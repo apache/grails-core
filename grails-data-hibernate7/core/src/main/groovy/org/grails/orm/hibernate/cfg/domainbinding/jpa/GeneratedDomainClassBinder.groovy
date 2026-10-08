@@ -348,12 +348,35 @@ class GeneratedDomainClassBinder implements SessionFactoryBuilderFactory {
         if (persistentClass instanceof RootClass) {
             // the generated root forces its discriminator so that Hibernate adds no check constraint; the binder never forces it
             ((RootClass) persistentClass).forceDiscriminator = false
+            alignDiscriminator((RootClass) persistentClass, entity)
             alignIdentifier((RootClass) persistentClass, generated, metadata)
         }
         for (Property property : persistentClass.declaredProperties) {
             alignProperty(property, entity, real)
         }
         alignUniqueKeys(persistentClass, entity)
+    }
+
+    /**
+     * The mapping can give the discriminator column a precision and a scale, which {@code @DiscriminatorColumn} cannot state. They change
+     * nothing in the DDL of the string, integer or character column, but the domain binder puts them on the column of the model, so the
+     * same is done here and a schema comparison finds the same column.
+     */
+    private void alignDiscriminator(RootClass root, GrailsHibernatePersistentEntity entity) {
+        DiscriminatorFacets discriminator = generator.hierarchyFacets(entity).discriminator()
+        if (discriminator == null || root.discriminator == null) {
+            return
+        }
+        for (Selectable selectable : root.discriminator.selectables) {
+            if (selectable instanceof Column) {
+                if (discriminator.precision() != null) {
+                    ((Column) selectable).precision = discriminator.precision()
+                }
+                if (discriminator.scale() != null) {
+                    ((Column) selectable).scale = discriminator.scale()
+                }
+            }
+        }
     }
 
     /**

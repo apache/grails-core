@@ -28,7 +28,9 @@ import jakarta.persistence.DiscriminatorType
  * <p>Exactly one of {@code column} and {@code formula} is set. {@code length} and {@code sqlType} are {@code null}
  * when the mapping does not state them. {@code typeName} is the Hibernate type name the binder puts on the
  * discriminator value ({@code string} unless the mapping says otherwise) and {@code type} is the JPA discriminator
- * type that stands for it.</p>
+ * type that stands for it. {@code precision} and {@code scale} are the ones the mapping gives the column: no annotation states
+ * them on a discriminator, and they change nothing in the DDL of a string, integer or character column, but the binder puts them
+ * on the column of the model, so the aligner does the same.</p>
  *
  * @since 9.0
  */
@@ -40,5 +42,7 @@ record DiscriminatorFacets(
     DiscriminatorType type,
     Integer length,
     String sqlType,
-    boolean insertable) {
+    boolean insertable,
+    Integer precision,
+    Integer scale) {
 }

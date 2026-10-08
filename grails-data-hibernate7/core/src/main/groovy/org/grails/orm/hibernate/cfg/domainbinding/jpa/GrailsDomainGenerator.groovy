@@ -921,7 +921,7 @@ class GrailsDomainGenerator {
      * {@code getDiscriminatorValue}, and a joined subclass's key column is named like its identifier column.
      *
      * @throws UnsupportedOperationException for a hierarchy that mixes strategies (annotations state the strategy
-     *     once, on the root) or whose discriminator has no annotation equivalent
+     *     once, on the root) or whose discriminator has a type other than string, integer or character
      */
     HierarchyFacets hierarchyFacets(GrailsHibernatePersistentEntity entity) {
         boolean root = entity.isRoot()
@@ -971,19 +971,15 @@ class GrailsDomainGenerator {
         DiscriminatorType type = discriminatorType(entity, typeName)
         boolean insertable = config?.insertable == null || config.insertable
         if (config?.formula != null) {
-            return new DiscriminatorFacets(null, config.formula, typeName, type, null, null, insertable)
+            return new DiscriminatorFacets(null, config.formula, typeName, type, null, null, insertable, null, null)
         }
         ColumnConfig columnConfig = config?.column
         Column column = new Column()
         columnConfigBinder.bindColumnConfigToColumn(column, columnConfig, null)
-        if (column.precision != null || column.scale != null) {
-            throw new UnsupportedOperationException(
-                    "The discriminator column of [${entity.name}] sets a precision or a scale, " +
-                            'which @DiscriminatorColumn cannot state')
-        }
         return new DiscriminatorFacets(
                 columnConfig?.name != null ? columnConfig.name : GrailsDomainBinder.DEFAULT_DISCRIMINATOR_COLUMN_NAME,
-                null, typeName, type, column.length?.intValue(), column.sqlType, insertable)
+                null, typeName, type, column.length?.intValue(), column.sqlType, insertable,
+                column.precision?.intValue(), column.scale?.intValue())
     }
 
     private static DiscriminatorType discriminatorType(GrailsHibernatePersistentEntity entity, String typeName) {

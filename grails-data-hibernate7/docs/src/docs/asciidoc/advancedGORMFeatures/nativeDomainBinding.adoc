@@ -69,6 +69,7 @@ For the domain classes in GORM's own test suites, both bindings produce the same
 * A natural id (`id natural: [...]`) may name an embedded object (the unique key spans its columns, in the order of the embedded class), and a name that is no property of the class is skipped without a message, as with classic binding.
 * A natural id declared on a subclass adds a unique key to the table of the hierarchy (the table of the subclass in a joined hierarchy), over the columns of the named properties in the order the mapping names them, and makes those properties updatable only when the natural id is `mutable`. Classic binding also marks the properties as natural identifiers, and with Hibernate 7 that makes every load of the subclass entity fail with a `NullPointerException`; native binding does not mark them, so the subclass entity loads.
 * `insertable: false` and `updatable: false` are honored on a property with a column. On an embedded object they apply to every column of the object. On a `hasMany` and on the inverse side of a one-to-one (the side with no column) both bindings ignore them: the collection is written through its own table, and the foreign key lives on the other side.
+* A `discriminator` column may set `precision` and `scale`. They change nothing in the DDL of a string, integer or character column, in both bindings.
 * Identifier generators, inheritance strategies (single table, joined and table-per-concrete-class), discriminators, natural ids, optimistic locking, lazy and eager fetching, cascades, sorting, batch size and `cache` usage are mapped as with classic binding.
 
 [[nativeDomainBinding-refused]]
@@ -95,10 +96,6 @@ Nothing is ignored silently. A mapping that boots is bound the way it is written
 | A `type` on a `hasMany` of basic values that is a registered Hibernate type name, for example `type: 'text'`, or a custom collection type.
 | `Collection property [...]: the type [...] mapped on the collection property names neither a class nor serializable ...` or `... a custom collection type (a UserCollectionType) is mapped on a collection of basic values ...`
 | Remove the `type`, or use `'serializable'` or a `UserType` class to store the collection in one column. Classic binding does not boot with a registered type name (it fails with `Could not load requested class`), and neither with a custom collection type on a collection of basic values.
-
-| A `discriminator` column with `precision` or `scale`.
-| `The discriminator column of [...] sets a precision or a scale, which @DiscriminatorColumn cannot state`
-| Remove them. Use `length` to size the column.
 
 | A composite identifier that is combined with something the mapping does not state faithfully: a many-to-many, a map or a join table that involves an entity with a composite identifier, a composite identifier part that is the inverse side of a one-to-one, a foreign key mapped with a different number of columns than the identifier has properties, or a composite identifier referring to a deeply nested composite identifier.
 | `... composite identifier ...`, naming the entity and the part.

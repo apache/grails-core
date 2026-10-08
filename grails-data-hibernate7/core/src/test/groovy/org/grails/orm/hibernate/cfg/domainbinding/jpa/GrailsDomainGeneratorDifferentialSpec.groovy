@@ -1286,7 +1286,7 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
         }
     }
 
-    /** The discriminator the binder put on the root: a column or a formula, its type, length and whether it is inserted. */
+    /** The discriminator the binder put on the root: a column or a formula, its type, length, precision, scale and whether it is inserted. */
     private List<String> compareDiscriminator(GrailsHibernatePersistentEntity entity, DiscriminatorFacets facets, RootClass root) {
         String where = "${entity.name} discriminator"
         if ((facets != null) != (root.discriminator != null)) {
@@ -1306,6 +1306,8 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
         ]
         if (!columns.isEmpty()) {
             pairs.length = [facets.length(), columns[0].length?.intValue()]
+            pairs.precision = [facets.precision(), columns[0].precision?.intValue()]
+            pairs.scale = [facets.scale(), columns[0].scale?.intValue()]
             if (facets.sqlType() != null) {
                 pairs.sqlType = [facets.sqlType(), columns[0].sqlType]
             }
