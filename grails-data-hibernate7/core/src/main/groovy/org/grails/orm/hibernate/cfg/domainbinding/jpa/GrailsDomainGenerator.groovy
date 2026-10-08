@@ -958,7 +958,7 @@ class GrailsDomainGenerator {
      * {@code getDiscriminatorValue}, and a joined subclass's key column is named like its identifier column.
      *
      * @throws UnsupportedOperationException for a hierarchy that mixes strategies (annotations state the strategy
-     *     once, on the root) or whose discriminator has a type other than string, integer or character
+     *     once, on the root)
      */
     HierarchyFacets hierarchyFacets(GrailsHibernatePersistentEntity entity) {
         boolean root = entity.isRoot()
@@ -1033,9 +1033,9 @@ class GrailsDomainGenerator {
             case 'java.lang.Character':
                 return DiscriminatorType.CHAR
             default:
-                throw new UnsupportedOperationException(
-                        "The discriminator type [${typeName}] of [${entity.name}] is not one of string, integer " +
-                                'or character, which the generator does not support yet')
+                // @DiscriminatorColumn names string, integer and character only: any other type is put on the discriminator of the model
+                // after binding (GeneratedDomainClassBinder), as the binder gives it its type name, so the annotation only needs a type
+                return DiscriminatorType.STRING
         }
     }
 

@@ -21,6 +21,7 @@ package org.grails.orm.hibernate.cfg.domainbinding.jpa
 import java.lang.reflect.Field
 
 import groovy.transform.CompileStatic
+import jakarta.persistence.DiscriminatorType
 import org.hibernate.Length
 import org.hibernate.MappingException
 import org.hibernate.boot.SessionFactoryBuilder
@@ -46,6 +47,7 @@ import org.hibernate.mapping.Collection
 import org.hibernate.mapping.Column
 import org.hibernate.mapping.Component
 import org.hibernate.mapping.ForeignKey
+import org.hibernate.mapping.Formula
 import org.hibernate.mapping.GeneratorSettings
 import org.hibernate.mapping.IndexedCollection
 import org.hibernate.mapping.ManyToOne
@@ -121,6 +123,7 @@ class GeneratedDomainClassBinder implements SessionFactoryBuilderFactory {
     private final MultiTenantFilterDefinitionBinder filterDefinitionBinder = new MultiTenantFilterDefinitionBinder()
     private final UniqueNameGenerator uniqueNameGenerator = new UniqueNameGenerator()
     private PersistentEntityNamingStrategy namingStrategy
+    private MetadataBuildingContext buildingContext
     private JdbcEnvironment jdbcEnvironment
     private GrailsDomainGenerator generator
     private GeneratedDomainClassLoaderService classLoaderService
@@ -161,6 +164,7 @@ class GeneratedDomainClassBinder implements SessionFactoryBuilderFactory {
             PersistentEntityNamingStrategy namingStrategy,
             JdbcEnvironment jdbcEnvironment) {
         this.namingStrategy = namingStrategy
+        this.buildingContext = buildingContext
         this.jdbcEnvironment = jdbcEnvironment
         List<GrailsHibernatePersistentEntity> toGenerate = hierarchies(entities)
         if (toGenerate.isEmpty()) {
@@ -361,12 +365,27 @@ class GeneratedDomainClassBinder implements SessionFactoryBuilderFactory {
     /**
      * The mapping can give the discriminator column a precision and a scale, which {@code @DiscriminatorColumn} cannot state. They change
      * nothing in the DDL of the string, integer or character column, but the domain binder puts them on the column of the model, so the
-     * same is done here and a schema comparison finds the same column.
+     * same is done here and a schema comparison finds the same column. It can also give the discriminator another type than string, integer
+     * or character ({@code type: 'long'}), which the annotation cannot name either: the type name is put on the discriminator of the model.
      */
     private void alignDiscriminator(RootClass root, GrailsHibernatePersistentEntity entity) {
         DiscriminatorFacets discriminator = generator.hierarchyFacets(entity).discriminator()
         if (discriminator == null || root.discriminator == null) {
             return
+        }
+        if (discriminator.type() == DiscriminatorType.STRING && !(discriminator.typeName() in ['string', 'java.lang.String'])) {
+            // the annotation can only name a string, an integer or a character; the binder gives the discriminator the type the mapping
+            // names, and Hibernate has resolved the one the annotation named by now, so the discriminator is bound again with the type
+            BasicValue retyped = new BasicValue(buildingContext, root.table)
+            retyped.typeName = discriminator.typeName()
+            for (Selectable selectable : ((BasicValue) root.discriminator).selectables) {
+                if (selectable instanceof Column) {
+                    retyped.addColumn(untypedCopy(root.table, (Column) selectable, discriminator.sqlType()))
+                } else if (selectable instanceof Formula) {
+                    retyped.addFormula((Formula) selectable)
+                }
+            }
+            root.discriminator = retyped
         }
         for (Selectable selectable : root.discriminator.selectables) {
             if (selectable instanceof Column) {
@@ -378,6 +397,30 @@ class GeneratedDomainClassBinder implements SessionFactoryBuilderFactory {
                 }
             }
         }
+    }
+
+    /**
+     * A column whose JDBC type Hibernate has resolved cannot be given another one, so the column of a discriminator that is typed again is
+     * replaced, in the same place of the table, by a copy that has none.
+     */
+    private static Column untypedCopy(Table table, Column column, String sqlType) {
+        Column copy = new Column(column.quoted ? '`' + column.name + '`' : column.name)
+        copy.nullable = column.nullable
+        copy.unique = column.unique
+        copy.length = column.length
+        copy.precision = column.precision
+        copy.scale = column.scale
+        copy.comment = column.comment
+        copy.defaultValue = column.defaultValue
+        copy.customRead = column.customRead
+        copy.customWrite = column.customWrite
+        copy.sqlType = sqlType
+        List<Column> columns = new ArrayList<Column>(table.columns)
+        table.columns.clear()
+        for (Column existing : columns) {
+            table.addColumn(existing.is(column) ? copy : existing)
+        }
+        return copy
     }
 
     /**

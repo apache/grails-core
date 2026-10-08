@@ -1437,7 +1437,7 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
             "${where} ${facet}: generator=${values[1]} binder=${values[0]}".toString()
         }
         if (bound instanceof RootClass) {
-            found.addAll(compareAnnotatedDiscriminator(where, (RootClass) bound, (RootClass) annotated))
+            found.addAll(compareAnnotatedDiscriminator(where, (RootClass) bound, (RootClass) annotated, known))
             found.addAll(compareAnnotatedNaturalId(where, bound, annotated, generator.naturalIdFacets(entity), known))
             found.addAll(compareAnnotatedCache(where, (RootClass) bound, (RootClass) annotated))
             if (entity.identity == null && generator.generationProblem(entity) == null) {
@@ -2090,7 +2090,7 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
         return false
     }
 
-    private static List<String> compareAnnotatedDiscriminator(String where, RootClass bound, RootClass annotated) {
+    private static List<String> compareAnnotatedDiscriminator(String where, RootClass bound, RootClass annotated, Map<String, Integer> known) {
         if ((bound.discriminator != null) != (annotated.discriminator != null)) {
             return ["${where} discriminator: generator=${annotated.discriminator != null} binder=${bound.discriminator != null}".toString()]
         }
@@ -2105,6 +2105,10 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
                               ((BasicValue) annotated.discriminator).resolve().jdbcType.defaultSqlTypeCode],
                 insertable : [bound.isDiscriminatorInsertable(), annotated.isDiscriminatorInsertable()],
         ]
+        if (pairs.jdbcType[0] != pairs.jdbcType[1] && !(((BasicValue) bound.discriminator).typeName in ['string', 'integer', 'character'])) {
+            known['a discriminator typed other than string, integer or character: @DiscriminatorColumn cannot state the type, GeneratedDomainClassBinder binds the discriminator again with it']++
+            pairs.remove('jdbcType')
+        }
         Column boundColumn = (Column) bound.discriminator.selectables.find { it instanceof Column }
         if (boundColumn != null && ((BasicValue) bound.discriminator).typeName == 'string') {
             // the binder leaves an unset length null, which Hibernate reads as its default

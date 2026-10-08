@@ -29,9 +29,10 @@ import spock.lang.Unroll
 import org.grails.orm.hibernate.HibernateDatastore
 
 /**
- * A discriminator column with a precision or a scale. {@code @DiscriminatorColumn} cannot state them and they change nothing in the
- * DDL of a string or an integer column, but the domain binder puts them on the column, and a mapping that sets them must boot in the
- * generated mode as it does in the domain binder, with the same column.
+ * A discriminator column with a precision or a scale, and a discriminator of a type other than string, integer or character.
+ * {@code @DiscriminatorColumn} cannot state either. The precision and the scale change nothing in the DDL of a string or an integer
+ * column, but the domain binder puts them on the column, and a mapping that sets them must boot in the generated mode as it does in the
+ * domain binder, with the same column. A discriminator typed {@code 'long'} is a bigint column in both.
  */
 class GeneratedDomainClassesDiscriminatorSpec extends Specification {
 
@@ -79,6 +80,7 @@ class GeneratedDomainClassesDiscriminatorSpec extends Specification {
         label                                   | group                            | table          | column
         'a string discriminator with both'      | [GddStringBase, GddStringSub]    | 'gdd_string_base' | 'varchar(255) not null precision=5 scale=2'
         'an integer discriminator with a precision' | [GddIntBase, GddIntSub]      | 'gdd_int_base'    | 'integer not null precision=5 scale=null'
+        'a discriminator typed long'        | [GddLongBase, GddLongSub]        | 'gdd_long_base'   | 'bigint not null precision=null scale=null'
     }
 
     @Unroll
@@ -97,6 +99,7 @@ class GeneratedDomainClassesDiscriminatorSpec extends Specification {
         label                | group                         | cycle
         'a string discriminator' | [GddStringBase, GddStringSub] | 'stringCycle'
         'an integer discriminator' | [GddIntBase, GddIntSub]     | 'intCycle'
+        'a discriminator typed long' | [GddLongBase, GddLongSub] | 'longCycle'
     }
 
     private List stringCycle() {
@@ -105,6 +108,14 @@ class GeneratedDomainClassesDiscriminatorSpec extends Specification {
             new GddStringSub(name: 'sub', more: 'x').save(failOnError: true, flush: true)
         }
         return GddStringBase.withNewSession { [GddStringBase.count(), GddStringSub.count(), GddStringSub.list()*.name] }
+    }
+
+    private List longCycle() {
+        GddLongBase.withTransaction {
+            new GddLongBase(name: 'base').save(failOnError: true)
+            new GddLongSub(name: 'sub', more: 'x').save(failOnError: true, flush: true)
+        }
+        return GddLongBase.withNewSession { [GddLongBase.count(), GddLongSub.count(), GddLongSub.list()*.name] }
     }
 
     private List intCycle() {
@@ -139,6 +150,22 @@ class GddIntBase {
 
 @Entity
 class GddIntSub extends GddIntBase {
+    String more
+    static mapping = {
+        discriminator value: '2'
+    }
+}
+
+@Entity
+class GddLongBase {
+    String name
+    static mapping = {
+        discriminator value: '1', type: 'long', column: [name: 'kind']
+    }
+}
+
+@Entity
+class GddLongSub extends GddLongBase {
     String more
     static mapping = {
         discriminator value: '2'
