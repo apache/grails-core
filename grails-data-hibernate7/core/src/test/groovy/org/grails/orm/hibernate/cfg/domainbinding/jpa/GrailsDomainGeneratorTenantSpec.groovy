@@ -165,13 +165,15 @@ class GrailsDomainGeneratorTenantSpec extends HibernateGormDatastoreSpec {
         getSessionFactory().getFilterDefinition('tenantId').getParameterJdbcMapping('tenantId').javaTypeDescriptor.javaTypeClass == String
     }
 
-    void "a tenant id with a mapped type is rejected by name, because the filter parameter would need the same type"() {
+    void "a tenant id with a mapped type is typed like any other column and the entity keeps its filter"() {
         when:
-        generate(GenTenantTyped)
+        Class<?> generated = generate(GenTenantTyped)
 
         then:
-        UnsupportedOperationException e = thrown()
-        e.message.contains('The tenant id [companyId] of [' + GenTenantTyped.name + ']')
+        generated.getDeclaredField('companyId').getAnnotation(org.hibernate.annotations.Type).value() == GenUpperType
+        generated.getAnnotation(Filter).name() == 'tenantId'
+        generated.getAnnotation(Filter).condition() == ':tenantId = company_id'
+        newGenerator().tenantFacets(entity(GenTenantTyped)).parameterType() == String
     }
 
     private Metadata annotationMetadata(Collection<Class<?>> classes) {

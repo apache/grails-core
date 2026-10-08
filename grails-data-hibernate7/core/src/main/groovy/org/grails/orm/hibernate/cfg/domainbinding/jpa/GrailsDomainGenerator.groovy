@@ -1205,7 +1205,7 @@ class GrailsDomainGenerator {
      * written and queried like any other property (plan decision on item 6a).</p>
      *
      * @return the filter, or {@code null} when the binder adds none to the entity
-     * @throws UnsupportedOperationException when the tenant id has a mapped type, which the filter parameter would need too
+     * @throws UnsupportedOperationException when the type of the tenant id is one the generator cannot state
      */
     TenantFacets tenantFacets(GrailsHibernatePersistentEntity entity) {
         HibernatePersistentProperty tenantId = entity.isMultiTenant() ? entity.hibernateTenantId : null
@@ -1213,10 +1213,8 @@ class GrailsDomainGenerator {
             return null
         }
         TypeDecision type = decideType(tenantId)
-        if (!type.supported || type.facets != null) {
-            throw new UnsupportedOperationException(
-                    "The tenant id [${tenantId.name}] of [${entity.name}] has a mapped type, which the filter parameter " +
-                            'would need too and the generator cannot state yet')
+        if (!type.supported) {
+            throw new UnsupportedOperationException(typeNotSupported(tenantId, type))
         }
         return new TenantFacets(GormProperties.TENANT_IDENTITY, entity.getMultiTenantFilterCondition(defaultColumnNames), boxed(tenantId.type))
     }

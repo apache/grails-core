@@ -70,6 +70,7 @@ For the domain classes in GORM's own test suites, both bindings produce the same
 * A natural id declared on a subclass adds a unique key to the table of the hierarchy (the table of the subclass in a joined hierarchy), over the columns of the named properties in the order the mapping names them, and makes those properties updatable only when the natural id is `mutable`. Classic binding also marks the properties as natural identifiers, and with Hibernate 7 that makes every load of the subclass entity fail with a `NullPointerException`; native binding does not mark them, so the subclass entity loads.
 * `insertable: false` and `updatable: false` are honored on a property with a column. On an embedded object they apply to every column of the object. On a `hasMany` and on the inverse side of a one-to-one (the side with no column) both bindings ignore them: the collection is written through its own table, and the foreign key lives on the other side.
 * A `discriminator` column may set `precision` and `scale`. They change nothing in the DDL of a string, integer or character column, in both bindings.
+* A multi-tenant id (`tenantId`) may have a mapped `type`: its column has the type, and the tenant filter still compares it with the current tenant.
 * Identifier generators, inheritance strategies (single table, joined and table-per-concrete-class), discriminators, natural ids, optimistic locking, lazy and eager fetching, cascades, sorting, batch size and `cache` usage are mapped as with classic binding.
 
 [[nativeDomainBinding-refused]]
@@ -108,10 +109,6 @@ Nothing is ignored silently. A mapping that boots is bound the way it is written
 | An association mapped with a `formula`, or with several columns where the target does not have a composite identifier.
 | `... the association is mapped with a formula` or `... the mapping states several columns ...`
 | Map the association with a single `column`.
-
-| A multi-tenant id (`tenantId`) that has a mapped `type`.
-| `The tenant id [...] of [...] has a mapped type ...`
-| Remove the `type` from the tenant id.
 |===
 
 A few mappings fail to boot with classic binding too, so they are not a difference between the two: a `SortedSet` of basic values, a `UserType` class as the `type` of a `hasMany` of domain classes, a `Map` of enums, a hierarchy that mixes inheritance strategies, a `discriminator` type other than string, integer or character, and a joined subclass of a root with a composite identifier.
