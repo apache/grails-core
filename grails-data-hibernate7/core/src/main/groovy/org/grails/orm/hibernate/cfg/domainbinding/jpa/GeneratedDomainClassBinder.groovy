@@ -21,6 +21,7 @@ package org.grails.orm.hibernate.cfg.domainbinding.jpa
 import java.lang.reflect.Field
 
 import groovy.transform.CompileStatic
+import org.hibernate.Length
 import org.hibernate.MappingException
 import org.hibernate.boot.SessionFactoryBuilder
 import org.hibernate.boot.internal.InFlightMetadataCollectorImpl
@@ -46,11 +47,14 @@ import org.hibernate.mapping.Column
 import org.hibernate.mapping.Component
 import org.hibernate.mapping.ForeignKey
 import org.hibernate.mapping.GeneratorSettings
+import org.hibernate.mapping.IndexedCollection
 import org.hibernate.mapping.ManyToOne
 import org.hibernate.mapping.PersistentClass
 import org.hibernate.mapping.PrimaryKey
 import org.hibernate.mapping.Property
 import org.hibernate.mapping.RootClass
+import org.hibernate.mapping.List as HibernateList
+import org.hibernate.mapping.Selectable
 import org.hibernate.mapping.Set as HibernateSet
 import org.hibernate.mapping.Table
 import org.hibernate.mapping.UniqueKey
@@ -551,6 +555,7 @@ class GeneratedDomainClassBinder implements SessionFactoryBuilderFactory {
         if (property.value instanceof Collection && persistentProperty instanceof HibernatePersistentProperty) {
             alignExtraLazy((Collection) property.value, (HibernatePersistentProperty) persistentProperty)
             alignCollectionTable((Collection) property.value, (HibernatePersistentProperty) persistentProperty)
+            alignListIndexLength((Collection) property.value, (HibernatePersistentProperty) persistentProperty)
         }
         if (property.value instanceof Component && persistentProperty instanceof Embedded) {
             // PropertyBinder marks the property lazy when the mapping says lazy: true; @Basic(fetch = LAZY) on an @Embedded is ignored
@@ -584,6 +589,28 @@ class GeneratedDomainClassBinder implements SessionFactoryBuilderFactory {
         }
         if (extraLazy) {
             collection.extraLazy = true
+        }
+    }
+
+    /**
+     * Hibernate's annotation binder gives the index column of a list no length, which it sizes as a long string when the mapping types
+     * the index as a string (a CLOB, which cannot be a key). The domain binder's column has the default length of every column it creates.
+     */
+    private void alignListIndexLength(Collection collection, HibernatePersistentProperty property) {
+        TypeFacets indexType
+        if (property instanceof HibernateToManyEntityProperty) {
+            indexType = generator.toManyFacets((HibernateToManyEntityProperty) property).indexType()
+        } else if (property instanceof HibernateBasicProperty) {
+            indexType = generator.collectionFacets((HibernateBasicProperty) property).indexType()
+        } else {
+            return
+        }
+        if (indexType != null && collection instanceof HibernateList) {
+            for (Selectable selectable : ((IndexedCollection) collection).index.selectables) {
+                if (selectable instanceof Column) {
+                    ((Column) selectable).length = (long) Length.DEFAULT
+                }
+            }
         }
     }
 

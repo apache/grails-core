@@ -36,6 +36,11 @@ import org.hibernate.FetchMode
  * a composite identifier; {@code referencedKeys} names the column of the owner's key each one points at, and is empty unless the
  * owner has a composite identifier. {@code key} is the first of the key columns.</p>
  *
+ * <p>{@code indexType} is the type the binder gives the index column of a list or the key column of a map when the mapping types it
+ * ({@code indexColumn: [type: 'long']}), independently of the declared key class: the Java type and the JDBC type of the registered
+ * type of that name. It is {@code null} when the mapping states none, or the type is the default (an integer for a list, a string for
+ * a map). A list's index stays an integer in Java whatever its JDBC type; the key of a map is typed with the facets' Java type.</p>
+ *
  * <p>{@code extraLazy} is an explicit {@code lazy: true}: the binder makes the collection extra-lazy, which Hibernate's annotation
  * binder cannot state, so {@code GeneratedDomainClassBinder} sets it on the collection after binding.</p>
  *
@@ -56,5 +61,6 @@ record CollectionFacets(
     int batchSize,
     String cacheUsage,
     List<ColumnFacets> keys,
-    List<String> referencedKeys) {
+    List<String> referencedKeys,
+    TypeFacets indexType) {
 }

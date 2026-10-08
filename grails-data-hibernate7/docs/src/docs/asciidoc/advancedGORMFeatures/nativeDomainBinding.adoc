@@ -101,10 +101,6 @@ Nothing is ignored silently. A mapping that boots is bound the way it is written
 | `Association property [...]: a map on a many-to-many ...`
 | Use a `Set` or `List` many-to-many, or model the join with a domain class of its own.
 
-| A map whose `indexColumn` has a `type` other than string, or a list whose `indexColumn` has a `type` other than integer.
-| `... the index column of the map is mapped with the type [long] ...` or `... the index column type [long] is not integer`
-| Remove the `type` from `indexColumn`. Use `String` map keys and the default list index.
-
 | A `type` that is a registered Hibernate type name for a different Java type than the property, for example `type: 'serializable'` on a `String`.
 | `Type [serializable] of property [...] is registered for the Java type [java.io.Serializable], not the property's [java.lang.String] ...`
 | Use a `UserType` class, or a type name registered for the property's own type.

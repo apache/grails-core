@@ -18,6 +18,8 @@
  */
 package org.grails.orm.hibernate.cfg.domainbinding.jpa
 
+import java.sql.Types
+
 import jakarta.persistence.InheritanceType
 import grails.gorm.tests.HibernateGormDatastoreSpec
 import org.hibernate.FetchMode
@@ -822,6 +824,7 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
             if (collection instanceof IndexedCollection) {
                 found.addAll(compareValueColumn(
                         "${where} index".toString(), facets.index(), ((IndexedCollection) collection).index, collection.collectionTable, false))
+                found.addAll(compareIndexType("${where} index".toString(), facets.kind(), facets.indexType(), (IndexedCollection) collection))
             } else {
                 found << "${where} index: generator=${facets.index().name()} binder=none".toString()
             }
@@ -1666,11 +1669,35 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
             if (collection instanceof IndexedCollection) {
                 found.addAll(compareValueColumn(
                         "${where} index".toString(), facets.index(), ((IndexedCollection) collection).index, collection.collectionTable, false))
+                found.addAll(compareIndexType("${where} index".toString(), facets.kind(), facets.indexType(), (IndexedCollection) collection))
             } else {
                 found << "${where} index: generator=${facets.index().name()} binder=none".toString()
             }
         } else if (collection instanceof IndexedCollection) {
             found << "${where} index: generator=none binder=${((IndexedCollection) collection).index.selectables*.text}".toString()
+        }
+        return found
+    }
+
+    /**
+     * The type the binder gave the index column of a list or the key column of a map against the one the generator decided: the JDBC type
+     * and the Java type of both.
+     */
+    private static List<String> compareIndexType(String where, CollectionKind kind, TypeFacets indexType, IndexedCollection collection) {
+        if (!(collection.index instanceof BasicValue)) {
+            return []
+        }
+        BasicValue index = (BasicValue) collection.index
+        List<String> found = []
+        int expectedJdbc = indexType != null ? indexType.jdbcTypeCode() : (kind == CollectionKind.LIST ? Types.INTEGER : Types.VARCHAR)
+        int boundJdbc = index.resolve().jdbcType.defaultSqlTypeCode
+        if (expectedJdbc != boundJdbc) {
+            found << "${where} jdbcTypeCode: generator=${expectedJdbc} binder=${boundJdbc}".toString()
+        }
+        Class<?> expectedJava = indexType != null ? indexType.javaType() : (kind == CollectionKind.LIST ? Integer : String)
+        Class<?> boundJava = index.resolve().domainJavaType.javaTypeClass
+        if (expectedJava != boundJava) {
+            found << "${where} javaType: generator=${expectedJava.name} binder=${boundJava.name}".toString()
         }
         return found
     }

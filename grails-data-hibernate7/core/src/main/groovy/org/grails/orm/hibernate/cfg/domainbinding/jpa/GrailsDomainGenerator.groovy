@@ -93,6 +93,9 @@ import org.hibernate.annotations.FetchMode as AnnotationFetchMode
 import org.hibernate.annotations.Formula
 import org.hibernate.annotations.Immutable
 import org.hibernate.annotations.JdbcTypeCode
+import org.hibernate.annotations.ListIndexJavaType
+import org.hibernate.annotations.ListIndexJdbcTypeCode
+import org.hibernate.annotations.MapKeyJdbcTypeCode
 import org.hibernate.annotations.NaturalId as HibernateNaturalId
 import org.hibernate.annotations.NotFound
 import org.hibernate.annotations.NotFoundAction
@@ -1215,13 +1218,9 @@ class GrailsDomainGenerator {
         if (kind == CollectionKind.MAP && type.facets != null) {
             return 'a mapped element type on a map'
         }
-        if (kind == CollectionKind.LIST && property.getIndexColumnType('integer') != 'integer') {
-            return "the index column type [${property.getIndexColumnType('integer')}] is not integer"
-        }
-        if (kind == CollectionKind.MAP && property.getIndexColumnType('string') != 'string') {
-            return "the index column of the map is mapped with the type [${property.getIndexColumnType('string')}], which the binder gives the key " +
-                    'independently of the declared key class; the generator types the key as the declared String and would need ' +
-                    '@MapKeyJdbcTypeCode to say another type, which it does not write yet'
+        String indexTypeProblem = collectionIndexTypeProblem(property, kind)
+        if (indexTypeProblem != null) {
+            return indexTypeProblem
         }
         ColumnFacets key = collectionKeyFacets(property)
         if (key.length() != null || key.precision() != null || key.scale() != null || key.defaultValue() != null ||
@@ -1345,7 +1344,8 @@ class GrailsDomainGenerator {
                 Math.max(property.batchSize, 0),
                 property.cacheUsage,
                 collectionKeyColumns(property),
-                collectionKeyReferencedColumns(property))
+                collectionKeyReferencedColumns(property),
+                collectionIndexType(property, kind))
     }
 
     /**
@@ -1440,6 +1440,54 @@ class GrailsDomainGenerator {
         return new ColumnFacets(
                 property.joinTableColumName(namingStrategy), true, column.unique, true, true, column.length?.intValue(),
                 column.precision?.intValue(), column.scale?.intValue(), column.sqlType, null, null, null, null)
+    }
+
+    /**
+     * The binder types the index column of a list and the key column of a map with the type the mapping names
+     * ({@code indexColumn: [type: 'long']}, or the {@code type} of the {@code index:} settings), whatever the declared key class is.
+     *
+     * @return why the generator cannot state that type, or {@code null} when it can (or the mapping states none)
+     */
+    private String collectionIndexTypeProblem(HibernateToManyProperty property, CollectionKind kind) {
+        if (!kind.indexed) {
+            return null
+        }
+        String name = property.getIndexColumnType(kind == CollectionKind.LIST ? 'integer' : 'string')
+        BasicType<?> registered = typeConfiguration.basicTypeRegistry.getRegisteredType(name)
+        if (registered == null) {
+            return "the index column type [${name}] is not a type registered with Hibernate, which is the only kind of type the generator " +
+                    'states for the index of a list or the key of a map'
+        }
+        if (registered.valueConverter != null) {
+            return "the index column type [${name}] is a registered type that converts its value, which no annotation states for the " +
+                    'index of a list or the key of a map'
+        }
+        if (kind == CollectionKind.LIST) {
+            Class<?> descriptor = javaTypeDescriptorClass(registered.javaTypeDescriptor.javaTypeClass)
+            if (!Modifier.isPublic(descriptor.modifiers) || descriptor.constructors.every { it.parameterCount != 0 }) {
+                return "the index column type [${name}] has a Java type descriptor [${descriptor.simpleName}] that Hibernate cannot instantiate " +
+                        'from an annotation, which is how the generator types the index of a list'
+            }
+        }
+        return null
+    }
+
+    /**
+     * @return the type of the index column of a list or the key column of a map when the mapping types it with other than the
+     *     default (an integer for a list, a string for a map), as the Java and the JDBC type of the registered type of that name;
+     *     {@code null} otherwise
+     */
+    private TypeFacets collectionIndexType(HibernateToManyProperty property, CollectionKind kind) {
+        if (!kind.indexed) {
+            return null
+        }
+        String defaultName = kind == CollectionKind.LIST ? 'integer' : 'string'
+        String name = property.getIndexColumnType(defaultName)
+        if (name == defaultName) {
+            return null
+        }
+        BasicType<?> registered = typeConfiguration.basicTypeRegistry.getRegisteredType(name)
+        return new TypeFacets(null, registered.jdbcType.defaultSqlTypeCode, [:], registered.javaTypeDescriptor.javaTypeClass)
     }
 
     /**
@@ -1566,13 +1614,9 @@ class GrailsDomainGenerator {
                         'write expression or a comment, which a join column cannot state'
             }
         }
-        if (kind == CollectionKind.LIST && property.getIndexColumnType('integer') != 'integer') {
-            return "the index column type [${property.getIndexColumnType('integer')}] is not integer"
-        }
-        if (kind == CollectionKind.MAP && property.getIndexColumnType('string') != 'string') {
-            return "the index column of the map is mapped with the type [${property.getIndexColumnType('string')}], which the binder gives the key " +
-                    'independently of the declared key class; the generator types the key as the declared String and would need ' +
-                    '@MapKeyJdbcTypeCode to say another type, which it does not write yet'
+        String indexTypeProblem = collectionIndexTypeProblem(property, kind)
+        if (indexTypeProblem != null) {
+            return indexTypeProblem
         }
         if (property.hasSort()) {
             if (kind.indexed) {
@@ -1687,7 +1731,8 @@ class GrailsDomainGenerator {
                 property.hasSort() ? (property.order != null ? property.order : 'asc') : null,
                 condition,
                 keys != null ? keys : [key],
-                keys != null ? collectionKeyReferencedColumns(property) : [])
+                keys != null ? collectionKeyReferencedColumns(property) : [],
+                collectionIndexType(property, kind))
     }
 
     /**
@@ -2538,8 +2583,10 @@ class GrailsDomainGenerator {
                     .define('name', facets.index().name())
                     .define('nullable', facets.index().nullable())
                     .build()
+            annotations.addAll(listIndexTypeAnnotations(facets.indexType()))
         } else if (facets.kind() == CollectionKind.MAP) {
             annotations << mapKeyColumnAnnotation(facets.index())
+            annotations.addAll(mapKeyTypeAnnotations(facets.indexType()))
         }
         if (facets.kind() == CollectionKind.SORTED_SET) {
             // the binder marks the collection sorted and names no comparator: the elements' natural order
@@ -2573,7 +2620,7 @@ class GrailsDomainGenerator {
             annotations << AnnotationDescription.ForLoadedAnnotation.of(constraint)
         }
         List<TypeDescription> arguments = facets.kind() == CollectionKind.MAP ?
-                [TypeDescription.ForLoadedType.of(String), generatedType(property.hibernateAssociatedEntity)] :
+                [TypeDescription.ForLoadedType.of(mapKeyClass(facets.indexType())), generatedType(property.hibernateAssociatedEntity)] :
                 [generatedType(property.hibernateAssociatedEntity)]
         TypeDescription.Generic fieldType = TypeDescription.Generic.Builder.parameterizedType(
                 TypeDescription.ForLoadedType.of(facets.kind().javaType), arguments).build()
@@ -2646,8 +2693,10 @@ class GrailsDomainGenerator {
                     .define('name', facets.index().name())
                     .define('nullable', facets.index().nullable())
                     .build()
+            annotations.addAll(listIndexTypeAnnotations(facets.indexType()))
         } else if (facets.kind() == CollectionKind.MAP) {
             annotations << mapKeyColumnAnnotation(facets.index())
+            annotations.addAll(mapKeyTypeAnnotations(facets.indexType()))
         }
         TypeFacets type = typeFacets(property)
         if (type != null) {
@@ -2670,7 +2719,7 @@ class GrailsDomainGenerator {
         Class<?> elementClass = property instanceof HibernateEnumProperty ?
                 ((HibernateEnumProperty) property).enumType : ((HibernateBasicProperty) property).componentType
         TypeDescription.Generic fieldType = facets.kind() == CollectionKind.MAP ?
-                TypeDescription.Generic.Builder.parameterizedType(Map, String, elementClass).build() :
+                TypeDescription.Generic.Builder.parameterizedType(Map, mapKeyClass(facets.indexType()), elementClass).build() :
                 TypeDescription.Generic.Builder.parameterizedType(facets.kind().javaType, elementClass).build()
         return builder.defineField(property.name, fieldType, Visibility.PRIVATE)
                 .annotateField(annotations as AnnotationDescription[])
@@ -2699,6 +2748,35 @@ class GrailsDomainGenerator {
             annotation = annotation.define('referencedColumnName', referencedColumn)
         }
         return annotation.build()
+    }
+
+    /** The Java type of the key of a map: the declared one is a string, the mapping can type the key column with another registered type. */
+    private static Class<?> mapKeyClass(TypeFacets indexType) {
+        return indexType == null ? String : indexType.javaType()
+    }
+
+    /** The Java and the JDBC type of the index column of a list, which the binder types as the mapping says, as it types the key of a map. */
+    private List<AnnotationDescription> listIndexTypeAnnotations(TypeFacets indexType) {
+        if (indexType == null) {
+            return []
+        }
+        return [
+                AnnotationDescription.Builder.ofType(ListIndexJavaType).define('value', TypeDescription.ForLoadedType.of(javaTypeDescriptorClass(indexType.javaType()))).build(),
+                AnnotationDescription.Builder.ofType(ListIndexJdbcTypeCode).define('value', indexType.jdbcTypeCode()).build(),
+        ]
+    }
+
+    /** The class of Hibernate's Java type descriptor of a Java type, which an annotation names and Hibernate instantiates. */
+    private Class<?> javaTypeDescriptorClass(Class<?> javaType) {
+        return typeConfiguration.javaTypeRegistry.getDescriptor(javaType).getClass()
+    }
+
+    /** The JDBC type of the key column of a map; its Java type is the key of the generated field. */
+    private static List<AnnotationDescription> mapKeyTypeAnnotations(TypeFacets indexType) {
+        if (indexType == null) {
+            return []
+        }
+        return [AnnotationDescription.Builder.ofType(MapKeyJdbcTypeCode).define('value', indexType.jdbcTypeCode()).build()]
     }
 
     private static AnnotationDescription mapKeyColumnAnnotation(ColumnFacets facets) {
