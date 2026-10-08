@@ -1138,8 +1138,9 @@ class GrailsDomainGenerator {
             return new TypeDecision(true, name, new TypeFacets(
                     null, registered.jdbcType.defaultSqlTypeCode, [:], null, registered.valueConverter.getClass()))
         }
-        if (registered != null && registered.valueConverter == null && !isEnum &&
-                (identity || registered.javaTypeDescriptor.javaTypeClass == boxed(type) || serializesValueOf(registered, type))) {
+        if (registered != null && registered.valueConverter == null && !isEnum) {
+            // the binder resolves the name and not the property's class: the field has the registered Java type, whatever the
+            // property's class is (a String or a byte[] for serializable, an Integer for string), with the registered JDBC type
             Class<?> registeredJava = registered.javaTypeDescriptor.javaTypeClass
             return new TypeDecision(true, name, new TypeFacets(
                     null, registered.jdbcType.defaultSqlTypeCode, [:], registeredJava == boxed(type) ? null : registeredJava))
@@ -1149,12 +1150,9 @@ class GrailsDomainGenerator {
             problem = 'is neither a UserType class nor a type registered with Hibernate'
         } else if (isEnum) {
             problem = 'is a registered type on an enum, which the binder binds with its own type parameters'
-        } else if (registered.valueConverter != null) {
+        } else {
             problem = 'is a registered type that converts its value in a way @Convert does not state (not a JPA attribute converter, ' +
                     'or the type of a collection element, an identifier or an enum)'
-        } else {
-            problem = "is registered for the Java type [${registered.javaTypeDescriptor.javaTypeClass.name}], not the property's [${type?.name}]: " +
-                    'stating it would need a converter, which annotations do not say for a type name'
         }
         return new TypeDecision(false, name, null, problem)
     }
@@ -1166,16 +1164,6 @@ class GrailsDomainGenerator {
      */
     private static TypeDecision serializedCollectionType() {
         return new TypeDecision(true, 'serializable', new TypeFacets(null, Types.VARBINARY, [:], Serializable))
-    }
-
-    /**
-     * {@code serializable} (and any registered type of a Java interface) on a property of a class that implements it: the property is
-     * typed with the registered Java type, as the binder resolves the type name and not the property's class, so a {@code String} or a
-     * {@code byte[]} is read and written through that type.
-     */
-    private static boolean serializesValueOf(BasicType<?> registered, Class<?> type) {
-        Class<?> registeredJava = registered.javaTypeDescriptor.javaTypeClass
-        return registeredJava.interface && type != null && registeredJava.isAssignableFrom(boxed(type))
     }
 
     /**

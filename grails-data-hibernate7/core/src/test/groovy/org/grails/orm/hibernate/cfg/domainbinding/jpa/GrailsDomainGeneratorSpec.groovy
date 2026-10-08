@@ -283,15 +283,6 @@ class GrailsDomainGeneratorSpec extends HibernateGormDatastoreSpec {
         getPersistentEntity(GenParamsOnly).persistentClass.getProperty('quantity').value.typeParameters.getProperty('sequence_name') == 'seq'
     }
 
-    void "a property the generator does not support is rejected by name"() {
-        when:
-        newGenerator().generateAll([unbound(GenUnsupportedType)], getClass().classLoader)
-
-        then:
-        UnsupportedOperationException e = thrown()
-        e.message.contains('Type [string] of property [tag] of [' + GenUnsupportedType.name + ']')
-    }
-
     void "the version is marked as the optimistic lock"() {
         expect:
         field('version').isAnnotationPresent(Version)
@@ -491,14 +482,15 @@ class GrailsDomainGeneratorSpec extends HibernateGormDatastoreSpec {
         !typed.getDeclaredField('kind').isAnnotationPresent(Enumerated)
     }
 
-    void "a type name that is neither a user type nor a registered type for the class is rejected by name"() {
+    void "a registered type name for a different Java type types the field with the registered Java type and its JDBC type"() {
         when:
-        generate(GenUnsupportedType)
+        Class<?> generated = generate(GenUnsupportedType)
 
-        then:
-        UnsupportedOperationException e = thrown()
-        e.message.contains('tag')
-        e.message.contains('string')
+        then: "the binder resolves the name and not the property's class, so the column is the registered type's"
+        generated.getDeclaredField('tag').type == String
+        generated.getDeclaredField('tag').getAnnotation(JdbcTypeCode).value() == Types.VARCHAR
+        newGenerator().typeFacets((HibernatePersistentProperty) entity(GenUnsupportedType).getPropertyByName('tag')) ==
+                new TypeFacets(null, Types.VARCHAR, [:], String)
     }
 
     void "Hibernate's own annotation binder reads the generated types and formulas"() {

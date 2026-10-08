@@ -82,7 +82,6 @@ class GeneratedDomainClassesDdlDifferentialSpec extends Specification {
      */
     private static final List<String> REFUSALS = [
             'neither side of the many-to-many owns it',
-            'is registered for the Java type',
     ]
 
     private static final AtomicInteger BOOTS = new AtomicInteger()
