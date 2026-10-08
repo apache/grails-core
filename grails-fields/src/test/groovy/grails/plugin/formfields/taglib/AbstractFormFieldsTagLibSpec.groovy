@@ -32,8 +32,12 @@ import org.grails.plugins.web.DefaultGrailsTagDateHelper
 import org.grails.scaffolding.model.DomainModelServiceImpl
 import org.grails.scaffolding.model.property.DomainPropertyFactory
 import org.grails.scaffolding.model.property.DomainPropertyFactoryImpl
+import org.grails.config.yaml.YamlPropertySourceLoader
 import org.grails.spring.beans.factory.InstanceFactoryBean
 import org.springframework.context.support.StaticMessageSource
+import org.springframework.core.env.StandardEnvironment
+import org.springframework.core.env.SystemEnvironmentPropertySource
+import org.springframework.core.io.ByteArrayResource
 import spock.lang.Specification
 import grails.plugin.formfields.mock.*
 
@@ -89,5 +93,16 @@ abstract class AbstractFormFieldsTagLibSpec extends Specification implements Gra
 	 		null // stops default return
 	 	}
 	}
+
+    /**
+     * An environment holding the given YAML, loaded as Grails loads {@code application.yml}, with the
+     * given variables standing in for environment variables.
+     */
+    protected static StandardEnvironment applicationYml(String yaml, Map<String, Object> variables = [:]) {
+        def environment = new StandardEnvironment()
+        environment.propertySources.addFirst(new YamlPropertySourceLoader().load('application.yml', new ByteArrayResource(yaml.bytes)).first())
+        environment.propertySources.addFirst(new SystemEnvironmentPropertySource('testEnvironment', variables))
+        environment
+    }
 
 }

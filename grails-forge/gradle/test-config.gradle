@@ -27,6 +27,7 @@ dependencies {
 // Skipped Test tasks still execute their dependsOn. Only wire the local-Maven publish chain
 // of the included builds when Forge tests will actually run.
 boolean forgeTestsEnabled = !['skipTests', 'skipForgeTests'].any { project.hasProperty(it) }
+boolean cacheTests = !doNotCacheTests
 
 tasks.withType(Test).configureEach { Test testTask ->
     if (forgeTestsEnabled) {
@@ -44,16 +45,11 @@ tasks.withType(Test).configureEach { Test testTask ->
 
     // Honor DO_NOT_CACHE_TESTS=1 so developers can repeatedly invoke the same test command
     // without --rerun-tasks (and without recompiling everything else).
-    outputs.cacheIf { !doNotCacheTests }
-    outputs.upToDateWhen { !doNotCacheTests }
+    outputs.cacheIf { cacheTests }
+    outputs.upToDateWhen { cacheTests }
 
-    onlyIf {
-        ![
-                'skipTests'
-        ].find {
-            project.hasProperty(it)
-        }
-    }
+    boolean skipped = project.hasProperty('skipTests')
+    onlyIf { !skipped }
     testLogging {
         events('passed', 'skipped', 'failed')
         showExceptions = true

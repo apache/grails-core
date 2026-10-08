@@ -17,11 +17,10 @@
  *  under the License.
  */
 
-import org.asciidoctor.gradle.jvm.AsciidoctorTask
+import grails.doc.gradle.ConvertAsciidocTask
 
 plugins {
     id 'groovy'
-    id 'org.asciidoctor.jvm.convert'
     id 'org.apache.grails.buildsrc.dependency-validator'
 }
 
@@ -74,17 +73,10 @@ dependencies {
     implementation 'org.mongodb:mongodb-driver-sync'
 }
 
-tasks.named('asciidoctor', AsciidoctorTask) { AsciidoctorTask it ->
+tasks.register('asciidoctor', ConvertAsciidocTask) { ConvertAsciidocTask it ->
     dependsOn('resolveMongodbVersion')
 
-    it.inputs.dir(project.layout.projectDirectory.dir('src/docs/asciidoc')).withPropertyName('docsSrcDir').withPathSensitivity(PathSensitivity.RELATIVE)
-    it.outputs.dir layout.buildDirectory.dir('asciidoc/manual')
-
-    it.jvm {
-        jvmArgs("--add-opens", "java.base/sun.nio.ch=ALL-UNNAMED", "--add-opens", "java.base/java.io=ALL-UNNAMED")
-    }
-    it.baseDirFollowsSourceFile()
-    it.sourceDir layout.projectDirectory.dir('src/docs/asciidoc')
+    it.sourceDir = layout.projectDirectory.dir('src/docs/asciidoc')
     it.outputDir = layout.buildDirectory.dir('asciidoc/manual')
     it.attributes = [
             'experimental'                           : 'true',
@@ -99,6 +91,10 @@ tasks.named('asciidoctor', AsciidoctorTask) { AsciidoctorTask it ->
             'grailsTestExamplesMongodbHibernate5Dir' : project.layout.projectDirectory.dir('src/docs/asciidoc').asFile.relativePath(rootProject.findProject(':grails-test-examples-mongodb-hibernate5').layout.projectDirectory.asFile),
             'grailsDataMongodbCoreDir'               : project.layout.projectDirectory.dir('src/docs/asciidoc/querying').asFile.relativePath(rootProject.findProject(':grails-data-mongodb-core').layout.projectDirectory.asFile)
     ]
+    it.includedFiles.from(
+            rootProject.findProject(':grails-test-examples-mongodb-base').layout.projectDirectory.dir('src/test/groovy'),
+            rootProject.findProject(':grails-test-examples-mongodb-hibernate5').layout.projectDirectory.dir('src/test/groovy'),
+            rootProject.findProject(':grails-data-mongodb-core').layout.projectDirectory.dir('src/test/groovy'))
 }
 
 tasks.withType(Groovydoc).configureEach { Groovydoc groovydoc ->

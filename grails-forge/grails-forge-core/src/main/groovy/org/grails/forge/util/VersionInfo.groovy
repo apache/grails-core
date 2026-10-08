@@ -22,10 +22,13 @@ import groovy.transform.CompileStatic
 import jakarta.annotation.Nonnull
 import org.grails.forge.options.JdkVersion
 import java.nio.charset.StandardCharsets
+import java.time.LocalDate
+import java.time.format.DateTimeParseException
 
 @CompileStatic
 class VersionInfo {
 
+    private static final String END_OF_SUPPORT = 'grails.endOfSupport'
     private static final Properties VERSIONS = new Properties()
 
     static {
@@ -87,6 +90,23 @@ class VersionInfo {
     }
 
     /**
+     * Retrieves the last day the Grails release line is supported.
+     *
+     * @return The end of support date, or empty when none is configured
+     */
+    static Optional<LocalDate> getEndOfSupport() {
+        Object endOfSupport = VERSIONS.get(END_OF_SUPPORT)
+        if (endOfSupport == null) {
+            return Optional.empty()
+        }
+        try {
+            return Optional.of(LocalDate.parse(endOfSupport.toString().trim()))
+        } catch (DateTimeParseException ignored) {
+            return Optional.empty()
+        }
+    }
+
+    /**
      * Gets the dependency versions.
      *
      * @return The versions
@@ -94,7 +114,9 @@ class VersionInfo {
     static Map<String, String> getDependencyVersions() {
         Map<String, String> map = new LinkedHashMap<>()
         for (String key : VERSIONS.stringPropertyNames().sort()) {
-            map.put(key, VERSIONS.getProperty(key))
+            if (key != END_OF_SUPPORT) {
+                map.put(key, VERSIONS.getProperty(key))
+            }
         }
         return Collections.unmodifiableMap(map)
     }

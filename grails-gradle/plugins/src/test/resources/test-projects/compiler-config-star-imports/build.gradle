@@ -9,8 +9,9 @@ grails {
 
 tasks.register('inspectImports') {
     dependsOn 'generateCompileGroovyGrailsCompilerConfig'
+    def combined = file('build/grailsGroovyCompilerConfig-compileGroovy.groovy')
     doLast {
-        def script = file('build/grailsGroovyCompilerConfig-compileGroovy.groovy').text
+        def script = combined.text
         def stars = (script =~ /star '([^']+)'/).collect { it[1] }.sort()
         println "STAR_IMPORTS=${stars}"
     }

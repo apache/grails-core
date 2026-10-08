@@ -91,6 +91,7 @@ grailsVersionInfoTask.configure { WriteGrailsVersionInfoTask it ->
     it.dependsOn(bomPublicationTask)
     it.bomPublicationFile = rootProject.layout.projectDirectory.file('../grails-bom/default/build/publications/maven/pom-default.xml')
     it.versionsDirectory = grailsVersionsPath
+    it.endOfSupport = findProperty('grailsEndOfSupport') as String
 }
 sourceSets.main.resources.srcDir(grailsVersionsPath)
 

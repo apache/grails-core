@@ -38,9 +38,13 @@ import jakarta.servlet.http.HttpServletRequest
 
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Value
+import org.springframework.boot.context.properties.bind.Bindable
+import org.springframework.boot.context.properties.bind.Binder
+import org.springframework.context.EnvironmentAware
 import org.springframework.context.MessageSource
 import org.springframework.context.MessageSourceResolvable
 import org.springframework.context.NoSuchMessageException
+import org.springframework.core.env.Environment
 import org.springframework.web.servlet.LocaleResolver
 
 import grails.gorm.validation.DisplayType
@@ -66,7 +70,7 @@ import org.grails.web.servlet.mvc.GrailsWebRequest
 import static FormFieldsTemplateService.toPropertyNameFormat
 
 @Slf4j
-class FormFieldsTagLib {
+class FormFieldsTagLib implements EnvironmentAware {
 
     static final namespace = 'f'
 
@@ -84,14 +88,11 @@ class FormFieldsTagLib {
     @Value('${grails.plugin.fields.localizeNumbers:true}')
     Boolean localizeNumbers
 
-    @Value('${grails.plugin.fields.exclusions.list:#{T(java.util.Arrays).asList("id", "dateCreated", "lastUpdated")}}')
-    List<String> exclusionsList
+    List<String> exclusionsList = ['id', 'dateCreated', 'lastUpdated']
 
-    @Value('${grails.plugin.fields.exclusions.input:#{T(java.util.Arrays).asList("version", "dateCreated", "lastUpdated")}}')
-    List<String> exclusionsInput
+    List<String> exclusionsInput = ['version', 'dateCreated', 'lastUpdated']
 
-    @Value('${grails.plugin.fields.exclusions.display:#{T(java.util.Arrays).asList("version", "dateCreated", "lastUpdated")}}')
-    List<String> exclusionsDisplay
+    List<String> exclusionsDisplay = ['version', 'dateCreated', 'lastUpdated']
 
     enum ExclusionType {
         List, Display, Input
@@ -110,6 +111,19 @@ class FormFieldsTagLib {
     MessageSource messageSource
 
     static defaultEncodeAs = [taglib: 'raw']
+
+    /**
+     * Reads the {@code grails.plugin.fields.exclusions} settings, each given as a comma-separated
+     * value or as a list. They are bound rather than injected with {@code @Value}, which cannot read
+     * a list from {@code application.yml}, because Grails exposes such a list element by element.
+     */
+    @Override
+    void setEnvironment(Environment environment) {
+        Binder binder = Binder.get(environment)
+        exclusionsList = binder.bind('grails.plugin.fields.exclusions.list', Bindable.listOf(String)).orElse(exclusionsList)
+        exclusionsInput = binder.bind('grails.plugin.fields.exclusions.input', Bindable.listOf(String)).orElse(exclusionsInput)
+        exclusionsDisplay = binder.bind('grails.plugin.fields.exclusions.display', Bindable.listOf(String)).orElse(exclusionsDisplay)
+    }
 
     class BeanAndPrefix {
         Object bean

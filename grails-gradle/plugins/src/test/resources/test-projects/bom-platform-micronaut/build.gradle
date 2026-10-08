@@ -15,12 +15,17 @@ dependencies {
 }
 
 tasks.register('inspectBomSetup') {
-    doLast {
+    def report = providers.provider {
         // Observing compileClasspath runs the dependency actions of its hierarchy, which is when
         // the auto-applied platform lands on 'implementation'.
         def compileDeps = configurations.compileClasspath.incoming.dependencies
         def micronautBom = compileDeps.find { it.group == 'org.apache.grails' && it.name == 'grails-micronaut-bom' }
-        println "HAS_MICRONAUT_BOM=${micronautBom != null}"
-        println "MICRONAUT_BOM_CATEGORY=${micronautBom?.attributes?.getAttribute(Category.CATEGORY_ATTRIBUTE)}"
+        [
+                "HAS_MICRONAUT_BOM=${micronautBom != null}",
+                "MICRONAUT_BOM_CATEGORY=${micronautBom?.attributes?.getAttribute(Category.CATEGORY_ATTRIBUTE)}"
+        ]*.toString()
+    }
+    doLast {
+        report.get().each { println it }
     }
 }

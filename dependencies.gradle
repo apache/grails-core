@@ -26,12 +26,12 @@ ext {
             'asciidoctor-gradle-jvm.version': '4.0.5',
             'asciidoctorj.version'          : '3.0.1',
             'asm.version'                   : '9.10.1',
-            'asset-pipeline-gradle.version' : '5.2.0',
+            'asset-pipeline-gradle.version' : '5.2.2',
             'commons-text.version'          : '1.15.0',
             'directory-watcher.version'     : '0.19.1',
             'gradle-groovy.version'         : '4.0.33',
             'gradle-spock.version'          : '2.4-groovy-4.0',
-            'grails-publish-plugin.version' : '1.0.0-RC2',
+            'grails-publish-plugin.version' : '1.0.0',
             'javaparser-core.version'       : '3.28.2',
             // Tracks the JLine version Groovy ships (groovy-groovysh), so the framework and groovysh
             // share one terminal stack - keep in step with groovy.version.
@@ -70,7 +70,7 @@ ext {
     ]
 
     bomDependencyVersions = [
-            'asset-pipeline-bom.version'    : '5.2.0',
+            'asset-pipeline-bom.version'    : '5.2.2',
             'cas-client-core.version'       : '4.1.1',
             'bootstrap-icons.version'       : '1.13.1',
             'bootstrap.version'             : '5.3.8',

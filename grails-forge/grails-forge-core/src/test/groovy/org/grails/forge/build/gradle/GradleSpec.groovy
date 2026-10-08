@@ -57,6 +57,17 @@ class GradleSpec extends Specification implements ProjectFixture, ContextFixture
         gradleProps.contains("org.gradle.jvmargs=-Dfile.encoding=UTF-8 -Xmx1024M")
     }
 
+    void "a generated #applicationType project uses the configuration cache"() {
+        given:
+        final def output = generate(applicationType, new Options(DevelopmentReloading.DEVTOOLS))
+
+        expect:
+        output["gradle.properties"].contains("org.gradle.configuration-cache=true")
+
+        where:
+        applicationType << ApplicationType.values()
+    }
+
     void "test build gradle"() {
         given:
         final def output = generate(ApplicationType.WEB, new Options(DevelopmentReloading.DEVTOOLS))

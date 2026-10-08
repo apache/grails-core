@@ -75,15 +75,18 @@ def collectTestTasks = { List<String> phases ->
             }
 }
 
-def collectResults = { List<String> phases ->
-    def results = []
-    def xmlSlurper = new groovy.xml.XmlSlurper()
-    xmlSlurper.setFeature('http://apache.org/xml/features/nonvalidating/load-external-dtd', false)
-    xmlSlurper.setFeature('http://xml.org/sax/features/namespaces', false)
+class MarkdownTestReport {
 
-    rootProject.subprojects.findAll { it != project }.each { subproject ->
-        phases.each { phase ->
-            def testResultsDir = subproject.layout.buildDirectory.dir("test-results/${phase}").get().asFile
+    /**
+     * @param resultDirs the test results directory of every phase, as [project path, phase, directory]
+     */
+    static List<Map> collectResults(List<List> resultDirs) {
+        def results = []
+        def xmlSlurper = new groovy.xml.XmlSlurper()
+        xmlSlurper.setFeature('http://apache.org/xml/features/nonvalidating/load-external-dtd', false)
+        xmlSlurper.setFeature('http://xml.org/sax/features/namespaces', false)
+
+        resultDirs.each { String projectPath, String phase, File testResultsDir ->
             if (!testResultsDir.directory) {
                 return
             }
@@ -96,7 +99,7 @@ def collectResults = { List<String> phases ->
                 int skipped = suite.@skipped.text() as int
 
                 results << [
-                        project : subproject.path,
+                        project : projectPath,
                         phase   : phase,
                         suite   : suite.@name.text(),
                         tests   : tests,
@@ -106,39 +109,40 @@ def collectResults = { List<String> phases ->
                 ]
             }
         }
+        results
     }
-    results
-}
 
-def writeMarkdownReport = { Map variant, List results ->
-    def reportFile = layout.buildDirectory.file(variant.markdownFile).get().asFile
-    def totals = [
-            tests   : results.sum { it.tests } ?: 0,
-            failures: results.sum { it.failures } ?: 0,
-            errors  : results.sum { it.errors } ?: 0,
-            skipped : results.sum { it.skipped } ?: 0,
-    ]
-    def markdown = new StringBuilder()
-    markdown << "# ${variant.title}\n\n"
-    markdown << "HTML report: `${layout.buildDirectory.dir(variant.reportDir).get().asFile}/index.html`\n\n"
-    markdown << '## Summary\n\n'
-    markdown << '| Tests | Failures | Errors | Skipped |\n'
-    markdown << '| :--- | :--- | :--- | :--- |\n'
-    markdown << "| ${totals.tests} | ${totals.failures} | ${totals.errors} | ${totals.skipped} |\n\n"
+    static String render(String title, File htmlReportDir, List<Map> results) {
+        def totals = [
+                tests   : results.sum { it.tests } ?: 0,
+                failures: results.sum { it.failures } ?: 0,
+                errors  : results.sum { it.errors } ?: 0,
+                skipped : results.sum { it.skipped } ?: 0,
+        ]
+        def markdown = new StringBuilder()
+        markdown << "# ${title}\n\n"
+        markdown << "HTML report: `${htmlReportDir}/index.html`\n\n"
+        markdown << '## Summary\n\n'
+        markdown << '| Tests | Failures | Errors | Skipped |\n'
+        markdown << '| :--- | :--- | :--- | :--- |\n'
+        markdown << "| ${totals.tests} | ${totals.failures} | ${totals.errors} | ${totals.skipped} |\n\n"
 
-    if (results) {
-        markdown << '## Suites\n\n'
-        markdown << '| Project | Phase | Suite | Tests | Failures | Errors | Skipped |\n'
-        markdown << '| :--- | :--- | :--- | :--- | :--- | :--- | :--- |\n'
-        results.sort { a, b -> a.project <=> b.project ?: a.phase <=> b.phase ?: a.suite <=> b.suite }.each { result ->
-            markdown << "| ${escapeMarkdown(result.project)} | ${escapeMarkdown(result.phase)} | ${escapeMarkdown(result.suite)} | ${result.tests} | ${result.failures} | ${result.errors} | ${result.skipped} |\n"
+        if (results) {
+            markdown << '## Suites\n\n'
+            markdown << '| Project | Phase | Suite | Tests | Failures | Errors | Skipped |\n'
+            markdown << '| :--- | :--- | :--- | :--- | :--- | :--- | :--- |\n'
+            results.sort { a, b -> a.project <=> b.project ?: a.phase <=> b.phase ?: a.suite <=> b.suite }.each { result ->
+                markdown << "| ${escapeMarkdown(result.project)} | ${escapeMarkdown(result.phase)} | ${escapeMarkdown(result.suite)} | ${result.tests} | ${result.failures} | ${result.errors} | ${result.skipped} |\n"
+            }
+        } else {
+            markdown << 'No test results were found. Run the aggregate report task with `--continue` after executing tests.\n'
         }
-    } else {
-        markdown << 'No test results were found. Run the aggregate report task with `--continue` after executing tests.\n'
+        markdown.toString()
     }
 
-    reportFile.text = markdown.toString()
-    logger.lifecycle("Markdown aggregate test report: ${reportFile}")
+    static String escapeMarkdown(String value) {
+        value.replace('|', '\\|').replace('\n', ' ')
+    }
 }
 
 reportVariants.each { name, variant ->
@@ -154,8 +158,18 @@ reportVariants.each { name, variant ->
         dependsOn tasks.named(variant.taskName, TestReport)
         outputs.file(layout.buildDirectory.file(variant.markdownFile))
 
-        doLast {
-            writeMarkdownReport(variant, collectResults(variant.phases))
+        List<List> resultDirs = rootProject.subprojects.findAll { it != project }.collectMany { subproject ->
+            variant.phases.collect { String phase ->
+                [subproject.path, phase, subproject.layout.buildDirectory.dir("test-results/${phase}").get().asFile]
+            }
+        }
+        String title = variant.title
+        File reportFile = layout.buildDirectory.file(variant.markdownFile).get().asFile
+        File htmlReportDir = layout.buildDirectory.dir(variant.reportDir).get().asFile
+
+        doLast { Task task ->
+            reportFile.text = MarkdownTestReport.render(title, htmlReportDir, MarkdownTestReport.collectResults(resultDirs))
+            task.logger.lifecycle("Markdown aggregate test report: ${reportFile}")
         }
     }
 }
@@ -207,10 +221,6 @@ tasks.named('check') {
     reportVariants.each { name, variant ->
         dependsOn tasks.named("${name}Tests")
     }
-}
-
-String escapeMarkdown(String value) {
-    value.replace('|', '\\|').replace('\n', ' ')
 }
 
 // the java plugin is applied to this project, but we do not build a jar file since

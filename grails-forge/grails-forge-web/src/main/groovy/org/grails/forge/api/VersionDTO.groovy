@@ -19,7 +19,11 @@
 package org.grails.forge.api
 
 import groovy.transform.CompileStatic
+import io.swagger.v3.oas.annotations.media.Schema
+import jakarta.annotation.Nullable
 import org.grails.forge.util.VersionInfo
+
+import java.time.LocalDate
 
 /**
  * Information about the application.
@@ -35,6 +39,15 @@ class VersionDTO extends Linkable {
      */
     Map<String, String> getVersions() {
         return VersionInfo.getDependencyVersions()
+    }
+
+    /**
+     * @return The last day this Grails release line is supported (ISO-8601 date), or null when none is configured
+     */
+    @Nullable
+    @Schema(description = 'The last day this Grails release line is supported. Not present when none is configured.', format = 'date')
+    String getEndOfSupport() {
+        return VersionInfo.getEndOfSupport().map(LocalDate::toString).orElse(null)
     }
 
     @Override

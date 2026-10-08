@@ -185,14 +185,15 @@ tasks.register('publishAllToMavenLocal') {
     group = 'publishing'
 
     def execSupport = objects.newInstance(ExecSupport)
+    // read while configuring: the build script's layout and logger are not available while a task runs
+    File projectRoot = layout.projectDirectory.asFile
 
-    doLast {
-        def projectRoot = layout.projectDirectory.asFile
+    doLast { Task task ->
         def javaHome = System.getProperty('java.home')
         def gradlew = Os.isFamily(Os.FAMILY_WINDOWS) ? 'gradlew.bat' : 'gradlew'
 
         def runPublish = { File workingDir, String label ->
-            logger.lifecycle("--- Publishing ${label} to Maven Local ---")
+            task.logger.lifecycle("--- Publishing ${label} to Maven Local ---")
             execSupport.process.exec { ExecSpec exec ->
                 exec.environment('JAVA_HOME', javaHome)
                 exec.workingDir = workingDir

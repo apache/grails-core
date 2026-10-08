@@ -21,6 +21,7 @@ package org.grails.forge.web
 import grails.testing.mixin.integration.Integration
 import grails.web.mapping.cors.GrailsCorsConfiguration
 import groovy.json.JsonSlurper
+import org.grails.forge.util.VersionInfo
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Value
 import spock.lang.Specification
@@ -30,6 +31,7 @@ import java.net.http.HttpRequest
 import java.net.http.HttpResponse
 import java.nio.charset.StandardCharsets
 import java.time.Duration
+import java.time.LocalDate
 import java.util.zip.ZipInputStream
 
 @Integration(applicationClass = Application)
@@ -50,6 +52,16 @@ class ForgeApiIntegrationSpec extends Specification {
         response.status == 200
         response.contentType.startsWith('application/json')
         json.versions['grails.version']
+    }
+
+    void "GET /versions reports the end of support date outside the version map"() {
+        when:
+        Map json = json(get('/versions'))
+
+        then:
+        json.versions['grails.version'] == VersionInfo.getGrailsVersion()
+        LocalDate.parse(json.endOfSupport as String) == VersionInfo.getEndOfSupport().get()
+        !(json.versions as Map).containsKey('grails.endOfSupport')
     }
 
     void "GET application type endpoints expose the web application contract"() {

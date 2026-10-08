@@ -12,21 +12,25 @@ dependencies {
 }
 
 tasks.register('inspectGspCompileClasspath') {
-    doLast {
-        println "HAS_GSP_COMPILE_CONFIGURATION=${configurations.findByName('gspCompile') != null}"
-        println "PAGE_COMPILER_STATIC=${tasks.named('compileGroovyPages').get().compileStatic.get()}"
-        println "WEBAPP_PAGE_COMPILER_STATIC=${tasks.named('compileWebappGroovyPages').get().compileStatic.get()}"
-
+    def report = providers.provider {
         def mainPaths = classpathOf('compileGroovyPages')
         def webappPaths = classpathOf('compileWebappGroovyPages')
+        [
+                "HAS_GSP_COMPILE_CONFIGURATION=${configurations.findByName('gspCompile') != null}",
+                "PAGE_COMPILER_STATIC=${tasks.named('compileGroovyPages').get().compileStatic.get()}",
+                "WEBAPP_PAGE_COMPILER_STATIC=${tasks.named('compileWebappGroovyPages').get().compileStatic.get()}",
 
-        println "MAIN_HAS_COMPILE_CLASSPATH=${containsEntry(mainPaths, 'compile-classpath-marker')}"
-        println "MAIN_HAS_PROVIDED_COMPILE=${containsEntry(mainPaths, 'provided-compile-marker')}"
-        println "MAIN_HAS_CLASSES_DIR=${mainPaths.any { it.contains('/build/classes/') }}"
+                "MAIN_HAS_COMPILE_CLASSPATH=${containsEntry(mainPaths, 'compile-classpath-marker')}",
+                "MAIN_HAS_PROVIDED_COMPILE=${containsEntry(mainPaths, 'provided-compile-marker')}",
+                "MAIN_HAS_CLASSES_DIR=${mainPaths.any { it.contains('/build/classes/') }}",
 
-        println "WEBAPP_HAS_COMPILE_CLASSPATH=${containsEntry(webappPaths, 'compile-classpath-marker')}"
-        println "WEBAPP_HAS_PROVIDED_COMPILE=${containsEntry(webappPaths, 'provided-compile-marker')}"
-        println "WEBAPP_HAS_CLASSES_DIR=${webappPaths.any { it.contains('/build/classes/') }}"
+                "WEBAPP_HAS_COMPILE_CLASSPATH=${containsEntry(webappPaths, 'compile-classpath-marker')}",
+                "WEBAPP_HAS_PROVIDED_COMPILE=${containsEntry(webappPaths, 'provided-compile-marker')}",
+                "WEBAPP_HAS_CLASSES_DIR=${webappPaths.any { it.contains('/build/classes/') }}"
+        ]*.toString()
+    }
+    doLast {
+        report.get().each { println it }
     }
 }
 
@@ -36,15 +40,19 @@ tasks.register('inspectGspCompileClasspath') {
 tasks.register('inspectGspRuntimeClasspath') {
     def test = tasks.named('test').get()
     def testDependencies = test.taskDependencies.getDependencies(test)*.name
-
-    doLast {
+    def report = providers.provider {
         def mainRuntime = runtimeClasspathOf('main')
         def testRuntime = runtimeClasspathOf('test')
+        [
+                "MAIN_RUNTIME_HAS_PAGES=${containsEntry(mainRuntime, 'build/gsp-classes/main')}",
+                "MAIN_RUNTIME_HAS_WEBAPP_PAGES=${containsEntry(mainRuntime, 'build/gsp-classes/webapp')}",
+                "TEST_RUNTIME_HAS_PAGES=${containsEntry(testRuntime, 'build/gsp-classes/main')}",
+                "TEST_RUNTIME_HAS_WEBAPP_PAGES=${containsEntry(testRuntime, 'build/gsp-classes/webapp')}"
+        ]*.toString()
+    }
 
-        println "MAIN_RUNTIME_HAS_PAGES=${containsEntry(mainRuntime, 'build/gsp-classes/main')}"
-        println "MAIN_RUNTIME_HAS_WEBAPP_PAGES=${containsEntry(mainRuntime, 'build/gsp-classes/webapp')}"
-        println "TEST_RUNTIME_HAS_PAGES=${containsEntry(testRuntime, 'build/gsp-classes/main')}"
-        println "TEST_RUNTIME_HAS_WEBAPP_PAGES=${containsEntry(testRuntime, 'build/gsp-classes/webapp')}"
+    doLast {
+        report.get().each { println it }
 
         // the pages are on the class path builtBy the tasks that compile them, so running the tests
         // compiles them first rather than leaving whatever an earlier run wrote

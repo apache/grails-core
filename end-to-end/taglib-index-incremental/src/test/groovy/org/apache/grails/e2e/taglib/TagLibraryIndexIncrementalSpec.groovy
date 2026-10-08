@@ -211,7 +211,8 @@ class TagLibraryIndexIncrementalSpec extends Specification {
             dependencyResolutionManagement {
                 repositories {
                     maven { url = uri('${repo.replace('\\\\', '/')}') }
-                    mavenCentral()
+                    // the snapshots of the libraries Grails also works on, such as the asset pipeline
+                    configurePluginRepositories(delegate)
                 }
             }
             rootProject.name = 'taglib-index-incremental-app'

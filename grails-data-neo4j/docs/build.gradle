@@ -17,7 +17,7 @@
  *  under the License.
  */
 
-import org.asciidoctor.gradle.jvm.AsciidoctorTask
+import grails.doc.gradle.ConvertAsciidocTask
 
 buildscript {
     apply from: rootProject.layout.projectDirectory.file('dependencies.gradle')
@@ -25,7 +25,6 @@ buildscript {
 
 plugins {
     id 'groovy'
-    id 'org.asciidoctor.jvm.convert'
 }
 
 version = projectVersion
@@ -57,15 +56,8 @@ dependencies {
             }
 }
 
-tasks.named('asciidoctor', AsciidoctorTask) { AsciidoctorTask it ->
-    it.inputs.dir(project.layout.projectDirectory.dir('src/docs/asciidoc')).withPropertyName('docsSrcDir').withPathSensitivity(PathSensitivity.RELATIVE)
-    it.outputs.dir layout.buildDirectory.dir('asciidoc/manual')
-
-    it.jvm {
-        jvmArgs("--add-opens", "java.base/sun.nio.ch=ALL-UNNAMED", "--add-opens", "java.base/java.io=ALL-UNNAMED")
-    }
-    it.baseDirFollowsSourceFile()
-    it.sourceDir layout.projectDirectory.dir('src/docs/asciidoc')
+tasks.register('asciidoctor', ConvertAsciidocTask) { ConvertAsciidocTask it ->
+    it.sourceDir = layout.projectDirectory.dir('src/docs/asciidoc')
     it.outputDir = layout.buildDirectory.dir('asciidoc/manual')
     it.attributes = [
             'experimental' : 'true',
@@ -76,9 +68,14 @@ tasks.named('asciidoctor', AsciidoctorTask) { AsciidoctorTask it ->
             'version'      : projectVersion,
             'pluginVersion': projectVersion,
             'neo4jVersion' : combinedVersions['neo4j-harness.version'],
-            'exampledir'   : rootProject.findProject(':grails-test-examples-neo4j-base').layout.projectDirectory.asFile.absolutePath,
-            'testsdir'     : rootProject.findProject(':grails-data-neo4j-core').layout.projectDirectory.dir('src/test/groovy').asFile.absolutePath
     ]
+    def exampleDir = rootProject.findProject(':grails-test-examples-neo4j-base').layout.projectDirectory
+    def testsDir = rootProject.findProject(':grails-data-neo4j-core').layout.projectDirectory.dir('src/test/groovy')
+    it.pathAttributes = [
+            'exampledir': exampleDir.asFile,
+            'testsdir'  : testsDir.asFile,
+    ]
+    it.includedFiles.from(exampleDir.dir('grails-app'), testsDir)
 }
 
 tasks.withType(Groovydoc).configureEach { Groovydoc groovydoc ->

@@ -27,12 +27,12 @@ import org.springframework.util.StringUtils
 /**
  * A {@link org.springframework.core.env.PropertySource} that doesn't return values for navigable submaps
  *
- * <p>A list of objects, or of lists holding objects, is presented element by element, under the
- * indexed names Spring Boot binds a list from, such as {@code app.items[0].name}, rather than as
- * one value. Spring Boot binds a
- * value it finds under the name of the list itself by conversion rather than element by element,
- * so a {@code List} of beans would otherwise be bound as a list of maps. A list of plain values is
- * presented as it is.</p>
+ * <p>A non-empty list is presented element by element, under the indexed names Spring Boot binds
+ * a list from, such as {@code app.names[0]} or {@code app.items[0].name}, rather than as one value.
+ * Spring Boot binds a value it finds under the name of the list itself by conversion rather than
+ * element by element, so a {@code List} of beans would otherwise be bound as a list of maps and
+ * placeholders in scalar elements would not be resolved. Empty lists remain available as values
+ * so they can clear defaults during binding.</p>
  *
  * @deprecated This class behavior is closely tied to {@link org.grails.config.NavigableMap} which will be removed in future release.
  * @author Graeme Rocher
@@ -45,7 +45,7 @@ class NavigableMapPropertySource extends MapPropertySource {
     final String[] propertyNames
     final String[] navigablePropertyNames
 
-    private final Set<String> objectLists
+    private final Set<String> indexedLists
     private final Map<String, Object> elementProperties
 
     NavigableMapPropertySource(String name, NavigableMap source) {
@@ -54,12 +54,12 @@ class NavigableMapPropertySource extends MapPropertySource {
         Map<String, Object> elements = new LinkedHashMap<>()
         for (String key : source.keySet()) {
             Object value = unwrap(source.get(key))
-            if (isObjectList(value)) {
+            if (value instanceof List && !((List) value).isEmpty()) {
                 lists << key
                 flatten(elements, key, value)
             }
         }
-        this.objectLists = lists
+        this.indexedLists = lists
         this.elementProperties = elements
 
         Set<String> names = new LinkedHashSet<>()
@@ -80,12 +80,12 @@ class NavigableMapPropertySource extends MapPropertySource {
 
     @Override
     boolean containsProperty(String name) {
-        !objectLists.contains(name) && (super.containsProperty(name) || elementProperties.containsKey(name))
+        !indexedLists.contains(name) && (super.containsProperty(name) || elementProperties.containsKey(name))
     }
 
     @Override
     Object getProperty(String name) {
-        if (objectLists.contains(name)) {
+        if (indexedLists.contains(name)) {
             return null
         }
         def value = super.getProperty(name)
@@ -102,16 +102,6 @@ class NavigableMapPropertySource extends MapPropertySource {
 
     Object getNavigableProperty(String name) {
         super.getProperty(name)
-    }
-
-    /**
-     * A list holding an object anywhere in it, including within a list it holds.
-     */
-    private static boolean isObjectList(Object value) {
-        value instanceof List && ((List) value).any { Object element ->
-            Object unwrapped = unwrap(element)
-            unwrapped instanceof Map || isObjectList(unwrapped)
-        }
     }
 
     /**
