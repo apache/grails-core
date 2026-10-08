@@ -87,30 +87,37 @@ class GrailsLiquibase extends SpringLiquibase {
 
     @Override
     protected void performUpdate(Liquibase liquibase) throws LiquibaseException {
-        // begun before the migration callbacks run; a change listener a callback sets of its own is added to the one
-        // that reports each change set, so the callback works as it did before the update was reported
+        if (!applicationContext.containsBean('migrationCallbacks')) {
+            performRecordedUpdate(liquibase)
+            return
+        }
+
+        def database = liquibase.database
+        def migrationCallbacks = applicationContext.getBean('migrationCallbacks')
+
+        if (migrationCallbacks.metaClass.respondsTo(migrationCallbacks, 'beforeStartMigration')) {
+            migrationCallbacks.invokeMethod('beforeStartMigration', [database] as Object[])
+        }
+        if (migrationCallbacks.metaClass.respondsTo(migrationCallbacks, 'onStartMigration')) {
+            migrationCallbacks.invokeMethod('onStartMigration', [database, liquibase, changeLog] as Object[])
+        }
+
+        performRecordedUpdate(liquibase)
+
+        if (migrationCallbacks.metaClass.respondsTo(migrationCallbacks, 'afterMigrations')) {
+            migrationCallbacks.invokeMethod('afterMigrations', [database] as Object[])
+        }
+    }
+
+    /**
+     * Runs the update as a {@link StartupTask} when anything records the application's start. The task is begun
+     * only once the migration callbacks have run: counting the change sets parses the change log, and Liquibase
+     * runs the update from that parse, so a change log parameter a callback sets has to be set before it.
+     */
+    private void performRecordedUpdate(Liquibase liquibase) throws LiquibaseException {
         StartupTask task = startTask(liquibase)
         try {
-            if (!applicationContext.containsBean('migrationCallbacks')) {
-                super.performUpdate(liquibase)
-                return
-            }
-
-            def database = liquibase.database
-            def migrationCallbacks = applicationContext.getBean('migrationCallbacks')
-
-            if (migrationCallbacks.metaClass.respondsTo(migrationCallbacks, 'beforeStartMigration')) {
-                migrationCallbacks.invokeMethod('beforeStartMigration', [database] as Object[])
-            }
-            if (migrationCallbacks.metaClass.respondsTo(migrationCallbacks, 'onStartMigration')) {
-                migrationCallbacks.invokeMethod('onStartMigration', [database, liquibase, changeLog] as Object[])
-            }
-
             super.performUpdate(liquibase)
-
-            if (migrationCallbacks.metaClass.respondsTo(migrationCallbacks, 'afterMigrations')) {
-                migrationCallbacks.invokeMethod('afterMigrations', [database] as Object[])
-            }
         }
         finally {
             task?.close()
@@ -121,7 +128,7 @@ class GrailsLiquibase extends SpringLiquibase {
      * Begins a {@link StartupTask} for the update when anything records the application's start, such as the
      * startup progress page, which then shows how many change sets are left and the one being run. Returns
      * {@code null} when nothing records the start, since knowing how many change sets there are takes one more
-     * read of the change log and the database.
+     * read of the database.
      */
     private StartupTask startTask(Liquibase liquibase) {
         if (!StartupTask.isRecorded(applicationContext)) {
