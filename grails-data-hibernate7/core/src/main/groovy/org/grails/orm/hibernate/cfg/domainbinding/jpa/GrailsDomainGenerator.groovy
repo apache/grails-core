@@ -1279,10 +1279,6 @@ class GrailsDomainGenerator {
         if (boundAsColumn(property)) {
             return columnCollectionProblem(property)
         }
-        String writeProblem = writeRestrictionProblem(mapped)
-        if (writeProblem != null) {
-            return writeProblem
-        }
         CollectionKind kind = CollectionKind.of(property.type)
         if (property.type == SortedSet) {
             return 'a SortedSet: the binder names java.util.SortedSet as the collection\'s custom type, which Hibernate rejects when it boots'
@@ -1327,21 +1323,6 @@ class GrailsDomainGenerator {
                 key.read() != null || key.write() != null || key.comment() != null) {
             return 'the column config of the collection property sets a length, a precision, a scale, a default, a read or ' +
                     'write expression or a comment, which a join column cannot state'
-        }
-        return null
-    }
-
-    /**
-     * {@code PropertyBinder} overwrites the insertable and updatable flags of every property with the ones of its columns, which
-     * are always set, so the binder ignores {@code insertable: false} and {@code updatable: false} (pinned in
-     * {@code GrailsDomainBinderOptionDefectSpec}). The generator states them where there is a column to state them on (a simple
-     * property, an enum, a foreign key). A property with no column of its own, an embedded object, a collection or the inverse
-     * side of a one-to-one, has nothing to state them on, so the generator rejects it rather than drop the option.
-     */
-    private static String writeRestrictionProblem(PropertyConfig mapped) {
-        if (mapped != null && (!mapped.insertable || !mapped.updatable)) {
-            return 'insertable: false or updatable: false is mapped on a property that has no column of its own (the binder ignores ' +
-                    'both for every property), and annotations cannot state them on it'
         }
         return null
     }
@@ -1714,10 +1695,6 @@ class GrailsDomainGenerator {
      */
     private String toManyProblem(HibernateToManyEntityProperty property) {
         PropertyConfig mapped = property.hibernateMappedForm
-        String writeProblem = writeRestrictionProblem(mapped)
-        if (writeProblem != null) {
-            return writeProblem
-        }
         CollectionKind kind = CollectionKind.of(property.type)
         if (kind == null) {
             return "the declared type [${property.type?.name}] is not one of Set, SortedSet, List or Collection, " +
@@ -1913,7 +1890,7 @@ class GrailsDomainGenerator {
         }
         PropertyConfig mapped = property.hibernateMappedForm
         if (inverseOneToOne) {
-            return writeRestrictionProblem(mapped)
+            return null
         }
         boolean compositeTarget = compositeIdentifier(target)
         if (compositeTarget) {
@@ -2274,13 +2251,19 @@ class GrailsDomainGenerator {
         return nullableInComponent(facets, enclosing)
     }
 
-    /** {@code ComponentUpdater} makes every column of an enclosing component nullable when that component is. */
+    /**
+     * {@code ComponentUpdater} makes every column of an enclosing component nullable when that component is. The binder also writes
+     * the component as a whole only when its property is insertable and updatable ({@code PropertyBinder}), so a column is written
+     * only when every enclosing embedded property allows it as well.
+     */
     private static ColumnFacets nullableInComponent(ColumnFacets facets, List<HibernateEmbeddedProperty> enclosing) {
         boolean nullable = facets.nullable() || enclosing.any { HibernateEmbeddedProperty e ->
             e.hibernateOwner.isComponentPropertyNullable(e)
         }
+        boolean insertable = facets.insertable() && enclosing.every { HibernateEmbeddedProperty e -> e.hibernateMappedForm?.insertable != false }
+        boolean updatable = facets.updatable() && enclosing.every { HibernateEmbeddedProperty e -> e.hibernateMappedForm?.updatable != false }
         return new ColumnFacets(
-                facets.name(), nullable, facets.unique(), facets.insertable(), facets.updatable(), facets.length(),
+                facets.name(), nullable, facets.unique(), insertable, updatable, facets.length(),
                 facets.precision(), facets.scale(), facets.sqlType(), facets.defaultValue(), facets.read(),
                 facets.write(), facets.comment())
     }
@@ -2307,10 +2290,6 @@ class GrailsDomainGenerator {
         if (property.isUserButNotCollectionType()) {
             return "the property is mapped with the type [${property.userType.name}]: the binder binds it as one simple value of that " +
                     'type and not as an embedded object, which the generator does not state'
-        }
-        String writeProblem = writeRestrictionProblem(property.hibernateMappedForm)
-        if (writeProblem != null) {
-            return writeProblem
         }
         if (visiting.contains(type.javaClass)) {
             return "the embedded type [${type.name}] contains itself"

@@ -60,6 +60,12 @@ class GrailsDomainGeneratorOptionCoverageSpec extends GrailsDomainGeneratorSuppo
 
     private static final List<String> SIMPLE = ['basic', 'number', 'mode']
 
+    /** The kinds of property that have a column of their own, where the write flags can be stated. */
+    private static final List<String> COLUMN_KINDS = ['basic', 'number', 'mode', 'target', 'home']
+
+    /** The kinds of property that have no column of their own: the domain binder ignores the write flags there, and so does the generator. */
+    private static final List<String> NO_COLUMN_KINDS = ['tags', 'modes', 'targets', 'ordered']
+
     private static final List<String> COLLECTIONS = ['tags', 'modes', 'targets', 'ordered']
 
     private static final List<String> VALUE_COLLECTIONS = ['tags', 'modes', 'ordered']
@@ -82,8 +88,8 @@ class GrailsDomainGeneratorOptionCoverageSpec extends GrailsDomainGeneratorSuppo
             // a unique group on a collection property names columns of the owner's table, which the collection table does not have: the binder's
             // key over them cannot be created (a defect fixed on the 8.0.x line), so the generator deliberately states none
             'property.uniqueGroup'         : ['basic', 'number', 'mode', 'target'],
-            'property.insertable'          : KINDS,
-            'property.updatable'           : KINDS,
+            'property.insertable'          : COLUMN_KINDS,
+            'property.updatable'           : COLUMN_KINDS,
             'property.type'                : ['basic'],
             'property.typeClass'           : ['basic', 'number', 'mode', 'home', 'tags', 'modes', 'targets', 'ordered'],
             'property.derived'             : ['basic', 'number', 'mode', 'target'],
@@ -119,6 +125,15 @@ class GrailsDomainGeneratorOptionCoverageSpec extends GrailsDomainGeneratorSuppo
             'mapping.table.catalog'        : ['mapping'],
             'mapping.identity.natural'     : ['mapping'],
             'mapping.userTypes'            : ['mapping'],
+    ]
+
+    /**
+     * Option to the kinds where the domain binder reads it and ignores it all the same (it overwrites the flags with the ones of the
+     * columns, and these kinds have none of their own): the generator ignores it there too, and does not refuse the mapping.
+     */
+    private static final Map<String, List<String>> IGNORED_LIKE_THE_BINDER = [
+            'property.insertable': NO_COLUMN_KINDS,
+            'property.updatable' : NO_COLUMN_KINDS,
     ]
 
     /** Options that change nothing anywhere, and why that is no silent drop. */
@@ -158,6 +173,16 @@ class GrailsDomainGeneratorOptionCoverageSpec extends GrailsDomainGeneratorSuppo
         expect: "an option the binder reads on a kind of property is never dropped"
         MUST_HAVE_EFFECT.collectMany { String option, List<String> kinds ->
             kinds.findAll { String kind -> verdicts[option][kind] == 'ignored' }.collect { String kind -> "${option} on ${kind}".toString() }
+        } == []
+    }
+
+    void "a write flag on a property with no column is accepted and changes nothing, as the domain binder ignores it"() {
+        given:
+        Map<String, Map<String, String>> verdicts = verdicts()
+
+        expect:
+        IGNORED_LIKE_THE_BINDER.collectMany { String option, List<String> kinds ->
+            kinds.findAll { String kind -> verdicts[option][kind] != 'ignored' }.collect { String kind -> "${option} on ${kind}: ${verdicts[option][kind]}".toString() }
         } == []
     }
 
@@ -210,23 +235,21 @@ class GrailsDomainGeneratorOptionCoverageSpec extends GrailsDomainGeneratorSuppo
         read.customWrite == 'upper(?)'
     }
 
-    void "an insertable or updatable flag on a property with no column is rejected by name"() {
-        when:
-        generateGroup(GenCovOwner, GenCovTarget)
+    void "an insertable or updatable flag on a property with no column is accepted and ignored"() {
+        given:
+        String base = signature()
         entity(GenCovOwner).getHibernatePropertyByName(property).hibernateMappedForm.insertable = false
-        generateGroup(GenCovOwner, GenCovTarget)
+        entity(GenCovOwner).getHibernatePropertyByName(property).hibernateMappedForm.updatable = false
 
-        then:
-        UnsupportedOperationException e = thrown()
-        e.message.contains('GenCovOwner')
-        e.message.contains(property)
-        e.message.contains('insertable: false or updatable: false')
+        expect:
+        signature() == base
 
         cleanup:
         entity(GenCovOwner).getHibernatePropertyByName(property).hibernateMappedForm.insertable = true
+        entity(GenCovOwner).getHibernatePropertyByName(property).hibernateMappedForm.updatable = true
 
         where:
-        property << ['home', 'tags', 'targets']
+        property << ['tags', 'targets']
     }
 
     void "a user type mapped on an embedded property is rejected by name, because the binder binds it as a simple value"() {

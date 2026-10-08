@@ -68,6 +68,7 @@ For the domain classes in GORM's own test suites, both bindings produce the same
 * A registered type name for a different Java type than the property's, for example `type: 'string'` on an `Integer`, gives the column of the registered type (`varchar(255)`), as with classic binding. Neither binding converts the value, so saving a value that is not null fails with a `ClassCastException` in both; a null value and the other properties of the class are stored.
 * A natural id (`id natural: [...]`) may name an embedded object (the unique key spans its columns, in the order of the embedded class), and a name that is no property of the class is skipped without a message, as with classic binding.
 * A natural id declared on a subclass adds a unique key to the table of the hierarchy (the table of the subclass in a joined hierarchy), over the columns of the named properties in the order the mapping names them, and makes those properties updatable only when the natural id is `mutable`. Classic binding also marks the properties as natural identifiers, and with Hibernate 7 that makes every load of the subclass entity fail with a `NullPointerException`; native binding does not mark them, so the subclass entity loads.
+* `insertable: false` and `updatable: false` are honored on a property with a column. On an embedded object they apply to every column of the object. On a `hasMany` and on the inverse side of a one-to-one (the side with no column) both bindings ignore them: the collection is written through its own table, and the foreign key lives on the other side.
 * Identifier generators, inheritance strategies (single table, joined and table-per-concrete-class), discriminators, natural ids, optimistic locking, lazy and eager fetching, cascades, sorting, batch size and `cache` usage are mapped as with classic binding.
 
 [[nativeDomainBinding-refused]]
@@ -94,10 +95,6 @@ Nothing is ignored silently. A mapping that boots is bound the way it is written
 | A `type` on a `hasMany` of basic values that is a registered Hibernate type name, for example `type: 'text'`, or a custom collection type.
 | `Collection property [...]: the type [...] mapped on the collection property names neither a class nor serializable ...` or `... a custom collection type (a UserCollectionType) is mapped on a collection of basic values ...`
 | Remove the `type`, or use `'serializable'` or a `UserType` class to store the collection in one column. Classic binding does not boot with a registered type name (it fails with `Could not load requested class`), and neither with a custom collection type on a collection of basic values.
-
-| `insertable: false` or `updatable: false` on a property that has no column of its own: a collection, an embedded object, or the inverse side of a one-to-one.
-| `... insertable: false or updatable: false is mapped on a property that has no column of its own ...`
-| Remove the option. Classic binding ignores it on such a property. On a property with a column, both bindings honor it.
 
 | A `discriminator` column with `precision` or `scale`.
 | `The discriminator column of [...] sets a precision or a scale, which @DiscriminatorColumn cannot state`
