@@ -36,7 +36,7 @@ import org.gradle.process.CommandLineArgumentProvider
  *
  * <p>A property given without a value, as above, is {@code true}.</p>
  *
- * @since 8.0
+ * @since 8.0.1
  */
 @CompileStatic
 class GrailsStartupProgressProvider implements CommandLineArgumentProvider {
