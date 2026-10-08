@@ -1114,7 +1114,7 @@ class GrailsDomainGenerator {
                     null, registered.jdbcType.defaultSqlTypeCode, parameters, null, registered.valueConverter.getClass()))
         }
         if (registered != null && registered.valueConverter == null && parameters.isEmpty() && !isEnum &&
-                (identity || registered.javaTypeDescriptor.javaTypeClass == boxed(type))) {
+                (identity || registered.javaTypeDescriptor.javaTypeClass == boxed(type) || serializesValueOf(registered, type))) {
             Class<?> registeredJava = registered.javaTypeDescriptor.javaTypeClass
             return new TypeDecision(true, name, new TypeFacets(
                     null, registered.jdbcType.defaultSqlTypeCode, parameters, registeredJava == boxed(type) ? null : registeredJava))
@@ -1146,6 +1146,16 @@ class GrailsDomainGenerator {
             return new TypeDecision(false, 'serializable', null, 'is a registered type with type parameters, which no annotation states')
         }
         return new TypeDecision(true, 'serializable', new TypeFacets(null, Types.VARBINARY, parameters, Serializable))
+    }
+
+    /**
+     * {@code serializable} (and any registered type of a Java interface) on a property of a class that implements it: the property is
+     * typed with the registered Java type, as the binder resolves the type name and not the property's class, so a {@code String} or a
+     * {@code byte[]} is read and written through that type.
+     */
+    private static boolean serializesValueOf(BasicType<?> registered, Class<?> type) {
+        Class<?> registeredJava = registered.javaTypeDescriptor.javaTypeClass
+        return registeredJava.interface && type != null && registeredJava.isAssignableFrom(boxed(type))
     }
 
     private static Class<?> loadClass(String name, HibernatePersistentProperty property) {

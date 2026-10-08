@@ -167,7 +167,8 @@ class GrailsDomainGeneratorSpec extends HibernateGormDatastoreSpec {
                 GenFkTarget, GenFkOwned, GenFkOwner, GenFkCascades, GenFkNodeA, GenFkNodeB, GenFkHasOneOwner, GenFkHasOneDetail, GenOneFace, GenOneNose, GenFkManyOne, GenFkOneSide, GenFkSub, GenFkSubRoot,
                 GenOmParent, GenOmChild, GenOmListed, GenOmOrdered, GenOmOrphan, GenOmFetched, GenOmTag, GenOmStep, GenOmKept, GenOmSortedOwner, GenOmMapOwner, GenMapBidiOwner, GenMapBidiChild, GenEmbAssocOwner,
                 GenMmStudent, GenMmCourse, GenMmPerson, GenParamsOnly, GenDecimal, GenUnversioned, GenUnversionedRoot, GenUnversionedChild, GenConverted, GenValueTyped,
-                GenCollEmbeddedHolder, GenCollEmbeddedSibling, GenCollEmbeddedItem, GenCollEmbeddedEntityHolder, GenMapM2mLeft, GenMapM2mRight)
+                GenCollEmbeddedHolder, GenCollEmbeddedSibling, GenCollEmbeddedItem, GenCollEmbeddedEntityHolder, GenMapM2mLeft, GenMapM2mRight,
+                GenSerialized)
     }
 
     List<StandardServiceRegistry> registries = []
@@ -286,7 +287,7 @@ class GrailsDomainGeneratorSpec extends HibernateGormDatastoreSpec {
 
         then:
         UnsupportedOperationException e = thrown()
-        e.message.contains('Type [serializable] of property [tag] of [' + GenUnsupportedType.name + ']')
+        e.message.contains('Type [string] of property [tag] of [' + GenUnsupportedType.name + ']')
     }
 
     void "the version is marked as the optimistic lock"() {
@@ -382,6 +383,19 @@ class GrailsDomainGeneratorSpec extends HibernateGormDatastoreSpec {
         !converted.getDeclaredField('plain').isAnnotationPresent(Convert)
     }
 
+    void "serializable on a property that is not a collection is a binary column of the Serializable Java type"() {
+        when:
+        Class<?> serialized = generate(GenSerialized)
+
+        then:
+        serialized.getDeclaredField('tag').type == Serializable
+        serialized.getDeclaredField('tag').getAnnotation(JdbcTypeCode).value() == java.sql.Types.VARBINARY
+        serialized.getDeclaredField('payload').type == Serializable
+        serialized.getDeclaredField('payload').getAnnotation(JdbcTypeCode).value() == java.sql.Types.VARBINARY
+        serialized.getDeclaredField('plain').type == String
+        !serialized.getDeclaredField('plain').isAnnotationPresent(JdbcTypeCode)
+    }
+
     void "Hibernate's own annotation binder resolves a converted type like the domain binder"() {
         given:
         Map<GrailsHibernatePersistentEntity, Class<?>> classes = generateGroup(GenConverted)
@@ -449,7 +463,7 @@ class GrailsDomainGeneratorSpec extends HibernateGormDatastoreSpec {
         then:
         UnsupportedOperationException e = thrown()
         e.message.contains('tag')
-        e.message.contains('serializable')
+        e.message.contains('string')
     }
 
     void "Hibernate's own annotation binder reads the generated types and formulas"() {
@@ -2788,10 +2802,23 @@ class GenParamsOnly {
 @Entity
 class GenUnsupportedType {
 
+    Integer tag
+
+    static mapping = {
+        tag type: 'string'
+    }
+}
+
+@Entity
+class GenSerialized {
+
     String tag
+    byte[] payload
+    String plain
 
     static mapping = {
         tag type: 'serializable'
+        payload type: 'serializable'
     }
 }
 
