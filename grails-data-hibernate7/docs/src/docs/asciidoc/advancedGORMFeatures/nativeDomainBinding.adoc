@@ -66,7 +66,6 @@ For the domain classes in GORM's own test suites, both bindings produce the same
 * `params` on a registered type name such as `type: 'string'` are ignored, as with classic binding. They reach the type when it is a `UserType` that implements `ParameterizedType`.
 * A `type` that names an `AttributeConverter` class, for example `type: 'org.hibernate.type.YesNoConverter'`, converts the property with it, on a single property as well as on a `hasMany` stored in one column, as with classic binding.
 * A registered type name for a different Java type than the property's, for example `type: 'string'` on an `Integer`, gives the column of the registered type (`varchar(255)`), as with classic binding. Neither binding converts the value, so saving a value that is not null fails with a `ClassCastException` in both; a null value and the other properties of the class are stored.
-* A custom collection type (a `UserCollectionType` class) as the `type` of a `hasMany` of domain classes is applied to the collection. Classic binding boots with the same schema but never uses the class: it keeps Hibernate's own collection.
 * A natural id (`id natural: [...]`) may name an embedded object (the unique key spans its columns, in the order of the embedded class), and a name that is no property of the class is skipped without a message, as with classic binding.
 * A natural id declared on a subclass adds a unique key to the table of the hierarchy (the table of the subclass in a joined hierarchy), over the columns of the named properties in the order the mapping names them, and makes those properties updatable only when the natural id is `mutable`. Classic binding also marks the properties as natural identifiers, and with Hibernate 7 that makes every load of the subclass entity fail with a `NullPointerException`; native binding does not mark them, so the subclass entity loads.
 * Identifier generators, inheritance strategies (single table, joined and table-per-concrete-class), discriminators, natural ids, optimistic locking, lazy and eager fetching, cascades, sorting, batch size and `cache` usage are mapped as with classic binding.
@@ -132,6 +131,9 @@ Some bugs of classic binding are not copied by native binding. Native binding do
 |===
 | Mapping
 | Difference
+
+| A custom collection type (a `UserCollectionType` class) as the `type` of a `hasMany` of domain classes, for example `books type: MyCollectionType`.
+| Classic binding boots with the same schema but never uses the class: it keeps Hibernate's own collection and does not even create an instance of your type. Native binding applies the type, so Hibernate creates, wraps and loads the collection with your class. If you map a custom collection type that has never been exercised, test it before you switch. On a `hasMany` of basic values neither binding supports it.
 
 | A `unique` group that includes an enum property.
 | Classic binding drops the group. Native binding creates the unique constraint. With `dbCreate: update` the constraint is added to an existing table, and fails if the table holds duplicates.

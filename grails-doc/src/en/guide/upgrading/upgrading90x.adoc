@@ -100,10 +100,39 @@ The mapping can, though:
 
 * A few mapping options cannot be expressed with annotations.
   Native binding refuses such a mapping with an `UnsupportedOperationException` at startup instead of ignoring the option.
-  Examples are an `index` or a `unique` group on a collection property, a natural id on a subclass, a collection inside an embedded class, and a `Map` on a many-to-many.
+  The manual chapter lists them.
 * The generated schema differs from the one of classic binding in a few documented cases, for example a `check (idx >= 0)` constraint on the index column of every list, and the column types of foreign keys to nested composite identifiers.
 * A few defects of classic binding are not copied, such as a `unique` group that includes an enum property being dropped.
+* A custom collection type on a `hasMany` now takes effect, see <<native-binding-custom-collection-type,1.4>>.
 
 Before you switch an existing database, run `dbm-gorm-diff` against a copy of it with the setting on.
 
 The link:{hibernate7Guide}index.html#advancedGORMFeatures-nativeDomainBinding[Native Domain Binding] chapter of the GORM for Hibernate 7 manual lists every refused mapping, every schema difference and what each means for an existing database.
+
+[[native-binding-custom-collection-type]]
+===== 1.4 Custom Collection Types Take Effect with Native Binding
+
+A `hasMany` of domain classes can name a Hibernate `UserCollectionType` as its `type`:
+
+[source,groovy]
+----
+class Author {
+    static hasMany = [books: Book]
+    static mapping = {
+        books type: MyCollectionType
+    }
+}
+----
+
+Classic binding accepts this mapping and creates the usual schema, but it never uses the class.
+It does not even create an instance of `MyCollectionType`, and `author.books` is an ordinary Hibernate collection.
+
+Native binding applies the type.
+Hibernate creates, wraps and loads the collection with your class, so the code of your collection type runs where it never ran before.
+The schema is the same.
+
+If your application maps a custom collection type, test it with `hibernate.generatedDomainClasses` set to `true` before you switch.
+A type that was never exercised can fail or behave differently once it is used.
+With classic binding, which stays the default in Grails {version}, nothing changes.
+
+A custom collection type on a `hasMany` of basic values is not supported by either binding.
