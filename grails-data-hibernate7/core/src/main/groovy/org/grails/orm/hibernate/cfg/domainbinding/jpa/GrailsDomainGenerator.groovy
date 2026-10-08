@@ -1096,7 +1096,7 @@ class GrailsDomainGenerator {
             return new TypeDecision(true, name, null)
         }
         if (column && property.isSerializableType()) {
-            return serializedCollectionType(parameters)
+            return serializedCollectionType()
         }
         Class<?> named = loadClass(name, property)
         if (named != null) {
@@ -1107,17 +1107,18 @@ class GrailsDomainGenerator {
         }
         BasicType<?> registered = typeConfiguration.basicTypeRegistry.getRegisteredType(name)
         boolean identity = property instanceof HibernateSimpleIdentityProperty
-        if (registered != null && registered.valueConverter instanceof AttributeConverter && parameters.isEmpty() && !isEnum && !identity &&
+        if (registered != null && registered.valueConverter instanceof AttributeConverter && !isEnum && !identity &&
                 !element && registered.javaTypeDescriptor.javaTypeClass == boxed(type)) {
             // a registered type that converts its value (yes_no, true_false, numeric_boolean) is the JPA converter it wraps
+            // the binder hands the type parameters to a registered type, which ignores them
             return new TypeDecision(true, name, new TypeFacets(
-                    null, registered.jdbcType.defaultSqlTypeCode, parameters, null, registered.valueConverter.getClass()))
+                    null, registered.jdbcType.defaultSqlTypeCode, [:], null, registered.valueConverter.getClass()))
         }
-        if (registered != null && registered.valueConverter == null && parameters.isEmpty() && !isEnum &&
+        if (registered != null && registered.valueConverter == null && !isEnum &&
                 (identity || registered.javaTypeDescriptor.javaTypeClass == boxed(type) || serializesValueOf(registered, type))) {
             Class<?> registeredJava = registered.javaTypeDescriptor.javaTypeClass
             return new TypeDecision(true, name, new TypeFacets(
-                    null, registered.jdbcType.defaultSqlTypeCode, parameters, registeredJava == boxed(type) ? null : registeredJava))
+                    null, registered.jdbcType.defaultSqlTypeCode, [:], registeredJava == boxed(type) ? null : registeredJava))
         }
         String problem
         if (registered == null) {
@@ -1127,8 +1128,6 @@ class GrailsDomainGenerator {
         } else if (registered.valueConverter != null) {
             problem = 'is a registered type that converts its value in a way @Convert does not state (not a JPA attribute converter, ' +
                     'or the type of a collection element, an identifier or an enum)'
-        } else if (!parameters.isEmpty()) {
-            problem = 'is a registered type with type parameters, which no annotation states'
         } else {
             problem = "is registered for the Java type [${registered.javaTypeDescriptor.javaTypeClass.name}], not the property's [${type?.name}]: " +
                     'stating it would need a converter, which annotations do not say for a type name'
@@ -1141,11 +1140,8 @@ class GrailsDomainGenerator {
      * under that name for {@code Serializable}. A field declared {@code Serializable} (the property of the real class is read and
      * written by its own accessors, whatever the field says) has that Java type, and the JDBC type is the binary one.
      */
-    private static TypeDecision serializedCollectionType(Map<String, String> parameters) {
-        if (!parameters.isEmpty()) {
-            return new TypeDecision(false, 'serializable', null, 'is a registered type with type parameters, which no annotation states')
-        }
-        return new TypeDecision(true, 'serializable', new TypeFacets(null, Types.VARBINARY, parameters, Serializable))
+    private static TypeDecision serializedCollectionType() {
+        return new TypeDecision(true, 'serializable', new TypeFacets(null, Types.VARBINARY, [:], Serializable))
     }
 
     /**

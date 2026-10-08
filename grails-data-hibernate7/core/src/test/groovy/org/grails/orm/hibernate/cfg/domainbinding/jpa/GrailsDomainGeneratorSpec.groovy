@@ -168,7 +168,7 @@ class GrailsDomainGeneratorSpec extends HibernateGormDatastoreSpec {
                 GenOmParent, GenOmChild, GenOmListed, GenOmOrdered, GenOmOrphan, GenOmFetched, GenOmTag, GenOmStep, GenOmKept, GenOmSortedOwner, GenOmMapOwner, GenMapBidiOwner, GenMapBidiChild, GenEmbAssocOwner,
                 GenMmStudent, GenMmCourse, GenMmPerson, GenParamsOnly, GenDecimal, GenUnversioned, GenUnversionedRoot, GenUnversionedChild, GenConverted, GenValueTyped,
                 GenCollEmbeddedHolder, GenCollEmbeddedSibling, GenCollEmbeddedItem, GenCollEmbeddedEntityHolder, GenMapM2mLeft, GenMapM2mRight,
-                GenSerialized)
+                GenSerialized, GenTypeParams)
     }
 
     List<StandardServiceRegistry> registries = []
@@ -394,6 +394,18 @@ class GrailsDomainGeneratorSpec extends HibernateGormDatastoreSpec {
         serialized.getDeclaredField('payload').getAnnotation(JdbcTypeCode).value() == java.sql.Types.VARBINARY
         serialized.getDeclaredField('plain').type == String
         !serialized.getDeclaredField('plain').isAnnotationPresent(JdbcTypeCode)
+    }
+
+    void "type parameters on a registered type name are ignored, as the domain binder hands them to a type that ignores them"() {
+        when:
+        Class<?> params = generate(GenTypeParams)
+
+        then:
+        params.getDeclaredField('name').type == String
+        !params.getDeclaredField('name').isAnnotationPresent(Type)
+        params.getDeclaredField('name').getAnnotation(JdbcTypeCode).value() == java.sql.Types.VARCHAR
+        params.getDeclaredField('amount').type == Integer
+        params.getDeclaredField('amount').getAnnotation(JdbcTypeCode).value() == java.sql.Types.INTEGER
     }
 
     void "Hibernate's own annotation binder resolves a converted type like the domain binder"() {
@@ -2819,6 +2831,18 @@ class GenSerialized {
     static mapping = {
         tag type: 'serializable'
         payload type: 'serializable'
+    }
+}
+
+@Entity
+class GenTypeParams {
+
+    String name
+    Integer amount
+
+    static mapping = {
+        name type: 'string', params: [param1: 'value1']
+        amount type: 'integer', params: [param1: 'value1']
     }
 }
 

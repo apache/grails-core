@@ -87,7 +87,6 @@ class GeneratedDomainClassesDdlDifferentialSpec extends Specification {
             'declares a natural id but is a subclass',
             'which is HibernateEmbeddedProperty',
             'which is not a persistent property of the entity',
-            'is a registered type with type parameters',
     ]
 
     private static final AtomicInteger BOOTS = new AtomicInteger()
