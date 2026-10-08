@@ -1671,6 +1671,15 @@ class GrailsDomainGenerator {
     }
 
     /**
+     * Whether the binder binds the collection of this many-to-many side as the one that writes the join table: the owning side
+     * ({@code belongsTo}), and a map, which {@code MapSecondPassBinder} always makes not inverse (a map side stores its rows with
+     * the key of the map whether or not the mapping says it owns the relationship).
+     */
+    private static boolean ownsManyToMany(HibernateManyToManyProperty property) {
+        return property.owningSide || Map.isAssignableFrom(property.type)
+    }
+
+    /**
      * @return why the generator cannot describe the collection of entities, or {@code null} when it can
      */
     private String toManyProblem(HibernateToManyEntityProperty property) {
@@ -1678,9 +1687,6 @@ class GrailsDomainGenerator {
         String writeProblem = writeRestrictionProblem(mapped)
         if (writeProblem != null) {
             return writeProblem
-        }
-        if (Map.isAssignableFrom(property.type) && property instanceof HibernateManyToManyProperty) {
-            return 'a map on a many-to-many, which the generator does not support yet'
         }
         CollectionKind kind = CollectionKind.of(property.type)
         if (kind == null) {
@@ -1707,10 +1713,10 @@ class GrailsDomainGenerator {
         }
         if (property instanceof HibernateManyToManyProperty) {
             HibernateAssociation other = property.hibernateInverseSide
-            if (!(other instanceof HibernateManyToManyProperty) || Map.isAssignableFrom(other.type)) {
+            if (!(other instanceof HibernateManyToManyProperty)) {
                 return "the other side [${other?.name}] is not a many-to-many collection"
             }
-            if (!property.owningSide && !other.owningSide) {
+            if (!ownsManyToMany(property) && !ownsManyToMany((HibernateManyToManyProperty) other)) {
                 return 'neither side of the many-to-many owns it (no belongsTo): the binder binds both collections inverse, so ' +
                         'no row is ever written, and annotations cannot say it (Hibernate\'s annotation binder fails with a ' +
                         'NullPointerException when both sides are mappedBy)'
@@ -1802,7 +1808,7 @@ class GrailsDomainGenerator {
             // ManyToOneBinder binds the element like the other side's own column: its name rules and its (never) nullable column
             element = circularKeyName(other, toOneColumnFacets(other))
             String joinColumnName = joinTable?.column?.name
-            if (joinColumnName != null && property.owningSide && !property.isCircular()) {
+            if (joinColumnName != null && ownsManyToMany(property) && !property.isCircular()) {
                 // the owning side names the element column of the join table it writes (the inverse side adopts it); a circular
                 // side keeps naming it after the property of the other side, as the binder does
                 element = new ColumnFacets(
@@ -1810,7 +1816,7 @@ class GrailsDomainGenerator {
                         element.length(), element.precision(), element.scale(), element.sqlType(), element.defaultValue(),
                         element.read(), element.write(), element.comment())
             }
-            mappedBy = property.owningSide ? null : other.name
+            mappedBy = ownsManyToMany(property) ? null : other.name
         } else if (property.shouldBindWithForeignKey()) {
             HibernateToOneProperty inverse = (HibernateToOneProperty) property.hibernateInverseSide
             // CollectionKeyBinder copies the other side's foreign key column into the key; the key updater makes it nullable

@@ -69,6 +69,7 @@ class GeneratedDomainClassesDdlDifferentialSpec extends Specification {
             [id: 'IGNORE_NOT_FOUND_FOREIGN_KEY', reason: 'ignoreNotFound: true: Hibernate\'s @NotFound(IGNORE) disables the foreign key (SimpleValue.disableForeignKey, there is no enabling counterpart), the binder keeps it, which makes the option contradict itself (a dangling reference cannot exist). Re-creating the key would need Table.createForeignKey with a name computed through the implicit naming strategy\'s internal ForeignKeyNameSource. Hibernate\'s own behaviour is arguably the right one; decision for the lead. 1 association in the scanned domains.'],
             [id: 'INVERSE_JOIN_TABLE_NAME', reason: 'A mapping that names the join table on both sides of a many-to-many with different names (the binder adopts the owning side\'s name only when the inverse side names none, since the 8.0.x fix for the inverse join table): the inverse side keeps its own name and the binder creates a second, unused table for it. The generated mode creates the table the owning side names (Hibernate derives the inverse side from mappedBy), so the unused table is absent. Nothing reads or writes the binder\'s extra table. 1 table in the scanned domains (CBOwnNameOwner and CBOwnNameInverse).'],
             [id: 'LIST_INDEX_CHECK', reason: 'Hibernate adds check (<index column> >= 0) to the index column of every list (IndexColumn.addIndexCheckConstraint, always, for @OrderColumn) and offers no annotation to avoid it; Column.getCheckConstraints() is unmodifiable and Column has no removal method (Column.copy shares the list), so it cannot be removed through public API, only by reflection on the private list, which is not done. The check can never reject a value GORM writes (indexes start at 0). 18 list columns in the scanned domains. Decision for the lead: accept the check.'],
+            [id: 'MAP_MANY_TO_MANY_ELEMENT_ORDER', reason: 'A binder defect that depends on the order the classes are bound in: the element column of a map on a many-to-many is also the key column of the set that reads the map, one column of the join table, and the binder sets its nullability twice (the element binder: not null; the key updater of the inverse set: nullable), so a database created by the binder has a nullable column or a not null one depending on which of the two collections is bound last (pinned in GeneratedDomainClassesMapManyToManySpec with the same classes in both orders). The generated mode states not null, the nullability of the element of any many-to-many, whatever the order. 1 group of the scanned test domains (MmmOwnerLeft and MmmOwnedRight, a map beside a set that belongs to the class of the map).'],
             [id: 'MAP_ELEMENT_NULLABLE', reason: 'The mapping of a map of values states nullable: false on the element column and the binder leaves the column nullable (it ignores the option, like the enum column extras); the generated mode honours the mapping, so a database created by the binder has a nullable column where the generated mode creates NOT NULL. Matching the binder would drop a constraint the mapping states.'],
             [id: 'MAP_UNUSED_COLUMN', reason: 'The binder leaves an unused nullable column in the table of a map of values (the element it bound before the map replaced it, attributes_java_lang_string); the generated mode creates no such column. Nothing reads the extra column; an existing database keeps it (update does not drop columns).'],
             [id: 'UNIQUE_GROUP_ON_COLLECTION', reason: 'A binder defect (fixed on the 8.0.x line by PR 16533, so the class disappears with the next up-merge): a unique group mapped on a collection property makes the binder create a unique key on the collection table over the key column and the other properties of the group, which are columns of the owner\'s table and not of the collection table, so the key cannot be created (Hibernate logs the failed statement and boots; the key is not in the H2 script of the binder either). The generated mode creates no key, which is what the fix does.'],
@@ -87,7 +88,6 @@ class GeneratedDomainClassesDdlDifferentialSpec extends Specification {
             'which is HibernateEmbeddedProperty',
             'which is not a persistent property of the entity',
             'is a registered type with type parameters',
-            'a map on a many-to-many',
     ]
 
     private static final AtomicInteger BOOTS = new AtomicInteger()
@@ -177,6 +177,10 @@ class GeneratedDomainClassesDdlDifferentialSpec extends Specification {
         }
         if (kind == 'unique key only in binder mode' && d.impossibleKey) {
             return 'UNIQUE_GROUP_ON_COLLECTION'
+        }
+        if (collection && kind == 'column nullable' && detail.contains('binder=true generated=false') &&
+                d.collections*.startsWith('Map of ManyToOne').any() && d.collections*.endsWith('(inverse)').any()) {
+            return 'MAP_MANY_TO_MANY_ELEMENT_ORDER'
         }
         if (collection && kind in ['column nullable', 'primary key only in generated mode', 'unique key only in binder mode']) {
             return 'COLLECTION_TABLE_KEY'

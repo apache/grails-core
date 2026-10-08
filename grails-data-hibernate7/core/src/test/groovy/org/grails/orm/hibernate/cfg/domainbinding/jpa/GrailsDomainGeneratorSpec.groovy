@@ -167,7 +167,7 @@ class GrailsDomainGeneratorSpec extends HibernateGormDatastoreSpec {
                 GenFkTarget, GenFkOwned, GenFkOwner, GenFkCascades, GenFkNodeA, GenFkNodeB, GenFkHasOneOwner, GenFkHasOneDetail, GenOneFace, GenOneNose, GenFkManyOne, GenFkOneSide, GenFkSub, GenFkSubRoot,
                 GenOmParent, GenOmChild, GenOmListed, GenOmOrdered, GenOmOrphan, GenOmFetched, GenOmTag, GenOmStep, GenOmKept, GenOmSortedOwner, GenOmMapOwner, GenMapBidiOwner, GenMapBidiChild, GenEmbAssocOwner,
                 GenMmStudent, GenMmCourse, GenMmPerson, GenParamsOnly, GenDecimal, GenUnversioned, GenUnversionedRoot, GenUnversionedChild, GenConverted, GenValueTyped,
-                GenCollEmbeddedHolder, GenCollEmbeddedSibling, GenCollEmbeddedItem, GenCollEmbeddedEntityHolder)
+                GenCollEmbeddedHolder, GenCollEmbeddedSibling, GenCollEmbeddedItem, GenCollEmbeddedEntityHolder, GenMapM2mLeft, GenMapM2mRight)
     }
 
     List<StandardServiceRegistry> registries = []
@@ -1902,6 +1902,26 @@ class GrailsDomainGeneratorSpec extends HibernateGormDatastoreSpec {
         GenMapBidiOwner | 'kids'   | GenMapBidiChild | 'gen_map_bidi_owner_kids' | 'kids_id' | 'owner_id'              | 'kids_idx'
     }
 
+    void "a map on a many-to-many is the side that writes the join table, with a map key column, and the set that reads it is mappedBy"() {
+        given:
+        Map<GrailsHibernatePersistentEntity, Class<?>> classes = generateGroup(GenMapM2mLeft, GenMapM2mRight)
+        Field rights = classes[entity(GenMapM2mLeft)].getDeclaredField('rights')
+        Field lefts = classes[entity(GenMapM2mRight)].getDeclaredField('lefts')
+
+        expect:
+        rights.genericType.typeName == 'java.util.Map<java.lang.String, ' + GenMapM2mRight.name + '>'
+        rights.getAnnotation(ManyToMany).mappedBy() == ''
+        rights.getAnnotation(JoinTable).name() == 'gen_map_m2m_left_rights'
+        rights.getAnnotation(JoinTable).joinColumns()*.name() == ['gen_map_m2m_left_id']
+        rights.getAnnotation(JoinTable).inverseJoinColumns()*.name() == ['gen_map_m2m_right_id']
+        rights.getAnnotation(MapKeyColumn).name() == 'rights_idx'
+        lefts.genericType.typeName == 'java.util.Set<' + GenMapM2mLeft.name + '>'
+        lefts.getAnnotation(ManyToMany).mappedBy() == 'rights'
+        !lefts.isAnnotationPresent(JoinTable)
+        newGenerator().supports(entity(GenMapM2mLeft).getHibernatePropertyByName('rights'))
+        newGenerator().supports(entity(GenMapM2mRight).getHibernatePropertyByName('lefts'))
+    }
+
     void "an association inside an embedded type is a field of the embeddable, and each owner states its join column with @AssociationOverride"() {
         given:
         Map<GrailsHibernatePersistentEntity, Class<?>> classes = generateGroup(GenEmbAssocOwner, GenFkTarget)
@@ -3346,4 +3366,22 @@ class GenUnversionedRoot {
 class GenUnversionedChild extends GenUnversionedRoot {
 
     String extra
+}
+
+@Entity
+class GenMapM2mLeft {
+
+    String name
+    Map<String, GenMapM2mRight> rights
+
+    static hasMany = [rights: GenMapM2mRight]
+}
+
+@Entity
+class GenMapM2mRight {
+
+    String name
+    Set<GenMapM2mLeft> lefts
+
+    static hasMany = [lefts: GenMapM2mLeft]
 }

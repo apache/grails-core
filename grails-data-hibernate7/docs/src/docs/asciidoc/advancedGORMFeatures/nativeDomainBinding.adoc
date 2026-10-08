@@ -61,6 +61,7 @@ For the domain classes in GORM's own test suites, both bindings produce the same
 * A `hasMany` of basic values whose `type` is `'serializable'` or a `UserType` class is stored in one column of the owner's table, as before, with the `index`, `unique` group and column settings of the property. A `type` on a `hasMany` of domain classes changes nothing in both bindings.
 * An `index` on the property of a `hasMany` is created over the key column of the collection table (and over the element column of a collection of enums), and `indexColumn` may give the index of a list or the key of a map a `type` other than integer or string.
 * A `hasMany` inside a class listed in `static embedded` (basic values, enums or domain classes, also in a nested embedded class) is stored in a collection table named after the embedded class, not after the owner, with a key column named after the embedded class too, as with classic binding.
+* A `Map` on a many-to-many (`Map<String, Book> books` with a `Set` or another `Map` on the other side) writes its own join table, with the key column of the map as part of the primary key, as with classic binding. A `Set` on the other side reads that table and does not write it, and two maps are two separate tables: rows stored through one map are not visible through the other, in both bindings.
 * Identifier generators, inheritance strategies (single table, joined and table-per-concrete-class), discriminators, natural ids, optimistic locking, lazy and eager fetching, cascades, sorting, batch size and `cache` usage are mapped as with classic binding.
 
 [[nativeDomainBinding-refused]]
@@ -95,10 +96,6 @@ Nothing is ignored silently. A mapping that boots is bound the way it is written
 | A `type` on a `hasMany` of basic values that is a registered Hibernate type name, for example `type: 'text'`, or a custom collection type.
 | `Collection property [...]: the type [...] mapped on the collection property names neither a class nor serializable ...` or `... a custom collection type (a UserCollectionType) is mapped on the collection property ...`
 | Remove the `type`, or use `'serializable'` or a `UserType` class to store the collection in one column. Classic binding does not boot with a registered type name (it fails with `Could not load requested class`); a custom collection type is not described yet.
-
-| A `Map` on a many-to-many.
-| `Association property [...]: a map on a many-to-many ...`
-| Use a `Set` or `List` many-to-many, or model the join with a domain class of its own.
 
 | A `type` that is a registered Hibernate type name for a different Java type than the property, for example `type: 'serializable'` on a `String`.
 | `Type [serializable] of property [...] is registered for the Java type [java.io.Serializable], not the property's [java.lang.String] ...`
@@ -168,7 +165,7 @@ Some bugs of classic binding are not copied by native binding. Native binding do
 [[nativeDomainBinding-schema]]
 === Differences in the Schema
 
-The schema of 679 groups of related domain classes was created with both bindings on H2 and compared: tables, columns with type, nullability, default, length, precision and scale, primary keys with their column order, foreign keys, unique keys, indexes, check constraints and sequences. Apart from the 10 groups that native binding refuses, these are the differences. Other databases are not covered by this comparison, so verify against your own database as described below.
+The schema of 685 groups of related domain classes was created with both bindings on H2 and compared: tables, columns with type, nullability, default, length, precision and scale, primary keys with their column order, foreign keys, unique keys, indexes, check constraints and sequences. Apart from the 8 groups that native binding refuses, these are the differences. Other databases are not covered by this comparison, so verify against your own database as described below.
 
 [cols="2,3,3", options="header"]
 |===
@@ -195,6 +192,10 @@ The schema of 679 groups of related domain classes was created with both binding
 | One join table instead of two when the two sides of a many-to-many name the join table differently.
 | Classic binding creates a second table for the inverse side that nothing reads or writes. Native binding uses the table that the owning side names.
 | The second table stays in an existing database. Remove it yourself.
+
+| `not null` on the column of a `Map` on a many-to-many that holds the entity the map refers to, when the other side is a `Set`.
+| That column is also the key column of the `Set` that reads the map, and classic binding sets its nullability twice, so it is nullable or not null depending on the order in which the domain classes are bound. Native binding always creates it `not null`, like the element column of any many-to-many.
+| `update` does not change an existing nullable column. A diff reports the difference.
 
 | `not null` on the element column of a map of values mapped with `nullable: false`.
 | See <<nativeDomainBinding-behavior,Differences in Behavior>>.
