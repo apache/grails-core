@@ -172,7 +172,14 @@ class UrlMappingsInfoHandlerAdapter implements HandlerAdapter, ApplicationContex
                     // Check the raw flag (not the composite isRenderView(), which also returns false
                     // for error status, committed response, or redirect) so that only an explicit
                     // render() call suppresses view resolution. (#15819)
-                    if (!webRequest.renderViewRequested) {
+                    //
+                    // redirect() sets REDIRECT_ISSUED on the request and a 3xx status without calling
+                    // setRenderView(false), so renderViewRequested stays true. Similarly, the response
+                    // may already be committed (e.g. the body was written directly) without that flag
+                    // being cleared. In both cases there is nothing left for DispatcherServlet to do.
+                    if (!webRequest.renderViewRequested
+                            || request.getAttribute(GrailsApplicationAttributes.REDIRECT_ISSUED) != null
+                            || response.committed) {
                         return null
                     }
                     String viewName = controllerClass.actionUriToViewName(action)

@@ -322,6 +322,8 @@ class UrlMappingsHandlerMappingSpec extends AbstractUrlMappingsSpec {
         actionName              | resultDesc
         'renderText'            | 'null (render(text:) returns null)'
         'renderTextWithMap'     | 'Map (render(text:) called, action also returns a Map)'
+        'redirectWithMap'       | 'Map (redirect() issued, action also returns a Map)'
+        'committedWithMap'      | 'Map (response already committed, action also returns a Map)'
     }
 
     @Issue('https://github.com/apache/grails-core/issues/15819')
@@ -425,17 +427,40 @@ class FooController implements Controller {
     }
 
     /**
-     * Simulates render(view: 'myView'): sets MODEL_AND_VIEW on the request but does NOT set
+     * Calls redirect() (which sets REDIRECT_ISSUED on the request and a 3xx status without calling
+     * setRenderView(false)) and also returns a Map. The adapter must return null — there is nothing
+     * left for DispatcherServlet to do after a redirect. (#15819)
+     */
+    @Action
+    def redirectWithMap() {
+        request.setAttribute(
+            GrailsApplicationAttributes.REDIRECT_ISSUED,
+            'http://example.com/redirected'
+        )
+        response.status = 302
+        [foo: 'bar']
+    }
+
+    /**
+     * Writes directly to the response (committing it) and also returns a Map. The adapter must
+     * return null — DispatcherServlet cannot render a view into an already-committed response.
+     * (#15819)
+     */
+    @Action
+    def committedWithMap() {
+        response.writer.write('already committed')
+        response.flushBuffer()
+        [foo: 'bar']
+    }
+
+    /**
+     * Calls render(view: 'myView'), which sets MODEL_AND_VIEW on the request but does NOT set
      * renderView=false. The adapter must return the ModelAndView so DispatcherServlet resolves
      * the named view. (#15819)
      */
     @Action
     def renderView() {
-        request.setAttribute(
-            GrailsApplicationAttributes.MODEL_AND_VIEW,
-            new ModelAndView('/foo/myView')
-        )
-        null
+        render(view: '/foo/myView')
     }
 
     /**
