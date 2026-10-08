@@ -157,10 +157,10 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
                         mismatches.addAll(compareEntity(entity, generator.entityFacets(entity), hierarchy))
                         mismatches.addAll(compareHierarchy(entity, hierarchy))
                         if (hierarchy.ownsTable() && generator.generationProblem(entity) == null) {
-                            mismatches.addAll(compareConstraints(entity, generator.constraintFacets(entity), constraints))
+                            mismatches.addAll(compareConstraints(generator, entity, generator.constraintFacets(entity), constraints))
                         }
                         if (generator.generationProblem(entity) == null) {
-                            mismatches.addAll(compareNaturalId(entity, generator.naturalIdFacets(entity), naturals))
+                            mismatches.addAll(compareNaturalId(generator, entity, generator.naturalIdFacets(entity), naturals))
                             mismatches.addAll(compareCache(entity, generator.cacheFacets(entity), caches))
                         }
                     }
@@ -399,13 +399,14 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
      * The indexes and multi-column unique keys on the table the entity owns: the same names, the same columns in the same
      * order. The unique key the binder adds for a natural id is not part of them (it is compared with the natural id).
      */
-    private List<String> compareConstraints(GrailsHibernatePersistentEntity entity, ConstraintFacets facets, Map<String, Integer> constraints) {
+    private List<String> compareConstraints(
+            GrailsDomainGenerator generator, GrailsHibernatePersistentEntity entity, ConstraintFacets facets, Map<String, Integer> constraints) {
         org.hibernate.mapping.Table table = entity.persistentClass.table
         String where = "${entity.name} table ${table.name}"
         Map<String, List<String>> boundIndexes = table.indexes.values().collectEntries { org.hibernate.mapping.Index index ->
             [(index.name): index.columns*.name]
         } as Map<String, List<String>>
-        Map<String, List<String>> boundKeys = tableKeysWithoutNaturalId(entity.persistentClass)
+        Map<String, List<String>> boundKeys = tableKeysWithoutNaturalId(entity.persistentClass, naturalKeySets(generator, entity))
         Map<String, List<String>> generatedIndexes = facets.indexes().collectEntries { IndexFacets index -> [(index.name()): index.columns()] } as Map<String, List<String>>
         Map<String, List<String>> generatedKeys = facets.uniqueKeys().findAll { UniqueKeyFacets key -> key.bound() }
                 .collectEntries { UniqueKeyFacets key -> [(key.name()): key.columns()] } as Map<String, List<String>>
@@ -600,33 +601,94 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
     }
 
     /**
-     * The natural identifier: the properties the binder marked natural are the ones the generator names, each is updatable exactly
-     * when the natural id is mutable, and one unique key spans their columns in the order the mapping names them.
+     * The natural identifier: the properties the binder marked natural are the ones a natural id of the class or of a subclass
+     * names (a subclass may name a property it inherits), each property the entity's own natural id names is updatable exactly when
+     * the natural id is mutable, and one unique key on the table of the class spans their columns in the order the mapping names them.
      */
-    private List<String> compareNaturalId(GrailsHibernatePersistentEntity entity, NaturalIdFacets facets, Map<String, Integer> naturals) {
+    private List<String> compareNaturalId(
+            GrailsDomainGenerator generator, GrailsHibernatePersistentEntity entity, NaturalIdFacets facets, Map<String, Integer> naturals) {
         PersistentClass persistentClass = entity.persistentClass
-        List<Property> natural = persistentClass.properties.findAll { Property p -> p.naturalIdentifier }
+        List<Property> natural = persistentClass.declaredProperties.findAll { Property p -> p.naturalIdentifier }
         String where = "${entity.name} natural id"
+        Set<String> named = hierarchyNaturalNames(generator, entity)
+        if (!named.containsAll(natural*.name)) {
+            return ["${where} properties: generator=${named} binder=${natural*.name}".toString()]
+        }
         if (facets == null) {
-            return natural.isEmpty() ? [] : ["${where} properties: generator=none binder=${natural*.name}".toString()]
+            return []
         }
         naturals['entities']++
         naturals['properties'] += facets.propertyNames().size()
         List<String> found = []
-        if (facets.propertyNames().toSet() != natural*.name.toSet()) {
-            found << "${where} properties: generator=${facets.propertyNames()} binder=${natural*.name}".toString()
-            return found
-        }
-        natural.each { Property p ->
-            if (p.updateable != facets.mutable()) {
+        facets.propertyNames().each { String name ->
+            Property p = persistentClass.hasProperty(name) ? persistentClass.getProperty(name) : null
+            if (p == null || !p.naturalIdentifier) {
+                found << "${where} properties: generator=${facets.propertyNames()} binder=not natural: ${name}".toString()
+            } else if (p.updateable != facets.mutable()) {
                 found << "${where} updatable of ${p.name}: generator=${facets.mutable()} binder=${p.updateable}".toString()
             }
         }
-        List<String> columns = facets.propertyNames().collectMany { String name -> persistentClass.getProperty(name).columns*.name }
+        List<String> columns = naturalKeyColumns(generator, entity, persistentClass, facets)
         if (!persistentClass.table.uniqueKeys.values().any { org.hibernate.mapping.UniqueKey key -> key.columns*.name == columns }) {
             found << "${where} uniqueKey: generator=${columns} binder=${persistentClass.table.uniqueKeys.values()*.columns*.name}".toString()
         }
         return found
+    }
+
+    /**
+     * The columns of the natural id the binder puts in its unique key: those of each property's value, in the order of the mapping.
+     * The columns of an embedded property are in the order of the properties of the embedded type as it declares them, which is the
+     * order of the generator's leaves: the binder adds them to the key before Hibernate sorts the properties of the component by
+     * name, so the bound component no longer tells.
+     */
+    private static List<String> naturalKeyColumns(
+            GrailsDomainGenerator generator, GrailsHibernatePersistentEntity entity, PersistentClass persistentClass, NaturalIdFacets facets) {
+        return facets.propertyNames().collectMany { String name ->
+            Object mapped = entity.getPropertyByName(name)
+            List<String> bound = persistentClass.getProperty(name).value.selectables.findAll { it instanceof org.hibernate.mapping.Column }
+                    .collect { ((org.hibernate.mapping.Column) it).name }
+            if (mapped instanceof HibernateEmbeddedProperty) {
+                List<String> declared = generator.embeddedLeaves((HibernateEmbeddedProperty) mapped).collectMany { EmbeddedLeaf leaf ->
+                    leaf.toOne() != null ? leaf.toOne().joinColumns()*.name() : (leaf.column() != null ? [leaf.column().name()] : [])
+                }
+                return declared.toSet() == bound.toSet() ? declared : bound
+            }
+            return bound
+        } as List<String>
+    }
+
+    /** The properties the natural id of the entity or of one of its subclasses names. */
+    private static Set<String> hierarchyNaturalNames(GrailsDomainGenerator generator, GrailsHibernatePersistentEntity entity) {
+        Set<String> names = new HashSet<String>()
+        Deque<GrailsHibernatePersistentEntity> pending = new ArrayDeque<GrailsHibernatePersistentEntity>([entity])
+        while (!pending.isEmpty()) {
+            GrailsHibernatePersistentEntity next = pending.poll()
+            NaturalIdFacets facets = generator.naturalIdFacets(next)
+            if (facets != null) {
+                names.addAll(facets.propertyNames())
+            }
+            pending.addAll(next.childEntities)
+        }
+        return names
+    }
+
+    /**
+     * The column sets of the natural ids of the entity and its subclasses whose unique key lies on the table of the entity: the
+     * binder puts the key of a subclass of a single-table hierarchy on the table of the hierarchy. They are compared with the natural
+     * id, not with the unique keys the mapping states.
+     */
+    private static Set<Set<String>> naturalKeySets(GrailsDomainGenerator generator, GrailsHibernatePersistentEntity entity) {
+        Set<Set<String>> sets = new HashSet<Set<String>>()
+        Deque<GrailsHibernatePersistentEntity> pending = new ArrayDeque<GrailsHibernatePersistentEntity>([entity])
+        while (!pending.isEmpty()) {
+            GrailsHibernatePersistentEntity next = pending.poll()
+            NaturalIdFacets facets = generator.naturalIdFacets(next)
+            if (facets != null && next.persistentClass.table.is(entity.persistentClass.table)) {
+                sets << naturalKeyColumns(generator, next, next.persistentClass, facets).toSet()
+            }
+            pending.addAll(next.childEntities)
+        }
+        return sets
     }
 
     /**
@@ -635,8 +697,11 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
      * columns follow the order of the fields, not the order the mapping names them: listed, not reported.
      */
     private static List<String> compareAnnotatedNaturalId(
-            String where, PersistentClass bound, PersistentClass annotated, Map<String, Integer> known) {
-        List<Property> boundNatural = bound.properties.findAll { Property p -> p.naturalIdentifier }
+            String where, PersistentClass bound, PersistentClass annotated, NaturalIdFacets facets, Map<String, Integer> known) {
+        // the properties a subclass names are marked by the binder, not by the annotation (Hibernate refuses @NaturalId on a subclass)
+        List<Property> boundNatural = bound.properties.findAll { Property p ->
+            p.naturalIdentifier && facets != null && facets.propertyNames().contains(p.name)
+        }
         List<Property> annotatedNatural = annotated.properties.findAll { Property p -> p.naturalIdentifier }
         if (boundNatural.isEmpty() && annotatedNatural.isEmpty()) {
             return []
@@ -666,10 +731,7 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
      * from a unique column once the metadata is complete (their names start with {@code UK_}), and the unique key over the columns
      * of a natural id, which is compared with the natural id.
      */
-    private static Map<String, List<String>> tableKeysWithoutNaturalId(PersistentClass persistentClass) {
-        List<Set<String>> naturalColumns = persistentClass.subclassClosure.collect { PersistentClass member ->
-            member.declaredProperties.findAll { Property p -> p.naturalIdentifier }*.columns.flatten()*.name.toSet()
-        }.findAll { Set<String> columns -> !columns.isEmpty() }
+    private static Map<String, List<String>> tableKeysWithoutNaturalId(PersistentClass persistentClass, Set<Set<String>> naturalColumns) {
         return persistentClass.table.uniqueKeys.values().findAll { org.hibernate.mapping.UniqueKey key ->
             !(key.columns.size() == 1 && key.name.startsWith('UK_')) && !naturalColumns.contains(key.columns*.name.toSet())
         }.collectEntries { org.hibernate.mapping.UniqueKey key ->
@@ -1374,7 +1436,7 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
         }
         if (bound instanceof RootClass) {
             found.addAll(compareAnnotatedDiscriminator(where, (RootClass) bound, (RootClass) annotated))
-            found.addAll(compareAnnotatedNaturalId(where, bound, annotated, known))
+            found.addAll(compareAnnotatedNaturalId(where, bound, annotated, generator.naturalIdFacets(entity), known))
             found.addAll(compareAnnotatedCache(where, (RootClass) bound, (RootClass) annotated))
             if (entity.identity == null && generator.generationProblem(entity) == null) {
                 annotationRead['composite identifiers']++
@@ -1382,7 +1444,7 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
             }
         }
         if (pairs.ownsTable[0]) {
-            found.addAll(compareAnnotatedConstraints(where, bound, annotated, generator.constraintFacets(entity)))
+            found.addAll(compareAnnotatedConstraints(where, bound, annotated, generator.constraintFacets(entity), naturalKeySets(generator, entity)))
         }
         Map<String, Map<String, Object>> expectations = leafExpectations(generator, entity)
         for (Property property : bound.declaredProperties) {
@@ -1454,7 +1516,7 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
      * is compared by columns in the natural id comparison and not here.
      */
     private static List<String> compareAnnotatedConstraints(
-            String where, PersistentClass bound, PersistentClass annotated, ConstraintFacets facets) {
+            String where, PersistentClass bound, PersistentClass annotated, ConstraintFacets facets, Set<Set<String>> naturalKeys) {
         Map<String, List<String>> boundIndexes = bound.table.indexes.values().collectEntries { org.hibernate.mapping.Index index ->
             [(index.name): index.columns*.name]
         } as Map<String, List<String>>
@@ -1465,10 +1527,10 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
         if (boundIndexes != annotatedIndexes) {
             found << "${where} indexes: generator=${annotatedIndexes} binder=${boundIndexes}".toString()
         }
-        Map<String, List<String>> boundKeys = tableKeysWithoutNaturalId(bound)
+        Map<String, List<String>> boundKeys = tableKeysWithoutNaturalId(bound, naturalKeys)
         // a key the mapping asks for and the binder does not create is stated by the generator, so Hibernate reads it too
         Set<String> unbound = facets.uniqueKeys().findAll { UniqueKeyFacets key -> !key.bound() }*.name().toSet()
-        Map<String, List<String>> annotatedKeys = tableKeysWithoutNaturalId(annotated).findAll { String name, List<String> columns ->
+        Map<String, List<String>> annotatedKeys = tableKeysWithoutNaturalId(annotated, naturalKeys).findAll { String name, List<String> columns ->
             !unbound.contains(name)
         } as Map<String, List<String>>
         if (boundKeys != annotatedKeys) {

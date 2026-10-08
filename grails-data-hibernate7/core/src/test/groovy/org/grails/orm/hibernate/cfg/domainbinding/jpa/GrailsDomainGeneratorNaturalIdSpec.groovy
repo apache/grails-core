@@ -35,7 +35,7 @@ import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersi
 class GrailsDomainGeneratorNaturalIdSpec extends GrailsDomainGeneratorSupport {
 
     void setupSpec() {
-        manager.registerDomainClasses(GenNatTarget, GenNatMutable, GenNatImmutable, GenNatRef, GenNatRoot, GenNatChild, GenNatTypo, GenNatEmbedded, GenNatNone)
+        manager.registerDomainClasses(GenNatTarget, GenNatMutable, GenNatImmutable, GenNatRef, GenNatRoot, GenNatChild, GenNatTypo, GenNatOnlyTypo, GenNatEmbedded, GenNatNone)
     }
 
     void "every property of a natural id is marked, and it is mutable only when the mapping says so"() {
@@ -86,29 +86,32 @@ class GrailsDomainGeneratorNaturalIdSpec extends GrailsDomainGeneratorSupport {
         !generateGroup(GenNatNone).values().first().declaredFields.any { it.isAnnotationPresent(NaturalId) }
     }
 
-    void "a natural id that names something the generator cannot state is rejected by name"() {
-        when:
-        generateGroup(domain)
-
-        then:
-        UnsupportedOperationException e = thrown()
-        e.message.contains(domain.simpleName)
-        e.message.contains(reason)
-
-        where:
-        domain        | reason
-        GenNatTypo    | 'typo'
-        GenNatEmbedded | 'home'
+    void "a name that is no property of the entity is skipped, as the domain binder skips it"() {
+        expect:
+        newGenerator().naturalIdFacets(entity(GenNatTypo)) == new NaturalIdFacets(['code'], false)
+        newGenerator().naturalIdFacets(entity(GenNatOnlyTypo)) == null
+        generateGroup(GenNatTypo).values().first().getDeclaredField('code').isAnnotationPresent(NaturalId)
+        !generateGroup(GenNatOnlyTypo).values().first().declaredFields.any { it.isAnnotationPresent(NaturalId) }
     }
 
-    void "a natural id on a subclass is rejected by name"() {
+    void "an embedded property can be part of the natural id, and the root states it with the other properties"() {
         when:
-        generateGroup(GenNatRoot, GenNatChild)
+        Class<?> generated = generateGroup(GenNatEmbedded).values().first()
 
         then:
-        UnsupportedOperationException e = thrown()
-        e.message.contains('GenNatChild')
-        e.message.contains('natural')
+        newGenerator().naturalIdFacets(entity(GenNatEmbedded)) == new NaturalIdFacets(['code', 'home'], false)
+        generated.getDeclaredField('code').isAnnotationPresent(NaturalId)
+        !generated.getDeclaredField('home').getAnnotation(NaturalId).mutable()
+    }
+
+    void "the natural id of a subclass is described by the facets but not stated: Hibernate refuses @NaturalId on a subclass"() {
+        when:
+        Map<GrailsHibernatePersistentEntity, Class<?>> classes = generateGroup(GenNatRoot, GenNatChild)
+
+        then:
+        newGenerator().naturalIdFacets(entity(GenNatChild)) == new NaturalIdFacets(['code'], false)
+        !classes[entity(GenNatChild)].getDeclaredField('code').isAnnotationPresent(NaturalId)
+        !classes[entity(GenNatChild)].getDeclaredField('code').getAnnotation(Column).updatable()
     }
 
     private static Map<String, List<Object>> naturalProperties(PersistentClass persistentClass) {
@@ -187,6 +190,16 @@ class GenNatTypo {
 
     static mapping = {
         id natural: ['code', 'typo']
+    }
+}
+
+@Entity
+class GenNatOnlyTypo {
+
+    String code
+
+    static mapping = {
+        id natural: ['typo']
     }
 }
 

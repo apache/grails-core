@@ -66,6 +66,8 @@ For the domain classes in GORM's own test suites, both bindings produce the same
 * `params` on a registered type name such as `type: 'string'` are ignored, as with classic binding. They reach the type when it is a `UserType` that implements `ParameterizedType`.
 * A `type` that names an `AttributeConverter` class, for example `type: 'org.hibernate.type.YesNoConverter'`, converts the property with it, on a single property as well as on a `hasMany` stored in one column, as with classic binding.
 * A custom collection type (a `UserCollectionType` class) as the `type` of a `hasMany` of domain classes is applied to the collection. Classic binding boots with the same schema but never uses the class: it keeps Hibernate's own collection.
+* A natural id (`id natural: [...]`) may name an embedded object (the unique key spans its columns, in the order of the embedded class), and a name that is no property of the class is skipped without a message, as with classic binding.
+* A natural id declared on a subclass adds a unique key to the table of the hierarchy (the table of the subclass in a joined hierarchy), over the columns of the named properties in the order the mapping names them, and makes those properties updatable only when the natural id is `mutable`. Classic binding also marks the properties as natural identifiers, and with Hibernate 7 that makes every load of the subclass entity fail with a `NullPointerException`; native binding does not mark them, so the subclass entity loads.
 * Identifier generators, inheritance strategies (single table, joined and table-per-concrete-class), discriminators, natural ids, optimistic locking, lazy and eager fetching, cascades, sorting, batch size and `cache` usage are mapped as with classic binding.
 
 [[nativeDomainBinding-refused]]
@@ -85,17 +87,9 @@ Nothing is ignored silently. A mapping that boots is bound the way it is written
 | `The collection [...] of the embedded type [...] is reachable through N embedded properties (...) ...`
 | Embed the class from one property only, or make it a domain class and map an association. Classic binding names the table and the key column of the collection after the embedded class, so all the owners share one table whose foreign key points at only one of them, and it fails to boot when the owners name the property alike.
 
-| A natural id declared on a subclass.
-| `Entity [...] declares a natural id but is a subclass ...`
-| Declare the natural id on the root class of the hierarchy. For a subclass, use a `unique` constraint on its property. Classic binding adds a unique key to the table of the hierarchy.
-
-| A natural id that names an embedded property, a collection or a formula.
-| `The natural id of [...] names [...], which is ... only a simple property, an enum or a foreign key can be part of a natural id ...`
-| Name only simple properties, enums and many-to-one associations in `natural`.
-
-| A natural id that names a property the class does not have.
-| `The natural id of [...] names [...], which is not a persistent property of the entity ...`
-| Correct the name. Classic binding skips an unknown name without a message, so the entity has no natural id.
+| A natural id that names a collection or a formula.
+| `The natural id of [...] names [...], which is ... only a simple property, an enum, a foreign key or an embedded type can be part of a natural id ...`
+| Name only simple properties, enums, many-to-one associations and embedded objects in `natural`. Classic binding does not boot either: it fails with a `ClassCastException` for a collection and with `constraint involves a formula` for a formula.
 
 | A `type` on a `hasMany` of basic values that is a registered Hibernate type name, for example `type: 'text'`, or a custom collection type.
 | `Collection property [...]: the type [...] mapped on the collection property names neither a class nor serializable ...` or `... a custom collection type (a UserCollectionType) is mapped on a collection of basic values ...`

@@ -73,6 +73,7 @@ import org.grails.orm.hibernate.cfg.domainbinding.binder.PropertyBinder
 import org.grails.orm.hibernate.cfg.domainbinding.binder.StringColumnConstraintsBinder
 import org.grails.orm.hibernate.cfg.domainbinding.generator.GrailsSequenceGeneratorEnum
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEmbeddedProperty
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentEntity
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateBasicProperty
@@ -83,6 +84,7 @@ import org.grails.orm.hibernate.cfg.domainbinding.util.ColumnNameForPropertyAndP
 import org.grails.orm.hibernate.cfg.domainbinding.util.DefaultColumnNameFetcher
 import org.grails.orm.hibernate.cfg.domainbinding.util.GeneratorCreationContextWrapper
 import org.grails.orm.hibernate.cfg.domainbinding.util.MultiTenantFilterDefinitionBinder
+import org.grails.orm.hibernate.cfg.domainbinding.util.UniqueNameGenerator
 
 /**
  * Lets Hibernate's own annotation binder bind the GORM domain classes, while the application's real instances stay what
@@ -116,6 +118,7 @@ class GeneratedDomainClassBinder implements SessionFactoryBuilderFactory {
     private final PropertyBinder propertyBinder = new PropertyBinder()
     private final Map<String, Generated> generatedByName = new HashMap<String, Generated>()
     private final MultiTenantFilterDefinitionBinder filterDefinitionBinder = new MultiTenantFilterDefinitionBinder()
+    private final UniqueNameGenerator uniqueNameGenerator = new UniqueNameGenerator()
     private PersistentEntityNamingStrategy namingStrategy
     private JdbcEnvironment jdbcEnvironment
     private GrailsDomainGenerator generator
@@ -365,18 +368,65 @@ class GeneratedDomainClassBinder implements SessionFactoryBuilderFactory {
             key.explicit = false
         }
         alignPrimaryKeyOrder(persistentClass, entity)
-        NaturalIdFacets naturalId = persistentClass instanceof RootClass ? generator.naturalIdFacets(entity) : null
-        if (naturalId != null) {
-            List<String> columns = naturalId.propertyNames().collectMany { String name ->
-                persistentClass.getProperty(name).columns*.name
-            }
+        NaturalIdFacets naturalId = generator.naturalIdFacets(entity)
+        if (naturalId == null) {
+            return
+        }
+        List<Column> columns = naturalId.propertyNames().collectMany { String name ->
+            naturalColumns(persistentClass, entity, name)
+        }
+        if (persistentClass instanceof RootClass) {
             for (UniqueKey key : persistentClass.table.uniqueKeys.values()) {
-                if (key.columns*.name.toSet() == columns.toSet()) {
-                    List<Column> ordered = key.columns.sort(false) { Column column -> columns.indexOf(column.name) }
+                if (key.columns*.name.toSet() == columns*.name.toSet()) {
+                    List<Column> ordered = key.columns.sort(false) { Column column -> columns*.name.indexOf(column.name) }
                     key.columns.clear()
                     key.columns.addAll(ordered)
                 }
             }
+        } else {
+            alignSubclassNaturalId(persistentClass, naturalId, columns)
+        }
+    }
+
+    /**
+     * The columns of a property of a natural id, in the order the domain binder gives them: the order of the properties of an
+     * embedded type as the mapping declares them, where Hibernate's annotation binder sorts the properties of a component by name.
+     */
+    private List<Column> naturalColumns(PersistentClass persistentClass, GrailsHibernatePersistentEntity entity, String name) {
+        Property property = persistentClass.getProperty(name)
+        List<Column> columns = property.columns
+        PersistentProperty<?> mapped = entity.getPropertyByName(name)
+        if (property.value instanceof Component && mapped instanceof HibernateEmbeddedProperty) {
+            List<String> declared = generator.embeddedLeaves((HibernateEmbeddedProperty) mapped).collectMany { EmbeddedLeaf leaf ->
+                leaf.toOne() != null ? leaf.toOne().joinColumns()*.name() : (leaf.column() != null ? [leaf.column().name()] : [])
+            }
+            List<String> bound = columns*.name
+            if (declared.toSet() == bound.toSet()) {
+                return columns.sort(false) { Column column -> declared.indexOf(column.name) }
+            }
+        }
+        return columns
+    }
+
+    /**
+     * Hibernate refuses {@code @NaturalId} on a subclass. The domain binder binds the natural id of a subclass as it does a root's
+     * ({@code NaturalId.createUniqueKey}): each property it names, found in the hierarchy, is made updatable exactly when the natural
+     * id is mutable, and one unique key over their columns in the order of the mapping is added to the table of the class, which is
+     * the table of the hierarchy for a single-table subclass, with the name {@link UniqueNameGenerator} gives it.
+     *
+     * <p>The properties are not marked as natural identifiers: with Hibernate 7 the domain binder's marking makes every load and
+     * update of the subclass fail with a {@code NullPointerException}, because Hibernate builds the natural id mapping of a root
+     * only.</p>
+     */
+    private void alignSubclassNaturalId(PersistentClass persistentClass, NaturalIdFacets naturalId, List<Column> columns) {
+        for (String name : naturalId.propertyNames()) {
+            persistentClass.getProperty(name).updateable = naturalId.mutable()
+        }
+        if (!columns.isEmpty()) {
+            UniqueKey key = new UniqueKey(persistentClass.table)
+            columns.each { Column column -> key.addColumn(column) }
+            uniqueNameGenerator.setGeneratedUniqueName(key)
+            persistentClass.table.addUniqueKey(key)
         }
     }
 

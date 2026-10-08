@@ -122,6 +122,7 @@ import org.hibernate.usertype.UserType
 import org.springframework.core.GenericTypeResolver
 import org.springframework.util.ClassUtils
 
+import org.grails.datastore.mapping.model.PersistentProperty
 import org.grails.datastore.mapping.model.config.GormProperties
 import org.grails.datastore.mapping.model.types.Association
 import org.grails.orm.hibernate.cfg.CacheConfig
@@ -722,9 +723,12 @@ class GrailsDomainGenerator {
 
     /**
      * Decides the natural identifier the domain binder binds for the entity, as {@code NaturalIdentifierBinder} reads it from the
-     * mapped identity: the properties it names and whether it is mutable. The binder also makes each of those properties updatable
-     * exactly when the natural id is mutable, and adds one unique key over their columns; Hibernate's annotation binder does both
-     * for {@code @NaturalId}, with a unique key of its own name.
+     * mapped identity: the properties it names and whether it is mutable. The binder makes each of those properties updatable
+     * exactly when the natural id is mutable, and adds one unique key over their columns to the table of the entity (the table of the
+     * hierarchy for a subclass of a single-table hierarchy). A name that is no property of the entity or of its superclasses is
+     * skipped without a word, so it is not part of the facets either; a mapping whose names are all skipped has no natural id.
+     * Hibernate's annotation binder does the rest for {@code @NaturalId} on a root, with a unique key of its own name; a subclass
+     * cannot state it, and the aligner binds the key and the flags of a subclass.
      *
      * @return the facets, or {@code null} when the mapping names no natural identifier
      */
@@ -733,43 +737,57 @@ class GrailsDomainGenerator {
         if (natural == null || natural.propertyNames == null || natural.propertyNames.isEmpty()) {
             return null
         }
-        return new NaturalIdFacets(new ArrayList<String>(natural.propertyNames), natural.mutable)
+        List<String> known = natural.propertyNames.findAll { String name ->
+            PersistentProperty<?> found = entity.getPropertyByName(name)
+            found instanceof HibernatePersistentProperty && entity.identity?.name != name
+        }
+        return known.isEmpty() ? null : new NaturalIdFacets(new ArrayList<String>(known), natural.mutable)
     }
 
     /**
-     * @return why the generator cannot describe the natural identifier of the entity, or {@code null} when it can: it must be
-     *     the entity's own (Hibernate refuses {@code @NaturalId} on a subclass, where the binder puts a key on the table of the
-     *     hierarchy), and every property it names must be a plain column, an enum or a foreign key of the entity (the binder skips a
-     *     name that is no property of the class without a word, which the generator rejects instead)
+     * @return why the generator cannot describe the natural identifier of the entity, or {@code null} when it can: every property it
+     *     names must be a plain column, an enum, a foreign key or an embedded type of the entity
      */
     private String naturalIdProblem(GrailsHibernatePersistentEntity entity) {
         NaturalIdFacets natural = naturalIdFacets(entity)
         if (natural == null) {
             return null
         }
-        if (!entity.isRoot()) {
-            return "Entity [${entity.name}] declares a natural id but is a subclass: Hibernate refuses @NaturalId on a subclass, " +
-                    'where the binder adds a unique key to the table of the hierarchy'
-        }
         for (String name : natural.propertyNames()) {
-            HibernatePersistentProperty property = entity.persistentPropertiesToBind.find { HibernatePersistentProperty p -> p.name == name }
-            if (property == null) {
-                return "The natural id of [${entity.name}] names [${name}], which is not a persistent property of the entity: " +
-                        'the binder skips it without a word'
-            }
-            if (property instanceof HibernateEmbeddedProperty || property instanceof HibernateBasicProperty ||
+            HibernatePersistentProperty property = (HibernatePersistentProperty) entity.getPropertyByName(name)
+            if (property instanceof HibernateBasicProperty ||
                     property instanceof HibernateToManyEntityProperty || isDerived(property) ||
                     (property instanceof HibernateToOneProperty && boundAsOneToOne((HibernateToOneProperty) property))) {
                 return "The natural id of [${entity.name}] names [${name}], which is ${property.getClass().simpleName}: " +
-                        'only a simple property, an enum or a foreign key can be part of a natural id the generator states'
+                        'only a simple property, an enum, a foreign key or an embedded type can be part of a natural id the generator states'
             }
+        }
+        return null
+    }
+
+    /**
+     * @return whether the natural identifier the binder gives the property makes it updatable: the natural id of its entity or of a
+     *     subclass of it, which may name a property it inherits; {@code null} when no natural id names it
+     */
+    private Boolean naturalIdUpdatable(HibernatePersistentProperty property) {
+        Deque<GrailsHibernatePersistentEntity> pending = new ArrayDeque<GrailsHibernatePersistentEntity>()
+        pending.add(property.hibernateOwner)
+        while (!pending.isEmpty()) {
+            GrailsHibernatePersistentEntity entity = pending.poll()
+            NaturalIdFacets natural = naturalIdFacets(entity)
+            if (natural != null && natural.propertyNames().contains(property.name)) {
+                return natural.mutable()
+            }
+            pending.addAll(entity.childEntities)
         }
         return null
     }
 
     /** @return whether the property is part of the natural identifier of its entity, and so whether that is mutable; {@code null} when it is not part of it */
     private Boolean naturalIdMutable(HibernatePersistentProperty property) {
-        NaturalIdFacets natural = naturalIdFacets(property.hibernateOwner)
+        GrailsHibernatePersistentEntity owner = property.hibernateOwner
+        // a subclass cannot state @NaturalId: the aligner binds the natural id of a subclass
+        NaturalIdFacets natural = owner.isRoot() ? naturalIdFacets(owner) : null
         return natural != null && natural.propertyNames().contains(property.name) ? natural.mutable() : null
     }
 
@@ -2402,7 +2420,7 @@ class GrailsDomainGenerator {
             HibernatePersistentProperty property, Column column, String name, boolean nullable, boolean unique) {
         PropertyConfig mappedForm = property.hibernateMappedForm
         // NaturalId.createUniqueKey sets the updatability of each of its properties to the mutability of the natural id
-        Boolean naturalMutable = naturalIdMutable(property)
+        Boolean naturalMutable = naturalIdUpdatable(property)
         return new ColumnFacets(
                 name,
                 nullable,
@@ -3032,6 +3050,10 @@ class GrailsDomainGenerator {
                                 overrides as AnnotationDescription[])
                         .build()
             }
+        }
+        Boolean naturalMutable = naturalIdMutable(property)
+        if (naturalMutable != null) {
+            annotations << AnnotationDescription.Builder.ofType(HibernateNaturalId).define('mutable', naturalMutable).build()
         }
         for (Annotation audit : auditAnnotations(property)) {
             annotations << AnnotationDescription.ForLoadedAnnotation.of(audit)
