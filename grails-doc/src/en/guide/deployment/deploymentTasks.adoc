@@ -119,7 +119,6 @@ ExecStart=/usr/bin/java \
 NOTE: The `-XX:+/-UseCompressedClassPointers` flag is deprecated in Java 25. Removal is scheduled (https://github.com/openjdk/jdk/commit/da296cbea1[JDK-8363996]) which makes `UseCompressedClassPointers` obsolete in JDK 27. This means the flag is accepted with a warning and ignored. Anyone who relies on `-XX:-UseCompressedClassPointers` will be using compressed class space on 27 whether or not they remove the flag.
 
 If your startup scripts pass `-XX:+UseCompressedClassPointers` (the default), remove it.
-If they pass `-XX:-UseCompressedClassPointers` to disable compressed class pointers, remove it and, if you encounter class-space exhaustion, increase the class space with `-XX:CompressedClassSpaceSize=4g` instead.
 
 == Graceful shutdown and rolling updates
 
