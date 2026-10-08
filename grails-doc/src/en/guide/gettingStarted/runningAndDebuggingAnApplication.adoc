@@ -74,3 +74,192 @@ For debugging a Grails app, you have two options. You can either right-click on 
 $ ./gradlew bootRun --debug-jvm
 
 For more information on the `bootRun` command, please refer to the link:{commandLineRef}bootRun.html[bootRun section of the Grails reference guide].
+
+[[startupProgress]]
+=== Watching the Application Start
+
+The `grails-startup-progress` module shows how far an application has got as it starts. Add it to the application's `build.gradle`, or select the `grails-startup-progress` feature when generating the application:
+
+[source,groovy]
+----
+dependencies {
+    implementation 'org.apache.grails:grails-startup-progress'
+}
+----
+
+With it, in development mode, which is the `development` environment run from the project directory as `./gradlew bootRun` does, Grails answers on the application's port as soon as the application begins to start, rather than leaving the port closed until the embedded server is ready. Opening the application in a browser while it starts shows a progress page with:
+
+* the stage the start has reached: preparing the application context, loading plugins and bean definitions, creating beans, starting the web server, and running plugin startup hooks and `BootStrap` classes
+* how many of the application's beans have been created, and which bean is being created now
+* the beans that have taken longest to create so far, not counting the beans they depend on, which is usually the quickest way to find out why a start is slow
+
+The page reloads the address it was opened at once the application is ready, which is after `BootStrap` has finished, not merely once the web server is listening. A browser that opens the application while `BootStrap` runs is shown the progress page too, rather than pages from an application that has not finished starting.
+
+Until the web server is listening, any request that is not for a web page, such as a call to a REST endpoint, gets a `503 Service Unavailable` response with a `Retry-After` header. Once it is listening, such requests reach the application as they always have, including requests the application makes to itself from `BootStrap`.
+
+If the start fails, the page shows the exception and its stack trace and stays open. Start the application again and the page follows the new start and reloads when it is ready.
+
+The stages, the beans, the exception and the Grails version are details of the application's internals, so the page shows them only to a browser signed in with the address the application logs as it starts:
+
+[source,console]
+----
+Startup progress is shown at http://localhost:8080/?grailsStartupToken=… until the application is ready
+----
+
+Opening that address once signs the browser in for as long as the application runs, through restarts by Spring Boot DevTools, and takes the token back out of the address bar. A browser opened by the application, as described below, is signed in already. Anyone else reaching the port sees only the progress bar: the details are left out of the page and out of its data, rather than hidden in them. The sign-in is a cookie, so it covers every tab of the browser that signed in. The token is made afresh each time the JVM starts and is only ever written to the log, so seeing the details takes the same access as reading the log.
+
+Until the embedded server takes the port over, the page is served by the HTTP server built into the JDK, so it changes nothing about how the application itself serves requests. In the interactive shell, `grails run-app` keeps waiting while the page holds the port, and stops waiting once the embedded server has taken the port over, as it does for an application without the module, so it does not wait for `BootStrap`. The page is not served when the application:
+
+* is deployed as a WAR to a servlet container
+* uses a random port (`server.port: 0`) or SSL
+* finds its port already in use, in which case the application fails to start exactly as it would without the page
+* is to take a CRaC checkpoint on refresh (`-Dspring.context.checkpoint=onRefresh`), which an open port would fail
+
+These settings control the page. The three left commented out have no fixed default: unset, each is on in development mode and off elsewhere, so set one only to decide it yourself:
+
+[source,yaml]
+----
+grails:
+    startup:
+        progress:
+            # enabled: true      # whether to serve the page; unset, only in development mode
+            # showDetails: true  # whether a signed-in browser sees bean names and failures; unset, only in development mode
+            openBrowser: false   # whether to open a browser on the page as the application starts
+            browserCommand: []   # the command that opens the browser; by default, the operating system's own
+            statusPath: /__grails/startup-progress   # where the page polls for progress, below the context path
+            endpoint:
+                # enabled: true  # whether to serve the startup report; unset, only in development mode
+                path: /__grails/startup   # where to serve it, below the context path
+----
+
+The page follows the start by polling `statusPath`. Once the application is ready, a poll there is told so rather than reaching the application, which would log every request it has no mapping for, so the path is taken from the application for as long as it runs. It cannot be the report's path.
+
+With `openBrowser` set, a browser opens on the progress page as soon as it is served, so the start can be watched from the beginning. When the page is not served, for example because the application uses SSL, the browser opens on the application once it is ready instead. A browser is opened once per address for the life of the JVM, so the page already open follows a restart by Spring Boot DevTools rather than another window opening. The browser is opened with `open` on macOS, `xdg-open` elsewhere on Unix and `rundll32 url.dll,FileProtocolHandler` on Windows; `browserCommand` names another command, which is given the address as its last argument:
+
+[source,yaml]
+----
+grails:
+    startup:
+        progress:
+            browserCommand: ['/usr/bin/firefox', '--new-window']
+----
+
+Whether a browser opens is usually one developer's preference rather than the application's. Under `bootRun`, any Gradle property whose name starts with `grails.startup.progress.` is passed to the application under the same name, so it can be set for every application on one machine in `~/.gradle/gradle.properties`:
+
+[source,properties]
+----
+grails.startup.progress.openBrowser=true
+----
+
+or for a single run, where a property given without a value is `true`:
+
+[source,console]
+----
+$ ./gradlew bootRun -Pgrails.startup.progress.openBrowser
+----
+
+Setting `grails.startup.progress.enabled` to `true` outside development mode, for example in production, serves only the progress bar, unless `grails.startup.progress.showDetails` is set as well, and then the details go only to a browser signed in with the address in the log.
+
+==== The Startup Report
+
+Once the application is running, the same view is available as a report of how it started, at `/__grails/startup` below the context path, in development mode by default. It shows how long each stage took, how many beans were created, and the slowest beans, with the total time measured as Spring Boot measures it in its `Started ... in` log message. The application logs where the report is, with the token that signs a browser in to see how the start went, as it finishes starting. Anyone else is told only how long the start took:
+
+[source,console]
+----
+Startup report is at http://localhost:8080/__grails/startup?grailsStartupToken=…
+----
+
+A client that asks for JSON, with an `Accept: application/json` header or a `format=json` parameter, gets the report as data, which suits keeping track of how long an application takes to start:
+
+[source,console]
+----
+$ curl -H 'Accept: application/json' http://localhost:8080/__grails/startup
+----
+
+[source,json]
+----
+{
+  "application": "bookstore",
+  "phase": "READY",
+  "elapsedMillis": 9421,
+  "phases": [
+    {"name": "PREPARING", "millis": 1288},
+    {"name": "LOADING_DEFINITIONS", "millis": 1404},
+    {"name": "CREATING_BEANS", "millis": 6305},
+    {"name": "STARTING_WEB_SERVER", "millis": 31},
+    {"name": "INITIALIZING", "millis": 393}
+  ],
+  "beansCreated": 512,
+  "beansExpected": 512,
+  ...
+}
+----
+
+[cols="1,3"]
+|===
+|Field |Meaning
+
+|`application`
+|The application's name, from `spring.application.name` or `info.app.name`.
+
+|`phase`
+|How far the start has got: `PREPARING`, `LOADING_DEFINITIONS`, `CREATING_BEANS`, `STARTING_WEB_SERVER`, `INITIALIZING`, then `READY`, or `FAILED`.
+
+|`elapsedMillis`
+|The time the application took to start, measured as Spring Boot measures the time in its `Started ... in` log message, so not counting application and command line runners, or the time so far while it is starting.
+
+|`phases`
+|Each stage begun, in order, with how long it took, or has taken so far. Only for a signed-in client.
+
+|`beansCreated`, `beansExpected`
+|How many of the singletons the application creates as it starts have been created, and how many there are. Only for a signed-in client.
+
+|`slowestBeans`
+|The beans that took longest to create, not counting the beans they depend on, each with its `name` and `millis`. Only for a signed-in client.
+
+|`tasks`
+|The tasks the application and its plugins reported, in the order they began, each with its `description`, how many items it has `completed` of its `total` (`-1` when not known), whether it is still `running`, the `item` it is on, and how long it took in `millis`. Only for a signed-in client.
+
+|`grailsVersion`
+|The version of Grails. Only for a signed-in client.
+
+|`signInForDetails`
+|Whether the client would see the fields only a signed-in client gets by signing in with the address in the log.
+|===
+
+The report does not need the progress page, so it is served wherever the application starts its own embedded web server, including over SSL or on a random port. A different path is set with `grails.startup.progress.endpoint.path`, and the report is turned on outside development mode with `grails.startup.progress.endpoint.enabled`.
+
+==== Reporting Progress from Your Own Code
+
+Work an application or a plugin does while the application starts, such as loading reference data in `BootStrap`, can report how far it has got with `grails.boot.StartupTask`. A signed-in progress page shows the task while it runs, with how many items it has done and the one it is on, and the startup report lists it with how long it took. The database migration plugin reports the change sets it runs on start this way.
+
+[source,groovy]
+----
+import grails.boot.StartupTask
+import grails.core.GrailsApplication
+
+class BootStrap {
+
+    GrailsApplication grailsApplication
+    ReferenceDataService referenceDataService
+
+    def init = {
+        List<File> files = referenceDataService.files()
+        try (StartupTask task = StartupTask.start(grailsApplication.mainContext, 'Loading reference data', files.size())) {
+            for (File file in files) {
+                task.startItem(file.name)
+                referenceDataService.load(file)
+                task.endItem()
+            }
+        }
+    }
+}
+----
+
+A task and each of its items are recorded as steps of the application context's `ApplicationStartup`, so a task costs nothing when nothing records the start, and is recorded alongside Spring's own steps by Spring Boot Actuator's `startup` endpoint when it is in use. `StartupTask.isRecorded(applicationContext)` says whether anything records the start, so a task can skip work it does only to report itself, such as counting its items before it begins. When the number of items is not known, start the task with a negative total.
+
+==== Health Checks
+
+With the page on, the port accepts connections from the moment the application begins to start, so a check that only opens a connection, such as a Kubernetes `tcpSocket` probe or a load balancer's TCP health check, reports the application up while it is still starting.
+
+A check that makes an HTTP request, such as a Kubernetes `httpGet` probe, gets a `503 Service Unavailable` only while the page's own server holds the port. Once the embedded server has taken the port over, plugin startup hooks and `BootStrap` classes are still to run, and a request that is not a browser opening a page reaches the application as it would without the page, so a probe of an ordinary address can succeed before the application is ready. The page's status address is no readiness check either: it answers `200` with the progress of the start. To hold traffic back until the application is ready, probe a readiness endpoint, such as the `/actuator/health/readiness` endpoint of Spring Boot Actuator, which answers `503` until the application is ready, after `BootStrap` has run.

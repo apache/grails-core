@@ -583,6 +583,23 @@ grails {
 See the <<deploymentAotCache,Ahead-of-Time Caching>> section, which includes measured figures and the
 conditions under which a JVM will decline a cache.
 
+==== Startup Progress Page
+
+With the new `grails-startup-progress` module, which Forge offers as a feature of the same name,
+`./gradlew bootRun` no longer leaves port 8080 closed while the application starts. From the moment the
+application context is prepared, a browser opening the application sees a progress page: the stage the start
+has reached, how many beans have been created and which one is being created now, and the beans that have
+taken longest so far. The page reloads into the application once it is ready, after `BootStrap` has run, and
+shows the exception if the start fails. It is on by default in development mode and can be turned on
+elsewhere with `grails.startup.progress.enabled`. With `grails.startup.progress.openBrowser`, which `bootRun`
+also takes as a Gradle property, for example `./gradlew bootRun -Pgrails.startup.progress.openBrowser`, a
+browser opens on the page as the application starts. Bean names and failures are shown only to a browser signed
+in with the address the application logs, which the browser it opens is. Once the application is running, the
+same view is a report of how long each stage of the start took, at `/__grails/startup`, and a client sending
+`Accept: application/json` gets it as data. Work done during the start can report its own progress with
+`grails.boot.StartupTask`, which the database migration plugin uses to show how many change sets are left to
+run. See <<startupProgress,Watching the Application Start>>.
+
 ==== Banner Colour, Container Version and Start Mark
 
 The startup banner is coloured, reports the servlet container it is running on, and says how the application was

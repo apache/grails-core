@@ -1,0 +1,53 @@
+{
+  "groups": [
+    {
+      "name": "grails.startup.progress",
+      "description": "Startup Progress Page"
+    },
+    {
+      "name": "grails.startup.progress.endpoint",
+      "description": "Startup Report"
+    }
+  ],
+  "properties": [
+    {
+      "name": "grails.startup.progress.enabled",
+      "type": "java.lang.Boolean",
+      "description": "Whether Grails answers on the application's port with a startup progress page from the moment the application context is prepared until the application is ready, instead of the port refusing connections. Only applies to an application starting its own embedded servlet web server on a fixed port without SSL. When not set, the page is served in development mode, that is when the environment is development and the application runs from its project directory, as it does under bootRun."
+    },
+    {
+      "name": "grails.startup.progress.showDetails",
+      "type": "java.lang.Boolean",
+      "description": "Whether the startup progress page and report show the stages of the start with their times, the bean counts, the bean being created, the slowest beans, the exception and stack trace when startup fails, and the Grails version. They are shown only to a browser signed in with the address the application logs as it starts, which carries a token made afresh each time the JVM starts; anyone else sees only the progress bar, and the details are left out of the page and its data rather than hidden. When not set, details are shown in development mode only."
+    },
+    {
+      "name": "grails.startup.progress.openBrowser",
+      "type": "java.lang.Boolean",
+      "defaultValue": false,
+      "description": "Whether to open a browser on the application when it starts: on the startup progress page as soon as it is served, or on the application once it is ready when the page is not served. A browser is opened once per address for the life of the JVM, so a restart by Spring Boot DevTools does not open another. Under bootRun it can be set for one developer, without changing the application, as a Gradle property, for example in ~/.gradle/gradle.properties."
+    },
+    {
+      "name": "grails.startup.progress.browserCommand",
+      "type": "java.util.List<java.lang.String>",
+      "defaultValue": [],
+      "description": "The command that opens the browser, to which the address is added as the last argument. When empty, the operating system's own is used: open on macOS, xdg-open elsewhere on Unix, and rundll32 url.dll,FileProtocolHandler on Windows."
+    },
+    {
+      "name": "grails.startup.progress.endpoint.enabled",
+      "type": "java.lang.Boolean",
+      "description": "Whether the application serves a report of how it started for as long as it runs: the time each stage took, how many beans were created, and the slowest beans. Browsers get a page and clients asking for JSON, with an Accept: application/json header or a format=json parameter, get the same as data. Bean names and the Grails version are shown only to a browser signed in with the address the application logs. It does not need the startup progress page, so it is served wherever the application starts its own embedded web server. When not set, it is served in development mode."
+    },
+    {
+      "name": "grails.startup.progress.endpoint.path",
+      "type": "java.lang.String",
+      "defaultValue": "/__grails/startup",
+      "description": "The path of the startup report, below the context path."
+    },
+    {
+      "name": "grails.startup.progress.statusPath",
+      "type": "java.lang.String",
+      "defaultValue": "/__grails/startup-progress",
+      "description": "The path, below the context path, that the startup progress page polls for the progress of the start. Once the application is ready, a poll there is answered with that, so the request never reaches the application. It cannot be the path of the startup report."
+    }
+  ]
+}

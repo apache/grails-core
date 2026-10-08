@@ -283,6 +283,7 @@ generateConfigReference.configure { Task it ->
             project(':grails-views-gson').tasks.named('jar'),
             project(':grails-views-markup').tasks.named('jar'),
             project(':grails-web-url-mappings').tasks.named('jar'),
+            project(':grails-startup-progress').tasks.named('jar'),
             project(':grails-openapi').tasks.named('jar')
     )
 
@@ -305,6 +306,7 @@ generateConfigReference.configure { Task it ->
             project(':grails-views-gson').tasks.named('jar').flatMap { task -> task.archiveFile },
             project(':grails-views-markup').tasks.named('jar').flatMap { task -> task.archiveFile },
             project(':grails-web-url-mappings').tasks.named('jar').flatMap { task -> task.archiveFile },
+            project(':grails-startup-progress').tasks.named('jar').flatMap { task -> task.archiveFile },
             project(':grails-openapi').tasks.named('jar').flatMap { task -> task.archiveFile }
     ]
     it.inputs.files(metadataJars)
