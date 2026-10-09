@@ -21,7 +21,11 @@ ext.configurePluginRepositories = { RepositoryHandler repositories ->
     if (System.getenv('GRAILS_INCLUDE_MAVEN_LOCAL')) {
         repositories.mavenLocal()
     }
-    repositories.mavenCentral()
+    repositories.mavenCentral {
+        mavenContent {
+            releasesOnly()
+        }
+    }
     repositories.gradlePluginPortal()
     repositories.maven {
         url = uri('https://repository.apache.org/content/groups/snapshots')
