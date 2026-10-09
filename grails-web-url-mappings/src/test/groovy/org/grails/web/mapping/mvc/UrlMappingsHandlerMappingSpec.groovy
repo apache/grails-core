@@ -19,6 +19,7 @@
 package org.grails.web.mapping.mvc
 
 import grails.artefact.Artefact
+import grails.artefact.Controller
 import grails.core.DefaultGrailsApplication
 import grails.util.GrailsWebMockUtil
 import grails.web.Action
@@ -26,16 +27,24 @@ import grails.web.HyphenatedUrlConverter
 import grails.web.mapping.AbstractUrlMappingsSpec
 import org.grails.web.mapping.DefaultUrlMappingData
 import org.grails.web.mapping.DefaultUrlMappingInfo
+import org.grails.web.servlet.view.CompositeViewResolver
+import org.grails.web.util.GrailsApplicationAttributes
 import org.grails.web.util.WebUtils
+import org.springframework.mock.web.MockHttpServletRequest
+import org.springframework.mock.web.MockHttpServletResponse
+import org.springframework.mock.web.MockServletContext
 import org.springframework.ui.ModelMap
 import org.springframework.web.context.request.RequestContextHolder
 import org.springframework.web.context.request.WebRequest
 import org.springframework.web.context.request.WebRequestInterceptor
 import org.springframework.web.context.support.StaticWebApplicationContext
 import org.springframework.web.servlet.HandlerInterceptor
+import org.springframework.web.servlet.ModelAndView
+import org.springframework.web.servlet.View
 import org.springframework.web.servlet.handler.WebRequestHandlerInterceptorAdapter
 import org.springframework.web.servlet.view.InternalResourceView
 import spock.lang.Issue
+import spock.lang.Unroll
 
 /**
  * Created by graemerocher on 26/05/14.
@@ -290,13 +299,186 @@ class UrlMappingsHandlerMappingSpec extends AbstractUrlMappingsSpec {
         new UrlMappingsHandlerMapping(holder)
     }
 
+    @Issue('https://github.com/apache/grails-core/issues/15819')
+    @Unroll
+    void "adapter returns null when action '#actionName' handles the response (result=#resultDesc)"() {
+        given: "a URL mapping for an action that handles the response"
+        def grailsApplication = new DefaultGrailsApplication(FooController)
+        grailsApplication.initialise()
+        def linkGenerator = getLinkGenerator {
+            "/$controller/$action?/$id?"()
+        }
+        def holder = getUrlMappingsHolder {
+            "/foo/$actionName"(controller: "foo", action: actionName)
+        }
+        holder = new GrailsControllerUrlMappings(grailsApplication, holder)
+        def handler = new UrlMappingsHandlerMapping(holder)
+
+        and: "an application context that provides the LinkGenerator needed by redirect()"
+        def ctx = new StaticWebApplicationContext()
+        ctx.beanFactory.registerSingleton('grailsLinkGenerator', linkGenerator)
+        ctx.refresh()
+
+        when: "the request is dispatched"
+        def webRequest = GrailsWebMockUtil.bindMockWebRequest(ctx, new MockHttpServletRequest(), new MockHttpServletResponse())
+        webRequest.renderView = true
+        def request = webRequest.request
+        request.setRequestURI("/foo/$actionName")
+        def handlerChain = handler.getHandler(request)
+        def handlerAdapter = new UrlMappingsInfoHandlerAdapter()
+        def result = handlerAdapter.handle(request, webRequest.response, handlerChain.handler)
+
+        then: "the adapter returns null — no ModelAndView is passed to DispatcherServlet for view resolution"
+        result == null
+
+        and: "the action's response status, redirect location, and body are preserved"
+        webRequest.response.status == expectedStatus
+        webRequest.response.getHeader('Location') == expectedLocation
+        webRequest.response.contentAsString == expectedBody
+
+        cleanup:
+        ctx.close()
+
+        where:
+        actionName         | resultDesc                                                    | expectedStatus | expectedLocation                | expectedBody
+        'renderText'       | 'null (render(text:) returns null)'                            | 200            | null                            | 'hello'
+        'renderTextWithMap' | 'Map (render(text:) called, action also returns a Map)'        | 200            | null                            | 'hello'
+        'redirectWithMap'   | 'Map (redirect() issued, action also returns a Map)'           | 302            | 'http://example.com/redirected' | ''
+        'committedWithMap'  | 'Map (response already committed, action also returns a Map)' | 200            | null                            | 'already committed'
+    }
+
+    @Issue('https://github.com/apache/grails-core/issues/15819')
+    void "adapter preserves the template body without selecting an implicit view when the action returns a Map"() {
+        given: "an action that calls render(template:) before returning a model"
+        def grailsApplication = new DefaultGrailsApplication(FooController)
+        grailsApplication.initialise()
+        def holder = new GrailsControllerUrlMappings(grailsApplication, getUrlMappingsHolder {
+            "/foo/renderTemplateWithMap"(controller: "foo", action: "renderTemplateWithMap")
+        })
+        def handler = new UrlMappingsHandlerMapping(holder)
+
+        and: "a template view that writes the supplied model without committing the response"
+        def templateView = Mock(View)
+        def viewResolver = Mock(CompositeViewResolver)
+        def servletContext = new MockServletContext()
+        def ctx = new StaticWebApplicationContext()
+        ctx.servletContext = servletContext
+        ctx.beanFactory.registerSingleton(CompositeViewResolver.BEAN_NAME, viewResolver)
+        servletContext.setAttribute(GrailsApplicationAttributes.APPLICATION_CONTEXT, ctx)
+        ctx.refresh()
+        def request = new MockHttpServletRequest(servletContext)
+        def response = new MockHttpServletResponse()
+        GrailsWebMockUtil.bindMockWebRequest(ctx, request, response)
+        request.setRequestURI('/foo/renderTemplateWithMap')
+
+        when: "the adapter invokes the action through its URL mapping"
+        def handlerChain = handler.getHandler(request)
+        def result = new UrlMappingsInfoHandlerAdapter().handle(request, response, handlerChain.handler)
+
+        then: "render(template:) resolves and renders the requested template with its model"
+        1 * viewResolver.resolveView('/foo/_greeting', _) >> templateView
+        1 * templateView.render([name: 'Grails'], request, response) >> { model, req, res ->
+            res.writer.write("Hello ${model.name}")
+        }
+        0 * viewResolver.resolveView(_, _)
+
+        and: "the template body is preserved without committing or selecting an implicit action view"
+        response.contentAsString == 'Hello Grails'
+        !response.committed
+        result == null
+
+        cleanup:
+        ctx.close()
+    }
+
+    @Issue('https://github.com/apache/grails-core/issues/15819')
+    void "adapter returns ModelAndView when render(view:) is used (renderView stays true, MODEL_AND_VIEW attribute is set)"() {
+        given: "a URL mapping for an action that uses render(view:)"
+        def grailsApplication = new DefaultGrailsApplication(FooController)
+        grailsApplication.initialise()
+        def holder = getUrlMappingsHolder {
+            "/foo/renderView"(controller: "foo", action: "renderView")
+        }
+        holder = new GrailsControllerUrlMappings(grailsApplication, holder)
+        def handler = new UrlMappingsHandlerMapping(holder)
+
+        when: "the request is dispatched"
+        def webRequest = GrailsWebMockUtil.bindMockWebRequest()
+        webRequest.renderView = true
+        def request = webRequest.request
+        request.setRequestURI("/foo/renderView")
+        def handlerChain = handler.getHandler(request)
+        def handlerAdapter = new UrlMappingsInfoHandlerAdapter()
+        def result = handlerAdapter.handle(request, webRequest.response, handlerChain.handler)
+
+        then: "the adapter returns the ModelAndView set by render(view:) so DispatcherServlet resolves the named view"
+        result != null
+        result.viewName == '/foo/myView'
+    }
+
+    @Issue('https://github.com/apache/grails-core/issues/15819')
+    void "adapter returns ModelAndView for an include dispatch even when the outer response is already committed"() {
+        given: "a URL mapping for an action that returns a Map"
+        def grailsApplication = new DefaultGrailsApplication(FooController)
+        grailsApplication.initialise()
+        def holder = getUrlMappingsHolder {
+            "/foo/bar"(controller: "foo", action: "bar")
+        }
+        holder = new GrailsControllerUrlMappings(grailsApplication, holder)
+        def handler = new UrlMappingsHandlerMapping(holder)
+
+        when: "the request is an include dispatch and the outer response is already committed"
+        def webRequest = GrailsWebMockUtil.bindMockWebRequest()
+        webRequest.renderView = true
+        def request = webRequest.request
+        def response = webRequest.response
+        request.setRequestURI("/foo/bar")
+        // Mark the request as a servlet include dispatch
+        request.setAttribute(WebUtils.INCLUDE_REQUEST_URI_ATTRIBUTE, "/foo/bar")
+        // Simulate the outer response having been flushed before the include ran
+        response.flushBuffer()
+        def handlerChain = handler.getHandler(request)
+        def handlerAdapter = new UrlMappingsInfoHandlerAdapter()
+        def result = handlerAdapter.handle(request, response, handlerChain.handler)
+
+        then: "the adapter returns a ModelAndView so the included action's view is rendered"
+        result != null
+        result.viewName == 'bar'
+        result.model == [foo: 'bar']
+    }
+
+    @Issue('https://github.com/apache/grails-core/issues/15819')
+    void "adapter returns ModelAndView when action sets an error status and returns a model (guard must not swallow error views)"() {
+        given: "a URL mapping for an action that sets an error status and returns a model"
+        def grailsApplication = new DefaultGrailsApplication(FooController)
+        grailsApplication.initialise()
+        def holder = getUrlMappingsHolder {
+            "/foo/errorWithModel"(controller: "foo", action: "errorWithModel")
+        }
+        holder = new GrailsControllerUrlMappings(grailsApplication, holder)
+        def handler = new UrlMappingsHandlerMapping(holder)
+
+        when: "the request is dispatched"
+        def webRequest = GrailsWebMockUtil.bindMockWebRequest()
+        webRequest.renderView = true
+        def request = webRequest.request
+        request.setRequestURI("/foo/errorWithModel")
+        def handlerChain = handler.getHandler(request)
+        def handlerAdapter = new UrlMappingsInfoHandlerAdapter()
+        def result = handlerAdapter.handle(request, webRequest.response, handlerChain.handler)
+
+        then: "the adapter returns a ModelAndView so the error view is rendered — the guard must not swallow it"
+        result != null
+        result.model == [message: 'not found']
+    }
+
     void cleanup() {
         RequestContextHolder.resetRequestAttributes()
     }
 }
 
 @Artefact('Controller')
-class FooController  {
+class FooController implements Controller {
 
     static defaultAction = 'fooBar'
 
@@ -318,5 +500,76 @@ class FooController  {
     @Action
     def notFound() {
         RequestContextHolder.currentRequestAttributes().response.writer << "Not Found"
+    }
+
+    /**
+     * Calls render(text:), which sets renderView=false and writes the body. The adapter must
+     * return null so DispatcherServlet does not attempt view resolution. (#15819)
+     */
+    @Action
+    def renderText() {
+        render(text: 'hello')
+        null
+    }
+
+    /**
+     * Calls render(text:) and also returns a Map — the exact bug scenario from #15819 where the
+     * adapter previously ignored renderView=false when result instanceof Map.
+     */
+    @Action
+    def renderTextWithMap() {
+        render(text: 'hello')
+        [foo: 'bar']
+    }
+
+    @Action
+    def renderTemplateWithMap() {
+        render(template: '/foo/greeting', model: [name: 'Grails'])
+        [foo: 'bar']
+    }
+
+    /**
+     * Calls redirect() (which sets REDIRECT_ISSUED on the request and a 3xx status without calling
+     * setRenderView(false)) and also returns a Map. The adapter must return null — there is nothing
+     * left for DispatcherServlet to do after a redirect. (#15819)
+     */
+    @Action
+    def redirectWithMap() {
+        redirect(uri: 'http://example.com/redirected')
+        [foo: 'bar']
+    }
+
+    /**
+     * Writes directly to the response (committing it) and also returns a Map. The adapter must
+     * return null — DispatcherServlet cannot render a view into an already-committed response.
+     * (#15819)
+     */
+    @Action
+    def committedWithMap() {
+        response.writer.write('already committed')
+        response.flushBuffer()
+        [foo: 'bar']
+    }
+
+    /**
+     * Calls render(view: 'myView'), which sets MODEL_AND_VIEW on the request but does NOT set
+     * renderView=false. The adapter must return the ModelAndView so DispatcherServlet resolves
+     * the named view. (#15819)
+     */
+    @Action
+    def renderView() {
+        render(view: '/foo/myView')
+    }
+
+    /**
+     * Sets an error status on the response and returns a model Map without calling render().
+     * The renderView flag stays true, so the adapter must still return a ModelAndView and let
+     * DispatcherServlet render the error view. The guard introduced for #15819 must not swallow
+     * this case. (#15819)
+     */
+    @Action
+    def errorWithModel() {
+        response.status = 404
+        [message: 'not found']
     }
 }

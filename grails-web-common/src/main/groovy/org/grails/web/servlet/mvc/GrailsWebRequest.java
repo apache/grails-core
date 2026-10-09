@@ -427,6 +427,27 @@ public class GrailsWebRequest extends DispatcherServletWebRequest {
     }
 
     /**
+     * Returns {@code true} if the {@code renderView} flag has not been explicitly cleared by a
+     * {@code render()} call.  Unlike {@link #isRenderView()}, this method does <em>not</em> consult
+     * the response status, the committed state, or the redirect flag — it reflects only whether
+     * {@link #setRenderView(boolean) setRenderView(false)} was called (which every {@code render()}
+     * variant except {@code render(view:)} does).
+     *
+     * <p>Use this in the handler adapter to decide whether to attempt view resolution: returning
+     * {@code null} from {@code handle()} is the correct signal to {@code DispatcherServlet} that
+     * the response has already been handled, and that signal must be sent whenever any
+     * {@code render()} variant other than {@code render(view:)} was called — regardless of whether
+     * the response happens to be committed or carries an error status.</p>
+     *
+     * @return {@code true} if no {@code render()} call has cleared the flag; {@code false} if
+     *         {@code render()} (other than {@code render(view:)}) has already handled the response
+     * @since 8.0
+     */
+    public boolean isRenderViewRequested() {
+        return renderView;
+    }
+
+    /**
      * @return true if the view for this GrailsWebRequest should be rendered
      */
     public boolean isRenderView() {
