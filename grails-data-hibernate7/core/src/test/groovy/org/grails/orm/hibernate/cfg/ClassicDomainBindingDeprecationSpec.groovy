@@ -76,11 +76,14 @@ class ClassicDomainBindingDeprecationSpec extends Specification {
     }
 
     void "the default, native domain binding, starts without the warning"() {
+        given: 'the suite may run through the classic binder as a whole, which makes the classic binder the default'
+        boolean classicSuite = Boolean.getBoolean('grails.hibernate.classicDomainBinding')
+
         when:
         String log = bootAndCaptureLog([:])
 
         then:
-        !log.contains(WARNING)
+        log.contains(WARNING) == classicSuite
         DomainOne.withTransaction {
             new DomainOne(controller: 'book', action: 'native').save(flush: true, failOnError: true)
             DomainOne.count() == 1
