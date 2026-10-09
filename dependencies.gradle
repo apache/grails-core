@@ -77,12 +77,11 @@ ext {
             'checker-qual.version'          : '3.55.1',
             'commons-codec.version'         : '1.22.1',
             'geb-spock.version'             : '8.0.1',
-            // Pinned deliberately as a drift tripwire even though it matches Spring Boot's
-            // managed version: graphql-java-extended-scalars (below) is NOT managed by Spring
-            // Boot and must be upgraded in lockstep with graphql-java. Keeping this pin makes
-            // the dependency validator flag any Spring Boot graphql-java bump so we re-check
-            // extended-scalars compatibility. See https://github.com/apache/grails-core/issues/15674
-            'graphql-java.version'          : '25.0',
+            // Pinned as a drift tripwire: graphql-java-extended-scalars is not managed by Spring
+            // Boot and must move in lockstep. 25.1 is the version Spring Boot 4.1.2 has merged.
+            // The pin stays after that release so a later Boot bump still forces an extended-scalars check.
+            // See https://github.com/apache/grails-core/issues/15674
+            'graphql-java.version'          : '25.1',
             'graphql-java-extended-scalars.version': '24.0',
             'groovy.version'                : '5.1.3',
             // Security: 33.7.2 addresses CVE-2026-102554 (uncontrolled resource consumption).
@@ -121,16 +120,17 @@ ext {
             'rxjava2.version'               : '2.2.21',
             'sitemesh.version'              : '2.6.0',
             'scribejava.version'            : '8.3.3',
-            // Logback 1.6.5 requires 2.0.19; align the SLF4J family above Boot's managed 2.0.18.
-            'slf4j.version'                 : '2.0.19',
+            // Logback 1.6.5 requires 2.0.19. 2.0.20 is Spring Boot 4.1.2; remove this pin once
+            // spring-boot.version is 4.1.2 or newer.
+            'slf4j.version'                 : '2.0.20',
             'spock.version'                 : '2.4-groovy-5.0',
             // Not managed by spring-boot-dependencies. springdoc 3.x is the Spring Boot 4 /
             // Spring Framework 7 line; the grails-openapi module compiles against its
             // OpenApiCustomizer SPI and apps add the webmvc-ui starter for Swagger UI.
-            'springdoc-openapi.version'     : '3.1.0',
+            'springdoc-openapi.version'     : '3.1.1',
             // Not managed by spring-boot-dependencies. Kept at the version springdoc-openapi
-            // resolves, which grails-openapi compiles against without requiring springdoc.
-            'swagger.version'               : '2.2.52',
+            // 3.1.1 resolves, which grails-openapi compiles against without requiring springdoc.
+            'swagger.version'               : '2.2.55',
             'starter-sitemesh.version'      : '3.3.0',
             'spring-webmvc-sitemesh.version': '3.3.0',
             // Spring Boot 4 no longer manages spring-retry; pin it here so the
@@ -144,9 +144,14 @@ ext {
             // removed its Undertow support before GA. Servlet 6.1 support ships as
             // undertow-core 2.4.x plus the io.undertow.ee servlet/websockets artifacts,
             // consumed by the vendored grails-undertow-spring-boot module.
-            'undertow.version'              : '2.4.3.Final',
-            'undertow-servlet.version'      : '2.0.2.Final',
-            'undertow-websockets.version'   : '2.0.2.Final',
+            'undertow.version'              : '2.4.4.Final',
+            'undertow-servlet.version'      : '2.0.3.Final',
+            'undertow-websockets.version'   : '2.0.3.Final',
+            // Spring Boot 4.1.2 has merged these. Remove the pins once spring-boot.version is 4.1.2 or newer.
+            'byte-buddy.version'            : '1.18.14',
+            'hibernate-validator.version'   : '9.1.4.Final',
+            'httpcore5.version'             : '5.4.4',
+            'postgresql.version'            : '42.7.14',
     ]
 
     // Note: the name of the dependency must be the prefix of the property name so properties in the pom are resolved correctly
@@ -246,6 +251,14 @@ ext {
             'swagger-models-jakarta'   : "io.swagger.core.v3:swagger-models-jakarta:${bomDependencyVersions['swagger.version']}",
             'starter-sitemesh'         : "org.sitemesh:spring-boot-starter-sitemesh:${bomDependencyVersions['starter-sitemesh.version']}",
             'spring-webmvc-sitemesh'   : "org.sitemesh:spring-webmvc-sitemesh:${bomDependencyVersions['spring-webmvc-sitemesh.version']}",
+            'byte-buddy'               : "net.bytebuddy:byte-buddy:${bomDependencyVersions['byte-buddy.version']}",
+            'byte-buddy-agent'         : "net.bytebuddy:byte-buddy-agent:${bomDependencyVersions['byte-buddy.version']}",
+            'hibernate-validator'      : "org.hibernate.validator:hibernate-validator:${bomDependencyVersions['hibernate-validator.version']}",
+            'hibernate-validator-annotation-processor': "org.hibernate.validator:hibernate-validator-annotation-processor:${bomDependencyVersions['hibernate-validator.version']}",
+            'httpcore5'                : "org.apache.httpcomponents.core5:httpcore5:${bomDependencyVersions['httpcore5.version']}",
+            'httpcore5-h2'             : "org.apache.httpcomponents.core5:httpcore5-h2:${bomDependencyVersions['httpcore5.version']}",
+            'httpcore5-reactive'       : "org.apache.httpcomponents.core5:httpcore5-reactive:${bomDependencyVersions['httpcore5.version']}",
+            'postgresql'               : "org.postgresql:postgresql:${bomDependencyVersions['postgresql.version']}",
             // Security override of spring-boot-dependencies - see tomcat.version
             'tomcat-annotations-api'   : "org.apache.tomcat:tomcat-annotations-api:${bomDependencyVersions['tomcat.version']}",
             'tomcat-jdbc'              : "org.apache.tomcat:tomcat-jdbc:${bomDependencyVersions['tomcat.version']}",
@@ -288,7 +301,7 @@ ext {
             'gradle-groovy.version',
     ]
     bomRedundantVersionExemptions = [
-            // Kept equal to Spring Boot's on purpose - see graphql-java.version
+            // Lets the pin remain once Spring Boot 4.1.2 matches 25.1 - see graphql-java.version
             'graphql-java.version',
     ]
 
@@ -345,11 +358,10 @@ ext {
         customBomVersions = [
                 'cache-ri-impl.version'         : '1.1.1',
                 'derby.version'                 : '10.17.1.0',
-                // Spring Boot 4.1 can select Hibernate ORM 7.4.x through Spring Dependency
-                // Management, and Hibernate ORM 7.4.x requires hibernate-models 1.1.x.
+                // Spring Boot 4.1.2 selects Hibernate ORM 7.4.12.Final, which still requires hibernate-models 1.1.x.
                 'hibernate-models.version'      : '1.1.2',
                 'hibernate-tools.version'       : '7.3.13.Final',
-                'hibernate.version'             : '7.4.10.Final',
+                'hibernate.version'             : '7.4.12.Final',
                 'jandex.version'                : '3.6.0',
                 'liquibase-test-harness.version': '1.0.11',
                 'liquibase.version'             : '4.27.0',
