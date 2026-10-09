@@ -63,8 +63,27 @@ dependencyResolutionManagement {
         if (System.getenv('GRAILS_INCLUDE_MAVEN_LOCAL')) {
             mavenLocal()
         }
-        mavenCentral()
-        gradlePluginPortal()
+        mavenCentral {
+            mavenContent {
+                releasesOnly()
+            }
+        }
+        // 8.14.5 of gradle-tooling-api is not on Maven Central. This build cannot apply the
+        // settings plugin it produces, so the same module filter is declared here.
+        maven {
+            url = 'https://repo.gradle.org/gradle/libs-releases'
+            content {
+                includeModule('org.gradle', 'gradle-tooling-api')
+            }
+            mavenContent {
+                releasesOnly()
+            }
+        }
+        gradlePluginPortal {
+            mavenContent {
+                releasesOnly()
+            }
+        }
         // publish plugin
         maven {
             url = 'https://repository.apache.org/content/groups/snapshots'

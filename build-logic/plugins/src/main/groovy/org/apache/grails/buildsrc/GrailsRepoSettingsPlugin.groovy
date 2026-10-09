@@ -32,7 +32,11 @@ class GrailsRepoSettingsPlugin implements Plugin<Settings> {
                 if (System.getenv('GRAILS_INCLUDE_MAVEN_LOCAL')) {
                     repo.mavenLocal()
                 }
-                repo.mavenCentral()
+                repo.mavenCentral {
+                    mavenContent {
+                        it.releasesOnly()
+                    }
+                }
                 repo.gradlePluginPortal()
                 repo.maven {
                     url = 'https://repository.apache.org/content/groups/snapshots'
@@ -71,8 +75,30 @@ class GrailsRepoSettingsPlugin implements Plugin<Settings> {
                 if (System.getenv('GRAILS_INCLUDE_MAVEN_LOCAL')) {
                     repo.mavenLocal()
                 }
+                // Maven Central first. Gradle disables a repository for the rest of the build on a transport
+                // failure and fails resolution instead of trying the next repository, so the primary
+                // repository has to be the one expected to stay up.
+                repo.mavenCentral {
+                    mavenContent {
+                        it.releasesOnly()
+                    }
+                }
+                // 8.14.5 of gradle-tooling-api is not on Maven Central. Ask only Gradle's release
+                // repository for that module. A non-exclusive include leaves Central and mavenLocal
+                // eligible if they have it; exclusiveContent would hide it from both.
                 repo.maven {
-                    url = 'https://repo.grails.org/grails/restricted'
+                    url = 'https://repo.gradle.org/gradle/libs-releases'
+                    content {
+                        it.includeModule('org.gradle', 'gradle-tooling-api')
+                    }
+                    mavenContent {
+                        it.releasesOnly()
+                    }
+                }
+                // Plugin jars and plugin markers are published to the Plugin Portal, not Maven Central.
+                // buildSrc consumes several of them as libraries. Central remains first, so a
+                // release Central has is not also requested here.
+                repo.gradlePluginPortal {
                     mavenContent {
                         it.releasesOnly()
                     }
