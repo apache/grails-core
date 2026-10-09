@@ -101,7 +101,7 @@ The mapping can, though:
 * Native binding refuses a mapping only when classic binding cannot use it either: classic binding fails to start with it, or boots it and fails on the first row.
   The refusal is an `UnsupportedOperationException` at startup that says what classic binding does.
   The manual chapter lists them.
-  The one exception today is an embedded object as a part of a composite identifier, which classic binding boots and native binding does not support yet.
+  The one exception today is an embedded object as a part of a composite identifier, which classic binding boots and native binding refuses with a message that points at a workaround that keeps the schema, see <<native-binding-embedded-id,1.5>>.
 * The generated schema differs from the one of classic binding in a few documented cases, for example a `check (idx >= 0)` constraint on the index column of every list, and the column types of foreign keys to nested composite identifiers.
 * A few defects of classic binding are not copied, such as a `unique` group that includes an enum property being dropped.
 * A `hasMany` inside a class listed in `static embedded` that more than one embedded property embeds gets a collection table of its own for every owner.
@@ -140,3 +140,28 @@ A type that was never exercised can fail or behave differently once it is used.
 With classic binding, which stays the default in Grails {version}, nothing changes.
 
 A custom collection type on a `hasMany` of basic values is not supported by either binding.
+
+[[native-binding-embedded-id]]
+===== 1.5 An Embedded Object as a Part of a Composite Identifier
+
+Native binding refuses `id composite: ['code', 'address']` where `address` is listed in `static embedded`, because Hibernate cannot hold an embedded object in an identifier class.
+Declare the properties of the embedded class on the entity and name them in the identifier instead:
+
+[source,groovy]
+----
+class Customer implements Serializable {
+    String code
+    String addressStreet
+    String addressCity
+
+    static mapping = {
+        id composite: ['code', 'addressStreet', 'addressCity']
+        addressStreet column: 'address_street'
+        addressCity column: 'address_city'
+    }
+}
+----
+
+The table, its columns and its primary key are the ones the embedded version creates (`address_street` and `address_city` are the names the embedded object gives its columns), so an existing database needs no migration and its rows stay readable.
+A transient `Address getAddress()` accessor keeps `customer.address` working.
+The link:{hibernate7Guide}index.html#nativeDomainBinding-embeddedId[Native Domain Binding] chapter of the GORM for Hibernate 7 manual describes the accessor, the foreign keys to such an entity and how to switch an existing database.

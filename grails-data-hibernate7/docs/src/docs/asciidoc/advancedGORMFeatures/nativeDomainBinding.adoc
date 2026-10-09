@@ -80,7 +80,7 @@ For the domain classes in GORM's own test suites, both bindings produce the same
 [[nativeDomainBinding-refused]]
 === Mappings Native Binding Refuses
 
-Native binding does not refuse a mapping that classic binding accepts and can use, with the one exception at the end of the table. It refuses the mappings below, which classic binding cannot use either: classic binding fails to start with them, or it boots them and fails on the first row. The application fails at startup. The exception has an `UnsupportedOperationException` as its root cause, and the message names the domain class and the property, and says what classic binding does with the mapping.
+Native binding does not refuse a mapping that classic binding accepts and can use, with the one exception at the end of the table, which has a supported workaround. It refuses the mappings below, which classic binding cannot use either: classic binding fails to start with them, or it boots them and fails on the first row. The application fails at startup. The exception has an `UnsupportedOperationException` as its root cause, and the message names the domain class and the property, and says what classic binding does with the mapping.
 
 [cols="2,3,3", options="header"]
 |===
@@ -108,14 +108,119 @@ Native binding does not refuse a mapping that classic binding accepts and can us
 | `Collection property [...]: ...`, `Association property [...]: ...` or `Entity [...] uses ... but the root of its hierarchy uses ...`
 | Change the mapping as the message says. Classic binding fails to start with each of them.
 
-| An embedded object as a part of a composite identifier (`id composite: ['code', 'address']` where `address` is listed in `static embedded`). Classic binding boots this mapping; native binding does not support it yet.
-| `Composite identifier part [...] of [...] is a HibernateEmbeddedProperty, which the generator does not support yet ...`
-| Name the properties of the embedded class in the identifier, or give the entity a single-column identifier.
+| An embedded object as a part of a composite identifier (`id composite: ['code', 'address']` where `address` is listed in `static embedded`). Classic binding boots this mapping; native binding does not support it.
+| `Composite identifier part [...] of [...] is an embedded object, which the generator does not support because Hibernate cannot state one in an identifier class. Map the properties of the embedded class as plain properties of the identifier instead ...`
+| Name the properties of the embedded class in the identifier instead, which keeps the schema. See <<nativeDomainBinding-embeddedId,Embedded Object as Part of a Composite Identifier>>.
 
 | A registered Hibernate type name as the `type` of an enum property (`type: 'integer'`), or a registered type that converts its value (`yes_no`) as the `type` of the `indexColumn` of a list or a map.
 | `Type [...] of property [...] is a registered type on an enum ...` or `... the index column type [...] is a registered type that converts its value ...`
 | Remove the `type` (an enum is stored as a string unless `enumType` says otherwise). Classic binding boots these mappings but cannot use them: saving a row fails with a `ClassCastException` for the enum, with a check constraint violation for the list, and the table of the map is not created.
 |===
+
+[[nativeDomainBinding-embeddedId]]
+=== Embedded Object as Part of a Composite Identifier
+
+Hibernate cannot hold an embedded object in an identifier class, so native binding refuses a composite identifier that names one. The workaround is to declare the properties of the embedded class as plain properties of the entity and to name them in the identifier. The tables, the columns, the types, the primary key and its column order stay as they are, with both bindings.
+
+[source,groovy]
+.Before: refused by native binding
+----
+class Customer implements Serializable {
+    String code
+    Address address
+    String name
+
+    static embedded = ['address']
+    static mapping = {
+        id composite: ['code', 'address']
+    }
+}
+
+class Address implements Serializable {
+    String street
+    String city
+}
+----
+
+[source,groovy]
+.After: boots with both bindings
+----
+class Customer implements Serializable {
+    String code
+    String addressStreet
+    String addressCity
+    String name
+
+    static mapping = {
+        id composite: ['code', 'addressStreet', 'addressCity']
+        addressStreet column: 'address_street'
+        addressCity column: 'address_city'
+    }
+}
+----
+
+Both versions create the same table. The primary key columns are in the order Hibernate gives them (here the sorted column names), which is the same for both:
+
+[source,sql]
+----
+create table customer (
+    version bigint not null,
+    address_city varchar(255) not null,
+    address_street varchar(255) not null,
+    code varchar(255) not null,
+    name varchar(255),
+    primary key (address_city, address_street, code))
+----
+
+Name the columns as the embedded object named them: the name of the embedded property, an underscore and the name of the property of the embedded class (`address_street`). If the columns of your table have other names, give the flattened properties those names with `column`.
+
+==== Keeping `customer.address`
+
+Code that reads `customer.address` keeps compiling when the entity has a transient accessor that builds the object from the properties. A transient property is not persisted, so the table gets no column for it.
+
+[source,groovy]
+----
+class Customer implements Serializable {
+    String code
+    String addressStreet
+    String addressCity
+    String name
+
+    static transients = ['address']
+    static mapping = {
+        id composite: ['code', 'addressStreet', 'addressCity']
+        addressStreet column: 'address_street'
+        addressCity column: 'address_city'
+    }
+
+    Address getAddress() {
+        new Address(street: addressStreet, city: addressCity)
+    }
+
+    void setAddress(Address address) {
+        addressStreet = address?.street
+        addressCity = address?.city
+    }
+}
+----
+
+`new Customer(code: 'c1', address: new Address(street: 's1', city: 'x1'))` and `customer.address.street` work as before. The getter returns a new `Address` on each call, so changing the returned object changes nothing; assign it with `customer.address = ...`. Queries, finders and criteria use the flattened properties (`Customer.findByAddressCity('x1')`, `addressCity == 'x1'`), because the property `address` is not persistent.
+
+==== Associations to the Entity
+
+* A `hasMany` of the entity that is bound by a foreign key on the entity (the entity has a many-to-one to its parent, as in `Region.hasMany = [customers: Customer]` and `Region region` in `Customer`) works as for any entity with a composite identifier, and the foreign key `region_id` is unchanged.
+* A many-to-one from another entity to the flattened entity creates the columns `<table of the entity>_<identifier column>`, in the order of the primary key (`customer_address_city`, `customer_address_street` and `customer_code` for the table `customer`), and a foreign key that references the identifier columns one to one: `foreign key (customer_address_city, customer_address_street, customer_code) references customer (address_city, address_street, code)`. Both bindings create the same table and the same key.
++
+Classic binding could not do this for the embedded version. It fails to start with `maps to 2 columns but 3 columns are required`, and when the three columns are spelled out it starts but pairs them wrongly (`customer_address_city` references `code`). A database that has such a table keeps the columns, but its foreign key may be wrong: check it before you rely on it.
+* A `hasMany` of the entity through a join table (a unidirectional `hasMany` of the parent) is not supported by either binding for any entity with a composite identifier, flattened or not; it is in the table above. Add the many-to-one to the entity, as in the first item.
+
+==== Switching an Existing Database
+
+The workaround changes no schema, so there is nothing to migrate:
+
+. Replace the embedded object in the class and in the identifier as shown above, and change the code that reads `address.street` in a query to `addressStreet`.
+. Start with `dbCreate: validate` against a copy of the database. Hibernate finds every table and column.
+. Rows written with the embedded entity are read, updated and deleted through the flattened one (`Customer.get(new Customer(code: 'c1', addressStreet: 's1', addressCity: 'x1'))`, finders and associations), and rows written by the flattened one are read by the embedded one if you go back.
 
 [[nativeDomainBinding-behavior]]
 === Differences in Behavior
