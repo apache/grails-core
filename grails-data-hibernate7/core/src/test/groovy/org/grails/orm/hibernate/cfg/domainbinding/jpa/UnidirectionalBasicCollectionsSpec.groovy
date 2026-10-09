@@ -22,12 +22,11 @@ import grails.gorm.annotation.Entity
 import grails.gorm.tests.HibernateGormDatastoreSpec
 
 /**
- * Regression test for a defect of the domain binder: {@code CollectionKeyColumnUpdater} made the key of a collection
- * not updatable when its owner had more than one unidirectional to-many property. Hibernate's collection persister then
- * disables inserting and deleting the rows of the collection, so the elements of a collection of basic values were never
- * written. The key of a collection of basic values must stay updatable.
+ * The elements of a collection of basic values are written whether or not the owner has another unidirectional to-many
+ * property: the key of the collection stays updatable (a defect of Grails 8's classic binding once made it not updatable when
+ * the owner had more than one such property, so Hibernate's collection persister never wrote the rows).
  */
-class BasicCollectionKeyDefectSpec extends HibernateGormDatastoreSpec {
+class UnidirectionalBasicCollectionsSpec extends HibernateGormDatastoreSpec {
 
     void setupSpec() {
         manager.registerDomainClasses(DefectOneCollection, DefectTwoCollections)

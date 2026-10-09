@@ -519,8 +519,8 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
     /**
      * The column facets the generator decided against the bound column and property. A mapping that says {@code insertable: false}
      * or {@code updatable: false} is a known divergence, not a mismatch: {@code PropertyBinder} overwrites those flags with the
-     * ones of the columns, which are always set, so the binder ignores the option (pinned in
-     * {@link GrailsDomainBinderOptionDefectSpec}) and the generator states what the mapping asks for.
+     * ones of the columns, which are always set, so the classic binder ignored the option and the generator states what the
+     * mapping asks for ({@code ColumnOptionSpec} proves the flags reach the rows).
      */
     private List<String> compare(
             String where, ColumnFacets facets, Map bound, Map<String, Integer> known, Collection<String> ignore = [],
@@ -549,7 +549,7 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
         ignore.each { pairs.remove(it) }
         if (enumeration) {
             // EnumTypeBinder ignores the comment, default and read and write expressions of the column config (a binder defect,
-            // pinned in GrailsDomainBinderOptionDefectSpec); the generator states them
+            // of Grails 8); the generator states them
             ['default', 'read', 'write', 'comment'].each { String facet ->
                 if (pairs[facet][0] != null && pairs[facet][1] == null) {
                     known["the binder ignores the comment, default and read and write expressions of an enum column; the generator states them".toString()]++

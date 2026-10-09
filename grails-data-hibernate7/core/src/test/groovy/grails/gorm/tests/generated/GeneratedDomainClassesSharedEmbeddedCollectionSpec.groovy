@@ -40,11 +40,11 @@ import spock.lang.Specification
 import org.grails.orm.hibernate.HibernateDatastore
 
 /**
- * A collection inside an embedded type that more than one embedded property reaches. The domain binder names its table and its key
- * column after the embedded type, so all the owners share one table whose key is a foreign key to the owner that was bound first (the
- * rows of any other owner violate it), and it fails to boot when the properties are named alike. The generated mode gives every owner a
- * table of its own: the first owner, in the order of the entity name and then the property path, keeps the names of the binder, the
- * others get names qualified with their owner and the path of their embedded property.
+ * A collection inside an embedded type that more than one embedded property reaches. The classic binding of Grails 8 named its table
+ * and its key column after the embedded type, so all the owners shared one table whose key was a foreign key to the owner that was
+ * bound first (the rows of any other owner violated it), and it failed to boot when the properties were named alike. Native binding
+ * gives every owner a table of its own: the first owner, in the order of the entity name and then the property path, keeps the names
+ * classic binding used, the others get names qualified with their owner and the path of their embedded property.
  */
 class GeneratedDomainClassesSharedEmbeddedCollectionSpec extends Specification {
 
@@ -53,19 +53,18 @@ class GeneratedDomainClassesSharedEmbeddedCollectionSpec extends Specification {
     @AutoCleanup
     HibernateDatastore datastore
 
-    private HibernateDatastore boot(List<Class> group, boolean generated) {
+    private HibernateDatastore boot(List<Class> group) {
         datastore?.close()
         datastore = new HibernateDatastore([
-                'dataSource.url'                  : "jdbc:h2:mem:gse${BOOTS.incrementAndGet()};LOCK_TIMEOUT=10000".toString(),
-                'dataSource.dbCreate'             : 'create-drop',
-                'hibernate.generatedDomainClasses': generated,
+                'dataSource.url'     : "jdbc:h2:mem:gse${BOOTS.incrementAndGet()};LOCK_TIMEOUT=10000".toString(),
+                'dataSource.dbCreate': 'create-drop',
         ], group as Class[])
         return datastore
     }
 
     /** The tables of the boot model with their columns and the table each foreign key points at. */
-    private Map<String, Map> schema(List<Class> group, boolean generated) {
-        HibernateDatastore booted = boot(group, generated)
+    private Map<String, Map> schema(List<Class> group) {
+        HibernateDatastore booted = boot(group)
         Map<String, Map> result = new TreeMap<String, Map>()
         for (Table table : booted.metadata.collectTableMappings()) {
             if (table.physicalTable) {
@@ -84,35 +83,9 @@ class GeneratedDomainClassesSharedEmbeddedCollectionSpec extends Specification {
         }
     }
 
-    void "the domain binder binds one table whose key points at the first owner only, so the rows of the other owner are refused"() {
+    void "the first owner keeps the table and the key column classic binding used, the other one gets names qualified with its owner and its property"() {
         when:
-        Map<String, Map> binder = schema([EmbeddedCollectionOwnerC, EmbeddedCollectionOwnerD], false)
-
-        then: "one collection table, a foreign key to one of the owners"
-        binder.keySet().count { it.contains('words') } == 1
-        binder.values().find { it.columns.contains('embedded_collection_holder_id') }.foreignKeys.size() == 1
-
-        when: "the second owner stores a collection"
-        EmbeddedCollectionOwnerD.withTransaction {
-            new EmbeddedCollectionOwnerD(second: new EmbeddedCollectionHolder(words: ['w'] as Set)).save(failOnError: true, flush: true)
-        }
-
-        then: "its row violates the foreign key to the other owner"
-        thrown(Exception)
-    }
-
-    void "the domain binder cannot boot owners that embed the type under the same name"() {
-        when:
-        boot([EmbeddedCollectionOwnerA, EmbeddedCollectionOwnerB], false)
-
-        then:
-        Exception e = thrown()
-        rootOf(e).getClass().simpleName == 'DuplicateMappingException'
-    }
-
-    void "the first owner keeps the table and the key column of the binder, the other one gets names qualified with its owner and its property"() {
-        when:
-        Map<String, Map> generated = schema([EmbeddedCollectionOwnerC, EmbeddedCollectionOwnerD], true)
+        Map<String, Map> generated = schema([EmbeddedCollectionOwnerC, EmbeddedCollectionOwnerD])
 
         then:
         generated.keySet() == ['embedded_collection_holder_words', 'embedded_collection_ownerc', 'embedded_collection_ownerd',
@@ -125,17 +98,21 @@ class GeneratedDomainClassesSharedEmbeddedCollectionSpec extends Specification {
 
     void "the owners are told apart by the name of the entity whatever the order they are given in"() {
         expect:
-        schema([EmbeddedCollectionOwnerD, EmbeddedCollectionOwnerC], true) == schema([EmbeddedCollectionOwnerC, EmbeddedCollectionOwnerD], true)
+        schema([EmbeddedCollectionOwnerD, EmbeddedCollectionOwnerC]) == schema([EmbeddedCollectionOwnerC, EmbeddedCollectionOwnerD])
     }
 
-    void "a type that only one owner embeds keeps exactly the schema of the domain binder"() {
+    void "a type that only one owner embeds keeps exactly the schema classic binding created"() {
         expect:
-        schema([EmbeddedCollectionOwnerC], true) == schema([EmbeddedCollectionOwnerC], false)
+        schema([EmbeddedCollectionOwnerC]) == [
+                embedded_collection_holder_words: [columns: ['embedded_collection_holder_id', 'words_java_lang_string'],
+                                                   foreignKeys: ['[embedded_collection_holder_id] -> embedded_collection_ownerc']],
+                embedded_collection_ownerc      : [columns: ['id', 'version'], foreignKeys: []],
+        ]
     }
 
     void "each owner stores, reads back and deletes its own collection"() {
         given:
-        boot([EmbeddedCollectionOwnerC, EmbeddedCollectionOwnerD], true)
+        boot([EmbeddedCollectionOwnerC, EmbeddedCollectionOwnerD])
 
         when:
         Long c = EmbeddedCollectionOwnerC.withTransaction {
@@ -172,7 +149,7 @@ class GeneratedDomainClassesSharedEmbeddedCollectionSpec extends Specification {
 
     void "owners that embed the type under the same name boot with qualified names for all but the first, and store their own collections"() {
         when:
-        Map<String, Map> generated = schema([EmbeddedCollectionOwnerA, EmbeddedCollectionOwnerB], true)
+        Map<String, Map> generated = schema([EmbeddedCollectionOwnerA, EmbeddedCollectionOwnerB])
 
         then:
         generated.keySet() == ['embedded_collection_holder_words', 'embedded_collection_ownera', 'embedded_collection_ownerb',
@@ -193,24 +170,9 @@ class GeneratedDomainClassesSharedEmbeddedCollectionSpec extends Specification {
         EmbeddedCollectionOwnerB.withNewSession { EmbeddedCollectionOwnerB.get(b).inner.words.sort() } == ['b1', 'b2']
     }
 
-    void "one owner that embeds the type twice has a table for each property, where the domain binder mixes the elements of both"() {
-        when: "the domain binder stores the elements of both properties in one table"
-        boot([EmbeddedCollectionOwnerTwice], false)
-        Long classic = EmbeddedCollectionOwnerTwice.withTransaction {
-            new EmbeddedCollectionOwnerTwice(
-                    home: new EmbeddedCollectionHolder(words: ['h'] as Set),
-                    work: new EmbeddedCollectionHolder(words: ['w'] as Set)).save(failOnError: true, flush: true).id
-        }
-        List classicRead = EmbeddedCollectionOwnerTwice.withNewSession {
-            EmbeddedCollectionOwnerTwice owner = EmbeddedCollectionOwnerTwice.get(classic)
-            [owner.home.words.sort(), owner.work.words.sort()]
-        }
-
-        then: "each property sees the elements of the other"
-        classicRead == [['h', 'w'], ['h', 'w']]
-
+    void "one owner that embeds the type twice has a table for each property (classic binding mixed the elements of both in one table)"() {
         when:
-        Map<String, Map> generated = schema([EmbeddedCollectionOwnerTwice], true)
+        Map<String, Map> generated = schema([EmbeddedCollectionOwnerTwice])
         Long id = EmbeddedCollectionOwnerTwice.withTransaction {
             new EmbeddedCollectionOwnerTwice(
                     home: new EmbeddedCollectionHolder(words: ['h'] as Set),
@@ -227,7 +189,7 @@ class GeneratedDomainClassesSharedEmbeddedCollectionSpec extends Specification {
 
     void "a collection of entities and a list inside an embedded type get a table of their own for each owner"() {
         when:
-        Map<String, Map> generated = schema([EmbeddedItemsOwnerA, EmbeddedItemsOwnerB, EmbeddedCollectionItem], true)
+        Map<String, Map> generated = schema([EmbeddedItemsOwnerA, EmbeddedItemsOwnerB, EmbeddedCollectionItem])
 
         then:
         generated.keySet() == [
@@ -254,7 +216,7 @@ class GeneratedDomainClassesSharedEmbeddedCollectionSpec extends Specification {
 
     void "a collection in a nested embedded type and one in a direct embedded property each get a table of their own"() {
         when:
-        Map<String, Map> generated = schema([EmbeddedNestedOwnerA, EmbeddedNestedOwnerB], true)
+        Map<String, Map> generated = schema([EmbeddedNestedOwnerA, EmbeddedNestedOwnerB])
 
         then:
         generated.keySet() == [
@@ -277,13 +239,5 @@ class GeneratedDomainClassesSharedEmbeddedCollectionSpec extends Specification {
             EmbeddedNestedOwnerB owner = EmbeddedNestedOwnerB.get(b)
             [owner.mid.deep.words.sort(), owner.direct.words.sort()]
         } == [['b-deep'], ['b-direct']]
-    }
-
-    private static Throwable rootOf(Throwable e) {
-        Throwable root = e
-        while (root.cause != null && root.cause != root) {
-            root = root.cause
-        }
-        return root
     }
 }

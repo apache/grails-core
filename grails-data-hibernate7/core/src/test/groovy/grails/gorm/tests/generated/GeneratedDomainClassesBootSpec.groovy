@@ -26,7 +26,7 @@ import org.grails.datastore.mapping.core.DatastoreUtils
 import org.grails.orm.hibernate.HibernateDatastore
 
 /**
- * What the generated-domain-class binding boots (an entity with a composite identifier) and the plain binder boots too.
+ * What boots through the generated classes (an entity with a composite identifier), with the setting stated and with the defaults.
  */
 class GeneratedDomainClassesBootSpec extends Specification {
 
@@ -50,7 +50,7 @@ class GeneratedDomainClassesBootSpec extends Specification {
         datastore?.close()
     }
 
-    def "the same entity boots through the domain binder"() {
+    def "the same entity boots with the default settings"() {
         when:
         HibernateDatastore datastore = new HibernateDatastore(
                 DatastoreUtils.createPropertyResolver([

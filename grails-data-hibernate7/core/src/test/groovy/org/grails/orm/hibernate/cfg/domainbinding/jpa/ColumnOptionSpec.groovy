@@ -20,17 +20,14 @@ package org.grails.orm.hibernate.cfg.domainbinding.jpa
 
 import grails.gorm.annotation.Entity
 import grails.gorm.tests.HibernateGormDatastoreSpec
-import org.hibernate.mapping.Collection as HibernateCollection
 import org.hibernate.mapping.Column
-import org.hibernate.mapping.Table
-import spock.lang.PendingFeature
 
 /**
- * Pins defects of the domain binder found while auditing which mapping options {@link GrailsDomainGenerator} drops. The
- * binder silently ignores the options below; the generator either states what the mapping asks for (and the differential spec
- * lists the difference) or rejects the mapping by name. Each feature reports as fixed when the binder is.
+ * Column options of a simple property and of an enum property that reach the bound column and the rows: the write flags
+ * ({@code insertable}, {@code updatable}) and the comment, default and read and write expressions of an enum column, which
+ * {@link GrailsDomainGenerator} states as the mapping asks for.
  */
-class GrailsDomainBinderOptionDefectSpec extends HibernateGormDatastoreSpec {
+class ColumnOptionSpec extends HibernateGormDatastoreSpec {
 
     void setupSpec() {
         manager.registerDomainClasses(DefectWritable, DefectReadOnlyColumns, DefectEnumGroup, DefectCollectionGroup, DefectEnumColumn)
@@ -72,8 +69,7 @@ class GrailsDomainBinderOptionDefectSpec extends HibernateGormDatastoreSpec {
         DefectReadOnlyColumns.get(row.id).updated == 'b'
     }
 
-    @PendingFeature(reason = 'EnumTypeBinder never calls CreateKeyForProps, so a unique group on an enum property makes no unique key')
-    void "a unique group on an enum property is unique in the database"() {
+    void "a unique group on an enum property is unique in the database (classic binding never created the key)"() {
         given:
         new DefectEnumGroup(state: DefectState.ON, other: 'a').save(flush: true, failOnError: true)
         session.clear()
@@ -96,14 +92,17 @@ class GrailsDomainBinderOptionDefectSpec extends HibernateGormDatastoreSpec {
         column.customWrite == 'upper(?)'
     }
 
-    @PendingFeature(reason = 'CollectionKeyBinder runs ColumnBinder on the collection property, so a unique group becomes a unique key of the collection table that names a column of the owner\'s table')
-    void "the unique key of a collection table names only columns of that table"() {
+    void "a unique group on a collection property creates no key, since the collection table does not hold the columns of the group"() {
         given:
-        Table table = ((HibernateCollection) getPersistentEntity(DefectCollectionGroup).persistentClass.getProperty('tags').value).collectionTable
-        Set<String> columns = table.columns*.name.toSet()
+        new DefectCollectionGroup(x: 'a', tags: ['one', 'two'] as Set).save(flush: true, failOnError: true)
+        session.clear()
 
-        expect:
-        table.uniqueKeys.values().every { it.columns*.name.every { String name -> columns.contains(name) } }
+        when: 'another owner repeats the value the group names'
+        new DefectCollectionGroup(x: 'a', tags: ['one'] as Set).save(flush: true, failOnError: true)
+        session.clear()
+
+        then:
+        DefectCollectionGroup.count() == 2
     }
 }
 

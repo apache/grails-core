@@ -22,12 +22,11 @@ import grails.gorm.annotation.Entity
 import grails.gorm.tests.HibernateGormDatastoreSpec
 
 /**
- * Pins a defect of the domain binder in the many-to-many ownership rules, found by comparing it with the annotations
- * {@link GrailsDomainGenerator} generates. The generator does not copy it: it follows the owning side. The feature reports
- * as fixed when the binder is. A many-to-many that neither side owns, the other defect found that way, no longer boots: see
- * {@code ManyToManyWithoutOwnerSpec}.
+ * The ownership rules of a many-to-many: the annotations {@link GrailsDomainGenerator} generates follow the owning side, so the
+ * inverse side reads the join table the owner writes, also when only the owner names the table (the classic binding of Grails 8
+ * lost the rows then). A many-to-many that neither side owns does not boot: see {@code ManyToManyWithoutOwnerSpec}.
  */
-class ManyToManyOwnershipDefectSpec extends HibernateGormDatastoreSpec {
+class ManyToManyOwnershipSpec extends HibernateGormDatastoreSpec {
 
     void setupSpec() {
         manager.registerDomainClasses(DefectNamedOwner, DefectNamedInverse)

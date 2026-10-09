@@ -20,16 +20,14 @@ package org.grails.orm.hibernate.cfg.domainbinding.jpa
 
 import grails.gorm.annotation.Entity
 import grails.gorm.tests.HibernateGormDatastoreSpec
-import spock.lang.PendingFeature
 
 /**
- * Pins a defect of the domain binder that {@link BasicCollectionKeyDefectSpec} fixed for collections of basic values:
- * {@code CollectionKeyColumnUpdater} makes the key of a collection of entities not updatable when its owner has more than
- * one unidirectional to-many property. Hibernate's collection persister then disables inserting and deleting the rows of the
- * join table, so the elements of such a collection are never written. The generator does not copy this: a join column must
- * be updatable, and it states it so. This feature reports as fixed when the binder is.
+ * The elements of a unidirectional collection of entities are written whether or not the owner has another unidirectional
+ * to-many property. The classic binding of Grails 8 made the key of such a collection not updatable when the owner had more than
+ * one, so Hibernate's collection persister never wrote the rows of the join table (see {@link UnidirectionalBasicCollectionsSpec}
+ * for collections of basic values); the generated classes state the join column updatable.
  */
-class EntityCollectionKeyDefectSpec extends HibernateGormDatastoreSpec {
+class UnidirectionalEntityCollectionsSpec extends HibernateGormDatastoreSpec {
 
     void setupSpec() {
         manager.registerDomainClasses(DefectItem, DefectOtherItem, DefectItemOneOwner, DefectItemTwoOwner)
@@ -47,7 +45,6 @@ class EntityCollectionKeyDefectSpec extends HibernateGormDatastoreSpec {
         DefectItemOneOwner.get(owner.id).items*.name.toSet() == ['a', 'b'].toSet()
     }
 
-    @PendingFeature(reason = 'the key of an entity collection is not updatable when its owner has two unidirectional collections, so the join table rows are never written')
     void "the items of each of two unidirectional collections of an owner are persisted"() {
         given:
         DefectItemTwoOwner owner = new DefectItemTwoOwner(name: 'two')

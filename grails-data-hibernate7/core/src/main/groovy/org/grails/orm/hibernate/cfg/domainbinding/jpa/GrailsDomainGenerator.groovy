@@ -320,7 +320,7 @@ class GrailsDomainGenerator {
      * the owner, and gives it no owner-specific identity, so two embedded properties that share a type with a collection share one
      * table whose key is a foreign key to the owner that was bound first (probed: the rows of the other owner violate it unless the
      * identifiers happen to coincide), and Hibernate refuses the duplicate collection at boot when the two properties have the same name
-     * (pinned in {@code GrailsDomainBinderEmbeddedCollectionDefectSpec}).
+     * (a defect of the classic binding of Grails 8).
      *
      * <p>Every embedded property gets a collection table of its own. The first one, in the order of the entity name and then the
      * property path, keeps the names the binder gives the shared table, so an existing database is undisturbed; the others get names
@@ -2024,7 +2024,7 @@ class GrailsDomainGenerator {
         if (simplePart != null) {
             return "the composite identifier of the associated entity [${target.name}] has a part [${simplePart.name}] that refers to an " +
                     'entity with a simple identifier: ForeignKeyColumnCountCalculator counts such a part as no column, so the binder gives ' +
-                    'the foreign key fewer columns than the key and Hibernate refuses it at boot (pinned in GrailsDomainBinderCompositeIdDefectSpec)'
+                    'the foreign key fewer columns than the key and Hibernate refuses it at boot'
         }
         HibernatePersistentProperty deepPart = root.compositeIdentity.find { HibernatePersistentProperty part ->
             part instanceof HibernateToOneProperty && compositeIdentifier(((HibernateToOneProperty) part).hibernateAssociatedEntity) &&
@@ -2458,7 +2458,7 @@ class GrailsDomainGenerator {
         }
         if (columnConfig != null) {
             // EnumTypeBinder ignores the comment, the default and the read and write expressions of the column config (a binder
-            // defect, pinned in GrailsDomainBinderOptionDefectSpec); the generator states what the mapping asks for
+            // defect of Grails 8); the generator states what the mapping asks for
             column.comment = columnConfig.comment
             column.defaultValue = columnConfig.defaultValue
             column.customRead = columnConfig.read

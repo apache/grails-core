@@ -37,24 +37,23 @@ import org.grails.orm.hibernate.HibernateDatastore
 
 /**
  * What the generated carrier classes may not do: leak. They have the names of the real domain classes and live in a loader of
- * their own, so serialization, by-name lookups and every Class that Hibernate hands out must give the real class, as in
- * binder mode.
+ * their own, so serialization, by-name lookups and every Class that Hibernate hands out must give the real class, as with the
+ * classic binding of Grails 8.
  */
 class GeneratedDomainClassesSerializationSpec extends Specification {
 
     @AutoCleanup
     HibernateDatastore datastore
 
-    private HibernateDatastore boot(boolean generated) {
+    private HibernateDatastore boot() {
         datastore?.close()
         datastore = new HibernateDatastore(DatastoreUtils.createPropertyResolver([
-                'dataSource.url'                  : "jdbc:h2:mem:gdcSer${generated}${System.nanoTime()};LOCK_TIMEOUT=10000".toString(),
-                'dataSource.dbCreate'             : 'create-drop',
-                'dataSource.dialect'              : H2Dialect.name,
-                'hibernate.hbm2ddl.auto'          : 'create-drop',
-                'hibernate.cache.queries'         : 'false',
-                'hibernate.cache.use_query_cache' : 'false',
-                'hibernate.generatedDomainClasses': generated,
+                'dataSource.url'                 : "jdbc:h2:mem:gdcSer${System.nanoTime()};LOCK_TIMEOUT=10000".toString(),
+                'dataSource.dbCreate'            : 'create-drop',
+                'dataSource.dialect'             : H2Dialect.name,
+                'hibernate.hbm2ddl.auto'         : 'create-drop',
+                'hibernate.cache.queries'        : 'false',
+                'hibernate.cache.use_query_cache': 'false',
         ]), GdcSerAuthor, GdcSerBook, GdcSerPet, GdcSerDog, GdcSerComposite)
         return datastore
     }
@@ -74,8 +73,8 @@ class GeneratedDomainClassesSerializationSpec extends Specification {
                 type.classLoader?.getClass()?.simpleName == 'ByteArrayClassLoader')
     }
 
-    private Map scenario(boolean generated) {
-        HibernateDatastore booted = boot(generated)
+    private Map scenario() {
+        HibernateDatastore booted = boot()
         Map r = [:]
         Long authorId
         GdcSerAuthor.withTransaction {
@@ -207,72 +206,62 @@ class GeneratedDomainClassesSerializationSpec extends Specification {
         return r
     }
 
-    private static final Map<Boolean, Map> RESULTS = [:]
+    private static Map RESULTS
 
-    private Map results(boolean generated) {
-        return RESULTS.computeIfAbsent(generated) { scenario(generated) }
+    private Map results() {
+        if (RESULTS == null) {
+            RESULTS = scenario()
+        }
+        return RESULTS
     }
 
     def "real instances serialize and deserialize as the real classes, detached, with their collections, and reattach"() {
         when:
-        Map generated = results(true)
-        Map binder = results(false)
+        Map generated = results()
 
         then: 'a detached entity with an initialized collection and an embedded value comes back as the real classes'
         generated.detachedCopy == [true, 'a', ['b1', 'b2'], 'org.hibernate.collection.spi.PersistentSet', true, GdcSerStatus.OPEN, true]
         !generated.streamMentionsGenerated
 
-        and: 'an uninitialized collection stays lazy and fails outside a session, as it does in binder mode'
+        and: 'an uninitialized collection stays lazy and fails outside a session, as it did with classic binding'
         generated.lazyInitializedBefore == false
         generated.lazyAccess == 'LazyInitializationException'
 
         and: 'the detached copy merges into a new session, cascading to its collection, and a deserialized entity reattaches'
         generated.afterMerge == ['renamed', ['b1 changed', 'b2'], 1]
         generated.afterAttach == 'reattached'
-
-        and: 'all of it is what binder mode does'
-        ['detachedCopy', 'streamMentionsGenerated', 'lazyInitializedBefore', 'lazyAccess', 'afterMerge', 'afterAttach'].every {
-            generated[it] == binder[it]
-        }
     }
 
-    def "proxies are proxies of the real class, and a serialized proxy deserializes as binder mode's does"() {
+    def "proxies are proxies of the real class, and a serialized proxy deserializes as it did with classic binding"() {
         when:
-        Map generated = results(true)
-        Map binder = results(false)
+        Map generated = results()
 
         then: 'superclass, persistent class, entity name and Hibernate.getClass are the real ones'
         generated.proxy == [true, true, true, true, true, true, true]
-        generated.proxySerialization == binder.proxySerialization
-        generated.proxySerialization[2] == 'reattached'
+
+        and: 'a serialized proxy deserializes as a plain instance of the real class with its state, as it did with classic binding'
+        generated.proxySerialization == [false, false, 'reattached']
     }
 
     def "lookups by entity name, class name and class give the real class"() {
         when:
-        Map generated = results(true)
-        Map binder = results(false)
+        Map generated = results()
 
         then:
         generated.byName == [
                 true, GdcSerAuthor.name, true, [GdcSerDog.name, GdcSerPet.name], true, true, true, GdcSerAuthor.name,
                 true, true, true, true, true, 1, 1, true, true,
         ]
-        generated.byName == binder.byName
         generated.polymorphic == [true, GdcSerDog.name, [GdcSerDog.name]]
-        generated.polymorphic == binder.polymorphic
         generated.composite == [[true, 'x']]
-        generated.embeddedQueries == binder.embeddedQueries
         generated.embeddedQueries == [[[true, 'c']], 1, 1, 1, 1]
     }
 
     def "no class that the mapping and JPA metamodels hand out is a generated class, but the cached type of an embedded value and of a composite identifier"() {
         when:
-        Map generated = results(true)
-        Map binder = results(false)
+        Map generated = results()
 
         then: 'the model has the real classes, under their own names'
-        binder.leakedClasses == []
-        generated.mappedClasses == binder.mappedClasses
         generated.mappedClasses.containsAll([GdcSerAuthor, GdcSerBook, GdcSerPet, GdcSerDog, GdcSerComposite, GdcSerAddress]*.name)
 
         and: 'Hibernate builds the component type of an embedded property and of a composite identifier before the switch to the real classes and caches its class, which has no public way to be reset'
@@ -285,7 +274,7 @@ class GeneratedDomainClassesSerializationSpec extends Specification {
     @PendingFeature(reason = 'Component.getType() caches the component class when Hibernate first asks for the type while binding the generated classes; Component has no public way to reset it')
     def "the returned class of an embedded property and of a composite identifier is the real class"() {
         expect:
-        results(true).leakedClasses == []
+        results().leakedClasses == []
     }
 }
 

@@ -273,14 +273,13 @@ class GrailsDomainGeneratorSpec extends HibernateGormDatastoreSpec {
         entityClass << [GenCar, GenVehicle]
     }
 
-    void "type parameters mapped with no type are not stated, because the built-in type the binder hands them to ignores them"() {
+    void "type parameters mapped with no type are not stated, because the built-in type they would go to ignores them"() {
         when:
         Class<?> generated = generate(GenParamsOnly)
 
         then:
         generated.getDeclaredField('quantity').getAnnotations().every { !(it instanceof Type) && !(it instanceof JdbcTypeCode) }
         generated.getDeclaredField('quantity').getAnnotation(Column).name() == 'quantity'
-        getPersistentEntity(GenParamsOnly).persistentClass.getProperty('quantity').value.typeParameters.getProperty('sequence_name') == 'seq'
     }
 
     void "the version is marked as the optimistic lock"() {
@@ -422,7 +421,7 @@ class GrailsDomainGeneratorSpec extends HibernateGormDatastoreSpec {
         classes[entity(GenCustomCollectionOwner)].getDeclaredField('kids').getAnnotation(CollectionType).type() == GenSetCollectionType
     }
 
-    void "Hibernate's own annotation binder resolves a converted type like the domain binder"() {
+    void "Hibernate's own annotation binder resolves a converted type as the bound model holds it"() {
         given:
         Map<GrailsHibernatePersistentEntity, Class<?>> classes = generateGroup(GenConverted)
         PersistentClass bound = entity(GenConverted).persistentClass
@@ -436,7 +435,7 @@ class GrailsDomainGeneratorSpec extends HibernateGormDatastoreSpec {
                     expected.jdbcType.defaultSqlTypeCode == actual.jdbcType.defaultSqlTypeCode &&
                     expected.domainJavaType.javaTypeClass == actual.domainJavaType.javaTypeClass
         }
-        ((BasicValue) bound.getProperty('yesNo').value).resolve().valueConverter instanceof YesNoConverter
+        converterClass(((BasicValue) bound.getProperty('yesNo').value).resolve()) == YesNoConverter
     }
 
     private static Class<?> converterClass(BasicValue.Resolution<?> resolution) {

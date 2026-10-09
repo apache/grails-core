@@ -72,24 +72,29 @@ class HibernateBasicPropertySpec extends HibernateGormDatastoreSpec {
         mockCollection.getBatchSize() == property.getBatchSize()
     }
 
-    def "getTable on an enum collection element switches from owner table to collection table"() {
+    def "getTable on an enum collection element switches from the owner's table to the collection's once a collection is set"() {
         given:
         def entity = (HibernatePersistentEntity) getMappingContext().getPersistentEntity(HBPStatusPerson.name)
         def property = (HibernateBasicEnumProperty) entity.getPropertyByName("statuses")
-        def original = property.getHibernateCollection()
+        def mbc = getGrailsDomainBinder().metadataBuildingContext
+        def rootClass = new org.hibernate.mapping.RootClass(mbc)
+        rootClass.setEntityName(HBPStatusPerson.name)
+        def collection = new org.hibernate.mapping.Set(mbc, rootClass)
+        collection.setCollectionTable(new org.hibernate.mapping.Table('orm', 'hbp_status_person_statuses'))
 
-        expect: "after binding, the property's table is the collection's join table, not the owner's"
-        property.getTable() == original.getCollectionTable()
-        property.getTable() != property.getPersistentClass().getTable()
-
-        when: "the collection has not been assigned yet"
-        property.setHibernateCollection(null)
-
-        then: "getTable falls back to the owning entity's table"
+        expect: "with no collection, the property's table is the owning entity's"
+        property.getHibernateCollection() == null
         property.getTable() == property.getPersistentClass().getTable()
 
+        when:
+        property.setHibernateCollection(collection)
+
+        then: "the property's table is the collection's table, not the owner's"
+        property.getTable() == collection.getCollectionTable()
+        property.getTable() != property.getPersistentClass().getTable()
+
         cleanup:
-        property.setHibernateCollection(original)
+        property.setHibernateCollection(null)
     }
 
     def "getTable on a non-enum basic collection element stays the owning entity's table"() {
