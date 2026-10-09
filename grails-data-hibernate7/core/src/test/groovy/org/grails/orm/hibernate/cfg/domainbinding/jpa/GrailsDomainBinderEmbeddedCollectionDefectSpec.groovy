@@ -33,10 +33,13 @@ import spock.lang.PendingFeature
  */
 class GrailsDomainBinderEmbeddedCollectionDefectSpec extends HibernateGormDatastoreSpec {
 
+    /** The defects are the classic binder's, so the datastores select it whatever the default is. */
+    private static final Map<String, Object> CLASSIC = ['hibernate.generatedDomainClasses': false]
+
     @PendingFeature(reason = 'the role, the table and the key column of a collection inside an embedded type come from the type, so two owners of the type collide')
     void "two entities can embed a type that has a collection"() {
         when:
-        HibernateDatastore datastore = new HibernateDatastore(EmbeddedCollectionOwnerA, EmbeddedCollectionOwnerB)
+        HibernateDatastore datastore = new HibernateDatastore(CLASSIC, EmbeddedCollectionOwnerA, EmbeddedCollectionOwnerB)
 
         then:
         notThrown(Exception)

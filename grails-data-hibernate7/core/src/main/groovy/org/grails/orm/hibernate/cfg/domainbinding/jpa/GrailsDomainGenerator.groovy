@@ -615,7 +615,9 @@ class GrailsDomainGenerator {
                         'does not support because Hibernate cannot state one in an identifier class. Map the properties of the ' +
                         'embedded class as plain properties of the identifier instead (the schema stays the same), see the ' +
                         'Native Domain Binding chapter of the manual'
-            } else if (!(part instanceof HibernateSimpleProperty) || isDerived(part)) {
+            } else if (!(part instanceof HibernateSimpleProperty || part instanceof HibernateTenantIdProperty) || isDerived(part)) {
+                // the tenant id of a multi-tenant entity is bound like any other column of the key, and the tenant filter
+                // compares that column (CompositeIdBinder gives it no special treatment either)
                 return "Composite identifier part [${part.name}] of [${entity.name}] is a ${part.getClass().simpleName}, which the " +
                         'generator does not support yet'
             } else if (!supports(part)) {

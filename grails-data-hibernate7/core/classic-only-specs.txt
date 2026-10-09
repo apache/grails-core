@@ -28,13 +28,12 @@
 # InFlightMetadataCollector or MetadataBuildingContext. Only those that FAIL with a natively bound datastore are listed,
 # one fully qualified class name per line; the others run and pass in both modes (every other binder-internals spec,
 # the generator differential included, was run against a natively bound datastore before being left out of this list).
-# The six listed assert facts of the classic boot model (a collection table the classic binder creates, a unique key it
+# The five listed assert facts of the classic boot model (a collection table the classic binder creates, a unique key it
 # drops, the type parameters it sets) or pin classic defects with @PendingFeature, which native binding does not have,
 # so they only hold against a classic datastore. The list goes away with the classic binder.
 #
 org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateBasicPropertySpec
 org.grails.orm.hibernate.cfg.domainbinding.jpa.EntityCollectionKeyDefectSpec
-org.grails.orm.hibernate.cfg.domainbinding.jpa.GrailsDomainBinderEmbeddedCollectionDefectSpec
 org.grails.orm.hibernate.cfg.domainbinding.jpa.GrailsDomainBinderOptionDefectSpec
 org.grails.orm.hibernate.cfg.domainbinding.jpa.GrailsDomainGeneratorSpec
 org.grails.orm.hibernate.cfg.domainbinding.jpa.GrailsDomainGeneratorUniqueGroupSpec

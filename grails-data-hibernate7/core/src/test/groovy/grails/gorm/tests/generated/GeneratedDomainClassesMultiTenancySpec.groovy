@@ -23,6 +23,7 @@ import grails.gorm.annotation.Entity
 import org.hibernate.dialect.H2Dialect
 import spock.lang.AutoCleanup
 import spock.lang.Specification
+import spock.lang.Unroll
 import spock.util.environment.RestoreSystemProperties
 
 import org.grails.datastore.mapping.core.DatastoreUtils
@@ -79,10 +80,67 @@ class GeneratedDomainClassesMultiTenancySpec extends Specification {
         GdcTenantItem.withNewSession { GdcTenantItem.list()*.name } == ['mustang']
         GdcTenantItem.withNewSession { GdcTenantItem.findByName('model s') } == null
     }
+
+    /**
+     * The tenant id may be a part of a composite identifier (grails-test-examples/hibernate7/issue450): the classic binder binds
+     * the part like any other column of the key, and the tenant filter compares the same column.
+     */
+    @Unroll
+    def "the tenant id can be a part of the composite identifier (generated: #generated)"() {
+        given:
+        System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, 'grails')
+        datastore = new HibernateDatastore(DatastoreUtils.createPropertyResolver([
+                'grails.gorm.multiTenancy.mode'               : MultiTenancySettings.MultiTenancyMode.DISCRIMINATOR,
+                'grails.gorm.multiTenancy.tenantResolverClass': SystemPropertyTenantResolver.name,
+                'dataSource.url'                              : "jdbc:h2:mem:gdcTenantComposite${generated};LOCK_TIMEOUT=10000".toString(),
+                'dataSource.dialect'                          : H2Dialect.name,
+                'hibernate.cache.queries'                     : 'false',
+                'hibernate.cache.use_query_cache'             : 'false',
+                'hibernate.hbm2ddl.auto'                      : 'create',
+                'hibernate.generatedDomainClasses'            : generated,
+        ]), GdcTenantCompositeBook)
+        String grailsId = UUID.randomUUID().toString()
+        String groovyId = UUID.randomUUID().toString()
+
+        when:
+        GdcTenantCompositeBook.withTransaction {
+            new GdcTenantCompositeBook(id: grailsId, title: 'The definitive Guide to Grails 2').save(flush: true, failOnError: true)
+        }
+        System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, 'groovy')
+        GdcTenantCompositeBook.withTransaction {
+            new GdcTenantCompositeBook(id: groovyId, title: 'Groovy in Action').save(flush: true, failOnError: true)
+        }
+
+        then: 'the primary key spans both parts and the tenant id is stored with the row'
+        datastore.sessionFactory.mappingMetamodel.getEntityDescriptor(GdcTenantCompositeBook).identifierMapping.jdbcTypeCount == 2
+        GdcTenantCompositeBook.withNewSession { GdcTenantCompositeBook.list()*.title } == ['Groovy in Action']
+        GdcTenantCompositeBook.withNewSession { GdcTenantCompositeBook.list().collect { [it.id, it.tenantId] } } == [[groovyId, 'groovy']]
+
+        when:
+        System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, 'grails')
+
+        then:
+        GdcTenantCompositeBook.withNewSession { GdcTenantCompositeBook.list()*.title } == ['The definitive Guide to Grails 2']
+        GdcTenantCompositeBook.withNewSession { GdcTenantCompositeBook.findByTitle('Groovy in Action') } == null
+
+        where:
+        generated << [false, true]
+    }
 }
 
 @Entity
 class GdcTenantItem implements MultiTenant<GdcTenantItem> {
     String name
     String tenantId
+}
+
+@Entity
+class GdcTenantCompositeBook implements MultiTenant<GdcTenantCompositeBook>, Serializable {
+    String id
+    String tenantId
+    String title
+
+    static mapping = {
+        id composite: ['id', 'tenantId']
+    }
 }
