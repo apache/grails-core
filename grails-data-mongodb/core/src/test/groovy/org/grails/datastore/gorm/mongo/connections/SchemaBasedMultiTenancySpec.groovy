@@ -73,11 +73,13 @@ class SchemaBasedMultiTenancySpec extends AutoStartedMongoSpec {
     }
 
     void "Test persist and retrieve entities with multi tenancy"() {
-        setup:"only the databases of these tenants are dropped, as every database of the shared server is a tenant, config included"
+        setup: "the tenants this feature uses start empty"
+        // Not eachTenant: in SCHEMA mode every database on the server is a tenant, MongoDB's own admin, config
+        // and local included. Dropping config on the shared test server removes config.image_collection, and
+        // the next retryable findAndModify - native id generation, in any later specification - then aborts
+        // mongod when it recreates that collection inside the write.
         ['test1', 'test2'].each { String tenantId ->
-            CompanyB.withTenant(tenantId) {
-                CompanyB.DB.drop()
-            }
+            datastore.mongoClient.getDatabase(tenantId).drop()
         }
 
         when:"A tenant id is present"
