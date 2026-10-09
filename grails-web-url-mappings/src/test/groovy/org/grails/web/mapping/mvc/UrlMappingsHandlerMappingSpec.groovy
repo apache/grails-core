@@ -27,9 +27,12 @@ import grails.web.HyphenatedUrlConverter
 import grails.web.mapping.AbstractUrlMappingsSpec
 import org.grails.web.mapping.DefaultUrlMappingData
 import org.grails.web.mapping.DefaultUrlMappingInfo
+import org.grails.web.servlet.view.CompositeViewResolver
+import org.grails.web.util.GrailsApplicationAttributes
 import org.grails.web.util.WebUtils
 import org.springframework.mock.web.MockHttpServletRequest
 import org.springframework.mock.web.MockHttpServletResponse
+import org.springframework.mock.web.MockServletContext
 import org.springframework.ui.ModelMap
 import org.springframework.web.context.request.RequestContextHolder
 import org.springframework.web.context.request.WebRequest
@@ -37,6 +40,7 @@ import org.springframework.web.context.request.WebRequestInterceptor
 import org.springframework.web.context.support.StaticWebApplicationContext
 import org.springframework.web.servlet.HandlerInterceptor
 import org.springframework.web.servlet.ModelAndView
+import org.springframework.web.servlet.View
 import org.springframework.web.servlet.handler.WebRequestHandlerInterceptorAdapter
 import org.springframework.web.servlet.view.InternalResourceView
 import spock.lang.Issue
@@ -297,8 +301,8 @@ class UrlMappingsHandlerMappingSpec extends AbstractUrlMappingsSpec {
 
     @Issue('https://github.com/apache/grails-core/issues/15819')
     @Unroll
-    void "adapter returns null when render() writes the body for action '#actionName' (result=#resultDesc)"() {
-        given: "a URL mapping for an action that calls render() to write the response body"
+    void "adapter returns null when action '#actionName' handles the response (result=#resultDesc)"() {
+        given: "a URL mapping for an action that handles the response"
         def grailsApplication = new DefaultGrailsApplication(FooController)
         grailsApplication.initialise()
         def linkGenerator = getLinkGenerator {
@@ -327,12 +331,64 @@ class UrlMappingsHandlerMappingSpec extends AbstractUrlMappingsSpec {
         then: "the adapter returns null — no ModelAndView is passed to DispatcherServlet for view resolution"
         result == null
 
+        and: "the action's response status, redirect location, and body are preserved"
+        webRequest.response.status == expectedStatus
+        webRequest.response.getHeader('Location') == expectedLocation
+        webRequest.response.contentAsString == expectedBody
+
+        cleanup:
+        ctx.close()
+
         where:
-        actionName              | resultDesc
-        'renderText'            | 'null (render(text:) returns null)'
-        'renderTextWithMap'     | 'Map (render(text:) called, action also returns a Map)'
-        'redirectWithMap'       | 'Map (redirect() issued, action also returns a Map)'
-        'committedWithMap'      | 'Map (response already committed, action also returns a Map)'
+        actionName         | resultDesc                                                    | expectedStatus | expectedLocation                | expectedBody
+        'renderText'       | 'null (render(text:) returns null)'                            | 200            | null                            | 'hello'
+        'renderTextWithMap' | 'Map (render(text:) called, action also returns a Map)'        | 200            | null                            | 'hello'
+        'redirectWithMap'   | 'Map (redirect() issued, action also returns a Map)'           | 302            | 'http://example.com/redirected' | ''
+        'committedWithMap'  | 'Map (response already committed, action also returns a Map)' | 200            | null                            | 'already committed'
+    }
+
+    @Issue('https://github.com/apache/grails-core/issues/15819')
+    void "adapter preserves the template body without selecting an implicit view when the action returns a Map"() {
+        given: "an action that calls render(template:) before returning a model"
+        def grailsApplication = new DefaultGrailsApplication(FooController)
+        grailsApplication.initialise()
+        def holder = new GrailsControllerUrlMappings(grailsApplication, getUrlMappingsHolder {
+            "/foo/renderTemplateWithMap"(controller: "foo", action: "renderTemplateWithMap")
+        })
+        def handler = new UrlMappingsHandlerMapping(holder)
+
+        and: "a template view that writes the supplied model without committing the response"
+        def templateView = Mock(View)
+        def viewResolver = Mock(CompositeViewResolver)
+        def servletContext = new MockServletContext()
+        def ctx = new StaticWebApplicationContext()
+        ctx.servletContext = servletContext
+        ctx.beanFactory.registerSingleton(CompositeViewResolver.BEAN_NAME, viewResolver)
+        servletContext.setAttribute(GrailsApplicationAttributes.APPLICATION_CONTEXT, ctx)
+        ctx.refresh()
+        def request = new MockHttpServletRequest(servletContext)
+        def response = new MockHttpServletResponse()
+        GrailsWebMockUtil.bindMockWebRequest(ctx, request, response)
+        request.setRequestURI('/foo/renderTemplateWithMap')
+
+        when: "the adapter invokes the action through its URL mapping"
+        def handlerChain = handler.getHandler(request)
+        def result = new UrlMappingsInfoHandlerAdapter().handle(request, response, handlerChain.handler)
+
+        then: "render(template:) resolves and renders the requested template with its model"
+        1 * viewResolver.resolveView('/foo/_greeting', _) >> templateView
+        1 * templateView.render([name: 'Grails'], request, response) >> { model, req, res ->
+            res.writer.write("Hello ${model.name}")
+        }
+        0 * viewResolver.resolveView(_, _)
+
+        and: "the template body is preserved without committing or selecting an implicit action view"
+        response.contentAsString == 'Hello Grails'
+        !response.committed
+        result == null
+
+        cleanup:
+        ctx.close()
     }
 
     @Issue('https://github.com/apache/grails-core/issues/15819')
@@ -463,6 +519,12 @@ class FooController implements Controller {
     @Action
     def renderTextWithMap() {
         render(text: 'hello')
+        [foo: 'bar']
+    }
+
+    @Action
+    def renderTemplateWithMap() {
+        render(template: '/foo/greeting', model: [name: 'Grails'])
         [foo: 'bar']
     }
 
