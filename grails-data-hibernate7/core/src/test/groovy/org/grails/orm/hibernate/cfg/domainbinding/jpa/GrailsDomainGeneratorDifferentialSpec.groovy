@@ -44,9 +44,9 @@ import org.grails.datastore.mapping.multitenancy.resolvers.SystemPropertyTenantR
 import org.grails.datastore.mapping.reflect.ClassUtils
 import org.grails.orm.hibernate.HibernateDatastore
 
-import org.grails.orm.hibernate.cfg.domainbinding.binder.ColumnConfigToColumnBinder
-import org.grails.orm.hibernate.cfg.domainbinding.binder.NumericColumnConstraintsBinder
-import org.grails.orm.hibernate.cfg.domainbinding.binder.StringColumnConstraintsBinder
+import org.grails.orm.hibernate.cfg.domainbinding.column.ColumnConfigToColumnBinder
+import org.grails.orm.hibernate.cfg.domainbinding.column.NumericColumnConstraintsBinder
+import org.grails.orm.hibernate.cfg.domainbinding.column.StringColumnConstraintsBinder
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateBasicProperty
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEmbeddedProperty
@@ -518,7 +518,7 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
 
     /**
      * The column facets the generator decided against the bound column and property. A mapping that says {@code insertable: false}
-     * or {@code updatable: false} is a known divergence, not a mismatch: {@code PropertyBinder} overwrites those flags with the
+     * or {@code updatable: false} is a known divergence, not a mismatch: the classic property binder overwrites those flags with the
      * ones of the columns, which are always set, so the classic binder ignored the option and the generator states what the
      * mapping asks for ({@code ColumnOptionSpec} proves the flags reach the rows).
      */
@@ -548,7 +548,7 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
         }
         ignore.each { pairs.remove(it) }
         if (enumeration) {
-            // EnumTypeBinder ignores the comment, default and read and write expressions of the column config (a binder defect,
+            // the classic enum binder ignores the comment, default and read and write expressions of the column config (a binder defect,
             // of Grails 8); the generator states them
             ['default', 'read', 'write', 'comment'].each { String facet ->
                 if (pairs[facet][0] != null && pairs[facet][1] == null) {
@@ -615,7 +615,7 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
     }
 
     /**
-     * The composite identifier as {@code CompositeIdBinder} bound it: one component with a property for every part, whose columns
+     * The composite identifier as the classic composite identifier binder bound it: one component with a property for every part, whose columns
      * are the primary key and so not null. A simple part must have the column facets of an ordinary property; a many-to-one part
      * the foreign key column and the associated entity (nothing cascades through an identifier, so the cascade the binder states on
      * the part is not compared).
@@ -912,7 +912,7 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
     }
 
     /**
-     * The tenant filter {@code MultiTenantFilterBinder} puts on the entity's class and the one global definition it
+     * The tenant filter the classic tenant filter binder puts on the entity's class and the one global definition it
      * registers: the same name, condition and parameter, or no filter at all when the generator says there is none.
      */
     private List<String> compareTenantFilter(
@@ -1014,7 +1014,7 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
     }
 
     /**
-     * A collection of basic values or enums as {@code CollectionBinder} and its second passes bound it: the kind of
+     * A collection of basic values or enums as the classic collection binder and its second passes bound it: the kind of
      * collection, its table, the key, element and index columns, and the fetching.
      */
     private List<String> compareCollection(
@@ -1157,7 +1157,7 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
     }
 
     /**
-     * An embedded property is a Component bound by {@code ComponentBinder}: the generator must name the same column-bearing
+     * An embedded property is a Component bound by the classic component binder: the generator must name the same column-bearing
      * leaves as the bound component (nested components included) and decide each leaf's column facets, type and enum
      * style the way the binder bound them.
      */
@@ -1369,7 +1369,7 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
                 dynamicUpdate: [facets.dynamicUpdate(), persistentClass.dynamicUpdate],
                 // the binder leaves a subclass's unset batch size at -1 and a root's at 0: both mean "not stated"
                 batchSize    : [facets.batchSize(), Math.max(persistentClass.batchSize, 0)],
-                // VersionBinder: NONE for a root without a version, VERSION otherwise; a subclass reads its root's
+                // the classic version binder: NONE for a root without a version, VERSION otherwise; a subclass reads its root's
                 versioned    : [facets.versioned(), persistentClass.optimisticLock == 'VERSION'],
         ]
         if (hierarchy.ownsTable()) {
@@ -1712,7 +1712,7 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
     }
 
     /**
-     * The inverse side of a one-to-one as {@code OneToOneBinder} bound it: no column, the property of the other side that
+     * The inverse side of a one-to-one as the classic one-to-one binder bound it: no column, the property of the other side that
      * holds the foreign key, the entity that declares it, the foreign key direction and the fetching.
      */
     private static List<String> compareOneToOne(String where, ToOneFacets facets, Map bound, Map<String, Integer> known) {
@@ -1737,7 +1737,7 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
     }
 
     /**
-     * A to-one association against the binder's {@code ToOne} value and property: the referenced entity, whether it is lazy,
+     * A to-one association against {@code ToOne} value and property: the referenced entity, whether it is lazy,
      * how it is fetched, what a missing row does, the cascade and whether the property is optional. The foreign key column
      * itself goes through the ordinary column comparison.
      */
@@ -1853,7 +1853,7 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
     }
 
     /**
-     * This comparison reads the mapping after the binder has bound it, and {@code ManyToOneBinder.prepareCircularManyToMany}
+     * This comparison reads the mapping after the binder has bound it, and the classic many-to-one binder's circular rule
      * writes the renamed join key into the mapping of a circular many-to-many while it binds, so the generator, which sees that
      * written key as a mapped one, states the renamed name for both sides, where the binder bound the side bound first before
      * the rename. The generator flow itself never sees the written key (it runs on the unbound mapping): the key names are
@@ -1899,7 +1899,7 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
     }
 
     /**
-     * A collection of entities as {@code CollectionBinder} and its second passes bound it: kind, ownership, join table, key,
+     * A collection of entities as the classic collection binder and its second passes bound it: kind, ownership, join table, key,
      * element and index columns, fetching, cascade, ordering and tenant filter.
      */
     private List<String> compareToMany(
@@ -2297,7 +2297,7 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
     }
 
     private GrailsDomainGenerator newGenerator() {
-        def naming = getGrailsDomainBinder().getNamingStrategy()
+        def naming = getMappingContributor().getNamingStrategy()
         return new GrailsDomainGenerator(
                 naming,
                 new ColumnNameForPropertyAndPathFetcher(naming, new DefaultColumnNameFetcher(naming), new BackticksRemover()),

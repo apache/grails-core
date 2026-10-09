@@ -68,11 +68,9 @@ import org.grails.datastore.mapping.model.PersistentProperty
 import org.grails.datastore.mapping.model.types.Embedded
 import org.grails.orm.hibernate.cfg.HibernateSimpleIdentity
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy
-import org.grails.orm.hibernate.cfg.domainbinding.binder.ColumnConfigToColumnBinder
-import org.grails.orm.hibernate.cfg.domainbinding.binder.ManyToManyOwnerValidator
-import org.grails.orm.hibernate.cfg.domainbinding.binder.NumericColumnConstraintsBinder
-import org.grails.orm.hibernate.cfg.domainbinding.binder.PropertyBinder
-import org.grails.orm.hibernate.cfg.domainbinding.binder.StringColumnConstraintsBinder
+import org.grails.orm.hibernate.cfg.domainbinding.column.ColumnConfigToColumnBinder
+import org.grails.orm.hibernate.cfg.domainbinding.column.NumericColumnConstraintsBinder
+import org.grails.orm.hibernate.cfg.domainbinding.column.StringColumnConstraintsBinder
 import org.grails.orm.hibernate.cfg.domainbinding.generator.GrailsSequenceGeneratorEnum
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEmbeddedProperty
@@ -118,7 +116,7 @@ class GeneratedDomainClassBinder implements SessionFactoryBuilderFactory {
 
     private final String dataSourceName
     private final GeneratedDomainClassLoader classLoader
-    private final PropertyBinder propertyBinder = new PropertyBinder()
+    private final PropertyAccessorName propertyAccessorName = new PropertyAccessorName()
     private final Map<String, Generated> generatedByName = new HashMap<String, Generated>()
     private final MultiTenantFilterDefinitionBinder filterDefinitionBinder = new MultiTenantFilterDefinitionBinder()
     private final UniqueNameGenerator uniqueNameGenerator = new UniqueNameGenerator()
@@ -499,7 +497,7 @@ class GeneratedDomainClassBinder implements SessionFactoryBuilderFactory {
 
     /**
      * A to-one foreign key to an entity with a composite identifier names the referenced columns, in the order of the identifier's
-     * parts sorted by name: the domain binder's {@code CompositeIdentifierToManyToOneBinder} creates it with the referenced columns it
+     * parts sorted by name: the classic composite foreign key binder creates it with the referenced columns it
      * collected after {@code Component.sortProperties()}. The key Hibernate derives refers to the primary key without naming its
      * columns, and before the schema is built Hibernate puts the columns of such a key in the order it gives the primary key
      * (by size and name); a key that names its referenced columns keeps the order it was created in, which is the sorted order of
@@ -643,7 +641,7 @@ class GeneratedDomainClassBinder implements SessionFactoryBuilderFactory {
         for (Property property : component.getProperties()) {
             HibernatePersistentProperty part = entity.compositeIdentity.find { HibernatePersistentProperty candidate -> candidate.name == property.name }
             if (part != null) {
-                property.propertyAccessorName = propertyBinder.accessorName(part)
+                property.propertyAccessorName = propertyAccessorName.accessorName(part)
                 if (property.value instanceof ManyToOne && part instanceof HibernateToOneProperty) {
                     alignJoinColumns(property.value, generator.toOneFacets((HibernateToOneProperty) part).joinColumns())
                 }
@@ -675,7 +673,7 @@ class GeneratedDomainClassBinder implements SessionFactoryBuilderFactory {
         PersistentProperty<?> persistentProperty = owner.identity?.name == property.name ?
                 owner.identity : owner.getPropertyByName(property.name)
         if (persistentProperty instanceof HibernatePersistentProperty) {
-            property.propertyAccessorName = propertyBinder.accessorName((HibernatePersistentProperty) persistentProperty)
+            property.propertyAccessorName = propertyAccessorName.accessorName((HibernatePersistentProperty) persistentProperty)
         }
         if (property.value instanceof ManyToOne && persistentProperty instanceof HibernateToOneProperty) {
             alignJoinColumns(property.value, generator.toOneFacets((HibernateToOneProperty) persistentProperty).joinColumns())
@@ -690,7 +688,7 @@ class GeneratedDomainClassBinder implements SessionFactoryBuilderFactory {
             alignCollectionIndexes((Collection) property.value, (HibernatePersistentProperty) persistentProperty, qualifier)
         }
         if (property.value instanceof Component && persistentProperty instanceof Embedded) {
-            // PropertyBinder marks the property lazy when the mapping says lazy: true; @Basic(fetch = LAZY) on an @Embedded is ignored
+            // the classic property binder marks the property lazy when the mapping says lazy: true; @Basic(fetch = LAZY) on an @Embedded is ignored
             // by Hibernate's annotation binder, so the mapping's flag is set on the bound property
             if (persistentProperty instanceof HibernatePersistentProperty && ((HibernatePersistentProperty) persistentProperty).isLazy()) {
                 property.lazy = true

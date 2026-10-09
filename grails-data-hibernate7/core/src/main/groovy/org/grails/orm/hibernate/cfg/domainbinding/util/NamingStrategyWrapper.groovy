@@ -28,7 +28,7 @@ import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty
 
-import static org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBinder.FOREIGN_KEY_SUFFIX
+import static org.grails.orm.hibernate.cfg.domainbinding.util.DefaultColumnNameFetcher.FOREIGN_KEY_SUFFIX
 import static org.hibernate.boot.model.naming.Identifier.toIdentifier
 
 /**

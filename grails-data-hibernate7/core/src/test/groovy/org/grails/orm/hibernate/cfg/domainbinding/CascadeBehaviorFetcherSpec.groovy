@@ -99,8 +99,8 @@ class CascadeBehaviorFetcherSpec extends HibernateGormDatastoreSpec {
     @Unroll
     void "test cascade behavior fetcher for #description"() {
         given: "A persistent property from the test entity"
-        createPersistentEntity(childClass, grailsDomainBinder)
-        def testProperty = createPersistentEntity(ownerClass, grailsDomainBinder)
+        createPersistentEntity(childClass)
+        def testProperty = createPersistentEntity(ownerClass)
                 .getPropertyByName(associationName)
 
         when: "Getting the cascade behavior"

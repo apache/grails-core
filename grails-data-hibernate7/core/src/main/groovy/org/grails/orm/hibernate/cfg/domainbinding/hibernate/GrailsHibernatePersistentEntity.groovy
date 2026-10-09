@@ -41,11 +41,14 @@ import org.grails.orm.hibernate.cfg.domainbinding.util.ConfigureDerivedPropertie
 import org.grails.orm.hibernate.cfg.domainbinding.util.DefaultColumnNameFetcher
 import org.grails.orm.hibernate.cfg.domainbinding.util.NamespaceNameExtractor
 
-import static org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBinder.DEFAULT_DISCRIMINATOR_COLUMN_NAME
-
 /** Common interface for Hibernate persistent entities */
 @CompileStatic
 interface GrailsHibernatePersistentEntity extends PersistentEntity {
+
+    /**
+     * The name of the discriminator column of a table-per-hierarchy tree that does not map one.
+     */
+    String DEFAULT_DISCRIMINATOR_COLUMN_NAME = 'class'
 
     private static String resolveDiscriminatorValue(DiscriminatorConfig discriminatorConfig) {
         return discriminatorConfig.column != null ? discriminatorConfig.column.name : discriminatorConfig.formula

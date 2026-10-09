@@ -45,7 +45,7 @@ class HibernateEmbeddedCollectionPropertySpec extends HibernateGormDatastoreSpec
 
     def "test setCollection with path configures metadata"() {
         given:
-        def mbc = getGrailsDomainBinder().metadataBuildingContext
+        def mbc = getMappingContributor().metadataBuildingContext
         def entity = Mock(HibernatePersistentEntity) {
             getName() >> "TestEntity"
         }

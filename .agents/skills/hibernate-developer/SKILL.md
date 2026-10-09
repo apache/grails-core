@@ -12,9 +12,9 @@ Licensed to the Apache Software Foundation (ASF) under one or more contributor l
 ## What I Do
 
 - Provide repository-specific guidance for the `grails-data-hibernate7` project.
-- Guide changes around `GrailsDomainBinder`, `GrailsPropertyBinder`, `IdentityBinder`, `VersionBinder`, collection binders, and related utilities.
+- Guide changes around native domain binding: `GrailsDomainGenerator`, `GeneratedDomainClassBinder`, `GormMappingContributor`, the metamodel under `domainbinding.hibernate`, the column helpers and the identifier generators.
 - Keep changes aligned with the testing constraints used by the Hibernate 7 modules in this repository.
-- Help with migration work inside this framework module (e.g., porting domain-binding behaviour from H5 to H7, updating binder internals, fixing H7 regressions). Does not cover user-facing application migration guides; those belong in `grails-doc`.
+- Help with migration work inside this framework module (e.g., closing a gap of native binding against what the classic binding of Grails 8 did, updating the metamodel, fixing H7 regressions). Does not cover user-facing application migration guides; those belong in `grails-doc`.
 
 ## When to Use Me
 
@@ -30,57 +30,44 @@ Activate this skill when working on the Hibernate 7 module, especially for:
 
 This skill is for the Grails framework's Hibernate 7 integration module, not for a Grails application. Prefer guidance from this skill over generic Grails app patterns when working in `grails-data-hibernate7`.
 
-`GrailsDomainBinder` is the main entry point for binding Grails domain classes to Hibernate metadata. Changes often ripple through:
+Native domain binding is the only binding: `GrailsDomainGenerator` generates a JPA-annotated class for every GORM entity from the mapping model, Hibernate's own annotation binder binds those classes, and `GeneratedDomainClassBinder` aligns the bound model with what the mapping asks for and points the bound entities at the real domain classes. The classic binder of Grails 8, which built Hibernate's boot model by hand, was removed in 9.0.x; its behaviour is recorded in `core/src/test/resources/classic-oracle/` and the two differential specs compare native binding with it (see `grails-data-hibernate7/README.md`). Changes often ripple through:
 
-- `org.grails.orm.hibernate.cfg`
-- `org.grails.orm.hibernate.cfg.domainbinding`
-- `org.grails.orm.hibernate.cfg.domainbinding.collectionType`
-- `org.grails.orm.hibernate.cfg.domainbinding.secondpass`
-- `org.grails.orm.hibernate.cfg.domainbinding.generator`
+- `org.grails.orm.hibernate.cfg` (the mapping DSL and its model)
+- `org.grails.orm.hibernate.cfg.domainbinding.hibernate` (the metamodel the generator reads)
+- `org.grails.orm.hibernate.cfg.domainbinding.jpa` (the generator, the facets it decides, the aligner)
+- `org.grails.orm.hibernate.cfg.domainbinding.column` and `.util` (column and naming helpers)
+- `org.grails.orm.hibernate.cfg.domainbinding.generator` (identifier generators)
 
 ## Key Classes and Responsibilities
 
-### Main Binding Flow
+### Binding Flow
 
-- `GrailsDomainBinder`: central coordinator for Hibernate 7 mapping contribution.
-- `GrailsPropertyBinder`: main coordinator for converting persistent properties into Hibernate `Value` instances.
-- `PropertyFromValueCreator`: shared utility for creating Hibernate `Property` instances from a bound `Value`.
+- `HibernateMappingContextConfiguration`: builds the session factory; registers `GormMappingContributor` as the first `AdditionalMappingContributor` and `GeneratedDomainClassBinder` as a `SessionFactoryBuilderFactory`.
+- `GormMappingContributor`: hands the entities of a data source to Hibernate; resolves the naming strategy (`NamingStrategyWrapper`) against the JDBC environment.
+- `GeneratedDomainClassBinder`: generates the classes, binds them with Hibernate's annotation binder, installs the GORM identifier generators and the tenant filter, aligns discriminators, unique keys, join columns and collection tables, then switches the class loader service to the real classes.
+- `GrailsDomainGenerator`: decides the facets (`*Facets` records) of every entity and property and emits the annotated class with Byte Buddy. A mapping it cannot describe is refused by name with an `UnsupportedOperationException` that says what to change.
 
-### Identifier and Version Binding
+### Metamodel
 
-- `IdentityBinder`: coordinates identifier binding.
-- `SimpleIdBinder`: handles simple identifiers.
-- `CompositeIdBinder`: handles composite identifiers.
-- `VersionBinder`: binds optimistic locking version properties.
-- `NaturalIdentifierBinder`: binds `naturalId` properties.
+- `GrailsHibernatePersistentEntity`, `HibernatePersistentProperty` and the `Hibernate*Property` types: the GORM mapping model with the Hibernate-specific reads the generator needs (column names, join tables, cascade, lazy, the tenant id).
+- `HibernateMappingBuilder`, `Mapping`, `PropertyConfig`, `ColumnConfig`: the mapping DSL and its model.
 
-### Associations and Collections
+### Column and Naming Helpers
 
-- `OneToOneBinder`, `ManyToOneBinder`, `ManyToOneValuesBinder`: association binding.
-- `CollectionBinder`: collection mapping.
-- `CollectionSecondPassBinder`, `ListSecondPassBinder`, `MapSecondPassBinder`: second-pass association and collection binding.
-- `CollectionHolder` plus the collection type classes: carry collection metadata through binding.
-
-### Value and Column Binding
-
-- `SimpleValueBinder`: binds simple properties.
-- `SimpleValueColumnBinder`: binds columns to simple values.
-- `ComponentBinder`, `ComponentPropertyBinder`: embedded/component binding.
-- `EnumTypeBinder`: enum mapping.
+- `ColumnConfigToColumnBinder`, `StringColumnConstraintsBinder`, `NumericColumnConstraintsBinder`, `IndexBinder` (`domainbinding.column`): apply a column config to a Hibernate `Column`; the generator and the aligner share them.
+- `DefaultColumnNameFetcher`, `ColumnNameForPropertyAndPathFetcher`, `TableForManyCalculator`, `NamingStrategyWrapper`, `BackticksRemover`, `CascadeBehaviorFetcher`, `CreateKeyForProps`, `UniqueNameGenerator` (`domainbinding.util`).
 
 ### Generators
 
-- `BasicValueCreator`: creates identifier values and generators.
-- `GrailsSequenceWrapper`, `GrailsSequenceGeneratorEnum`: generator integration helpers.
-- `GrailsIdentityGenerator`, `GrailsIncrementGenerator`, `GrailsNativeGenerator`, `GrailsSequenceStyleGenerator`, `GrailsTableGenerator`: Grails-specific Hibernate 7 generator implementations.
+- `GrailsIdentityGenerator`, `GrailsIncrementGenerator`, `GrailsNativeGenerator`, `GrailsSequenceStyleGenerator`, `GrailsTableGenerator`: Grails-specific Hibernate 7 generator implementations the generated classes name through `@GrailsIdGenerator`; `GrailsSequenceWrapper`, `BasicValueCreator` and `GeneratorCreationContextWrapper` install them.
 
 ## Current Module Guidance
 
 Keep these module-specific expectations in mind:
 
-- `GrailsPropertyBinder` has already been simplified to a unified binder-dispatch structure. Preserve that consolidation instead of reintroducing scattered property creation or ad hoc branching.
-- Property creation and addition should stay centralized through callers using `PropertyFromValueCreator` where applicable.
-- Utility classes in `domainbinding.util` should prefer Hibernate-aware GORM types internally, but public signatures may still need base interfaces when Spock mocks require them.
+- A mapping option the generator does not state is a gap, not a refusal: native binding must not refuse a mapping the classic binding of Grails 8 accepted (the manual's "Mappings Native Binding Refuses" lists the only exceptions). Add the facet, state it on the generated class, and prove it with a spec that boots a datastore.
+- Utility classes in `domainbinding.util` and `domainbinding.column` should prefer Hibernate-aware GORM types internally, but public signatures may still need base interfaces when Spock mocks require them.
+- A new `@Entity` fixture in the core test tree is scanned by the differential specs and needs its records in the classic oracle (see the README for how to record them).
 - `GrailsIncrementGenerator` still contains reflection-based Hibernate 7 compatibility workarounds; avoid broad refactors unless the change explicitly addresses that area.
 
 ## Testing Rules
@@ -95,9 +82,9 @@ When touching `grails-data-hibernate7`, test through real Hibernate wiring rathe
 
 ## Change Workflow
 
-1. Identify which binder, creator, generator, fetcher, or second-pass class owns the behavior.
-2. Trace whether the change affects only `Value` creation, `Property` creation, or both.
-3. Preserve the existing separation between logical mapping decisions and Hibernate object construction.
+1. Identify which facet of `GrailsDomainGenerator`, which alignment of `GeneratedDomainClassBinder`, or which helper owns the behavior.
+2. Trace whether the change affects what the generated class states, what the aligner changes on the bound model, or both.
+3. Preserve the existing separation between the mapping decisions (facets) and the emission of the annotated class.
 4. Update or add specs in `grails-data-hibernate7` that exercise the affected behavior through the public Hibernate-backed path.
 5. Run the relevant Hibernate 7 module tests, and expand test coverage when binder flow or entity registration behavior changes.
 
@@ -110,7 +97,7 @@ When touching `grails-data-hibernate7`, test through real Hibernate wiring rathe
 
 ## Known Status and Constraints
 
-- The Hibernate 7 binder migration is complete: all main binders, collection types, second-pass binders, generators, and utilities have been migrated.
+- Native domain binding is the only binding since 9.0.x; the generator describes every mapping the classic binding of Grails 8 could boot.
 - `GrailsIncrementGenerator` retains reflection-based workarounds for accessing Hibernate 7 internals; avoid broad refactors in that class unless explicitly targeting that area.
 
 ## Source of Truth

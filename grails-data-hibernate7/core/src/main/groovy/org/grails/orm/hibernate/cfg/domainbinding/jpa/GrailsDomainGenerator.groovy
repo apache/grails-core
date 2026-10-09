@@ -135,11 +135,10 @@ import org.grails.orm.hibernate.cfg.Mapping
 import org.grails.orm.hibernate.cfg.NaturalId
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy
 import org.grails.orm.hibernate.cfg.PropertyConfig
-import org.grails.orm.hibernate.cfg.domainbinding.binder.ColumnConfigToColumnBinder
-import org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBinder
-import org.grails.orm.hibernate.cfg.domainbinding.binder.IndexBinder
-import org.grails.orm.hibernate.cfg.domainbinding.binder.NumericColumnConstraintsBinder
-import org.grails.orm.hibernate.cfg.domainbinding.binder.StringColumnConstraintsBinder
+import org.grails.orm.hibernate.cfg.domainbinding.column.ColumnConfigToColumnBinder
+import org.grails.orm.hibernate.cfg.domainbinding.column.IndexBinder
+import org.grails.orm.hibernate.cfg.domainbinding.column.NumericColumnConstraintsBinder
+import org.grails.orm.hibernate.cfg.domainbinding.column.StringColumnConstraintsBinder
 import org.grails.orm.hibernate.cfg.domainbinding.generator.GrailsIdentityGenerator
 import org.grails.orm.hibernate.cfg.domainbinding.generator.GrailsIncrementGenerator
 import org.grails.orm.hibernate.cfg.domainbinding.generator.GrailsNativeGenerator
@@ -546,7 +545,7 @@ class GrailsDomainGenerator {
     }
 
     /**
-     * Describes the composite identifier of a root entity as {@code CompositeIdBinder} binds it: one identifier component with a
+     * Describes the composite identifier of a root entity as the classic composite identifier binder binds it: one identifier component with a
      * property for every part, in the order the mapping names them. The columns of a part are the ones the part would have as an
      * ordinary property, except that they are never null: the binder's component is the primary key, and Hibernate makes every
      * column of a primary key not null.
@@ -617,7 +616,7 @@ class GrailsDomainGenerator {
                         'Native Domain Binding chapter of the manual'
             } else if (!(part instanceof HibernateSimpleProperty || part instanceof HibernateTenantIdProperty) || isDerived(part)) {
                 // the tenant id of a multi-tenant entity is bound like any other column of the key, and the tenant filter
-                // compares that column (CompositeIdBinder gives it no special treatment either)
+                // compares that column (the classic composite identifier binder gives it no special treatment either)
                 return "Composite identifier part [${part.name}] of [${entity.name}] is a ${part.getClass().simpleName}, which the " +
                         'generator does not support yet'
             } else if (!supports(part)) {
@@ -751,7 +750,7 @@ class GrailsDomainGenerator {
     }
 
     /**
-     * Decides the second-level cache of a root entity as {@code RootPersistentClassCommonValuesBinder} configures it: only a
+     * Decides the second-level cache of a root entity as the classic root binder configures it: only a
      * cache that the mapping enables, only on the root (the cache of a subclass is not read, and Hibernate refuses
      * {@code @Cache} on one), with the usage of the mapping, lazy properties included unless the mapping says {@code non-lazy},
      * and the class immutable for the {@code read-only} usage.
@@ -768,7 +767,7 @@ class GrailsDomainGenerator {
     }
 
     /**
-     * Decides the natural identifier the domain binder binds for the entity, as {@code NaturalIdentifierBinder} reads it from the
+     * Decides the natural identifier the domain binder binds for the entity, as the classic natural identifier binder reads it from the
      * mapped identity: the properties it names and whether it is mutable. The binder makes each of those properties updatable
      * exactly when the natural id is mutable, and adds one unique key over their columns to the table of the entity (the table of the
      * hierarchy for a subclass of a single-table hierarchy). A name that is no property of the entity or of its superclasses is
@@ -841,8 +840,8 @@ class GrailsDomainGenerator {
     /**
      * Decides the indexes and multi-column unique keys the domain binder puts on the table the entity owns. The binder's own
      * {@code IndexBinder} and {@code CreateKeyForProps} run, on a scratch table with the entity's table name, for every column
-     * the binder passes through {@code ColumnBinder} (a simple property, the identifier, the version, a to-one foreign key, each
-     * leaf of an embedded type) or {@code EnumTypeBinder} (an enum, which only gets an index from the binder and a unique group
+     * the binder passes through the classic column binder (a simple property, the identifier, the version, a to-one foreign key, each
+     * leaf of an embedded type) or the classic enum binder (an enum, which only gets an index from the binder and a unique group
      * from the generator), in the order the binder binds them, so the names ({@code <table>_<column>_idx}, {@code UK} and a hash) and the column order are the binder's. The
      * single-table subclasses of a hierarchy share the table of the root, so their columns are part of the root's constraints.
      *
@@ -860,7 +859,7 @@ class GrailsDomainGenerator {
             collectConstraintSites(contributor, identity, version, properties)
             applyConstraintSites(table, identity + version, unbound)
             if (contributor.isRoot()) {
-                // RootPersistentClassCommonValuesBinder creates the primary key after the identifier and the version, and
+                // the classic root binder creates the primary key after the identifier and the version, and
                 // Hibernate then drops a unique key that repeats exactly the columns of the primary key
                 PrimaryKey primaryKey = new PrimaryKey(table)
                 identity.each { ConstraintSite site -> primaryKey.addColumn(new Column(site.columnName)) }
@@ -885,7 +884,7 @@ class GrailsDomainGenerator {
             Set<String> before = new HashSet<String>(table.uniqueKeys.keySet())
             keyForProps.createKeyForProps(site.property, site.path, table, site.columnName)
             if (site.enumeration) {
-                // EnumTypeBinder never calls CreateKeyForProps: the key is the mapping's, not the binder's
+                // the classic enum binder never calls CreateKeyForProps: the key is the mapping's, not the binder's
                 unbound.addAll(table.uniqueKeys.keySet() - before)
             }
         }
@@ -907,7 +906,7 @@ class GrailsDomainGenerator {
             if (contributor.identity instanceof HibernateSimpleIdentityProperty) {
                 collectConstraintSites((HibernatePersistentProperty) contributor.identity, '', identity)
             } else if (compositeIdentifier(contributor)) {
-                // CompositeIdBinder binds the parts of the identifier one after the other, like any property
+                // the classic composite identifier binder binds the parts of the identifier one after the other, like any property
                 for (HibernatePersistentProperty part : contributor.compositeIdentity) {
                     collectConstraintSites(part, '', identity)
                 }
@@ -941,7 +940,7 @@ class GrailsDomainGenerator {
         }
     }
 
-    /** One column the binder passes through {@code ColumnBinder} or {@code EnumTypeBinder}: where its index and unique group come from. */
+    /** One column the binder passes through the classic column binder or the classic enum binder: where its index and unique group come from. */
     private static final class ConstraintSite {
 
         final HibernatePersistentProperty property
@@ -963,7 +962,7 @@ class GrailsDomainGenerator {
     /**
      * Decides where the entity sits in its inheritance hierarchy the way the domain binder does: the strategy is the
      * one the entity's own accessors report ({@code isUnionSubclass}, {@code isJoinedSubclass}, else single table),
-     * the discriminator is the one {@code DiscriminatorPropertyBinder} binds on the root of a single-table
+     * the discriminator is the one the classic discriminator binder binds on the root of a single-table
      * hierarchy that has subclasses, a subclass's discriminator value is the entity's own
      * {@code getDiscriminatorValue}, and a joined subclass's key column is named like its identifier column.
      *
@@ -1008,7 +1007,7 @@ class GrailsDomainGenerator {
     }
 
     /**
-     * Mirrors {@code ConfiguredDiscriminatorBinder} and {@code DefaultDiscriminatorBinder}: a formula, else a column
+     * Mirrors the classic configured discriminator binder and the classic default discriminator binder: a formula, else a column
      * that is named {@code class} unless configured and takes its length and SQL type from the column config.
      */
     private DiscriminatorFacets discriminatorFacets(GrailsHibernatePersistentEntity entity) {
@@ -1024,7 +1023,7 @@ class GrailsDomainGenerator {
         Column column = new Column()
         columnConfigBinder.bindColumnConfigToColumn(column, columnConfig, null)
         return new DiscriminatorFacets(
-                columnConfig?.name != null ? columnConfig.name : GrailsDomainBinder.DEFAULT_DISCRIMINATOR_COLUMN_NAME,
+                columnConfig?.name != null ? columnConfig.name : GrailsHibernatePersistentEntity.DEFAULT_DISCRIMINATOR_COLUMN_NAME,
                 null, typeName, type, column.length?.intValue(), column.sqlType, insertable,
                 column.precision?.intValue(), column.scale?.intValue())
     }
@@ -1151,8 +1150,8 @@ class GrailsDomainGenerator {
         boolean explicit = name != null && (isEnum || type == null || name != type.name)
         Map<String, String> parameters = [:]
         if (isEnum) {
-            // EnumTypeBinder replaces the configured type parameters with the enum class
-            parameters[GrailsDomainBinder.ENUM_CLASS_PROP] = type.name
+            // the classic enum binder replaces the configured type parameters with the enum class
+            parameters[IdentityEnumType.PARAM_ENUM_CLASS] = type.name
         } else if (!element) {
             // the binder gives a collection element its type name only, never the type parameters
             Properties typeParams = property.hibernateMappedForm.typeParams
@@ -1250,7 +1249,7 @@ class GrailsDomainGenerator {
     }
 
     /**
-     * Decides the multi-tenant filter the domain binder gives the entity, as {@code MultiTenantFilterBinder} does: only an
+     * Decides the multi-tenant filter the domain binder gives the entity, as the classic tenant filter binder does: only an
      * entity whose multi-tenancy is active (it has a tenant id, which GORM only sets in discriminator mode) is filtered,
      * and only a root, or a joined or table-per-class subclass that declares the tenant id itself; the single-table
      * subclasses share the root's filter. The condition compares the filter parameter with the tenant id property's
@@ -1377,7 +1376,7 @@ class GrailsDomainGenerator {
     /**
      * @return why the generator cannot describe the collection whose owner or associated entity has a composite identifier, or
      *     {@code null} when it can: the key columns of a collection of the owner are one for each identifier property
-     *     ({@code DependentKeyValueBinder}), and a collection mapped by the foreign key of the other side copies the columns of
+     *     (the classic dependent key binder), and a collection mapped by the foreign key of the other side copies the columns of
      *     that foreign key. A many-to-many, a map and a join table to an entity with a composite identifier are not described:
      *     the binder names the element columns from the column configs of the collection property, which the key reads too
      *     (the key of such a collection gets the element's columns).
@@ -1413,7 +1412,7 @@ class GrailsDomainGenerator {
     }
 
     /**
-     * The binder binds the key column of a collection like any other column ({@code DependentKeyValueBinder} runs {@code ColumnBinder}
+     * The binder binds the key column of a collection like any other column (the classic dependent key binder runs the classic column binder
      * on the collection property), so an {@code index:} on the property becomes an index of the collection table over the key column,
      * named as the mapping says ({@code IndexBinder}), and for a collection of enums the element column is indexed too, before the key.
      * A {@code unique} group on the property would name columns of the owner's table, which the collection table does not have: the
@@ -1455,7 +1454,7 @@ class GrailsDomainGenerator {
     /**
      * The binder binds a collection property as one column of the owner's table, typed with the mapping's {@code type}, when the type
      * is a class that is not a collection type (a {@code UserType}, for example) or {@code serializable}
-     * ({@code GrailsPropertyBinder}): it is no collection then, and has the index, the unique group and the column settings of any
+     * (the classic property dispatcher): it is no collection then, and has the index, the unique group and the column settings of any
      * other column. Any other {@code type} stays a type of the collection, which no collection of values accepts (see
      * {@link #mappedCollectionTypeProblem}).
      */
@@ -1567,9 +1566,9 @@ class GrailsDomainGenerator {
     }
 
     /**
-     * Mirrors {@code CollectionKeyBinder}: a single join table key is a plain column named by the key; otherwise the key
+     * Mirrors the classic collection key binder: a single join table key is a plain column named by the key; otherwise the key
      * is bound like the property's own column (name from the column config or the naming strategy, the column config's
-     * facets, uniqueness). It is nullable, as {@code CollectionKeyColumnUpdater} makes it, and always updatable.
+     * facets, uniqueness). It is nullable, as the classic key column updater makes it, and always updatable.
      *
      * <p>That updater also makes the key NOT updatable when the owner has more than one unidirectional to-many property,
      * which is a defect rather than a rule to copy: Hibernate's collection persister disables inserting and deleting the
@@ -1588,13 +1587,13 @@ class GrailsDomainGenerator {
 
     /**
      * The key columns of a collection: one, or one for each identifier property when the owner has a composite identifier
-     * ({@code DependentKeyValueBinder} binds them like the foreign key to a composite identifier, from the column configs of the
+     * (the classic dependent key binder binds them like the foreign key to a composite identifier, from the column configs of the
      * collection property; a collection mapped by the foreign key of the other side copies the columns of that foreign key).
      */
     private List<ColumnFacets> collectionKeyColumns(HibernateToManyProperty property) {
         GrailsHibernatePersistentEntity owner = property.hibernateOwner
         if (property instanceof HibernateToManyEntityProperty && property.shouldBindWithForeignKey()) {
-            // CollectionKeyBinder copies the foreign key columns of the other side into the key; the key updater makes them nullable
+            // the classic collection key binder copies the foreign key columns of the other side into the key; the key updater makes them nullable
             return toOneColumnsFacets((HibernateToOneProperty) property.hibernateInverseSide).collect { ColumnFacets column ->
                 new ColumnFacets(column.name(), true, false, true, true, null, null, null, null, null, null, null, null)
             }
@@ -1637,8 +1636,8 @@ class GrailsDomainGenerator {
     }
 
     /**
-     * Mirrors {@code BasicCollectionElementBinder} for a set, a bag and a list (the element is named after the property
-     * and the element class, nullable, with the join table column config's facets), and {@code MapSecondPassBinder} for a
+     * Mirrors the classic basic element binder for a set, a bag and a list (the element is named after the property
+     * and the element class, nullable, with the join table column config's facets), and the classic map second pass for a
      * map (a not-null column named {@code <property>_elt} unless the join table names it).
      */
     private ColumnFacets collectionElementFacets(HibernateBasicProperty property, CollectionKind kind) {
@@ -1710,8 +1709,8 @@ class GrailsDomainGenerator {
     }
 
     /**
-     * Mirrors {@code ListSecondPassBinder} (a nullable index column named by {@code getIndexColumnName}) and
-     * {@code MapSecondPassBinder} (the same name, plus the index column config's facets); {@code null} for a set or a bag.
+     * Mirrors the classic list second pass (a nullable index column named by {@code getIndexColumnName}) and
+     * the classic map second pass (the same name, plus the index column config's facets); {@code null} for a set or a bag.
      */
     private ColumnFacets collectionIndexFacets(HibernateToManyProperty property, CollectionKind kind) {
         if (!kind.indexed) {
@@ -1729,7 +1728,7 @@ class GrailsDomainGenerator {
     }
 
     /**
-     * {@code ManyToOneBinder.prepareCircularManyToMany} gives a circular many-to-many that names no join key the key
+     * the classic many-to-one binder's circular rule gives a circular many-to-many that names no join key the key
      * {@code <property>_id}, by changing the mapping while it binds. The generator runs without that mutation, so it applies
      * the rule itself, to the name of the element column (the binder binds it after the rename of the other side) and, for the
      * key column, only where the binder renamed the key before it bound it, see {@link #boundBeforeInverseSide}.
@@ -1763,7 +1762,7 @@ class GrailsDomainGenerator {
 
     /**
      * Whether the binder binds the collection of this many-to-many side as the one that writes the join table: the owning side
-     * ({@code belongsTo}), and a map, which {@code MapSecondPassBinder} always makes not inverse (a map side stores its rows with
+     * ({@code belongsTo}), and a map, which the classic map second pass always makes not inverse (a map side stores its rows with
      * the key of the map whether or not the mapping says it owns the relationship).
      */
     private static boolean ownsManyToMany(HibernateManyToManyProperty property) {
@@ -1826,7 +1825,7 @@ class GrailsDomainGenerator {
 
     /**
      * Decides how the binder binds a collection of entities. A bidirectional collection is mapped by the foreign key of the
-     * other side ({@code CollectionKeyBinder} copies that column into the key) and is inverse, except an indexed list, which
+     * other side (the classic collection key binder copies that column into the key) and is inverse, except an indexed list, which
      * the binder keeps owned (its index is a column of the target's table that only the collection writes). A
      * unidirectional collection is a join table whose element is a many-to-one: the binder binds it as one whatever the
      * name says, so it is a {@code @ManyToMany}. Using {@code @OneToMany} with a join table would add a unique constraint on the
@@ -1871,11 +1870,11 @@ class GrailsDomainGenerator {
                 key = circularKeyName((HibernateManyToManyProperty) property, key)
             }
             if (compositeIdentifier(property.hibernateOwner)) {
-                // DependentKeyValueBinder: one key column for each identifier property of the owner
+                // the classic dependent key binder: one key column for each identifier property of the owner
                 keys = collectionKeyColumns(property)
                 key = keys[0]
             }
-            // ManyToOneBinder binds the element like the other side's own column: its name rules and its (never) nullable column
+            // the classic many-to-one binder binds the element like the other side's own column: its name rules and its (never) nullable column
             // (named by the other side's column rules alone: the other side refers to this owner, whose identifier may be composite)
             element = circularKeyName(other, toOneColumnFacets(other, '', firstColumnConfig(other.hibernateMappedForm)))
             if (compositeIdentifier(target)) {
@@ -1904,7 +1903,7 @@ class GrailsDomainGenerator {
             mappedBy = ownsManyToMany(property) ? null : other.name
         } else if (property.shouldBindWithForeignKey()) {
             HibernateToOneProperty inverse = (HibernateToOneProperty) property.hibernateInverseSide
-            // CollectionKeyBinder copies the other side's foreign key column into the key; the key updater makes it nullable
+            // the classic collection key binder copies the other side's foreign key column into the key; the key updater makes it nullable
             keys = collectionKeyColumns(property)
             key = keys[0]
             mappedBy = kind == CollectionKind.LIST ? null : inverse.name
@@ -1917,7 +1916,7 @@ class GrailsDomainGenerator {
             keys = collectionKeyColumns(property)
             key = keys[0]
             if (property.bidirectional) {
-                // BidirectionalMapElementBinder binds the element like the many-to-one of the other side (its column name rules)
+                // the classic bidirectional map element binder binds the element like the many-to-one of the other side (its column name rules)
                 ColumnFacets inverseColumn = toOneColumnFacets((HibernateToOneProperty) property.hibernateInverseSide)
                 element = new ColumnFacets(
                         inverseColumn.name(), inverseColumn.nullable(), inverseColumn.unique(), true, true, null, null, null,
@@ -2002,7 +2001,7 @@ class GrailsDomainGenerator {
 
     /**
      * The foreign key to an entity with a composite identifier has one column for each identifier property
-     * ({@code CompositeIdentifierToManyToOneBinder}). The generator reproduces that when the identifier properties are simple
+     * (the classic composite foreign key binder). The generator reproduces that when the identifier properties are simple
      * columns or foreign keys to entities with a simple identifier, and the mapping states either no columns or exactly one for
      * each identifier property, all named.
      *
@@ -2035,7 +2034,7 @@ class GrailsDomainGenerator {
         if (deepPart != null) {
             return "the composite identifier of the associated entity [${target.name}] has a part [${deepPart.name}] whose own composite " +
                     'identifier refers to a composite identifier: the binder names the columns of a foreign key to a composite identifier ' +
-                    'only one level deep (CompositeIdentifierToManyToOneBinder.tryExpandNestedComposite), so it gives the foreign key ' +
+                    'only one level deep (as the classic binding of Grails 8 did), so it gives the foreign key ' +
                     'fewer columns than the key'
         }
         List<ColumnConfig> columns = property.hibernateMappedForm.columns
@@ -2050,7 +2049,7 @@ class GrailsDomainGenerator {
 
     /**
      * The column configs the binder binds the foreign key to an entity with a composite identifier with. A mapping that states
-     * them names them; otherwise {@code CompositeIdentifierToManyToOneBinder} (which adds them to the mapping, as it binds)
+     * them names them; otherwise the classic composite foreign key binder (which adds them to the mapping, as it binds)
      * names one for each identifier property after the table of the associated entity and the default column name of the
      * identifier property.
      */
@@ -2108,7 +2107,7 @@ class GrailsDomainGenerator {
 
     /**
      * The binder binds a many-to-one as a {@code ManyToOne} value, and so it does a one-to-one that is not a valid Hibernate
-     * one-to-one ({@code ForeignKeyOneToOneBinder}): the foreign key is a column of the owner's table and only the
+     * one-to-one (the classic foreign key one-to-one binder): the foreign key is a column of the owner's table and only the
      * uniqueness differs.
      */
     private static boolean boundAsManyToOne(HibernateToOneProperty property) {
@@ -2117,7 +2116,7 @@ class GrailsDomainGenerator {
     }
 
     /**
-     * The binder binds a valid one-to-one ({@code OneToOneBinder}) as a Hibernate {@code OneToOne}. Its foreign key lives on
+     * The binder binds a valid one-to-one (the classic one-to-one binder) as a Hibernate {@code OneToOne}. Its foreign key lives on
      * the other side (which is bound as a many-to-one above), so this side has no column and only names the property that
      * holds the key.
      */
@@ -2130,7 +2129,7 @@ class GrailsDomainGenerator {
      * entity, whether it is lazy, how it is fetched, whether the foreign key may be null, what happens when the row it
      * points at is missing, the cascade and the join column.
      *
-     * <p>{@code ColumnBinder} makes the foreign key column nullable as {@code isAssociationColumnNullable} says (always, for
+     * <p>the classic column binder makes the foreign key column nullable as {@code isAssociationColumnNullable} says (always, for
      * the associations handled here) and only then lets a subclass override it: a table-per-hierarchy subclass is always
      * nullable, any other subclass follows the property's {@code nullable}. A root entity's association with
      * {@code nullable: false} therefore keeps a nullable column, and only its {@code Property.optional} is false, which
@@ -2145,7 +2144,7 @@ class GrailsDomainGenerator {
         PropertyConfig mapped = property.hibernateMappedForm
         if (boundAsOneToOne(property)) {
             HibernateOneToOneProperty oneToOne = (HibernateOneToOneProperty) property
-            // OneToOneBinder never sets the value's lazy flag (it stays true) nor an ignore-not-found, and constrained is false
+            // the classic one-to-one binder never sets the value's lazy flag (it stays true) nor an ignore-not-found, and constrained is false
             return new ToOneFacets(
                     property.hibernateAssociatedEntity.name,
                     true,
@@ -2209,7 +2208,7 @@ class GrailsDomainGenerator {
         }
         boolean unique = mapped.isUnique() && !mapped.isUniqueWithinGroup()
         if (property instanceof HibernateOneToOneProperty && mapped.isUniqueWithinGroup()) {
-            // ForeignKeyOneToOneBinder: a column in a unique group is unique on its own only when the other side is a valid one-to-one
+            // the classic foreign key one-to-one binder: a column in a unique group is unique on its own only when the other side is a valid one-to-one
             HibernateOneToOneProperty inverse = ((HibernateOneToOneProperty) property).hibernateInverseSide
             unique = property.isBidirectional() && inverse != null && inverse.isValidHibernateOneToOne()
         }
@@ -2283,7 +2282,7 @@ class GrailsDomainGenerator {
     }
 
     /**
-     * Decides the columns of an embedded property for the owner that declares it, the way {@code ComponentBinder}
+     * Decides the columns of an embedded property for the owner that declares it, the way the classic component binder
      * binds them: one leaf for every property of the embedded type, nested embedded types included, each named from
      * the property path and nullable when the binder makes it so. A derived (formula) leaf has no column facets.
      *
@@ -2332,7 +2331,7 @@ class GrailsDomainGenerator {
 
     /**
      * The facets of one column of a component: the binder's own column rules with the component path in the name and
-     * the parent property's nullability, then {@code ComponentUpdater}'s rule that makes the columns of every
+     * the parent property's nullability, then the classic component updater's rule that makes the columns of every
      * enclosing component nullable when that component is.
      */
     private ColumnFacets componentColumnFacets(
@@ -2345,8 +2344,8 @@ class GrailsDomainGenerator {
     }
 
     /**
-     * {@code ComponentUpdater} makes every column of an enclosing component nullable when that component is. The binder also writes
-     * the component as a whole only when its property is insertable and updatable ({@code PropertyBinder}), so a column is written
+     * the classic component updater makes every column of an enclosing component nullable when that component is. The binder also writes
+     * the component as a whole only when its property is insertable and updatable (the classic property binder), so a column is written
      * only when every enclosing embedded property allows it as well.
      */
     private static ColumnFacets nullableInComponent(ColumnFacets facets, List<HibernateEmbeddedProperty> enclosing) {
@@ -2361,7 +2360,7 @@ class GrailsDomainGenerator {
                 facets.write(), facets.comment())
     }
 
-    /** The properties {@code ComponentBinder} binds for an embedded property: the embedded type's, minus the owner's. */
+    /** The properties the classic component binder binds for an embedded property: the embedded type's, minus the owner's. */
     private static List<HibernatePersistentProperty> embeddedPeers(HibernateEmbeddedProperty property) {
         GrailsHibernatePersistentEntity type = (GrailsHibernatePersistentEntity) property.associatedEntity
         return type.getHibernatePersistentProperties(property.owner.javaClass)
@@ -2448,7 +2447,7 @@ class GrailsDomainGenerator {
                 mappedForm.isUnique() && !mappedForm.isUniqueWithinGroup())
     }
 
-    /** Mirrors {@code EnumTypeBinder}: the column config's length, precision, scale, SQL type and uniqueness, plus the comment, default and read and write expressions it forgets. */
+    /** Mirrors the classic enum binder: the column config's length, precision, scale, SQL type and uniqueness, plus the comment, default and read and write expressions it forgets. */
     private ColumnFacets enumColumnFacets(HibernateEnumProperty property, String path) {
         PropertyConfig mappedForm = property.hibernateMappedForm
         Column column = new Column()
@@ -2457,7 +2456,7 @@ class GrailsDomainGenerator {
             columnConfigBinder.bindColumnConfigToColumn(column, columnConfig, mappedForm)
         }
         if (columnConfig != null) {
-            // EnumTypeBinder ignores the comment, the default and the read and write expressions of the column config (a binder
+            // the classic enum binder ignores the comment, the default and the read and write expressions of the column config (a binder
             // defect of Grails 8); the generator states what the mapping asks for
             column.comment = columnConfig.comment
             column.defaultValue = columnConfig.defaultValue
@@ -2541,7 +2540,7 @@ class GrailsDomainGenerator {
             annotations << AnnotationDescription.Builder.ofType(DynamicUpdate).build()
         }
         if (entity.isRoot() && !facets.versioned()) {
-            // VersionBinder sets the lock style NONE for a root without a version; Hibernate's default is VERSION
+            // the classic version binder sets the lock style NONE for a root without a version; Hibernate's default is VERSION
             annotations << AnnotationDescription.Builder.ofType(OptimisticLocking).define('type', OptimisticLockType.NONE).build()
         }
         if (facets.batchSize() > 0) {
@@ -2657,7 +2656,7 @@ class GrailsDomainGenerator {
             annotations << AnnotationDescription.Builder.ofType(HibernateNaturalId).define('mutable', naturalMutable).build()
         }
         if (!(property instanceof HibernateSimpleIdentityProperty) && property.isLazy()) {
-            // PropertyBinder marks the property lazy when the mapping says lazy: true (the version never is)
+            // the classic property binder marks the property lazy when the mapping says lazy: true (the version never is)
             annotations << AnnotationDescription.Builder.ofType(Basic).define('fetch', FetchType.LAZY).build()
         }
         TypeFacets type = typeFacets(property)
@@ -3419,7 +3418,7 @@ class GrailsDomainGenerator {
 
     /**
      * @return whether the binder binds the property as a Hibernate {@code Formula} with no column, which is what
-     *     {@code SimpleValueBinder} does for every derived property except an enum and the tenant id (which stays a
+     *     the classic simple value binder does for every derived property except an enum and the tenant id (which stays a
      *     column)
      */
     boolean isDerived(HibernatePersistentProperty property) {

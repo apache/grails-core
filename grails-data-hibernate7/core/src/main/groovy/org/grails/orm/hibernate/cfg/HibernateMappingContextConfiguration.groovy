@@ -66,10 +66,10 @@ import org.grails.orm.hibernate.EventListenerIntegrator
 import org.grails.orm.hibernate.GrailsSessionContext
 import org.grails.orm.hibernate.HibernateEventListeners
 import org.grails.orm.hibernate.MetadataIntegrator
-import org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBinder
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentEntity
 import org.grails.orm.hibernate.cfg.domainbinding.jpa.GeneratedDomainClassBinder
 import org.grails.orm.hibernate.cfg.domainbinding.jpa.GeneratedDomainClassLoaderService
+import org.grails.orm.hibernate.cfg.domainbinding.jpa.GormMappingContributor
 import org.grails.orm.hibernate.cfg.domainbinding.util.NamingStrategyProvider
 import org.grails.orm.hibernate.proxy.GrailsBytecodeProvider
 
@@ -320,8 +320,7 @@ class HibernateMappingContextConfiguration extends Configuration
         }
 
         final GeneratedDomainClassBinder generatedBinder = new GeneratedDomainClassBinder(dataSourceName, appClassLoader)
-        final GrailsDomainBinder domainBinder = new GrailsDomainBinder(
-                dataSourceName,
+        final GormMappingContributor contributor = new GormMappingContributor(
                 sessionFactoryBeanName,
                 persistentEntities,
                 namingStrategyProvider,
@@ -332,7 +331,7 @@ class HibernateMappingContextConfiguration extends Configuration
 
         // the mappings are bound against the generated classes; once they are bound, the same names resolve to the real ones
         GeneratedDomainClassLoaderService classLoaderService = new GeneratedDomainClassLoaderService(
-                newClassLoaderService(generatedBinder.classLoader, domainBinder, generatedBinder),
+                newClassLoaderService(generatedBinder.classLoader, contributor, generatedBinder),
                 new ClassLoaderServiceImpl(appClassLoader))
         generatedBinder.classLoaderService = classLoaderService
         EventListenerIntegrator eventListenerIntegrator =
@@ -378,18 +377,18 @@ class HibernateMappingContextConfiguration extends Configuration
     }
 
     private static ClassLoaderService newClassLoaderService(
-            ClassLoader classLoader, GrailsDomainBinder domainBinder, GeneratedDomainClassBinder generatedBinder) {
+            ClassLoader classLoader, GormMappingContributor contributor, GeneratedDomainClassBinder generatedBinder) {
         return new ClassLoaderServiceImpl(classLoader) {
             @Override
             <S> Collection<S> loadJavaServices(Class<S> serviceContract) {
                 // Ensure Grails contributes mappings for GORM entities even if they lack JPA @Entity
                 if (AdditionalMappingContributor.isAssignableFrom(serviceContract)) {
-                    // Include the GrailsDomainBinder first, then any other contributors
+                    // Include GORM's contributor first, then any other contributors
                     // discovered by the parent classloader (e.g., Envers AdditionalMappingContributorImpl).
                     // Without this, Envers' AdditionalMappingContributor would be excluded,
                     // preventing EnversService from being initialized before EnversIntegrator runs.
                     Collection<S> parentContributors = super.loadJavaServices(serviceContract)
-                    S grailsBinder = (S) domainBinder
+                    S grailsBinder = (S) contributor
                     List<S> allContributors = new ArrayList<>(parentContributors.size() + 1)
                     allContributors.add(grailsBinder)
                     allContributors.addAll(parentContributors)
@@ -412,8 +411,8 @@ class HibernateMappingContextConfiguration extends Configuration
         ClassLoader storedClassLoader = classLoaderObject instanceof ClassLoader ?
                 (ClassLoader) classLoaderObject : getClass().classLoader
         // addProperties() or a custom configClass may have replaced CLASSLOADERS after the
-        // setters ran. GrailsDomainBinder binds entities by class name and Hibernate resolves
-        // them through this loader, so it has to see the restarted application classes.
+        // setters ran. The entities are bound by class name and Hibernate resolves them
+        // through this loader, so it has to see the restarted application classes.
         return DevToolsClassLoaders.preferRestartClassLoader(storedClassLoader)
     }
 

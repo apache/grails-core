@@ -56,7 +56,7 @@ class HibernateBasicPropertySpec extends HibernateGormDatastoreSpec {
         given:
         def personEntity = (HibernatePersistentEntity) getMappingContext().getPersistentEntity(HBPPerson.name)
         def property = (HibernateBasicProperty) personEntity.getPropertyByName("tags")
-        def mbc = getGrailsDomainBinder().metadataBuildingContext
+        def mbc = getMappingContributor().metadataBuildingContext
         
         def rootClass = new org.hibernate.mapping.RootClass(mbc)
         rootClass.setEntityName(HBPPerson.name)
@@ -76,7 +76,7 @@ class HibernateBasicPropertySpec extends HibernateGormDatastoreSpec {
         given:
         def entity = (HibernatePersistentEntity) getMappingContext().getPersistentEntity(HBPStatusPerson.name)
         def property = (HibernateBasicEnumProperty) entity.getPropertyByName("statuses")
-        def mbc = getGrailsDomainBinder().metadataBuildingContext
+        def mbc = getMappingContributor().metadataBuildingContext
         def rootClass = new org.hibernate.mapping.RootClass(mbc)
         rootClass.setEntityName(HBPStatusPerson.name)
         def collection = new org.hibernate.mapping.Set(mbc, rootClass)

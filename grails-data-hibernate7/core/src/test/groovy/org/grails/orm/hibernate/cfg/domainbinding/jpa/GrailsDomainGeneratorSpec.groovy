@@ -142,9 +142,9 @@ import org.grails.orm.hibernate.cfg.domainbinding.generator.GrailsSequenceStyleG
 import org.grails.orm.hibernate.cfg.domainbinding.generator.GrailsSequenceWrapper
 import org.grails.orm.hibernate.cfg.domainbinding.generator.GrailsTableGenerator
 import org.grails.orm.hibernate.cfg.domainbinding.util.GeneratorCreationContextWrapper
-import org.grails.orm.hibernate.cfg.domainbinding.binder.ColumnConfigToColumnBinder
-import org.grails.orm.hibernate.cfg.domainbinding.binder.NumericColumnConstraintsBinder
-import org.grails.orm.hibernate.cfg.domainbinding.binder.StringColumnConstraintsBinder
+import org.grails.orm.hibernate.cfg.domainbinding.column.ColumnConfigToColumnBinder
+import org.grails.orm.hibernate.cfg.domainbinding.column.NumericColumnConstraintsBinder
+import org.grails.orm.hibernate.cfg.domainbinding.column.StringColumnConstraintsBinder
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
 import org.grails.orm.hibernate.cfg.domainbinding.util.BackticksRemover
 import org.grails.orm.hibernate.cfg.domainbinding.util.ColumnNameForPropertyAndPathFetcher
@@ -2070,7 +2070,7 @@ class GrailsDomainGeneratorSpec extends HibernateGormDatastoreSpec {
                 GrailsHibernatePersistentEntity entity = getPersistentEntity(domainClass)
                 BasicValue identifier = (BasicValue) persistentClass.identifier
                 JdbcEnvironment jdbcEnvironment = getSessionFactory().jdbcServices.jdbcEnvironment
-                def naming = getGrailsDomainBinder().getNamingStrategy()
+                def naming = getMappingContributor().getNamingStrategy()
                 identifier.setCustomIdGeneratorCreator({ GeneratorCreationContext context ->
                     new GrailsSequenceWrapper().getGenerator(
                             marker.strategy(), new GeneratorCreationContextWrapper(context, identifier),
@@ -2086,7 +2086,7 @@ class GrailsDomainGeneratorSpec extends HibernateGormDatastoreSpec {
     }
 
     private GrailsDomainGenerator newGenerator() {
-        def naming = getGrailsDomainBinder().getNamingStrategy()
+        def naming = getMappingContributor().getNamingStrategy()
         return new GrailsDomainGenerator(
                 naming,
                 new ColumnNameForPropertyAndPathFetcher(naming, new DefaultColumnNameFetcher(naming), new BackticksRemover()),

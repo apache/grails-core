@@ -25,7 +25,7 @@ import groovy.transform.CompileStatic
  * {@link GrailsDomainGenerator} writes it into {@code @Table(uniqueConstraints)}.
  *
  * <p>{@code bound} is {@code false} for a key the mapping asks for and the binder does not create: a unique group on an enum
- * property, which {@code EnumTypeBinder} never gives a key. The generator states it all the same, because the option is the
+ * property, which the classic enum binder never gives a key. The generator states it all the same, because the option is the
  * mapping's and the binder's omission is a defect, not a rule to copy.</p>
  *
  * @since 9.0

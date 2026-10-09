@@ -22,13 +22,11 @@ package grails.gorm.tests
 
 import org.apache.grails.data.hibernate7.core.GrailsDataHibernate7TckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
-import org.grails.datastore.mapping.core.connections.ConnectionSource
 import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.orm.hibernate.HibernateSession
 import org.grails.orm.hibernate.HibernateDatastore
-import org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBinder
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentEntity
+import org.grails.orm.hibernate.cfg.domainbinding.jpa.GormMappingContributor
 import org.grails.orm.hibernate.cfg.HibernateMappingContext
 import org.grails.orm.hibernate.query.HibernateQuery
 
@@ -77,49 +75,16 @@ class HibernateGormDatastoreSpec extends GrailsDataTckSpec<GrailsDataHibernate7T
         collectorRegistries.clear()
     }
 
-    GrailsHibernatePersistentEntity createPersistentEntity(GrailsDomainBinder binder
-                                                    , String className
-                                                     , Map<String, Class> fieldProperties
-                                                     , Map<String, String> staticMapping
-                                                     , List<String> embeddedProps = []
-                                                     , Map<String, Class> hasManyMap = [:]
-                                                     , Map<String, Class> belongsToMap = [:]
-
-    ) {
-        def classLoader = new GroovyClassLoader()
-        def classText = """
-        package foo
-        import grails.gorm.annotation.Entity
-        import grails.gorm.hibernate.HibernateEntity
-        @Entity
-        class ${className} implements HibernateEntity<${className}> {
-
-            ${fieldProperties.collect { name, type -> "${(type instanceof Class ? type : type.javaClass).name} ${name}" }.join('\n            ')}
-
-            static embedded = ${embeddedProps.inspect()}
-            static hasMany = [${hasManyMap.collect { name, type -> "${name}: ${(type instanceof Class ? type : type.javaClass).name}" }.join(', ')}]
-            static belongsTo = [${belongsToMap.collect { name, type -> "${name}: ${(type instanceof Class ? type : type.javaClass).name}" }.join(', ')}]
-
-            static mapping = {
-                ${staticMapping.collect { name, value -> "${name} ${value}" }.join('\n            ')}
-            }
-        }
-    """
-
-        def clazz = classLoader.parseClass(classText)
-        createPersistentEntity(clazz, binder)
-    }
-
-    GrailsHibernatePersistentEntity createPersistentEntity(Class clazz, GrailsDomainBinder binder) {
+    /**
+     * Adds a domain class to the mapping context of the datastore and caches its mapping, without binding it: for specs of
+     * the mapping model.
+     */
+    GrailsHibernatePersistentEntity createPersistentEntity(Class clazz) {
         def entity = getMappingContext().addPersistentEntity(clazz) as GrailsHibernatePersistentEntity
         if (entity != null) {
             getMappingContext().getMappingCacheHolder().cacheMapping(entity)
         }
         entity
-    }
-
-    GrailsHibernatePersistentEntity createPersistentEntity(Class clazz) {
-        return createPersistentEntity(clazz, getGrailsDomainBinder())
     }
 
     protected InFlightMetadataCollectorImpl getCollector() {
@@ -146,13 +111,17 @@ class HibernateGormDatastoreSpec extends GrailsDataTckSpec<GrailsDataHibernate7T
         manager.hibernateDatastore.getMappingContext()
     }
 
-    protected GrailsDomainBinder getGrailsDomainBinder() {
+    /**
+     * The contributor through which the datastore handed its domain classes to Hibernate: the naming strategy, the
+     * building context and the JDBC environment of the boot.
+     */
+    protected GormMappingContributor getMappingContributor() {
         def registry = getServiceRegistry()
         registry
                 .getParentServiceRegistry()
                 .getService(ClassLoaderService.class)
                 .loadJavaServices(AdditionalMappingContributor.class)
-                .find { it instanceof GrailsDomainBinder }
+                .find { it instanceof GormMappingContributor }
     }
 
     protected ServiceRegistryImplementor getServiceRegistry() {
@@ -183,19 +152,6 @@ class HibernateGormDatastoreSpec extends GrailsDataTckSpec<GrailsDataHibernate7T
 
     protected HibernateQuery getQuery(Class clazz) {
         return  new HibernateQuery(session, getPersistentEntity(clazz))
-    }
-
-    /**
-     * Triggers the first-pass Hibernate mapping for all registered entities.
-     * This initializes the Hibernate Collection, Table, and Column objects
-     * required for SecondPass binder tests.
-     */
-    protected void hibernateFirstPass() {
-        def gdb = getGrailsDomainBinder()
-        def collector = gdb.getMetadataBuildingContext().getMetadataCollector()
-        List<HibernatePersistentEntity> entities = getMappingContext().getHibernatePersistentEntities()
-        entities.each { it.setDataSourceName(ConnectionSource.DEFAULT) }
-        gdb.contribute(collector, entities)
     }
 
     /**
