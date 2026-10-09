@@ -130,7 +130,7 @@ class GeneratedModeEnversSpec extends Specification {
                 ['hibernate.additionalProperties': ['org.hibernate.envers.do_not_audit_optimistic_locking_field': 'false']]))
 
         then: 'the annotation is on the field Envers reads (the classic binding of Grails 8 audited the property, since Envers read the getter), and the version is audited as it was then'
-        generated['envers_book_aud'] == ['id', 'pages', 'rev', 'revtype', 'title', 'version']
+        generated['envers_book_aud'] == ['class', 'genre', 'id', 'pages', 'rev', 'revtype', 'title', 'version']
 
         and: 'Envers\' own setting, which a user can still set, gives the same'
         generatedWithVersion['envers_book_aud'].contains('version')
@@ -188,14 +188,14 @@ class GeneratedModeEnversSpec extends Specification {
         then: 'the audit table has the columns of the entity, the revision and the revision type'
         generated.columns*.getAt(0) == columns
 
-        and: 'the version written at each revision is the one of the row then'
+        and: 'the version written at each revision is the one of the row then, and null at the deletion (Envers stores no data at a DEL revision by default), as with classic binding'
         generated.rows == rows
 
         where:
         type                | table                       | versionColumn | columns                                           | rows
-        EnversVersioned     | 'envers_versioned_aud'      | 'version'     | ['id', 'name', 'rev', 'revtype', 'version']       | [[0, 0], [1, 1], [1, 2], [2, 2]]
+        EnversVersioned     | 'envers_versioned_aud'      | 'version'     | ['id', 'name', 'rev', 'revtype', 'version']       | [[0, 0], [1, 1], [1, 2], [2, null]]
         EnversUnversioned   | 'envers_unversioned_aud'    | null          | ['id', 'name', 'rev', 'revtype']                  | null
-        EnversCustomVersion | 'envers_custom_version_aud' | 'lock_no'     | ['id', 'lock_no', 'name', 'rev', 'revtype']       | [[0, 0], [1, 1], [1, 2], [2, 2]]
+        EnversCustomVersion | 'envers_custom_version_aud' | 'lock_no'     | ['id', 'lock_no', 'name', 'rev', 'revtype']       | [[0, 0], [1, 1], [1, 2], [2, null]]
     }
 
     private static Map shelfHistory() {
