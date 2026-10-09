@@ -610,10 +610,14 @@ class GrailsDomainGenerator {
                 if (problem != null) {
                     return "Composite identifier part [${part.name}] of [${entity.name}]: ${problem}"
                 }
+            } else if (part instanceof HibernateEmbeddedProperty) {
+                return "Composite identifier part [${part.name}] of [${entity.name}] is an embedded object, which the generator " +
+                        'does not support because Hibernate cannot state one in an identifier class. Map the properties of the ' +
+                        'embedded class as plain properties of the identifier instead (the schema stays the same), see the ' +
+                        'Native Domain Binding chapter of the manual'
             } else if (!(part instanceof HibernateSimpleProperty) || isDerived(part)) {
                 return "Composite identifier part [${part.name}] of [${entity.name}] is a ${part.getClass().simpleName}, which the " +
-                        'generator does not support yet (the binder boots an embedded object as a part of the identifier, and Hibernate ' +
-                        'cannot state one in an identifier class)'
+                        'generator does not support yet'
             } else if (!supports(part)) {
                 return "Composite identifier part [${part.name}] of [${entity.name}]: ${unsupportedReason(entity, part)}"
             }
