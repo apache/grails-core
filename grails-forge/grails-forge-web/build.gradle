@@ -67,13 +67,15 @@ TaskProvider<Zip> awsElasticBeanstalk = tasks.register('awsElasticBeanstalk', Zi
     reproducibleFileOrder = true
     preserveFileTimestamps = false
 
-    from({ tasks.named('bootJar').get().archiveFile.get() }) {
+    from(tasks.named('bootJar', BootJar).flatMap { BootJar bootJar -> bootJar.archiveFile }) {
         rename { 'app.jar' }
     }
     from(layout.projectDirectory.dir('aws')) {
         includeEmptyDirs = false
     }
 
+    // Resolved here: the configuration cache does not allow the action to reach the build script
+    Provider<RegularFile> extractedAppJar = layout.buildDirectory.file('tmp/aws-app.jar')
     doLast {
         File zipFile = archiveFile.get().asFile
         Set<String> names = [] as Set
@@ -85,7 +87,7 @@ TaskProvider<Zip> awsElasticBeanstalk = tasks.register('awsElasticBeanstalk', Zi
             if (appJarEntry == null) {
                 throw new GradleException("${zipFile.name} is missing app.jar")
             }
-            File appJar = layout.buildDirectory.file('tmp/aws-app.jar').get().asFile
+            File appJar = extractedAppJar.get().asFile
             appJar.parentFile.mkdirs()
             zip.getInputStream(appJarEntry).withStream { InputStream input ->
                 appJar.withOutputStream { OutputStream output ->
