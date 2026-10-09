@@ -44,14 +44,12 @@ tasks.withType(Test).configureEach {
 
     useJUnitPlatform()
 
-    // The differential specs compare native domain binding against what the classic binder produced, recorded under
-    // src/test/resources/classic-oracle/. By default they read the recorded files and do not boot the classic binder.
-    // -Pgrails.test.verifyClassicOracle=true boots it too and asserts it still produces exactly the recorded data;
-    // -Pgrails.test.refreezeClassicOracle=true boots it and rewrites the files (see ClassicOracle for the details).
-    ['verifyClassicOracle', 'refreezeClassicOracle'].each { String oracleSwitch ->
-        if (providers.gradleProperty("grails.test.${oracleSwitch}").map { it.toBoolean() }.getOrElse(false)) {
-            systemProperty("grails.test.${oracleSwitch}", 'true')
-        }
+    // The differential specs compare native domain binding against what the classic binder of Grails 8 produced, recorded
+    // under src/test/resources/classic-oracle/ before it was deleted. By default they read the recorded files; a scanned
+    // fixture with no record fails them. -Pgrails.test.recordClassicOracle=true boots such a fixture natively and writes its
+    // record, leaving the other records as they are (see ClassicOracle for the details).
+    if (providers.gradleProperty('grails.test.recordClassicOracle').map { it.toBoolean() }.getOrElse(false)) {
+        systemProperty('grails.test.recordClassicOracle', 'true')
     }
     // Lets TCK specs gate features on the running suite. Spock evaluates @IgnoreIf/@Requires
     // preconditions before setupSpec() runs, so this must be set at the task level - a
