@@ -24,6 +24,7 @@ import java.sql.Statement
 import java.util.concurrent.atomic.AtomicInteger
 
 import spock.lang.Specification
+import spock.lang.Unroll
 
 import org.hibernate.boot.Metadata
 import org.hibernate.engine.jdbc.connections.spi.ConnectionProvider
@@ -80,7 +81,58 @@ class GeneratedDomainClassesDdlDifferentialSpec extends Specification {
 
     void "the generated-class mode creates the same schema as the domain binder"() {
         given:
+        ClassicOracle oracle = new ClassicOracle('ddl-differential')
         List<List<Class<?>>> groups = ScannedDomainClasses.groupByAssociation(ScannedDomainClasses.findEntities())
+
+        when:
+        Map<String, Object> result = compareGroups(oracle, groups, null)
+        oracle.finish()
+        writeReport(groups.size(), result, oracle)
+
+        then:
+        result.compared > 400
+        result.unknown.isEmpty()
+        result.unexplained.isEmpty()
+        result.generatedRefused.isEmpty()
+        oracle.drift.isEmpty()
+    }
+
+    @Unroll
+    void "a changed recorded fact (#label) is reported as a difference of the schemas"() {
+        given: "the smallest group the oracle holds a table of"
+        ClassicOracle intactOracle = new ClassicOracle('ddl-differential', ClassicOracle.Mode.FROZEN)
+        List<Class<?>> group = ScannedDomainClasses.groupByAssociation(ScannedDomainClasses.findEntities()).findAll { List<Class<?>> candidate ->
+            ClassicOracle.Section section = intactOracle.recordedSection(candidate.first().name)
+            section != null && section.header.unbootable == null && !section.parsedByKey('table').isEmpty()
+        }.min { List<Class<?>> candidate -> candidate.size() }
+
+        when:
+        Map<String, Object> intact = compareGroups(intactOracle, [group], null)
+        Map<String, Object> changed = compareGroups(new ClassicOracle('ddl-differential', ClassicOracle.Mode.FROZEN), [group], perturbation)
+
+        then: "the recorded schema alone passes, and the same schema with one thing changed does not"
+        intact.compared == 1
+        intact.unknown.isEmpty()
+        intact.unexplained.isEmpty()
+        changed.differences.size() > intact.differences.size() || changed.h2.size() > intact.h2.size()
+        expectedKind == null || changed.differences.any { Map difference -> difference.kind == expectedKind }
+        expectedKind != null || !changed.unexplained.isEmpty()
+
+        where:
+        label << ['the type of every column', 'a missing table', 'a missing H2 statement']
+        perturbation << [
+                { List<Class<?>> g, Map binder -> binder.tables.values().each { Map table -> table.columns.values().each { Map column -> column.type = 'changed' } } },
+                { List<Class<?>> g, Map binder -> binder.tables.remove(binder.tables.keySet().first()) },
+                { List<Class<?>> g, Map binder -> binder.script.remove(0) },
+        ]
+        expectedKind << ['column type', 'table only in generated mode', null]
+    }
+
+    /**
+     * The comparison over the given groups, against the schemas the oracle holds. A {@code perturb} closure (called with the group and the
+     * recorded schema, which it may change) lets a spec of the oracle itself prove that a changed recorded fact is reported.
+     */
+    static Map<String, Object> compareGroups(ClassicOracle oracle, List<List<Class<?>>> groups, Closure<?> perturb) {
         List<Map> differences = []
         Map<String, String> binderUnbootable = [:]
         Map<String, String> generatedRefused = [:]
@@ -89,20 +141,20 @@ class GeneratedDomainClassesDdlDifferentialSpec extends Specification {
         int compared = 0
         int tables = 0
         int scriptStatements = 0
-
-        when:
         for (List<Class<?>> group : groups) {
             String name = group*.simpleName.join(',').take(120)
-            Map binder
-            try {
-                binder = snapshot(group, false)
-            } catch (Throwable e) {
-                binderUnbootable[name] = firstLine(e)
+            ClassicOracle.Section section = oracle.section(group.first().name, group*.name) { classicSection(group) }
+            if (section.header.unbootable != null) {
+                binderUnbootable[name] = section.header.unbootable.toString()
                 continue
+            }
+            Map binder = recordedSnapshot(section)
+            if (perturb != null) {
+                perturb.call(group, binder)
             }
             Map generated
             try {
-                generated = snapshot(group, true)
+                generated = (Map) ClassicOracle.normalized(snapshot(group, true), true)
             } catch (Throwable e) {
                 generatedRefused[name] = firstLine(e)
                 continue
@@ -115,14 +167,33 @@ class GeneratedDomainClassesDdlDifferentialSpec extends Specification {
             unexplained.addAll(unexplainedStatements(name, binder, generated, found))
             h2.addAll(statementDifferences(name, binder, generated))
         }
-        List<Map> unknown = differences.findAll { Map difference -> knownEntry(difference) == null }
-        writeReport(groups.size(), compared, tables, scriptStatements, differences, unknown, unexplained, binderUnbootable, generatedRefused, h2)
+        return [differences: differences, unknown: differences.findAll { Map difference -> knownEntry(difference) == null },
+                unexplained: unexplained, binderUnbootable: binderUnbootable, generatedRefused: generatedRefused, h2: h2,
+                compared: compared, tables: tables, scriptStatements: scriptStatements]
+    }
 
-        then:
-        compared > 400
-        unknown.isEmpty()
-        unexplained.isEmpty()
-        generatedRefused.isEmpty()
+    /**
+     * What the domain binder produces for a group, as a section of the oracle file: the snapshot of the schema it derived, or the first
+     * line of the reason it cannot boot the group. Only called when the classic binder is booted (VERIFY and REFREEZE).
+     */
+    static ClassicOracle.Section classicSection(List<Class<?>> group) {
+        Map schema
+        try {
+            schema = snapshot(group, false)
+        } catch (Throwable e) {
+            return new ClassicOracle.Section(group.first().name, [members: group*.name, unbootable: ClassicOracle.stableReason(firstLine(e))])
+        }
+        ClassicOracle.Section section = new ClassicOracle.Section(group.first().name, [members: group*.name])
+        ((Map<String, Map>) schema.tables).keySet().sort().each { String table -> section.add('table', table, schema.tables[table], true) }
+        ((Map<String, Map>) schema.sequences).keySet().sort().each { String sequence -> section.add('sequence', sequence, schema.sequences[sequence], true) }
+        ((List<String>) schema.script).each { String statement -> section.add('script', '', statement, true) }
+        return section
+    }
+
+    private static Map recordedSnapshot(ClassicOracle.Section section) {
+        return [tables   : section.parsedByKey('table'),
+                sequences: section.parsedByKey('sequence'),
+                script   : section.parsed('script')]
     }
 
     private static Map knownEntry(Map difference) {
@@ -486,14 +557,24 @@ class GeneratedDomainClassesDdlDifferentialSpec extends Specification {
                 (generated.script - binder.script).collect { "${group}: generated only: ${it.replaceAll(/\s+/, ' ')}".toString() }) as List<String>
     }
 
-    private static void writeReport(
-            int groups, int compared, int tables, int scriptStatements, List<Map> differences, List<Map> unknown,
-            List<String> unexplained, Map<String, String> binderUnbootable, Map<String, String> generatedRefused, List<String> h2) {
+    private static void writeReport(int groups, Map<String, Object> result, ClassicOracle oracle) {
+        int compared = (int) result.compared
+        int tables = (int) result.tables
+        int scriptStatements = (int) result.scriptStatements
+        List<Map> differences = (List<Map>) result.differences
+        List<Map> unknown = (List<Map>) result.unknown
+        List<String> unexplained = (List<String>) result.unexplained
+        Map<String, String> binderUnbootable = (Map<String, String>) result.binderUnbootable
+        Map<String, String> generatedRefused = (Map<String, String>) result.generatedRefused
+        List<String> h2 = (List<String>) result.h2
         StringBuilder report = new StringBuilder()
         report << "ddl differential: ${groups} groups, ${compared} compared in both modes, ${binderUnbootable.size()} cannot boot " +
                 "with the domain binder, ${generatedRefused.size()} refused by the generated mode; ${tables} tables, " +
                 "${scriptStatements} H2 statements; ${differences.size()} differences, ${unknown.size()} not known, " +
-                "${unexplained.size()} unexplained H2 statements\n\n"
+                "${unexplained.size()} unexplained H2 statements\n"
+        report << "classic oracle: ${oracle.mode}${oracle.drift.isEmpty() ? '' : ", ${oracle.drift.size()} recorded groups differ from the live classic binder"}\n"
+        oracle.drift.each { report << "  DRIFT ${it}\n" }
+        report << '\n'
         report << "difference classes (kind, on a join table or not): count, example\n"
         Map<String, List<Map>> byClass = differences.groupBy { Map d -> d.cls }
         byClass.sort { a, b -> a.key <=> b.key }.each { String key, List<Map> members ->

@@ -57,6 +57,15 @@ tasks.withType(Test).configureEach {
             }
         }
     }
+    // The differential specs compare native domain binding against what the classic binder produced, recorded under
+    // src/test/resources/classic-oracle/. By default they read the recorded files and do not boot the classic binder.
+    // -Pgrails.test.verifyClassicOracle=true boots it too and asserts it still produces exactly the recorded data;
+    // -Pgrails.test.refreezeClassicOracle=true boots it and rewrites the files (see ClassicOracle for the details).
+    ['verifyClassicOracle', 'refreezeClassicOracle'].each { String oracleSwitch ->
+        if (providers.gradleProperty("grails.test.${oracleSwitch}").map { it.toBoolean() }.getOrElse(false)) {
+            systemProperty("grails.test.${oracleSwitch}", 'true')
+        }
+    }
     // Lets TCK specs gate features on the running suite. Spock evaluates @IgnoreIf/@Requires
     // preconditions before setupSpec() runs, so this must be set at the task level - a
     // TCK-manager System.setProperty would come too late.
