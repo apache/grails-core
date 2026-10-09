@@ -124,6 +124,18 @@ class Tenants {
     }
 
     /**
+     * Whether the current thread runs without a tenant id, as it does inside {@link #withoutId(Closure)}. Unlike
+     * {@link #currentId()}, this does not consult the tenant resolver, so a resolver that resolves the name of the
+     * default connection source as the tenant id does not count.
+     *
+     * @return Whether the default connection source is bound to the current thread as the current tenant
+     * @since 7.0.18
+     */
+    static boolean isWithoutId() {
+        ConnectionSource.DEFAULT == CurrentTenant.get()
+    }
+
+    /**
      * Execute the given closure without any tenant id. In Multi tenancy mode SINGLE this will execute against the default data source. If multi tenancy mode
      * MULTI this will execute without including the "tenantId" on any query. Use with caution.
      *

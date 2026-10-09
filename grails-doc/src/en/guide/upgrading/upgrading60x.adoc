@@ -1173,3 +1173,12 @@ has used since Grails 3: the context path is compared case-insensitively althoug
 RFC 9110 section 4.2.3 define paths as case-sensitive, and during a `RequestDispatcher` include the included path is
 matched. Interceptors and the Spring Security plugin follow dispatch on both points because a matcher that disagrees
 with dispatch lets a request reach a controller without its interceptors or restrictions.
+
+==== 19. Lookups by id are restricted to the current tenant with DISCRIMINATOR multi-tenancy
+
+With `DISCRIMINATOR` multi-tenancy, GORM for MongoDB and GORM's in-memory datastore used by unit tests now restrict `get`, `read`, `exists`, `getAll`, `load` and `proxy` to the current tenant, as queries and dynamic finders already were. Previously these methods looked an instance up by its id alone, so they returned an instance that belongs to another tenant. GORM for Hibernate is unchanged: it already restricts `get`, `read`, `exists` and `getAll` to the current tenant, but not `load` and `proxy`.
+
+* The id of another tenant's instance is treated like an id that does not exist: `get` and `read` return `null`, `exists` returns `false`, `getAll` returns `null` in its place, and the proxy returned by `load` or `proxy` throws when it is initialized.
+* Without a current tenant, these methods throw `TenantNotFoundException`, as a query does. `getAll` without ids still returns an empty list.
+* Inside `Tenants.withoutId { }` a lookup by id is still not restricted to a tenant, and neither is a proxy returned by `load` or `proxy` that is initialized there.
+* A lookup by id still finds an instance that the session holds for the current tenant, including one that has been saved but not flushed, and it does not flush the session.
