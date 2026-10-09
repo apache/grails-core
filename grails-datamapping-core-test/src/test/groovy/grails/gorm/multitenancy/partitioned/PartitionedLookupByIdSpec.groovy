@@ -140,6 +140,31 @@ class PartitionedLookupByIdSpec extends Specification {
         datastore.mappingContext.proxyFactory = proxyFactory
     }
 
+    void 'a lookup by id of an entity mapped with a composite id is restricted to the current tenant'() {
+        given: 'the in-memory datastore keeps the generated id of an entity mapped with a composite id'
+        Long ownKeyedId = KeyedNote.withTenant('own') {
+            KeyedNote.withNewSession { new KeyedNote(code: 'A', region: 'north', title: 'Own').save(flush: true).id }
+        }
+        Long otherKeyedId = KeyedNote.withTenant('other') {
+            KeyedNote.withNewSession { new KeyedNote(code: 'B', region: 'south', title: 'Other').save(flush: true).id }
+        }
+
+        expect:
+        KeyedNote.withNewSession { KeyedNote.get(ownKeyedId)?.title } == 'Own'
+
+        and: 'an instance of another tenant is not found'
+        KeyedNote.withNewSession { KeyedNote.get(otherKeyedId) } == null
+        KeyedNote.withNewSession { KeyedNote.read(otherKeyedId) } == null
+        !KeyedNote.withNewSession { KeyedNote.exists(otherKeyedId) }
+        KeyedNote.withNewSession { KeyedNote.getAll(otherKeyedId, ownKeyedId) }*.title == [null, 'Own']
+
+        when: 'a proxy for an instance of another tenant is used'
+        KeyedNote.withNewSession { KeyedNote.load(otherKeyedId).title }
+
+        then:
+        thrown(DataIntegrityViolationException)
+    }
+
     void 'a lookup by id inside withTenant is restricted to that tenant'() {
         expect:
         Note.withTenant('other') { Note.withNewSession { Note.get(otherId)?.title } } == 'Other'
@@ -196,6 +221,18 @@ class PartitionedLookupByIdSpec extends Specification {
 class Note implements MultiTenant<Note> {
     String title
     String tenantId
+}
+
+@Entity
+class KeyedNote implements MultiTenant<KeyedNote> {
+    String code
+    String region
+    String title
+    String tenantId
+
+    static mapping = {
+        id composite: ['code', 'region']
+    }
 }
 
 @Entity

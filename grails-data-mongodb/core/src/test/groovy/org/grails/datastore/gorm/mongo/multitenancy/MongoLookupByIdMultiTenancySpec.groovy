@@ -56,7 +56,7 @@ class MongoLookupByIdMultiTenancySpec extends AutoStartedMongoSpec {
                 'grails.gorm.multiTenancy.tenantResolverClass': SystemPropertyTenantResolver,
                 (MongoSettings.SETTING_URL)                   : "mongodb://${mongoHost}:${mongoPort}/lookupByIdDb" as String,
         ]
-        this.datastore = new MongoDatastore(config, Memo, NumberedMemo)
+        this.datastore = new MongoDatastore(config, Memo, NumberedMemo, KeyedMemo)
     }
 
     void setup() {
@@ -129,6 +129,32 @@ class MongoLookupByIdMultiTenancySpec extends AutoStartedMongoSpec {
         thrown(DataIntegrityViolationException)
     }
 
+    void 'a lookup by id of an entity mapped with a composite id is restricted to the current tenant'() {
+        given: 'GORM for MongoDB keeps the generated id of an entity mapped with a composite id'
+        KeyedMemo.DB.drop()
+        Long ownKeyedId = KeyedMemo.withTenant('own') {
+            KeyedMemo.withNewSession { new KeyedMemo(code: 'A', region: 'north', title: 'Own').save(flush: true).id }
+        }
+        Long otherKeyedId = KeyedMemo.withTenant('other') {
+            KeyedMemo.withNewSession { new KeyedMemo(code: 'B', region: 'south', title: 'Other').save(flush: true).id }
+        }
+
+        expect:
+        KeyedMemo.withNewSession { KeyedMemo.get(ownKeyedId)?.title } == 'Own'
+
+        and: 'an instance of another tenant is not found'
+        KeyedMemo.withNewSession { KeyedMemo.get(otherKeyedId) } == null
+        KeyedMemo.withNewSession { KeyedMemo.read(otherKeyedId) } == null
+        !KeyedMemo.withNewSession { KeyedMemo.exists(otherKeyedId) }
+        KeyedMemo.withNewSession { KeyedMemo.getAll(otherKeyedId, ownKeyedId) }*.title == [null, 'Own']
+
+        when: 'a proxy for an instance of another tenant is used'
+        KeyedMemo.withNewSession { KeyedMemo.load(otherKeyedId).title }
+
+        then:
+        thrown(DataIntegrityViolationException)
+    }
+
     void 'a lookup by id inside withTenant is restricted to that tenant'() {
         expect:
         Memo.withTenant('other') { Memo.withNewSession { Memo.get(otherId)?.title } } == 'Other'
@@ -181,4 +207,16 @@ class NumberedMemo implements MultiTenant<NumberedMemo>, MongoEntity<NumberedMem
     Long id
     String tenantId
     String title
+}
+
+@Entity
+class KeyedMemo implements MultiTenant<KeyedMemo>, MongoEntity<KeyedMemo> {
+    String code
+    String region
+    String tenantId
+    String title
+
+    static mapping = {
+        id composite: ['code', 'region']
+    }
 }
