@@ -378,7 +378,9 @@ public interface GrailsHibernatePersistentEntity extends PersistentEntity {
      * Sorts or indexes the columns of {@code value} to align with this entity's composite
      * identifier order. When the identifier is a {@link Component} with an established sort order,
      * delegates to {@link SimpleValue#sortColumns(int[])}. Otherwise assigns sequential
-     * {@link Column#setTypeIndex(int)} values so Hibernate can correlate them.
+     * {@link Column#setTypeIndex(int)} values so Hibernate can correlate them. The binder calls this
+     * once the identifier is bound, deferring the call to a second pass when this entity is bound
+     * later than the entity holding the key.
      *
      * @param value the foreign-key {@link SimpleValue} whose columns should be aligned
      */

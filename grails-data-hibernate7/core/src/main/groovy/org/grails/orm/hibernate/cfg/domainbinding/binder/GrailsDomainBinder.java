@@ -142,6 +142,7 @@ public class GrailsDomainBinder implements AdditionalMappingContributor, TypeCon
         var simpleValueColumnFetcher = new SimpleValueColumnFetcher();
         var compositeIdentifierToManyToOneBinder =
                 new CompositeIdentifierToManyToOneBinder(
+                        metadataCollector,
                         new org.grails.orm.hibernate.cfg.domainbinding.util.ForeignKeyColumnCountCalculator(),
                         namingStrategy,
                         defaultColumnNameFetcher,

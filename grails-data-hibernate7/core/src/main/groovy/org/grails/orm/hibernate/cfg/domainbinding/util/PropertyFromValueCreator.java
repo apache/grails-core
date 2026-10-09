@@ -18,12 +18,15 @@
  */
 package org.grails.orm.hibernate.cfg.domainbinding.util;
 
+import org.hibernate.mapping.ManyToOne;
 import org.hibernate.mapping.Property;
 import org.hibernate.mapping.Value;
 
 import org.grails.orm.hibernate.cfg.domainbinding.binder.PropertyBinder;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEnumProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToOneProperty;
 
 public class PropertyFromValueCreator {
 
@@ -43,10 +46,23 @@ public class PropertyFromValueCreator {
             value.setTypeUsingReflection(grailsProperty.getOwnerClassName(), grailsProperty.getName());
         }
 
-        if (value.getTable() != null) {
+        if (value.getTable() != null && !referencesCompositeIdentifier(value, grailsProperty)) {
             value.createForeignKey();
         }
 
         return propertyBinder.bindProperty(grailsProperty, value);
+    }
+
+    /**
+     * A many-to-one to a composite identifier gets its foreign key from the composite identifier
+     * binder, which pairs each column with the identifier column it references once that identifier
+     * is bound. Hibernate's own foreign key would pair the columns by position instead.
+     */
+    private static boolean referencesCompositeIdentifier(Value value, HibernatePersistentProperty grailsProperty) {
+        if (!(value instanceof ManyToOne) || !(grailsProperty instanceof HibernateToOneProperty toOne)) {
+            return false;
+        }
+        GrailsHibernatePersistentEntity associatedEntity = toOne.getHibernateAssociatedEntity();
+        return associatedEntity != null && associatedEntity.getHibernateCompositeIdentity().isPresent();
     }
 }

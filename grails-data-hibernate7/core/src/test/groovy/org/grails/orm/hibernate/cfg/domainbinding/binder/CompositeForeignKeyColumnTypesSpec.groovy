@@ -73,23 +73,7 @@ class CompositeForeignKeyColumnTypesSpec extends Specification {
      * {@code KEY_SEQ} order, which is the order the database matches the columns of a key by.
      */
     private Map<String, List<List<String>>> foreignKeyPairs(String table) {
-        Map<String, List<List<String>>> keys = [:]
-        datastore.sessionFactory.openSession().withCloseable { session ->
-            session.doWork { Connection c ->
-                c.metaData.getImportedKeys(null, null, table).withCloseable { rs ->
-                    List<List> rows = []
-                    while (rs.next()) {
-                        rows << [rs.getString('FK_NAME'), rs.getInt('KEY_SEQ'),
-                                 rs.getString('PKTABLE_NAME').toLowerCase(),
-                                 rs.getString('FKCOLUMN_NAME').toLowerCase(), rs.getString('PKCOLUMN_NAME').toLowerCase()]
-                    }
-                    rows.sort { it[1] }.each { List row ->
-                        keys.get(row[0] + ' -> ' + row[2], []) << [row[3], row[4]]
-                    }
-                }
-            }
-        }
-        keys.collectEntries { String name, List<List<String>> pairs -> [(name.substring(name.indexOf(' -> ') + 4)): pairs] }
+        ForeignKeyPairs.of(datastore, table)
     }
 
     void "a foreign key to a composite parent pairs its columns with the referenced key columns in key order"() {

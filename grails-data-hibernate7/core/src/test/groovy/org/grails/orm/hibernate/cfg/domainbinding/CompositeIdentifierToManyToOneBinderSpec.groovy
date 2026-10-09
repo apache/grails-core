@@ -27,6 +27,7 @@ import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersi
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy
 import org.grails.orm.hibernate.cfg.PropertyConfig
+import org.hibernate.boot.spi.InFlightMetadataCollector
 import org.hibernate.mapping.Column
 import org.hibernate.mapping.KeyValue
 import org.hibernate.mapping.RootClass
@@ -35,6 +36,7 @@ import spock.lang.Specification
 
 import org.grails.orm.hibernate.cfg.domainbinding.binder.CompositeIdentifierToManyToOneBinder
 import org.grails.orm.hibernate.cfg.domainbinding.binder.SimpleValueBinder
+import org.grails.orm.hibernate.cfg.domainbinding.secondpass.CompositeForeignKeySecondPass
 import org.grails.orm.hibernate.cfg.domainbinding.util.BackticksRemover
 import org.grails.orm.hibernate.cfg.domainbinding.util.DefaultColumnNameFetcher
 import org.grails.orm.hibernate.cfg.domainbinding.util.ForeignKeyColumnCountCalculator
@@ -44,6 +46,7 @@ class CompositeIdentifierToManyToOneBinderSpec extends Specification {
     def "Test bindCompositeIdentifierToManyToOne with nested composite ID"() {
         given:
         // 1. Stub all dependencies for the protected constructor
+        def metadataCollector = Mock(InFlightMetadataCollector)
         def calculator = Stub(ForeignKeyColumnCountCalculator)
         def namingStrategy = Stub(PersistentEntityNamingStrategy)
         def columnNameFetcher = Stub(DefaultColumnNameFetcher)
@@ -52,7 +55,7 @@ class CompositeIdentifierToManyToOneBinderSpec extends Specification {
         def metadataBuildingContext = Mock(org.hibernate.boot.spi.MetadataBuildingContext)
 
         // Instantiate the binder with stubs
-        def binder = new CompositeIdentifierToManyToOneBinder(calculator, namingStrategy, columnNameFetcher, backticksRemover, simpleValueBinder)
+        def binder = new CompositeIdentifierToManyToOneBinder(metadataCollector, calculator, namingStrategy, columnNameFetcher, backticksRemover, simpleValueBinder)
 
         // 2. Set up stubs for the method arguments
         def association = Mock(HibernatePersistentProperty)
@@ -120,11 +123,17 @@ class CompositeIdentifierToManyToOneBinderSpec extends Specification {
 
         and: // 6. Verify the call to the simple value binder
         1 * simpleValueBinder.bindSimpleValue(_ as HibernatePersistentProperty, null, value, path)
+
+        and: 'the referenced entity is bound, so the key is aligned with its identifier in this pass'
+        1 * refDomainClass.sortOrIndexForeignKeyColumns(value)
+        1 * association.markValueSorted(value)
+        0 * metadataCollector.addSecondPass(_)
     }
 
     def "Test bindCompositeIdentifierToManyToOne when column count matches"() {
         given:
         // 1. Use Mocks for dependencies that require interaction verification
+        def metadataCollector = Mock(InFlightMetadataCollector)
         def calculator = Stub(ForeignKeyColumnCountCalculator)
         def namingStrategy = Mock(PersistentEntityNamingStrategy)
         def columnNameFetcher = Mock(DefaultColumnNameFetcher)
@@ -132,7 +141,7 @@ class CompositeIdentifierToManyToOneBinderSpec extends Specification {
         def simpleValueBinder = Mock(SimpleValueBinder)
         def metadataBuildingContext = Mock(org.hibernate.boot.spi.MetadataBuildingContext)
 
-        def binder = new CompositeIdentifierToManyToOneBinder(calculator, namingStrategy, columnNameFetcher, backticksRemover, simpleValueBinder)
+        def binder = new CompositeIdentifierToManyToOneBinder(metadataCollector, calculator, namingStrategy, columnNameFetcher, backticksRemover, simpleValueBinder)
 
         // 2. Set up arguments
         def association = Mock(HibernatePersistentProperty)
@@ -175,5 +184,75 @@ class CompositeIdentifierToManyToOneBinderSpec extends Specification {
 
         and: // 5. Verify the simple value binder is still called
         1 * simpleValueBinder.bindSimpleValue(_ as HibernatePersistentProperty, null, value, path)
+    }
+
+    def "the alignment with a referenced entity that is not bound yet is deferred to a second pass"() {
+        given:
+        def metadataCollector = Mock(InFlightMetadataCollector)
+        def calculator = Stub(ForeignKeyColumnCountCalculator)
+        def simpleValueBinder = Mock(SimpleValueBinder)
+        def binder = new CompositeIdentifierToManyToOneBinder(metadataCollector, calculator,
+                Stub(PersistentEntityNamingStrategy), Stub(DefaultColumnNameFetcher), Stub(BackticksRemover), simpleValueBinder)
+
+        def association = Mock(HibernatePersistentProperty)
+        def value = Mock(SimpleValue)
+        def refDomainClass = Mock(GrailsHibernatePersistentEntity)
+        def propertyNames = ['prop1', 'prop2'] as String[]
+        def compositeId = new HibernateCompositeIdentity()
+        compositeId.setPropertyNames(propertyNames)
+        def propertyConfig = new PropertyConfig()
+        propertyConfig.getColumns().add(new ColumnConfig())
+        propertyConfig.getColumns().add(new ColumnConfig())
+        association.getHibernateMappedForm() >> propertyConfig
+        calculator.calculateForeignKeyColumnCount(refDomainClass, _ as String[]) >> 2
+        refDomainClass.getName() >> 'RefDomain'
+        CompositeForeignKeySecondPass secondPass = null
+
+        when: 'the key is bound while the referenced entity has no persistent class yet'
+        binder.bindCompositeIdentifierToManyToOne(association, value, compositeId, refDomainClass, '/test')
+
+        then: 'the columns are bound, but neither sorted nor marked sorted'
+        1 * simpleValueBinder.bindSimpleValue(association, null, value, '/test')
+        1 * metadataCollector.addSecondPass(_ as CompositeForeignKeySecondPass) >> { args -> secondPass = args[0] }
+        0 * refDomainClass.sortOrIndexForeignKeyColumns(_)
+        0 * association.markValueSorted(_)
+
+        when: 'Hibernate runs the second pass'
+        secondPass.doSecondPass([:])
+
+        then: 'the key is sorted against the referenced identifier, its foreign key created, and marked sorted'
+        1 * refDomainClass.sortOrIndexForeignKeyColumns(value)
+        1 * refDomainClass.getReferencedIdentifierColumns(propertyNames) >> [new Column('prop1'), new Column('prop2')]
+        1 * value.createForeignKeyOfEntity('RefDomain', _ as List<Column>) >> null
+        1 * association.markValueSorted(value)
+    }
+
+    def "a key bound during the second passes is aligned at once even when the referenced entity has no persistent class"() {
+        given:
+        def metadataCollector = Mock(InFlightMetadataCollector)
+        def calculator = Stub(ForeignKeyColumnCountCalculator)
+        def binder = new CompositeIdentifierToManyToOneBinder(metadataCollector, calculator,
+                Stub(PersistentEntityNamingStrategy), Stub(DefaultColumnNameFetcher), Stub(BackticksRemover), Mock(SimpleValueBinder))
+
+        def association = Mock(HibernatePersistentProperty)
+        def value = Mock(SimpleValue)
+        def refDomainClass = Mock(GrailsHibernatePersistentEntity)
+        def compositeId = new HibernateCompositeIdentity()
+        compositeId.setPropertyNames(['prop1', 'prop2'] as String[])
+        def propertyConfig = new PropertyConfig()
+        propertyConfig.getColumns().add(new ColumnConfig())
+        propertyConfig.getColumns().add(new ColumnConfig())
+        association.getHibernateMappedForm() >> propertyConfig
+        calculator.calculateForeignKeyColumnCount(refDomainClass, _ as String[]) >> 2
+        metadataCollector.isInSecondPass() >> true
+
+        when:
+        binder.bindCompositeIdentifierToManyToOne(association, value, compositeId, refDomainClass, '/test')
+
+        then:
+        0 * metadataCollector.addSecondPass(_)
+        1 * refDomainClass.sortOrIndexForeignKeyColumns(value)
+        1 * refDomainClass.getReferencedIdentifierColumns(_ as String[]) >> []
+        1 * association.markValueSorted(value)
     }
 }
