@@ -18,6 +18,7 @@
  */
 package org.grails.orm.hibernate.connections
 
+import groovy.json.JsonSlurper
 import org.grails.datastore.mapping.core.DatastoreUtils
 import org.hibernate.dialect.H2Dialect
 import org.springframework.core.io.UrlResource
@@ -118,34 +119,10 @@ class HibernateConnectionSourceSettingsSpec extends Specification {
         listeners['create-onflush'].is(onFlushListener)
     }
 
-    void "the generated domain classes switch is off by default and can be turned on"() {
+    void "native domain binding is on by default and the classic domain binder can be selected"() {
         given:
-        String property = 'grails.hibernate.generatedDomainClasses'
+        String property = 'grails.hibernate.classicDomainBinding'
         String previous = System.clearProperty(property)
-
-        when:
-        def settings = new HibernateConnectionSourceSettings()
-
-        then:
-        !settings.hibernate.generatedDomainClasses
-
-        when:
-        settings.hibernate.generatedDomainClasses = true
-
-        then:
-        settings.hibernate.generatedDomainClasses
-
-        cleanup:
-        if (previous != null) {
-            System.setProperty(property, previous)
-        }
-    }
-
-    void "the JVM-wide system property switches the generated domain classes default on, and a configured value wins"() {
-        given:
-        String property = 'grails.hibernate.generatedDomainClasses'
-        String previous = System.getProperty(property)
-        System.setProperty(property, 'true')
 
         when:
         def settings = new HibernateConnectionSourceSettings()
@@ -160,10 +137,77 @@ class HibernateConnectionSourceSettingsSpec extends Specification {
         !settings.hibernate.generatedDomainClasses
 
         cleanup:
+        if (previous != null) {
+            System.setProperty(property, previous)
+        }
+    }
+
+    void "a configured hibernate.generatedDomainClasses value is what the built settings hold"() {
+        given:
+        String property = 'grails.hibernate.classicDomainBinding'
+        String previous = System.clearProperty(property)
+
+        when:
+        HibernateConnectionSourceSettings settings = new HibernateConnectionSourceSettingsBuilder(
+                DatastoreUtils.createPropertyResolver(['hibernate.generatedDomainClasses': configured])).build()
+
+        then:
+        settings.hibernate.generatedDomainClasses == expected
+
+        cleanup:
+        if (previous != null) {
+            System.setProperty(property, previous)
+        }
+
+        where:
+        configured | expected
+        false      | false
+        'false'    | false
+        true       | true
+    }
+
+    void "the JVM-wide system property switches the default to the classic domain binder, and a configured value wins"() {
+        given:
+        String property = 'grails.hibernate.classicDomainBinding'
+        String previous = System.getProperty(property)
+        System.setProperty(property, 'true')
+
+        when:
+        def settings = new HibernateConnectionSourceSettings()
+
+        then:
+        !settings.hibernate.generatedDomainClasses
+
+        when:
+        settings.hibernate.generatedDomainClasses = true
+
+        then:
+        settings.hibernate.generatedDomainClasses
+
+        cleanup:
         if (previous == null) {
             System.clearProperty(property)
         } else {
             System.setProperty(property, previous)
+        }
+    }
+
+    void "the published configuration metadata states the default of hibernate.generatedDomainClasses"() {
+        given: 'the metadata an IDE shows for the key'
+        String previous = System.clearProperty('grails.hibernate.classicDomainBinding')
+        URL metadata = HibernateConnectionSourceSettings.getResource('/META-INF/additional-spring-configuration-metadata.json')
+        Map property = ((List<Map>) ((Map) new JsonSlurper().parse(metadata)).get('properties')).find {
+            it.get('name') == 'hibernate.generatedDomainClasses'
+        }
+
+        expect:
+        property != null
+        property.get('defaultValue') == new HibernateConnectionSourceSettings().hibernate.generatedDomainClasses
+        (property.get('description') as String).contains('deprecated')
+
+        cleanup:
+        if (previous != null) {
+            System.setProperty('grails.hibernate.classicDomainBinding', previous)
         }
     }
 
