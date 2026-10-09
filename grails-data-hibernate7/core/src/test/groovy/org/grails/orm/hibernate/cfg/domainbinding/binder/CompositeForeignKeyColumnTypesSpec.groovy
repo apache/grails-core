@@ -47,7 +47,7 @@ class CompositeForeignKeyColumnTypesSpec extends Specification {
             ],
             CfkParent, CfkChild, CfkGrandParent, CfkMiddle, CfkLeaf,
             CfkOrdParent, CfkOrdChild, CfkOrdGrand, CfkOrdMiddle, CfkOrdLeaf,
-            PrbGrand, PrbMiddle, PrbLeaf, PrbSpanLeaf)
+            PrbGrand, PrbMiddle, PrbLeaf, PrbHub, PrbHubTag, PrbHubRef)
 
     private List<List> columns(String table) {
         List<List> rows = []
@@ -219,28 +219,41 @@ class CompositeForeignKeyColumnTypesSpec extends Specification {
         }
     }
 
-    void "a multi-column nested part between two plain parts keeps its columns together in key order"() {
-        expect: 'the key is declared as zed, middle, ace, so the three column middle part sorts between the two plain parts'
-        foreignKeyPairs('PRB_SPAN_LEAF') == [
-                prb_middle: [
-                        ['prb_middle_grand_parent_alpha', 'prb_grand_alpha'],
-                        ['prb_middle_grand_parent_zeta', 'prb_grand_zeta'],
-                        ['prb_middle_name', 'name']]
+    void "the keys that reference a multi-column nested part between two plain parts move it with all of its columns"() {
+        expect: 'the hub key is declared as zed, grand, ace, so the two column grand part sorts between the two plain parts'
+        foreignKeyPairs('PRB_HUB_REF') == [
+                prb_hub: [
+                        ['prb_hub_ace', 'ace'],
+                        ['prb_hub_grand_alpha', 'prb_grand_alpha'],
+                        ['prb_hub_grand_zeta', 'prb_grand_zeta'],
+                        ['prb_hub_zed', 'zed']]
+        ]
+
+        and: 'the join table of the unidirectional one-to-many references the hub by the same key'
+        foreignKeyPairs('PRB_HUB_PRB_HUB_TAG') == [
+                prb_hub: [
+                        ['prb_hub_ace', 'ace'],
+                        ['prb_hub_grand_alpha', 'prb_grand_alpha'],
+                        ['prb_hub_grand_zeta', 'prb_grand_zeta'],
+                        ['prb_hub_zed', 'zed']],
+                prb_hub_tag: [['prb_hub_tag_id', 'id']]
         ]
     }
 
-    void "a leaf whose multi-column nested part sorts between two plain parts is saved and reloaded"() {
+    void "a hub whose multi-column nested part sorts between two plain parts is saved with a tag and a reference and reloaded"() {
         when:
         PrbGrand.withNewTransaction {
             PrbGrand grand = new PrbGrand(zeta: 'z2', alpha: 'a2').save(failOnError: true)
-            PrbMiddle middle = new PrbMiddle(name: 'm2', grandParent: grand).save(failOnError: true)
-            new PrbSpanLeaf(zed: 'zz', ace: 'aa', middle: middle).save(failOnError: true, flush: true)
+            PrbHub hub = new PrbHub(zed: 'zz', ace: 'aa', grand: grand)
+                    .addToTags(new PrbHubTag(label: 'tag'))
+                    .save(failOnError: true)
+            new PrbHubRef(name: 'ref', hub: hub).save(failOnError: true, flush: true)
         }
 
         then:
-        PrbSpanLeaf.withNewSession {
-            PrbSpanLeaf leaf = PrbSpanLeaf.findByZed('zz')
-            leaf.ace == 'aa' && leaf.middle.name == 'm2' && leaf.middle.grandParent.zeta == 'z2'
+        PrbHubRef.withNewSession {
+            PrbHubRef ref = PrbHubRef.findByName('ref')
+            ref.hub.zed == 'zz' && ref.hub.ace == 'aa' && ref.hub.grand.zeta == 'z2' && ref.hub.tags*.label == ['tag']
         }
     }
 }
@@ -278,14 +291,26 @@ class PrbLeaf implements Serializable {
 }
 
 @Entity
-class PrbSpanLeaf implements Serializable {
+class PrbHub implements Serializable {
     String zed
     String ace
-    PrbMiddle middle
+    PrbGrand grand
+    static hasMany = [tags: PrbHubTag]
 
     static mapping = MappingBuilder.define {
-        composite('zed', 'middle', 'ace')
+        composite('zed', 'grand', 'ace')
     }
+}
+
+@Entity
+class PrbHubTag {
+    String label
+}
+
+@Entity
+class PrbHubRef {
+    String name
+    PrbHub hub
 }
 
 @Entity
