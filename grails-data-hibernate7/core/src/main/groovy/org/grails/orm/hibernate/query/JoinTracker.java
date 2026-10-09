@@ -52,6 +52,13 @@ public class JoinTracker {
         return join;
     }
 
+    /**
+     * Returns the join made for the path from this tracker's root, without looking at the outer trackers.
+     */
+    public From<?, ?> getLocalJoin(String path) {
+        return joinsByPath.get(path);
+    }
+
     public From<?, ?> getRoot() {
         return root;
     }

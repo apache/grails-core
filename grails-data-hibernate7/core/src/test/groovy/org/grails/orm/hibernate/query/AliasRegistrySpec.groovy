@@ -79,6 +79,28 @@ class AliasRegistrySpec extends Specification {
         child.getRealized("f") == expression
     }
 
+    def "test local definition does not look at the parent"() {
+        given:
+        def parent = new AliasRegistry()
+        def child = new AliasRegistry(parent)
+        def parentDefinition = new HibernateAlias("face", "face", JoinType.INNER)
+        def childDefinition = new HibernateAlias("face", "face", JoinType.LEFT)
+
+        when:
+        parent.define("face", parentDefinition)
+
+        then:
+        child.getLocalDefinition("face") == null
+        parent.getLocalDefinition("face") == parentDefinition
+
+        when:
+        child.define("face", childDefinition)
+
+        then:
+        child.getLocalDefinition("face") == childDefinition
+        parent.getLocalDefinition("face") == parentDefinition
+    }
+
     def "test child override"() {
         given:
         def parent = new AliasRegistry()

@@ -54,6 +54,28 @@ class JoinTrackerSpec extends Specification {
         child.getRoot() == subRoot
     }
 
+    def "test local join does not look at the parent"() {
+        given:
+        def parent = new JoinTracker(Mock(From))
+        def child = new JoinTracker(parent, Mock(From))
+        def parentJoin = Mock(From)
+        def childJoin = Mock(From)
+
+        when:
+        parent.addJoin("face", parentJoin)
+
+        then:
+        child.getLocalJoin("face") == null
+        parent.getLocalJoin("face") == parentJoin
+
+        when:
+        child.addJoin("face", childJoin)
+
+        then:
+        child.getLocalJoin("face") == childJoin
+        parent.getLocalJoin("face") == parentJoin
+    }
+
     def "test child override join"() {
         given:
         def parentRoot = Mock(From)
