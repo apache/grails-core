@@ -30,7 +30,6 @@ import org.hibernate.envers.NotAudited
 import org.hibernate.envers.RevisionType
 import org.hibernate.mapping.Table
 import spock.lang.AutoCleanup
-import spock.lang.PendingFeature
 import spock.lang.Specification
 
 import org.grails.orm.hibernate.HibernateDatastore
@@ -39,23 +38,22 @@ import org.grails.orm.hibernate.HibernateDatastore
  * Hibernate Envers over the generated domain classes. Envers builds its audit mappings from the entities bound when its
  * contributor runs, reading the annotations of the bound classes, so the generated classes are bound before it and carry
  * the Envers annotations of the domain classes. The audit tables, the revisions and the instances the audit queries return
- * are those of binder mode, with the differences that are named in the features below.
+ * are those the classic binding of Grails 8 gave, with the differences that are named in the features below.
  */
 class GeneratedModeEnversSpec extends Specification {
 
     @AutoCleanup
     HibernateDatastore datastore
 
-    private HibernateDatastore boot(boolean generated, List<Class> classes, Map extra = [:]) {
+    private HibernateDatastore boot(List<Class> classes, Map extra = [:]) {
         datastore?.close()
         datastore = new HibernateDatastore([
-                'dataSource.url'                  : "jdbc:h2:mem:enversSpec${generated}${System.nanoTime()};LOCK_TIMEOUT=10000;DB_CLOSE_DELAY=-1".toString(),
-                'dataSource.dialect'              : H2Dialect.name,
-                'dataSource.dbCreate'             : 'create-drop',
-                'hibernate.hbm2ddl.auto'          : 'create',
-                'hibernate.cache.queries'         : 'false',
-                'hibernate.cache.use_query_cache' : 'false',
-                'hibernate.generatedDomainClasses': generated,
+                'dataSource.url'                 : "jdbc:h2:mem:enversSpec${System.nanoTime()};LOCK_TIMEOUT=10000;DB_CLOSE_DELAY=-1".toString(),
+                'dataSource.dialect'             : H2Dialect.name,
+                'dataSource.dbCreate'            : 'create-drop',
+                'hibernate.hbm2ddl.auto'         : 'create',
+                'hibernate.cache.queries'        : 'false',
+                'hibernate.cache.use_query_cache': 'false',
         ] + extra, classes as Class[])
         return datastore
     }
@@ -105,12 +103,12 @@ class GeneratedModeEnversSpec extends Specification {
         return result
     }
 
-    def "an audited domain class has audit tables, revisions and audit queries that return real instances in generated mode"() {
+    def "an audited domain class has audit tables, revisions and audit queries that return real instances"() {
         given:
-        HibernateDatastore generated = boot(true, [EnversBook, EnversNovel])
+        HibernateDatastore generated = boot([EnversBook, EnversNovel])
 
         expect: 'the audit tables are mapped'
-        columnsByTable(generated).keySet().containsAll(['envers_book_aud', 'revinfo'])
+        columnsByTable(generated).keySet().containsAll(['envers_book', 'envers_book_aud', 'revinfo'])
 
         when:
         Map history = bookHistory()
@@ -125,52 +123,23 @@ class GeneratedModeEnversSpec extends Specification {
         history.atRevision.collect { it[0] }.toSet() == ['EnversBook', 'EnversNovel'].toSet()
     }
 
-    def "generated mode audits the same entities and writes the same revisions as binder mode"() {
-        when:
-        HibernateDatastore binderDatastore = boot(false, [EnversBook, EnversNovel])
-        Map binderTables = columnsByTable(binderDatastore)
-        Map binderHistory = bookHistory()
-        HibernateDatastore generatedDatastore = boot(true, [EnversBook, EnversNovel])
-        Map generatedTables = columnsByTable(generatedDatastore)
-        Map generatedHistory = bookHistory()
-
-        then: 'the same tables exist'
-        binderTables.keySet() == generatedTables.keySet()
-
-        and: 'the audited entities are bound alike and the revision tables are equal'
-        binderTables.findAll { String name, List<String> columns -> !name.endsWith('_aud') } ==
-                generatedTables.findAll { String name, List<String> columns -> !name.endsWith('_aud') }
-
-        and: 'the audit table of the entity differs only in the columns named in the next feature'
-        binderTables['envers_book_aud'] - generatedTables['envers_book_aud'] == ['secret']
-        generatedTables['envers_book_aud'] - binderTables['envers_book_aud'] == []
-
-        and: 'the revisions and the audit queries return the same'
-        binderHistory == generatedHistory
-    }
-
     def "a field level @NotAudited and the optimistic locking version are honoured the way Envers does for annotated entities"() {
         when:
-        Map binder = columnsByTable(boot(false, [EnversBook, EnversNovel]))
-        Map generated = columnsByTable(boot(true, [EnversBook, EnversNovel]))
-        Map generatedWithVersion = columnsByTable(boot(true, [EnversBook, EnversNovel],
+        Map generated = columnsByTable(boot([EnversBook, EnversNovel]))
+        Map generatedWithVersion = columnsByTable(boot([EnversBook, EnversNovel],
                 ['hibernate.additionalProperties': ['org.hibernate.envers.do_not_audit_optimistic_locking_field': 'false']]))
 
-        then: 'binder mode audits both, because Envers reads the getter of a property accessed property and the Groovy field is the one annotated, and the version has no @Version annotation to recognise'
-        binder['envers_book_aud'].containsAll(['secret', 'version'])
-
-        and: 'generated mode puts the annotation on the field Envers reads, and audits the version as binder mode does'
-        !generated['envers_book_aud'].contains('secret')
-        generated['envers_book_aud'].contains('version')
+        then: 'the annotation is on the field Envers reads (the classic binding of Grails 8 audited the property, since Envers read the getter), and the version is audited as it was then'
+        generated['envers_book_aud'] == ['id', 'pages', 'rev', 'revtype', 'title', 'version']
 
         and: 'Envers\' own setting, which a user can still set, gives the same'
         generatedWithVersion['envers_book_aud'].contains('version')
         !generatedWithVersion['envers_book_aud'].contains('secret')
     }
 
-    def "a user value of the Envers optimistic locking setting wins over the generated mode default"() {
+    def "a user value of the Envers optimistic locking setting wins over the default"() {
         when:
-        Map generated = columnsByTable(boot(true, [EnversVersioned],
+        Map generated = columnsByTable(boot([EnversVersioned],
                 ['hibernate.additionalProperties': ['org.hibernate.envers.do_not_audit_optimistic_locking_field': 'true']]))
 
         then:
@@ -210,28 +179,23 @@ class GeneratedModeEnversSpec extends Specification {
         }
     }
 
-    def "the audit table and its rows carry the optimistic locking version as in binder mode for #type.simpleName"() {
+    def "the audit table and its rows carry the optimistic locking version as with classic binding for #type.simpleName"() {
         when:
-        HibernateDatastore binderDatastore = boot(false, [type])
-        changeTwice(type, 'name')
-        Map binder = versionAudit(binderDatastore, table, versionColumn)
-        HibernateDatastore generatedDatastore = boot(true, [type])
+        HibernateDatastore generatedDatastore = boot([type])
         changeTwice(type, 'name')
         Map generated = versionAudit(generatedDatastore, table, versionColumn)
 
-        then: 'the audit table has the same columns, types and nullability'
-        binder.columns == generated.columns
-        binder.columns*.getAt(0).contains(versionColumn) == hasVersion
+        then: 'the audit table has the columns of the entity, the revision and the revision type'
+        generated.columns*.getAt(0) == columns
 
-        and: 'the version written at each revision is the same'
-        binder.rows == generated.rows
-        !hasVersion || binder.rows*.getAt(1).any { it != null }
+        and: 'the version written at each revision is the one of the row then'
+        generated.rows == rows
 
         where:
-        type                | table                    | versionColumn | hasVersion
-        EnversVersioned     | 'envers_versioned_aud'   | 'version'     | true
-        EnversUnversioned   | 'envers_unversioned_aud' | null          | false
-        EnversCustomVersion | 'envers_custom_version_aud' | 'lock_no'  | true
+        type                | table                       | versionColumn | columns                                           | rows
+        EnversVersioned     | 'envers_versioned_aud'      | 'version'     | ['id', 'name', 'rev', 'revtype', 'version']       | [[0, 0], [1, 1], [1, 2], [2, 2]]
+        EnversUnversioned   | 'envers_unversioned_aud'    | null          | ['id', 'name', 'rev', 'revtype']                  | null
+        EnversCustomVersion | 'envers_custom_version_aud' | 'lock_no'     | ['id', 'lock_no', 'name', 'rev', 'revtype']       | [[0, 0], [1, 1], [1, 2], [2, 2]]
     }
 
     private static Map shelfHistory() {
@@ -261,9 +225,9 @@ class GeneratedModeEnversSpec extends Specification {
         return result
     }
 
-    def "a hasMany collection of audited entities is audited in generated mode"() {
+    def "a hasMany collection of audited entities is audited (the classic binding of Grails 8 failed to boot it)"() {
         given:
-        boot(true, [EnversShelf, EnversItem])
+        boot([EnversShelf, EnversItem])
 
         when:
         Map history = shelfHistory()
@@ -273,15 +237,6 @@ class GeneratedModeEnversSpec extends Specification {
         history.revisionCount == 2
         history.itemLabels == [['a', 'b'], ['a', 'b', 'c']]
         history.itemClasses == ['EnversItem'].toSet()
-    }
-
-    @PendingFeature(reason = 'binder mode: Envers builds the audit mapping of a hasMany collection before the domain binder has run its second passes and fails with a NullPointerException on the missing collection key')
-    def "a hasMany collection of audited entities is audited in binder mode"() {
-        given:
-        boot(false, [EnversShelf, EnversItem])
-
-        expect:
-        shelfHistory().itemLabels == [['a', 'b'], ['a', 'b', 'c']]
     }
 }
 

@@ -31,7 +31,7 @@ import org.hibernate.persister.collection.CollectionPersister
 class GeneratedDomainClassesExtraLazySpec extends HibernateGormDatastoreSpec {
 
     void setupSpec() {
-        registerGeneratedDomainClasses(GdcLazyOwner, GdcLazyItem, GdcLazyTagged, GdcPlainOwner)
+        manager.registerDomainClasses(GdcLazyOwner, GdcLazyItem, GdcLazyTagged, GdcPlainOwner)
     }
 
     private static CollectionPersister persister(def sessionFactory, Class owner, String property) {

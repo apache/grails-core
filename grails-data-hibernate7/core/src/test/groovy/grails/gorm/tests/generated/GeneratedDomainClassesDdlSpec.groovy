@@ -34,7 +34,7 @@ import org.hibernate.mapping.RootClass
 class GeneratedDomainClassesDdlSpec extends HibernateGormDatastoreSpec {
 
     void setupSpec() {
-        registerGeneratedDomainClasses(GddVehicle, GddCar, GddTruck, GddStudent, GddSchool, GddTeacher, GddBadge, GddToken, GddMember, GddAccount, GddPair, GddEdition, GddImprint, GddSequenced)
+        manager.registerDomainClasses(GddVehicle, GddCar, GddTruck, GddStudent, GddSchool, GddTeacher, GddBadge, GddToken, GddMember, GddAccount, GddPair, GddEdition, GddImprint, GddSequenced)
     }
 
     private List<String> checkClauses(String table) {

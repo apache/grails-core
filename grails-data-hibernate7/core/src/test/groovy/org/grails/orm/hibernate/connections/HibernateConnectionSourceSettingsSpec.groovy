@@ -119,82 +119,18 @@ class HibernateConnectionSourceSettingsSpec extends Specification {
         listeners['create-onflush'].is(onFlushListener)
     }
 
-    void "native domain binding is on by default and the classic domain binder can be selected"() {
-        given:
-        String property = 'grails.hibernate.classicDomainBinding'
-        String previous = System.clearProperty(property)
-
-        when:
-        def settings = new HibernateConnectionSourceSettings()
-
-        then:
-        settings.hibernate.generatedDomainClasses
-
-        when:
-        settings.hibernate.generatedDomainClasses = false
-
-        then:
-        !settings.hibernate.generatedDomainClasses
-
-        cleanup:
-        if (previous != null) {
-            System.setProperty(property, previous)
-        }
-    }
-
-    void "a configured hibernate.generatedDomainClasses value is what the built settings hold"() {
-        given:
-        String property = 'grails.hibernate.classicDomainBinding'
-        String previous = System.clearProperty(property)
-
+    void "the settings have no switch of the domain binding: hibernate.generatedDomainClasses is not a setting and is ignored when configured"() {
         when:
         HibernateConnectionSourceSettings settings = new HibernateConnectionSourceSettingsBuilder(
-                DatastoreUtils.createPropertyResolver(['hibernate.generatedDomainClasses': configured])).build()
+                DatastoreUtils.createPropertyResolver(['hibernate.generatedDomainClasses': false, 'hibernate.flush.mode': 'commit'])).build()
 
         then:
-        settings.hibernate.generatedDomainClasses == expected
-
-        cleanup:
-        if (previous != null) {
-            System.setProperty(property, previous)
-        }
-
-        where:
-        configured | expected
-        false      | false
-        'false'    | false
-        true       | true
+        !settings.hibernate.hasProperty('generatedDomainClasses')
+        settings.hibernate.flush.mode.toString() == 'COMMIT'
     }
 
-    void "the JVM-wide system property switches the default to the classic domain binder, and a configured value wins"() {
-        given:
-        String property = 'grails.hibernate.classicDomainBinding'
-        String previous = System.getProperty(property)
-        System.setProperty(property, 'true')
-
-        when:
-        def settings = new HibernateConnectionSourceSettings()
-
-        then:
-        !settings.hibernate.generatedDomainClasses
-
-        when:
-        settings.hibernate.generatedDomainClasses = true
-
-        then:
-        settings.hibernate.generatedDomainClasses
-
-        cleanup:
-        if (previous == null) {
-            System.clearProperty(property)
-        } else {
-            System.setProperty(property, previous)
-        }
-    }
-
-    void "the published configuration metadata states the default of hibernate.generatedDomainClasses"() {
+    void "the published configuration metadata lists hibernate.generatedDomainClasses as removed, so an IDE flags it"() {
         given: 'the metadata an IDE shows for the key'
-        String previous = System.clearProperty('grails.hibernate.classicDomainBinding')
         URL metadata = HibernateConnectionSourceSettings.getResource('/META-INF/additional-spring-configuration-metadata.json')
         Map property = ((List<Map>) ((Map) new JsonSlurper().parse(metadata)).get('properties')).find {
             it.get('name') == 'hibernate.generatedDomainClasses'
@@ -202,13 +138,9 @@ class HibernateConnectionSourceSettingsSpec extends Specification {
 
         expect:
         property != null
-        property.get('defaultValue') == new HibernateConnectionSourceSettings().hibernate.generatedDomainClasses
-        (property.get('description') as String).contains('deprecated')
-
-        cleanup:
-        if (previous != null) {
-            System.setProperty('grails.hibernate.classicDomainBinding', previous)
-        }
+        !property.containsKey('defaultValue')
+        ((Map) property.get('deprecation')).get('level') == 'error'
+        (property.get('description') as String).contains('No longer used')
     }
 
     void "test toProperties with dirty checking and custom config"() {

@@ -45,16 +45,14 @@ import org.hibernate.boot.spi.MetadataImplementor
 import org.hibernate.dialect.H2Dialect
 import spock.lang.AutoCleanup
 import spock.lang.Specification
-import spock.lang.Unroll
 
 import org.grails.orm.hibernate.HibernateDatastore
 import org.grails.plugins.databasemigration.liquibase.GormDatabase
 
 /**
  * The Liquibase snapshot and the changelog that dbm-gorm-diff and dbm-generate-gorm-changelog build from the Hibernate
- * mapping model are the same whether the domain binder or the generated domain classes bound it: tables, columns and
- * their types, primary keys, foreign keys, unique constraints, indexes and sequences. The differences that remain are
- * the known ones of the generated mode, each pinned by its own feature.
+ * mapping model: tables, columns and their types, primary keys, foreign keys, unique constraints, indexes and sequences.
+ * They are the ones the classic binding of Grails 8 gave, but for the known differences each pinned by its own feature.
  */
 class GeneratedModeSnapshotSpec extends Specification {
 
@@ -66,13 +64,12 @@ class GeneratedModeSnapshotSpec extends Specification {
     @AutoCleanup
     HibernateDatastore datastore
 
-    private GormDatabase boot(boolean generated, List<Class> classes) {
+    private GormDatabase boot(List<Class> classes) {
         datastore?.close()
         datastore = new HibernateDatastore([
-                'dataSource.url'                  : "jdbc:h2:mem:snapSpec${generated}${System.nanoTime()};LOCK_TIMEOUT=10000;DB_CLOSE_DELAY=-1".toString(),
-                'dataSource.dialect'              : H2Dialect.name,
-                'dataSource.dbCreate'             : 'none',
-                'hibernate.generatedDomainClasses': generated,
+                'dataSource.url'     : "jdbc:h2:mem:snapSpec${System.nanoTime()};LOCK_TIMEOUT=10000;DB_CLOSE_DELAY=-1".toString(),
+                'dataSource.dialect' : H2Dialect.name,
+                'dataSource.dbCreate': 'none',
         ], classes as Class[])
         return new GormDatabase(new H2Dialect(), datastore)
     }
@@ -97,18 +94,6 @@ class GeneratedModeSnapshotSpec extends Specification {
             }
         }
         return lines.sort()
-    }
-
-    /**
-     * The known differences that the features below pin are hidden: the order of the columns of a primary key and the
-     * name Hibernate gives the unique key of a natural id.
-     */
-    private static List<String> withoutKnownDifferences(List<String> lines) {
-        return lines.collect { String line ->
-            line.replaceAll(/(?i)(on [\w.]+)\(([^)]*)\)/) { List<String> match ->
-                match[1] + '(' + match[2].split(', ').toList().sort().join(', ') + ')'
-            }.replaceAll(/UK[0-9a-z]{20,}/, 'UK<hash>')
-        }.sort()
     }
 
     private static String changeLog(GormDatabase reference) {
@@ -140,51 +125,40 @@ class GeneratedModeSnapshotSpec extends Specification {
         }.sort()
     }
 
-    def "the Liquibase snapshot of the generated mapping equals the snapshot of the binder mapping"() {
+    def "the Liquibase snapshot of the mapping has every kind of schema object"() {
         when:
-        List<String> binder = snapshotLines(boot(false, ALL))
-        List<String> generated = snapshotLines(boot(true, ALL))
+        List<String> generated = snapshotLines(boot(ALL))
 
-        then: 'the snapshot has every kind of object'
+        then:
         ['Table', 'Column', 'PrimaryKey', 'ForeignKey', 'UniqueConstraint', 'Index', 'Sequence'].every { String type ->
-            binder.any { it.startsWith(type + ' ') }
+            generated.any { it.startsWith(type + ' ') }
         }
-        binder.size() > 100
-
-        and: 'nothing differs besides the known differences'
-        withoutKnownDifferences(binder) - withoutKnownDifferences(generated) == []
-        withoutKnownDifferences(generated) - withoutKnownDifferences(binder) == []
+        generated.size() > 100
     }
 
     def "the primary key of a composite identifier lists its columns in the order Hibernate sorts them, and the natural id key has Hibernate's own name"() {
         when:
-        List<String> binder = snapshotLines(boot(false, ALL))
-        List<String> generated = snapshotLines(boot(true, ALL))
-        Closure<String> primaryKey = { List<String> lines -> lines.find { it.startsWith('PrimaryKey snap_enrollmentPK') } }
-        Closure<String> naturalKey = { List<String> lines ->
-            (lines.find { it.startsWith('UniqueConstraint UK') && it.contains('snap_natural') } =~ /UniqueConstraint (UK\w+)/)[0][1]
-        }
+        List<String> generated = snapshotLines(boot(ALL))
+        String primaryKey = generated.find { it.startsWith('PrimaryKey snap_enrollmentPK') }
+        String naturalKey = (generated.find { it.startsWith('UniqueConstraint UK') && it.contains('snap_natural') } =~ /UniqueConstraint (UK\w+)/)[0][1]
 
-        then: 'the binder keeps the order of the mapping, Hibernate sorts the parts of the identifier'
-        primaryKey(binder).contains('ON HIBERNATE.snap_enrollment(student, course)')
-        primaryKey(generated).contains('ON HIBERNATE.snap_enrollment(course, student)')
+        then: 'Hibernate sorts the parts of the identifier (the classic binding of Grails 8 kept the order of the mapping)'
+        primaryKey.contains('ON HIBERNATE.snap_enrollment(course, student)')
 
-        and: 'both name the natural id key from its table and columns'
-        naturalKey(binder) != naturalKey(generated)
+        and: 'the natural id key is named from its table and columns, by Hibernate'
+        naturalKey.startsWith('UK')
+        naturalKey.length() > 20
     }
 
-    def "the changelog generated from the generated mapping equals the one generated from the binder mapping"() {
+    def "the changelog generated from the mapping creates the sequences, identities and foreign keys"() {
         when:
-        List<String> binder = canonicalChangeLog(changeLog(boot(false, BASE)))
-        List<String> generated = canonicalChangeLog(changeLog(boot(true, BASE)))
+        List<String> generated = canonicalChangeLog(changeLog(boot(BASE)))
 
         then:
-        binder.size() > 15
-        binder.any { it.contains('<createSequence') }
-        binder.any { it.contains('autoIncrement="true"') }
-        binder.any { it.contains('<addForeignKeyConstraint') }
-        binder - generated == []
-        generated - binder == []
+        generated.size() > 15
+        generated.any { it.contains('<createSequence') }
+        generated.any { it.contains('autoIncrement="true"') }
+        generated.any { it.contains('<addForeignKeyConstraint') }
     }
     /**
      * The order of the columns of a table in the generated change log is the order Hibernate's mapping model holds them,
@@ -196,18 +170,12 @@ class GeneratedModeSnapshotSpec extends Specification {
      * columns, so dbm-gorm-diff against an existing database is not affected; only a createTable change set lists them
      * in the new order.
      */
-    @Unroll
-    def "without a schema action the columns of a table are in the order the binding created them (generated: #generated)"() {
+    def "without a schema action the columns of a table are in the order Hibernate's annotation binder created them"() {
         when:
-        boot(generated, [SnapAuthor, SnapBook])
+        boot([SnapAuthor, SnapBook])
 
-        then:
-        tableColumns('snap_book') == columns
-
-        where:
-        generated | columns
-        false     | ['id', 'version', 'title', 'isbn', 'author_id']
-        true      | ['id', 'isbn', 'title', 'version', 'author_id']
+        then: 'the classic binding of Grails 8 listed them as id, version, title, isbn, author_id'
+        tableColumns('snap_book') == ['id', 'isbn', 'title', 'version', 'author_id']
     }
 
     private List<String> tableColumns(String table) {

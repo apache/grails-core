@@ -70,17 +70,6 @@ class HibernateGormDatastoreSpec extends GrailsDataTckSpec<GrailsDataHibernate7T
         ]
     }
 
-    /**
-     * Registers the domain classes like {@code manager.registerDomainClasses(...)}, and boots the datastore through the
-     * generated-domain-class path ({@code hibernate.generatedDomainClasses}) whatever mode the suite runs in: Hibernate's
-     * annotation binder binds classes generated from the GORM mapping while sessions keep persisting and loading the real
-     * domain classes. {@code registerDomainClasses} boots through the mode of the suite, native by default and the classic
-     * domain binder with {@code -Pgrails.test.classicDomainBinding=true}.
-     */
-    void registerGeneratedDomainClasses(Class... classes) {
-        manager.registerGeneratedDomainClasses(classes)
-    }
-
     void cleanup() {
         // Each registry from getCollector() runs its own JDBC connection pool, whose validation
         // thread keeps the registry and everything it references alive until it is destroyed.

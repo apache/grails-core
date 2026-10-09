@@ -53,15 +53,6 @@ Registered via `META-INF/spring/org.springframework.boot.autoconfigure.AutoConfi
 A Grails CLI SPI hook (`org.grails.cli.compiler.CompilerAutoConfiguration`) that detects `@Entity` classes in Grails scripts and automatically adds the `grails-data-hibernate7-core` dependency and `grails.gorm.*` imports to the compilation context.
 Registered via `META-INF/services/org.grails.cli.compiler.CompilerAutoConfiguration`.
 
-## Running the suite with the classic domain binder (contributors)
-
-Native domain binding is the default (`hibernate.generatedDomainClasses` defaults to `true`), so the core suite boots every datastore the
-TCK manager builds natively. `./gradlew -Pgrails.test.classicDomainBinding=true :grails-data-hibernate7-core:test` boots them through the
-deprecated classic binder instead (the Gradle property sets the JVM property `grails.hibernate.classicDomainBinding`, which the settings
-default and the TCK manager read; a spec that sets `hibernate.generatedDomainClasses` itself is not affected). The specs listed in
-`core/classic-only-specs.txt` assert facts of the classic boot model and run only in that mode; the default run excludes them. Both modes
-are wired in `gradle/hibernate7-test-config.gradle`.
-
 ## Differential specs and the frozen classic oracle (contributors)
 
 Native domain binding (`hibernate.generatedDomainClasses`, `GrailsDomainGenerator`) is checked against what the classic domain binder

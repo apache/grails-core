@@ -44,21 +44,6 @@ tasks.withType(Test).configureEach {
 
     useJUnitPlatform()
 
-    // Native domain binding (hibernate.generatedDomainClasses, on by default) is what the suite runs by default.
-    // -Pgrails.test.classicDomainBinding=true boots every datastore that does not set the key itself through the classic
-    // domain binder instead (system property grails.hibernate.classicDomainBinding, read by the settings default and by the
-    // TCK manager). Specs that exercise the classic binder's internals only make sense in that run and are listed, one
-    // class name per line, in the module's classic-only-specs.txt: the default run excludes them, the classic run runs them.
-    if (providers.gradleProperty('grails.test.classicDomainBinding').map { it.toBoolean() }.getOrElse(false)) {
-        systemProperty('grails.hibernate.classicDomainBinding', 'true')
-    } else {
-        File classicOnly = project.file('classic-only-specs.txt')
-        if (classicOnly.exists()) {
-            classicOnly.readLines().collect { it.trim() }.findAll { it && !it.startsWith('#') }.each { String pattern ->
-                filter.excludeTestsMatching(pattern)
-            }
-        }
-    }
     // The differential specs compare native domain binding against what the classic binder produced, recorded under
     // src/test/resources/classic-oracle/. By default they read the recorded files and do not boot the classic binder.
     // -Pgrails.test.verifyClassicOracle=true boots it too and asserts it still produces exactly the recorded data;

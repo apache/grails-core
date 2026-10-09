@@ -29,7 +29,7 @@ import grails.persistence.Entity
 class GeneratedDomainClassesConverterSpec extends HibernateGormDatastoreSpec {
 
     void setupSpec() {
-        registerGeneratedDomainClasses(GdcConverted)
+        manager.registerDomainClasses(GdcConverted)
     }
 
     def "the converted columns hold the converted values and the properties read back"() {
