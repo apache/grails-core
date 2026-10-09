@@ -73,14 +73,11 @@ class SchemaBasedMultiTenancySpec extends AutoStartedMongoSpec {
     }
 
     void "Test persist and retrieve entities with multi tenancy"() {
-        setup:
-        CompanyB.eachTenant {
-            try {
-                CompanyB.DB.drop()    
-            } catch(e) {
-                // continue
+        setup:"only the databases of these tenants are dropped, as every database of the shared server is a tenant, config included"
+        ['test1', 'test2'].each { String tenantId ->
+            CompanyB.withTenant(tenantId) {
+                CompanyB.DB.drop()
             }
-            
         }
 
         when:"A tenant id is present"
