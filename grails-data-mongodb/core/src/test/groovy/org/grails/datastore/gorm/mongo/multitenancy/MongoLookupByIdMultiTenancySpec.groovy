@@ -30,6 +30,7 @@ import grails.gorm.multitenancy.Tenants
 import grails.mongodb.MongoEntity
 import grails.persistence.Entity
 import org.apache.grails.testing.mongo.AutoStartedMongoSpec
+import org.grails.datastore.mapping.core.connections.ConnectionSource
 import org.grails.datastore.mapping.mongo.MongoDatastore
 import org.grails.datastore.mapping.mongo.config.MongoSettings
 import org.grails.datastore.mapping.multitenancy.exceptions.TenantNotFoundException
@@ -155,6 +156,96 @@ class MongoLookupByIdMultiTenancySpec extends AutoStartedMongoSpec {
         thrown(DataIntegrityViolationException)
     }
 
+    void 'a lookup by id inside a transaction finds an instance saved earlier in that transaction'() {
+        when: 'instances are saved inside a transaction, which GORM for MongoDB does not flush before a query'
+        Map<String, Object> lookups = Memo.withNewSession {
+            Memo.withTransaction {
+                Memo saved = new Memo(title: 'New').save()
+                Memo unvalidated = new Memo(title: 'Unvalidated').save(validate: false)
+                List<Memo> all = Memo.getAll(saved.id, unvalidated.id)
+                [unvalidatedTenantId: unvalidated.tenantId,
+                 get                : Memo.get(saved.id).is(saved),
+                 exists             : Memo.exists(saved.id),
+                 getAll             : all[0].is(saved) && all[1].is(unvalidated),
+                 load               : Memo.load(saved.id).is(saved),
+                 getUnvalidated     : Memo.get(unvalidated.id).is(unvalidated)]
+            }
+        }
+
+        then: 'the session returns them, including one that gets its tenant id only when it is inserted'
+        lookups == [unvalidatedTenantId: null, get: true, exists: true, getAll: true, load: true, getUnvalidated: true]
+
+        and: 'the transaction inserts both for the current tenant'
+        Memo.withNewSession { Memo.countByTitleInList(['New', 'Unvalidated']) } == 2
+        Memo.withTenant('other') { Memo.withNewSession { Memo.countByTitleInList(['New', 'Unvalidated']) } } == 0
+    }
+
+    void 'a lookup by id does not flush the session'() {
+        when: 'an instance is changed and the session is used for lookups by id before it is flushed'
+        String stored = Memo.withNewSession {
+            Memo own = Memo.get(ownId)
+            own.title = 'Changed'
+            own.save()
+            Memo.get(otherId)
+            Memo.exists(new ObjectId())
+            Memo.getAll(otherId, new ObjectId())
+            Memo.withNewSession { Memo.get(ownId).title }
+        }
+
+        then: 'the change has not been written'
+        stored == 'Own'
+    }
+
+    void 'an instance of another tenant that the session already holds is not returned'() {
+        when: 'the session holds an instance of another tenant'
+        Map<String, Object> lookups = Memo.withNewSession {
+            Memo other = Memo.withTenant('other') { Memo.get(otherId) }
+            [held  : other?.title,
+             get   : Memo.get(otherId),
+             read  : Memo.read(otherId),
+             exists: Memo.exists(otherId),
+             getAll: Memo.getAll(otherId, ownId)*.title]
+        }
+
+        then: 'a lookup by id for the current tenant does not find it'
+        lookups == [held: 'Other', get: null, read: null, exists: false, getAll: [null, 'Own']]
+
+        when: 'a proxy for it is used'
+        Memo.withNewSession {
+            Memo.withTenant('other') { Memo.get(otherId) }
+            Memo.load(otherId).title
+        }
+
+        then:
+        thrown(DataIntegrityViolationException)
+    }
+
+    void 'load returns the instance the session already holds for the current tenant'() {
+        expect:
+        Memo.withNewSession {
+            Memo own = Memo.get(ownId)
+            Memo.load(ownId).is(own)
+        }
+    }
+
+    void 'a tenant resolver that resolves the default connection source does not lift the restriction'() {
+        given:
+        System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, ConnectionSource.DEFAULT)
+
+        expect: 'a lookup by id agrees with a query'
+        Memo.withNewSession { Memo.findById(ownId) } == null
+        Memo.withNewSession { Memo.get(ownId) } == null
+        Memo.withNewSession { Memo.read(otherId) } == null
+        !Memo.withNewSession { Memo.exists(ownId) }
+        Memo.withNewSession { Memo.getAll(ownId, otherId) } == [null, null]
+
+        when:
+        Memo.withNewSession { Memo.load(ownId).title }
+
+        then:
+        thrown(DataIntegrityViolationException)
+    }
+
     void 'a lookup by id inside withTenant is restricted to that tenant'() {
         expect:
         Memo.withTenant('other') { Memo.withNewSession { Memo.get(otherId)?.title } } == 'Other'
@@ -186,6 +277,14 @@ class MongoLookupByIdMultiTenancySpec extends AutoStartedMongoSpec {
 
         then:
         thrown(TenantNotFoundException)
+    }
+
+    void 'getAll without ids needs no current tenant'() {
+        given:
+        System.clearProperty(SystemPropertyTenantResolver.PROPERTY_NAME)
+
+        expect:
+        Memo.withNewSession { Memo.getAll([]) } == []
     }
 
     private static ObjectId saveMemo(String tenantId, String title) {
