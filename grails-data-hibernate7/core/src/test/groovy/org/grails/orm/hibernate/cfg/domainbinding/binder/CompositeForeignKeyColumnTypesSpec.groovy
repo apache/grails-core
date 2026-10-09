@@ -47,7 +47,7 @@ class CompositeForeignKeyColumnTypesSpec extends Specification {
             ],
             CfkParent, CfkChild, CfkGrandParent, CfkMiddle, CfkLeaf,
             CfkOrdParent, CfkOrdChild, CfkOrdGrand, CfkOrdMiddle, CfkOrdLeaf,
-            PrbGrand, PrbMiddle, PrbLeaf, PrbHub, PrbHubTag, PrbHubRef)
+            PrbGrand, PrbMiddle, PrbLeaf, PrbHub, PrbHubTag, PrbHubRef, PrbHubChild)
 
     private List<List> columns(String table) {
         List<List> rows = []
@@ -222,14 +222,24 @@ class CompositeForeignKeyColumnTypesSpec extends Specification {
                         ['prb_hub_zed', 'zed']],
                 prb_hub_tag: [['prb_hub_tag_id', 'id']]
         ]
+
+        and: 'the child of the bidirectional one-to-many references the hub by the same key, and by that key only'
+        foreignKeyPairs('PRB_HUB_CHILD') == [
+                prb_hub: [
+                        ['prb_hub_ace', 'ace'],
+                        ['prb_hub_grand_alpha', 'prb_grand_alpha'],
+                        ['prb_hub_grand_zeta', 'prb_grand_zeta'],
+                        ['prb_hub_zed', 'zed']]
+        ]
     }
 
-    void "a hub whose multi-column nested part sorts between two plain parts is saved with a tag and a reference and reloaded"() {
+    void "a hub whose multi-column nested part sorts between two plain parts is saved with a tag, a child and a reference and reloaded"() {
         when:
         PrbGrand.withNewTransaction {
             PrbGrand grand = new PrbGrand(zeta: 'z2', alpha: 'a2').save(failOnError: true)
             PrbHub hub = new PrbHub(zed: 'zz', ace: 'aa', grand: grand)
                     .addToTags(new PrbHubTag(label: 'tag'))
+                    .addToChildren(new PrbHubChild(name: 'kid'))
                     .save(failOnError: true)
             new PrbHubRef(name: 'ref', hub: hub).save(failOnError: true, flush: true)
         }
@@ -238,6 +248,10 @@ class CompositeForeignKeyColumnTypesSpec extends Specification {
         PrbHubRef.withNewSession {
             PrbHubRef ref = PrbHubRef.findByName('ref')
             ref.hub.zed == 'zz' && ref.hub.ace == 'aa' && ref.hub.grand.zeta == 'z2' && ref.hub.tags*.label == ['tag']
+        }
+        PrbHubChild.withNewSession {
+            PrbHubChild child = PrbHubChild.findByName('kid')
+            child.hub.zed == 'zz' && child.hub.ace == 'aa' && child.hub.grand.alpha == 'a2'
         }
     }
 }
@@ -279,7 +293,7 @@ class PrbHub implements Serializable {
     String zed
     String ace
     PrbGrand grand
-    static hasMany = [tags: PrbHubTag]
+    static hasMany = [tags: PrbHubTag, children: PrbHubChild]
 
     static mapping = MappingBuilder.define {
         composite('zed', 'grand', 'ace')
@@ -289,6 +303,12 @@ class PrbHub implements Serializable {
 @Entity
 class PrbHubTag {
     String label
+}
+
+@Entity
+class PrbHubChild {
+    String name
+    static belongsTo = [hub: PrbHub]
 }
 
 @Entity
