@@ -150,7 +150,10 @@ class DefaultUrlMappingsHolder implements UrlMappings {
             int optionalIndex = -1
             for (int j = 0; j < params.length; j++) {
                 Constrained param = params[j]
-                if (param instanceof ConstrainedProperty) {
+                // Class.isInstance rather than instanceof: flow typing would call isNullable() on a receiver cast
+                // to ConstrainedProperty, and verifying that call loads Constrained, which an application without
+                // grails-datamapping-validation does not have. Called on the Constrained it stays unloaded.
+                if (ConstrainedProperty.isInstance(param)) {
                     if (!param.isNullable()) {
                         requiredParams.add(((ConstrainedProperty) param).getPropertyName())
                     }
