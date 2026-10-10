@@ -55,9 +55,9 @@ class GroovyPageUnitTestResourceLoaderSpec extends Specification {
         Resource resource = loader.getResource('/book/missing.gsp')
         String expected = new File(BuildSettings.BASE_DIR.absolutePath + File.separatorChar + GrailsResourceUtils.VIEWS_DIR_PATH + '/book/missing.gsp').canonicalPath
 
-        then:
+        then: 'the resource is the file itself, whatever separator the platform writes its path with'
         resource instanceof FileSystemResource
-        ((FileSystemResource) resource).path == expected
+        ((FileSystemResource) resource).file.canonicalPath == expected
         !resource.exists()
     }
 
@@ -74,7 +74,7 @@ class GroovyPageUnitTestResourceLoaderSpec extends Specification {
         Resource resource = loader.getResource('/book/list.gsp')
 
         then:
-        ((FileSystemResource) resource).path == new File(viewsDir, 'book/list.gsp').canonicalPath
+        ((FileSystemResource) resource).file.canonicalPath == new File(viewsDir, 'book/list.gsp').canonicalPath
 
         cleanup:
         viewsDir.deleteDir()
