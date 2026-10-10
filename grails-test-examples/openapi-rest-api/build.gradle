@@ -32,7 +32,7 @@ group = 'openapirest'
 apply plugin: 'org.apache.grails.gradle.grails-web'
 
 dependencies {
-    implementation platform(project(':grails-bom'))
+    implementation platform(project(':grails-hibernate7-bom'))
 
     implementation 'org.apache.grails:grails-dependencies-starter-web'
     implementation 'org.apache.grails:grails-data-hibernate7'
