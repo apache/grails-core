@@ -20,12 +20,29 @@
 // Add JUnit Platform launcher dependency required by Gradle 9 for running tests
 // Also add ByteBuddy for Spock mocking on Java 17+ (CGLIB doesn't support Java 17 class files)
 dependencies {
-    testRuntimeOnly 'org.junit.platform:junit-platform-launcher:1.12.2'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
     testImplementation "net.bytebuddy:byte-buddy"
 }
 
+// Skipped Test tasks still execute their dependsOn. Only wire the local-Maven publish chain
+// of the included builds when Forge tests will actually run.
+boolean forgeTestsEnabled = !['skipTests', 'skipForgeTests'].any { project.hasProperty(it) }
 boolean cacheTests = !doNotCacheTests
-tasks.withType(Test).configureEach {
+
+tasks.withType(Test).configureEach { Test testTask ->
+    if (forgeTestsEnabled) {
+        // Only the modules whose specs build generated applications (TestKit) need the published
+        // framework; the unit specs of the other modules run without the publish chain.
+        boolean forgeTestsNeedLocalMaven = project.findProperty('forgeTestsNeedLocalMaven') == true
+        if (forgeTestsNeedLocalMaven) {
+            testTask.dependsOn(
+                    gradle.includedBuild('grails-core').task(':publishAllPublicationsToTestCaseMavenRepoRepository'),
+                    gradle.includedBuild('grails-gradle').task(':publishAllPublicationsToTestCaseMavenRepoRepository')
+            )
+            testTask.environment('GRAILS_REPO_URL', uri(rootProject.layout.projectDirectory.dir('../build/local-maven')))
+        }
+    }
+
     // Honor DO_NOT_CACHE_TESTS=1 so developers can repeatedly invoke the same test command
     // without --rerun-tasks (and without recompiling everything else).
     outputs.cacheIf { cacheTests }
@@ -41,12 +58,11 @@ tasks.withType(Test).configureEach {
         showStackTraces = true
     }
 
-    environment('GRAILS_REPO_URL', uri(rootProject.layout.projectDirectory.dir('../build/local-maven')))
+    maxHeapSize = '2G'
     jvmArgs('-Duser.country=US', '-Duser.language=en',
             '--add-opens', 'java.base/java.lang=ALL-UNNAMED')
     forkEvery = 100
     maxParallelForks = rootProject.ext.configuredTestParallel
-    maxHeapSize = '2G'
 
     useJUnitPlatform()
 }

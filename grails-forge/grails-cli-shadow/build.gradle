@@ -15,6 +15,7 @@
  *  limitations under the License.
  */
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
+import com.github.jengelman.gradle.plugins.shadow.transformers.PropertiesFileTransformer
 import org.apache.grails.forge.buildlogic.shadowjar.GrailsShadowLicenseTransform
 import org.apache.grails.forge.buildlogic.shadowjar.GrailsShadowNoticeTransform
 
@@ -24,6 +25,7 @@ plugins {
     id 'org.apache.grails.buildsrc.properties'
     id 'org.apache.grails.buildsrc.dependency-validator'
     id 'org.apache.grails.buildsrc.compile'
+    id 'org.apache.grails.gradle.grails-code-style'
 }
 
 version = projectVersion
@@ -62,6 +64,15 @@ shadowJarTask.configure { ShadowJar it ->
     // services & custom grails.factories have to be merged since commands can be created from both sources
     it.mergeServiceFiles()
     it.mergeServiceFiles('META-INF/grails.factories')
+    // the Forge CLI starts a Grails application: Spring Boot finds its auto-configurations and
+    // bootstrap initializers through these files, one per jar, so they are merged rather than
+    // letting the first jar win
+    it.mergeServiceFiles('META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports')
+    it.transform(PropertiesFileTransformer) {
+        // the views registries of the Forge plugin and the Forge CLI, each naming its own compiled pages
+        paths = ['META-INF/spring.factories', 'gsp/views.properties']
+        mergeStrategy = 'append'
+    }
 
     // groovy extensions are shipped with grails-core
     it.mergeGroovyExtensionModules()

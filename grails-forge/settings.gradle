@@ -30,6 +30,10 @@ pluginManagement {
     repositories {
         configurePluginRepositories(delegate)
     }
+    // the shadow plugin comes with build-logic; this one only grails-cli applies
+    plugins {
+        id 'io.sdkman.vendors' version gradleSdkvendorPluginVersion
+    }
 }
 
 plugins {
@@ -68,11 +72,9 @@ rootProject.name = 'grails-forge'
 include(
         'grails-cli',
         'grails-cli-shadow', // to allow us to transform our own artifacts
-        'grails-forge-analytics-postgres',
-        'grails-forge-api',
         'grails-forge-cli',
         'grails-forge-core',
-        'grails-forge-web-netty',
+        'grails-forge-web',
         'test-core',
 )
 

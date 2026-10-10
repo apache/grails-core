@@ -44,3 +44,28 @@ GSP also supports the contentType directive:
 ----
 
 The contentType directive allows using GSP to render other formats.
+
+GSP writes the text of a page exactly as it is written, including the line breaks around scriptlets, directives and comments. That does not matter for HTML, but it does for text in which every line counts, such as a source file or a build script. The `trimLogicLines` directive makes a line holding only page directives, scriptlets (`<% %>` or `%{ }%`) and comments (`%{-- --}%` or `<%-- --%>`) write nothing, neither its indentation nor its line break:
+
+[,xml]
+----
+<%@ page trimLogicLines="true" expressionCodec="none" %>
+<%@ model="List<String> pluginIds" %>
+plugins {
+    <% for (String pluginId : pluginIds) { %>
+    id '${pluginId}'
+    <% } %>
+}
+----
+
+renders, with `pluginIds` holding `java` and `groovy`:
+
+[,groovy]
+----
+plugins {
+    id 'java'
+    id 'groovy'
+}
+----
+
+A line holding text, an expression (`${}` or `<%= %>`) or a tag besides the logic is written as it is. Only the lines of the page's text are trimmed: a line inside an expression, a tag, a scriptlet or a comment is never changed, even when it looks like a scriptlet. The lines of the page keep their numbers in the errors reported against it.

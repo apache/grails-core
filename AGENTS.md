@@ -131,7 +131,7 @@ This repository contains multiple independent Gradle projects:
 | **grails-core** (root) | Main framework with 60+ modules | `./gradlew build` |
 | **build-logic/** | Gradle convention plugins for the build | `cd build-logic && ./gradlew build` |
 | **grails-gradle/** | Grails Gradle plugins | `cd grails-gradle && ./gradlew build` |
-| **grails-forge/** | Application generator (like Spring Initializr) | `cd grails-forge && ./gradlew build` |
+| **grails-forge/** | Application generator (like Spring Initializr): a Grails plugin (`grails-forge-core`) hosted by a Grails web application (`grails-forge-web`) and a non-web Grails application (`grails-forge-cli`), consuming the framework by coordinates | `cd grails-forge && ./gradlew build` |
 | **end-to-end/** | End-to-end tests consuming published Grails artifacts (see `end-to-end/README.md` for required setup) | `cd end-to-end && ./gradlew check` |
 
 Each project has its own `settings.gradle` and independent build. When working on a specific project, run Gradle commands from that project's directory.

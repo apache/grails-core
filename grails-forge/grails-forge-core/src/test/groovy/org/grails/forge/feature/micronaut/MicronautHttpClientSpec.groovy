@@ -19,11 +19,11 @@
 
 package org.grails.forge.feature.micronaut
 
-import org.grails.forge.BeanContextSpec
+import org.grails.forge.ApplicationContextSpec
 import org.grails.forge.BuildBuilder
 import org.grails.forge.options.JdkVersion
 
-class MicronautHttpClientSpec extends BeanContextSpec {
+class MicronautHttpClientSpec extends ApplicationContextSpec {
 
 
     void "test dependencies"() {

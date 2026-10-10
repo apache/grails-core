@@ -135,7 +135,7 @@ Resources:
     Properties:
       ApplicationName:
         Ref: ApplicationName
-      Description: Grails Forge Micronaut API.
+      Description: Grails Forge API.
       ResourceLifecycleConfig:
         ServiceRole:
           Fn::GetAtt:

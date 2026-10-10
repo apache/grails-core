@@ -19,7 +19,7 @@
 
 package org.grails.forge.feature.github.workflows
 
-import org.grails.forge.BeanContextSpec
+import org.grails.forge.ApplicationContextSpec
 import org.grails.forge.application.ApplicationType
 import org.grails.forge.feature.github.workflows.plain.PlainGithubWorkflowFeature
 import org.grails.forge.fixture.CommandOutputFixture
@@ -30,7 +30,7 @@ import org.grails.forge.options.Options
 import org.grails.forge.options.TestFramework
 import spock.lang.Unroll
 
-class PlainGithubWorkflowSpec extends BeanContextSpec implements CommandOutputFixture {
+class PlainGithubWorkflowSpec extends ApplicationContextSpec implements CommandOutputFixture {
 
     @Unroll
     void 'test github workflow is created for #buildTool'(BuildTool buildTool, String workflowName) {

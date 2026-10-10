@@ -220,6 +220,11 @@ public class GroovyPageParser implements Tokens {
     private static final String OUT_CODEC_DIRECTIVE = OutputEncodingSettings.OUT_CODEC_NAME + CODEC_DIRECTIVE_POSTFIX;
     private static final String TAGLIB_CODEC_DIRECTIVE = OutputEncodingSettings.TAGLIB_CODEC_NAME + CODEC_DIRECTIVE_POSTFIX;
     private static final String GRAILS_LAYOUT_PREPROCESS_DIRECTIVE = "grailsLayoutPreprocess";
+    /**
+     * The page directive by which a page asks that the lines holding only directives, scriptlets and
+     * comments write nothing, for a page rendering text in which every line break counts.
+     */
+    public static final String TRIM_LOGIC_LINES_DIRECTIVE = "trimLogicLines";
 
     private String pluginAnnotation;
     public static final String GROOVY_SOURCE_CHAR_ENCODING = "UTF-8";
@@ -320,6 +325,9 @@ public class GroovyPageParser implements Tokens {
         applyCompileStaticSystemProperty();
 
         Map<String, String> directives = parseDirectives(gspSource);
+        if (GrailsStringUtils.toBoolean(directives.get(TRIM_LOGIC_LINES_DIRECTIVE))) {
+            gspSource = LogicLineTrimmer.trim(gspSource);
+        }
         if (isGrailsLayoutPreprocessingEnabled(directives.get(GRAILS_LAYOUT_PREPROCESS_DIRECTIVE))) {
             // GSP preprocessing for direct grails layout integration: replace head -> g:captureHead, title -> g:captureTitle, meta -> g:captureMeta, body -> g:captureBody
             gspSource = grailsLayoutPreprocessor.addGspGrailsLayoutCapturing(gspSource);
@@ -423,13 +431,21 @@ public class GroovyPageParser implements Tokens {
         String input = PRESCAN_COMMENT_PATTERN.matcher(gspSource).replaceAll("");
         // find page directives
         Matcher m = PRESCAN_PAGE_DIRECTIVE_PATTERN.matcher(input);
-        if (m.find()) {
+        boolean first = true;
+        while (m.find()) {
             Matcher mat = PAGE_DIRECTIVE_PATTERN.matcher(m.group(1));
             while (mat.find()) {
                 String name = mat.group(1);
                 String value = mat.group(3);
-                result.put(name, value);
+                // the first page directive is read as it always was, a later one only adds what it
+                // names that the ones before it do not
+                if (first) {
+                    result.put(name, value);
+                } else {
+                    result.putIfAbsent(name, value);
+                }
             }
+            first = false;
         }
         return result;
     }
