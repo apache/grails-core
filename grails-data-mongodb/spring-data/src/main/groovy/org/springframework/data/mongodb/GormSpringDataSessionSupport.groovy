@@ -16,11 +16,11 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.springframework.data.mongodb;
+package org.springframework.data.mongodb
 
-import com.mongodb.client.ClientSession;
-
-import org.springframework.transaction.support.TransactionSynchronizationManager;
+import com.mongodb.client.ClientSession
+import groovy.transform.CompileStatic
+import org.springframework.transaction.support.TransactionSynchronizationManager
 
 /**
  * Binds a GORM-owned {@link ClientSession} into Spring Data MongoDB's thread-bound resources so that
@@ -46,7 +46,8 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
  *
  * @since 8.0
  */
-public final class GormSpringDataSessionSupport {
+@CompileStatic
+final class GormSpringDataSessionSupport {
 
     private GormSpringDataSessionSupport() {
     }
@@ -54,11 +55,12 @@ public final class GormSpringDataSessionSupport {
     /**
      * Binds the given session to the current thread for the given factory, if nothing is bound yet.
      */
-    public static void bindClientSession(MongoDatabaseFactory databaseFactory, ClientSession clientSession) {
+    static void bindClientSession(MongoDatabaseFactory databaseFactory, ClientSession clientSession) {
         if (!TransactionSynchronizationManager.hasResource(databaseFactory)) {
-            MongoResourceHolder holder = new MongoResourceHolder(clientSession, databaseFactory);
-            holder.setSynchronizedWithTransaction(true);
-            TransactionSynchronizationManager.bindResource(databaseFactory, holder);
+            MongoResourceHolder holder = new MongoResourceHolder(clientSession, databaseFactory)
+            holder.setSynchronizedWithTransaction(true)
+            TransactionSynchronizationManager.bindResource(databaseFactory, holder)
         }
     }
+
 }
