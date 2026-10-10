@@ -16,9 +16,10 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.datastore.mapping.mongo;
+package org.grails.datastore.mapping.mongo
 
-import org.bson.Document;
+import groovy.transform.CompileStatic
+import org.bson.Document
 
 /**
  * An index on a collection that domain classes map, whose keys none of those domain classes declares.
@@ -31,5 +32,8 @@ import org.bson.Document;
  * @see MongoDatastore#findUndeclaredIndexes()
  * @see MongoDatastore#dropUndeclaredIndexes()
  */
-public record UndeclaredIndex(String database, String collection, String name, Document key, Document definition) {
+@CompileStatic
+@SuppressWarnings(['ClassStartsWithBlankLine', 'Indentation'])
+record UndeclaredIndex(String database, String collection, String name, Document key, Document definition) {
+
 }

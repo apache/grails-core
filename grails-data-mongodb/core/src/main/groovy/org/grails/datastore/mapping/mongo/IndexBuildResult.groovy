@@ -16,7 +16,9 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.datastore.mapping.mongo;
+package org.grails.datastore.mapping.mongo
+
+import groovy.transform.CompileStatic
 
 /**
  * What an index build applied, as its summary line reports it. The counts are of index declarations, so
@@ -34,6 +36,9 @@ package org.grails.datastore.mapping.mongo;
  * @param elapsedMillis  how long the build took
  * @see MongoDatastore#buildIndexAsync()
  */
-public record IndexBuildResult(String database, int domainClasses, int created, int recreated, int alreadyPresent,
+@CompileStatic
+@SuppressWarnings(['ClassStartsWithBlankLine', 'Indentation'])
+record IndexBuildResult(String database, int domainClasses, int created, int recreated, int alreadyPresent,
                                int unclassified, int failures, long elapsedMillis) {
+
 }
