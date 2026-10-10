@@ -96,7 +96,7 @@ class GroovyPageMetaInfo implements GrailsApplicationAware {
     private boolean initialized = false
 
     private CacheEntry<Resource> shouldReloadCacheEntry = new CacheEntry<>()
-    static String DEFAULT_PLUGIN_PATH = ''
+    public static String DEFAULT_PLUGIN_PATH = ''
 
     volatile boolean metaClassShouldBeRemoved = false
 

@@ -446,9 +446,9 @@ class DefaultGroovyPageLocator implements GroovyPageLocator, ResourceLoaderAware
     }
 
     static class PluginViewPathInfo {
-        String basePath
-        String pluginName
-        String path
+        public String basePath
+        public String pluginName
+        public String path
 
         PluginViewPathInfo(String uri) {
             basePath = uri.substring(PLUGINS_PATH.length(), uri.length())
