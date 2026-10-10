@@ -54,25 +54,26 @@ class GrailsDataHibernate5Spec extends ApplicationContextSpec implements Command
         template.contains('runtimeOnly "com.h2database:h2"')
     }
 
-    void "test dependencies are present for buildSrc"() {
+    void "test the plugin is kept out of buildSrc"() {
         when:
         final String template = new BuildBuilder(beanContext)
                 .features(["gorm-hibernate5"])
                 .renderBuildSrc()
 
         then:
-        template.contains('implementation "org.apache.grails:grails-data-hibernate5"')
+        !template.contains('org.apache.grails:grails-data-hibernate5')
     }
 
-    void "test buildSrc is present for buildscript dependencies"() {
+    void "test the plugin is kept off the buildscript classpath"() {
         given:
         final def output = generate(ApplicationType.WEB, new Options(DevelopmentReloading.DEVTOOLS))
         final def buildGradle = output["build.gradle"]
 
         expect:
         buildGradle != null
-        buildGradle.contains("classpath \"org.apache.grails:grails-data-hibernate5\"")
-
+        buildGradle.contains("classpath \"org.apache.grails:grails-gradle-plugins\"")
+        !buildGradle.contains("classpath \"org.apache.grails:grails-data-hibernate5\"")
+        buildGradle.contains("implementation \"org.apache.grails:grails-data-hibernate5\"")
     }
 
     void "test config"() {
