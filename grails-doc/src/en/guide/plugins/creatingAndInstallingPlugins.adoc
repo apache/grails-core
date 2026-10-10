@@ -108,7 +108,7 @@ class QuartzGrailsPlugin extends Plugin {
 Adds Quartz job scheduling features
 '''
     def profiles = ['web']
-    List loadAfter = ['hibernate3', 'hibernate4', 'hibernate5', 'services']
+    List loadAfter = ['hibernate7', 'services']
     def documentation = "https://apache.github.io/grails-quartz/latest/"
     def license = "APACHE"
     def issueManagement = [ system: "Github Issues", url: "https://github.com/apache/grails-quartz/issues" ]
@@ -464,7 +464,7 @@ class QuartzGrailsPlugin extends Plugin {
 Adds Quartz job scheduling features
 '''
     def profiles = ['web']
-    List loadAfter = ['hibernate3', 'hibernate4', 'hibernate5', 'services']
+    List loadAfter = ['hibernate7', 'services']
     def documentation = "https://apache.github.io/grails-quartz/latest/"
     def license = "APACHE"
     def issueManagement = [ system: "Github Issues", url: "https://github.com/apache/grails-quartzissues" ]

@@ -62,7 +62,7 @@ types that render differently than in Grails 7.
 ==== Hibernate 7 Application Generation
 
 Grails Forge can now generate applications configured for Grails Data with Hibernate 7.
-The `create-*` commands also accept a new `-d, --data` option (the previous `-g` and `--gorm` flags remain supported as legacy aliases) with the values `hibernate5`, `hibernate7`, and `mongodb`; the legacy value `hibernate` is still accepted and selects Hibernate 5:
+The `create-*` commands also accept a new `-d, --data` option (the previous `-g` and `--gorm` flags remain supported as legacy aliases) with the values `hibernate7` and `mongodb`; the legacy value `hibernate` is still accepted and selects Hibernate 7:
 
 [source,console]
 ----
@@ -70,7 +70,7 @@ grails -t forge create-app --data=hibernate7 com.example.demo
 ----
 
 Applications generated for Hibernate 7 consume `grails-hibernate7-bom` consistently across the application dependencies, the buildscript classpath, and `buildSrc`.
-This avoids the dependency resolution conflicts that occur when an application generated for Hibernate 5 is manually switched to `grails-data-hibernate7` while the default `grails-bom` remains on the build classpath.
+This avoids the dependency resolution conflicts that occur when an application is manually switched to `grails-data-hibernate7` while the default `grails-bom` remains on the build classpath.
 The `database-migration` feature also selects the matching `grails-data-hibernate7-dbmigration` plugin automatically.
 
 ==== Asynchronous Grails Data Application Generation
@@ -317,7 +317,7 @@ details.
 
 ==== GORM for Hibernate Locking Improvements
 
-GORM for Hibernate 5 and Hibernate 7 gain three related locking capabilities. All of them require an active transaction, hold the lock until that transaction commits or rolls back, and are available on named connections (`Book.secondary.lock(id, refresh: true)`, `book.secondary.refresh(lock: true)`, within a transaction on that connection) and under a bound tenant. Datastores that do not support a capability throw `UnsupportedOperationException` rather than silently falling back to a plain refresh or an ordinary lock. The existing `entity.lock()`, `DomainClass.lock(id)` and `entity.refresh()` methods are unchanged; `entity.mutex` is built on the first of these capabilities and changes behaviour, as described below.
+GORM for Hibernate 7 gains three related locking capabilities. All of them require an active transaction, hold the lock until that transaction commits or rolls back, and are available on named connections (`Book.secondary.lock(id, refresh: true)`, `book.secondary.refresh(lock: true)`, within a transaction on that connection) and under a bound tenant. Datastores that do not support a capability throw `UnsupportedOperationException` rather than silently falling back to a plain refresh or an ordinary lock. The existing `entity.lock()`, `DomainClass.lock(id)` and `entity.refresh()` methods are unchanged; `entity.mutex` is built on the first of these capabilities and changes behaviour, as described below.
 
 ===== Refresh Under a Lock
 
@@ -337,11 +337,9 @@ Book.withTransaction {
 
 `lock` also accepts a `jakarta.persistence.LockModeType`, or its name, to refresh under a different mode, for example `book.refresh(lock: LockModeType.PESSIMISTIC_READ)`. `lock: true` is equivalent to `lock: LockModeType.PESSIMISTIC_WRITE`. `lock: false` and `lock: LockModeType.NONE` request no lock, so `entity.refresh([:])`, `entity.refresh(lock: false)` and `entity.refresh(lock: LockModeType.NONE)` behave exactly like `entity.refresh()`. Any other value throws `IllegalArgumentException`.
 
-The instance must be attached to the current session; a detached instance is rejected with `IllegalArgumentException` on both Hibernate versions rather than being silently re-attached. Re-attach it with `attach()` first.
+The instance must be attached to the current session; a detached instance is rejected with `IllegalArgumentException` rather than being silently re-attached. Re-attach it with `attach()` first.
 
 WARNING: Refreshing discards unflushed entity changes, including changes to associated entities reached by configured refresh cascades; it does not refresh the whole object graph. Call `refresh(lock: ...)` or `lock(id, refresh: true)` *before* making decisions based on the entity's state or applying mutations. The lock applies to the refreshed entity's own row; associated entities reloaded through the cascade are not guaranteed to be locked.
-
-On Hibernate 5, a locked refresh also resets GORM's dirty-checking state on the refreshed entity, its embedded components, and every initialized entity the refresh cascade reloaded, including associations reached through an embedded component, so the discarded edits do not schedule an update or bump a version at the next flush. A plain `refresh()` on Hibernate 5 leaves that state in place. Hibernate 7 resets it itself.
 
 ===== Lock by Identifier with Refresh
 
@@ -364,7 +362,7 @@ There is no `entity.lock(refresh: true)`. Groovy resolves that call to the stati
 
 The static `lock` method also accepts `type`, a `jakarta.persistence.LockModeType` or its name, to acquire a lock other than the default `PESSIMISTIC_WRITE`. It applies whether the entity is loaded by the call or is already managed in the session, and it can be combined with `refresh: true` to reload a managed instance under that mode. `NONE` is rejected.
 
-Every lock mode is available to `refresh(lock: ...)` and to the static `type` argument on both Hibernate 5 and Hibernate 7:
+Every lock mode is available to `refresh(lock: ...)` and to the static `type` argument on Hibernate 7:
 
 [cols="2,2,3",options="header"]
 |===
@@ -403,7 +401,7 @@ Book.withTransaction {
 }
 ----
 
-Without an active transaction, `refresh` with a lock, `lock(id, refresh: true)` and any `lock(id, ...)` call naming a `type` throw `jakarta.persistence.TransactionRequiredException` before anything is loaded. The database and transaction isolation level determine which state is visible. Locking does not guarantee that every concurrent attempt succeeds: deadlocks, lock timeouts, and transaction serialization failures remain possible. See the Optimistic and Pessimistic Locking section of the GORM for link:{hibernate7Guide}index.html#locking[Hibernate 7] or link:{hibernate5Guide}index.html#locking[Hibernate 5] guide for details.
+Without an active transaction, `refresh` with a lock, `lock(id, refresh: true)` and any `lock(id, ...)` call naming a `type` throw `jakarta.persistence.TransactionRequiredException` before anything is loaded. The database and transaction isolation level determine which state is visible. Locking does not guarantee that every concurrent attempt succeeds: deadlocks, lock timeouts, and transaction serialization failures remain possible. See the Optimistic and Pessimistic Locking section of the link:{hibernate7Guide}index.html#locking[GORM for Hibernate 7] guide for details.
 
 ===== Holding a Lock for a Block of Work
 

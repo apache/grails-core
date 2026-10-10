@@ -35,7 +35,7 @@ dependencies {
     implementation platform(project(':grails-bom'))
 
     implementation 'org.apache.grails:grails-dependencies-starter-web'
-    implementation 'org.apache.grails:grails-data-hibernate5'
+    implementation 'org.apache.grails:grails-data-hibernate7'
     implementation 'org.apache.grails:grails-views-gson'
     implementation 'com.h2database:h2'
     runtimeOnly 'com.zaxxer:HikariCP'

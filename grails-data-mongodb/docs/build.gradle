@@ -92,7 +92,6 @@ tasks.register('asciidoctor', ConvertAsciidocTask) { ConvertAsciidocTask it ->
     ]
     it.includedFiles.from(
             rootProject.findProject(':grails-test-examples-mongodb-base').layout.projectDirectory.dir('src/test/groovy'),
-            rootProject.findProject(':grails-test-examples-mongodb-hibernate5').layout.projectDirectory.dir('src/test/groovy'),
             rootProject.findProject(':grails-data-mongodb-core').layout.projectDirectory.dir('src/test/groovy'))
 }
 

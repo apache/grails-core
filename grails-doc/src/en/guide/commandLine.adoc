@@ -164,14 +164,14 @@ defaultPackage: com.example
 reloading: devtools
 sourceLanguage: groovy
 buildTool: gradle
-gormImpl: gorm-hibernate5
+gormImpl: gorm-hibernate7
 servletImpl: spring-boot-starter-tomcat
 features:
   - app-name
   - asset-pipeline-grails
   - base
   - geb
-  - gorm-hibernate5
+  - gorm-hibernate7
   - gradle
   - grails-application
   - grails-console

@@ -47,7 +47,7 @@ class ValidationSpec extends GrailsDataTckSpec {
     void 'Test existing ObjectErrors are reset by Hibernate and retained by other datastores'() {
         given:
         def t = new TestEntity(name: 'someName')
-        boolean hibernate = Boolean.getBoolean('hibernate5.gorm.suite') || Boolean.getBoolean('hibernate7.gorm.suite')
+        boolean hibernate = Boolean.getBoolean('hibernate7.gorm.suite')
 
         when:
         t.errors.reject('foo')
