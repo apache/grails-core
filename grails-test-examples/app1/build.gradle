@@ -68,6 +68,7 @@ dependencies {
 
     integrationTestImplementation testFixtures('org.apache.grails:grails-geb')
     integrationTestImplementation 'org.apache.grails:grails-testing-support-http-client'
+    integrationTestImplementation testFixtures(project(':grails-testing-support-http-client'))
 }
 
 tasks.withType(JavaExec).configureEach {
@@ -92,4 +93,5 @@ apply {
     from rootProject.layout.projectDirectory.file('gradle/functional-test-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/test-webjar-asset-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/grails-extension-gradle-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/app-bench-config.gradle')
 }

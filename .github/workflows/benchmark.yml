@@ -264,6 +264,44 @@ jobs:
           git worktree remove --force "$WORKTREE_ROOT/base" || true
           git worktree remove --force "$WORKTREE_ROOT/head" || true
 
+  app-bench:
+    name: "App indy benchmarks"
+    if: >-
+      contains(github.event.pull_request.labels.*.name, 'performance') &&
+      (github.event.action != 'labeled' || github.event.label.name == 'performance')
+    runs-on: ubuntu-24.04
+    env:
+      RESULT_DIR: ${{ github.workspace }}/app-bench-results
+    steps:
+      - name: "Checkout repository"
+        uses: actions/checkout@v7.0.1
+      - name: "Setup JDK"
+        uses: actions/setup-java@v6.0.1
+        with:
+          distribution: liberica
+          java-version: 21
+      - name: "Setup Gradle"
+        uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
+        with:
+          cache-provider: basic # 'basic' uses the MIT-licensed, open-source cache provider; the default 'enhanced' provider (v6+) is proprietary (Gradle commercial Terms of Use)
+          develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
+      - name: "Verify JMH comparison tool"
+        run: ./gradlew :grails-test-examples-benchmarks:test --max-workers=4
+      - name: "Stop Gradle daemons before app benchmark measurement"
+        if: always()
+        run: ./gradlew --stop || true
+      - name: "Run app-level indy A/B benches"
+        timeout-minutes: 180
+        continue-on-error: true
+        run: ./gradlew --no-daemon :grails-test-examples-benchmarks:appIndyBench -PappBenchWarmup=80 -PappBenchSamples=300 -PappBenchForks=2 -PappBenchOutDir="$RESULT_DIR" --max-workers=4
+      - name: "Upload app benchmark artifacts"
+        if: always()
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: app-bench-results
+          path: app-bench-results/
+          if-no-files-found: warn
+
   report:
     name: "Publish JMH benchmark comparison"
     needs: benchmark
