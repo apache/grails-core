@@ -65,11 +65,11 @@ class AutoTimestampEventListener extends AbstractPersistenceEventListener implem
 
     // if false, will not set timestamp on insert event if value is not null
     @Value('${' + Settings.SETTING_AUTO_TIMESTAMP_INSERT_OVERWRITE + ':true}')
-    boolean insertOverwrite = true
+    public boolean insertOverwrite = true
 
     // if false, will not cache auto-timestamp annotation metadata (for development/class reloading)
     @Value('${' + Settings.SETTING_AUTO_TIMESTAMP_CACHE_ANNOTATIONS + ':true}')
-    boolean cacheAutoTimestampAnnotations = true
+    public boolean cacheAutoTimestampAnnotations = true
 
     public static final String DATE_CREATED_PROPERTY = 'dateCreated'
     public static final String LAST_UPDATED_PROPERTY = 'lastUpdated'
