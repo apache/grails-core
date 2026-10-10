@@ -1505,7 +1505,9 @@ class DetachedCriteriaTransformer extends ClassCodeVisitorSupport {
         if (keysAndValues == null) {
             return Collections.emptyMap()
         }
-        if (keysAndValues.length % 2 == 1) {
+        // a bitwise test rather than `% 2`: this class is loaded by whichever Groovy runs the compiler,
+        // and the static compiler turns `%` into a NumberMath call that older Groovy runtimes lack
+        if ((keysAndValues.length & 1) == 1) {
             throw new IllegalArgumentException('Must have an even number of keys and values')
         }
 
