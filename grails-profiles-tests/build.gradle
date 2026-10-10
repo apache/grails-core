@@ -1,0 +1,41 @@
+plugins {
+    id 'groovy'
+    id 'org.apache.grails.buildsrc.properties'
+    id 'org.apache.grails.buildsrc.compile'
+}
+
+apply from: rootProject.layout.projectDirectory.file('gradle/functional-test-config.gradle')
+
+version = projectVersion
+group = 'org.apache.grails.testing'
+
+dependencies {
+    // Use platform for proper version management
+    implementation platform(project(':grails-bom'))
+    
+    implementation project(':grails-core')
+    implementation project(':grails-bootstrap')
+    implementation project(':grails-web-boot')
+    
+    testImplementation project(':grails-test-core')
+    testImplementation project(':grails-testing-support-core')
+    testImplementation project(':grails-testing-support-web')
+    
+    testImplementation 'org.spockframework:spock-core'
+    testRuntimeOnly 'net.bytebuddy:byte-buddy'
+    testImplementation 'org.objenesis:objenesis'
+    
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+    testImplementation 'org.slf4j:slf4j-simple'
+}
+
+// Configure test tasks
+tasks.withType(Test).configureEach {
+    useJUnitPlatform()
+}
+
+test {
+    include '**/*Spec.class'
+    include '**/*Tests.class'
+    include '**/*Test.class'
+}
