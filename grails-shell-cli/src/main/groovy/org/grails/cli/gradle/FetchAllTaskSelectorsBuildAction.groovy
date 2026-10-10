@@ -77,10 +77,10 @@ class FetchAllTaskSelectorsBuildAction implements BuildAction<AllTasksModel> {
 
     static class AllTasksModel implements Serializable {
         private static final long serialVersionUID = 1L
-        Map<String, Set<String>> allTasks
-        Map<String, Set<String>> allTaskSelectors
-        Map<String, String> projectPaths
-        String currentProject
+        public Map<String, Set<String>> allTasks
+        public Map<String, Set<String>> allTaskSelectors
+        public Map<String, String> projectPaths
+        public String currentProject
     }
 
 }
