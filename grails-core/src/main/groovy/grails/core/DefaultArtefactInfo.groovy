@@ -36,7 +36,7 @@ class DefaultArtefactInfo implements ArtefactInfo {
     private Map<String, GrailsClass> logicalPropertyNameToClassMap = new HashMap<>()
 
     @SuppressWarnings('rawtypes')
-    Map handlerData = new HashMap()
+    public Map handlerData = new HashMap()
     private GrailsClass[] grailsClassesArray
 
     /**

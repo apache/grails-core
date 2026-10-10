@@ -49,7 +49,7 @@ import org.apache.grails.common.aot.AheadOfTimeProcessing
 @CompileStatic
 class AbstractResourceLocatorPostProcessor implements BeanDefinitionRegistryPostProcessor, PriorityOrdered {
 
-    static final String BEAN_NAME = 'abstractGrailsResourceLocator'
+    public static final String BEAN_NAME = 'abstractGrailsResourceLocator'
 
     private final List<String> searchLocations
 

@@ -34,7 +34,7 @@ import org.springframework.core.io.Resource
 @CompileStatic
 class PluginPathAwareFileSystemResourceLoader extends FileSystemResourceLoader {
 
-    static final String WEB_APP_DIRECTORY = 'web-app'
+    public static final String WEB_APP_DIRECTORY = 'web-app'
 
     @PackageScope
     ResourceLocator resourceLocator = new DefaultResourceLocator()

@@ -34,12 +34,12 @@ class MockFileResource extends ByteArrayResource {
 
     private String fileName
 
-    MockFileResource(String fileName, String contents) {
+    MockFileResource(String fileName, String contents) throws UnsupportedEncodingException {
         super(contents.getBytes(StandardCharsets.UTF_8))
         this.fileName = fileName
     }
 
-    MockFileResource(String fileName, String contents, String encoding) {
+    MockFileResource(String fileName, String contents, String encoding) throws UnsupportedEncodingException {
         super(contents.getBytes(encoding))
         this.fileName = fileName
     }

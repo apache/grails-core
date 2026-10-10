@@ -44,10 +44,10 @@ import org.grails.plugins.BinaryGrailsPlugin
 @CompileStatic
 class DefaultResourceLocator implements ResourceLocator, ResourceLoaderAware, PluginManagerAware {
 
-    static final String WILDCARD = '*'
-    static final String FILE_SEPARATOR = File.separator
-    static final String CLOSURE_MARKER = '$'
-    static final String WEB_APP_DIR = 'web-app'
+    public static final String WILDCARD = '*'
+    public static final String FILE_SEPARATOR = File.separator
+    public static final String CLOSURE_MARKER = '$'
+    public static final String WEB_APP_DIR = 'web-app'
 
     protected static final Resource NULL_RESOURCE = new ByteArrayResource('null'.bytes)
 
