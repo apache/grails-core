@@ -17,7 +17,7 @@
  *  under the License.
  */
 
-package org.grails.orm.hibernate.cfg.domainbinding.secondpass;
+package org.grails.orm.hibernate.cfg.domainbinding.secondpass
 
 import grails.persistence.Entity
 

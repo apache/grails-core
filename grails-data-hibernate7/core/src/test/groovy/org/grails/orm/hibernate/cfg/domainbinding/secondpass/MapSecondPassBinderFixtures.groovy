@@ -19,7 +19,6 @@
 
 package org.grails.orm.hibernate.cfg.domainbinding.secondpass
 
-
 /**
  * Domain classes of the former {@code MapSecondPassBinderSpec}, a unit spec of the classic domain binder of Grails 8: they stay as fixtures of the
  * differential specs, which compare native binding with the recorded classic schema of every scanned entity.

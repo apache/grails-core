@@ -19,7 +19,6 @@
 package org.grails.orm.hibernate.cfg.domainbinding.secondpass
 
 import grails.gorm.annotation.Entity
-import org.hibernate.mapping.Set
 
 /**
  * Domain classes of the former {@code BasicCollectionElementBinderSpec}, a unit spec of the classic domain binder of Grails 8: they stay as fixtures of the
