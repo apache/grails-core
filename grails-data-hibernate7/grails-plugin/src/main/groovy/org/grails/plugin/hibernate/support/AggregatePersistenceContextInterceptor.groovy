@@ -17,9 +17,11 @@
  *  under the License.
  */
 
-package org.grails.plugin.hibernate.support;
+package org.grails.plugin.hibernate.support
 
-import org.grails.orm.hibernate.HibernateDatastore;
+import groovy.transform.CompileStatic
+
+import org.grails.orm.hibernate.HibernateDatastore
 
 /**
  * Concrete implementation of the {@link AbstractMultipleDataSourceAggregatePersistenceContextInterceptor} class for Hibernate 4
@@ -27,19 +29,21 @@ import org.grails.orm.hibernate.HibernateDatastore;
  * @author Graeme Rocher
  * @author Burt Beckwith
  */
-public class AggregatePersistenceContextInterceptor
+@CompileStatic
+class AggregatePersistenceContextInterceptor
         extends AbstractMultipleDataSourceAggregatePersistenceContextInterceptor {
 
-    public AggregatePersistenceContextInterceptor(HibernateDatastore hibernateDatastore) {
-        super(hibernateDatastore);
+    AggregatePersistenceContextInterceptor(HibernateDatastore hibernateDatastore) {
+        super(hibernateDatastore)
     }
 
     @Override
     protected SessionFactoryAwarePersistenceContextInterceptor createPersistenceContextInterceptor(
             String dataSourceName) {
-        HibernatePersistenceContextInterceptor interceptor = new HibernatePersistenceContextInterceptor(dataSourceName);
-        HibernateDatastore datastoreForConnection = hibernateDatastore.getDatastoreForConnection(dataSourceName);
-        interceptor.setHibernateDatastore(datastoreForConnection);
-        return interceptor;
+        HibernatePersistenceContextInterceptor interceptor = new HibernatePersistenceContextInterceptor(dataSourceName)
+        HibernateDatastore datastoreForConnection = hibernateDatastore.getDatastoreForConnection(dataSourceName)
+        interceptor.setHibernateDatastore(datastoreForConnection)
+        return interceptor
     }
+
 }

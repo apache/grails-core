@@ -16,11 +16,12 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.plugin.hibernate.support;
+package org.grails.plugin.hibernate.support
 
-import org.hibernate.SessionFactory;
+import groovy.transform.CompileStatic
+import org.hibernate.SessionFactory
 
-import grails.persistence.support.PersistenceContextInterceptor;
+import grails.persistence.support.PersistenceContextInterceptor
 
 /**
  * Interface for {@link grails.persistence.support.PersistenceContextInterceptor} instances that are aware of the {@link org.hibernate.SessionFactory}
@@ -28,7 +29,9 @@ import grails.persistence.support.PersistenceContextInterceptor;
  * @author Graeme Rocher
  * @since 2.0.7
  */
-public interface SessionFactoryAwarePersistenceContextInterceptor extends PersistenceContextInterceptor {
+@CompileStatic
+interface SessionFactoryAwarePersistenceContextInterceptor extends PersistenceContextInterceptor {
 
-    void setSessionFactory(SessionFactory sessionFactory);
+    void setSessionFactory(SessionFactory sessionFactory)
+
 }
