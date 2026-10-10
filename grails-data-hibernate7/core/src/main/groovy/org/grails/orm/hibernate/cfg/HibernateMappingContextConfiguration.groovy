@@ -33,6 +33,7 @@ import org.hibernate.boot.registry.StandardServiceRegistryBuilder
 import org.hibernate.boot.registry.classloading.internal.ClassLoaderServiceImpl
 import org.hibernate.boot.registry.classloading.spi.ClassLoaderService
 import org.hibernate.boot.spi.AdditionalMappingContributor
+import org.hibernate.boot.spi.SessionFactoryBuilderFactory
 import org.hibernate.bytecode.spi.BytecodeProvider
 import org.hibernate.cfg.AvailableSettings
 import org.hibernate.cfg.BytecodeSettings
@@ -66,6 +67,9 @@ import org.grails.orm.hibernate.GrailsSessionContext
 import org.grails.orm.hibernate.HibernateEventListeners
 import org.grails.orm.hibernate.MetadataIntegrator
 import org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBinder
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentEntity
+import org.grails.orm.hibernate.cfg.domainbinding.jpa.GeneratedDomainClassBinder
+import org.grails.orm.hibernate.cfg.domainbinding.jpa.GeneratedDomainClassLoaderService
 import org.grails.orm.hibernate.cfg.domainbinding.util.NamingStrategyProvider
 import org.grails.orm.hibernate.proxy.GrailsBytecodeProvider
 
@@ -91,6 +95,10 @@ class HibernateMappingContextConfiguration extends Configuration
         new AnnotationTypeFilter(MappedSuperclass, false),
     ] as TypeFilter[]
     private static final String FALSE_LITERAL = 'false'
+
+    // Literal copy of org.hibernate.envers.configuration.EnversSettings.DO_NOT_AUDIT_OPTIMISTIC_LOCKING_FIELD: Envers is not a
+    // dependency of this module
+    private static final String ENVERS_DO_NOT_AUDIT_OPTIMISTIC_LOCKING_FIELD = 'org.hibernate.envers.do_not_audit_optimistic_locking_field'
     private final Class<? extends CurrentSessionContext> currentSessionContext = GrailsSessionContext
     private final Set<Class> additionalClasses = new HashSet<>()
     protected String sessionFactoryBeanName = 'sessionFactory'
@@ -102,6 +110,24 @@ class HibernateMappingContextConfiguration extends Configuration
     private transient ResourcePatternResolver resourcePatternResolver = new PathMatchingResourcePatternResolver()
     private transient NamingStrategyProvider namingStrategyProvider = new NamingStrategyProvider()
     protected GrailsBytecodeProvider bytecodeProvider
+    private boolean generatedDomainClasses
+
+    /**
+     * Whether Hibernate's annotation binder binds classes generated from the GORM mapping instead of the domain binder
+     * building Hibernate's boot model by hand. The real domain classes are still what is persisted and loaded.
+     *
+     * <p>Set it before the annotated classes are added: with the switch on, {@link #addAnnotatedClass} keeps the GORM entities
+     * that are not JPA entities away from Hibernate's own sources (see there).</p>
+     *
+     * @param generatedDomainClasses {@code true} to bind generated classes; {@code false} (the default) for the domain binder
+     */
+    void setGeneratedDomainClasses(boolean generatedDomainClasses) {
+        this.generatedDomainClasses = generatedDomainClasses
+    }
+
+    boolean isGeneratedDomainClasses() {
+        return generatedDomainClasses
+    }
 
     void setBytecodeProvider(GrailsBytecodeProvider bytecodeProvider) {
         this.bytecodeProvider = bytecodeProvider
@@ -187,9 +213,19 @@ class HibernateMappingContextConfiguration extends Configuration
         return this
     }
 
+    /**
+     * Registers the class for the mapping context and hands it to Hibernate's own sources. With
+     * {@link #setGeneratedDomainClasses generated domain classes} a GORM entity that is not a JPA entity is not handed to
+     * Hibernate: the class generated for it has the same name, and Hibernate keeps the first class it is given for a name, so
+     * the real class, which Hibernate cannot read as an entity, would hide the generated one and leave the entity unmapped.
+     * The entity is bound through the mapping context as usual.
+     */
     @Override
     Configuration addAnnotatedClass(Class annotatedClass) {
         additionalClasses.add(annotatedClass)
+        if (generatedDomainClasses && GormEntity.isAssignableFrom(annotatedClass) && !annotatedClass.isAnnotationPresent(Entity)) {
+            return this
+        }
         return super.addAnnotatedClass(annotatedClass)
     }
 
@@ -281,13 +317,6 @@ class HibernateMappingContextConfiguration extends Configuration
 
         ConfigurationHelper.resolvePlaceHolders(properties)
 
-        final GrailsDomainBinder domainBinder = new GrailsDomainBinder(
-                dataSourceName,
-                sessionFactoryBeanName,
-                hibernateMappingContext,
-                namingStrategyProvider,
-                hibernateMappingContext.mappingCacheHolder)
-
         List<Class> annotatedClasses = new ArrayList<>()
         for (PersistentEntity persistentEntity : hibernateMappingContext.persistentEntities) {
             Class<?> javaClass = persistentEntity.javaClass
@@ -304,26 +333,31 @@ class HibernateMappingContextConfiguration extends Configuration
             }
         }
 
+        List<HibernatePersistentEntity> persistentEntities = hibernateMappingContext.hibernatePersistentEntities
+        for (HibernatePersistentEntity persistentEntity : persistentEntities) {
+            persistentEntity.setDataSourceName(dataSourceName)
+        }
+
+        final GeneratedDomainClassBinder generatedBinder =
+                generatedDomainClasses ? new GeneratedDomainClassBinder(dataSourceName, appClassLoader) : null
+        final GrailsDomainBinder domainBinder = new GrailsDomainBinder(
+                dataSourceName,
+                sessionFactoryBeanName,
+                persistentEntities,
+                namingStrategyProvider,
+                hibernateMappingContext.mappingCacheHolder,
+                generatedBinder)
+
         addAnnotatedClasses(annotatedClasses.toArray(new Class[0]))
 
-        ClassLoaderService classLoaderService = new ClassLoaderServiceImpl(appClassLoader) {
-            @Override
-            <S> Collection<S> loadJavaServices(Class<S> serviceContract) {
-                // Ensure Grails contributes mappings for GORM entities even if they lack JPA @Entity
-                if (AdditionalMappingContributor.isAssignableFrom(serviceContract)) {
-                    // Include the GrailsDomainBinder first, then any other contributors
-                    // discovered by the parent classloader (e.g., Envers AdditionalMappingContributorImpl).
-                    // Without this, Envers' AdditionalMappingContributor would be excluded,
-                    // preventing EnversService from being initialized before EnversIntegrator runs.
-                    Collection<S> parentContributors = super.loadJavaServices(serviceContract)
-                    S grailsBinder = (S) domainBinder
-                    List<S> allContributors = new ArrayList<>(parentContributors.size() + 1)
-                    allContributors.add(grailsBinder)
-                    allContributors.addAll(parentContributors)
-                    return allContributors
-                }
-                return super.loadJavaServices(serviceContract)
-            }
+        ClassLoaderService classLoaderService = newClassLoaderService(
+                generatedBinder != null ? generatedBinder.classLoader : appClassLoader, domainBinder, generatedBinder)
+        if (generatedBinder != null) {
+            // the mappings are bound against the generated classes; once they are bound, the same names resolve to the real ones
+            GeneratedDomainClassLoaderService switching = new GeneratedDomainClassLoaderService(
+                    classLoaderService, new ClassLoaderServiceImpl(appClassLoader))
+            generatedBinder.classLoaderService = switching
+            classLoaderService = switching
         }
         EventListenerIntegrator eventListenerIntegrator =
                 new EventListenerIntegrator(hibernateEventListeners, eventListeners)
@@ -335,6 +369,13 @@ class HibernateMappingContextConfiguration extends Configuration
 
         StandardServiceRegistryBuilder standardServiceRegistryBuilder =
                 createStandardServiceRegistryBuilder(bootstrapServiceRegistry).applySettings((Map) properties)
+
+        if (generatedBinder != null && !properties.containsKey(ENVERS_DO_NOT_AUDIT_OPTIMISTIC_LOCKING_FIELD)) {
+            // Binder mode never marks the version as one for Envers, which therefore audits it as a plain property and the
+            // audit tables of an existing application have the column. A generated entity carries a JPA @Version, which
+            // Envers skips by default. A value the user sets always wins.
+            standardServiceRegistryBuilder.applySetting(ENVERS_DO_NOT_AUDIT_OPTIMISTIC_LOCKING_FIELD, FALSE_LITERAL)
+        }
 
         Object dataSource = properties.get(JdbcSettings.JAKARTA_NON_JTA_DATASOURCE)
         if (dataSource instanceof DataSource) {
@@ -358,6 +399,36 @@ class HibernateMappingContextConfiguration extends Configuration
         this.serviceRegistry = ssr
 
         return sessionFactory
+    }
+
+    private static ClassLoaderService newClassLoaderService(
+            ClassLoader classLoader, GrailsDomainBinder domainBinder, GeneratedDomainClassBinder generatedBinder) {
+        return new ClassLoaderServiceImpl(classLoader) {
+            @Override
+            <S> Collection<S> loadJavaServices(Class<S> serviceContract) {
+                // Ensure Grails contributes mappings for GORM entities even if they lack JPA @Entity
+                if (AdditionalMappingContributor.isAssignableFrom(serviceContract)) {
+                    // Include the GrailsDomainBinder first, then any other contributors
+                    // discovered by the parent classloader (e.g., Envers AdditionalMappingContributorImpl).
+                    // Without this, Envers' AdditionalMappingContributor would be excluded,
+                    // preventing EnversService from being initialized before EnversIntegrator runs.
+                    Collection<S> parentContributors = super.loadJavaServices(serviceContract)
+                    S grailsBinder = (S) domainBinder
+                    List<S> allContributors = new ArrayList<>(parentContributors.size() + 1)
+                    allContributors.add(grailsBinder)
+                    allContributors.addAll(parentContributors)
+                    return allContributors
+                }
+                // Hibernate asks for these once the metadata is complete; the generated-class binder points the bound
+                // entities at the real classes then
+                if (generatedBinder != null && SessionFactoryBuilderFactory.isAssignableFrom(serviceContract)) {
+                    List<S> factories = new ArrayList<>(super.loadJavaServices(serviceContract))
+                    factories.add((S) generatedBinder)
+                    return factories
+                }
+                return super.loadJavaServices(serviceContract)
+            }
+        }
     }
 
     ClassLoader resolveSessionFactoryClassLoader() {

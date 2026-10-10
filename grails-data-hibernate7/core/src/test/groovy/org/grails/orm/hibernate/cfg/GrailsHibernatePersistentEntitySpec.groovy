@@ -214,12 +214,13 @@ class GrailsHibernatePersistentEntitySpec extends HibernateGormDatastoreSpec {
         prop.mappedForm.derived == true
     }
 
-    void "test dataSourceName injection"() {
+    void "test the datastore binds every entity to its own data source"() {
         when:
-        def entities = getMappingContext().getHibernatePersistentEntities("customDS")
+        def entities = getMappingContext().getHibernatePersistentEntities()
 
         then:
-        entities.every { it.dataSourceName == "customDS" }
+        !entities.isEmpty()
+        entities.every { it.dataSourceName == ConnectionSource.DEFAULT }
     }
 
     void "test getHibernatePersistentProperties calls validateProperty"() {

@@ -86,8 +86,12 @@ class GormColumnSnapshotGenerator implements SnapshotGenerator {
 
         GrailsHibernatePersistentEntity gpe = (GrailsHibernatePersistentEntity) entity
 
-        if (isIdentifier(pc, column.name)) {
-            applyGormIdentitySettings(column, gpe)
+        // a subclass of a table per hierarchy shares the table of its root, and Hibernate may list it first: the identifier
+        // and its generator belong to the root
+        PersistentClass identifierOwner = pc.table.is(pc.rootClass.table) ? pc.rootClass : pc
+        if (isIdentifier(identifierOwner, column.name)) {
+            PersistentEntity owner = mappingContext.getPersistentEntity(identifierOwner.className ?: identifierOwner.entityName)
+            applyGormIdentitySettings(column, owner instanceof GrailsHibernatePersistentEntity ? (GrailsHibernatePersistentEntity) owner : gpe)
         } else {
             PersistentProperty prop = resolveGormProperty(gpe, column.name)
             if (prop) {

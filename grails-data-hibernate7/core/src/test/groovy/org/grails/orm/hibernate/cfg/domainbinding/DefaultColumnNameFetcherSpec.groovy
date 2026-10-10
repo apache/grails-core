@@ -145,6 +145,7 @@ class AManyToManyEntity {
 class BManyToManyEntity {
     String name
     static hasMany = [manyToMany: AManyToManyEntity]
+    static belongsTo = [AManyToManyEntity]
 }
 
 @Entity

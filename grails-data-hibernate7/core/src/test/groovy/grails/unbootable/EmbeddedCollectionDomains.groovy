@@ -1,0 +1,140 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ */
+package grails.unbootable
+
+import grails.gorm.annotation.Entity
+
+/**
+ * Domain classes that embed a type with a collection, kept outside the packages the differential spec scans: the binder names the
+ * table and the key column of the collection after the embedded type, so two owners of the type share one collection table (the
+ * generated mode gives every owner a table of its own).
+ */
+@Entity
+class EmbeddedCollectionOwnerA {
+
+    EmbeddedCollectionHolder inner
+
+    static embedded = ['inner']
+}
+
+@Entity
+class EmbeddedCollectionOwnerB {
+
+    EmbeddedCollectionHolder inner
+
+    static embedded = ['inner']
+}
+
+class EmbeddedCollectionHolder {
+
+    Set<String> words
+
+    static hasMany = [words: String]
+}
+
+/**
+ * Two owners that embed the same type under different property names: the binder boots (the roles differ) but binds one collection
+ * table, whose key is a foreign key to the owner that was bound first.
+ */
+@Entity
+class EmbeddedCollectionOwnerC {
+
+    EmbeddedCollectionHolder first
+
+    static embedded = ['first']
+}
+
+@Entity
+class EmbeddedCollectionOwnerD {
+
+    EmbeddedCollectionHolder second
+
+    static embedded = ['second']
+}
+
+/**
+ * One owner that embeds the same type under two property names: the same single table again.
+ */
+@Entity
+class EmbeddedCollectionOwnerTwice {
+
+    EmbeddedCollectionHolder home
+    EmbeddedCollectionHolder work
+
+    static embedded = ['home', 'work']
+}
+
+/**
+ * Two owners that embed a type with a collection of entities and a list, under different names, and one owner that embeds the type
+ * twice, with a type nested in another.
+ */
+@Entity
+class EmbeddedCollectionItem {
+
+    String name
+}
+
+class EmbeddedItemsHolder {
+
+    Set<EmbeddedCollectionItem> items
+    List<String> order
+
+    static hasMany = [items: EmbeddedCollectionItem, order: String]
+}
+
+@Entity
+class EmbeddedItemsOwnerA {
+
+    EmbeddedItemsHolder mine
+
+    static embedded = ['mine']
+}
+
+@Entity
+class EmbeddedItemsOwnerB {
+
+    EmbeddedItemsHolder theirs
+
+    static embedded = ['theirs']
+}
+
+class EmbeddedMiddle {
+
+    String label
+    EmbeddedCollectionHolder deep
+
+    static embedded = ['deep']
+}
+
+@Entity
+class EmbeddedNestedOwnerA {
+
+    EmbeddedMiddle mid
+
+    static embedded = ['mid']
+}
+
+@Entity
+class EmbeddedNestedOwnerB {
+
+    EmbeddedMiddle mid
+    EmbeddedCollectionHolder direct
+
+    static embedded = ['mid', 'direct']
+}

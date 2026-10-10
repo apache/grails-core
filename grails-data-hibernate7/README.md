@@ -53,6 +53,37 @@ Registered via `META-INF/spring/org.springframework.boot.autoconfigure.AutoConfi
 A Grails CLI SPI hook (`org.grails.cli.compiler.CompilerAutoConfiguration`) that detects `@Entity` classes in Grails scripts and automatically adds the `grails-data-hibernate7-core` dependency and `grails.gorm.*` imports to the compilation context.
 Registered via `META-INF/services/org.grails.cli.compiler.CompilerAutoConfiguration`.
 
+## Differential specs and the frozen classic oracle (contributors)
+
+Native domain binding (`hibernate.generatedDomainClasses`, `GrailsDomainGenerator`) is checked against what the classic domain binder
+(`GrailsDomainBinder`) produces for every `@Entity` in the TCK and in the Hibernate 7 tests, by two specs in
+`core/src/test/groovy/org/grails/orm/hibernate/cfg/domainbinding/jpa`:
+
+* `GrailsDomainGeneratorDifferentialSpec` compares the facets the generator decides, and what Hibernate's annotation binder reads back from
+  the generated classes, with the facts the classic binder bound (per entity and property); it writes `build/differential-report.txt`.
+* `GeneratedDomainClassesDdlDifferentialSpec` boots every group of associated domain classes in the generated mode on H2 and compares the
+  schema (tables, columns, keys, indexes, checks, sequences, and H2's `SCRIPT NODATA`) with the schema the classic binder derived; it
+  writes `build/ddl-report.txt`.
+
+The classic side of both comparisons is **recorded data**, not a live classic binder: `core/src/test/resources/classic-oracle/`
+(`generator-differential.txt`, `ddl-differential.txt`). `ClassicOracle` documents the format (one record per line, sorted keys, nothing that
+varies from run to run) and has three modes:
+
+| Mode | How | What happens |
+|---|---|---|
+| FROZEN (default) | `./gradlew :grails-data-hibernate7-core:test --tests '*DifferentialSpec'` | The classic binder is not booted. The recorded files are the oracle. A scanned fixture with no recorded group fails with a message that says to refreeze. |
+| VERIFY | add `-Pgrails.test.verifyClassicOracle=true` | The classic binder is booted too and what it produces must equal the recorded files exactly (the freeze is faithful and current); the comparison then runs as in FROZEN. |
+| REFREEZE | add `-Pgrails.test.refreezeClassicOracle=true` | The classic binder is booted and the files are rewritten. Review and commit the diff: a changed record is a change in what the classic binder does, or a new or changed fixture. |
+
+Run VERIFY after changing a fixture, classic binder code or Hibernate, and REFREEZE only to record that change. The `KNOWN`
+list of the DDL spec states why each remaining difference between native and classic binding is kept; it is not part of the recording.
+`ClassicOracleSpec` and the "changed recorded fact" features of the two differential specs prove that the serialisation is stable, that
+the files cover every scanned fixture, and that changing a recorded fact makes the comparison fail.
+
+The classic binder is internal code that is being retired. When it is deleted, the VERIFY and REFREEZE modes go with it, the recorded files
+become plain expectations, and a new fixture gets its records written by hand (copy the records of a similar fixture into the group of the
+new one, in the format `ClassicOracle` reads).
+
 ## Using GORM Without Grails
 
 ### Strategy: Write Domain Classes in Groovy

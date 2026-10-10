@@ -269,6 +269,11 @@ include::advancedGORMFeatures/ormdsl/customNamingStrategy.adoc[]
 
 include::advancedGORMFeatures/defaultSortOrder.adoc[]
 
+[[nativeDomainBinding]]
+=== Native Domain Binding
+
+include::advancedGORMFeatures/nativeDomainBinding.adoc[]
+
 [[programmaticTransactions]]
 == Programmatic Transactions
 

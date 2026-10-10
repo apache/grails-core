@@ -1,0 +1,167 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+=== Upgrade Instructions for Grails 8 to Grails 9
+
+This guide outlines the changes introduced in Grails {version} and the steps required to upgrade your application from Grails 8.
+
+==== 1. Hibernate 7 Domain Binding
+
+These notes apply to applications that use GORM for Hibernate 7 (`grails-hibernate7`).
+
+===== 1.1 A Many-to-Many Without `belongsTo` Fails at Startup
+
+A bidirectional many-to-many is written by its owning side, which `belongsTo` designates.
+When neither side declares `belongsTo`, both collections used to be bound as inverse, so no join table row was ever written and the relationship was silently lost.
+The application now refuses to start instead:
+
+[source,text]
+----
+Neither side of the many-to-many between [com.example.Author.books] and [com.example.Book.authors] declares belongsTo, so the relationship would never be stored. Declare belongsTo on the owned side, for example in Book: static belongsTo = Author
+----
+
+The message is a Hibernate `MappingException`.
+It names both sides of each affected relationship, and the sides in alphabetical order.
+
+Declare `belongsTo` on the side that should be owned:
+
+[source,groovy]
+----
+class Book {
+    String title
+    static hasMany = [authors: Author]
+    static belongsTo = Author
+}
+
+class Author {
+    String name
+    static hasMany = [books: Book]
+}
+----
+
+The same applies to a many-to-many from a class to itself: `belongsTo` names the class itself.
+A unidirectional many-to-many, a many-to-many that has `belongsTo` on either side, and one where either side is a `Map` need no change.
+The rule is the same whether or not you enable native domain binding, see below.
+
+See link:{hibernate7Guide}index.html#gormAssociation-manyToMany[Many-to-Many Associations] in the GORM for Hibernate 7 manual.
+
+===== 1.2 Fixes That Change Mappings and Generated Schemas
+
+The following defects of the Hibernate 7 mapping are fixed.
+They are also fixed in the 8.0.x line, so an application that is already on a recent Grails 8 release has seen them.
+
+* *`insertable: false` and `updatable: false`* were ignored on every property.
+  They are honored now: a column mapped `insertable: false` is left out of the `INSERT`, and one mapped `updatable: false` is left out of the `UPDATE`.
+  Review the domain classes that use them, because values that used to be written are now not written.
+* *Enum columns* did not receive the `comment`, `defaultValue`, `read` and `write` of their column mapping.
+  They do now, so the generated column definition of an enum property changes.
+  Compare the generated schema with your database before you use `dbCreate: update`.
+* *Collections of basic values* of an owner with more than one unidirectional `hasMany` were not written to their table.
+  The elements are now stored.
+  No change is needed.
+* *The inverse side of a many-to-many* read a join table of its own default name when only the owning side named the join table.
+  The inverse side now reads the table that the owner writes.
+  An empty table with the default name may remain in an existing database.
+
+===== 1.3 Native Domain Binding
+
+GORM for Hibernate 7 can bind your domain classes with Hibernate's own annotation binder instead of building Hibernate's mapping itself.
+This is native domain binding.
+It is the direction GORM for Hibernate 7 is taking and is intended to become the default.
+In Grails {version} it is opt-in and the default stays classic binding.
+
+Enable it with the `hibernate.generatedDomainClasses` setting:
+
+[source,yaml]
+.grails-app/conf/application.yml
+----
+hibernate:
+    generatedDomainClasses: true
+----
+
+Your domain classes, your queries and the GORM API do not change.
+The mapping can, though:
+
+* Native binding refuses a mapping only when classic binding cannot use it either: classic binding fails to start with it, or boots it and fails on the first row.
+  The refusal is an `UnsupportedOperationException` at startup that says what classic binding does.
+  The manual chapter lists them.
+  The one exception today is an embedded object as a part of a composite identifier, which classic binding boots and native binding refuses with a message that points at a workaround that keeps the schema, see <<native-binding-embedded-id,1.5>>.
+* The generated schema differs from the one of classic binding in a few documented cases, for example a `check (idx >= 0)` constraint on the index column of every list, and the column types of foreign keys to nested composite identifiers.
+* A few defects of classic binding are not copied, such as a `unique` group that includes an enum property being dropped.
+* A `hasMany` inside a class listed in `static embedded` that more than one embedded property embeds gets a collection table of its own for every owner.
+  Classic binding shares one table whose foreign key points at only one owner, so the collection of any other owner cannot be stored, and it does not start when the properties have the same name.
+  The first owner (by entity name, then property path) keeps the table and the key column it has today, the others get names that start with their table and the path of the embedded property.
+* A custom collection type on a `hasMany` now takes effect, see <<native-binding-custom-collection-type,1.4>>.
+
+Before you switch an existing database, run `dbm-gorm-diff` against a copy of it with the setting on.
+
+The link:{hibernate7Guide}index.html#advancedGORMFeatures-nativeDomainBinding[Native Domain Binding] chapter of the GORM for Hibernate 7 manual lists every refused mapping, every schema difference and what each means for an existing database.
+
+[[native-binding-custom-collection-type]]
+===== 1.4 Custom Collection Types Take Effect with Native Binding
+
+A `hasMany` of domain classes can name a Hibernate `UserCollectionType` as its `type`:
+
+[source,groovy]
+----
+class Author {
+    static hasMany = [books: Book]
+    static mapping = {
+        books type: MyCollectionType
+    }
+}
+----
+
+Classic binding accepts this mapping and creates the usual schema, but it never uses the class.
+It does not even create an instance of `MyCollectionType`, and `author.books` is an ordinary Hibernate collection.
+
+Native binding applies the type.
+Hibernate creates, wraps and loads the collection with your class, so the code of your collection type runs where it never ran before.
+The schema is the same.
+
+If your application maps a custom collection type, test it with `hibernate.generatedDomainClasses` set to `true` before you switch.
+A type that was never exercised can fail or behave differently once it is used.
+With classic binding, which stays the default in Grails {version}, nothing changes.
+
+A custom collection type on a `hasMany` of basic values is not supported by either binding.
+
+[[native-binding-embedded-id]]
+===== 1.5 An Embedded Object as a Part of a Composite Identifier
+
+Native binding refuses `id composite: ['code', 'address']` where `address` is listed in `static embedded`, because Hibernate cannot hold an embedded object in an identifier class.
+Declare the properties of the embedded class on the entity and name them in the identifier instead:
+
+[source,groovy]
+----
+class Customer implements Serializable {
+    String code
+    String addressStreet
+    String addressCity
+
+    static mapping = {
+        id composite: ['code', 'addressStreet', 'addressCity']
+        addressStreet column: 'address_street'
+        addressCity column: 'address_city'
+    }
+}
+----
+
+The table, its columns and its primary key are the ones the embedded version creates (`address_street` and `address_city` are the names the embedded object gives its columns), so an existing database needs no migration and its rows stay readable.
+A transient `Address getAddress()` accessor keeps `customer.address` working.
+The link:{hibernate7Guide}index.html#nativeDomainBinding-embeddedId[Native Domain Binding] chapter of the GORM for Hibernate 7 manual describes the accessor, the foreign keys to such an entity and how to switch an existing database.
