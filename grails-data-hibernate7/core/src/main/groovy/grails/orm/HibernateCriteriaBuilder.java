@@ -23,6 +23,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.function.Supplier;
 
 import groovy.lang.Closure;
 import groovy.lang.DelegatesTo;
@@ -36,6 +37,8 @@ import jakarta.persistence.metamodel.PluralAttribute;
 
 import org.hibernate.FetchMode;
 import org.hibernate.SessionFactory;
+import org.hibernate.type.BasicTypeReference;
+import org.hibernate.type.StandardBasicTypes;
 
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
@@ -52,6 +55,9 @@ import org.grails.orm.hibernate.HibernateDatastore;
 import org.grails.orm.hibernate.HibernateSession;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
 import org.grails.orm.hibernate.query.HibernateQuery;
+import org.grails.orm.hibernate.query.SqlGroupProjection;
+import org.grails.orm.hibernate.query.SqlProjection;
+import org.grails.orm.hibernate.query.SqlRestriction;
 import org.grails.orm.hibernate.support.hibernate7.SessionHolder;
 
 /**
@@ -163,6 +169,45 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
     }
 
     public static final String ALIAS_SEPARATOR = ":";
+
+    // The types a sqlProjection or sqlGroupProjection takes in the criteria DSL, as on Hibernate 5
+    public static final BasicTypeReference<?> BOOLEAN = StandardBasicTypes.BOOLEAN;
+    public static final BasicTypeReference<?> YES_NO = StandardBasicTypes.YES_NO;
+    public static final BasicTypeReference<?> BYTE = StandardBasicTypes.BYTE;
+    public static final BasicTypeReference<?> CHARACTER = StandardBasicTypes.CHARACTER;
+    public static final BasicTypeReference<?> SHORT = StandardBasicTypes.SHORT;
+    public static final BasicTypeReference<?> INTEGER = StandardBasicTypes.INTEGER;
+    public static final BasicTypeReference<?> LONG = StandardBasicTypes.LONG;
+    public static final BasicTypeReference<?> FLOAT = StandardBasicTypes.FLOAT;
+    public static final BasicTypeReference<?> DOUBLE = StandardBasicTypes.DOUBLE;
+    public static final BasicTypeReference<?> BIG_DECIMAL = StandardBasicTypes.BIG_DECIMAL;
+    public static final BasicTypeReference<?> BIG_INTEGER = StandardBasicTypes.BIG_INTEGER;
+    public static final BasicTypeReference<?> STRING = StandardBasicTypes.STRING;
+    public static final BasicTypeReference<?> NUMERIC_BOOLEAN = StandardBasicTypes.NUMERIC_BOOLEAN;
+    public static final BasicTypeReference<?> TRUE_FALSE = StandardBasicTypes.TRUE_FALSE;
+    public static final BasicTypeReference<?> URL = StandardBasicTypes.URL;
+    public static final BasicTypeReference<?> TIME = StandardBasicTypes.TIME;
+    public static final BasicTypeReference<?> DATE = StandardBasicTypes.DATE;
+    public static final BasicTypeReference<?> TIMESTAMP = StandardBasicTypes.TIMESTAMP;
+    public static final BasicTypeReference<?> CALENDAR = StandardBasicTypes.CALENDAR;
+    public static final BasicTypeReference<?> CALENDAR_DATE = StandardBasicTypes.CALENDAR_DATE;
+    public static final BasicTypeReference<?> CLASS = StandardBasicTypes.CLASS;
+    public static final BasicTypeReference<?> LOCALE = StandardBasicTypes.LOCALE;
+    public static final BasicTypeReference<?> CURRENCY = StandardBasicTypes.CURRENCY;
+    public static final BasicTypeReference<?> TIMEZONE = StandardBasicTypes.TIMEZONE;
+    public static final BasicTypeReference<?> UUID_BINARY = StandardBasicTypes.UUID_BINARY;
+    public static final BasicTypeReference<?> UUID_CHAR = StandardBasicTypes.UUID_CHAR;
+    public static final BasicTypeReference<?> BINARY = StandardBasicTypes.BINARY;
+    public static final BasicTypeReference<?> WRAPPER_BINARY = StandardBasicTypes.BINARY_WRAPPER;
+    public static final BasicTypeReference<?> IMAGE = StandardBasicTypes.IMAGE;
+    public static final BasicTypeReference<?> BLOB = StandardBasicTypes.BLOB;
+    public static final BasicTypeReference<?> MATERIALIZED_BLOB = StandardBasicTypes.MATERIALIZED_BLOB;
+    public static final BasicTypeReference<?> CHAR_ARRAY = StandardBasicTypes.CHAR_ARRAY;
+    public static final BasicTypeReference<?> CHARACTER_ARRAY = StandardBasicTypes.CHARACTER_ARRAY;
+    public static final BasicTypeReference<?> TEXT = StandardBasicTypes.TEXT;
+    public static final BasicTypeReference<?> CLOB = StandardBasicTypes.CLOB;
+    public static final BasicTypeReference<?> MATERIALIZED_CLOB = StandardBasicTypes.MATERIALIZED_CLOB;
+    public static final BasicTypeReference<?> SERIALIZABLE = StandardBasicTypes.SERIALIZABLE;
 
     private static String getFullyQualifiedColumn(String propertyName, String alias) {
         return (Objects.nonNull(alias) ? alias + ALIAS_SEPARATOR : "") + propertyName;
@@ -926,8 +971,8 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
      * @return A Criterion instance
      */
     public Criteria eq(String propertyName, Object propertyValue, Map<?, ?> params) {
-        if (Boolean.TRUE.equals(params.get("ignoreCase"))) {
-            hibernateQuery.like(propertyName, "%" + propertyValue.toString() + "%");
+        if (Boolean.TRUE.equals(params.get("ignoreCase")) && propertyValue instanceof CharSequence) {
+            hibernateQuery.eqIgnoreCase(propertyName, propertyValue.toString());
         } else {
             hibernateQuery.eq(propertyName, propertyValue);
         }
@@ -1109,6 +1154,101 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
     @Override
     public Criteria sizeLt(String propertyName, int size) {
         hibernateQuery.sizeLt(propertyName, size);
+        return this;
+    }
+
+    /**
+     * Projects the value of a native SQL expression. {@code {alias}} in the SQL stands for the table alias of the
+     * queried entity.
+     *
+     * @param sql SQL projecting a single value, optionally followed by {@code as} and the column alias
+     * @param columnAlias the column alias of the projected value
+     * @param type the type of the projected value: a {@code StandardBasicTypes} constant such as {@link #INTEGER},
+     *     an {@code org.hibernate.type.Type} or a Java class
+     * @return this projection list
+     */
+    public ProjectionList sqlProjection(String sql, String columnAlias, Object type) {
+        return sqlProjection(sql, Collections.singletonList(columnAlias), Collections.singletonList(type));
+    }
+
+    /**
+     * Projects the values of native SQL expressions, separated by commas. {@code {alias}} in the SQL stands for the
+     * table alias of the queried entity.
+     *
+     * @param sql SQL projecting the values, each one optionally followed by {@code as} and its column alias
+     * @param columnAliases the column alias of each projected value, in order
+     * @param types the type of each projected value, in order: a {@code StandardBasicTypes} constant such as
+     *     {@link #INTEGER}, an {@code org.hibernate.type.Type} or a Java class
+     * @return this projection list
+     * @throws IllegalArgumentException if the numbers of projected values, column aliases and types differ
+     */
+    public ProjectionList sqlProjection(String sql, List<String> columnAliases, List<?> types) {
+        for (SqlProjection projection : closingSessionOnError(() -> SqlProjection.of(sql, columnAliases, types))) {
+            hibernateQuery.projections().add(projection);
+        }
+        return this;
+    }
+
+    /**
+     * Projects the values of native SQL expressions, separated by commas, and groups the results by a native SQL
+     * group by clause. {@code {alias}} in the SQL stands for the table alias of the queried entity.
+     *
+     * @param sql SQL projecting the values, each one optionally followed by {@code as} and its column alias
+     * @param groupBy the group by clause: a single expression or a comma separated list of them
+     * @param columnAliases the column alias of each projected value, in order
+     * @param types the type of each projected value, in order: a {@code StandardBasicTypes} constant such as
+     *     {@link #INTEGER}, an {@code org.hibernate.type.Type} or a Java class
+     * @return this projection list
+     * @throws IllegalArgumentException if the numbers of projected values, column aliases and types differ, or the
+     *     group by clause is empty
+     */
+    public ProjectionList sqlGroupProjection(String sql, String groupBy, List<String> columnAliases, List<?> types) {
+        List<SqlProjection> projections = closingSessionOnError(() -> SqlProjection.of(sql, columnAliases, types));
+        for (SqlGroupProjection groupProjection : closingSessionOnError(() -> SqlGroupProjection.of(groupBy))) {
+            hibernateQuery.projections().add(groupProjection);
+        }
+        for (SqlProjection projection : projections) {
+            hibernateQuery.projections().add(projection);
+        }
+        return this;
+    }
+
+    /**
+     * Returns the projections a DSL method creates, closing the session the builder opened if their arguments are
+     * invalid, as {@link #throwRuntimeException(RuntimeException)} does.
+     */
+    private <T> T closingSessionOnError(Supplier<T> projections) {
+        try {
+            return projections.get();
+        } catch (IllegalArgumentException e) {
+            closeSessionFollowingException();
+            throw e;
+        }
+    }
+
+    /**
+     * Restricts the results with a native SQL condition. {@code {alias}} in the SQL stands for the table alias of
+     * the queried entity.
+     *
+     * @param sqlRestriction the SQL condition
+     * @return this criteria
+     */
+    public org.grails.datastore.mapping.query.api.Criteria sqlRestriction(String sqlRestriction) {
+        return sqlRestriction(sqlRestriction, Collections.emptyList());
+    }
+
+    /**
+     * Restricts the results with a native SQL condition whose {@code ?} placeholders are bound to the given values.
+     * {@code {alias}} in the SQL stands for the table alias of the queried entity.
+     *
+     * @param sqlRestriction the SQL condition
+     * @param values the values of the {@code ?} placeholders, in order, none of them {@code null}
+     * @return this criteria
+     * @throws IllegalArgumentException if the number of {@code ?} placeholders differs from the number of values,
+     *     or a value is {@code null}
+     */
+    public org.grails.datastore.mapping.query.api.Criteria sqlRestriction(String sqlRestriction, List<?> values) {
+        hibernateQuery.add(new SqlRestriction(sqlRestriction, values));
         return this;
     }
 

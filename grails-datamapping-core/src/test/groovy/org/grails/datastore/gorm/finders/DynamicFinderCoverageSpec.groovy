@@ -268,9 +268,9 @@ class DynamicFinderCoverageSpec extends Specification {
         notThrown(Exception)
     }
 
-    void "the DatastoreResolver+MappingContext constructor wires a finder that is usable without a bound datastore"() {
+    void "the DatastoreResolver+MappingContext factory wires a finder that is usable without a bound datastore"() {
         given:
-        def finder = new FindByFinder(new org.grails.datastore.gorm.DatastoreResolver() {
+        def finder = SingleResultFinder.findBy(new org.grails.datastore.gorm.DatastoreResolver() {
             @Override org.grails.datastore.mapping.core.Datastore resolve() { datastore }
         }, datastore.mappingContext)
 
@@ -278,9 +278,9 @@ class DynamicFinderCoverageSpec extends Specification {
         finder.isMethodMatch('findByName')
     }
 
-    void "the MappingContext-only constructor wires a finder without any datastore or resolver"() {
+    void "the MappingContext-only factory wires a finder without any datastore or resolver"() {
         given:
-        def finder = new FindByFinder(datastore.mappingContext)
+        def finder = SingleResultFinder.findBy(datastore.mappingContext)
 
         expect:
         finder.isMethodMatch('findByName')
@@ -288,7 +288,7 @@ class DynamicFinderCoverageSpec extends Specification {
 
     void "invoke(Class, methodName, DetachedCriteria, arguments) merges the detached criteria into the finder invocation"() {
         given:
-        def finder = new FindAllByFinder(datastore)
+        def finder = ListResultFinder.findAllBy(datastore)
         def detached = new grails.gorm.DetachedCriteria(DynamicFinderThing).build { gt('age', 20) }
 
         when:

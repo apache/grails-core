@@ -33,4 +33,4 @@ The Grails BOM is published in several variants to support different Hibernate v
 | **Neo4j** | `org.apache.grails:grails-neo4j-bom` | Inherits from the default BOM and pins a Neo4j driver version compatible with `grails-data-neo4j` (link:{versionsRef}Grails%20BOM%20Neo4j.html[view dependencies])
 |===
 
-The Neo4j variant only overrides the Neo4j driver version, so it does not affect Hibernate-related dependencies.
+The Hibernate 7 BOM does not manage `liquibase-hibernate7`, because the Hibernate 7 database migration plugin includes its own Hibernate 7 support for Liquibase; do not add `liquibase-hibernate7` alongside it. The Neo4j variant only overrides the Neo4j driver version, so it does not affect Hibernate-related dependencies.

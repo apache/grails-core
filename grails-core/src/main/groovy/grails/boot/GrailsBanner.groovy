@@ -30,6 +30,8 @@ import org.springframework.boot.ansi.AnsiColor
 import org.springframework.boot.ansi.AnsiElement
 import org.springframework.boot.ansi.AnsiOutput
 import org.springframework.boot.SpringBootVersion
+import org.springframework.boot.context.properties.bind.Bindable
+import org.springframework.boot.context.properties.bind.Binder
 import org.springframework.aot.AotDetector
 import org.springframework.core.NativeDetector
 import org.springframework.core.SpringVersion
@@ -511,8 +513,7 @@ class GrailsBanner implements Banner {
 
     /** What an application wrote under the given property, or nothing where it wrote none. */
     private static List<String> readVersionOptions(Environment env, String propertyName) {
-        // Groovy 6.0.0-RC-1 (GROOVY-12319): parameterized types are not class literals.
-        env.getProperty(propertyName, List, [] as List<String>)
+        Binder.get(env).bind(propertyName, Bindable.listOf(String)).orElse([])
     }
 
     /**

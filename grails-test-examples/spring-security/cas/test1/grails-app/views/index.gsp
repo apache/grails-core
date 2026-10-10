@@ -26,7 +26,7 @@
 <body>
 <content tag="nav">
     <li class="nav-item dropdown">
-        <a href="#" class="nav-link dropdown-toggle" role="button" data-bs-toggle="dropdown" aria-expanded="false">Application Status <span class="caret"></span></a>
+        <a href="#" class="nav-link dropdown-toggle" role="button" data-bs-toggle="dropdown" aria-expanded="false">Application Status</a>
         <ul class="dropdown-menu">
             <li><a class="dropdown-item" href="#">Server: ${request.getServletContext().getServerInfo()}</a></li>
             <li><a class="dropdown-item" href="#">Host: ${InetAddress.getLocalHost()}</a></li>
@@ -48,7 +48,7 @@
         </ul>
     </li>
     <li class="nav-item dropdown">
-        <a href="#" class="nav-link dropdown-toggle" role="button" data-bs-toggle="dropdown" aria-expanded="false">Artefacts <span class="caret"></span></a>
+        <a href="#" class="nav-link dropdown-toggle" role="button" data-bs-toggle="dropdown" aria-expanded="false">Artefacts</a>
         <ul class="dropdown-menu">
             <li><a class="dropdown-item" href="#">Controllers: ${grailsApplication.controllerClasses.size()}</a></li>
             <li><a class="dropdown-item" href="#">Domains: ${grailsApplication.domainClasses.size()}</a></li>
@@ -57,8 +57,8 @@
         </ul>
     </li>
     <li class="nav-item dropdown">
-        <a href="#" class="nav-link dropdown-toggle" role="button" data-bs-toggle="dropdown" aria-expanded="false">Installed Plugins<span class="caret"></span></a>
-        <ul class="dropdown-menu dropdown-menu-right">
+        <a href="#" class="nav-link dropdown-toggle" role="button" data-bs-toggle="dropdown" aria-expanded="false">Installed Plugins</a>
+        <ul class="dropdown-menu dropdown-menu-end">
             <g:each var="plugin" in="${applicationContext.getBean('pluginManager').allPlugins}">
                 <li><a class="dropdown-item" href="#">${plugin.name} - ${plugin.version}</a></li>
             </g:each>

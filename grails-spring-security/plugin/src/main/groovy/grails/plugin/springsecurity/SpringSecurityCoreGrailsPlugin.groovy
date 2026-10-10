@@ -61,6 +61,8 @@ import grails.plugin.springsecurity.web.filter.IpAddressFilter
 import grails.plugins.Plugin
 import groovy.util.logging.Slf4j
 import org.grails.web.mime.HttpServletResponseExtension
+import org.springframework.boot.context.properties.bind.Bindable
+import org.springframework.boot.context.properties.bind.Binder
 import org.springframework.boot.web.servlet.FilterRegistrationBean
 import org.springframework.boot.web.servlet.ServletListenerRegistrationBean
 import org.springframework.cache.jcache.JCacheCacheManager
@@ -793,7 +795,7 @@ class SpringSecurityCoreGrailsPlugin extends Plugin {
                 def env = applicationContext.environment
                 String userName = env.getProperty('spring.security.user.name', String)
                 String userPassword = env.getProperty('spring.security.user.password', String)
-                List<String> userRoles = env.getProperty('spring.security.user.roles', List)
+                List<String> userRoles = Binder.get(env).bind('spring.security.user.roles', Bindable.listOf(String)).orElse(null)
                 def bridged = ComponentBasedConfigBlender.bridgeSpringSecurityUserProperties(userName, userPassword, userRoles)
                 if (bridged != null) {
                     additional << (UserDetailsService) bridged

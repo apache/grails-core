@@ -68,6 +68,17 @@ curl -f -L -o "${DOWNLOAD_LOCATION}/apache-${PROJECT_NAME}-${VERSION}-bin.zip" "
 curl -f -L -o "${DOWNLOAD_LOCATION}/apache-${PROJECT_NAME}-${VERSION}-bin.zip.asc" "https://dist.apache.org/repos/dist/dev/grails/${SVN_FOLDER}/${VERSION}/distribution/apache-${PROJECT_NAME}-${VERSION}-bin.zip.asc"
 curl -f -L -o "${DOWNLOAD_LOCATION}/apache-${PROJECT_NAME}-${VERSION}-bin.zip.sha512" "https://dist.apache.org/repos/dist/dev/grails/${SVN_FOLDER}/${VERSION}/distribution/apache-${PROJECT_NAME}-${VERSION}-bin.zip.sha512"
 
+# documentation
+echo "Downloading GitHub docs release files"
+curl -f -L -o "${DOWNLOAD_LOCATION}/github-apache-${PROJECT_NAME}-${VERSION}-docs.zip" "https://github.com/${REPO_NAME}/releases/download/${RELEASE_TAG}/apache-${PROJECT_NAME}-${VERSION}-docs.zip"
+curl -f -L -o "${DOWNLOAD_LOCATION}/github-apache-${PROJECT_NAME}-${VERSION}-docs.zip.asc" "https://github.com/${REPO_NAME}/releases/download/${RELEASE_TAG}/apache-${PROJECT_NAME}-${VERSION}-docs.zip.asc"
+curl -f -L -o "${DOWNLOAD_LOCATION}/github-apache-${PROJECT_NAME}-${VERSION}-docs.zip.sha512" "https://github.com/${REPO_NAME}/releases/download/${RELEASE_TAG}/apache-${PROJECT_NAME}-${VERSION}-docs.zip.sha512"
+
+echo "Downloading SVN docs release files"
+curl -f -L -o "${DOWNLOAD_LOCATION}/apache-${PROJECT_NAME}-${VERSION}-docs.zip" "https://dist.apache.org/repos/dist/dev/grails/${SVN_FOLDER}/${VERSION}/distribution/apache-${PROJECT_NAME}-${VERSION}-docs.zip"
+curl -f -L -o "${DOWNLOAD_LOCATION}/apache-${PROJECT_NAME}-${VERSION}-docs.zip.asc" "https://dist.apache.org/repos/dist/dev/grails/${SVN_FOLDER}/${VERSION}/distribution/apache-${PROJECT_NAME}-${VERSION}-docs.zip.asc"
+curl -f -L -o "${DOWNLOAD_LOCATION}/apache-${PROJECT_NAME}-${VERSION}-docs.zip.sha512" "https://dist.apache.org/repos/dist/dev/grails/${SVN_FOLDER}/${VERSION}/distribution/apache-${PROJECT_NAME}-${VERSION}-docs.zip.sha512"
+
 # validate downloads
 set +e
 
@@ -147,4 +158,29 @@ if [ "${CLI_ZIP_SVN_CHECKSUM}" != "${CLI_ZIP_GITHUB_CHECKSUM}" ]; then
     exit 1
 else
     echo "✅ Checksum matches between SVN and GitHub wrapper zip files"
+fi
+echo "Comparing SVN vs GitHub docs release files"
+cmp -s "${DOWNLOAD_LOCATION}/apache-${PROJECT_NAME}-${VERSION}-docs.zip.asc" "${DOWNLOAD_LOCATION}/github-apache-${PROJECT_NAME}-${VERSION}-docs.zip.asc"
+if [ $? -eq 0 ]; then
+  echo "✅ Identical SVN vs GitHub Upload for apache-${PROJECT_NAME}-${VERSION}-docs.zip.asc"
+else
+  echo "❌ Different SVN vs GitHub Upload for apache-${PROJECT_NAME}-${VERSION}-docs.zip.asc"
+  exit 1
+fi
+
+cmp -s "${DOWNLOAD_LOCATION}/apache-${PROJECT_NAME}-${VERSION}-docs.zip.sha512" "${DOWNLOAD_LOCATION}/github-apache-${PROJECT_NAME}-${VERSION}-docs.zip.sha512"
+if [ $? -eq 0 ]; then
+  echo "✅ Identical SVN vs GitHub Upload for apache-${PROJECT_NAME}-${VERSION}-docs.zip.sha512"
+else
+  echo "❌ Different SVN vs GitHub Upload for apache-${PROJECT_NAME}-${VERSION}-docs.zip.sha512"
+  exit 1
+fi
+
+DOCS_ZIP_SVN_CHECKSUM=$(shasum -a 512 "${DOWNLOAD_LOCATION}/apache-${PROJECT_NAME}-${VERSION}-docs.zip" | awk '{print $1}')
+DOCS_ZIP_GITHUB_CHECKSUM=$(shasum -a 512 "${DOWNLOAD_LOCATION}/github-apache-${PROJECT_NAME}-${VERSION}-docs.zip" | awk '{print $1}')
+if [ "${DOCS_ZIP_SVN_CHECKSUM}" != "${DOCS_ZIP_GITHUB_CHECKSUM}" ]; then
+    echo "❌ Checksum mismatch between SVN and GitHub docs zip files"
+    exit 1
+else
+    echo "✅ Checksum matches between SVN and GitHub docs zip files"
 fi

@@ -27,7 +27,6 @@ import java.util.zip.ZipFile
 
 plugins {
     id 'base'
-    id 'org.asciidoctor.jvm.convert'
     id 'groovy'
     id 'org.apache.grails.buildsrc.properties'
     id 'org.apache.grails.buildsrc.dependency-validator'
@@ -40,7 +39,6 @@ version = projectVersion
 ext {
     grailsCheckOutDir = project.layout.buildDirectory.dir('grails-core/checkout').get().asFile.absolutePath
     grailsTestsCheckOutDir = project.layout.buildDirectory.dir('grails-functional-tests/checkout').get().asFile.absolutePath
-    outputDir = layout.buildDirectory.file('docs').get().asFile.absolutePath
     githubBranch = project.findProperty('githubBranch')
     guidePage = '/docs/guide/single.html'
     indexPage = '/docs/index.html'
@@ -66,6 +64,13 @@ dependencies {
 // this task needs to be here instead of the root since bom resolution only occurs when the java / groovy plugins are applied
 def combinedGroovydoc = tasks.register('aggregateGroovydoc', Groovydoc)
 apply from: rootProject.layout.projectDirectory.file('gradle/docs-dependencies.gradle')
+
+// aggregateGroovydoc documents every module in one run and holds the whole model until the
+// last page is written, so it needs far more than a single module does. It settles around
+// 1.9 GB resident today; the rest is headroom for the modules still to come.
+groovydocEnhancer {
+    maxHeapSize = '3g'
+}
 
 combinedGroovydoc.configure { Groovydoc gdoc ->
     gdoc.windowTitle = "Grails $projectVersion"
@@ -252,11 +257,16 @@ generateConfigReference.configure { Task it ->
             project(':grails-web-core').tasks.named('jar'),
             project(':grails-gsp').tasks.named('jar'),
             project(':grails-databinding').tasks.named('jar'),
+            project(':grails-datamapping-core').tasks.named('jar'),
             project(':grails-data-hibernate7-core').tasks.named('jar'),
             project(':grails-cache').tasks.named('jar'),
             project(':grails-data-hibernate7-dbmigration').tasks.named('jar'),
             project(':grails-data-mongodb').tasks.named('jar'),
-            project(':grails-views-gson').tasks.named('jar')
+            project(':grails-views-gson').tasks.named('jar'),
+            project(':grails-views-markup').tasks.named('jar'),
+            project(':grails-web-url-mappings').tasks.named('jar'),
+            project(':grails-startup-progress').tasks.named('jar'),
+            project(':grails-openapi').tasks.named('jar')
     )
 
     it.description = 'Generates the Application Properties reference from configuration metadata.'
@@ -265,17 +275,23 @@ generateConfigReference.configure { Task it ->
     def configDir = project.layout.projectDirectory.dir('src/en/ref/Configuration')
     def outputFile = project.layout.projectDirectory.file('src/en/ref/Configuration/Application Properties.adoc')
 
-    it.inputs.files(
+    def metadataJars = [
             project(':grails-core').tasks.named('jar').flatMap { task -> task.archiveFile },
             project(':grails-web-core').tasks.named('jar').flatMap { task -> task.archiveFile },
             project(':grails-gsp').tasks.named('jar').flatMap { task -> task.archiveFile },
             project(':grails-databinding').tasks.named('jar').flatMap { task -> task.archiveFile },
+            project(':grails-datamapping-core').tasks.named('jar').flatMap { task -> task.archiveFile },
             project(':grails-data-hibernate7-core').tasks.named('jar').flatMap { task -> task.archiveFile },
             project(':grails-cache').tasks.named('jar').flatMap { task -> task.archiveFile },
             project(':grails-data-hibernate7-dbmigration').tasks.named('jar').flatMap { task -> task.archiveFile },
             project(':grails-data-mongodb').tasks.named('jar').flatMap { task -> task.archiveFile },
-            project(':grails-views-gson').tasks.named('jar').flatMap { task -> task.archiveFile }
-    )
+            project(':grails-views-gson').tasks.named('jar').flatMap { task -> task.archiveFile },
+            project(':grails-views-markup').tasks.named('jar').flatMap { task -> task.archiveFile },
+            project(':grails-web-url-mappings').tasks.named('jar').flatMap { task -> task.archiveFile },
+            project(':grails-startup-progress').tasks.named('jar').flatMap { task -> task.archiveFile },
+            project(':grails-openapi').tasks.named('jar').flatMap { task -> task.archiveFile }
+    ]
+    it.inputs.files(metadataJars)
     it.outputs.file(outputFile)
 
     it.doFirst {
@@ -283,17 +299,7 @@ generateConfigReference.configure { Task it ->
     }
 
     it.doLast {
-        List<File> jarFiles = [
-                project(':grails-core').tasks.named('jar').get().archiveFile.get().asFile,
-                project(':grails-web-core').tasks.named('jar').get().archiveFile.get().asFile,
-                project(':grails-gsp').tasks.named('jar').get().archiveFile.get().asFile,
-                project(':grails-databinding').tasks.named('jar').get().archiveFile.get().asFile,
-                project(':grails-data-hibernate7-core').tasks.named('jar').get().archiveFile.get().asFile,
-                project(':grails-cache').tasks.named('jar').get().archiveFile.get().asFile,
-                project(':grails-data-hibernate7-dbmigration').tasks.named('jar').get().archiveFile.get().asFile,
-                project(':grails-data-mongodb').tasks.named('jar').get().archiveFile.get().asFile,
-                project(':grails-views-gson').tasks.named('jar').get().archiveFile.get().asFile
-        ]
+        List<File> jarFiles = metadataJars.collect { it.get().asFile }
 
         Map<String, String> groupDescriptions = new LinkedHashMap<String, String>()
         List<Map<String, Object>> properties = new ArrayList<Map<String, Object>>()
@@ -683,9 +689,16 @@ createReleaseDropdownTask.configure { CreateReleaseDropDownTask it ->
     it.modifiedPagesDirectory = project.layout.buildDirectory.dir('modified-guide')
 }
 
+// A source distribution has no git history, so the release workflow ships the tags the
+// release documentation was built with as GIT_TAGS, which keeps the version dropdown reproducible
+def releaseTagsFile = rootProject.layout.projectDirectory.file('GIT_TAGS')
 def fetchTagsTask = project.tasks.register('fetchTags', FetchTagsTask)
-createReleaseDropdownTask.configure {
-    dependsOn(fetchTagsTask)
+createReleaseDropdownTask.configure { CreateReleaseDropDownTask it ->
+    if (releaseTagsFile.asFile.exists()) {
+        it.gitTags = releaseTagsFile
+    } else {
+        it.dependsOn(fetchTagsTask)
+    }
 }
 
 def docsTask = tasks.register('docs', Sync)
@@ -717,8 +730,21 @@ docsTask.configure { Sync it ->
 }
 
 tasks.register('dist', Zip).configure { Zip it ->
-    it.dependsOn(docsTask)
-    it.from(outputDir)
+    it.archiveBaseName = 'apache-grails'
+    it.archiveClassifier = 'docs'
+    // expand() values are not task inputs, so declare the year or a new build year leaves dist UP-TO-DATE
+    def noticeYear = rootProject.ext.buildDate.year
+    it.inputs.property('noticeYear', noticeYear)
+    it.into("apache-grails-${project.version}-docs") { CopySpec distribution ->
+        distribution.from(project.layout.projectDirectory.dir('distribution-artifacts')) { CopySpec legal ->
+            legal.filesMatching('NOTICE') { FileCopyDetails notice ->
+                notice.expand(year: noticeYear)
+            }
+        }
+        distribution.from(docsTask) { CopySpec html ->
+            html.into('html')
+        }
+    }
 }
 
 // Make dist a direct dependency of assemble instead of using deprecated archives configuration

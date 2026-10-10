@@ -63,6 +63,21 @@ dependencies {
     testImplementation 'org.junit.platform:junit-platform-suite:1.12.2'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher:1.12.2'
     testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.12.2'
+
+    // Supplied by the Gradle distribution when this code runs as build logic, hence compileOnly
+    // above; tests run on a plain JVM and need them for real.
+    testRuntimeOnly "org.apache.groovy:groovy-ant:${GroovySystem.version}"
+    testRuntimeOnly "org.apache.groovy:groovy-templates:${GroovySystem.version}"
+    // PropertyNameCalculator's signatures name Gradle types, which Groovy loads when it introspects the class
+    testRuntimeOnly gradleApi()
+
+    // DocPublisher looks grails-doc-files.jar up as a resource on its own classpath. The
+    // published jar carries it inside; tests run against class directories, so they need the
+    // directory holding it instead.
+    testRuntimeOnly files(layout.buildDirectory.dir('doc-files')) { builtBy 'docFilesJar' }
+
+    // The task specs run real builds, which load the tasks from docsCoreClasspath below
+    testImplementation gradleTestKit()
 }
 
 sourceSets {
@@ -76,6 +91,9 @@ docFilesJar.configure {Jar it ->
     it.description = 'Package up files used for generating documentation.'
     it.archiveVersion = null
     it.archiveFileName = 'grails-doc-files.jar'
+    // Its own directory, so that directory can go on the test runtime classpath above
+    // without dragging build/libs along with it.
+    it.destinationDirectory = layout.buildDirectory.dir('doc-files')
     it.from 'src/main/template'
 }
 
@@ -96,19 +114,16 @@ tasks.withType(Test).configureEach {
     outputs.cacheIf { !doNotCacheTests }
     outputs.upToDateWhen { !doNotCacheTests }
 
-    onlyIf {
-        ![
-                'onlyFunctionalTests',
-                'onlyHibernate7Tests',
-                'onlyMongodbTests',
-                'onlyRedisTests',
-                'onlySpringSecurityTests',
-                'skipCoreTests',
-                'skipTests'
-        ].find {
-            project.hasProperty(it)
-        }
-    }
+    boolean skipped = [
+            'onlyFunctionalTests',
+            'onlyHibernate7Tests',
+            'onlyMongodbTests',
+            'onlyRedisTests',
+            'onlySpringSecurityTests',
+            'skipCoreTests',
+            'skipTests'
+    ].any { project.hasProperty(it) }
+    onlyIf { !skipped }
 
     useJUnitPlatform()
     jvmArgs += java17moduleReflectionCompatibilityArguments
@@ -123,4 +138,24 @@ tasks.withType(Test).configureEach {
     excludes = ['**/*TestCase.class', '**/*$*.class']
     maxParallelForks = 1
     maxHeapSize = '1024m'
+}
+
+/**
+ * Hands the classpath of this project to the tests, whose TestKit builds load the tasks under test from it.
+ */
+abstract class DocsCoreClasspathArgument implements CommandLineArgumentProvider {
+
+    @Classpath
+    abstract ConfigurableFileCollection getClasspath()
+
+    @Override
+    Iterable<String> asArguments() {
+        ["-DdocsCoreClasspath=${classpath.asPath}".toString()]
+    }
+}
+
+def docsCoreClasspathArgument = objects.newInstance(DocsCoreClasspathArgument)
+docsCoreClasspathArgument.classpath.from(sourceSets.named('main').map { it.runtimeClasspath })
+tasks.withType(Test).configureEach { Test it ->
+    it.jvmArgumentProviders.add(docsCoreClasspathArgument)
 }

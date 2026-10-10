@@ -26,7 +26,6 @@ env:
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   JAVA_DISTRIBUTION: liberica
   JAVA_VERSION: 21.0.12
-  TARGET_BRANCH: ${{ github.ref_name }}
   VERSION: ${{ inputs.version }}
 jobs:
   docs:
@@ -49,26 +48,44 @@ jobs:
       - name: "📝 Store release version"
         run: echo "VERSION=${VERSION}" >> "$GITHUB_ENV"
       - name: "📥 Checkout repository"
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@v7.0.1
         with:
           fetch-depth: 0 # needed for docs release dropdown, (fetch-tags: true with fetch-depth: 1 does not work; https://github.com/actions/checkout/issues/1471)
           filter: tree:0 # limit size, keeping tags for docs release dropdown
           token: ${{ secrets.GITHUB_TOKEN }}
           ref: ${{ github.ref }}
+      - name: "🔍 Verify the branch builds the requested version"
+        # VERSION only picks the website folder. The documentation is built with the branch's projectVersion,
+        # so a branch on another version would publish that version's documentation under VERSION. Its pages
+        # link to their sources on githubBranch, which must stay the version's maintenance branch.
+        run: |
+          projectVersion=$(sed -n 's/^projectVersion=//p' gradle.properties)
+          if [[ "${projectVersion}" != "${VERSION#v}" ]]; then
+            echo "❌ ${GITHUB_REF_NAME} builds ${projectVersion:-an unknown version}, not ${VERSION#v}. Run this workflow from a branch created from the v${VERSION#v} tag." >&2
+            exit 1
+          fi
+          IFS=. read -r major minor _ <<< "${projectVersion}"
+          githubBranch=$(sed -n 's/^githubBranch=//p' gradle.properties)
+          if [[ "${githubBranch}" != "${major}.${minor}.x" ]]; then
+            echo "❌ githubBranch in gradle.properties is '${githubBranch}', not ${major}.${minor}.x. Fix it on ${GITHUB_REF_NAME}." >&2
+            exit 1
+          fi
       - name: "📅 Ensure Common Build Date" # to ensure a reproducible build
         run: echo "SOURCE_DATE_EPOCH=$(git log -1 --pretty=%ct)" >> "$GITHUB_ENV"
       - name: "☕️ Setup JDK"
-        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
+        uses: actions/setup-java@v6.0.1
         with:
           distribution: ${{ env.JAVA_DISTRIBUTION }}
           java-version: ${{ env.JAVA_VERSION }}
       - name: "🐘 Setup Gradle"
-        uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
+        uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
         with:
           cache-provider: basic # 'basic' uses the MIT-licensed, open-source cache provider; the default 'enhanced' provider (v6+) is proprietary (Gradle commercial Terms of Use)
           develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
       - name: "📖 Generate Documentation"
-        run: ./gradlew grails-doc:build -PgithubBranch=${TARGET_BRANCH}
+        # githubBranch comes from gradle.properties, so the source links point at the same branch as the voted
+        # documentation instead of the temporary correction branch
+        run: ./gradlew grails-doc:build
       - name: "🚀 Publish to GitHub Pages"
         uses: apache/grails-github-actions/deploy-github-pages@asf
         env:

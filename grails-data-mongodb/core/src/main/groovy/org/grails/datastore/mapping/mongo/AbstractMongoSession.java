@@ -33,6 +33,8 @@ import org.bson.Document;
 import org.bson.conversions.Bson;
 
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.transaction.IllegalTransactionStateException;
+import org.springframework.transaction.TransactionDefinition;
 
 import org.grails.datastore.mapping.core.AbstractSession;
 import org.grails.datastore.mapping.core.impl.PendingOperation;
@@ -268,9 +270,27 @@ public abstract class AbstractMongoSession extends AbstractSession<MongoClient> 
 
     @Override
     protected Transaction beginTransactionInternal() {
-        if (getDatastore().isTransactionsEnabled()) {
-            // Defensive: if a previous transaction did not complete cleanly, close its orphaned
-            // session before starting a new one so it cannot leak.
+        return beginTransactionInternal(false);
+    }
+
+    @Override
+    protected Transaction beginTransactionInternal(TransactionDefinition definition) {
+        return beginTransactionInternal(definition != null && definition.isReadOnly());
+    }
+
+    private Transaction beginTransactionInternal(boolean readOnly) {
+        // A read-only transaction reads without a server transaction: one would pin every read to the
+        // primary (the driver refuses any other read preference inside a transaction), put the reads
+        // under transactionLifetimeLimitSeconds, and add a commit round trip, for nothing to commit.
+        if (getDatastore().isTransactionsEnabled() && !readOnly) {
+            if (hasActiveTransaction()) {
+                // Starting another would abort this one, and every write made in it, without a word
+                throw new IllegalTransactionStateException("A MongoDB transaction is already active on this " +
+                        "session. Join it (PROPAGATION_REQUIRED) or run in a session of its own " +
+                        "(PROPAGATION_REQUIRES_NEW) instead of beginning another on the same session.");
+            }
+            // A session left behind by a transaction that did not complete cleanly holds no transaction
+            // any more; close it so it cannot leak.
             closeClientSessionQuietly();
             ClientSession session = getNativeInterface().startSession();
             try {
@@ -281,9 +301,19 @@ public abstract class AbstractMongoSession extends AbstractSession<MongoClient> 
                 throw e;
             }
             this.clientSession = session;
-            return new MongoTransaction(this, session);
+            return new MongoTransaction(this, session, readOnly);
         }
-        return new SessionOnlyTransaction<>(getNativeInterface(), this);
+        if (readOnly && getDatastore().isTransactionsEnabled()) {
+            // No server transaction to time out, but a timeout is refused as it is for a read-write one,
+            // rather than ignored
+            return new SessionOnlyTransaction<MongoClient>(getNativeInterface(), this, true) {
+                @Override
+                public void setTimeout(int timeout) {
+                    MongoTransaction.refuseTimeout(timeout);
+                }
+            };
+        }
+        return new SessionOnlyTransaction<>(getNativeInterface(), this, readOnly);
     }
 
     // The driver exposes a session-less and a ClientSession overload for every operation, and the

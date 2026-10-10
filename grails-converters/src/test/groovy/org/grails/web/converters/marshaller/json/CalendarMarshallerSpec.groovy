@@ -92,6 +92,20 @@ class CalendarMarshallerSpec extends Specification {
         result == '["2024-01-01T00:00:00.005Z"]'
     }
 
+    void "default formatter keeps a zero millisecond fraction, as Spring Boot does"() {
+        given:
+        def marshaller = new CalendarMarshaller()
+        def calendar = Calendar.getInstance(TimeZone.getTimeZone('Asia/Tokyo')).tap {
+            timeInMillis = 1704067200000L
+        }
+
+        when:
+        def result = marshalToString(marshaller, calendar)
+
+        then:
+        result == '["2024-01-01T00:00:00.000Z"]'
+    }
+
     void "legacy formatter is used when provided"() {
         given:
         def customFormat = new SimpleDateFormat('dd/MM/yyyy').tap {

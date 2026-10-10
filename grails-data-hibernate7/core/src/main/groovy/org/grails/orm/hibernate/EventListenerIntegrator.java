@@ -18,6 +18,7 @@
  */
 package org.grails.orm.hibernate;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
@@ -27,11 +28,14 @@ import java.util.Map;
 import org.hibernate.boot.Metadata;
 import org.hibernate.boot.spi.BootstrapContext;
 import org.hibernate.engine.spi.SessionFactoryImplementor;
+import org.hibernate.event.internal.DefaultPersistOnFlushEventListener;
 import org.hibernate.event.service.spi.EventListenerGroup;
 import org.hibernate.event.service.spi.EventListenerRegistry;
 import org.hibernate.event.spi.EventType;
 import org.hibernate.integrator.spi.Integrator;
 import org.hibernate.service.spi.SessionFactoryServiceRegistry;
+
+import org.grails.orm.hibernate.support.ClosureEventTriggeringInterceptor;
 
 public class EventListenerIntegrator implements Integrator {
 
@@ -119,8 +123,12 @@ public class EventListenerIntegrator implements Integrator {
                     // since ClosureEventTriggeringInterceptor extends DefaultSaveOrUpdateEventListener we
                     // want to override instead of append the listener here
                     // to avoid there being 2 implementations which would impact performance too
+                    List<T> retained = grailsOwnedListeners(group, listener);
                     group.clearListeners();
                     group.appendListener(listener);
+                    for (T grailsListener : retained) {
+                        group.appendListener(grailsListener);
+                    }
                 } else {
                     group.appendListener(listener);
                 }
@@ -133,7 +141,19 @@ public class EventListenerIntegrator implements Integrator {
         var isMergeEvent = eventType.equals(EventType.MERGE);
         var isPersistEventListener = listener instanceof org.hibernate.event.internal.DefaultPersistEventListener;
         var isPersistEvent = eventType.equals(EventType.PERSIST);
-        return isMergeListener && isMergeEvent || isPersistEventListener && isPersistEvent;
+        var isPersistOnFlushListener = listener instanceof DefaultPersistOnFlushEventListener;
+        var isPersistOnFlushEvent = eventType.equals(EventType.PERSIST_ONFLUSH);
+        // ClosureEventTriggeringInterceptor is registered for merge and persist too, but it composes (rather
+        // than extends) DefaultMergeEventListener/DefaultPersistEventListener, delegating every call to its own
+        // internal instance of each. Appending it to Hibernate's own default listener group would run that
+        // delegated persist/merge logic a second time for every entity - replace the default listener instead,
+        // the same way we do for the Default*EventListener subclasses above. The persist-on-flush listener it
+        // supplies extends DefaultPersistOnFlushEventListener and is covered by that clause.
+        var isClosureEventTriggeringInterceptor = listener instanceof ClosureEventTriggeringInterceptor;
+        return isMergeListener && isMergeEvent ||
+                isPersistEventListener && isPersistEvent ||
+                isPersistOnFlushListener && isPersistOnFlushEvent ||
+                isClosureEventTriggeringInterceptor && (isMergeEvent || isPersistEvent);
     }
 
     @SuppressWarnings("unchecked")
@@ -148,11 +168,57 @@ public class EventListenerIntegrator implements Integrator {
                 // since ClosureEventTriggeringInterceptor extends DefaultSaveOrUpdateEventListener we want
                 // to override instead of append the listener here
                 // to avoid there being 2 implementations which would impact performance too
+                EventListenerGroup<T> group = listenerRegistry.getEventListenerGroup(eventType);
+                List<T> retained = grailsOwnedListeners(group, (T) listener);
                 listenerRegistry.setListeners(eventType, (T) listener);
+                for (T grailsListener : retained) {
+                    group.appendListener(grailsListener);
+                }
             } else {
                 listenerRegistry.appendListeners(eventType, (T) listener);
             }
         }
+    }
+
+    /**
+     * What GORM contributed to the group that a replacement must not discard, in the form it can keep.
+     * <p>
+     * Replacing a group is meant to displace Hibernate's own default listener, but an application can register
+     * a listener of its own for the same event. Without this, such a listener would silently take GORM's
+     * persistence events and its dirty-check activation with it. The replacement performs the persist or merge
+     * itself, so what is kept is the interceptor's observing listener rather than the interceptor, which would
+     * otherwise perform that same operation a second time for every entity.
+     */
+    @SuppressWarnings("unchecked")
+    private <T> List<T> grailsOwnedListeners(EventListenerGroup<T> group, T replacement) {
+        List<T> retained = new ArrayList<>();
+        if (group == null || group.listeners() == null) {
+            return retained;
+        }
+        for (T existing : group.listeners()) {
+            if (existing == replacement) {
+                continue;
+            }
+            Object kept = retainedForm(existing);
+            if (kept != null) {
+                retained.add((T) kept);
+            }
+        }
+        return retained;
+    }
+
+    private Object retainedForm(Object listener) {
+        if (listener instanceof ClosureEventTriggeringInterceptor) {
+            return ((ClosureEventTriggeringInterceptor) listener).getObservingEventListener();
+        }
+        if (listener instanceof ClosureEventTriggeringInterceptor.PersistOnFlushEventListener) {
+            return ((ClosureEventTriggeringInterceptor.PersistOnFlushEventListener) listener)
+                    .getObservingEventListener();
+        }
+        if (listener instanceof ClosureEventTriggeringInterceptor.ObservingEventListener) {
+            return listener;
+        }
+        return null;
     }
 
     @Override

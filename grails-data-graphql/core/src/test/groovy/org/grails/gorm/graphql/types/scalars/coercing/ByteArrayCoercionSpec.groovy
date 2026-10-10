@@ -19,6 +19,8 @@
 
 package org.grails.gorm.graphql.types.scalars.coercing
 
+import graphql.GraphQLContext
+import graphql.execution.CoercedVariables
 import graphql.language.ArrayValue
 import graphql.language.IntValue
 import spock.lang.Specification
@@ -31,7 +33,7 @@ class ByteArrayCoercionSpec extends Specification {
         ByteArrayCoercion coercion = new ByteArrayCoercion()
 
         when:
-        def result = coercion.parseLiteral(value)
+        def result = coercion.parseLiteral(value, CoercedVariables.emptyVariables(), GraphQLContext.default, Locale.default)
 
         then:
         result == [1,22,32,54] as Byte[]

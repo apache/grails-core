@@ -23,27 +23,26 @@ dependencies {
 }
 
 tasks.withType(Test).configureEach {
-    onlyIf {
-        ![
-                'skipSpringSecurityTests',
-                'onlyFunctionalTests',
-                'onlyHibernate7Tests',
-                'onlyMongodbTests',
-                'onlyRedisTests',
-                'onlyCoreTests',
-                'skipTests'
-        ].find {
-            project.hasProperty(it)
-        }
-    }
+    boolean skipped = [
+            'skipSpringSecurityTests',
+            'onlyFunctionalTests',
+            'onlyHibernate7Tests',
+            'onlyMongodbTests',
+            'onlyNeo4jTests',
+            'onlyRedisTests',
+            'onlyCoreTests',
+            'skipTests'
+    ].any { project.hasProperty(it) }
+    onlyIf { !skipped }
 
     useJUnitPlatform()
     testLogging {
         exceptionFormat = 'full'
         events 'passed', 'skipped', 'failed'//, 'standardOut', 'standardError'
     }
+    Logger testLogger = logger
     addTestListener([
-            beforeTest: { descriptor -> logger.quiet(" -- $descriptor") }
+            beforeTest: { descriptor -> testLogger.quiet(" -- $descriptor") }
     ] as TestListener)
 }
 
@@ -58,8 +57,8 @@ pluginManager.withPlugin('org.apache.grails.gradle.grails-integration-test') {
         systemProperty('grails.geb.atCheckWaiting.enabled', 'true')
         systemProperty('grails.geb.timeouts.timeout', '30')
 
-        doFirst {
-            logger.quiet(
+        doFirst { Task task ->
+            task.logger.quiet(
                     '\n - Running tests for configuration: {}',
                     System.getProperty('TESTCONFIG', 'N/S')
             )

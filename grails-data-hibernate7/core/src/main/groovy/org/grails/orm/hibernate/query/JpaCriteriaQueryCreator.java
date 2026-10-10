@@ -16,6 +16,7 @@
 package org.grails.orm.hibernate.query;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -25,6 +26,7 @@ import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.CriteriaQuery;
 import jakarta.persistence.criteria.Expression;
 import jakarta.persistence.criteria.JoinType;
+import jakarta.persistence.criteria.ParameterExpression;
 import jakarta.persistence.criteria.Root;
 
 import org.hibernate.query.criteria.HibernateCriteriaBuilder;
@@ -42,9 +44,7 @@ import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersi
 /**
  * A class that creates a JPA {@link CriteriaQuery} from a GORM {@link Query} and {@link DetachedCriteria}.
  *
- * @author burt
- * @author graemerocher
- * @since 7.0.0
+ * @since 8.0
  */
 public class JpaCriteriaQueryCreator<T> {
 
@@ -55,6 +55,7 @@ public class JpaCriteriaQueryCreator<T> {
     private final ConversionService conversionService;
     private final HibernateQuery hibernateQuery;
     private JpaQueryContext parentContext;
+    private JpaQueryContext context;
 
     public JpaCriteriaQueryCreator(
             Query.ProjectionList projections,
@@ -84,6 +85,17 @@ public class JpaCriteriaQueryCreator<T> {
         this.parentContext = parentContext;
     }
 
+    /**
+     * Returns the values of the criteria parameters in the query or subquery last built by this creator, which
+     * must be bound to the query once it is created. A subquery built under a parent context records its values
+     * in the parent's context, so they are bound with the query that contains it.
+     *
+     * @return the value of each parameter
+     */
+    public Map<ParameterExpression<?>, Object> getParameterValues() {
+        return context != null ? context.getParameterValues() : Collections.emptyMap();
+    }
+
     public JpaCriteriaQuery<?> createQuery() {
         var projectionList = collectProjections();
         var cq = createCriteriaQuery(projectionList);
@@ -100,13 +112,13 @@ public class JpaCriteriaQueryCreator<T> {
             }
         }
 
-        var context = JpaQueryContext.forSubquery(parentContext, aliases, root);
+        context = JpaQueryContext.forSubquery(parentContext, aliases, root);
         registerDetachedJoins(context);
         discoverAliases(detachedCriteria.getCriteria(), context);
 
         applyEagerFetchJoins(root, projectionList);
 
-        new JpaProjectionAdapter(criteriaBuilder, context).adapt(projections, (AbstractQuery<?>) cq);
+        new JpaProjectionAdapter(criteriaBuilder, context, entity).adapt(projections, (AbstractQuery<?>) cq);
         assignGroupBy(cq, context);
 
         assignOrderBy(cq, context);
@@ -162,11 +174,11 @@ public class JpaCriteriaQueryCreator<T> {
             }
         }
 
-        var context = JpaQueryContext.forSubquery(parentContext, aliases, root);
+        context = JpaQueryContext.forSubquery(parentContext, aliases, root);
         registerDetachedJoins(context);
         discoverAliases(detachedCriteria.getCriteria(), context);
 
-        new JpaProjectionAdapter(criteriaBuilder, context).adapt(projections, (AbstractQuery<?>) subquery);
+        new JpaProjectionAdapter(criteriaBuilder, context, entity).adapt(projections, (AbstractQuery<?>) subquery);
 
         assignGroupBy(subquery, context);
 
@@ -179,7 +191,7 @@ public class JpaCriteriaQueryCreator<T> {
 
     private JpaCriteriaQuery<?> createCriteriaQuery(List<Query.Projection> projections) {
         List<Query.Projection> expressionProjections = projections.stream()
-                .filter(p -> !(p instanceof Query.DistinctProjection))
+                .filter(p -> !(p instanceof Query.DistinctProjection) && !(p instanceof SqlGroupProjection))
                 .toList();
 
         if (expressionProjections.size() > 1) {
@@ -198,19 +210,50 @@ public class JpaCriteriaQueryCreator<T> {
                 return (JpaCriteriaQuery<?>) criteriaBuilder.createQuery(projectionType);
             } else if (first instanceof Query.PropertyProjection propertyProjection) {
                 return (JpaCriteriaQuery<?>) criteriaBuilder.createQuery(resolveProjectionType(propertyProjection));
+            } else if (first instanceof SqlProjection sqlProjection) {
+                return (JpaCriteriaQuery<?>) criteriaBuilder.createQuery(sqlProjection.getType());
             }
             return (JpaCriteriaQuery<?>) criteriaBuilder.createQuery(entity.getJavaClass());
         }
     }
 
     private void assignGroupBy(AbstractQuery<?> query, JpaQueryContext context) {
-        var groupByExpressions = collectGroupProjections().stream()
-                .map(groupPropertyProjection -> context.getFullyQualifiedExpression(groupPropertyProjection.getPropertyName()))
+        var translator = new JpaProjectionTranslator(criteriaBuilder, context, entity);
+        var groupByExpressions = projections.getProjectionList().stream()
+                .map(projection -> {
+                    if (projection instanceof Query.GroupPropertyProjection groupPropertyProjection) {
+                        return context.getFullyQualifiedExpression(groupPropertyProjection.getPropertyName());
+                    } else if (projection instanceof SqlGroupProjection sqlGroupProjection) {
+                        // the column alias of a SQL projection does not reach the SQL, so a group by clause that
+                        // names one, quoted or not, groups by the SQL it stands for; as in standard SQL, a name in
+                        // double quotes is case sensitive, while backquotes (MySQL) and square brackets (SQL Server)
+                        // leave a column alias case insensitive
+                        String groupBy = sqlGroupProjection.getSql().trim();
+                        String name = SqlProjection.unquote(groupBy);
+                        boolean caseSensitive = groupBy.startsWith("\"") && !name.equals(groupBy);
+                        SqlProjection aliased = findSqlProjection(name, !caseSensitive);
+                        return translator.translateSql(aliased != null ? aliased.getSql() : sqlGroupProjection.getSql(), null);
+                    }
+                    return null;
+                })
                 .filter(Objects::nonNull)
                 .toArray(Expression[]::new);
         if (groupByExpressions.length > 0) {
             query.groupBy(groupByExpressions);
         }
+    }
+
+    /**
+     * Returns the SQL projection whose column alias is the given name, or {@code null}.
+     */
+    private SqlProjection findSqlProjection(String name, boolean ignoreCase) {
+        for (Query.Projection projection : projections.getProjectionList()) {
+            if (projection instanceof SqlProjection sqlProjection && sqlProjection.getColumnAlias() != null &&
+                    (ignoreCase ? sqlProjection.getColumnAlias().equalsIgnoreCase(name) : sqlProjection.getColumnAlias().equals(name))) {
+                return sqlProjection;
+            }
+        }
+        return null;
     }
 
     private Class<?> resolveProjectionType(Query.PropertyProjection projection) {
@@ -234,7 +277,10 @@ public class JpaCriteriaQueryCreator<T> {
             var jpaOrders = orders.stream()
                     .map(order -> {
                         var propertyName = order.getProperty();
-                        Expression<?> expression = context.getFullyQualifiedExpression(propertyName);
+                        SqlProjection sqlProjection = findSqlProjection(propertyName, false);
+                        Expression<?> expression = sqlProjection != null ?
+                                context.getSelectionAlias(sqlProjection.getColumnAlias()) :
+                                context.getFullyQualifiedExpression(propertyName);
                         if (order.isIgnoreCase() && expression.getJavaType().equals(String.class)) {
                             return order.getDirection().equals(Query.Order.Direction.ASC) ?
                                     criteriaBuilder.asc(criteriaBuilder.lower((Expression<String>) expression)) :
@@ -295,12 +341,5 @@ public class JpaCriteriaQueryCreator<T> {
                 cq.where(predicate);
             }
         }
-    }
-
-    private List<Query.GroupPropertyProjection> collectGroupProjections() {
-        return projections.getProjectionList().stream()
-                .filter(Query.GroupPropertyProjection.class::isInstance)
-                .map(Query.GroupPropertyProjection.class::cast)
-                .toList();
     }
 }

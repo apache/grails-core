@@ -265,10 +265,11 @@ class DomainModelServiceSpec extends Specification implements MocksDomain {
         when:
         List<DomainProperty> properties = domainModelService.getListOutputProperties(domainClass).toList()
 
-        then: "Identity is added to the beginning of the list"
+        then: "Identity is prepended, and all output properties are retained"
         properties.size() == 11
         properties[0].name == "id"
-        properties[10].name == "10"
+        // Spock 2.5 compares Comparable mocks by identity hash, so sort order is not insertion order.
+        properties[1..-1]*.name as Set == (1..10).collect { it.toString() } as Set
     }
 
     class ScaffoldedDomain {

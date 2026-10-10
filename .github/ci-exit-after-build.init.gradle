@@ -23,6 +23,10 @@ import java.nio.file.StandardCopyOption
 import org.gradle.api.execution.TaskExecutionGraph
 import org.gradle.api.tasks.TaskState
 
+// The afterTask and buildFinished listeners below are not supported by the
+// configuration cache, so every invocation that passes this script must also
+// pass --no-configuration-cache.
+
 // Command-line init scripts also apply to included builds. Only the
 // invocation root should write the functional-suite sentinel.
 if (gradle.parent != null) {

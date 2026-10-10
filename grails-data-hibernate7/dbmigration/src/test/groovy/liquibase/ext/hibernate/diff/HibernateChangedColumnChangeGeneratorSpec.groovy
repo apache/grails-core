@@ -22,6 +22,7 @@ import liquibase.change.Change
 import liquibase.database.Database
 import liquibase.diff.Difference
 import liquibase.diff.ObjectDifferences
+import liquibase.diff.compare.CompareControl
 import liquibase.diff.output.DiffOutputControl
 import liquibase.ext.hibernate.database.HibernateDatabase
 import liquibase.statement.DatabaseFunction
@@ -79,8 +80,7 @@ class HibernateChangedColumnChangeGeneratorSpec extends Specification {
 
         then:
         _ * differences.getDifference("type") >> diff
-        1 * differences.getDifferences() >> [diff]
-        0 * differences.removeDifference("type")
+        0 * differences.removeDifference(_)
     }
 
     def "handleTypeDifferences removes difference if size is same"() {
@@ -103,8 +103,35 @@ class HibernateChangedColumnChangeGeneratorSpec extends Specification {
 
         then:
         _ * differences.getDifference("type") >> diff
-        1 * differences.getDifferences() >> [diff]
         1 * differences.removeDifference("type")
+        0 * differences.removeDifference({ it != "type" })
+    }
+
+    def "handleTypeDifferences keeps unrelated differences of the same column when the size is unchanged"() {
+        given:
+        Column column = new Column()
+        column.setName("myCol")
+        column.setRelation(new Table(name: "myTable"))
+        column.setType(new DataType("VARCHAR"))
+        DiffOutputControl control = Mock()
+        List<Change> changes = []
+        HibernateDatabase hibernateDatabase = Mock()
+
+        DataType referenceType = new DataType("VARCHAR(10)")
+        referenceType.setColumnSize(10)
+        DataType comparedType = new DataType("VARCHAR(10)")
+        comparedType.setColumnSize(10)
+
+        ObjectDifferences differences = new ObjectDifferences(new CompareControl())
+        differences.addDifference("type", referenceType, comparedType)
+        differences.addDifference("remarks", "The name of the item", null)
+
+        when:
+        generator.handleTypeDifferences(column, differences, control, changes, hibernateDatabase, hibernateDatabase)
+
+        then: "only the type difference is dropped, so the remark change is still reported"
+        differences.getDifference("type") == null
+        differences.getDifference("remarks") != null
     }
 
     def "handleDefaultValueDifferences ignores null to DatabaseFunction changes for HibernateDatabase"() {

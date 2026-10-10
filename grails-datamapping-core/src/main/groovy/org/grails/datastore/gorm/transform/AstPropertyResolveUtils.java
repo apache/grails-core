@@ -155,7 +155,7 @@ public class AstPropertyResolveUtils {
      * @return The type
      */
     public static ClassNode getPropertyType(ClassNode classNode, String propertyName) {
-        if (propertyName == null || propertyName.length() == 0) {
+        if (propertyName == null || propertyName.isEmpty()) {
             return null;
         }
         Map<String, ClassNode> cachedProperties = getPropertiesFromCache(classNode);
@@ -271,12 +271,11 @@ public class AstPropertyResolveUtils {
     private static void cachePropertiesForAssociationMetadata(Map<String, ClassNode> cachedProperties, ClassPropertyFetcher propertyFetcher, String associationMetadataName) {
         if (propertyFetcher.isReadableProperty(associationMetadataName)) {
             Object propertyValue = propertyFetcher.getPropertyValue(associationMetadataName);
-            if (propertyValue instanceof Map) {
-                Map hasManyMap = (Map) propertyValue;
+            if (propertyValue instanceof Map<?, ?> hasManyMap) {
                 for (Object propertyName : hasManyMap.keySet()) {
                     Object val = hasManyMap.get(propertyName);
-                    if (val instanceof Class) {
-                        cachedProperties.put(propertyName.toString(), ClassHelper.make((Class) val).getPlainNodeReference());
+                    if (val instanceof Class<?> valType) {
+                        cachedProperties.put(propertyName.toString(), ClassHelper.make(valType).getPlainNodeReference());
                     }
                 }
             }
@@ -284,8 +283,7 @@ public class AstPropertyResolveUtils {
     }
 
     private static void populatePropertiesForInitialExpression(Map<String, ClassNode> cachedProperties, Expression initialExpression) {
-        if (initialExpression instanceof MapExpression) {
-            MapExpression me = (MapExpression) initialExpression;
+        if (initialExpression instanceof MapExpression me) {
             List<MapEntryExpression> mapEntryExpressions = me.getMapEntryExpressions();
             for (MapEntryExpression mapEntryExpression : mapEntryExpressions) {
                 Expression keyExpression = mapEntryExpression.getKeyExpression();

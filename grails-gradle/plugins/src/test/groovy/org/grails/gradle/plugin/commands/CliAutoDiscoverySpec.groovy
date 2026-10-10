@@ -74,6 +74,22 @@ class CliAutoDiscoverySpec extends GradleSpecification {
         result.output.contains('INTEGRATION_TEST_RUNTIME_HAS_GRAILSCLILEGACY=true')
     }
 
+    def "building an in-build library does not invalidate the configuration cache entry that discovered the companions"() {
+        given: 'an app that also depends on a library of the same build without a companion'
+        setupTestResourceProject('cli-companion-autodiscovery')
+        executeTask(':app:prepareDigitBearingPlugin')
+
+        when: 'the app discovers its companions, the library jar is built, and the app discovers them again'
+        def stored = executeTask(':app:inspectGrailsCli')
+        executeTask(':plain-library:jar')
+        def reused = executeTask(':app:inspectGrailsCli')
+
+        then: 'the library jar was never read during discovery, so building it leaves the entry reusable'
+        stored.output.contains('Configuration cache entry stored')
+        reused.output.contains('Configuration cache entry reused')
+        reused.output.contains('GRAILSCLI_DEP: project path=:my-plugin capabilities=[org.example.test:my-plugin-cli]')
+    }
+
     def "a companion with a customized artifactId is discovered and resolves through its advertised capability"() {
         given: 'an app depending on a plugin whose companion coordinate is customized'
         setupTestResourceProject('cli-companion-autodiscovery')
@@ -206,5 +222,16 @@ class CliAutoDiscoverySpec extends GradleSpecification {
         !result.output.contains('GRAILSCLI_DEP: module org.apache.grails:grails-core-cli-legacy')
         result.output.contains('TEST_RUNTIME_HAS_GRAILSCLILEGACY=true')
         result.output.contains('INTEGRATION_TEST_RUNTIME_HAS_GRAILSCLILEGACY=true')
+    }
+
+    def "configuring the cli wiring emits no Gradle deprecation warnings"() {
+        given: 'a web application, which applies the cli plugin'
+        setupTestResourceProject('cli-deprecation-free')
+
+        when: 'every task is configured with deprecation warnings treated as failures'
+        def result = executeTask('tasks', ['--all', '--warning-mode=fail'])
+
+        then: 'the build succeeds without a deprecation warning'
+        !result.output.contains('has been deprecated')
     }
 }

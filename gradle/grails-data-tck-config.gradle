@@ -57,15 +57,16 @@ cleanupTask.configure { Task it ->
     it.outputs.upToDateWhen { false }
 }
 
+boolean cacheTests = !doNotCacheTests
 tasks.withType(Test).configureEach { Test it ->
     it.dependsOn(extractTck)
 
     // Honor DO_NOT_CACHE_TESTS=1 so developers can repeatedly invoke the same test command
     // without --rerun-tasks (and without recompiling everything else).
-    it.outputs.cacheIf { !doNotCacheTests }
-    it.outputs.upToDateWhen { !doNotCacheTests }
+    it.outputs.cacheIf { cacheTests }
+    it.outputs.upToDateWhen { cacheTests }
 
-    it.onlyIf {
+    boolean enabled = {
         if (project.hasProperty('onlyFunctionalTests')) {
             return false
         }
@@ -111,7 +112,8 @@ tasks.withType(Test).configureEach { Test it ->
         }
 
         true
-    }
+    }()
+    it.onlyIf { enabled }
 
     it.testClassesDirs = objects.fileCollection().from(extractTck, testClassesDirs)
     it.finalizedBy(cleanupTask)

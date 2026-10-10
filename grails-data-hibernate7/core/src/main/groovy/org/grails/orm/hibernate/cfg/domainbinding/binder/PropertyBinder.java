@@ -64,13 +64,14 @@ public class PropertyBinder {
             config = new PropertyConfig();
         }
 
-        if (persistentProperty instanceof HibernateAssociation assoc &&
-                assoc.isBidirectionalManyToOneWithListMapping(prop)) {
-            prop.setInsertable(false);
-            prop.setUpdatable(false);
-        } else {
-            prop.setInsertable(config.getInsertable());
-            prop.setUpdatable(config.getUpdatable());
+        // The mapping's insertable/updatable flags; the value's columns can only narrow them further, below. The
+        // many-to-one side of a bidirectional list mapping is left to its columns, as it always was.
+        boolean insertable = true;
+        boolean updatable = true;
+        if (!(persistentProperty instanceof HibernateAssociation assoc &&
+                assoc.isBidirectionalManyToOneWithListMapping(prop))) {
+            insertable = config.getInsertable();
+            updatable = config.getUpdatable();
         }
 
         var accessType = AccessType.getAccessStrategy(config.getAccessType());
@@ -96,8 +97,10 @@ public class PropertyBinder {
         // Use centralized laziness determination
         prop.setLazy(persistentProperty.isLazy());
 
-        prop.setInsertable(value.hasAnyInsertableColumns());
-        prop.setUpdatable(value.hasAnyUpdatableColumns());
+        // An explicit false in the mapping is honoured, and a value without insertable/updatable columns
+        // (a formula, a collection, an inverse side) is never written.
+        prop.setInsertable(insertable && value.hasAnyInsertableColumns());
+        prop.setUpdatable(updatable && value.hasAnyUpdatableColumns());
 
         return prop;
     }

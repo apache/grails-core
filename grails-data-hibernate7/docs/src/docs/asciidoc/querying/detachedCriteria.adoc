@@ -53,6 +53,15 @@ def bartQuery = criteria.build {
 }
 ----
 
+A detached criteria also accepts `sqlRestriction`, which restricts the results with a native SQL condition as in a <<querying-criteria,criteria>> query. `{alias}` stands for the table alias of the class of the detached criteria, also when the detached criteria is used as a subquery:
+
+[source,groovy]
+----
+def criteria = new DetachedCriteria(Person).build {
+    sqlRestriction "char_length({alias}.first_name) <= ?", [4]
+}
+----
+
 
 ==== Executing Detached Criteria Queries
 
@@ -199,7 +208,7 @@ def criteria = new DetachedCriteria(Person).build {
 int total = criteria.updateAll(lastName:"Bloggs")
 ----
 
-NOTE: Note that one limitation with regards to batch operations is that join queries (queries that query associations) are not allowed within the `DetachedCriteria` instance.
+NOTE: Note that one limitation with regards to batch operations is that join queries (queries that query associations) are not allowed within the `DetachedCriteria` instance. Neither is `sqlRestriction`: a batch operation on a detached criteria with a SQL restriction throws an exception.
 
 To batch delete records you can use the `deleteAll` method:
 

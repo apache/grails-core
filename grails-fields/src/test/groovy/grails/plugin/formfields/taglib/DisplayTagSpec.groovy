@@ -56,6 +56,28 @@ class DisplayTagSpec extends AbstractFormFieldsTagLibSpec implements TagLibUnitT
 			result.contains '<div class="property-value" aria-labelledby="gender-label">Male</div>'
 	}
 
+    void 'display tag skips the properties excluded by a list in application.yml with environment #variables'() {
+        given:
+        List<String> defaultExclusions = tagLib.exclusionsDisplay
+        tagLib.environment = applicationYml('grails.plugin.fields.exclusions.display: [version, "${EXAMPLE_EXCLUDED:gender}"]', variables)
+
+        when:
+        def result = applyTemplate('<f:display bean="personInstance" />', [personInstance: personInstance])
+
+        then:
+        tagLib.exclusionsDisplay == ['version', excluded]
+        !result.contains("${excluded}-label")
+        result.contains('name-label')
+
+        cleanup:
+        tagLib.exclusionsDisplay = defaultExclusions
+
+        where:
+        variables                   | excluded
+        [:]                         | 'gender'
+        [EXAMPLE_EXCLUDED: 'minor'] | 'minor'
+    }
+
 	void 'display tag allows to specify order'() {
 		when:"A list is rendered"
 		def result = applyTemplate('<f:display bean="personInstance" order="salutation,name,gender"/>', [personInstance: personInstance])

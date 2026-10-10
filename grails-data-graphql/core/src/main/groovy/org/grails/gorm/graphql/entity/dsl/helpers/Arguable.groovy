@@ -41,7 +41,9 @@ trait Arguable<T> extends ExecutesClosures {
 
     private void handleArgumentClosure(CustomArgument argument, @DelegatesTo(strategy = Closure.DELEGATE_ONLY)Closure closure) {
         // GROOVY-12106: STC could not resolve this inherited ExecutesClosures static from a sub-trait
-        // body; fixed in Groovy 5.0.7, so the plain inherited-static call compiles again.
+        // body; fixed in Groovy 5.0.7, so the plain inherited-static call compiles again. Qualifying
+        // this call (e.g. ExecutesClosures.withDelegate(...)) does NOT resolve under STC either - only
+        // the unqualified form works, so leave it as-is despite IDE inspections suggesting otherwise.
         withDelegate(closure, (Object) argument)
         argument.validate()
         arguments.add(argument)

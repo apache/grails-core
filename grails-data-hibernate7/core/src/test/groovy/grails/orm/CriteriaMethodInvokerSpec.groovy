@@ -79,17 +79,17 @@ class CriteriaMethodInvokerSpec extends Specification {
     void "test invokeMethod handles count call"() {
         given:
         def closure = { eq("foo", "bar") }
-        def projectionList = new org.grails.datastore.mapping.query.Query.ProjectionList()
 
         when:
-        invoker.invokeMethod("count", [closure] as Object[])
+        def result = invoker.invokeMethod("count", [closure] as Object[])
 
         then:
         1 * builder.setCount(true)
         1 * builder.isUniqueResult() >> false
         1 * builder.isCount() >> true
-        1 * query.projections() >> projectionList
-        1 * query.singleResult() >> 0L
+        1 * query.countResults() >> 7L
+        0 * query.singleResult()
+        result == 7L
         1 * builder.isParticipate() >> true
     }
 

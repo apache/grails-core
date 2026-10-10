@@ -77,6 +77,27 @@ dependencies {
     testImplementation "org.apache.grails:grails-testing-support-web"
 }
 
+// PrecompiledScaffoldPagesSpec reads the pages this build compiles, as the packaged application does
+tasks.named('test', Test) {
+    def compileGroovyPages = tasks.named('compileGroovyPages')
+    // the directory property does not carry the task that writes it, so the dependency is stated
+    dependsOn compileGroovyPages
+    jvmArgumentProviders.add(new CompiledPages(pages: compileGroovyPages.flatMap { it.destinationDirectory }))
+}
+
+/** Hands the tests the compiled pages, tracked by content rather than by where this checkout is. */
+class CompiledPages implements CommandLineArgumentProvider {
+
+    @InputDirectory
+    @PathSensitive(PathSensitivity.RELATIVE)
+    Provider<Directory> pages
+
+    @Override
+    Iterable<String> asArguments() {
+        ["-Dscaffolding.compiledPages=${pages.get().asFile.absolutePath}".toString()]
+    }
+}
+
 apply {
     from rootProject.layout.projectDirectory.file('gradle/functional-test-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/test-webjar-asset-config.gradle')

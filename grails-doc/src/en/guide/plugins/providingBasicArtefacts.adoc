@@ -35,7 +35,7 @@ A plugin can add new commands to the Grails interactive shell in one of two ways
 Code generation scripts can be used to create artefacts within the project tree and automate interactions with Gradle.
 
 When the plugin also applies `org.apache.grails.gradle.grails-plugin-cli` (see
-<<Ship plugin commands as a companion -cli artifact>> below), files under `src/main/scripts`
+<<pluginCliArtifact,Ship plugin commands as a companion `-cli` artifact>> below), files under `src/main/scripts`
 (including `*.groovy`, `*.yml`, and `*.json` multi-step commands) are packaged into the companion
 `-cli` jar as `META-INF/commands` and are **not** copied into the runtime plugin jar. That keeps
 command-only resources off `runtimeClasspath`, `bootJar`, and `bootWar` while still making them
@@ -67,6 +67,7 @@ class MyExampleCommand implements ApplicationCommand {
 
 An `ApplicationCommand` has access to the `GrailsApplication` instance and is subject to autowiring like any other Spring bean.
 
+[[pluginCliArtifact]]
 ===== Ship plugin commands as a companion `-cli` artifact
 
 Commands are only ever executed by the CLI, so a plugin should keep them off the application

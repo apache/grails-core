@@ -74,8 +74,8 @@ ext['groovy.version'] = bomDependencyVersions['groovy.version']
 if (bomDependencyVersions.containsKey('logback.version')) {
     ext['logback.version'] = bomDependencyVersions['logback.version']
 }
-if (bomDependencyVersions.containsKey('jackson3.version')) {
-    ext['jackson-bom.version'] = bomDependencyVersions['jackson3.version']
+if (bomDependencyVersions.containsKey('jackson-bom.version')) {
+    ext['jackson-bom.version'] = bomDependencyVersions['jackson-bom.version']
 }
 
 dependencies {

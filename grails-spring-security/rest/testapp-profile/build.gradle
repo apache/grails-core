@@ -17,6 +17,8 @@
  *  under the License.
  */
 
+import javax.inject.Inject
+
 plugins {
     id 'org.apache.grails.gradle.grails-profile'
     id 'org.apache.grails.buildsrc.sbom'
@@ -30,21 +32,28 @@ ext {
     pomDescription = 'A Grails profile to assist in generating various implementations of the Grails Spring Security REST plugin for testing purposes'
 }
 
+interface FileSystemSupport {
+    @Inject FileSystemOperations getFs()
+}
+
 tasks.register('generateProfileConfig') {
+    def fs = objects.newInstance(FileSystemSupport).fs
+    File profileDir = layout.projectDirectory.asFile
+    Map<String, Object> expansions = [pluginVersion: project.version, grailsVersion: findProperty('projectVersion')]
     doLast {
-        copy {
-            from 'profile.yml.tmpl'
-            into '.'
+        fs.copy {
+            from new File(profileDir, 'profile.yml.tmpl')
+            into profileDir
             rename { String fileName -> fileName.replaceAll '\\.tmpl', '' }
-            expand(pluginVersion: project.version, grailsVersion: findProperty('projectVersion'))
+            expand(expansions)
         }
 
-        file('features').eachDir { feature ->
-            copy {
-                from "features/${feature.name}/feature.yml.tmpl"
-                into "features/${feature.name}/"
+        new File(profileDir, 'features').eachDir { feature ->
+            fs.copy {
+                from new File(feature, 'feature.yml.tmpl')
+                into feature
                 rename { String fileName -> fileName.replaceAll '\\.tmpl', '' }
-                expand(pluginVersion: project.version, grailsVersion: findProperty('projectVersion'))
+                expand(expansions)
             }
         }
     }

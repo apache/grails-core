@@ -60,10 +60,10 @@ class DetachedCriteria<T> extends AbstractDetachedCriteria<Observable<T>> implem
      *
      * @return An observable
      */
-    Observable<T> find(Map args = Collections.emptyMap(), @DelegatesTo(DetachedCriteria) Closure additionalCriteria = null) {
-        Query query = prepareQuery(args, additionalCriteria)
+    Observable<T> find(Map args = Collections.emptyMap(), @DelegatesTo(value = DetachedCriteria, strategy = Closure.DELEGATE_FIRST) Closure additionalCriteria = null) {
+        Query query = prepareQuery(args, (Closure) additionalCriteria)
         query.max(1)
-        return ((RxQuery)query).findAll(args)
+        return ((RxQuery<T>)query).findAll(args)
     }
 
     /**
@@ -75,9 +75,9 @@ class DetachedCriteria<T> extends AbstractDetachedCriteria<Observable<T>> implem
      *
      * @return An observable
      */
-    Observable<T> findAll(Map args = Collections.emptyMap(), @DelegatesTo(DetachedCriteria) Closure additionalCriteria = null) {
-        Query query = prepareQuery(args, additionalCriteria)
-        return ((RxQuery)query).findAll(args)
+    Observable<T> findAll(Map args = Collections.emptyMap(), @DelegatesTo(value = DetachedCriteria, strategy = Closure.DELEGATE_FIRST) Closure additionalCriteria = null) {
+        Query query = prepareQuery(args, (Closure) additionalCriteria)
+        return ((RxQuery<T>)query).findAll(args)
     }
 
     /**
@@ -85,10 +85,10 @@ class DetachedCriteria<T> extends AbstractDetachedCriteria<Observable<T>> implem
      *
      * @see #find(java.util.Map, groovy.lang.Closure)
      */
-    Observable<T> get(Map args, @DelegatesTo(DetachedCriteria) Closure additionalCriteria = null) {
-        Query query = prepareQuery(args, additionalCriteria)
+    Observable<T> get(Map args, @DelegatesTo(value = DetachedCriteria, strategy = Closure.DELEGATE_FIRST) Closure additionalCriteria = null) {
+        Query query = prepareQuery(args, (Closure) additionalCriteria)
         query.max(1)
-        return ((RxQuery)query).singleResult(args)
+        return ((RxQuery<T>)query).singleResult(args)
     }
 
     /**
@@ -96,10 +96,10 @@ class DetachedCriteria<T> extends AbstractDetachedCriteria<Observable<T>> implem
      *
      * @see #find(java.util.Map, groovy.lang.Closure)
      */
-    Observable<T> get(@DelegatesTo(DetachedCriteria) Closure additionalCriteria = null) {
-        Query query = prepareQuery(Collections.emptyMap(), additionalCriteria)
+    Observable<T> get(@DelegatesTo(value = DetachedCriteria, strategy = Closure.DELEGATE_FIRST) Closure additionalCriteria = null) {
+        Query query = prepareQuery(Collections.emptyMap(), (Closure) additionalCriteria)
         query.max(1)
-        return ((RxQuery)query).singleResult()
+        return ((RxQuery<T>)query).singleResult()
     }
 
     /**
@@ -109,9 +109,9 @@ class DetachedCriteria<T> extends AbstractDetachedCriteria<Observable<T>> implem
      * @param additionalCriteria Any additional criteria
      * @return An observable that emits a list
      */
-    Observable<List<T>> toList(Map args = Collections.emptyMap(), @DelegatesTo(DetachedCriteria) Closure additionalCriteria = null) {
-        Query query = prepareQuery(args, additionalCriteria)
-        return ((RxQuery)query).findAll(args).toList()
+    Observable<List<T>> toList(Map args = Collections.emptyMap(), @DelegatesTo(value = DetachedCriteria, strategy = Closure.DELEGATE_FIRST) Closure additionalCriteria = null) {
+        Query query = prepareQuery(args, (Closure) additionalCriteria)
+        return ((RxQuery<T>)query).findAll(args).toList()
     }
 
     /**
@@ -121,9 +121,9 @@ class DetachedCriteria<T> extends AbstractDetachedCriteria<Observable<T>> implem
      * @param additionalCriteria Any additional criteria
      * @return An observable that emits a list
      */
-    Observable<List<T>> list(Map args = Collections.emptyMap(), @DelegatesTo(DetachedCriteria) Closure additionalCriteria = null) {
-        Query query = prepareQuery(args, additionalCriteria)
-        return ((RxQuery)query).findAll(args).toList()
+    Observable<List<T>> list(Map args = Collections.emptyMap(), @DelegatesTo(value = DetachedCriteria, strategy = Closure.DELEGATE_FIRST) Closure additionalCriteria = null) {
+        Query query = prepareQuery(args, (Closure) additionalCriteria)
+        return ((RxQuery<T>)query).findAll(args).toList()
     }
 
     /**
@@ -133,10 +133,10 @@ class DetachedCriteria<T> extends AbstractDetachedCriteria<Observable<T>> implem
      * @param additionalCriteria Any additional criteria
      * @return The total results
      */
-    Observable<Number> getCount(Map args = Collections.emptyMap(), @DelegatesTo(DetachedCriteria) Closure additionalCriteria = null) {
-        Query query = prepareQuery(args, additionalCriteria)
+    Observable<Number> getCount(Map args = Collections.emptyMap(), @DelegatesTo(value = DetachedCriteria, strategy = Closure.DELEGATE_FIRST) Closure additionalCriteria = null) {
+        Query query = prepareQuery(args, (Closure) additionalCriteria)
         query.projections().count()
-        return ((RxQuery)query).singleResult(args) as Observable<Number>
+        return ((RxQuery<T>)query).singleResult(args) as Observable<Number>
     }
 
     /**
@@ -144,7 +144,7 @@ class DetachedCriteria<T> extends AbstractDetachedCriteria<Observable<T>> implem
      *
      * @see #getCount(java.util.Map, groovy.lang.Closure)
      */
-    Observable<Number> count(Map args = Collections.emptyMap(), @DelegatesTo(DetachedCriteria) Closure additionalCriteria = null) {
+    Observable<Number> count(Map args = Collections.emptyMap(), @DelegatesTo(value = DetachedCriteria, strategy = Closure.DELEGATE_FIRST) Closure additionalCriteria = null) {
         getCount(args, additionalCriteria)
     }
 
@@ -157,7 +157,7 @@ class DetachedCriteria<T> extends AbstractDetachedCriteria<Observable<T>> implem
      */
     Observable<Number> updateAll(Map propertiesMap) {
         Query query = prepareQuery(Collections.emptyMap(), null)
-        return ((RxQuery)query).updateAll(propertiesMap)
+        return ((RxQuery<T>)query).updateAll(propertiesMap)
     }
 
     /**
@@ -167,7 +167,7 @@ class DetachedCriteria<T> extends AbstractDetachedCriteria<Observable<T>> implem
      */
     Observable<Number> deleteAll() {
         Query query = prepareQuery(Collections.emptyMap(), null)
-        return ((RxQuery)query).deleteAll()
+        return ((RxQuery<T>)query).deleteAll()
     }
 
     /**
@@ -181,22 +181,22 @@ class DetachedCriteria<T> extends AbstractDetachedCriteria<Observable<T>> implem
     }
 
     @Override
-    DetachedCriteria<T> where(@DelegatesTo(AbstractDetachedCriteria) Closure additionalQuery) {
+    DetachedCriteria<T> where(@DelegatesTo(value = AbstractDetachedCriteria, strategy = Closure.DELEGATE_FIRST) Closure additionalQuery) {
         return (DetachedCriteria) super.where(additionalQuery)
     }
 
     @Override
-    DetachedCriteria<T> whereLazy(@DelegatesTo(AbstractDetachedCriteria) Closure additionalQuery) {
+    DetachedCriteria<T> whereLazy(@DelegatesTo(value = AbstractDetachedCriteria, strategy = Closure.DELEGATE_FIRST) Closure additionalQuery) {
         return (DetachedCriteria) super.whereLazy(additionalQuery)
     }
 
     @Override
-    DetachedCriteria<T> build(@DelegatesTo(grails.gorm.DetachedCriteria) Closure callable) {
+    DetachedCriteria<T> build(@DelegatesTo(value = grails.gorm.DetachedCriteria, strategy = Closure.DELEGATE_FIRST) Closure callable) {
         return (DetachedCriteria)super.build(callable)
     }
 
     @Override
-    DetachedCriteria<T> buildLazy(@DelegatesTo(grails.gorm.DetachedCriteria) Closure callable) {
+    DetachedCriteria<T> buildLazy(@DelegatesTo(value = grails.gorm.DetachedCriteria, strategy = Closure.DELEGATE_FIRST) Closure callable) {
         return (DetachedCriteria)super.buildLazy(callable)
     }
 
@@ -262,7 +262,7 @@ class DetachedCriteria<T> extends AbstractDetachedCriteria<Observable<T>> implem
 
     @Override
     protected QueryableCriteria buildQueryableCriteria(Closure queryClosure) {
-        DetachedCriteria<T> subquery = (DetachedCriteria<T>) new DetachedCriteria(targetClass).build(queryClosure)
+        DetachedCriteria<T> subquery = (DetachedCriteria<T>) new DetachedCriteria(targetClass).build((Closure) queryClosure)
         return buildQueryableCriteriaAdapter(subquery)
     }
 
@@ -287,22 +287,22 @@ class DetachedCriteria<T> extends AbstractDetachedCriteria<Observable<T>> implem
     }
 
     @Override
-    DetachedCriteria<T> projections(@DelegatesTo(ProjectionList) Closure callable) {
+    DetachedCriteria<T> projections(@DelegatesTo(value = ProjectionList, strategy = Closure.DELEGATE_FIRST) Closure callable) {
         return (DetachedCriteria<T>)super.projections(callable)
     }
 
     @Override
-    DetachedCriteria<T> and(@DelegatesTo(AbstractDetachedCriteria) Closure callable) {
+    DetachedCriteria<T> and(@DelegatesTo(value = AbstractDetachedCriteria, strategy = Closure.DELEGATE_FIRST) Closure callable) {
         return (DetachedCriteria<T>)super.and(callable)
     }
 
     @Override
-    DetachedCriteria<T> or(@DelegatesTo(AbstractDetachedCriteria) Closure callable) {
+    DetachedCriteria<T> or(@DelegatesTo(value = AbstractDetachedCriteria, strategy = Closure.DELEGATE_FIRST) Closure callable) {
         return (DetachedCriteria<T>)super.or(callable)
     }
 
     @Override
-    DetachedCriteria<T> not(@DelegatesTo(AbstractDetachedCriteria) Closure callable) {
+    DetachedCriteria<T> not(@DelegatesTo(value = AbstractDetachedCriteria, strategy = Closure.DELEGATE_FIRST) Closure callable) {
         return (DetachedCriteria<T>)super.not(callable)
     }
 
@@ -322,12 +322,12 @@ class DetachedCriteria<T> extends AbstractDetachedCriteria<Observable<T>> implem
     }
 
     @Override
-    DetachedCriteria<T> "in"(String propertyName, @DelegatesTo(AbstractDetachedCriteria) Closure<?> subquery) {
+    DetachedCriteria<T> "in"(String propertyName, @DelegatesTo(value = AbstractDetachedCriteria, strategy = Closure.DELEGATE_FIRST) Closure<?> subquery) {
         return (DetachedCriteria<T>)super.in(propertyName, subquery)
     }
 
     @Override
-    DetachedCriteria<T> inList(String propertyName, @DelegatesTo(AbstractDetachedCriteria) Closure<?> subquery) {
+    DetachedCriteria<T> inList(String propertyName, @DelegatesTo(value = AbstractDetachedCriteria, strategy = Closure.DELEGATE_FIRST) Closure<?> subquery) {
         return (DetachedCriteria<T>)super.inList(propertyName, subquery)
     }
 
@@ -342,7 +342,7 @@ class DetachedCriteria<T> extends AbstractDetachedCriteria<Observable<T>> implem
     }
 
     @Override
-    DetachedCriteria<T> notIn(String propertyName, @DelegatesTo(AbstractDetachedCriteria) Closure<?> subquery) {
+    DetachedCriteria<T> notIn(String propertyName, @DelegatesTo(value = AbstractDetachedCriteria, strategy = Closure.DELEGATE_FIRST) Closure<?> subquery) {
         return (DetachedCriteria<T>)super.notIn(propertyName, subquery)
     }
 
@@ -542,27 +542,27 @@ class DetachedCriteria<T> extends AbstractDetachedCriteria<Observable<T>> implem
     }
 
     @Override
-    DetachedCriteria<T> eqAll(String propertyName, @DelegatesTo(AbstractDetachedCriteria) Closure<?> propertyValue) {
+    DetachedCriteria<T> eqAll(String propertyName, @DelegatesTo(value = AbstractDetachedCriteria, strategy = Closure.DELEGATE_FIRST) Closure<?> propertyValue) {
         return (DetachedCriteria<T>)super.eqAll(propertyName, propertyValue)
     }
 
     @Override
-    DetachedCriteria<T> gtAll(String propertyName, @DelegatesTo(AbstractDetachedCriteria) Closure<?> propertyValue) {
+    DetachedCriteria<T> gtAll(String propertyName, @DelegatesTo(value = AbstractDetachedCriteria, strategy = Closure.DELEGATE_FIRST) Closure<?> propertyValue) {
         return (DetachedCriteria<T>)super.gtAll(propertyName, propertyValue)
     }
 
     @Override
-    DetachedCriteria<T> ltAll(String propertyName, @DelegatesTo(AbstractDetachedCriteria) Closure<?> propertyValue) {
+    DetachedCriteria<T> ltAll(String propertyName, @DelegatesTo(value = AbstractDetachedCriteria, strategy = Closure.DELEGATE_FIRST) Closure<?> propertyValue) {
         return (DetachedCriteria<T>)super.ltAll(propertyName, propertyValue)
     }
 
     @Override
-    DetachedCriteria<T> geAll(String propertyName, @DelegatesTo(AbstractDetachedCriteria) Closure<?> propertyValue) {
+    DetachedCriteria<T> geAll(String propertyName, @DelegatesTo(value = AbstractDetachedCriteria, strategy = Closure.DELEGATE_FIRST) Closure<?> propertyValue) {
         return (DetachedCriteria<T>)super.geAll(propertyName, propertyValue)
     }
 
     @Override
-    DetachedCriteria<T> leAll(String propertyName, @DelegatesTo(AbstractDetachedCriteria) Closure<?> propertyValue) {
+    DetachedCriteria<T> leAll(String propertyName, @DelegatesTo(value = AbstractDetachedCriteria, strategy = Closure.DELEGATE_FIRST) Closure<?> propertyValue) {
         return (DetachedCriteria<T>)super.leAll(propertyName, propertyValue)
     }
 
@@ -582,7 +582,7 @@ class DetachedCriteria<T> extends AbstractDetachedCriteria<Observable<T>> implem
     }
 
     @Override
-    DetachedCriteria<T> gtSome(String propertyName, @DelegatesTo(AbstractDetachedCriteria) Closure<?> propertyValue) {
+    DetachedCriteria<T> gtSome(String propertyName, @DelegatesTo(value = AbstractDetachedCriteria, strategy = Closure.DELEGATE_FIRST) Closure<?> propertyValue) {
         return (DetachedCriteria<T>)super.gtSome(propertyName, propertyValue)
     }
 
@@ -592,7 +592,7 @@ class DetachedCriteria<T> extends AbstractDetachedCriteria<Observable<T>> implem
     }
 
     @Override
-    DetachedCriteria<T> geSome(String propertyName, @DelegatesTo(AbstractDetachedCriteria) Closure<?> propertyValue) {
+    DetachedCriteria<T> geSome(String propertyName, @DelegatesTo(value = AbstractDetachedCriteria, strategy = Closure.DELEGATE_FIRST) Closure<?> propertyValue) {
         return (DetachedCriteria<T>)super.geSome(propertyName, propertyValue)
     }
 
@@ -602,7 +602,7 @@ class DetachedCriteria<T> extends AbstractDetachedCriteria<Observable<T>> implem
     }
 
     @Override
-    DetachedCriteria<T> ltSome(String propertyName, @DelegatesTo(AbstractDetachedCriteria) Closure<?> propertyValue) {
+    DetachedCriteria<T> ltSome(String propertyName, @DelegatesTo(value = AbstractDetachedCriteria, strategy = Closure.DELEGATE_FIRST) Closure<?> propertyValue) {
         return (DetachedCriteria<T>)super.ltSome(propertyName, propertyValue)
     }
 
@@ -612,7 +612,7 @@ class DetachedCriteria<T> extends AbstractDetachedCriteria<Observable<T>> implem
     }
 
     @Override
-    DetachedCriteria<T> leSome(String propertyName, @DelegatesTo(AbstractDetachedCriteria) Closure<?> propertyValue) {
+    DetachedCriteria<T> leSome(String propertyName, @DelegatesTo(value = AbstractDetachedCriteria, strategy = Closure.DELEGATE_FIRST) Closure<?> propertyValue) {
         return (DetachedCriteria<T>)super.leSome(propertyName, propertyValue)
     }
 
@@ -649,7 +649,7 @@ class DetachedCriteria<T> extends AbstractDetachedCriteria<Observable<T>> implem
         }
 
         if (additionalCriteria != null) {
-            def additionalDetached = new DetachedCriteria(targetClass).build(additionalCriteria)
+            def additionalDetached = new DetachedCriteria(targetClass).build((Closure) additionalCriteria)
             DynamicFinder.applyDetachedCriteria(query, additionalDetached)
         }
 

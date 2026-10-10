@@ -114,8 +114,8 @@ public class CriteriaMethodInvoker {
                 hibernateQuery.distinct();
                 result = hibernateQuery.list();
             } else if (builder.isCount()) {
-                hibernateQuery.projections().count();
-                result = hibernateQuery.singleResult();
+                // countResults() never pages, so firstResult/maxResults in the closure do not skip the count row
+                result = hibernateQuery.countResults();
             } else if (builder.isPaginationEnabledList()) {
                 Map<?, ?> argMap = (Map<?, ?>) args[0];
                 // the same checks list() and the dynamic finders apply, so sort arguments taken

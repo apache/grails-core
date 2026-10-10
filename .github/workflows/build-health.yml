@@ -1,0 +1,147 @@
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#     https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+name: "Build Health"
+on:
+  push:
+    branches:
+      - '[0-9]+.[0-9]+.x'
+  pull_request:
+  workflow_dispatch:
+# queue jobs and only allow 1 run per branch due to the likelihood of hitting GitHub resource limits
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+permissions:
+  contents: read
+jobs:
+  check_core_projects:
+    name: "Core Projects"
+    runs-on: ubuntu-24.04
+    steps:
+      - name: "🌐 Output Agent IP" # in the event RAO blocks this agent, this can be used to debug it
+        run: curl -s https://api.ipify.org
+      - name: "📥 Checkout repository"
+        uses: actions/checkout@v7.0.1
+      - name: "☕️ Setup JDK"
+        uses: actions/setup-java@v6.0.1
+        with:
+          distribution: liberica
+          java-version: 21
+      - name: "🐘 Setup Gradle"
+        uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+        with:
+          cache-provider: basic # 'basic' uses the MIT-licensed, open-source cache provider; the default 'enhanced' provider (v6+) is proprietary (Gradle commercial Terms of Use)
+          develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
+      - name: "🩺 Check Core Projects"
+        # build-logic is an included build, so its own health task is invoked through the root build.
+        # With the configuration cache enabled, core analysis retains about 3.7 GiB after mixed GC.
+        # The full analysis passed with a 5 GiB daemon and four workers, without any full GC.
+        run: >
+          ./gradlew buildHealth :build-logic-root:buildHealth --continue
+          --max-workers=4
+          -Dorg.gradle.jvmargs="-Dfile.encoding=UTF-8 -Xmx5G"
+      - name: "📤 Upload Reports"
+        if: always()
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: core-build-health
+          path: |
+            build/reports/dependency-analysis/
+            build-logic/build/reports/dependency-analysis/
+      - name: "📋 Publish Build Health Report in Job Summary"
+        if: always()
+        run: |
+          for file in build/reports/dependency-analysis/build-health-report.txt build-logic/build/reports/dependency-analysis/build-health-report.txt; do
+            [ -s "$file" ] || continue
+            echo "## 🩺 Build Health Report - $(dirname "$file" | cut -d/ -f1 | sed 's/^build$/grails-core/')" >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            cat "$file" >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+          done
+  check_gradle_plugin_projects:
+    name: "Gradle Plugin Projects"
+    runs-on: ubuntu-24.04
+    steps:
+      - name: "🌐 Output Agent IP" # in the event RAO blocks this agent, this can be used to debug it
+        run: curl -s https://api.ipify.org
+      - name: "📥 Checkout repository"
+        uses: actions/checkout@v7.0.1
+      - name: "☕️ Setup JDK"
+        uses: actions/setup-java@v6.0.1
+        with:
+          distribution: liberica
+          java-version: 21
+      - name: "🐘 Setup Gradle"
+        uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+        with:
+          cache-provider: basic # 'basic' uses the MIT-licensed, open-source cache provider; the default 'enhanced' provider (v6+) is proprietary (Gradle commercial Terms of Use)
+          develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
+      - name: "🩺 Check Gradle Plugin Projects"
+        working-directory: grails-gradle
+        run: ./gradlew buildHealth --continue
+      - name: "📤 Upload Reports"
+        if: always()
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: gradle-plugin-build-health
+          path: grails-gradle/build/reports/dependency-analysis/
+      - name: "📋 Publish Build Health Report in Job Summary"
+        if: always()
+        run: |
+          file=grails-gradle/build/reports/dependency-analysis/build-health-report.txt
+          if [ -s "$file" ]; then
+            echo "## 🩺 Build Health Report - Gradle Plugin Projects" >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            cat "$file" >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+          fi
+  check_grails_forge_projects:
+    name: "Forge Projects"
+    runs-on: ubuntu-24.04
+    steps:
+      - name: "🌐 Output Agent IP" # in the event RAO blocks this agent, this can be used to debug it
+        run: curl -s https://api.ipify.org
+      - name: "📥 Checkout repository"
+        uses: actions/checkout@v7.0.1
+      - name: "☕️ Setup JDK"
+        uses: actions/setup-java@v6.0.1
+        with:
+          distribution: liberica
+          java-version: 21
+      - name: "🐘 Setup Gradle"
+        uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+        with:
+          cache-provider: basic # 'basic' uses the MIT-licensed, open-source cache provider; the default 'enhanced' provider (v6+) is proprietary (Gradle commercial Terms of Use)
+          develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
+      - name: "🩺 Check Forge Projects"
+        working-directory: grails-forge
+        run: ./gradlew buildHealth --continue
+      - name: "📤 Upload Reports"
+        if: always()
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: forge-build-health
+          path: grails-forge/build/reports/dependency-analysis/
+      - name: "📋 Publish Build Health Report in Job Summary"
+        if: always()
+        run: |
+          file=grails-forge/build/reports/dependency-analysis/build-health-report.txt
+          if [ -s "$file" ]; then
+            echo "## 🩺 Build Health Report - Forge Projects" >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            cat "$file" >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+          fi

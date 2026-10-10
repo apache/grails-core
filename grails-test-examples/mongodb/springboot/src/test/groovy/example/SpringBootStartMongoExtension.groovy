@@ -48,13 +48,15 @@ class SpringBootStartMongoExtension implements IGlobalExtension {
             if(mongoDatastoreField) {
                 mongoDatastoreField.writeValue(invocation.sharedInstance, new MongoDatastore([(MongoSettings.SETTING_HOST): dbContainer.getHost(), (MongoSettings.SETTING_PORT): dbContainer.getMappedPort(27017) as String], getClass().getPackage()))
             }
+            // Then the spec's own shared initializers, which this runs in place of, so they can use the datastore.
+            invocation.proceed()
         }
     }
 
     @Override
     void stop() {
         if(dbContainer) {
-            dbContainer.start()
+            dbContainer.stop()
         }
     }
 }

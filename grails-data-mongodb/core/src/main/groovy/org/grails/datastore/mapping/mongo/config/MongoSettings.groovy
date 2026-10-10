@@ -93,18 +93,54 @@ interface MongoSettings extends Settings {
 
     String SETTING_STATELESS = 'grails.mongodb.stateless'
 
+    /**
+     * Selects the persistence engine. {@code 'codec'} is the default and the recommended
+     * value; {@code 'mapping'} remains available for compatibility but is deprecated.
+     *
+     * @deprecated The non-codec ("mapping") engine this setting can select is deprecated and
+     * will be removed in a future release, at which point this setting becomes a no-op.
+     */
+    @Deprecated
     String SETTING_ENGINE = 'grails.mongodb.engine'
+
+    /**
+     * Whether GORM creates and reconciles the indexes declared in domain class mapping blocks by
+     * itself when the datastore starts. Defaults to {@code true}.
+     *
+     * <p>Set to {@code false} to leave the indexes on the server exactly as they are, which is
+     * useful when deploying against live data where index changes are applied separately by a
+     * DBA or a migration step rather than by the application on startup. The application can still
+     * build them when it chooses with {@code MongoDatastore.buildIndex()}.
+     *
+     * @since 8.0
+     */
+    String SETTING_BUILD_INDEXES = 'grails.mongodb.buildIndexes'
+
+    /**
+     * Whether index builds run on a background thread rather than blocking the thread that starts
+     * them: the one GORM runs when the datastore starts, and any the application starts with
+     * {@code MongoDatastore.buildIndex()}, including with {@link #SETTING_BUILD_INDEXES} off.
+     * Defaults to {@code false}, which is the historical behavior: startup waits for MongoDB to
+     * finish building every declared index.
+     *
+     * @since 8.0
+     */
+    String SETTING_BUILD_INDEXES_ASYNC = 'grails.mongodb.buildIndexesAsync'
 
     /**
      * Global default storage type for {@code String id} fields when no per-domain
      * {@code id storedAs: ...} mapping is declared. Accepted values are the names (or hex
-     * aliases) {@code 'string'} (default, current behavior) and {@code 'objectid'}.
+     * aliases) {@code 'objectid'} (the default) and {@code 'string'}.
      *
-     * <p>When set to {@code 'objectid'}, every domain that declares {@code String id}
-     * without an explicit {@code storedAs} will persist {@code _id} as a BSON ObjectId,
-     * while keeping the {@code String} ergonomics in application code. Domains that use
-     * natural string keys (slug, email, UUID) should opt out per-domain via
-     * {@code static mapping = { id storedAs: String }}.
+     * <p>Every domain that declares {@code String id} without an explicit {@code storedAs}
+     * persists {@code _id} as a BSON ObjectId, while keeping the {@code String} ergonomics
+     * in application code. Domains that use natural string keys (slug, email, UUID) should
+     * opt out per-domain via {@code static mapping = { id storedAs: String }}; set this to
+     * {@code 'string'} to opt the whole application out.
+     *
+     * <p>The default changed from {@code 'string'} to {@code 'objectid'} in 8.0.0. An
+     * application upgrading with existing string {@code _id} data must either migrate that
+     * data or pin {@code 'string'} here.
      *
      * @since 7.1.1
      */

@@ -141,6 +141,255 @@ class MailMessageBuilderSpec extends Specification implements GrailsUnitTest {
 		msg.from[0].toString() == defaultFrom
 	}
 
+	void "Test that overrideToAddress overrides only the to address"() {
+		given:
+		String overrideToAddr = "override-to@example.com"
+		def properties = new MailConfigurationProperties()
+		properties.overrideToAddress = overrideToAddr
+		def mockJavaMailSender = Stub(JavaMailSender) {
+			createMimeMessage() >> new MimeMessage(Session.getInstance(new Properties()))
+		}
+		def builder = new MailMessageBuilder(mockJavaMailSender, properties)
+
+		when:
+		processDsl(builder) {
+			to "fred@g2one.com"
+			from "john@g2one.com"
+			subject "Hello"
+			body 'Test'
+		}
+
+		then:
+		MimeMessage msg = builder.message.mimeMessage
+		to(msg)[0].toString() == overrideToAddr
+		msg.from[0].toString() == "john@g2one.com"
+	}
+
+	void "Test that overrideFromAddress overrides only the from address"() {
+		given:
+		String overrideFromAddr = "override-from@example.com"
+		def properties = new MailConfigurationProperties()
+		properties.overrideFromAddress = overrideFromAddr
+		def mockJavaMailSender = Stub(JavaMailSender) {
+			createMimeMessage() >> new MimeMessage(Session.getInstance(new Properties()))
+		}
+		def builder = new MailMessageBuilder(mockJavaMailSender, properties)
+
+		when:
+		processDsl(builder) {
+			to "fred@g2one.com"
+			from "john@g2one.com"
+			subject "Hello"
+			body 'Test'
+		}
+
+		then:
+		MimeMessage msg = builder.message.mimeMessage
+		to(msg)[0].toString() == "fred@g2one.com"
+		msg.from[0].toString() == overrideFromAddr
+	}
+
+	void "Test that overrideToAddress takes precedence over overrideAddress for to"() {
+		given:
+		String overrideAddr = "override@example.com"
+		String overrideToAddr = "override-to@example.com"
+		def properties = new MailConfigurationProperties()
+		properties.overrideAddress = overrideAddr
+		properties.overrideToAddress = overrideToAddr
+		def mockJavaMailSender = Stub(JavaMailSender) {
+			createMimeMessage() >> new MimeMessage(Session.getInstance(new Properties()))
+		}
+		def builder = new MailMessageBuilder(mockJavaMailSender, properties)
+
+		when:
+		processDsl(builder) {
+			to "fred@g2one.com"
+			from "john@g2one.com"
+			subject "Hello"
+			body 'Test'
+		}
+
+		then:
+		MimeMessage msg = builder.message.mimeMessage
+		to(msg)[0].toString() == overrideToAddr
+		msg.from[0].toString() == overrideAddr
+	}
+
+	void "Test that overrideFromAddress takes precedence over overrideAddress for from"() {
+		given:
+		String overrideAddr = "override@example.com"
+		String overrideFromAddr = "override-from@example.com"
+		def properties = new MailConfigurationProperties()
+		properties.overrideAddress = overrideAddr
+		properties.overrideFromAddress = overrideFromAddr
+		def mockJavaMailSender = Stub(JavaMailSender) {
+			createMimeMessage() >> new MimeMessage(Session.getInstance(new Properties()))
+		}
+		def builder = new MailMessageBuilder(mockJavaMailSender, properties)
+
+		when:
+		processDsl(builder) {
+			to "fred@g2one.com"
+			from "john@g2one.com"
+			subject "Hello"
+			body 'Test'
+		}
+
+		then:
+		MimeMessage msg = builder.message.mimeMessage
+		to(msg)[0].toString() == overrideAddr
+		msg.from[0].toString() == overrideFromAddr
+	}
+
+	void "Test that overrideToAddress overrides multiple recipients"() {
+		given:
+		String overrideToAddr = "override-to@example.com"
+		def properties = new MailConfigurationProperties()
+		properties.overrideToAddress = overrideToAddr
+		def mockJavaMailSender = Stub(JavaMailSender) {
+			createMimeMessage() >> new MimeMessage(Session.getInstance(new Properties()))
+		}
+		def builder = new MailMessageBuilder(mockJavaMailSender, properties)
+
+		when:
+		processDsl(builder) {
+			to "fred@g2one.com", "ginger@g2one.com", "grace@hollywood.com"
+			from "john@g2one.com"
+			subject "Hello"
+			body 'Test'
+		}
+
+		then:
+		MimeMessage msg = builder.message.mimeMessage
+		to(msg).size() == 3
+		to(msg).every { it == overrideToAddr }
+		msg.from[0].toString() == "john@g2one.com"
+	}
+
+	void "Test that overrideToAddress is used as default to when no to is specified in DSL"() {
+		given:
+		String overrideToAddr = "override-to@example.com"
+		def properties = new MailConfigurationProperties()
+		properties.overrideToAddress = overrideToAddr
+		def mockJavaMailSender = Stub(JavaMailSender) {
+			createMimeMessage() >> new MimeMessage(Session.getInstance(new Properties()))
+		}
+		def builder = new MailMessageBuilder(mockJavaMailSender, properties)
+
+		when:
+		processDsl(builder) {
+			subject "Hello"
+			body 'Test'
+		}
+
+		then:
+		MimeMessage msg = builder.message.mimeMessage
+		to(msg)[0].toString() == overrideToAddr
+	}
+
+	void "Test that overrideFromAddress is used as default from when no from is specified in DSL"() {
+		given:
+		String overrideFromAddr = "override-from@example.com"
+		def properties = new MailConfigurationProperties()
+		properties.overrideFromAddress = overrideFromAddr
+		def mockJavaMailSender = Stub(JavaMailSender) {
+			createMimeMessage() >> new MimeMessage(Session.getInstance(new Properties()))
+		}
+		def builder = new MailMessageBuilder(mockJavaMailSender, properties)
+
+		when:
+		processDsl(builder) {
+			to "fred@g2one.com"
+			subject "Hello"
+			body 'Test'
+		}
+
+		then:
+		MimeMessage msg = builder.message.mimeMessage
+		msg.from[0].toString() == overrideFromAddr
+	}
+
+	void "Test that overrideToAddress replaces cc and bcc recipients"() {
+		given:
+		String overrideToAddr = "override-to@example.com"
+		def properties = new MailConfigurationProperties()
+		properties.overrideToAddress = overrideToAddr
+		def mockJavaMailSender = Stub(JavaMailSender) {
+			createMimeMessage() >> new MimeMessage(Session.getInstance(new Properties()))
+		}
+		def builder = new MailMessageBuilder(mockJavaMailSender, properties)
+
+		when:
+		processDsl(builder) {
+			to "fred@g2one.com"
+			cc "marge@g2one.com", "ed@g2one.com"
+			bcc "joe@g2one.com"
+			from "john@g2one.com"
+			subject "Hello"
+			body 'Test'
+		}
+
+		then: "cc and bcc are each replaced by the override address, just like to"
+		MimeMessage msg = builder.message.mimeMessage
+		to(msg) == [overrideToAddr]
+		cc(msg) == [overrideToAddr, overrideToAddr]
+		bcc(msg) == [overrideToAddr]
+		msg.from[0].toString() == "john@g2one.com"
+	}
+
+	void "Test that overrideAddress overrides the explicit from address"() {
+		given: "only overrideAddress is configured, no separate overrideFromAddress"
+		String overrideAddr = "override@example.com"
+		def properties = new MailConfigurationProperties()
+		properties.overrideAddress = overrideAddr
+		def mockJavaMailSender = Stub(JavaMailSender) {
+			createMimeMessage() >> new MimeMessage(Session.getInstance(new Properties()))
+		}
+		def builder = new MailMessageBuilder(mockJavaMailSender, properties)
+
+		when: "the DSL specifies an explicit from address"
+		processDsl(builder) {
+			to "fred@g2one.com"
+			from "john@g2one.com"
+			subject "Hello"
+			body 'Test'
+		}
+
+		then: "overrideAddress acts as overrideFromAddress and replaces the explicit from"
+		MimeMessage msg = builder.message.mimeMessage
+		msg.from[0].toString() == overrideAddr
+		to(msg)[0].toString() == overrideAddr
+	}
+
+	void "Test that replyTo and envelopeFrom are not affected by overrideFromAddress or overrideAddress"() {
+		given: "both overrideAddress and overrideFromAddress are configured"
+		String overrideAddr = "override@example.com"
+		String overrideFromAddr = "override-from@example.com"
+		def properties = new MailConfigurationProperties()
+		properties.overrideAddress = overrideAddr
+		properties.overrideFromAddress = overrideFromAddr
+		def mockJavaMailSender = Stub(JavaMailSender) {
+			createMimeMessage() >> new MimeMessage(Session.getInstance(new Properties()))
+		}
+		def builder = new MailMessageBuilder(mockJavaMailSender, properties)
+
+		when: "the DSL sets an explicit replyTo and envelopeFrom"
+		processDsl(builder) {
+			to "fred@g2one.com"
+			from "john@g2one.com"
+			replyTo "replies@g2one.com"
+			envelopeFrom "bounce@g2one.com"
+			subject "Hello"
+			body 'Test'
+		}
+
+		then: "from is overridden but replyTo and envelopeFrom are passed through unchanged"
+		MimeMessage msg = builder.message.mimeMessage
+		msg.from[0].toString() == overrideFromAddr
+		msg.replyTo[0].toString() == "replies@g2one.com"
+		builder.envelopeFrom == "bounce@g2one.com"
+	}
+
 	void "Test that envelopeFrom works as expected"() {
 		when:
 		processDsl {

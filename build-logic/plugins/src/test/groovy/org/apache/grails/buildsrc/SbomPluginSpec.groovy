@@ -23,9 +23,15 @@ import org.gradle.api.Project
 import org.gradle.api.logging.Logging
 import org.gradle.api.provider.Property
 import org.gradle.testfixtures.ProjectBuilder
+import org.gradle.testkit.runner.BuildResult
+import org.gradle.testkit.runner.GradleRunner
 import spock.lang.Specification
+import spock.lang.TempDir
 
 class SbomPluginSpec extends Specification {
+
+    @TempDir
+    File projectDir
 
     private static final def LOGGER = Logging.getLogger(SbomPluginSpec)
     private static final String HIBERNATE_COMMONS = 'pkg:maven/org.hibernate.common/hibernate-commons-annotations@5.1.2.Final?type=jar'
@@ -126,5 +132,38 @@ class SbomPluginSpec extends Specification {
                 'pkg:maven/com.example/jansi@4.3.1?type=jar',
                 'pkg:maven/org.jline/jansi@3.3.1?type=jar'
         ]
+    }
+
+    void "the sbom is written and made reproducible with the configuration cache, also when it is reused"() {
+        given: 'a library with no dependencies'
+        new File(projectDir, 'settings.gradle').text = "rootProject.name = 'library'"
+        new File(projectDir, 'gradle.properties').text = 'projectVersion=1.0.0'
+        new File(projectDir, 'build.gradle').text = """
+            plugins {
+                id 'java-library'
+                id 'org.apache.grails.buildsrc.sbom'
+            }
+        """
+
+        when: 'the sbom is built from a clean build, storing and then reusing the configuration cache entry'
+        BuildResult stored = buildSbomFromClean()
+        BuildResult reused = buildSbomFromClean()
+
+        then:
+        stored.output.contains('Configuration cache entry stored')
+        reused.output.contains('Configuration cache entry reused')
+
+        and: 'the reused build rewrote the sbom as the stored one did'
+        String sbom = new File(projectDir, 'build/library-1.0.0-sbom.json').text
+        sbom.contains('"timestamp": "1970-01-01T00:00:00Z"')
+        sbom.contains('"serialNumber": "urn:uuid:')
+    }
+
+    private BuildResult buildSbomFromClean() {
+        GradleRunner.create()
+                .withProjectDir(projectDir)
+                .withArguments('clean', 'cyclonedxDirectBom', '--configuration-cache', '--stacktrace')
+                .withPluginClasspath()
+                .build()
     }
 }

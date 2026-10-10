@@ -52,6 +52,17 @@ class CreateAppSpec extends CommandSpec {
         output.contains('BUILD SUCCESSFUL')
     }
 
+    void "test create-app with grails-compile-static compiles statically"() {
+        given:
+        generateProject(OperatingSystem.MACOS_ARCH64, ['grails-compile-static'])
+
+        when:
+        final String output = executeGradle('compileGroovyPages').getOutput()
+
+        then:
+        output.contains('BUILD SUCCESSFUL')
+    }
+
     void "test create-app contains i18n files"() {
         given:
         generateProject(OperatingSystem.MACOS_ARCH64)

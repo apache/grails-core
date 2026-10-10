@@ -24,6 +24,7 @@ import grails.converters.JSON;
 import org.grails.web.converters.exceptions.ConverterException;
 import org.grails.web.converters.marshaller.ObjectMarshaller;
 import org.grails.web.json.JSONWriter;
+import org.grails.web.json.JsonDateFormat;
 
 /**
  * @author Siegfried Puchbauer
@@ -43,7 +44,7 @@ public class MapMarshaller implements ObjectMarshaller<JSON> {
         for (Map.Entry<Object, Object> entry : map.entrySet()) {
             Object key = entry.getKey();
             if (key != null) {
-                writer.key(key.toString());
+                writer.key(JsonDateFormat.formatKey(key));
                 converter.convertAnother(entry.getValue());
             }
         }

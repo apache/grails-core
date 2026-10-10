@@ -18,6 +18,8 @@
  */
 package org.grails.datastore.gorm.mongodb.springdata
 
+import java.util.concurrent.ConcurrentHashMap
+
 import groovy.transform.CompileStatic
 
 import com.mongodb.client.ClientSession
@@ -27,9 +29,11 @@ import org.springframework.data.mongodb.MongoDatabaseFactory
 import org.springframework.transaction.TransactionDefinition
 import org.springframework.transaction.support.TransactionSynchronizationManager
 
-import org.grails.datastore.mapping.mongo.AbstractMongoSession
 import org.grails.datastore.mapping.mongo.MongoDatastore
+import org.grails.datastore.mapping.mongo.MongoTransaction
 import org.grails.datastore.mapping.transactions.DatastoreTransactionManager
+import org.grails.datastore.mapping.transactions.Transaction
+import org.grails.datastore.mapping.transactions.TransactionObject
 
 /**
  * A {@link org.springframework.transaction.PlatformTransactionManager} that drives a single GORM
@@ -48,10 +52,13 @@ import org.grails.datastore.mapping.transactions.DatastoreTransactionManager
  * ({@code grails.mongodb.transactional = true}); without an active {@link ClientSession} there is
  * nothing to share and Spring Data operations run outside of a transaction as before.</p>
  *
- * <p><strong>Propagation:</strong> like GORM's {@link DatastoreTransactionManager}, this manager
- * supports a single flat transaction ({@code PROPAGATION_REQUIRED}); Spring-native suspension
- * propagations such as {@code REQUIRES_NEW} and {@code NESTED} are not supported and behave as
- * {@code REQUIRED} (they join the surrounding transaction rather than suspending it).</p>
+ * <p><strong>Propagation:</strong> as for GORM's {@link DatastoreTransactionManager}. A transaction
+ * started inside another joins it, for Spring Data as for GORM. {@code REQUIRES_NEW} suspends both:
+ * the new transaction runs in a GORM session and {@link ClientSession} of its own, which its
+ * {@code MongoTemplate} calls use, and the outer transaction's are restored when it completes. A
+ * transaction begun in a session of its own ({@code withNewSession}) likewise runs its
+ * {@code MongoTemplate} calls in its own {@link ClientSession}, or, read-only, without one, and the
+ * surrounding transaction's is put back when it completes. {@code NESTED} is not supported.</p>
  *
  * @since 8.0
  */
@@ -59,6 +66,9 @@ import org.grails.datastore.mapping.transactions.DatastoreTransactionManager
 class GormSharedSessionMongoTransactionManager extends DatastoreTransactionManager {
 
     private final MongoDatabaseFactory databaseFactory
+    // Spring Data holders set aside by transactions begun in a session of their own inside another,
+    // keyed by transaction, and put back when each completes
+    private final Map<Object, Object> setAside = new ConcurrentHashMap<>()
 
     GormSharedSessionMongoTransactionManager(MongoDatastore datastore, MongoDatabaseFactory databaseFactory) {
         this.databaseFactory = databaseFactory
@@ -69,22 +79,67 @@ class GormSharedSessionMongoTransactionManager extends DatastoreTransactionManag
     protected void doBegin(Object transaction, TransactionDefinition definition) {
         super.doBegin(transaction, definition)
 
-        ClientSession clientSession = currentClientSession()
+        // A holder already bound names the ClientSession of a transaction this one runs inside, in a
+        // session of its own (withNewSession). This one's MongoTemplate calls must not run in it,
+        // whether this one begins a ClientSession of its own or, read-only, runs without one
+        Object surrounding = TransactionSynchronizationManager.unbindResourceIfPossible(databaseFactory)
+        if (surrounding != null) {
+            setAside.put(transaction, surrounding)
+        }
+        ClientSession clientSession = clientSession(transaction)
         if (clientSession != null) {
             GormSpringDataSessionSupport.bindClientSession(databaseFactory, clientSession)
         }
     }
 
     @Override
-    protected void doCleanupAfterCompletion(Object transaction) {
+    protected Object doSuspend(Object transaction) {
+        // Spring Data's holder names the suspended transaction's ClientSession: left bound, the next
+        // transaction's MongoTemplate calls would run in the suspended one
+        Object springData = TransactionSynchronizationManager.hasResource(databaseFactory) ?
+                TransactionSynchronizationManager.unbindResource(databaseFactory) : null
+        new SuspendedSessions(super.doSuspend(transaction), springData)
+    }
+
+    @Override
+    protected void doResume(Object transaction, Object suspendedResources) {
+        SuspendedSessions suspended = (SuspendedSessions) suspendedResources
+        super.doResume(transaction, suspended.gorm)
         if (TransactionSynchronizationManager.hasResource(databaseFactory)) {
             TransactionSynchronizationManager.unbindResource(databaseFactory)
+        }
+        if (suspended.springData != null) {
+            TransactionSynchronizationManager.bindResource(databaseFactory, suspended.springData)
+        }
+    }
+
+    @Override
+    protected void doCleanupAfterCompletion(Object transaction) {
+        Object surrounding = setAside.remove(transaction)
+        // Leaves a holder alone that this transaction neither bound nor found bound when it began
+        if (clientSession(transaction) != null || surrounding != null) {
+            TransactionSynchronizationManager.unbindResourceIfPossible(databaseFactory)
+        }
+        if (surrounding != null) {
+            TransactionSynchronizationManager.bindResource(databaseFactory, surrounding)
         }
         super.doCleanupAfterCompletion(transaction)
     }
 
-    private ClientSession currentClientSession() {
-        def session = getDatastore().getCurrentSession()
-        return session instanceof AbstractMongoSession ? ((AbstractMongoSession) session).getClientSession() : null
+    /** The ClientSession of the server-side transaction this one began; null when it began none (read-only) */
+    private static ClientSession clientSession(Object transaction) {
+        Transaction<?> tx = ((TransactionObject) transaction).getTransaction()
+        return tx instanceof MongoTransaction ? ((MongoTransaction) tx).getNativeTransaction() : null
+    }
+
+    /** What a suspended transaction had bound: GORM's session holder, and Spring Data's, if any */
+    private static final class SuspendedSessions {
+        final Object gorm
+        final Object springData
+
+        SuspendedSessions(Object gorm, Object springData) {
+            this.gorm = gorm
+            this.springData = springData
+        }
     }
 }

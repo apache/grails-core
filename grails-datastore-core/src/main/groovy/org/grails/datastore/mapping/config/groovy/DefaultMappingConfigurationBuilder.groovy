@@ -103,13 +103,12 @@ class DefaultMappingConfigurationBuilder implements MappingConfigurationBuilder 
                 target."$name"(*args)
             }
             else if (args.size() == 1 && args[0] instanceof Map) {
-
-                def instance
-                if (properties['*']) {
-                    instance = properties['*'].clone()
-                }
-                else {
-                    instance = properties[name] ?: propertyClass.newInstance()
+                // The '*' default seeds a property's first entry only. Starting from it again on a later
+                // closure would discard what an earlier one configured, such as the mapping's index: true
+                // when the constraints closure names the same property.
+                def instance = properties[name]
+                if (instance == null) {
+                    instance = properties['*'] ? properties['*'].clone() : propertyClass.newInstance()
                 }
 
                 def binder = new DataBinder(instance)

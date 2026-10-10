@@ -19,10 +19,13 @@
 
 package gorm
 
+import org.hibernate.proxy.HibernateProxy
+
 /**
  * Controller used by the functional test for issue 15681. It binds the incoming request parameters to a new
- * {@link DirtyCheckedRecord} and renders the resulting {@code id}, {@code version} and {@code description} so the
- * test can assert over HTTP that {@code id}/{@code version} were not bound by default.
+ * {@link DirtyCheckedRecord}, or to a proxy of a persisted one, and renders the resulting {@code id},
+ * {@code version} and {@code description} so the test can assert over HTTP that {@code id}/{@code version}
+ * were not bound by default.
  */
 class DirtyCheckBindingController {
 
@@ -30,5 +33,15 @@ class DirtyCheckBindingController {
         def record = new DirtyCheckedRecord()
         bindData(record, params)
         render "id=${record.id}|version=${record.version}|description=${record.description}"
+    }
+
+    def bindProxy(Long recordId) {
+        // A new request's session holds nothing yet, so the persisted record is loaded as a proxy.
+        def record = DirtyCheckedRecord.load(recordId)
+        boolean proxy = record instanceof HibernateProxy
+        bindData(record, params)
+        String bound = "proxy=${proxy}|id=${record.id}|version=${record.version}|description=${record.description}"
+        record.discard()
+        render bound
     }
 }

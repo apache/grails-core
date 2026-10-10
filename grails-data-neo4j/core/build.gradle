@@ -44,7 +44,7 @@ dependencies {
 
     implementation platform(project(':grails-neo4j-bom'))
 
-    // Version comes from grails-neo4j-bom's neo4j-driver constraint (dependencies.gradle),
+    // Version comes from grails-neo4j-bom's neo4j-java-driver constraint (dependencies.gradle),
     // declared 'strictly' there so it out-ranks the newer, binary-incompatible version Spring
     // Boot's BOM would otherwise offer. Scoped to grails-neo4j-bom (not the default grails-bom)
     // so apps that don't use grails-data-neo4j keep Spring Boot's managed driver version.

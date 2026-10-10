@@ -33,22 +33,22 @@ jobs:
       - name: "🌐 Output Agent IP" # in the event RAO blocks this agent, this can be used to debug it
         run: curl -s https://api.ipify.org
       - name: "📥 Checkout repository"
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@v7.0.1
       - name: "☕️ Setup JDK"
-        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
+        uses: actions/setup-java@v6.0.1
         with:
           distribution: liberica
           java-version: 21
       - name: "🐘 Setup Gradle"
-        uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
+        uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
         with:
           cache-provider: basic # 'basic' uses the MIT-licensed, open-source cache provider; the default 'enhanced' provider (v6+) is proprietary (Gradle commercial Terms of Use)
           develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
       - name: "🔎 Check Core Projects"
-        run: ./gradlew aggregateAnalysisViolations --continue -Pgrails.code-analysis.enabled.pmd=true -Pgrails.code-analysis.enabled.spotbugs=true -Pgrails.code-analysis.ignoreFailures=true
+        run: ./gradlew aggregateAnalysisViolations --continue
       - name: "📤 Upload Reports"
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@v7.0.1
         with:
           name: core-reports
           path: build/reports/violations/
@@ -60,6 +60,26 @@ jobs:
             file="build/reports/violations/$report"
             [ -f "$file" ] && cat "$file" >> $GITHUB_STEP_SUMMARY || true
           done
+      - name: "🔎 Run Core SpotBugs Advisory"
+        if: success() || failure()
+        continue-on-error: true
+        id: core_spotbugs_advisory
+        run: |
+          rm -f build/reports/violations/SPOTBUGS_VIOLATIONS.md
+          ./gradlew aggregateAnalysisViolations --continue -Pgrails.code-analysis.enabled.spotbugs=true -Pgrails.code-analysis.ignoreFailures=true
+      - name: "📤 Upload SpotBugs Advisory Reports"
+        if: success() || failure()
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: core-spotbugs-advisory-reports
+          path: build/reports/violations/SPOTBUGS_VIOLATIONS.md
+      - name: "📋 Publish SpotBugs Advisory Report in Job Summary"
+        if: success() || failure()
+        run: |
+          echo "## 🔎 SpotBugs Advisory Report - Core Projects" >> $GITHUB_STEP_SUMMARY
+          echo "Advisory run outcome: ${{ steps.core_spotbugs_advisory.outcome }}" >> $GITHUB_STEP_SUMMARY
+          file="build/reports/violations/SPOTBUGS_VIOLATIONS.md"
+          [ -f "$file" ] && cat "$file" >> $GITHUB_STEP_SUMMARY || true
   check_gradle_plugin_projects:
     name: "Gradle Plugin Projects"
     runs-on: ubuntu-24.04
@@ -67,23 +87,23 @@ jobs:
       - name: "🌐 Output Agent IP" # in the event RAO blocks this agent, this can be used to debug it
         run: curl -s https://api.ipify.org
       - name: "📥 Checkout repository"
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@v7.0.1
       - name: "☕️ Setup JDK"
-        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
+        uses: actions/setup-java@v6.0.1
         with:
           distribution: liberica
           java-version: 21
       - name: "🐘 Setup Gradle"
-        uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
+        uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
         with:
           cache-provider: basic # 'basic' uses the MIT-licensed, open-source cache provider; the default 'enhanced' provider (v6+) is proprietary (Gradle commercial Terms of Use)
           develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
       - name: "🔎 Check Gradle Plugin Projects"
         working-directory: grails-gradle
-        run: ./gradlew aggregateAnalysisViolations --continue -Pgrails.code-analysis.enabled.pmd=true -Pgrails.code-analysis.enabled.spotbugs=true -Pgrails.code-analysis.ignoreFailures=true
+        run: ./gradlew aggregateAnalysisViolations --continue -Pgrails.code-analysis.enabled.pmd=true -Pgrails.code-analysis.ignoreFailures=true
       - name: "📤 Upload Reports"
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@v7.0.1
         with:
           name: gradle-plugin-reports
           path: grails-gradle/build/reports/violations/
@@ -95,3 +115,24 @@ jobs:
             file="grails-gradle/build/reports/violations/$report"
             [ -f "$file" ] && cat "$file" >> $GITHUB_STEP_SUMMARY || true
           done
+      - name: "🔎 Run Gradle Plugin SpotBugs Advisory"
+        if: success() || failure()
+        continue-on-error: true
+        id: gradle_plugin_spotbugs_advisory
+        working-directory: grails-gradle
+        run: |
+          rm -f build/reports/violations/SPOTBUGS_VIOLATIONS.md
+          ./gradlew aggregateAnalysisViolations --continue -Pgrails.code-analysis.enabled.spotbugs=true -Pgrails.code-analysis.ignoreFailures=true
+      - name: "📤 Upload Gradle Plugin SpotBugs Advisory Reports"
+        if: success() || failure()
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: gradle-plugin-spotbugs-advisory-reports
+          path: grails-gradle/build/reports/violations/SPOTBUGS_VIOLATIONS.md
+      - name: "📋 Publish Gradle Plugin SpotBugs Advisory Report in Job Summary"
+        if: success() || failure()
+        run: |
+          echo "## 🔎 SpotBugs Advisory Report - Gradle Plugin Projects" >> $GITHUB_STEP_SUMMARY
+          echo "Advisory run outcome: ${{ steps.gradle_plugin_spotbugs_advisory.outcome }}" >> $GITHUB_STEP_SUMMARY
+          file="grails-gradle/build/reports/violations/SPOTBUGS_VIOLATIONS.md"
+          [ -f "$file" ] && cat "$file" >> $GITHUB_STEP_SUMMARY || true

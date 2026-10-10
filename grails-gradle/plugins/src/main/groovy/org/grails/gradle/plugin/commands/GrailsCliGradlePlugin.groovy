@@ -22,7 +22,9 @@ import java.util.jar.JarFile
 
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
+import groovy.transform.PackageScope
 
+import org.gradle.api.GradleException
 import org.gradle.api.NamedDomainObjectProvider
 import org.gradle.api.Plugin
 import org.gradle.api.Project
@@ -35,6 +37,7 @@ import org.gradle.api.artifacts.component.ProjectComponentIdentifier
 import org.gradle.api.artifacts.result.ResolvedArtifactResult
 import org.gradle.api.artifacts.result.ResolvedComponentResult
 import org.gradle.api.file.FileCollection
+import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.JavaExec
 import org.gradle.api.tasks.SourceSet
 import org.gradle.api.tasks.TaskContainer
@@ -170,7 +173,6 @@ class GrailsCliGradlePlugin implements Plugin<Project> {
         Configuration grailsCliDetect = configurations.create(GRAILS_CLI_DETECT_CONFIGURATION)
         grailsCliDetect.canBeResolved = true
         grailsCliDetect.canBeConsumed = false
-        grailsCliDetect.visible = false
         grailsCliDetect.description = 'Internal probe used to discover companion -cli artifacts advertised by dependencies.'
         for (String bucket : ['api', 'implementation', 'runtimeOnly']) {
             configurations.matching { Configuration it -> it.name == bucket }.configureEach { Configuration it ->
@@ -270,9 +272,10 @@ class GrailsCliGradlePlugin implements Plugin<Project> {
     protected Dependency findAdvertisedCliArtifact(Project project, ResolvedArtifactResult artifact) {
         def componentIdentifier = artifact.id.componentIdentifier
         if (componentIdentifier instanceof ProjectComponentIdentifier) {
-            Dependency projectCompanion = findProjectCliCompanion(project, (ProjectComponentIdentifier) componentIdentifier)
-            if (projectCompanion != null) {
-                return projectCompanion
+            if (isProjectOfThisBuild(project, (ProjectComponentIdentifier) componentIdentifier)) {
+                // the project's own cliArtifactId decides, so its jar - which this build has usually not built
+                // yet, and whose absence the configuration cache would record as an input - is never read
+                return findProjectCliCompanion(project, (ProjectComponentIdentifier) componentIdentifier)
             }
             // a project of an included build (or a same-named project in the wrong build) is not
             // addressable through findProject; fall through to the advertised module coordinate
@@ -327,6 +330,17 @@ class GrailsCliGradlePlugin implements Plugin<Project> {
     }
 
     /**
+     * Whether the component is a project of the consuming build. Only those are addressable via findProject: a
+     * component from another build of the composite shares the project-path namespace and would resolve to the
+     * wrong project, which the build tree path comparison rejects.
+     */
+    @CompileDynamic
+    protected static boolean isProjectOfThisBuild(Project project, ProjectComponentIdentifier componentIdentifier) {
+        Project target = project.rootProject.findProject(componentIdentifier.projectPath)
+        target != null && target.buildTreePath == componentIdentifier.buildTreePath
+    }
+
+    /**
      * Binds a companion advertised by a project of the current build as a project dependency on
      * its {@code cli} feature capability, or returns {@code null} when the component is not a
      * resolvable project of the current build (an included-build project, or a coincidental
@@ -336,13 +350,10 @@ class GrailsCliGradlePlugin implements Plugin<Project> {
      */
     @CompileDynamic
     protected Dependency findProjectCliCompanion(Project project, ProjectComponentIdentifier componentIdentifier) {
-        Project target = project.rootProject.findProject(componentIdentifier.projectPath)
-        // only a project of the consuming build is addressable via findProject; a component from
-        // another build of the composite shares the project-path namespace and would resolve to
-        // the wrong project — the build tree path comparison rejects that collision
-        if (target == null || target.buildTreePath != componentIdentifier.buildTreePath) {
+        if (!isProjectOfThisBuild(project, componentIdentifier)) {
             return null
         }
+        Project target = project.rootProject.findProject(componentIdentifier.projectPath)
         def cliArtifactId = target.findProperty('cliArtifactId')
         if (!cliArtifactId) {
             // the extra property is exported in the producer's afterEvaluate; the cliArtifact
@@ -357,6 +368,27 @@ class GrailsCliGradlePlugin implements Plugin<Project> {
         Dependency dependency = project.dependencies.project(path: componentIdentifier.projectPath)
         dependency.capabilities { it.requireCapability(capabilityCoordinate) }
         dependency
+    }
+
+    /**
+     * Returns the application main class for a task that runs against the application, or fails the task with
+     * an explanation when the project has none, as is the case for a plugin without an {@code Application} class.
+     *
+     * <p>Task actions call it qualified with the class name: with the configuration cache, an action's closure
+     * does not keep its owner, so an unqualified call would be looked up on the task instead.</p>
+     *
+     * @param mainClass the main class found by the {@code findMainClass} task
+     * @param taskName the name of the task that requires the main class
+     * @return the name of the main class
+     */
+    @PackageScope
+    static String requireMainClass(Provider<String> mainClass, String taskName) {
+        def mainClassName = mainClass.orNull
+        if (!mainClassName) {
+            throw new GradleException("The '${taskName}' task requires an application class with a main method, but none was found. " +
+                    "Add an Application class, or set 'springBoot.mainClass' if the project already has one.")
+        }
+        mainClassName
     }
 
     @CompileDynamic
@@ -399,7 +431,7 @@ class GrailsCliGradlePlugin implements Plugin<Project> {
                         def appClassProvider = GrailsGradlePlugin.getMainClassProvider(project)
 
                         it.doFirst {
-                            args << appClassProvider.get()
+                            args << GrailsCliGradlePlugin.requireMainClass(appClassProvider, it.name)
                             it.args(args)
                         }
                     }
@@ -478,7 +510,7 @@ class GrailsCliGradlePlugin implements Plugin<Project> {
                 def appClass = GrailsGradlePlugin.getMainClassProvider(project)
 
                 it.doFirst {
-                    it.args(appClass.get())
+                    it.args(GrailsCliGradlePlugin.requireMainClass(appClass, it.name))
                 }
             }
         }
@@ -503,7 +535,7 @@ class GrailsCliGradlePlugin implements Plugin<Project> {
                 def appClass = GrailsGradlePlugin.getMainClassProvider(project)
 
                 it.doFirst {
-                    it.args(appClass.get())
+                    it.args(GrailsCliGradlePlugin.requireMainClass(appClass, it.name))
                 }
             }
         }
@@ -535,7 +567,7 @@ class GrailsCliGradlePlugin implements Plugin<Project> {
                     def appClassProvider = GrailsGradlePlugin.getMainClassProvider(project)
 
                     it.doFirst {
-                        args << appClassProvider.get()
+                        args << GrailsCliGradlePlugin.requireMainClass(appClassProvider, it.name)
                         it.args(args)
                     }
                 }
@@ -568,7 +600,7 @@ class GrailsCliGradlePlugin implements Plugin<Project> {
                     def appClassProvider = GrailsGradlePlugin.getMainClassProvider(project)
 
                     it.doFirst {
-                        args << appClassProvider.get()
+                        args << GrailsCliGradlePlugin.requireMainClass(appClassProvider, it.name)
                         it.args(args)
                     }
 

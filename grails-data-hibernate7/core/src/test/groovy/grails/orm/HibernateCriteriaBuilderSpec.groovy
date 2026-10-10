@@ -395,6 +395,26 @@ class HibernateCriteriaBuilderSpec extends HibernateGormDatastoreSpec {
     }
 
     /**
+     * {@code count} reports the number of matching rows, whatever paging the closure sets.
+     *
+     * <pre>
+     *   Account.createCriteria().count {
+     *       eq("lastName", "Flintstone")
+     *       firstResult(1)
+     *   }
+     * </pre>
+     */
+    void "count ignores firstResult"() {
+        expect:
+        c.count { eq("lastName", "Flintstone"); firstResult(1) } == 3
+    }
+
+    void "count ignores maxResults combined with firstResult"() {
+        expect:
+        c.count { eq("lastName", "Flintstone"); maxResults(1); firstResult(5) } == 3
+    }
+
+    /**
      * <h3>sum / avg</h3>
      * <pre>
      *   Account.withCriteria {

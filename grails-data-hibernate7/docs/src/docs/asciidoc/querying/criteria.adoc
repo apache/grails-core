@@ -173,7 +173,7 @@ Common projections include `count`, `countDistinct`, `groupProperty`, `avg`, `mi
 ==== SQL Restrictions
 
 
-You can access Hibernate's SQL Restrictions capabilities.
+You can restrict the results with a native SQL condition, which is added to the `where` clause of the query as written, in parentheses.
 
 [source,java]
 ----
@@ -196,6 +196,90 @@ def peopleWithShortFirstNames = c.list {
 ----
 
 NOTE: Note that the parameter there is SQL. The `first_name` attribute referenced in the example refers to the persistence model, not the object model like in HQL queries.
+
+Each `?` in the SQL is bound to the value at the same position in the list, so the number of `?` placeholders must match the number of values, and a value must not be `null`. A `?` in a string literal, such as `'%?'`, in a quoted identifier or in a comment is not a placeholder.
+
+When the query joins other tables, qualify the columns with `{alias}`, which stands for the table alias of the queried class, so that a column a joined table also has is not ambiguous:
+
+[source,java]
+----
+def c = Person.createCriteria()
+
+def peopleWithShortFirstNames = c.list {
+    pets {
+        eq 'name', 'Lucky'
+    }
+    sqlRestriction "char_length({alias}.first_name) <= ?", [4]
+}
+----
+
+Inside an association block, such as `pets { ... }`, the condition restricts the association, as the other criteria in the block do, and `{alias}` stands for the table alias of the association instead. This includes an association block inside an `and`, `or` or `not` block.
+
+A <<querying-detachedCriteria,detached criteria>> accepts `sqlRestriction` too.
+
+==== SQL Projections
+
+
+The `projections` node also accepts native SQL, for a value that only SQL computes, such as a date truncated to the day.
+
+[source,java]
+----
+// Box is a domain class...
+class Box {
+    int width
+    int height
+    Date packedAt
+}
+----
+
+[source,java]
+----
+def c = Box.createCriteria()
+
+def results = c.list {
+    projections {
+        sqlProjection '(2 * (width + height)) as perimeter, (width * height) as area', ['perimeter', 'area'], [INTEGER, INTEGER]
+    }
+}
+----
+
+The first argument to the `sqlProjection` method is the SQL which defines the projected values, separated by commas, each one optionally followed by `as` and its column alias. The second argument is the list of column aliases of the projected values, and the third is the list of their types. A type is a constant of `org.hibernate.type.StandardBasicTypes`, such as `INTEGER`, `LONG`, `STRING` or `TIMESTAMP`, which the DSL provides under the same name, an `org.hibernate.type.Type` or a Java class.
+
+The query above returns the perimeter and the area of each box, in a list each: `[[18, 14], [20, 16], [22, 18], [26, 36]]`. If only one value is projected, the alias and the type do not need to be in a list:
+
+[source,java]
+----
+def totalArea = Box.createCriteria().get {
+    projections {
+        sqlProjection 'sum(width * height) as totalArea', 'totalArea', INTEGER
+    }
+}
+----
+
+The `sqlGroupProjection` method groups the results by a SQL group by clause, a single expression or a comma separated list of them, given as its second argument:
+
+[source,java]
+----
+def results = Box.createCriteria().list {
+    projections {
+        sqlGroupProjection 'width, sum(height) as combinedHeightsForThisWidth', 'width', ['width', 'combinedHeightsForThisWidth'], [INTEGER, INTEGER]
+    }
+}
+----
+
+The query above returns the combined heights of the boxes of each width: `[[2, 24], [4, 9]]`. A SQL projection combines with the other projections, such as `rowCount()`, and the results can be ordered by its column alias with `order`. The group by clause may also name a column alias, which stands for the SQL that it names. A restriction such as `gt('height', 5)` always restricts the property, even if a column alias has the same name.
+
+As in a SQL restriction, `{alias}` in the SQL stands for the table alias of the queried class, so a column that a joined table also has is not ambiguous:
+
+[source,java]
+----
+def boxesPerDay = Box.createCriteria().list {
+    projections {
+        sqlGroupProjection "date_trunc('day', {alias}.packed_at) as day", "date_trunc('day', {alias}.packed_at)", ['day'], [TIMESTAMP]
+        rowCount()
+    }
+}
+----
 
 ==== Setting Properties in the Criteria Instance
 

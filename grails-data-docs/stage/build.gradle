@@ -22,6 +22,12 @@ apply plugin: 'groovy'
 // grails-data-mapping api
 def combinedGroovydoc = tasks.register('aggregateDataMappingGroovydoc', Groovydoc)
 apply from: rootProject.layout.projectDirectory.file('gradle/docs-dependencies.gradle')
+// aggregateDataMappingGroovydoc documents the whole data-mapping stack in one run, so it
+// needs more than a single module does.
+groovydocEnhancer {
+    maxHeapSize = '2g'
+}
+
 combinedGroovydoc.configure { Groovydoc task ->
     task.windowTitle = "Grails Data Mapping API - ${projectVersion}"
     task.docTitle = "Grails Data Mapping API - ${projectVersion}"
@@ -121,26 +127,18 @@ tasks.register('docs', Sync).configure { Sync it ->
     it.into combinedDir
 }
 
-tasks.register('copyGuides').configure { Task task ->
+tasks.register('copyGuides', Sync).configure { Sync task ->
     task.group = 'documentation'
 
     Set<Project> dataHeaderGuides = rootProject.subprojects.findAll { it.name.startsWith('grails-data-docs-guide-') }
     task.dependsOn(dataHeaderGuides.tasks*.named('asciidoctor'))
-    def guideDataDirectory = project.layout.buildDirectory.dir('guides/grails-data')
-    doLast {
-        copy {
-            for (Project subproject : dataHeaderGuides) {
-                String guideName = subproject.name.substring('grails-data-docs-guide-'.length())
-                def guideDirectory = subproject.layout.buildDirectory.dir('docs').get().asFile.absolutePath
-
-                from(guideDirectory) {
-                    into("${guideName}-manual")
-                }
-            }
-
-            into(guideDataDirectory)
+    for (Project subproject : dataHeaderGuides) {
+        String guideName = subproject.name.substring('grails-data-docs-guide-'.length())
+        task.from(subproject.layout.buildDirectory.dir('docs')) {
+            into("${guideName}-manual")
         }
     }
+    task.into(project.layout.buildDirectory.dir('guides/grails-data'))
 }
 
 // the groovy plugin is applied to this project, but we do not build a jar file since

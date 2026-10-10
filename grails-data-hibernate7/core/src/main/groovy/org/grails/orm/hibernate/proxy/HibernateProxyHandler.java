@@ -38,8 +38,7 @@ import org.grails.orm.hibernate.GrailsHibernateTemplate;
 /**
  * Implementation of the ProxyHandler interface for Hibernate 7.
  *
- * @author Graeme Rocher
- * @since 7.0
+ * @since 1.2.2
  */
 @SuppressWarnings("PMD.CloseResource")
 public class HibernateProxyHandler implements ProxyHandler, ProxyFactory {
@@ -145,13 +144,12 @@ public class HibernateProxyHandler implements ProxyHandler, ProxyFactory {
     @Override
     public <T> T createProxy(Session session, Class<T> type, Serializable key) {
         if (session.getNativeInterface() instanceof GrailsHibernateTemplate ght) {
-            org.hibernate.SessionFactory sessionFactory = ght.getSessionFactory();
-            if (sessionFactory != null) {
-                return org.hibernate.Hibernate.createDetachedProxy(sessionFactory, type, key);
-            }
+            // Obtain the proxy from the current Hibernate session (Session#getReference),
+            // so that it is attached to it and can be initialized on first access
+            return ght.load(type, key);
         }
         throw new IllegalStateException(
-                "Could not obtain native Hibernate SessionFactory from Session#getNativeInterface()");
+                "Could not obtain GrailsHibernateTemplate from Session#getNativeInterface()");
     }
 
     @Override

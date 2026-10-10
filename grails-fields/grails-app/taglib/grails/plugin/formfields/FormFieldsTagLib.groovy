@@ -38,9 +38,13 @@ import jakarta.servlet.http.HttpServletRequest
 
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Value
+import org.springframework.boot.context.properties.bind.Bindable
+import org.springframework.boot.context.properties.bind.Binder
+import org.springframework.context.EnvironmentAware
 import org.springframework.context.MessageSource
 import org.springframework.context.MessageSourceResolvable
 import org.springframework.context.NoSuchMessageException
+import org.springframework.core.env.Environment
 import org.springframework.web.servlet.LocaleResolver
 
 import grails.gorm.validation.DisplayType
@@ -66,7 +70,7 @@ import org.grails.web.servlet.mvc.GrailsWebRequest
 import static FormFieldsTemplateService.toPropertyNameFormat
 
 @Slf4j
-class FormFieldsTagLib {
+class FormFieldsTagLib implements EnvironmentAware {
 
     static final namespace = 'f'
 
@@ -84,14 +88,11 @@ class FormFieldsTagLib {
     @Value('${grails.plugin.fields.localizeNumbers:true}')
     Boolean localizeNumbers
 
-    @Value('${grails.plugin.fields.exclusions.list:#{T(java.util.Arrays).asList("id", "dateCreated", "lastUpdated")}}')
-    List<String> exclusionsList
+    List<String> exclusionsList = ['id', 'dateCreated', 'lastUpdated']
 
-    @Value('${grails.plugin.fields.exclusions.input:#{T(java.util.Arrays).asList("version", "dateCreated", "lastUpdated")}}')
-    List<String> exclusionsInput
+    List<String> exclusionsInput = ['version', 'dateCreated', 'lastUpdated']
 
-    @Value('${grails.plugin.fields.exclusions.display:#{T(java.util.Arrays).asList("version", "dateCreated", "lastUpdated")}}')
-    List<String> exclusionsDisplay
+    List<String> exclusionsDisplay = ['version', 'dateCreated', 'lastUpdated']
 
     enum ExclusionType {
         List, Display, Input
@@ -110,6 +111,19 @@ class FormFieldsTagLib {
     MessageSource messageSource
 
     static defaultEncodeAs = [taglib: 'raw']
+
+    /**
+     * Reads the {@code grails.plugin.fields.exclusions} settings, each given as a comma-separated
+     * value or as a list. They are bound rather than injected with {@code @Value}, which cannot read
+     * a list from {@code application.yml}, because Grails exposes such a list element by element.
+     */
+    @Override
+    void setEnvironment(Environment environment) {
+        Binder binder = Binder.get(environment)
+        exclusionsList = binder.bind('grails.plugin.fields.exclusions.list', Bindable.listOf(String)).orElse(exclusionsList)
+        exclusionsInput = binder.bind('grails.plugin.fields.exclusions.input', Bindable.listOf(String)).orElse(exclusionsInput)
+        exclusionsDisplay = binder.bind('grails.plugin.fields.exclusions.display', Bindable.listOf(String)).orElse(exclusionsDisplay)
+    }
 
     class BeanAndPrefix {
         Object bean
@@ -929,24 +943,28 @@ class FormFieldsTagLib {
         Writer buffer = new FastStringWriter()
         buffer << '<ul>'
         def persistentProperty = model.persistentProperty
-        def controllerName
+        // The associated domain class, rather than a controller named after it, so each link reaches the
+        // controller serving the domain class wherever it is.
+        Class associatedClass = null
+        def propertyName
         def shortName
         if (persistentProperty instanceof Association) {
             Association prop = ((Association) persistentProperty)
-            controllerName = prop.associatedEntity.decapitalizedName
+            associatedClass = prop.associatedEntity.javaClass
+            propertyName = prop.associatedEntity.decapitalizedName
             shortName = prop.associatedEntity.javaClass.simpleName
         }
 
         attrs.value.each {
             buffer << '<li>'
-            buffer << g.link(controller: controllerName, action: 'show', id: it.id, it.toString().encodeAsHTML())
+            buffer << g.link(resource: associatedClass, action: 'show', id: it.id, it.toString().encodeAsHTML())
             buffer << '</li>'
         }
         buffer << '</ul>'
-        def referencedTypeLabel = message(code: "${controllerName}.label", default: shortName)
+        def referencedTypeLabel = message(code: "${propertyName}.label", default: shortName)
         def addLabel = g.message(code: 'default.add.label', args: [referencedTypeLabel])
         PersistentEntity beanClass = (PersistentEntity) model.beanClass
-        buffer << g.link(controller: controllerName, action: 'create', params: [("${beanClass.decapitalizedName}.id".toString()): model.bean.id], addLabel)
+        buffer << g.link(resource: associatedClass, action: 'create', params: [("${beanClass.decapitalizedName}.id".toString()): model.bean.id], addLabel)
         buffer.buffer
     }
 
@@ -1015,7 +1033,7 @@ class FormFieldsTagLib {
 
     private CharSequence displayAssociation(value, PersistentEntity referencedDomainClass) {
         if (value && referencedDomainClass) {
-            g.link(controller: referencedDomainClass.decapitalizedName, action: 'show', id: value.id, value.toString().encodeAsHTML())
+            g.link(resource: referencedDomainClass.javaClass, action: 'show', id: value.id, value.toString().encodeAsHTML())
         } else if (value) {
             value.toString()
         }

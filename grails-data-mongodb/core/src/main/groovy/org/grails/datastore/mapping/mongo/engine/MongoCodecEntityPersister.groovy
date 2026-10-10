@@ -159,6 +159,8 @@ class MongoCodecEntityPersister extends ThirdPartyCacheEntityPersister<Object> {
                     .withDocumentClass(persistentEntity.javaClass)
                     .withCodecRegistry(mongoDatastore.codecRegistry)
             Document idQuery = createIdQuery(coerceIdToStoredType(key, pe))
+            // a subclass shares its root's collection, so a document of another class must not match
+            idQuery.putAll(MongoQuery.createClassFieldQuery(pe))
             o = mongoSession.find(mongoCollection, idQuery, pe.javaClass)
                     .limit(1)
                     .first()

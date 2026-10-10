@@ -26,6 +26,7 @@ gettingStarted:
   aHelloWorldExample: Creating a Simple Web Application with Grails
   usingInteractiveMode: Using Interactive Mode
   ide: Getting Set Up in an IDE
+  agentSkills: Agent Skills
   conventionOverConfiguration: Grails Directory Structure and Convention over Configuration
   runningAndDebuggingAnApplication: Running and Debugging an Application
   testingAnApplication: Testing an Application
@@ -61,6 +62,7 @@ conf:
   applicationClass:
       title: The Application Class
       executing: Executing the Application Class
+      applicationBuilder: Building the Application
       customizing: Customizing the Application Class
       applicationLifeCycle: The Application LifeCycle
   environments: Environments
@@ -85,6 +87,7 @@ commandLine:
     gradleDependencies: Defining Dependencies with Gradle
     gradleTasks: Working with Gradle Tasks
     gradlePlugins: Grails plugins for Gradle
+    gradleConfigurationCache: Using the Gradle Configuration Cache
 profiles:
   title: Application Profiles
   standardProfiles:
@@ -149,6 +152,7 @@ theWebLayer:
       contentBlocks: Content Blocks
     resources: Static Resources
     makingChangesToADeployedApplication: Making Changes to a Deployed Application
+    gspInSpringBoot: GSP in a Spring Boot Application
     taglibs:
       title: Tag Libraries
       taglibVariablesAndScopes: Variables and Scopes
@@ -233,6 +237,7 @@ REST:
     generatingRestControllers: Generating a REST controller using scaffolding
   callingRestServices: Calling REST Services with HttpClient
   restProfile: The REST Profile
+  openApi: OpenAPI Descriptions
   jsonViews:
     title: JSON Views
     jsonViewsSetup: Getting Started
@@ -410,8 +415,9 @@ cache:
 deployment:
   title: Deployment
   deploymentStandalone: Standalone
-  deploymentContainer: Container Deployment (e.g. Tomcat)
-  deploymentTasks: Deployment Configuration Tasks
+  deploymentContainer: External Servlet Container Deployment
+  deploymentLayeredBuilds: OCI Images and Layered Builds
+  deploymentTasks: Production Configuration
   deploymentAot: Ahead-of-Time Processing
   deploymentAotCache: Ahead-of-Time Caching
 contributing:

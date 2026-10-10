@@ -36,12 +36,10 @@ plugins {
     id 'com.gradle.develocity' version '4.5.0'
     id 'com.gradle.common-custom-user-data-gradle-plugin' version '2.4.0'
     id 'org.apache.grails.buildsrc.repo'
+    id 'com.autonomousapps.build-health' version '3.19.2' apply false
 }
 
-// NOTE: Known Gradle deprecation warnings (scheduled for removal in Gradle 10):
-// 1. StartParameter.isConfigurationCacheRequested - from org.asciidoctor.jvm.convert plugin (4.0.5)
-//    Fix available in asciidoctor-gradle-plugin 5.0.0+ (currently alpha)
-//    Tracking: https://github.com/asciidoctor/asciidoctor-gradle-plugin/issues/756
+apply from: file('gradle/dependency-analysis.settings.gradle')
 
 def isCI = System.getenv().containsKey('CI')
 def isLocal = !isCI
@@ -80,6 +78,7 @@ include(
         'grails-codecs-core',
         'grails-codecs',
         'grails-common',
+        'grails-configuration-metadata',
         'grails-console',
         'grails-controllers',
         'grails-converters',
@@ -96,11 +95,13 @@ include(
         'grails-interceptors',
         'grails-logging',
         'grails-mimetypes',
+        'grails-openapi',
         'grails-rest-transforms',
         'grails-scaffolding',
         'grails-services',
         'grails-shell-cli',
         'grails-spring',
+        'grails-startup-progress',
         'grails-test-core',
         'grails-undertow',
         'grails-undertow-spring-boot',
@@ -222,6 +223,10 @@ include(
 
         // wrapper
         'grails-wrapper',
+
+        // Agent Skills (published for consumption by AI coding agents)
+        'grails-skills-developer',
+        'grails-skills-upgrade-guide-8',
 )
 
 project(':grails-bom').projectDir = file('grails-bom/default')
@@ -246,6 +251,9 @@ project(':grails-async-rxjava').projectDir = file('grails-async/rxjava')
 project(':grails-async-rxjava2').projectDir = file('grails-async/rxjava2')
 project(':grails-async-rxjava3').projectDir = file('grails-async/rxjava3')
 project(':grails-async').projectDir = file('grails-async/plugin')
+
+project(':grails-skills-developer').projectDir = file('grails-skills/developer')
+project(':grails-skills-upgrade-guide-8').projectDir = file('grails-skills/upgrade-guide-8')
 
 project(':grails-dependencies-starter-web').projectDir = file('grails-dependencies/starter-web')
 project(':grails-dependencies-test').projectDir = file('grails-dependencies/test')
@@ -530,12 +538,16 @@ include(
         'grails-test-examples-jetty',
         'grails-test-examples-latency',
         'grails-test-examples-namespaces',
+        'grails-test-examples-openapi',
+        'grails-test-examples-openapi-rest-api',
         'grails-test-examples-plugins-exploded',
         'grails-test-examples-plugins-issue11005',
         'grails-test-examples-plugins-loadafter',
         'grails-test-examples-plugins-loadfirst',
         'grails-test-examples-plugins-loadsecond',
         'grails-test-examples-config-report',
+        'grails-test-examples-context-hierarchy',
+        'grails-test-examples-context-hierarchy-cli',
         'grails-test-examples-quartz',
         'grails-test-examples-scaffolding',
         'grails-test-examples-scaffolding-fields',
@@ -543,6 +555,9 @@ include(
         'grails-test-examples-undertow',
         'grails-test-examples-views-functional-tests',
         'grails-test-examples-views-functional-tests-plugin',
+        'grails-test-examples-startup-progress',
+        'grails-test-examples-welcome-page',
+        'grails-test-examples-welcome-page-jetty',
 )
 project(':grails-test-examples-async-events-pubsub-demo').projectDir = file('grails-test-examples/async-events-pubsub-demo')
 project(':grails-test-examples-benchmarks').projectDir = file('grails-test-examples/benchmarks')
@@ -583,6 +598,8 @@ project(':grails-test-examples-issue-10279').projectDir = file('grails-test-exam
 project(':grails-test-examples-plugins-exploded').projectDir = file('grails-test-examples/plugins/exploded')
 project(':grails-test-examples-cache').projectDir = file('grails-test-examples/cache')
 project(':grails-test-examples-config-report').projectDir = file('grails-test-examples/config-report')
+project(':grails-test-examples-context-hierarchy').projectDir = file('grails-test-examples/context-hierarchy')
+project(':grails-test-examples-context-hierarchy-cli').projectDir = file('grails-test-examples/context-hierarchy-cli')
 project(':grails-test-examples-scaffolding').projectDir = file('grails-test-examples/scaffolding')
 project(':grails-test-examples-scaffolding-fields').projectDir = file('grails-test-examples/scaffolding-fields')
 project(':grails-test-examples-views-functional-tests').projectDir = file('grails-test-examples/views-functional-tests')
@@ -590,7 +607,12 @@ project(':grails-test-examples-views-functional-tests-plugin').projectDir = file
 project(':grails-test-examples-test-phases').projectDir = file('grails-test-examples/test-phases')
 project(':grails-test-examples-jetty').projectDir = file('grails-test-examples/jetty')
 project(':grails-test-examples-undertow').projectDir = file('grails-test-examples/undertow')
+project(':grails-test-examples-startup-progress').projectDir = file('grails-test-examples/startup-progress')
+project(':grails-test-examples-welcome-page').projectDir = file('grails-test-examples/welcome-page')
+project(':grails-test-examples-welcome-page-jetty').projectDir = file('grails-test-examples/welcome-page-jetty')
 project(':grails-test-examples-latency').projectDir = file('grails-test-examples/latency')
+project(':grails-test-examples-openapi').projectDir = file('grails-test-examples/openapi')
+project(':grails-test-examples-openapi-rest-api').projectDir = file('grails-test-examples/openapi-rest-api')
 
 includeBuild('./grails-gradle') {
     name = 'grails-gradle'

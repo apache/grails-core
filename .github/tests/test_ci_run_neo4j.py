@@ -83,6 +83,7 @@ class Neo4jExitTests(unittest.TestCase):
                     self.assertEqual(result.returncode, expected, result.stderr)
                     args = (root / 'args.txt').read_text().splitlines()
                     self.assertIn('--init-script', args)
+                    self.assertIn('--no-configuration-cache', args)
                     self.assertIn('-PonlyNeo4jTests', args)
                     self.assertIn('-PgrailsIndy=false', args)
 

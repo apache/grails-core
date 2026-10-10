@@ -317,7 +317,7 @@ public class DefaultUrlMappingsHolder implements UrlMappings {
         if (mapping == null) {
             mapping = lookupMapping(controller, action, namespace, pluginName, httpMethod, version, params);
             if (mapping == null) {
-                lookupMapping(controller, action, namespace, pluginName, UrlMapping.ANY_HTTP_METHOD, version, params);
+                mapping = lookupMapping(controller, action, namespace, pluginName, UrlMapping.ANY_HTTP_METHOD, version, params);
             }
         }
         if (mapping == null || (mapping instanceof ResponseCodeUrlMapping)) {

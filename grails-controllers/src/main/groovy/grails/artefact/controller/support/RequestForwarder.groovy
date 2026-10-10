@@ -125,6 +125,7 @@ trait RequestForwarder implements WebAttributes {
 
         int requestScope = WebRequest.SCOPE_REQUEST
         webRequest.removeAttribute(GrailsApplicationAttributes.MODEL_AND_VIEW, requestScope)
+        webRequest.removeAttribute(GrailsApplicationAttributes.TEMPLATE_MODEL, requestScope)
         webRequest.removeAttribute(GrailsApplicationAttributes.GRAILS_CONTROLLER_CLASS_AVAILABLE, requestScope)
         webRequest.removeAttribute(UrlMappingsHandlerMapping.MATCHED_REQUEST, requestScope)
         webRequest.removeAttribute(WebUtils.ERROR_STATUS_CODE_ATTRIBUTE, requestScope)
@@ -135,6 +136,7 @@ trait RequestForwarder implements WebAttributes {
         } finally {
             // cleanup after forward
             webRequest.removeAttribute(GrailsApplicationAttributes.MODEL_AND_VIEW, requestScope)
+            webRequest.removeAttribute(GrailsApplicationAttributes.TEMPLATE_MODEL, requestScope)
             webRequest.removeAttribute(GrailsApplicationAttributes.GRAILS_CONTROLLER_CLASS_AVAILABLE, requestScope)
             webRequest.removeAttribute(UrlMappingsHandlerMapping.MATCHED_REQUEST, requestScope)
             webRequest.removeAttribute(WebUtils.ERROR_STATUS_CODE_ATTRIBUTE, requestScope)

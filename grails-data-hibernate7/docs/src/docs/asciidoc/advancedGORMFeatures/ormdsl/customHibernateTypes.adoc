@@ -70,16 +70,31 @@ class Measurement {
 
 === Global User Type Mapping
 
-Register a user type for a given Java class globally so it applies to all properties of that type without explicit per-property configuration:
+Use `user-type` to register a user type for a Java type, so that every property of that type uses it without a per-property `type`. Registered in a domain class's `mapping` block, it applies to the properties of that class:
 
 [source,groovy]
 ----
-class MyDomainClass {
+class Account {
+    Boolean active
+    Boolean locked
+
     static mapping = {
-        userTypes Money: MoneyUserType      // <1>
+        'user-type'(type: YesNoBooleanType, class: Boolean)    // <1>
     }
 }
 ----
-<1> Any property of type `Money` in this class will use `MoneyUserType`.
+<1> `YesNoBooleanType` implements `org.hibernate.usertype.UserType<Boolean>` and stores booleans as `Y` or `N`. Both `active` and `locked` use it. The `type` can be the user type's `Class` or its fully qualified class name.
 
-TIP: Implementing `org.hibernate.usertype.UserType` requires handling `sqlTypes()`, `nullSafeGet()`, `nullSafeSet()`, `deepCopy()`, and `equals()`. Prefer Hibernate's `CompositeUserType` for multi-column mappings.
+To apply it to every domain class, register it in the <<_the_default_mapping_constraints, default mapping>>:
+
+[source,groovy]
+.grails-app/conf/application.groovy
+----
+grails.gorm.default.mapping = {
+    'user-type'(type: YesNoBooleanType, class: Boolean)
+}
+----
+
+A `type` set on an individual property takes precedence over a registered user type.
+
+TIP: A Hibernate 7 `UserType` must implement `getSqlType()`, `returnedClass()`, `deepCopy()`, and `isMutable()`, and usually overrides `nullSafeGet()` and `nullSafeSet()` to convert between the column value and the Java type. Prefer Hibernate's `CompositeUserType` for multi-column mappings.

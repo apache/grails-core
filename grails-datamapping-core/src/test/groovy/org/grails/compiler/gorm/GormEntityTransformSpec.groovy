@@ -19,6 +19,7 @@
 package org.grails.compiler.gorm
 
 import java.lang.reflect.Method
+import java.lang.reflect.Modifier
 
 import groovy.transform.Generated
 import org.codehaus.groovy.ast.ClassNode
@@ -191,6 +192,13 @@ class GormEntityTransformSpec extends Specification{
         Author.getDeclaredMethod('setBooks', Set).isAnnotationPresent(Generated)
         Author.getDeclaredMethod('getBooks').isAnnotationPresent(Generated)
         Book.getDeclaredMethod('getAuthorId').isAnnotationPresent(Generated)
+        Book.getDeclaredMethod('refresh', Map).isAnnotationPresent(Generated)
+        Book.getDeclaredMethod('refresh', Map).returnType == Book
+        !Modifier.isStatic(Book.getDeclaredMethod('refresh', Map).modifiers)
+        Book.getDeclaredMethod('lock', Map, Serializable).isAnnotationPresent(Generated)
+        Book.getDeclaredMethod('lock', Map, Serializable).returnType == Book
+        Modifier.isStatic(Book.getDeclaredMethod('lock', Map, Serializable).modifiers)
+        Book.getDeclaredMethod('lock', Serializable).returnType == Book
     }
 
     void 'test property/method missing'() {
@@ -230,7 +238,9 @@ class GormEntityTransformSpec extends Specification{
         }
     }
 
-    // Groovy 6.0.0-beta-2 specializes generic trait parameters on the implementing class.
+    // Groovy 6 specializes a generic trait method's type-variable parameters to the implementing
+    // class, so Book.merge(Object) from GormEntity<D> becomes Book.merge(Book). Look the specialized
+    // signature up when the erased one is missing.
     private static Method findGeneratedMethod(Class targetClass, Method traitMethod) {
         try {
             return targetClass.getMethod(traitMethod.name, traitMethod.parameterTypes)

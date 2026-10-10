@@ -24,6 +24,7 @@ import org.sitemesh.webmvc.SiteMeshViewResolverBeanPostProcessor
 
 import org.springframework.beans.BeansException
 import org.springframework.beans.factory.BeanFactory
+import org.springframework.util.ObjectUtils
 
 /**
  * {@link SiteMeshViewResolverBeanPostProcessor} preconfigured to wrap
@@ -65,7 +66,22 @@ class GrailsSiteMeshViewResolverBeanPostProcessor extends SiteMeshViewResolverBe
                 !beanFactory.containsBean(decoratorSelectorBeanName)) {
             return bean
         }
-        super.postProcessAfterInitialization(bean, beanName)
+        super.postProcessAfterInitialization(bean, targetNameFor(beanName, beanFactory))
+    }
+
+    /**
+     * Answers with {@link #TARGET_VIEW_RESOLVER_BEAN_NAME} for a bean that carries it as an alias
+     * rather than as its name, which is how {@code GspAutoConfiguration} registers the GSP view
+     * resolver of a standalone Spring Boot application. The upstream implementation compares the
+     * name it is handed against the target name, so an aliased resolver would never be wrapped and
+     * nothing on such a page would be decorated.
+     */
+    private static String targetNameFor(String beanName, BeanFactory beanFactory) {
+        if (beanName != TARGET_VIEW_RESOLVER_BEAN_NAME &&
+                ObjectUtils.containsElement(beanFactory.getAliases(beanName), TARGET_VIEW_RESOLVER_BEAN_NAME)) {
+            return TARGET_VIEW_RESOLVER_BEAN_NAME
+        }
+        beanName
     }
 
     /**

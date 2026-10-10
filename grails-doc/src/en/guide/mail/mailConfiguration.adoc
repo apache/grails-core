@@ -103,3 +103,22 @@ An alternative to disabling email is to use the `overrideAddress` config setting
 ----
 grails.mail.overrideAddress = 'test@address.com'
 ----
+
+When `overrideAddress` is set, every `to`, `cc` and `bcc` address and the sender are replaced by this value. That includes a `from` set in the `sendMail` closure. `replyTo` and `envelopeFrom` are not changed.
+
+To override only the recipients or only the sender, use `overrideToAddress` or `overrideFromAddress`:
+
+* `grails.mail.overrideToAddress` replaces every `to`, `cc` and `bcc` address. It's also used as the `to` address when the `sendMail` closure doesn't set one.
+* `grails.mail.overrideFromAddress` replaces the sender, including a `from` set in the `sendMail` closure. It's also used as the `from` address when the closure doesn't set one.
+
+When `overrideAddress` is set as well, `overrideToAddress` and `overrideFromAddress` take precedence over it.
+
+[source,groovy]
+----
+// Redirect all outgoing mail to a test inbox, but keep the real sender address
+grails.mail.overrideToAddress = 'test-inbox@example.com'
+
+// Force a fixed sender address without redirecting recipients
+grails.mail.overrideFromAddress = 'noreply@example.com'
+----
+

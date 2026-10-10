@@ -407,6 +407,27 @@ class GrailsHibernateTemplateSpec extends HibernateGormDatastoreSpec {
         noExceptionThrown()
     }
 
+    void "lock(entity, lockMode) applies the requested lock mode"() {
+        given:
+        TemplateBook saved = TemplateBook.withTransaction {
+            new TemplateBook(title: 'Effective Java', author: 'Joshua Bloch').save(flush: true, failOnError: true)
+        }
+        session.clear()
+
+        when:
+        LockMode applied = TemplateBook.withTransaction {
+            TemplateBook book = template.get(TemplateBook, saved.id)
+            template.lock(book, lockMode)
+            template.execute { Session s -> s.getCurrentLockMode(book) }
+        }
+
+        then:
+        applied == lockMode
+
+        where:
+        lockMode << [LockMode.PESSIMISTIC_READ, LockMode.PESSIMISTIC_WRITE]
+    }
+
     // -------------------------------------------------------------------------
     // lock(Class, Serializable, LockMode)
     // -------------------------------------------------------------------------
