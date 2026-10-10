@@ -16,20 +16,19 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.build.logging;
+package org.grails.build.logging
 
-import groovy.ant.AntBuilder;
+import groovy.ant.AntBuilder
+import groovy.transform.CompileStatic
+import org.apache.tools.ant.BuildEvent
+import org.apache.tools.ant.BuildLogger
+import org.apache.tools.ant.DefaultLogger
+import org.apache.tools.ant.MagicNames
+import org.apache.tools.ant.Project
+import org.apache.tools.ant.ProjectHelper
+import org.apache.tools.ant.types.LogLevel
 
-import org.apache.tools.ant.BuildEvent;
-import org.apache.tools.ant.BuildLogger;
-import org.apache.tools.ant.DefaultLogger;
-import org.apache.tools.ant.MagicNames;
-import org.apache.tools.ant.Project;
-import org.apache.tools.ant.ProjectHelper;
-import org.apache.tools.ant.types.LogLevel;
-import org.apache.tools.ant.util.StringUtils;
-
-import grails.build.logging.GrailsConsole;
+import grails.build.logging.GrailsConsole
 
 /**
  * Silences ant builder output.
@@ -37,50 +36,51 @@ import grails.build.logging.GrailsConsole;
  * @author Graeme Rocher
  * @since 2.0
  */
-public class GrailsConsoleAntBuilder extends AntBuilder {
+@CompileStatic
+class GrailsConsoleAntBuilder extends AntBuilder {
 
-    public GrailsConsoleAntBuilder(Project project) {
-        super(project);
+    GrailsConsoleAntBuilder(Project project) {
+        super(project)
     }
 
-    public GrailsConsoleAntBuilder() {
-        super(createAntProject());
+    GrailsConsoleAntBuilder() {
+        super(createAntProject())
     }
 
     /**
      * @return Factory method to create new Project instances
      */
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings('unchecked')
     protected static Project createAntProject() {
-        final Project project = new Project();
+        final Project project = new Project()
 
-        final ProjectHelper helper = ProjectHelper.getProjectHelper();
-        project.addReference(MagicNames.REFID_PROJECT_HELPER, helper);
-        helper.getImportStack().addElement("AntBuilder"); // import checks that stack is not empty
+        final ProjectHelper helper = ProjectHelper.getProjectHelper()
+        project.addReference(MagicNames.REFID_PROJECT_HELPER, helper)
+        helper.getImportStack().addElement('AntBuilder') // import checks that stack is not empty
 
-        addGrailsConsoleBuildListener(project);
+        addGrailsConsoleBuildListener(project)
 
-        project.init();
-        project.getBaseDir();
-        return project;
+        project.init()
+        project.getBaseDir()
+        return project
     }
 
-    public static void addGrailsConsoleBuildListener(Project project) {
-        final BuildLogger logger = new GrailsConsoleLogger();
+    static void addGrailsConsoleBuildListener(Project project) {
+        final BuildLogger logger = new GrailsConsoleLogger()
 
-        logger.setMessageOutputLevel(Project.MSG_INFO);
-        logger.setOutputPrintStream(System.out);
-        logger.setErrorPrintStream(System.err);
+        logger.setMessageOutputLevel(Project.MSG_INFO)
+        logger.setOutputPrintStream(System.out)
+        logger.setErrorPrintStream(System.err)
 
-        project.addBuildListener(logger);
+        project.addBuildListener(logger)
 
-        GrailsConsole instance = GrailsConsole.getInstance();
-        project.addBuildListener(new GrailsConsoleBuildListener(instance));
+        GrailsConsole instance = GrailsConsole.getInstance()
+        project.addBuildListener(new GrailsConsoleBuildListener(instance))
 
         if (!instance.isVerbose()) {
-            for (Object buildListener : project.getBuildListeners()) {
+            for (Object buildListener in project.getBuildListeners()) {
                 if (buildListener instanceof BuildLogger) {
-                    ((BuildLogger) buildListener).setMessageOutputLevel(LogLevel.ERR.getLevel());
+                    ((BuildLogger) buildListener).setMessageOutputLevel(LogLevel.ERR.getLevel())
                 }
             }
         }
@@ -94,8 +94,8 @@ public class GrailsConsoleAntBuilder extends AntBuilder {
          * to <code>null</code> after the first message for
          * the target is logged.
          */
-        protected String targetName;
-        protected GrailsConsole console = GrailsConsole.getInstance();
+        protected String targetName
+        protected GrailsConsole console = GrailsConsole.getInstance()
 
         /**
          * Notes the name of the target so it can be logged
@@ -105,8 +105,8 @@ public class GrailsConsoleAntBuilder extends AntBuilder {
          *              Must not be <code>null</code>.
          */
         @Override
-        public void targetStarted(BuildEvent event) {
-            targetName = event.getTarget().getName();
+        void targetStarted(BuildEvent event) {
+            targetName = event.getTarget().getName()
         }
 
         /**
@@ -115,8 +115,8 @@ public class GrailsConsoleAntBuilder extends AntBuilder {
          * @param event Ignored in this implementation.
          */
         @Override
-        public void targetFinished(BuildEvent event) {
-            targetName = null;
+        void targetFinished(BuildEvent event) {
+            targetName = null
         }
 
         /**
@@ -129,17 +129,18 @@ public class GrailsConsoleAntBuilder extends AntBuilder {
          *              Must not be <code>null</code>.
          */
         @Override
-        public void messageLogged(BuildEvent event) {
+        void messageLogged(BuildEvent event) {
             if (event.getPriority() > msgOutputLevel ||
                     null == event.getMessage() ||
-                    "".equals(event.getMessage().trim())) {
-                return;
+                    ''.equals(event.getMessage().trim())) {
+                return
             }
 
             if (null != targetName) {
-                console.verbose(System.lineSeparator() + targetName + ":");
-                targetName = null;
+                console.verbose(System.lineSeparator() + targetName + ':')
+                targetName = null
             }
         }
     }
+
 }
