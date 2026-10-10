@@ -73,6 +73,9 @@ Applications generated for Hibernate 7 consume `grails-hibernate7-bom` consisten
 This avoids the dependency resolution conflicts that occur when an application generated for Hibernate 5 is manually switched to `grails-data-hibernate7` while the default `grails-bom` remains on the build classpath.
 The `database-migration` feature also selects the matching `grails-data-hibernate7-dbmigration` plugin automatically.
 
+The Grails Data plugin itself (`grails-data-hibernate5` or `grails-data-hibernate7`) is an application dependency only: generated builds no longer place it on the `buildscript` classpath or in `buildSrc`, where Gradle's own Groovy would run the compile-time transformations the plugin carries while compiling the build scripts.
+See the xref:upgrading#upgrading80x[upgrade guide] for the equivalent change in an existing build.
+
 ==== Asynchronous Grails Data Application Generation
 
 Grails Forge offers a new `gorm-async` feature that adds the asynchronous programming model for Grails Data — the `AsyncEntity` trait and the `async` namespace — to a generated application:
