@@ -73,6 +73,56 @@ property-with_mixed.symbols: from-yml
         'property-with_mixed.symbols' | 'PROPERTY_WITH_MIXED_SYMBOLS' | 'from-env'
     }
 
+    void 'a property read more than once keeps resolving to the system environment value'() {
+        given: 'configuration that is overridden by the environment'
+        def config = configFor('property.with.period: from-yml')
+        modifiableSystemEnvironment.put('PROPERTY_WITH_PERIOD', 'from-env')
+
+        expect: 'every read resolves to the environment value, not just the first'
+        config.getProperty('property.with.period') == 'from-env'
+        config.getProperty('property.with.period') == 'from-env'
+        config.getProperty('property.with.period') == 'from-env'
+
+        cleanup:
+        modifiableSystemEnvironment.remove('PROPERTY_WITH_PERIOD')
+    }
+
+    void 'a property that has already been read still reflects later configuration changes'() {
+        given: 'a property that has been read once'
+        def config = configFor('some.nested.value: original')
+        assert config.getProperty('some.nested.value') == 'original'
+
+        when: 'the configuration is changed'
+        config.merge(['some.nested.value': 'updated'])
+
+        then: 'the new value is returned rather than the previously resolved one'
+        config.getProperty('some.nested.value') == 'updated'
+    }
+
+    void 'a config created after an environment variable is installed observes it'() {
+        given: 'a config created and read before the variable exists'
+        def before = configFor('late.bound.property: from-yml')
+        assert before.getProperty('late.bound.property') == 'from-yml'
+
+        when: 'the variable is installed and a new config is created'
+        modifiableSystemEnvironment.put('LATE_BOUND_PROPERTY', 'from-env')
+        def after = configFor('late.bound.property: from-yml')
+
+        then: 'the new config resolves to the environment value'
+        after.getProperty('late.bound.property') == 'from-env'
+
+        cleanup:
+        modifiableSystemEnvironment.remove('LATE_BOUND_PROPERTY')
+    }
+
+    private static PropertySourcesConfig configFor(String yaml) {
+        def yamlPropertiesSource = new YamlPropertySourceLoader()
+                .load('application.yml', new ByteArrayResource(yaml.bytes, 'test.yml'), null)
+        def propertySources = new MutablePropertySources()
+        propertySources.addFirst(yamlPropertiesSource.first())
+        new PropertySourcesConfig(propertySources)
+    }
+
     // From https://github.com/spring-projects/spring-framework/blob/4.3.x/spring-core/src/test/java/org/springframework/core/env/StandardEnvironmentTests.java#L492
     @SuppressWarnings("unchecked")
     static Map<String, String> getModifiableSystemEnvironment() {
