@@ -16,11 +16,12 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.apache.grails.startup;
+package org.apache.grails.startup
 
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.util.List;
+import java.nio.charset.StandardCharsets
+
+import groovy.transform.CompileStatic
+import groovy.transform.PackageScope
 
 /**
  * Decides how the startup progress answers a request, and answers it, for both of the servers that answer
@@ -45,6 +46,7 @@ import java.util.List;
  *     {@code 503} for anything else</li>
  * </ul>
  */
+@CompileStatic
 final class StartupProgressResponder {
 
     /** Which requests a server takes, beyond the startup progress's own paths. */
@@ -63,94 +65,96 @@ final class StartupProgressResponder {
     /** A request and its response, as a server that answers for the startup progress hands them over. */
     interface Exchange {
 
-        String method();
+        String method()
 
         /** The path asked for, undecoded, with the context path. */
-        String path();
+        String path()
 
         /** The query, undecoded, or {@code null} when there is none. */
-        String query();
+        String query()
 
-        String header(String name);
+        String header(String name)
 
-        List<String> headers(String name);
+        List<String> headers(String name)
 
-        void setHeader(String name, String value);
+        void setHeader(String name, String value)
 
         /**
          * Sends the status, headers and body, all of it before returning.
          *
          * @param contentType the type of the body, or {@code null} when there is no body
          */
-        void send(int status, String contentType, byte[] body) throws IOException;
+        void send(int status, String contentType, byte[] body) throws IOException
     }
 
-    private static final byte[] NO_BODY = new byte[0];
+    private static final byte[] NO_BODY = new byte[0]
 
-    private final StartupProgress progress;
+    private final StartupProgress progress
 
-    private final StartupProgressPage page;
+    private final StartupProgressPage page
 
-    private final StartupAccess access;
+    private final StartupAccess access
 
-    private final String statusPath;
+    private final String statusPath
 
-    private final String reportPath;
+    private final String reportPath
 
     /**
      * @param statusPath the full path the progress page polls
      * @param reportPath the full path of the startup report, or {@code null} when it is not served
      */
+    @PackageScope
     StartupProgressResponder(StartupProgress progress, StartupProgressPage page, StartupAccess access, String statusPath, String reportPath) {
-        this.progress = progress;
-        this.page = page;
-        this.access = access;
-        this.statusPath = statusPath;
-        this.reportPath = reportPath;
+        this.progress = progress
+        this.page = page
+        this.access = access
+        this.statusPath = statusPath
+        this.reportPath = reportPath
     }
 
     /**
      * Answers the request if the server takes it, and says whether it did. A request left unanswered is the
      * application's.
      */
+    @PackageScope
     boolean respond(Exchange exchange, Takes takes) throws IOException {
-        String path = exchange.path();
-        boolean starting = progress.isReporting();
-        boolean status = path.equals(statusPath);
-        boolean report = path.equals(reportPath);
+        String path = exchange.path()
+        boolean starting = progress.isReporting()
+        boolean status = path.equals(statusPath)
+        boolean report = path.equals(reportPath)
         if (status && !starting) {
             // a page still polling once the application is ready is told so, rather than the poll reaching an
             // application that has no such path and logs every request it cannot map
-            sendReady(exchange);
-            return true;
+            sendReady(exchange)
+            return true
         }
-        boolean everyRequest = takes == Takes.EVERY_REQUEST;
+        boolean everyRequest = takes == Takes.EVERY_REQUEST
         if ((everyRequest || starting || report) && signIn(exchange)) {
-            return true;
+            return true
         }
-        boolean pageLoad = isPageLoad(exchange);
+        boolean pageLoad = isPageLoad(exchange)
         if (!everyRequest && !report && !(starting && (status || takes == Takes.PAGE_LOADS && pageLoad))) {
-            return false;
+            return false
         }
-        boolean showDetails = access.showsDetails(exchange.headers("Cookie"));
-        boolean signInForDetails = access.isSignInRequired() && !showDetails;
+        boolean showDetails = access.showsDetails(exchange.headers('Cookie'))
+        boolean signInForDetails = access.isSignInRequired() && !showDetails
         if (status) {
-            StartupProgress.Status current = progress.report(showDetails, signInForDetails);
-            exchange.setHeader(StartupProgress.PHASE_HEADER, current.phase().name());
-            send(exchange, 200, "application/json", current.json());
-            progress.delivered(current);
+            StartupProgress.Status current = progress.report(showDetails, signInForDetails)
+            exchange.setHeader(StartupProgress.PHASE_HEADER, current.phase().name())
+            send(exchange, 200, 'application/json', current.json())
+            progress.delivered(current)
         }
-        else if (report && StartupProgressPage.wantsJson(exchange.header("Accept"), exchange.query())) {
-            send(exchange, 200, "application/json", progress.snapshot(showDetails, signInForDetails).json());
+        else if (report && StartupProgressPage.wantsJson(exchange.header('Accept'), exchange.query())) {
+            send(exchange, 200, 'application/json', progress.snapshot(showDetails, signInForDetails).json())
         }
         else if (report && !starting) {
-            setPageHeaders(exchange);
-            send(exchange, 200, "text/html", page.renderReport(progress.snapshot(showDetails, signInForDetails).json(), showDetails, signInForDetails));
+            setPageHeaders(exchange)
+            send(exchange, 200, 'text/html', page.renderReport(progress.snapshot(showDetails, signInForDetails).json(), showDetails, signInForDetails))
         }
         else {
-            sendStarting(exchange, pageLoad, showDetails, signInForDetails);
+            sendStarting(exchange, pageLoad, showDetails, signInForDetails)
         }
-        return true;
+        return true
     }
 
     /**
@@ -161,31 +165,31 @@ final class StartupProgressResponder {
      * code, is never mistaken for one.
      */
     private static boolean isPageLoad(Exchange exchange) {
-        String mode = exchange.header("Sec-Fetch-Mode");
+        String mode = exchange.header('Sec-Fetch-Mode')
         if (mode != null) {
-            return "navigate".equals(mode) && "document".equals(exchange.header("Sec-Fetch-Dest"));
+            return 'navigate'.equals(mode) && 'document'.equals(exchange.header('Sec-Fetch-Dest'))
         }
-        return "1".equals(exchange.header("Upgrade-Insecure-Requests"));
+        return '1'.equals(exchange.header('Upgrade-Insecure-Requests'))
     }
 
     /** Signs a browser in when its request carries the token from the log, and says whether it did. */
     private boolean signIn(Exchange exchange) throws IOException {
-        String method = exchange.method();
-        String signedIn = "GET".equals(method) || "HEAD".equals(method) ? access.signInRedirect(exchange.path(), exchange.query()) : null;
+        String method = exchange.method()
+        String signedIn = 'GET'.equals(method) || 'HEAD'.equals(method) ? access.signInRedirect(exchange.path(), exchange.query()) : null
         if (signedIn == null) {
-            return false;
+            return false
         }
-        exchange.setHeader("Cache-Control", "no-store");
-        exchange.setHeader("Referrer-Policy", "no-referrer");
-        exchange.setHeader("Set-Cookie", access.signInCookie());
-        exchange.setHeader("Location", signedIn);
-        exchange.send(302, null, NO_BODY);
-        return true;
+        exchange.setHeader('Cache-Control', 'no-store')
+        exchange.setHeader('Referrer-Policy', 'no-referrer')
+        exchange.setHeader('Set-Cookie', access.signInCookie())
+        exchange.setHeader('Location', signedIn)
+        exchange.send(302, null, NO_BODY)
+        return true
     }
 
     private static void sendReady(Exchange exchange) throws IOException {
-        exchange.setHeader(StartupProgress.PHASE_HEADER, StartupProgress.Phase.READY.name());
-        send(exchange, 200, "application/json", "{\"phase\":\"READY\"}");
+        exchange.setHeader(StartupProgress.PHASE_HEADER, StartupProgress.Phase.READY.name())
+        send(exchange, 200, 'application/json', '{"phase":"READY"}')
     }
 
     /**
@@ -193,26 +197,26 @@ final class StartupProgressResponder {
      * address once the application is ready, and anything else a plain answer to try again.
      */
     private void sendStarting(Exchange exchange, boolean pageLoad, boolean showDetails, boolean signInForDetails) throws IOException {
-        exchange.setHeader(StartupProgress.PHASE_HEADER, progress.getPhase().name());
-        exchange.setHeader("Retry-After", StartupProgressPage.RETRY_AFTER_SECONDS);
-        String accept = exchange.header("Accept");
-        if (pageLoad || accept != null && accept.contains("text/html")) {
-            setPageHeaders(exchange);
-            send(exchange, 503, "text/html", page.render(exchange.method(), showDetails, signInForDetails));
+        exchange.setHeader(StartupProgress.PHASE_HEADER, progress.getPhase().name())
+        exchange.setHeader('Retry-After', StartupProgressPage.RETRY_AFTER_SECONDS)
+        String accept = exchange.header('Accept')
+        if (pageLoad || accept != null && accept.contains('text/html')) {
+            setPageHeaders(exchange)
+            send(exchange, 503, 'text/html', page.render(exchange.method(), showDetails, signInForDetails))
         }
         else {
-            send(exchange, 503, "text/plain", page.plainText());
+            send(exchange, 503, 'text/plain', page.plainText())
         }
     }
 
     private static void setPageHeaders(Exchange exchange) {
-        exchange.setHeader("Content-Security-Policy", StartupProgressPage.CONTENT_SECURITY_POLICY);
-        exchange.setHeader("Referrer-Policy", "no-referrer");
+        exchange.setHeader('Content-Security-Policy', StartupProgressPage.CONTENT_SECURITY_POLICY)
+        exchange.setHeader('Referrer-Policy', 'no-referrer')
     }
 
     private static void send(Exchange exchange, int status, String contentType, String content) throws IOException {
-        exchange.setHeader("Cache-Control", "no-store");
-        exchange.setHeader("X-Content-Type-Options", "nosniff");
-        exchange.send(status, contentType + ";charset=utf-8", content.getBytes(StandardCharsets.UTF_8));
+        exchange.setHeader('Cache-Control', 'no-store')
+        exchange.setHeader('X-Content-Type-Options', 'nosniff')
+        exchange.send(status, contentType + ';charset=utf-8', content.getBytes(StandardCharsets.UTF_8))
     }
 }
