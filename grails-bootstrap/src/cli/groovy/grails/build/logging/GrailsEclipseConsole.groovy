@@ -46,6 +46,12 @@ class GrailsEclipseConsole extends GrailsConsole {
 
     private Boolean eclipseSupportsAnsi = null //lazy initialized because implicitly used from super constructor.
 
+    // the explicit constructor keeps the 'throws IOException' of the Java original (the implicit one declares none)
+    @SuppressWarnings('UnnecessaryConstructor')
+    GrailsEclipseConsole() throws IOException {
+        super()
+    }
+
     private boolean eclipseSupportsAnsi() {
         if (eclipseSupportsAnsi == null) {
             eclipseSupportsAnsi = boolProp(ECLIPSE_SUPPORTS_ANSI_PROP)
