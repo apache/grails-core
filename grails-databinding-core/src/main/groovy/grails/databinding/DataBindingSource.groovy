@@ -16,9 +16,7 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package grails.databinding;
-
-import java.util.Set;
+package grails.databinding
 
 /**
  * A DataBindingSource is a lot like a Map but is read-only and is
@@ -26,61 +24,63 @@ import java.util.Set;
  *
  * @since 3.0
  */
-public interface DataBindingSource {
+interface DataBindingSource {
+
     /**
      *
      * @return the names of properties represented
      */
-    Set<String> getPropertyNames();
+    Set<String> getPropertyNames()
 
     /**
      *
      * @param propertyName the name of a property
      * @return the value associated with propertyName, or null if propertyName is not represented
      */
-    Object getPropertyValue(String propertyName);
+    Object getPropertyValue(String propertyName)
 
     /**
      * Convencience operator overloading
      * @param propertyName the name of a property
      * @return the value associated with propertyName, or null if propertyName is not represented
      */
-    Object getAt(String propertyName);
+    Object getAt(String propertyName)
 
     /**
      *
      * @param propertyName the name of a property
      * @return true if propertyName is represented in the is binding source, otherwise false
      */
-    boolean containsProperty(String propertyName);
+    boolean containsProperty(String propertyName)
 
     /**
      *
      * @return true if this binding source contains an identifier for binding
      */
-    boolean hasIdentifier();
+    boolean hasIdentifier()
 
     /**
      *
      * @return the identifier value for binding or null if no identifier is represented by this binding source
      */
-    Object getIdentifierValue();
+    Object getIdentifierValue()
 
     /**
      *
      * @return the number of properties represented by this binding source
      */
-    int size();
+    int size()
 
     /**
      *
      * @return true if GORM operations should be enabled when binding with this DataBindingSource
      */
-    boolean isDataSourceAware();
+    boolean isDataSourceAware()
 
     /**
      *
      * @param isDataSourceAware true if GORM operations should be enabled when binding with this DataBindingSource
      */
-    void setDataSourceAware(boolean isDataSourceAware);
+    void setDataSourceAware(boolean isDataSourceAware)
+
 }

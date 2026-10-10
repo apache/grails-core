@@ -16,7 +16,7 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package grails.databinding.converters;
+package grails.databinding.converters
 
 /**
  * Classes which implement this interface may participate
@@ -25,6 +25,7 @@ package grails.databinding.converters;
 import org.grails.databinding.converters.FormattedValueConverter
 
 class FormattedStringValueConverter implements FormattedValueConverter {
+
     def convert(value, String format) {
         if('UPPERCASE' == format) {
             value = value.toUpperCase()
@@ -47,7 +48,8 @@ class FormattedStringValueConverter implements FormattedValueConverter {
  * @see grails.databinding.SimpleDataBinder
  * @see grails.databinding.SimpleDataBinder#registerFormattedValueConverter(FormattedValueConverter)
  */
-public interface FormattedValueConverter {
+interface FormattedValueConverter {
+
     /**
      * Return a formatted value
      *
@@ -55,10 +57,11 @@ public interface FormattedValueConverter {
      * @param format The format String
      * @return the formatted value
      */
-    Object convert(Object value, String format);
+    Object convert(Object value, String format)
 
     /**
      * @return the output type of this converter
      */
-    Class<?> getTargetType();
+    Class<?> getTargetType()
+
 }
