@@ -16,9 +16,10 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.datastore.mapping.mongo;
+package org.grails.datastore.mapping.mongo
 
-import org.bson.Document;
+import groovy.transform.CompileStatic
+import org.bson.Document
 
 /**
  * An index a domain class declares that its collection does not have.
@@ -30,5 +31,8 @@ import org.bson.Document;
  * @param options     the options declared with it, such as {@code unique} or {@code expireAfterSeconds}
  * @see MongoDatastore#findMissingIndexes()
  */
-public record MissingIndex(String database, String collection, String domainClass, Document key, Document options) {
+@CompileStatic
+@SuppressWarnings(['ClassStartsWithBlankLine', 'Indentation'])
+record MissingIndex(String database, String collection, String domainClass, Document key, Document options) {
+
 }

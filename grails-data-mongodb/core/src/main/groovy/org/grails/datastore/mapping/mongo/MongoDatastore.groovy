@@ -13,127 +13,111 @@
  * limitations under the License.
  */
 
-package org.grails.datastore.mapping.mongo;
+package org.grails.datastore.mapping.mongo
 
-import java.io.Closeable;
-import java.io.IOException;
-import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.IdentityHashMap;
-import java.util.Iterator;
-import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
-import java.util.concurrent.CancellationException;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.RejectedExecutionException;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.locks.ReentrantLock;
-import java.util.function.Supplier;
+import java.util.concurrent.CancellationException
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.LinkedBlockingQueue
+import java.util.concurrent.RejectedExecutionException
+import java.util.concurrent.ThreadPoolExecutor
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.locks.ReentrantLock
+import java.util.function.Supplier
 
-import groovy.lang.Closure;
+import com.mongodb.DuplicateKeyException
+import com.mongodb.ErrorCategory
+import com.mongodb.MongoClientSettings
+import com.mongodb.MongoCommandException
+import com.mongodb.MongoInterruptedException
+import com.mongodb.MongoNamespace
+import com.mongodb.MongoServerException
+import com.mongodb.MongoSocketException
+import com.mongodb.client.MongoClient
+import com.mongodb.client.MongoIterable
+import com.mongodb.client.model.IndexOptions
+import com.mongodb.connection.ClusterType
+import groovy.transform.CompileStatic
+import groovy.transform.PackageScope
+import jakarta.annotation.PreDestroy
+import jakarta.persistence.FlushModeType
+import org.bson.Document
+import org.bson.codecs.Codec
+import org.bson.codecs.configuration.CodecProvider
+import org.bson.codecs.configuration.CodecRegistries
+import org.bson.codecs.configuration.CodecRegistry
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.context.MessageSource
+import org.springframework.context.SmartLifecycle
+import org.springframework.context.support.StaticMessageSource
+import org.springframework.core.env.PropertyResolver
+import org.springframework.scheduling.concurrent.CustomizableThreadFactory
+import org.springframework.transaction.PlatformTransactionManager
 
-import jakarta.annotation.PreDestroy;
-import jakarta.persistence.FlushModeType;
-
-import com.mongodb.DuplicateKeyException;
-import com.mongodb.ErrorCategory;
-import com.mongodb.MongoClientSettings;
-import com.mongodb.MongoCommandException;
-import com.mongodb.MongoInterruptedException;
-import com.mongodb.MongoNamespace;
-import com.mongodb.MongoServerException;
-import com.mongodb.MongoSocketException;
-import com.mongodb.client.MongoClient;
-import com.mongodb.client.MongoIterable;
-import com.mongodb.client.model.IndexOptions;
-import com.mongodb.connection.ClusterType;
-import org.bson.Document;
-import org.bson.codecs.Codec;
-import org.bson.codecs.configuration.CodecProvider;
-import org.bson.codecs.configuration.CodecRegistries;
-import org.bson.codecs.configuration.CodecRegistry;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.MessageSource;
-import org.springframework.context.SmartLifecycle;
-import org.springframework.context.support.StaticMessageSource;
-import org.springframework.core.env.PropertyResolver;
-import org.springframework.scheduling.concurrent.CustomizableThreadFactory;
-import org.springframework.transaction.PlatformTransactionManager;
-
-import grails.gorm.multitenancy.Tenants;
-import grails.util.GrailsMessageSourceUtils;
-import org.grails.datastore.bson.codecs.CodecExtensions;
-import org.grails.datastore.gorm.GormEnhancer;
-import org.grails.datastore.gorm.GormInstanceApi;
-import org.grails.datastore.gorm.GormValidationApi;
-import org.grails.datastore.gorm.events.AutoTimestampEventListener;
-import org.grails.datastore.gorm.events.ConfigurableApplicationEventPublisher;
-import org.grails.datastore.gorm.events.DefaultApplicationEventPublisher;
-import org.grails.datastore.gorm.events.DomainEventListener;
-import org.grails.datastore.gorm.mongo.MongoGormEnhancer;
-import org.grails.datastore.gorm.mongo.api.MongoStaticApi;
-import org.grails.datastore.gorm.multitenancy.MultiTenantEventListener;
-import org.grails.datastore.gorm.utils.ClasspathEntityScanner;
-import org.grails.datastore.gorm.validation.constraints.MappingContextAwareConstraintFactory;
-import org.grails.datastore.gorm.validation.constraints.builtin.UniqueConstraint;
-import org.grails.datastore.gorm.validation.constraints.registry.ConstraintRegistry;
-import org.grails.datastore.gorm.validation.listener.ValidationEventListener;
-import org.grails.datastore.gorm.validation.registry.support.ValidatorRegistries;
-import org.grails.datastore.mapping.config.Settings;
-import org.grails.datastore.mapping.core.AbstractDatastore;
-import org.grails.datastore.mapping.core.Datastore;
-import org.grails.datastore.mapping.core.DatastoreUtils;
-import org.grails.datastore.mapping.core.Session;
-import org.grails.datastore.mapping.core.StatelessDatastore;
-import org.grails.datastore.mapping.core.connections.ConnectionSource;
-import org.grails.datastore.mapping.core.connections.ConnectionSourceFactory;
-import org.grails.datastore.mapping.core.connections.ConnectionSourceSettingsBuilder;
-import org.grails.datastore.mapping.core.connections.ConnectionSources;
-import org.grails.datastore.mapping.core.connections.ConnectionSourcesInitializer;
-import org.grails.datastore.mapping.core.connections.ConnectionSourcesListener;
-import org.grails.datastore.mapping.core.connections.ConnectionSourcesSupport;
-import org.grails.datastore.mapping.core.connections.DefaultConnectionSource;
-import org.grails.datastore.mapping.core.connections.InMemoryConnectionSources;
-import org.grails.datastore.mapping.core.connections.MultipleConnectionSourceCapableDatastore;
-import org.grails.datastore.mapping.core.connections.SingletonConnectionSources;
-import org.grails.datastore.mapping.core.exceptions.ConfigurationException;
-import org.grails.datastore.mapping.model.ClassMapping;
-import org.grails.datastore.mapping.model.EmbeddedPersistentEntity;
-import org.grails.datastore.mapping.model.MappingContext;
-import org.grails.datastore.mapping.model.PersistentEntity;
-import org.grails.datastore.mapping.model.PersistentProperty;
-import org.grails.datastore.mapping.model.PropertyMapping;
-import org.grails.datastore.mapping.mongo.config.MongoAttribute;
-import org.grails.datastore.mapping.mongo.config.MongoCollection;
-import org.grails.datastore.mapping.mongo.config.MongoMappingContext;
-import org.grails.datastore.mapping.mongo.config.MongoSettings;
-import org.grails.datastore.mapping.mongo.connections.MongoConnectionSource;
-import org.grails.datastore.mapping.mongo.connections.MongoConnectionSourceFactory;
-import org.grails.datastore.mapping.mongo.connections.MongoConnectionSourceSettings;
-import org.grails.datastore.mapping.mongo.connections.MongoConnectionSourceSettingsBuilder;
-import org.grails.datastore.mapping.mongo.connections.RestartableMongoClient;
-import org.grails.datastore.mapping.mongo.engine.codecs.PersistentEntityCodec;
-import org.grails.datastore.mapping.multitenancy.AllTenantsResolver;
-import org.grails.datastore.mapping.multitenancy.MultiTenancySettings;
-import org.grails.datastore.mapping.multitenancy.MultiTenantCapableDatastore;
-import org.grails.datastore.mapping.multitenancy.TenantResolver;
-import org.grails.datastore.mapping.multitenancy.exceptions.TenantNotFoundException;
-import org.grails.datastore.mapping.transactions.DatastoreTransactionManager;
-import org.grails.datastore.mapping.transactions.TransactionCapableDatastore;
-import org.grails.datastore.mapping.validation.ValidatorRegistry;
+import grails.gorm.multitenancy.Tenants
+import grails.util.GrailsMessageSourceUtils
+import org.grails.datastore.bson.codecs.CodecExtensions
+import org.grails.datastore.gorm.GormEnhancer
+import org.grails.datastore.gorm.GormInstanceApi
+import org.grails.datastore.gorm.GormValidationApi
+import org.grails.datastore.gorm.events.AutoTimestampEventListener
+import org.grails.datastore.gorm.events.ConfigurableApplicationEventPublisher
+import org.grails.datastore.gorm.events.DefaultApplicationEventPublisher
+import org.grails.datastore.gorm.events.DomainEventListener
+import org.grails.datastore.gorm.mongo.MongoGormEnhancer
+import org.grails.datastore.gorm.mongo.api.MongoStaticApi
+import org.grails.datastore.gorm.multitenancy.MultiTenantEventListener
+import org.grails.datastore.gorm.utils.ClasspathEntityScanner
+import org.grails.datastore.gorm.validation.constraints.MappingContextAwareConstraintFactory
+import org.grails.datastore.gorm.validation.constraints.builtin.UniqueConstraint
+import org.grails.datastore.gorm.validation.constraints.registry.ConstraintRegistry
+import org.grails.datastore.gorm.validation.listener.ValidationEventListener
+import org.grails.datastore.gorm.validation.registry.support.ValidatorRegistries
+import org.grails.datastore.mapping.config.Settings
+import org.grails.datastore.mapping.core.AbstractDatastore
+import org.grails.datastore.mapping.core.Datastore
+import org.grails.datastore.mapping.core.DatastoreUtils
+import org.grails.datastore.mapping.core.Session
+import org.grails.datastore.mapping.core.StatelessDatastore
+import org.grails.datastore.mapping.core.connections.ConnectionSource
+import org.grails.datastore.mapping.core.connections.ConnectionSourceFactory
+import org.grails.datastore.mapping.core.connections.ConnectionSourceSettingsBuilder
+import org.grails.datastore.mapping.core.connections.ConnectionSources
+import org.grails.datastore.mapping.core.connections.ConnectionSourcesInitializer
+import org.grails.datastore.mapping.core.connections.ConnectionSourcesListener
+import org.grails.datastore.mapping.core.connections.ConnectionSourcesSupport
+import org.grails.datastore.mapping.core.connections.DefaultConnectionSource
+import org.grails.datastore.mapping.core.connections.InMemoryConnectionSources
+import org.grails.datastore.mapping.core.connections.MultipleConnectionSourceCapableDatastore
+import org.grails.datastore.mapping.core.connections.SingletonConnectionSources
+import org.grails.datastore.mapping.core.exceptions.ConfigurationException
+import org.grails.datastore.mapping.model.ClassMapping
+import org.grails.datastore.mapping.model.EmbeddedPersistentEntity
+import org.grails.datastore.mapping.model.MappingContext
+import org.grails.datastore.mapping.model.PersistentEntity
+import org.grails.datastore.mapping.model.PersistentProperty
+import org.grails.datastore.mapping.model.PropertyMapping
+import org.grails.datastore.mapping.mongo.config.MongoAttribute
+import org.grails.datastore.mapping.mongo.config.MongoCollection
+import org.grails.datastore.mapping.mongo.config.MongoMappingContext
+import org.grails.datastore.mapping.mongo.config.MongoSettings
+import org.grails.datastore.mapping.mongo.connections.MongoConnectionSource
+import org.grails.datastore.mapping.mongo.connections.MongoConnectionSourceFactory
+import org.grails.datastore.mapping.mongo.connections.MongoConnectionSourceSettings
+import org.grails.datastore.mapping.mongo.connections.MongoConnectionSourceSettingsBuilder
+import org.grails.datastore.mapping.mongo.connections.RestartableMongoClient
+import org.grails.datastore.mapping.mongo.engine.codecs.PersistentEntityCodec
+import org.grails.datastore.mapping.multitenancy.AllTenantsResolver
+import org.grails.datastore.mapping.multitenancy.MultiTenancySettings
+import org.grails.datastore.mapping.multitenancy.MultiTenantCapableDatastore
+import org.grails.datastore.mapping.multitenancy.TenantResolver
+import org.grails.datastore.mapping.multitenancy.exceptions.TenantNotFoundException
+import org.grails.datastore.mapping.transactions.DatastoreTransactionManager
+import org.grails.datastore.mapping.transactions.TransactionCapableDatastore
+import org.grails.datastore.mapping.validation.ValidatorRegistry
 
 /**
  * A Datastore implementation for the Mongo document store.
@@ -141,20 +125,21 @@ import org.grails.datastore.mapping.validation.ValidatorRegistry;
  * @author Graeme Rocher
  * @since 1.0
  */
-public class MongoDatastore extends AbstractDatastore implements MappingContext.Listener, Closeable, StatelessDatastore, MultipleConnectionSourceCapableDatastore, MultiTenantCapableDatastore<MongoClient, MongoConnectionSourceSettings>, TransactionCapableDatastore, SmartLifecycle {
+@CompileStatic
+class MongoDatastore extends AbstractDatastore implements MappingContext.Listener, Closeable, StatelessDatastore, MultipleConnectionSourceCapableDatastore, MultiTenantCapableDatastore<MongoClient, MongoConnectionSourceSettings>, TransactionCapableDatastore, SmartLifecycle {
 
-    public static final String SETTING_DATABASE_NAME = MongoSettings.SETTING_DATABASE_NAME;
-    public static final String SETTING_CONNECTION_STRING = MongoSettings.SETTING_CONNECTION_STRING;
-    public static final String SETTING_URL = MongoSettings.SETTING_URL;
-    public static final String SETTING_DEFAULT_MAPPING = MongoSettings.SETTING_DEFAULT_MAPPING;
-    public static final String SETTING_OPTIONS = MongoSettings.SETTING_OPTIONS;
-    public static final String SETTING_HOST = MongoSettings.SETTING_HOST;
-    public static final String SETTING_PORT = MongoSettings.SETTING_PORT;
-    public static final String SETTING_USERNAME = MongoSettings.SETTING_USERNAME;
-    public static final String SETTING_PASSWORD = MongoSettings.SETTING_PASSWORD;
-    public static final String SETTING_STATELESS = MongoSettings.SETTING_STATELESS;
-    public static final String SETTING_ENGINE = MongoSettings.SETTING_ENGINE;
-    public static final String INDEX_ATTRIBUTES = "indexAttributes";
+    public static final String SETTING_DATABASE_NAME = MongoSettings.SETTING_DATABASE_NAME
+    public static final String SETTING_CONNECTION_STRING = MongoSettings.SETTING_CONNECTION_STRING
+    public static final String SETTING_URL = MongoSettings.SETTING_URL
+    public static final String SETTING_DEFAULT_MAPPING = MongoSettings.SETTING_DEFAULT_MAPPING
+    public static final String SETTING_OPTIONS = MongoSettings.SETTING_OPTIONS
+    public static final String SETTING_HOST = MongoSettings.SETTING_HOST
+    public static final String SETTING_PORT = MongoSettings.SETTING_PORT
+    public static final String SETTING_USERNAME = MongoSettings.SETTING_USERNAME
+    public static final String SETTING_PASSWORD = MongoSettings.SETTING_PASSWORD
+    public static final String SETTING_STATELESS = MongoSettings.SETTING_STATELESS
+    public static final String SETTING_ENGINE = MongoSettings.SETTING_ENGINE
+    public static final String INDEX_ATTRIBUTES = 'indexAttributes'
 
     /**
      * TTL index attribute. MongoDB's {@link IndexOptions#expireAfter(Long, TimeUnit)} is the only
@@ -163,7 +148,7 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
      * is pulled out of the index attributes and applied explicitly. TTL indexes are single-field
      * only — MongoDB silently ignores the option on a compound index.
      */
-    public static final String INDEX_EXPIRE_AFTER_SECONDS = "expireAfterSeconds";
+    public static final String INDEX_EXPIRE_AFTER_SECONDS = 'expireAfterSeconds'
 
     /**
      * Opt-in index attribute: when an index already exists on the same keys with conflicting
@@ -171,28 +156,28 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
      * declared name is taken by an index on other keys, drop the existing index and recreate it with
      * the declared options instead of just logging the conflict.
      */
-    public static final String INDEX_RECREATE_ON_CONFLICT = "recreateOnConflict";
+    public static final String INDEX_RECREATE_ON_CONFLICT = 'recreateOnConflict'
 
     /** MongoDB server error code for {@code IndexOptionsConflict}. */
-    private static final int INDEX_OPTIONS_CONFLICT_CODE = 85;
+    private static final int INDEX_OPTIONS_CONFLICT_CODE = 85
 
     /** MongoDB server error code for {@code IndexKeySpecsConflict}: the name is taken by an index on other keys. */
-    private static final int INDEX_KEY_SPECS_CONFLICT_CODE = 86;
+    private static final int INDEX_KEY_SPECS_CONFLICT_CODE = 86
 
     /** MongoDB server error code for {@code IndexNotFound}. */
-    private static final int INDEX_NOT_FOUND_CODE = 27;
+    private static final int INDEX_NOT_FOUND_CODE = 27
 
     /** The name MongoDB gives the index every collection has on {@code _id}, which cannot be dropped. */
-    private static final String ID_INDEX_NAME = "_id_";
+    private static final String ID_INDEX_NAME = '_id_'
 
     /**
      * The keys MongoDB lists a text index under in place of its text fields, which its {@code weights} name.
      */
-    private static final String TEXT_INDEX_KEY = "_fts";
-    private static final String TEXT_INDEX_TERM_KEY = "_ftsx";
-    public static final String CODEC_ENGINE = MongoConstants.CODEC_ENGINE;
+    private static final String TEXT_INDEX_KEY = '_fts'
+    private static final String TEXT_INDEX_TERM_KEY = '_ftsx'
+    public static final String CODEC_ENGINE = MongoConstants.CODEC_ENGINE
 
-    private static final Logger LOG = LoggerFactory.getLogger(MongoDatastore.class);
+    private static final Logger LOG = LoggerFactory.getLogger(MongoDatastore)
 
     /**
      * Not final because {@link #start()} replaces it after a CRaC restore when it is not a
@@ -200,15 +185,15 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
      * construction reaches it through {@link #getMongoClient()}, so a replacement is picked up
      * without anything else having to be told.
      */
-    protected volatile MongoClient mongo;
-    protected final String defaultDatabase;
-    protected final Map<PersistentEntity, String> mongoCollections = new ConcurrentHashMap<>();
-    protected final Map<PersistentEntity, String> mongoDatabases = new ConcurrentHashMap<>();
-    protected final boolean stateless;
-    protected final boolean codecEngine;
-    protected final boolean transactionsEnabled;
-    protected final boolean buildIndexes;
-    protected final boolean buildIndexesAsync;
+    protected volatile MongoClient mongo
+    protected final String defaultDatabase
+    protected final Map<PersistentEntity, String> mongoCollections = new ConcurrentHashMap<>()
+    protected final Map<PersistentEntity, String> mongoDatabases = new ConcurrentHashMap<>()
+    protected final boolean stateless
+    protected final boolean codecEngine
+    protected final boolean transactionsEnabled
+    protected final boolean buildIndexes
+    protected final boolean buildIndexesAsync
 
     /**
      * Runs the background index builds: every {@link #buildIndexAsync()}, and the startup build and each
@@ -219,54 +204,54 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
      * <p>Not final: a shut down executor cannot be restarted, so {@link #start()} replaces the one
      * {@link #stop()} shut down.
      */
-    private volatile ExecutorService indexBuildExecutor;
+    private volatile ExecutorService indexBuildExecutor
 
     /**
      * Held for the whole of every build on this connection, on the background thread or a caller's, and while a
      * domain class registered after startup is indexed, so that no two apply declarations at the same time: two
      * {@code recreateOnConflict} drop-and-recreate sequences on one index would undo each other.
      */
-    private final ReentrantLock indexBuildLock = new ReentrantLock();
+    private final ReentrantLock indexBuildLock = new ReentrantLock()
 
     /**
      * Set when a build did not run to the end because the datastore was stopping, or was requested while it
      * was stopped, for {@link #start()} to run again. A build interrupted by {@link #stop()} sets it itself
      * as it exits, so a build that finished in the meantime is not run twice.
      */
-    private volatile boolean indexBuildPending;
+    private volatile boolean indexBuildPending
 
     /**
      * Set first thing in {@link #close()}. A connection added at runtime starts its index build only while
      * this is clear, and only after it is registered, so a close cannot miss a build that has started.
      */
-    private volatile boolean closed;
+    private volatile boolean closed
 
     /**
      * How long {@link #start()} waits for a build that {@link #stop()} interrupted to finish exiting. One that is
      * going to exit does so within milliseconds of the interrupt.
      */
-    private static final long INDEX_BUILD_EXIT_TIMEOUT_MILLIS = 1000;
+    private static final long INDEX_BUILD_EXIT_TIMEOUT_MILLIS = 1000
 
     /** The summary for the current build, scoped to its thread so the protected index hook is preserved. */
-    private final ThreadLocal<IndexBuildSummary> indexBuildSummary = new ThreadLocal<>();
-    private volatile Boolean transactionsSupported;
-    private volatile boolean warnedTransactionsUnsupported = false;
+    private final ThreadLocal<IndexBuildSummary> indexBuildSummary = new ThreadLocal<>()
+    private volatile Boolean transactionsSupported
+    private volatile boolean warnedTransactionsUnsupported = false
     // Volatile: an asynchronous index build reads it from its own thread while the @Autowired setters below
     // can still be replacing it.
-    protected volatile CodecRegistry codecRegistry;
-    protected final ConfigurableApplicationEventPublisher eventPublisher;
-    protected final PlatformTransactionManager transactionManager;
-    protected final GormEnhancer gormEnhancer;
-    protected final ConnectionSources<MongoClient, MongoConnectionSourceSettings> connectionSources;
-    protected final FlushModeType defaultFlushMode;
+    protected volatile CodecRegistry codecRegistry
+    protected final ConfigurableApplicationEventPublisher eventPublisher
+    protected final PlatformTransactionManager transactionManager
+    protected final GormEnhancer gormEnhancer
+    protected final ConnectionSources<MongoClient, MongoConnectionSourceSettings> connectionSources
+    protected final FlushModeType defaultFlushMode
     /**
      * Concurrent because it is written by the connection sources listener, which can add a child for a
      * connection registered at runtime, while {@link #close()} may be iterating it.
      */
-    protected final Map<String, MongoDatastore> datastoresByConnectionSource = new ConcurrentHashMap<>();
-    protected final MultiTenancySettings.MultiTenancyMode multiTenancyMode;
-    protected final TenantResolver tenantResolver;
-    protected final AutoTimestampEventListener autoTimestampEventListener;
+    protected final Map<String, MongoDatastore> datastoresByConnectionSource = new ConcurrentHashMap<>()
+    protected final MultiTenancySettings.MultiTenancyMode multiTenancyMode
+    protected final TenantResolver tenantResolver
+    protected final AutoTimestampEventListener autoTimestampEventListener
 
     /**
      * Configures a new {@link MongoDatastore} for the given arguments
@@ -275,163 +260,162 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
      * @param eventPublisher The Spring ApplicationContext
      * @param mappingContext The mapping context
      */
-    public MongoDatastore(final ConnectionSources<MongoClient, MongoConnectionSourceSettings> connectionSources, final MongoMappingContext mappingContext, final ConfigurableApplicationEventPublisher eventPublisher) {
-        super(mappingContext, connectionSources != null ? connectionSources.getBaseConfiguration() : null, null);
+    MongoDatastore(final ConnectionSources<MongoClient, MongoConnectionSourceSettings> connectionSources, final MongoMappingContext mappingContext, final ConfigurableApplicationEventPublisher eventPublisher) {
+        super(mappingContext, connectionSources != null ? connectionSources.getBaseConfiguration() : null, null)
         if (connectionSources == null) {
-            throw new IllegalArgumentException("Argument [connectionSources] cannot be null");
+            throw new IllegalArgumentException('Argument [connectionSources] cannot be null')
         }
         if (mappingContext == null) {
-            throw new IllegalArgumentException("Argument [mappingContext] cannot be null");
+            throw new IllegalArgumentException('Argument [mappingContext] cannot be null')
         }
 
-        this.connectionSources = connectionSources;
+        this.connectionSources = connectionSources
 
-        final ConnectionSource<MongoClient, MongoConnectionSourceSettings> defaultConnectionSource = connectionSources.getDefaultConnectionSource();
-        MongoConnectionSourceSettings settings = defaultConnectionSource.getSettings();
-        MultiTenancySettings multiTenancySettings = settings.getMultiTenancy();
+        final ConnectionSource<MongoClient, MongoConnectionSourceSettings> defaultConnectionSource = connectionSources.getDefaultConnectionSource()
+        MongoConnectionSourceSettings settings = defaultConnectionSource.getSettings()
+        MultiTenancySettings multiTenancySettings = settings.getMultiTenancy()
 
-        this.mongo = defaultConnectionSource.getSource();
-        this.multiTenancyMode = multiTenancySettings.getMode();
-        this.eventPublisher = eventPublisher;
-        this.defaultDatabase = settings.getDatabase();
-        this.defaultFlushMode = settings.getFlushMode();
-        this.stateless = settings.isStateless();
-        this.codecEngine = settings.getEngine().equals(MongoConstants.CODEC_ENGINE);
+        this.mongo = defaultConnectionSource.getSource()
+        this.multiTenancyMode = multiTenancySettings.getMode()
+        this.eventPublisher = eventPublisher
+        this.defaultDatabase = settings.getDatabase()
+        this.defaultFlushMode = settings.getFlushMode()
+        this.stateless = settings.isStateless()
+        this.codecEngine = settings.getEngine() == MongoConstants.CODEC_ENGINE
         if (!this.codecEngine) {
             LOG.warn("The '{}' persistence engine is deprecated and will be removed in a " +
-                    "future release. Remove the {} setting to use the default codec engine.",
-                    settings.getEngine(), MongoSettings.SETTING_ENGINE);
+                    'future release. Remove the {} setting to use the default codec engine.',
+                    settings.getEngine(), MongoSettings.SETTING_ENGINE)
         }
-        this.transactionsEnabled = settings.isTransactional();
-        this.buildIndexes = settings.isBuildIndexes();
-        this.buildIndexesAsync = settings.isBuildIndexesAsync();
+        this.transactionsEnabled = settings.isTransactional()
+        this.buildIndexes = settings.isBuildIndexes()
+        this.buildIndexesAsync = settings.isBuildIndexesAsync()
         // Whatever the setting: buildIndexAsync() runs on it too. Until a build is submitted it holds no thread.
-        this.indexBuildExecutor = newIndexBuildExecutor(defaultConnectionSource.getName());
+        this.indexBuildExecutor = newIndexBuildExecutor(defaultConnectionSource.getName())
         codecRegistry = CodecRegistries.fromRegistries(
                 CodecRegistries.fromProviders(new CodecExtensions(), new PersistentEntityCodeRegistry()),
                 mappingContext.getCodecRegistry(),
                 MongoClientSettings.getDefaultCodecRegistry()
-        );
+        )
 
-        DatastoreTransactionManager datastoreTransactionManager = new DatastoreTransactionManager();
-        datastoreTransactionManager.setDatastore(this);
-        transactionManager = datastoreTransactionManager;
+        DatastoreTransactionManager datastoreTransactionManager = new DatastoreTransactionManager()
+        datastoreTransactionManager.setDatastore(this)
+        transactionManager = datastoreTransactionManager
         for (PersistentEntity entity : mappingContext.getPersistentEntities()) {
-            registerEntity(entity);
+            registerEntity(entity)
         }
         if (!(connectionSources instanceof SingletonConnectionSources)) {
-            final MongoDatastore parent = this;
-            Iterable<ConnectionSource<MongoClient, MongoConnectionSourceSettings>> allConnectionSources = connectionSources.getAllConnectionSources();
+            final MongoDatastore parent = this
+            Iterable<ConnectionSource<MongoClient, MongoConnectionSourceSettings>> allConnectionSources = connectionSources.getAllConnectionSources()
             for (final ConnectionSource<MongoClient, MongoConnectionSourceSettings> connectionSource : allConnectionSources) {
-                SingletonConnectionSources<MongoClient, MongoConnectionSourceSettings> singletonConnectionSources = new SingletonConnectionSources<>(connectionSource, connectionSources.getBaseConfiguration());
-                MongoDatastore childDatastore;
+                SingletonConnectionSources<MongoClient, MongoConnectionSourceSettings> singletonConnectionSources = new SingletonConnectionSources<MongoClient, MongoConnectionSourceSettings>(connectionSource, connectionSources.getBaseConfiguration())
+                MongoDatastore childDatastore
 
-                if (ConnectionSource.DEFAULT.equals(connectionSource.getName())) {
-                    childDatastore = this;
+                if (ConnectionSource.DEFAULT == connectionSource.getName()) {
+                    childDatastore = this
                 } else {
-                    childDatastore = createChildDatastore(mappingContext, eventPublisher, parent, singletonConnectionSources);
+                    childDatastore = createChildDatastore(mappingContext, eventPublisher, parent, singletonConnectionSources)
                 }
                 // Its indexes are built when the datastore starts, along with this one's.
-                datastoresByConnectionSource.put(connectionSource.getName(), childDatastore);
+                datastoresByConnectionSource.put(connectionSource.getName(), childDatastore)
             }
 
-            connectionSources.addListener(new ConnectionSourcesListener<>() {
-                public void newConnectionSource(final ConnectionSource<MongoClient, MongoConnectionSourceSettings> connectionSource) {
-                    final SingletonConnectionSources<MongoClient, MongoConnectionSourceSettings> singletonConnectionSources = new SingletonConnectionSources<>(connectionSource, connectionSources.getBaseConfiguration());
-                    MongoDatastore childDatastore = createChildDatastore(mappingContext, eventPublisher, parent, singletonConnectionSources);
-                    datastoresByConnectionSource.put(connectionSource.getName(), childDatastore);
-                    registerAllEntitiesWithEnhancer();
+            connectionSources.addListener(new ConnectionSourcesListener<MongoClient, MongoConnectionSourceSettings>() {
+                void newConnectionSource(final ConnectionSource<MongoClient, MongoConnectionSourceSettings> connectionSource) {
+                    final SingletonConnectionSources<MongoClient, MongoConnectionSourceSettings> singletonConnectionSources = new SingletonConnectionSources<MongoClient, MongoConnectionSourceSettings>(connectionSource, connectionSources.getBaseConfiguration())
+                    MongoDatastore childDatastore = createChildDatastore(mappingContext, eventPublisher, parent, singletonConnectionSources)
+                    datastoresByConnectionSource.put(connectionSource.getName(), childDatastore)
+                    registerAllEntitiesWithEnhancer()
                     // Decided under the lifecycle monitor, so a connection registered while start() or stop() is
                     // under way waits for it and is then treated as the datastore now is.
                     synchronized (lifecycleMonitor) {
                         // Registered first and then checked: either close() has not started, and will find this
                         // child when it walks the map, or it has, and the build is never started.
                         if (closed) {
-                            return;
+                            return
                         }
                         if (running) {
                             // Unless the start() this waited for found it in the map, and has connected and
                             // built it already.
                             if (!childDatastore.startupBuildDone) {
-                                childDatastore.startClient(connectionSources.getFactory(), false);
-                                childDatastore.buildIndexAutomatically();
-                                childDatastore.startupBuildDone = true;
+                                childDatastore.startClient(connectionSources.getFactory(), false)
+                                childDatastore.buildIndexAutomatically()
+                                childDatastore.startupBuildDone = true
                             }
-                        }
-                        else if (stopped) {
+                        } else if (stopped) {
                             // As stop() left the others: a build requested on it waits for start(), which
                             // connects it and builds its indexes, and its client, if GORM's, refuses use.
-                            childDatastore.stopIndexBuild();
+                            childDatastore.stopIndexBuild()
                             if (childDatastore.ownsClient()) {
-                                childDatastore.stopClient();
+                                childDatastore.stopClient()
                             }
                         }
                         // Otherwise the datastore has not started, and start() connects and builds it with the
                         // others, including when start() itself is what registered it.
                     }
                 }
-            });
+            })
         }
 
         if (multiTenancyMode == MultiTenancySettings.MultiTenancyMode.SCHEMA) {
-            final TenantResolver baseResolver = multiTenancySettings.getTenantResolver();
+            final TenantResolver baseResolver = multiTenancySettings.getTenantResolver()
             this.tenantResolver = new AllTenantsResolver() {
                 @Override
-                public Iterable<Serializable> resolveTenantIds() {
-                    List<Serializable> ids = new ArrayList<>();
+                Iterable<Serializable> resolveTenantIds() {
+                    List<Serializable> ids = new ArrayList<>()
                     // Through the datastore rather than the connection source, which may still hold the client
                     // a checkpoint closed.
-                    MongoIterable<String> databaseNames = MongoDatastore.this.getMongoClient().listDatabaseNames();
-                    for (String databaseName : databaseNames) {
-                        ids.add(databaseName);
+                    MongoIterable<String> databaseNames = MongoDatastore.this.getMongoClient().listDatabaseNames()
+                    for (String databaseName in databaseNames) {
+                        ids.add(databaseName)
                     }
-                    return ids;
+                    return ids
                 }
 
                 @Override
-                public Serializable resolveTenantIdentifier() throws TenantNotFoundException {
-                    return baseResolver.resolveTenantIdentifier();
+                Serializable resolveTenantIdentifier() throws TenantNotFoundException {
+                    return baseResolver.resolveTenantIdentifier()
                 }
-            };
+            }
         } else {
-            this.tenantResolver = multiTenancySettings.getTenantResolver();
+            this.tenantResolver = multiTenancySettings.getTenantResolver()
         }
 
-        this.autoTimestampEventListener = new AutoTimestampEventListener(this);
-        registerEventListeners(this.eventPublisher);
-        this.gormEnhancer = initialize(settings);
+        this.autoTimestampEventListener = new AutoTimestampEventListener(this)
+        registerEventListeners(this.eventPublisher)
+        this.gormEnhancer = initialize(settings)
     }
 
-    private MongoDatastore createChildDatastore(MongoMappingContext mappingContext,
-                                                    ConfigurableApplicationEventPublisher eventPublisher,
-                                                    final MongoDatastore parent,
-                                                    SingletonConnectionSources<MongoClient, MongoConnectionSourceSettings> singletonConnectionSources) {
+    @PackageScope
+    MongoDatastore createChildDatastore(MongoMappingContext mappingContext,
+                                        ConfigurableApplicationEventPublisher eventPublisher,
+                                        final MongoDatastore parent,
+                                        SingletonConnectionSources<MongoClient, MongoConnectionSourceSettings> singletonConnectionSources) {
         return new MongoDatastore(singletonConnectionSources, mappingContext, eventPublisher) {
             @Override
             protected MongoGormEnhancer initialize(final MongoConnectionSourceSettings settings) {
                 // The parent starts the index build once this child is registered, where close() can reach it.
-                return null;
+                return null
             }
 
             @Override
             void ensureStarted() {
                 // A child has no lifecycle of its own: starting the parent starts it.
-                parent.ensureStarted();
+                parent.ensureStarted()
             }
 
             @Override
-            public MongoDatastore getDatastoreForConnection(String connectionName) {
-                if (connectionName.equals(Settings.SETTING_DATASOURCE) || connectionName.equals(ConnectionSource.DEFAULT)) {
-                    return parent;
-                } else {
-                    MongoDatastore mongoDatastore = parent.datastoresByConnectionSource.get(connectionName);
-                    if (mongoDatastore == null) {
-                        throw new ConfigurationException("DataSource not found for name [" + connectionName + "] in configuration. Please check your multiple data sources configuration and try again.");
-                    }
-                    return mongoDatastore;
+            MongoDatastore getDatastoreForConnection(String connectionName) {
+                if (connectionName == Settings.SETTING_DATASOURCE || connectionName == ConnectionSource.DEFAULT) {
+                    return parent
                 }
+                MongoDatastore mongoDatastore = parent.datastoresByConnectionSource.get(connectionName)
+                if (mongoDatastore == null) {
+                    throw new ConfigurationException('DataSource not found for name [' + connectionName + '] in configuration. Please check your multiple data sources configuration and try again.')
+                }
+                return mongoDatastore
             }
-        };
+        }
     }
 
     /**
@@ -441,8 +425,8 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
      * @param eventPublisher The Spring ApplicationContext
      * @param classes The persistent classes
      */
-    public MongoDatastore(ConnectionSources<MongoClient, MongoConnectionSourceSettings> connectionSources, ConfigurableApplicationEventPublisher eventPublisher, Class... classes) {
-        this(connectionSources, createMappingContext(connectionSources, classes), eventPublisher);
+    MongoDatastore(ConnectionSources<MongoClient, MongoConnectionSourceSettings> connectionSources, ConfigurableApplicationEventPublisher eventPublisher, Class... classes) {
+        this(connectionSources, createMappingContext(connectionSources, classes), eventPublisher)
     }
 
     /**
@@ -452,9 +436,9 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
      * @param eventPublisher The Spring ApplicationContext
      * @param mappingContext The mapping context
      */
-    public MongoDatastore(MongoClient mongoClient, PropertyResolver configuration, MongoMappingContext mappingContext, ConfigurableApplicationEventPublisher eventPublisher) {
+    MongoDatastore(MongoClient mongoClient, PropertyResolver configuration, MongoMappingContext mappingContext, ConfigurableApplicationEventPublisher eventPublisher) {
         // The client is supplied by the caller, so GORM must not close it (closeable = false).
-        this(createDefaultConnectionSources(mongoClient, configuration, mappingContext, false), mappingContext, eventPublisher);
+        this(createDefaultConnectionSources(mongoClient, configuration, mappingContext, false), mappingContext, eventPublisher)
     }
 
     /**
@@ -464,8 +448,8 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
      * @param eventPublisher The Spring ApplicationContext
      * @param classes The persistent classes
      */
-    public MongoDatastore(MongoClient mongoClient, PropertyResolver configuration, ConfigurableApplicationEventPublisher eventPublisher, Class... classes) {
-        this(mongoClient, configuration, createMappingContext(configuration, classes), eventPublisher);
+    MongoDatastore(MongoClient mongoClient, PropertyResolver configuration, ConfigurableApplicationEventPublisher eventPublisher, Class... classes) {
+        this(mongoClient, configuration, createMappingContext(configuration, classes), eventPublisher)
     }
 
     /**
@@ -480,8 +464,8 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
      * @param packages The packages to scan
      * @since 8.0
      */
-    public MongoDatastore(Supplier<MongoClient> clientSupplier, PropertyResolver configuration, ConfigurableApplicationEventPublisher eventPublisher, Package... packages) {
-        this(clientSupplier, configuration, createMappingContext(configuration, new ClasspathEntityScanner().scan(packages)), eventPublisher);
+    MongoDatastore(Supplier<MongoClient> clientSupplier, PropertyResolver configuration, ConfigurableApplicationEventPublisher eventPublisher, Package... packages) {
+        this(clientSupplier, configuration, createMappingContext(configuration, new ClasspathEntityScanner().scan(packages)), eventPublisher)
     }
 
     /**
@@ -494,10 +478,10 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
      * @param eventPublisher The Spring ApplicationContext
      * @since 8.0
      */
-    public MongoDatastore(Supplier<MongoClient> clientSupplier, PropertyResolver configuration, MongoMappingContext mappingContext, ConfigurableApplicationEventPublisher eventPublisher) {
+    MongoDatastore(Supplier<MongoClient> clientSupplier, PropertyResolver configuration, MongoMappingContext mappingContext, ConfigurableApplicationEventPublisher eventPublisher) {
         // GORM builds the client from the supplier, so it owns it and must close it (closeable = true).
         this(createDefaultConnectionSources(new RestartableMongoClient(ConnectionSource.DEFAULT, clientSupplier),
-                configuration, mappingContext, true), mappingContext, eventPublisher);
+                configuration, mappingContext, true), mappingContext, eventPublisher)
     }
 
     /**
@@ -507,8 +491,8 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
      * @param eventPublisher The Spring ApplicationContext
      * @param packages The packages to scan
      */
-    public MongoDatastore(MongoClient mongoClient, PropertyResolver configuration, ConfigurableApplicationEventPublisher eventPublisher, Package... packages) {
-        this(mongoClient, configuration, createMappingContext(configuration, new ClasspathEntityScanner().scan(packages)), eventPublisher);
+    MongoDatastore(MongoClient mongoClient, PropertyResolver configuration, ConfigurableApplicationEventPublisher eventPublisher, Package... packages) {
+        this(mongoClient, configuration, createMappingContext(configuration, new ClasspathEntityScanner().scan(packages)), eventPublisher)
     }
 
     /**
@@ -517,8 +501,8 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
      * @param mongoClient The {@link MongoClient} instance
      * @param classes The persistent classes
      */
-    public MongoDatastore(MongoClient mongoClient, PropertyResolver configuration, Class... classes) {
-        this(mongoClient, configuration, createMappingContext(configuration, classes), new DefaultApplicationEventPublisher());
+    MongoDatastore(MongoClient mongoClient, PropertyResolver configuration, Class... classes) {
+        this(mongoClient, configuration, createMappingContext(configuration, classes), new DefaultApplicationEventPublisher())
     }
 
     /**
@@ -527,8 +511,8 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
      * @param mongoClient The {@link MongoClient} instance
      * @param packages The packages to scan
      */
-    public MongoDatastore(MongoClient mongoClient, PropertyResolver configuration, Package... packages) {
-        this(mongoClient, configuration, createMappingContext(configuration, new ClasspathEntityScanner().scan(packages)), new DefaultApplicationEventPublisher());
+    MongoDatastore(MongoClient mongoClient, PropertyResolver configuration, Package... packages) {
+        this(mongoClient, configuration, createMappingContext(configuration, new ClasspathEntityScanner().scan(packages)), new DefaultApplicationEventPublisher())
     }
 
     /**
@@ -537,8 +521,8 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
      * @param mongoClient The {@link MongoClient} instance
      * @param classes The persistent classes
      */
-    public MongoDatastore(MongoClient mongoClient, Class... classes) {
-        this(mongoClient, mapToPropertyResolver(null), createMappingContext(mapToPropertyResolver(null), classes), new DefaultApplicationEventPublisher());
+    MongoDatastore(MongoClient mongoClient, Class... classes) {
+        this(mongoClient, mapToPropertyResolver((Map) null), createMappingContext(mapToPropertyResolver((Map) null), classes), new DefaultApplicationEventPublisher())
     }
 
     /**
@@ -549,9 +533,9 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
      * @param eventPublisher The Spring ApplicationContext
      * @param mappingContext The mapping context
      */
-    public MongoDatastore(MongoClientSettings.Builder clientOptions, PropertyResolver configuration, MongoMappingContext mappingContext, ConfigurableApplicationEventPublisher eventPublisher) {
+    MongoDatastore(MongoClientSettings.Builder clientOptions, PropertyResolver configuration, MongoMappingContext mappingContext, ConfigurableApplicationEventPublisher eventPublisher) {
         // GORM builds the client from the supplied options, so it owns it and must close it (closeable = true).
-        this(createDefaultConnectionSources(createMongoClient(configuration, clientOptions, mappingContext), configuration, mappingContext, true), mappingContext, eventPublisher);
+        this(createDefaultConnectionSources(createMongoClient(configuration, clientOptions, mappingContext), configuration, mappingContext, true), mappingContext, eventPublisher)
     }
 
     /**
@@ -561,9 +545,9 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
      * @param configuration The configuration
      * @param mappingContext The mapping context
      */
-    public MongoDatastore(MongoClientSettings.Builder clientOptions, PropertyResolver configuration, MongoMappingContext mappingContext) {
+    MongoDatastore(MongoClientSettings.Builder clientOptions, PropertyResolver configuration, MongoMappingContext mappingContext) {
         // GORM builds the client from the supplied options, so it owns it and must close it (closeable = true).
-        this(createDefaultConnectionSources(createMongoClient(configuration, clientOptions, mappingContext), configuration, mappingContext, true), mappingContext, new DefaultApplicationEventPublisher());
+        this(createDefaultConnectionSources(createMongoClient(configuration, clientOptions, mappingContext), configuration, mappingContext, true), mappingContext, new DefaultApplicationEventPublisher())
     }
 
     /**
@@ -573,8 +557,8 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
      * @param eventPublisher The Spring ApplicationContext
      * @param mappingContext The mapping context
      */
-    public MongoDatastore(PropertyResolver configuration, MongoMappingContext mappingContext, ConfigurableApplicationEventPublisher eventPublisher) {
-        this(ConnectionSourcesInitializer.create(new MongoConnectionSourceFactory(), configuration), mappingContext, eventPublisher);
+    MongoDatastore(PropertyResolver configuration, MongoMappingContext mappingContext, ConfigurableApplicationEventPublisher eventPublisher) {
+        this(ConnectionSourcesInitializer.create(new MongoConnectionSourceFactory(), configuration), mappingContext, eventPublisher)
     }
 
     /**
@@ -585,8 +569,8 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
      * @param connectionSourceFactory The connection source factory to use
      * @param classes The persistent classes
      */
-    public MongoDatastore(PropertyResolver configuration, MongoConnectionSourceFactory connectionSourceFactory, ConfigurableApplicationEventPublisher eventPublisher, Class... classes) {
-        this(ConnectionSourcesInitializer.create(connectionSourceFactory, configuration), eventPublisher, classes);
+    MongoDatastore(PropertyResolver configuration, MongoConnectionSourceFactory connectionSourceFactory, ConfigurableApplicationEventPublisher eventPublisher, Class... classes) {
+        this(ConnectionSourcesInitializer.create(connectionSourceFactory, configuration), eventPublisher, classes)
     }
 
     /**
@@ -596,8 +580,8 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
      * @param eventPublisher The Spring ApplicationContext
      * @param classes The persistent classes
      */
-    public MongoDatastore(PropertyResolver configuration, ConfigurableApplicationEventPublisher eventPublisher, Class... classes) {
-        this(configuration, new MongoConnectionSourceFactory(), eventPublisher, classes);
+    MongoDatastore(PropertyResolver configuration, ConfigurableApplicationEventPublisher eventPublisher, Class... classes) {
+        this(configuration, new MongoConnectionSourceFactory(), eventPublisher, classes)
     }
 
     /**
@@ -606,8 +590,8 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
      * @param configuration The configuration for the datastore
      * @param mappingContext The mapping context
      */
-    public MongoDatastore(PropertyResolver configuration, MongoMappingContext mappingContext) {
-        this(configuration, mappingContext, new DefaultApplicationEventPublisher());
+    MongoDatastore(PropertyResolver configuration, MongoMappingContext mappingContext) {
+        this(configuration, mappingContext, new DefaultApplicationEventPublisher())
     }
 
     /**
@@ -616,8 +600,8 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
      * @param configuration The configuration for the datastore
      * @param classes The persistent classes
      */
-    public MongoDatastore(PropertyResolver configuration, Class... classes) {
-        this(configuration, new DefaultApplicationEventPublisher(), classes);
+    MongoDatastore(PropertyResolver configuration, Class... classes) {
+        this(configuration, new DefaultApplicationEventPublisher(), classes)
     }
 
     /**
@@ -627,8 +611,8 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
      * @param eventPublisher The event publisher
      * @param classes The persistent classes
      */
-    public MongoDatastore(Map<String, Object> configuration, ConfigurableApplicationEventPublisher eventPublisher, Class... classes) {
-        this(mapToPropertyResolver(configuration), eventPublisher, classes);
+    MongoDatastore(Map<String, Object> configuration, ConfigurableApplicationEventPublisher eventPublisher, Class... classes) {
+        this(mapToPropertyResolver(configuration), eventPublisher, classes)
     }
 
     /**
@@ -637,8 +621,8 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
      * @param configuration The configuration
      * @param classes The persistent classes
      */
-    public MongoDatastore(Map<String, Object> configuration, Class... classes) {
-        this(mapToPropertyResolver(configuration), new DefaultApplicationEventPublisher(), classes);
+    MongoDatastore(Map<String, Object> configuration, Class... classes) {
+        this(mapToPropertyResolver(configuration), new DefaultApplicationEventPublisher(), classes)
     }
 
     /**
@@ -646,8 +630,8 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
      *
      * @param configuration The configuration
      */
-    public MongoDatastore(Map<String, Object> configuration) {
-        this(configuration, new Class[0]);
+    MongoDatastore(Map<String, Object> configuration) {
+        this(configuration, new Class[0])
     }
 
     /**
@@ -656,9 +640,8 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
      * @param configuration The configuration
      * @param mappingContext The {@link MongoMappingContext}
      */
-
-    public MongoDatastore(Map<String, Object> configuration, MongoMappingContext mappingContext) {
-        this(mapToPropertyResolver(configuration), mappingContext, new DefaultApplicationEventPublisher());
+    MongoDatastore(Map<String, Object> configuration, MongoMappingContext mappingContext) {
+        this(mapToPropertyResolver(configuration), mappingContext, new DefaultApplicationEventPublisher())
     }
 
     /**
@@ -666,8 +649,8 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
      *
      * @param mappingContext The {@link MongoMappingContext}
      */
-    public MongoDatastore(MongoMappingContext mappingContext) {
-        this(mapToPropertyResolver(null), mappingContext, new DefaultApplicationEventPublisher());
+    MongoDatastore(MongoMappingContext mappingContext) {
+        this(mapToPropertyResolver((Map) null), mappingContext, new DefaultApplicationEventPublisher())
     }
 
     /**
@@ -675,8 +658,8 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
      *
      * @param classes The persistent classes
      */
-    public MongoDatastore(Class... classes) {
-        this(mapToPropertyResolver(null), classes);
+    MongoDatastore(Class... classes) {
+        this(mapToPropertyResolver((Map) null), classes)
     }
 
     /**
@@ -684,8 +667,8 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
      *
      * @param packagesToScan The packages to scan
      */
-    public MongoDatastore(Package... packagesToScan) {
-        this(new ClasspathEntityScanner().scan(packagesToScan));
+    MongoDatastore(Package... packagesToScan) {
+        this(new ClasspathEntityScanner().scan(packagesToScan))
     }
 
     /**
@@ -693,8 +676,8 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
      *
      * @param packageToScan The packages to scan
      */
-    public MongoDatastore(Package packageToScan) {
-        this(new ClasspathEntityScanner().scan(packageToScan));
+    MongoDatastore(Package packageToScan) {
+        this(new ClasspathEntityScanner().scan(packageToScan))
     }
 
     /**
@@ -703,8 +686,8 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
      * @param configuration The configuration
      * @param packagesToScan The packages to scan
      */
-    public MongoDatastore(PropertyResolver configuration, Package... packagesToScan) {
-        this(configuration, new ClasspathEntityScanner().scan(packagesToScan));
+    MongoDatastore(PropertyResolver configuration, Package... packagesToScan) {
+        this(configuration, new ClasspathEntityScanner().scan(packagesToScan))
     }
 
     /**
@@ -713,8 +696,8 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
      * @param configuration The configuration
      * @param packagesToScan The packages to scan
      */
-    public MongoDatastore(Map<String, Object> configuration, Package... packagesToScan) {
-        this(DatastoreUtils.createPropertyResolver(configuration), packagesToScan);
+    MongoDatastore(Map<String, Object> configuration, Package... packagesToScan) {
+        this(DatastoreUtils.createPropertyResolver(configuration), packagesToScan)
     }
 
     /**
@@ -724,15 +707,15 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
      * @param eventPublisher The event publisher
      * @param packagesToScan The packages to scan
      */
-    public MongoDatastore(PropertyResolver configuration, ConfigurableApplicationEventPublisher eventPublisher, Package... packagesToScan) {
-        this(configuration, eventPublisher, new ClasspathEntityScanner().scan(packagesToScan));
+    MongoDatastore(PropertyResolver configuration, ConfigurableApplicationEventPublisher eventPublisher, Package... packagesToScan) {
+        this(configuration, eventPublisher, new ClasspathEntityScanner().scan(packagesToScan))
     }
 
     /**
      * @return The {@link ConnectionSources} for this datastore
      */
-    public ConnectionSources<MongoClient, MongoConnectionSourceSettings> getConnectionSources() {
-        return connectionSources;
+    ConnectionSources<MongoClient, MongoConnectionSourceSettings> getConnectionSources() {
+        return connectionSources
     }
 
     /**
@@ -751,29 +734,29 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
      * build on the calling thread first waits for one running in the background, and the other way round, and a
      * domain class registered after startup is indexed once neither is running.
      */
-    public void buildIndex() {
-        String connection = connectionName();
+    void buildIndex() {
+        String connection = connectionName()
         // Before either mode: a build on the calling thread would otherwise run against the client close() is closing.
         if (closed) {
-            LOG.warn("An index build was requested for connection [{}] after the datastore was closed, so it was not started.",
-                    connection);
-            return;
+            LOG.warn('An index build was requested for connection [{}] after the datastore was closed, so it was not started.',
+                    connection)
+            return
         }
         if (!buildIndexesAsync) {
-            runIndexBuild(null, LOG.isInfoEnabled(), null);
-            return;
+            runIndexBuild(null, LOG.isInfoEnabled(), null)
+            return
         }
         if (submitIndexBuild(null)) {
-            return;
+            return
         }
         if (closed) {
-            LOG.warn("An index build was requested for connection [{}] after the datastore was closed, so it was not started.",
-                    connection);
+            LOG.warn('An index build was requested for connection [{}] after the datastore was closed, so it was not started.',
+                    connection)
         }
         else {
-            indexBuildPending = true;
-            LOG.info("An index build was requested for connection [{}] while the datastore is stopped; it will run when " +
-                    "the datastore is restarted.", connection);
+            indexBuildPending = true
+            LOG.info('An index build was requested for connection [{}] while the datastore is stopped; it will run when ' +
+                    'the datastore is restarted.', connection)
         }
     }
 
@@ -796,13 +779,13 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
      *
      * @return the outcome of the build
      */
-    public CompletableFuture<IndexBuildResult> buildIndexAsync() {
-        CompletableFuture<IndexBuildResult> result = new CompletableFuture<>();
+    CompletableFuture<IndexBuildResult> buildIndexAsync() {
+        CompletableFuture<IndexBuildResult> result = new CompletableFuture<>()
         if (closed || !submitIndexBuild(result)) {
-            result.completeExceptionally(new IllegalStateException("The index build for connection [" +
-                    connectionName() + "] was not started: the datastore is " + (closed ? "closed" : "stopped") + "."));
+            result.completeExceptionally(new IllegalStateException('The index build for connection [' +
+                    connectionName() + '] was not started: the datastore is ' + (closed ? 'closed' : 'stopped') + '.'))
         }
-        return result;
+        return result
     }
 
     /**
@@ -812,31 +795,31 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
      * @return false if the executor has been shut down, by {@link #stop()} or {@link #close()}
      */
     private boolean submitIndexBuild(CompletableFuture<IndexBuildResult> result) {
-        ExecutorService executor = this.indexBuildExecutor;
+        ExecutorService executor = this.indexBuildExecutor
         if (executor.isShutdown()) {
-            return false;
+            return false
         }
         try {
             executor.execute(new IndexBuildTask(result, () -> {
                 // The first thing the build does: said only of a build that is under way, and ahead of
                 // everything it logs, which it would not be if the submitting thread said it.
                 if (result == null) {
-                    LOG.info("Building the indexes declared by the domain classes for connection [{}] on a " +
-                            "background thread. Startup does not wait for them, so a query issued before its index " +
-                            "exists is served without it.", connectionName());
+                    LOG.info('Building the indexes declared by the domain classes for connection [{}] on a ' +
+                            'background thread. Startup does not wait for them, so a query issued before its index ' +
+                            'exists is served without it.', connectionName())
                 }
                 else {
-                    LOG.info("Building the indexes declared by the domain classes for connection [{}] on a " +
-                            "background thread, for a caller waiting on the result.", connectionName());
+                    LOG.info('Building the indexes declared by the domain classes for connection [{}] on a ' +
+                            'background thread, for a caller waiting on the result.', connectionName())
                 }
                 // Classified whenever a caller is waiting for the counts, which are then the product.
-                runIndexBuild(executor, result != null || LOG.isInfoEnabled(), result);
-            }));
-            return true;
+                runIndexBuild(executor, result != null || LOG.isInfoEnabled(), result)
+            }))
+            return true
         }
-        catch (RejectedExecutionException e) {
+        catch (RejectedExecutionException ignored) {
             // Shut down between the check and the submission.
-            return false;
+            return false
         }
     }
 
@@ -844,26 +827,27 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
      * A build on the background thread, carrying the future its caller holds so that one shut down before it
      * runs, or ended by an {@link Error}, still completes it.
      */
-    private record IndexBuildTask(CompletableFuture<IndexBuildResult> result, Runnable build) implements Runnable {
+    private static record IndexBuildTask(CompletableFuture<IndexBuildResult> result, Runnable build) implements Runnable {
 
         @Override
-        public void run() {
+        void run() {
             try {
-                build.run();
+                build.run()
             }
             catch (RuntimeException | Error e) {
                 if (result != null) {
-                    result.completeExceptionally(e);
+                    result.completeExceptionally(e)
                 }
-                throw e;
+                throw e
             }
         }
 
-        private void notRun(String reason) {
+        void notRun(String reason) {
             if (result != null) {
-                result.completeExceptionally(new CancellationException(reason));
+                result.completeExceptionally(new CancellationException(reason))
             }
         }
+
     }
 
     /**
@@ -872,16 +856,16 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
      */
     private void buildIndexAutomatically() {
         if (!buildIndexes) {
-            LOG.info("Index creation on startup is disabled for connection [{}] by [{} = false]. The indexes already " +
-                    "present on the server are left untouched; call buildIndex() to create the declared ones.",
-                    connectionName(), buildIndexesSettingName());
-            return;
+            LOG.info('Index creation on startup is disabled for connection [{}] by [{} = false]. The indexes already ' +
+                    'present on the server are left untouched; call buildIndex() to create the declared ones.',
+                    connectionName(), buildIndexesSettingName())
+            return
         }
-        buildIndex();
+        buildIndex()
     }
 
     private String connectionName() {
-        return connectionSources.getDefaultConnectionSource().getName();
+        return connectionSources.getDefaultConnectionSource().getName()
     }
 
     /**
@@ -889,12 +873,12 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
      * its own value if it declares one and inherits the top level one otherwise, so both are named.
      */
     private String buildIndexesSettingName() {
-        String connection = connectionName();
+        String connection = connectionName()
         if (ConnectionSource.DEFAULT.equals(connection)) {
-            return MongoSettings.SETTING_BUILD_INDEXES;
+            return MongoSettings.SETTING_BUILD_INDEXES
         }
-        return MongoSettings.SETTING_CONNECTIONS + "." + connection + ".buildIndexes (or " +
-                MongoSettings.SETTING_BUILD_INDEXES + ")";
+        return MongoSettings.SETTING_CONNECTIONS + '.' + connection + '.buildIndexes (or ' +
+                MongoSettings.SETTING_BUILD_INDEXES + ')'
     }
 
     /**
@@ -908,61 +892,61 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
      * @param result   the future to complete with the outcome, or {@code null} if nothing is waiting on it
      */
     private void runIndexBuild(ExecutorService executor, boolean classify, CompletableFuture<IndexBuildResult> result) {
-        long startedAt = System.nanoTime();
-        IndexBuildSummary summary = new IndexBuildSummary(classify);
-        Exception failure = null;
-        boolean locked = false;
+        long startedAt = System.nanoTime()
+        IndexBuildSummary summary = new IndexBuildSummary(classify)
+        Exception failure = null
+        boolean locked = false
         try {
-            lockIndexBuild();
-            locked = true;
+            lockIndexBuild()
+            locked = true
             // Timed from here: waiting for another build is not this one's cost.
-            startedAt = System.nanoTime();
-            buildDeclaredIndexes(summary);
+            startedAt = System.nanoTime()
+            buildDeclaredIndexes(summary)
         }
         catch (Exception e) {
             // An Error is left to propagate as it is, without the summary.
-            failure = e;
+            failure = e
             if (e instanceof InterruptedException) {
                 // Caught here rather than by whoever interrupted, so the flag it cleared is put back.
-                Thread.currentThread().interrupt();
+                Thread.currentThread().interrupt()
             }
         }
         finally {
             if (locked) {
-                indexBuildLock.unlock();
+                indexBuildLock.unlock()
             }
         }
-        long elapsedMillis = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startedAt);
+        long elapsedMillis = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startedAt)
         if (failure == null) {
-            logFinishedIndexBuild(summary, elapsedMillis);
+            logFinishedIndexBuild(summary, elapsedMillis)
             if (result != null) {
-                result.complete(summary.toResult(defaultDatabase, elapsedMillis));
+                result.complete(summary.toResult(defaultDatabase, elapsedMillis))
             }
-            return;
+            return
         }
         if (executor == null) {
-            logUnfinishedIndexBuild(summary, elapsedMillis, false);
+            logUnfinishedIndexBuild(summary, elapsedMillis, false)
             // Unchanged, checked or not: an initializeIndices override may throw one without declaring it.
-            MongoDatastore.<RuntimeException>rethrow(failure);
-            return;
+            MongoDatastore.<RuntimeException>rethrow(failure)
+            return
         }
         // Nothing is waiting on this thread, so an error that would have failed startup has to be
         // reported here or it is lost entirely.
-        boolean abandoned = executor.isShutdown() && explainedByShutdown(failure);
+        boolean abandoned = executor.isShutdown() && explainedByShutdown(failure)
         if (abandoned) {
-            indexBuildPending = true;
+            indexBuildPending = true
             // toString rather than the message: an interrupted driver call can arrive wrapped in
             // an exception that carries no message of its own.
-            LOG.debug("The background index build was abandoned because the datastore is shutting down: {}",
-                    failure.toString(), failure);
+            LOG.debug('The background index build was abandoned because the datastore is shutting down: {}',
+                    failure.toString(), failure)
         }
         else {
-            LOG.error("The background index build failed: {}. The application is running without the " +
-                    "indexes that were not created.", failure.getMessage(), failure);
+            LOG.error('The background index build failed: {}. The application is running without the ' +
+                    'indexes that were not created.', failure.getMessage(), failure)
         }
-        logUnfinishedIndexBuild(summary, elapsedMillis, abandoned);
+        logUnfinishedIndexBuild(summary, elapsedMillis, abandoned)
         if (result != null) {
-            result.completeExceptionally(failure);
+            result.completeExceptionally(failure)
         }
     }
 
@@ -973,12 +957,12 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
      */
     private void lockIndexBuild() {
         try {
-            indexBuildLock.lockInterruptibly();
+            indexBuildLock.lockInterruptibly()
         }
         catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new MongoInterruptedException("Interrupted while waiting for the index build already running on " +
-                    "connection [" + connectionName() + "]", e);
+            Thread.currentThread().interrupt()
+            throw new MongoInterruptedException('Interrupted while waiting for the index build already running on ' +
+                    'connection [' + connectionName() + ']', e)
         }
     }
 
@@ -992,31 +976,31 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
         for (Throwable cause = failure; cause != null; cause = cause.getCause() == cause ? null : cause.getCause()) {
             if (cause instanceof InterruptedException || cause instanceof MongoInterruptedException ||
                     cause instanceof IllegalStateException || cause instanceof MongoSocketException) {
-                return true;
+                return true
             }
         }
-        return false;
+        return false
     }
 
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings('unchecked')
     private static <E extends Exception> void rethrow(Exception failure) throws E {
-        throw (E) failure;
+        throw (E) failure
     }
 
     private void logFinishedIndexBuild(IndexBuildSummary summary, long elapsedMillis) {
         if (summary.applied() == 0 && summary.recreated == 0 && summary.failures == 0) {
-            LOG.debug("No indexes are declared by the {} domain class(es) mapped to database [{}]",
-                    summary.entities, defaultDatabase);
-            return;
+            LOG.debug('No indexes are declared by the {} domain class(es) mapped to database [{}]',
+                    summary.entities, defaultDatabase)
+            return
         }
         if (summary.failures == 0) {
-            LOG.info("Index build for database [{}] finished in {}ms: {}, from {} domain class(es)",
-                    defaultDatabase, elapsedMillis, summary.describe(), summary.entities);
+            LOG.info('Index build for database [{}] finished in {}ms: {}, from {} domain class(es)',
+                    defaultDatabase, elapsedMillis, summary.describe(), summary.entities)
         }
         else {
-            LOG.warn("Index build for database [{}] finished in {}ms: {}, from {} domain class(es). " +
-                    "The failures are reported above.",
-                    defaultDatabase, elapsedMillis, summary.describe(), summary.entities);
+            LOG.warn('Index build for database [{}] finished in {}ms: {}, from {} domain class(es). ' +
+                    'The failures are reported above.',
+                    defaultDatabase, elapsedMillis, summary.describe(), summary.entities)
         }
     }
 
@@ -1025,12 +1009,12 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
      * build fails partway: the error names the cause, this says what was applied before it.
      */
     private void logUnfinishedIndexBuild(IndexBuildSummary summary, long elapsedMillis, boolean abandoned) {
-        String message = "Index build for database [{}] did not finish, stopping after {}ms at {} of {} domain class(es): {}";
+        String message = 'Index build for database [{}] did not finish, stopping after {}ms at {} of {} domain class(es): {}'
         if (abandoned) {
-            LOG.debug(message, defaultDatabase, elapsedMillis, summary.entities, summary.entitiesTotal, summary.describe());
+            LOG.debug(message, defaultDatabase, elapsedMillis, summary.entities, summary.entitiesTotal, summary.describe())
         }
         else {
-            LOG.warn(message, defaultDatabase, elapsedMillis, summary.entities, summary.entitiesTotal, summary.describe());
+            LOG.warn(message, defaultDatabase, elapsedMillis, summary.entities, summary.entitiesTotal, summary.describe())
         }
     }
 
@@ -1040,22 +1024,22 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
      * startup, or the background build thread — actually spends waiting.
      */
     private void buildDeclaredIndexes(IndexBuildSummary summary) {
-        List<PersistentEntity> entities = indexedEntities();
-        summary.entitiesTotal = entities.size();
-        IndexBuildSummary previousSummary = indexBuildSummary.get();
-        indexBuildSummary.set(summary);
+        List<PersistentEntity> entities = indexedEntities()
+        summary.entitiesTotal = entities.size()
+        IndexBuildSummary previousSummary = indexBuildSummary.get()
+        indexBuildSummary.set(summary)
         try {
-            for (PersistentEntity entity : entities) {
-                initializeIndices(entity);
-                summary.entities++;
+            for (PersistentEntity entity in entities) {
+                initializeIndices(entity)
+                summary.entities++
             }
         }
         finally {
             if (previousSummary == null) {
-                indexBuildSummary.remove();
+                indexBuildSummary.remove()
             }
             else {
-                indexBuildSummary.set(previousSummary);
+                indexBuildSummary.set(previousSummary)
             }
         }
     }
@@ -1064,13 +1048,13 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
      * The entities whose declared indexes this datastore builds.
      */
     private List<PersistentEntity> indexedEntities() {
-        List<PersistentEntity> entities = new ArrayList<>();
-        for (PersistentEntity entity : this.mappingContext.getPersistentEntities()) {
+        List<PersistentEntity> entities = new ArrayList<>()
+        for (PersistentEntity entity in this.mappingContext.getPersistentEntities()) {
             if (isIndexedHere(entity)) {
-                entities.add(entity);
+                entities.add(entity)
             }
         }
-        return entities;
+        return entities
     }
 
     /**
@@ -1081,7 +1065,7 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
     private boolean isIndexedHere(PersistentEntity entity) {
         return !entity.isExternal() &&
                 !(entity.isMultiTenant() && multiTenancyMode == MultiTenancySettings.MultiTenancyMode.SCHEMA) &&
-                ConnectionSourcesSupport.usesConnectionSource(entity, connectionName());
+                ConnectionSourcesSupport.usesConnectionSource(entity, connectionName())
     }
 
     /**
@@ -1090,23 +1074,29 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
      * can name the same one.
      */
     private Map<MongoNamespace, CollectionDeclarations> declarationsByCollection() {
-        Map<MongoNamespace, CollectionDeclarations> collections = new LinkedHashMap<>();
-        for (PersistentEntity entity : indexedEntities()) {
-            com.mongodb.client.MongoCollection<Document> collection = getCollection(entity);
-            CollectionDeclarations declarations = collections.computeIfAbsent(collection.getNamespace(),
-                    namespace -> new CollectionDeclarations(collection, new ArrayList<>()));
-            for (IndexDeclaration declaration : declaredIndexes(entity)) {
-                declarations.declarations().add(new EntityDeclaration(entity, declaration));
+        Map<MongoNamespace, CollectionDeclarations> collections = new LinkedHashMap<>()
+        for (PersistentEntity entity in indexedEntities()) {
+            com.mongodb.client.MongoCollection<Document> collection = getCollection(entity)
+            CollectionDeclarations declarations = collections.get(collection.getNamespace())
+            if (declarations == null) {
+                declarations = new CollectionDeclarations(collection, new ArrayList<EntityDeclaration>())
+                collections.put(collection.getNamespace(), declarations)
+            }
+            for (IndexDeclaration declaration in declaredIndexes(entity)) {
+                declarations.declarations().add(new EntityDeclaration(entity, declaration))
             }
         }
-        return collections;
+        return collections
     }
 
-    private record CollectionDeclarations(com.mongodb.client.MongoCollection<Document> collection,
-                                          List<EntityDeclaration> declarations) {
+    @SuppressWarnings('Indentation')
+    private static record CollectionDeclarations(com.mongodb.client.MongoCollection<Document> collection,
+                                                 List<EntityDeclaration> declarations) {
+
     }
 
-    private record EntityDeclaration(PersistentEntity entity, IndexDeclaration declaration) {
+    private static record EntityDeclaration(PersistentEntity entity, IndexDeclaration declaration) {
+
     }
 
     /**
@@ -1123,27 +1113,27 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
      *
      * @return the missing indexes, collection by collection, in the order the domain classes declare them
      */
-    public List<MissingIndex> findMissingIndexes() {
-        List<MissingIndex> missing = new ArrayList<>();
-        for (Map.Entry<MongoNamespace, CollectionDeclarations> entry : declarationsByCollection().entrySet()) {
+    List<MissingIndex> findMissingIndexes() {
+        List<MissingIndex> missing = new ArrayList<>()
+        for (Map.Entry<MongoNamespace, CollectionDeclarations> entry in declarationsByCollection().entrySet()) {
             if (entry.getValue().declarations().isEmpty()) {
-                continue;
+                continue
             }
-            MongoNamespace namespace = entry.getKey();
-            List<Document> existing = entry.getValue().collection().listIndexes().into(new ArrayList<>());
-            List<Document> reported = new ArrayList<>();
-            for (EntityDeclaration declared : entry.getValue().declarations()) {
-                Document keys = declared.declaration().keys();
+            MongoNamespace namespace = entry.getKey()
+            List<Document> existing = entry.getValue().collection().listIndexes().into(new ArrayList<Document>())
+            List<Document> reported = new ArrayList<>()
+            for (EntityDeclaration declared in entry.getValue().declarations()) {
+                Document keys = declared.declaration().keys()
                 if (isListed(keys, existing) || isAmong(keys, reported)) {
-                    continue;
+                    continue
                 }
-                reported.add(keys);
-                Map<String, Object> options = declared.declaration().options();
+                reported.add(keys)
+                Map<String, Object> options = declared.declaration().options()
                 missing.add(new MissingIndex(namespace.getDatabaseName(), namespace.getCollectionName(),
-                        declared.entity().getName(), keys, options != null ? new Document(options) : new Document()));
+                        declared.entity().getName(), keys, options != null ? new Document(options) : new Document()))
             }
         }
-        return missing;
+        return missing
     }
 
     /**
@@ -1164,21 +1154,22 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
      *
      * @return the undeclared indexes, collection by collection, in the order the server lists them
      */
-    public List<UndeclaredIndex> findUndeclaredIndexes() {
-        List<UndeclaredIndex> undeclared = new ArrayList<>();
-        for (Map.Entry<MongoNamespace, CollectionDeclarations> entry : declarationsByCollection().entrySet()) {
-            MongoNamespace namespace = entry.getKey();
-            for (Document index : entry.getValue().collection().listIndexes()) {
-                if (ID_INDEX_NAME.equals(index.getString("name"))) {
-                    continue;
+    List<UndeclaredIndex> findUndeclaredIndexes() {
+        List<UndeclaredIndex> undeclared = new ArrayList<>()
+        for (Map.Entry<MongoNamespace, CollectionDeclarations> entry in declarationsByCollection().entrySet()) {
+            MongoNamespace namespace = entry.getKey()
+            for (Document index in entry.getValue().collection().listIndexes()) {
+                if (ID_INDEX_NAME.equals(index.getString('name'))) {
+                    continue
                 }
-                if (index.get("key") instanceof Document key && !isDeclared(index, entry.getValue())) {
+                Object key = index.get('key')
+                if (key instanceof Document && !isDeclared(index, entry.getValue())) {
                     undeclared.add(new UndeclaredIndex(namespace.getDatabaseName(), namespace.getCollectionName(),
-                            index.getString("name"), key, index));
+                            index.getString('name'), (Document) key, index))
                 }
             }
         }
-        return undeclared;
+        return undeclared
     }
 
     /**
@@ -1191,8 +1182,8 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
      *
      * @return the indexes dropped
      */
-    public List<UndeclaredIndex> dropUndeclaredIndexes() {
-        return dropUndeclaredIndexes(findUndeclaredIndexes());
+    List<UndeclaredIndex> dropUndeclaredIndexes() {
+        return dropUndeclaredIndexes(findUndeclaredIndexes())
     }
 
     /**
@@ -1207,62 +1198,65 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
      * @param indexes the indexes to drop
      * @return the indexes dropped
      */
-    public List<UndeclaredIndex> dropUndeclaredIndexes(List<UndeclaredIndex> indexes) {
-        List<UndeclaredIndex> dropped = new ArrayList<>();
-        Map<MongoNamespace, CollectionDeclarations> mapped = declarationsByCollection();
+    List<UndeclaredIndex> dropUndeclaredIndexes(List<UndeclaredIndex> indexes) {
+        List<UndeclaredIndex> dropped = new ArrayList<>()
+        Map<MongoNamespace, CollectionDeclarations> mapped = declarationsByCollection()
         // Listed first, once per collection, rather than inferred from the drop: the driver answers a dropIndex on
         // a collection that no longer exists as a success, and a name can have been given to another index since.
-        Map<MongoNamespace, List<Document>> listed = new HashMap<>();
-        for (UndeclaredIndex index : indexes) {
-            MongoNamespace namespace = new MongoNamespace(index.database(), index.collection());
-            CollectionDeclarations declarations = mapped.get(namespace);
+        Map<MongoNamespace, List<Document>> listed = new HashMap<>()
+        for (UndeclaredIndex index in indexes) {
+            MongoNamespace namespace = new MongoNamespace(index.database(), index.collection())
+            CollectionDeclarations declarations = mapped.get(namespace)
             if (declarations == null) {
-                LOG.warn("Index [{}] on collection [{}] of database [{}] was not dropped: no domain class is mapped to " +
-                        "that collection on connection [{}]", index.name(), index.collection(), index.database(),
-                        connectionName());
-                continue;
+                LOG.warn('Index [{}] on collection [{}] of database [{}] was not dropped: no domain class is mapped to ' +
+                        'that collection on connection [{}]', index.name(), index.collection(), index.database(),
+                        connectionName())
+                continue
             }
-            List<Document> current = listed.computeIfAbsent(namespace,
-                    ignored -> declarations.collection().listIndexes().into(new ArrayList<>()));
-            Document existing = findIndexByName(current, index.name());
+            List<Document> current = listed.get(namespace)
+            if (current == null) {
+                current = declarations.collection().listIndexes().into(new ArrayList<Document>())
+                listed.put(namespace, current)
+            }
+            Document existing = findIndexByName(current, index.name())
             if (existing == null) {
-                LOG.debug("Index [{}] on collection [{}] of database [{}] was not dropped: it no longer exists",
-                        index.name(), index.collection(), index.database());
-                continue;
+                LOG.debug('Index [{}] on collection [{}] of database [{}] was not dropped: it no longer exists',
+                        index.name(), index.collection(), index.database())
+                continue
             }
             if (!sameIndexKeys(existing, index.definition())) {
-                LOG.warn("Index [{}] on collection [{}] of database [{}] was not dropped: it is on {} now, not on the " +
-                        "keys reviewed, {}", index.name(), index.collection(), index.database(),
-                        existing.get("key", Document.class).toJson(), index.key().toJson());
-                continue;
+                LOG.warn('Index [{}] on collection [{}] of database [{}] was not dropped: it is on {} now, not on the ' +
+                        'keys reviewed, {}', index.name(), index.collection(), index.database(),
+                        existing.get('key', Document).toJson(), index.key().toJson())
+                continue
             }
             if (isDeclared(existing, declarations)) {
-                LOG.warn("Index [{}] on collection [{}] of database [{}] was not dropped: a domain class declares its " +
-                        "keys {}", index.name(), index.collection(), index.database(), index.key().toJson());
-                continue;
+                LOG.warn('Index [{}] on collection [{}] of database [{}] was not dropped: a domain class declares its ' +
+                        'keys {}', index.name(), index.collection(), index.database(), index.key().toJson())
+                continue
             }
             if (!dropIndex(declarations.collection(), index.name())) {
-                LOG.debug("Index [{}] on collection [{}] of database [{}] was not dropped: it no longer exists",
-                        index.name(), index.collection(), index.database());
-                continue;
+                LOG.debug('Index [{}] on collection [{}] of database [{}] was not dropped: it no longer exists',
+                        index.name(), index.collection(), index.database())
+                continue
             }
-            LOG.info("Dropped index [{}] on collection [{}] of database [{}]: no domain class declares its keys {}",
-                    index.name(), index.collection(), index.database(), index.key().toJson());
-            dropped.add(index);
+            LOG.info('Dropped index [{}] on collection [{}] of database [{}]: no domain class declares its keys {}',
+                    index.name(), index.collection(), index.database(), index.key().toJson())
+            dropped.add(index)
         }
-        return dropped;
+        return dropped
     }
 
     /**
      * Whether a domain class mapped to a collection declares the key pattern of an index it has.
      */
     private static boolean isDeclared(Document index, CollectionDeclarations declarations) {
-        for (EntityDeclaration declaration : declarations.declarations()) {
+        for (EntityDeclaration declaration in declarations.declarations()) {
             if (describes(declaration.declaration().keys(), index)) {
-                return true;
+                return true
             }
         }
-        return false;
+        return false
     }
 
     /**
@@ -1271,16 +1265,18 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
      * compared too.
      */
     private static boolean sameIndexKeys(Document index, Document other) {
-        if (!(index.get("key") instanceof Document key) || !(other.get("key") instanceof Document otherKey) ||
-                !sameKeyPattern(key, otherKey)) {
-            return false;
+        Object key = index.get('key')
+        Object otherKey = other.get('key')
+        if (!(key instanceof Document) || !(otherKey instanceof Document) ||
+                !sameKeyPattern((Document) key, (Document) otherKey)) {
+            return false
         }
-        Document weights = index.get("weights", Document.class);
-        Document otherWeights = other.get("weights", Document.class);
+        Document weights = index.get('weights', Document)
+        Document otherWeights = other.get('weights', Document)
         if (weights == null || otherWeights == null) {
-            return weights == otherWeights;
+            return weights == null && otherWeights == null
         }
-        return weights.keySet().equals(otherWeights.keySet());
+        return weights.keySet() == otherWeights.keySet()
     }
 
     /**
@@ -1288,14 +1284,14 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
      */
     private static boolean dropIndex(com.mongodb.client.MongoCollection<Document> collection, String name) {
         try {
-            collection.dropIndex(name);
-            return true;
+            collection.dropIndex(name)
+            return true
         }
         catch (MongoCommandException e) {
             if (e.getErrorCode() == INDEX_NOT_FOUND_CODE) {
-                return false;
+                return false
             }
-            throw e;
+            throw e
         }
     }
 
@@ -1313,33 +1309,33 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
      */
     private static final class ExistingIndexes {
 
-        private final com.mongodb.client.MongoCollection<Document> collection;
+        private final com.mongodb.client.MongoCollection<Document> collection
 
-        private final IndexBuildSummary summary;
+        private final IndexBuildSummary summary
 
-        private List<Document> indexes;
+        private List<Document> indexes
 
-        private boolean listed;
+        private boolean listed
 
         /** Why the last listing failed, for the conflict it leaves unreconciled to report. */
-        private RuntimeException listingFailure;
+        private RuntimeException listingFailure
 
         /**
          * False once a listing of this collection has failed, whether its first or a re-listing after a conflict.
          * Its declarations are then applied without being classified; other collections keep their breakdown.
          */
-        private boolean readable = true;
+        private boolean readable = true
 
-        private ExistingIndexes(com.mongodb.client.MongoCollection<Document> collection, IndexBuildSummary summary) {
-            this.collection = collection;
-            this.summary = summary;
+        ExistingIndexes(com.mongodb.client.MongoCollection<Document> collection, IndexBuildSummary summary) {
+            this.collection = collection
+            this.summary = summary
         }
 
         /**
          * @return the known current indexes, or {@code null} if they could not be listed
          */
         private List<Document> get() {
-            return listed ? indexes : refresh();
+            return listed ? indexes : refresh()
         }
 
         /**
@@ -1348,36 +1344,36 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
          * @return the current indexes, or {@code null} if they could not be listed
          */
         private List<Document> refresh() {
-            listed = true;
+            listed = true
             try {
-                indexes = collection.listIndexes().into(new ArrayList<>());
-                listingFailure = null;
-                readable = true;
+                indexes = collection.listIndexes().into(new ArrayList<>())
+                listingFailure = null
+                readable = true
             } catch (RuntimeException e) {
                 // Not fatal: the build can still create indexes, it just cannot report which of them
                 // were new. Losing the breakdown is not worth failing a startup over.
-                LOG.debug("Could not list the existing indexes of collection [{}]: {}",
-                        collection.getNamespace().getCollectionName(), e.getMessage(), e);
-                indexes = null;
-                listingFailure = e;
-                readable = false;
+                LOG.debug('Could not list the existing indexes of collection [{}]: {}',
+                        collection.getNamespace().getCollectionName(), e.getMessage(), e)
+                indexes = null
+                listingFailure = e
+                readable = false
             }
-            return indexes;
+            return indexes
         }
 
         private void record(Document keys, String name, Long expireAfterSeconds) {
             if (indexes == null) {
-                return;
+                return
             }
-            Document existing = findIndexByKeyPattern(indexes, keys);
+            Document existing = findIndexByKeyPattern(indexes, keys)
             if (existing != null) {
-                indexes.remove(existing);
+                indexes.remove(existing)
             }
-            Document index = new Document("key", new Document(keys)).append("name", name);
+            Document index = new Document('key', new Document(keys)).append('name', name)
             if (expireAfterSeconds != null) {
-                index.append(INDEX_EXPIRE_AFTER_SECONDS, expireAfterSeconds);
+                index.append(INDEX_EXPIRE_AFTER_SECONDS, expireAfterSeconds)
             }
-            indexes.add(index);
+            indexes.add(index)
         }
 
         /**
@@ -1386,13 +1382,13 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
          */
         private Boolean contains(Document keys) {
             if (!summary.classifying || !readable) {
-                return null;
+                return null
             }
-            List<Document> existing = get();
+            List<Document> existing = get()
             if (existing == null) {
-                return null;
+                return null
             }
-            return findIndexByKeyPattern(existing, keys) != null;
+            return findIndexByKeyPattern(existing, keys) != null
         }
     }
 
@@ -1403,78 +1399,78 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
     private static final class IndexBuildSummary {
 
         /** Domain classes whose indexes have been applied. */
-        private int entities;
+        private int entities
 
         /** Domain classes the build set out to cover. */
-        private int entitiesTotal;
+        private int entitiesTotal
 
-        private int created;
+        private int created
 
         /** Dropped and built again for {@code recreateOnConflict}, which costs a full build. */
-        private int recreated;
+        private int recreated
 
-        private int alreadyPresent;
+        private int alreadyPresent
 
-        private int failures;
+        private int failures
 
         /** Applied on a collection whose existing indexes could not be listed, so neither created nor present. */
-        private int unclassified;
+        private int unclassified
 
         /**
          * Whether created and already-present indexes are to be told apart at all, which costs a listing per
          * collection and is only worth it when the summary will be logged.
          */
-        private final boolean classifying;
+        private final boolean classifying
 
         /**
          * One listing per collection rather than per entity: every class in an inheritance hierarchy maps
          * to its root's collection, and several classes can name the same one. Sharing it also keeps them
          * consistent, so a second class declaring keys the first has just created sees them as present.
          */
-        private final Map<MongoNamespace, ExistingIndexes> existingIndexes = new HashMap<>();
+        private final Map<MongoNamespace, ExistingIndexes> existingIndexes = new HashMap<>()
 
-        private IndexBuildSummary(boolean classifying) {
-            this.classifying = classifying;
+        IndexBuildSummary(boolean classifying) {
+            this.classifying = classifying
         }
 
         private ExistingIndexes existingIndexesOf(com.mongodb.client.MongoCollection<Document> collection) {
-            return existingIndexes.computeIfAbsent(collection.getNamespace(), namespace -> new ExistingIndexes(collection, this));
+            return existingIndexes.computeIfAbsent(collection.getNamespace(), namespace -> new ExistingIndexes(collection, this))
         }
 
         /** Declarations applied other than by a drop and recreate. */
         private int applied() {
-            return created + alreadyPresent + unclassified;
+            return created + alreadyPresent + unclassified
         }
 
         private IndexBuildResult toResult(String database, long elapsedMillis) {
             return new IndexBuildResult(database, entities, created, recreated, alreadyPresent, unclassified,
-                    failures, elapsedMillis);
+                    failures, elapsedMillis)
         }
 
         private String describe() {
-            StringBuilder outcome = new StringBuilder();
+            StringBuilder outcome = new StringBuilder()
             if (created + alreadyPresent > 0 || unclassified == 0) {
-                outcome.append(created).append(" created, ");
+                outcome.append(created).append(' created, ')
                 if (recreated > 0) {
-                    outcome.append(recreated).append(" recreated, ");
+                    outcome.append(recreated).append(' recreated, ')
                 }
-                outcome.append(alreadyPresent).append(" already present");
+                outcome.append(alreadyPresent).append(' already present')
                 if (unclassified > 0) {
                     // Partial: what the collections that could be listed established still stands.
-                    outcome.append(", ").append(unclassified).append(" applied without a listing");
+                    outcome.append(', ').append(unclassified).append(' applied without a listing')
                 }
             }
             else {
                 // Nothing was classified, whether because it was not asked for or no collection could be listed.
-                outcome.append(unclassified).append(" index declaration(s) applied");
+                outcome.append(unclassified).append(' index declaration(s) applied')
                 if (recreated > 0) {
-                    outcome.append(", ").append(recreated).append(" recreated");
+                    outcome.append(', ').append(recreated).append(' recreated')
                 }
             }
             if (failures > 0) {
-                outcome.append(", ").append(failures).append(" failed");
+                outcome.append(', ').append(failures).append(' failed')
             }
-            return outcome.toString();
+            return outcome.toString()
         }
     }
 
@@ -1491,15 +1487,15 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
     /**
      * @return The default flush mode
      */
-    public FlushModeType getDefaultFlushMode() {
-        return defaultFlushMode;
+    FlushModeType getDefaultFlushMode() {
+        return defaultFlushMode
     }
 
     /**
      * @return The default database name
      */
-    public String getDefaultDatabase() {
-        return defaultDatabase;
+    String getDefaultDatabase() {
+        return defaultDatabase
     }
 
     /**
@@ -1508,10 +1504,10 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
      * @param codecRegistries The {@link CodecRegistry} instances
      */
     @Autowired(required = false)
-    public void setCodecRegistries(List<CodecRegistry> codecRegistries) {
+    void setCodecRegistries(List<CodecRegistry> codecRegistries) {
         this.codecRegistry = CodecRegistries.fromRegistries(
                 this.codecRegistry,
-                CodecRegistries.fromRegistries(codecRegistries));
+                CodecRegistries.fromRegistries(codecRegistries))
     }
 
     /**
@@ -1520,10 +1516,10 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
      * @param codecProviders The {@link CodecProvider} instances
      */
     @Autowired(required = false)
-    public void setCodecProviders(List<CodecProvider> codecProviders) {
+    void setCodecProviders(List<CodecProvider> codecProviders) {
         this.codecRegistry = CodecRegistries.fromRegistries(
                 this.codecRegistry,
-                CodecRegistries.fromProviders(codecProviders));
+                CodecRegistries.fromProviders(codecProviders))
     }
 
     /**
@@ -1532,10 +1528,10 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
      * @param codecs The {@link Codec} instances
      */
     @Autowired(required = false)
-    public void setCodecs(List<Codec<?>> codecs) {
+    void setCodecs(List<Codec<?>> codecs) {
         this.codecRegistry = CodecRegistries.fromRegistries(
                 this.codecRegistry,
-                CodecRegistries.fromCodecs(codecs));
+                CodecRegistries.fromCodecs(codecs))
     }
 
     /**
@@ -1544,28 +1540,28 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
      * @param messageSources The message source
      */
     @Autowired(required = false)
-    public void setMessageSource(List<MessageSource> messageSources) {
-        setMessageSource(GrailsMessageSourceUtils.findPreferredMessageSource(messageSources));
+    void setMessageSource(List<MessageSource> messageSources) {
+        setMessageSource(GrailsMessageSourceUtils.findPreferredMessageSource(messageSources))
     }
 
-    public void setMessageSource(MessageSource messageSource) {
+    void setMessageSource(MessageSource messageSource) {
         if (messageSource != null) {
-            configureValidatorRegistry(connectionSources.getDefaultConnectionSource().getSettings(), (MongoMappingContext) mappingContext, messageSource);
+            configureValidatorRegistry(connectionSources.getDefaultConnectionSource().getSettings(), getMappingContext(), messageSource)
         }
     }
 
     /**
      * @return The transaction manager
      */
-    public PlatformTransactionManager getTransactionManager() {
-        return transactionManager;
+    PlatformTransactionManager getTransactionManager() {
+        return transactionManager
     }
 
     /**
      * @return The {@link CodecRegistry}
      */
-    public CodecRegistry getCodecRegistry() {
-        return codecRegistry;
+    CodecRegistry getCodecRegistry() {
+        return codecRegistry
     }
 
     /**
@@ -1574,12 +1570,11 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
      * @param entity The entity
      * @return The {@link PersistentEntityCodec}
      */
-    public PersistentEntityCodec getPersistentEntityCodec(PersistentEntity entity) {
+    PersistentEntityCodec getPersistentEntityCodec(PersistentEntity entity) {
         if (entity instanceof EmbeddedPersistentEntity) {
-            return new PersistentEntityCodec(codecRegistry, entity);
-        } else {
-            return getPersistentEntityCodec(entity.getJavaClass());
+            return new PersistentEntityCodec(codecRegistry, entity)
         }
+        return getPersistentEntityCodec(entity.getJavaClass())
     }
 
     /**
@@ -1588,32 +1583,32 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
      * @param entityClass The entity class
      * @return The {@link PersistentEntityCodec}
      */
-    public PersistentEntityCodec getPersistentEntityCodec(Class entityClass) {
+    PersistentEntityCodec getPersistentEntityCodec(Class entityClass) {
         if (entityClass == null) {
-            throw new IllegalArgumentException("Argument [entityClass] cannot be null");
+            throw new IllegalArgumentException('Argument [entityClass] cannot be null')
         }
 
-        final PersistentEntity entity = getMappingContext().getPersistentEntity(entityClass.getName());
+        final PersistentEntity entity = getMappingContext().getPersistentEntity(entityClass.getName())
         if (entity == null) {
-            throw new IllegalArgumentException("Argument [" + entityClass + "] is not an entity");
+            throw new IllegalArgumentException('Argument [' + entityClass + '] is not an entity')
         }
 
-        return (PersistentEntityCodec) getCodecRegistry().get(entity.getJavaClass());
+        return (PersistentEntityCodec) getCodecRegistry().get(entity.getJavaClass())
     }
 
     /**
      * @return The {@link ConfigurableApplicationEventPublisher} instance used by this datastore
      */
     @Override
-    public ConfigurableApplicationEventPublisher getApplicationEventPublisher() {
-        return this.eventPublisher;
+    ConfigurableApplicationEventPublisher getApplicationEventPublisher() {
+        return this.eventPublisher
     }
 
     /**
      * @return The {@link MongoClient} instance
      */
-    public MongoClient getMongoClient() {
-        return mongo;
+    MongoClient getMongoClient() {
+        return mongo
     }
 
     /**
@@ -1626,41 +1621,40 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
      * @return {@code true} if server-side transactions should be used
      * @since 8.0
      */
-    public boolean isTransactionsEnabled() {
+    boolean isTransactionsEnabled() {
         if (!transactionsEnabled) {
-            return false;
+            return false
         }
         // Once the topology is positively known it does not change at runtime, so latch the result to
         // avoid recomputing (and possibly flipping) on every transaction begin.
-        Boolean supported = transactionsSupported;
+        Boolean supported = transactionsSupported
         if (supported != null) {
-            return supported;
+            return supported
         }
         try {
-            ClusterType clusterType = mongo.getClusterDescription().getType();
+            ClusterType clusterType = mongo.getClusterDescription().getType()
             switch (clusterType) {
-                case STANDALONE:
-                    transactionsSupported = Boolean.FALSE;
+                case ClusterType.STANDALONE:
+                    transactionsSupported = Boolean.FALSE
                     if (!warnedTransactionsUnsupported) {
-                        warnedTransactionsUnsupported = true;
-                        LOG.warn("grails.mongodb.transactional is enabled but the connected MongoDB topology is standalone, " +
-                                "which does not support multi-document transactions. Falling back to flush-only transaction behavior.");
+                        warnedTransactionsUnsupported = true
+                        LOG.warn('grails.mongodb.transactional is enabled but the connected MongoDB topology is standalone, ' +
+                                'which does not support multi-document transactions. Falling back to flush-only transaction behavior.')
                     }
-                    return false;
-                case REPLICA_SET:
-                case SHARDED:
-                case LOAD_BALANCED:
-                    transactionsSupported = Boolean.TRUE;
-                    return true;
+                    return false
+                case ClusterType.REPLICA_SET:
+                case ClusterType.SHARDED:
+                case ClusterType.LOAD_BALANCED:
+                    transactionsSupported = Boolean.TRUE
+                    return true
                 default:
                     // UNKNOWN: topology not discovered yet. Assume transactions are available for this
                     // attempt without latching, so a later definitive determination can still apply.
-                    return true;
+                    return true
             }
-        }
-        catch (RuntimeException e) {
-            LOG.debug("Could not determine MongoDB cluster topology for transaction support; assuming transactions are available: {}", e.getMessage(), e);
-            return true;
+        } catch (RuntimeException e) {
+            LOG.debug('Could not determine MongoDB cluster topology for transaction support; assuming transactions are available: {}', e.getMessage(), e)
+            return true
         }
     }
 
@@ -1673,8 +1667,8 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
      * @return {@code true} if GORM builds the declared indexes by itself
      * @since 8.0
      */
-    public boolean isBuildIndexes() {
-        return buildIndexes;
+    boolean isBuildIndexes() {
+        return buildIndexes
     }
 
     /**
@@ -1685,22 +1679,20 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
      * @return {@code true} if declared indexes are built asynchronously
      * @since 8.0
      */
-    public boolean isBuildIndexesAsync() {
-        return buildIndexesAsync;
+    boolean isBuildIndexesAsync() {
+        return buildIndexesAsync
     }
 
-    public String getDatabaseName(PersistentEntity entity) {
+    String getDatabaseName(PersistentEntity entity) {
         if (entity.isMultiTenant() && multiTenancyMode == MultiTenancySettings.MultiTenancyMode.SCHEMA) {
-            return Tenants.currentId(getClass()).toString();
+            return Tenants.currentId(getClass()).toString()
         }
-        else {
-            final String databaseName = mongoDatabases.get(entity);
-            if (databaseName == null) {
-                mongoDatabases.put(entity, defaultDatabase);
-                return defaultDatabase;
-            }
-            return databaseName;
+        final String databaseName = mongoDatabases.get(entity)
+        if (databaseName == null) {
+            mongoDatabases.put(entity, defaultDatabase)
+            return defaultDatabase
         }
+        return databaseName
     }
 
     /**
@@ -1709,14 +1701,14 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
      * @param entity The entity
      * @return The collection name
      */
-    public String getCollectionName(PersistentEntity entity) {
-        final String collectionName = mongoCollections.get(entity);
+    String getCollectionName(PersistentEntity entity) {
+        final String collectionName = mongoCollections.get(entity)
         if (collectionName == null) {
-            final String decapitalizedName = entity.isRoot() ? entity.getDecapitalizedName() : entity.getRootEntity().getDecapitalizedName();
-            mongoCollections.put(entity, decapitalizedName);
-            return decapitalizedName;
+            final String decapitalizedName = entity.isRoot() ? entity.getDecapitalizedName() : entity.getRootEntity().getDecapitalizedName()
+            mongoCollections.put(entity, decapitalizedName)
+            return decapitalizedName
         }
-        return collectionName;
+        return collectionName
     }
 
     /**
@@ -1725,44 +1717,42 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
      * @param entity The entity
      * @return The Mongo collection
      */
-    public com.mongodb.client.MongoCollection<Document> getCollection(PersistentEntity entity) {
+    com.mongodb.client.MongoCollection<Document> getCollection(PersistentEntity entity) {
         return getMongoClient()
                 .getDatabase(getDatabaseName(entity))
                 .getCollection(getCollectionName(entity))
-                .withCodecRegistry(codecRegistry);
+                .withCodecRegistry(codecRegistry)
     }
 
     /**
      * @return The mapping context
      */
     @Override
-    public MongoMappingContext getMappingContext() {
-        return (MongoMappingContext) super.getMappingContext();
+    MongoMappingContext getMappingContext() {
+        return (MongoMappingContext) super.getMappingContext()
     }
 
     @Override
-    public boolean isSchemaless() {
-        return true;
+    boolean isSchemaless() {
+        return true
     }
 
     protected void registerAllEntitiesWithEnhancer() {
-        for (PersistentEntity persistentEntity : mappingContext.getPersistentEntities()) {
-            gormEnhancer.registerEntity(persistentEntity);
+        for (PersistentEntity persistentEntity : getMappingContext().getPersistentEntities()) {
+            gormEnhancer.registerEntity(persistentEntity)
         }
     }
 
     @Override
     protected Session createSession(PropertyResolver connDetails) {
-        ensureStarted();
+        ensureStarted()
         if (stateless) {
-            return createStatelessSession(connDetails);
-        } else {
-            if (codecEngine) {
-                return new MongoCodecSession(this, getMappingContext(), getApplicationEventPublisher(), false);
-            } else {
-                return new MongoSession(this, getMappingContext(), getApplicationEventPublisher(), false);
-            }
+            return createStatelessSession(connDetails)
         }
+        if (codecEngine) {
+            return new MongoCodecSession(this, getMappingContext(), getApplicationEventPublisher(), false)
+        }
+        return new MongoSession(this, getMappingContext(), getApplicationEventPublisher(), false)
     }
 
     /**
@@ -1770,86 +1760,84 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
      * @param settings
      */
     protected MongoGormEnhancer initialize(final MongoConnectionSourceSettings settings) {
-        initializeConverters(this.mappingContext);
+        initializeConverters(getMappingContext())
 
-        this.mappingContext.addMappingContextListener(new MappingContext.Listener() {
+        getMappingContext().addMappingContextListener(new MappingContext.Listener() {
             @Override
-            public void persistentEntityAdded(PersistentEntity entity) {
-                gormEnhancer.registerEntity(entity);
-                registerEntity(entity);
+            void persistentEntityAdded(PersistentEntity entity) {
+                gormEnhancer.registerEntity(entity)
+                registerEntity(entity)
             }
-        });
+        })
+
         // Listeners are called in the order they were added, and indexing an entity needs the collection and
         // database registerEntity resolves from its mapping: indexed first, it was indexed on its default
         // collection, and getCollectionName cached that name.
-        getMappingContext().addMappingContextListener(this);
+        getMappingContext().addMappingContextListener(this)
 
         return new MongoGormEnhancer(this, transactionManager, settings) {
             @Override
             protected <D> MongoStaticApi<D> getStaticApi(Class<D> cls, String qualifier) {
-                MongoDatastore mongoDatastore = getDatastoreForQualifier(cls, qualifier);
-                return new MongoStaticApi<>(cls, mongoDatastore, createDynamicFinders(mongoDatastore), transactionManager);
+                MongoDatastore mongoDatastore = getDatastoreForQualifier(cls, qualifier)
+                return new MongoStaticApi<D>(cls, mongoDatastore, createDynamicFinders(mongoDatastore), transactionManager)
             }
 
             @Override
             protected <D> GormInstanceApi<D> getInstanceApi(Class<D> cls, String qualifier) {
-                MongoDatastore mongoDatastore = getDatastoreForQualifier(cls, qualifier);
+                MongoDatastore mongoDatastore = getDatastoreForQualifier(cls, qualifier)
 
-                GormInstanceApi<D> instanceApi = new GormInstanceApi<>(cls, mongoDatastore);
-                instanceApi.setFailOnError(getFailOnError());
-                instanceApi.setMarkDirty(getMarkDirty());
-                return instanceApi;
+                GormInstanceApi<D> instanceApi = new GormInstanceApi<D>(cls, mongoDatastore)
+                instanceApi.setFailOnError(getFailOnError())
+                instanceApi.setMarkDirty(getMarkDirty())
+                return instanceApi
             }
 
             @Override
             protected <D> GormValidationApi<D> getValidationApi(Class<D> cls, String qualifier) {
-                MongoDatastore mongoDatastore = getDatastoreForQualifier(cls, qualifier);
-                return new GormValidationApi<>(cls, mongoDatastore);
+                MongoDatastore mongoDatastore = getDatastoreForQualifier(cls, qualifier)
+                return new GormValidationApi<D>(cls, mongoDatastore)
             }
 
             private <D> MongoDatastore getDatastoreForQualifier(Class<D> cls, String qualifier) {
-                String defaultConnectionSourceName = ConnectionSourcesSupport.getDefaultConnectionSourceName(getMappingContext().getPersistentEntity(cls.getName()));
-                if (defaultConnectionSourceName.equals(ConnectionSource.ALL)) {
-                    defaultConnectionSourceName = ConnectionSource.DEFAULT;
+                String defaultConnectionSourceName = ConnectionSourcesSupport.getDefaultConnectionSourceName(getMappingContext().getPersistentEntity(cls.getName()))
+                if (defaultConnectionSourceName == ConnectionSource.ALL) {
+                    defaultConnectionSourceName = ConnectionSource.DEFAULT
                 }
 
-                boolean isDefaultQualifier = qualifier.equals(ConnectionSource.DEFAULT);
-                if (isDefaultQualifier && defaultConnectionSourceName.equals(ConnectionSource.DEFAULT)) {
-                    return MongoDatastore.this;
+                boolean isDefaultQualifier = qualifier == ConnectionSource.DEFAULT
+                if (isDefaultQualifier && defaultConnectionSourceName == ConnectionSource.DEFAULT) {
+                    return MongoDatastore.this
                 }
-                else {
-                    if (isDefaultQualifier) {
-                        qualifier = defaultConnectionSourceName;
-                    }
-                    ConnectionSource<MongoClient, MongoConnectionSourceSettings> connectionSource = connectionSources.getConnectionSource(qualifier);
-                    if (connectionSource == null) {
-                        throw new ConfigurationException("Invalid connection [" + defaultConnectionSourceName + "] configured for class [" + cls + "]");
-                    }
+                String resolvedQualifier = qualifier
+                if (isDefaultQualifier) {
+                    resolvedQualifier = defaultConnectionSourceName
+                }
+                ConnectionSource<MongoClient, MongoConnectionSourceSettings> connectionSource = connectionSources.getConnectionSource(resolvedQualifier)
+                if (connectionSource == null) {
+                    throw new ConfigurationException('Invalid connection [' + defaultConnectionSourceName + '] configured for class [' + cls + ']')
+                }
 
-                    return datastoresByConnectionSource.get(qualifier);
-                }
+                return datastoresByConnectionSource.get(resolvedQualifier)
             }
-        };
-
+        }
     }
 
     @Override
     protected Session createStatelessSession(PropertyResolver connectionDetails) {
-        ensureStarted();
+        ensureStarted()
         if (codecEngine) {
-            return new MongoCodecSession(this, getMappingContext(), getApplicationEventPublisher(), true);
-        } else {
-            return new MongoSession(this, getMappingContext(), getApplicationEventPublisher(), true);
+            return new MongoCodecSession(this, getMappingContext(), getApplicationEventPublisher(), true)
         }
+        return new MongoSession(this, getMappingContext(), getApplicationEventPublisher(), true)
     }
 
     protected void registerEventListeners(ConfigurableApplicationEventPublisher eventPublisher) {
-        eventPublisher.addApplicationListener(new DomainEventListener(this));
-        eventPublisher.addApplicationListener(autoTimestampEventListener);
-        eventPublisher.addApplicationListener(new ValidationEventListener(this));
+        eventPublisher.addApplicationListener(new DomainEventListener(this))
+        eventPublisher.addApplicationListener(autoTimestampEventListener)
+        eventPublisher.addApplicationListener(new ValidationEventListener(this))
 
         if (multiTenancyMode == MultiTenancySettings.MultiTenancyMode.DISCRIMINATOR) {
-            eventPublisher.addApplicationListener(new MultiTenantEventListener(this));
+            eventPublisher.addApplicationListener(new MultiTenantEventListener(this))
         }
     }
 
@@ -1864,17 +1852,17 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
      * @param entity The entity
      */
     protected void initializeIndices(final PersistentEntity entity) {
-        IndexBuildSummary summary = indexBuildSummary.get();
+        IndexBuildSummary summary = indexBuildSummary.get()
         // Outside a build nothing reports the counts, so there is nothing to classify for.
-        initializeIndices(entity, summary != null ? summary : new IndexBuildSummary(false));
+        initializeIndices(entity, summary != null ? summary : new IndexBuildSummary(false))
     }
 
     private void initializeIndices(final PersistentEntity entity, final IndexBuildSummary summary) {
-        final com.mongodb.client.MongoCollection<Document> collection = getCollection(entity);
-        final ExistingIndexes existingIndexes = summary.existingIndexesOf(collection);
-        for (IndexDeclaration declaration : declaredIndexes(entity)) {
+        final com.mongodb.client.MongoCollection<Document> collection = getCollection(entity)
+        final ExistingIndexes existingIndexes = summary.existingIndexesOf(collection)
+        for (IndexDeclaration declaration in declaredIndexes(entity)) {
             createOrUpdateIndex(entity, collection, declaration.keys(), declaration.options(),
-                    declaration.descriptor(), summary, existingIndexes);
+                    declaration.descriptor(), summary, existingIndexes)
         }
     }
 
@@ -1882,63 +1870,64 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
      * An index a domain class declares: its key pattern, the options it is built with and how the build's
      * log lines name it.
      */
-    private record IndexDeclaration(Document keys, Map<String, Object> options, String descriptor) {
+    private static record IndexDeclaration(Document keys, Map<String, Object> options, String descriptor) {
+
     }
 
     /**
      * The indexes an entity's mapping declares, in the order the build applies them: its {@code index}
      * entries, its {@code compoundIndex} entries, then each property mapped with {@code index: true}.
      */
-    @SuppressWarnings({"rawtypes", "unchecked"})
+    @SuppressWarnings(['rawtypes', 'unchecked'])
     private List<IndexDeclaration> declaredIndexes(final PersistentEntity entity) {
-        List<IndexDeclaration> declarations = new ArrayList<>();
-        final ClassMapping<MongoCollection> classMapping = entity.getMapping();
+        List<IndexDeclaration> declarations = new ArrayList<>()
+        final ClassMapping<MongoCollection> classMapping = (ClassMapping<MongoCollection>) entity.getMapping()
         if (classMapping != null) {
-            final MongoCollection mappedForm = classMapping.getMappedForm();
+            final MongoCollection mappedForm = classMapping.getMappedForm()
             if (mappedForm != null) {
-                List<MongoCollection.Index> indices = mappedForm.getIndices();
+                List<MongoCollection.Index> indices = mappedForm.getIndices()
                 for (MongoCollection.Index index : indices) {
                     declarations.add(new IndexDeclaration(new Document(index.getDefinition()), index.getOptions(),
-                            "with definition [" + index.getDefinition() + "]"));
+                            'with definition [' + index.getDefinition() + ']'))
                 }
 
-                for (Map compoundIndex : mappedForm.getCompoundIndices()) {
+                for (Map compoundIndex in mappedForm.getCompoundIndices()) {
                     // A copy, because the declaration is shared: every connection builds from the same
                     // mapping, and taking the attributes out of the original would leave the next build
                     // an index with none.
-                    Map declaration = new LinkedHashMap(compoundIndex);
-                    Object attributes = declaration.remove(INDEX_ATTRIBUTES);
-                    Map indexAttributes = attributes instanceof Map ? (Map) attributes : null;
-                    Document indexDef = new Document(declaration);
+                    Map declaration = new LinkedHashMap(compoundIndex)
+                    Object attributes = declaration.remove(INDEX_ATTRIBUTES)
+                    Map indexAttributes = attributes instanceof Map ? (Map) attributes : null
+                    Document indexDef = new Document(declaration)
                     declarations.add(new IndexDeclaration(indexDef, indexAttributes,
-                            "compound index with definition [" + indexDef + "]"));
+                            'compound index with definition [' + indexDef + ']'))
                 }
             }
         }
 
         for (PersistentProperty<MongoAttribute> property : entity.getPersistentProperties()) {
-            final boolean indexed = isIndexed(property);
+            final boolean indexed = isIndexed(property)
 
             if (indexed) {
-                final MongoAttribute mongoAttributeMapping = property.getMapping().getMappedForm();
-                Document dbObject = new Document();
-                final String fieldName = getMongoFieldNameForProperty(property);
-                dbObject.put(fieldName, 1);
-                Document options = new Document();
+                final MongoAttribute mongoAttributeMapping = property.getMapping().getMappedForm()
+                Document dbObject = new Document()
+                final String fieldName = getMongoFieldNameForProperty(property)
+                dbObject.put(fieldName, 1)
+                Document options = new Document()
                 if (mongoAttributeMapping != null) {
-                    Map attributes = mongoAttributeMapping.getIndexAttributes();
+                    Map attributes = mongoAttributeMapping.getIndexAttributes()
                     if (attributes != null) {
-                        attributes = new HashMap(attributes);
+                        attributes = new HashMap(attributes)
                         if (attributes.containsKey(MongoAttribute.INDEX_TYPE)) {
-                            dbObject.put(fieldName, attributes.remove(MongoAttribute.INDEX_TYPE));
+                            dbObject.put(fieldName, attributes.remove(MongoAttribute.INDEX_TYPE))
                         }
-                        options.putAll(attributes);
+                        options.putAll(attributes)
                     }
                 }
-                declarations.add(new IndexDeclaration(dbObject, options, "on property [" + property.getName() + "]"));
+                declarations.add(new IndexDeclaration(dbObject, options, 'on property [' + property.getName() + ']'))
             }
         }
-        return declarations;
+        return declarations
     }
 
     /**
@@ -1962,60 +1951,60 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
                                      com.mongodb.client.MongoCollection<Document> collection,
                                      Document keys, Map<String, Object> rawOptions, String descriptor,
                                      IndexBuildSummary summary, ExistingIndexes existingIndexes) {
-        Map<String, Object> options = rawOptions != null ? new HashMap<>(rawOptions) : new HashMap<>();
+        Map<String, Object> options = rawOptions != null ? new HashMap<>(rawOptions) : new HashMap<>()
 
         // Control flag — not a Mongo index option.
-        boolean recreateOnConflict = Boolean.TRUE.equals(options.remove(INDEX_RECREATE_ON_CONFLICT));
+        boolean recreateOnConflict = Boolean.TRUE.equals(options.remove(INDEX_RECREATE_ON_CONFLICT))
 
-        Long expireAfterSeconds = null;
-        Object ttl = options.remove(INDEX_EXPIRE_AFTER_SECONDS);
+        Long expireAfterSeconds = null
+        Object ttl = options.remove(INDEX_EXPIRE_AFTER_SECONDS)
         if (ttl instanceof Number) {
-            expireAfterSeconds = ((Number) ttl).longValue();
+            expireAfterSeconds = ((Number) ttl).longValue()
         }
 
-        final IndexOptions indexOptions = MongoConstants.mapToObject(IndexOptions.class, options);
+        final IndexOptions indexOptions = MongoConstants.mapToObject(IndexOptions, options)
         if (expireAfterSeconds != null) {
-            indexOptions.expireAfter(expireAfterSeconds, TimeUnit.SECONDS);
+            indexOptions.expireAfter(expireAfterSeconds, TimeUnit.SECONDS)
         }
 
         // Asked before the index is created, while the answer still means something.
-        Boolean present = existingIndexes.contains(keys);
-        long startedAt = System.nanoTime();
+        Boolean present = existingIndexes.contains(keys)
+        long startedAt = System.nanoTime()
         try {
-            String indexName = collection.createIndex(keys, indexOptions);
-            existingIndexes.record(keys, indexName, expireAfterSeconds);
+            String indexName = collection.createIndex(keys, indexOptions)
+            existingIndexes.record(keys, indexName, expireAfterSeconds)
             if (present == null) {
-                summary.unclassified++;
+                summary.unclassified++
             }
             else if (present) {
-                summary.alreadyPresent++;
+                summary.alreadyPresent++
             }
             else {
-                summary.created++;
+                summary.created++
             }
             // Unclassified, nothing says whether the index was new, so the line does not claim either.
-            String applied = present == null ? "Applied" : present ? "Confirmed" : "Created";
-            LOG.debug("{} index for entity [{}] {} in {}ms", applied,
-                    entity.getName(), descriptor, TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startedAt));
+            String applied = present == null ? 'Applied' : present ? 'Confirmed' : 'Created'
+            LOG.debug('{} index for entity [{}] {} in {}ms', applied,
+                    entity.getName(), descriptor, TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startedAt))
         } catch (MongoCommandException e) {
             if (e.getErrorCode() == INDEX_OPTIONS_CONFLICT_CODE || e.getErrorCode() == INDEX_KEY_SPECS_CONFLICT_CODE) {
                 Reconciliation reconciliation = reconcileIndexConflict(entity, collection, existingIndexes, keys,
-                        indexOptions, expireAfterSeconds, recreateOnConflict, descriptor, e);
+                        indexOptions, expireAfterSeconds, recreateOnConflict, descriptor, e)
                 if (reconciliation == Reconciliation.UPDATED) {
                     // An index was already on these keys and was changed in place rather than added.
-                    summary.alreadyPresent++;
+                    summary.alreadyPresent++
                 }
                 else if (reconciliation == Reconciliation.RECREATED) {
                     // Counted apart: a rebuild costs as much as a new index, whatever was there before.
-                    summary.recreated++;
+                    summary.recreated++
                 }
                 else {
-                    summary.failures++;
+                    summary.failures++
                 }
             } else {
-                summary.failures++;
-                LOG.error("Failed to create index for entity [{}] {}: {}",
-                    entity.getName(), descriptor, e.getMessage(), e);
+                summary.failures++
+                LOG.error('Failed to create index for entity [{}] {}: {}',
+                        entity.getName(), descriptor, e.getMessage(), e)
             }
         } catch (MongoServerException e) {
             // A unique index over documents that already share a value, which the driver reports as a
@@ -2023,16 +2012,16 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
             // Anything else here, such as a write concern the server could not satisfy, says nothing about the
             // declaration and leaves unknown whether it was applied, so it stops the build.
             if (!isDuplicateKey(e)) {
-                throw e;
+                throw e
             }
-            summary.failures++;
-            LOG.error("Failed to create index for entity [{}] {}: {}",
-                entity.getName(), descriptor, e.getMessage(), e);
+            summary.failures++
+            LOG.error('Failed to create index for entity [{}] {}: {}',
+                    entity.getName(), descriptor, e.getMessage(), e)
         }
     }
 
     private static boolean isDuplicateKey(MongoServerException e) {
-        return e instanceof DuplicateKeyException || ErrorCategory.fromErrorCode(e.getCode()) == ErrorCategory.DUPLICATE_KEY;
+        return e instanceof DuplicateKeyException || ErrorCategory.fromErrorCode(e.getCode()) == ErrorCategory.DUPLICATE_KEY
     }
 
     /**
@@ -2051,153 +2040,154 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
                                         boolean recreateOnConflict, String descriptor, MongoCommandException original) {
         // Listed afresh: the index the server just reported may not have existed when this collection was
         // first listed - another instance or another connection can have created it since.
-        List<Document> indexes = existingIndexes.refresh();
+        List<Document> indexes = existingIndexes.refresh()
         if (indexes == null) {
             // The reason the listing failed, which is what an operator can act on - often a missing
             // listIndexes privilege - with the conflict that made it matter attached.
-            LOG.error("Failed to create index for entity [{}] {} and could not inspect existing indexes: {}",
-                entity.getName(), descriptor, existingIndexes.listingFailure.getMessage(), original);
-            return Reconciliation.FAILED;
+            LOG.error('Failed to create index for entity [{}] {} and could not inspect existing indexes: {}',
+                entity.getName(), descriptor, existingIndexes.listingFailure.getMessage(), original)
+            return Reconciliation.FAILED
         }
-        Document existing = findIndexByKeyPattern(indexes, keys);
+        Document existing = findIndexByKeyPattern(indexes, keys)
         // An IndexKeySpecsConflict names no index on these keys: the declared name belongs to one on other keys.
-        boolean nameTaken = false;
+        boolean nameTaken = false
         if (existing == null && desired.getName() != null) {
-            existing = findIndexByName(indexes, desired.getName());
-            nameTaken = existing != null;
+            existing = findIndexByName(indexes, desired.getName())
+            nameTaken = existing != null
         }
         if (existing == null) {
-            LOG.error("Failed to create index for entity [{}] {}: {}",
-                entity.getName(), descriptor, original.getMessage(), original);
-            return Reconciliation.FAILED;
+            LOG.error('Failed to create index for entity [{}] {}: {}',
+                entity.getName(), descriptor, original.getMessage(), original)
+            return Reconciliation.FAILED
         }
 
-        String existingName = existing.getString("name");
-        Object existingTtl = existing.get(INDEX_EXPIRE_AFTER_SECONDS);
-        Long existingTtlSeconds = existingTtl instanceof Number ? ((Number) existingTtl).longValue() : null;
+        String existingName = existing.getString('name')
+        Object existingTtl = existing.get(INDEX_EXPIRE_AFTER_SECONDS)
+        Long existingTtlSeconds = existingTtl instanceof Number ? ((Number) existingTtl).longValue() : null
 
         // TTL change on an existing index — update in place, no rebuild, no gap. An index that merely holds the
         // name is a different index, so its expiry is not the declared one to update.
-        boolean ttlChange = !nameTaken && expireAfterSeconds != null && !expireAfterSeconds.equals(existingTtlSeconds);
+        boolean ttlChange = !nameTaken && expireAfterSeconds != null && !expireAfterSeconds.equals(existingTtlSeconds)
         if (ttlChange) {
             try {
                 getMongoClient().getDatabase(getDatabaseName(entity))
-                        .runCommand(new Document("collMod", getCollectionName(entity))
-                                .append("index", new Document("name", existingName)
-                                        .append(INDEX_EXPIRE_AFTER_SECONDS, expireAfterSeconds)));
-                existingIndexes.record(keys, existingName, expireAfterSeconds);
-                LOG.info("Updated TTL of index [{}] on entity [{}] to {}s",
-                    existingName, entity.getName(), expireAfterSeconds);
-                return Reconciliation.UPDATED;
+                        .runCommand(new Document('collMod', getCollectionName(entity))
+                                .append('index', new Document('name', existingName)
+                                        .append(INDEX_EXPIRE_AFTER_SECONDS, expireAfterSeconds)))
+                existingIndexes.record(keys, existingName, expireAfterSeconds)
+                LOG.info('Updated TTL of index [{}] on entity [{}] to {}s',
+                    existingName, entity.getName(), expireAfterSeconds)
+                return Reconciliation.UPDATED
             } catch (MongoCommandException collModError) {
                 // collMod can't make every change (e.g. add a TTL to a non-TTL index on older
                 // servers) — fall through to recreate (if authorised) rather than fail outright.
-                LOG.warn("collMod TTL update failed for index [{}] on entity [{}]: {}{}",
-                    existingName, entity.getName(), collModError.getMessage(), recreateOnConflict ? " — recreating" : "");
+                LOG.warn('collMod TTL update failed for index [{}] on entity [{}]: {}{}',
+                        existingName, entity.getName(), collModError.getMessage(), recreateOnConflict ? ' — recreating' : '')
             }
         }
 
         if (recreateOnConflict) {
-            boolean dropped = false;
+            boolean dropped = false
             try {
-                collection.dropIndex(existingName);
-                dropped = true;
-                String indexName = collection.createIndex(keys, desired);
-                existingIndexes.record(keys, indexName, expireAfterSeconds);
-                LOG.info("Recreated index [{}] on entity [{}] {}", existingName, entity.getName(), descriptor);
-                return Reconciliation.RECREATED;
+                collection.dropIndex(existingName)
+                dropped = true
+                String indexName = collection.createIndex(keys, desired)
+                existingIndexes.record(keys, indexName, expireAfterSeconds)
+                LOG.info('Recreated index [{}] on entity [{}] {}', existingName, entity.getName(), descriptor)
+                return Reconciliation.RECREATED
             } catch (MongoServerException recreateError) {
                 if (!(recreateError instanceof MongoCommandException) && !isDuplicateKey(recreateError)) {
                     if (dropped) {
-                        LOG.warn("Dropped index [{}] on entity [{}] to recreate it {}, but the server did not confirm " +
-                                "the new one, so whether it was built is not known: {}",
-                            existingName, entity.getName(), descriptor, recreateError.getMessage());
+                        LOG.warn('Dropped index [{}] on entity [{}] to recreate it {}, but the server did not confirm ' +
+                                'the new one, so whether it was built is not known: {}',
+                            existingName, entity.getName(), descriptor, recreateError.getMessage())
                     }
-                    throw recreateError;
+                    throw recreateError
                 }
                 if (!dropped) {
-                    LOG.error("Failed to recreate index [{}] on entity [{}] {}: {}",
-                        existingName, entity.getName(), descriptor, recreateError.getMessage(), recreateError);
-                    return Reconciliation.FAILED;
+                    LOG.error('Failed to recreate index [{}] on entity [{}] {}: {}',
+                        existingName, entity.getName(), descriptor, recreateError.getMessage(), recreateError)
+                    return Reconciliation.FAILED
                 }
                 // Listed again, so that a later declaration on these keys is not counted as already present.
-                existingIndexes.refresh();
-                LOG.error("Dropped index [{}] on entity [{}] to recreate it {}, but it could not be built again: {}. " +
-                        "The collection has no index on these keys until the cause is fixed and the index built.",
-                    existingName, entity.getName(), descriptor, recreateError.getMessage(), recreateError);
-                return Reconciliation.FAILED;
+                existingIndexes.refresh()
+                LOG.error('Dropped index [{}] on entity [{}] to recreate it {}, but it could not be built again: {}. ' +
+                        'The collection has no index on these keys until the cause is fixed and the index built.',
+                    existingName, entity.getName(), descriptor, recreateError.getMessage(), recreateError)
+                return Reconciliation.FAILED
             }
         }
 
         if (nameTaken) {
             LOG.error(
-                "Index conflict for entity [{}] {}: the name [{}] is taken by an index on different keys. " +
-                    "Declare indexAttributes:[recreateOnConflict:true] to drop and recreate it, or declare another " +
-                    "name. Original error: {}",
-                entity.getName(), descriptor, existingName, original.getMessage());
+                'Index conflict for entity [{}] {}: the name [{}] is taken by an index on different keys. ' +
+                    'Declare indexAttributes:[recreateOnConflict:true] to drop and recreate it, or declare another ' +
+                    'name. Original error: {}',
+                entity.getName(), descriptor, existingName, original.getMessage())
         }
         else {
             LOG.error(
-                "Index conflict for entity [{}] {}: an index [{}] already exists on the same keys with different options. " +
-                    "Declare indexAttributes:[recreateOnConflict:true] to drop and recreate it. Original error: {}",
-                entity.getName(), descriptor, existingName, original.getMessage());
+                'Index conflict for entity [{}] {}: an index [{}] already exists on the same keys with different options. ' +
+                    'Declare indexAttributes:[recreateOnConflict:true] to drop and recreate it. Original error: {}',
+                entity.getName(), descriptor, existingName, original.getMessage())
         }
-        return Reconciliation.FAILED;
+        return Reconciliation.FAILED
     }
 
     /**
      * Find an existing index by name, or {@code null} if none has it.
      */
     private static Document findIndexByName(Iterable<Document> indexes, String name) {
-        for (Document index : indexes) {
-            if (name.equals(index.getString("name"))) {
-                return index;
+        for (Document index in indexes) {
+            if (name.equals(index.getString('name'))) {
+                return index
             }
         }
-        return null;
+        return null
     }
 
     /**
      * Find an existing index whose key pattern matches the given keys, or {@code null} if none.
      */
     private static Document findIndexByKeyPattern(Iterable<Document> indexes, Document keys) {
-        for (Document idx : indexes) {
-            if (idx.get("key") instanceof Document key && matchesDeclaration(key, keys)) {
-                return idx;
+        for (Document idx in indexes) {
+            Object key = idx.get('key')
+            if (key instanceof Document && matchesDeclaration((Document) key, keys)) {
+                return idx
             }
         }
-        return null;
+        return null
     }
 
     /**
      * Whether any of the indexes the server listed is the one a declaration describes, as the reports compare them.
      */
     private static boolean isListed(Document declaredKeys, List<Document> indexes) {
-        for (Document index : indexes) {
+        for (Document index in indexes) {
             if (describes(declaredKeys, index)) {
-                return true;
+                return true
             }
         }
-        return false;
+        return false
     }
 
     /**
      * Whether a declaration describes the same index as one of the others, as the reports compare them.
      */
     private static boolean isAmong(Document declaredKeys, List<Document> others) {
-        for (Document other : others) {
+        for (Document other in others) {
             if (sameDeclaredIndex(declaredKeys, other)) {
-                return true;
+                return true
             }
         }
-        return false;
+        return false
     }
 
     private static boolean sameDeclaredIndex(Document declaredKeys, Document other) {
         if (isTextIndex(declaredKeys) && isTextIndex(other)) {
-            return declaredTextKeys(declaredKeys).matches(declaredTextKeys(other));
+            return declaredTextKeys(declaredKeys).matches(declaredTextKeys(other))
         }
-        return sameKeyPattern(declaredKeys, other);
+        return sameKeyPattern(declaredKeys, other)
     }
 
     /**
@@ -2208,41 +2198,45 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
      * them. Their weights are options, so they are not compared.
      */
     private static boolean describes(Document declaredKeys, Document index) {
-        if (!(index.get("key") instanceof Document key)) {
-            return false;
+        Object keyValue = index.get('key')
+        if (!(keyValue instanceof Document)) {
+            return false
         }
+        Document key = (Document) keyValue
         if (isTextIndex(declaredKeys) && key.containsKey(TEXT_INDEX_KEY)) {
-            return index.get("weights") instanceof Document weights &&
-                    declaredTextKeys(declaredKeys).matches(listedTextKeys(key, weights));
+            Object weights = index.get('weights')
+            return weights instanceof Document &&
+                    declaredTextKeys(declaredKeys).matches(listedTextKeys(key, (Document) weights))
         }
-        return sameKeyPattern(key, declaredKeys);
+        return sameKeyPattern(key, declaredKeys)
     }
 
     /**
      * A text index's keys as the reports compare them: the keys before its text fields, the text fields
      * themselves, in any order, and the keys after them.
      */
-    private record TextKeys(Document before, Set<String> fields, Document after) {
+    private static record TextKeys(Document before, Set<String> fields, Document after) {
 
         boolean matches(TextKeys other) {
-            return fields.equals(other.fields) && sameKeyPattern(before, other.before) &&
-                    sameKeyPattern(after, other.after);
+            return fields == other.fields && sameKeyPattern(before, other.before) &&
+                    sameKeyPattern(after, other.after)
         }
+
     }
 
     private static TextKeys declaredTextKeys(Document keys) {
-        Document before = new Document();
-        Document after = new Document();
-        Set<String> fields = new LinkedHashSet<>();
-        for (Map.Entry<String, Object> entry : keys.entrySet()) {
-            if ("text".equals(entry.getValue())) {
-                fields.add(entry.getKey());
+        Document before = new Document()
+        Document after = new Document()
+        Set<String> fields = new LinkedHashSet<>()
+        for (Map.Entry<String, Object> entry in keys.entrySet()) {
+            if ('text'.equals(entry.getValue())) {
+                fields.add(entry.getKey())
             }
             else {
-                (fields.isEmpty() ? before : after).append(entry.getKey(), entry.getValue());
+                (fields.isEmpty() ? before : after).append(entry.getKey(), entry.getValue())
             }
         }
-        return new TextKeys(before, fields, after);
+        return new TextKeys(before, fields, after)
     }
 
     /**
@@ -2250,18 +2244,18 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
      * fields were declared and whose {@code weights} name them.
      */
     private static TextKeys listedTextKeys(Document key, Document weights) {
-        Document before = new Document();
-        Document after = new Document();
-        boolean pastText = false;
-        for (Map.Entry<String, Object> entry : key.entrySet()) {
+        Document before = new Document()
+        Document after = new Document()
+        boolean pastText = false
+        for (Map.Entry<String, Object> entry in key.entrySet()) {
             if (TEXT_INDEX_KEY.equals(entry.getKey()) || TEXT_INDEX_TERM_KEY.equals(entry.getKey())) {
-                pastText = true;
+                pastText = true
             }
             else {
-                (pastText ? after : before).append(entry.getKey(), entry.getValue());
+                (pastText ? after : before).append(entry.getKey(), entry.getValue())
             }
         }
-        return new TextKeys(before, new LinkedHashSet<>(weights.keySet()), after);
+        return new TextKeys(before, new LinkedHashSet<>(weights.keySet()), after)
     }
 
     /**
@@ -2277,9 +2271,9 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
      */
     private static boolean matchesDeclaration(Document existingKey, Document declaredKeys) {
         if (isTextIndex(declaredKeys) && isTextIndex(existingKey)) {
-            return true;
+            return true
         }
-        return sameKeyPattern(existingKey, declaredKeys);
+        return sameKeyPattern(existingKey, declaredKeys)
     }
 
     /**
@@ -2288,14 +2282,14 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
      */
     private static boolean isTextIndex(Document key) {
         if (key.containsKey(TEXT_INDEX_KEY)) {
-            return true;
+            return true
         }
         for (Object v : key.values()) {
-            if ("text".equals(v)) {
-                return true;
+            if ('text' == v) {
+                return true
             }
         }
-        return false;
+        return false
     }
 
     /**
@@ -2304,48 +2298,49 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
      */
     private static boolean sameKeyPattern(Document existingKey, Document desiredKey) {
         if (existingKey.size() != desiredKey.size()) {
-            return false;
+            return false
         }
-        Iterator<Map.Entry<String, Object>> existing = existingKey.entrySet().iterator();
-        for (Map.Entry<String, Object> desired : desiredKey.entrySet()) {
-            Map.Entry<String, Object> actual = existing.next();
+        Iterator<Map.Entry<String, Object>> existing = existingKey.entrySet().iterator()
+        for (Map.Entry<String, Object> desired in desiredKey.entrySet()) {
+            Map.Entry<String, Object> actual = existing.next()
             if (!actual.getKey().equals(desired.getKey())) {
-                return false;
+                return false
             }
-            Object a = actual.getValue();
-            Object b = desired.getValue();
+            Object a = actual.getValue()
+            Object b = desired.getValue()
             if (a instanceof Number && b instanceof Number) {
                 if (((Number) a).doubleValue() != ((Number) b).doubleValue()) {
-                    return false;
+                    return false
                 }
             } else if (!Objects.equals(a, b)) {
-                return false;
+                return false
             }
         }
-        return true;
+        return true
     }
 
+    @PackageScope
     String getMongoFieldNameForProperty(PersistentProperty<MongoAttribute> property) {
-        PropertyMapping<MongoAttribute> pm = property.getMapping();
-        String propKey = null;
+        PropertyMapping<MongoAttribute> pm = property.getMapping()
+        String propKey = null
         if (pm.getMappedForm() != null) {
-            propKey = pm.getMappedForm().getField();
+            propKey = pm.getMappedForm().getField()
         }
         if (propKey == null) {
-            propKey = property.getName();
+            propKey = property.getName()
         }
-        return propKey;
+        return propKey
     }
 
-    public void persistentEntityAdded(PersistentEntity entity) {
+    void persistentEntityAdded(PersistentEntity entity) {
         // GORM indexing a domain class registered after startup by itself, so it follows the setting.
         if (!buildIndexes) {
-            LOG.debug("Index creation is disabled for connection [{}] by [{} = false]. Skipping the indexes declared " +
-                    "by entity [{}].", connectionName(), buildIndexesSettingName(), entity.getName());
-            return;
+            LOG.debug('Index creation is disabled for connection [{}] by [{} = false]. Skipping the indexes declared ' +
+                    'by entity [{}].', connectionName(), buildIndexesSettingName(), entity.getName())
+            return
         }
         if (!isIndexedHere(entity)) {
-            return;
+            return
         }
         synchronized (lifecycleMonitor) {
             if (!running) {
@@ -2353,19 +2348,19 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
                 // start() builds the indexes of every entity registered by then, this one included; a datastore that
                 // has started before builds this connection's again when it is started.
                 if (started) {
-                    startupBuildDone = false;
+                    startupBuildDone = false
                 }
-                return;
+                return
             }
             // After any build running on this connection, as every build on it is: two at once could each drop
             // and recreate the same index. Taken inside the lifecycle monitor, as start() takes it for the build
             // on its own thread.
-            lockIndexBuild();
+            lockIndexBuild()
             try {
-                initializeIndices(entity);
+                initializeIndices(entity)
             }
             finally {
-                indexBuildLock.unlock();
+                indexBuildLock.unlock()
             }
         }
     }
@@ -2375,48 +2370,48 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
      * {@code EmbeddedMongoLifecycle.PHASE} so an embedded server outlives this client:
      * Spring starts in ascending phase order and stops in descending.
      */
-    public static final int LIFECYCLE_PHASE = -1000;
+    public static final int LIFECYCLE_PHASE = -1000
 
-    private volatile boolean running;
+    private volatile boolean running
 
     /**
      * Set once {@link #start()} has connected the datastore and built its indexes for the first time, after which
      * using the datastore no longer starts it.
      */
-    private volatile boolean started;
+    private volatile boolean started
 
     /**
      * Set by {@link #stop()} and cleared by {@link #start()}. A stopped datastore is started again only by a call to
      * {@link #start()}, never by being used, and a connection added while it is stopped is stopped too.
      */
-    private volatile boolean stopped;
+    private volatile boolean stopped
 
     /**
      * Set while the first start is under way, so that a session it opens does not start it again.
      */
-    private boolean starting;
+    private boolean starting
 
-    private final Object lifecycleMonitor = new Object();
+    private final Object lifecycleMonitor = new Object()
 
     /**
      * Set on each datastore whose client {@link #stop()} stopped or closed, so that {@link #start()} brings back
      * exactly those.
      */
-    private volatile boolean clientStopped;
+    private volatile boolean clientStopped
 
     /**
      * Set on each datastore, this one and the one for each connection, once the index build {@link #start()} runs for
      * it has finished, or been handed to its thread. A connection added while the datastore is stopped, or while it
      * starts, has not had one, and the next pass of {@link #start()} runs it.
      */
-    private volatile boolean startupBuildDone;
+    private volatile boolean startupBuildDone
 
     /**
      * Stops the {@link MongoClient} of every connection, so the process can be checkpointed.
      *
      * <p>CRaC refuses to checkpoint a process holding open sockets, and a connected driver
-     * holds one per pooled connection plus its server monitors. Closing the driver client shuts
-     * the monitor threads down and releases every socket, which nothing else in the driver
+     * holds one per pooled connection plus its server monitors. Closing the driver client shuts the
+     * monitor threads down and releases every socket, which nothing else in the driver
      * offers: draining the pool leaves the monitors connected. Each connection declared under
      * {@code grails.mongodb.connections}, or added at runtime, has a client of its own, and
      * each is stopped.
@@ -2438,26 +2433,26 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
      * rather than left to fail against a closed client, and {@link #start()} runs it again.
      */
     @Override
-    public void stop() {
+    void stop() {
         synchronized (this.lifecycleMonitor) {
-            this.stopped = true;
-            List<MongoDatastore> datastores = datastoresAndChildren();
-            List<MongoDatastore> owningTheirClient = new ArrayList<>();
-            for (MongoDatastore datastore : datastores) {
+            this.stopped = true
+            List<MongoDatastore> datastores = datastoresAndChildren()
+            List<MongoDatastore> owningTheirClient = new ArrayList<>()
+            for (MongoDatastore datastore in datastores) {
                 if (datastore.ownsClient()) {
-                    owningTheirClient.add(datastore);
+                    owningTheirClient.add(datastore)
                 }
             }
             if (owningTheirClient.isEmpty()) {
-                return;
+                return
             }
-            for (MongoDatastore datastore : datastores) {
-                datastore.stopIndexBuild();
+            for (MongoDatastore datastore in datastores) {
+                datastore.stopIndexBuild()
             }
-            for (MongoDatastore datastore : owningTheirClient) {
-                datastore.stopClient();
+            for (MongoDatastore datastore in owningTheirClient) {
+                datastore.stopClient()
             }
-            this.running = false;
+            this.running = false
         }
     }
 
@@ -2488,22 +2483,22 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
      * thread, from an index build hook, is taken up by another pass before this returns.
      */
     @Override
-    public void start() {
+    void start() {
         synchronized (this.lifecycleMonitor) {
             if (this.running) {
-                return;
+                return
             }
-            this.stopped = false;
-            this.starting = true;
+            this.stopped = false
+            this.starting = true
             try {
-                startConnections();
+                startConnections()
                 // Only once every build has finished, or been handed to its thread: one that failed is tried again
                 // by the next start, or by the next use of a datastore that has never started.
-                this.started = true;
-                this.running = true;
+                this.started = true
+                this.running = true
             }
             finally {
-                this.starting = false;
+                this.starting = false
             }
         }
     }
@@ -2514,11 +2509,11 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
      */
     void ensureStarted() {
         if (this.started || this.closed || this.stopped) {
-            return;
+            return
         }
         synchronized (this.lifecycleMonitor) {
             if (!this.started && !this.closed && !this.stopped && !this.starting) {
-                start();
+                start()
             }
         }
     }
@@ -2528,35 +2523,35 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
      * datastore it has not already seen: an index build hook can register a connection while this runs.
      */
     private void startConnections() {
-        ConnectionSourceFactory<MongoClient, MongoConnectionSourceSettings> factory = connectionSources.getFactory();
-        Set<MongoDatastore> seen = Collections.newSetFromMap(new IdentityHashMap<>());
-        List<MongoDatastore> pass = datastoresAndChildren();
+        ConnectionSourceFactory<MongoClient, MongoConnectionSourceSettings> factory = connectionSources.getFactory()
+        Set<MongoDatastore> seen = Collections.newSetFromMap(new IdentityHashMap<MongoDatastore, Boolean>())
+        List<MongoDatastore> pass = datastoresAndChildren()
         while (!pass.isEmpty()) {
-            seen.addAll(pass);
-            for (MongoDatastore datastore : pass) {
-                datastore.startClient(factory, datastore == this);
+            seen.addAll(pass)
+            for (MongoDatastore datastore in pass) {
+                datastore.startClient(factory, datastore == this)
             }
-            for (MongoDatastore datastore : pass) {
+            for (MongoDatastore datastore in pass) {
                 // Before either build: one submitted to the executor stop() shut down would be put off as
                 // though the datastore were still stopped.
-                datastore.replaceStoppedIndexBuildExecutor();
+                datastore.replaceStoppedIndexBuildExecutor()
                 if (!datastore.startupBuildDone) {
                     if (datastore.buildIndexes) {
                         // The full build does whatever a build cut short, or requested while stopped, would have.
-                        datastore.indexBuildPending = false;
+                        datastore.indexBuildPending = false
                     }
-                    datastore.buildIndexAutomatically();
-                    datastore.startupBuildDone = true;
+                    datastore.buildIndexAutomatically()
+                    datastore.startupBuildDone = true
                 }
-                datastore.runPendingIndexBuild();
+                datastore.runPendingIndexBuild()
             }
-            List<MongoDatastore> next = new ArrayList<>();
-            for (MongoDatastore datastore : datastoresAndChildren()) {
+            List<MongoDatastore> next = new ArrayList<>()
+            for (MongoDatastore datastore in datastoresAndChildren()) {
                 if (!seen.contains(datastore)) {
-                    next.add(datastore);
+                    next.add(datastore)
                 }
             }
-            pass = next;
+            pass = next
         }
     }
 
@@ -2565,16 +2560,16 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
      */
     private void startClient(ConnectionSourceFactory<MongoClient, MongoConnectionSourceSettings> factory, boolean defaultConnection) {
         if (this.clientStopped) {
-            if (this.mongo instanceof RestartableMongoClient restartable) {
-                restartable.start();
+            if (this.mongo instanceof RestartableMongoClient) {
+                ((RestartableMongoClient) this.mongo).start()
             }
             else {
-                replaceClient(factory, defaultConnection);
+                replaceClient(factory, defaultConnection)
             }
-            this.clientStopped = false;
+            this.clientStopped = false
         }
-        else if (ownsClient() && this.mongo instanceof RestartableMongoClient restartable) {
-            restartable.start();
+        else if (ownsClient() && this.mongo instanceof RestartableMongoClient) {
+            ((RestartableMongoClient) this.mongo).start()
         }
     }
 
@@ -2583,13 +2578,13 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
      * until it is started again, and any other is closed, for {@link #start()} to replace.
      */
     private void stopClient() {
-        if (this.mongo instanceof RestartableMongoClient restartable) {
-            restartable.stop();
+        if (this.mongo instanceof RestartableMongoClient) {
+            ((RestartableMongoClient) this.mongo).stop()
         }
         else {
-            this.mongo.close();
+            this.mongo.close()
         }
-        this.clientStopped = true;
+        this.clientStopped = true
     }
 
     /**
@@ -2598,43 +2593,43 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
      * the configuration.
      */
     private void replaceClient(ConnectionSourceFactory<MongoClient, MongoConnectionSourceSettings> factory, boolean defaultConnection) {
-        ConnectionSource<MongoClient, MongoConnectionSourceSettings> own = connectionSources.getDefaultConnectionSource();
+        ConnectionSource<MongoClient, MongoConnectionSourceSettings> own = connectionSources.getDefaultConnectionSource()
         MongoClient replacement = defaultConnection ?
                 factory.create(ConnectionSource.DEFAULT, connectionSources.getBaseConfiguration()).getSource() :
-                factory.create(own.getName(), own.getSettings()).getSource();
+                factory.create(own.getName(), own.getSettings()).getSource()
         if (own instanceof MongoConnectionSource) {
-            ((MongoConnectionSource) own).replaceSource(replacement);
+            ((MongoConnectionSource) own).replaceSource(replacement)
         }
         else {
             // Only the connection source the factory creates can be given the replacement. A custom factory's
             // own kind cannot, so whatever reads the client from it, rather than from the datastore, would go on
             // using the one that was closed.
-            LOG.warn("The connection source for [{}] is a {}, which cannot be given the client built for the " +
-                    "restore, so it still hands out the one that was closed. A connection source factory whose " +
-                    "clients outlive a restore should wrap each in a {}, or return a {}.", own.getName(),
-                    own.getClass().getSimpleName(), RestartableMongoClient.class.getSimpleName(),
-                    MongoConnectionSource.class.getSimpleName());
+            LOG.warn('The connection source for [{}] is a {}, which cannot be given the client built for the ' +
+                    'restore, so it still hands out the one that was closed. A connection source factory whose ' +
+                    'clients outlive a restore should wrap each in a {}, or return a {}.', own.getName(),
+                    own.getClass().getSimpleName(), RestartableMongoClient.getSimpleName(),
+                    MongoConnectionSource.getSimpleName())
         }
-        this.mongo = replacement;
+        this.mongo = replacement
     }
 
     /**
      * This datastore followed by the per-connection children, which have no lifecycle of their own.
      */
     private List<MongoDatastore> datastoresAndChildren() {
-        List<MongoDatastore> datastores = new ArrayList<>();
-        datastores.add(this);
-        for (MongoDatastore datastore : datastoresByConnectionSource.values()) {
+        List<MongoDatastore> datastores = new ArrayList<>()
+        datastores.add(this)
+        for (MongoDatastore datastore in datastoresByConnectionSource.values()) {
             if (datastore != this) {
-                datastores.add(datastore);
+                datastores.add(datastore)
             }
         }
-        return datastores;
+        return datastores
     }
 
     private void stopIndexBuild() {
         if (shutDownIndexBuild()) {
-            indexBuildPending = true;
+            indexBuildPending = true
         }
     }
 
@@ -2644,23 +2639,23 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
      * have exited first.
      */
     private void replaceStoppedIndexBuildExecutor() {
-        ExecutorService stopped = this.indexBuildExecutor;
+        ExecutorService stopped = this.indexBuildExecutor
         if (!stopped.isShutdown()) {
             // Never shut down: the datastore has not been stopped since it was last started.
-            return;
+            return
         }
         try {
             if (!stopped.awaitTermination(INDEX_BUILD_EXIT_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS)) {
                 // Still running: it may yet finish, but assuming it will not costs only a repeat of work
                 // that is idempotent.
-                indexBuildPending = true;
+                indexBuildPending = true
             }
         }
         catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            indexBuildPending = true;
+            Thread.currentThread().interrupt()
+            indexBuildPending = true
         }
-        this.indexBuildExecutor = newIndexBuildExecutor(connectionSources.getDefaultConnectionSource().getName());
+        this.indexBuildExecutor = newIndexBuildExecutor(connectionSources.getDefaultConnectionSource().getName())
     }
 
     /**
@@ -2668,23 +2663,23 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
      */
     private void runPendingIndexBuild() {
         if (indexBuildPending) {
-            indexBuildPending = false;
-            LOG.info("Resuming the index build for connection [{}] that was pending while the datastore was stopped.",
-                    connectionName());
+            indexBuildPending = false
+            LOG.info('Resuming the index build for connection [{}] that was pending while the datastore was stopped.',
+                    connectionName())
             // On the background thread whatever the setting: only a background build can be cut short, and
             // with the setting off that is one buildIndexAsync() started.
-            submitIndexBuild(null);
+            submitIndexBuild(null)
         }
     }
 
     @Override
-    public boolean isRunning() {
-        return this.running;
+    boolean isRunning() {
+        return this.running
     }
 
     @Override
-    public int getPhase() {
-        return LIFECYCLE_PHASE;
+    int getPhase() {
+        return LIFECYCLE_PHASE
     }
 
     /**
@@ -2692,47 +2687,46 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
      * in by the application.
      */
     private boolean ownsClient() {
-        ConnectionSource<MongoClient, MongoConnectionSourceSettings> source = connectionSources.getDefaultConnectionSource();
-        return !(source instanceof DefaultConnectionSource) || ((DefaultConnectionSource<?, ?>) source).isCloseable();
+        ConnectionSource<MongoClient, MongoConnectionSourceSettings> source = connectionSources.getDefaultConnectionSource()
+        return !(source instanceof DefaultConnectionSource) || ((DefaultConnectionSource) source).isCloseable()
     }
 
     @Override
     @PreDestroy
-    public void close() {
-        List<MongoClient> inUse = new ArrayList<>();
-        for (MongoDatastore datastore : datastoresAndChildren()) {
+    void close() {
+        List<MongoClient> inUse = new ArrayList<>()
+        for (MongoDatastore datastore in datastoresAndChildren()) {
             if (datastore.ownsClient()) {
-                inUse.add(datastore.mongo);
+                inUse.add(datastore.mongo)
             }
         }
         // Set before the children are walked; see the connection sources listener.
-        closed = true;
-        for (MongoDatastore datastore : datastoresAndChildren()) {
-            datastore.closed = true;
-            datastore.shutDownIndexBuild();
+        closed = true
+        for (MongoDatastore datastore in datastoresAndChildren()) {
+            datastore.closed = true
+            datastore.shutDownIndexBuild()
         }
         try {
-            super.destroy();
-        } catch (Exception e) {
+            super.destroy()
+        } catch (Exception ignored) {
             // ignore
         }
         try {
             if (connectionSources != null) {
-                connectionSources.close();
+                connectionSources.close()
             }
             // A connection source other than a MongoConnectionSource closes the client it was built with,
             // which is no longer the one in use once a restore has replaced it. Closing one twice is harmless.
-            for (MongoClient client : inUse) {
-                client.close();
+            for (MongoClient client in inUse) {
+                client.close()
             }
         } catch (IOException e) {
-            LOG.error("There was an error shutting down GORM for an entity: " + e.getMessage(), e);
+            LOG.error('There was an error shutting down GORM for an entity: ' + e.getMessage(), e)
         } finally {
-
             if (gormEnhancer != null) {
                 try {
-                    gormEnhancer.close();
-                } catch (Throwable e) {
+                    gormEnhancer.close()
+                } catch (Throwable ignored) {
                     // Ignore
                 }
             }
@@ -2747,14 +2741,14 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
      */
     private boolean shutDownIndexBuild() {
         // A build already running reports for itself whether it was cut short; one still queued never runs.
-        List<Runnable> queued = this.indexBuildExecutor.shutdownNow();
-        for (Runnable task : queued) {
-            if (task instanceof IndexBuildTask build) {
-                build.notRun("The datastore was stopped or closed before the index build for connection [" +
-                        connectionName() + "] started.");
+        List<Runnable> queued = this.indexBuildExecutor.shutdownNow()
+        for (Runnable task in queued) {
+            if (task instanceof IndexBuildTask) {
+                ((IndexBuildTask) task).notRun('The datastore was stopped or closed before the index build for connection [' +
+                        connectionName() + '] started.')
             }
         }
-        return !queued.isEmpty();
+        return !queued.isEmpty()
     }
 
     /**
@@ -2764,9 +2758,9 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
      * the server finishes an index it has been asked for whether or not a client is still listening.
      */
     private static ExecutorService newIndexBuildExecutor(String connectionName) {
-        CustomizableThreadFactory threadFactory = new CustomizableThreadFactory("gorm-mongo-index-build-" + connectionName + "-");
-        threadFactory.setDaemon(true);
-        return new ThreadPoolExecutor(0, 1, 1, TimeUnit.SECONDS, new LinkedBlockingQueue<>(), threadFactory);
+        CustomizableThreadFactory threadFactory = new CustomizableThreadFactory('gorm-mongo-index-build-' + connectionName + '-')
+        threadFactory.setDaemon(true)
+        return new ThreadPoolExecutor(0, 1, 1, TimeUnit.SECONDS, new LinkedBlockingQueue<>(), threadFactory)
     }
 
     /**
@@ -2788,138 +2782,138 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
         // exactly as they do when GORM creates the client itself. The connection details in them are
         // unused - this client is already connected - so a configured URL is dropped: its database would
         // otherwise take precedence over the mapping context's, which is the one this path always used.
-        MongoConnectionSourceSettings settings = buildConnectionSourceSettings(configuration);
-        settings.url(null);
-        settings.setDatabaseName(mappingContext.getDefaultDatabaseName());
+        MongoConnectionSourceSettings settings = buildConnectionSourceSettings(configuration)
+        settings.url(null)
+        settings.setDatabaseName(mappingContext.getDefaultDatabaseName())
         // One that GORM owns can be replaced after a restore; see start().
         ConnectionSource<MongoClient, MongoConnectionSourceSettings> defaultConnectionSource = closeable ?
                 new MongoConnectionSource(ConnectionSource.DEFAULT, mongoClient, settings) :
-                new DefaultConnectionSource<>(ConnectionSource.DEFAULT, mongoClient, settings, false);
-        return new InMemoryConnectionSources<>(defaultConnectionSource, new MongoConnectionSourceFactory(), configuration);
+                new DefaultConnectionSource<>(ConnectionSource.DEFAULT, mongoClient, settings, false)
+        return new InMemoryConnectionSources<>(defaultConnectionSource, new MongoConnectionSourceFactory(), configuration)
     }
 
     protected static MongoClient createMongoClient(PropertyResolver configuration, MongoClientSettings.Builder mongoOptions, MongoMappingContext mappingContext) {
-        MongoConnectionSourceFactory mongoConnectionSourceFactory = new MongoConnectionSourceFactory();
-        mongoConnectionSourceFactory.setClientOptionsBuilder(mongoOptions);
-        return mongoConnectionSourceFactory.create(ConnectionSource.DEFAULT, configuration).getSource();
+        MongoConnectionSourceFactory mongoConnectionSourceFactory = new MongoConnectionSourceFactory()
+        mongoConnectionSourceFactory.setClientOptionsBuilder(mongoOptions)
+        return mongoConnectionSourceFactory.create(ConnectionSource.DEFAULT, configuration).getSource()
     }
 
     protected static MongoMappingContext createMappingContext(ConnectionSources<MongoClient, MongoConnectionSourceSettings> connectionSources, Class... classes) {
-        ConnectionSource<MongoClient, MongoConnectionSourceSettings> defaultConnectionSource = connectionSources.getDefaultConnectionSource();
-        MongoMappingContext mongoMappingContext = new MongoMappingContext(defaultConnectionSource.getSettings(), classes);
-        configureValidationRegistry(connectionSources.getDefaultConnectionSource().getSettings(), mongoMappingContext);
-        return mongoMappingContext;
+        ConnectionSource<MongoClient, MongoConnectionSourceSettings> defaultConnectionSource = connectionSources.getDefaultConnectionSource()
+        MongoMappingContext mongoMappingContext = new MongoMappingContext(defaultConnectionSource.getSettings(), classes)
+        configureValidationRegistry(connectionSources.getDefaultConnectionSource().getSettings(), mongoMappingContext)
+        return mongoMappingContext
     }
 
     protected static MongoMappingContext createMappingContext(PropertyResolver configuration, Class... classes) {
-        MongoConnectionSourceSettings mongoConnectionSourceSettings = buildConnectionSourceSettings(configuration);
-        MongoMappingContext mongoMappingContext = new MongoMappingContext(mongoConnectionSourceSettings, classes);;
-        configureValidationRegistry(mongoConnectionSourceSettings, mongoMappingContext);
-        return mongoMappingContext;
+        MongoConnectionSourceSettings mongoConnectionSourceSettings = buildConnectionSourceSettings(configuration)
+        MongoMappingContext mongoMappingContext = new MongoMappingContext(mongoConnectionSourceSettings, classes)
+        configureValidationRegistry(mongoConnectionSourceSettings, mongoMappingContext)
+        return mongoMappingContext
     }
 
     private static MongoConnectionSourceSettings buildConnectionSourceSettings(PropertyResolver configuration) {
         return new MongoConnectionSourceSettingsBuilder(configuration, MongoSettings.PREFIX,
-                new ConnectionSourceSettingsBuilder(configuration).build()).build();
+                new ConnectionSourceSettingsBuilder(configuration).build()).build()
     }
 
     protected void registerEntity(PersistentEntity entity) {
-        String collectionName = entity.isRoot() ? entity.getDecapitalizedName() : entity.getRootEntity().getDecapitalizedName();
-        String databaseName = this.defaultDatabase;
+        String collectionName = entity.isRoot() ? entity.getDecapitalizedName() : entity.getRootEntity().getDecapitalizedName()
+        String databaseName = this.defaultDatabase
 
-        MongoCollection collectionMapping = (MongoCollection) entity.getMapping().getMappedForm();
+        MongoCollection collectionMapping = (MongoCollection) entity.getMapping().getMappedForm()
         if (collectionMapping.getCollection() != null) {
-            collectionName = collectionMapping.getCollection();
+            collectionName = collectionMapping.getCollection()
         }
         if (collectionMapping.getDatabase() != null) {
-            databaseName = collectionMapping.getDatabase();
+            databaseName = collectionMapping.getDatabase()
         }
 
-        mongoCollections.put(entity, collectionName);
-        mongoDatabases.put(entity, databaseName);
+        mongoCollections.put(entity, collectionName)
+        mongoDatabases.put(entity, databaseName)
     }
 
     private static void configureValidationRegistry(MongoConnectionSourceSettings settings, MongoMappingContext mongoMappingContext) {
-        MessageSource messageSource = new StaticMessageSource();
-        configureValidatorRegistry(settings, mongoMappingContext, messageSource);
+        MessageSource messageSource = new StaticMessageSource()
+        configureValidatorRegistry(settings, mongoMappingContext, messageSource)
     }
 
     private static void configureValidatorRegistry(MongoConnectionSourceSettings settings, MongoMappingContext mongoMappingContext, MessageSource messageSource) {
-        ValidatorRegistry validatorRegistry = ValidatorRegistries.createValidatorRegistry(mongoMappingContext, settings, messageSource);
+        ValidatorRegistry validatorRegistry = ValidatorRegistries.createValidatorRegistry(mongoMappingContext, settings, messageSource)
         if (validatorRegistry instanceof ConstraintRegistry) {
             ((ConstraintRegistry) validatorRegistry).addConstraintFactory(
-                    new MappingContextAwareConstraintFactory(UniqueConstraint.class, messageSource, mongoMappingContext)
-            );
+                    new MappingContextAwareConstraintFactory(UniqueConstraint, messageSource, mongoMappingContext)
+            )
         }
         mongoMappingContext.setValidatorRegistry(
                 validatorRegistry
-        );
+        )
     }
 
     @Override
-    public MultiTenancySettings.MultiTenancyMode getMultiTenancyMode() {
-        return this.multiTenancyMode;
+    MultiTenancySettings.MultiTenancyMode getMultiTenancyMode() {
+        return this.multiTenancyMode
     }
 
     @Override
-    public TenantResolver getTenantResolver() {
-        return this.tenantResolver;
+    TenantResolver getTenantResolver() {
+        return this.tenantResolver
     }
 
     @Override
-    public MongoDatastore getDatastoreForTenantId(Serializable tenantId) {
+    MongoDatastore getDatastoreForTenantId(Serializable tenantId) {
         if (getMultiTenancyMode() == MultiTenancySettings.MultiTenancyMode.DATABASE) {
-            return this.datastoresByConnectionSource.get(tenantId.toString());
+            return this.datastoresByConnectionSource.get(tenantId.toString())
         }
-        return this;
+        return this
     }
 
     @Override
-    public Datastore getDatastoreForConnection(String connectionName) {
-        if (connectionName.equals(Settings.SETTING_DATASOURCE) || connectionName.equals(ConnectionSource.DEFAULT)) {
-            return this;
-        } else {
-            MongoDatastore mongoDatastore = this.datastoresByConnectionSource.get(connectionName);
-            if (mongoDatastore == null) {
-                throw new ConfigurationException("DataSource not found for name [" + connectionName + "] in configuration. Please check your multiple data sources configuration and try again.");
-            }
-            return mongoDatastore;
+    Datastore getDatastoreForConnection(String connectionName) {
+        if (connectionName == Settings.SETTING_DATASOURCE || connectionName == ConnectionSource.DEFAULT) {
+            return this
         }
+        MongoDatastore mongoDatastore = this.datastoresByConnectionSource.get(connectionName)
+        if (mongoDatastore == null) {
+            throw new ConfigurationException('DataSource not found for name [' + connectionName + '] in configuration. Please check your multiple data sources configuration and try again.')
+        }
+        return mongoDatastore
     }
 
     @Override
-    public <T1> T1 withNewSession(Serializable tenantId, Closure<T1> callable) {
-        MongoDatastore mongoDatastore = getDatastoreForTenantId(tenantId);
-        Session session = mongoDatastore.connect();
+    def <T1> T1 withNewSession(Serializable tenantId, Closure<T1> callable) {
+        MongoDatastore mongoDatastore = getDatastoreForTenantId(tenantId)
+        Session session = mongoDatastore.connect()
         try {
-            DatastoreUtils.bindNewSession(session);
-            return callable.call(session);
-        }
-        finally {
-            DatastoreUtils.unbindSession(session);
+            DatastoreUtils.bindNewSession(session)
+            return callable.call(session)
+        } finally {
+            DatastoreUtils.unbindSession(session)
         }
     }
 
     class PersistentEntityCodeRegistry implements CodecProvider {
 
-        Map<String, PersistentEntityCodec> codecs = new HashMap<>();
+        Map<String, PersistentEntityCodec> codecs = new HashMap<>()
 
         @Override
-        public <T> Codec<T> get(Class<T> clazz, CodecRegistry registry) {
-            final String entityName = clazz.getName();
-            PersistentEntityCodec codec = codecs.get(entityName);
+        def <T> Codec<T> get(Class<T> clazz, CodecRegistry registry) {
+            final String entityName = clazz.getName()
+            PersistentEntityCodec codec = codecs.get(entityName)
             if (codec == null) {
-                final PersistentEntity entity = getMappingContext().getPersistentEntity(entityName);
+                final PersistentEntity entity = getMappingContext().getPersistentEntity(entityName)
                 if (entity != null) {
-                    codec = new PersistentEntityCodec(codecRegistry, entity);
-                    codecs.put(entityName, codec);
+                    codec = new PersistentEntityCodec(codecRegistry, entity)
+                    codecs.put(entityName, codec)
                 }
             }
-            return codec;
+            return (Codec<T>) codec
         }
+
     }
 
-    public AutoTimestampEventListener getAutoTimestampEventListener() {
-        return this.autoTimestampEventListener;
+    AutoTimestampEventListener getAutoTimestampEventListener() {
+        return this.autoTimestampEventListener
     }
+
 }
