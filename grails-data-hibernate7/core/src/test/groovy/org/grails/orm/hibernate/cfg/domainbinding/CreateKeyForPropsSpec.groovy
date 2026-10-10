@@ -21,6 +21,7 @@ package org.grails.orm.hibernate.cfg.domainbinding
 
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty
 import org.hibernate.MappingException
 import org.hibernate.mapping.Table
 import spock.lang.Specification
@@ -137,5 +138,81 @@ class CreateKeyForPropsSpec extends Specification {
         1 * owner.getHibernatePropertyByName("missingProp")
         0 * uniqueKeyCreator._
         0 * columnNameFetcher._
+    }
+
+    def "creates no key for a collection property, whose table does not hold the other columns of the group"() {
+        given:
+        def columnNameFetcher = Mock(ColumnNameForPropertyAndPathFetcher)
+        def uniqueKeyCreator = Mock(UniqueKeyForColumnsCreator)
+        def subject = new CreateKeyForProps(columnNameFetcher, uniqueKeyCreator)
+        def collectionProp = Mock(HibernateToManyProperty) {
+            isSerializableType() >> false
+            isUserButNotCollectionType() >> false
+        }
+
+        when:
+        subject.createKeyForProps(collectionProp, "", new Table("t_collection"), "owner_id")
+
+        then:
+        0 * collectionProp.getMappedForm()
+        0 * uniqueKeyCreator._
+        0 * columnNameFetcher._
+    }
+
+    def "creates the key for a serializable collection property, whose column is on the owner table"() {
+        given:
+        def columnNameFetcher = Mock(ColumnNameForPropertyAndPathFetcher)
+        def uniqueKeyCreator = Mock(UniqueKeyForColumnsCreator)
+        def subject = new CreateKeyForProps(columnNameFetcher, uniqueKeyCreator)
+        def owner = Mock(GrailsHibernatePersistentEntity)
+        def otherProp = Mock(HibernatePersistentProperty)
+        def mappedForm = Mock(org.grails.orm.hibernate.cfg.PropertyConfig) {
+            isUnique() >> true
+            isUniqueWithinGroup() >> true
+            getUniquenessGroup() >> ["x"]
+        }
+        def serializableProp = Mock(HibernateToManyProperty) {
+            isSerializableType() >> true
+            getMappedForm() >> mappedForm
+            getHibernateOwner() >> owner
+        }
+        owner.getHibernatePropertyByName("x") >> otherProp
+        columnNameFetcher.getColumnNameForPropertyAndPath(otherProp, "", null) >> "x_col"
+        def table = new Table("owner")
+
+        when:
+        subject.createKeyForProps(serializableProp, "", table, "tags")
+
+        then:
+        1 * uniqueKeyCreator.createUniqueKeyForColumns(table, { List cols -> cols*.name == ["tags", "x_col"] })
+    }
+
+    def "creates the key for a to-many property mapped with a user type, whose column is on the owner table"() {
+        given:
+        def columnNameFetcher = Mock(ColumnNameForPropertyAndPathFetcher)
+        def uniqueKeyCreator = Mock(UniqueKeyForColumnsCreator)
+        def subject = new CreateKeyForProps(columnNameFetcher, uniqueKeyCreator)
+        def owner = Mock(GrailsHibernatePersistentEntity)
+        def otherProp = Mock(HibernatePersistentProperty)
+        def mappedForm = Mock(org.grails.orm.hibernate.cfg.PropertyConfig) {
+            isUnique() >> true
+            isUniqueWithinGroup() >> true
+            getUniquenessGroup() >> ["x"]
+        }
+        def userTypeProp = Mock(HibernateToManyProperty) {
+            isSerializableType() >> false
+            isUserButNotCollectionType() >> true
+            getMappedForm() >> mappedForm
+            getHibernateOwner() >> owner
+        }
+        owner.getHibernatePropertyByName("x") >> otherProp
+        columnNameFetcher.getColumnNameForPropertyAndPath(otherProp, "", null) >> "x_col"
+        def table = new Table("owner")
+
+        when:
+        subject.createKeyForProps(userTypeProp, "", table, "tags")
+
+        then:
+        1 * uniqueKeyCreator.createUniqueKeyForColumns(table, { List cols -> cols*.name == ["tags", "x_col"] })
     }
 }
