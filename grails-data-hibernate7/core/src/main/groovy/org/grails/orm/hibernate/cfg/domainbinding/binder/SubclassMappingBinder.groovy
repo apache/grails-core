@@ -21,6 +21,7 @@ package org.grails.orm.hibernate.cfg.domainbinding.binder
 import groovy.transform.CompileStatic
 import org.hibernate.mapping.PersistentClass
 import org.hibernate.mapping.Subclass
+import org.jspecify.annotations.NonNull
 
 import org.grails.orm.hibernate.cfg.GrailsHibernateUtil
 import org.grails.orm.hibernate.cfg.Mapping
@@ -45,6 +46,7 @@ class SubclassMappingBinder {
         this.classPropertiesBinder = classPropertiesBinder
     }
 
+    @NonNull
     Subclass createSubclassMapping(HibernatePersistentEntity subEntity, PersistentClass parent) {
         Subclass subClass
         subEntity.configureDerivedProperties()

@@ -25,6 +25,7 @@ import org.hibernate.boot.spi.MetadataBuildingContext
 import org.hibernate.mapping.Component
 import org.hibernate.mapping.RootClass
 import org.hibernate.mapping.Value
+import org.jspecify.annotations.NonNull
 
 import org.grails.orm.hibernate.cfg.GrailsHibernateUtil
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateCompositeIdentityProperty
@@ -63,7 +64,8 @@ class CompositeIdBinder {
         throw new MappingException("Invalid composite id binding for entity [${domainClass.name}]".toString())
     }
 
-    private Component getComponent(HibernatePersistentEntity domainClass) {
+    @NonNull
+    private Component getComponent(@NonNull HibernatePersistentEntity domainClass) {
         RootClass rootClass = domainClass.rootClass
         Component id = new Component(metadataBuildingContext, rootClass)
         id.nullValue = 'undefined'

@@ -17,6 +17,7 @@ package org.grails.orm.hibernate.support.hibernate7
 
 import org.hibernate.HibernateException
 import org.hibernate.Session
+import org.jspecify.annotations.Nullable
 
 /**
  * Callback interface for Hibernate code. To be used with {@link HibernateTemplate}'s
@@ -46,6 +47,7 @@ interface HibernateCallback<T> {
      * @throws HibernateException if thrown by the Hibernate API
      * @see HibernateTemplate#execute
      */
+    @Nullable
     T doInHibernate(Session session) throws HibernateException
 
 }

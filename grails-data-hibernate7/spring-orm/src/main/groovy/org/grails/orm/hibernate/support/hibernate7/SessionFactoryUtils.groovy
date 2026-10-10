@@ -52,6 +52,7 @@ import org.hibernate.exception.JDBCConnectionException
 import org.hibernate.exception.LockAcquisitionException
 import org.hibernate.exception.SQLGrammarException
 import org.hibernate.service.UnknownServiceException
+import org.jspecify.annotations.Nullable
 import org.springframework.dao.CannotAcquireLockException
 import org.springframework.dao.DataAccessException
 import org.springframework.dao.DataAccessResourceFailureException
@@ -86,7 +87,7 @@ abstract class SessionFactoryUtils {
      * to execute Session cleanup before JDBC Connection cleanup, if any.
      * @see DataSourceUtils#CONNECTION_SYNCHRONIZATION_ORDER
      */
-    static final int SESSION_SYNCHRONIZATION_ORDER =
+    public static final int SESSION_SYNCHRONIZATION_ORDER =
             DataSourceUtils.CONNECTION_SYNCHRONIZATION_ORDER - 100
 
     @PackageScope
@@ -126,7 +127,7 @@ abstract class SessionFactoryUtils {
      * @param session the Hibernate Session to close (may be {@code null})
      * @see Session#close()
      */
-    static void closeSession(Session session) {
+    static void closeSession(@Nullable Session session) {
         if (session != null) {
             try {
                 if (session.isOpen()) {
@@ -144,6 +145,7 @@ abstract class SessionFactoryUtils {
      * @return the DataSource, or {@code null} if none found
      * @see ConnectionProvider
      */
+    @Nullable
     static DataSource getDataSource(SessionFactory sessionFactory) {
         Method getProperties = ClassUtils.getMethodIfAvailable(sessionFactory.getClass(), 'getProperties')
         if (getProperties != null) {

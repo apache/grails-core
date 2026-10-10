@@ -23,6 +23,7 @@ import org.hibernate.MappingException
 import org.hibernate.mapping.PersistentClass
 import org.hibernate.mapping.Table
 import org.hibernate.mapping.Value
+import org.jspecify.annotations.NonNull
 
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentEntity
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty
@@ -67,6 +68,7 @@ class ClassPropertiesBinder {
         naturalIdentifierBinder.bindNaturalIdentifier(hibernatePersistentEntity, persistentClass)
     }
 
+    @NonNull
     private Table getTable(PersistentClass persistentClass) {
         if (persistentClass.table == null) {
             throw new MappingException(

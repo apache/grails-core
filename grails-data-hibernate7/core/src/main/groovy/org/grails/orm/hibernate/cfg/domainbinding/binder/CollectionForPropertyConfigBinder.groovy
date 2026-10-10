@@ -20,6 +20,7 @@ package org.grails.orm.hibernate.cfg.domainbinding.binder
 
 import groovy.transform.CompileStatic
 import org.hibernate.mapping.Collection
+import org.jspecify.annotations.NonNull
 
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty
 
@@ -32,7 +33,7 @@ import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyPrope
 class CollectionForPropertyConfigBinder {
 
     /** Bind collection for property config. */
-    void bindCollectionForPropertyConfig(HibernateToManyProperty property) {
+    void bindCollectionForPropertyConfig(@NonNull HibernateToManyProperty property) {
         Collection collection = property.collection
         collection.lazy = property.isLazy()
         Boolean extraLazy = property.getLazy()

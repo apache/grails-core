@@ -51,10 +51,11 @@ class NamingStrategyProvider {
      * @param datasourceName the datasource name
      * @param strategy the naming strategy (instance, Class, or class name)
      * @throws ClassNotFoundException when the strategy class cannot be found
-     * @throws ReflectiveOperationException when the strategy class cannot be instantiated
+     * @throws IllegalAccessException when the strategy class cannot be accessed
+     * @throws InstantiationException when the strategy class cannot be instantiated
      */
     void configureNamingStrategy(final String datasourceName, final Object strategy)
-            throws ClassNotFoundException, ReflectiveOperationException {
+            throws ClassNotFoundException, InstantiationException, IllegalAccessException {
 
         if (strategy == null) {
             throw new IllegalArgumentException('Naming strategy cannot be null')

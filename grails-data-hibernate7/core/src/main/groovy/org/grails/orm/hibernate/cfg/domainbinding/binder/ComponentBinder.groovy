@@ -19,11 +19,11 @@
 package org.grails.orm.hibernate.cfg.domainbinding.binder
 
 import groovy.transform.CompileStatic
-import jakarta.annotation.Nonnull
 import org.hibernate.boot.spi.MetadataBuildingContext
 import org.hibernate.mapping.Collection
 import org.hibernate.mapping.Component
 import org.hibernate.mapping.PersistentClass
+import org.jspecify.annotations.NonNull
 
 import org.grails.orm.hibernate.cfg.GrailsHibernateUtil
 import org.grails.orm.hibernate.cfg.MappingCacheHolder
@@ -63,7 +63,7 @@ class ComponentBinder {
         this.grailsPropertyBinder = grailsPropertyBinder
     }
 
-    Component bindComponent(@Nonnull HibernateEmbeddedProperty embeddedProperty, String path) {
+    Component bindComponent(@NonNull HibernateEmbeddedProperty embeddedProperty, String path) {
         PersistentClass owner = embeddedProperty.persistentClass
         Component component = new Component(metadataBuildingContext, owner)
         Class<?> type = embeddedProperty.type
@@ -97,7 +97,7 @@ class ComponentBinder {
      * Used for {@code hasMany} associations whose element type is a non-entity value object
      * (a GORM embedded type) rather than a scalar or persistent entity.
      */
-    Component bindEmbeddedCollectionComponent(@Nonnull HibernateEmbeddedCollectionProperty property) {
+    Component bindEmbeddedCollectionComponent(@NonNull HibernateEmbeddedCollectionProperty property) {
         Collection collection = property.collection
         Component component = new Component(metadataBuildingContext, collection)
 
