@@ -42,16 +42,16 @@ import grails.config.Settings
 final class HiddenHttpMethod {
 
     /** Default method parameter: <code>_method</code> */
-    static final String DEFAULT_METHOD_PARAM = '_method'
+    public static final String DEFAULT_METHOD_PARAM = '_method'
 
     /** Spring Boot's equivalent of {@link Settings#WEB_HIDDEN_METHOD_FILTER_ENABLED}, also false by default. */
-    static final String SPRING_FILTER_ENABLED = 'spring.mvc.hiddenmethod.filter.enabled'
+    public static final String SPRING_FILTER_ENABLED = 'spring.mvc.hiddenmethod.filter.enabled'
 
     /**
      * Request attribute carrying the method a request asked to be treated as, published by the dispatcher
      * when it resolves an override.
      */
-    static final String OVERRIDDEN_METHOD_ATTRIBUTE = HiddenHttpMethod.getName() + '.METHOD'
+    public static final String OVERRIDDEN_METHOD_ATTRIBUTE = HiddenHttpMethod.getName() + '.METHOD'
 
     /**
      * The only methods a form may ask for: the three a browser cannot submit itself. Matches the set
