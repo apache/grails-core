@@ -1,0 +1,122 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ */
+package org.grails.datastore.gorm.finders
+
+import java.util.regex.Matcher
+import java.util.regex.Pattern
+
+import org.grails.datastore.gorm.DatastoreResolver
+import org.grails.datastore.mapping.core.Datastore
+import org.grails.datastore.mapping.core.Session
+import org.grails.datastore.mapping.core.SessionCallback
+import org.grails.datastore.mapping.model.MappingContext
+import org.grails.datastore.mapping.query.Query
+import org.grails.datastore.mapping.reflect.NameUtils
+
+/**
+ * The "listOrderBy*" static persistent method. This method allows queries on the properties of the class of the form
+ * listOrderBy[Property]([Map] args)
+ *
+ * eg.
+ * Book.listOrderByTitle(max:10)
+ * Book.listOrderByTitleAndAuthor(max:10)
+ *
+ * <p>Never shared {@link DynamicFinder}'s grammar (no operator-suffix parsing - just trailing
+ * property names joined by {@code And}), so it stays its own standalone implementation, composing
+ * nothing beyond {@link FinderSupport} for session execution.
+ *
+ * @author Graeme Rocher
+ */
+class ListOrderByFinder implements FinderMethod {
+
+    private static final Pattern METHOD_PATTERN = Pattern.compile('(listOrderBy)(\\w+)')
+    private static final String PROPERTY_SEPARATOR = 'And'
+    private final DatastoreResolver datastoreResolver
+    private Pattern pattern = METHOD_PATTERN
+
+    ListOrderByFinder(Datastore datastore) {
+        this(FinderSupport.resolverFor(datastore), null)
+    }
+
+    /**
+     * @param datastoreResolver Resolves the datastore at invocation time
+     * @param mappingContext Unused - kept so this finder is registered the same way as the
+     * grammar-based finders, which need the mapping context to convert arguments
+     */
+    ListOrderByFinder(DatastoreResolver datastoreResolver, @SuppressWarnings('unused') MappingContext mappingContext) {
+        this.datastoreResolver = datastoreResolver
+    }
+
+    @Override
+    void setPattern(String pattern) {
+        this.pattern = Pattern.compile(pattern)
+    }
+
+    @Override
+    @SuppressWarnings('rawtypes')
+    Object invoke(final Class clazz, final String methodName, final Object[] arguments) {
+        return invoke(clazz, methodName, null, arguments)
+    }
+
+    @Override
+    @SuppressWarnings({'rawtypes', 'unchecked', 'ResultOfMethodCallIgnored'})
+    Object invoke(final Class clazz, final String methodName, final Closure additionalCriteria, final Object[] arguments) {
+
+        Matcher match = pattern.matcher(methodName)
+        match.find()
+
+        final String[] propertyNames = match.group(2).split(PROPERTY_SEPARATOR)
+
+        return FinderSupport.execute(datastoreResolver, { Session session ->
+            Query q = session.createQuery(clazz)
+
+            // Resolve the sort direction BEFORE applying any order. Applying asc first and then
+            // trying to clear/replace it leaves the eagerly-applied asc order in the underlying
+            // criteria, so an explicit order:'desc' argument was silently ignored. The direction
+            // goes through the same normalization as every other entry point, so a value other
+            // than asc or desc is rejected here too instead of quietly sorting ascending.
+            boolean ascending = true
+            if (arguments.length > 0 && (arguments[0] instanceof Map)) {
+                final Map args = new LinkedHashMap((Map) arguments[0])
+                final Object order = args.remove(DynamicFinder.ARGUMENT_ORDER)
+                final String direction = DynamicFinder.normalizeDirection(order != null ? order.toString() : null)
+                ascending = !DynamicFinder.ORDER_DESC.equals(direction)
+                DynamicFinder.populateArgumentsForCriteria(clazz, q, args)
+            }
+
+            for (String propertyName in propertyNames) {
+                // Lower-case only the first character: a GORM property's name is the method-name
+                // segment with its first letter de-capitalised. JavaBeans-style decapitalize()
+                // leaves a name whose first two letters are upper-case unchanged (e.g. "ISize"),
+                // which would not match a Hungarian-notation property such as "iSize".
+                String property = NameUtils.decapitalizeFirstChar(propertyName)
+                q.order(ascending ? Query.Order.asc(property) : Query.Order.desc(property))
+            }
+
+            DynamicFinder.applyAdditionalCriteria(q, additionalCriteria)
+
+            return q.list()
+        } as SessionCallback<Object>)
+    }
+
+    @Override
+    boolean isMethodMatch(String methodName) {
+        return pattern.matcher(methodName).find()
+    }
+}

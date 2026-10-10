@@ -68,6 +68,9 @@ class DatabaseDriverSpec extends Specification {
         'DB2/LINUXX8664'               | DatabaseDriver.DB2
         'DB2 UDB for AS/400'           | DatabaseDriver.DB2_AS400
         'Something running on AS/400'  | DatabaseDriver.DB2_AS400
+        'Firebird 2.5.WI-V6.3.7'       | DatabaseDriver.FIREBIRD
+        'FIREBIRD SOMETHING'           | DatabaseDriver.FIREBIRD
+        'Some AS/400 database'         | DatabaseDriver.DB2_AS400
         'Completely unknown product'   | DatabaseDriver.UNKNOWN
         null                           | DatabaseDriver.UNKNOWN
         ''                             | DatabaseDriver.UNKNOWN

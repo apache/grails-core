@@ -125,6 +125,23 @@ class Sitemesh3LayoutFinderSpec extends Specification {
         paths == ['/layouts/sample/edit'] as String[]
     }
 
+    void 'a layout resolved by convention is served from the cache for the same controller action'() {
+        given:
+        finder.cacheEnabled = true
+        bindController(new ConventionController(), 'sample', '/sample/edit')
+        Content content = emptyContent()
+
+        when: 'the same controller action is decorated twice'
+        String[] first = finder.selectDecoratorPaths(content, context)
+        String[] again = finder.selectDecoratorPaths(content, context)
+
+        then: 'the layout is looked up once and the second request is answered from the cache'
+        1 * locator.findViewByPath('/layouts/sample/edit') >> Mock(GroovyPageScriptSource)
+        0 * locator.findViewByPath(_)
+        first == ['/layouts/sample/edit'] as String[]
+        again == ['/layouts/sample/edit'] as String[]
+    }
+
     void 'controller-specific layout is tried when action not found'() {
         given:
         bindController(new ConventionController(), 'sample', '/sample/edit')
