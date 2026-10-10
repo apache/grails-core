@@ -16,14 +16,11 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.datastore.gorm.mongodb.embedded;
+package org.grails.datastore.gorm.mongodb.embedded
 
-import java.io.IOException;
-import java.net.Socket;
-import java.util.Map;
-
-import org.springframework.context.support.GenericApplicationContext;
-import org.springframework.core.env.MapPropertySource;
+import groovy.transform.CompileStatic
+import org.springframework.context.support.GenericApplicationContext
+import org.springframework.core.env.MapPropertySource
 
 /**
  * An application that starts an in-memory server the way any application does, lets a client
@@ -32,25 +29,26 @@ import org.springframework.core.env.MapPropertySource;
  * server a second time.
  *
  * <p>{@code EmbeddedMongoLifecycleSpec} runs it in a JVM of its own, since whether that JVM exits is
- * the question. The shutdown hang is a race: this Java application reproduced it reliably on the
+ * the question. The shutdown hang is a race: this application reproduced it reliably on the
  * author's machine, while another machine reproduced it only in the in-process Spock feature.
  * Both tests exercise the race, but neither is guaranteed to reproduce it without the fix.
  */
-public final class ContextStoppedServerApplication {
+@CompileStatic
+final class ContextStoppedServerApplication {
 
     private ContextStoppedServerApplication() {
     }
 
-    public static void main(String[] args) throws IOException {
-        int port = Integer.parseInt(args[0]);
-        GenericApplicationContext context = new GenericApplicationContext();
-        context.getEnvironment().getPropertySources().addFirst(new MapPropertySource("application", Map.of(
-                EmbeddedMongoInitializer.BACKEND, InMemoryMongoBackend.NAME,
-                "grails.mongodb.url", "mongodb://embedded:" + port + "/bookstore")));
-        new EmbeddedMongoInitializer().initialize(context);
+    static void main(String[] args) throws IOException {
+        int port = Integer.parseInt(args[0])
+        GenericApplicationContext context = new GenericApplicationContext()
+        context.getEnvironment().getPropertySources().addFirst(new MapPropertySource('application', [
+                (EmbeddedMongoInitializer.BACKEND): InMemoryMongoBackend.NAME,
+                'grails.mongodb.url'              : "mongodb://embedded:${port}/bookstore".toString()] as Map<String, Object>))
+        new EmbeddedMongoInitializer().initialize(context)
         EmbeddedMongoLifecycle lifecycle = context.getBeanFactory()
-                .getBean(EmbeddedMongoLifecycle.BEAN_NAME, EmbeddedMongoLifecycle.class);
-        new Socket("localhost", port).close();
-        lifecycle.stop();
+                .getBean(EmbeddedMongoLifecycle.BEAN_NAME, EmbeddedMongoLifecycle)
+        new Socket('localhost', port).close()
+        lifecycle.stop()
     }
 }

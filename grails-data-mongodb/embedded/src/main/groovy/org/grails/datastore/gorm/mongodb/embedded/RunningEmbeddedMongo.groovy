@@ -16,38 +16,39 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.datastore.gorm.mongodb.embedded;
+package org.grails.datastore.gorm.mongodb.embedded
 
 /**
  * A started embedded MongoDB server.
  *
  * @since 8.0
  */
-public interface RunningEmbeddedMongo {
+interface RunningEmbeddedMongo {
 
     /**
      * @return the host the server is listening on
      */
-    String getHost();
+    String getHost()
 
     /**
      * @return the port the server is listening on, which is the port that was actually
      * bound rather than the one that was requested
      */
-    int getPort();
+    int getPort()
 
     /**
      * Stops the server. Called from a JVM shutdown hook, so it must not throw.
      * May be called again after the server has stopped, in which case it must do nothing.
+     * May be called again after the server has stopped, in which case it must do nothing.
      */
-    void stop();
+    void stop()
 
     /**
      * @return whether the server is listening, which it is until {@link #stop()} and again
      *         after {@link #restart()}. A server outlives the application context that started
      *         it, so a later context has to ask rather than assume.
      */
-    boolean isRunning();
+    boolean isRunning()
 
     /**
      * Binds the server again on the port it was already using, after {@link #stop()}.
@@ -62,5 +63,6 @@ public interface RunningEmbeddedMongo {
      * onto the same backend. Flapdoodle keeps whatever is in its {@code database-dir} and
      * loses the rest, since the {@code mongod} process is not part of the image.
      */
-    void restart();
+    void restart()
+
 }

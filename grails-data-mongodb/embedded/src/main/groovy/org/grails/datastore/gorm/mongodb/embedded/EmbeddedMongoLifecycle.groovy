@@ -16,9 +16,10 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.datastore.gorm.mongodb.embedded;
+package org.grails.datastore.gorm.mongodb.embedded
 
-import org.springframework.context.SmartLifecycle;
+import groovy.transform.CompileStatic
+import org.springframework.context.SmartLifecycle
 
 /**
  * Stops the embedded server while the process is checkpointed and starts it again when the
@@ -35,9 +36,10 @@ import org.springframework.context.SmartLifecycle;
  *
  * @since 8.0
  */
-public class EmbeddedMongoLifecycle implements SmartLifecycle {
+@CompileStatic
+class EmbeddedMongoLifecycle implements SmartLifecycle {
 
-    public static final String BEAN_NAME = "embeddedMongoLifecycle";
+    public static final String BEAN_NAME = 'embeddedMongoLifecycle'
 
     /**
      * Spring starts in ascending phase order and stops in descending, so a phase below
@@ -45,12 +47,12 @@ public class EmbeddedMongoLifecycle implements SmartLifecycle {
      * outlive the datastore that talks to it, which uses
      * {@code MongoDatastore.LIFECYCLE_PHASE}, itself below the web server's.
      */
-    public static final int PHASE = -2000;
+    public static final int PHASE = -2000
 
-    private final RunningEmbeddedMongo running;
+    private final RunningEmbeddedMongo running
 
-    public EmbeddedMongoLifecycle(RunningEmbeddedMongo running) {
-        this.running = running;
+    EmbeddedMongoLifecycle(RunningEmbeddedMongo running) {
+        this.running = running
     }
 
     /**
@@ -60,26 +62,27 @@ public class EmbeddedMongoLifecycle implements SmartLifecycle {
      * from a flag set when this bean was made.
      */
     @Override
-    public void start() {
+    void start() {
         if (!this.running.isRunning()) {
-            this.running.restart();
+            this.running.restart()
         }
     }
 
     @Override
-    public void stop() {
+    void stop() {
         if (this.running.isRunning()) {
-            this.running.stop();
+            this.running.stop()
         }
     }
 
     @Override
-    public boolean isRunning() {
-        return this.running.isRunning();
+    boolean isRunning() {
+        return this.running.isRunning()
     }
 
     @Override
-    public int getPhase() {
-        return PHASE;
+    int getPhase() {
+        return PHASE
     }
+
 }

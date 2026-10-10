@@ -16,7 +16,7 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.datastore.gorm.mongodb.embedded;
+package org.grails.datastore.gorm.mongodb.embedded
 
 /**
  * A MongoDB server that can be started inside, or alongside, the application process.
@@ -30,14 +30,14 @@ package org.grails.datastore.gorm.mongodb.embedded;
  * @see InMemoryMongoBackend
  * @see FlapdoodleMongoBackend
  */
-public interface EmbeddedMongoBackend {
+interface EmbeddedMongoBackend {
 
     /**
      * The name this backend is selected by, through {@code embedded.mongodb.backend}.
      *
      * @return the backend name
      */
-    String getName();
+    String getName()
 
     /**
      * Whether the library this backend needs is on the classpath. Only one backend is a
@@ -46,7 +46,7 @@ public interface EmbeddedMongoBackend {
      *
      * @return true when this backend can be started
      */
-    boolean isAvailable();
+    boolean isAvailable()
 
     /**
      * Starts a server bound to localhost.
@@ -54,5 +54,6 @@ public interface EmbeddedMongoBackend {
      * @param settings the port to bind and any backend specific options
      * @return the running server, for the caller to stop
      */
-    RunningEmbeddedMongo start(EmbeddedMongoSettings settings);
+    RunningEmbeddedMongo start(EmbeddedMongoSettings settings)
+
 }

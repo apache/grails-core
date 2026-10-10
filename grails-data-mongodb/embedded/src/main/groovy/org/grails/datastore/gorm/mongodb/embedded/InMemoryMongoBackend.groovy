@@ -16,12 +16,12 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.datastore.gorm.mongodb.embedded;
+package org.grails.datastore.gorm.mongodb.embedded
 
-import de.bwaldvogel.mongo.MongoServer;
-import de.bwaldvogel.mongo.backend.memory.MemoryBackend;
-
-import org.springframework.util.ClassUtils;
+import de.bwaldvogel.mongo.MongoServer
+import de.bwaldvogel.mongo.backend.memory.MemoryBackend
+import groovy.transform.CompileStatic
+import org.springframework.util.ClassUtils
 
 /**
  * Runs MongoDB inside this JVM using mongo-java-server, which reimplements the MongoDB
@@ -35,42 +35,43 @@ import org.springframework.util.ClassUtils;
  *
  * @since 8.0
  */
-public class InMemoryMongoBackend implements EmbeddedMongoBackend {
+@CompileStatic
+class InMemoryMongoBackend implements EmbeddedMongoBackend {
 
-    public static final String NAME = "in-memory";
+    public static final String NAME = 'in-memory'
 
-    private static final String SERVER_CLASS = "de.bwaldvogel.mongo.MongoServer";
+    private static final String SERVER_CLASS = 'de.bwaldvogel.mongo.MongoServer'
 
     @Override
-    public String getName() {
-        return NAME;
+    String getName() {
+        return NAME
     }
 
     @Override
-    public boolean isAvailable() {
-        return ClassUtils.isPresent(SERVER_CLASS, getClass().getClassLoader());
+    boolean isAvailable() {
+        return ClassUtils.isPresent(SERVER_CLASS, getClass().getClassLoader())
     }
 
     @Override
-    public RunningEmbeddedMongo start(EmbeddedMongoSettings settings) {
+    RunningEmbeddedMongo start(EmbeddedMongoSettings settings) {
         if (settings.isPersistent()) {
-            throw new IllegalStateException("The " + NAME + " backend keeps everything in memory and cannot honour " +
-                    EmbeddedMongoInitializer.DATABASE_DIR + ". Add " +
-                    "de.flapdoodle.embed:de.flapdoodle.embed.mongo to run a real mongod that can, or remove the " +
-                    "directory to accept a database that is discarded when the server stops.");
+            throw new IllegalStateException('The ' + NAME + ' backend keeps everything in memory and cannot honour ' +
+                    EmbeddedMongoInitializer.DATABASE_DIR + '. Add ' +
+                    'de.flapdoodle.embed:de.flapdoodle.embed.mongo to run a real mongod that can, or remove the ' +
+                    'directory to accept a database that is discarded when the server stops.')
         }
 
         if (settings.isReplicaSet()) {
-            throw new IllegalStateException("The " + NAME + " backend reimplements the wire protocol and cannot be a " +
-                    "replica set, which is what a transaction, a change stream and a causally consistent read need. " +
-                    "Add de.flapdoodle.embed:de.flapdoodle.embed.mongo to run a real mongod that can, or unset " +
-                    EmbeddedMongoInitializer.REPLICA_SET + " and " + EmbeddedMongoInitializer.TRANSACTIONAL + ".");
+            throw new IllegalStateException('The ' + NAME + ' backend reimplements the wire protocol and cannot be a ' +
+                    'replica set, which is what a transaction, a change stream and a causally consistent read need. ' +
+                    'Add de.flapdoodle.embed:de.flapdoodle.embed.mongo to run a real mongod that can, or unset ' +
+                    EmbeddedMongoInitializer.REPLICA_SET + ' and ' + EmbeddedMongoInitializer.TRANSACTIONAL + '.')
         }
 
-        MemoryBackend backend = new RetainingMemoryBackend();
-        MongoServer server = new MongoServer(backend);
-        server.bind("localhost", settings.getPort());
-        return new RunningInMemoryMongo(backend, server);
+        MemoryBackend backend = new RetainingMemoryBackend()
+        MongoServer server = new MongoServer(backend)
+        server.bind('localhost', settings.getPort())
+        return new RunningInMemoryMongo(backend, server)
     }
 
     /**
@@ -88,9 +89,10 @@ public class InMemoryMongoBackend implements EmbeddedMongoBackend {
     private static final class RetainingMemoryBackend extends MemoryBackend {
 
         @Override
-        public void close() {
+        void close() {
             // Deliberately empty; see the class comment.
         }
+
     }
 
     private static final class RunningInMemoryMongo implements RunningEmbeddedMongo {
@@ -100,32 +102,32 @@ public class InMemoryMongoBackend implements EmbeddedMongoBackend {
          * there. The data lives on the heap, so a CRaC checkpoint image preserves it and a
          * restored process comes back with the collections it had.
          */
-        private final MemoryBackend backend;
+        private final MemoryBackend backend
 
-        private volatile MongoServer server;
+        private volatile MongoServer server
 
-        private volatile boolean running = true;
+        private volatile boolean running = true
 
         /**
          * The port that was actually bound, which is not the requested one when that was 0.
          * Restarting reuses it so the url published into the environment stays correct.
          */
-        private final int port;
+        private final int port
 
         private RunningInMemoryMongo(MemoryBackend backend, MongoServer server) {
-            this.backend = backend;
-            this.server = server;
-            this.port = server.getLocalAddress().getPort();
+            this.backend = backend
+            this.server = server
+            this.port = server.getLocalAddress().getPort()
         }
 
         @Override
-        public String getHost() {
-            return "localhost";
+        String getHost() {
+            return 'localhost'
         }
 
         @Override
-        public int getPort() {
-            return this.port;
+        int getPort() {
+            return this.port
         }
 
         /**
@@ -143,25 +145,27 @@ public class InMemoryMongoBackend implements EmbeddedMongoBackend {
          * time on the way out.
          */
         @Override
-        public synchronized void stop() {
+        synchronized void stop() {
             if (!this.running) {
-                return;
+                return
             }
-            this.server.shutdownNow();
-            this.running = false;
+            this.server.shutdownNow()
+            this.running = false
         }
 
         @Override
-        public boolean isRunning() {
-            return this.running;
+        boolean isRunning() {
+            return this.running
         }
 
         @Override
-        public synchronized void restart() {
-            MongoServer restarted = new MongoServer(this.backend);
-            restarted.bind("localhost", this.port);
-            this.server = restarted;
-            this.running = true;
+        synchronized void restart() {
+            MongoServer restarted = new MongoServer(this.backend)
+            restarted.bind('localhost', this.port)
+            this.server = restarted
+            this.running = true
         }
+
     }
+
 }
