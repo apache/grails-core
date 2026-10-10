@@ -157,6 +157,9 @@ class UniqueConstraint extends AbstractConstraint {
                                 }
                             }
                             eq(propName, value)
+                        } else {
+                            // null is compared as a value: only a row whose value is also null conflicts
+                            isNull(propName)
                         }
                     }
                 }
