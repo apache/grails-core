@@ -93,3 +93,7 @@ apply {
     from rootProject.layout.projectDirectory.file('gradle/docs-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/test-config.gradle')
 }
+
+tasks.withType(Jar) {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}
