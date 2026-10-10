@@ -161,10 +161,11 @@ class MetaClassRegistryCleaner implements MetaClassRegistryChangeEventListener {
 
         @Override
         boolean equals(Object obj) {
-            if (this == obj) {
+            // identity on both levels: == would call equals() again on the key and compare the referents by value
+            if (this.is(obj)) {
                 return true
             }
-            return get() == ((IdentityWeakReference) obj).get()
+            return get().is(((IdentityWeakReference) obj).get())
         }
     }
 
