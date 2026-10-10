@@ -147,7 +147,7 @@ class GrailsDataHibernate7Spec extends ApplicationContextSpec implements Command
         !template.contains('grails-hibernate7-micronaut-bom')
     }
 
-    void "test dependencies are present for buildSrc"() {
+    void "test the Hibernate 7 BOM is used for buildSrc and the plugin is kept out of it"() {
         when:
         final String template = new BuildBuilder(beanContext)
                 .features(["gorm-hibernate7"])
@@ -155,19 +155,21 @@ class GrailsDataHibernate7Spec extends ApplicationContextSpec implements Command
 
         then:
         template.contains('implementation platform("org.apache.grails:grails-hibernate7-bom:$grailsVersion")')
-        template.contains('implementation "org.apache.grails:grails-data-hibernate7"')
+        !template.contains('org.apache.grails:grails-data-hibernate7')
         !template.contains('org.apache.grails:grails-bom')
         !template.contains('grails-data-hibernate5')
     }
 
-    void "test buildSrc is present for buildscript dependencies"() {
+    void "test the plugin is kept off the buildscript classpath"() {
         given:
         final def output = generate(ApplicationType.WEB, hibernate7Options())
         final def buildGradle = output["build.gradle"]
 
         expect:
         buildGradle != null
-        buildGradle.contains("classpath \"org.apache.grails:grails-data-hibernate7\"")
+        buildGradle.contains("classpath \"org.apache.grails:grails-gradle-plugins\"")
+        !buildGradle.contains("classpath \"org.apache.grails:grails-data-hibernate7\"")
+        buildGradle.contains("implementation \"org.apache.grails:grails-data-hibernate7\"")
         !buildGradle.contains("grails-data-hibernate5")
     }
 
