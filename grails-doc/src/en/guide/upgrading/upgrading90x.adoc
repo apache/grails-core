@@ -57,7 +57,7 @@ class Author {
 
 The same applies to a many-to-many from a class to itself: `belongsTo` names the class itself.
 A unidirectional many-to-many, a many-to-many that has `belongsTo` on either side, and one where either side is a `Map` need no change.
-The rule is the same whether or not you enable native domain binding, see below.
+The rule is the same with native domain binding, the default, and with the deprecated classic binding, see below.
 
 See link:{hibernate7Guide}index.html#gormAssociation-manyToMany[Many-to-Many Associations] in the GORM for Hibernate 7 manual.
 
@@ -81,19 +81,9 @@ They are also fixed in the 8.0.x line, so an application that is already on a re
 
 ===== 1.3 Native Domain Binding
 
-GORM for Hibernate 7 can bind your domain classes with Hibernate's own annotation binder instead of building Hibernate's mapping itself.
-This is native domain binding.
-It is the direction GORM for Hibernate 7 is taking and is intended to become the default.
-In Grails {version} it is opt-in and the default stays classic binding.
-
-Enable it with the `hibernate.generatedDomainClasses` setting:
-
-[source,yaml]
-.grails-app/conf/application.yml
-----
-hibernate:
-    generatedDomainClasses: true
-----
+GORM for Hibernate 7 binds your domain classes with Hibernate's own annotation binder instead of building Hibernate's mapping itself.
+This is native domain binding, and in Grails {version} it is the default: an upgraded application starts with it without any setting.
+The classic binding of earlier releases is deprecated and will be removed in a later release.
 
 Your domain classes, your queries and the GORM API do not change.
 The mapping can, though:
@@ -108,8 +98,28 @@ The mapping can, though:
   Classic binding shares one table whose foreign key points at only one owner, so the collection of any other owner cannot be stored, and it does not start when the properties have the same name.
   The first owner (by entity name, then property path) keeps the table and the key column it has today, the others get names that start with their table and the path of the embedded property.
 * A custom collection type on a `hasMany` now takes effect, see <<native-binding-custom-collection-type,1.4>>.
+* A `createTable` change set written by `dbm-generate-gorm-changelog` or `dbm-gorm-diff` lists the columns in a different order: the identifier, then the columns in the order of the property names, then the foreign keys.
+  A diff against an existing database does not report this, because Liquibase does not compare column order.
 
-Before you switch an existing database, run `dbm-gorm-diff` against a copy of it with the setting on.
+Before you upgrade an application with an existing database:
+
+. Start the upgraded application against a copy of the database and fix every refused mapping; the startup error says what to change.
+. Run `dbm-gorm-diff` against the copy with the upgraded application, which uses the new default.
+  An empty diff means the switch does not change your schema.
+  Otherwise, compare each reported change with the schema differences in the manual and apply the ones you want through a migration.
+. Run your test suite once.
+
+If you need more time, the `hibernate.generatedDomainClasses` setting selects the classic binding for the environments that are not ready yet:
+
+[source,yaml]
+.grails-app/conf/application.yml
+----
+hibernate:
+    generatedDomainClasses: false   # deprecated: selects the classic binding
+----
+
+The application then logs a warning at startup that names the setting.
+Remove the setting as soon as the migration has run, because classic binding will be removed.
 
 The link:{hibernate7Guide}index.html#advancedGORMFeatures-nativeDomainBinding[Native Domain Binding] chapter of the GORM for Hibernate 7 manual lists every refused mapping, every schema difference and what each means for an existing database.
 
@@ -135,9 +145,9 @@ Native binding applies the type.
 Hibernate creates, wraps and loads the collection with your class, so the code of your collection type runs where it never ran before.
 The schema is the same.
 
-If your application maps a custom collection type, test it with `hibernate.generatedDomainClasses` set to `true` before you switch.
+If your application maps a custom collection type, test it with the upgraded application before you deploy.
 A type that was never exercised can fail or behave differently once it is used.
-With classic binding, which stays the default in Grails {version}, nothing changes.
+With the deprecated classic binding (`hibernate.generatedDomainClasses: false`) nothing changes.
 
 A custom collection type on a `hasMany` of basic values is not supported by either binding.
 

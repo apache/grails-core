@@ -22,25 +22,28 @@ under the License.
 
 GORM for Hibernate 7 can bind your domain classes to Hibernate in two ways.
 
-Classic binding::
-GORM reads your `static mapping` blocks and constraints and builds Hibernate's mapping model itself. This is the default.
-
 Native binding::
-GORM describes each domain class with the JPA and Hibernate annotations that express the same mapping, and Hibernate's own annotation binder binds them. Your domain classes are not changed. Sessions, queries, proxies, dirty checking and the instances you work with are still your real domain classes.
+GORM describes each domain class with the JPA and Hibernate annotations that express the same mapping, and Hibernate's own annotation binder binds them. Your domain classes are not changed. Sessions, queries, proxies, dirty checking and the instances you work with are still your real domain classes. This is the default.
 
-Native binding is where GORM for Hibernate 7 is heading: the mapping is bound by the same code that binds hand-annotated JPA entities, so it follows Hibernate releases without GORM keeping its own copy of Hibernate's mapping rules. It is opt-in today and is intended to become the default. Classic binding will then be retired.
+Classic binding::
+GORM reads your `static mapping` blocks and constraints and builds Hibernate's mapping model itself. Classic binding is deprecated and will be removed in a later release.
 
-This page lists everything that differs from classic binding, so you can decide when to switch.
+Native binding is where GORM for Hibernate 7 is heading: the mapping is bound by the same code that binds hand-annotated JPA entities, so it follows Hibernate releases without GORM keeping its own copy of Hibernate's mapping rules.
 
+This page lists everything that differs from classic binding, so you know what changes for an application that was built with it.
+
+[[nativeDomainBinding-enabling]]
 === Enabling Native Binding
 
-Set `hibernate.generatedDomainClasses` to `true`. It is a boolean and defaults to `false`.
+Native binding is on by default: `hibernate.generatedDomainClasses` is a boolean and defaults to `true`. Nothing needs to be set.
+
+Setting it to `false` selects the deprecated classic binding. Use this only to keep an existing application running while you work through the differences on this page; the application logs a warning at startup that names the setting, and the option goes away when classic binding is removed.
 
 [source,yaml]
 .grails-app/conf/application.yml
 ----
 hibernate:
-    generatedDomainClasses: true
+    generatedDomainClasses: false   # deprecated: selects the classic binding
 ----
 
 The same key works wherever the configuration is read: `application.yml` in Spring Boot, or the `Map` or `PropertyResolver` passed to `HibernateDatastore` when GORM is used standalone. The setting applies to every data source of the application.
@@ -312,6 +315,10 @@ The schema of 765 groups of related domain classes was created with both binding
 | No index named after a closure on the table of a collection whose `index` is a closure.
 | See <<nativeDomainBinding-behavior,Differences in Behavior>>.
 | A database created by classic binding has an index with a name that depends on the start it was created in. Drop it if you want to be rid of it.
+
+| The order of the columns in a `createTable` change set that `dbm-generate-gorm-changelog` or `dbm-gorm-diff` writes: the identifier, then the other columns in the order of the property names (the `version` column among them), then the foreign key columns.
+| Hibernate's annotation binder binds the properties of a class sorted by name, and the migration commands read the mapping model as it was bound. Classic binding listed the identifier, the version, then the properties in declaration order. The schema that `dbCreate` creates is not affected: Hibernate orders the columns of a table it creates itself, in the same way for both bindings, which is why the comparison above lists no other difference in column order.
+| None. Liquibase does not compare the order of columns, so a diff against an existing database reports nothing. A table created from a new change set has its columns in the new order.
 |===
 
 The comparison finds no difference in the unique keys, indexes and identifier columns that natural ids, `unique` groups and `index` options create: they have the same columns in the same order as with classic binding.
@@ -320,10 +327,10 @@ The comparison finds no difference in the unique keys, indexes and identifier co
 
 Do not switch a production database over blindly. Whether `dbCreate: update` or a Liquibase changelog would change anything depends on the differences above.
 
-. Start the application with `hibernate.generatedDomainClasses: true` against a copy of your schema. Fix every refused mapping from the table above; classic binding cannot use these either.
+. Start the upgraded application, with its default native binding, against a copy of your schema. Fix every refused mapping from the table above; classic binding cannot use these either.
 . Run <<ref-diff-scripts-dbm-gorm-diff,dbm-gorm-diff>> against the copy. An empty diff means the switch does not change the schema. Otherwise, compare each reported change with the table above, and apply the changes you want through a migration.
-. Run your test suite once with the setting on.
-. Set the property in the environment where you want it first, for example in `development` only.
+. Run your test suite once with native binding.
+. If you need more time, set `hibernate.generatedDomainClasses: false` in the environments that are not ready yet, for example in `production` only, and remove it as soon as the migration has run. Classic binding is deprecated and will be removed.
 
 Prefer migrations over `dbCreate: update` for a production schema.
 

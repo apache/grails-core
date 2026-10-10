@@ -28,6 +28,14 @@ class DbmGenerateGormChangelogCommandSpec extends ApplicationContextDatabaseMigr
         return DbmGenerateGormChangelogCommand
     }
 
+    // Native domain binding (the default) lists the columns of a table in the order Hibernate's annotation binder binds
+    // them: the identifier, then the other properties sorted by name (the version among them), then the foreign keys it
+    // resolves in a second pass. Classic binding listed the identifier, the version, then the properties in declaration
+    // order. Hibernate only reorders the columns of the mapping model when a schema action (hbm2ddl.auto / dbCreate) is
+    // configured, which the migration commands do not set, so the generated change log shows the binding order. The
+    // snapshot of an existing database is not affected: Liquibase does not compare column order. See
+    // GeneratedModeSnapshotSpec and the "Differences in the Schema" section of the Native Domain Binding chapter.
+
     def "writes Change Log to copy the current state of the database to STDOUT"() {
         when:
             command.handle(getExecutionContext())
@@ -42,11 +50,11 @@ databaseChangeLog = \\{
                 constraints\\(nullable: "false", primaryKey: "true", primaryKeyName: "authorPK"\\)
             \\}
 
-            column\\(name: "version", type: "BIGINT"\\) \\{
+            column\\(name: "name", type: "VARCHAR\\(255\\)"\\) \\{
                 constraints\\(nullable: "false"\\)
             \\}
 
-            column\\(name: "name", type: "VARCHAR\\(255\\)"\\) \\{
+            column\\(name: "version", type: "BIGINT"\\) \\{
                 constraints\\(nullable: "false"\\)
             \\}
         \\}
@@ -58,11 +66,11 @@ databaseChangeLog = \\{
                 constraints\\(nullable: "false", primaryKey: "true", primaryKeyName: "bookPK"\\)
             \\}
 
-            column\\(name: "version", type: "BIGINT"\\) \\{
+            column\\(name: "title", type: "VARCHAR\\(255\\)"\\) \\{
                 constraints\\(nullable: "false"\\)
             \\}
 
-            column\\(name: "title", type: "VARCHAR\\(255\\)"\\) \\{
+            column\\(name: "version", type: "BIGINT"\\) \\{
                 constraints\\(nullable: "false"\\)
             \\}
 
@@ -97,11 +105,11 @@ databaseChangeLog = \\{
                 constraints\\(nullable: "false", primaryKey: "true", primaryKeyName: "authorPK"\\)
             \\}
 
-            column\\(name: "version", type: "BIGINT"\\) \\{
+            column\\(name: "name", type: "VARCHAR\\(255\\)"\\) \\{
                 constraints\\(nullable: "false"\\)
             \\}
 
-            column\\(name: "name", type: "VARCHAR\\(255\\)"\\) \\{
+            column\\(name: "version", type: "BIGINT"\\) \\{
                 constraints\\(nullable: "false"\\)
             \\}
         \\}
@@ -113,11 +121,11 @@ databaseChangeLog = \\{
                 constraints\\(nullable: "false", primaryKey: "true", primaryKeyName: "bookPK"\\)
             \\}
 
-            column\\(name: "version", type: "BIGINT"\\) \\{
+            column\\(name: "title", type: "VARCHAR\\(255\\)"\\) \\{
                 constraints\\(nullable: "false"\\)
             \\}
 
-            column\\(name: "title", type: "VARCHAR\\(255\\)"\\) \\{
+            column\\(name: "version", type: "BIGINT"\\) \\{
                 constraints\\(nullable: "false"\\)
             \\}
 

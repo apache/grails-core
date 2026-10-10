@@ -61,7 +61,7 @@ name,description,default value
 `hibernate.configLocations`, Location of additional Hibernate XML configuration files
 `hibernate.packagesToScan`, Specify packages to search for autodetection of your entity classes in the classpath
 `hibernate.grails.proxy.lazy_to_string`, Whether `toString()` on an uninitialized proxy avoids initializing it (see Proxies and toString()), `false`
-`hibernate.generatedDomainClasses`, Whether Hibernate's own annotation binder binds the domain classes (see Native Domain Binding), `false`
+`hibernate.generatedDomainClasses`, Whether Hibernate's own annotation binder binds the domain classes (see Native Domain Binding); `false` selects the deprecated classic binding, `true`
 |===
 
 In addition, any additional settings that start with `hibernate.` are passed through to Hibernate, so if there is any specific feature of Hibernate you wish to configure that is possible.
