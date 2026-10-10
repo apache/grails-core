@@ -16,23 +16,43 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.build.parsing;
+package org.grails.build.parsing
 
-/**
- * Exception that is thrown in command line parsing fails.
- *
- * @author Graeme Rocher
- * @since 2.0
- */
-public class ParseException extends RuntimeException {
+import spock.lang.Specification
 
-    private static final long serialVersionUID = 1;
+class OptionSpec extends Specification {
 
-    public ParseException(String message) {
-        super(message);
+    void 'stores the given name and description'() {
+        when:
+        Option option = new Option('offline', 'Run offline')
+
+        then:
+        option.name == 'offline'
+        option.description == 'Run offline'
     }
 
-    public ParseException(Throwable cause) {
-        super(cause);
+    void 'defaults a null description to an empty string'() {
+        when:
+        Option option = new Option('offline', null)
+
+        then:
+        option.description == ''
     }
+
+    void 'rejects a null name'() {
+        when:
+        new Option(null, 'desc')
+
+        then:
+        thrown(IllegalArgumentException)
+    }
+
+    void 'rejects an empty name'() {
+        when:
+        new Option('', 'desc')
+
+        then:
+        thrown(IllegalArgumentException)
+    }
+
 }

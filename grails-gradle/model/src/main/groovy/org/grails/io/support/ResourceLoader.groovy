@@ -16,7 +16,7 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.io.support;
+package org.grails.io.support
 
 /**
  * Strategy interface for loading resources (e.. class path or file system
@@ -30,10 +30,10 @@ package org.grails.io.support;
  * @author Juergen Hoeller
  * @since 10.03.2004
  */
-public interface ResourceLoader {
+interface ResourceLoader {
 
     /** Pseudo URL prefix for loading from the class path: "classpath:" */
-    String CLASSPATH_URL_PREFIX = "classpath:";
+    String CLASSPATH_URL_PREFIX = 'classpath:'
 
     /**
      * Return a Resource handle for the specified resource.
@@ -52,7 +52,7 @@ public interface ResourceLoader {
      * @return a corresponding Resource handle
      * @see #CLASSPATH_URL_PREFIX
      */
-    Resource getResource(String location);
+    Resource getResource(String location)
 
     /**
      * Expose the ClassLoader used by this ResourceLoader.
@@ -61,5 +61,6 @@ public interface ResourceLoader {
      * on the thread context ClassLoader.
      * @return the ClassLoader (never <code>null</code>)
      */
-    ClassLoader getClassLoader();
+    ClassLoader getClassLoader()
+
 }
