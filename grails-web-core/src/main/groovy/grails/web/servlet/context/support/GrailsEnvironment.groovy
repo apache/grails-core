@@ -19,6 +19,7 @@
 package grails.web.servlet.context.support
 
 import groovy.transform.CompileStatic
+import groovy.transform.stc.POJO
 import org.springframework.core.env.PropertiesPropertySource
 import org.springframework.core.env.PropertySource
 import org.springframework.util.StringUtils
@@ -30,9 +31,15 @@ import grails.util.Environment
 /**
  * Bridges Grails' existing environment API with the new Spring 3.1 environment profiles API.
  *
+ * <p>The class is a {@link POJO}: Spring's {@code PropertyResolver#getProperty(String)} returns
+ * {@code String}, so it does not override {@code GroovyObject#getProperty(String)} (which returns
+ * {@code Object}), and a dynamic {@code environment.getProperty('a.b')} call would otherwise reach
+ * the Groovy property lookup instead of the Spring property resolution.</p>
+ *
  * @author Graeme Rocher
  * @since 2.0
  */
+@POJO
 @CompileStatic
 class GrailsEnvironment extends StandardServletEnvironment {
 
