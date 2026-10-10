@@ -57,7 +57,7 @@ class GroovyPageUnitTestResourceLoaderSpec extends Specification {
 
         then: 'the resource is the file itself, whatever separator the platform writes its path with'
         resource instanceof FileSystemResource
-        ((FileSystemResource) resource).file.canonicalPath == expected
+        ((FileSystemResource) resource).getFile().canonicalPath == expected
         !resource.exists()
     }
 
@@ -74,7 +74,7 @@ class GroovyPageUnitTestResourceLoaderSpec extends Specification {
         Resource resource = loader.getResource('/book/list.gsp')
 
         then:
-        ((FileSystemResource) resource).file.canonicalPath == new File(viewsDir, 'book/list.gsp').canonicalPath
+        ((FileSystemResource) resource).getFile().canonicalPath == new File(viewsDir, 'book/list.gsp').canonicalPath
 
         cleanup:
         viewsDir.deleteDir()
