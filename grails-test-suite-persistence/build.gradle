@@ -31,8 +31,7 @@ version = projectVersion
 group = 'org.apache.grails.testing'
 
 dependencies {
-    implementation platform(project(':grails-bom'))
-    testImplementation platform(project(':grails-bom'))
+    implementation platform(project(':grails-hibernate7-bom'))
     testImplementation platform(project(':grails-hibernate7-bom'))
     testImplementation project(':grails-codecs')
 

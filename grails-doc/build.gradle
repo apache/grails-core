@@ -45,7 +45,6 @@ ext {
 }
 
 dependencies {
-    implementation platform(project(':grails-bom'))
     implementation platform(project(':grails-hibernate7-bom'))
     implementation 'org.apache.grails:grails-docs-core'
     implementation 'org.apache.groovy:groovy'

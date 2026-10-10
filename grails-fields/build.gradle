@@ -40,7 +40,7 @@ ext {
 }
 
 dependencies {
-    implementation platform(project(':grails-bom'))
+    implementation platform(project(':grails-hibernate7-bom'))
     testImplementation platform(project(':grails-hibernate7-bom'))
 
     implementation project(':grails-gsp')

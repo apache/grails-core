@@ -40,7 +40,7 @@ dependencies {
     implementation 'org.apache.grails:grails-layout'
 
     // 3rd party client-side assets bundled in webjars
-    testAndDevelopmentOnly platform(project(':grails-bom'))
+    testAndDevelopmentOnly platform(project(':grails-hibernate7-bom'))
     testAndDevelopmentOnly 'org.webjars.npm:bootstrap'
     testAndDevelopmentOnly 'org.webjars.npm:jquery'
 

@@ -44,9 +44,9 @@ ext {
 
 dependencies {
 
-    implementation platform(project(':grails-bom'))
+    implementation platform(project(':grails-hibernate7-bom'))
     testImplementation platform(project(':grails-hibernate7-bom'))
-    testFixturesImplementation platform(project(':grails-bom'))
+    testFixturesImplementation platform(project(':grails-hibernate7-bom'))
 
     api project(':grails-datamapping-core'), {
         // api: ConstrainedProperty, GormEntity, MappingContext, PersistentEntity, PersistentProperty
