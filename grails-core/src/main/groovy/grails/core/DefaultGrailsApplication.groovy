@@ -101,7 +101,8 @@ class DefaultGrailsApplication extends AbstractGrailsApplication implements Bean
         InvocationHandler proxyHandler = new InvocationHandler() {
             @Override
             Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
-                MappingContext realContext = application.mappingContext
+                // The field, not the property: the getter answers with this proxy until GORM has initialized
+                MappingContext realContext = application.@mappingContext
                 if (realContext == null) {
                     throw new GrailsConfigurationException('The method [' + method + '] cannot be accessed before GORM has initialized')
                 }
