@@ -32,7 +32,7 @@ import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateManyToManyP
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty
 
-import static org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBinder.UNDERSCORE
+import static org.grails.orm.hibernate.cfg.domainbinding.util.DefaultColumnNameFetcher.UNDERSCORE
 
 @CompileStatic
 @SuppressWarnings('PMD.DataflowAnomalyAnalysis')

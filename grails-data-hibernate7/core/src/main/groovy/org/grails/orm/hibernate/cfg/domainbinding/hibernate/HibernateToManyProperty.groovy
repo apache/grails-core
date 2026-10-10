@@ -36,12 +36,12 @@ import org.grails.orm.hibernate.cfg.ColumnConfig
 import org.grails.orm.hibernate.cfg.JoinTable
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy
 import org.grails.orm.hibernate.cfg.PropertyConfig
-import org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBinder
 import org.grails.orm.hibernate.cfg.domainbinding.util.BackticksRemover
 import org.grails.orm.hibernate.cfg.domainbinding.util.CascadeBehavior
 
 import static org.grails.orm.hibernate.cfg.GrailsHibernateUtil.qualify
-import static org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBinder.UNDERSCORE
+import static org.grails.orm.hibernate.cfg.domainbinding.util.DefaultColumnNameFetcher.FOREIGN_KEY_SUFFIX
+import static org.grails.orm.hibernate.cfg.domainbinding.util.DefaultColumnNameFetcher.UNDERSCORE
 import static org.grails.orm.hibernate.cfg.domainbinding.util.CascadeBehavior.ALL
 import static org.grails.orm.hibernate.cfg.domainbinding.util.CascadeBehavior.ALL_DELETE_ORPHAN
 import static org.grails.orm.hibernate.cfg.domainbinding.util.CascadeBehavior.NONE
@@ -241,21 +241,21 @@ interface HibernateToManyProperty extends PropertyWithMapping<PropertyConfig>, H
         ColumnConfig column = joinTable?.column
         String columnName = column?.name
         return columnName != null ? columnName : namingStrategy.resolveColumnName(name) +
-                GrailsDomainBinder.UNDERSCORE +
+                UNDERSCORE +
                 IndexedCollection.DEFAULT_ELEMENT_COLUMN_NAME
     }
 
     /**
-     * Only reached for a unidirectional {@code hasMany} join table (via {@code CollectionWithJoinTableBinder}).
-     * A bidirectional many-to-many join table's foreign-key columns instead go through
-     * {@code DefaultColumnNameFetcher#resolveForeignKeyForPropertyDomainClass}, unaffected by this method.
+     * The key column of a unidirectional {@code hasMany} join table. A bidirectional many-to-many join table's foreign-key
+     * columns instead go through {@code DefaultColumnNameFetcher#resolveForeignKeyForPropertyDomainClass}, unaffected by
+     * this method.
      */
     default String resolveJoinTableForeignKeyColumnName(PersistentEntityNamingStrategy namingStrategy) {
         PropertyConfig mapped = hibernateMappedForm
         ColumnConfig columnConfig = mapped?.joinTableColumnConfig
         String columnName = columnConfig?.name
         return columnName != null ? columnName : resolveAssociatedEntityTableName(namingStrategy) +
-                GrailsDomainBinder.FOREIGN_KEY_SUFFIX
+                FOREIGN_KEY_SUFFIX
     }
 
     /**
@@ -284,9 +284,9 @@ interface HibernateToManyProperty extends PropertyWithMapping<PropertyConfig>, H
             columnName = namingStrategy.resolveColumnName(referencedType.simpleName)
         }
         else {
-            // Both callers of joinTableColumName (BasicCollectionElementBinder, EnumTypeBinder) operate on
-            // a HibernateBasicProperty, so referencedType is always the collection's basic element type here,
-            // never an associated entity - resolveAssociatedEntityTableName does not apply to this path.
+            // joinTableColumName is only called for a HibernateBasicProperty, so referencedType is always the
+            // collection's basic element type here, never an associated entity - resolveAssociatedEntityTableName
+            // does not apply to this path.
             String clazz = namingStrategy.resolveColumnName(referencedType.name)
             String prop = namingStrategy.resolveColumnName(name)
             columnName = new BackticksRemover().apply(prop) + UNDERSCORE + new BackticksRemover().apply(clazz)

@@ -57,7 +57,7 @@ class Author {
 
 The same applies to a many-to-many from a class to itself: `belongsTo` names the class itself.
 A unidirectional many-to-many, a many-to-many that has `belongsTo` on either side, and one where either side is a `Map` need no change.
-The rule is the same with native domain binding, the default, and with the deprecated classic binding, see below.
+The rule is enforced by native domain binding, see below.
 
 See link:{hibernate7Guide}index.html#gormAssociation-manyToMany[Many-to-Many Associations] in the GORM for Hibernate 7 manual.
 
@@ -82,20 +82,21 @@ They are also fixed in the 8.0.x line, so an application that is already on a re
 ===== 1.3 Native Domain Binding
 
 GORM for Hibernate 7 binds your domain classes with Hibernate's own annotation binder instead of building Hibernate's mapping itself.
-This is native domain binding, and in Grails {version} it is the default: an upgraded application starts with it without any setting.
-The classic binding of earlier releases is deprecated and will be removed in a later release.
+This is native domain binding, and in Grails {version} it is the only binding: an upgraded application starts with it without any setting.
+The classic binding of Grails 8 was removed, with the `hibernate.generatedDomainClasses` setting that selected it.
+An application that still sets the setting, with either value, starts normally and logs a warning at startup that names it; remove the setting.
 
 Your domain classes, your queries and the GORM API do not change.
 The mapping can, though:
 
-* Native binding refuses a mapping only when classic binding cannot use it either: classic binding fails to start with it, or boots it and fails on the first row.
-  The refusal is an `UnsupportedOperationException` at startup that says what classic binding does.
+* Native binding refuses a mapping only when the classic binding could not use it either: the classic binding failed to start with it, or booted it and failed on the first row.
+  The refusal is an `UnsupportedOperationException` at startup that says what the classic binding did.
   The manual chapter lists them.
-  The one exception today is an embedded object as a part of a composite identifier, which classic binding boots and native binding refuses with a message that points at a workaround that keeps the schema, see <<native-binding-embedded-id,1.5>>.
-* The generated schema differs from the one of classic binding in a few documented cases, for example a `check (idx >= 0)` constraint on the index column of every list, and the column types of foreign keys to nested composite identifiers.
-* A few defects of classic binding are not copied, such as a `unique` group that includes an enum property being dropped.
+  The one exception is an embedded object as a part of a composite identifier, which the classic binding booted and native binding refuses with a message that points at a workaround that keeps the schema, see <<native-binding-embedded-id,1.5>>.
+* The generated schema differs from the one of the classic binding in a few documented cases, for example a `check (idx >= 0)` constraint on the index column of every list, and the column types of foreign keys to nested composite identifiers.
+* A few defects of the classic binding are not copied, such as a `unique` group that includes an enum property being dropped.
 * A `hasMany` inside a class listed in `static embedded` that more than one embedded property embeds gets a collection table of its own for every owner.
-  Classic binding shares one table whose foreign key points at only one owner, so the collection of any other owner cannot be stored, and it does not start when the properties have the same name.
+  The classic binding shared one table whose foreign key pointed at only one owner, so the collection of any other owner could not be stored, and it did not start when the properties had the same name.
   The first owner (by entity name, then property path) keeps the table and the key column it has today, the others get names that start with their table and the path of the embedded property.
 * A custom collection type on a `hasMany` now takes effect, see <<native-binding-custom-collection-type,1.4>>.
 * A `createTable` change set written by `dbm-generate-gorm-changelog` or `dbm-gorm-diff` lists the columns in a different order: the identifier, then the columns in the order of the property names, then the foreign keys.
@@ -104,22 +105,13 @@ The mapping can, though:
 Before you upgrade an application with an existing database:
 
 . Start the upgraded application against a copy of the database and fix every refused mapping; the startup error says what to change.
-. Run `dbm-gorm-diff` against the copy with the upgraded application, which uses the new default.
-  An empty diff means the switch does not change your schema.
+. Run `dbm-gorm-diff` against the copy with the upgraded application.
+  An empty diff means the upgrade does not change your schema.
   Otherwise, compare each reported change with the schema differences in the manual and apply the ones you want through a migration.
 . Run your test suite once.
 
-If you need more time, the `hibernate.generatedDomainClasses` setting selects the classic binding for the environments that are not ready yet:
-
-[source,yaml]
-.grails-app/conf/application.yml
-----
-hibernate:
-    generatedDomainClasses: false   # deprecated: selects the classic binding
-----
-
-The application then logs a warning at startup that names the setting.
-Remove the setting as soon as the migration has run, because classic binding will be removed.
+There is no setting that brings the classic binding back.
+An application whose mappings or database need work stays on Grails 8 until it is done; every refused mapping is one the classic binding could not use either, so the change it needs is the same on both lines.
 
 The link:{hibernate7Guide}index.html#advancedGORMFeatures-nativeDomainBinding[Native Domain Binding] chapter of the GORM for Hibernate 7 manual lists every refused mapping, every schema difference and what each means for an existing database.
 
@@ -138,8 +130,8 @@ class Author {
 }
 ----
 
-Classic binding accepts this mapping and creates the usual schema, but it never uses the class.
-It does not even create an instance of `MyCollectionType`, and `author.books` is an ordinary Hibernate collection.
+The classic binding of Grails 8 accepted this mapping and created the usual schema, but it never used the class.
+It did not even create an instance of `MyCollectionType`, and `author.books` was an ordinary Hibernate collection.
 
 Native binding applies the type.
 Hibernate creates, wraps and loads the collection with your class, so the code of your collection type runs where it never ran before.
@@ -147,9 +139,8 @@ The schema is the same.
 
 If your application maps a custom collection type, test it with the upgraded application before you deploy.
 A type that was never exercised can fail or behave differently once it is used.
-With the deprecated classic binding (`hibernate.generatedDomainClasses: false`) nothing changes.
 
-A custom collection type on a `hasMany` of basic values is not supported by either binding.
+A custom collection type on a `hasMany` of basic values is not supported (the classic binding did not boot it either).
 
 [[native-binding-embedded-id]]
 ===== 1.5 An Embedded Object as a Part of a Composite Identifier
@@ -172,6 +163,6 @@ class Customer implements Serializable {
 }
 ----
 
-The table, its columns and its primary key are the ones the embedded version creates (`address_street` and `address_city` are the names the embedded object gives its columns), so an existing database needs no migration and its rows stay readable.
+The table, its columns and its primary key are the ones the embedded version created with Grails 8 (`address_street` and `address_city` are the names the embedded object gave its columns), so an existing database needs no migration and its rows stay readable.
 A transient `Address getAddress()` accessor keeps `customer.address` working.
 The link:{hibernate7Guide}index.html#nativeDomainBinding-embeddedId[Native Domain Binding] chapter of the GORM for Hibernate 7 manual describes the accessor, the foreign keys to such an entity and how to switch an existing database.

@@ -30,10 +30,10 @@ import org.grails.orm.hibernate.HibernateDatastore
 
 /**
  * Many-to-many associations and maps of entities that involve an entity with a composite identifier, and foreign keys to a composite
- * identifier that the mapping gives fewer columns than the identifier has properties. The domain binder boots them: it gives the join
- * table a key column for each identifier property of the owner and an element column for each one of the target, names the columns the
- * mapping states in order and names the missing ones as it would have named all of them. The generated mode describes the same tables
- * and columns instead of refusing the mapping.
+ * identifier that the mapping gives fewer columns than the identifier has properties. The classic binding of Grails 8 booted them: it
+ * gave the join table a key column for each identifier property of the owner and an element column for each one of the target, named
+ * the columns the mapping states in order and named the missing ones as it would have named all of them. Native binding describes the
+ * same tables and columns, stated here, instead of refusing the mapping.
  */
 class GeneratedDomainClassesCompositeCollectionSpec extends Specification {
 
@@ -42,19 +42,18 @@ class GeneratedDomainClassesCompositeCollectionSpec extends Specification {
     @AutoCleanup
     HibernateDatastore datastore
 
-    private HibernateDatastore boot(List<Class> group, boolean generated) {
+    private HibernateDatastore boot(List<Class> group) {
         datastore?.close()
         datastore = new HibernateDatastore([
-                'dataSource.url'                  : "jdbc:h2:mem:gcc${BOOTS.incrementAndGet()};LOCK_TIMEOUT=10000".toString(),
-                'dataSource.dbCreate'             : 'create-drop',
-                'hibernate.generatedDomainClasses': generated,
+                'dataSource.url'     : "jdbc:h2:mem:gcc${BOOTS.incrementAndGet()};LOCK_TIMEOUT=10000".toString(),
+                'dataSource.dbCreate': 'create-drop',
         ], group as Class[])
         return datastore
     }
 
     /** The tables of the boot model: columns with type and nullability (a primary key column is not null), primary key and foreign keys. */
-    private Map<String, Map> schema(List<Class> group, boolean generated) {
-        HibernateDatastore booted = boot(group, generated)
+    private Map<String, Map> schema(List<Class> group) {
+        HibernateDatastore booted = boot(group)
         Map<String, Map> result = new TreeMap<String, Map>()
         for (Table table : booted.metadata.collectTableMappings()) {
             if (table.physicalTable) {
@@ -72,13 +71,11 @@ class GeneratedDomainClassesCompositeCollectionSpec extends Specification {
     }
 
     @Unroll
-    void "#label: the generated mode creates the tables and columns of the domain binder"() {
+    void "#label: the tables and columns of classic binding are created"() {
         when:
-        Map<String, Map> binder = schema(group, false)
-        Map<String, Map> generated = schema(group, true)
+        Map<String, Map> generated = schema(group)
 
         then:
-        generated == binder
         generated[table].columns.keySet() == columns as Set
 
         where:
@@ -94,16 +91,13 @@ class GeneratedDomainClassesCompositeCollectionSpec extends Specification {
     }
 
     @Unroll
-    void "#label: the rows are stored, read back, changed and deleted in both modes"() {
+    void "#label: the rows are stored, read back, changed and deleted"() {
         when:
-        Map<Boolean, List> results = [false, true].collectEntries { boolean generated ->
-            boot(group, generated)
-            [(generated): this."${cycle}"()]
-        }
+        boot(group)
+        List results = this."${cycle}"()
 
         then:
-        results[true] == results[false]
-        results[true] == expected
+        results == expected
 
         where:
         label                                            | group                          | cycle               | expected

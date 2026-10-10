@@ -31,7 +31,7 @@ import spock.lang.Unroll
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty
 import org.grails.orm.hibernate.cfg.domainbinding.util.NamingStrategyWrapper
 
-import static org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBinder.FOREIGN_KEY_SUFFIX
+import static org.grails.orm.hibernate.cfg.domainbinding.util.DefaultColumnNameFetcher.FOREIGN_KEY_SUFFIX
 
 /**
  * Specification for the NamingStrategyWrapper.
@@ -133,7 +133,7 @@ class NamingStrategyWrapperSpec extends HibernateGormDatastoreSpec {
 
     def "should correctly generate a foreign key name for a property"() {
         given: "A persistent property and a captured argument"
-        def ownerEntity = createPersistentEntity(Owner, getGrailsDomainBinder())
+        def ownerEntity = createPersistentEntity(Owner)
         def property = ownerEntity.getPropertyByName("someProperty") as HibernatePersistentProperty
         def capturedIdentifier
 

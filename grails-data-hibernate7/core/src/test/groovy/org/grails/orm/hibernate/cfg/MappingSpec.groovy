@@ -31,10 +31,9 @@ class MappingSpec extends HibernateGormDatastoreSpec {
     @Unroll
     void "test isCompositeIdProperty should return #expectedResult for #description"() {
         given: "A persistent entity and its mapping"
-        def binder = grailsDomainBinder
         // Ensure all related entities are processed by the mapping context
-        createPersistentEntity(Author, binder)
-        def entity = createPersistentEntity(domainClass, binder)
+        createPersistentEntity(Author)
+        def entity = createPersistentEntity(domainClass)
         def mapping = (Mapping) entity.getMappedForm()
         def property = entity.getPropertyByName(propertyName)
 
@@ -55,8 +54,7 @@ class MappingSpec extends HibernateGormDatastoreSpec {
     @Unroll
     void "test isIdentityProperty should return #expectedResult for #description"() {
         given: "A persistent entity and its property"
-        def binder = grailsDomainBinder
-        def entity = createPersistentEntity(domainClass, binder)
+        def entity = createPersistentEntity(domainClass)
         def property = entity.getPropertyByName(propertyName)
 
         when: "The method is called on the property itself"

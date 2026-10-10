@@ -221,7 +221,7 @@ class GrailsDomainGeneratorCompositeIdSpec extends GrailsDomainGeneratorSupport 
         when:
         newGenerator().generateAll(unbound(domain, composite), getClass().classLoader)
 
-        then: "the binder cannot boot a join table to a composite identifier either (see GrailsDomainBinderCompositeIdDefectSpec)"
+        then: "classic binding could not boot a join table to a composite identifier either (the key got the columns of the element)"
         UnsupportedOperationException e = thrown()
         e.message.contains(domain.simpleName)
         e.message.contains(property)
@@ -332,7 +332,7 @@ class GrailsDomainGeneratorCompositeIdSpec extends GrailsDomainGeneratorSupport 
         when:
         newGenerator().generateAll(unbound(UnbootableJoinedParent, UnbootableJoinedChild), getClass().classLoader)
 
-        then: "the binder binds the key of a joined subclass with one column (see GrailsDomainBinderCompositeIdDefectSpec)"
+        then: "classic binding bound the key of a joined subclass with one column, so it could not boot this either"
         UnsupportedOperationException e = thrown()
         e.message.contains('UnbootableJoinedParent')
         e.message.contains('joined subclass')

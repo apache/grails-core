@@ -37,11 +37,10 @@ class GeneratedDomainClassesAnnotatedClassesSpec extends Specification {
     @AutoCleanup
     HibernateDatastore datastore = new HibernateDatastore(
             DatastoreUtils.createPropertyResolver([
-                    'hibernate.generatedDomainClasses': true,
-                    'hibernate.annotatedClasses'      : [GdcAnnotatedThing],
-                    'dataSource.url'                  : 'jdbc:h2:mem:gdcAnnotatedClasses;LOCK_TIMEOUT=10000',
-                    'dataSource.dbCreate'             : 'create-drop',
-                    'hibernate.hbm2ddl.auto'          : 'create-drop',
+                    'hibernate.annotatedClasses': [GdcAnnotatedThing],
+                    'dataSource.url'            : 'jdbc:h2:mem:gdcAnnotatedClasses;LOCK_TIMEOUT=10000',
+                    'dataSource.dbCreate'       : 'create-drop',
+                    'hibernate.hbm2ddl.auto'    : 'create-drop',
             ]),
             GdcConstructorThing)
 

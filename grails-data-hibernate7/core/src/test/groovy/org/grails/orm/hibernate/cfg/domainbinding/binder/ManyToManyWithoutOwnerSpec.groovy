@@ -33,22 +33,21 @@ import spock.lang.Unroll
 /**
  * A bidirectional many-to-many is written by the side that {@code belongsTo} designates as the owner. When neither side
  * declares it, both collections are inverse and the relationship is never stored, so the application refuses to start
- * instead of silently losing the data, in both the domain binder and the generated mapping.
+ * instead of silently losing the data.
  */
 class ManyToManyWithoutOwnerSpec extends Specification {
 
     @AutoCleanup
     HibernateDatastore datastore
 
-    private HibernateDatastore boot(boolean generated, Class... classes) {
+    private HibernateDatastore boot(Class... classes) {
         datastore = new HibernateDatastore(DatastoreUtils.createPropertyResolver([
-                'dataSource.url'                  : "jdbc:h2:mem:m2mNoOwner${generated}${System.nanoTime()};LOCK_TIMEOUT=10000".toString(),
-                'dataSource.dbCreate'             : 'create-drop',
-                'dataSource.dialect'              : H2Dialect.name,
-                'hibernate.hbm2ddl.auto'          : 'create-drop',
-                'hibernate.cache.queries'         : 'false',
-                'hibernate.cache.use_query_cache' : 'false',
-                'hibernate.generatedDomainClasses': generated,
+                'dataSource.url'                 : "jdbc:h2:mem:m2mNoOwner${System.nanoTime()};LOCK_TIMEOUT=10000".toString(),
+                'dataSource.dbCreate'            : 'create-drop',
+                'dataSource.dialect'             : H2Dialect.name,
+                'hibernate.hbm2ddl.auto'         : 'create-drop',
+                'hibernate.cache.queries'        : 'false',
+                'hibernate.cache.use_query_cache': 'false',
         ]), classes)
         return datastore
     }
@@ -67,39 +66,30 @@ class ManyToManyWithoutOwnerSpec extends Specification {
         return null
     }
 
-    @Unroll
-    def "the application does not start when neither side of a many-to-many declares belongsTo (generated mapping: #generated)"() {
+    def "the application does not start when neither side of a many-to-many declares belongsTo"() {
         when:
-        MappingException failure = mappingFailure { boot(generated, NoOwnerLeft, NoOwnerRight) }
+        MappingException failure = mappingFailure { boot(NoOwnerLeft, NoOwnerRight) }
 
         then: 'the message names both sides and says where to declare belongsTo'
         failure != null
         failure.message == 'Neither side of the many-to-many between [grails.unbootable.NoOwnerLeft.rights] and ' +
                 '[grails.unbootable.NoOwnerRight.lefts] declares belongsTo, so the relationship would never be stored. ' +
                 'Declare belongsTo on the owned side, for example in NoOwnerRight: static belongsTo = NoOwnerLeft'
-
-        where:
-        generated << [false, true]
     }
 
-    @Unroll
-    def "the application does not start when a self-referencing many-to-many has no belongsTo (generated mapping: #generated)"() {
+    def "the application does not start when a self-referencing many-to-many has no belongsTo"() {
         when:
-        MappingException failure = mappingFailure { boot(generated, NoOwnerSelf) }
+        MappingException failure = mappingFailure { boot(NoOwnerSelf) }
 
         then:
         failure != null
         failure.message.contains('[grails.unbootable.NoOwnerSelf.followers] and [grails.unbootable.NoOwnerSelf.following]')
         failure.message.contains('static belongsTo = NoOwnerSelf')
-
-        where:
-        generated << [false, true]
     }
 
-    @Unroll
-    def "a many-to-many with belongsTo on one side starts and stores its rows (generated mapping: #generated)"() {
+    def "a many-to-many with belongsTo on one side starts and stores its rows"() {
         when:
-        boot(generated, OwnedLeft, OwnerRight)
+        boot(OwnedLeft, OwnerRight)
         OwnerRight.withTransaction {
             OwnerRight owner = new OwnerRight(name: 'owner')
             owner.addToLefts(new OwnedLeft(name: 'left'))
@@ -109,27 +99,19 @@ class ManyToManyWithoutOwnerSpec extends Specification {
         then:
         OwnerRight.withNewSession { OwnerRight.first().lefts*.name } == ['left']
         OwnedLeft.withNewSession { OwnedLeft.first().owners*.name } == ['owner']
-
-        where:
-        generated << [false, true]
     }
 
-    @Unroll
-    def "a unidirectional many-to-many starts (generated mapping: #generated)"() {
+    def "a unidirectional many-to-many starts"() {
         when:
-        boot(generated, UnidirectionalLeft, UnidirectionalRight)
+        boot(UnidirectionalLeft, UnidirectionalRight)
 
         then:
         noExceptionThrown()
-
-        where:
-        generated << [false, true]
     }
 
-    @Unroll
-    def "a self-referencing many-to-many with belongsTo starts and stores its rows (generated mapping: #generated)"() {
+    def "a self-referencing many-to-many with belongsTo starts and stores its rows"() {
         when:
-        boot(generated, OwnedSelf)
+        boot(OwnedSelf)
         OwnedSelf.withTransaction {
             OwnedSelf first = new OwnedSelf(name: 'first')
             first.addToFollowers(new OwnedSelf(name: 'second'))
@@ -138,15 +120,12 @@ class ManyToManyWithoutOwnerSpec extends Specification {
 
         then:
         OwnedSelf.withNewSession { OwnedSelf.findByName('first').followers*.name } == ['second']
-
-        where:
-        generated << [false, true]
     }
 
     @Unroll
-    def "a many-to-many with a Map on #shape starts without belongsTo and stores its rows through the Map side (generated mapping: #generated)"() {
+    def "a many-to-many with a Map on #shape starts without belongsTo and stores its rows through the Map side"() {
         when:
-        boot(generated, left, right)
+        boot(left, right)
         left.withTransaction {
             def rightRow = right.newInstance(name: 'right').save(failOnError: true)
             left.newInstance(name: 'left', (leftProperty): [first: rightRow]).save(flush: true, failOnError: true)
@@ -157,16 +136,14 @@ class ManyToManyWithoutOwnerSpec extends Specification {
         !readsBack || right.withNewSession { right.findByName('right')."$rightProperty"*.name } == ['left']
 
         where:
-        shape        | left       | right       | leftProperty | rightProperty | readsBack | generated
-        'one side'   | MapSetLeft | MapSetRight | 'rights'     | 'lefts'       | true      | false
-        'both sides' | MapMapLeft | MapMapRight | 'rights'     | 'lefts'       | false     | false
-        'one side'   | MapSetLeft | MapSetRight | 'rights'     | 'lefts'       | true      | true
-        'both sides' | MapMapLeft | MapMapRight | 'rights'     | 'lefts'       | false     | true
+        shape        | left       | right       | leftProperty | rightProperty | readsBack
+        'one side'   | MapSetLeft | MapSetRight | 'rights'     | 'lefts'       | true
+        'both sides' | MapMapLeft | MapMapRight | 'rights'     | 'lefts'       | false
     }
 
     def "a Set on both sides without belongsTo still does not start"() {
         when:
-        MappingException failure = mappingFailure { boot(false, NoOwnerLeft, NoOwnerRight) }
+        MappingException failure = mappingFailure { boot(NoOwnerLeft, NoOwnerRight) }
 
         then:
         failure != null

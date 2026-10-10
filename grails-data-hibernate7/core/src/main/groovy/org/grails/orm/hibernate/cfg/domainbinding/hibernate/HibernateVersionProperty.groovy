@@ -26,8 +26,7 @@ import java.beans.PropertyDescriptor
 
 /**
  * Specialisation of {@link HibernateSimpleProperty} used for the optimistic-locking
- * version property. Having a distinct type allows binders (e.g. {@link
- * org.grails.orm.hibernate.cfg.domainbinding.binder.VersionBinder}) to distinguish the
+ * version property. Having a distinct type allows the binding to distinguish the
  * version slot from ordinary simple properties and apply version-specific defaults
  * (integer type, {@code undefined} null-value, etc.).
  */

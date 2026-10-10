@@ -36,7 +36,7 @@ class HibernateOneToManyPropertySpec extends HibernateGormDatastoreSpec {
         given:
         def authorEntity = mappingContext.getPersistentEntity(HOTMPAuthor.name)
         HibernateOneToManyProperty property = (HibernateOneToManyProperty) authorEntity.getPropertyByName("books")
-        def mbc = getGrailsDomainBinder().metadataBuildingContext
+        def mbc = getMappingContributor().metadataBuildingContext
         def rootClass = new org.hibernate.mapping.RootClass(mbc)
         rootClass.setEntityName(HOTMPAuthor.name)
         def mockCollection = new org.hibernate.mapping.Set(mbc, rootClass)
@@ -94,7 +94,7 @@ class HibernateOneToManyPropertySpec extends HibernateGormDatastoreSpec {
         given:
         def authorEntity = (HibernatePersistentEntity) getMappingContext().getPersistentEntity(HOTMPAuthor.name)
         def property = (HibernateOneToManyProperty) authorEntity.getPropertyByName("books")
-        def mbc = getGrailsDomainBinder().metadataBuildingContext
+        def mbc = getMappingContributor().metadataBuildingContext
         
         def rootClass = new org.hibernate.mapping.RootClass(mbc)
         rootClass.setEntityName(HOTMPAuthor.name)

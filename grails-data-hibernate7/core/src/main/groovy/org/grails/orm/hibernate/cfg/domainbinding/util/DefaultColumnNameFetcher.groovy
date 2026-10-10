@@ -31,8 +31,9 @@ import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyPrope
 @SuppressWarnings('PMD.DataflowAnomalyAnalysis')
 class DefaultColumnNameFetcher {
 
-    private static final String FOREIGN_KEY_SUFFIX = '_id'
-    private static final String UNDERSCORE = '_'
+    /** The suffix of a foreign key column named after the property or the entity it refers to. */
+    public static final String FOREIGN_KEY_SUFFIX = '_id'
+    public static final String UNDERSCORE = '_'
 
     private final PersistentEntityNamingStrategy namingStrategyWrapper
     private final BackticksRemover backticksRemover

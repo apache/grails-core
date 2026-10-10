@@ -20,39 +20,22 @@ under the License.
 [[advancedGORMFeatures-nativeDomainBinding]]
 == Native Domain Binding
 
-GORM for Hibernate 7 can bind your domain classes to Hibernate in two ways.
+GORM for Hibernate 7 binds your domain classes to Hibernate natively: GORM describes each domain class with the JPA and Hibernate annotations that express the same mapping, and Hibernate's own annotation binder binds them. Your domain classes are not changed. Sessions, queries, proxies, dirty checking and the instances you work with are still your real domain classes. The mapping is bound by the same code that binds hand-annotated JPA entities, so it follows Hibernate releases without GORM keeping its own copy of Hibernate's mapping rules.
 
-Native binding::
-GORM describes each domain class with the JPA and Hibernate annotations that express the same mapping, and Hibernate's own annotation binder binds them. Your domain classes are not changed. Sessions, queries, proxies, dirty checking and the instances you work with are still your real domain classes. This is the default.
+Grails 8 bound the domain classes with the classic binding: GORM read your `static mapping` blocks and constraints and built Hibernate's mapping model itself. The classic binding was removed in Grails 9.0. Native binding is the only binding, and there is no setting that selects another.
 
-Classic binding::
-GORM reads your `static mapping` blocks and constraints and builds Hibernate's mapping model itself. Classic binding is deprecated and will be removed in a later release.
-
-Native binding is where GORM for Hibernate 7 is heading: the mapping is bound by the same code that binds hand-annotated JPA entities, so it follows Hibernate releases without GORM keeping its own copy of Hibernate's mapping rules.
-
-This page lists everything that differs from classic binding, so you know what changes for an application that was built with it.
+This page lists everything that changed from the classic binding, so you know what to expect for an application, and a database, that were built with Grails 8.
 
 [[nativeDomainBinding-enabling]]
-=== Enabling Native Binding
+=== The Setting of Grails 8
 
-Native binding is on by default: `hibernate.generatedDomainClasses` is a boolean and defaults to `true`. Nothing needs to be set.
-
-Setting it to `false` selects the deprecated classic binding. Use this only to keep an existing application running while you work through the differences on this page; the application logs a warning at startup that names the setting, and the option goes away when classic binding is removed.
-
-[source,yaml]
-.grails-app/conf/application.yml
-----
-hibernate:
-    generatedDomainClasses: false   # deprecated: selects the classic binding
-----
-
-The same key works wherever the configuration is read: `application.yml` in Spring Boot, or the `Map` or `PropertyResolver` passed to `HibernateDatastore` when GORM is used standalone. The setting applies to every data source of the application.
+Nothing needs to be set. The setting `hibernate.generatedDomainClasses`, which selected the classic binding in Grails 8 when set to `false`, is no longer read: an application that still sets it, with either value, starts with native binding and logs a warning at startup that names the setting. Remove it from `application.yml`, and from the `Map` or `PropertyResolver` passed to `HibernateDatastore` when GORM is used standalone.
 
 NOTE: Native binding changes how the mapping is built, not the API. `save()`, `get()`, finders, criteria, HQL, `where` queries, events, validation and transactions are used exactly as before.
 
 === What Stays the Same
 
-For the domain classes in GORM's own test suites, both bindings produce the same schema apart from the differences listed below. The following are the same on purpose:
+For the domain classes in GORM's own test suites, native binding produces the schema the classic binding of Grails 8 produced, apart from the differences listed below. The following are the same on purpose:
 
 * Entity names are the names of your domain classes, so statistics, entity graphs, cache regions and log messages use the names they used with classic binding.
 * Second-level cache regions are named as with classic binding.
@@ -61,29 +44,29 @@ For the domain classes in GORM's own test suites, both bindings produce the same
 * All multi-tenancy modes (`DISCRIMINATOR`, `SCHEMA`, `DATABASE`) and multiple data sources work. An association still cannot refer to an entity of another data source.
 * Composite identifiers use the same primary key column order.
 * Properties mapped with a `UserType` class, and with the registered converter types `yes_no`, `true_false` and `numeric_boolean`, are stored as before.
-* A `hasMany` of basic values whose `type` is `'serializable'` or a `UserType` class is stored in one column of the owner's table, as before, with the `index`, `unique` group and column settings of the property. A `type` on a `hasMany` of domain classes changes nothing in both bindings.
+* A `hasMany` of basic values whose `type` is `'serializable'` or a `UserType` class is stored in one column of the owner's table, as before, with the `index`, `unique` group and column settings of the property. A `type` on a `hasMany` of domain classes changes nothing, as before.
 * An `index` on the property of a `hasMany` is created over the key column of the collection table (and over the element column of a collection of enums), and `indexColumn` may give the index of a list or the key of a map a `type` other than integer or string.
-* A `hasMany` inside a class listed in `static embedded` (basic values, enums or domain classes, also in a nested embedded class) is stored in a collection table named after the embedded class, not after the owner, with a key column named after the embedded class too, as with classic binding. When more than one embedded property embeds the class, every owner gets a table of its own, see <<nativeDomainBinding-behavior,Differences in Behavior>>.
-* A `Map` on a many-to-many (`Map<String, Book> books` with a `Set` or another `Map` on the other side) writes its own join table, with the key column of the map as part of the primary key, as with classic binding. A `Set` on the other side reads that table and does not write it, and two maps are two separate tables: rows stored through one map are not visible through the other, in both bindings.
+* A `hasMany` inside a class listed in `static embedded` (basic values, enums or domain classes, also in a nested embedded class) is stored in a collection table named after the embedded class, not after the owner, with a key column named after the embedded class too, as with classic binding. When more than one embedded property embeds the class, every owner gets a table of its own, see <<nativeDomainBinding-behavior,Changes in Behavior from Grails 8>>.
+* A `Map` on a many-to-many (`Map<String, Book> books` with a `Set` or another `Map` on the other side) writes its own join table, with the key column of the map as part of the primary key, as with classic binding. A `Set` on the other side reads that table and does not write it, and two maps are two separate tables: rows stored through one map are not visible through the other, as before.
 * `type: 'serializable'` on a property that is not a collection (a `String`, a `byte[]` or any `Serializable`) is a binary column holding the Java serialization of the value, as with classic binding.
 * `params` on a registered type name such as `type: 'string'` are ignored, as with classic binding. They reach the type when it is a `UserType` that implements `ParameterizedType`.
 * A `type` that names an `AttributeConverter` class, for example `type: 'org.hibernate.type.YesNoConverter'`, converts the property with it, on a single property as well as on a `hasMany` stored in one column, as with classic binding.
-* A registered type name for a different Java type than the property's, for example `type: 'string'` on an `Integer`, gives the column of the registered type (`varchar(255)`), as with classic binding. Neither binding converts the value, so saving a value that is not null fails with a `ClassCastException` in both; a null value and the other properties of the class are stored.
+* A registered type name for a different Java type than the property's, for example `type: 'string'` on an `Integer`, gives the column of the registered type (`varchar(255)`), as with classic binding. The value is not converted, as it was not by classic binding, so saving a value that is not null fails with a `ClassCastException`; a null value and the other properties of the class are stored.
 * A natural id (`id natural: [...]`) may name an embedded object (the unique key spans its columns, in the order of the embedded class), and a name that is no property of the class is skipped without a message, as with classic binding.
-* A natural id declared on a subclass adds a unique key to the table of the hierarchy (the table of the subclass in a joined hierarchy), over the columns of the named properties in the order the mapping names them, and makes those properties updatable only when the natural id is `mutable`. Classic binding also marks the properties as natural identifiers, and with Hibernate 7 that makes every load of the subclass entity fail with a `NullPointerException`; native binding does not mark them, so the subclass entity loads.
-* `insertable: false` and `updatable: false` are honored on a property with a column. On an embedded object they apply to every column of the object. On a `hasMany` and on the inverse side of a one-to-one (the side with no column) both bindings ignore them: the collection is written through its own table, and the foreign key lives on the other side.
-* A `discriminator` column may set `precision` and `scale`, and the discriminator may have a `type` other than string, integer or character, for example `type: 'long'`. The precision and the scale change nothing in the DDL of a string, integer or character column, in both bindings.
+* A natural id declared on a subclass adds a unique key to the table of the hierarchy (the table of the subclass in a joined hierarchy), over the columns of the named properties in the order the mapping names them, and makes those properties updatable only when the natural id is `mutable`. The classic binding also marked the properties as natural identifiers, and with Hibernate 7 that made every load of the subclass entity fail with a `NullPointerException`; native binding does not mark them, so the subclass entity loads.
+* `insertable: false` and `updatable: false` are honored on a property with a column. On an embedded object they apply to every column of the object. On a `hasMany` and on the inverse side of a one-to-one (the side with no column) they are ignored, as they were by the classic binding: the collection is written through its own table, and the foreign key lives on the other side.
+* A `discriminator` column may set `precision` and `scale`, and the discriminator may have a `type` other than string, integer or character, for example `type: 'long'`. The precision and the scale change nothing in the DDL of a string, integer or character column, as before.
 * A multi-tenant id (`tenantId`) may have a mapped `type`: its column has the type, and the tenant filter still compares it with the current tenant.
-* The `defaultValue`, `comment`, `read` and `write` of the column mapping of an association or of a `hasMany` are put on the foreign key column (on the key column of a collection, and on the element column of a many-to-many for the options of the other side). The `length`, `precision` and `scale` change nothing: a foreign key column has the type of the column it references, and a `hasMany` of basic values ignores them too. This is the same in both bindings.
+* The `defaultValue`, `comment`, `read` and `write` of the column mapping of an association or of a `hasMany` are put on the foreign key column (on the key column of a collection, and on the element column of a many-to-many for the options of the other side). The `length`, `precision` and `scale` change nothing: a foreign key column has the type of the column it references, and a `hasMany` of basic values ignores them too. This is the same as with the classic binding.
 * A many-to-many or a map of domain classes may involve an entity with a composite identifier on either side or on both: the join table has a key column for each identifier property of the owner and an element column for each one of the target, named as with classic binding. A foreign key to a composite identifier that the mapping gives fewer columns than the identifier has properties keeps the columns the mapping names and names the missing ones as classic binding does.
-* A `joinTable` that names several `key` columns uses the first one in both bindings (the other names are ignored). A `type` that names a Java class that is no `UserType` or converter, for example `type: 'java.util.Date'`, gives the column of the type Hibernate registers for that class, and a property of a class GORM does not know (a `Serializable` class, with no `type`) is stored as bytes. An embedded property with a `type` that is a `UserType` is one column of that type, not an embedded object. An embedded class may extend a domain class: its inherited properties become columns of the owner too.
-* The default `sort` of a bidirectional `hasMany` orders a set and a map by the property, also when it is an association (by its foreign key), and does nothing for a list, which stays in the order of its index. This is the same in both bindings.
+* A `joinTable` that names several `key` columns uses the first one, as with the classic binding (the other names are ignored). A `type` that names a Java class that is no `UserType` or converter, for example `type: 'java.util.Date'`, gives the column of the type Hibernate registers for that class, and a property of a class GORM does not know (a `Serializable` class, with no `type`) is stored as bytes. An embedded property with a `type` that is a `UserType` is one column of that type, not an embedded object. An embedded class may extend a domain class: its inherited properties become columns of the owner too.
+* The default `sort` of a bidirectional `hasMany` orders a set and a map by the property, also when it is an association (by its foreign key), and does nothing for a list, which stays in the order of its index. This is the same as with the classic binding.
 * Identifier generators, inheritance strategies (single table, joined and table-per-concrete-class), discriminators, natural ids, optimistic locking, lazy and eager fetching, cascades, sorting, batch size and `cache` usage are mapped as with classic binding.
 
 [[nativeDomainBinding-refused]]
-=== Mappings Native Binding Refuses
+=== Mappings That Are Not Supported
 
-Native binding does not refuse a mapping that classic binding accepts and can use, with the one exception at the end of the table, which has a supported workaround. It refuses the mappings below, which classic binding cannot use either: classic binding fails to start with them, or it boots them and fails on the first row. The application fails at startup. The exception has an `UnsupportedOperationException` as its root cause, and the message names the domain class and the property, and says what classic binding does with the mapping.
+Native binding supports every mapping that the classic binding of Grails 8 could use, with the one exception at the end of the table, which has a supported workaround. The mappings below are not supported; the classic binding could not use them either: it failed to start with them, or it booted them and failed on the first row. The application fails at startup. The exception has an `UnsupportedOperationException` as its root cause, and the message names the domain class and the property, and says what the classic binding did with the mapping.
 
 [cols="2,3,3", options="header"]
 |===
@@ -93,40 +76,40 @@ Native binding does not refuse a mapping that classic binding accepts and can us
 
 | A natural id that names a collection or a formula.
 | `The natural id of [...] names [...], which is ... only a simple property, an enum, a foreign key or an embedded type can be part of a natural id ...`
-| Name only simple properties, enums, many-to-one associations and embedded objects in `natural`. Classic binding fails with a `ClassCastException` for a collection and with `constraint involves a formula` for a formula.
+| Name only simple properties, enums, many-to-one associations and embedded objects in `natural`. The classic binding failed with a `ClassCastException` for a collection and with `constraint involves a formula` for a formula.
 
 | A `type` on a `hasMany` of basic values that is a registered Hibernate type name, for example `type: 'text'`, or a custom collection type.
 | `Collection property [...]: the type [...] mapped on the collection property names neither a class nor serializable ...` or `... a custom collection type (a UserCollectionType) is mapped on a collection of basic values ...`
-| Remove the `type`, or use `'serializable'` or a `UserType` class to store the collection in one column. Classic binding fails with `Could not load requested class`, and with a custom collection type on a collection of basic values.
+| Remove the `type`, or use `'serializable'` or a `UserType` class to store the collection in one column. The classic binding failed with `Could not load requested class`, and with a custom collection type on a collection of basic values.
 
-| A composite identifier combined with something classic binding cannot boot: a `hasMany` of domain classes that is not a many-to-many and uses a join table to an entity with a composite identifier, a join table whose key columns are mapped on an entity with a composite identifier, a composite identifier part that is the inverse side of a one-to-one, a part that refers to an entity with a simple identifier or to a composite identifier more than one level deep, a joined subclass of such an entity, or a foreign key mapped with more columns than the identifier has properties.
+| A composite identifier combined with something the classic binding could not boot: a `hasMany` of domain classes that is not a many-to-many and uses a join table to an entity with a composite identifier, a join table whose key columns are mapped on an entity with a composite identifier, a composite identifier part that is the inverse side of a one-to-one, a part that refers to an entity with a simple identifier or to a composite identifier more than one level deep, a joined subclass of such an entity, or a foreign key mapped with more columns than the identifier has properties.
 | `... composite identifier ...`, naming the entity and the part.
-| Give the entity a single-column identifier, or map the relationship with a domain class of its own. Classic binding fails with `Foreign key ... must have same number of columns as the referenced primary key` or an `IndexOutOfBoundsException`.
+| Give the entity a single-column identifier, or map the relationship with a domain class of its own. The classic binding failed with `Foreign key ... must have same number of columns as the referenced primary key` or an `IndexOutOfBoundsException`.
 
 | Several columns mapped on a property that has one: on a simple property, on an association to an entity with a simple identifier, or on the key of a `hasMany` of an entity with a simple identifier. An association mapped with a `formula`. A one-to-one declared `hasOne` on both sides.
 | `... the mapping states several columns ...`, `... the association is mapped with a formula ...` or `... the binder binds this one-to-one as a Hibernate OneToOne with a column of its own ...`
-| Map the property or the association with a single `column`. Classic binding fails with `Foreign key ... must have same number of columns as the referenced primary key`, `maps to 2 columns but 1 columns are required`, `value involves formulas` or `PostInitCallback queue could not be processed`.
+| Map the property or the association with a single `column`. The classic binding failed with `Foreign key ... must have same number of columns as the referenced primary key`, `maps to 2 columns but 1 columns are required`, `value involves formulas` or `PostInitCallback queue could not be processed`.
 
-| A collection that classic binding cannot create: a `SortedSet` of basic values, a `UserType` class as the `type` of a `hasMany` of domain classes, a `Map` of enums, a collection declared with a type that is not `Set`, `SortedSet`, `List`, `Collection` or `Map` (for example `HashSet`), a `hasMany` of a class that is not a domain class, an unknown `indexColumn` type, a default `sort` on a unidirectional `hasMany`, a `Map` or `Set` on a many-to-many that neither side owns (no `belongsTo`), and a hierarchy that mixes inheritance strategies.
+| A collection that the classic binding could not create: a `SortedSet` of basic values, a `UserType` class as the `type` of a `hasMany` of domain classes, a `Map` of enums, a collection declared with a type that is not `Set`, `SortedSet`, `List`, `Collection` or `Map` (for example `HashSet`), a `hasMany` of a class that is not a domain class, an unknown `indexColumn` type, a default `sort` on a unidirectional `hasMany`, a `Map` or `Set` on a many-to-many that neither side owns (no `belongsTo`), and a hierarchy that mixes inheritance strategies.
 | `Collection property [...]: ...`, `Association property [...]: ...` or `Entity [...] uses ... but the root of its hierarchy uses ...`
-| Change the mapping as the message says. Classic binding fails to start with each of them.
+| Change the mapping as the message says. The classic binding failed to start with each of them.
 
-| An embedded object as a part of a composite identifier (`id composite: ['code', 'address']` where `address` is listed in `static embedded`). Classic binding boots this mapping; native binding does not support it.
+| An embedded object as a part of a composite identifier (`id composite: ['code', 'address']` where `address` is listed in `static embedded`). The classic binding booted this mapping; native binding does not support it.
 | `Composite identifier part [...] of [...] is an embedded object, which the generator does not support because Hibernate cannot state one in an identifier class. Map the properties of the embedded class as plain properties of the identifier instead ...`
 | Name the properties of the embedded class in the identifier instead, which keeps the schema. See <<nativeDomainBinding-embeddedId,Embedded Object as Part of a Composite Identifier>>.
 
 | A registered Hibernate type name as the `type` of an enum property (`type: 'integer'`), or a registered type that converts its value (`yes_no`) as the `type` of the `indexColumn` of a list or a map.
 | `Type [...] of property [...] is a registered type on an enum ...` or `... the index column type [...] is a registered type that converts its value ...`
-| Remove the `type` (an enum is stored as a string unless `enumType` says otherwise). Classic binding boots these mappings but cannot use them: saving a row fails with a `ClassCastException` for the enum, with a check constraint violation for the list, and the table of the map is not created.
+| Remove the `type` (an enum is stored as a string unless `enumType` says otherwise). The classic binding booted these mappings but could not use them: saving a row failed with a `ClassCastException` for the enum, with a check constraint violation for the list, and the table of the map was not created.
 |===
 
 [[nativeDomainBinding-embeddedId]]
 === Embedded Object as Part of a Composite Identifier
 
-Hibernate cannot hold an embedded object in an identifier class, so native binding refuses a composite identifier that names one. The workaround is to declare the properties of the embedded class as plain properties of the entity and to name them in the identifier. The tables, the columns, the types, the primary key and its column order stay as they are, with both bindings.
+Hibernate cannot hold an embedded object in an identifier class, so native binding refuses a composite identifier that names one. The workaround is to declare the properties of the embedded class as plain properties of the entity and to name them in the identifier. The tables, the columns, the types, the primary key and its column order stay as Grails 8 created them.
 
 [source,groovy]
-.Before: refused by native binding
+.Before: accepted by Grails 8, refused by native binding
 ----
 class Customer implements Serializable {
     String code
@@ -146,7 +129,7 @@ class Address implements Serializable {
 ----
 
 [source,groovy]
-.After: boots with both bindings
+.After: boots with native binding, with the schema of before
 ----
 class Customer implements Serializable {
     String code
@@ -162,7 +145,7 @@ class Customer implements Serializable {
 }
 ----
 
-Both versions create the same table. The primary key columns are in the order Hibernate gives them (here the sorted column names), which is the same for both:
+Both versions create the same table. The primary key columns are in the order Hibernate gives them (here the sorted column names), which is the order Grails 8 used:
 
 [source,sql]
 ----
@@ -212,10 +195,10 @@ class Customer implements Serializable {
 ==== Associations to the Entity
 
 * A `hasMany` of the entity that is bound by a foreign key on the entity (the entity has a many-to-one to its parent, as in `Region.hasMany = [customers: Customer]` and `Region region` in `Customer`) works as for any entity with a composite identifier, and the foreign key `region_id` is unchanged.
-* A many-to-one from another entity to the flattened entity creates the columns `<table of the entity>_<identifier column>`, in the order of the primary key (`customer_address_city`, `customer_address_street` and `customer_code` for the table `customer`), and a foreign key that references the identifier columns one to one: `foreign key (customer_address_city, customer_address_street, customer_code) references customer (address_city, address_street, code)`. Both bindings create the same table and the same key.
+* A many-to-one from another entity to the flattened entity creates the columns `<table of the entity>_<identifier column>`, in the order of the primary key (`customer_address_city`, `customer_address_street` and `customer_code` for the table `customer`), and a foreign key that references the identifier columns one to one: `foreign key (customer_address_city, customer_address_street, customer_code) references customer (address_city, address_street, code)`.
 +
-Classic binding could not do this for the embedded version. It fails to start with `maps to 2 columns but 3 columns are required`, and when the three columns are spelled out it starts but pairs them wrongly (`customer_address_city` references `code`). A database that has such a table keeps the columns, but its foreign key may be wrong: check it before you rely on it.
-* A `hasMany` of the entity through a join table (a unidirectional `hasMany` of the parent) is not supported by either binding for any entity with a composite identifier, flattened or not; it is in the table above. Add the many-to-one to the entity, as in the first item.
+The classic binding of Grails 8 could not do this for the embedded version. It failed to start with `maps to 2 columns but 3 columns are required`, and when the three columns were spelled out it started but paired them wrongly (`customer_address_city` referenced `code`). A database that has such a table keeps the columns, but its foreign key may be wrong: check it before you rely on it.
+* A `hasMany` of the entity through a join table (a unidirectional `hasMany` of the parent) is not supported for any entity with a composite identifier, flattened or not (the classic binding did not boot it either); it is in the table above. Add the many-to-one to the entity, as in the first item.
 
 ==== Switching an Existing Database
 
@@ -223,12 +206,12 @@ The workaround changes no schema, so there is nothing to migrate:
 
 . Replace the embedded object in the class and in the identifier as shown above, and change the code that reads `address.street` in a query to `addressStreet`.
 . Start with `dbCreate: validate` against a copy of the database. Hibernate finds every table and column.
-. Rows written with the embedded entity are read, updated and deleted through the flattened one (`Customer.get(new Customer(code: 'c1', addressStreet: 's1', addressCity: 'x1'))`, finders and associations), and rows written by the flattened one are read by the embedded one if you go back.
+. Rows written with the embedded entity are read, updated and deleted through the flattened one (`Customer.get(new Customer(code: 'c1', addressStreet: 's1', addressCity: 'x1'))`, finders and associations), and rows written by the flattened one are read by the embedded entity of a Grails 8 application that still shares the database.
 
 [[nativeDomainBinding-behavior]]
-=== Differences in Behavior
+=== Changes in Behavior from Grails 8
 
-Some bugs of classic binding are not copied by native binding. Native binding does what the mapping says.
+Some bugs of the classic binding of Grails 8 are not copied by native binding. Native binding does what the mapping says.
 
 [cols="2,3", options="header"]
 |===
@@ -236,31 +219,31 @@ Some bugs of classic binding are not copied by native binding. Native binding do
 | Difference
 
 | A custom collection type (a `UserCollectionType` class) as the `type` of a `hasMany` of domain classes, for example `books type: MyCollectionType`.
-| Classic binding boots with the same schema but never uses the class: it keeps Hibernate's own collection and does not even create an instance of your type. Native binding applies the type, so Hibernate creates, wraps and loads the collection with your class. If you map a custom collection type that has never been exercised, test it before you switch. On a `hasMany` of basic values neither binding supports it.
+| The classic binding booted with the same schema but never used the class: it kept Hibernate's own collection and did not even create an instance of your type. Native binding applies the type, so Hibernate creates, wraps and loads the collection with your class. If you map a custom collection type that has never been exercised, test it before you upgrade. On a `hasMany` of basic values it is not supported (the classic binding did not boot it either).
 
 | A `unique` group that includes an enum property.
-| Classic binding drops the group. Native binding creates the unique constraint. With `dbCreate: update` the constraint is added to an existing table, and fails if the table holds duplicates.
+| The classic binding dropped the group. Native binding creates the unique constraint. With `dbCreate: update` the constraint is added to an existing table, and fails if the table holds duplicates.
 
 | An owner with two or more unidirectional `hasMany` collections that use a join table.
-| Classic binding can fail to write the join table rows of such a collection. Native binding writes them.
+| The classic binding could fail to write the join table rows of such a collection. Native binding writes them.
 
 | The `nullable: false` constraint on the element column of a map of values.
-| Classic binding leaves the column nullable. Native binding makes it `not null`.
+| The classic binding left the column nullable. Native binding makes it `not null`.
 
 | A `unique` group on the property of a collection (`hasMany`).
-| The group names columns of the owner's table, which the table of the collection does not have. Classic binding tries to create a unique key over them and the statement fails when the schema is created, so the database has no such key. Native binding creates no key. The `index` option on the same property works in both bindings: the index is created over the key column of the collection table (and over the element column of a collection of enums), with the name the mapping gives it.
+| The group names columns of the owner's table, which the table of the collection does not have. The classic binding tried to create a unique key over them and the statement failed when the schema was created, so the database has no such key. Native binding creates no key. The `index` option on the same property works as it did: the index is created over the key column of the collection table (and over the element column of a collection of enums), with the name the mapping gives it.
 
 | A `hasMany` inside a class listed in `static embedded` (basic values, enums or domain classes) when more than one embedded property of the application embeds that class: two domain classes, or one domain class with two properties of that type.
-| Classic binding names the table and the key column after the embedded class, so all the owners share one table. Its foreign key points at the owner that was bound first, so the collection of any other owner cannot be stored (the insert violates the key), the elements of two properties of one owner are mixed up, and the application fails to start when the properties have the same name. Native binding gives every owner a collection table of its own. The first owner, in the order of the entity name and then the property path, keeps the table and the key column of classic binding, so an existing database is not disturbed. The other owners get names that start with the table of the owner and the path of the embedded property, for example `author_address_phones` and `author_address_id`.
+| The classic binding named the table and the key column after the embedded class, so all the owners shared one table. Its foreign key pointed at the owner that was bound first, so the collection of any other owner could not be stored (the insert violated the key), the elements of two properties of one owner were mixed up, and the application failed to start when the properties had the same name. Native binding gives every owner a collection table of its own. The first owner, in the order of the entity name and then the property path, keeps the table and the key column of the classic binding, so an existing database is not disturbed. The other owners get names that start with the table of the owner and the path of the embedded property, for example `author_address_phones` and `author_address_id`.
 
 | An `index` given as a closure on the property of a collection, for example `index: { column name: 'position' }`.
-| The closure configures the index column of a list or a map in both bindings. Classic binding also creates an index of the collection table that is named after the closure, a name that changes on every start. Native binding creates the index column and no such index.
+| The closure configures the index column of a list or a map, as it did. The classic binding also created an index of the collection table that was named after the closure, a name that changed on every start. Native binding creates the index column and no such index.
 |===
 
 [[nativeDomainBinding-schema]]
-=== Differences in the Schema
+=== Changes in the Schema from Grails 8
 
-The schema of 765 groups of related domain classes was created with both bindings on H2 and compared: tables, columns with type, nullability, default, length, precision and scale, primary keys with their column order, foreign keys, unique keys, indexes, check constraints and sequences. Native binding booted every group that classic binding boots, and these are the differences. Other databases are not covered by this comparison, so verify against your own database as described below.
+The schema of 766 groups of related domain classes was created with the classic binding of Grails 8 and with native binding on H2 and compared: tables, columns with type, nullability, default, length, precision and scale, primary keys with their column order, foreign keys, unique keys, indexes, check constraints and sequences. Native binding boots every group that the classic binding booted, and these are the differences. Other databases are not covered by this comparison, so verify against your own database as described below.
 
 [cols="2,3,3", options="header"]
 |===
@@ -270,78 +253,77 @@ The schema of 765 groups of related domain classes was created with both binding
 
 | `check (<index column> >= 0)` on the index column of every `List` mapping.
 | Hibernate adds it to every list index column and offers no way to leave it out. GORM never writes a negative index.
-| Tables created by classic binding have no such constraint. It cannot reject a value that GORM writes.
+| Tables created by the classic binding have no such constraint. It cannot reject a value that GORM writes.
 
 | Column types, column order and primary key order of a table that has a foreign key to an entity whose composite identifier contains another composite identifier.
-| Classic binding gives such foreign key columns the type of a different part of the key than their name says, for example a column `parent_grand_parent_name` of type `integer`. Native binding names and types them correctly. The fix for classic binding is in the 8.0.x line; once your version includes it, this difference disappears for the column types.
-| The column types differ from those of a database created by classic binding. Migrate or recreate such tables before you switch. The order of the foreign key columns may remain different.
+| The classic binding gave such foreign key columns the type of a different part of the key than their name says, for example a column `parent_grand_parent_name` of type `integer`. Native binding names and types them correctly. The fix for the classic binding is in the 8.0.x line; a database created by a Grails 8 release that includes it has the right column types.
+| The column types differ from those of a database created by the classic binding. Migrate or recreate such tables before you upgrade. The order of the foreign key columns may remain different.
 
 | The order of the columns of the foreign key from a collection to an entity with a composite identifier.
-| Classic binding creates two foreign keys of the same name in two column orders and keeps one of them depending on the order the classes are bound in.
+| The classic binding created two foreign keys of the same name in two column orders and kept one of them depending on the order the classes were bound in.
 | Same constraint name and same columns, in another order.
 
 | No foreign key for an association mapped with `ignoreNotFound: true`.
 | Hibernate does not create the foreign key for `@NotFound(IGNORE)`. A dangling reference is the point of the option.
-| A database created by classic binding has the foreign key. A diff reports a foreign key that the model no longer has.
+| A database created by the classic binding has the foreign key. A diff reports a foreign key that the model no longer has.
 
 | One join table instead of two when the two sides of a many-to-many name the join table differently.
-| Classic binding creates a second table for the inverse side that nothing reads or writes. Native binding uses the table that the owning side names.
+| The classic binding created a second table for the inverse side that nothing reads or writes. Native binding uses the table that the owning side names.
 | The second table stays in an existing database. Remove it yourself.
 
 | `not null` on the column of a `Map` on a many-to-many that holds the entity the map refers to, when the other side is a `Set`.
-| That column is also the key column of the `Set` that reads the map, and classic binding sets its nullability twice, so it is nullable or not null depending on the order in which the domain classes are bound. Native binding always creates it `not null`, like the element column of any many-to-many.
+| That column is also the key column of the `Set` that reads the map, and the classic binding set its nullability twice, so it is nullable or not null depending on the order in which the domain classes were bound. Native binding always creates it `not null`, like the element column of any many-to-many.
 | `update` does not change an existing nullable column. A diff reports the difference.
 
 | `not null` on the element column of a map of values mapped with `nullable: false`.
-| See <<nativeDomainBinding-behavior,Differences in Behavior>>.
+| See <<nativeDomainBinding-behavior,Changes in Behavior from Grails 8>>.
 | `update` does not change an existing nullable column. A diff reports the difference.
 
 | No unused extra nullable column on the table of a map of values.
-| Classic binding creates a column such as `attributes_java_lang_string` that nothing uses.
+| The classic binding created a column such as `attributes_java_lang_string` that nothing uses.
 | The column stays in an existing database. It does no harm.
 
 | A unique constraint over the columns of a `unique` group that includes an enum.
-| See <<nativeDomainBinding-behavior,Differences in Behavior>>.
+| See <<nativeDomainBinding-behavior,Changes in Behavior from Grails 8>>.
 | `update` adds the constraint.
 
 | No unique key on the table of a collection for a `unique` group mapped on the collection property.
-| See <<nativeDomainBinding-behavior,Differences in Behavior>>.
-| The key never existed in a database created by classic binding: the statement that creates it fails.
+| See <<nativeDomainBinding-behavior,Changes in Behavior from Grails 8>>.
+| The key never existed in a database created by the classic binding: the statement that created it failed.
 
 | An extra collection table, with a key column named after the owner and the embedded property, for every owner after the first of an embedded class that has a `hasMany`.
-| See <<nativeDomainBinding-behavior,Differences in Behavior>>. Classic binding shares one table between the owners.
-| The first owner keeps its table and column names. The tables of the other owners are new: `update` creates them, and the elements that classic binding could not store for those owners were never in the database.
+| See <<nativeDomainBinding-behavior,Changes in Behavior from Grails 8>>. The classic binding shared one table between the owners.
+| The first owner keeps its table and column names. The tables of the other owners are new: `update` creates them, and the elements that the classic binding could not store for those owners were never in the database.
 
 | No index named after a closure on the table of a collection whose `index` is a closure.
-| See <<nativeDomainBinding-behavior,Differences in Behavior>>.
-| A database created by classic binding has an index with a name that depends on the start it was created in. Drop it if you want to be rid of it.
+| See <<nativeDomainBinding-behavior,Changes in Behavior from Grails 8>>.
+| A database created by the classic binding has an index with a name that depends on the start it was created in. Drop it if you want to be rid of it.
 
 | The order of the columns in a `createTable` change set that `dbm-generate-gorm-changelog` or `dbm-gorm-diff` writes: the identifier, then the other columns in the order of the property names (the `version` column among them), then the foreign key columns.
-| Hibernate's annotation binder binds the properties of a class sorted by name, and the migration commands read the mapping model as it was bound. Classic binding listed the identifier, the version, then the properties in declaration order. The schema that `dbCreate` creates is not affected: Hibernate orders the columns of a table it creates itself, in the same way for both bindings, which is why the comparison above lists no other difference in column order.
+| Hibernate's annotation binder binds the properties of a class sorted by name, and the migration commands read the mapping model as it was bound. The classic binding listed the identifier, the version, then the properties in declaration order. The schema that `dbCreate` creates is not affected: Hibernate orders the columns of a table it creates itself, as it did for the classic binding, which is why the comparison above lists no other difference in column order.
 | None. Liquibase does not compare the order of columns, so a diff against an existing database reports nothing. A table created from a new change set has its columns in the new order.
 |===
 
-The comparison finds no difference in the unique keys, indexes and identifier columns that natural ids, `unique` groups and `index` options create: they have the same columns in the same order as with classic binding.
+The comparison finds no difference in the unique keys, indexes and identifier columns that natural ids, `unique` groups and `index` options create: they have the same columns in the same order as with the classic binding.
 
-=== Switching an Existing Database
+=== Upgrading an Existing Database
 
-Do not switch a production database over blindly. Whether `dbCreate: update` or a Liquibase changelog would change anything depends on the differences above.
+Do not upgrade a production database blindly. Whether `dbCreate: update` or a Liquibase changelog would change anything depends on the differences above.
 
-. Start the upgraded application, with its default native binding, against a copy of your schema. Fix every refused mapping from the table above; classic binding cannot use these either.
-. Run <<ref-diff-scripts-dbm-gorm-diff,dbm-gorm-diff>> against the copy. An empty diff means the switch does not change the schema. Otherwise, compare each reported change with the table above, and apply the changes you want through a migration.
-. Run your test suite once with native binding.
-. If you need more time, set `hibernate.generatedDomainClasses: false` in the environments that are not ready yet, for example in `production` only, and remove it as soon as the migration has run. Classic binding is deprecated and will be removed.
+. Start the upgraded application against a copy of your schema. Fix every refused mapping from the table above; the classic binding of Grails 8 could not use these either.
+. Run <<ref-diff-scripts-dbm-gorm-diff,dbm-gorm-diff>> against the copy. An empty diff means the upgrade does not change the schema. Otherwise, compare each reported change with the table above, and apply the changes you want through a migration.
+. Run your test suite once.
 
-Prefer migrations over `dbCreate: update` for a production schema.
+Prefer migrations over `dbCreate: update` for a production schema. There is no setting that brings the classic binding back; an application whose mappings or database need work stays on Grails 8 until it is done.
 
 [[nativeDomainBinding-envers]]
 === Envers
 
-Envers audits the same entities and writes the same revisions with both bindings. There are two differences:
+Envers audits the same entities and writes the same revisions as with the classic binding of Grails 8. There are two differences:
 
-* A `@NotAudited` annotation on a Groovy property is honored by native binding. Classic binding ignores it: Groovy puts the annotation on the field, and Envers reads the getter, so the property is audited. Classic binding audits a property that you excluded.
-* The `version` column of optimistic locking is audited by both bindings, as it is with classic binding.
+* A `@NotAudited` annotation on a Groovy property is honored by native binding. The classic binding ignored it: Groovy puts the annotation on the field, and Envers read the getter, so the property was audited. The classic binding audited a property that you excluded.
+* The `version` column of optimistic locking is audited, as it was with the classic binding.
 
 === Reporting an Unsupported Mapping
 
-If a mapping is refused that you think should work, or if the schema differs in a way that this page does not list, open an issue at https://github.com/apache/grails-core/issues with the domain classes, the `static mapping` blocks and the exception message or the DDL of each binding. Native binding is meant to accept every mapping that classic binding can use, so a mapping that classic binding accepts and uses and that native binding refuses is a bug of native binding.
+If a mapping is refused that you think should work, or if the schema differs from the one of Grails 8 in a way that this page does not list, open an issue at https://github.com/apache/grails-core/issues with the domain classes, the `static mapping` blocks and the exception message or the DDL. Native binding is meant to accept every mapping that the classic binding of Grails 8 could use, so a mapping that Grails 8 accepted and used and that native binding refuses is a bug of native binding.

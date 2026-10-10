@@ -33,11 +33,11 @@ import org.grails.orm.hibernate.cfg.domainbinding.binder.MapSetLeft
 import org.grails.orm.hibernate.cfg.domainbinding.binder.MapSetRight
 
 /**
- * A {@code Map} on a many-to-many, bound by the domain binder and by the generated classes. The domain binder makes a map side not
- * inverse whether or not the mapping says it owns the relationship, so the map side writes the join table (key column, element
- * column and the column of the key of the map, which is part of the primary key), a {@code Set} on the other side is inverse and reads
- * the same table, and two maps are two independent tables (a map on a many-to-many stores through its own side only). The generated
- * classes state exactly that.
+ * A {@code Map} on a many-to-many. As with the classic binding of Grails 8, a map side is not inverse whether or not the mapping says
+ * it owns the relationship, so the map side writes the join table (key column, element column and the column of the key of the map,
+ * which is part of the primary key), a {@code Set} on the other side is inverse and reads the same table, and two maps are two
+ * independent tables (a map on a many-to-many stores through its own side only). The generated classes state exactly that; the tables
+ * and the behaviour stated here are the ones classic binding gave.
  */
 class GeneratedDomainClassesMapManyToManySpec extends Specification {
 
@@ -46,19 +46,18 @@ class GeneratedDomainClassesMapManyToManySpec extends Specification {
     @AutoCleanup
     HibernateDatastore datastore
 
-    private HibernateDatastore boot(List<Class> group, boolean generated) {
+    private HibernateDatastore boot(List<Class> group) {
         datastore?.close()
         datastore = new HibernateDatastore([
-                'dataSource.url'                  : "jdbc:h2:mem:mmm${BOOTS.incrementAndGet()};LOCK_TIMEOUT=10000".toString(),
-                'dataSource.dbCreate'             : 'create-drop',
-                'hibernate.generatedDomainClasses': generated,
+                'dataSource.url'     : "jdbc:h2:mem:mmm${BOOTS.incrementAndGet()};LOCK_TIMEOUT=10000".toString(),
+                'dataSource.dbCreate': 'create-drop',
         ], group as Class[])
         return datastore
     }
 
     /** The tables of the boot model as plain data, and which collection of which role is inverse. */
-    private Map<String, Map> schema(List<Class> group, boolean generated) {
-        HibernateDatastore booted = boot(group, generated)
+    private Map<String, Map> schema(List<Class> group) {
+        HibernateDatastore booted = boot(group)
         Map<String, Map> result = new TreeMap<String, Map>()
         for (Table table : booted.metadata.collectTableMappings()) {
             if (table.physicalTable) {
@@ -81,13 +80,11 @@ class GeneratedDomainClassesMapManyToManySpec extends Specification {
     }
 
     @Unroll
-    void "#label: the generated mode creates the schema of the domain binder"() {
+    void "#label: the schema of classic binding is created"() {
         when:
-        Map<String, Map> binder = schema(group, false)
-        Map<String, Map> generated = schema(group, true)
+        Map<String, Map> generated = schema(group)
 
         then:
-        generated == binder
         generated.keySet() - 'collections' == tables as Set
         generated[joinTable].columns.keySet() == columns as Set
         generated[joinTable].primaryKey == primaryKey.sort(false)
@@ -103,7 +100,7 @@ class GeneratedDomainClassesMapManyToManySpec extends Specification {
 
     void "the map side writes the join table and the set side is inverse"() {
         when:
-        Map<String, Map> generated = schema([MapSetLeft, MapSetRight], true)
+        Map<String, Map> generated = schema([MapSetLeft, MapSetRight])
 
         then:
         generated.collections['org.grails.orm.hibernate.cfg.domainbinding.binder.MapSetLeft.rights'].contains('inverse=false')
@@ -112,21 +109,18 @@ class GeneratedDomainClassesMapManyToManySpec extends Specification {
     }
 
     @Unroll
-    void "#label: the rows are stored through the map, read back, changed and deleted, the same in both modes"() {
+    void "#label: the rows are stored through the map, read back, changed and deleted"() {
         when:
-        Map<Boolean, Map> results = [false, true].collectEntries { boolean generated ->
-            boot(group, generated)
-            [(generated): cycle(left, right, joinTable)]
-        }
+        boot(group)
+        Map results = cycle(left, right, joinTable)
 
         then:
-        results[true] == results[false]
-        results[true].stored == [a: 'r1', b: 'r2']
-        results[true].changed == [b: 'r2', c: 'r1']
-        results[true].rowsStored == 2
-        results[true].rowsChanged == 2
-        results[true].rowsDeleted == 0
-        results[true].inverse == inverse
+        results.stored == [a: 'r1', b: 'r2']
+        results.changed == [b: 'r2', c: 'r1']
+        results.rowsStored == 2
+        results.rowsChanged == 2
+        results.rowsDeleted == 0
+        results.inverse == inverse
 
         where:
         label                           | group                         | left          | right          | joinTable               | inverse
@@ -137,17 +131,13 @@ class GeneratedDomainClassesMapManyToManySpec extends Specification {
         'a map with a join table named' | [MmmNamedLeft, MmmNamedRight] | MmmNamedLeft  | MmmNamedRight  | 'mmm_named_join'        | ['left']
     }
 
-    void "the domain binder leaves the element column of a map nullable or not null depending on the order the classes are bound in, the generated mode always states not null"() {
-        when: "the column is shared by the element of the map and the key of the set that reads it, and the binder sets its nullability twice"
-        Map<String, String> binder = [[MmmOwnerLeft, MmmOwnedRight], [MmmOwnedRight, MmmOwnerLeft]].collectEntries { List<Class> group ->
-            [(group*.simpleName.join(',')): schema(group, false)['mmm_owner_left_rights'].columns['mmm_owned_right_id']]
-        }
+    void "the element column of a map is not null whatever the order the classes are bound in"() {
+        when: "the column is shared by the element of the map and the key of the set that reads it (classic binding set its nullability twice, and the order decided)"
         Map<String, String> generated = [[MmmOwnerLeft, MmmOwnedRight], [MmmOwnedRight, MmmOwnerLeft]].collectEntries { List<Class> group ->
-            [(group*.simpleName.join(',')): schema(group, true)['mmm_owner_left_rights'].columns['mmm_owned_right_id']]
+            [(group*.simpleName.join(',')): schema(group)['mmm_owner_left_rights'].columns['mmm_owned_right_id']]
         }
 
         then:
-        binder.values().toSet() == ['bigint', 'bigint not null'].toSet()
         generated.values().toSet() == ['bigint not null'].toSet()
     }
 
@@ -185,43 +175,41 @@ class GeneratedDomainClassesMapManyToManySpec extends Specification {
         }
     }
 
-    void "a query joins through the map and through the set that reads it, the same in both modes"() {
+    void "a query joins through the map and through the set that reads it"() {
+        given:
+        boot([MapSetLeft, MapSetRight])
+
         when:
-        List<List> results = [false, true].collect { boolean generated ->
-            boot([MapSetLeft, MapSetRight], generated)
-            MapSetLeft.withTransaction {
-                MapSetRight red = new MapSetRight(name: 'red').save(failOnError: true)
-                MapSetRight blue = new MapSetRight(name: 'blue').save(failOnError: true)
-                new MapSetLeft(name: 'one', rights: [x: red, y: blue]).save(failOnError: true)
-                new MapSetLeft(name: 'two', rights: [x: red]).save(failOnError: true, flush: true)
-            }
-            MapSetLeft.withNewSession {
-                [MapSetLeft.executeQuery('select l.name from MapSetLeft l join l.rights r where r.name = :n order by l.name', [n: 'red']),
-                 MapSetLeft.executeQuery('select l.name from MapSetLeft l join l.rights r where r.name = :n', [n: 'blue']),
-                 MapSetRight.executeQuery('select l.name from MapSetRight r join r.lefts l where r.name = :n order by l.name', [n: 'red']),
-                 MapSetLeft.executeQuery('select count(l) from MapSetLeft l where size(l.rights) = 2')[0]]
-            }
+        MapSetLeft.withTransaction {
+            MapSetRight red = new MapSetRight(name: 'red').save(failOnError: true)
+            MapSetRight blue = new MapSetRight(name: 'blue').save(failOnError: true)
+            new MapSetLeft(name: 'one', rights: [x: red, y: blue]).save(failOnError: true)
+            new MapSetLeft(name: 'two', rights: [x: red]).save(failOnError: true, flush: true)
+        }
+        List results = MapSetLeft.withNewSession {
+            [MapSetLeft.executeQuery('select l.name from MapSetLeft l join l.rights r where r.name = :n order by l.name', [n: 'red']),
+             MapSetLeft.executeQuery('select l.name from MapSetLeft l join l.rights r where r.name = :n', [n: 'blue']),
+             MapSetRight.executeQuery('select l.name from MapSetRight r join r.lefts l where r.name = :n order by l.name', [n: 'red']),
+             MapSetLeft.executeQuery('select count(l) from MapSetLeft l where size(l.rights) = 2')[0]]
         }
 
         then:
-        results[1] == results[0]
-        results[1] == [['one', 'two'], ['one'], ['one', 'two'], 1]
+        results == [['one', 'two'], ['one'], ['one', 'two'], 1]
     }
 
-    void "the second map of two maps does not see the rows stored through the first, in both modes"() {
+    void "the second map of two maps does not see the rows stored through the first"() {
+        given:
+        boot([MapMapLeft, MapMapRight])
+
         when:
-        List<List> results = [false, true].collect { boolean generated ->
-            boot([MapMapLeft, MapMapRight], generated)
-            MapMapLeft.withTransaction {
-                MapMapRight right = new MapMapRight(name: 'right').save(failOnError: true)
-                new MapMapLeft(name: 'left', rights: [first: right]).save(failOnError: true, flush: true)
-            }
-            MapMapLeft.withNewSession { [MapMapLeft.findByName('left').rights.keySet() as List, MapMapRight.findByName('right').lefts.keySet() as List] }
+        MapMapLeft.withTransaction {
+            MapMapRight right = new MapMapRight(name: 'right').save(failOnError: true)
+            new MapMapLeft(name: 'left', rights: [first: right]).save(failOnError: true, flush: true)
         }
+        List results = MapMapLeft.withNewSession { [MapMapLeft.findByName('left').rights.keySet() as List, MapMapRight.findByName('right').lefts.keySet() as List] }
 
         then:
-        results[1] == results[0]
-        results[1] == [['first'], []]
+        results == [['first'], []]
     }
 }
 

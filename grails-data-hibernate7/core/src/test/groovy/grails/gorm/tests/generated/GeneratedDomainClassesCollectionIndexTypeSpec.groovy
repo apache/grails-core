@@ -30,9 +30,10 @@ import org.grails.orm.hibernate.HibernateDatastore
 
 /**
  * The index column of a list and the key column of a map are typed by the mapping ({@code indexColumn: [type: 'long']}, or the
- * {@code type} of the {@code index:} settings), independently of the declared key class, and the domain binder gives them that
- * type. The generated classes state it with Hibernate's own annotations, so a database created by the binder keeps its schema and
- * the keys of a map are read back as the type the column holds.
+ * {@code type} of the {@code index:} settings), independently of the declared key class, and the classic binding of Grails 8 gave
+ * them that type. The generated classes state it with Hibernate's own annotations, so a database created by Grails 8 keeps its schema
+ * (the tables and keys stated here are the ones classic binding created) and the keys of a map are read back as the type the column
+ * holds.
  */
 class GeneratedDomainClassesCollectionIndexTypeSpec extends Specification {
 
@@ -41,19 +42,18 @@ class GeneratedDomainClassesCollectionIndexTypeSpec extends Specification {
     @AutoCleanup
     HibernateDatastore datastore
 
-    private HibernateDatastore boot(List<Class> group, boolean generated) {
+    private HibernateDatastore boot(List<Class> group) {
         datastore?.close()
         datastore = new HibernateDatastore([
-                'dataSource.url'                  : "jdbc:h2:mem:cit${BOOTS.incrementAndGet()};LOCK_TIMEOUT=10000".toString(),
-                'dataSource.dbCreate'             : 'create-drop',
-                'hibernate.generatedDomainClasses': generated,
+                'dataSource.url'     : "jdbc:h2:mem:cit${BOOTS.incrementAndGet()};LOCK_TIMEOUT=10000".toString(),
+                'dataSource.dbCreate': 'create-drop',
         ], group as Class[])
         return datastore
     }
 
     /** The collection tables of the boot model as plain data: every column with its SQL type, nullability and length. */
-    private Map<String, Map> schema(List<Class> group, boolean generated) {
-        HibernateDatastore booted = boot(group, generated)
+    private Map<String, Map> schema(List<Class> group) {
+        HibernateDatastore booted = boot(group)
         Map<String, Map> result = new TreeMap<String, Map>()
         for (Table table : booted.metadata.collectTableMappings()) {
             if (table.physicalTable) {
@@ -71,31 +71,29 @@ class GeneratedDomainClassesCollectionIndexTypeSpec extends Specification {
     }
 
     @Unroll
-    void "#label is typed in the generated mode as the domain binder types it"() {
+    void "#label is typed as classic binding typed it"() {
         when:
-        Map<String, Map> binder = schema(group, false)
-        Map<String, Map> generated = schema(group, true)
+        Map<String, Map> generated = schema(group)
 
-        then: "the column and the key it is part of are the binder's (the binder leaves an unused column in the table of a map of values)"
-        binder[table].columns[column] == type
+        then: "the column and the key it is part of are the ones classic binding created"
         generated[table].columns[column] == type
-        generated[table].primaryKey == binder[table].primaryKey
-        generated.keySet() == binder.keySet()
+        generated[table].primaryKey == primaryKey
+        generated.keySet() == tables as Set
 
         where:
-        label                                              | group                  | table                  | column  | type
-        'the key of a map of entities, mapped as long'     | [CitLongMap, CitValue] | 'cit_long_map_tags'    | 'tags_idx' | 'long not null'
-        'the key of a map of values, mapped as long'       | [CitValueMap]          | 'cit_value_map_attrs'  | 'k'     | 'long not null'
-        'the key of a map, mapped as integer and named'    | [CitIntegerMap]        | 'cit_integer_map_attrs' | 'k'    | 'integer not null'
-        'the key of a map, with a length'                  | [CitLengthMap]         | 'cit_length_map_attrs' | 'k'     | 'varchar(40) not null'
-        'the index of a list, mapped as long'              | [CitLongList]          | 'cit_long_list_items'  | 'ix'    | 'bigint not null'
-        'the index of a list, mapped as string'            | [CitStringList]        | 'cit_string_list_items' | 'ix'   | 'varchar(255) not null'
-        'the index of a list of entities, mapped as long'  | [CitEntityList, CitValue] | 'cit_entity_list_cit_value' | 'ix' | 'bigint not null'
+        label                                              | group                  | tables                                                   | table                  | column  | type                   | primaryKey
+        'the key of a map of entities, mapped as long'     | [CitLongMap, CitValue] | ['cit_long_map', 'cit_long_map_tags', 'cit_value']        | 'cit_long_map_tags'    | 'tags_idx' | 'long not null'     | ['cit_long_map_tags_id', 'tags_idx']
+        'the key of a map of values, mapped as long'       | [CitValueMap]          | ['cit_value_map', 'cit_value_map_attrs']                  | 'cit_value_map_attrs'  | 'k'     | 'long not null'        | ['cit_value_map_id', 'k']
+        'the key of a map, mapped as integer and named'    | [CitIntegerMap]        | ['cit_integer_map', 'cit_integer_map_attrs']              | 'cit_integer_map_attrs' | 'k'    | 'integer not null'     | ['cit_integer_map_id', 'k']
+        'the key of a map, with a length'                  | [CitLengthMap]         | ['cit_length_map', 'cit_length_map_attrs']                | 'cit_length_map_attrs' | 'k'     | 'varchar(40) not null' | ['cit_length_map_id', 'k']
+        'the index of a list, mapped as long'              | [CitLongList]          | ['cit_long_list', 'cit_long_list_items']                  | 'cit_long_list_items'  | 'ix'    | 'bigint not null'      | ['cit_long_list_id', 'ix']
+        'the index of a list, mapped as string'            | [CitStringList]        | ['cit_string_list', 'cit_string_list_items']              | 'cit_string_list_items' | 'ix'   | 'varchar(255) not null' | ['cit_string_list_id', 'ix']
+        'the index of a list of entities, mapped as long'  | [CitEntityList, CitValue] | ['cit_entity_list', 'cit_entity_list_cit_value', 'cit_value'] | 'cit_entity_list_cit_value' | 'ix' | 'bigint not null' | ['cit_entity_list_values_id', 'ix']
     }
 
     void "a map keyed by long saves, reloads and is queried with the keys the column holds"() {
         given:
-        boot([CitLongMap, CitValue], true)
+        boot([CitLongMap, CitValue])
 
         when:
         Long id = CitLongMap.withTransaction {
@@ -113,7 +111,7 @@ class GeneratedDomainClassesCollectionIndexTypeSpec extends Specification {
 
     void "the index of a list mapped as long keeps the order of the elements"() {
         given:
-        boot([CitLongList, CitStringList], true)
+        boot([CitLongList, CitStringList])
 
         when:
         Long longId = CitLongList.withTransaction { new CitLongList(items: ['c', 'a', 'b']).save(failOnError: true, flush: true).id }

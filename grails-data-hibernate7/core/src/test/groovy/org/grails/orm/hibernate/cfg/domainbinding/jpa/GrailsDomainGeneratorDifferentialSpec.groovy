@@ -44,9 +44,9 @@ import org.grails.datastore.mapping.multitenancy.resolvers.SystemPropertyTenantR
 import org.grails.datastore.mapping.reflect.ClassUtils
 import org.grails.orm.hibernate.HibernateDatastore
 
-import org.grails.orm.hibernate.cfg.domainbinding.binder.ColumnConfigToColumnBinder
-import org.grails.orm.hibernate.cfg.domainbinding.binder.NumericColumnConstraintsBinder
-import org.grails.orm.hibernate.cfg.domainbinding.binder.StringColumnConstraintsBinder
+import org.grails.orm.hibernate.cfg.domainbinding.column.ColumnConfigToColumnBinder
+import org.grails.orm.hibernate.cfg.domainbinding.column.NumericColumnConstraintsBinder
+import org.grails.orm.hibernate.cfg.domainbinding.column.StringColumnConstraintsBinder
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateBasicProperty
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEmbeddedProperty
@@ -64,16 +64,16 @@ import org.grails.orm.hibernate.cfg.domainbinding.util.ColumnNameForPropertyAndP
 import org.grails.orm.hibernate.cfg.domainbinding.util.DefaultColumnNameFetcher
 
 /**
- * Compares {@link GrailsDomainGenerator} with the domain binder on real entities. For every supported property of
- * every entity the binder can bind, the column facets the generator decides must equal the ones the binder put on the
- * bound Hibernate {@code Column} and {@code Property}. The binder is the oracle, so a mismatch is either a generator
- * bug or a rule that was mirrored wrongly.
+ * Compares {@link GrailsDomainGenerator} with the classic domain binder of Grails 8 on real entities. For every supported
+ * property of every entity the classic binder could bind, the column facets the generator decides must equal the ones the
+ * classic binder put on the bound Hibernate {@code Column} and {@code Property}. The classic binder is the oracle, so a mismatch
+ * is either a generator bug or a rule that was mirrored wrongly.
  *
- * <p>The oracle is FROZEN: what the binder bound is read from {@code classic-oracle/generator-differential.txt}
- * ({@link ClassicOracle}, {@link ClassicFacts}), recorded once, and the classic binder is not booted. The generator's side is read
- * from the mapping of a datastore booted through the generated classes. {@code -Pgrails.test.verifyClassicOracle=true} boots the
- * classic binder too and requires it to produce exactly the recorded facts; {@code -Pgrails.test.refreezeClassicOracle=true}
- * rewrites the file from it.</p>
+ * <p>The oracle is FROZEN: what the classic binder bound is read from {@code classic-oracle/generator-differential.txt}
+ * ({@link ClassicOracle}, {@link ClassicFacts}), recorded once before the classic binder was deleted. The generator's side is read
+ * from the mapping of a datastore booted through the generated classes. A new fixture gets its record from a native boot with
+ * {@code -Pgrails.test.recordClassicOracle=true} ({@link #nativeSection}); its comparison is then native against native, and the
+ * diff of the recorded file is what is reviewed.</p>
  *
  * <p>The entities are every domain class in the TCK and in the Hibernate 7 tests, which are written to exercise
  * binder permutations. They are grouped by association so each group boots as its own datastore; a group that cannot
@@ -157,6 +157,7 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
         List<String> oracleProblems = []
         Map<String, Integer> skipped = [:].withDefault { 0 }
         Map<String, String> unbootable = [:]
+        Map<String, Integer> nativeRecorded = [:]
         int compared = 0
         int entities = 0
         int derived = 0
@@ -177,9 +178,16 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
         List<String> rejectedComposites = []
 
         for (List<Class<?>> group : groups) {
-            ClassicOracle.Section section = oracle.section(group.first().name, group*.name) { classicSection(group) }
+            ClassicOracle.Section section = oracle.section(group.first().name, group*.name) { nativeSection(group) }
             if (section.header.unbootable != null) {
                 unbootable[group*.simpleName.join(',')] = section.header.unbootable.toString()
+                continue
+            }
+            if (section.header.source == ClassicOracle.NATIVE_SOURCE) {
+                // recorded from a native boot after the classic binder was deleted: the bound facts hold what Hibernate's own binder
+                // fills in (the default discriminator value, the default cache strategy, a length on the version), which no classic
+                // binding ever stated, so there are no classic facets to compare; the DDL differential compares the schema
+                nativeRecorded[group*.simpleName.join(',')] = section.parsedByKey('entity').size()
                 continue
             }
             classic = section.parsedByKey('entity')
@@ -198,7 +206,7 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
                 List<GrailsHibernatePersistentEntity> boundEntities = datastore.mappingContext.getHibernatePersistentEntities()
                         .findAll { group.contains(it.javaClass) && classic.containsKey(it.name) }
                 if (boundEntities*.name.toSet() != classic.keySet()) {
-                    oracleProblems << "${group*.simpleName.join(',')}: the recorded entities ${classic.keySet()} are not the entities ${boundEntities*.name} the mapping holds: ${ClassicOracle.REFREEZE_HINT}".toString()
+                    oracleProblems << "${group*.simpleName.join(',')}: the recorded entities ${classic.keySet()} are not the entities ${boundEntities*.name} the mapping holds: ${ClassicOracle.RECORD_HINT}".toString()
                 }
                 boundEntities.each { GrailsHibernatePersistentEntity entity -> replayJoinTables(entity) }
                 for (GrailsHibernatePersistentEntity entity : boundEntities) {
@@ -354,7 +362,7 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
             }
         }
         return [
-                mismatches: mismatches, oracleProblems: oracleProblems, skipped: skipped, unbootable: unbootable, compared: compared,
+                mismatches: mismatches, oracleProblems: oracleProblems, skipped: skipped, unbootable: unbootable, nativeRecorded: nativeRecorded, compared: compared,
                 entities: entities, derived: derived, embeddedProperties: embeddedProperties, embeddedLeaves: embeddedLeaves,
                 explicitTypes: explicitTypes, collections: collections, known: known, tenants: tenants, strategies: strategies,
                 hierarchies: hierarchies, annotationRead: annotationRead, associations: associations, constraints: constraints,
@@ -369,8 +377,11 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
         report << "differential: ${candidates} candidate classes in ${groups} groups; " +
                 "${unbootable.size()} groups could not boot alone; ${result.entities} entities, ${result.compared} properties compared " +
                 "(${result.derived} derived); ${result.embeddedProperties} embedded properties compared, ${result.embeddedLeaves} embedded columns\n"
-        report << "classic oracle: ${oracle.mode}${oracle.drift.isEmpty() ? '' : ", ${oracle.drift.size()} recorded groups differ from the live classic binder"}\n"
+        report << "classic oracle: ${oracle.mode}${oracle.recordedNow.isEmpty() ? '' : ", ${oracle.recordedNow.size()} groups recorded from a native boot"}" +
+                "${oracle.dropped.isEmpty() ? '' : ", ${oracle.dropped.size()} recorded groups dropped"}\n"
         oracle.drift.each { report << "DRIFT ${it}\n" }
+        oracle.recordedNow.each { report << "RECORDED ${it}\n" }
+        oracle.dropped.each { report << "DROPPED ${it}\n" }
         result.oracleProblems.each { report << "ORACLE ${it}\n" }
         report << "explicit types compared: ${result.explicitTypes}\n"
         report << "collections of basic values compared by kind: ${result.collections}\n"
@@ -388,28 +399,31 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
         report << "unsupported by kind: ${result.skipped}\n"
         report << "mismatches by facet: ${mismatches.groupBy { (it =~ /\s(\w+): generator=/)[0][1] }.collectEntries { k, v -> [k, v.size()] }}\n"
         unbootable.each { report << "unbootable: ${it.key.take(120)} -> ${it.value.take(200)}\n" }
+        ((Map<String, Integer>) result.nativeRecorded).each { report << "recorded from a native boot, not compared: ${it.key.take(120)} (${it.value} entities)\n" }
         mismatches.each { report << "MISMATCH ${it}\n" }
         new File('build/differential-report.txt').text = report.toString()
     }
 
     /**
-     * What the classic binder bound for a group, as a section of the oracle file: for each entity the facts {@link ClassicFacts} reads
-     * from its {@code PersistentClass} (and the identifier generator the session factory holds for a root with a simple identifier), the
-     * filter definitions of the session factory, or the first line of the reason it cannot boot the group. Only called when the classic
-     * binder is booted (VERIFY and REFREEZE).
+     * The record of a group that has none, taken from a native boot (the files were recorded from the classic binder before it was
+     * deleted; this is how a new fixture joins them): for each entity the facts {@link ClassicFacts} reads from its bound
+     * {@code PersistentClass} (and the identifier generator the session factory holds for a root with a simple identifier), the join
+     * table state of its collection properties, the filter definitions of the session factory, or the first line of the reason the
+     * group cannot boot. Only called in the RECORD mode of {@link ClassicOracle}.
      */
-    static ClassicOracle.Section classicSection(List<Class<?>> group) {
+    static ClassicOracle.Section nativeSection(List<Class<?>> group) {
         HibernateDatastore datastore
         try {
-            datastore = boot(group)
+            datastore = bootGenerated(group)
         } catch (Throwable e) {
             return new ClassicOracle.Section(group.first().name, [
                     members   : group*.name,
+                    source    : ClassicOracle.NATIVE_SOURCE,
                     unbootable: ClassicOracle.stableReason((e.message ?: e.getClass().simpleName).readLines().first()),
             ])
         }
         try {
-            ClassicOracle.Section section = new ClassicOracle.Section(group.first().name, [members: group*.name])
+            ClassicOracle.Section section = new ClassicOracle.Section(group.first().name, [members: group*.name, source: ClassicOracle.NATIVE_SOURCE])
             SessionFactoryImplementor sessionFactory = (SessionFactoryImplementor) datastore.sessionFactory
             List<GrailsHibernatePersistentEntity> bound = datastore.mappingContext.getHibernatePersistentEntities()
                     .findAll { group.contains(it.javaClass) && it.persistentClass != null && it.persistentClass.entityName == it.name }
@@ -447,9 +461,9 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
     }
 
     /**
-     * Puts back on the mapping of an entity the join tables the classic binder left on it. The classic binder writes into the mapping while it
-     * binds (the inverse side of a many-to-many adopts the owning side's join table, a circular many-to-many gets a renamed key) and this
-     * comparison has always read the mapping the binder left, so the generator reads the same state here, on a mapping the binder never touched.
+     * Puts back on the mapping of an entity the join table state recorded for it. The classic binder wrote into the mapping while it
+     * bound (the inverse side of a many-to-many adopted the owning side's join table, a circular many-to-many got a renamed key) and
+     * this comparison has always read the mapping it left, so the generator reads the same state here, on a mapping nothing wrote into.
      */
     private void replayJoinTables(GrailsHibernatePersistentEntity entity) {
         Map<String, Map> states = (Map<String, Map>) classic[entity.name].joinTables ?: [:]
@@ -460,35 +474,13 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
     }
 
     /**
-     * Boots a group of entities with the classic binder (stated, since native binding is the default). GORM only gives an entity a tenant id (and the binder only adds the tenant filter) in
-     * discriminator multi-tenancy mode, so a group with multi-tenant entities is booted in that mode when it can be.
-     */
-    private static HibernateDatastore boot(List<Class<?>> group) {
-        if (group.any { Class<?> type -> ClassUtils.isMultiTenant(type) }) {
-            try {
-                return new HibernateDatastore([
-                        'dataSource.dbCreate'                     : 'create-drop',
-                        'hibernate.generatedDomainClasses'        : false,
-                        'grails.gorm.multiTenancy.mode'          : MultiTenancySettings.MultiTenancyMode.DISCRIMINATOR,
-                        'grails.gorm.multiTenancy.tenantResolver': new SystemPropertyTenantResolver(),
-                ], group as Class[])
-            } catch (Exception ignored) {
-                // a domain that needs another configuration is booted by default below
-            }
-        }
-        // the same create-drop the no-argument constructor applies, which resolves the SQL types the records hold
-        return new HibernateDatastore(['dataSource.dbCreate': 'create-drop', 'hibernate.generatedDomainClasses': false], group as Class[])
-    }
-
-    /**
      * Boots a group through the generated classes, which is what the comparison reads the mapping of: the entities, their properties and the
      * facets the generator decides from them. The tenant mode is the one the classic binder was booted in.
      */
     private static HibernateDatastore bootGenerated(List<Class<?>> group) {
         Map<String, Object> config = [
-                'dataSource.url'                  : "jdbc:h2:mem:generatorDiff${BOOTS.incrementAndGet()};LOCK_TIMEOUT=10000".toString(),
-                'dataSource.dbCreate'             : 'create-drop',
-                'hibernate.generatedDomainClasses': true,
+                'dataSource.url'     : "jdbc:h2:mem:generatorDiff${BOOTS.incrementAndGet()};LOCK_TIMEOUT=10000".toString(),
+                'dataSource.dbCreate': 'create-drop',
         ]
         if (group.any { Class<?> type -> ClassUtils.isMultiTenant(type) }) {
             config['grails.gorm.multiTenancy.mode'] = MultiTenancySettings.MultiTenancyMode.DISCRIMINATOR
@@ -518,9 +510,9 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
 
     /**
      * The column facets the generator decided against the bound column and property. A mapping that says {@code insertable: false}
-     * or {@code updatable: false} is a known divergence, not a mismatch: {@code PropertyBinder} overwrites those flags with the
-     * ones of the columns, which are always set, so the binder ignores the option (pinned in
-     * {@link GrailsDomainBinderOptionDefectSpec}) and the generator states what the mapping asks for.
+     * or {@code updatable: false} is a known divergence, not a mismatch: the classic property binder overwrites those flags with the
+     * ones of the columns, which are always set, so the classic binder ignored the option and the generator states what the
+     * mapping asks for ({@code ColumnOptionSpec} proves the flags reach the rows).
      */
     private List<String> compare(
             String where, ColumnFacets facets, Map bound, Map<String, Integer> known, Collection<String> ignore = [],
@@ -548,8 +540,8 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
         }
         ignore.each { pairs.remove(it) }
         if (enumeration) {
-            // EnumTypeBinder ignores the comment, default and read and write expressions of the column config (a binder defect,
-            // pinned in GrailsDomainBinderOptionDefectSpec); the generator states them
+            // the classic enum binder ignores the comment, default and read and write expressions of the column config (a binder defect,
+            // of Grails 8); the generator states them
             ['default', 'read', 'write', 'comment'].each { String facet ->
                 if (pairs[facet][0] != null && pairs[facet][1] == null) {
                     known["the binder ignores the comment, default and read and write expressions of an enum column; the generator states them".toString()]++
@@ -615,7 +607,7 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
     }
 
     /**
-     * The composite identifier as {@code CompositeIdBinder} bound it: one component with a property for every part, whose columns
+     * The composite identifier as the classic composite identifier binder bound it: one component with a property for every part, whose columns
      * are the primary key and so not null. A simple part must have the column facets of an ordinary property; a many-to-one part
      * the foreign key column and the associated entity (nothing cascades through an identifier, so the cascade the binder states on
      * the part is not compared).
@@ -912,7 +904,7 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
     }
 
     /**
-     * The tenant filter {@code MultiTenantFilterBinder} puts on the entity's class and the one global definition it
+     * The tenant filter the classic tenant filter binder puts on the entity's class and the one global definition it
      * registers: the same name, condition and parameter, or no filter at all when the generator says there is none.
      */
     private List<String> compareTenantFilter(
@@ -1014,7 +1006,7 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
     }
 
     /**
-     * A collection of basic values or enums as {@code CollectionBinder} and its second passes bound it: the kind of
+     * A collection of basic values or enums as the classic collection binder and its second passes bound it: the kind of
      * collection, its table, the key, element and index columns, and the fetching.
      */
     private List<String> compareCollection(
@@ -1157,7 +1149,7 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
     }
 
     /**
-     * An embedded property is a Component bound by {@code ComponentBinder}: the generator must name the same column-bearing
+     * An embedded property is a Component bound by the classic component binder: the generator must name the same column-bearing
      * leaves as the bound component (nested components included) and decide each leaf's column facets, type and enum
      * style the way the binder bound them.
      */
@@ -1369,7 +1361,7 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
                 dynamicUpdate: [facets.dynamicUpdate(), persistentClass.dynamicUpdate],
                 // the binder leaves a subclass's unset batch size at -1 and a root's at 0: both mean "not stated"
                 batchSize    : [facets.batchSize(), Math.max(persistentClass.batchSize, 0)],
-                // VersionBinder: NONE for a root without a version, VERSION otherwise; a subclass reads its root's
+                // the classic version binder: NONE for a root without a version, VERSION otherwise; a subclass reads its root's
                 versioned    : [facets.versioned(), persistentClass.optimisticLock == 'VERSION'],
         ]
         if (hierarchy.ownsTable()) {
@@ -1712,7 +1704,7 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
     }
 
     /**
-     * The inverse side of a one-to-one as {@code OneToOneBinder} bound it: no column, the property of the other side that
+     * The inverse side of a one-to-one as the classic one-to-one binder bound it: no column, the property of the other side that
      * holds the foreign key, the entity that declares it, the foreign key direction and the fetching.
      */
     private static List<String> compareOneToOne(String where, ToOneFacets facets, Map bound, Map<String, Integer> known) {
@@ -1737,7 +1729,7 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
     }
 
     /**
-     * A to-one association against the binder's {@code ToOne} value and property: the referenced entity, whether it is lazy,
+     * A to-one association against {@code ToOne} value and property: the referenced entity, whether it is lazy,
      * how it is fetched, what a missing row does, the cascade and whether the property is optional. The foreign key column
      * itself goes through the ordinary column comparison.
      */
@@ -1853,7 +1845,7 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
     }
 
     /**
-     * This comparison reads the mapping after the binder has bound it, and {@code ManyToOneBinder.prepareCircularManyToMany}
+     * This comparison reads the mapping after the binder has bound it, and the classic many-to-one binder's circular rule
      * writes the renamed join key into the mapping of a circular many-to-many while it binds, so the generator, which sees that
      * written key as a mapped one, states the renamed name for both sides, where the binder bound the side bound first before
      * the rename. The generator flow itself never sees the written key (it runs on the unbound mapping): the key names are
@@ -1899,7 +1891,7 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
     }
 
     /**
-     * A collection of entities as {@code CollectionBinder} and its second passes bound it: kind, ownership, join table, key,
+     * A collection of entities as the classic collection binder and its second passes bound it: kind, ownership, join table, key,
      * element and index columns, fetching, cascade, ordering and tenant filter.
      */
     private List<String> compareToMany(
@@ -2297,7 +2289,7 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
     }
 
     private GrailsDomainGenerator newGenerator() {
-        def naming = getGrailsDomainBinder().getNamingStrategy()
+        def naming = getMappingContributor().getNamingStrategy()
         return new GrailsDomainGenerator(
                 naming,
                 new ColumnNameForPropertyAndPathFetcher(naming, new DefaultColumnNameFetcher(naming), new BackticksRemover()),

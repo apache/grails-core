@@ -142,9 +142,9 @@ import org.grails.orm.hibernate.cfg.domainbinding.generator.GrailsSequenceStyleG
 import org.grails.orm.hibernate.cfg.domainbinding.generator.GrailsSequenceWrapper
 import org.grails.orm.hibernate.cfg.domainbinding.generator.GrailsTableGenerator
 import org.grails.orm.hibernate.cfg.domainbinding.util.GeneratorCreationContextWrapper
-import org.grails.orm.hibernate.cfg.domainbinding.binder.ColumnConfigToColumnBinder
-import org.grails.orm.hibernate.cfg.domainbinding.binder.NumericColumnConstraintsBinder
-import org.grails.orm.hibernate.cfg.domainbinding.binder.StringColumnConstraintsBinder
+import org.grails.orm.hibernate.cfg.domainbinding.column.ColumnConfigToColumnBinder
+import org.grails.orm.hibernate.cfg.domainbinding.column.NumericColumnConstraintsBinder
+import org.grails.orm.hibernate.cfg.domainbinding.column.StringColumnConstraintsBinder
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
 import org.grails.orm.hibernate.cfg.domainbinding.util.BackticksRemover
 import org.grails.orm.hibernate.cfg.domainbinding.util.ColumnNameForPropertyAndPathFetcher
@@ -273,14 +273,13 @@ class GrailsDomainGeneratorSpec extends HibernateGormDatastoreSpec {
         entityClass << [GenCar, GenVehicle]
     }
 
-    void "type parameters mapped with no type are not stated, because the built-in type the binder hands them to ignores them"() {
+    void "type parameters mapped with no type are not stated, because the built-in type they would go to ignores them"() {
         when:
         Class<?> generated = generate(GenParamsOnly)
 
         then:
         generated.getDeclaredField('quantity').getAnnotations().every { !(it instanceof Type) && !(it instanceof JdbcTypeCode) }
         generated.getDeclaredField('quantity').getAnnotation(Column).name() == 'quantity'
-        getPersistentEntity(GenParamsOnly).persistentClass.getProperty('quantity').value.typeParameters.getProperty('sequence_name') == 'seq'
     }
 
     void "the version is marked as the optimistic lock"() {
@@ -422,7 +421,7 @@ class GrailsDomainGeneratorSpec extends HibernateGormDatastoreSpec {
         classes[entity(GenCustomCollectionOwner)].getDeclaredField('kids').getAnnotation(CollectionType).type() == GenSetCollectionType
     }
 
-    void "Hibernate's own annotation binder resolves a converted type like the domain binder"() {
+    void "Hibernate's own annotation binder resolves a converted type as the bound model holds it"() {
         given:
         Map<GrailsHibernatePersistentEntity, Class<?>> classes = generateGroup(GenConverted)
         PersistentClass bound = entity(GenConverted).persistentClass
@@ -436,7 +435,7 @@ class GrailsDomainGeneratorSpec extends HibernateGormDatastoreSpec {
                     expected.jdbcType.defaultSqlTypeCode == actual.jdbcType.defaultSqlTypeCode &&
                     expected.domainJavaType.javaTypeClass == actual.domainJavaType.javaTypeClass
         }
-        ((BasicValue) bound.getProperty('yesNo').value).resolve().valueConverter instanceof YesNoConverter
+        converterClass(((BasicValue) bound.getProperty('yesNo').value).resolve()) == YesNoConverter
     }
 
     private static Class<?> converterClass(BasicValue.Resolution<?> resolution) {
@@ -2071,7 +2070,7 @@ class GrailsDomainGeneratorSpec extends HibernateGormDatastoreSpec {
                 GrailsHibernatePersistentEntity entity = getPersistentEntity(domainClass)
                 BasicValue identifier = (BasicValue) persistentClass.identifier
                 JdbcEnvironment jdbcEnvironment = getSessionFactory().jdbcServices.jdbcEnvironment
-                def naming = getGrailsDomainBinder().getNamingStrategy()
+                def naming = getMappingContributor().getNamingStrategy()
                 identifier.setCustomIdGeneratorCreator({ GeneratorCreationContext context ->
                     new GrailsSequenceWrapper().getGenerator(
                             marker.strategy(), new GeneratorCreationContextWrapper(context, identifier),
@@ -2087,7 +2086,7 @@ class GrailsDomainGeneratorSpec extends HibernateGormDatastoreSpec {
     }
 
     private GrailsDomainGenerator newGenerator() {
-        def naming = getGrailsDomainBinder().getNamingStrategy()
+        def naming = getMappingContributor().getNamingStrategy()
         return new GrailsDomainGenerator(
                 naming,
                 new ColumnNameForPropertyAndPathFetcher(naming, new DefaultColumnNameFetcher(naming), new BackticksRemover()),

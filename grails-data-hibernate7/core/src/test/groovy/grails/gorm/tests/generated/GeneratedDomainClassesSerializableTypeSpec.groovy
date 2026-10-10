@@ -34,8 +34,8 @@ import org.grails.orm.hibernate.HibernateDatastore
 
 /**
  * {@code type: 'serializable'} on a property that is not a collection. The registered type is for {@code java.io.Serializable}, so the
- * domain binder stores the Java serialization of a {@code String} or any other value in a binary column. The generated mode boots with
- * the same schema and stores the same bytes.
+ * Java serialization of a {@code String} or any other value is stored in a binary column, as the classic binding of Grails 8 stored
+ * it; the columns and the bytes stated here are the ones classic binding gave.
  */
 class GeneratedDomainClassesSerializableTypeSpec extends Specification {
 
@@ -44,12 +44,11 @@ class GeneratedDomainClassesSerializableTypeSpec extends Specification {
     @AutoCleanup
     HibernateDatastore datastore
 
-    private HibernateDatastore boot(List<Class> group, boolean generated) {
+    private HibernateDatastore boot(List<Class> group) {
         datastore?.close()
         datastore = new HibernateDatastore([
-                'dataSource.url'                  : "jdbc:h2:mem:tns${BOOTS.incrementAndGet()};LOCK_TIMEOUT=10000".toString(),
-                'dataSource.dbCreate'             : 'create-drop',
-                'hibernate.generatedDomainClasses': generated,
+                'dataSource.url'     : "jdbc:h2:mem:tns${BOOTS.incrementAndGet()};LOCK_TIMEOUT=10000".toString(),
+                'dataSource.dbCreate': 'create-drop',
         ], group as Class[])
         return datastore
     }
@@ -107,13 +106,11 @@ class GeneratedDomainClassesSerializableTypeSpec extends Specification {
     }
 
     @Unroll
-    void "#label has the column type the domain binder gives it"() {
+    void "#label has the column type classic binding gave it"() {
         when:
-        Map<String, Map> binder = schema(boot(group, false))
-        Map<String, Map> generated = schema(boot(group, true))
+        Map<String, Map> generated = schema(boot(group))
 
         then:
-        generated == binder
         generated[table].columns[column] == type
 
         where:
@@ -122,27 +119,24 @@ class GeneratedDomainClassesSerializableTypeSpec extends Specification {
         'a string typed serializable'                        | [TnSerializableString] | 'tn_serializable_string' | 'tag'        | 'varbinary(255)'
     }
 
-    void "a string typed serializable is stored as the Java serialization of the string, as the domain binder stores it"() {
+    void "a string typed serializable is stored as the Java serialization of the string, as classic binding stored it"() {
         when:
-        Map binder = roundTrip(boot([TnSerializableString], false), TnSerializableString, [tag: 'hello'], 'tag', 'select tag from tn_serializable_string')
-        Map generated = roundTrip(boot([TnSerializableString], true), TnSerializableString, [tag: 'hello'], 'tag', 'select tag from tn_serializable_string')
+        Map generated = roundTrip(boot([TnSerializableString]), TnSerializableString, [tag: 'hello'], 'tag', 'select tag from tn_serializable_string')
 
         then:
-        generated == binder
         generated.reloaded == 'hello'
         generated.stored == [[[-84, -19, 0, 5, 116, 0, 5, 104, 101, 108, 108, 111]]]
     }
 
-    void "a byte array typed serializable behaves as it does in the domain binder"() {
+    void "a byte array typed serializable is stored as its bytes, which the serializable type cannot read back, as with classic binding"() {
         when:
-        Map binder = roundTrip(boot([TnSerializableBytes], false), TnSerializableBytes, [payload: 'hello'.bytes], 'payload', 'select payload from tn_serializable_bytes')
-        Map generated = roundTrip(boot([TnSerializableBytes], true), TnSerializableBytes, [payload: 'hello'.bytes], 'payload', 'select payload from tn_serializable_bytes')
+        Map generated = roundTrip(boot([TnSerializableBytes]), TnSerializableBytes, [payload: 'hello'.bytes], 'payload', 'select payload from tn_serializable_bytes')
 
         then:
-        generated == binder
+        generated == [stored: [[[104, 101, 108, 108, 111]]], reloaded: 'cannot be read: StreamCorruptedException']
     }
 
-    void "a serialized byte array written by the Java serialization is read back by both bindings"() {
+    void "a serialized byte array written by the Java serialization is read back, as with classic binding"() {
         given:
         byte[] serialized = new ByteArrayOutputStream().with { bytes ->
             new ObjectOutputStream(bytes).with { it.writeObject('hello'.bytes); it.flush() }
@@ -150,20 +144,16 @@ class GeneratedDomainClassesSerializableTypeSpec extends Specification {
         }
 
         when:
-        Map<Boolean, Object> read = [false, true].collectEntries { boolean generated ->
-            boot([TnSerializableBytes], generated)
-            datastore.connectionSources.defaultConnectionSource.dataSource.connection.withCloseable { Connection connection ->
-                PreparedStatement insert = connection.prepareStatement('insert into tn_serializable_bytes (id, version, payload) values (1, 0, ?)')
-                insert.setBytes(1, serialized)
-                insert.executeUpdate()
-            }
-            Object value = TnSerializableBytes.withNewSession { TnSerializableBytes.get(1L).payload }
-            [(generated): ((byte[]) value).toList()]
+        boot([TnSerializableBytes])
+        datastore.connectionSources.defaultConnectionSource.dataSource.connection.withCloseable { Connection connection ->
+            PreparedStatement insert = connection.prepareStatement('insert into tn_serializable_bytes (id, version, payload) values (1, 0, ?)')
+            insert.setBytes(1, serialized)
+            insert.executeUpdate()
         }
+        Object value = TnSerializableBytes.withNewSession { TnSerializableBytes.get(1L).payload }
 
         then:
-        read[true] == read[false]
-        read[true] == 'hello'.bytes.toList()
+        ((byte[]) value).toList() == 'hello'.bytes.toList()
     }
 }
 

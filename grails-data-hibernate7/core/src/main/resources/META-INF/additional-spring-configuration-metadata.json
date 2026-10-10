@@ -31,8 +31,11 @@
         {
             "name": "hibernate.generatedDomainClasses",
             "type": "java.lang.Boolean",
-            "description": "Whether Hibernate's own annotation binder binds the domain classes (native domain binding). When false, GORM's classic domain binder builds the Hibernate mapping itself; classic domain binding is deprecated and will be removed. See Native Domain Binding in the GORM for Hibernate 7 manual.",
-            "defaultValue": true
+            "description": "No longer used. Native domain binding (Hibernate's own annotation binder over classes generated from the GORM mapping) is the only binding; the classic domain binding of Grails 8 was removed. The setting is ignored with a warning at startup. See Native Domain Binding in the GORM for Hibernate 7 manual.",
+            "deprecation": {
+                "level": "error",
+                "reason": "The classic domain binding was removed; native domain binding is the only binding."
+            }
         },
         {
             "name": "hibernate.grails.proxy.lazy_to_string",

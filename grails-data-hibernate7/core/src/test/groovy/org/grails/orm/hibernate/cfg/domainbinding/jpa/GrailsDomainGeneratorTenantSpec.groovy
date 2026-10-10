@@ -36,9 +36,9 @@ import org.hibernate.mapping.PersistentClass
 
 import org.grails.datastore.mapping.multitenancy.MultiTenancySettings
 import org.grails.datastore.mapping.multitenancy.resolvers.SystemPropertyTenantResolver
-import org.grails.orm.hibernate.cfg.domainbinding.binder.ColumnConfigToColumnBinder
-import org.grails.orm.hibernate.cfg.domainbinding.binder.NumericColumnConstraintsBinder
-import org.grails.orm.hibernate.cfg.domainbinding.binder.StringColumnConstraintsBinder
+import org.grails.orm.hibernate.cfg.domainbinding.column.ColumnConfigToColumnBinder
+import org.grails.orm.hibernate.cfg.domainbinding.column.NumericColumnConstraintsBinder
+import org.grails.orm.hibernate.cfg.domainbinding.column.StringColumnConstraintsBinder
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
 import org.grails.orm.hibernate.cfg.domainbinding.util.BackticksRemover
 import org.grails.orm.hibernate.cfg.domainbinding.util.ColumnNameForPropertyAndPathFetcher
@@ -201,7 +201,7 @@ class GrailsDomainGeneratorTenantSpec extends HibernateGormDatastoreSpec {
     }
 
     private GrailsDomainGenerator newGenerator() {
-        def naming = getGrailsDomainBinder().getNamingStrategy()
+        def naming = getMappingContributor().getNamingStrategy()
         return new GrailsDomainGenerator(
                 naming,
                 new ColumnNameForPropertyAndPathFetcher(naming, new DefaultColumnNameFetcher(naming), new BackticksRemover()),

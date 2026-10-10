@@ -45,18 +45,16 @@ import org.grails.datastore.mapping.reflect.ClassUtils
 import org.grails.orm.hibernate.HibernateDatastore
 
 /**
- * What a user with an existing database would see if they switched {@code hibernate.generatedDomainClasses} on: the schema
- * Hibernate derives from the generated classes against the schema the domain binder derives from the same domain classes.
- *
- * <p>Every group of associated domain classes of the scanned test domains ({@link ScannedDomainClasses}) is booted twice
- * on H2, once in each mode, and the Hibernate mapping model of both (tables, columns with their type, nullability, default,
- * length, precision and scale, primary keys with their column order, foreign keys, unique keys, indexes, check constraints,
- * sequences) is compared. As a backstop for what the model does not show, the schema H2 itself holds after the boot
- * ({@code SCRIPT NODATA}, with H2's generated constraint names normalised) is compared too, and a statement that differs
- * for a table with no difference in the model fails the spec as an unexplained difference.</p>
+ * Compares the schema native binding derives from every group of related domain classes of the test suites with the schema the
+ * classic domain binder of Grails 8 derived from them, recorded in {@code classic-oracle/ddl-differential.txt} before it was
+ * deleted ({@link ClassicOracle}): tables, columns with their types, nullability, defaults and lengths, primary keys and their
+ * column order, foreign keys, unique keys, indexes, check constraints and sequences, and H2's {@code SCRIPT NODATA} (with the
+ * generated constraint names normalised). What a user with an existing database created by Grails 8 sees when the upgraded
+ * application starts against it.
  *
  * <p>The spec fails on every difference that is not covered by an entry of {@link #KNOWN}, each of which states why the
- * difference is kept. The categorised report is written to {@code build/ddl-report.txt}.</p>
+ * difference is kept, and on an H2 statement that differs without a known difference explaining it. A new fixture gets its record
+ * from a native boot with {@code -Pgrails.test.recordClassicOracle=true} ({@link #nativeSection}).</p>
  */
 class GeneratedDomainClassesDdlDifferentialSpec extends Specification {
 
@@ -74,7 +72,7 @@ class GeneratedDomainClassesDdlDifferentialSpec extends Specification {
             [id: 'MAP_ELEMENT_NULLABLE', reason: 'The mapping of a map of values states nullable: false on the element column and the binder leaves the column nullable (it ignores the option, like the enum column extras); the generated mode honours the mapping, so a database created by the binder has a nullable column where the generated mode creates NOT NULL. Matching the binder would drop a constraint the mapping states.'],
             [id: 'MAP_UNUSED_COLUMN', reason: 'The binder leaves an unused nullable column in the table of a map of values (the element it bound before the map replaced it, attributes_java_lang_string); the generated mode creates no such column. Nothing reads the extra column; an existing database keeps it (update does not drop columns).'],
             [id: 'UNIQUE_GROUP_ON_COLLECTION', reason: 'A binder defect (fixed on the 8.0.x line by PR 16533, so the class disappears with the next up-merge): a unique group mapped on a collection property makes the binder create a unique key on the collection table over the key column and the other properties of the group, which are columns of the owner\'s table and not of the collection table, so the key cannot be created (Hibernate logs the failed statement and boots; the key is not in the H2 script of the binder either). The generated mode creates no key, which is what the fix does.'],
-            [id: 'UNIQUE_GROUP_ON_ENUM', reason: 'A binder defect (pinned in GrailsDomainBinderOptionDefectSpec): a unique group that includes an enum property is dropped by the binder. The generated mode creates the constraint the mapping states, so a database created by the binder lacks it and `update` would add it. 2 groups in the scanned domains.']
+            [id: 'UNIQUE_GROUP_ON_ENUM', reason: 'A classic binder defect (the native constraint is proven by ColumnOptionSpec): a unique group that includes an enum property is dropped by the binder. The generated mode creates the constraint the mapping states, so a database created by the binder lacks it and `update` would add it. 2 groups in the scanned domains.']
     ]
 
     private static final AtomicInteger BOOTS = new AtomicInteger()
@@ -143,7 +141,7 @@ class GeneratedDomainClassesDdlDifferentialSpec extends Specification {
         int scriptStatements = 0
         for (List<Class<?>> group : groups) {
             String name = group*.simpleName.join(',').take(120)
-            ClassicOracle.Section section = oracle.section(group.first().name, group*.name) { classicSection(group) }
+            ClassicOracle.Section section = oracle.section(group.first().name, group*.name) { nativeSection(group) }
             if (section.header.unbootable != null) {
                 binderUnbootable[name] = section.header.unbootable.toString()
                 continue
@@ -154,7 +152,7 @@ class GeneratedDomainClassesDdlDifferentialSpec extends Specification {
             }
             Map generated
             try {
-                generated = (Map) ClassicOracle.normalized(snapshot(group, true), true)
+                generated = (Map) ClassicOracle.normalized(snapshot(group), true)
             } catch (Throwable e) {
                 generatedRefused[name] = firstLine(e)
                 continue
@@ -173,17 +171,19 @@ class GeneratedDomainClassesDdlDifferentialSpec extends Specification {
     }
 
     /**
-     * What the domain binder produces for a group, as a section of the oracle file: the snapshot of the schema it derived, or the first
-     * line of the reason it cannot boot the group. Only called when the classic binder is booted (VERIFY and REFREEZE).
+     * The record of a group that has none, taken from a native boot (the files were recorded from the classic binder before it was
+     * deleted; this is how a new fixture joins them): the snapshot of the schema, or the first line of the reason the group cannot
+     * boot. Only called in the RECORD mode of {@link ClassicOracle}.
      */
-    static ClassicOracle.Section classicSection(List<Class<?>> group) {
+    static ClassicOracle.Section nativeSection(List<Class<?>> group) {
         Map schema
         try {
-            schema = snapshot(group, false)
+            schema = snapshot(group)
         } catch (Throwable e) {
-            return new ClassicOracle.Section(group.first().name, [members: group*.name, unbootable: ClassicOracle.stableReason(firstLine(e))])
+            return new ClassicOracle.Section(group.first().name,
+                    [members: group*.name, source: ClassicOracle.NATIVE_SOURCE, unbootable: ClassicOracle.stableReason(firstLine(e))])
         }
-        ClassicOracle.Section section = new ClassicOracle.Section(group.first().name, [members: group*.name])
+        ClassicOracle.Section section = new ClassicOracle.Section(group.first().name, [members: group*.name, source: ClassicOracle.NATIVE_SOURCE])
         ((Map<String, Map>) schema.tables).keySet().sort().each { String table -> section.add('table', table, schema.tables[table], true) }
         ((Map<String, Map>) schema.sequences).keySet().sort().each { String sequence -> section.add('sequence', sequence, schema.sequences[sequence], true) }
         ((List<String>) schema.script).each { String statement -> section.add('script', '', statement, true) }
@@ -272,14 +272,12 @@ class GeneratedDomainClassesDdlDifferentialSpec extends Specification {
     }
 
     /**
-     * Boots a group in one mode, with the settings of the other mode identical, and reads the schema model and the H2 script
-     * back as plain data so that the datastore can be closed.
+     * Boots a group and reads the schema model and the H2 script back as plain data so that the datastore can be closed.
      */
-    private static Map snapshot(List<Class<?>> group, boolean generated) {
+    private static Map snapshot(List<Class<?>> group) {
         Map<String, Object> config = [
-                'dataSource.url'                  : "jdbc:h2:mem:ddlDiff${BOOTS.incrementAndGet()};LOCK_TIMEOUT=10000".toString(),
-                'dataSource.dbCreate'             : 'create-drop',
-                'hibernate.generatedDomainClasses': generated,
+                'dataSource.url'     : "jdbc:h2:mem:ddlDiff${BOOTS.incrementAndGet()};LOCK_TIMEOUT=10000".toString(),
+                'dataSource.dbCreate': 'create-drop',
         ]
         if (group.any { Class<?> type -> ClassUtils.isMultiTenant(type) }) {
             config['grails.gorm.multiTenancy.mode'] = MultiTenancySettings.MultiTenancyMode.DISCRIMINATOR
@@ -572,8 +570,11 @@ class GeneratedDomainClassesDdlDifferentialSpec extends Specification {
                 "with the domain binder, ${generatedRefused.size()} refused by the generated mode; ${tables} tables, " +
                 "${scriptStatements} H2 statements; ${differences.size()} differences, ${unknown.size()} not known, " +
                 "${unexplained.size()} unexplained H2 statements\n"
-        report << "classic oracle: ${oracle.mode}${oracle.drift.isEmpty() ? '' : ", ${oracle.drift.size()} recorded groups differ from the live classic binder"}\n"
+        report << "classic oracle: ${oracle.mode}${oracle.recordedNow.isEmpty() ? '' : ", ${oracle.recordedNow.size()} groups recorded from a native boot"}" +
+                "${oracle.dropped.isEmpty() ? '' : ", ${oracle.dropped.size()} recorded groups dropped"}\n"
         oracle.drift.each { report << "  DRIFT ${it}\n" }
+        oracle.recordedNow.each { report << "  RECORDED ${it}\n" }
+        oracle.dropped.each { report << "  DROPPED ${it}\n" }
         report << '\n'
         report << "difference classes (kind, on a join table or not): count, example\n"
         Map<String, List<Map>> byClass = differences.groupBy { Map d -> d.cls }

@@ -29,10 +29,10 @@ import spock.lang.Unroll
 import org.grails.orm.hibernate.HibernateDatastore
 
 /**
- * Column settings on a foreign key: a to-one association, the key of a collection, the element of a many-to-many. The domain binder puts
- * the {@code defaultValue}, {@code comment}, {@code read} and {@code write} of the column config on the foreign key column and ignores
- * {@code length}, {@code precision} and {@code scale} (the type of the column is the one of the column it references). The generated
- * mode accepts the mapping and creates the same columns, instead of refusing it.
+ * Column settings on a foreign key: a to-one association, the key of a collection, the element of a many-to-many. As the classic binding
+ * of Grails 8 did, the {@code defaultValue}, {@code comment}, {@code read} and {@code write} of the column config go on the foreign key
+ * column and {@code length}, {@code precision} and {@code scale} are ignored (the type of the column is the one of the column it
+ * references). Native binding accepts the mapping instead of refusing it; the columns stated here are the ones classic binding created.
  */
 class GeneratedDomainClassesJoinColumnSpec extends Specification {
 
@@ -41,19 +41,18 @@ class GeneratedDomainClassesJoinColumnSpec extends Specification {
     @AutoCleanup
     HibernateDatastore datastore
 
-    private HibernateDatastore boot(List<Class> group, boolean generated) {
+    private HibernateDatastore boot(List<Class> group) {
         datastore?.close()
         datastore = new HibernateDatastore([
-                'dataSource.url'                  : "jdbc:h2:mem:gdj${BOOTS.incrementAndGet()};LOCK_TIMEOUT=10000".toString(),
-                'dataSource.dbCreate'             : 'create-drop',
-                'hibernate.generatedDomainClasses': generated,
+                'dataSource.url'     : "jdbc:h2:mem:gdj${BOOTS.incrementAndGet()};LOCK_TIMEOUT=10000".toString(),
+                'dataSource.dbCreate': 'create-drop',
         ], group as Class[])
         return datastore
     }
 
     /** The columns of the boot model with the type, nullability, comment, default and read and write expressions of each, and the foreign keys. */
-    private Map<String, Map> schema(List<Class> group, boolean generated) {
-        HibernateDatastore booted = boot(group, generated)
+    private Map<String, Map> schema(List<Class> group) {
+        HibernateDatastore booted = boot(group)
         Map<String, Map> result = new TreeMap<String, Map>()
         for (Table table : booted.metadata.collectTableMappings()) {
             if (table.physicalTable) {
@@ -76,13 +75,11 @@ class GeneratedDomainClassesJoinColumnSpec extends Specification {
     }
 
     @Unroll
-    void "#label: the generated mode creates the foreign key column of the domain binder, with its comment, default and expressions"() {
+    void "#label: the foreign key column of classic binding is created, with its comment, default and expressions"() {
         when:
-        Map<String, Map> binder = schema(group, false)
-        Map<String, Map> generated = schema(group, true)
+        Map<String, Map> generated = schema(group)
 
         then:
-        generated == binder
         generated[table].columns[column].subMap(['comment', 'default', 'read', 'write']) == expected
 
         where:
@@ -99,13 +96,11 @@ class GeneratedDomainClassesJoinColumnSpec extends Specification {
     }
 
     @Unroll
-    void "#label: the types of the foreign key columns ignore length, precision and scale in both modes"() {
+    void "#label: the types of the foreign key columns ignore length, precision and scale"() {
         when:
-        Map<String, Map> binder = schema(group, false)
-        Map<String, Map> generated = schema(group, true)
+        Map<String, Map> generated = schema(group)
 
         then:
-        generated == binder
         generated[table].columns[column].type == type
 
         where:
@@ -116,16 +111,13 @@ class GeneratedDomainClassesJoinColumnSpec extends Specification {
     }
 
     @Unroll
-    void "#label: the associations are stored and read back in both modes"() {
+    void "#label: the associations are stored and read back"() {
         when:
-        Map<Boolean, List> results = [false, true].collectEntries { boolean generated ->
-            boot(group, generated)
-            [(generated): this."${cycle}"()]
-        }
+        boot(group)
+        List results = this."${cycle}"()
 
         then:
-        results[true] == results[false]
-        results[true] == expected
+        results == expected
 
         where:
         label                       | group                          | cycle          | expected

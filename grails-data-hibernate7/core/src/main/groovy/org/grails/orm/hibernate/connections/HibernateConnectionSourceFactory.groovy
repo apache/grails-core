@@ -24,6 +24,8 @@ import org.hibernate.Interceptor
 import org.hibernate.SessionFactory
 import org.hibernate.boot.model.naming.PhysicalNamingStrategy
 import org.hibernate.cfg.Configuration
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 import org.springframework.beans.BeanUtils
 import org.springframework.beans.BeansException
 import org.springframework.context.ApplicationContext
@@ -64,6 +66,19 @@ import javax.sql.DataSource
 class HibernateConnectionSourceFactory
         extends AbstractConnectionSourceFactory<SessionFactory, HibernateConnectionSourceSettings>
         implements ApplicationContextAware, MessageSourceAware {
+
+    private static final Logger LOG = LoggerFactory.getLogger(HibernateConnectionSourceFactory)
+
+    /**
+     * The setting that selected the classic domain binding of Grails 8. It is no longer read: native domain binding is the
+     * only binding. An application that still sets it is told so once, at startup, and boots natively.
+     */
+    static final String GENERATED_DOMAIN_CLASSES_SETTING = 'hibernate.generatedDomainClasses'
+
+    static final String GENERATED_DOMAIN_CLASSES_SETTING_IGNORED =
+            'The setting [%s] is no longer used: native domain binding is the only binding of GORM for Hibernate 7. ' +
+            'Remove the setting. The Native Domain Binding chapter of the GORM for Hibernate 7 manual lists what changed ' +
+            'from the classic binding of Grails 8.'
 
     static {
         // use Slf4j logging by default
@@ -176,7 +191,6 @@ class HibernateConnectionSourceFactory
         HibernateMappingContextConfiguration configuration = resolveConfiguration(hibernateSettings.configClass)
         configuration.setBytecodeProvider(this.bytecodeProvider)
         configuration.setDataSourceName(name)
-        configuration.setGeneratedDomainClasses(hibernateSettings.generatedDomainClasses)
         configuration.properties.put('jakarta.persistence.nonJtaDataSource', dataSourceConnectionSource.source)
         if (applicationContext != null) {
             configuration.setApplicationContext(applicationContext)
@@ -299,6 +313,7 @@ class HibernateConnectionSourceFactory
     @Override
     protected <F extends ConnectionSourceSettings> HibernateConnectionSourceSettings buildSettings(
             String name, PropertyResolver configuration, F fallbackSettings, boolean isDefaultDataSource) {
+        warnAboutIgnoredSetting(configuration, isDefaultDataSource ? '' : "${Settings.SETTING_DATASOURCES}.${name}".toString())
         if (isDefaultDataSource) {
             String qualified = "${Settings.SETTING_DATASOURCES}.${Settings.SETTING_DATASOURCE}"
             HibernateConnectionSourceSettings settings =
@@ -311,6 +326,16 @@ class HibernateConnectionSourceFactory
             return settings
         }
         return buildSettingsWithPrefix(configuration, fallbackSettings, "${Settings.SETTING_DATASOURCES}.${name}")
+    }
+
+    /**
+     * Logs once per data source that the setting of Grails 8 selecting the classic domain binding is ignored.
+     */
+    private static void warnAboutIgnoredSetting(PropertyResolver configuration, String prefix) {
+        String key = prefix.isEmpty() ? GENERATED_DOMAIN_CLASSES_SETTING : "${prefix}.${GENERATED_DOMAIN_CLASSES_SETTING}".toString()
+        if (configuration.containsProperty(key)) {
+            LOG.warn(String.format(GENERATED_DOMAIN_CLASSES_SETTING_IGNORED, key))
+        }
     }
 
     private <F extends ConnectionSourceSettings> HibernateConnectionSourceSettings buildSettingsWithPrefix(

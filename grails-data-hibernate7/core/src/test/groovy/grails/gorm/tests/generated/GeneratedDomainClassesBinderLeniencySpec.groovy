@@ -35,11 +35,12 @@ import spock.lang.Unroll
 import org.grails.orm.hibernate.HibernateDatastore
 
 /**
- * Mappings that say more than the domain binder uses, and that it boots all the same: a join table that names a composite key (the
- * binder uses the first key column and ignores the others), a {@code type} that names a Java class and not a type (the binder looks
- * the class name up among the types registered for Java classes), and a property of a class GORM does not know and the mapping gives no
- * type (the binder lets Hibernate pick the type, which is binary for a serializable class). The generated mode boots them with the same
- * columns instead of refusing them.
+ * Mappings that say more than the classic binding of Grails 8 used, and that it booted all the same: a join table that names a
+ * composite key (the first key column is used and the others ignored), a {@code type} that names a Java class and not a type (the class
+ * name is looked up among the types registered for Java classes), and a property of a class GORM does not know and the mapping gives no
+ * type (Hibernate picks the type, which is binary for a serializable class). Native binding boots them with the same columns instead of
+ * refusing them; the columns and the behaviour stated here are the ones classic binding had (the schema of every group is also compared
+ * with the recorded classic schema by {@code GeneratedDomainClassesDdlDifferentialSpec}).
  */
 class GeneratedDomainClassesBinderLeniencySpec extends Specification {
 
@@ -48,18 +49,17 @@ class GeneratedDomainClassesBinderLeniencySpec extends Specification {
     @AutoCleanup
     HibernateDatastore datastore
 
-    private HibernateDatastore boot(List<Class> group, boolean generated) {
+    private HibernateDatastore boot(List<Class> group) {
         datastore?.close()
         datastore = new HibernateDatastore([
-                'dataSource.url'                  : "jdbc:h2:mem:gbl${BOOTS.incrementAndGet()};LOCK_TIMEOUT=10000".toString(),
-                'dataSource.dbCreate'             : 'create-drop',
-                'hibernate.generatedDomainClasses': generated,
+                'dataSource.url'     : "jdbc:h2:mem:gbl${BOOTS.incrementAndGet()};LOCK_TIMEOUT=10000".toString(),
+                'dataSource.dbCreate': 'create-drop',
         ], group as Class[])
         return datastore
     }
 
-    private Map<String, Map> schema(List<Class> group, boolean generated) {
-        HibernateDatastore booted = boot(group, generated)
+    private Map<String, Map> schema(List<Class> group) {
+        HibernateDatastore booted = boot(group)
         Map<String, Map> result = new TreeMap<String, Map>()
         for (Table table : booted.metadata.collectTableMappings()) {
             if (table.physicalTable) {
@@ -77,13 +77,11 @@ class GeneratedDomainClassesBinderLeniencySpec extends Specification {
     }
 
     @Unroll
-    void "#label: the generated mode creates the tables and columns of the domain binder"() {
+    void "#label: the tables and columns of classic binding are created"() {
         when:
-        Map<String, Map> binder = schema(group, false)
-        Map<String, Map> generated = schema(group, true)
+        Map<String, Map> generated = schema(group)
 
         then:
-        generated == binder
         generated[table].columns.keySet() == columns as Set
 
         where:
@@ -99,16 +97,13 @@ class GeneratedDomainClassesBinderLeniencySpec extends Specification {
     }
 
     @Unroll
-    void "#label: the rows are stored, read back and changed in both modes"() {
+    void "#label: the rows are stored, read back and changed"() {
         when:
-        Map<Boolean, List> results = [false, true].collectEntries { boolean generated ->
-            boot(group, generated)
-            [(generated): this."${cycle}"()]
-        }
+        boot(group)
+        List results = this."${cycle}"()
 
         then:
-        results[true] == results[false]
-        results[true] == expected
+        results == expected
 
         where:
         label                                              | group                      | cycle            | expected

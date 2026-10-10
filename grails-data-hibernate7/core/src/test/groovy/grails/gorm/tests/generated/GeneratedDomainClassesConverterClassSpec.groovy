@@ -32,9 +32,9 @@ import spock.lang.Unroll
 import org.grails.orm.hibernate.HibernateDatastore
 
 /**
- * A {@code type} that names an {@code AttributeConverter} class, such as {@code org.hibernate.type.YesNoConverter}. The domain binder
- * converts the property with it, whatever the class of the property is, and also when the property is a {@code hasMany} stored in one
- * column. The generated mode boots with the same schema and converts the same way.
+ * A {@code type} that names an {@code AttributeConverter} class, such as {@code org.hibernate.type.YesNoConverter}. The property is
+ * converted with it, whatever the class of the property is, and also when the property is a {@code hasMany} stored in one column, as
+ * the classic binding of Grails 8 did; the columns and the stored values stated here are the ones classic binding gave.
  */
 class GeneratedDomainClassesConverterClassSpec extends Specification {
 
@@ -43,12 +43,11 @@ class GeneratedDomainClassesConverterClassSpec extends Specification {
     @AutoCleanup
     HibernateDatastore datastore
 
-    private HibernateDatastore boot(List<Class> group, boolean generated) {
+    private HibernateDatastore boot(List<Class> group) {
         datastore?.close()
         datastore = new HibernateDatastore([
-                'dataSource.url'                  : "jdbc:h2:mem:tns${BOOTS.incrementAndGet()};LOCK_TIMEOUT=10000".toString(),
-                'dataSource.dbCreate'             : 'create-drop',
-                'hibernate.generatedDomainClasses': generated,
+                'dataSource.url'     : "jdbc:h2:mem:tns${BOOTS.incrementAndGet()};LOCK_TIMEOUT=10000".toString(),
+                'dataSource.dbCreate': 'create-drop',
         ], group as Class[])
         return datastore
     }
@@ -106,13 +105,11 @@ class GeneratedDomainClassesConverterClassSpec extends Specification {
     }
 
     @Unroll
-    void "#label has the column type the domain binder gives it"() {
+    void "#label has the column type classic binding gave it"() {
         when:
-        Map<String, Map> binder = schema(boot(group, false))
-        Map<String, Map> generated = schema(boot(group, true))
+        Map<String, Map> generated = schema(boot(group))
 
         then:
-        generated == binder
         generated[table].columns[column] == type
 
         where:
@@ -124,11 +121,9 @@ class GeneratedDomainClassesConverterClassSpec extends Specification {
 
     void "a boolean converted by an attribute converter is stored as the converter says and read back"() {
         when:
-        Map binder = roundTrip(boot([TnConvertedBoolean], false), TnConvertedBoolean, [flag: true], 'flag', 'select flag from tn_converted_boolean')
-        Map generated = roundTrip(boot([TnConvertedBoolean], true), TnConvertedBoolean, [flag: true], 'flag', 'select flag from tn_converted_boolean')
+        Map generated = roundTrip(boot([TnConvertedBoolean]), TnConvertedBoolean, [flag: true], 'flag', 'select flag from tn_converted_boolean')
 
         then:
-        generated == binder
         generated == [stored: [['Y']], reloaded: true]
 
         and: "a query on the property converts its parameter"
@@ -136,22 +131,15 @@ class GeneratedDomainClassesConverterClassSpec extends Specification {
         TnConvertedBoolean.withNewSession { TnConvertedBoolean.findAllByFlag(false) } == []
     }
 
-    void "an attribute converter on a property of a class it does not convert is accepted by both bindings and fails the same way when used"() {
-        when:
-        Map<Boolean, String> outcome = [false, true].collectEntries { boolean generated ->
-            boot([TnConvertedString], generated)
-            String result
-            try {
-                TnConvertedString.withTransaction { new TnConvertedString(data: 'Y').save(failOnError: true, flush: true) }
-                result = 'saved'
-            } catch (Throwable e) {
-                result = 'failed'
-            }
-            [(generated): result]
-        }
+    void "an attribute converter on a property of a class it does not convert is accepted, as classic binding accepted it, and fails when used"() {
+        given:
+        boot([TnConvertedString])
 
-        then:
-        outcome[true] == outcome[false]
+        when:
+        TnConvertedString.withTransaction { new TnConvertedString(data: 'Y').save(failOnError: true, flush: true) }
+
+        then: "Hibernate refuses the value (an AssertionError of its converter resolution), as it did with classic binding"
+        thrown(Throwable)
     }
 }
 

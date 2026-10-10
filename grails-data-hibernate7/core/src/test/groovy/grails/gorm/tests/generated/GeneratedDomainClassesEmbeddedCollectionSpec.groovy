@@ -29,11 +29,11 @@ import spock.lang.Unroll
 import org.grails.orm.hibernate.HibernateDatastore
 
 /**
- * A collection inside an embedded type, bound by the domain binder and by the generated classes. The domain binder names the table
- * of such a collection after the embedded type and not after the owner ({@code ecs_words_words}), and its key column after the
- * embedded type too ({@code ecs_words_id}), whatever the embedded property is called; the key points at the table of the owner. The
- * generated classes state the same names. Two embedded properties that share a type with a collection get a table each in the generated
- * mode, see {@link GeneratedDomainClassesSharedEmbeddedCollectionSpec}.
+ * A collection inside an embedded type. The classic binding of Grails 8 named the table of such a collection after the embedded type
+ * and not after the owner ({@code ecs_words_words}), and its key column after the embedded type too ({@code ecs_words_id}), whatever
+ * the embedded property is called; the key points at the table of the owner. The generated classes state the same names, recorded
+ * here. Two embedded properties that share a type with a collection get a table each, see
+ * {@link GeneratedDomainClassesSharedEmbeddedCollectionSpec}.
  */
 class GeneratedDomainClassesEmbeddedCollectionSpec extends Specification {
 
@@ -42,19 +42,18 @@ class GeneratedDomainClassesEmbeddedCollectionSpec extends Specification {
     @AutoCleanup
     HibernateDatastore datastore
 
-    private HibernateDatastore boot(List<Class> group, boolean generated) {
+    private HibernateDatastore boot(List<Class> group) {
         datastore?.close()
         datastore = new HibernateDatastore([
-                'dataSource.url'                  : "jdbc:h2:mem:ecs${BOOTS.incrementAndGet()};LOCK_TIMEOUT=10000".toString(),
-                'dataSource.dbCreate'             : 'create-drop',
-                'hibernate.generatedDomainClasses': generated,
+                'dataSource.url'     : "jdbc:h2:mem:ecs${BOOTS.incrementAndGet()};LOCK_TIMEOUT=10000".toString(),
+                'dataSource.dbCreate': 'create-drop',
         ], group as Class[])
         return datastore
     }
 
     /** The tables of the boot model as plain data: columns with SQL type and nullability, keys, foreign keys, indexes, unique keys. */
-    private Map<String, Map> schema(List<Class> group, boolean generated) {
-        HibernateDatastore booted = boot(group, generated)
+    private Map<String, Map> schema(List<Class> group) {
+        HibernateDatastore booted = boot(group)
         Map<String, Map> result = new TreeMap<String, Map>()
         for (Table table : booted.metadata.collectTableMappings()) {
             if (table.physicalTable) {
@@ -74,13 +73,11 @@ class GeneratedDomainClassesEmbeddedCollectionSpec extends Specification {
     }
 
     @Unroll
-    void "#label: the generated mode creates the schema of the domain binder"() {
+    void "#label: the schema of classic binding is created"() {
         when:
-        Map<String, Map> binder = schema(group, false)
-        Map<String, Map> generated = schema(group, true)
+        Map<String, Map> generated = schema(group)
 
         then:
-        generated == binder
         generated.keySet() == tables as Set
         generated[table].columns.keySet() == columns as Set
 
@@ -96,46 +93,30 @@ class GeneratedDomainClassesEmbeddedCollectionSpec extends Specification {
     }
 
     @Unroll
-    void "#label: the schema differs from the domain binder's only as the schema of a collection of the owner itself does"() {
+    void "#label: the collection table is the one of a collection of the owner itself, named after the embedded type"() {
         when:
-        Map<String, Map> binder = schema(group, false)
-        Map<String, Map> generated = schema(group, true)
-        Map<String, Map> plainBinder = schema([plain], false)
-        Map<String, Map> plainGenerated = schema([plain], true)
+        Map<String, Map> generated = schema(group)
+        Map<String, Map> plainGenerated = schema([plain])
 
-        then: "the same tables, the same columns apart from the one the binder leaves unused, the same keys"
-        generated.keySet() == binder.keySet()
-        generated[table].columns.keySet() == binder[table].columns.keySet() - unused
-        generated[table].primaryKey == binder[table].primaryKey
-        generated[table].foreignKeys == binder[table].foreignKeys
-        generated[table].indexes == binder[table].indexes
-        generated[table].uniqueKeys == binder[table].uniqueKeys
-
-        and: "the types differ exactly where they differ for a collection that is a property of the owner"
-        shape(binder[table].columns, generated[table].columns) == shape(plainBinder[plainTable].columns, plainGenerated[plainTable].columns)
+        then: "the table has the columns, keys and types of the plain collection's table (classic binding left an unused element column in the table of a map)"
+        generated.keySet() == [owner, table] as Set
+        generated[table] == expected
+        plainGenerated[plainTable].columns.values().sort() == expected.columns.values().sort()
 
         where:
-        label               | group          | table              | unused                       | plain        | plainTable
-        'a list of strings' | [EcsListOwner] | 'ecs_lists_items'  | []                           | EcsPlainList | 'ecs_plain_list_items'
-        'a map of strings'  | [EcsMapOwner]  | 'ecs_maps_by_name' | ['by_name_java_lang_string'] | EcsPlainMap  | 'ecs_plain_map_by_name'
-    }
-
-    private static List shape(Map<String, String> binder, Map<String, String> generated) {
-        return (binder.keySet() + generated.keySet()).collect { String name -> [binder[name], generated[name]] }
-                .findAll { List pair -> pair[0] != pair[1] }.sort { it.toString() }
+        label               | group          | owner            | table              | plain        | plainTable             | expected
+        'a list of strings' | [EcsListOwner] | 'ecs_list_owner' | 'ecs_lists_items'  | EcsPlainList | 'ecs_plain_list_items' | [columns: [items_idx: 'integer not null', ecs_lists_id: 'bigint not null', items_java_lang_string: 'varchar(255)'], primaryKey: ['ecs_lists_id', 'items_idx'], foreignKeys: ['[ecs_lists_id] -> ecs_list_owner'], indexes: [:], uniqueKeys: []]
+        'a map of strings'  | [EcsMapOwner]  | 'ecs_map_owner'  | 'ecs_maps_by_name' | EcsPlainMap  | 'ecs_plain_map_by_name' | [columns: [ecs_maps_id: 'bigint not null', by_name_elt: 'varchar(255) not null', by_name_idx: 'varchar(255) not null'], primaryKey: ['by_name_idx', 'ecs_maps_id'], foreignKeys: ['[ecs_maps_id] -> ecs_map_owner'], indexes: [:], uniqueKeys: []]
     }
 
     @Unroll
-    void "#label are stored, read back, changed and deleted with the owner, the same in both modes"() {
+    void "#label are stored, read back, changed and deleted with the owner"() {
         when:
-        Map<Boolean, List> results = [false, true].collectEntries { boolean generated ->
-            boot(group, generated)
-            [(generated): this."${cycle}"()]
-        }
+        boot(group)
+        List results = this."${cycle}"()
 
         then:
-        results[true] == results[false]
-        results[true] == expected
+        results == expected
 
         where:
         label                                | group                         | cycle              | expected
@@ -234,22 +215,21 @@ class GeneratedDomainClassesEmbeddedCollectionSpec extends Specification {
         }
     }
 
-    void "the words of an embedded set are found by a query on the owner in both modes"() {
+    void "the words of an embedded set are found by a query on the owner"() {
+        given:
+        boot([EcsSetOwner])
+
         when:
-        List<List> results = [false, true].collect { boolean generated ->
-            boot([EcsSetOwner], generated)
-            EcsSetOwner.withTransaction {
-                new EcsSetOwner(inner: new EcsWords(words: ['red', 'blue'] as Set)).save(failOnError: true)
-                new EcsSetOwner(inner: new EcsWords(words: ['green'] as Set)).save(failOnError: true, flush: true)
-            }
-            EcsSetOwner.withNewSession {
-                [EcsSetOwner.count(), EcsSetOwner.list()*.inner.words.flatten().sort(), EcsSetOwner.executeQuery('select count(o) from EcsSetOwner o where o.id > 0')[0]]
-            }
+        EcsSetOwner.withTransaction {
+            new EcsSetOwner(inner: new EcsWords(words: ['red', 'blue'] as Set)).save(failOnError: true)
+            new EcsSetOwner(inner: new EcsWords(words: ['green'] as Set)).save(failOnError: true, flush: true)
+        }
+        List results = EcsSetOwner.withNewSession {
+            [EcsSetOwner.count(), EcsSetOwner.list()*.inner.words.flatten().sort(), EcsSetOwner.executeQuery('select count(o) from EcsSetOwner o where o.id > 0')[0]]
         }
 
         then:
-        results[1] == results[0]
-        results[1] == [2, ['blue', 'green', 'red'], 2]
+        results == [2, ['blue', 'green', 'red'], 2]
     }
 }
 
