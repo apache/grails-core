@@ -18,35 +18,25 @@
  */
 package org.grails.web.converters.marshaller.json;
 
-import java.time.ZonedDateTime;
-import java.time.format.DateTimeFormatter;
+import java.util.Optional;
 
 import grails.converters.JSON;
 import org.grails.web.converters.exceptions.ConverterException;
 import org.grails.web.converters.marshaller.ObjectMarshaller;
-import org.grails.web.json.JSONException;
 
 /**
- * JSON ObjectMarshaller which converts a ZonedDateTime to ISO-8601 format with timezone offset.
+ * JSON ObjectMarshaller which renders an {@link Optional} as its value, or {@code null} when it is empty, as Spring
+ * Boot's JsonMapper does. The value is rendered by the converter, as any other value is.
  *
- * @since 7.0
- * @deprecated no longer registered, as the converter writes {@code ZonedDateTime} values with the application's {@code JsonMapper};
- *     registered with {@code grails.converters.json.legacy}, to render JSON as Grails 8 did.
+ * @since 9.0
  */
-@Deprecated(since = "9.0")
-public class ZonedDateTimeMarshaller implements ObjectMarshaller<JSON> {
+public class OptionalMarshaller implements ObjectMarshaller<JSON> {
 
     public boolean supports(Object object) {
-        return object instanceof ZonedDateTime;
+        return object instanceof Optional;
     }
 
     public void marshalObject(Object object, JSON converter) throws ConverterException {
-        try {
-            ZonedDateTime zonedDateTime = (ZonedDateTime) object;
-            converter.getWriter().value(DateTimeFormatter.ISO_OFFSET_DATE_TIME.format(zonedDateTime));
-        }
-        catch (JSONException e) {
-            throw new ConverterException(e);
-        }
+        converter.convertAnother(((Optional<?>) object).orElse(null));
     }
 }

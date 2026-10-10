@@ -18,148 +18,38 @@
  */
 package org.grails.web.json;
 
-import java.io.IOException;
 import java.io.Writer;
 
-import groovy.lang.Writable;
-
-import static org.grails.web.json.JSONWriter.Mode.ARRAY;
-import static org.grails.web.json.JSONWriter.Mode.KEY;
-import static org.grails.web.json.JSONWriter.Mode.OBJECT;
-
 /**
- * A JSONWriter dedicated to create indented/pretty printed output.
+ * A JSONWriter dedicated to create indented/pretty printed output, indented as Grails 8 indented it.
  *
  * @author Siegfried Puchbauer
  * @since 1.1
+ * @deprecated use {@link JSONWriter#JSONWriter(Writer, JsonMapperSupport, boolean)}, which indents with the mapper's
+ *     default pretty printer; {@code grails.converters.json.legacy} uses it to indent JSON as Grails 8 did
  */
+@Deprecated(since = "9.0")
 public class PrettyPrintJSONWriter extends JSONWriter {
 
     public static final String DEFAULT_INDENT_STR = "  ";
 
-    public static final String NEWLINE;
-
-    static {
-        String nl = System.getProperty("line.separator");
-        NEWLINE = nl != null ? nl : "\n";
-    }
-
-    private int indentLevel = 0;
-    private final String indentStr;
+    public static final String NEWLINE = System.lineSeparator();
 
     public PrettyPrintJSONWriter(Writer w) {
         this(w, DEFAULT_INDENT_STR);
     }
 
     public PrettyPrintJSONWriter(Writer w, String indentStr) {
-        super(w);
-        this.indentStr = indentStr;
+        this(w, JsonMapperSupport.DEFAULT, indentStr);
     }
 
-    private void newline() {
-        try {
-            writer.write(NEWLINE);
-        }
-        catch (IOException e) {
-            throw new JSONException(e);
-        }
-    }
-
-    private void indent() {
-        try {
-            for (int i = 0; i < indentLevel; i++) {
-                writer.write(indentStr);
-            }
-        }
-        catch (IOException e) {
-            throw new JSONException(e);
-        }
-    }
-
-    @Override
-    protected JSONWriter append(Writable writableValue) {
-        if (mode == OBJECT || mode == ARRAY) {
-            try {
-                if (comma && mode == ARRAY) {
-                    comma();
-                }
-                if (mode == ARRAY) {
-                    newline();
-                    indent();
-                }
-                writableValue.writeTo(writer);
-            }
-            catch (IOException e) {
-                throw new JSONException(e);
-            }
-            if (mode == OBJECT) {
-                mode = KEY;
-            }
-            comma = true;
-            return this;
-        }
-
-        throw new JSONException("Value out of sequence: expected mode to be OBJECT or ARRAY when writing '" + writableValue + "' but was " + this.mode);
-    }
-
-    @Override
-    protected JSONWriter end(Mode m, char c) {
-        newline();
-        indent();
-        return super.end(m, c);
-    }
-
-    @Override
-    public JSONWriter array() {
-        super.array();
-        indentLevel++;
-        return this;
-    }
-
-    @Override
-    public JSONWriter endArray() {
-        indentLevel--;
-        super.endArray();
-        return this;
-    }
-
-    @Override
-    public JSONWriter object() {
-        super.object();
-        indentLevel++;
-        return this;
-    }
-
-    @Override
-    public JSONWriter endObject() {
-        indentLevel--;
-        super.endObject();
-        return this;
-    }
-
-    @Override
-    public JSONWriter key(String s) {
-        if (s == null) {
-            throw new JSONException("Null key.");
-        }
-
-        if (mode == KEY) {
-            try {
-                if (comma) {
-                    comma();
-                }
-                newline();
-                indent();
-                JSONObject.writeQuoted(writer, s);
-                writer.write(": ");
-                comma = false;
-                mode = OBJECT;
-                return this;
-            }
-            catch (IOException e) {
-                throw new JSONException(e);
-            }
-        }
-        throw new JSONException("Misplaced key: expected mode of KEY but was " + this.mode);
+    /**
+     * @param w the writer to write the JSON text to
+     * @param jsonMapper the mapper to write the JSON text with
+     * @param indentStr the text of one level of indentation
+     * @since 9.0
+     */
+    public PrettyPrintJSONWriter(Writer w, JsonMapperSupport jsonMapper, String indentStr) {
+        super(w, jsonMapper, new GrailsPrettyPrinter(indentStr, NEWLINE));
     }
 }

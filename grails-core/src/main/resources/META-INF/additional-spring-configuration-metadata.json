@@ -165,6 +165,18 @@
             "defaultValue": false
         },
         {
+            "name": "grails.converters.json.legacy",
+            "type": "java.lang.Boolean",
+            "description": "Whether the JSON converter renders JSON as Grails 8 did, with the marshallers and pretty-print layouts of Grails 8, rather than with the application's Jackson JsonMapper.",
+            "defaultValue": false
+        },
+        {
+            "name": "grails.converters.json.domain.jackson.enabled",
+            "type": "java.lang.Boolean",
+            "description": "Whether domain classes are registered with the application's Jackson JsonMapper, so that it renders them as the JSON converter does, including when a Spring MVC controller returns one. When false, the JsonMapper renders domain classes as Jackson beans.",
+            "defaultValue": false
+        },
+        {
             "name": "grails.gorm.failOnError",
             "type": "java.lang.Boolean",
             "description": "When true, save() throws ValidationException on validation failure instead of returning null and can also be a list of package names to apply selectively.",

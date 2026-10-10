@@ -30,7 +30,10 @@ import org.grails.web.json.JSONException;
  * JSON ObjectMarshaller which converts a LocalDate to ISO-8601 date format (YYYY-MM-DD).
  *
  * @since 7.0
+ * @deprecated no longer registered, as the converter writes {@code LocalDate} values with the application's {@code JsonMapper};
+ *     registered with {@code grails.converters.json.legacy}, to render JSON as Grails 8 did.
  */
+@Deprecated(since = "9.0")
 public class LocalDateMarshaller implements ObjectMarshaller<JSON> {
 
     public boolean supports(Object object) {

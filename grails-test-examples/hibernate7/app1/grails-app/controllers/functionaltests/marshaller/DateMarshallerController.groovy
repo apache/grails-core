@@ -34,7 +34,7 @@ class DateMarshallerController {
 
     /**
      * Returns a Date at epoch (1970-01-01T00:00:00Z) as JSON or XML.
-     * Exercises json/DateMarshaller and xml/DateMarshaller.
+     * Exercises the JsonMapper for JSON, and xml/DateMarshaller.
      */
     def date() {
         def data = [dateField: new Date(0)]
@@ -46,7 +46,7 @@ class DateMarshallerController {
 
     /**
      * Returns a Calendar at epoch as JSON or XML.
-     * Exercises json/CalendarMarshaller.
+     * Exercises the JsonMapper for JSON.
      */
     def calendar() {
         def cal = Calendar.getInstance(TimeZone.getTimeZone('UTC'))

@@ -18,14 +18,29 @@
  */
 package org.grails.plugins.converters
 
+import tools.jackson.databind.json.JsonMapper
+
 import org.springframework.beans.factory.support.BeanRegistryAdapter
 import org.springframework.beans.factory.support.DefaultListableBeanFactory
+import org.springframework.boot.jackson.autoconfigure.JacksonAutoConfiguration
+import org.springframework.context.ApplicationContext
+import org.springframework.context.annotation.AnnotationConfigApplicationContext
+import org.springframework.core.env.MapPropertySource
 import org.springframework.core.env.StandardEnvironment
 
 import grails.converters.JSON
 import grails.converters.XML
+import grails.core.DefaultGrailsApplication
+import grails.core.GrailsApplication
+import grails.core.support.proxy.DefaultProxyHandler
+import grails.core.support.proxy.ProxyHandler
+import org.grails.datastore.mapping.keyvalue.mapping.config.KeyValueMappingContext
+import org.grails.datastore.mapping.model.MappingContext
+import org.grails.web.converters.configuration.ConvertersConfigurationHolder
 import org.grails.web.converters.configuration.ConvertersConfigurationInitializer
 import org.grails.web.converters.configuration.ObjectMarshallerRegisterer
+import org.grails.web.converters.jackson.Shelf
+import org.grails.web.converters.jackson.Volume
 import org.grails.web.converters.marshaller.json.ValidationErrorsMarshaller as JsonErrorsMarshaller
 import org.grails.web.converters.marshaller.xml.ValidationErrorsMarshaller as XmlErrorsMarshaller
 
@@ -61,5 +76,94 @@ class ConvertersGrailsPluginSpec extends Specification {
         xmlRegisterer.converterClass == XML
         jsonRegisterer.marshaller.is(beanFactory.getBean('jsonErrorsMarshaller', JsonErrorsMarshaller))
         jsonRegisterer.converterClass == JSON
+    }
+
+    void "the Jackson module for domain classes is not registered by default"() {
+        expect:
+        !beanFactory.containsBeanDefinition('domainClassJacksonModule')
+    }
+
+    void "the Jackson module for domain classes is registered when #settings"() {
+        given:
+        def factory = new DefaultListableBeanFactory()
+        def registrar = new ConvertersGrailsPlugin().beanRegistrar()
+        new BeanRegistryAdapter(factory, environment(settings), registrar.getClass()).register(registrar)
+
+        expect:
+        factory.containsBeanDefinition('domainClassJacksonModule') == registered
+
+        where:
+        settings                                                                               || registered
+        [(ConvertersConfigurationInitializer.SETTING_CONVERTERS_JSON_DOMAIN_JACKSON_ENABLED): 'true'] || true
+        [(ConvertersConfigurationInitializer.SETTING_CONVERTERS_JSON_DOMAIN_JACKSON_ENABLED): 'false'] || false
+        [(ConvertersConfigurationInitializer.SETTING_CONVERTERS_JSON_DOMAIN_JACKSON_ENABLED): 'true',
+         (ConvertersConfigurationInitializer.SETTING_CONVERTERS_JSON_LEGACY): 'true']                 || true
+    }
+
+    void "by default, Spring Boot's JsonMapper renders domain classes as Jackson beans, as in Grails 8"() {
+        given:
+        def context = bootContext([:])
+        def shelf = new Shelf(name: 'top')
+        shelf.id = 3
+        def volume = new Volume(title: 'Grails', shelf: shelf)
+        volume.id = 1
+
+        when:
+        def json = context.getBean(JsonMapper).writeValueAsString(volume)
+
+        then: 'the shelf in full'
+        json.contains('"shelf":{')
+        json.contains('"name":"top"')
+
+        cleanup:
+        context.close()
+        ConvertersConfigurationHolder.clear()
+    }
+
+    void "with the module enabled, Spring Boot's JsonMapper renders domain classes as the JSON converter does"() {
+        given:
+        def context = bootContext([(ConvertersConfigurationInitializer.SETTING_CONVERTERS_JSON_DOMAIN_JACKSON_ENABLED): 'true'])
+        def shelf = new Shelf(name: 'top')
+        shelf.id = 3
+        def volume = new Volume(title: 'Grails', shelf: shelf)
+        volume.id = 1
+
+        expect: 'the shelf as a reference of its id'
+        context.getBean(JsonMapper).writeValueAsString(volume) ==
+                '{"id":1,"title":"Grails","shelf":{"id":3},"writers":null,"writersByName":null}'
+
+        cleanup:
+        context.close()
+        ConvertersConfigurationHolder.clear()
+    }
+
+    private AnnotationConfigApplicationContext bootContext(Map<String, Object> settings) {
+        def context = new AnnotationConfigApplicationContext()
+        context.environment.propertySources.addFirst(new MapPropertySource('test', settings))
+        context.registerBean('grailsApplication', GrailsApplication, { domainApplication() })
+        context.registerBean(ProxyHandler, { new DefaultProxyHandler() })
+        def registrar = new ConvertersGrailsPlugin().beanRegistrar()
+        new BeanRegistryAdapter(context.defaultListableBeanFactory, context.environment, registrar.getClass()).register(registrar)
+        context.register(JacksonAutoConfiguration)
+        context.refresh()
+        context
+    }
+
+    private static StandardEnvironment environment(Map<String, Object> settings) {
+        def environment = new StandardEnvironment()
+        environment.propertySources.addFirst(new MapPropertySource('test', settings))
+        environment
+    }
+
+    private GrailsApplication domainApplication() {
+        def grailsApplication = new DefaultGrailsApplication(Volume, Shelf)
+        grailsApplication.initialise()
+        def mappingContext = new KeyValueMappingContext('json')
+        mappingContext.addPersistentEntities(Volume, Shelf)
+        grailsApplication.setApplicationContext(Stub(ApplicationContext) {
+            getBean('grailsDomainClassMappingContext', MappingContext) >> mappingContext
+        })
+        grailsApplication.setMappingContext(mappingContext)
+        grailsApplication
     }
 }

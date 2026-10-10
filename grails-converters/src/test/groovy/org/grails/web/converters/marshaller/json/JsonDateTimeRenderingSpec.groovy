@@ -89,14 +89,14 @@ class JsonDateTimeRenderingSpec extends Specification {
         LocalTime.of(3, 0)                                               || '"03:00:00"'
         LocalDateTime.of(2025, 10, 8, 1, 48, 46, 407254000)              || '"2025-10-08T01:48:46.407254"'
         OffsetDateTime.parse('2025-10-08T01:48:46.407254-06:00')         || '"2025-10-08T01:48:46.407254-06:00"'
-        OffsetTime.parse('03:00-03:00')                                  || '"03:00:00-03:00"'
-        OffsetTime.parse('03:00:00.5+05:30')                             || '"03:00:00.5+05:30"'
+        OffsetTime.parse('03:00-03:00')                                  || '"03:00-03:00"'
+        OffsetTime.parse('03:00:00.5+05:30')                             || '"03:00:00.500+05:30"'
         OffsetTime.parse('01:48:46.407254-06:00')                        || '"01:48:46.407254-06:00"'
         ZonedDateTime.parse('2026-09-25T00:00-03:00[America/Sao_Paulo]') || '"2026-09-25T00:00:00-03:00"'
         Year.of(2026)                                                    || '2026'
         YearMonth.of(2026, 9)                                            || '"2026-09"'
         MonthDay.of(9, 25)                                               || '"--09-25"'
-        Month.SEPTEMBER                                                  || '"SEPTEMBER"'
+        Month.SEPTEMBER                                                  || '9'
         DayOfWeek.FRIDAY                                                 || '"FRIDAY"'
         Duration.ofMinutes(90).plusMillis(250)                           || '"PT1H30M0.25S"'
         Period.of(1, 2, 3)                                               || '"P1Y2M3D"'
@@ -114,18 +114,18 @@ class JsonDateTimeRenderingSpec extends Specification {
         new JSON(map).toString() == jackson.writeValueAsString(map)
 
         where:
-        value << DateTimeValues.all().findAll { !DateTimeValues.differsFromSpringBoot(it) }
+        value << DateTimeValues.all()
         description = value instanceof Map ? "${value.keySet().first().class.simpleName} map key" : value.class.simpleName
     }
 
-    void "a marshaller registered for Month renders it as its number, as Spring Boot does"() {
-        given: 'the marshaller the upgrade guide suggests'
+    void "a marshaller registered for Month restores its Grails 8 enum name"() {
+        given:
         JSON.registerObjectMarshaller(Month) { Month month ->
-            month.value
+            month.name()
         }
 
         expect:
-        new JSON([value: Month.SEPTEMBER]).toString() == '{"value":9}'
+        new JSON([value: Month.SEPTEMBER]).toString() == '{"value":"SEPTEMBER"}'
     }
 
     void "a marshaller registered for java.sql.Time renders it as Grails 7 did"() {
@@ -148,7 +148,7 @@ class JsonDateTimeRenderingSpec extends Specification {
 
         expect: 'other date and time types render as they do by default'
         new JSON([date: new Date(0L), time: new Time(0L), month: Month.MAY, calendar: calendar('1970-01-01T00:00Z[UTC]')]).toString() ==
-                '{"date":new Date(0),"time":new Date(0),"month":"MAY","calendar":"1970-01-01T00:00:00.000Z"}'
+                '{"date":new Date(0),"time":new Date(0),"month":5,"calendar":"1970-01-01T00:00:00.000Z"}'
     }
 
     void "the JSON builder writes date map keys the same way as Spring Boot"() {

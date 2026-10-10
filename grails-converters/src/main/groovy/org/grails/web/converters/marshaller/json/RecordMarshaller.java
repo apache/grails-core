@@ -18,35 +18,42 @@
  */
 package org.grails.web.converters.marshaller.json;
 
-import java.time.ZonedDateTime;
-import java.time.format.DateTimeFormatter;
+import java.lang.reflect.InaccessibleObjectException;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.RecordComponent;
 
 import grails.converters.JSON;
 import org.grails.web.converters.exceptions.ConverterException;
 import org.grails.web.converters.marshaller.ObjectMarshaller;
 import org.grails.web.json.JSONException;
+import org.grails.web.json.JSONWriter;
 
 /**
- * JSON ObjectMarshaller which converts a ZonedDateTime to ISO-8601 format with timezone offset.
+ * JSON ObjectMarshaller which renders a record as an object of its components, by their names, in declaration order.
+ * Each component value is rendered by the converter, as any other value is. Jackson annotations on the components,
+ * such as {@code @JsonProperty} or {@code @JsonIgnore}, are not applied.
  *
- * @since 7.0
- * @deprecated no longer registered, as the converter writes {@code ZonedDateTime} values with the application's {@code JsonMapper};
- *     registered with {@code grails.converters.json.legacy}, to render JSON as Grails 8 did.
+ * @since 9.0
  */
-@Deprecated(since = "9.0")
-public class ZonedDateTimeMarshaller implements ObjectMarshaller<JSON> {
+public class RecordMarshaller implements ObjectMarshaller<JSON> {
 
     public boolean supports(Object object) {
-        return object instanceof ZonedDateTime;
+        return object.getClass().isRecord();
     }
 
     public void marshalObject(Object object, JSON converter) throws ConverterException {
+        JSONWriter writer = converter.getWriter();
         try {
-            ZonedDateTime zonedDateTime = (ZonedDateTime) object;
-            converter.getWriter().value(DateTimeFormatter.ISO_OFFSET_DATE_TIME.format(zonedDateTime));
+            writer.object();
+            for (RecordComponent component : object.getClass().getRecordComponents()) {
+                component.getAccessor().setAccessible(true);
+                writer.key(component.getName());
+                converter.convertAnother(component.getAccessor().invoke(object));
+            }
+            writer.endObject();
         }
-        catch (JSONException e) {
-            throw new ConverterException(e);
+        catch (IllegalAccessException | InvocationTargetException | InaccessibleObjectException | JSONException e) {
+            throw new ConverterException("Error converting record " + object.getClass().getName(), e);
         }
     }
 }

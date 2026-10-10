@@ -20,6 +20,8 @@ package org.grails.web.json;
 
 import java.util.Stack;
 
+import groovy.lang.Writable;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -50,6 +52,35 @@ public class PathCapturingJSONWriterWrapper extends JSONWriter {
         }
         delegate.append(s);
         return this;
+    }
+
+    @Override
+    protected JSONWriter append(Writable writableValue) {
+        if (log.isDebugEnabled()) {
+            if (debugCurrentStack) log.debug("{} > >> {}", delegate.mode.name(), getCurrentStrackReference());
+            log.debug("{} > append({})", delegate.mode.name(), writableValue);
+        }
+        delegate.append(writableValue);
+        return this;
+    }
+
+    @Override
+    public void flush() {
+        delegate.flush();
+    }
+
+    @Override
+    public void writeNested(Runnable writeValue) {
+        Stack<PathElement> outerPath = pathStack;
+        pathStack = new Stack<>();
+        pathStack.addAll(outerPath);
+        pathStack.push(new NestedElement(delegate.nestedPath()));
+        try {
+            delegate.writeNested(writeValue);
+        }
+        finally {
+            pathStack = outerPath;
+        }
     }
 
     @Override
@@ -175,7 +206,7 @@ public class PathCapturingJSONWriterWrapper extends JSONWriter {
         if (delegate.mode == Mode.ARRAY) {
             pushNextIndex();
         }
-        else {
+        else if (!pathStack.isEmpty()) {
             pathStack.pop();
         }
         delegate.value(b);
@@ -191,7 +222,7 @@ public class PathCapturingJSONWriterWrapper extends JSONWriter {
         if (delegate.mode == Mode.ARRAY) {
             pushNextIndex();
         }
-        else {
+        else if (!pathStack.isEmpty()) {
             pathStack.pop();
         }
         delegate.value(d);
@@ -207,10 +238,42 @@ public class PathCapturingJSONWriterWrapper extends JSONWriter {
         if (delegate.mode == Mode.ARRAY) {
             pushNextIndex();
         }
-        else {
+        else if (!pathStack.isEmpty()) {
             pathStack.pop();
         }
         delegate.value(l);
+        return this;
+    }
+
+    @Override
+    public JSONWriter value(Number number) {
+        if (log.isDebugEnabled()) {
+            if (debugCurrentStack) log.debug("{} > >> {}", delegate.mode.name(), getCurrentStrackReference());
+            log.debug("{} > value(Number {})", delegate.mode.name(), number);
+        }
+        if (delegate.mode == Mode.ARRAY) {
+            pushNextIndex();
+        }
+        else if (!pathStack.isEmpty()) {
+            pathStack.pop();
+        }
+        delegate.value(number);
+        return this;
+    }
+
+    @Override
+    public JSONWriter valueNull() {
+        if (log.isDebugEnabled()) {
+            if (debugCurrentStack) log.debug("{} > >> {}", delegate.mode.name(), getCurrentStrackReference());
+            log.debug("{} > valueNull()", delegate.mode.name());
+        }
+        if (delegate.mode == Mode.ARRAY) {
+            pushNextIndex();
+        }
+        else if (!pathStack.isEmpty()) {
+            pathStack.pop();
+        }
+        delegate.valueNull();
         return this;
     }
 
@@ -223,11 +286,21 @@ public class PathCapturingJSONWriterWrapper extends JSONWriter {
 
         if (delegate.mode == Mode.ARRAY) {
             pushNextIndex();
+            delegate.value(o);
+        }
+        else if (o instanceof JsonMapperValue) {
+            // the key stays on the path while the values nested in the value are written
+            delegate.value(o);
+            if (!pathStack.isEmpty()) {
+                pathStack.pop();
+            }
         }
         else {
-            pathStack.pop();
+            if (!pathStack.isEmpty()) {
+                pathStack.pop();
+            }
+            delegate.value(o);
         }
-        delegate.value(o);
         return this;
     }
 
@@ -245,6 +318,19 @@ public class PathCapturingJSONWriterWrapper extends JSONWriter {
         @Override
         public String toString() {
             return "." + property;
+        }
+    }
+
+    private class NestedElement extends PathElement {
+        private final String path;
+
+        private NestedElement(String path) {
+            this.path = path;
+        }
+
+        @Override
+        public String toString() {
+            return path;
         }
     }
 

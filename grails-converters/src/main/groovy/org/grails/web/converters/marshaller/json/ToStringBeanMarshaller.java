@@ -34,7 +34,10 @@ import org.grails.web.converters.marshaller.ObjectMarshaller;
 /**
  * @author Siegfried Puchbauer
  * @since 1.1
+ * @deprecated no longer registered, as the converter writes URL, Locale and other values with the application's {@code JsonMapper};
+ *     registered with {@code grails.converters.json.legacy}, to render JSON as Grails 8 did.
  */
+@Deprecated(since = "9.0")
 public class ToStringBeanMarshaller implements ObjectMarshaller<JSON> {
 
     private final Set<Class<?>> classes;
