@@ -16,10 +16,9 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.build.logging;
+package org.grails.build.logging
 
-import java.util.ArrayList;
-import java.util.List;
+import groovy.transform.CompileStatic
 
 /**
  * Builds the ANSI escape sequences {@code GrailsConsole} writes to the terminal.
@@ -37,110 +36,112 @@ import java.util.List;
  *
  * @since 8.0
  */
-public final class ConsoleAnsi {
+@CompileStatic
+final class ConsoleAnsi {
 
     /** Control Sequence Introducer. */
-    private static final String CSI = "[";
+    private static final String CSI = '['
 
-    public static final int BOLD = 1;
-    public static final int BOLD_OFF = 22;
-    public static final int FG_RED = 31;
-    public static final int FG_GREEN = 32;
-    public static final int FG_YELLOW = 33;
-    public static final int FG_CYAN = 36;
-    public static final int FG_DEFAULT = 39;
+    public static final int BOLD = 1
+    public static final int BOLD_OFF = 22
+    public static final int FG_RED = 31
+    public static final int FG_GREEN = 32
+    public static final int FG_YELLOW = 33
+    public static final int FG_CYAN = 36
+    public static final int FG_DEFAULT = 39
 
-    private final StringBuilder sb = new StringBuilder();
-    private final List<Integer> pendingStyles = new ArrayList<>(4);
+    private final StringBuilder sb = new StringBuilder()
+    private final List<Integer> pendingStyles = new ArrayList<>(4)
 
     private ConsoleAnsi() {
     }
 
-    public static ConsoleAnsi ansi() {
-        return new ConsoleAnsi();
+    static ConsoleAnsi ansi() {
+        return new ConsoleAnsi()
     }
 
     /** Queues an SGR style code; it is written when the next text is appended. */
-    public ConsoleAnsi style(int code) {
-        this.pendingStyles.add(code);
-        return this;
+    ConsoleAnsi style(int code) {
+        this.pendingStyles.add(code)
+        return this
     }
 
-    public ConsoleAnsi bold() {
-        return style(BOLD);
+    ConsoleAnsi bold() {
+        return style(BOLD)
     }
 
-    public ConsoleAnsi boldOff() {
-        return style(BOLD_OFF);
+    ConsoleAnsi boldOff() {
+        return style(BOLD_OFF)
     }
 
-    public ConsoleAnsi fg(int colorCode) {
-        return style(colorCode);
+    ConsoleAnsi fg(int colorCode) {
+        return style(colorCode)
     }
 
-    public ConsoleAnsi a(Object text) {
-        flushStyles();
-        this.sb.append(text);
-        return this;
+    ConsoleAnsi a(Object text) {
+        flushStyles()
+        this.sb.append(text)
+        return this
     }
 
     /** Full reset (SGR 0), written as the shorthand {@code ESC[m}. */
-    public ConsoleAnsi reset() {
-        flushStyles();
-        this.sb.append(CSI).append('m');
-        return this;
+    ConsoleAnsi reset() {
+        flushStyles()
+        this.sb.append(CSI).append('m')
+        return this
     }
 
-    public ConsoleAnsi cursorUp(int lines) {
-        return move(lines, 'A');
+    ConsoleAnsi cursorUp(int lines) {
+        return move(lines, 'A'.charAt(0))
     }
 
-    public ConsoleAnsi cursorDown(int lines) {
-        return move(lines, 'B');
+    ConsoleAnsi cursorDown(int lines) {
+        return move(lines, 'B'.charAt(0))
     }
 
-    public ConsoleAnsi cursorLeft(int columns) {
-        return move(columns, 'D');
+    ConsoleAnsi cursorLeft(int columns) {
+        return move(columns, 'D'.charAt(0))
     }
 
     /** Erases from the cursor to the end of the line. */
-    public ConsoleAnsi eraseLineForward() {
-        flushStyles();
-        this.sb.append(CSI).append("0K");
-        return this;
+    ConsoleAnsi eraseLineForward() {
+        flushStyles()
+        this.sb.append(CSI).append('0K')
+        return this
     }
 
     /** Erases from the start of the line to the cursor. */
-    public ConsoleAnsi eraseLineBackward() {
-        flushStyles();
-        this.sb.append(CSI).append("1K");
-        return this;
+    ConsoleAnsi eraseLineBackward() {
+        flushStyles()
+        this.sb.append(CSI).append('1K')
+        return this
     }
 
     private ConsoleAnsi move(int amount, char code) {
-        flushStyles();
-        this.sb.append(CSI).append(amount).append(code);
-        return this;
+        flushStyles()
+        this.sb.append(CSI).append(amount).append(code)
+        return this
     }
 
     private void flushStyles() {
         if (this.pendingStyles.isEmpty()) {
-            return;
+            return
         }
-        this.sb.append(CSI);
+        this.sb.append(CSI)
         for (int i = 0; i < this.pendingStyles.size(); i++) {
             if (i > 0) {
-                this.sb.append(';');
+                this.sb.append(';')
             }
-            this.sb.append(this.pendingStyles.get(i));
+            this.sb.append(this.pendingStyles.get(i))
         }
-        this.sb.append('m');
-        this.pendingStyles.clear();
+        this.sb.append('m')
+        this.pendingStyles.clear()
     }
 
     @Override
-    public String toString() {
-        flushStyles();
-        return this.sb.toString();
+    String toString() {
+        flushStyles()
+        return this.sb.toString()
     }
+
 }

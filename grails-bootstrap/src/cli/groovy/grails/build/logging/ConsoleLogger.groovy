@@ -16,7 +16,7 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package grails.build.logging;
+package grails.build.logging
 
 /**
  * Interface containing methods for logging to the Grails console
@@ -24,11 +24,12 @@ package grails.build.logging;
  * @author Graeme Rocher
  * @since 3.0
  */
-public interface ConsoleLogger {
+interface ConsoleLogger {
+
     /**
      * Indicates progress with the default progress indicator
      */
-    void indicateProgress();
+    void indicateProgress()
 
     /**
      * Indicate progress for a number and total
@@ -36,7 +37,7 @@ public interface ConsoleLogger {
      * @param number The current number
      * @param total  The total number
      */
-    void indicateProgress(int number, int total);
+    void indicateProgress(int number, int total)
 
     /**
      * Indicates progress as a percentage for the given number and total
@@ -44,49 +45,49 @@ public interface ConsoleLogger {
      * @param number The number
      * @param total  The total
      */
-    void indicateProgressPercentage(long number, long total);
+    void indicateProgressPercentage(long number, long total)
 
     /**
      * Indicates progress by number
      *
      * @param number The number
      */
-    void indicateProgress(int number);
+    void indicateProgress(int number)
 
     /**
      * Updates the current state message
      *
      * @param msg The message
      */
-    void updateStatus(String msg);
+    void updateStatus(String msg)
 
     /**
      * Adds a new message that won't be overwritten by {#updateStatus(String)}
      *
      * @param msg The message
      */
-    void addStatus(String msg);
+    void addStatus(String msg)
 
     /**
      * Prints an error message
      *
      * @param msg The error message
      */
-    void error(String msg);
+    void error(String msg)
 
     /**
      * Prints a warning message
      *
      * @param msg The warning message
      */
-    void warning(String msg);
+    void warning(String msg)
 
     /**
      * Prints a warning message
      *
      * @param msg The warning message
      */
-    void warn(String msg);
+    void warn(String msg)
 
     /**
      * Use to log an error
@@ -94,7 +95,7 @@ public interface ConsoleLogger {
      * @param msg The message
      * @param error The error
      */
-    void error(String msg, Throwable error);
+    void error(String msg, Throwable error)
 
     /**
      * Log an error with a specific error label
@@ -102,32 +103,33 @@ public interface ConsoleLogger {
      * @param label The label
      * @param message The message
      */
-    void error(String label, String message);
+    void error(String label, String message)
 
     /**
      * Use to log an error
      *
      * @param error The error
      */
-    void error(Throwable error);
+    void error(Throwable error)
 
     /**
      * Logs a message below the current status message
      *
      * @param msg The message to log
      */
-    void log(String msg);
+    void log(String msg)
 
     /**
      * Synonym for #log
      *
      * @param msg The message to log
      */
-    void info(String msg);
+    void info(String msg)
 
     /**
      * Outputs a verbose message
      * @param msg The message
      */
-    void verbose(String msg);
+    void verbose(String msg)
+
 }
