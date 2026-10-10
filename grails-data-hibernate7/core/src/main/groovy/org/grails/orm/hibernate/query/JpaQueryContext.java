@@ -23,6 +23,7 @@ import java.util.Map;
 
 import jakarta.persistence.criteria.Expression;
 import jakarta.persistence.criteria.From;
+import jakarta.persistence.criteria.JoinType;
 import jakarta.persistence.criteria.ParameterExpression;
 import jakarta.persistence.criteria.Path;
 
@@ -41,6 +42,7 @@ public class JpaQueryContext implements Cloneable {
     private final ExpressionResolver resolver;
     private final Map<ParameterExpression<?>, Object> parameterValues = new LinkedHashMap<>();
     private final Map<String, Expression<?>> selectionAliases = new HashMap<>();
+    private final Map<String, JoinType> joinTypes = new HashMap<>();
     private JpaQueryContext parent;
 
     public JpaQueryContext() {
@@ -120,6 +122,44 @@ public class JpaQueryContext implements Cloneable {
 
     public From<?, ?> getFrom(String path) {
         return joinTracker.getJoin(path);
+    }
+
+    /**
+     * Returns the join made for the path from this context's root, without looking at the outer contexts.
+     */
+    public From<?, ?> getLocalFrom(String path) {
+        return joinTracker.getLocalJoin(path);
+    }
+
+    /**
+     * Returns the definition of the alias in this context, without looking at the outer contexts.
+     */
+    public HibernateAlias getLocalAliasDefinition(String alias) {
+        return aliasRegistry.getLocalDefinition(alias);
+    }
+
+    /**
+     * Records the join type of an association joined from this context's root. Unlike
+     * {@link #registerAlias(String, HibernateAlias)}, the association does not become an alias, so a property
+     * criterion on the association's name still resolves to the property.
+     *
+     * @param path the association's path from this context's root
+     * @param joinType the join type of the association
+     */
+    public void registerJoinType(String path, JoinType joinType) {
+        joinTypes.put(path, joinType);
+    }
+
+    /**
+     * Returns the join type recorded by {@link #registerJoinType(String, JoinType)} for an association joined from
+     * this context's root, without looking at the outer contexts.
+     *
+     * @param path the association's path from this context's root
+     * @return the join type, or {@link JoinType#INNER} if none is recorded
+     */
+    public JoinType getLocalJoinType(String path) {
+        JoinType joinType = joinTypes.get(path);
+        return joinType != null ? joinType : JoinType.INNER;
     }
 
     public void registerAlias(String alias, Expression<?> expression) {

@@ -253,6 +253,50 @@ class JpaQueryContextSpec extends Specification {
         resolved == heightPath
     }
 
+    def "test local joins and alias definitions do not look at the outer contexts"() {
+        given:
+        def parentContext = new JpaQueryContext(Mock(From))
+        def nested = new JpaQueryContext(parentContext, Mock(From))
+        def parentJoin = Mock(Join)
+        def definition = new HibernateAlias("face", "face", JoinType.LEFT)
+
+        when:
+        parentContext.addFrom("face", parentJoin)
+        parentContext.registerAlias("face", definition)
+
+        then:
+        nested.getFrom("face") == parentJoin
+        nested.getLocalFrom("face") == null
+        nested.getLocalAliasDefinition("face") == null
+        parentContext.getLocalFrom("face") == parentJoin
+        parentContext.getLocalAliasDefinition("face") == definition
+    }
+
+    def "test a join type is recorded for the context without defining an alias"() {
+        given:
+        def root = Mock(From)
+        def context = new JpaQueryContext(root)
+        def nested = new JpaQueryContext(context, Mock(From))
+        def petsPath = Mock(Path)
+
+        when:
+        context.registerJoinType("pets", JoinType.LEFT)
+
+        then:
+        context.getLocalJoinType("pets") == JoinType.LEFT
+        context.getLocalJoinType("face") == JoinType.INNER
+        nested.getLocalJoinType("pets") == JoinType.INNER
+        !context.hasAlias("pets")
+
+        when:
+        def resolved = context.getFullyQualifiedExpression("pets")
+
+        then:
+        1 * root.get("pets") >> petsPath
+        0 * root.join(_, _)
+        resolved == petsPath
+    }
+
     def "test parameter values cannot be changed through the returned map"() {
         given:
         def context = new JpaQueryContext(Mock(From))

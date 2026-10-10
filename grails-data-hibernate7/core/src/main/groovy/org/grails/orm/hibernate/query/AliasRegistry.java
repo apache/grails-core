@@ -64,6 +64,13 @@ public class AliasRegistry {
         return def;
     }
 
+    /**
+     * Returns the definition of the alias in this registry, without looking at the outer registries.
+     */
+    public HibernateAlias getLocalDefinition(String alias) {
+        return definitions.get(alias);
+    }
+
     public Expression<?> getRealized(String alias) {
         Expression<?> expr = realizedExpressions.get(alias);
         if (expr == null && parent != null) {
