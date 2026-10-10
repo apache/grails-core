@@ -394,6 +394,11 @@ public class JSON extends AbstractConverter<JSONWriter> implements IncludeExclud
         }
     }
 
+    /**
+     * @deprecated Scheduled for removal in Grails 11. Inject {@link grails.converters.json.NamedJsonConfigurationRegistry} and call
+     * {@link grails.converters.json.NamedJsonConfigurationRegistry#writer(String)}.
+     */
+    @Deprecated(since = "9.0", forRemoval = true)
     public static ConverterConfiguration<JSON> getNamedConfig(String configName) throws ConverterException {
         ConverterConfiguration<JSON> cfg = ConvertersConfigurationHolder.getNamedConverterConfiguration(configName, JSON.class);
         if (cfg == null) {
@@ -402,6 +407,12 @@ public class JSON extends AbstractConverter<JSONWriter> implements IncludeExclud
         return cfg;
     }
 
+    /**
+     * @deprecated Scheduled for removal in Grails 11. Inject {@link grails.converters.json.NamedJsonConfigurationRegistry} and call
+     * {@link grails.converters.json.NamedJsonConfigurationRegistry#writeValueAsString(String, Object)} or
+     * {@link grails.converters.json.NamedJsonConfigurationRegistry#writeValue(String, java.io.Writer, Object)}.
+     */
+    @Deprecated(since = "9.0", forRemoval = true)
     public static Object use(String configName, Closure<?> callable) throws ConverterException {
         ConverterConfiguration<JSON> old = ConvertersConfigurationHolder.getThreadLocalConverterConfiguration(JSON.class);
         ConverterConfiguration<JSON> cfg = getNamedConfig(configName);
@@ -414,6 +425,11 @@ public class JSON extends AbstractConverter<JSONWriter> implements IncludeExclud
         }
     }
 
+    /**
+     * @deprecated Scheduled for removal in Grails 11. Inject {@link grails.converters.json.NamedJsonConfigurationRegistry} and select the
+     * configuration explicitly for each write. The replacement does not mutate thread-local state.
+     */
+    @Deprecated(since = "9.0", forRemoval = true)
     public static void use(String cfgName) throws ConverterException {
         if (cfgName == null || "default".equals(cfgName)) {
             ConvertersConfigurationHolder.setThreadLocalConverterConfiguration(JSON.class, null);
@@ -423,14 +439,26 @@ public class JSON extends AbstractConverter<JSONWriter> implements IncludeExclud
         }
     }
 
+    /**
+     * Registers a supported converter customization. This applies to {@code render value as JSON}
+     * and legacy {@code respond}; Spring response conversion uses Jackson serializers instead.
+     */
     public static void registerObjectMarshaller(Class<?> clazz, Closure<?> callable) throws ConverterException {
         registerObjectMarshaller(new ClosureObjectMarshaller<>(clazz, callable));
     }
 
+    /**
+     * Registers a supported converter customization. This applies to {@code render value as JSON}
+     * and legacy {@code respond}; Spring response conversion uses Jackson serializers instead.
+     */
     public static void registerObjectMarshaller(Class<?> clazz, int priority, Closure<?> callable) throws ConverterException {
         registerObjectMarshaller(new ClosureObjectMarshaller<>(clazz, callable), priority);
     }
 
+    /**
+     * Registers a supported converter customization. This applies to {@code render value as JSON}
+     * and legacy {@code respond}; Spring response conversion uses Jackson serializers instead.
+     */
     public static void registerObjectMarshaller(ObjectMarshaller<JSON> om) throws ConverterException {
         ConverterConfiguration<JSON> cfg = ConvertersConfigurationHolder.getConverterConfiguration(JSON.class);
         if (cfg == null) {
@@ -443,6 +471,10 @@ public class JSON extends AbstractConverter<JSONWriter> implements IncludeExclud
         ((DefaultConverterConfiguration<JSON>) cfg).registerObjectMarshaller(om);
     }
 
+    /**
+     * Registers a supported converter customization. This applies to {@code render value as JSON}
+     * and legacy {@code respond}; Spring response conversion uses Jackson serializers instead.
+     */
     public static void registerObjectMarshaller(ObjectMarshaller<JSON> om, int priority) throws ConverterException {
         ConverterConfiguration<JSON> cfg = ConvertersConfigurationHolder.getConverterConfiguration(JSON.class);
         if (cfg == null) {
@@ -455,6 +487,11 @@ public class JSON extends AbstractConverter<JSONWriter> implements IncludeExclud
         ((DefaultConverterConfiguration<JSON>) cfg).registerObjectMarshaller(om, priority);
     }
 
+    /**
+     * @deprecated Scheduled for removal in Grails 11. Inject {@link grails.converters.json.NamedJsonConfigurationRegistry} and use
+     * {@link grails.converters.json.NamedJsonConfigurationRegistry#register(String, java.util.function.Consumer)}.
+     */
+    @Deprecated(since = "9.0", forRemoval = true)
     public static void createNamedConfig(String name, Closure<?> callable) throws ConverterException {
         DefaultConverterConfiguration<JSON> cfg = new DefaultConverterConfiguration<>(ConvertersConfigurationHolder.getConverterConfiguration(JSON.class));
         try {
@@ -466,6 +503,12 @@ public class JSON extends AbstractConverter<JSONWriter> implements IncludeExclud
         }
     }
 
+    /**
+     * @deprecated Scheduled for removal in Grails 11. Prefer a Spring Boot
+     * {@code JsonMapperBuilderCustomizer} for application-wide JSON defaults, or use
+     * {@link #registerObjectMarshaller(Class, Closure)} to customize converter marshalling.
+     */
+    @Deprecated(since = "9.0", forRemoval = true)
     public static void withDefaultConfiguration(Closure<?> callable) throws ConverterException {
         ConverterConfiguration<JSON> cfg = ConvertersConfigurationHolder.getConverterConfiguration(JSON.class);
         if (!(cfg instanceof DefaultConverterConfiguration<?>)) {
@@ -473,7 +516,6 @@ public class JSON extends AbstractConverter<JSONWriter> implements IncludeExclud
         }
         try {
             callable.call(cfg);
-            ConvertersConfigurationHolder.setDefaultConfiguration(JSON.class, cfg);
             ConvertersConfigurationHolder.setDefaultConfiguration(JSON.class, cfg);
         }
         catch (Throwable t) {

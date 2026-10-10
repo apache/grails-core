@@ -25,12 +25,13 @@ import grails.converters.XML
 import grails.testing.web.controllers.ControllerUnitTest
 import org.grails.plugins.testing.GrailsMockHttpServletRequest
 import org.grails.plugins.testing.GrailsMockHttpServletResponse
-import org.grails.web.mime.HttpServletResponseExtension
+
 import spock.lang.Issue
 import spock.lang.Specification
 import spock.lang.Unroll
 
 class ContentNegotiationSpec extends Specification implements ControllerUnitTest<ContentNegotiationController> {
+
 
     Closure doWithConfig() {{ config ->
         config['grails.mime.use.accept.header'] = true
@@ -55,15 +56,7 @@ class ContentNegotiationSpec extends Specification implements ControllerUnitTest
         // Access config to ensure grailsApplication is initialized and Holders is populated.
         // This triggers doWithConfig() which registers the custom MIME types.
         assert config != null
-        
-        // Clear the static mimeTypes cache to prevent test environment pollution.
-        // This must be done AFTER accessing config to ensure the new config is applied.
-        HttpServletResponseExtension.@mimeTypes = null
-    }
 
-    def cleanup() {
-        // Clear the static mimeTypes cache after each test for test isolation
-        HttpServletResponseExtension.@mimeTypes = null
     }
 
     void setupSpec() {

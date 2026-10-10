@@ -21,7 +21,6 @@ package org.grails.plugins.web.rest.render.html
 import grails.persistence.Entity
 import grails.validation.ValidationErrors
 import grails.web.mime.MimeType
-import org.grails.web.mime.HttpServletResponseExtension
 import org.grails.web.util.GrailsApplicationAttributes
 import org.grails.web.servlet.mvc.GrailsWebRequest
 import org.grails.plugins.web.rest.render.ServletRenderContext
@@ -36,16 +35,6 @@ import spock.lang.Specification
  */
 
 class HtmlRendererSpec extends Specification {
-
-    void setup() {
-        // Clear the static mimeTypes cache to prevent test environment pollution
-        HttpServletResponseExtension.@mimeTypes = null
-    }
-
-    void cleanup() {
-        // Clear the static mimeTypes cache after each test for test isolation
-        HttpServletResponseExtension.@mimeTypes = null
-    }
 
     void "Test that HTML renderer sets the content type with the configured charset"() {
         when: "a domain instance is rendered for a negotiated HTML request"

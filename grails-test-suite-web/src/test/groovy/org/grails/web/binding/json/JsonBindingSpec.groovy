@@ -132,7 +132,7 @@ class JsonBindingSpec extends Specification implements ControllerUnitTest<Bindin
         }
         
         then:
-        familyError?.defaultMessage?.contains 'Error occurred initializing command object [family]. groovy.json.JsonException'
+        familyError?.defaultMessage?.startsWith 'Error occurred initializing command object [family].'
     }
     
     @Issue('GRAILS-11646')

@@ -1,0 +1,10 @@
+{
+    "properties": [
+        {
+            "name": "grails.web.rendering.xml.spring",
+            "type": "java.lang.Boolean",
+            "defaultValue": false,
+            "description": "Opt into Spring XML converters for ordinary beans. Grails domain objects and legacy compatibility shapes retain Grails XML conversion."
+        }
+    ]
+}

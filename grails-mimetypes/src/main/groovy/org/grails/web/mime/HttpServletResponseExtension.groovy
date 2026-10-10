@@ -18,23 +18,18 @@
  */
 package org.grails.web.mime
 
-import java.util.regex.Pattern
-
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
 
-import org.springframework.beans.factory.NoSuchBeanDefinitionException
+import org.springframework.context.ApplicationContext
+import org.springframework.web.context.support.WebApplicationContextUtils
 
-import grails.config.Config
-import grails.config.Settings
 import grails.core.GrailsApplication
-import grails.web.http.HttpHeaders
 import grails.web.mime.MimeType
 import grails.web.mime.MimeUtility
-import org.grails.core.lifecycle.ShutdownOperations
 import org.grails.plugins.web.api.MimeTypesApiSupport
 import org.grails.web.servlet.mvc.GrailsWebRequest
 import org.grails.web.util.GrailsApplicationAttributes
@@ -50,54 +45,13 @@ import org.grails.web.util.GrailsApplicationAttributes
 @CompileStatic
 class HttpServletResponseExtension {
 
-    // When set, the ACCEPT header is ignored for content negotiation for user agents matching this pattern.
-    // Defaults to null so the ACCEPT header is honored for every client, including browsers. Configure
-    // grails.mime.disable.accept.header.userAgents to opt back in to ignoring it for specific user agents.
-    static Pattern disableForUserAgents
-    static boolean useAcceptHeaderXhr
-    static boolean useAcceptHeader
-    static {
-        useDefaultConfig()
-    }
-
     static MimeTypesApiSupport apiSupport = new MimeTypesApiSupport()
-
-    private static MimeType[] mimeTypes
-
-    static {
-        ShutdownOperations.addOperation({
-            mimeTypes = null
-            useDefaultConfig()
-        }, true)
-    }
-
-    private static void useDefaultConfig() {
-        disableForUserAgents = null
-        useAcceptHeaderXhr = true
-        useAcceptHeader = true
-    }
 
     @CompileStatic
     static MimeType[] getMimeTypes() {
-        if (mimeTypes == null) {
-
-            final webRequest = GrailsWebRequest.lookup()
-
-            def context = webRequest?.applicationContext
-            if (context) {
-                try {
-                    mimeTypes = context.getBean(MimeUtility).getKnownMimeTypes() as MimeType[]
-                    loadMimeTypeConfig(context.getBean(GrailsApplication).config)
-                } catch (NoSuchBeanDefinitionException e) {
-                    mimeTypes = MimeType.createDefaults()
-                }
-            }
-            else {
-                mimeTypes = MimeType.createDefaults()
-            }
-        }
-
-        mimeTypes
+        ApplicationContext context = GrailsWebRequest.lookup()?.applicationContext
+        MimeUtility mimeUtility = context?.getBeanProvider(MimeUtility)?.getIfAvailable()
+        return mimeUtility?.knownMimeTypes as MimeType[] ?: MimeType.createDefaults()
     }
 
     /**
@@ -228,39 +182,34 @@ class HttpServletResponseExtension {
         apiSupport.withFormat(response, callable)
     }
 
-    static void loadMimeTypeConfig(Config config) {
-        useAcceptHeader = config.getProperty(Settings.MIME_USE_ACCEPT_HEADER, Boolean, true)
-
-        if (config.containsKey(Settings.MIME_DISABLE_ACCEPT_HEADER_FOR_USER_AGENTS_XHR)) {
-            final disableForUserAgentsXhrConfig = config.getProperty(Settings.MIME_DISABLE_ACCEPT_HEADER_FOR_USER_AGENTS_XHR,  Boolean, false)
-            // if MIME_DISABLE_ACCEPT_HEADER_FOR_USER_AGENTS_XHR is set to true, we want xhr's to check the user agent list.
-            useAcceptHeaderXhr = !disableForUserAgentsXhrConfig
-        }
-        if (config.containsKey(Settings.MIME_DISABLE_ACCEPT_HEADER_FOR_USER_AGENTS)) {
-            final disableForUserAgentsConfig = config.getProperty(Settings.MIME_DISABLE_ACCEPT_HEADER_FOR_USER_AGENTS, Object)
-            if (disableForUserAgentsConfig instanceof Pattern) {
-                this.disableForUserAgents = (Pattern) disableForUserAgentsConfig
-            } else if (disableForUserAgentsConfig instanceof Collection && disableForUserAgentsConfig) {
-                final userAgents = disableForUserAgentsConfig.join('(?i)|')
-                this.disableForUserAgents = Pattern.compile("(${userAgents})")
-            } else {
-                this.disableForUserAgents = null
-            }
-        }
-    }
-
     @CompileDynamic
     private static MimeType[] getMimeTypesInternal(HttpServletRequest request) {
         MimeType[] result = (MimeType[]) request.getAttribute(GrailsApplicationAttributes.RESPONSE_FORMATS)
         if (!result) {
 
-            def userAgent = request.getHeader(HttpHeaders.USER_AGENT)
+            def applicationContext = GrailsWebRequest.lookup()?.applicationContext
+            if (applicationContext == null && request.servletContext != null) {
+                applicationContext = WebApplicationContextUtils.getWebApplicationContext(request.servletContext)
+            }
+            // The strategy is not a bean of its own so that Spring Security does not adopt it, so
+            // reach it through the configurer that holds it rather than by its own type.
+            GrailsContentNegotiationStrategy strategy = applicationContext?.getBeanProvider(
+                    GrailsMimeTypesWebMvcConfigurer
+            )?.getIfAvailable()?.contentNegotiationStrategy
+            if (strategy == null) {
+                GrailsApplication application = applicationContext?.getBeanProvider(GrailsApplication)?.getIfAvailable()
+                if (application != null) {
+                    strategy = new GrailsContentNegotiationStrategy(getMimeTypes(), application.config)
+                }
+            }
+            if (strategy != null) {
+                result = strategy.resolveMimeTypes(request)
+                request.setAttribute(GrailsApplicationAttributes.RESPONSE_FORMATS, result)
+                return result
+            }
 
             def parser = new DefaultAcceptHeaderParser(getMimeTypes())
-            String header = null
-
-            boolean disabledForUserAgent = !(useAcceptHeaderXhr && request.xhr) && disableForUserAgents != null && userAgent ? disableForUserAgents.matcher(userAgent).find() : false
-            if (useAcceptHeader && !disabledForUserAgent) header = request.getHeader(HttpHeaders.ACCEPT)
+            String header = request.getHeader(grails.web.http.HttpHeaders.ACCEPT)
             result = parser.parse(header)
 
             // GRAILS-8341 - If no header the parser would have returned all configured mime types.  Since no format

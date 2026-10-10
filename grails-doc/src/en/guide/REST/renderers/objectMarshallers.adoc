@@ -17,7 +17,7 @@ specific language governing permissions and limitations
 under the License.
 ////
 
-Grails' Converters feature the notion of an link:{api}org/grails/web/converters/marshaller/ObjectMarshaller.html[ObjectMarshaller] and each type can have a registered `ObjectMarshaller`. You can register custom `ObjectMarshaller` instances to completely customize response rendering. For example, you can define the following in `BootStrap.init`:
+Grails' legacy Converters feature the notion of an link:{api}org/grails/web/converters/marshaller/ObjectMarshaller.html[ObjectMarshaller] and each type can have a registered `ObjectMarshaller`. You can register custom `ObjectMarshaller` instances to completely customize response rendering. For example, you can define the following in `BootStrap.init`:
 
 [source,groovy]
 ----
@@ -28,6 +28,14 @@ XML.registerObjectMarshaller Book, { Book book, XML xml ->
   }
 }
 ----
+
+NOTE: JSON `ObjectMarshaller` registration remains supported for `render ... as JSON` and legacy
+converter-based `respond`. Registration does not change `grails.web.rendering.json.spring`, which
+defaults to `false` in Grails 9. For Spring-based rendering, register Jackson serializers through
+Spring Boot's `JsonMapperBuilderCustomizer`. Named/default JSON converter configuration APIs are
+deprecated and scheduled for removal in Grails 11; use `NamedJsonConfigurationRegistry` instead.
+XML marshalling requires `org.apache.grails:grails-xml`, included by starter-web in Grails 9 and
+an explicit dependency from Grails 10. Legacy XML conversion is scheduled for removal in Grails 11.
 
 You can customize the formatting of an individual value this way too. For example, the https://grails-plugins.github.io/grails-joda-time/index.html[JodaTime plugin] does the following to support rendering of JodaTime dates in JSON output:
 
@@ -51,31 +59,25 @@ JSON.registerObjectMarshaller(Book) {
 ----
 
 
-==== Registering Custom Marshallers via Spring
+==== Customizing JSON via Spring Boot
 
 
-Note that if you have many custom marshallers it is recommended you split the registration of these into a separate class:
-
-[source,groovy]
-----
-class CustomMarshallerRegistrar {
-
-    @jakarta.annotation.PostConstruct
-    void registerMarshallers() {
-        JSON.registerObjectMarshaller(DateTime) {
-            return it?.toString("yyyy-MM-dd'T'HH:mm:ss'Z'")
-        }
-    }
-}
-----
-
-Then define this class as Spring bean in `grails-app/conf/spring/resources.groovy`:
+Register Jackson serializers with Spring Boot's configured mapper so they apply to `respond()`, Spring MVC,
+and other Jackson-based integrations:
 
 [source,groovy]
 ----
-beans = {
-    myCustomMarshallerRegistrar(CustomMarshallerRegistrar)
+import org.springframework.boot.jackson.autoconfigure.JsonMapperBuilderCustomizer
+import tools.jackson.databind.module.SimpleModule
+
+@Bean
+JsonMapperBuilderCustomizer applicationJsonCustomizer() {
+    { builder ->
+        builder.addModule(new SimpleModule()
+                .addSerializer(Book, new BookValueSerializer()))
+    } as JsonMapperBuilderCustomizer
 }
 ----
 
-The `PostConstruct` annotation will get triggered on startup of your application.
+`BookValueSerializer` is an application-provided Jackson `ValueSerializer<Book>`. Legacy JSON marshallers
+continue to run when the legacy renderer is selected explicitly or as a compatibility fallback.

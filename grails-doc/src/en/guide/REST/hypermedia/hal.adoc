@@ -17,6 +17,10 @@ specific language governing permissions and limitations
 under the License.
 ////
 
+NOTE: XML conversion, renderers and binding require `org.apache.grails:grails-xml`. The Grails 9
+web starter includes it; applications without that starter, and applications upgrading to Grails 10,
+must add the dependency explicitly. Advertising an XML format alone does not install XML support.
+
 https://stateless.co/hal_specification.html[HAL] is a standard exchange format commonly used when developing REST APIs that follow HATEOAS principals. An example HAL document representing a list of orders can be seen below:
 
 [source,javascript]
@@ -67,7 +71,8 @@ https://stateless.co/hal_specification.html[HAL] is a standard exchange format c
 ==== Exposing Resources Using HAL
 
 
-To return HAL instead of regular JSON for a resource you can simply override the renderer in `grails-app/conf/spring/resources.groovy` with an instance of `grails.rest.render.hal.HalJsonRenderer` (or `HalXmlRenderer` for the XML variation):
+To return HAL instead of regular JSON for a resource you can override the renderer in
+`grails-app/conf/spring/resources.groovy` with an instance of `grails.rest.render.hal.HalJsonRenderer`:
 
 [source,groovy]
 ----
@@ -124,15 +129,10 @@ Content-Type: application/hal+json;charset=ISO-8859-1
 }
 ----
 
-To use HAL XML format simply change the renderer:
-
-[source,groovy]
-----
-import grails.rest.render.hal.*
-beans = {
-    halBookRenderer(HalXmlRenderer, rest.test.Book)
-}
-----
+HAL XML renderers are deprecated since Grails 9.0 and will be removed in a future major release. Existing
+clients can retain them temporarily by adding the optional `grails-xml` module. New development should
+use the Grails HAL JSON renderer. Spring HATEOAS models can be returned from Spring MVC controllers;
+adding `spring-boot-starter-hateoas` alone does not register a Grails renderer for those models.
 
 
 ==== Rendering Collections Using HAL

@@ -17,6 +17,10 @@ specific language governing permissions and limitations
 under the License.
 ////
 
+NOTE: XML conversion, renderers and binding require `org.apache.grails:grails-xml`. The Grails 9
+web starter includes it; applications without that starter, and applications upgrading to Grails 10,
+must add the dependency explicitly. Advertising an XML format alone does not install XML support.
+
 The framework provides a sophisticated but simple mechanism for binding REST requests to domain objects and command objects.  One way to take advantage of this is to bind the `request` property in a controller the `properties` of a domain class.  Given the following XML as the body of the request, the `createBook` action will create a new `Book` and assign "The Stand" to the `title` property and "Stephen King" to the `authorName` property.
 
 [source,groovy]
@@ -90,16 +94,19 @@ class BookController {
 }
 ----
 
-The data binding depends on an instance of the link:{api}grails/databinding/DataBindingSource.html[DataBindingSource] interface created by an instance of the link:{api}org/grails/databinding/bindingsource/DataBindingSourceCreator.html[DataBindingSourceCreator] interface.  The specific implementation of `DataBindingSourceCreator` will be selected based on the `contentType` of the request.  Several implementations are provided to handle common content types.  The default implementations will be fine for most use cases.  The following table lists the content types which are supported by the core framework and which `DataBindingSourceCreator` implementations are used for each. All of the implementation classes are in the `org.grails.databinding.bindingsource` package.
+Data binding uses a link:{api}grails/databinding/DataBindingSource.html[DataBindingSource] created by a
+link:{api}org/grails/databinding/bindingsource/DataBindingSourceCreator.html[DataBindingSourceCreator].
+The request's `contentType` selects the appropriate binding source. The following beans handle common
+content types; XML and HAL XML sources are contributed by `grails-xml`, not the core JSON infrastructure.
 
 [format="csv", options="header"]
 |===
 
-Content Type(s),Bean Name,DataBindingSourceCreator Impl.
-"application/xml, text/xml",xmlDataBindingSourceCreator,XmlDataBindingSourceCreator
-"application/json, text/json",jsonDataBindingSourceCreator,JsonDataBindingSourceCreator
-application/hal+json,halJsonDataBindingSourceCreator,HalJsonDataBindingSourceCreator
-application/hal+xml,halXmlDataBindingSourceCreator,HalXmlDataBindingSourceCreator
+Content Type(s),Bean Name,Module
+"application/xml, text/xml",xmlDataBindingSourceCreator,grails-xml
+"application/json, text/json",jsonDataBindingSourceCreator,grails-web-databinding
+application/hal+json,halJsonDataBindingSourceCreator,grails-web-databinding
+application/hal+xml,halXmlDataBindingSourceCreator,grails-xml
 |===
 
 In order to provide your own `DataBindingSourceCreator` for any of those content types, write a class which implements

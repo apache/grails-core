@@ -2,7 +2,7 @@
 
 import grails.rest.*
 
-@Resource(readOnly = false, formats = ['json', 'xml'])
+@Resource(readOnly = false, formats = ['json'])
 class @artifact.name@ {
 
 }

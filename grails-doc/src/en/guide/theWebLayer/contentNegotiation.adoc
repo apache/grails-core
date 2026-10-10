@@ -112,7 +112,8 @@ You can also define this parameter in the link:theWebLayer.html#urlmappings[URL 
 
 You could code your controller action to return XML based on this property, but you can also make use of the controller-specific `withFormat()` method:
 
-NOTE: This example requires the addition of the `org.apache.grails:grails-converters` plugin
+NOTE: XML conversion in this example requires `org.apache.grails:grails-xml`, included by starter-web
+in Grails 9. Applications without that starter, and applications upgrading to Grails 10, add it explicitly.
 
 [source,groovy]
 ----

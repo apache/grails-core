@@ -24,9 +24,14 @@ import groovy.transform.TypeCheckingMode
 
 import org.spockframework.runtime.extension.IMethodInterceptor
 import org.spockframework.runtime.extension.IMethodInvocation
+import tools.jackson.databind.json.JsonMapper
 
+import org.springframework.http.converter.HttpMessageConverter
+import org.springframework.http.converter.HttpMessageConverters
+import org.springframework.http.converter.json.JacksonJsonHttpMessageConverter
 import org.springframework.util.ClassUtils
 import org.springframework.web.multipart.support.StandardServletMultipartResolver
+import org.springframework.web.servlet.config.annotation.WebMvcConfigurer
 import org.springframework.web.servlet.i18n.SessionLocaleResolver
 
 import grails.config.Settings
@@ -43,8 +48,7 @@ import org.grails.gsp.GroovyPagesTemplateEngine
 import org.grails.gsp.jsp.TagLibraryResolverImpl
 import org.grails.plugins.codecs.CodecsGrailsPlugin
 import org.grails.plugins.codecs.DefaultCodecLookup
-import org.grails.plugins.converters.ConvertersGrailsPlugin
-import org.grails.plugins.web.rest.render.DefaultRendererRegistry
+import org.grails.plugins.web.rest.render.SpringMessageConverters
 import org.grails.testing.runtime.support.GroovyPageUnitTestResourceLoader
 import org.grails.testing.runtime.support.LazyTagLibraryLookup
 import org.grails.validation.ConstraintEvalUtils
@@ -60,11 +64,42 @@ import org.grails.web.util.GrailsApplicationAttributes
 @CompileStatic
 class WebSetupSpecInterceptor implements IMethodInterceptor {
 
+    private static final String SERVER_CONVERTERS_CUSTOMIZER =
+            'org.springframework.boot.http.converter.autoconfigure.ServerHttpMessageConvertersCustomizer'
+
     @Override
     void intercept(IMethodInvocation invocation) throws Throwable {
         GrailsWebUnitTest test = (GrailsWebUnitTest) invocation.instance
         setup(test)
         invocation.proceed()
+    }
+
+    /**
+     * Builds the message converters as Spring MVC does, since the slice does not start it: Spring's
+     * server defaults for the classpath with JSON on Boot's mapper, Boot's converter customizers,
+     * then the application's {@link WebMvcConfigurer} beans.
+     */
+    @CompileStatic(TypeCheckingMode.SKIP)
+    protected List<HttpMessageConverter<?>> messageConverters(GrailsWebUnitTest test) {
+        def context = test.applicationContext
+        JsonMapper mapper = context.getBeanProvider(JsonMapper).getIfUnique() ?:
+                context.getBean('jacksonJsonMapper', JsonMapper)
+        List<WebMvcConfigurer> configurers = context.getBeanProvider(WebMvcConfigurer).orderedStream().toList()
+        List<HttpMessageConverter<?>> converters = []
+        configurers.each { WebMvcConfigurer configurer -> configurer.configureMessageConverters(converters) }
+        if (converters.isEmpty()) {
+            HttpMessageConverters.ServerBuilder builder = HttpMessageConverters.forServer().registerDefaults()
+                    .withJsonConverter(new JacksonJsonHttpMessageConverter(mapper))
+            ClassLoader classLoader = ControllerUnitTest.getClassLoader()
+            if (ClassUtils.isPresent(SERVER_CONVERTERS_CUSTOMIZER, classLoader)) {
+                context.getBeanProvider(ClassUtils.forName(SERVER_CONVERTERS_CUSTOMIZER, classLoader))
+                        .orderedStream().forEach { customizer -> customizer.customize(builder) }
+            }
+            configurers.each { WebMvcConfigurer configurer -> configurer.configureMessageConverters(builder) }
+            builder.build().each { HttpMessageConverter<?> converter -> converters.add(converter) }
+        }
+        configurers.each { WebMvcConfigurer configurer -> configurer.extendMessageConverters(converters) }
+        return converters
     }
 
     @CompileStatic(TypeCheckingMode.SKIP)
@@ -73,7 +108,7 @@ class WebSetupSpecInterceptor implements IMethodInterceptor {
         GrailsApplication grailsApplication = test.grailsApplication
         Map<String, String> groovyPages = test.views
 
-        test.defineBeans(new ConvertersGrailsPlugin())
+        test.applicationContext.getBean(SpringMessageConverters).setConverters(messageConverters(test))
 
         def config = grailsApplication.config
         test.defineBeans {
@@ -94,15 +129,16 @@ class WebSetupSpecInterceptor implements IMethodInterceptor {
                 'org.grails.beans.ConstraintsEvaluator'(DefaultConstraintEvaluator, constraintRegistry, new KeyValueMappingContext('test'), ConstraintEvalUtils.getDefaultConstraints(grailsApplication.config))
             }
 
-            rendererRegistry(DefaultRendererRegistry) {
-                modelSuffix = config.getProperty('grails.scaffolding.templates.domainSuffix', '')
-            }
             String urlConverterType = config.getProperty(Settings.WEB_URL_CONVERTER)
             "${grails.web.UrlConverter.BEAN_NAME}"('hyphenated' == urlConverterType ? HyphenatedUrlConverter : CamelCaseUrlConverter)
 
-            grailsUrlMappingsHolder(UrlMappingsHolderFactoryBean)
+            if (!test.applicationContext.containsBean('grailsUrlMappingsHolder')) {
+                grailsUrlMappingsHolder(UrlMappingsHolderFactoryBean)
+            }
 
-            grailsLinkGenerator(DefaultLinkGenerator, config?.grails?.serverURL ?: 'http://localhost:8080')
+            if (!test.applicationContext.containsBean('grailsLinkGenerator')) {
+                grailsLinkGenerator(DefaultLinkGenerator, config?.grails?.serverURL ?: 'http://localhost:8080')
+            }
 
             if (ClassUtils.isPresent('UrlMappings', classLoader)) {
                 grailsApplication.addArtefact(UrlMappingsArtefactHandler.TYPE, classLoader.loadClass('UrlMappings'))
@@ -118,7 +154,6 @@ class WebSetupSpecInterceptor implements IMethodInterceptor {
                 jsonSmartViewResolver(viewResolver)
             } catch (ClassNotFoundException ignored) { }
 
-            localeResolver(SessionLocaleResolver)
             multipartResolver(StandardServletMultipartResolver)
 
             "${CompositeViewResolver.BEAN_NAME}"(CompositeViewResolver)
@@ -155,7 +190,9 @@ class WebSetupSpecInterceptor implements IMethodInterceptor {
                 }
             }
             filteringCodecsByContentTypeSettings(FilteringCodecsByContentTypeSettings, grailsApplication)
-            localeResolver(SessionLocaleResolver)
+            if (!test.applicationContext.containsBean('localeResolver')) {
+                localeResolver(SessionLocaleResolver)
+            }
         }
 
         CodecsGrailsPlugin codecsGrailsPlugin = new CodecsGrailsPlugin()

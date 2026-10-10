@@ -53,6 +53,8 @@ dependencies {
     testAndDevelopmentOnly platform(project(':grails-hibernate7-bom'))
     testAndDevelopmentOnly 'org.webjars.npm:jquery'
 
+    implementation 'org.apache.grails:grails-xml'
+
     runtimeOnly 'cloud.wondrify:asset-pipeline-grails'
     runtimeOnly 'org.apache.grails:grails-fields'
     runtimeOnly 'org.apache.tomcat:tomcat-jdbc'

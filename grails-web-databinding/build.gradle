@@ -24,6 +24,7 @@ plugins {
     id 'org.apache.grails.buildsrc.properties'
     id 'org.apache.grails.buildsrc.dependency-validator'
     id 'org.apache.grails.buildsrc.compile'
+    id 'org.apache.grails.buildsrc.configuration-metadata'
     id 'org.apache.grails.buildsrc.publish'
     id 'org.apache.grails.buildsrc.sbom'
     id 'org.apache.grails.buildsrc.vulnerability-scan'
@@ -45,6 +46,7 @@ dependencies {
     }
     api project(':grails-encoder')
     api 'org.apache.groovy:groovy'
+    api 'tools.jackson.core:jackson-databind'
 
     implementation project(':grails-common'), {
         // impl: GrailsMessageSourceUtils

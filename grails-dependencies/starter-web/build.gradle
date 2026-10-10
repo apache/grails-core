@@ -67,6 +67,7 @@ def configurations = [
                 ':grails-services',
                 ':grails-url-mappings',
                 ':grails-web-boot',
+                ':grails-xml', // Compatibility default through Grails 9; optional from Grails 10.
                 // Minimum dependencies for spring boot
                 'org.springframework.boot:spring-boot-autoconfigure',
                 'org.springframework.boot:spring-boot-starter',

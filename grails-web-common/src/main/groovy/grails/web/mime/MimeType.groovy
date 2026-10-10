@@ -65,13 +65,13 @@ class MimeType {
 
     MimeType(String name, String extension, Map<String, String> params = [:]) {
         if (name && name.contains(';')) {
-            List tokenWithArgs = name.split(';').toList()
-            name = tokenWithArgs[0]
+            List tokenWithArgs = name.split(';', -1).toList()
+            name = ((String) tokenWithArgs[0]).trim()
             final paramsList = tokenWithArgs[1..-1]
             paramsList.each { String it ->
                 def i = it.indexOf('=')
-                if (i > -1) {
-                    parameters[it[0..i - 1].trim()] = it[i + 1..-1].trim()
+                if (i > 0) {
+                    parameters[it.substring(0, i).trim()] = it.substring(i + 1).trim()
                 }
             }
 

@@ -17,6 +17,10 @@ specific language governing permissions and limitations
 under the License.
 ////
 
+NOTE: XML conversion, renderers and binding require `org.apache.grails:grails-xml`. The Grails 9
+web starter includes it; applications without that starter, and applications upgrading to Grails 10,
+must add the dependency explicitly. Advertising an XML format alone does not install XML support.
+
 The easiest way to create a RESTful API in Grails is to expose a domain class as a REST resource. This can be done by adding the `grails.rest.Resource` transformation to any domain class:
 
 [source,groovy]
