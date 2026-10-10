@@ -25,7 +25,6 @@ import java.sql.SQLException
 import javax.sql.DataSource
 
 import groovy.transform.CompileStatic
-import jakarta.persistence.LockModeType
 import jakarta.persistence.PersistenceException
 import jakarta.persistence.criteria.CriteriaBuilder
 import jakarta.persistence.criteria.CriteriaQuery

@@ -205,7 +205,6 @@ class CollectionBinder {
         config.joinTable = inherited
     }
 
-
     private void bindCollectionTable(HibernateToManyProperty property, Collection collection) {
         inheritOwningJoinTable(property)
         String tableName = tableForManyCalculator.getTableName(property)
