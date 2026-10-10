@@ -16,7 +16,9 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.datastore.mapping.reflect;
+package org.grails.datastore.mapping.reflect
+
+import groovy.transform.CompileStatic
 
 /**
  * Resolves the class loader GORM and Hibernate should use when Spring Boot DevTools
@@ -37,11 +39,12 @@ package org.grails.datastore.mapping.reflect;
  *
  * @since 8.0
  */
-public final class DevToolsClassLoaders {
+@CompileStatic
+final class DevToolsClassLoaders {
 
     private static final String RESTART_CLASS_LOADER_NAME =
-            "org.springframework.boot.devtools.restart.classloader.RestartClassLoader";
-    private static final String RESTART_CLASS_LOADER_SIMPLE_NAME = "RestartClassLoader";
+            'org.springframework.boot.devtools.restart.classloader.RestartClassLoader'
+    private static final String RESTART_CLASS_LOADER_SIMPLE_NAME = 'RestartClassLoader'
 
     private DevToolsClassLoaders() {
     }
@@ -51,19 +54,19 @@ public final class DevToolsClassLoaders {
      * @return {@code true} when {@code classLoader} is Spring Boot DevTools'
      * {@code RestartClassLoader} itself
      */
-    public static boolean isRestartClassLoader(ClassLoader classLoader) {
+    static boolean isRestartClassLoader(ClassLoader classLoader) {
         if (classLoader == null) {
-            return false;
+            return false
         }
-        Class<?> type = classLoader.getClass();
-        while (type != null && type != Object.class) {
-            if (RESTART_CLASS_LOADER_NAME.equals(type.getName())) {
-                return true;
+        Class<?> type = classLoader.getClass()
+        while (type != null && type != Object) {
+            if (RESTART_CLASS_LOADER_NAME == type.name) {
+                return true
             }
-            type = type.getSuperclass();
+            type = type.superclass
         }
         // Fallback for tests and shaded/relocated DevTools copies.
-        return RESTART_CLASS_LOADER_SIMPLE_NAME.equals(classLoader.getClass().getSimpleName());
+        return RESTART_CLASS_LOADER_SIMPLE_NAME == classLoader.getClass().simpleName
     }
 
     /**
@@ -71,13 +74,13 @@ public final class DevToolsClassLoaders {
      * @return {@code true} when {@code classLoader} is the {@code RestartClassLoader} or
      * delegates to one through its parent chain, and so sees the restarted application classes
      */
-    public static boolean isRestartClassLoaderOrDescendant(ClassLoader classLoader) {
-        for (ClassLoader current = classLoader; current != null; current = current.getParent()) {
+    static boolean isRestartClassLoaderOrDescendant(ClassLoader classLoader) {
+        for (ClassLoader current = classLoader; current != null; current = current.parent) {
             if (isRestartClassLoader(current)) {
-                return true;
+                return true
             }
         }
-        return false;
+        return false
     }
 
     /**
@@ -90,18 +93,19 @@ public final class DevToolsClassLoaders {
      * @param fallback the loader to use when DevTools restart is not active
      * @return a non-null class loader
      */
-    @SuppressWarnings("PMD.UseProperClassLoader") // last-resort fallback once neither candidate sees the restart loader
-    public static ClassLoader preferRestartClassLoader(ClassLoader fallback) {
+    @SuppressWarnings('PMD.UseProperClassLoader') // last-resort fallback once neither candidate sees the restart loader
+    static ClassLoader preferRestartClassLoader(ClassLoader fallback) {
         if (isRestartClassLoaderOrDescendant(fallback)) {
-            return fallback;
+            return fallback
         }
-        ClassLoader contextClassLoader = Thread.currentThread().getContextClassLoader();
+        ClassLoader contextClassLoader = Thread.currentThread().contextClassLoader
         if (isRestartClassLoaderOrDescendant(contextClassLoader)) {
-            return contextClassLoader;
+            return contextClassLoader
         }
         if (fallback != null) {
-            return fallback;
+            return fallback
         }
-        return DevToolsClassLoaders.class.getClassLoader();
+        return DevToolsClassLoaders.getClassLoader()
     }
+
 }
