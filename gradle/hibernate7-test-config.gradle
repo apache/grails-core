@@ -29,6 +29,11 @@ tasks.withType(Test).configureEach {
     outputs.cacheIf { cacheTests }
     outputs.upToDateWhen { cacheTests }
 
+    // This config does not apply test-config.gradle, so the forks would run at Gradle's 512 MB default. The scan of the
+    // roughly 1,200 domain classes of the core test sources (ClassicOracleSpec and the differential specs) does not
+    // fit: CI failed with "Java heap space" while reading the candidate components.
+    maxHeapSize = '2g'
+
     boolean skipped = [
             'onlyFunctionalTests',
             'onlyHibernate5Tests',
