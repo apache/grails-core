@@ -19,6 +19,7 @@ import groovy.transform.CompileStatic
 import org.hibernate.FlushMode
 import org.hibernate.Session
 import org.hibernate.Transaction
+import org.jspecify.annotations.Nullable
 import org.springframework.orm.jpa.EntityManagerHolder
 
 /**
@@ -37,8 +38,10 @@ import org.springframework.orm.jpa.EntityManagerHolder
 @CompileStatic
 class SessionHolder extends EntityManagerHolder {
 
+    @Nullable
     private Transaction transaction
 
+    @Nullable
     private FlushMode previousFlushMode
 
     SessionHolder(Session session) {
@@ -49,19 +52,21 @@ class SessionHolder extends EntityManagerHolder {
         return (Session) getEntityManager()
     }
 
-    void setTransaction(Transaction transaction) {
+    void setTransaction(@Nullable Transaction transaction) {
         this.transaction = transaction
         setTransactionActive(transaction != null)
     }
 
+    @Nullable
     Transaction getTransaction() {
         return this.transaction
     }
 
-    void setPreviousFlushMode(FlushMode previousFlushMode) {
+    void setPreviousFlushMode(@Nullable FlushMode previousFlushMode) {
         this.previousFlushMode = previousFlushMode
     }
 
+    @Nullable
     FlushMode getPreviousFlushMode() {
         return this.previousFlushMode
     }

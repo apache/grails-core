@@ -22,6 +22,7 @@ import groovy.transform.PackageScope
 import org.apache.commons.logging.Log
 import org.apache.commons.logging.LogFactory
 import org.hibernate.SessionFactory
+import org.jspecify.annotations.Nullable
 import org.springframework.transaction.support.TransactionSynchronizationManager
 import org.springframework.web.context.request.NativeWebRequest
 import org.springframework.web.context.request.async.CallableProcessingInterceptor
@@ -73,7 +74,7 @@ class AsyncRequestInterceptor implements CallableProcessingInterceptor, Deferred
     }
 
     @Override
-    def <T> void postProcess(NativeWebRequest request, Callable<T> task, Object concurrentResult) {
+    def <T> void postProcess(NativeWebRequest request, Callable<T> task, @Nullable Object concurrentResult) {
         TransactionSynchronizationManager.unbindResource(this.sessionFactory)
     }
 

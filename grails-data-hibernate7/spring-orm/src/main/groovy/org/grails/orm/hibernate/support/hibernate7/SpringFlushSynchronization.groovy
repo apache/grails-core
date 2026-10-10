@@ -17,6 +17,7 @@ package org.grails.orm.hibernate.support.hibernate7
 
 import groovy.transform.CompileStatic
 import org.hibernate.Session
+import org.jspecify.annotations.Nullable
 import org.springframework.transaction.support.TransactionSynchronization
 
 /**
@@ -41,7 +42,7 @@ class SpringFlushSynchronization implements TransactionSynchronization {
     }
 
     @Override
-    boolean equals(Object other) {
+    boolean equals(@Nullable Object other) {
         // Reference identity on both counts, as in the original.
         return this.is(other) ||
                 (other instanceof SpringFlushSynchronization && this.session.is(((SpringFlushSynchronization) other).@session))

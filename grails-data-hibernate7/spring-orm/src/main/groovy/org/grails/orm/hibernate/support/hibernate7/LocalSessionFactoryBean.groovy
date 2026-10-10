@@ -29,6 +29,7 @@ import org.hibernate.cfg.Configuration
 import org.hibernate.context.spi.CurrentTenantIdentifierResolver
 import org.hibernate.engine.jdbc.connections.spi.MultiTenantConnectionProvider
 import org.hibernate.integrator.spi.Integrator
+import org.jspecify.annotations.Nullable
 import org.springframework.beans.factory.BeanFactory
 import org.springframework.beans.factory.BeanFactoryAware
 import org.springframework.beans.factory.DisposableBean
@@ -74,58 +75,84 @@ class LocalSessionFactoryBean extends HibernateExceptionTranslator
         implements FactoryBean<SessionFactory>, ResourceLoaderAware, BeanFactoryAware,
         InitializingBean, SmartInitializingSingleton, DisposableBean {
 
+    @Nullable
     private DataSource dataSource
 
+    @Nullable
     private Resource[] configLocations
 
+    @Nullable
     private String[] mappingResources
 
+    @Nullable
     private Resource[] mappingLocations
 
+    @Nullable
     private Resource[] cacheableMappingLocations
 
+    @Nullable
     private Resource[] mappingJarLocations
 
+    @Nullable
     private Resource[] mappingDirectoryLocations
 
+    @Nullable
     private Interceptor entityInterceptor
 
+    @Nullable
     private ImplicitNamingStrategy implicitNamingStrategy
 
+    @Nullable
     private PhysicalNamingStrategy physicalNamingStrategy
 
+    @Nullable
     private Object jtaTransactionManager
 
+    @Nullable
     private RegionFactory cacheRegionFactory
 
+    @Nullable
     private MultiTenantConnectionProvider multiTenantConnectionProvider
 
+    @Nullable
     private CurrentTenantIdentifierResolver currentTenantIdentifierResolver
 
+    @Nullable
     private Properties hibernateProperties
 
+    @Nullable
     private TypeFilter[] entityTypeFilters
 
+    @Nullable
     private Class<?>[] annotatedClasses
 
+    @Nullable
     private String[] annotatedPackages
 
+    @Nullable
     private String[] packagesToScan
 
+    @Nullable
     private AsyncTaskExecutor bootstrapExecutor
 
+    @Nullable
     private Integrator[] hibernateIntegrators
 
     private boolean metadataSourcesAccessed = false
 
+    @Nullable
     private MetadataSources metadataSources
 
+    @Nullable
     private ResourcePatternResolver resourcePatternResolver
 
+    @Nullable
     private ConfigurableListableBeanFactory beanFactory
 
+    @Nullable
     private Configuration configuration
 
+    @Nullable
     private SessionFactory sessionFactory
 
     /**
@@ -603,6 +630,7 @@ class LocalSessionFactoryBean extends HibernateExceptionTranslator
         return this.configuration
     }
 
+    @Nullable
     @Override
     SessionFactory getObject() {
         return this.sessionFactory

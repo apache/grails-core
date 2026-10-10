@@ -20,6 +20,7 @@ package org.grails.orm.hibernate.cfg.domainbinding.binder
 
 import groovy.transform.CompileStatic
 import org.hibernate.mapping.Column
+import org.jspecify.annotations.NonNull
 
 import org.grails.orm.hibernate.cfg.ColumnConfig
 import org.grails.orm.hibernate.cfg.PropertyConfig
@@ -34,7 +35,7 @@ import org.grails.orm.hibernate.cfg.PropertyConfig
 @CompileStatic
 class ColumnConfigToColumnBinder {
 
-    void bindColumnConfigToColumn(Column column, ColumnConfig columnConfig, PropertyConfig mappedForm) {
+    void bindColumnConfigToColumn(@NonNull Column column, ColumnConfig columnConfig, PropertyConfig mappedForm) {
         if (columnConfig == null) {
             return
         }

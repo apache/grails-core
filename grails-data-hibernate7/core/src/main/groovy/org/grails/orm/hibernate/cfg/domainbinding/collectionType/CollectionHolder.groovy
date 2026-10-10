@@ -25,13 +25,8 @@ import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyPrope
 
 /** Collection holder. */
 @CompileStatic
-final class CollectionHolder {
-
-    private final Map<Class<?>, CollectionType> map
-
-    CollectionHolder(Map<Class<?>, CollectionType> map) {
-        this.map = map
-    }
+@SuppressWarnings(['ClassStartsWithBlankLine', 'Indentation'])
+record CollectionHolder(Map<Class<?>, CollectionType> map) {
 
     /** Creates a new {@link CollectionHolder} instance. */
     CollectionHolder(MetadataBuildingContext buildingContext) {
@@ -41,10 +36,6 @@ final class CollectionHolder {
                 Map.entry(List, new ListCollectionType(buildingContext)),
                 Map.entry(Collection, new BagCollectionType(buildingContext)),
                 Map.entry(Map, new MapCollectionType(buildingContext))))
-    }
-
-    Map<Class<?>, CollectionType> map() {
-        return map
     }
 
     /** Get. */

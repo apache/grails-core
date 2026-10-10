@@ -17,6 +17,7 @@ package org.grails.orm.hibernate.support.hibernate7
 
 import groovy.transform.CompileStatic
 import org.hibernate.QueryException
+import org.jspecify.annotations.Nullable
 import org.springframework.dao.InvalidDataAccessResourceUsageException
 
 /**
@@ -38,6 +39,7 @@ class HibernateQueryException extends InvalidDataAccessResourceUsageException {
     /**
      * Return the HQL query string that was invalid.
      */
+    @Nullable
     String getQueryString() {
         QueryException cause = (QueryException) getCause()
         return (cause != null ? cause.getQueryString() : null)

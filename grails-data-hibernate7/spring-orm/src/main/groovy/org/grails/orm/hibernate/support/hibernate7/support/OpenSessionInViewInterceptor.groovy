@@ -22,6 +22,7 @@ import org.hibernate.FlushMode
 import org.hibernate.HibernateException
 import org.hibernate.Session
 import org.hibernate.SessionFactory
+import org.jspecify.annotations.Nullable
 import org.springframework.dao.DataAccessException
 import org.springframework.dao.DataAccessResourceFailureException
 import org.springframework.transaction.support.TransactionSynchronizationManager
@@ -76,22 +77,24 @@ class OpenSessionInViewInterceptor implements AsyncWebRequestInterceptor {
      * session handling" request attribute.
      * @see #getParticipateAttributeName
      */
-    static final String PARTICIPATE_SUFFIX = '.PARTICIPATE'
+    public static final String PARTICIPATE_SUFFIX = '.PARTICIPATE'
 
     protected final Log logger = LogFactory.getLog(getClass())
 
+    @Nullable
     private SessionFactory sessionFactory
 
     /**
      * Set the Hibernate SessionFactory that should be used to create Hibernate Sessions.
      */
-    void setSessionFactory(SessionFactory sessionFactory) {
+    void setSessionFactory(@Nullable SessionFactory sessionFactory) {
         this.sessionFactory = sessionFactory
     }
 
     /**
      * Return the Hibernate SessionFactory that should be used to create Hibernate Sessions.
      */
+    @Nullable
     SessionFactory getSessionFactory() {
         return this.sessionFactory
     }
@@ -133,7 +136,7 @@ class OpenSessionInViewInterceptor implements AsyncWebRequestInterceptor {
     }
 
     @Override
-    void postHandle(WebRequest request, ModelMap model) {
+    void postHandle(WebRequest request, @Nullable ModelMap model) {
         // no-op
     }
 
@@ -142,7 +145,7 @@ class OpenSessionInViewInterceptor implements AsyncWebRequestInterceptor {
      * @see TransactionSynchronizationManager
      */
     @Override
-    void afterCompletion(WebRequest request, Exception ex) throws DataAccessException {
+    void afterCompletion(WebRequest request, @Nullable Exception ex) throws DataAccessException {
         if (!decrementParticipateCount(request)) {
             SessionHolder sessionHolder =
                     (SessionHolder) TransactionSynchronizationManager.unbindResource(obtainSessionFactory())

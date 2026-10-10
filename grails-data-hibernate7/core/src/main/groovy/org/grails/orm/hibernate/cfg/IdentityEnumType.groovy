@@ -50,8 +50,8 @@ class IdentityEnumType implements UserType<Object>, ParameterizedType, Serializa
     private static final Logger LOG = LoggerFactory.getLogger(IdentityEnumType)
     private static final TypeConfiguration typeConfiguration = new TypeConfiguration()
 
-    static final String ENUM_ID_ACCESSOR = 'getId'
-    static final String PARAM_ENUM_CLASS = 'enumClass'
+    public static final String ENUM_ID_ACCESSOR = 'getId'
+    public static final String PARAM_ENUM_CLASS = 'enumClass'
 
     private static final Map<Class<? extends Enum<?>>, BidiEnumMap> ENUM_MAPPINGS = new HashMap<>()
 

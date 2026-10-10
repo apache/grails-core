@@ -35,7 +35,7 @@ import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentE
 @CompileStatic
 class RootPersistentClassCommonValuesBinder {
 
-    static final Logger LOG = LoggerFactory.getLogger(RootPersistentClassCommonValuesBinder)
+    public static final Logger LOG = LoggerFactory.getLogger(RootPersistentClassCommonValuesBinder)
 
     private final MetadataBuildingContext metadataBuildingContext
     private final PersistentEntityNamingStrategy namingStrategy
