@@ -242,7 +242,7 @@ class Sitemesh3LayoutFinder implements DecoratorSelector<SiteMeshContext> {
 
         @Override
         boolean equals(Object o) {
-            if (this == o) return true
+            if (this.is(o)) return true
             if (!(o instanceof LayoutCacheKey)) return false
             LayoutCacheKey that = (LayoutCacheKey) o
             return controllerName.equals(that.controllerName) && actionUri.equals(that.actionUri)
