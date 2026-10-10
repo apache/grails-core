@@ -52,6 +52,14 @@ public class JoinTracker {
         return join;
     }
 
+    /**
+     * Returns the join registered by this query, ignoring enclosing queries because
+     * an association path is relative to the root of the query it appears in.
+     */
+    From<?, ?> getOwnJoin(String path) {
+        return joinsByPath.get(path);
+    }
+
     public From<?, ?> getRoot() {
         return root;
     }

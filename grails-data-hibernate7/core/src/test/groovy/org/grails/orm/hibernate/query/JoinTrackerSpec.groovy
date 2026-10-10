@@ -71,5 +71,7 @@ class JoinTrackerSpec extends Specification {
         then:
         child.getJoin("face") == childJoin
         parent.getJoin("face") == parentJoin
+        child.getJoin('missing') == null
+        parent.getJoin('missing') == null
     }
 }
