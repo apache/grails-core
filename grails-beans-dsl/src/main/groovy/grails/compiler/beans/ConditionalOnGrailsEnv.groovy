@@ -16,17 +16,17 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package grails.compiler.beans;
+package grails.compiler.beans
 
-import java.lang.annotation.Documented;
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
+import java.lang.annotation.Documented
+import java.lang.annotation.ElementType
+import java.lang.annotation.Retention
+import java.lang.annotation.RetentionPolicy
+import java.lang.annotation.Target
 
-import org.springframework.context.annotation.Conditional;
+import org.springframework.context.annotation.Conditional
 
-import org.grails.compiler.beans.OnGrailsEnvCondition;
+import org.grails.compiler.beans.OnGrailsEnvCondition
 
 /**
  * Registers the annotated bean or configuration only in the named Grails environments.
@@ -41,16 +41,16 @@ import org.grails.compiler.beans.OnGrailsEnvCondition;
  * @see OnGrailsEnvCondition
  */
 @Retention(RetentionPolicy.RUNTIME)
-@Target({ElementType.TYPE, ElementType.METHOD})
+@Target([ElementType.TYPE, ElementType.METHOD])
 @Documented
-@Conditional(OnGrailsEnvCondition.class)
-public @interface ConditionalOnGrailsEnv {
+@Conditional(OnGrailsEnvCondition)
+@interface ConditionalOnGrailsEnv {
 
     /**
      * The environment names to match, as {@code grails.util.Environment} reports them - the
      * built-in ones lowercased ({@code development}, {@code production}, {@code test},
      * {@code application}), or a custom environment's own name. Matching any one is enough.
      */
-    String[] value();
+    String[] value()
 
 }

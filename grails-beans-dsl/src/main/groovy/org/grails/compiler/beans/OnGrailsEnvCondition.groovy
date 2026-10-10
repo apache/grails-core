@@ -16,16 +16,16 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.compiler.beans;
+package org.grails.compiler.beans
 
-import java.lang.reflect.Method;
-import java.util.Locale;
-import java.util.Map;
+import java.lang.reflect.Method
 
-import org.springframework.context.annotation.Condition;
-import org.springframework.context.annotation.ConditionContext;
-import org.springframework.core.type.AnnotatedTypeMetadata;
-import org.springframework.util.ClassUtils;
+import groovy.transform.CompileStatic
+
+import org.springframework.context.annotation.Condition
+import org.springframework.context.annotation.ConditionContext
+import org.springframework.core.type.AnnotatedTypeMetadata
+import org.springframework.util.ClassUtils
 
 /**
  * Matches when the current Grails environment is one of those named by
@@ -38,40 +38,41 @@ import org.springframework.util.ClassUtils;
  * was designed for - an explicitly set environment - and leaves the condition unmatched otherwise
  * rather than guessing.</p>
  */
-public class OnGrailsEnvCondition implements Condition {
+@CompileStatic
+class OnGrailsEnvCondition implements Condition {
 
-    private static final String ENVIRONMENT_CLASS = "grails.util.Environment";
-    private static final String ENVIRONMENT_PROPERTY = "grails.env";
-    private static final String ANNOTATION_NAME = "grails.compiler.beans.ConditionalOnGrailsEnv";
+    private static final String ENVIRONMENT_CLASS = 'grails.util.Environment'
+    private static final String ENVIRONMENT_PROPERTY = 'grails.env'
+    private static final String ANNOTATION_NAME = 'grails.compiler.beans.ConditionalOnGrailsEnv'
 
     @Override
-    public boolean matches(ConditionContext context, AnnotatedTypeMetadata metadata) {
-        Map<String, Object> attributes = metadata.getAnnotationAttributes(ANNOTATION_NAME);
+    boolean matches(ConditionContext context, AnnotatedTypeMetadata metadata) {
+        Map<String, Object> attributes = metadata.getAnnotationAttributes(ANNOTATION_NAME)
         if (attributes == null) {
-            return false;
+            return false
         }
-        Object value = attributes.get("value");
+        Object value = attributes.get('value')
         if (!(value instanceof String[])) {
-            return false;
+            return false
         }
-        String current = currentEnvironmentName(context);
+        String current = currentEnvironmentName(context)
         if (current == null) {
-            return false;
+            return false
         }
-        for (String candidate : (String[]) value) {
+        for (String candidate in (String[]) value) {
             if (current.equalsIgnoreCase(candidate)) {
-                return true;
+                return true
             }
         }
-        return false;
+        false
     }
 
     private String currentEnvironmentName(ConditionContext context) {
-        String fromGrails = currentEnvironmentNameFromGrails(context.getClassLoader());
+        String fromGrails = currentEnvironmentNameFromGrails(context.getClassLoader())
         if (fromGrails != null) {
-            return fromGrails;
+            return fromGrails
         }
-        return context.getEnvironment().getProperty(ENVIRONMENT_PROPERTY);
+        context.getEnvironment().getProperty(ENVIRONMENT_PROPERTY)
     }
 
     private String currentEnvironmentNameFromGrails(ClassLoader classLoader) {
@@ -80,15 +81,15 @@ public class OnGrailsEnvCondition implements Condition {
             // Spring's own class-presence checks fall back to getDefaultClassLoader(), which tries
             // the thread context loader first - the one that can see Grails when this class and the
             // application are loaded by different loaders, as under Boot's LaunchedClassLoader.
-            ClassLoader loader = classLoader != null ? classLoader : ClassUtils.getDefaultClassLoader();
-            Class<?> environmentClass = Class.forName(ENVIRONMENT_CLASS, true, loader);
-            Object current = environmentClass.getMethod("getCurrent").invoke(null);
+            ClassLoader loader = classLoader != null ? classLoader : ClassUtils.getDefaultClassLoader()
+            Class<?> environmentClass = Class.forName(ENVIRONMENT_CLASS, true, loader)
+            Object current = environmentClass.getMethod('getCurrent').invoke(null)
             if (current == null) {
-                return null;
+                return null
             }
-            Method getName = environmentClass.getMethod("getName");
-            Object name = getName.invoke(current);
-            return name == null ? null : name.toString().toLowerCase(Locale.ENGLISH);
+            Method getName = environmentClass.getMethod('getName')
+            Object name = getName.invoke(current)
+            return name == null ? null : name.toString().toLowerCase(Locale.ENGLISH)
         }
         catch (ReflectiveOperationException | RuntimeException | LinkageError ignored) {
             // Not a Grails application, or an Environment that cannot answer - fall back to the
@@ -102,7 +103,7 @@ public class OnGrailsEnvCondition implements Condition {
             // ReflectiveOperationException, and either would otherwise be thrown out of matches()
             // and fail the whole configuration this condition was meant to skip quietly.
             // VirtualMachineError is deliberately still not caught.
-            return null;
+            return null
         }
     }
 
