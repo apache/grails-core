@@ -31,7 +31,7 @@ import spock.lang.Requires
  */
 // Explicit join semantics are relational: MongoDB rejects join queries outright and the
 // simple in-memory datastore has no join support, so only the Hibernate suites run this.
-@Requires({ Boolean.getBoolean('hibernate5.gorm.suite') || Boolean.getBoolean('hibernate7.gorm.suite') })
+@Requires({ Boolean.getBoolean('hibernate7.gorm.suite') })
 class WhereQueryLeftJoinSpec extends GrailsDataTckSpec {
 
     void setupSpec() {

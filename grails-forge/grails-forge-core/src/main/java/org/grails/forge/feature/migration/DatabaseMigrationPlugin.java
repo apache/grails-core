@@ -21,7 +21,6 @@ package org.grails.forge.feature.migration;
 import jakarta.inject.Singleton;
 import org.grails.forge.application.generator.GeneratorContext;
 import org.grails.forge.build.dependencies.Dependency;
-import org.grails.forge.feature.database.GrailsDataHibernate7;
 import org.grails.forge.feature.migration.templates.dbMigrationGradle;
 import org.grails.forge.template.RockerWritable;
 import org.grails.forge.template.URLTemplate;
@@ -52,7 +51,7 @@ public class DatabaseMigrationPlugin implements MigrationFeature {
 
     @Override
     public String getDocumentation() {
-        return "https://grails.apache.org/docs/" + VersionInfo.getDocumentationVersion() + "/grails-data/hibernate5/manual/index.html#databaseMigration";
+        return "https://grails.apache.org/docs/" + VersionInfo.getDocumentationVersion() + "/grails-data/hibernate7/manual/index.html#databaseMigration";
     }
 
     @Override
@@ -61,12 +60,9 @@ public class DatabaseMigrationPlugin implements MigrationFeature {
         // the dbm-* commands ship in the companion -cli artifact, which the Grails Gradle plugin
         // discovers automatically from the plugin jar's Grails-Cli-Artifact manifest attribute —
         // no buildscript classpath or grailsCli entry is generated
-        final String dbMigrationArtifactId = generatorContext.isFeaturePresent(GrailsDataHibernate7.class)
-                ? "grails-data-hibernate7-dbmigration"
-                : "grails-data-hibernate5-dbmigration";
         generatorContext.addDependency(Dependency.builder()
                 .groupId("org.apache.grails")
-                .artifactId(dbMigrationArtifactId)
+                .artifactId("grails-data-hibernate7-dbmigration")
                 .implementation()
                 .extension(new RockerWritable(dbMigrationGradle.template(srcDirPath))));
         final ClassLoader classLoader = Thread.currentThread().getContextClassLoader();

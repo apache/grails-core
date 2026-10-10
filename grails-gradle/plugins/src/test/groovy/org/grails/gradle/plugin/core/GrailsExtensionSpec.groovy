@@ -119,10 +119,10 @@ class GrailsExtensionSpec extends Specification {
         GrailsExtension extension = new GrailsExtension(project)
 
         when:
-        extension.bom = 'grails-hibernate5-bom'
+        extension.bom = 'grails-hibernate7-bom'
 
         then:
-        extension.bom.getOrNull() == 'grails-hibernate5-bom'
+        extension.bom.getOrNull() == 'grails-hibernate7-bom'
         extension.springDependencyManagement
     }
 

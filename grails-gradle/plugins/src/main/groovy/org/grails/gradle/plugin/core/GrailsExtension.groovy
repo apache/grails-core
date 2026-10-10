@@ -292,8 +292,8 @@ class GrailsExtension {
      * }
      * </pre>
      *
-     * <p>The Micronaut variants ({@code grails-micronaut-bom},
-     * {@code grails-hibernate5-micronaut-bom}, and {@code grails-hibernate7-micronaut-bom})
+     * <p>The Micronaut variants ({@code grails-micronaut-bom} and
+     * {@code grails-hibernate7-micronaut-bom})
      * are applied as an {@code enforcedPlatform}
      * because the Micronaut platform would otherwise override their managed versions via
      * conflict resolution. All other BOMs are applied as a regular {@code platform}.</p>

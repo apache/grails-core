@@ -35,7 +35,7 @@ apply plugin: 'org.apache.grails.gradle.grails-web'
 apply plugin: 'org.apache.grails.gradle.grails-gson'
 
 dependencies {
-    implementation platform(project(':grails-bom'))
+    implementation platform(project(':grails-hibernate7-bom'))
 
     implementation 'org.apache.grails:grails-async'
     implementation 'org.apache.grails:grails-events'
@@ -55,7 +55,7 @@ dependencies {
     }
 
     implementation 'org.apache.grails:grails-views-gson'
-    implementation 'org.apache.grails:grails-data-hibernate5'
+    implementation 'org.apache.grails:grails-data-hibernate7'
 
     implementation 'org.springframework.boot:spring-boot-autoconfigure'
     implementation 'org.springframework.boot:spring-boot-starter'

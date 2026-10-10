@@ -73,7 +73,7 @@ class OptimisticLockingSpec extends GrailsDataTckSpec {
         // in grails-data-neo4j-core.
         Boolean.getBoolean('neo4j.gorm.suite') ||
                 // Hibernate has a customized version of this
-                System.getProperty('hibernate5.gorm.suite') || System.getProperty('hibernate7.gorm.suite')
+                System.getProperty('hibernate7.gorm.suite')
     })
     void "Test optimistic locking"() {
 

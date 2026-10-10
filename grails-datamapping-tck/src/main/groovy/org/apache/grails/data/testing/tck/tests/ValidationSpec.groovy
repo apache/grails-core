@@ -47,7 +47,7 @@ class ValidationSpec extends GrailsDataTckSpec {
     void 'Test existing ObjectErrors are reset by Hibernate and retained by other datastores'() {
         given:
         def t = new TestEntity(name: 'someName')
-        boolean hibernate = Boolean.getBoolean('hibernate5.gorm.suite') || Boolean.getBoolean('hibernate7.gorm.suite')
+        boolean hibernate = Boolean.getBoolean('hibernate7.gorm.suite')
 
         when:
         t.errors.reject('foo')
@@ -60,7 +60,7 @@ class ValidationSpec extends GrailsDataTckSpec {
     }
 
     // Hibernate did not originally have this test and it fails for it
-    @PendingFeatureIf({ System.getProperty('hibernate5.gorm.suite') || System.getProperty('hibernate7.gorm.suite') })
+    @PendingFeatureIf({ System.getProperty('hibernate7.gorm.suite') })
     void 'Test disable validation'() {
         // test assumes name cannot be blank
         given:
@@ -199,7 +199,7 @@ class ValidationSpec extends GrailsDataTckSpec {
 
     @IgnoreIf({
         Boolean.getBoolean('neo4j.gorm.suite') || // neo4j requires a transaction present for inserts
-                System.getProperty('hibernate5.gorm.suite') || System.getProperty('hibernate7.gorm.suite') // Hibernate has a custom version of this test
+                System.getProperty('hibernate7.gorm.suite') // Hibernate has a custom version of this test
     })
     void 'Test that validate works without a bound Session'() {
         given:

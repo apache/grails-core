@@ -132,7 +132,7 @@ WARNING: Refreshing discards unflushed changes to the entity. Configured refresh
 
 The lock applies to the refreshed entity's own row. Associated entities reloaded through a refresh cascade are not guaranteed to be locked: databases that cannot lock outer-joined rows, such as H2 and PostgreSQL, leave those rows unlocked, and GORM does not issue follow-on locking queries for them.
 
-Refreshing under a lock is supported by GORM for Hibernate 5 and Hibernate 7. Datastores that do not support it throw `UnsupportedOperationException` rather than silently falling back to a plain refresh.
+Refreshing under a lock is supported by GORM for Hibernate 7. Datastores that do not support it throw `UnsupportedOperationException` rather than silently falling back to a plain refresh.
 
 The database and transaction isolation level determine which state is visible to the locked refresh. `refresh(lock: true)` does not override isolation rules or guarantee that every concurrent attempt succeeds. Deadlocks, lock timeouts, and transaction serialization failures remain possible.
 

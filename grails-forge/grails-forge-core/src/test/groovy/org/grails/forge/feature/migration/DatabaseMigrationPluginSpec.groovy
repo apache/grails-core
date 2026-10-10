@@ -37,8 +37,8 @@ class DatabaseMigrationPluginSpec extends ApplicationContextSpec implements Comm
                 .render()
 
         then: 'only the runtime plugin is declared — its -cli companion is auto-discovered by the Grails Gradle plugin'
-        template.contains('implementation "org.apache.grails:grails-data-hibernate5-dbmigration"')
-        !template.contains('grails-data-hibernate5-dbmigration-cli')
+        template.contains('implementation "org.apache.grails:grails-data-hibernate7-dbmigration"')
+        !template.contains('grails-data-hibernate7-dbmigration-cli')
     }
 
     void "test the cli companion is not declared in buildSrc"() {
@@ -48,7 +48,7 @@ class DatabaseMigrationPluginSpec extends ApplicationContextSpec implements Comm
                 .renderBuildSrc()
 
         then:
-        !template.contains('grails-data-hibernate5-dbmigration')
+        !template.contains('grails-data-hibernate7-dbmigration')
     }
 
     void "test the generated application declares only the runtime plugin"() {
@@ -58,8 +58,8 @@ class DatabaseMigrationPluginSpec extends ApplicationContextSpec implements Comm
 
         expect:
         buildGradle != null
-        buildGradle.contains('implementation "org.apache.grails:grails-data-hibernate5-dbmigration"')
-        !buildGradle.contains('grails-data-hibernate5-dbmigration-cli')
+        buildGradle.contains('implementation "org.apache.grails:grails-data-hibernate7-dbmigration"')
+        !buildGradle.contains('grails-data-hibernate7-dbmigration-cli')
     }
 
     @Unroll

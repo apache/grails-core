@@ -67,7 +67,7 @@ class GrailsDependencyValidatorPlugin implements Plugin<Project> {
     /** Opts a project out of {@link #VALIDATE_TASK_NAME}; see {@link GradleUtils#isOptedOut}. */
     static final String SKIP_PROPERTY = 'skipDependencyValidation'
 
-    private static final Set<String> BOM_PROJECT_NAMES = ['grails-bom', 'grails-gradle-bom', 'grails-base-bom', 'grails-hibernate5-bom', 'grails-hibernate7-bom', 'grails-neo4j-bom'].toSet()
+    private static final Set<String> BOM_PROJECT_NAMES = ['grails-bom', 'grails-gradle-bom', 'grails-base-bom', 'grails-hibernate7-bom', 'grails-neo4j-bom'].toSet()
 
     /**
      * Configuration names that pull in a Grails BOM purely as build tooling rather than as part

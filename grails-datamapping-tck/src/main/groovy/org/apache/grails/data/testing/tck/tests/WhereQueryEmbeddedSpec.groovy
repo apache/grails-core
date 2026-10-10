@@ -309,7 +309,7 @@ class WhereQueryEmbeddedSpec extends GrailsDataTckSpec {
 
     // Restricting through an association requires join support, which MongoDB rejects
     // and the simple in-memory datastore does not implement for nested paths.
-    @Requires({ Boolean.getBoolean('hibernate5.gorm.suite') || Boolean.getBoolean('hibernate7.gorm.suite') })
+    @Requires({ Boolean.getBoolean('hibernate7.gorm.suite') })
     @Issue('https://github.com/apache/grails-core/issues/15955')
     void 'where query on an association whose target entity has an embedded component'() {
         given: 'groups pointing at items with embedded components'

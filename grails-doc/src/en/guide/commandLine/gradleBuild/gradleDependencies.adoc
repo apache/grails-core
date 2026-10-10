@@ -38,7 +38,7 @@ dependencies {
     implementation "org.apache.grails:grails-url-mappings"
     implementation "org.apache.grails:grails-web-boot"
     implementation "org.apache.grails:grails-gsp"
-    implementation "org.apache.grails:grails-data-hibernate5"
+    implementation "org.apache.grails:grails-data-hibernate7"
     implementation "org.apache.grails:grails-scaffolding"
     implementation "org.springframework.boot:spring-boot-autoconfigure"
     implementation "org.springframework.boot:spring-boot-starter"

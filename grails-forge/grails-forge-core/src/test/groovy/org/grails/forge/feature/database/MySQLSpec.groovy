@@ -46,7 +46,7 @@ class MySQLSpec extends ApplicationContextSpec {
 
     void "test config"() {
         when:
-        GeneratorContext ctx = buildGeneratorContext(["gorm-hibernate5", "mysql"])
+        GeneratorContext ctx = buildGeneratorContext(["gorm-hibernate7", "mysql"])
 
         then:
         ctx.getConfiguration().get("dataSource.driverClassName") == 'com.mysql.cj.jdbc.Driver'

@@ -663,7 +663,6 @@ ${importStatements}
      */
     private static final Set<String> ENFORCED_PLATFORM_BOMS = [
             'grails-micronaut-bom',
-            'grails-hibernate5-micronaut-bom',
             'grails-hibernate7-micronaut-bom',
     ] as Set<String>
 
@@ -675,11 +674,9 @@ ${importStatements}
     private static final Set<String> GRAILS_BOM_NAMES = [
             'grails-bom',
             'grails-base-bom',
-            'grails-hibernate5-bom',
             'grails-hibernate7-bom',
             'grails-neo4j-bom',
             'grails-micronaut-bom',
-            'grails-hibernate5-micronaut-bom',
             'grails-hibernate7-micronaut-bom',
     ] as Set<String>
 
@@ -892,7 +889,6 @@ ${importStatements}
                         "Micronaut's platform declares higher versions of javaparser-core and other libraries that would " +
                         'override the grails-bom versions via conflict resolution. Change to one of:\n\n' +
                         '    implementation enforcedPlatform("org.apache.grails:grails-micronaut-bom:$grailsVersion")\n' +
-                        '    implementation enforcedPlatform("org.apache.grails:grails-hibernate5-micronaut-bom:$grailsVersion")\n' +
                         '    implementation enforcedPlatform("org.apache.grails:grails-hibernate7-micronaut-bom:$grailsVersion")\n'
         )
     }

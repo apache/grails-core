@@ -31,7 +31,7 @@ version = "0.0.1"
 group = 'functional.tests'
 
 dependencies {
-    implementation platform(project(':grails-bom'))
+    implementation platform(project(':grails-hibernate7-bom'))
 
     implementation project(':grails-test-examples-views-functional-tests-plugin')
     implementation 'org.apache.grails:grails-views-gson'
@@ -54,13 +54,13 @@ dependencies {
     implementation 'org.apache.grails:grails-validation'
 
     implementation 'org.apache.grails:grails-gsp'
-    implementation 'org.apache.grails:grails-data-hibernate5'
+    implementation 'org.apache.grails:grails-data-hibernate7'
 
     implementation 'org.springframework.boot:spring-boot-autoconfigure'
     implementation 'org.springframework.boot:spring-boot-starter-logging'
     implementation 'org.springframework.boot:spring-boot-starter-tomcat'
 
-    testAndDevelopmentOnly platform(project(':grails-bom'))
+    testAndDevelopmentOnly platform(project(':grails-hibernate7-bom'))
     testAndDevelopmentOnly 'org.webjars.npm:jquery'
 
     compileOnly 'org.slf4j:slf4j-api' // Provided by Tomcat

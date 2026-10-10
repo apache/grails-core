@@ -18,6 +18,7 @@
  */
 package org.grails.forge.feature.database;
 
+import io.micronaut.context.annotation.Primary;
 import jakarta.inject.Singleton;
 import org.grails.forge.application.ApplicationType;
 import org.grails.forge.application.generator.GeneratorContext;
@@ -30,6 +31,7 @@ import org.grails.forge.options.Options;
 import java.util.Map;
 import java.util.Set;
 
+@Primary
 @Singleton
 public class GrailsDataHibernate7 extends GormFeature implements DatabaseDriverConfigurationFeature {
 

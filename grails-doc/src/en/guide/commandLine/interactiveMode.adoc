@@ -66,8 +66,7 @@ Usage: grails create-app [-hivVx] [--list-features] [-d=Grails Data Implementati
 Creates an application
       [NAME]            The name of the application to create.
   -f, --features=FEATURE[,FEATURE...]
-                        The features to use. Possible values: h2, scaffolding, gorm-hibernate5,
-                          gorm-hibernate7, spring-boot-starter-jetty, spring-boot-starter-tomcat,
+                        The features to use. Possible values: h2, scaffolding, gorm-hibernate7, spring-boot-starter-jetty, spring-boot-starter-tomcat,
                           micronaut-http-client, cache-ehcache, hibernate-validator, postgres,
                           mysql, cache, database-migration, grails-gsp, hamcrest, gorm-mongodb,
                           assertj, mockito, grails-undertow,
@@ -77,7 +76,7 @@ Creates an application
                           logbackGroovy, mongo-sync, shade, geb, properties
   -d, --data, -g, --gorm=Grails Data Implementation
                         Which Grails Data implementation to configure (-g, --gorm are legacy
-                          aliases). Possible values: hibernate5, hibernate7, mongodb.
+                          aliases). Possible values: hibernate7, mongodb.
   -h, --help            Show this help message and exit.
   -i, --inplace         Create a service using the current directory
       --jdk, --java-version=<javaVersion>
@@ -116,7 +115,6 @@ Available Features
 
   Database
   database-migration                  Adds support for Liquibase database migrations. The Database Migration plugin helps you manage database changes while developing Grails applications.
-  gorm-hibernate5 (+)                 Configure Grails Data for using Hibernate 5.
   gorm-hibernate7                     Configure Grails Data for using Hibernate 7.
   gorm-mongodb                        Configure Grails Data for using MongoDB.
   gorm-neo4j                          Configures GORM for Neo4j for Groovy applications

@@ -114,7 +114,7 @@ class CreateAppCommandSpec extends CommandSpec implements CommandFixture {
         System.setOut(new PrintStream(out))
 
         when:
-        PicocliRunner.run(CreateAppCommand, ctx, "gshort", "-g", "hibernate5")
+        PicocliRunner.run(CreateAppCommand, ctx, "gshort", "-g", "hibernate7")
 
         then:
         noExceptionThrown()
@@ -134,17 +134,19 @@ class CreateAppCommandSpec extends CommandSpec implements CommandFixture {
         out.toString().contains("Application created")
     }
 
-    void "test creating a project with the hibernate5 gorm value"() {
+    void "test creating a project with the removed hibernate5 gorm value is rejected"() {
         given:
         ByteArrayOutputStream out = new ByteArrayOutputStream()
+        ByteArrayOutputStream err = new ByteArrayOutputStream()
         System.setOut(new PrintStream(out))
+        System.setErr(new PrintStream(err))
 
         when:
         PicocliRunner.run(CreateAppCommand, ctx, "hib5gorm", "--gorm", "hibernate5")
 
-        then:
-        noExceptionThrown()
-        out.toString().contains("Application created")
+        then: 'Hibernate 5 support has been removed, so this value no longer resolves'
+        err.toString().contains("Invalid Grails Data implementation selection: hibernate5")
+        !out.toString().contains("Application created")
     }
 
     void "the --features completion candidates are listed in name order"() {

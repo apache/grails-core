@@ -50,7 +50,7 @@ tasks.named('compileGroovy').configure {
 }
 
 dependencies {
-    implementation platform("org.apache.grails:grails-bom:$projectVersion")
+    implementation platform("org.apache.grails:grails-hibernate7-bom:$projectVersion")
 
     implementation project(':legacy-commands-plugin')
     implementation files(legacyG7FixtureJars)
@@ -67,7 +67,7 @@ dependencies {
     else {
         implementation 'org.apache.grails:grails-sitemesh3'
     }
-    implementation 'org.apache.grails:grails-data-hibernate5'
+    implementation 'org.apache.grails:grails-data-hibernate7'
     implementation 'org.springframework.boot:spring-boot-autoconfigure'
     implementation 'org.springframework.boot:spring-boot-starter'
     implementation 'org.springframework.boot:spring-boot-starter-logging'

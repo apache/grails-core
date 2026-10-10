@@ -121,6 +121,5 @@ jobs:
           -PgrailsIndy=${{ matrix.indy }}
           -PonlyFunctionalTests
           -PskipCodeStyle
-          -PskipHibernate5Tests
           -PskipHibernate7Tests
           -PskipMongodbTests

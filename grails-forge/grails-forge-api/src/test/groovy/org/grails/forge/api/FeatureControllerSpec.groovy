@@ -116,7 +116,7 @@ class FeatureControllerSpec extends Specification {
 
         then:
         !features.any { it.name == 'geb-with-testcontainers' }
-        features.any { it.name == 'gorm-hibernate5' }
+        features.any { it.name == 'gorm-hibernate7' }
 
         when:
         features = applicationTypeClient

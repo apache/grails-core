@@ -23,7 +23,7 @@ Dynamic frameworks like Rails and Django helped pave the way to a more modern wa
 
 Grails is a full stack framework and attempts to solve as many pieces of the web development puzzle through the core technology and its associated plugins. Included out the box are things like:
 
-* link:{gormWebsite}[GORM] - An easy-to-use Object Mapping library with support for  link:{hibernate5Guide}[SQL],  link:{mongodb5Guide}[MongoDB], https://gorm.grails.org/latest/neo4j/manual/[Neo4j] and link:{gormWebsite}[more].
+* link:{gormWebsite}[GORM] - An easy-to-use Object Mapping library with support for  link:{hibernate7Guide}[SQL],  link:{mongodb5Guide}[MongoDB], https://gorm.grails.org/latest/neo4j/manual/[Neo4j] and link:{gormWebsite}[more].
 * View technologies for link:theWebLayer.html#gsp[rendering HTML] as well as link:theWebLayer.html#gson[JSON]
 * A controller layer built on https://spring.io/projects/spring-boot[Spring Boot]
 * A plugin system featuring https://grails.apache.org/plugins.html[hundreds of plugins].
@@ -43,7 +43,7 @@ Finally, Grails is far more than just a web framework and is made up of various 
 |===
 |Project            | Description
 
-| link:{hibernate5Guide}[GORM for Hibernate]
+| link:{hibernate7Guide}[GORM for Hibernate]
 |An Object Mapping implementation for SQL databases
 
 | link:{mongodb5Guide}[GORM for MongoDB]

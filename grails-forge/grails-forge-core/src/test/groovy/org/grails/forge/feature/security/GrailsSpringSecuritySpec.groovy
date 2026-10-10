@@ -93,7 +93,6 @@ class GrailsSpringSecuritySpec extends ApplicationContextSpec implements Command
 
         where:
         gorm                | directive              | foreign
-        GormImpl.HIBERNATE5 | "table name: '`user`'" | "collection 'user'"
         GormImpl.HIBERNATE7 | "table name: '`user`'" | "collection 'user'"
         GormImpl.MONGODB    | "collection 'user'"    | "table name: '`user`'"
     }

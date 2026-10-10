@@ -46,7 +46,7 @@ class Book {
 === Description
 
 
-Refer to the section on  link:{hibernate5GuideFromRef}[GORM] in the Grails user guide which details how to create Grails domain classes.
+Refer to the section on  link:{hibernate7GuideFromRef}[GORM] in the Grails user guide which details how to create Grails domain classes.
 
 Configured Spring Beans given a domain class of `Book`:
 

@@ -83,14 +83,13 @@ transaction and throw `jakarta.persistence.TransactionRequiredException` without
 including for a `null` identifier. A `type` supplied as `null` counts as absent: the call takes the default lock
 and behaves exactly like `lock(id)`, transaction requirement included.
 `lock(id)`, `lock(id, refresh: false)` and the instance method `entity.lock()` keep the behaviour they have
-always had, which differs by implementation. GORM for Hibernate 7 rejects them without a transaction, with the
-same exception. GORM for Hibernate 5 does not: the call returns the instance and `getCurrentLockMode` reports
-`PESSIMISTIC_WRITE`, but the statement ran on an auto-commit connection, so the row lock is gone as soon as it
-completes and another transaction can take it immediately. Always lock inside a transaction.
+always had. GORM for Hibernate 7 rejects them without a transaction, with the
+same exception.
+Always lock inside a transaction.
 
 Pass `type` to choose the lock mode. It accepts a `jakarta.persistence.LockModeType` or its name and defaults to `PESSIMISTIC_WRITE`; `NONE` is rejected. For example `Book.lock(1, type: LockModeType.PESSIMISTIC_READ)` acquires a pessimistic READ lock, whether the entity is loaded as part of the call or is already managed in the session. The semantics of each mode are those of the JPA `LockModeType` of the same name. Datastores that support only a pessimistic write lock throw `UnsupportedOperationException` for any other `type`.
 
-The lock modes behave as follows on Hibernate 5 and Hibernate 7:
+The lock modes behave as follows on Hibernate 7:
 
 [cols="2,2,3",options="header"]
 |===
@@ -125,10 +124,10 @@ Pass `refresh: true` to reload instead. `DomainClass.lock(id, refresh: true)` be
 
 WARNING: `refresh: true` discards unflushed changes to the entity. Configured refresh cascades can also discard unflushed changes to associated entities; this is not a refresh of the whole object graph. Call it *before* making decisions based on the entity's state or applying mutations.
 
-Refreshing under a lock is supported by GORM for Hibernate 5 and Hibernate 7. Other datastores throw `UnsupportedOperationException` rather than silently falling back to a lock without a refresh.
+Refreshing under a lock is supported by GORM for Hibernate 7. Other datastores throw `UnsupportedOperationException` rather than silently falling back to a lock without a refresh.
 
 NOTE: There is no `entity.lock(refresh: true)`. Groovy resolves that call to the static `lock(Serializable id)` method with the options map as the identifier, and GORM rejects it with an `IllegalArgumentException` that names the supported forms. To reload an already-loaded instance under a pessimistic write lock, use link:{domainClassesRefFromRef}refresh.html[refresh(lock: true)]; to choose another lock mode, pass a `jakarta.persistence.LockModeType` as the `lock` argument of `refresh`.
 
 Pessimistic locking does not guarantee freedom from deadlocks, lock timeouts, or transaction serialization failures. Locking and read visibility depend on the database and transaction isolation level; ordinary reads are not necessarily blocked by a write lock.
 
-Refer to the section on Optimistic and Pessimistic locking in the GORM for link:{hibernate7GuideFromRef}index.html#locking[Hibernate 7] or link:{hibernate5GuideFromRef}index.html#locking[Hibernate 5] guide for info.
+Refer to the section on Optimistic and Pessimistic locking in the link:{hibernate7GuideFromRef}index.html#locking[GORM for Hibernate 7] guide for info.

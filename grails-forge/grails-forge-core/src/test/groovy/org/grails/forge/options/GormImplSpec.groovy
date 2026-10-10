@@ -31,18 +31,22 @@ class GormImplSpec extends Specification {
 
         where:
         value        | expected
-        'hibernate5' | GormImpl.HIBERNATE5
-        'HIBERNATE5' | GormImpl.HIBERNATE5
-        'hibernate'  | GormImpl.HIBERNATE5
-        'HIBERNATE'  | GormImpl.HIBERNATE5
+        'hibernate'  | GormImpl.HIBERNATE7
+        'HIBERNATE'  | GormImpl.HIBERNATE7
         'hibernate7' | GormImpl.HIBERNATE7
+        'HIBERNATE7' | GormImpl.HIBERNATE7
         'mongodb'    | GormImpl.MONGODB
         'neo4j'      | GormImpl.NEO4J
         null         | null
     }
 
-    void "the default option is Hibernate 5"() {
+    void "hibernate5 is no longer a resolvable value"() {
+        expect: 'Hibernate 5 support has been removed, so this value is now unresolvable'
+        GormImpl.parse('hibernate5') == null
+    }
+
+    void "the default option is Hibernate 7"() {
         expect:
-        GormImpl.DEFAULT_OPTION == GormImpl.HIBERNATE5
+        GormImpl.DEFAULT_OPTION == GormImpl.HIBERNATE7
     }
 }
