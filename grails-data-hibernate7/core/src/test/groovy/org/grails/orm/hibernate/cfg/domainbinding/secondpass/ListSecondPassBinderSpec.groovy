@@ -47,7 +47,7 @@ class ListSecondPassBinderSpec extends HibernateGormDatastoreSpec {
         EnumTypeBinder etb = new EnumTypeBinder(mbc, cnfpapf, ns)
         SimpleValueColumnFetcher svcf = new SimpleValueColumnFetcher()
         CompositeIdentifierToManyToOneBinder citmto = new CompositeIdentifierToManyToOneBinder(
-                new ForeignKeyColumnCountCalculator(), ns, dcnf, br, svb)
+                collector, new ForeignKeyColumnCountCalculator(), ns, dcnf, br, svb)
         OneToOneBinder otob = new OneToOneBinder(mbc, svb)
         ManyToOneBinder mtob = new ManyToOneBinder(mbc, ns, svb, new ManyToOneValuesBinder(), citmto)
         ForeignKeyOneToOneBinder fkotob = new ForeignKeyOneToOneBinder(mtob, svcf)

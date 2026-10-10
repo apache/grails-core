@@ -69,7 +69,7 @@ class CollectionBinderSpec extends HibernateGormDatastoreSpec {
         def dcnf = new DefaultColumnNameFetcher(ns, backticksRemover)
         def cnfpapf = new ColumnNameForPropertyAndPathFetcher(ns, dcnf, backticksRemover)
         def etb = new EnumTypeBinder(mbc, cnfpapf, ns)
-        def citmto = new CompositeIdentifierToManyToOneBinder(new org.grails.orm.hibernate.cfg.domainbinding.util.ForeignKeyColumnCountCalculator(), ns, dcnf, backticksRemover, svb)
+        def citmto = new CompositeIdentifierToManyToOneBinder(mockCollector, new org.grails.orm.hibernate.cfg.domainbinding.util.ForeignKeyColumnCountCalculator(), ns, dcnf, backticksRemover, svb)
         def mtob = new ManyToOneBinder(mbc, ns, svb, new ManyToOneValuesBinder(), citmto)
         def ch = new CollectionHolder(mbc)
         mockCalculator = Mock(TableForManyCalculator)
