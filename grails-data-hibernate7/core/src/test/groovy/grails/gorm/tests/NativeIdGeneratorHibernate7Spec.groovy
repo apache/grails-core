@@ -35,6 +35,7 @@ import spock.lang.Specification
 
 import java.sql.Connection
 import java.sql.ResultSet
+import java.sql.Statement
 import java.time.Duration
 
 /**
@@ -107,9 +108,20 @@ class NativeIdGeneratorHibernate7Spec extends Specification {
     private static List<String> sequenceNames(HibernateDatastore datastore) {
         List<String> names = []
         datastore.connectionSources.defaultConnectionSource.dataSource.connection.withCloseable { Connection c ->
-            c.metaData.getTables(null, null, '%', ['SEQUENCE'] as String[]).withCloseable { ResultSet rs ->
-                while (rs.next()) {
-                    names << rs.getString('TABLE_NAME')
+            // Oracle's driver does not report sequences through DatabaseMetaData.getTables
+            if (c.metaData.databaseProductName == 'Oracle') {
+                c.createStatement().withCloseable { Statement st ->
+                    st.executeQuery('select sequence_name from user_sequences').withCloseable { ResultSet rs ->
+                        while (rs.next()) {
+                            names << rs.getString(1)
+                        }
+                    }
+                }
+            } else {
+                c.metaData.getTables(null, null, '%', ['SEQUENCE'] as String[]).withCloseable { ResultSet rs ->
+                    while (rs.next()) {
+                        names << rs.getString('TABLE_NAME')
+                    }
                 }
             }
         }
