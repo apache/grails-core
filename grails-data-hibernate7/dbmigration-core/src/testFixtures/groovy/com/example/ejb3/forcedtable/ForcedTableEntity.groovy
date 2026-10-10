@@ -16,23 +16,25 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package com.example.ejb3.forcedtable;
+package com.example.ejb3.forcedtable
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.Id;
-import org.hibernate.annotations.GenericGenerator;
-import org.hibernate.annotations.Parameter;
-import org.hibernate.id.enhanced.SequenceStyleGenerator;
+import jakarta.persistence.Entity
+import jakarta.persistence.GeneratedValue
+import jakarta.persistence.Id
+
+import org.hibernate.annotations.GenericGenerator
+import org.hibernate.annotations.Parameter
+import org.hibernate.id.enhanced.SequenceStyleGenerator
 
 @Entity
-public class ForcedTableEntity {
+class ForcedTableEntity {
 
     @Id
-    @GeneratedValue(generator = "forced_table_gen")
-    @GenericGenerator(name = "forced_table_gen", type = SequenceStyleGenerator.class, parameters = {
-            @Parameter(name = "force_table_use", value = "true"),
-            @Parameter(name = "sequence_name", value = "forced_table_seq")
-    })
-    private Long id;
+    @GeneratedValue(generator = 'forced_table_gen')
+    @GenericGenerator(name = 'forced_table_gen', type = SequenceStyleGenerator, parameters = [
+            @Parameter(name = 'force_table_use', value = 'true'),
+            @Parameter(name = 'sequence_name', value = 'forced_table_seq')
+    ])
+    Long id
+
 }

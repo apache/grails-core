@@ -16,19 +16,29 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package com.example.ejb3.qualifiedsequence;
+package com.example.columnremarks
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.SequenceGenerator;
+import jakarta.persistence.Column
+import jakarta.persistence.Entity
+import jakarta.persistence.GeneratedValue
+import jakarta.persistence.GenerationType
+import jakarta.persistence.Id
+
+import org.hibernate.annotations.Comment
 
 @Entity
-public class QualifiedSequenceEntity {
+@Comment('This is the item table')
+class Item {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "qs_gen")
-    @SequenceGenerator(name = "qs_gen", sequenceName = "qs_seq", schema = "app")
-    private Long id;
+    @GeneratedValue(strategy = GenerationType.SEQUENCE)
+    long id
+
+    @Comment('The name of the item')
+    @Column
+    String name
+
+    @Column
+    String description
+
 }
