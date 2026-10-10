@@ -16,12 +16,12 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.orm.hibernate.query;
+package org.grails.orm.hibernate.query
 
-import java.util.List;
+import groovy.transform.CompileStatic
 
-import org.grails.datastore.gorm.query.criteria.AbstractDetachedCriteria;
-import org.grails.datastore.mapping.query.api.Criteria;
+import org.grails.datastore.gorm.query.criteria.AbstractDetachedCriteria
+import org.grails.datastore.mapping.query.api.Criteria
 
 /**
  * Groovy extension methods that add {@code sqlRestriction} to detached criteria, registered in
@@ -32,7 +32,8 @@ import org.grails.datastore.mapping.query.api.Criteria;
  *
  * @since 8.0.0
  */
-public final class HibernateDetachedCriteriaExtension {
+@CompileStatic
+final class HibernateDetachedCriteriaExtension {
 
     private HibernateDetachedCriteriaExtension() {
     }
@@ -42,11 +43,11 @@ public final class HibernateDetachedCriteriaExtension {
      * the criteria's entity.
      *
      * @param self the detached criteria
-     * @param sqlRestriction the SQL condition
+     * @param sql the SQL condition
      * @return the detached criteria
      */
-    public static Criteria sqlRestriction(AbstractDetachedCriteria<?> self, String sqlRestriction) {
-        return sqlRestriction(self, sqlRestriction, List.of());
+    static Criteria sqlRestriction(AbstractDetachedCriteria<?> self, String sql) {
+        return sqlRestriction(self, sql, List.of())
     }
 
     /**
@@ -54,14 +55,15 @@ public final class HibernateDetachedCriteriaExtension {
      * {@code {alias}} in the SQL stands for the table alias of the criteria's entity.
      *
      * @param self the detached criteria
-     * @param sqlRestriction the SQL condition
+     * @param sql the SQL condition
      * @param values the values of the {@code ?} placeholders, in order, none of them {@code null}
      * @return the detached criteria
      * @throws IllegalArgumentException if the number of {@code ?} placeholders differs from the number of values,
      *     or a value is {@code null}
      */
-    public static Criteria sqlRestriction(AbstractDetachedCriteria<?> self, String sqlRestriction, List<?> values) {
-        self.add(new SqlRestriction(sqlRestriction, values));
-        return self;
+    static Criteria sqlRestriction(AbstractDetachedCriteria<?> self, String sql, List<?> values) {
+        self.add(new SqlRestriction(sql, values))
+        return self
     }
+
 }

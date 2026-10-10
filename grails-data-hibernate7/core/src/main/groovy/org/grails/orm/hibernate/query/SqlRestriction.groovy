@@ -16,13 +16,12 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.orm.hibernate.query;
+package org.grails.orm.hibernate.query
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
+import groovy.transform.CompileStatic
+import groovy.transform.PackageScope
 
-import org.grails.datastore.mapping.query.Query;
+import org.grails.datastore.mapping.query.Query
 
 /**
  * Criterion that restricts the results with a native SQL condition, created by {@code sqlRestriction} in a
@@ -34,100 +33,106 @@ import org.grails.datastore.mapping.query.Query;
  * @param values the values of the {@code ?} placeholders, in order
  * @since 8.0.0
  */
-public record SqlRestriction(String sql, List<?> values) implements Query.Criterion {
+@CompileStatic
+record SqlRestriction(String sql, List<?> values) implements Query.Criterion {
 
-    public SqlRestriction {
+    SqlRestriction {
         if (sql == null) {
-            throw new IllegalArgumentException("The SQL of a sqlRestriction must not be null");
+            throw new IllegalArgumentException('The SQL of a sqlRestriction must not be null')
         }
         if (values == null) {
-            values = List.of();
+            values = List.of()
         }
-        List<Object> copy = new ArrayList<>(values.size());
+        List<Object> copy = new ArrayList<>(values.size())
         for (Object value : values) {
             if (value == null) {
-                throw new IllegalArgumentException("The values of a sqlRestriction must not be null: " + sql);
+                throw new IllegalArgumentException("The values of a sqlRestriction must not be null: ${sql}".toString())
             }
-            copy.add(value instanceof CharSequence ? value.toString() : value);
+            copy.add(value instanceof CharSequence ? value.toString() : value)
         }
-        int placeholders = placeholderIndexes(sql).size();
+        int placeholders = placeholderIndexes(sql).size()
         if (placeholders != copy.size()) {
-            throw new IllegalArgumentException("The SQL of a sqlRestriction has " + placeholders +
-                    " ? placeholders but " + copy.size() + " values: " + sql);
+            throw new IllegalArgumentException(
+                    "The SQL of a sqlRestriction has ${placeholders} ? placeholders but ${copy.size()} values: ${sql}".toString())
         }
-        values = Collections.unmodifiableList(copy);
+        values = Collections.unmodifiableList(copy)
     }
 
     /**
      * Returns the indexes of the {@code ?} placeholders in the SQL. A {@code ?} in a string literal, a quoted
      * identifier, a line comment or a block comment is not a placeholder.
      */
+    @PackageScope
     static List<Integer> placeholderIndexes(String sql) {
-        List<Integer> placeholders = new ArrayList<>();
-        scan(sql, placeholders);
-        return placeholders;
+        List<Integer> placeholders = new ArrayList<>()
+        scan(sql, placeholders)
+        return placeholders
     }
 
     /**
      * Returns whether the SQL ends in a line comment, which would comment out anything appended to it on the same
      * line.
      */
+    @PackageScope
     static boolean endsInLineComment(String sql) {
-        return scan(sql, new ArrayList<>());
+        return scan(sql, new ArrayList<Integer>())
     }
 
     private static boolean scan(String sql, List<Integer> placeholders) {
-        int length = sql.length();
-        int i = 0;
+        int length = sql.length()
+        int i = 0
         while (i < length) {
-            char c = sql.charAt(i);
-            if (c == '\'' || c == '"' || c == '`') {
-                i = skipQuoted(sql, i, c);
-            } else if (c == '-' && sql.startsWith("--", i)) {
-                int end = endOfLine(sql, i);
+            char c = sql.charAt(i)
+            if (c == (char) "'" || c == (char) '"' || c == (char) '`') {
+                i = skipQuoted(sql, i, c)
+            } else if (c == (char) '-' && sql.startsWith('--', i)) {
+                int end = endOfLine(sql, i)
                 if (end == length) {
-                    return true;
+                    return true
                 }
-                i = end;
-            } else if (c == '/' && sql.startsWith("/*", i)) {
-                int end = sql.indexOf("*/", i + 2);
-                i = end == -1 ? length : end + 2;
+                i = end
+            } else if (c == (char) '/' && sql.startsWith('/*', i)) {
+                int end = sql.indexOf('*/', i + 2)
+                i = end == -1 ? length : end + 2
             } else {
-                if (c == '?') {
-                    placeholders.add(i);
+                if (c == (char) '?') {
+                    placeholders.add(i)
                 }
-                i++;
+                i++
             }
         }
-        return false;
+        return false
     }
 
     /**
      * Returns the index after the quoted text starting at {@code start}, where a doubled quote stands for the quote
      * itself.
      */
+    @PackageScope
     static int skipQuoted(String sql, int start, char quote) {
-        int i = start + 1;
+        int i = start + 1
         while (i < sql.length()) {
             if (sql.charAt(i) == quote) {
                 if (i + 1 < sql.length() && sql.charAt(i + 1) == quote) {
-                    i += 2;
-                    continue;
+                    i += 2
+                    continue
                 }
-                return i + 1;
+                return i + 1
             }
-            i++;
+            i++
         }
-        return i;
+        return i
     }
 
+    @PackageScope
     static int endOfLine(String sql, int start) {
         for (int i = start; i < sql.length(); i++) {
-            char c = sql.charAt(i);
-            if (c == '\n' || c == '\r') {
-                return i;
+            char c = sql.charAt(i)
+            if (c == (char) '\n' || c == (char) '\r') {
+                return i
             }
         }
-        return sql.length();
+        return sql.length()
     }
+
 }

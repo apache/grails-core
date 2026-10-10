@@ -16,22 +16,24 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.orm.hibernate.query;
+package org.grails.orm.hibernate.query
 
-import org.hibernate.boot.model.FunctionContributions;
-import org.hibernate.boot.model.FunctionContributor;
+import groovy.transform.CompileStatic
+
+import org.grails.datastore.mapping.query.Query
 
 /**
- * Registers the {@link GrailsSqlRestrictionFunction}.
+ * Criterion matching a property that equals a value when both are compared in lower case. It is created by
+ * {@code eq(property, value, [ignoreCase: true])} in a criteria query. A property that is not a {@link String}
+ * is compared with plain equality.
  *
  * @since 8.0.0
  */
-public class GrailsSqlRestrictionFunctionContributor implements FunctionContributor {
+@CompileStatic
+class EqualsIgnoreCase extends Query.PropertyCriterion {
 
-    @Override
-    public void contributeFunctions(FunctionContributions functionContributions) {
-        functionContributions.getFunctionRegistry().register(
-                GrailsSqlRestrictionFunction.NAME,
-                new GrailsSqlRestrictionFunction(functionContributions.getTypeConfiguration()));
+    EqualsIgnoreCase(String name, Object value) {
+        super(name, value)
     }
+
 }
