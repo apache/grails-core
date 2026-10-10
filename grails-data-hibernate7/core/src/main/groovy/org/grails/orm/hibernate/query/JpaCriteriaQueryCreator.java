@@ -306,7 +306,9 @@ public class JpaCriteriaQueryCreator<T> {
                 }
             } else if (criterion instanceof DetachedAssociationCriteria<?> dac) {
                 if (dac.getAlias() != null) {
-                    context.registerAlias(dac.getAlias(), new HibernateAlias(dac.getAssociationPath(), dac.getAlias()));
+                    String associationPath = dac.getAssociationPath();
+                    JoinType joinType = detachedCriteria.getJoinTypes().getOrDefault(associationPath, JoinType.INNER);
+                    context.registerAlias(dac.getAlias(), new HibernateAlias(associationPath, dac.getAlias(), joinType));
                 }
                 discoverAliases(dac.getCriteria(), context);
             } else if (criterion instanceof Query.PropertyNameCriterion pnc) {
