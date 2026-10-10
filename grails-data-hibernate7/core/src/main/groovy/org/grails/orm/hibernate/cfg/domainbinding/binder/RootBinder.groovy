@@ -21,10 +21,10 @@ package org.grails.orm.hibernate.cfg.domainbinding.binder
 import java.util.stream.Stream
 
 import groovy.transform.CompileStatic
-import jakarta.annotation.Nonnull
 import org.hibernate.boot.spi.InFlightMetadataCollector
 import org.hibernate.mapping.RootClass
 import org.hibernate.mapping.Subclass
+import org.jspecify.annotations.NonNull
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
@@ -70,7 +70,7 @@ class RootBinder {
      *
      * @param entity The Grails domain class
      */
-    void bindRoot(@Nonnull HibernatePersistentEntity entity) {
+    void bindRoot(@NonNull HibernatePersistentEntity entity) {
         if (mappings.getEntityBinding(entity.name) != null) {
             if (LOG.isWarnEnabled()) {
                 LOG.warn('[RootBinder] Class [{}] is already mapped, skipping.. ', entity.name)
@@ -100,6 +100,7 @@ class RootBinder {
         mappings.addEntityBinding(subClass)
     }
 
+    @NonNull
     private Stream<Subclass> getSubclassStream(HibernatePersistentEntity entity, RootClass root) {
         mappingCacheHolder.cacheMapping(entity)
         return subClassBinder.bindSubClass(entity, root).stream()

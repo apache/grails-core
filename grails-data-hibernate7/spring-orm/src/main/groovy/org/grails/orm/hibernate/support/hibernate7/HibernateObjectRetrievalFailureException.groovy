@@ -20,6 +20,7 @@ import groovy.transform.PackageScope
 import org.hibernate.HibernateException
 import org.hibernate.UnresolvableObjectException
 import org.hibernate.WrongClassException
+import org.jspecify.annotations.Nullable
 import org.springframework.orm.ObjectRetrievalFailureException
 import org.springframework.util.ReflectionUtils
 
@@ -43,6 +44,7 @@ class HibernateObjectRetrievalFailureException extends ObjectRetrievalFailureExc
         super(ex.getEntityName(), getIdentifier(ex), ex.getMessage(), ex)
     }
 
+    @Nullable
     @PackageScope
     static Object getIdentifier(HibernateException hibEx) {
         try {

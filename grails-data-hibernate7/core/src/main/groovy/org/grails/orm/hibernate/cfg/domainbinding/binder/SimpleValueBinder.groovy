@@ -28,6 +28,7 @@ import org.hibernate.mapping.DependantValue
 import org.hibernate.mapping.Formula
 import org.hibernate.mapping.SimpleValue
 import org.hibernate.mapping.Table
+import org.jspecify.annotations.NonNull
 
 import org.grails.datastore.mapping.model.types.TenantId
 import org.grails.orm.hibernate.cfg.ColumnConfig
@@ -69,7 +70,7 @@ class SimpleValueBinder {
     }
 
     BasicValue bindBasicValue(
-            @Nonnull HibernatePersistentProperty property,
+            @NonNull HibernatePersistentProperty property,
             HibernatePersistentProperty parentProperty,
             String path) {
         BasicValue basicValue = basicValueCreator.bindBasicValue(property)

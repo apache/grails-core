@@ -263,10 +263,11 @@ class GrailsDomainBinder implements AdditionalMappingContributor, TypeContributo
      * @param datasourceName the datasource name
      * @param strategy the class, name, or instance
      * @throws ClassNotFoundException When the class was not found for specified strategy
-     * @throws ReflectiveOperationException When an error occurred instantiating the strategy
+     * @throws IllegalAccessException When the strategy class cannot be accessed
+     * @throws InstantiationException When the strategy class cannot be instantiated
      */
     void configureNamingStrategy(String datasourceName, Object strategy)
-            throws ClassNotFoundException, ReflectiveOperationException {
+            throws ClassNotFoundException, InstantiationException, IllegalAccessException {
         namingStrategyProvider.configureNamingStrategy(datasourceName, strategy)
     }
 

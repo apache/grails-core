@@ -19,9 +19,9 @@
 package org.grails.orm.hibernate.cfg.domainbinding.binder
 
 import groovy.transform.CompileStatic
-import jakarta.annotation.Nonnull
 import org.hibernate.boot.spi.InFlightMetadataCollector
 import org.hibernate.mapping.PersistentClass
+import org.jspecify.annotations.NonNull
 
 import org.grails.orm.hibernate.cfg.Mapping
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
@@ -38,7 +38,7 @@ class ClassBinder {
 
     private final InFlightMetadataCollector collector
 
-    ClassBinder(@Nonnull InFlightMetadataCollector collector) {
+    ClassBinder(@NonNull InFlightMetadataCollector collector) {
         this.collector = collector
     }
 
@@ -49,7 +49,7 @@ class ClassBinder {
      * @param persistentEntity The Grails domain class
      * @param persistentClass The persistent class
      */
-    void bindClass(@Nonnull GrailsHibernatePersistentEntity persistentEntity, PersistentClass persistentClass) {
+    void bindClass(@NonNull GrailsHibernatePersistentEntity persistentEntity, PersistentClass persistentClass) {
         persistentClass.lazy = true
         String entityName = persistentEntity.name
         persistentClass.entityName = entityName

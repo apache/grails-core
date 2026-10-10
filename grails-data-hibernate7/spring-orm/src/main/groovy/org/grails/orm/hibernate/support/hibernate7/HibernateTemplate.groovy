@@ -35,6 +35,7 @@ import org.hibernate.Session
 import org.hibernate.SessionFactory
 import org.hibernate.engine.spi.SessionImplementor
 import org.hibernate.query.Query
+import org.jspecify.annotations.Nullable
 import org.springframework.beans.factory.InitializingBean
 import org.springframework.dao.DataAccessException
 import org.springframework.dao.InvalidDataAccessApiUsageException
@@ -84,8 +85,10 @@ class HibernateTemplate implements HibernateOperations, InitializingBean {
 
     protected final Log logger = LogFactory.getLog(getClass())
 
+    @Nullable
     private SessionFactory sessionFactory
 
+    @Nullable
     private String[] filterNames
 
     private boolean exposeNativeSession = false
@@ -94,6 +97,7 @@ class HibernateTemplate implements HibernateOperations, InitializingBean {
 
     private boolean cacheQueries = false
 
+    @Nullable
     private String queryCacheRegion
 
     private int fetchSize = 0
@@ -119,7 +123,7 @@ class HibernateTemplate implements HibernateOperations, InitializingBean {
      * Set the Hibernate SessionFactory that should be used to create
      * Hibernate Sessions.
      */
-    void setSessionFactory(SessionFactory sessionFactory) {
+    void setSessionFactory(@Nullable SessionFactory sessionFactory) {
         this.sessionFactory = sessionFactory
     }
 
@@ -127,6 +131,7 @@ class HibernateTemplate implements HibernateOperations, InitializingBean {
      * Return the Hibernate SessionFactory that should be used to create
      * Hibernate Sessions.
      */
+    @Nullable
     SessionFactory getSessionFactory() {
         return this.sessionFactory
     }
@@ -153,13 +158,14 @@ class HibernateTemplate implements HibernateOperations, InitializingBean {
      * @see #enableFilters(Session)
      * @see Session#enableFilter(String)
      */
-    void setFilterNames(String... filterNames) {
+    void setFilterNames(@Nullable String... filterNames) {
         this.filterNames = filterNames
     }
 
     /**
      * Return the names of Hibernate filters to be activated, if any.
      */
+    @Nullable
     String[] getFilterNames() {
         return this.filterNames
     }
@@ -242,13 +248,14 @@ class HibernateTemplate implements HibernateOperations, InitializingBean {
      * @see Query#setCacheRegion
      * @see Criteria#setCacheRegion
      */
-    void setQueryCacheRegion(String queryCacheRegion) {
+    void setQueryCacheRegion(@Nullable String queryCacheRegion) {
         this.queryCacheRegion = queryCacheRegion
     }
 
     /**
      * Return the name of the cache region for queries executed by this template.
      */
+    @Nullable
     String getQueryCacheRegion() {
         return this.queryCacheRegion
     }
@@ -297,6 +304,7 @@ class HibernateTemplate implements HibernateOperations, InitializingBean {
         }
     }
 
+    @Nullable
     @Override
     def <T> T execute(HibernateCallback<T> action) throws DataAccessException {
         return doExecute(action, false)
@@ -311,6 +319,7 @@ class HibernateTemplate implements HibernateOperations, InitializingBean {
      * @return a result object returned by the action, or {@code null}
      * @throws DataAccessException in case of Hibernate errors
      */
+    @Nullable
     def <T> T executeWithNativeSession(HibernateCallback<T> action) {
         return doExecute(action, true)
     }
@@ -323,6 +332,7 @@ class HibernateTemplate implements HibernateOperations, InitializingBean {
      * @return a result object returned by the action, or {@code null}
      * @throws DataAccessException in case of Hibernate errors
      */
+    @Nullable
     protected <T> T doExecute(HibernateCallback<T> action, boolean enforceNativeSession) throws DataAccessException {
         Assert.notNull(action, 'Callback object must not be null')
 
@@ -412,13 +422,15 @@ class HibernateTemplate implements HibernateOperations, InitializingBean {
     // Convenience methods for loading individual objects
     //-------------------------------------------------------------------------
 
+    @Nullable
     @Override
     def <T> T get(Class<T> entityClass, Serializable id) throws DataAccessException {
         return get(entityClass, id, null)
     }
 
+    @Nullable
     @Override
-    def <T> T get(Class<T> entityClass, Serializable id, LockMode lockMode) throws DataAccessException {
+    def <T> T get(Class<T> entityClass, Serializable id, @Nullable LockMode lockMode) throws DataAccessException {
         return executeWithNativeSession({ Session session ->
             if (lockMode != null) {
                 return session.get(entityClass, id, new LockOptions(lockMode))
@@ -428,13 +440,15 @@ class HibernateTemplate implements HibernateOperations, InitializingBean {
         } as HibernateCallback<T>)
     }
 
+    @Nullable
     @Override
     Object get(String entityName, Serializable id) throws DataAccessException {
         return get(entityName, id, null)
     }
 
+    @Nullable
     @Override
-    Object get(String entityName, Serializable id, LockMode lockMode) throws DataAccessException {
+    Object get(String entityName, Serializable id, @Nullable LockMode lockMode) throws DataAccessException {
         return executeWithNativeSession({ Session session ->
             if (lockMode != null) {
                 return session.get(entityName, id, new LockOptions(lockMode))
@@ -450,7 +464,7 @@ class HibernateTemplate implements HibernateOperations, InitializingBean {
     }
 
     @Override
-    def <T> T load(Class<T> entityClass, Serializable id, LockMode lockMode)
+    def <T> T load(Class<T> entityClass, Serializable id, @Nullable LockMode lockMode)
             throws DataAccessException {
 
         return nonNull(executeWithNativeSession({ Session session ->
@@ -468,7 +482,7 @@ class HibernateTemplate implements HibernateOperations, InitializingBean {
     }
 
     @Override
-    Object load(String entityName, Serializable id, LockMode lockMode) throws DataAccessException {
+    Object load(String entityName, Serializable id, @Nullable LockMode lockMode) throws DataAccessException {
         return nonNull(executeWithNativeSession({ Session session ->
             if (lockMode != null) {
                 return session.get(entityName, id, new LockOptions(lockMode))
@@ -494,7 +508,7 @@ class HibernateTemplate implements HibernateOperations, InitializingBean {
     }
 
     @Override
-    void refresh(Object entity, LockMode lockMode) throws DataAccessException {
+    void refresh(Object entity, @Nullable LockMode lockMode) throws DataAccessException {
         executeWithNativeSession({ Session session ->
             if (lockMode != null) {
                 session.refresh(entity, new LockOptions(lockMode))
@@ -597,7 +611,7 @@ class HibernateTemplate implements HibernateOperations, InitializingBean {
     }
 
     @Override
-    void update(Object entity, LockMode lockMode) throws DataAccessException {
+    void update(Object entity, @Nullable LockMode lockMode) throws DataAccessException {
         executeWithNativeSession({ Session session ->
             checkWriteOperationAllowed(session)
             session.merge(entity)
@@ -614,7 +628,7 @@ class HibernateTemplate implements HibernateOperations, InitializingBean {
     }
 
     @Override
-    void update(String entityName, Object entity, LockMode lockMode)
+    void update(String entityName, Object entity, @Nullable LockMode lockMode)
             throws DataAccessException {
 
         executeWithNativeSession({ Session session ->
@@ -719,7 +733,7 @@ class HibernateTemplate implements HibernateOperations, InitializingBean {
     }
 
     @Override
-    void delete(Object entity, LockMode lockMode) throws DataAccessException {
+    void delete(Object entity, @Nullable LockMode lockMode) throws DataAccessException {
         executeWithNativeSession({ Session session ->
             checkWriteOperationAllowed(session)
             if (lockMode != null) {
@@ -736,7 +750,7 @@ class HibernateTemplate implements HibernateOperations, InitializingBean {
     }
 
     @Override
-    void delete(String entityName, Object entity, LockMode lockMode)
+    void delete(String entityName, Object entity, @Nullable LockMode lockMode)
             throws DataAccessException {
 
         executeWithNativeSession({ Session session ->
@@ -782,7 +796,7 @@ class HibernateTemplate implements HibernateOperations, InitializingBean {
 
     @Deprecated
     @Override
-    List<?> find(String queryString, Object... values) throws DataAccessException {
+    List<?> find(String queryString, @Nullable Object... values) throws DataAccessException {
         return nonNull(executeWithNativeSession({ Session session ->
             Query<?> queryObject = session.createQuery(queryString)
             prepareQuery(queryObject)
@@ -838,7 +852,7 @@ class HibernateTemplate implements HibernateOperations, InitializingBean {
 
     @Deprecated
     @Override
-    List<?> findByNamedQuery(String queryName, Object... values) throws DataAccessException {
+    List<?> findByNamedQuery(String queryName, @Nullable Object... values) throws DataAccessException {
         return nonNull(executeWithNativeSession({ Session session ->
             Query<?> queryObject = session.getNamedQuery(queryName)
             prepareQuery(queryObject)
@@ -862,7 +876,7 @@ class HibernateTemplate implements HibernateOperations, InitializingBean {
     @Deprecated
     @Override
     List<?> findByNamedQueryAndNamedParam(
-            String queryName, String[] paramNames, Object[] values)
+            String queryName, @Nullable String[] paramNames, @Nullable Object[] values)
             throws DataAccessException {
 
         if (values != null && (paramNames == null || paramNames.length != values.length)) {
@@ -897,7 +911,7 @@ class HibernateTemplate implements HibernateOperations, InitializingBean {
 
     @Deprecated
     @Override
-    int bulkUpdate(String queryString, Object... values) throws DataAccessException {
+    int bulkUpdate(String queryString, @Nullable Object... values) throws DataAccessException {
         Integer result = executeWithNativeSession({ Session session ->
             Query<?> queryObject = session.createQuery(queryString)
             prepareQuery(queryObject)
@@ -981,7 +995,7 @@ class HibernateTemplate implements HibernateOperations, InitializingBean {
         }
     }
 
-    private static <T> T nonNull(T result) {
+    private static <T> T nonNull(@Nullable T result) {
         Assert.state(result != null, 'No result')
         return result
     }
@@ -999,6 +1013,7 @@ class HibernateTemplate implements HibernateOperations, InitializingBean {
             this.target = target
         }
 
+        @Nullable
         @Override
         Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
             // Invocation on Session interface coming in...

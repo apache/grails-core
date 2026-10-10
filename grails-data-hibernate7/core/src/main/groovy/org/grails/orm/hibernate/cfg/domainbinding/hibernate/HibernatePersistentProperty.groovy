@@ -26,6 +26,7 @@ import org.hibernate.mapping.SimpleValue
 import org.hibernate.mapping.Table
 import org.hibernate.mapping.ToOne
 import org.hibernate.usertype.UserCollectionType
+import org.jspecify.annotations.Nullable
 
 import org.grails.datastore.mapping.model.PersistentProperty
 import org.grails.datastore.mapping.model.types.Association
@@ -42,6 +43,7 @@ import static org.grails.orm.hibernate.cfg.GrailsHibernateUtil.qualify
 @CompileStatic
 interface HibernatePersistentProperty extends PersistentProperty<PropertyConfig> {
 
+    @Nullable
     private static String getMappingName(Class<?> propertyClass, Mapping mapping) {
         // Falls back to the class name both when there is no mapping at all and when the
         // mapping has no custom user type registered for this class (the normal case).
@@ -49,6 +51,7 @@ interface HibernatePersistentProperty extends PersistentProperty<PropertyConfig>
         return mappedName != null ? mappedName : getClassName(propertyClass)
     }
 
+    @Nullable
     private static String getClassName(Class<?> propertyClass) {
         return propertyClass != null && !propertyClass.isEnum() ? propertyClass.getName() : null
     }
@@ -257,6 +260,7 @@ interface HibernatePersistentProperty extends PersistentProperty<PropertyConfig>
      *
      * @return The generator name, or {@code null} if none is configured
      */
+    @Nullable
     default String getGeneratorName() {
         PropertyConfig mappedForm = getHibernateMappedForm()
         return mappedForm != null ? mappedForm.getGenerator() : null

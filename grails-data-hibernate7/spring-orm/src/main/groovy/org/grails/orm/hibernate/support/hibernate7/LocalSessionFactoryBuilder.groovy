@@ -44,6 +44,7 @@ import org.hibernate.context.spi.CurrentTenantIdentifierResolver
 import org.hibernate.engine.jdbc.connections.spi.MultiTenantConnectionProvider
 import org.hibernate.engine.spi.SessionFactoryImplementor
 import org.hibernate.resource.jdbc.spi.PhysicalConnectionHandlingMode
+import org.jspecify.annotations.Nullable
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory
 import org.springframework.core.InfrastructureProxy
 import org.springframework.core.SpringProperties
@@ -120,7 +121,7 @@ class LocalSessionFactoryBuilder extends Configuration {
      * @param dataSource the JDBC DataSource that the resulting Hibernate SessionFactory should be using
      * (may be {@code null})
      */
-    LocalSessionFactoryBuilder(DataSource dataSource) {
+    LocalSessionFactoryBuilder(@Nullable DataSource dataSource) {
         this(dataSource, new PathMatchingResourcePatternResolver())
     }
 
@@ -130,7 +131,7 @@ class LocalSessionFactoryBuilder extends Configuration {
      * (may be {@code null})
      * @param classLoader the ClassLoader to load application classes from
      */
-    LocalSessionFactoryBuilder(DataSource dataSource, ClassLoader classLoader) {
+    LocalSessionFactoryBuilder(@Nullable DataSource dataSource, ClassLoader classLoader) {
         this(dataSource, new PathMatchingResourcePatternResolver(classLoader))
     }
 
@@ -140,7 +141,7 @@ class LocalSessionFactoryBuilder extends Configuration {
      * (may be {@code null})
      * @param resourceLoader the ResourceLoader to load application classes from
      */
-    LocalSessionFactoryBuilder(DataSource dataSource, ResourceLoader resourceLoader) {
+    LocalSessionFactoryBuilder(@Nullable DataSource dataSource, ResourceLoader resourceLoader) {
         this(dataSource, resourceLoader, new MetadataSources(
                 new BootstrapServiceRegistryBuilder().applyClassLoader(resourceLoader.getClassLoader()).build()))
     }
@@ -154,7 +155,7 @@ class LocalSessionFactoryBuilder extends Configuration {
      * @since 4.3
      */
     LocalSessionFactoryBuilder(
-            DataSource dataSource, ResourceLoader resourceLoader, MetadataSources metadataSources) {
+            @Nullable DataSource dataSource, ResourceLoader resourceLoader, MetadataSources metadataSources) {
 
         super(metadataSources)
 

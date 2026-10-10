@@ -24,6 +24,7 @@ import org.hibernate.MappingException
 import org.hibernate.mapping.Collection
 import org.hibernate.mapping.IndexedCollection
 
+import org.jspecify.annotations.NonNull
 import org.springframework.util.StringUtils
 
 import org.grails.datastore.mapping.model.types.Association
@@ -293,6 +294,7 @@ interface HibernateToManyProperty extends PropertyWithMapping<PropertyConfig>, H
         return columnName
     }
 
+    @NonNull
     default Optional<ColumnConfig> getColumnConfigOptional() {
         PropertyConfig mapped = hibernateMappedForm
         return Optional.ofNullable(mapped != null ? mapped.joinTableColumnConfig : null)
