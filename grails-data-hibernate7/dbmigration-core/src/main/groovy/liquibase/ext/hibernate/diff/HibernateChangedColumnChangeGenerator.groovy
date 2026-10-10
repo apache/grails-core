@@ -41,26 +41,22 @@ class HibernateChangedColumnChangeGenerator extends ChangedColumnChangeGenerator
             return
         }
 
-        if (differences.getDifference('type') != null) {
-            filterIrrelevantDifferences(differences)
+        Difference typeDifference = differences.getDifference('type')
+        if (typeDifference != null) {
+            // Only the "type" difference is dropped when the size is unchanged; unrelated differences for the same
+            // column (e.g. remarks) must survive.
+            if (typeDifference.getReferenceValue() instanceof DataType) {
+                DataType referenceType = (DataType) typeDifference.getReferenceValue()
+                Integer comparedSize = null
+                if (typeDifference.getComparedValue() instanceof DataType) {
+                    comparedSize = ((DataType) typeDifference.getComparedValue()).getColumnSize()
+                }
+                if (isSizeEqualOrNull(referenceType.getColumnSize(), comparedSize)) {
+                    differences.removeDifference('type')
+                }
+            }
             super.handleTypeDifferences(column, differences, control, changes, refDb, compDb)
         }
-    }
-
-    private void filterIrrelevantDifferences(ObjectDifferences differences) {
-        for (Difference diff : new ArrayList<Difference>(differences.getDifferences())) {
-            if (!isMeaningfulDifference(diff)) {
-                differences.removeDifference(diff.getField())
-            }
-        }
-    }
-
-    private boolean isMeaningfulDifference(Difference diff) {
-        Object referenceValue = diff.getReferenceValue()
-        Object comparedValue = diff.getComparedValue()
-        return referenceValue instanceof DataType &&
-               comparedValue instanceof DataType &&
-               !isSizeEqualOrNull(((DataType) referenceValue).getColumnSize(), ((DataType) comparedValue).getColumnSize())
     }
 
     @Override

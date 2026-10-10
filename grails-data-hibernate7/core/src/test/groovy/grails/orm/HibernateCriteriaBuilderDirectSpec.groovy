@@ -343,9 +343,33 @@ class HibernateCriteriaBuilderDirectSpec extends HibernateGormDatastoreSpec {
         c.list { inList("category", "Y") }*.name.sort() == ["C", "D"]
     }
 
-    void "test eq with ignoreCase param delegates to a like criterion"() {
-        expect: "ignoreCase performs a substring match rather than an exact equality check"
-        c.list { eq("name", "A", [ignoreCase: true]) }*.name == ["A"]
+    void "test eq with ignoreCase param matches the whole value in any case"() {
+        given: 'names that a substring or LIKE pattern match would also find'
+        new CriteriaTestEntity(name: 'Ann', amount: 50, category: 'Z').save()
+        new CriteriaTestEntity(name: 'a%', amount: 60, category: 'Z').save(flush: true)
+
+        expect:
+        c.list { eq('name', 'a', [ignoreCase: true]) }*.name == ['A']
+        c.list { eq('name', 'ANN', [ignoreCase: true]) }*.name == ['Ann']
+        c.list { eq('name', 'A%', [ignoreCase: true]) }*.name == ['a%']
+        c.list { eq([ignoreCase: true], 'name', 'ann') }*.name == ['Ann']
+    }
+
+    void "test eq with ignoreCase false, a non-String value or a non-String property compares with plain equality"() {
+        expect:
+        c.list { eq('name', 'a', [ignoreCase: false]) }.empty
+        c.list { eq('name', 'A', [ignoreCase: false]) }*.name == ['A']
+        c.list { eq('amount', 20, [ignoreCase: true]) }*.name == ['B']
+        c.list { eq('amount', '20', [ignoreCase: true]) }*.name == ['B']
+    }
+
+    void "test eq with ignoreCase param inside an association"() {
+        given:
+        var parent = CriteriaTestEntity.findByName('A')
+        parent.addToChildren(new CriteriaTestChild(name: 'Kid')).save(flush: true)
+
+        expect:
+        c.list { children { eq('name', 'KID', [ignoreCase: true]) } }*.name == ['A']
     }
 
     void "test registerCriterionHandler overrides built-in criterion handling"() {

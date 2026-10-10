@@ -172,7 +172,8 @@ def mergeJmhClasspathMetadata = tasks.register('mergeJmhClasspathMetadata') {
                 'META-INF/spring.schemas'
         ]
 
-        inputs.files(configurations.jmhRuntimeClasspath)
+        FileCollection jmhRuntimeClasspath = configurations.jmhRuntimeClasspath
+        inputs.files(jmhRuntimeClasspath)
                 .withPropertyName('jmhRuntimeClasspath')
                 .withPathSensitivity(PathSensitivity.RELATIVE)
         outputs.dir(mergedMetadataDirectory)
@@ -180,13 +181,13 @@ def mergeJmhClasspathMetadata = tasks.register('mergeJmhClasspathMetadata') {
 
         doLast {
             File outputDirectory = mergedMetadataDirectory.get().asFile
-            project.delete(outputDirectory)
+            outputDirectory.deleteDir()
 
             Map<String, Set<String>> lineEntries = new TreeMap<>()
             Map<String, Map<String, Set<String>>> extensionModuleEntries = new TreeMap<>()
             Map<String, Map<String, Set<String>>> propertyEntries = new TreeMap<>()
 
-            configurations.jmhRuntimeClasspath.files
+            jmhRuntimeClasspath.files
                     .findAll { File artifact -> artifact.name.endsWith('.jar') }
                     .sort { File artifact -> artifact.absolutePath }
                     .each { File artifact ->

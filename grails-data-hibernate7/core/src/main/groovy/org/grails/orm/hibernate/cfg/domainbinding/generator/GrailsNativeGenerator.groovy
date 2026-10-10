@@ -32,8 +32,7 @@ import java.lang.reflect.Field
 /**
  * A native generator that supports Grails assigned identifiers and fixes Hibernate 7 ClassCastException.
  *
- * @author Graeme Rocher
- * @since 7.0
+ * @since 8.0
  */
 @CompileStatic
 class GrailsNativeGenerator extends NativeGenerator {

@@ -17,6 +17,13 @@
  *  under the License.
  */
 
+plugins {
+    // Reads projectVersion from the repository root gradle.properties, the file the release
+    // workflow bumps, so the suite always resolves the version the core build just published.
+    // Every subproject inherits it from here.
+    id 'org.apache.grails.buildsrc.properties'
+}
+
 def localMavenRepo = rootProject.layout.projectDirectory.dir('../build/local-maven')
 
 subprojects {
@@ -27,16 +34,6 @@ subprojects {
             cacheChangingModulesFor(0, 'seconds')
             cacheDynamicVersionsFor(0, 'seconds')
         }
-    }
-
-    // Grails 9 compiles against Groovy 6 while Spock ships as 2.4-groovy-5.0. The framework
-    // build disables Spock's Groovy version check the same way (see CompilePlugin).
-    tasks.withType(GroovyCompile).configureEach {
-        groovyOptions.forkOptions.jvmArgs = (groovyOptions.forkOptions.jvmArgs ?: []) +
-                ['-Dspock.iKnowWhatImDoing.disableGroovyVersionCheck=true']
-    }
-    tasks.withType(Test).configureEach {
-        jvmArgs '-Dspock.iKnowWhatImDoing.disableGroovyVersionCheck=true'
     }
 
     tasks.withType(AbstractCompile).configureEach {

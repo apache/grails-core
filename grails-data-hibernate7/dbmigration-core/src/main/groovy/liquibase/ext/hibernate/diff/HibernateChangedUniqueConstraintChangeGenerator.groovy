@@ -55,6 +55,7 @@ class HibernateChangedUniqueConstraintChangeGenerator extends ChangedUniqueConst
             ChangeGeneratorChain chain) {
         if (referenceDatabase instanceof HibernateDatabase || comparisonDatabase instanceof HibernateDatabase) {
             differences.removeDifference('unique')
+            differences.removeDifference('using')
             if (!differences.hasDifferences()) {
                 return new Change[0]
             }

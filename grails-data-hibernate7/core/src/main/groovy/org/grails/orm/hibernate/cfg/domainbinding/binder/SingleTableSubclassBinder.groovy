@@ -31,7 +31,7 @@ import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersi
 /**
  * Binds a sub-class using table-per-hierarchy inheritance mapping
  *
- * @since 7.0
+ * @since 8.0
  */
 @CompileStatic
 class SingleTableSubclassBinder {

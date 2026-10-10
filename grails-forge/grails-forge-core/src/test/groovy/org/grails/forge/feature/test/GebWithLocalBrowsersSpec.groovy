@@ -91,7 +91,6 @@ class GebWithLocalBrowsersSpec extends ApplicationContextSpec implements Command
         buildGradle.contains("""\
             tasks.withType(Test).configureEach {
                 useJUnitPlatform()
-                systemProperty 'spock.iKnowWhatImDoing.disableGroovyVersionCheck', 'true'
                 def gebEnv = providers.systemProperty('geb.env')
                 if (gebEnv.present) {
                     systemProperty('geb.env', gebEnv.get())

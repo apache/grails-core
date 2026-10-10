@@ -112,7 +112,7 @@ class BuildSettings {
     public static final String OFFLINE_MODE = 'grails.offline.mode'
 
     /**
-     * The name of the system property for {@link #}.
+     * The name of the system property for {@link #RESOURCES_DIR} and {@link #BUILD_RESOURCES_PATH}.
      */
     public static final String PROJECT_RESOURCES_DIR = 'grails.project.resource.dir'
 
@@ -147,7 +147,8 @@ class BuildSettings {
     public static final String PROJECT_TEST_SOURCE_DIR = 'grails.project.test.source.dir'
 
     /**
-     * The name of the system property for the the project target directory. Must be set if Gradle build location is changed.
+     * The name of the system property for {@link #TARGET_DIR}, the build directory relative to the project. The Grails
+     * Gradle plugin passes it, so a changed Gradle build location is followed.
      */
     public static final String PROJECT_TARGET_DIR = 'grails.project.target.dir'
 
@@ -288,9 +289,10 @@ class BuildSettings {
     public static final String BUILD_CLASSES_PATH
 
     /**
-     * The path to the build resources directory
+     * The path to the build resources directory, relative to the project: the {@link #PROJECT_RESOURCES_DIR} system
+     * property, which the Gradle plugin passes, else {@code build/resources/main}
      */
-    public static final String BUILD_RESOURCES_PATH = 'build/resources/main'
+    public static final String BUILD_RESOURCES_PATH
 
     public static final File SHARED_SETTINGS_FILE = new File("${System.getProperty('user.home')}/.grails/settings.groovy")
 
@@ -309,6 +311,7 @@ class BuildSettings {
     }
 
     static {
+        BUILD_RESOURCES_PATH = System.getProperty(PROJECT_RESOURCES_DIR) ?: 'build/resources/main'
         boolean grailsAppDirPresent = new File('grails-app').exists() || new File('Application.groovy').exists()
         if (!grailsAppDirPresent) {
             CLASSES_DIR = null
@@ -334,7 +337,44 @@ class BuildSettings {
         }
         BASE_DIR = System.getProperty(APP_BASE_DIR) ? new File(System.getProperty(APP_BASE_DIR)) : (IOUtils.findApplicationDirectoryFile() ?: new File('.'))
         GRAILS_APP_DIR_PRESENT = new File(BASE_DIR, 'grails-app').exists() || new File(BASE_DIR, 'Application.groovy').exists()
-        TARGET_DIR = new File(BASE_DIR, System.getProperty('project.target.dir', 'build'))
-        RESOURCES_DIR = !GRAILS_APP_DIR_PRESENT ? null : (System.getProperty(PROJECT_RESOURCES_DIR) ? new File(System.getProperty(PROJECT_RESOURCES_DIR)) : new File(TARGET_DIR, 'resources/main'))
+        TARGET_DIR = targetDir(System.getProperty('project.target.dir'), System.getProperty(PROJECT_TARGET_DIR), BASE_DIR)
+        RESOURCES_DIR = !GRAILS_APP_DIR_PRESENT ? null : resourcesDir(System.getProperty(PROJECT_RESOURCES_DIR), BASE_DIR, TARGET_DIR)
+    }
+
+    /**
+     * {@link #TARGET_DIR}: {@code project.target.dir}, the only property read before, which a build sets by hand
+     * ({@code -Dgrails.project.target.dir} given to Gradle reaches the application as it, the Gradle plugin passing
+     * {@code grails.*} system properties on without their prefix), so a value set there is kept; else the
+     * {@link #PROJECT_TARGET_DIR} the Gradle plugin passes, the build directory relative to the project; else
+     * {@code build}. A relative one is joined to the application directory, an absolute one kept as it is. The
+     * development restart marker ({@code .grailspid}) is kept there, so each build directory of one checkout has its own.
+     *
+     * @param byHand the {@code project.target.dir} system property, or null
+     * @param fromPlugin the {@link #PROJECT_TARGET_DIR} system property, or null
+     * @param baseDir the application directory
+     * @return the target directory
+     */
+    private static File targetDir(String byHand, String fromPlugin, File baseDir) {
+        String dir = byHand ?: fromPlugin ?: 'build'
+        File file = new File(dir)
+        file.absolute ? file : new File(baseDir, dir)
+    }
+
+    /**
+     * {@link #RESOURCES_DIR}: a {@link #PROJECT_RESOURCES_DIR} that is relative, as the Gradle plugin passes it, joined
+     * to the application directory rather than the working directory, which a build can move; one that is absolute
+     * as it is; and without one, {@code resources/main} in the target directory.
+     *
+     * @param fromSystem the {@link #PROJECT_RESOURCES_DIR} system property, or null
+     * @param baseDir the application directory
+     * @param targetDir the target directory
+     * @return the resources directory
+     */
+    private static File resourcesDir(String fromSystem, File baseDir, File targetDir) {
+        if (!fromSystem) {
+            return new File(targetDir, 'resources/main')
+        }
+        File dir = new File(fromSystem)
+        dir.absolute ? dir : new File(baseDir, fromSystem)
     }
 }

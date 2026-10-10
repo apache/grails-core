@@ -557,13 +557,12 @@ class GormInstanceApiSpec extends Specification {
         notThrown(Exception)
     }
 
-    void "ident reads the instance's id property"() {
+    void "ident returns the default mapped identifier through the domain API"() {
         given:
-        def api = new GormInstanceApi(GormInstanceApiThing, datastore)
         def saved = new GormInstanceApiThing(name: 'a').save(flush: true)
 
         expect:
-        api.ident(saved) == saved.id
+        saved.ident() == saved.id
     }
 
     void "isAttached reports true for an instance persisted within the current session"() {

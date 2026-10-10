@@ -82,6 +82,7 @@ class BuildIndexesClassificationCostSpec extends AutoStartedMongoSpec {
         datastore = new MongoDatastore(countingClient,
                 DatastoreUtils.createPropertyResolver(['grails.mongodb.databaseName': DATABASE]),
                 ClassifiedThing, FirstSharedCollectionThing, SecondSharedCollectionThing)
+        datastore.start()
         startupListings = listings.get()
         startupSummary = log.events*.formattedMessage.find { it.contains("database [$DATABASE]") }
         log.close()

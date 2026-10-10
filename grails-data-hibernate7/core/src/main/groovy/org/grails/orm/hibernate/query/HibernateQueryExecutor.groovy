@@ -20,7 +20,9 @@ package org.grails.orm.hibernate.query
 
 import groovy.transform.CompileStatic
 import jakarta.persistence.LockModeType
+import jakarta.persistence.Parameter
 import jakarta.persistence.Tuple
+import jakarta.persistence.criteria.ParameterExpression
 import org.hibernate.Session
 import org.hibernate.query.Query
 import org.hibernate.query.QueryFlushMode
@@ -41,16 +43,16 @@ record HibernateQueryExecutor(
         Boolean readOnly,
         ProxyHandler proxyHandler) {
 
-    List list(Session session, JpaCriteriaQuery jpaCq) {
-        return configureQuery(session, jpaCq).resultList
+    List list(Session session, JpaCriteriaQuery jpaCq, Map<ParameterExpression<?>, Object> parameterValues) {
+        return configureQuery(session, jpaCq, parameterValues).resultList
     }
 
-    Object scroll(Session session, JpaCriteriaQuery jpaCq) {
-        return configureQuery(session, jpaCq).scroll()
+    Object scroll(Session session, JpaCriteriaQuery jpaCq, Map<ParameterExpression<?>, Object> parameterValues) {
+        return configureQuery(session, jpaCq, parameterValues).scroll()
     }
 
-    Object singleResult(Session session, JpaCriteriaQuery jpaCq) {
-        Query query = configureQuery(session, jpaCq)
+    Object singleResult(Session session, JpaCriteriaQuery jpaCq, Map<ParameterExpression<?>, Object> parameterValues) {
+        Query query = configureQuery(session, jpaCq, parameterValues)
         try {
             Object singleResult = query.singleResult
             return proxyHandler.unwrap(singleResult)
@@ -61,8 +63,12 @@ record HibernateQueryExecutor(
         }
     }
 
-    private Query configureQuery(Session session, JpaCriteriaQuery jpaCq) {
+    @SuppressWarnings('unchecked')
+    private Query configureQuery(Session session, JpaCriteriaQuery jpaCq, Map<ParameterExpression<?>, Object> parameterValues) {
         Query query = session.createQuery(jpaCq)
+        parameterValues.each { ParameterExpression<?> parameter, Object value ->
+            query.setParameter((Parameter<Object>) parameter, value)
+        }
         if (Tuple.equals(jpaCq.resultType)) {
             query.setTupleTransformer({ payload, aliases -> payload })
         }

@@ -15,18 +15,24 @@
 
 package org.grails.datastore.mapping.mongo
 
+import java.util.concurrent.CancellationException
+import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.RejectedExecutionException
 import java.util.concurrent.ThreadPoolExecutor
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.locks.ReentrantLock
 import java.util.function.Supplier
 
+import com.mongodb.DuplicateKeyException
+import com.mongodb.ErrorCategory
 import com.mongodb.MongoClientSettings
 import com.mongodb.MongoCommandException
 import com.mongodb.MongoInterruptedException
 import com.mongodb.MongoNamespace
+import com.mongodb.MongoServerException
 import com.mongodb.MongoSocketException
 import com.mongodb.client.MongoClient
 import com.mongodb.client.MongoIterable
@@ -102,6 +108,7 @@ import org.grails.datastore.mapping.mongo.connections.MongoConnectionSource
 import org.grails.datastore.mapping.mongo.connections.MongoConnectionSourceFactory
 import org.grails.datastore.mapping.mongo.connections.MongoConnectionSourceSettings
 import org.grails.datastore.mapping.mongo.connections.MongoConnectionSourceSettingsBuilder
+import org.grails.datastore.mapping.mongo.connections.RestartableMongoClient
 import org.grails.datastore.mapping.mongo.engine.codecs.PersistentEntityCodec
 import org.grails.datastore.mapping.multitenancy.AllTenantsResolver
 import org.grails.datastore.mapping.multitenancy.MultiTenancySettings
@@ -156,14 +163,27 @@ class MongoDatastore extends AbstractDatastore implements MappingContext.Listene
 
     /** MongoDB server error code for {@code IndexKeySpecsConflict}: the name is taken by an index on other keys. */
     private static final int INDEX_KEY_SPECS_CONFLICT_CODE = 86
+
+    /** MongoDB server error code for {@code IndexNotFound}. */
+    private static final int INDEX_NOT_FOUND_CODE = 27
+
+    /** The name MongoDB gives the index every collection has on {@code _id}, which cannot be dropped. */
+    private static final String ID_INDEX_NAME = '_id_'
+
+    /**
+     * The keys MongoDB lists a text index under in place of its text fields, which its {@code weights} name.
+     */
+    private static final String TEXT_INDEX_KEY = '_fts'
+    private static final String TEXT_INDEX_TERM_KEY = '_ftsx'
     public static final String CODEC_ENGINE = MongoConstants.CODEC_ENGINE
 
     private static final Logger LOG = LoggerFactory.getLogger(MongoDatastore)
 
     /**
-     * Not final because {@link #start()} replaces it after a CRaC restore. Everything other
-     * than construction reaches it through {@link #getMongoClient()}, so a replacement is
-     * picked up without anything else having to be told.
+     * Not final because {@link #start()} replaces it after a CRaC restore when it is not a
+     * {@link RestartableMongoClient}, which is restarted in place instead. Everything other than
+     * construction reaches it through {@link #getMongoClient()}, so a replacement is picked up
+     * without anything else having to be told.
      */
     protected volatile MongoClient mongo
     protected final String defaultDatabase
@@ -176,15 +196,22 @@ class MongoDatastore extends AbstractDatastore implements MappingContext.Listene
     protected final boolean buildIndexesAsync
 
     /**
-     * Runs the startup index build off the thread that creates the datastore when
-     * {@code grails.mongodb.buildIndexesAsync} is enabled; {@code null} otherwise. A single thread,
+     * Runs the background index builds: every {@link #buildIndexAsync()}, and the startup build and each
+     * {@link #buildIndex()} when {@code grails.mongodb.buildIndexesAsync} is enabled. A single thread,
      * so the indexes are still built one at a time per connection. The worker expires after one idle
-     * second, releasing the worker while allowing subsequent calls to {@link #buildIndex()}.
+     * second, releasing the worker while allowing subsequent builds.
      *
      * <p>Not final: a shut down executor cannot be restarted, so {@link #start()} replaces the one
      * {@link #stop()} shut down.
      */
     private volatile ExecutorService indexBuildExecutor
+
+    /**
+     * Held for the whole of every build on this connection, on the background thread or a caller's, and while a
+     * domain class registered after startup is indexed, so that no two apply declarations at the same time: two
+     * {@code recreateOnConflict} drop-and-recreate sequences on one index would undo each other.
+     */
+    private final ReentrantLock indexBuildLock = new ReentrantLock()
 
     /**
      * Set when a build did not run to the end because the datastore was stopping, or was requested while it
@@ -263,13 +290,8 @@ class MongoDatastore extends AbstractDatastore implements MappingContext.Listene
         this.transactionsEnabled = settings.isTransactional()
         this.buildIndexes = settings.isBuildIndexes()
         this.buildIndexesAsync = settings.isBuildIndexesAsync()
-        // Whenever builds are asynchronous, not only when GORM builds by itself: an explicit buildIndex() runs
-        // on it too. Until a build is submitted it holds no thread.
-        if (this.buildIndexesAsync) {
-            this.indexBuildExecutor = createIndexBuildExecutor(defaultConnectionSource.getName())
-        } else {
-            this.indexBuildExecutor = null
-        }
+        // Whatever the setting: buildIndexAsync() runs on it too. Until a build is submitted it holds no thread.
+        this.indexBuildExecutor = newIndexBuildExecutor(defaultConnectionSource.getName())
         codecRegistry = CodecRegistries.fromRegistries(
                 CodecRegistries.fromProviders(new CodecExtensions(), new PersistentEntityCodeRegistry()),
                 mappingContext.getCodecRegistry(),
@@ -294,10 +316,8 @@ class MongoDatastore extends AbstractDatastore implements MappingContext.Listene
                 } else {
                     childDatastore = createChildDatastore(mappingContext, eventPublisher, parent, singletonConnectionSources)
                 }
+                // Its indexes are built when the datastore starts, along with this one's.
                 datastoresByConnectionSource.put(connectionSource.getName(), childDatastore)
-                if (childDatastore != this) {
-                    childDatastore.buildIndexAutomatically()
-                }
             }
 
             connectionSources.addListener(new ConnectionSourcesListener<MongoClient, MongoConnectionSourceSettings>() {
@@ -306,10 +326,32 @@ class MongoDatastore extends AbstractDatastore implements MappingContext.Listene
                     MongoDatastore childDatastore = createChildDatastore(mappingContext, eventPublisher, parent, singletonConnectionSources)
                     datastoresByConnectionSource.put(connectionSource.getName(), childDatastore)
                     registerAllEntitiesWithEnhancer()
-                    // Registered first and then checked: either close() has not started, and will find this
-                    // child when it walks the map, or it has, and the build is never started.
-                    if (!closed) {
-                        childDatastore.buildIndexAutomatically()
+                    // Decided under the lifecycle monitor, so a connection registered while start() or stop() is
+                    // under way waits for it and is then treated as the datastore now is.
+                    synchronized (lifecycleMonitor) {
+                        // Registered first and then checked: either close() has not started, and will find this
+                        // child when it walks the map, or it has, and the build is never started.
+                        if (closed) {
+                            return
+                        }
+                        if (running) {
+                            // Unless the start() this waited for found it in the map, and has connected and
+                            // built it already.
+                            if (!childDatastore.startupBuildDone) {
+                                childDatastore.startClient(connectionSources.getFactory(), false)
+                                childDatastore.buildIndexAutomatically()
+                                childDatastore.startupBuildDone = true
+                            }
+                        } else if (stopped) {
+                            // As stop() left the others: a build requested on it waits for start(), which
+                            // connects it and builds its indexes, and its client, if GORM's, refuses use.
+                            childDatastore.stopIndexBuild()
+                            if (childDatastore.ownsClient()) {
+                                childDatastore.stopClient()
+                            }
+                        }
+                        // Otherwise the datastore has not started, and start() connects and builds it with the
+                        // others, including when start() itself is what registered it.
                     }
                 }
             })
@@ -354,6 +396,12 @@ class MongoDatastore extends AbstractDatastore implements MappingContext.Listene
             protected MongoGormEnhancer initialize(final MongoConnectionSourceSettings settings) {
                 // The parent starts the index build once this child is registered, where close() can reach it.
                 return null
+            }
+
+            @Override
+            void ensureStarted() {
+                // A child has no lifecycle of its own: starting the parent starts it.
+                parent.ensureStarted()
             }
 
             @Override
@@ -406,9 +454,9 @@ class MongoDatastore extends AbstractDatastore implements MappingContext.Listene
 
     /**
      * Configures a new {@link MongoDatastore} around the clients a supplier builds, which GORM owns: it builds one
-     * now, closes it when the datastore is stopped for a checkpoint, and builds the replacement the restore needs
-     * from the same supplier. Use this where the client cannot be rebuilt from {@code grails.mongodb} settings,
-     * such as one built from Spring Boot's own {@code MongoClientSettings}.
+     * the first time the client is needed, closes it when the datastore is stopped for a checkpoint, and builds the
+     * one the restore needs from the same supplier. Use this where the client cannot be rebuilt from
+     * {@code grails.mongodb} settings, such as one built from Spring Boot's own {@code MongoClientSettings}.
      *
      * @param clientSupplier Builds a {@link MongoClient}, whenever the datastore needs one
      * @param configuration The configuration
@@ -432,8 +480,8 @@ class MongoDatastore extends AbstractDatastore implements MappingContext.Listene
      */
     MongoDatastore(Supplier<MongoClient> clientSupplier, PropertyResolver configuration, MongoMappingContext mappingContext, ConfigurableApplicationEventPublisher eventPublisher) {
         // GORM builds the client from the supplier, so it owns it and must close it (closeable = true).
-        this(createDefaultConnectionSources(clientSupplier.get(), configuration, mappingContext, true), mappingContext, eventPublisher)
-        this.defaultClientSupplier = clientSupplier
+        this(createDefaultConnectionSources(new RestartableMongoClient(ConnectionSource.DEFAULT, clientSupplier),
+                configuration, mappingContext, true), mappingContext, eventPublisher)
     }
 
     /**
@@ -488,7 +536,6 @@ class MongoDatastore extends AbstractDatastore implements MappingContext.Listene
     MongoDatastore(MongoClientSettings.Builder clientOptions, PropertyResolver configuration, MongoMappingContext mappingContext, ConfigurableApplicationEventPublisher eventPublisher) {
         // GORM builds the client from the supplied options, so it owns it and must close it (closeable = true).
         this(createDefaultConnectionSources(createMongoClient(configuration, clientOptions, mappingContext), configuration, mappingContext, true), mappingContext, eventPublisher)
-        this.defaultClientOptions = clientOptions
     }
 
     /**
@@ -501,7 +548,6 @@ class MongoDatastore extends AbstractDatastore implements MappingContext.Listene
     MongoDatastore(MongoClientSettings.Builder clientOptions, PropertyResolver configuration, MongoMappingContext mappingContext) {
         // GORM builds the client from the supplied options, so it owns it and must close it (closeable = true).
         this(createDefaultConnectionSources(createMongoClient(configuration, clientOptions, mappingContext), configuration, mappingContext, true), mappingContext, new DefaultApplicationEventPublisher())
-        this.defaultClientOptions = clientOptions
     }
 
     /**
@@ -683,7 +729,10 @@ class MongoDatastore extends AbstractDatastore implements MappingContext.Listene
      * <p>Each index is created by a command that the server answers only once the index has been built,
      * so this blocks the calling thread for as long as MongoDB takes to build every declared index. With
      * {@code grails.mongodb.buildIndexesAsync} enabled the work goes to a background thread and this
-     * returns immediately instead.
+     * returns immediately instead. {@link #buildIndexAsync()} runs it in the background whatever the setting,
+     * and reports the outcome to its caller. Builds on a connection run one at a time, wherever they run: a
+     * build on the calling thread first waits for one running in the background, and the other way round, and a
+     * domain class registered after startup is indexed once neither is running.
      */
     void buildIndex() {
         String connection = connectionName()
@@ -693,26 +742,12 @@ class MongoDatastore extends AbstractDatastore implements MappingContext.Listene
                     connection)
             return
         }
-        ExecutorService executor = this.indexBuildExecutor
-        if (executor == null) {
-            runIndexBuild(null)
+        if (!buildIndexesAsync) {
+            runIndexBuild(null, LOG.isInfoEnabled(), null)
             return
         }
-        if (!executor.isShutdown()) {
-            try {
-                executor.execute(() -> {
-                    // The first thing the build does: said only of a build that is under way, and ahead of
-                    // everything it logs, which it would not be if the submitting thread said it.
-                    LOG.info('Building the indexes declared by the domain classes for connection [{}] on a ' +
-                            'background thread. Startup does not wait for them, so a query issued before its index ' +
-                            'exists is served without it.', connection)
-                    runIndexBuild(executor)
-                })
-                return
-            }
-            catch (RejectedExecutionException e) {
-                // Shut down between the check and the submission.
-            }
+        if (submitIndexBuild(null)) {
+            return
         }
         if (closed) {
             LOG.warn('An index build was requested for connection [{}] after the datastore was closed, so it was not started.',
@@ -723,6 +758,96 @@ class MongoDatastore extends AbstractDatastore implements MappingContext.Listene
             LOG.info('An index build was requested for connection [{}] while the datastore is stopped; it will run when ' +
                     'the datastore is restarted.', connection)
         }
+    }
+
+    /**
+     * Runs the same build as {@link #buildIndex()} on this connection's background index build thread, whatever
+     * {@code grails.mongodb.buildIndexesAsync} says, and returns at once with a handle on its outcome.
+     *
+     * <p>The future completes with the build's {@link IndexBuildResult} once every declaration has been applied,
+     * including when some of them failed: those are counted in {@link IndexBuildResult#failures()} and logged
+     * as they happen. It completes exceptionally with the exception that stopped the build partway, such as a
+     * lost connection or a write concern the server could not satisfy. Created and already-present indexes are always told apart, whatever the log level.
+     *
+     * <p>Builds on a connection run one at a time, so a build requested while another is running waits for it,
+     * including one running on a caller's thread with {@link #buildIndex()}, or one indexing a domain class
+     * registered after startup.
+     * Cancelling the future does not stop the build. If the datastore is stopped or closed, the future completes
+     * exceptionally at once, and a build that stopping or closing the datastore cuts short completes
+     * exceptionally too; a restart runs the cut-short build again, without a future. Each named connection
+     * builds its own domain classes: call this on {@link #getDatastoreForConnection(String)} for those.
+     *
+     * @return the outcome of the build
+     */
+    CompletableFuture<IndexBuildResult> buildIndexAsync() {
+        CompletableFuture<IndexBuildResult> result = new CompletableFuture<>()
+        if (closed || !submitIndexBuild(result)) {
+            result.completeExceptionally(new IllegalStateException('The index build for connection [' +
+                    connectionName() + '] was not started: the datastore is ' + (closed ? 'closed' : 'stopped') + '.'))
+        }
+        return result
+    }
+
+    /**
+     * Hands a build to this connection's background index build thread.
+     *
+     * @param result the future to complete with the build's outcome, or {@code null} if nothing is waiting on it
+     * @return false if the executor has been shut down, by {@link #stop()} or {@link #close()}
+     */
+    private boolean submitIndexBuild(CompletableFuture<IndexBuildResult> result) {
+        ExecutorService executor = this.indexBuildExecutor
+        if (executor.isShutdown()) {
+            return false
+        }
+        try {
+            executor.execute(new IndexBuildTask(result, () -> {
+                // The first thing the build does: said only of a build that is under way, and ahead of
+                // everything it logs, which it would not be if the submitting thread said it.
+                if (result == null) {
+                    LOG.info('Building the indexes declared by the domain classes for connection [{}] on a ' +
+                            'background thread. Startup does not wait for them, so a query issued before its index ' +
+                            'exists is served without it.', connectionName())
+                }
+                else {
+                    LOG.info('Building the indexes declared by the domain classes for connection [{}] on a ' +
+                            'background thread, for a caller waiting on the result.', connectionName())
+                }
+                // Classified whenever a caller is waiting for the counts, which are then the product.
+                runIndexBuild(executor, result != null || LOG.isInfoEnabled(), result)
+            }))
+            return true
+        }
+        catch (RejectedExecutionException ignored) {
+            // Shut down between the check and the submission.
+            return false
+        }
+    }
+
+    /**
+     * A build on the background thread, carrying the future its caller holds so that one shut down before it
+     * runs, or ended by an {@link Error}, still completes it.
+     */
+    private static record IndexBuildTask(CompletableFuture<IndexBuildResult> result, Runnable build) implements Runnable {
+
+        @Override
+        void run() {
+            try {
+                build.run()
+            }
+            catch (RuntimeException | Error e) {
+                if (result != null) {
+                    result.completeExceptionally(e)
+                }
+                throw e
+            }
+        }
+
+        void notRun(String reason) {
+            if (result != null) {
+                result.completeExceptionally(new CancellationException(reason))
+            }
+        }
+
     }
 
     /**
@@ -761,14 +886,21 @@ class MongoDatastore extends AbstractDatastore implements MappingContext.Listene
      *
      * @param executor the executor running it, or {@code null} for a build on the caller's thread, whose
      *                 failure is left to propagate to the caller
+     * @param classify whether to tell created indexes from ones already present. It costs a listIndexes per
+     *                 indexed collection, and its only product is the counts, so it is skipped when nothing
+     *                 would report them
+     * @param result   the future to complete with the outcome, or {@code null} if nothing is waiting on it
      */
-    private void runIndexBuild(ExecutorService executor) {
+    private void runIndexBuild(ExecutorService executor, boolean classify, CompletableFuture<IndexBuildResult> result) {
         long startedAt = System.nanoTime()
-        // Telling a created index from one that was already there costs a listIndexes per indexed
-        // collection, and its only product is the summary, so it is skipped when that would not be logged.
-        IndexBuildSummary summary = new IndexBuildSummary(LOG.isInfoEnabled())
+        IndexBuildSummary summary = new IndexBuildSummary(classify)
         Exception failure = null
+        boolean locked = false
         try {
+            lockIndexBuild()
+            locked = true
+            // Timed from here: waiting for another build is not this one's cost.
+            startedAt = System.nanoTime()
             buildDeclaredIndexes(summary)
         }
         catch (Exception e) {
@@ -779,9 +911,17 @@ class MongoDatastore extends AbstractDatastore implements MappingContext.Listene
                 Thread.currentThread().interrupt()
             }
         }
+        finally {
+            if (locked) {
+                indexBuildLock.unlock()
+            }
+        }
         long elapsedMillis = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startedAt)
         if (failure == null) {
             logFinishedIndexBuild(summary, elapsedMillis)
+            if (result != null) {
+                result.complete(summary.toResult(defaultDatabase, elapsedMillis))
+            }
             return
         }
         if (executor == null) {
@@ -805,6 +945,25 @@ class MongoDatastore extends AbstractDatastore implements MappingContext.Listene
                     'indexes that were not created.', failure.getMessage(), failure)
         }
         logUnfinishedIndexBuild(summary, elapsedMillis, abandoned)
+        if (result != null) {
+            result.completeExceptionally(failure)
+        }
+    }
+
+    /**
+     * Waits for any build already running on this connection. Interruptible, so that {@link #stop()} and
+     * {@link #close()} can end a background build that is still waiting; a caller interrupted while it waits gets
+     * the driver's unchecked {@link MongoInterruptedException}, as an interrupted driver call would.
+     */
+    private void lockIndexBuild() {
+        try {
+            indexBuildLock.lockInterruptibly()
+        }
+        catch (InterruptedException e) {
+            Thread.currentThread().interrupt()
+            throw new MongoInterruptedException('Interrupted while waiting for the index build already running on ' +
+                    'connection [' + connectionName() + ']', e)
+        }
     }
 
     /**
@@ -865,14 +1024,7 @@ class MongoDatastore extends AbstractDatastore implements MappingContext.Listene
      * startup, or the background build thread — actually spends waiting.
      */
     private void buildDeclaredIndexes(IndexBuildSummary summary) {
-        List<PersistentEntity> entities = new ArrayList<>()
-        for (PersistentEntity entity in this.mappingContext.getPersistentEntities()) {
-            // Only create Mongo templates for entities that are mapped with Mongo
-            if (!entity.isExternal() &&
-                    !(entity.isMultiTenant() && multiTenancyMode == MultiTenancySettings.MultiTenancyMode.SCHEMA)) {
-                entities.add(entity)
-            }
-        }
+        List<PersistentEntity> entities = indexedEntities()
         summary.entitiesTotal = entities.size()
         IndexBuildSummary previousSummary = indexBuildSummary.get()
         indexBuildSummary.set(summary)
@@ -889,6 +1041,257 @@ class MongoDatastore extends AbstractDatastore implements MappingContext.Listene
             else {
                 indexBuildSummary.set(previousSummary)
             }
+        }
+    }
+
+    /**
+     * The entities whose declared indexes this datastore builds.
+     */
+    private List<PersistentEntity> indexedEntities() {
+        List<PersistentEntity> entities = new ArrayList<>()
+        for (PersistentEntity entity in this.mappingContext.getPersistentEntities()) {
+            if (isIndexedHere(entity)) {
+                entities.add(entity)
+            }
+        }
+        return entities
+    }
+
+    /**
+     * Whether this datastore builds an entity's declared indexes: an entity mapped with Mongo, outside schema
+     * multi-tenancy, to this datastore's connection. Every connection shares one mapping context, so an entity
+     * mapped only to another connection is in it too.
+     */
+    private boolean isIndexedHere(PersistentEntity entity) {
+        return !entity.isExternal() &&
+                !(entity.isMultiTenant() && multiTenancyMode == MultiTenancySettings.MultiTenancyMode.SCHEMA) &&
+                ConnectionSourcesSupport.usesConnectionSource(entity, connectionName())
+    }
+
+    /**
+     * The collections whose declared indexes this datastore builds, each with the declarations of every class
+     * mapped to it: every class in an inheritance hierarchy maps to its root's collection, and several classes
+     * can name the same one.
+     */
+    private Map<MongoNamespace, CollectionDeclarations> declarationsByCollection() {
+        Map<MongoNamespace, CollectionDeclarations> collections = new LinkedHashMap<>()
+        for (PersistentEntity entity in indexedEntities()) {
+            com.mongodb.client.MongoCollection<Document> collection = getCollection(entity)
+            CollectionDeclarations declarations = collections.get(collection.getNamespace())
+            if (declarations == null) {
+                declarations = new CollectionDeclarations(collection, new ArrayList<EntityDeclaration>())
+                collections.put(collection.getNamespace(), declarations)
+            }
+            for (IndexDeclaration declaration in declaredIndexes(entity)) {
+                declarations.declarations().add(new EntityDeclaration(entity, declaration))
+            }
+        }
+        return collections
+    }
+
+    @SuppressWarnings('Indentation')
+    private static record CollectionDeclarations(com.mongodb.client.MongoCollection<Document> collection,
+                                                 List<EntityDeclaration> declarations) {
+
+    }
+
+    private static record EntityDeclaration(PersistentEntity entity, IndexDeclaration declaration) {
+
+    }
+
+    /**
+     * Lists the indexes the domain classes declare that their collections do not have, on the collections
+     * whose declared indexes {@link #buildIndex()} builds for this datastore's connection.
+     *
+     * <p>A declared index is present when its collection has an index on the same key pattern, the same fields
+     * in the same order, whatever its name and options: an option that differs is the build's to reconcile.
+     * A text index is present when one indexes the same text fields, in any order, with the same keys before and
+     * after them, whatever its weights. Keys that several classes mapped to one collection declare are reported
+     * once. Nothing is changed:
+     * {@link #buildIndex()} or {@link #buildIndexAsync()} creates them. Each named connection has its own
+     * domain classes, so call this on {@link #getDatastoreForConnection(String)} for those.
+     *
+     * @return the missing indexes, collection by collection, in the order the domain classes declare them
+     */
+    List<MissingIndex> findMissingIndexes() {
+        List<MissingIndex> missing = new ArrayList<>()
+        for (Map.Entry<MongoNamespace, CollectionDeclarations> entry in declarationsByCollection().entrySet()) {
+            if (entry.getValue().declarations().isEmpty()) {
+                continue
+            }
+            MongoNamespace namespace = entry.getKey()
+            List<Document> existing = entry.getValue().collection().listIndexes().into(new ArrayList<Document>())
+            List<Document> reported = new ArrayList<>()
+            for (EntityDeclaration declared in entry.getValue().declarations()) {
+                Document keys = declared.declaration().keys()
+                if (isListed(keys, existing) || isAmong(keys, reported)) {
+                    continue
+                }
+                reported.add(keys)
+                Map<String, Object> options = declared.declaration().options()
+                missing.add(new MissingIndex(namespace.getDatabaseName(), namespace.getCollectionName(),
+                        declared.entity().getName(), keys, options != null ? new Document(options) : new Document()))
+            }
+        }
+        return missing
+    }
+
+    /**
+     * Lists the indexes that no domain class declares, on the collections whose declared indexes
+     * {@link #buildIndex()} builds for this datastore's connection.
+     *
+     * <p>An index is declared when a domain class mapped to the same collection declares its key pattern, the
+     * same fields in the same order, with {@code compoundIndex}, {@code index} or a property's
+     * {@code index: true}. Its name and options do not matter. A text index is declared when a class declares
+     * text on the same fields, in any order, with the same keys before and after them; its weights do not
+     * matter. The {@code _id} index is never reported, and
+     * neither is any index on a collection that no domain class maps. An index that an
+     * {@link #initializeIndices(PersistentEntity)} override creates by itself is not a declaration, so it is
+     * reported.
+     *
+     * <p>Nothing is changed: see {@link #dropUndeclaredIndexes()}. Each named connection has its own domain
+     * classes, so call this on {@link #getDatastoreForConnection(String)} for those.
+     *
+     * @return the undeclared indexes, collection by collection, in the order the server lists them
+     */
+    List<UndeclaredIndex> findUndeclaredIndexes() {
+        List<UndeclaredIndex> undeclared = new ArrayList<>()
+        for (Map.Entry<MongoNamespace, CollectionDeclarations> entry in declarationsByCollection().entrySet()) {
+            MongoNamespace namespace = entry.getKey()
+            for (Document index in entry.getValue().collection().listIndexes()) {
+                if (ID_INDEX_NAME.equals(index.getString('name'))) {
+                    continue
+                }
+                Object key = index.get('key')
+                if (key instanceof Document && !isDeclared(index, entry.getValue())) {
+                    undeclared.add(new UndeclaredIndex(namespace.getDatabaseName(), namespace.getCollectionName(),
+                            index.getString('name'), (Document) key, index))
+                }
+            }
+        }
+        return undeclared
+    }
+
+    /**
+     * Drops every index that {@link #findUndeclaredIndexes()} reports.
+     *
+     * <p>Run this deliberately, once every instance of the application runs the release whose domain classes
+     * declare the indexes to keep. An instance still on an earlier release does not declare what a later
+     * release added, nor an index created by hand ahead of a deployment, so to it those indexes are
+     * undeclared and this drops them.
+     *
+     * @return the indexes dropped
+     */
+    List<UndeclaredIndex> dropUndeclaredIndexes() {
+        return dropUndeclaredIndexes(findUndeclaredIndexes())
+    }
+
+    /**
+     * Drops the given indexes: those {@link #findUndeclaredIndexes()} reported, once they have been reviewed.
+     *
+     * <p>Each index is checked again before it is dropped, since the reviewed list can be older than what is on
+     * the server: one is dropped only while the index of that name is on the keys reviewed, its collection is
+     * mapped on this datastore's connection, and no domain class mapped to it declares those keys. An index that
+     * no longer exists, or whose collection no longer does, is skipped, and so is one that fails a check, which
+     * is logged at {@code WARN}.
+     *
+     * @param indexes the indexes to drop
+     * @return the indexes dropped
+     */
+    List<UndeclaredIndex> dropUndeclaredIndexes(List<UndeclaredIndex> indexes) {
+        List<UndeclaredIndex> dropped = new ArrayList<>()
+        Map<MongoNamespace, CollectionDeclarations> mapped = declarationsByCollection()
+        // Listed first, once per collection, rather than inferred from the drop: the driver answers a dropIndex on
+        // a collection that no longer exists as a success, and a name can have been given to another index since.
+        Map<MongoNamespace, List<Document>> listed = new HashMap<>()
+        for (UndeclaredIndex index in indexes) {
+            MongoNamespace namespace = new MongoNamespace(index.database(), index.collection())
+            CollectionDeclarations declarations = mapped.get(namespace)
+            if (declarations == null) {
+                LOG.warn('Index [{}] on collection [{}] of database [{}] was not dropped: no domain class is mapped to ' +
+                        'that collection on connection [{}]', index.name(), index.collection(), index.database(),
+                        connectionName())
+                continue
+            }
+            List<Document> current = listed.get(namespace)
+            if (current == null) {
+                current = declarations.collection().listIndexes().into(new ArrayList<Document>())
+                listed.put(namespace, current)
+            }
+            Document existing = findIndexByName(current, index.name())
+            if (existing == null) {
+                LOG.debug('Index [{}] on collection [{}] of database [{}] was not dropped: it no longer exists',
+                        index.name(), index.collection(), index.database())
+                continue
+            }
+            if (!sameIndexKeys(existing, index.definition())) {
+                LOG.warn('Index [{}] on collection [{}] of database [{}] was not dropped: it is on {} now, not on the ' +
+                        'keys reviewed, {}', index.name(), index.collection(), index.database(),
+                        existing.get('key', Document).toJson(), index.key().toJson())
+                continue
+            }
+            if (isDeclared(existing, declarations)) {
+                LOG.warn('Index [{}] on collection [{}] of database [{}] was not dropped: a domain class declares its ' +
+                        'keys {}', index.name(), index.collection(), index.database(), index.key().toJson())
+                continue
+            }
+            if (!dropIndex(declarations.collection(), index.name())) {
+                LOG.debug('Index [{}] on collection [{}] of database [{}] was not dropped: it no longer exists',
+                        index.name(), index.collection(), index.database())
+                continue
+            }
+            LOG.info('Dropped index [{}] on collection [{}] of database [{}]: no domain class declares its keys {}',
+                    index.name(), index.collection(), index.database(), index.key().toJson())
+            dropped.add(index)
+        }
+        return dropped
+    }
+
+    /**
+     * Whether a domain class mapped to a collection declares the key pattern of an index it has.
+     */
+    private static boolean isDeclared(Document index, CollectionDeclarations declarations) {
+        for (EntityDeclaration declaration in declarations.declarations()) {
+            if (describes(declaration.declaration().keys(), index)) {
+                return true
+            }
+        }
+        return false
+    }
+
+    /**
+     * Whether two indexes the server listed are on the same keys. Every text index has the key pattern
+     * {@code {_fts: 'text', _ftsx: 1}} wherever its text is, so for those the fields its {@code weights} name are
+     * compared too.
+     */
+    private static boolean sameIndexKeys(Document index, Document other) {
+        Object key = index.get('key')
+        Object otherKey = other.get('key')
+        if (!(key instanceof Document) || !(otherKey instanceof Document) ||
+                !sameKeyPattern((Document) key, (Document) otherKey)) {
+            return false
+        }
+        Document weights = index.get('weights', Document)
+        Document otherWeights = other.get('weights', Document)
+        if (weights == null || otherWeights == null) {
+            return weights == null && otherWeights == null
+        }
+        return weights.keySet() == otherWeights.keySet()
+    }
+
+    /**
+     * @return whether the index was dropped, false if it had gone since the collection was listed
+     */
+    private static boolean dropIndex(com.mongodb.client.MongoCollection<Document> collection, String name) {
+        try {
+            collection.dropIndex(name)
+            return true
+        }
+        catch (MongoCommandException e) {
+            if (e.getErrorCode() == INDEX_NOT_FOUND_CODE) {
+                return false
+            }
+            throw e
         }
     }
 
@@ -1037,6 +1440,11 @@ class MongoDatastore extends AbstractDatastore implements MappingContext.Listene
         /** Declarations applied other than by a drop and recreate. */
         private int applied() {
             return created + alreadyPresent + unclassified
+        }
+
+        private IndexBuildResult toResult(String database, long elapsedMillis) {
+            return new IndexBuildResult(database, entities, created, recreated, alreadyPresent, unclassified,
+                    failures, elapsedMillis)
         }
 
         private String describe() {
@@ -1337,6 +1745,7 @@ class MongoDatastore extends AbstractDatastore implements MappingContext.Listene
 
     @Override
     protected Session createSession(PropertyResolver connDetails) {
+        ensureStarted()
         if (stateless) {
             return createStatelessSession(connDetails)
         }
@@ -1351,7 +1760,6 @@ class MongoDatastore extends AbstractDatastore implements MappingContext.Listene
      * @param settings
      */
     protected MongoGormEnhancer initialize(final MongoConnectionSourceSettings settings) {
-        getMappingContext().addMappingContextListener(this)
         initializeConverters(getMappingContext())
 
         getMappingContext().addMappingContextListener(new MappingContext.Listener() {
@@ -1362,7 +1770,10 @@ class MongoDatastore extends AbstractDatastore implements MappingContext.Listene
             }
         })
 
-        buildIndexAutomatically()
+        // Listeners are called in the order they were added, and indexing an entity needs the collection and
+        // database registerEntity resolves from its mapping: indexed first, it was indexed on its default
+        // collection, and getCollectionName cached that name.
+        getMappingContext().addMappingContextListener(this)
 
         return new MongoGormEnhancer(this, transactionManager, settings) {
             @Override
@@ -1413,6 +1824,7 @@ class MongoDatastore extends AbstractDatastore implements MappingContext.Listene
 
     @Override
     protected Session createStatelessSession(PropertyResolver connectionDetails) {
+        ensureStarted()
         if (codecEngine) {
             return new MongoCodecSession(this, getMappingContext(), getApplicationEventPublisher(), true)
         }
@@ -1448,15 +1860,35 @@ class MongoDatastore extends AbstractDatastore implements MappingContext.Listene
     private void initializeIndices(final PersistentEntity entity, final IndexBuildSummary summary) {
         final com.mongodb.client.MongoCollection<Document> collection = getCollection(entity)
         final ExistingIndexes existingIndexes = summary.existingIndexesOf(collection)
+        for (IndexDeclaration declaration in declaredIndexes(entity)) {
+            createOrUpdateIndex(entity, collection, declaration.keys(), declaration.options(),
+                    declaration.descriptor(), summary, existingIndexes)
+        }
+    }
+
+    /**
+     * An index a domain class declares: its key pattern, the options it is built with and how the build's
+     * log lines name it.
+     */
+    private static record IndexDeclaration(Document keys, Map<String, Object> options, String descriptor) {
+
+    }
+
+    /**
+     * The indexes an entity's mapping declares, in the order the build applies them: its {@code index}
+     * entries, its {@code compoundIndex} entries, then each property mapped with {@code index: true}.
+     */
+    @SuppressWarnings(['rawtypes', 'unchecked'])
+    private List<IndexDeclaration> declaredIndexes(final PersistentEntity entity) {
+        List<IndexDeclaration> declarations = new ArrayList<>()
         final ClassMapping<MongoCollection> classMapping = (ClassMapping<MongoCollection>) entity.getMapping()
         if (classMapping != null) {
             final MongoCollection mappedForm = classMapping.getMappedForm()
             if (mappedForm != null) {
                 List<MongoCollection.Index> indices = mappedForm.getIndices()
                 for (MongoCollection.Index index : indices) {
-                    createOrUpdateIndex(entity, collection, new Document(index.getDefinition()),
-                            index.getOptions(), 'with definition [' + index.getDefinition() + ']',
-                            summary, existingIndexes)
+                    declarations.add(new IndexDeclaration(new Document(index.getDefinition()), index.getOptions(),
+                            'with definition [' + index.getDefinition() + ']'))
                 }
 
                 for (Map compoundIndex in mappedForm.getCompoundIndices()) {
@@ -1467,8 +1899,8 @@ class MongoDatastore extends AbstractDatastore implements MappingContext.Listene
                     Object attributes = declaration.remove(INDEX_ATTRIBUTES)
                     Map indexAttributes = attributes instanceof Map ? (Map) attributes : null
                     Document indexDef = new Document(declaration)
-                    createOrUpdateIndex(entity, collection, indexDef, indexAttributes,
-                            'compound index with definition [' + indexDef + ']', summary, existingIndexes)
+                    declarations.add(new IndexDeclaration(indexDef, indexAttributes,
+                            'compound index with definition [' + indexDef + ']'))
                 }
             }
         }
@@ -1492,10 +1924,10 @@ class MongoDatastore extends AbstractDatastore implements MappingContext.Listene
                         options.putAll(attributes)
                     }
                 }
-                createOrUpdateIndex(entity, collection, dbObject, options,
-                        'on property [' + property.getName() + ']', summary, existingIndexes)
+                declarations.add(new IndexDeclaration(dbObject, options, 'on property [' + property.getName() + ']'))
             }
         }
+        return declarations
     }
 
     /**
@@ -1510,6 +1942,10 @@ class MongoDatastore extends AbstractDatastore implements MappingContext.Listene
      *       {@code collMod} (no drop, no rebuild, no gap); any other conflict is dropped and
      *       recreated only when {@code recreateOnConflict:true} was declared, else logged with guidance.</li>
      * </ol>
+     *
+     * <p>Any other refusal from the server, a duplicate key under a {@code unique} index included, is logged and
+     * counted as a failure, and the build goes on. An error that is not the server's answer, such as a lost
+     * connection, is left to stop the build.
      */
     private void createOrUpdateIndex(PersistentEntity entity,
                                      com.mongodb.client.MongoCollection<Document> collection,
@@ -1570,7 +2006,22 @@ class MongoDatastore extends AbstractDatastore implements MappingContext.Listene
                 LOG.error('Failed to create index for entity [{}] {}: {}',
                         entity.getName(), descriptor, e.getMessage(), e)
             }
+        } catch (MongoServerException e) {
+            // A unique index over documents that already share a value, which the driver reports as a
+            // DuplicateKeyException rather than a command error, is the server refusing this one declaration.
+            // Anything else here, such as a write concern the server could not satisfy, says nothing about the
+            // declaration and leaves unknown whether it was applied, so it stops the build.
+            if (!isDuplicateKey(e)) {
+                throw e
+            }
+            summary.failures++
+            LOG.error('Failed to create index for entity [{}] {}: {}',
+                    entity.getName(), descriptor, e.getMessage(), e)
         }
+    }
+
+    private static boolean isDuplicateKey(MongoServerException e) {
+        return e instanceof DuplicateKeyException || ErrorCategory.fromErrorCode(e.getCode()) == ErrorCategory.DUPLICATE_KEY
     }
 
     /**
@@ -1636,14 +2087,32 @@ class MongoDatastore extends AbstractDatastore implements MappingContext.Listene
         }
 
         if (recreateOnConflict) {
+            boolean dropped = false
             try {
                 collection.dropIndex(existingName)
+                dropped = true
                 String indexName = collection.createIndex(keys, desired)
                 existingIndexes.record(keys, indexName, expireAfterSeconds)
                 LOG.info('Recreated index [{}] on entity [{}] {}', existingName, entity.getName(), descriptor)
                 return Reconciliation.RECREATED
-            } catch (MongoCommandException recreateError) {
-                LOG.error('Failed to recreate index [{}] on entity [{}] {}: {}',
+            } catch (MongoServerException recreateError) {
+                if (!(recreateError instanceof MongoCommandException) && !isDuplicateKey(recreateError)) {
+                    if (dropped) {
+                        LOG.warn('Dropped index [{}] on entity [{}] to recreate it {}, but the server did not confirm ' +
+                                'the new one, so whether it was built is not known: {}',
+                            existingName, entity.getName(), descriptor, recreateError.getMessage())
+                    }
+                    throw recreateError
+                }
+                if (!dropped) {
+                    LOG.error('Failed to recreate index [{}] on entity [{}] {}: {}',
+                        existingName, entity.getName(), descriptor, recreateError.getMessage(), recreateError)
+                    return Reconciliation.FAILED
+                }
+                // Listed again, so that a later declaration on these keys is not counted as already present.
+                existingIndexes.refresh()
+                LOG.error('Dropped index [{}] on entity [{}] to recreate it {}, but it could not be built again: {}. ' +
+                        'The collection has no index on these keys until the cause is fixed and the index built.',
                     existingName, entity.getName(), descriptor, recreateError.getMessage(), recreateError)
                 return Reconciliation.FAILED
             }
@@ -1679,25 +2148,11 @@ class MongoDatastore extends AbstractDatastore implements MappingContext.Listene
 
     /**
      * Find an existing index whose key pattern matches the given keys, or {@code null} if none.
-     * Directions/types are compared numerically (1 vs 1.0) so driver-returned values match.
-     *
-     * <p>Text indexes are special-cased: a declared text index has key {@code {field: 'text'}}, but
-     * MongoDB reports an existing one with a synthetic {@code {_fts: 'text', _ftsx: 1}} key, so the
-     * two never match by pattern. Since MongoDB allows at most one text index per collection, an
-     * existing text index is unambiguously the one a newly-declared text index conflicts with —
-     * match it regardless of its key shape or name so {@code recreateOnConflict} can absorb it.</p>
      */
     private static Document findIndexByKeyPattern(Iterable<Document> indexes, Document keys) {
-        boolean desiredIsText = isTextIndex(keys)
         for (Document idx in indexes) {
             Object key = idx.get('key')
-            if (!(key instanceof Document)) {
-                continue
-            }
-            if (desiredIsText && isTextIndex((Document) key)) {
-                return idx
-            }
-            if (sameKeyPattern((Document) key, keys)) {
+            if (key instanceof Document && matchesDeclaration((Document) key, keys)) {
                 return idx
             }
         }
@@ -1705,11 +2160,128 @@ class MongoDatastore extends AbstractDatastore implements MappingContext.Listene
     }
 
     /**
+     * Whether any of the indexes the server listed is the one a declaration describes, as the reports compare them.
+     */
+    private static boolean isListed(Document declaredKeys, List<Document> indexes) {
+        for (Document index in indexes) {
+            if (describes(declaredKeys, index)) {
+                return true
+            }
+        }
+        return false
+    }
+
+    /**
+     * Whether a declaration describes the same index as one of the others, as the reports compare them.
+     */
+    private static boolean isAmong(Document declaredKeys, List<Document> others) {
+        for (Document other in others) {
+            if (sameDeclaredIndex(declaredKeys, other)) {
+                return true
+            }
+        }
+        return false
+    }
+
+    private static boolean sameDeclaredIndex(Document declaredKeys, Document other) {
+        if (isTextIndex(declaredKeys) && isTextIndex(other)) {
+            return declaredTextKeys(declaredKeys).matches(declaredTextKeys(other))
+        }
+        return sameKeyPattern(declaredKeys, other)
+    }
+
+    /**
+     * Whether an index the server listed is the one a declaration describes, as the missing and undeclared
+     * reports compare them: on the same key pattern, whatever its name and options. Unlike
+     * {@link #matchesDeclaration(Document, Document)}, a text index is only the one a text declaration describes
+     * when it indexes the same text fields, which its {@code weights} name, with the same keys before and after
+     * them. Their weights are options, so they are not compared.
+     */
+    private static boolean describes(Document declaredKeys, Document index) {
+        Object keyValue = index.get('key')
+        if (!(keyValue instanceof Document)) {
+            return false
+        }
+        Document key = (Document) keyValue
+        if (isTextIndex(declaredKeys) && key.containsKey(TEXT_INDEX_KEY)) {
+            Object weights = index.get('weights')
+            return weights instanceof Document &&
+                    declaredTextKeys(declaredKeys).matches(listedTextKeys(key, (Document) weights))
+        }
+        return sameKeyPattern(key, declaredKeys)
+    }
+
+    /**
+     * A text index's keys as the reports compare them: the keys before its text fields, the text fields
+     * themselves, in any order, and the keys after them.
+     */
+    private static record TextKeys(Document before, Set<String> fields, Document after) {
+
+        boolean matches(TextKeys other) {
+            return fields == other.fields && sameKeyPattern(before, other.before) &&
+                    sameKeyPattern(after, other.after)
+        }
+
+    }
+
+    private static TextKeys declaredTextKeys(Document keys) {
+        Document before = new Document()
+        Document after = new Document()
+        Set<String> fields = new LinkedHashSet<>()
+        for (Map.Entry<String, Object> entry in keys.entrySet()) {
+            if ('text'.equals(entry.getValue())) {
+                fields.add(entry.getKey())
+            }
+            else {
+                (fields.isEmpty() ? before : after).append(entry.getKey(), entry.getValue())
+            }
+        }
+        return new TextKeys(before, fields, after)
+    }
+
+    /**
+     * The same of an index the server listed, whose key holds {@code _fts} and {@code _ftsx} where the text
+     * fields were declared and whose {@code weights} name them.
+     */
+    private static TextKeys listedTextKeys(Document key, Document weights) {
+        Document before = new Document()
+        Document after = new Document()
+        boolean pastText = false
+        for (Map.Entry<String, Object> entry in key.entrySet()) {
+            if (TEXT_INDEX_KEY.equals(entry.getKey()) || TEXT_INDEX_TERM_KEY.equals(entry.getKey())) {
+                pastText = true
+            }
+            else {
+                (pastText ? after : before).append(entry.getKey(), entry.getValue())
+            }
+        }
+        return new TextKeys(before, new LinkedHashSet<>(weights.keySet()), after)
+    }
+
+    /**
+     * Whether an existing index's key pattern is the one a declaration describes, for creating and reconciling
+     * it. Directions/types are compared numerically (1 vs 1.0) so driver-returned values match.
+     *
+     * <p>Text indexes are special-cased: a declared text index has key {@code {field: 'text'}}, but
+     * MongoDB reports an existing one with a synthetic {@code {_fts: 'text', _ftsx: 1}} key, so the
+     * two never match by pattern. Since MongoDB allows at most one text index per collection, an
+     * existing text index is unambiguously the one a declared text index describes or conflicts with —
+     * match it regardless of its key shape or name so {@code recreateOnConflict} can absorb it. The reports
+     * compare text indexes field by field instead: see {@link #describes(Document, Document)}.</p>
+     */
+    private static boolean matchesDeclaration(Document existingKey, Document declaredKeys) {
+        if (isTextIndex(declaredKeys) && isTextIndex(existingKey)) {
+            return true
+        }
+        return sameKeyPattern(existingKey, declaredKeys)
+    }
+
+    /**
      * True for a text index in either representation: a declaration ({@code {field: 'text'}}) or the
      * synthetic key MongoDB reports for an existing one ({@code {_fts: 'text', _ftsx: 1}}).
      */
     private static boolean isTextIndex(Document key) {
-        if (key.containsKey('_fts')) {
+        if (key.containsKey(TEXT_INDEX_KEY)) {
             return true
         }
         for (Object v : key.values()) {
@@ -1767,7 +2339,30 @@ class MongoDatastore extends AbstractDatastore implements MappingContext.Listene
                     'by entity [{}].', connectionName(), buildIndexesSettingName(), entity.getName())
             return
         }
-        initializeIndices(entity)
+        if (!isIndexedHere(entity)) {
+            return
+        }
+        synchronized (lifecycleMonitor) {
+            if (!running) {
+                // Not now, which would connect a datastore that has not started, or one stopped for a checkpoint.
+                // start() builds the indexes of every entity registered by then, this one included; a datastore that
+                // has started before builds this connection's again when it is started.
+                if (started) {
+                    startupBuildDone = false
+                }
+                return
+            }
+            // After any build running on this connection, as every build on it is: two at once could each drop
+            // and recreate the same index. Taken inside the lifecycle monitor, as start() takes it for the build
+            // on its own thread.
+            lockIndexBuild()
+            try {
+                initializeIndices(entity)
+            }
+            finally {
+                indexBuildLock.unlock()
+            }
+        }
     }
 
     /**
@@ -1777,34 +2372,58 @@ class MongoDatastore extends AbstractDatastore implements MappingContext.Listene
      */
     public static final int LIFECYCLE_PHASE = -1000
 
-    private volatile boolean running = true
+    private volatile boolean running
 
     /**
-     * Set on each datastore whose client {@link #stop()} closed, so that {@link #start()} replaces exactly those.
+     * Set once {@link #start()} has connected the datastore and built its indexes for the first time, after which
+     * using the datastore no longer starts it.
+     */
+    private volatile boolean started
+
+    /**
+     * Set by {@link #stop()} and cleared by {@link #start()}. A stopped datastore is started again only by a call to
+     * {@link #start()}, never by being used, and a connection added while it is stopped is stopped too.
+     */
+    private volatile boolean stopped
+
+    /**
+     * Set while the first start is under way, so that a session it opens does not start it again.
+     */
+    private boolean starting
+
+    private final Object lifecycleMonitor = new Object()
+
+    /**
+     * Set on each datastore whose client {@link #stop()} stopped or closed, so that {@link #start()} brings back
+     * exactly those.
      */
     private volatile boolean clientStopped
 
     /**
-     * The client options the default connection's client was built with, when they were passed to the constructor
-     * rather than configured, so that {@link #start()} builds its replacement with them too; {@code null} otherwise.
+     * Set on each datastore, this one and the one for each connection, once the index build {@link #start()} runs for
+     * it has finished, or been handed to its thread. A connection added while the datastore is stopped, or while it
+     * starts, has not had one, and the next pass of {@link #start()} runs it.
      */
-    private volatile MongoClientSettings.Builder defaultClientOptions
+    private volatile boolean startupBuildDone
 
     /**
-     * What builds the default connection's client, when the constructor was given a supplier rather than settings,
-     * so that {@link #start()} builds its replacement the same way; {@code null} otherwise.
-     */
-    private volatile Supplier<MongoClient> defaultClientSupplier
-
-    /**
-     * Closes the {@link MongoClient} of every connection, so the process can be checkpointed.
+     * Stops the {@link MongoClient} of every connection, so the process can be checkpointed.
      *
      * <p>CRaC refuses to checkpoint a process holding open sockets, and a connected driver
-     * holds one per pooled connection plus its server monitors. Closing the client shuts the
+     * holds one per pooled connection plus its server monitors. Closing the driver client shuts the
      * monitor threads down and releases every socket, which nothing else in the driver
      * offers: draining the pool leaves the monitors connected. Each connection declared under
      * {@code grails.mongodb.connections}, or added at runtime, has a client of its own, and
-     * each is closed.
+     * each is stopped.
+     *
+     * <p>A {@link RestartableMongoClient}, which is what GORM creates, closes its driver client and
+     * stays the client the datastore hands out, so whatever holds it - the {@code mongo} bean among
+     * them - works again once {@link #start()} has restarted it. Any other client GORM owns is
+     * closed, and {@link #start()} builds a replacement.
+     *
+     * <p>Every client is stopped whether or not the datastore has started: one used before it was started, or
+     * connected by a {@link #start()} that then failed, holds sockets as much as one the datastore started. Until
+     * {@link #start()} is called again the clients refuse to be used, and using the datastore does not start it.
      *
      * <p>A client the application supplied is left alone. Its lifecycle belongs to whoever
      * created it, and {@link #start()} does not replace it. A datastore that owns none of its
@@ -1815,90 +2434,183 @@ class MongoDatastore extends AbstractDatastore implements MappingContext.Listene
      */
     @Override
     void stop() {
-        if (!this.running) {
-            return
-        }
-        List<MongoDatastore> datastores = datastoresAndChildren()
-        List<MongoDatastore> owningTheirClient = new ArrayList<>()
-        for (MongoDatastore datastore in datastores) {
-            if (datastore.ownsClient()) {
-                owningTheirClient.add(datastore)
+        synchronized (this.lifecycleMonitor) {
+            this.stopped = true
+            List<MongoDatastore> datastores = datastoresAndChildren()
+            List<MongoDatastore> owningTheirClient = new ArrayList<>()
+            for (MongoDatastore datastore in datastores) {
+                if (datastore.ownsClient()) {
+                    owningTheirClient.add(datastore)
+                }
             }
+            if (owningTheirClient.isEmpty()) {
+                return
+            }
+            for (MongoDatastore datastore in datastores) {
+                datastore.stopIndexBuild()
+            }
+            for (MongoDatastore datastore in owningTheirClient) {
+                datastore.stopClient()
+            }
+            this.running = false
         }
-        if (owningTheirClient.isEmpty()) {
-            return
-        }
-        for (MongoDatastore datastore in datastores) {
-            datastore.stopIndexBuild()
-        }
-        for (MongoDatastore datastore in owningTheirClient) {
-            datastore.mongo.close()
-            datastore.clientStopped = true
-        }
-        this.running = false
     }
 
     /**
-     * Builds a replacement for each {@link MongoClient} that {@link #stop()} closed, using the
-     * same factory the original was built with, so settings applied at startup still apply. The
-     * replacement is handed out by the connection's {@link ConnectionSource} as well as by this
-     * datastore, when that is the {@link MongoConnectionSource} the factory creates.
+     * Connects the datastore, which is the first point at which it opens a socket.
      *
-     * <p>A background index build that {@link #stop()} cut short, or that was requested while stopped,
-     * runs again on a fresh executor, on every connection.
+     * <p>The first start connects the client of every connection GORM owns and builds the indexes the domain
+     * classes declare, unless {@code grails.mongodb.buildIndexes} is {@code false}. Nothing before it connects: the
+     * clients GORM creates are {@link RestartableMongoClient}s, which connect when first used, and building the
+     * datastore builds no index. So a datastore created while an application context refreshes holds no socket
+     * until Spring starts it in {@link #LIFECYCLE_PHASE}, which is what lets the process be checkpointed with CRaC as
+     * the context refreshes ({@code spring.context.checkpoint=onRefresh}). Spring starts it before it publishes
+     * {@code ContextRefreshedEvent}, so the indexes are in place before {@code BootStrap} runs and before the web
+     * server accepts a request. A datastore that nothing starts - one built outside an application context - starts
+     * itself the first time a session is opened on it.
+     *
+     * <p>Starting after {@link #stop()} brings back each {@link MongoClient} it stopped: a
+     * {@link RestartableMongoClient} builds a new driver client and stays the one handed out, and any other client is
+     * replaced by one built by the same factory the original was built with, so settings applied at startup still
+     * apply. A replacement is handed out by the connection's {@link ConnectionSource} as well as by this datastore,
+     * when that is a {@link MongoConnectionSource}. The indexes are not built again, since they outlive a checkpoint
+     * on the server, but a background index build that {@link #stop()} cut short, or that was requested while
+     * stopped, runs again on a fresh executor, on every connection. A connection added while the datastore was
+     * stopped is connected and has its indexes built here.
+     *
+     * <p>A connection registered while this runs is not left out. One registered by another thread waits for it to
+     * finish and is then connected and built as the running datastore's connections are; one registered by this
+     * thread, from an index build hook, is taken up by another pass before this returns.
      */
     @Override
     void start() {
-        if (this.running) {
-            return
-        }
-        ConnectionSourceFactory<MongoClient, MongoConnectionSourceSettings> factory = connectionSources.getFactory()
-        for (MongoDatastore datastore in datastoresAndChildren()) {
-            if (!datastore.clientStopped) {
-                continue
+        synchronized (this.lifecycleMonitor) {
+            if (this.running) {
+                return
             }
-            ConnectionSource<MongoClient, MongoConnectionSourceSettings> own =
-                    datastore.connectionSources.getDefaultConnectionSource()
-            MongoClient replacement = datastore == this ?
-                    createReplacementDefaultClient(factory) :
-                    // Its settings are reused rather than built again: a connection added at runtime was never part
-                    // of the configuration.
-                    factory.create(own.getName(), own.getSettings()).getSource()
-            if (own instanceof MongoConnectionSource) {
-                ((MongoConnectionSource) own).replaceSource(replacement)
+            this.stopped = false
+            this.starting = true
+            try {
+                startConnections()
+                // Only once every build has finished, or been handed to its thread: one that failed is tried again
+                // by the next start, or by the next use of a datastore that has never started.
+                this.started = true
+                this.running = true
             }
-            else {
-                // Only the connection source the factory creates can be given the replacement. A custom factory's
-                // own kind cannot, so whatever reads the client from it, rather than from the datastore, would go on
-                // using the one that was closed.
-                LOG.warn('The connection source for [{}] is a {}, which cannot be given the client built for the ' +
-                        'restore, so it still hands out the one that was closed. A connection source factory whose ' +
-                        'clients outlive a restore should return a {}.', own.getName(),
-                        own.getClass().getSimpleName(), MongoConnectionSource.getSimpleName())
+            finally {
+                this.starting = false
             }
-            datastore.mongo = replacement
-            datastore.clientStopped = false
-        }
-        this.running = true
-        for (MongoDatastore datastore in datastoresAndChildren()) {
-            datastore.resumeIndexBuild()
         }
     }
 
     /**
-     * Builds the default connection's client as it was built at startup: from the supplier the constructor was
-     * given, or from the configuration again and with the client options passed to the constructor if any.
+     * Starts a datastore that nothing has started, the first time it is used. A datastore that has been stopped is
+     * not started here: whatever stopped it starts it again, and until then its clients refuse to be used.
      */
-    private MongoClient createReplacementDefaultClient(ConnectionSourceFactory<MongoClient, MongoConnectionSourceSettings> factory) {
-        Supplier<MongoClient> clientSupplier = this.defaultClientSupplier
-        if (clientSupplier != null) {
-            return clientSupplier.get()
+    void ensureStarted() {
+        if (this.started || this.closed || this.stopped) {
+            return
         }
-        MongoClientSettings.Builder clientOptions = this.defaultClientOptions
-        if (clientOptions != null) {
-            return createMongoClient(connectionSources.getBaseConfiguration(), clientOptions, getMappingContext())
+        synchronized (this.lifecycleMonitor) {
+            if (!this.started && !this.closed && !this.stopped && !this.starting) {
+                start()
+            }
         }
-        return factory.create(ConnectionSource.DEFAULT, connectionSources.getBaseConfiguration()).getSource()
+    }
+
+    /**
+     * Connects each client and runs each startup index build that is due, in passes, until a pass finds no
+     * datastore it has not already seen: an index build hook can register a connection while this runs.
+     */
+    private void startConnections() {
+        ConnectionSourceFactory<MongoClient, MongoConnectionSourceSettings> factory = connectionSources.getFactory()
+        Set<MongoDatastore> seen = Collections.newSetFromMap(new IdentityHashMap<MongoDatastore, Boolean>())
+        List<MongoDatastore> pass = datastoresAndChildren()
+        while (!pass.isEmpty()) {
+            seen.addAll(pass)
+            for (MongoDatastore datastore in pass) {
+                datastore.startClient(factory, datastore == this)
+            }
+            for (MongoDatastore datastore in pass) {
+                // Before either build: one submitted to the executor stop() shut down would be put off as
+                // though the datastore were still stopped.
+                datastore.replaceStoppedIndexBuildExecutor()
+                if (!datastore.startupBuildDone) {
+                    if (datastore.buildIndexes) {
+                        // The full build does whatever a build cut short, or requested while stopped, would have.
+                        datastore.indexBuildPending = false
+                    }
+                    datastore.buildIndexAutomatically()
+                    datastore.startupBuildDone = true
+                }
+                datastore.runPendingIndexBuild()
+            }
+            List<MongoDatastore> next = new ArrayList<>()
+            for (MongoDatastore datastore in datastoresAndChildren()) {
+                if (!seen.contains(datastore)) {
+                    next.add(datastore)
+                }
+            }
+            pass = next
+        }
+    }
+
+    /**
+     * Brings back a client {@link #stop()} stopped, or connects one GORM owns that has not connected yet.
+     */
+    private void startClient(ConnectionSourceFactory<MongoClient, MongoConnectionSourceSettings> factory, boolean defaultConnection) {
+        if (this.clientStopped) {
+            if (this.mongo instanceof RestartableMongoClient) {
+                ((RestartableMongoClient) this.mongo).start()
+            }
+            else {
+                replaceClient(factory, defaultConnection)
+            }
+            this.clientStopped = false
+        }
+        else if (ownsClient() && this.mongo instanceof RestartableMongoClient) {
+            ((RestartableMongoClient) this.mongo).start()
+        }
+    }
+
+    /**
+     * Stops a client GORM owns: a {@link RestartableMongoClient} closes its driver client and refuses to be used
+     * until it is started again, and any other is closed, for {@link #start()} to replace.
+     */
+    private void stopClient() {
+        if (this.mongo instanceof RestartableMongoClient) {
+            ((RestartableMongoClient) this.mongo).stop()
+        }
+        else {
+            this.mongo.close()
+        }
+        this.clientStopped = true
+    }
+
+    /**
+     * Builds a replacement for a client {@link #stop()} closed. The default connection's is built from the
+     * configuration again; any other reuses its settings, since a connection added at runtime was never part of
+     * the configuration.
+     */
+    private void replaceClient(ConnectionSourceFactory<MongoClient, MongoConnectionSourceSettings> factory, boolean defaultConnection) {
+        ConnectionSource<MongoClient, MongoConnectionSourceSettings> own = connectionSources.getDefaultConnectionSource()
+        MongoClient replacement = defaultConnection ?
+                factory.create(ConnectionSource.DEFAULT, connectionSources.getBaseConfiguration()).getSource() :
+                factory.create(own.getName(), own.getSettings()).getSource()
+        if (own instanceof MongoConnectionSource) {
+            ((MongoConnectionSource) own).replaceSource(replacement)
+        }
+        else {
+            // Only the connection source the factory creates can be given the replacement. A custom factory's
+            // own kind cannot, so whatever reads the client from it, rather than from the datastore, would go on
+            // using the one that was closed.
+            LOG.warn('The connection source for [{}] is a {}, which cannot be given the client built for the ' +
+                    'restore, so it still hands out the one that was closed. A connection source factory whose ' +
+                    'clients outlive a restore should wrap each in a {}, or return a {}.', own.getName(),
+                    own.getClass().getSimpleName(), RestartableMongoClient.getSimpleName(),
+                    MongoConnectionSource.getSimpleName())
+        }
+        this.mongo = replacement
     }
 
     /**
@@ -1922,15 +2634,14 @@ class MongoDatastore extends AbstractDatastore implements MappingContext.Listene
     }
 
     /**
-     * Replaces the executor {@link #stop()} shut down and runs any build it cut short. A build that was
-     * running when it was interrupted records that it was cut short as it exits, so this waits for it to
-     * have exited before deciding.
+     * Replaces the executor {@link #stop()} shut down, so that a build submitted from here on runs. A build that
+     * was running when it was interrupted records that it was cut short as it exits, so this waits for it to
+     * have exited first.
      */
-    private void resumeIndexBuild() {
+    private void replaceStoppedIndexBuildExecutor() {
         ExecutorService stopped = this.indexBuildExecutor
-        if (stopped == null || !stopped.isShutdown()) {
-            // Never shut down - a connection added while the datastore was stopped - so no build of it was
-            // interrupted, and one requested since was submitted rather than deferred.
+        if (!stopped.isShutdown()) {
+            // Never shut down: the datastore has not been stopped since it was last started.
             return
         }
         try {
@@ -1944,12 +2655,20 @@ class MongoDatastore extends AbstractDatastore implements MappingContext.Listene
             Thread.currentThread().interrupt()
             indexBuildPending = true
         }
-        this.indexBuildExecutor = createIndexBuildExecutor(connectionSources.getDefaultConnectionSource().getName())
+        this.indexBuildExecutor = newIndexBuildExecutor(connectionSources.getDefaultConnectionSource().getName())
+    }
+
+    /**
+     * Runs a build {@link #stop()} cut short, or one requested while the datastore was stopped.
+     */
+    private void runPendingIndexBuild() {
         if (indexBuildPending) {
             indexBuildPending = false
             LOG.info('Resuming the index build for connection [{}] that was pending while the datastore was stopped.',
                     connectionName())
-            buildIndex()
+            // On the background thread whatever the setting: only a background build can be cut short, and
+            // with the setting off that is one buildIndexAsync() started.
+            submitIndexBuild(null)
         }
     }
 
@@ -2021,12 +2740,15 @@ class MongoDatastore extends AbstractDatastore implements MappingContext.Listene
      * @return whether a build was still queued, and so never ran
      */
     private boolean shutDownIndexBuild() {
-        ExecutorService executor = this.indexBuildExecutor
-        if (executor == null) {
-            return false
-        }
         // A build already running reports for itself whether it was cut short; one still queued never runs.
-        return !executor.shutdownNow().isEmpty()
+        List<Runnable> queued = this.indexBuildExecutor.shutdownNow()
+        for (Runnable task in queued) {
+            if (task instanceof IndexBuildTask) {
+                ((IndexBuildTask) task).notRun('The datastore was stopped or closed before the index build for connection [' +
+                        connectionName() + '] started.')
+            }
+        }
+        return !queued.isEmpty()
     }
 
     /**
@@ -2035,7 +2757,7 @@ class MongoDatastore extends AbstractDatastore implements MappingContext.Listene
      * index build in flight must not hold the JVM open, and abandoning the wait does not abandon the build —
      * the server finishes an index it has been asked for whether or not a client is still listening.
      */
-    private static ExecutorService createIndexBuildExecutor(String connectionName) {
+    private static ExecutorService newIndexBuildExecutor(String connectionName) {
         CustomizableThreadFactory threadFactory = new CustomizableThreadFactory('gorm-mongo-index-build-' + connectionName + '-')
         threadFactory.setDaemon(true)
         return new ThreadPoolExecutor(0, 1, 1, TimeUnit.SECONDS, new LinkedBlockingQueue<>(), threadFactory)

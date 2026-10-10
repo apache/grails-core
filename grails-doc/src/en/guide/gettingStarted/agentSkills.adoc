@@ -38,7 +38,7 @@ Agents read skills from directories in the repository rather than from the class
 ----
 plugins {
     // the application's other plugins
-    id 'com.skillsjars.gradle-plugin' version '0.1.4'
+    id 'com.skillsjars.gradle-plugin' version '0.2.0'
 }
 
 dependencies {
@@ -51,7 +51,7 @@ skillsjars {
 }
 ----
 
-Use version 0.1.4 or later of the SkillsJars Gradle plugin. Earlier versions have issues that prevent using it with third-party skills such as the Grails skills.
+Use version 0.2.0 or later of the SkillsJars Gradle plugin. Earlier versions have issues that prevent using it with third-party skills such as the Grails skills, and do not support the xref:commandLine#gradleConfigurationCache[Gradle configuration cache], which Grails applications enable.
 
 Then extract them:
 

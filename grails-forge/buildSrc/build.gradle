@@ -40,7 +40,6 @@ dependencies {
     implementation "io.sdkman:gradle-sdkvendor-plugin:$gradleSdkvendorPluginVersion"
     implementation "org.asciidoctor:asciidoctor-gradle-jvm:$asciidoctorGradleJvmVersion"
     implementation "com.diffplug.spotless:spotless-plugin-gradle:$spotlessVersion"
-    implementation "io.spring.nohttp:nohttp-gradle:$nohttpGradleVersion"
     implementation "com.gradleup.shadow:shadow-gradle-plugin:$shadowVersion"
     implementation "org.nosphere.apache.rat:org.nosphere.apache.rat.gradle.plugin:$apacheRatVersion"
     implementation "org.apache.grails:grails-gradle-plugins:$projectVersion", {

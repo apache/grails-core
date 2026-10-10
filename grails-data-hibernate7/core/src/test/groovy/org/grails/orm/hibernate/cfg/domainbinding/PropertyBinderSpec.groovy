@@ -37,7 +37,7 @@ class PropertyBinderSpec extends HibernateGormDatastoreSpec {
     @Shared PropertyBinder binder = new PropertyBinder(new CascadeBehaviorFetcher())
 
     void setupSpec() {
-        manager.registerDomainClasses(PBEntity, PBAuthor, PBCascadeEntity)
+        manager.registerDomainClasses(PBEntity, PBAuthor, PBCascadeEntity, PBWriteEntity)
     }
 
     void "test property binding with real objects"() {
@@ -61,6 +61,41 @@ class PropertyBinderSpec extends HibernateGormDatastoreSpec {
         property.isUpdatable()
         property.getPropertyAccessorName() == "property"
         !property.isLazy()
+    }
+
+    void "test insertable false and updatable false in the mapping are honoured"() {
+        given:
+        def entity = (HibernatePersistentEntity) getMappingContext().getPersistentEntity(PBWriteEntity.name)
+        def table = new Table("PB_WRITE_ENTITY")
+        def value = new BasicValue(getGrailsDomainBinder().getMetadataBuildingContext(), table)
+        value.addColumn(new Column("TEST_COL"))
+
+        when:
+        def property = binder.bindProperty((HibernatePersistentProperty) entity.getPropertyByName(name), value)
+
+        then:
+        property.isInsertable() == insertable
+        property.isUpdatable() == updatable
+
+        where:
+        name         | insertable | updatable
+        "writable"   | true       | true
+        "insertOnly" | true       | false
+        "updateOnly" | false      | true
+        "readOnly"   | false      | false
+    }
+
+    void "test a value without columns is neither insertable nor updatable"() {
+        given:
+        def entity = (HibernatePersistentEntity) getMappingContext().getPersistentEntity(PBWriteEntity.name)
+        def value = new BasicValue(getGrailsDomainBinder().getMetadataBuildingContext(), new Table("PB_WRITE_ENTITY"))
+
+        when:
+        def property = binder.bindProperty((HibernatePersistentProperty) entity.getPropertyByName("writable"), value)
+
+        then:
+        !property.isInsertable()
+        !property.isUpdatable()
     }
 
     void "test association binding laziness"() {
@@ -147,6 +182,21 @@ class PBEntity {
     static mapping = {
         name nullable: false
         eagerAuthor lazy: false
+    }
+}
+
+@Entity
+class PBWriteEntity {
+    Long id
+    String writable
+    String insertOnly
+    String updateOnly
+    String readOnly
+
+    static mapping = {
+        insertOnly updatable: false
+        updateOnly insertable: false
+        readOnly insertable: false, updatable: false
     }
 }
 

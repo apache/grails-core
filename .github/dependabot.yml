@@ -39,6 +39,7 @@ updates:
     ignore:
       - dependency-name: "*"
         update-types: ["version-update:semver-major", "version-update:semver-minor"]
+      - dependency-name: "org.webjars*"
   - package-ecosystem: gradle
     directory: "/grails-forge"
     schedule:
@@ -50,6 +51,7 @@ updates:
     ignore:
       - dependency-name: "*"
         update-types: ["version-update:semver-major", "version-update:semver-minor"]
+      - dependency-name: "org.webjars*"
   - package-ecosystem: gradle
     directory: "/grails-forge"
     schedule:
@@ -61,6 +63,7 @@ updates:
     ignore:
       - dependency-name: "*"
         update-types: ["version-update:semver-major", "version-update:semver-minor"]
+      - dependency-name: "org.webjars*"
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:

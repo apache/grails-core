@@ -24,8 +24,13 @@ import org.hibernate.boot.spi.MetadataBuildingContext
 import org.hibernate.mapping.Collection
 import org.hibernate.mapping.OneToMany
 
+import org.grails.orm.hibernate.cfg.ColumnConfig
+import org.grails.orm.hibernate.cfg.JoinTable
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy
+import org.grails.orm.hibernate.cfg.PropertyConfig
 import org.grails.orm.hibernate.cfg.domainbinding.collectionType.CollectionHolder
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateAssociation
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateManyToManyProperty
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyEntityProperty
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty
 import org.grails.orm.hibernate.cfg.domainbinding.secondpass.BasicCollectionElementBinder
@@ -161,7 +166,48 @@ class CollectionBinder {
         collection.element = oneToMany
     }
 
+    /**
+     * A bidirectional many-to-many has one join table, and the owning side is the one that writes it. When
+     * the owning side names that table, the inverse side adopts the name, schema, catalog and column names
+     * (its key is the owner's column and its column is the owner's key) unless it configures its own.
+     */
+    private void inheritOwningJoinTable(HibernateToManyProperty property) {
+        if (!(property instanceof HibernateManyToManyProperty) || !property.isBidirectional() || property.isOwningSide()) {
+            return
+        }
+        PropertyConfig config = property.hibernateMappedForm
+        JoinTable own = config.joinTable
+        if (own != null && own.name != null) {
+            return
+        }
+        HibernateAssociation owningSide = property.hibernateInverseSide
+        PropertyConfig owningConfig = owningSide instanceof HibernateManyToManyProperty ?
+                ((HibernateManyToManyProperty) owningSide).hibernateMappedForm : null
+        JoinTable owner = owningConfig == null ? null : owningConfig.joinTable
+        if (owner == null || owner.name == null) {
+            return
+        }
+        JoinTable inherited = own == null ? new JoinTable() : own
+        inherited.name = owner.name
+        if (inherited.schema == null) {
+            inherited.schema = owner.schema
+        }
+        if (inherited.catalog == null) {
+            inherited.catalog = owner.catalog
+        }
+        if ((inherited.keys == null || inherited.keys.isEmpty()) && owner.column != null) {
+            inherited.keys = List.of(owner.column)
+        }
+        List<ColumnConfig> ownerKeys = owner.keys
+        if (inherited.column == null && ownerKeys != null && ownerKeys.size() == 1) {
+            inherited.column = ownerKeys.get(0)
+        }
+        config.joinTable = inherited
+    }
+
+
     private void bindCollectionTable(HibernateToManyProperty property, Collection collection) {
+        inheritOwningJoinTable(property)
         String tableName = tableForManyCalculator.getTableName(property)
         String schemaName = tableForManyCalculator.getJoinTableSchema(property)
         String catalogName = tableForManyCalculator.getJoinTableCatalog(property)

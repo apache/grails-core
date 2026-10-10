@@ -33,15 +33,6 @@ dependencies {
     add('testRuntimeOnly', 'org.objenesis:objenesis')
 }
 
-// Disable Spock's compile-time Groovy version check on ALL Groovy compile
-// tasks. Spock's SpockTransform is registered via META-INF services and
-// the Groovy compiler loads every AST transform on the classpath, so even
-// main source sets trip the version check when Groovy is newer than the
-// Spock artifact's groovy variant.
-tasks.withType(GroovyCompile).configureEach {
-    options.forkOptions.jvmArgs += ['-Dspock.iKnowWhatImDoing.disableGroovyVersionCheck=true']
-}
-
 // Disable build cache for Groovy compilation in CI to ensure AST transformations are always applied.
 // AST transformers are applied at compile time, and Gradle's incremental compilation might not detect
 // when a transformer itself changes, leading to stale bytecode.
@@ -49,32 +40,31 @@ tasks.withType(GroovyCompile).configureEach {
 // - compileGroovy
 // - compileTestGroovy
 // - compileGroovyPlugins (if present)
+boolean ciBuild = isCiBuild
+boolean cacheTests = !doNotCacheTests
 tasks.withType(GroovyCompile).configureEach {
-    outputs.cacheIf { !isCiBuild }
+    outputs.cacheIf { !ciBuild }
 }
 
 tasks.withType(Test).configureEach {
     // Disable build cache for tests in CI to ensure they always run.
     // Also honor DO_NOT_CACHE_TESTS=1 so developers can repeatedly invoke the same test
     // command without --rerun-tasks (and without recompiling everything else).
-    outputs.cacheIf { !isCiBuild && !doNotCacheTests }
-    outputs.upToDateWhen { !doNotCacheTests }
+    outputs.cacheIf { !ciBuild && cacheTests }
+    outputs.upToDateWhen { cacheTests }
 
-    onlyIf {
-        ![
-                'onlyFunctionalTests',
-                'onlyHibernate5Tests',
-                'onlyHibernate7Tests',
-                'onlyMongodbTests',
-                'onlyNeo4jTests',
-                'onlyRedisTests',
-                'onlySpringSecurityTests',
-                'skipCoreTests',
-                'skipTests'
-        ].find {
-            project.hasProperty(it)
-        }
-    }
+    boolean skipped = [
+            'onlyFunctionalTests',
+            'onlyHibernate5Tests',
+            'onlyHibernate7Tests',
+            'onlyMongodbTests',
+            'onlyNeo4jTests',
+            'onlyRedisTests',
+            'onlySpringSecurityTests',
+            'skipCoreTests',
+            'skipTests'
+    ].any { project.hasProperty(it) }
+    onlyIf { !skipped }
 
     useJUnitPlatform()
     jvmArgs += java17moduleReflectionCompatibilityArguments
@@ -131,14 +121,15 @@ if (hasProperty('testBisect')) {
             }
         }
 
+        Logger testLogger = logger
         addTestListener([
                 beforeTest: { testDescriptor ->
-                    logger.info('STARTED TEST: {} > {}', testDescriptor.className, testDescriptor.name)
+                    testLogger.info('STARTED TEST: {} > {}', testDescriptor.className, testDescriptor.name)
                 },
                 afterSuite: { suite, result ->
                     if (!suite.parent) {
                         def testStatus = result.failedTestCount == 0 && result.testCount > 1 ? 'PASSED' : 'FAILED'
-                        logger.info(
+                        testLogger.info(
                                 'FINISHED - {} - {} tests executed, {} failed',
                                 testStatus, result.testCount, result.failedTestCount
                         )

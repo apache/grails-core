@@ -75,6 +75,9 @@ dependencies {
     // published jar carries it inside; tests run against class directories, so they need the
     // directory holding it instead.
     testRuntimeOnly files(layout.buildDirectory.dir('doc-files')) { builtBy 'docFilesJar' }
+
+    // The task specs run real builds, which load the tasks from docsCoreClasspath below
+    testImplementation gradleTestKit()
 }
 
 sourceSets {
@@ -111,20 +114,17 @@ tasks.withType(Test).configureEach {
     outputs.cacheIf { !doNotCacheTests }
     outputs.upToDateWhen { !doNotCacheTests }
 
-    onlyIf {
-        ![
-                'onlyFunctionalTests',
-                'onlyHibernate5Tests',
-                'onlyHibernate7Tests',
-                'onlyMongodbTests',
-                'onlyRedisTests',
-                'onlySpringSecurityTests',
-                'skipCoreTests',
-                'skipTests'
-        ].find {
-            project.hasProperty(it)
-        }
-    }
+    boolean skipped = [
+            'onlyFunctionalTests',
+            'onlyHibernate5Tests',
+            'onlyHibernate7Tests',
+            'onlyMongodbTests',
+            'onlyRedisTests',
+            'onlySpringSecurityTests',
+            'skipCoreTests',
+            'skipTests'
+    ].any { project.hasProperty(it) }
+    onlyIf { !skipped }
 
     useJUnitPlatform()
     jvmArgs += java17moduleReflectionCompatibilityArguments
@@ -139,4 +139,24 @@ tasks.withType(Test).configureEach {
     excludes = ['**/*TestCase.class', '**/*$*.class']
     maxParallelForks = 1
     maxHeapSize = '1024m'
+}
+
+/**
+ * Hands the classpath of this project to the tests, whose TestKit builds load the tasks under test from it.
+ */
+abstract class DocsCoreClasspathArgument implements CommandLineArgumentProvider {
+
+    @Classpath
+    abstract ConfigurableFileCollection getClasspath()
+
+    @Override
+    Iterable<String> asArguments() {
+        ["-DdocsCoreClasspath=${classpath.asPath}".toString()]
+    }
+}
+
+def docsCoreClasspathArgument = objects.newInstance(DocsCoreClasspathArgument)
+docsCoreClasspathArgument.classpath.from(sourceSets.named('main').map { it.runtimeClasspath })
+tasks.withType(Test).configureEach { Test it ->
+    it.jvmArgumentProviders.add(docsCoreClasspathArgument)
 }

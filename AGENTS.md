@@ -115,10 +115,10 @@ These human-review concerns are intentionally not mechanized; `validateRepositor
 | Component | Version |
 |-----------|---------|
 | JDK | 21+ (baseline 21) |
-| Groovy | 5.1.x |
+| Groovy | 6.0.x |
 | Spring Boot | 4.1.x |
 | Spring Framework | 7.0.x |
-| Spock | 2.4-groovy-5.0 |
+| Spock | 2.5-groovy-6.0 |
 | Gradle | 9.8.x |
 | Jakarta EE | 10 |
 

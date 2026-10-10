@@ -833,6 +833,10 @@ The Spring annotations still work, so this is non-blocking, but new code should 
 A `classpath*:` or other location pattern converted to `Resource[]` now resolves to every matching resource, or to an empty array when nothing matches, as it does in a plain Spring application. Previously Grails' conversion of a `String` to a `Resource` also handled `Resource[]` values one element at a time, so `classpath*:META-INF/spring.integration.properties` became a single resource with the pattern as its path, and loading it failed when it was opened. This applies to `Resource[]` properties of beans declared in `resources.groovy`, `doWithSpring`, XML, or by a library, whether the value is a single pattern, a comma-delimited String, or a list or array of locations, to `@Value` injection into a `Resource[]` field, and to `config.getProperty(name, Resource[])`, including list-valued configuration entries. Placeholders in the pattern are resolved from the environment. A `Resource` value still resolves a single location.
 A list or array of locations is also collected into a set, as Spring does: a list that names the same location twice now gives one resource instead of two, while a comma-delimited String keeps both. A `null` element in a list or array now fails the conversion instead of becoming a `null` entry, so a bean property given such a list fails at startup.
 
+* **Configuration lists are exposed as indexed properties.**
+Non-empty lists loaded from `application.yml` or `application.groovy` are exposed to Spring's `Environment` through indexed names such as `app.names[0]`. This lets Spring Boot bind each element to its declared type and resolve placeholders inside scalar lists. Code that reads a whole list using `environment.getProperty('app.names', List)` should instead bind it with `@ConfigurationProperties` or `Binder.get(environment).bind('app.names', Bindable.listOf(String)).orElse([])`, using `Binder` and `Bindable` from `org.springframework.boot.context.properties.bind`. `Binder` only accepts a name in Spring Boot's canonical form (lowercase, dot-separated, kebab-case); when the name is built from a value such as the environment name, pass `ConfigurationPropertyName.adapt(name, '.' as char)` from `org.springframework.boot.context.properties.source` instead of the string. Whole-list access through `grailsApplication.config.getProperty('app.names', List)` remains supported.
+The list itself is no longer a property of the `Environment`: `environment.getProperty('app.names', String[])` returns `null` and `environment.containsProperty('app.names')` returns `false`. A `@Value('${app.names}')` placeholder can no longer read the list either. Without a default, the application fails to start with `Could not resolve placeholder 'app.names'`; with a default, the placeholder resolves to the default, or to a single value of the same name from a lower-priority source, and the list is ignored. Bind such a list instead, or write it as one comma-separated string. Grails' own list settings, `grails.plugin.fields.exclusions.input`, `grails.plugin.fields.exclusions.display`, `grails.plugin.fields.exclusions.list`, `grails.gsp.tldScanPattern` and `spring.gsp.templateRoots`, are bound and accept either form.
+
 * **Namespaced link generation is namespace-aware.**
 When a link, form action, pagination link, sortable column link, redirect, chain, or include targets a controller without an explicit `namespace`, Grails now resolves the namespace automatically. The name is resolved nearest scope first: the current request's namespace if it defines a controller with that name, then the non-namespaced controller, then the namespace of the only controller with that name. `controller` and `action` therefore generate the correct namespaced or non-namespaced URL, and a link rendered from a namespace stays in it when that namespace defines the target. A name defined only in namespaces other than the default and the current one is ambiguous: Grails logs a warning and the link must specify `namespace` to choose the target explicitly. A name no registered controller has stays in the namespace the link is made from, where a link previously dropped the namespace; a redirect to such a name has always stayed in it. A page rendered by a controller in the `admin` namespace that links with `controller: 'other', action: 'list'` now generates `/admin/other/list` when no `OtherController` is registered, and so does a unit test that sets `webRequest.controllerNamespace` itself; a `ControllerUnitTest`, which leaves the request namespace unset, still generates `/other/list`. Pass `namespace` to target another namespace. A redirect naming no namespace is resolved exactly as a link is, from the namespace of the controller issuing it; previously it was forced into that namespace, so a redirect to a controller defined only in another namespace produced a URL for a controller that does not exist. Pass `namespace: null` from Groovy code or `namespace=""` in a GSP tag to target the non-namespaced controller explicitly.
 
@@ -867,8 +871,17 @@ A GORM datastore implementation outside the Grails repository whose transaction 
 * **`bindData` can clear omitted included fields.**
 `bindData(target, source, [include: [...], clearMissing: true])` now clears included properties that are absent from the binding source. The behavior is opt-in, requires an `include` list, and does not apply globally. Existing `bindData` calls without `clearMissing: true` keep omitted fields unchanged.
 
+* **GORM for MongoDB builds its indexes when the datastore starts, not when it is created.**
+Creating a `MongoDatastore` no longer connects to MongoDB or builds the declared indexes, whichever constructor creates it, including one given an application's own `MongoClient`. In an application Spring starts the datastore before `BootStrap` runs, so nothing changes there; code that creates a `MongoDatastore` itself and expects its indexes once the constructor returns has to call `start()`, although the first GORM query or save on a datastore nothing has started also starts it. See link:{mongodb5Guide}index.html#upgradeNotes[Upgrade Notes] in the GORM for MongoDB guide.
+
 * **GORM for MongoDB rejects Map criterion values that contain `$` keys.**
 `findWhere`, `findAllWhere`, criteria queries, the `where` DSL and dynamic finders now throw `InvalidDataAccessResourceUsageException` when a `Map` passed as a criterion value contains a key starting with `$` at any level, on any property type including enums. MongoDB interprets such a value document as an operator expression rather than as a value. Maps without such keys are still sent as literal subdocument comparisons, so exact matches on `Map` properties, dotted paths and array elements are unchanged, and geospatial criteria are exempt. Code that deliberately passed an operator document through a criteria value should use the native `find(Bson)` API instead.
+
+* **GORM for MongoDB no longer ends the index build on a `unique` index over duplicate values.**
+A declared `unique` index that could not be built because documents already shared a value ended the index build with a `DuplicateKeyException`: the indexes declared after it were not built, and with the default synchronous build the application did not start. It is now counted as a failed declaration like any other index the server refuses, logged at `ERROR`, and the build goes on; the application starts without that index. Remove the duplicates and build the index again to create it. See link:{mongodb5Guide}index.html#upgradeNotes[Upgrade Notes] in the GORM for MongoDB guide.
+
+* **GORM for MongoDB builds only the indexes of the domain classes mapped to each connection.**
+The index build of a named connection also created the indexes of classes mapped only to another connection, in its own database. Each connection now builds the indexes of the classes mapped to it, including those mapped to `ConnectionSource.ALL`. Indexes already created elsewhere are left in place. See link:{mongodb5Guide}index.html#upgradeNotes[Upgrade Notes] in the GORM for MongoDB guide.
 
 ==== 21. Tag Library Test Cleanup Changes
 
@@ -4709,3 +4722,21 @@ for template renders:
 
 Objects passed with `bean` or `collection` are not part of `model`. See
 link:theWebLayer.html#definingInterceptors[Defining Interceptors].
+
+==== 85. Gradle Configuration Cache
+
+The Grails Gradle plugins of Grails 8.0, and the Asset Pipeline and Grails Publish plugins in the versions the Grails 8.0 BOM manages, support the https://docs.gradle.org/{gradleVersion}/userguide/configuration_cache.html[Gradle configuration cache].
+Applications and plugins created with Grails 8.0 enable it in `gradle.properties`.
+
+An application or plugin upgraded to Grails 8.0 can enable it by adding the same property, once it uses the Grails 8.0 Gradle plugins and BOM:
+
+[source,properties]
+.gradle.properties
+----
+org.gradle.configuration-cache=true
+----
+
+When upgrading from an earlier Grails 8 milestone or release candidate, update the Grails Gradle plugins and BOM before enabling the configuration cache.
+
+With the configuration cache, task actions such as `doFirst` and `doLast` closures may not use `project`, other tasks or build script properties while they run, and Gradle fails the build when a build script or another Gradle plugin does.
+See xref:commandLine#gradleConfigurationCache[Using the Gradle Configuration Cache] for how to adapt build scripts and what to do about plugins that do not support it.

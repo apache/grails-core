@@ -423,6 +423,10 @@ class GrailsModelConverter implements ModelConverter {
         List<String> bindable = read("what data binding binds of [${type.name}]") {
             BindingIncludeLists.propertyNames(type)
         }
+        // Where no list restricts what binding binds, it still leaves out what is constrained bindable: false.
+        List<String> unbindable = bindable == null ? read("what data binding does not bind of [${type.name}]") {
+            BindingIncludeLists.unbindablePropertyNames(type)
+        } : null
         Set<String> beanProperties = BeanUtils.getPropertyDescriptors(type)*.name.toSet()
 
         Map<String, String> names = propertyNames.applyTo(model)
@@ -445,6 +449,7 @@ class GrailsModelConverter implements ModelConverter {
         if (bindable != null) {
             markUnbound(model, names, bindable, beanProperties)
         }
+        unbindable?.each { String name -> describable(model, names[name] ?: name)?.setReadOnly(true) }
     }
 
     /**

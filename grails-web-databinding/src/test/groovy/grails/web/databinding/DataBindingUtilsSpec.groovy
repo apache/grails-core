@@ -23,13 +23,16 @@ import spock.lang.Specification
 import org.springframework.context.ApplicationContext
 import org.springframework.context.support.StaticApplicationContext
 
+import grails.core.DefaultGrailsApplication
 import grails.core.GrailsApplication
 import grails.databinding.CollectionDataBindingSource
 import grails.databinding.DataBinder
 import grails.databinding.SimpleMapDataBindingSource
 import grails.util.Holders
 import grails.web.mime.MimeTypeResolver
+import org.grails.datastore.mapping.keyvalue.mapping.config.KeyValueMappingContext
 import org.grails.datastore.mapping.model.MappingContext
+import org.grails.datastore.mapping.proxy.ProxyFactory
 import org.grails.web.databinding.BindingIncludeLists
 import org.grails.web.databinding.bindingsource.DataBindingSourceRegistry
 import org.grails.web.databinding.bindingsource.DefaultDataBindingSourceRegistry
@@ -98,14 +101,56 @@ class DataBindingUtilsSpec extends Specification {
         command.version == null
     }
 
-    void 'test a whitelist declared by a super class also restricts a sub class'() {
+    void 'test a superclass whitelist does not restrict an unenhanced subclass in compatibility mode'() {
         given:
         def command = new SubclassOfWhitelistedCommand()
 
         when:
         DataBindingUtils.bindObjectToInstance(command, [name: 'Grails', version: '8'])
 
-        then: 'the inherited whitelist applies to the sub class as well'
+        then: 'only a whitelist declared on the bound class describes its eligible properties'
+        command.name == 'Grails'
+        command.version == '8'
+    }
+
+    void 'test a proxy is bound with the whitelist of the class it stands for'() {
+        given: 'an application whose datastore generates a proxy as a subclass of the class it stands for'
+        def mappingContext = new KeyValueMappingContext('test')
+        mappingContext.proxyFactory = Stub(ProxyFactory) {
+            isProxy(_ as ProxyOfWhitelistedCommand) >> true
+            getProxiedClass(_ as ProxyOfWhitelistedCommand) >> WhitelistedCommand
+        }
+        def application = new DefaultGrailsApplication()
+        application.mappingContext = mappingContext
+        Holders.setGrailsApplication(application)
+
+        and:
+        def proxy = new ProxyOfWhitelistedCommand()
+        def subclass = new SubclassOfWhitelistedCommand()
+
+        when:
+        DataBindingUtils.bindObjectToInstance(proxy, [name: 'Grails', version: '8'])
+        DataBindingUtils.bindObjectToInstance(subclass, [name: 'Grails', version: '8'])
+
+        then: 'the proxy binds as the class it stands for does'
+        proxy.name == 'Grails'
+        proxy.version == null
+
+        and: 'a subclass that is not a proxy still binds the properties its superclass whitelist leaves out'
+        subclass.name == 'Grails'
+        subclass.version == '8'
+    }
+
+    void 'test binding before GORM has initialized the mapping context'() {
+        given: 'an application whose mapping context is only a placeholder until GORM initializes'
+        Holders.setGrailsApplication(new DefaultGrailsApplication())
+        def command = new WhitelistedCommand()
+
+        when:
+        def bindingResult = DataBindingUtils.bindObjectToInstance(command, [name: 'Grails', version: '8'])
+
+        then:
+        bindingResult == null
         command.name == 'Grails'
         command.version == null
     }
@@ -113,7 +158,7 @@ class DataBindingUtilsSpec extends Specification {
     void 'test the include list of a type is the one its instances are bound with'() {
         expect:
         BindingIncludeLists.propertyNames(WhitelistedCommand) == ['name']
-        BindingIncludeLists.propertyNames(SubclassOfWhitelistedCommand) == ['name']
+        BindingIncludeLists.propertyNames(SubclassOfWhitelistedCommand) == null
 
         and: 'a type that declares none is not restricted'
         BindingIncludeLists.propertyNames(NoWhitelistCommand) == null
@@ -294,6 +339,10 @@ class WhitelistedCommand {
 }
 
 class SubclassOfWhitelistedCommand extends WhitelistedCommand {
+}
+
+// Stands for the subclass a datastore generates at runtime to proxy an instance of the class it extends.
+class ProxyOfWhitelistedCommand extends WhitelistedCommand {
 }
 
 class CountedCommand {

@@ -28,7 +28,7 @@ import org.hibernate.metamodel.mapping.JdbcMapping
 /**
  * Utility class for binding multi-tenant filter definitions to the Hibernate meta model.
  *
- * @since 7.0
+ * @since 8.0
  */
 @CompileStatic
 class MultiTenantFilterDefinitionBinder {

@@ -59,6 +59,25 @@ class HibernateQuerySpec extends HibernateGormDatastoreSpec {
         oldBob == newBob
     }
 
+    def 'eqIgnoreCase(#property, #value.inspect()) matches the whole value in any case'() {
+        given: 'a person whose first name starts with the value'
+        new Person(firstName: 'Bobby', lastName: 'Rogers', age: 51).save(flush: true)
+        hibernateQuery.eqIgnoreCase(property, value)
+
+        when:
+        var results = hibernateQuery.list()
+
+        then:
+        results*.firstName == expected
+
+        where:
+        property    | value  || expected
+        'firstName' | 'BOB'  || ['Bob']
+        'firstName' | 'bob%' || []
+        'age'       | 50     || ['Bob']
+        'age'       | '50'   || ['Bob']
+    }
+
     def equalsJoins() {
         given:
         oldBob.addToPets(new Pet(name: "Pluto")).save(flush: true)
@@ -946,21 +965,80 @@ class HibernateQuerySpec extends HibernateGormDatastoreSpec {
     }
 
     def addDetachedCriteria() {
-        given:
-        hibernateQuery.add(new DetachedCriteria(Person).eq("firstName", "Bob"))
+        given: 'a second person the detached criteria does not match'
+        new Person(firstName: 'Fred', lastName: 'Rogers', age: 51).save(flush: true)
+        hibernateQuery.add(new DetachedCriteria(Person).eq('firstName', 'Bob'))
+
         when:
-        def bob = hibernateQuery.singleResult()
-        then:
-        bob == oldBob
+        var results = hibernateQuery.list()
+
+        then: 'the criteria of the detached criteria restrict the query'
+        results == [oldBob]
     }
 
     def addJunctionCriterion() {
-        given:
-        hibernateQuery.add(new Query.Disjunction(), new Query.Equals("firstName", "Bob"))
+        given: 'two people besides oldBob and a disjunction of two of them'
+        new Person(firstName: 'Fred', lastName: 'Rogers', age: 51).save(flush: true)
+        new Person(firstName: 'Walt', lastName: 'Disney', age: 52).save(flush: true)
+        var disjunction = hibernateQuery.disjunction()
+        hibernateQuery.add(disjunction, new Query.Equals('firstName', 'Bob'))
+        hibernateQuery.add(disjunction, new Query.Equals('firstName', 'Fred'))
+
         when:
-        def bob = hibernateQuery.singleResult()
+        var results = hibernateQuery.list()
+
         then:
-        bob == oldBob
+        results*.firstName.sort() == ['Bob', 'Fred']
+    }
+
+    def 'add(junction, criterion) adds the criterion to the given junction, not to an earlier disjunction'() {
+        given: 'a disjunction on last name followed by a second disjunction that criteria are added to'
+        new Person(firstName: 'Fred', lastName: 'Rogers', age: 51).save(flush: true)
+        new Person(firstName: 'Walt', lastName: 'Disney', age: 52).save(flush: true)
+        var lastNames = hibernateQuery.disjunction()
+        lastNames.add(new Query.Equals('lastName', 'Builder'))
+        lastNames.add(new Query.Equals('lastName', 'Rogers'))
+        var ages = hibernateQuery.disjunction()
+        hibernateQuery.add(ages, new Query.Equals('age', 51))
+        hibernateQuery.add(ages, new Query.Equals('age', 52))
+
+        when:
+        var results = hibernateQuery.list()
+
+        then: 'only Fred matches both disjunctions'
+        results*.firstName == ['Fred']
+    }
+
+    def 'add(junction, criterion) adds the criterion to a conjunction'() {
+        given:
+        new Person(firstName: 'Bob', lastName: 'Rogers', age: 51).save(flush: true)
+        var conjunction = hibernateQuery.conjunction()
+        hibernateQuery.add(conjunction, new Query.Equals('firstName', 'Bob'))
+        hibernateQuery.add(conjunction, new Query.Equals('lastName', 'Rogers'))
+
+        when:
+        var results = hibernateQuery.list()
+
+        then: 'only the person matching every criterion of the conjunction is returned'
+        results*.lastName == ['Rogers']
+    }
+
+    def 'countByXOrY on a where query keeps its Or apart from the where query\'s or block'() {
+        given: 'Fred matches the or block and the dynamic finder, Walt matches only the dynamic finder'
+        new Person(firstName: 'Fred', lastName: 'Rogers', age: 51).save(flush: true)
+        new Person(firstName: 'Walt', lastName: 'Disney', age: 52).save(flush: true)
+        var query = Person.where {
+            or {
+                eq('lastName', 'Builder')
+                eq('lastName', 'Rogers')
+            }
+        }
+
+        when:
+        var count = query.countByFirstNameOrAge('Walt', 51)
+
+        then: 'only Fred matches both the or block and the dynamic finder'
+        count == 1
     }
 
     def "countByXOrY exercises disjunction() through a dynamic finder"() {

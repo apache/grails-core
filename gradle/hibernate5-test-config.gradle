@@ -24,31 +24,25 @@ dependencies {
     add('testRuntimeOnly', 'org.objenesis:objenesis')
 }
 
-tasks.withType(GroovyCompile).configureEach {
-    options.forkOptions.jvmArgs += ['-Dspock.iKnowWhatImDoing.disableGroovyVersionCheck=true']
-}
-
+boolean cacheTests = !doNotCacheTests
 tasks.withType(Test).configureEach {
     // Honor DO_NOT_CACHE_TESTS=1 so developers can repeatedly invoke the same test command
     // without --rerun-tasks (and without recompiling everything else).
-    outputs.cacheIf { !doNotCacheTests }
-    outputs.upToDateWhen { !doNotCacheTests }
+    outputs.cacheIf { cacheTests }
+    outputs.upToDateWhen { cacheTests }
 
-    onlyIf {
-        ![
-                'onlyFunctionalTests',
-                'onlyHibernate7Tests',
-                'skipHibernate5Tests',
-                'onlyMongodbTests',
-                'onlyNeo4jTests',
-                'onlyRedisTests',
-                'onlySpringSecurityTests',
-                'onlyCoreTests',
-                'skipTests'
-        ].find {
-            project.hasProperty(it)
-        }
-    }
+    boolean skipped = [
+            'onlyFunctionalTests',
+            'onlyHibernate7Tests',
+            'skipHibernate5Tests',
+            'onlyMongodbTests',
+            'onlyNeo4jTests',
+            'onlyRedisTests',
+            'onlySpringSecurityTests',
+            'onlyCoreTests',
+            'skipTests'
+    ].any { project.hasProperty(it) }
+    onlyIf { !skipped }
 
     useJUnitPlatform()
     // Lets TCK specs gate features on the running suite. Spock evaluates @IgnoreIf/@Requires
@@ -72,9 +66,10 @@ tasks.withType(Test).configureEach {
         info.events = debug.events
         info.exceptionFormat = debug.exceptionFormat
     }
+    Logger testLogger = logger
     addTestListener([
         afterTest: { desc, result ->
-            logger.quiet(' -- Executed test {} [{}] with result: {}', desc.name, desc.className, result.resultType)
+            testLogger.quiet(' -- Executed test {} [{}] with result: {}', desc.name, desc.className, result.resultType)
         },
         afterSuite: { desc, result ->
             if (!desc.parent) { // will match the outermost suite
@@ -82,7 +77,7 @@ tasks.withType(Test).configureEach {
                 def startItem = '|  ', endItem = '  |'
                 def repeatLength = startItem.length() + output.length() + endItem.length()
                 def dashes = '-' * repeatLength
-                logger.quiet('\n{}\n{}{}{}\n{}', dashes, startItem, output, endItem, dashes)
+                testLogger.quiet('\n{}\n{}{}{}\n{}', dashes, startItem, output, endItem, dashes)
             }
         }
     ] as TestListener)

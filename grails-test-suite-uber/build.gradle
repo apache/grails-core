@@ -128,13 +128,15 @@ isolatedTestPatterns.keySet().each { taskName ->
     }
 }
 
+boolean cacheTests = !doNotCacheTests
+boolean testsSkipped = testSkippingProperties.any { project.hasProperty(it) }
 tasks.withType(Test).configureEach {
     // Honor DO_NOT_CACHE_TESTS=1 so developers can repeatedly invoke the same test command
     // without --rerun-tasks (and without recompiling everything else).
-    outputs.cacheIf { !doNotCacheTests }
-    outputs.upToDateWhen { !doNotCacheTests }
+    outputs.cacheIf { cacheTests }
+    outputs.upToDateWhen { cacheTests }
 
-    onlyIf { !testSkippingProperties.any {project.hasProperty(it) } }
+    onlyIf { !testsSkipped }
     useJUnitPlatform()
     maxParallelForks = rootProject.ext.configuredTestParallel
     forkEvery = isCiBuild ? 50 : 100

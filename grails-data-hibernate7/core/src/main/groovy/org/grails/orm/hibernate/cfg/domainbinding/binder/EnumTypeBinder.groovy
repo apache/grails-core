@@ -101,6 +101,10 @@ class EnumTypeBinder {
 
         if (!pc.columns.isEmpty()) {
             ColumnConfig columnConfig = pc.columns.get(0)
+            column.comment = columnConfig.comment
+            column.defaultValue = columnConfig.defaultValue
+            column.customRead = columnConfig.read
+            column.customWrite = columnConfig.write
             indexBinder.bindIndex(columnName, column, columnConfig, t)
             columnConfigToColumnBinder.bindColumnConfigToColumn(column, columnConfig, pc)
         }

@@ -24,12 +24,12 @@ import jakarta.persistence.criteria.Subquery
 import org.hibernate.query.criteria.HibernateCriteriaBuilder
 
 import org.grails.datastore.mapping.query.Query
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
 
 /**
  * Adapts Grails datastore projections to JPA Selections.
  *
- * @author walterduquedeestrada
- * @since 7.0.0
+ * @since 8.0
  */
 @CompileStatic
 class JpaProjectionAdapter {
@@ -39,9 +39,17 @@ class JpaProjectionAdapter {
     private final JpaProjectionTranslator translator
 
     JpaProjectionAdapter(HibernateCriteriaBuilder criteriaBuilder, JpaQueryContext context) {
+        this(criteriaBuilder, context, null)
+    }
+
+    /**
+     * @param entity the queried entity, whose table alias replaces {@code {alias}} in a SQL projection
+     */
+    JpaProjectionAdapter(
+            HibernateCriteriaBuilder criteriaBuilder, JpaQueryContext context, GrailsHibernatePersistentEntity entity) {
         this.criteriaBuilder = criteriaBuilder
         this.context = context
-        this.translator = new JpaProjectionTranslator(criteriaBuilder, context)
+        this.translator = new JpaProjectionTranslator(criteriaBuilder, context, entity)
     }
 
     void adapt(Query.ProjectionList projectionList, jakarta.persistence.criteria.AbstractQuery<?> query) {

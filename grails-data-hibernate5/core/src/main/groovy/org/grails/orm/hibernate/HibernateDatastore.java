@@ -22,12 +22,14 @@ import java.io.IOException;
 import java.io.Serializable;
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 import javax.sql.DataSource;
 
@@ -53,8 +55,10 @@ import org.springframework.core.env.PropertyResolver;
 import org.springframework.jdbc.datasource.ConnectionHolder;
 import org.springframework.jdbc.datasource.TransactionAwareDataSourceProxy;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
+import org.springframework.util.ReflectionUtils;
 
 import grails.gorm.MultiTenant;
+import org.grails.datastore.gorm.GormRegistry;
 import org.grails.datastore.gorm.events.AutoTimestampEventListener;
 import org.grails.datastore.gorm.events.ConfigurableApplicationContextEventPublisher;
 import org.grails.datastore.gorm.events.ConfigurableApplicationEventPublisher;
@@ -108,6 +112,7 @@ public class HibernateDatastore extends AbstractHibernateDatastore implements Me
     protected ConfigurableApplicationEventPublisher eventPublisher;
     protected final HibernateGormEnhancer gormEnhancer;
     protected final Map<String, HibernateDatastore> datastoresByConnectionSource = new LinkedHashMap<>();
+    private final List<ConnectionSource<SessionFactory, HibernateConnectionSourceSettings>> schemaTenantConnectionSources = new CopyOnWriteArrayList<>();
     protected final Metadata metadata;
 
     /**
@@ -508,17 +513,16 @@ public class HibernateDatastore extends AbstractHibernateDatastore implements Me
     public void withFlushMode(FlushMode flushMode, Callable<Boolean> callable) {
         final org.hibernate.Session session = sessionFactory.getCurrentSession();
         org.hibernate.FlushMode previousMode = null;
-        Boolean reset = true;
+        boolean reset = true;
         try {
             if (session != null) {
                 previousMode = session.getHibernateFlushMode();
                 session.setHibernateFlushMode(org.hibernate.FlushMode.valueOf(flushMode.name()));
             }
-            try {
-                reset = callable.call();
-            } catch (Exception e) {
-                reset = false;
-            }
+            reset = !Boolean.FALSE.equals(callable.call());
+        }
+        catch (Exception e) {
+            ReflectionUtils.rethrowRuntimeException(e);
         }
         finally {
             if (session != null && previousMode != null && reset) {
@@ -543,15 +547,58 @@ public class HibernateDatastore extends AbstractHibernateDatastore implements Me
     @Override
     public void destroy() {
         try {
+            closeSchemaTenantConnectionSources();
             super.destroy();
         } finally {
             GrailsDomainBinder.clearMappingCache();
+            unregisterChildDatastores();
             try {
                 this.gormEnhancer.close();
             } catch (IOException e) {
                 LOG.error("There was an error shutting down GORM enhancer", e);
             }
         }
+    }
+
+    /**
+     * Closes the connection sources created for schema tenants. Each one owns a SessionFactory,
+     * but none of them is part of {@link #connectionSources}, so closing those does not reach them.
+     */
+    private void closeSchemaTenantConnectionSources() {
+        for (ConnectionSource<SessionFactory, HibernateConnectionSourceSettings> tenantConnectionSource : schemaTenantConnectionSources) {
+            try {
+                tenantConnectionSource.close();
+            } catch (IOException e) {
+                LOG.error("There was an error closing the connection source of schema tenant [{}]: {}", tenantConnectionSource.getName(), e.getMessage(), e);
+            }
+        }
+        schemaTenantConnectionSources.clear();
+    }
+
+    /**
+     * Removes the child datastores of this datastore's other connection sources, such as additional
+     * data sources and schema tenants, from the GORM registry. They are not destroyed on their own,
+     * and while they stay registered they keep this datastore reachable after it is destroyed.
+     */
+    private void unregisterChildDatastores() {
+        GormRegistry registry = GormRegistry.getInstance();
+        for (HibernateDatastore childDatastore : childDatastores()) {
+            registry.removeDatastore(childDatastore);
+        }
+    }
+
+    /**
+     * Returns a snapshot of the datastores of this datastore's other connection sources, so that
+     * destroying them does not iterate {@link #datastoresByConnectionSource} while a tenant may be added.
+     */
+    private List<HibernateDatastore> childDatastores() {
+        List<HibernateDatastore> childDatastores = new ArrayList<>();
+        for (HibernateDatastore datastore : datastoresByConnectionSource.values()) {
+            if (datastore != this) {
+                childDatastores.add(datastore);
+            }
+        }
+        return childDatastores;
     }
 
     @Override
@@ -650,6 +697,7 @@ public class HibernateDatastore extends AbstractHibernateDatastore implements Me
         };
         DefaultConnectionSource<DataSource, DataSourceSettings> dataSourceConnectionSource = new DefaultConnectionSource<>(schemaName, dataSource, tenantSettings.getDataSource());
         ConnectionSource<SessionFactory, HibernateConnectionSourceSettings> connectionSource = factory.create(schemaName, dataSourceConnectionSource, tenantSettings);
+        schemaTenantConnectionSources.add(connectionSource);
         SingletonConnectionSources<SessionFactory, HibernateConnectionSourceSettings> singletonConnectionSources = new SingletonConnectionSources<>(connectionSource, connectionSources.getBaseConfiguration());
         HibernateDatastore childDatastore = new HibernateDatastore(singletonConnectionSources, (HibernateMappingContext) mappingContext, eventPublisher) {
             @Override

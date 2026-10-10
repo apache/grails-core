@@ -3,9 +3,10 @@ plugins {
 }
 
 tasks.register('inspectPreserveParam') {
+    def paramsEnabled = providers.provider {
+        tasks.withType(GroovyCompile).every { it.groovyOptions.parameters }
+    }
     doLast {
-        def compileTasks = tasks.withType(GroovyCompile)
-        def paramsEnabled = compileTasks.every { it.groovyOptions.parameters }
-        println "HAS_PRESERVE_PARAM_ENABLED=${paramsEnabled}"
+        println "HAS_PRESERVE_PARAM_ENABLED=${paramsEnabled.get()}"
     }
 }

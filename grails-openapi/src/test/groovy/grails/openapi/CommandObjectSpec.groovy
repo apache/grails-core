@@ -142,6 +142,28 @@ class CommandObjectSpec extends Specification {
         openApi.components.schemas.containsKey('LineCommand')
     }
 
+    void 'marks what data binding does not bind of a command and of its subclass as read only'() {
+        when:
+        def openApi = OpenApiFixture.document([DeliveriesController], []) {
+            post '/deliveries/schedule'(controller: 'deliveries', action: 'schedule')
+            post '/deliveries/verify'(controller: 'deliveries', action: 'verify')
+        }
+
+        then: 'the command an action takes binds the properties Grails generated its list with'
+        with(openApi.components.schemas['PickupAddressCommand'].properties) {
+            !street.readOnly
+            verifiedBy.readOnly
+        }
+
+        and: 'its subclass, which has no list of its own, binds its own properties, but none constrained bindable: false'
+        with(openApi.components.schemas['DeliveryAddressCommand'].properties) {
+            !street.readOnly
+            !carrier.readOnly
+            verifiedBy.readOnly
+            trackingCode.readOnly
+        }
+    }
+
     private static GrailsOpenApiGenerator nestedCustomizer() {
         def application = new DefaultGrailsApplication(NestedOrdersController).tap { it.initialise() }
         def ctx = new MockApplicationContext()
@@ -201,6 +223,37 @@ class LineCommand implements Validateable {
 class NestedOrderCommand implements Validateable {
     AddressCommand shipping
     List<LineCommand> lines
+}
+
+class PickupAddressCommand implements Validateable {
+    String street
+    String verifiedBy
+
+    static constraints = {
+        verifiedBy bindable: false
+    }
+}
+
+// Inherits Validateable, and with it the superclass's constraints accessor, without implementing it again.
+class DeliveryAddressCommand extends PickupAddressCommand {
+    String carrier
+    String trackingCode
+
+    static constraints = {
+        trackingCode bindable: false
+    }
+}
+
+class DeliveryCommand implements Validateable {
+    DeliveryAddressCommand destination
+}
+
+@Artefact('Controller')
+class DeliveriesController {
+    // Taking the superclass generates its binding list, which its subclass does not declare.
+    def verify(PickupAddressCommand address) { }
+
+    def schedule(DeliveryCommand delivery) { }
 }
 
 @Artefact('Controller')

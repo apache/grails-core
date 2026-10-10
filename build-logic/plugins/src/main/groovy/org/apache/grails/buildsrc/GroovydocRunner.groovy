@@ -83,9 +83,6 @@ abstract class GroovydocRunner {
             spec.classpath = classpath
             spec.mainClass.set('groovy.ui.GroovyMain')
             spec.args = [scriptFile.absolutePath, paramsFile.absolutePath]
-            // Included builds (such as Forge) do not inherit the root JVM settings, and Spock's
-            // global AST transform refuses to load on Groovy 6 without this opt-out.
-            spec.systemProperty('spock.iKnowWhatImDoing.disableGroovyVersionCheck', 'true')
             spec.maxHeapSize = maxHeapSize
         }
     }

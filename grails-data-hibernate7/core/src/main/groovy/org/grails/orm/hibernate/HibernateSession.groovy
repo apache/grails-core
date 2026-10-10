@@ -21,6 +21,8 @@ package org.grails.orm.hibernate
 import groovy.transform.CompileStatic
 import jakarta.persistence.FlushModeType
 import jakarta.persistence.LockModeType
+import org.hibernate.FlushMode
+import org.hibernate.HibernateException
 import org.hibernate.LockMode
 import org.hibernate.Session
 import org.hibernate.SessionFactory
@@ -470,20 +472,42 @@ class HibernateSession extends AbstractAttributeStoringSession implements QueryA
         return (GrailsHibernateTemplate) getNativeInterface()
     }
 
+    /**
+     * Returns the flush mode of the Hibernate session bound to the current thread, or the default flush mode of
+     * the datastore when no session is bound. {@link FlushMode#MANUAL} is returned as {@link FlushModeType#COMMIT}
+     * and {@link FlushMode#ALWAYS} as {@link FlushModeType#AUTO}.
+     */
     @Override
     FlushModeType getFlushMode() {
-        if (hibernateTemplate.flushMode == GrailsHibernateTemplate.FLUSH_COMMIT) {
-            return FlushModeType.COMMIT
+        Session session = getCurrentNativeSession()
+        if (session != null) {
+            return session.getFlushMode()
         }
-        return FlushModeType.AUTO
+        FlushMode defaultFlushMode = ((HibernateDatastore) getDatastore()).getDefaultFlushMode()
+        return defaultFlushMode == FlushMode.COMMIT || defaultFlushMode == FlushMode.MANUAL ?
+                FlushModeType.COMMIT : FlushModeType.AUTO
     }
 
+    /**
+     * Sets the flush mode of the Hibernate session bound to the current thread. Other sessions and the default
+     * flush mode of the datastore are not changed.
+     *
+     * @throws IllegalStateException if no Hibernate session is bound to the current thread
+     */
     @Override
     void setFlushMode(FlushModeType flushMode) {
-        if (flushMode == FlushModeType.AUTO) {
-            hibernateTemplate.setFlushMode(GrailsHibernateTemplate.FLUSH_AUTO)
-        } else if (flushMode == FlushModeType.COMMIT) {
-            hibernateTemplate.setFlushMode(GrailsHibernateTemplate.FLUSH_COMMIT)
+        Session session = getCurrentNativeSession()
+        if (session == null) {
+            throw new IllegalStateException('No Hibernate session is bound to the current thread')
+        }
+        session.setFlushMode(flushMode)
+    }
+
+    private Session getCurrentNativeSession() {
+        try {
+            return hibernateTemplate.getSessionFactory().getCurrentSession()
+        } catch (HibernateException ignored) {
+            return null
         }
     }
 

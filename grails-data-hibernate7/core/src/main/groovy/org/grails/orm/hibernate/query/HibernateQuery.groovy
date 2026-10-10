@@ -22,6 +22,7 @@ import groovy.transform.CompileStatic
 import jakarta.persistence.Tuple
 import jakarta.persistence.criteria.CriteriaQuery
 import jakarta.persistence.criteria.JoinType
+import jakarta.persistence.criteria.ParameterExpression
 import org.hibernate.FlushMode
 import org.hibernate.Session
 import org.hibernate.SessionFactory
@@ -179,24 +180,13 @@ class HibernateQuery extends Query {
         detachedCriteria.add(criterion)
     }
 
-    void add(DetachedCriteria<?> detachedCriteria) {
-        detachedCriteria.add(new Conjunction(detachedCriteria.criteria))
+    void add(DetachedCriteria<?> criteria) {
+        detachedCriteria.add(new Conjunction(criteria.criteria))
     }
 
     @Override
     void add(Junction currentJunction, Criterion criterion) {
-        Disjunction disjunction = null
-        for (Criterion c : detachedCriteria.criteria) {
-            if (c instanceof Disjunction) {
-                disjunction = (Disjunction) c
-                break
-            }
-        }
-        if (disjunction == null) {
-            disjunction = new Disjunction()
-        }
-        disjunction.add(criterion)
-        detachedCriteria.add(disjunction)
+        currentJunction.add(criterion)
     }
 
     // The factory junctions must operate on detachedCriteria (the source this query builds its JPA
@@ -226,6 +216,18 @@ class HibernateQuery extends Query {
     @Override
     Query eq(String property, Object value) {
         detachedCriteria.eq(calculatePropertyName(property), value)
+        return this
+    }
+
+    /**
+     * Restricts the results to those where the property equals the value when both are compared in lower case.
+     *
+     * @param property the name of the property
+     * @param value the value the property must equal, ignoring case
+     * @return this query
+     */
+    Query eqIgnoreCase(String property, Object value) {
+        detachedCriteria.add(new EqualsIgnoreCase(calculatePropertyName(property), value))
         return this
     }
 
@@ -474,11 +476,12 @@ class HibernateQuery extends Query {
     }
 
     private List executeList() {
-        return hibernateQueryExecutor.list(currentSession, jpaCriteriaQuery)
+        return list(currentSession)
     }
 
     List list(Session session) {
-        return hibernateQueryExecutor.list(session, jpaCriteriaQuery)
+        JpaCriteriaQueryCreator<?> creator = createJpaCriteriaQueryCreator()
+        return hibernateQueryExecutor.list(session, creator.createQuery(), creator.parameterValues)
     }
 
     private HibernateQueryExecutor getHibernateQueryExecutor() {
@@ -486,11 +489,16 @@ class HibernateQuery extends Query {
                 offset, max, lockResult, queryCache, fetchSize, timeout, flushMode, readOnly, proxyHandler)
     }
 
-    JpaCriteriaQuery<?> getJpaCriteriaQuery() {
+    /** An executor that never pages, because max and offset do not apply to a count. */
+    private HibernateQueryExecutor getCountQueryExecutor() {
+        return new HibernateQueryExecutor(
+                null, null, lockResult, queryCache, fetchSize, timeout, flushMode, readOnly, proxyHandler)
+    }
+
+    private JpaCriteriaQueryCreator<?> createJpaCriteriaQueryCreator() {
         ConversionService conversionService = session.mappingContext.conversionService
-        return new JpaCriteriaQueryCreator(
-                        projections, criteriaBuilder, (GrailsHibernatePersistentEntity) this.@entity, detachedCriteria, conversionService, this)
-                .createQuery()
+        return new JpaCriteriaQueryCreator<>(
+                projections, criteriaBuilder, (GrailsHibernatePersistentEntity) this.@entity, detachedCriteria, conversionService, this)
     }
 
     void setFetchSize(Integer fetchSize) {
@@ -510,11 +518,12 @@ class HibernateQuery extends Query {
     }
 
     private Object executeSingleResult() {
-        return hibernateQueryExecutor.singleResult(currentSession, jpaCriteriaQuery)
+        return singleResult(currentSession)
     }
 
     Object singleResult(Session session) {
-        return hibernateQueryExecutor.singleResult(session, jpaCriteriaQuery)
+        JpaCriteriaQueryCreator<?> creator = createJpaCriteriaQueryCreator()
+        return hibernateQueryExecutor.singleResult(session, creator.createQuery(), creator.parameterValues)
     }
 
     @Override
@@ -524,7 +533,8 @@ class HibernateQuery extends Query {
         Number result
         if (projections.projectionList.isEmpty()) {
             projections().count()
-            result = (Number) executeSingleResult()
+            JpaCriteriaQueryCreator<?> creator = createJpaCriteriaQueryCreator()
+            result = executeCount(creator.createQuery(), creator.parameterValues)
         } else {
             HibernateCriteriaBuilder cb = criteriaBuilder
 
@@ -532,14 +542,19 @@ class HibernateQuery extends Query {
             JpaSubQuery<Tuple> innerSubquery = countQuery.subquery(Tuple)
 
             ConversionService cs = session.mappingContext.conversionService
-            new JpaCriteriaQueryCreator(projections, cb, (GrailsHibernatePersistentEntity) this.@entity, detachedCriteria, cs).populateSubquery(innerSubquery)
+            JpaCriteriaQueryCreator<?> creator = new JpaCriteriaQueryCreator<>(projections, cb, (GrailsHibernatePersistentEntity) this.@entity, detachedCriteria, cs)
+            creator.populateSubquery(innerSubquery)
 
             countQuery.from(innerSubquery)
             countQuery.select(cb.count(cb.literal(1)))
-            result = (Number) hibernateQueryExecutor.singleResult(currentSession, countQuery)
+            result = executeCount(countQuery, creator.parameterValues)
         }
 
         return (Number) firePostQueryEvent(result)
+    }
+
+    private Number executeCount(JpaCriteriaQuery<?> query, Map<ParameterExpression<?>, Object> parameterValues) {
+        return (Number) countQueryExecutor.singleResult(currentSession, query, parameterValues)
     }
 
     private void firePreQueryEvent() {
@@ -568,11 +583,12 @@ class HibernateQuery extends Query {
 
     Object scroll() {
         firePreQueryEvent()
-        return hibernateQueryExecutor.scroll(currentSession, jpaCriteriaQuery)
+        return scroll(currentSession)
     }
 
     Object scroll(Session session) {
-        return hibernateQueryExecutor.scroll(session, jpaCriteriaQuery)
+        JpaCriteriaQueryCreator<?> creator = createJpaCriteriaQueryCreator()
+        return hibernateQueryExecutor.scroll(session, creator.createQuery(), creator.parameterValues)
     }
 
     private Session getCurrentSession() {

@@ -35,6 +35,7 @@ import org.grails.datastore.mapping.mongo.MongoDatastore
 import org.grails.datastore.mapping.mongo.config.MongoMappingContext
 import org.grails.datastore.mapping.mongo.config.MongoSettings
 import org.grails.datastore.mapping.query.Query
+import org.springframework.context.ConfigurableApplicationContext
 import org.springframework.context.annotation.AnnotationConfigApplicationContext
 import spock.lang.Ignore
 import spock.lang.Issue
@@ -211,6 +212,31 @@ class MongoDbDataStoreSpringInitializerSpec extends AutoStartedMongoSpec {
 
         cleanup:
         mongoDatastore.destroy()
+    }
+
+    void "Test the mongo bean keeps working after the context is stopped and started again, as it is around a checkpoint"() {
+        given: "GORM for MongoDB set up in an application context, and the client it publishes as the mongo bean"
+        def initializer = makeInitializer([
+                (MongoSettings.SETTING_DATABASE_NAME): 'restartedMongoBeanDb',
+                (MongoSettings.SETTING_HOST): mongoHost,
+                (MongoSettings.SETTING_PORT): mongoPort,
+        ], Person)
+        ConfigurableApplicationContext applicationContext = (ConfigurableApplicationContext) initializer.configure()
+        MongoClient mongo = applicationContext.getBean('mongo', MongoClient)
+
+        when: "Spring stops the lifecycle beans, as it does before a CRaC checkpoint, and starts them again after the restore"
+        applicationContext.stop()
+        applicationContext.start()
+
+        then: "the client that was injected before the checkpoint reaches MongoDB"
+        mongo.getDatabase('restartedMongoBeanDb').runCommand(new Document('ping', 1)).get('ok') == 1
+
+        and: "it is still the client GORM uses"
+        applicationContext.getBean(MongoDatastore).mongoClient.is(mongo)
+
+        cleanup:
+        applicationContext?.getBean(MongoDatastore)?.close()
+        applicationContext?.close()
     }
 
     @Issue('GPMONGODB-339')

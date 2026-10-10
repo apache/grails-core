@@ -27,8 +27,7 @@ import org.hibernate.proxy.ProxyFactory
 /**
  * A {@link ProxyFactoryFactory} implementation for Hibernate 7 that provides Groovy-aware proxies.
  *
- * @author Graeme Rocher
- * @since 7.0
+ * @since 8.0
  */
 @CompileStatic
 class GrailsProxyFactoryFactory implements ProxyFactoryFactory, Serializable {

@@ -264,6 +264,7 @@ class UrlMappingUtils {
         // responsibility for rendering the response.
         final GrailsWebRequest webRequest = GrailsWebRequest.lookup(request)
         webRequest.removeAttribute(GrailsApplicationAttributes.MODEL_AND_VIEW, 0)
+        webRequest.removeAttribute(GrailsApplicationAttributes.TEMPLATE_MODEL, 0)
         info.configure(webRequest)
         webRequest.removeAttribute(GrailsApplicationAttributes.GRAILS_CONTROLLER_CLASS_AVAILABLE, WebRequest.SCOPE_REQUEST)
         webRequest.removeAttribute(UrlMappingsHandlerMapping.MATCHED_REQUEST, WebRequest.SCOPE_REQUEST)
@@ -319,6 +320,7 @@ class UrlMappingUtils {
         String currentAction = null
         String currentId = null
         ModelAndView currentMv = null
+        Map currentTemplateModel = null
         Binding currentPageBinding = null
         Map currentParams = null
         Object currentLayoutAttribute = null
@@ -340,6 +342,7 @@ class UrlMappingUtils {
             currentParams = new HashMap()
             currentParams.putAll(webRequest.getParameterMap())
             currentMv = (ModelAndView) webRequest.getAttribute(GrailsApplicationAttributes.MODEL_AND_VIEW, 0)
+            currentTemplateModel = (Map) webRequest.getAttribute(GrailsApplicationAttributes.TEMPLATE_MODEL, 0)
         }
         try {
             if (webRequest != null) {
@@ -347,6 +350,7 @@ class UrlMappingUtils {
                 info.configure(webRequest)
                 webRequest.getParameterMap().putAll(info.getParameters())
                 webRequest.removeAttribute(GrailsApplicationAttributes.MODEL_AND_VIEW, 0)
+                webRequest.removeAttribute(GrailsApplicationAttributes.TEMPLATE_MODEL, 0)
             }
             return includeForUrl(includeUrl, request, response, model)
         }
@@ -368,6 +372,11 @@ class UrlMappingUtils {
                     webRequest.setActionName(currentAction)
                     if (currentMv != null) {
                         webRequest.setAttribute(GrailsApplicationAttributes.MODEL_AND_VIEW, currentMv, 0)
+                    }
+                    if (currentTemplateModel != null) {
+                        webRequest.setAttribute(GrailsApplicationAttributes.TEMPLATE_MODEL, currentTemplateModel, 0)
+                    } else {
+                        webRequest.removeAttribute(GrailsApplicationAttributes.TEMPLATE_MODEL, 0)
                     }
                 } else {
                     RequestContextHolder.setRequestAttributes(null)

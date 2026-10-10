@@ -21,6 +21,7 @@ import jakarta.persistence.criteria.CriteriaBuilder
 import jakarta.persistence.criteria.CriteriaQuery
 import jakarta.persistence.criteria.Expression
 import jakarta.persistence.criteria.JoinType
+import jakarta.persistence.criteria.ParameterExpression
 import jakarta.persistence.criteria.Root
 import org.hibernate.query.criteria.HibernateCriteriaBuilder
 import org.hibernate.query.criteria.JpaCriteriaQuery
@@ -37,9 +38,7 @@ import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersi
 /**
  * A class that creates a JPA {@link CriteriaQuery} from a GORM {@link Query} and {@link DetachedCriteria}.
  *
- * @author burt
- * @author graemerocher
- * @since 7.0.0
+ * @since 8.0
  */
 @CompileStatic
 class JpaCriteriaQueryCreator<T> {
@@ -51,6 +50,7 @@ class JpaCriteriaQueryCreator<T> {
     private final ConversionService conversionService
     private final HibernateQuery hibernateQuery
     private JpaQueryContext parentContext
+    private JpaQueryContext context
 
     JpaCriteriaQueryCreator(
             Query.ProjectionList projections,
@@ -80,6 +80,17 @@ class JpaCriteriaQueryCreator<T> {
         this.parentContext = parentContext
     }
 
+    /**
+     * Returns the values of the criteria parameters in the query or subquery last built by this creator, which
+     * must be bound to the query once it is created. A subquery built under a parent context records its values
+     * in the parent's context, so they are bound with the query that contains it.
+     *
+     * @return the value of each parameter
+     */
+    Map<ParameterExpression<?>, Object> getParameterValues() {
+        return context != null ? context.parameterValues : Collections.<ParameterExpression<?>, Object>emptyMap()
+    }
+
     JpaCriteriaQuery<?> createQuery() {
         List<Query.Projection> projectionList = collectProjections()
         JpaCriteriaQuery<?> cq = createCriteriaQuery(projectionList)
@@ -96,13 +107,13 @@ class JpaCriteriaQueryCreator<T> {
             }
         }
 
-        JpaQueryContext context = JpaQueryContext.forSubquery(parentContext, aliases, root)
+        context = JpaQueryContext.forSubquery(parentContext, aliases, root)
         registerDetachedJoins(context)
         discoverAliases(detachedCriteria.criteria, context)
 
         applyEagerFetchJoins(root, projectionList)
 
-        new JpaProjectionAdapter(criteriaBuilder, context).adapt(projections, (AbstractQuery<?>) cq)
+        new JpaProjectionAdapter(criteriaBuilder, context, entity).adapt(projections, (AbstractQuery<?>) cq)
         assignGroupBy(cq, context)
 
         assignOrderBy(cq, context)
@@ -163,11 +174,11 @@ class JpaCriteriaQueryCreator<T> {
             }
         }
 
-        JpaQueryContext context = JpaQueryContext.forSubquery(parentContext, aliases, root)
+        context = JpaQueryContext.forSubquery(parentContext, aliases, root)
         registerDetachedJoins(context)
         discoverAliases(detachedCriteria.criteria, context)
 
-        new JpaProjectionAdapter(criteriaBuilder, context).adapt(projections, (AbstractQuery<?>) subquery)
+        new JpaProjectionAdapter(criteriaBuilder, context, entity).adapt(projections, (AbstractQuery<?>) subquery)
 
         assignGroupBy(subquery, context)
 
@@ -181,7 +192,7 @@ class JpaCriteriaQueryCreator<T> {
     private JpaCriteriaQuery<?> createCriteriaQuery(List<Query.Projection> projections) {
         List<Query.Projection> expressionProjections = []
         for (Query.Projection p : projections) {
-            if (!(p instanceof Query.DistinctProjection)) {
+            if (!(p instanceof Query.DistinctProjection) && !(p instanceof SqlGroupProjection)) {
                 expressionProjections.add(p)
             }
         }
@@ -202,15 +213,32 @@ class JpaCriteriaQueryCreator<T> {
                 return (JpaCriteriaQuery<?>) criteriaBuilder.createQuery(projectionType)
             } else if (first instanceof Query.PropertyProjection) {
                 return (JpaCriteriaQuery<?>) criteriaBuilder.createQuery(resolveProjectionType((Query.PropertyProjection) first))
+            } else if (first instanceof SqlProjection) {
+                return (JpaCriteriaQuery<?>) criteriaBuilder.createQuery(((SqlProjection) first).type)
             }
             return (JpaCriteriaQuery<?>) criteriaBuilder.createQuery(entity.javaClass)
         }
     }
 
     private void assignGroupBy(AbstractQuery<?> query, JpaQueryContext context) {
+        JpaProjectionTranslator translator = new JpaProjectionTranslator(criteriaBuilder, context, entity)
         List<Expression> groupByExpressions = []
-        for (Query.GroupPropertyProjection groupPropertyProjection : collectGroupProjections()) {
-            Expression<?> expr = context.getFullyQualifiedExpression(groupPropertyProjection.propertyName)
+        for (Query.Projection projection : projections.projectionList) {
+            Expression<?> expr = null
+            if (projection instanceof Query.GroupPropertyProjection) {
+                expr = context.getFullyQualifiedExpression(((Query.GroupPropertyProjection) projection).propertyName)
+            } else if (projection instanceof SqlGroupProjection) {
+                // the column alias of a SQL projection does not reach the SQL, so a group by clause that
+                // names one, quoted or not, groups by the SQL it stands for; as in standard SQL, a name in
+                // double quotes is case sensitive, while backquotes (MySQL) and square brackets (SQL Server)
+                // leave a column alias case insensitive
+                SqlGroupProjection sqlGroupProjection = (SqlGroupProjection) projection
+                String groupBy = sqlGroupProjection.sql.trim()
+                String name = SqlProjection.unquote(groupBy)
+                boolean caseSensitive = groupBy.startsWith('"') && name != groupBy
+                SqlProjection aliased = findSqlProjection(name, !caseSensitive)
+                expr = translator.translateSql(aliased != null ? aliased.sql : sqlGroupProjection.sql, null)
+            }
             if (expr != null) {
                 groupByExpressions.add(expr)
             }
@@ -218,6 +246,22 @@ class JpaCriteriaQueryCreator<T> {
         if (!groupByExpressions.isEmpty()) {
             query.groupBy(groupByExpressions as Expression[])
         }
+    }
+
+    /**
+     * Returns the SQL projection whose column alias is the given name, or {@code null}.
+     */
+    private SqlProjection findSqlProjection(String name, boolean ignoreCase) {
+        for (Query.Projection projection : projections.projectionList) {
+            if (projection instanceof SqlProjection) {
+                SqlProjection sqlProjection = (SqlProjection) projection
+                if (sqlProjection.columnAlias != null &&
+                        (ignoreCase ? sqlProjection.columnAlias.equalsIgnoreCase(name) : sqlProjection.columnAlias == name)) {
+                    return sqlProjection
+                }
+            }
+        }
+        return null
     }
 
     private Class<?> resolveProjectionType(Query.PropertyProjection projection) {
@@ -241,7 +285,10 @@ class JpaCriteriaQueryCreator<T> {
             List<jakarta.persistence.criteria.Order> jpaOrders = []
             for (Query.Order order : orders) {
                 String propertyName = order.property
-                Expression<?> expression = context.getFullyQualifiedExpression(propertyName)
+                SqlProjection sqlProjection = findSqlProjection(propertyName, false)
+                Expression<?> expression = sqlProjection != null ?
+                        context.getSelectionAlias(sqlProjection.columnAlias) :
+                        context.getFullyQualifiedExpression(propertyName)
                 jakarta.persistence.criteria.Order jpaOrder
                 if (order.ignoreCase && expression.javaType == String) {
                     jpaOrder = order.direction == Query.Order.Direction.ASC ?
@@ -308,16 +355,6 @@ class JpaCriteriaQueryCreator<T> {
                 cq.where(predicate)
             }
         }
-    }
-
-    private List<Query.GroupPropertyProjection> collectGroupProjections() {
-        List<Query.GroupPropertyProjection> result = []
-        for (Query.Projection p : projections.projectionList) {
-            if (p instanceof Query.GroupPropertyProjection) {
-                result.add((Query.GroupPropertyProjection) p)
-            }
-        }
-        return result
     }
 
 }

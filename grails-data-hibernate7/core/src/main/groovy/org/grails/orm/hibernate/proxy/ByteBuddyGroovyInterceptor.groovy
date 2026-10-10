@@ -28,14 +28,10 @@ import java.lang.reflect.Method
 /**
  * A ByteBuddy interceptor that avoids initializing the proxy for Groovy-specific methods.
  *
- * @author Graeme Rocher
- * @since 7.0
+ * @since 8.0
  */
 @CompileStatic
 class ByteBuddyGroovyInterceptor extends ByteBuddyInterceptor {
-
-    private static final String GET_ID_METHOD = 'getId'
-    private static final String GET_IDENTIFIER_METHOD = 'getIdentifier'
 
     protected final Method getIdentifierMethod
 
@@ -70,10 +66,8 @@ class ByteBuddyGroovyInterceptor extends ByteBuddyInterceptor {
     Object intercept(Object proxy, Method method, Object[] args) throws Throwable {
         String methodName = method.getName()
 
-        // Check these BEFORE calling this.invoke() to avoid premature initialization in Hibernate 7
-        if ((getIdentifierMethod != null && methodName == getIdentifierMethod.getName()) ||
-                GET_ID_METHOD == methodName ||
-                GET_IDENTIFIER_METHOD == methodName) {
+        // Only the mapped getter can return the identifier without invoking the entity.
+        if (getIdentifierMethod != null && getIdentifierMethod == method) {
             return getIdentifier()
         }
 

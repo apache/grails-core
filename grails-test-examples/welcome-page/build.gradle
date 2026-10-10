@@ -1,0 +1,84 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ */
+
+plugins {
+    id 'org.apache.grails.buildsrc.properties'
+    id 'org.apache.grails.buildsrc.dependency-validator'
+    id 'org.apache.grails.buildsrc.compile'
+    id 'org.apache.grails.buildsrc.vulnerability-scan'
+}
+
+version = '0.1'
+group = 'welcomepage'
+
+apply plugin: 'org.apache.grails.gradle.grails-web'
+apply plugin: 'org.apache.grails.gradle.grails-gsp'
+
+grails {
+    compileStatic {
+        gsp = true
+    }
+}
+
+dependencies {
+    implementation platform(project(':grails-bom'))
+
+    implementation 'org.apache.grails:grails-dependencies-starter-web'
+
+    integrationTestImplementation 'org.apache.grails.testing:grails-testing-support-core'
+}
+
+// The page under test is the web profile's welcome page itself, which GrailsGspSpec pins to the forge copy,
+// so it is staged into a views directory of its own rather than copied into the source tree.
+def welcomePageDir = layout.buildDirectory.dir('generated/welcome-page')
+def stageWelcomePage = tasks.register('stageWelcomePage', Sync) {
+    into welcomePageDir.map { it.dir('grails-app/views') }
+    from rootProject.layout.projectDirectory.file('grails-profiles/web/skeleton/grails-app/views/index.gsp')
+}
+tasks.named('compileGroovyPages') {
+    source = welcomePageDir.get().dir('grails-app/views')
+    dependsOn stageWelcomePage
+}
+
+// The welcome page lists the servlet filters only in development, where pages are read from disk, so the
+// application runs there and reads them from the staged directory.
+tasks.named('integrationTest', Test) {
+    systemProperty('grails.env', 'development')
+    // the directory property does not carry the task that writes it, so the dependency is stated
+    dependsOn stageWelcomePage, tasks.named('compileGroovyPages')
+    jvmArgumentProviders.add(new StagedViews(views: welcomePageDir))
+}
+
+/** Points the application at the staged pages, tracked by content rather than by where this checkout is. */
+class StagedViews implements CommandLineArgumentProvider {
+
+    @InputDirectory
+    @PathSensitive(PathSensitivity.RELATIVE)
+    Provider<Directory> views
+
+    @Override
+    Iterable<String> asArguments() {
+        ["-Dgrails.gsp.view.dir=${views.get().asFile.absolutePath}/".toString()]
+    }
+}
+
+apply {
+    from rootProject.layout.projectDirectory.file('gradle/functional-test-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/grails-extension-gradle-config.gradle')
+}

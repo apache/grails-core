@@ -20,8 +20,10 @@ ext['race.managed.version'] = '2.0.0'
 
 tasks.register('printOverrideApplied') {
     def implConstraints = configurations.implementation.dependencyConstraints
+    def applied = providers.provider {
+        implConstraints.any { it.group == 'org.example' && it.name == 'race-lib' && it.versionConstraint.strictVersion == '2.0.0' }
+    }
     doLast {
-        def applied = implConstraints.any { it.group == 'org.example' && it.name == 'race-lib' && it.versionConstraint.strictVersion == '2.0.0' }
-        println "OVERRIDE_APPLIED=${applied}"
+        println "OVERRIDE_APPLIED=${applied.get()}"
     }
 }

@@ -527,7 +527,7 @@ class GrailsHibernateTemplate implements IHibernateTemplate {
     void lock(Object entity, LockMode lockMode) throws DataAccessException {
         doExecute(
                 { Session session ->
-                    session.lock(entity, LockModeType.PESSIMISTIC_WRITE)
+                    session.lock(entity, lockMode)
                     return null
                 },
                 true)

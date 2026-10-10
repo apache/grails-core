@@ -260,17 +260,26 @@ class UnassociatedEntity {
         entity.$$_hibernate_getNextManagedEntity() == null
     }
 
-    void "test skip non-hibernate mapping strategy"() {
+    void "the transformation applies to an entity whose mapWith is #mapWith"() {
         when:
-        Class cls = new GroovyClassLoader().parseClass('''
+        Class cls = new GroovyClassLoader().parseClass("""
 import grails.gorm.hibernate.annotation.ManagedEntity
 @ManagedEntity
-class NonHibernateEntity {
-    static mapWith = "mongodb"
+class MapWithEntity {
+    static mapWith = '${mapWith}'
+    String name
 }
-''')
+""")
+
         then:
-        !PersistentAttributeInterceptable.isAssignableFrom(cls)
+        ManagedEntity.isAssignableFrom(cls) == transformed
+        PersistentAttributeInterceptable.isAssignableFrom(cls) == transformed
+
+        where:
+        mapWith     || transformed
+        'hibernate' || true
+        'GORM'      || true
+        'mongodb'   || false
     }
 
     void "test addTo retargeting"() {

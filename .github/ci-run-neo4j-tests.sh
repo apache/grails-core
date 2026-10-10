@@ -20,10 +20,13 @@ set -euo pipefail
 
 # The marker is written only after every task has completed, with task failures
 # included. Never accept a marker left by an earlier invocation.
+# The init script registers build listeners, which the configuration cache
+# rejects, so this invocation runs without it.
 rm -f build/ci-build-finished.txt build/ci-build-finished.txt.tmp
 set +e
 timeout --kill-after=30s 90m ./gradlew bootJar check \
     --init-script .github/ci-exit-after-build.init.gradle \
+    --no-configuration-cache \
     --no-daemon --continue --rerun-tasks --stacktrace \
     -PonlyNeo4jTests -PskipCodeStyle "$@"
 code=$?

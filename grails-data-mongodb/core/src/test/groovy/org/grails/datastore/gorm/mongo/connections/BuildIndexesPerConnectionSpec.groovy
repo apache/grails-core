@@ -31,6 +31,8 @@ import spock.lang.AutoCleanup
 import spock.lang.Shared
 import spock.util.concurrent.PollingConditions
 
+import org.springframework.core.env.PropertyResolver
+
 import org.apache.grails.testing.mongo.AutoStartedMongoSpec
 import org.grails.datastore.gorm.events.DefaultApplicationEventPublisher
 import org.grails.datastore.gorm.mongo.CapturedLog
@@ -38,10 +40,12 @@ import org.grails.datastore.gorm.mongo.FailingMongoClient
 import org.grails.datastore.mapping.core.DatastoreUtils
 import org.grails.datastore.mapping.core.connections.ConnectionSource
 import org.grails.datastore.mapping.core.connections.DefaultConnectionSource
+import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.mongo.MongoDatastore
 import org.grails.datastore.mapping.mongo.config.MongoSettings
 import org.grails.datastore.mapping.mongo.connections.MongoConnectionSourceFactory
 import org.grails.datastore.mapping.mongo.connections.MongoConnectionSourceSettings
+import org.grails.datastore.mapping.mongo.connections.RestartableMongoClient
 
 /**
  * Verifies that {@code buildIndexes} is resolved per connection: a connection inherits the top level
@@ -108,6 +112,7 @@ class BuildIndexesPerConnectionSpec extends AutoStartedMongoSpec {
         when:
         def parent = new MongoDatastore(DatastoreUtils.createPropertyResolver(config), factory,
                 new DefaultApplicationEventPublisher(), AsyncPerConnectionThing)
+        parent.start()
         if (addedAtRuntime) {
             parent.connectionSources.addConnectionSource('indexedAsync', childConfig)
         }
@@ -177,6 +182,7 @@ class BuildIndexesPerConnectionSpec extends AutoStartedMongoSpec {
                 'grails.mongodb.buildIndexesAsync': true,
                 'grails.mongodb.connections'      : [checkpointedChild: [url: dbContainer.getReplicaSetUrl('checkpointedChildDb'), buildIndexes: true]]
         ]), factory, new DefaultApplicationEventPublisher(), AsyncPerConnectionThing)
+        parent.start()
         buildReached.await(30, TimeUnit.SECONDS)
 
         then: "the build announces which connection it is for"
@@ -212,8 +218,8 @@ class BuildIndexesPerConnectionSpec extends AutoStartedMongoSpec {
         log?.close()
     }
 
-    void "test start() neither waits on nor re-runs a connection added while the datastore was stopped"() {
-        given:
+    void "test a connection added while the datastore is stopped is connected and built only when it is started"() {
+        given: "a datastore stopped for a checkpoint"
         def conditions = new PollingConditions(timeout: 30)
         def log = new CapturedLog('org.grails.datastore.mapping', Level.INFO)
         def parent = new MongoDatastore(DatastoreUtils.createPropertyResolver([
@@ -221,22 +227,146 @@ class BuildIndexesPerConnectionSpec extends AutoStartedMongoSpec {
                 'grails.mongodb.buildIndexes'     : false,
                 'grails.mongodb.buildIndexesAsync': true
         ]), AsyncPerConnectionThing)
+        parent.start()
         parent.stop()
+        MongoClient inspector = MongoClients.create(dbContainer.getReplicaSetUrl('addedWhileStoppedDb'))
+        def addedIndexes = { -> inspector.getDatabase('addedWhileStoppedDb').getCollection('asyncPerConnectionThing').listIndexes()*.key }
+
+        when: "a connection is added before the restore"
         parent.connectionSources.addConnectionSource('addedWhileStopped',
                 [url: dbContainer.getReplicaSetUrl('addedWhileStoppedDb'), buildIndexes: true])
-        conditions.eventually {
-            assert log.events.any { it.formattedMessage.contains('database [addedWhileStoppedDb] finished') }
+        MongoClient added = (parent.getDatastoreForConnection('addedWhileStopped') as MongoDatastore).mongoClient
+
+        then: "it opens no connection and sends no index command, which the checkpoint could not be taken with"
+        !(added as RestartableMongoClient).connected
+        !log.events.any { it.formattedMessage.contains('addedWhileStoppedDb') }
+        !([name: 1] in addedIndexes())
+
+        when: "it is used while the datastore is stopped"
+        added.listDatabaseNames().first()
+
+        then: "it is refused, as the others are"
+        thrown(IllegalStateException)
+
+        when: "a build is requested on it while the datastore is stopped"
+        (parent.getDatastoreForConnection('addedWhileStopped') as MongoDatastore).buildIndex()
+
+        then: "it is put off until the restart, as on any other connection, rather than run against the stopped client"
+        log.events.any {
+            it.formattedMessage.contains('for connection [addedWhileStopped] while the datastore is stopped')
         }
 
-        when: "the datastore is restarted"
+        when: "the datastore is started after the restore"
         parent.start()
 
-        then: "that connection's build was never interrupted, so start() resumes no second one"
-        !log.events.any { it.formattedMessage.startsWith('Resuming the index build for connection [addedWhileStopped]') }
+        then: "the connection is connected and its indexes are built"
+        (added as RestartableMongoClient).connected
+        conditions.eventually {
+            assert [name: 1] in addedIndexes()
+        }
+
+        and: "no build failed along the way"
+        !log.events.any { it.level.isGreaterOrEqual(Level.ERROR) }
 
         cleanup:
         parent?.close()
+        inspector?.close()
         log?.close()
+    }
+
+    void "test a build requested on a connection added while the datastore is stopped runs when it is started, with index creation off"() {
+        given: "a datastore stopped for a checkpoint, whose connections build no index by themselves"
+        def conditions = new PollingConditions(timeout: 30)
+        def log = new CapturedLog('org.grails.datastore.mapping', Level.INFO)
+        def parent = new MongoDatastore(DatastoreUtils.createPropertyResolver([
+                'grails.mongodb.url'              : dbContainer.getReplicaSetUrl('requestingParentDb'),
+                'grails.mongodb.buildIndexes'     : false,
+                'grails.mongodb.buildIndexesAsync': true
+        ]), AsyncPerConnectionThing)
+        parent.start()
+        parent.stop()
+        MongoClient inspector = MongoClients.create(dbContainer.getReplicaSetUrl('requestedWhileStoppedDb'))
+        def addedIndexes = { -> inspector.getDatabase('requestedWhileStoppedDb').getCollection('asyncPerConnectionThing').listIndexes()*.key }
+
+        when: "a connection is added, a build is requested on it, and the datastore is then started"
+        parent.connectionSources.addConnectionSource('requestedWhileStopped',
+                [url: dbContainer.getReplicaSetUrl('requestedWhileStoppedDb'), buildIndexes: false])
+        (parent.getDatastoreForConnection('requestedWhileStopped') as MongoDatastore).buildIndex()
+        parent.start()
+
+        then: "the requested build runs, though the connection builds none by itself"
+        conditions.eventually {
+            assert [name: 1] in addedIndexes()
+        }
+        !log.events.any { it.level.isGreaterOrEqual(Level.ERROR) }
+
+        cleanup:
+        parent?.close()
+        inspector?.close()
+        log?.close()
+    }
+
+    void "test a connection registered by the thread starting the datastore has its indexes when start() returns"() {
+        given: "a datastore whose index build registers a connection as it runs"
+        def parent = new ConnectionRegisteringDatastore(DatastoreUtils.createPropertyResolver([
+                'grails.mongodb.url': dbContainer.getReplicaSetUrl('registeringParentDb')
+        ]), AsyncPerConnectionThing)
+        parent.register('registeredDuringStart', [url: dbContainer.getReplicaSetUrl('registeredDuringStartDb')]) {
+            parent.connectionSources.addConnectionSource(it.name as String, it.configuration as Map)
+        }
+        MongoClient inspector = MongoClients.create(dbContainer.getReplicaSetUrl('registeredDuringStartDb'))
+
+        when:
+        parent.start()
+
+        then: "the connection registered after start() had listed the connections is built before it returns"
+        parent.registered
+        [name: 1] in inspector.getDatabase('registeredDuringStartDb').getCollection('asyncPerConnectionThing').listIndexes()*.key
+
+        cleanup:
+        parent?.close()
+        inspector?.close()
+    }
+
+    void "test a connection another thread registers while the datastore starts has its indexes"() {
+        given: "a datastore whose index build waits while another thread registers a connection"
+        Thread registering = null
+        def log = new CapturedLog('org.grails.datastore.mapping', Level.DEBUG)
+        def parent = new ConnectionRegisteringDatastore(DatastoreUtils.createPropertyResolver([
+                'grails.mongodb.url': dbContainer.getReplicaSetUrl('concurrentParentDb')
+        ]), AsyncPerConnectionThing)
+        parent.register('registeredConcurrently', [url: dbContainer.getReplicaSetUrl('registeredConcurrentlyDb')]) { Map registration ->
+            registering = Thread.start {
+                parent.connectionSources.addConnectionSource(registration.name as String, registration.configuration as Map)
+            }
+            // Until the registration has either gone through or is waiting for start() to finish.
+            long deadline = System.currentTimeMillis() + 10000
+            while (!(registering.state in [Thread.State.BLOCKED, Thread.State.TERMINATED]) && System.currentTimeMillis() < deadline) {
+                Thread.sleep(5)
+            }
+        }
+        MongoClient inspector = MongoClients.create(dbContainer.getReplicaSetUrl('registeredConcurrentlyDb'))
+
+        when:
+        parent.start()
+        registering.join(30000)
+
+        then: "it is not left out, as a connection registered between listing the connections and finishing the start"
+        parent.registered
+        [name: 1] in inspector.getDatabase('registeredConcurrentlyDb').getCollection('asyncPerConnectionThing').listIndexes()*.key
+
+        and: "it is built once: by start(), which found it, and not again by the registration once start() has finished"
+        log.events.count {
+            String message = it.formattedMessage
+            message.contains('[registeredConcurrentlyDb]') &&
+                    (message.startsWith('Index build for database') || message.startsWith('No indexes are declared'))
+        } == 1
+
+        cleanup:
+        registering?.join(30000)
+        log?.close()
+        parent?.close()
+        inspector?.close()
     }
 
     void "test a connection added after close() starts no index build"() {
@@ -246,6 +376,7 @@ class BuildIndexesPerConnectionSpec extends AutoStartedMongoSpec {
                 'grails.mongodb.buildIndexes'     : false,
                 'grails.mongodb.buildIndexesAsync': true
         ]), AsyncPerConnectionThing)
+        parent.start()
         parent.close()
 
         when:
@@ -306,5 +437,38 @@ class AsyncPerConnectionThing {
     static mapping = {
         connection ConnectionSource.ALL
         name index: true
+    }
+}
+
+/**
+ * Registers a connection from its index build hook, the first time it builds an index on the default connection,
+ * which is while {@code start()} is under way.
+ */
+class ConnectionRegisteringDatastore extends MongoDatastore {
+
+    private Map<String, Object> registration
+
+    private Closure registrar
+
+    volatile boolean registered
+
+    ConnectionRegisteringDatastore(PropertyResolver configuration, Class... classes) {
+        super(configuration, classes)
+    }
+
+    void register(String name, Map configuration, Closure registrar) {
+        this.registration = [name: name, configuration: configuration] as Map<String, Object>
+        this.registrar = registrar
+    }
+
+    @Override
+    protected void initializeIndices(PersistentEntity entity) {
+        super.initializeIndices(entity)
+        if (registration != null) {
+            Map<String, Object> pending = registration
+            registration = null
+            registrar.call(pending)
+            registered = true
+        }
     }
 }

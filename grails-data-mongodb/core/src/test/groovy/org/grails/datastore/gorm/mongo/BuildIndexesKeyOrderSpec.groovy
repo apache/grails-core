@@ -61,6 +61,7 @@ class BuildIndexesKeyOrderSpec extends AutoStartedMongoSpec {
 
         log = new CapturedLog('org.grails.datastore.mapping', Level.INFO)
         datastore = new MongoDatastore(['grails.mongodb.url': url] as Map, KeyOrderThing)
+        datastore.start()
     }
 
     void cleanupSpec() {

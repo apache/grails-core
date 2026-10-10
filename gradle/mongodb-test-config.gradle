@@ -24,39 +24,33 @@ dependencies {
     add('testRuntimeOnly', 'org.objenesis:objenesis')
 }
 
-tasks.withType(GroovyCompile).configureEach {
-    options.forkOptions.jvmArgs += ['-Dspock.iKnowWhatImDoing.disableGroovyVersionCheck=true']
-}
-
 tasks.named('compileTestGroovy', GroovyCompile) {
-    groovyOptions.forkOptions.jvmArgs = ['-Xmx768m', '-Dspock.iKnowWhatImDoing.disableGroovyVersionCheck=true']
+    groovyOptions.forkOptions.jvmArgs = ['-Xmx768m']
 }
 
+boolean cacheTests = !doNotCacheTests
 tasks.withType(Test).configureEach {
     // Honor DO_NOT_CACHE_TESTS=1 so developers can repeatedly invoke the same test command
     // without --rerun-tasks (and without recompiling everything else).
-    outputs.cacheIf { !doNotCacheTests }
-    outputs.upToDateWhen { !doNotCacheTests }
+    outputs.cacheIf { cacheTests }
+    outputs.upToDateWhen { cacheTests }
 
-    onlyIf {
-        ![
-                'onlyFunctionalTests',
-                'onlyHibernate5Tests',
-                'onlyHibernate7Tests',
-                'skipMongodbTests',
-                'onlyNeo4jTests',
-                'onlyRedisTests',
-                'onlySpringSecurityTests',
-                'onlyCoreTests',
-                'skipTests'
-        ].find {
-            project.hasProperty(it)
-        }
-    }
+    boolean skipped = [
+            'onlyFunctionalTests',
+            'onlyHibernate5Tests',
+            'onlyHibernate7Tests',
+            'skipMongodbTests',
+            'onlyNeo4jTests',
+            'onlyRedisTests',
+            'onlySpringSecurityTests',
+            'onlyCoreTests',
+            'skipTests'
+    ].any { project.hasProperty(it) }
+    onlyIf { !skipped }
 
     useJUnitPlatform()
     maxParallelForks = 1
-    jvmArgs = ['-Xmx1028M', '-Dspock.iKnowWhatImDoing.disableGroovyVersionCheck=true']
+    jvmArgs = ['-Xmx1028M']
     addTestListener([
         afterSuite: { desc, result ->
             System.out.print('.')

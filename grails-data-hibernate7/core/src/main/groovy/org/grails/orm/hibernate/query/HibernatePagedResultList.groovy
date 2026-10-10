@@ -28,8 +28,7 @@ import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersi
 /**
  * A PagedResultList for Hibernate 7.
  *
- * @author burt
- * @since 7.0.0
+ * @since 8.0
  */
 @CompileStatic
 class HibernatePagedResultList extends grails.gorm.PagedResultList {

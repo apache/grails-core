@@ -21,8 +21,7 @@ import jakarta.persistence.criteria.Expression
 /**
  * Registry for user-defined and auto-generated aliases in a JPA query.
  *
- * @author walterduquedeestrada
- * @since 7.0.0
+ * @since 8.0
  */
 @CompileStatic
 class AliasRegistry {

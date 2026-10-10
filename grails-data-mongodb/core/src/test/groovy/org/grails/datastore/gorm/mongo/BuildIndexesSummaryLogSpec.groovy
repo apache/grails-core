@@ -58,6 +58,7 @@ class BuildIndexesSummaryLogSpec extends AutoStartedMongoSpec {
         datastore = new MongoDatastore(
                 ['grails.mongodb.url': dbContainer.getReplicaSetUrl(DATABASE)] as Map,
                 SummaryLoggedThing, OtherSummaryLoggedThing, UnindexedSummaryThing)
+        datastore.start()
 
         // Snapshotted so that a feature triggering another build cannot change what the startup build said
         startupMessages = messagesForThisDatabase()

@@ -27,8 +27,7 @@ import org.grails.datastore.gorm.proxy.ProxyInstanceMetaClass
 /**
  * Pure logic for Groovy proxy interception and handling, decoupled from Hibernate.
  *
- * @author Graeme Rocher
- * @since 7.0
+ * @since 8.0
  */
 @CompileStatic
 class GroovyProxyInterceptorLogic {

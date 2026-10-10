@@ -36,6 +36,7 @@ import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.model.types.TenantId
 import org.grails.datastore.mapping.multitenancy.MultiTenantCapableDatastore
 import org.grails.datastore.mapping.multitenancy.exceptions.TenantException
+import org.grails.datastore.mapping.multitenancy.exceptions.TenantNotFoundException
 import org.grails.datastore.mapping.query.Query
 import org.grails.datastore.mapping.query.event.PreQueryEvent
 
@@ -130,15 +131,22 @@ class MultiTenantEventListener implements PersistenceEventListener {
                             }
 
                             if (currentId != null) {
-                                Object existingId = preInsertEvent.getEntityAccess().getProperty(tenantId.getName())
-                                if (existingId != null) {
-                                    currentId = (Serializable) existingId
+                                // The current tenant decides the tenant id. Only outside a tenant, with the default
+                                // connection source as the current id, is a tenant id set on the instance kept.
+                                if (ConnectionSource.DEFAULT.equals(currentId)) {
+                                    Object existingId = preInsertEvent.getEntityAccess().getProperty(tenantId.getName())
+                                    if (existingId != null) {
+                                        currentId = (Serializable) existingId
+                                    }
                                 }
                                 if (ConnectionSource.DEFAULT.equals(currentId) && Number.isAssignableFrom(tenantId.getType())) {
                                     currentId = 0L
                                 }
                                 preInsertEvent.getEntityAccess().setProperty(tenantId.getName(), currentId)
                             }
+                        }
+                        catch (TenantNotFoundException e) {
+                            throw e
                         }
                         catch (Exception e) {
                             throw new TenantException(

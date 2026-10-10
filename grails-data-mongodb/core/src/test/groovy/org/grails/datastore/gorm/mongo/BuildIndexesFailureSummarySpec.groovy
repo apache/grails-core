@@ -31,9 +31,10 @@ import org.apache.grails.testing.mongo.AutoStartedMongoSpec
 import org.grails.datastore.mapping.mongo.MongoDatastore
 
 /**
- * An index the server refuses is not allowed to stop the application from starting: the failure is
- * reported and the rest of the build carries on. The summary then goes out at {@code WARN} and says how
- * many declarations failed, so a build that half worked cannot pass for a clean one.
+ * An index the server refuses, whether by a command error or by a duplicate key, is not allowed to stop the
+ * application from starting: the failure is reported and the rest of the build carries on. The summary then
+ * goes out at {@code WARN} and says how many declarations failed, so a build that half worked cannot pass for
+ * a clean one.
  */
 class BuildIndexesFailureSummarySpec extends AutoStartedMongoSpec {
 
@@ -66,9 +67,19 @@ class BuildIndexesFailureSummarySpec extends AutoStartedMongoSpec {
 
         database.getCollection('rejectedThing').insertOne(new Document('code', 'first'))
 
+        // Documents that share the value a declared unique index is on, which the driver reports as a
+        // DuplicateKeyException rather than a command error.
+        database.getCollection('duplicatedThing').insertMany([new Document('code', 'same'), new Document('code', 'same')])
+
+        // The same, where recreateOnConflict has the existing non-unique index dropped before the unique one fails.
+        def recreated = database.getCollection('recreatedOverDuplicatesThing')
+        recreated.insertMany([new Document('code', 'same'), new Document('code', 'same')])
+        recreated.createIndex(new Document('code', 1))
+
         log = new CapturedLog('org.grails.datastore.mapping', Level.INFO)
 
-        datastore = new MongoDatastore(['grails.mongodb.url': url] as Map, ConflictingThing, RejectedThing)
+        datastore = new MongoDatastore(['grails.mongodb.url': url] as Map, ConflictingThing, RejectedThing,
+                DuplicatedThing, RecreatedOverDuplicatesThing)
     }
 
     void cleanupSpec() {
@@ -93,6 +104,16 @@ class BuildIndexesFailureSummarySpec extends AutoStartedMongoSpec {
         RejectedThing.withNewSession {
             RejectedThing.collection.listIndexes()*.key == [[_id: 1]]
         }
+
+        and: "a unique index over duplicate values was not built, and the class's other declaration still was"
+        DuplicatedThing.withNewSession {
+            DuplicatedThing.collection.listIndexes()*.key as Set == [[_id: 1], [label: 1]] as Set
+        }
+
+        and: "recreating an index as unique over duplicate values dropped the old one and could not build the new"
+        RecreatedOverDuplicatesThing.withNewSession {
+            RecreatedOverDuplicatesThing.collection.listIndexes()*.key == [[_id: 1]]
+        }
     }
 
     void "test the summary is logged at warn and reports how many declarations failed"() {
@@ -103,12 +124,23 @@ class BuildIndexesFailureSummarySpec extends AutoStartedMongoSpec {
         eventsForThisDatabase().size() == 1
         summary.level == Level.WARN
 
-        and: "both failures are counted: the unresolved conflict and the declaration the server refused"
-        summary.formattedMessage.contains('2 failed')
+        and: "every failure is counted: the unresolved conflict, the declaration the server refused, and the two unique indexes over duplicate values"
+        summary.formattedMessage.contains('4 failed')
 
         and: "the failures themselves were reported individually, naming the entity each came from"
         log.events.any { it.level == Level.ERROR && it.formattedMessage.contains('ConflictingThing') }
         log.events.any { it.level == Level.ERROR && it.formattedMessage.contains('RejectedThing') }
+        log.events.any {
+            it.level == Level.ERROR && it.formattedMessage.contains('DuplicatedThing') &&
+                    it.formattedMessage.contains('E11000')
+        }
+
+        and: "the recreate that dropped the old index says so"
+        log.events.any {
+            it.level == Level.ERROR && it.formattedMessage.startsWith('Dropped index [code_1] on entity [') &&
+                    it.formattedMessage.contains('RecreatedOverDuplicatesThing') &&
+                    it.formattedMessage.contains('but it could not be built again')
+        }
     }
 }
 
@@ -131,5 +163,29 @@ class RejectedThing {
         version false
         collection 'rejectedThing'
         code index: true, indexAttributes: [type: 'nosuchindexplugin']
+    }
+}
+
+@Entity
+class DuplicatedThing {
+    String code
+    String label
+
+    static mapping = {
+        version false
+        collection 'duplicatedThing'
+        code index: true, indexAttributes: [unique: true]
+        label index: true
+    }
+}
+
+@Entity
+class RecreatedOverDuplicatesThing {
+    String code
+
+    static mapping = {
+        version false
+        collection 'recreatedOverDuplicatesThing'
+        code index: true, indexAttributes: [unique: true, recreateOnConflict: true]
     }
 }

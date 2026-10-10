@@ -43,9 +43,11 @@ import grails.web.mime.MimeType
 import grails.web.mime.MimeTypeResolver
 import grails.web.mime.MimeTypeUtils
 import org.grails.core.exceptions.GrailsConfigurationException
+import org.grails.datastore.mapping.model.MappingContext
 import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.model.PersistentProperty
 import org.grails.datastore.mapping.model.types.OneToOne
+import org.grails.datastore.mapping.proxy.ProxyHandler
 import org.grails.web.databinding.BindingIncludeLists
 import org.grails.web.databinding.DefaultASTDatabindingHelper
 import org.grails.web.databinding.bindingsource.DataBindingSourceRegistry
@@ -125,7 +127,31 @@ class DataBindingUtils {
     }
 
     protected static List getBindingIncludeList(final Object object) {
-        return BindingIncludeLists.forType(object.getClass(), isDenyByDefaultEnabled())
+        return BindingIncludeLists.forType(bindingType(object), isDenyByDefaultEnabled())
+    }
+
+    /**
+     * The class whose include list an object is bound with. A proxy of an entity is a subclass generated at runtime
+     * that declares no include list of its own, so it is bound as the persistent class it stands for, rather than
+     * as an unenhanced subclass would be.
+     */
+    private static Class bindingType(final Object object) {
+        final GrailsApplication application = Holders.findApplication()
+        if (application != null) {
+            try {
+                final MappingContext mappingContext = application.getMappingContext()
+                final ProxyHandler proxyHandler = mappingContext != null ? mappingContext.getProxyHandler() : null
+                if (proxyHandler != null && proxyHandler.isProxy(object)) {
+                    final Class proxiedClass = proxyHandler.getProxiedClass(object)
+                    if (proxiedClass != null) {
+                        return proxiedClass
+                    }
+                }
+            } catch (GrailsConfigurationException ignored) {
+                // GORM has not initialized, so no datastore has created a proxy to bind
+            }
+        }
+        return object.getClass()
     }
 
     static List asGeneratedBindingIncludeList(final List includeList) {
@@ -141,6 +167,10 @@ class DataBindingUtils {
     }
 
     static List getUnbindablePropertyNames(final Object object) {
+        if (BindingIncludeLists.inheritsConstraintsMap(object.getClass())) {
+            // The inherited Validateable accessor holds the superclass's constraints, so the class's own are evaluated once.
+            return getUnbindablePropertyNames(object.getClass())
+        }
         // Instance-derived constraints (constraintsMap / getConstraintsMap / constraints)
         // may differ between instances of the same class, so do not cache by Class here.
         return getPropertyNamesWithBindableValue(object, Boolean.FALSE)
@@ -163,6 +193,9 @@ class DataBindingUtils {
     }
 
     static Map getConstrainedProperties(final Object object) {
+        if (BindingIncludeLists.inheritsConstraintsMap(object.getClass())) {
+            return BindingIncludeLists.constrainedProperties(object.getClass())
+        }
         MetaClass metaClass = GroovySystem.getMetaClassRegistry().getMetaClass(object.getClass())
         try {
             Object constrainedProperties = metaClass.getProperty(object, 'constraintsMap')

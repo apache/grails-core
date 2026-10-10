@@ -65,10 +65,15 @@ afterEvaluate {
         }
     }
     tasks.register('inspectLateConfigurations') {
+        def report = providers.provider {
+            [
+                    "LATE_RESOLVABLE_RESOLVED=${resolvedModules(lateResolvable)}",
+                    "LATE_RESOLVABLE_HAS_BOM=${lateResolvable.incoming.dependencies.any { it.name == 'lazy-bom' }}",
+                    "LATE_DECLARABLE_RESOLVED=${resolvedModules(lateDeclarable)}"
+            ]*.toString()
+        }
         doLast {
-            println "LATE_RESOLVABLE_RESOLVED=${resolvedModules(lateResolvable)}"
-            println "LATE_RESOLVABLE_HAS_BOM=${lateResolvable.incoming.dependencies.any { it.name == 'lazy-bom' }}"
-            println "LATE_DECLARABLE_RESOLVED=${resolvedModules(lateDeclarable)}"
+            report.get().each { println it }
         }
     }
 }
@@ -79,21 +84,26 @@ tasks.register('inspectDefaultDependencies') {
     def lazyTool = configurations.lazyTool
     def managed = configurations.managed
     def profile = configurations.profile
-    doLast {
+    def report = providers.provider {
         def isLazyBom = { dep -> dep.group == 'org.apache.grails' && dep.name == 'lazy-bom' }
 
-        println "JACOCO_AGENT_RESOLVED=${resolvedModules(jacocoAgent)}"
-        println "JACOCO_ANT_RESOLVED=${resolvedModules(jacocoAnt)}"
-        println "LAZY_TOOL_RESOLVED=${resolvedModules(lazyTool)}"
-        println "MANAGED_RESOLVED=${resolvedModules(managed)}"
+        [
+                "JACOCO_AGENT_RESOLVED=${resolvedModules(jacocoAgent)}",
+                "JACOCO_ANT_RESOLVED=${resolvedModules(jacocoAnt)}",
+                "LAZY_TOOL_RESOLVED=${resolvedModules(lazyTool)}",
+                "MANAGED_RESOLVED=${resolvedModules(managed)}",
 
-        // Observing a configuration's dependencies runs its dependency actions, so the default
-        // dependency and the lazily contributed platform must both be declared by now.
-        println "PROFILE_DEFAULT_DECLARED=${profile.incoming.dependencies.any { it.group == 'org.apache.grails.profiles' }}"
-        println "PROFILE_HAS_BOM=${profile.incoming.dependencies.any(isLazyBom)}"
-        println "LAZY_TOOL_HAS_BOM=${lazyTool.incoming.dependencies.any(isLazyBom)}"
-        println "JACOCO_AGENT_HAS_BOM=${jacocoAgent.incoming.dependencies.any(isLazyBom)}"
-        println "JACOCO_ANT_HAS_BOM=${jacocoAnt.incoming.dependencies.any(isLazyBom)}"
+                // Observing a configuration's dependencies runs its dependency actions, so the default
+                // dependency and the lazily contributed platform must both be declared by now.
+                "PROFILE_DEFAULT_DECLARED=${profile.incoming.dependencies.any { it.group == 'org.apache.grails.profiles' }}",
+                "PROFILE_HAS_BOM=${profile.incoming.dependencies.any(isLazyBom)}",
+                "LAZY_TOOL_HAS_BOM=${lazyTool.incoming.dependencies.any(isLazyBom)}",
+                "JACOCO_AGENT_HAS_BOM=${jacocoAgent.incoming.dependencies.any(isLazyBom)}",
+                "JACOCO_ANT_HAS_BOM=${jacocoAnt.incoming.dependencies.any(isLazyBom)}"
+        ]*.toString()
+    }
+    doLast {
+        report.get().each { println it }
     }
 }
 

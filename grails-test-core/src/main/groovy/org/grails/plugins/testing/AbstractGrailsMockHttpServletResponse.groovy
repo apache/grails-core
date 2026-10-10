@@ -113,7 +113,8 @@ abstract class AbstractGrailsMockHttpServletResponse extends MockHttpServletResp
         webRequest?.request?.removeAttribute(GrailsApplicationAttributes.REDIRECT_ISSUED)
         setCommitted(false)
         super.reset()
-        webRequest?.setOut(getWriter())
+        // Let the next response choose a writer or an output stream when it needs one.
+        webRequest?.setOut(null)
     }
 
     String getRedirectUrl() {
