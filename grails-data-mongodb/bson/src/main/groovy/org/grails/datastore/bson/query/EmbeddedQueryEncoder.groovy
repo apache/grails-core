@@ -17,9 +17,9 @@
  *  under the License.
  */
 
-package org.grails.datastore.bson.query;
+package org.grails.datastore.bson.query
 
-import org.grails.datastore.mapping.model.types.Embedded;
+import org.grails.datastore.mapping.model.types.Embedded
 
 /**
  * Encodes an embedded object as a query
@@ -27,7 +27,7 @@ import org.grails.datastore.mapping.model.types.Embedded;
  * @author Graeme Rocher
  * @since 6.0
  */
-public interface EmbeddedQueryEncoder {
+interface EmbeddedQueryEncoder {
 
     /**
      * Takes an embedded property and instance and returns the query encoded value
@@ -36,5 +36,6 @@ public interface EmbeddedQueryEncoder {
      * @param instance The instance
      * @return The encoded value
      */
-    Object encode(Embedded embedded, Object instance);
+    Object encode(Embedded embedded, Object instance)
+
 }

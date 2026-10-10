@@ -13,12 +13,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.grails.datastore.bson.json;
+package org.grails.datastore.bson.json
+
+import groovy.transform.CompileStatic
+import groovy.transform.PackageScope
 
 /**
  * Fork of {@link org.bson.json.JsonTokenType}
  */
+@CompileStatic
+@PackageScope
 enum JsonTokenType {
+
     /**
      * An invalid token.
      */
@@ -98,4 +104,5 @@ enum JsonTokenType {
      * An end of file token.
      */
     END_OF_FILE
+
 }
