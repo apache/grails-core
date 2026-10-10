@@ -16,13 +16,7 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.io.support;
-
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
-import java.net.URI;
-import java.net.URL;
+package org.grails.io.support
 
 /**
  * Interface for a resource descriptor that abstracts from the actual
@@ -38,13 +32,13 @@ import java.net.URL;
  * @see #getURI()
  * @see #getFile()
  */
-public interface Resource {
+interface Resource {
 
     /**
      * An input stream
      * @return The input stream
      */
-    InputStream getInputStream() throws IOException;
+    InputStream getInputStream() throws IOException
 
     /**
      * Return whether this resource actually exists in physical form.
@@ -52,7 +46,7 @@ public interface Resource {
      * existence of a <code>Resource</code> handle only guarantees a
      * valid descriptor handle.
      */
-    boolean exists();
+    boolean exists()
 
     /**
      * Return whether the contents of this resource can be read,
@@ -63,42 +57,42 @@ public interface Resource {
      * that the resource content cannot be read.
      * @see #getInputStream()
      */
-    boolean isReadable();
+    boolean isReadable()
 
     /**
      * Return a URL handle for this resource.
      * @throws java.io.IOException if the resource cannot be resolved as URL,
      * i.e. if the resource is not available as descriptor
      */
-    URL getURL() throws IOException;
+    URL getURL() throws IOException
 
     /**
      * Return a URI handle for this resource.
      * @throws IOException if the resource cannot be resolved as URI,
      * i.e. if the resource is not available as descriptor
      */
-    URI getURI() throws IOException;
+    URI getURI() throws IOException
 
     /**
      * Return a File handle for this resource.
      * @throws IOException if the resource cannot be resolved as absolute
      * file path, i.e. if the resource is not available in a file system
      */
-    File getFile() throws IOException;
+    File getFile() throws IOException
 
     /**
      * Determine the content length for this resource.
      * @throws IOException if the resource cannot be resolved
      * (in the file system or as some other known physical resource type)
      */
-    long contentLength() throws IOException;
+    long contentLength() throws IOException
 
     /**
      * Determine the last-modified timestamp for this resource.
      * @throws IOException if the resource cannot be resolved
      * (in the file system or as some other known physical resource type)
      */
-    long lastModified() throws IOException;
+    long lastModified() throws IOException
 
     /**
      * Determine a filename for this resource, i.e. typically the last
@@ -106,7 +100,7 @@ public interface Resource {
      * <p>Returns <code>null</code> if this type of resource does not
      * have a filename.
      */
-    String getFilename();
+    String getFilename()
 
     /**
      * Return a description for this resource,
@@ -115,7 +109,7 @@ public interface Resource {
      * from their <code>toString</code> method.
      * @see java.lang.Object#toString()
      */
-    String getDescription();
+    String getDescription()
 
     /**
      * Creates a new resource relative to this one
@@ -123,5 +117,6 @@ public interface Resource {
      * @param relativePath The relative path
      * @return The new resource
      */
-    Resource createRelative(String relativePath);
+    Resource createRelative(String relativePath)
+
 }

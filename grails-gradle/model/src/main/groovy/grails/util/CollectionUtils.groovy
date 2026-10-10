@@ -16,59 +16,52 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package grails.util;
+package grails.util
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import groovy.transform.CompileStatic
 
 /**
  * Collection utility methods.
  *
  * @author Burt Beckwith
  */
-public class CollectionUtils {
+@CompileStatic
+class CollectionUtils {
 
     private CollectionUtils() {
         // static only
     }
 
-    @SuppressWarnings({ "rawtypes", "unchecked" })
-    public static <K, V> Map newMap(Object... keysAndValues) {
+    @SuppressWarnings([ 'rawtypes', 'unchecked' ])
+    static <K, V> Map newMap(Object... keysAndValues) {
         if (keysAndValues == null) {
-            return Collections.emptyMap();
+            return Collections.emptyMap()
         }
         if (keysAndValues.length % 2 == 1) {
-            throw new IllegalArgumentException("Must have an even number of keys and values");
+            throw new IllegalArgumentException('Must have an even number of keys and values')
         }
 
-        Map<K, V> map = new HashMap<>();
+        Map<K, V> map = new HashMap<>()
         for (int i = 0; i < keysAndValues.length; i += 2) {
-            map.put((K) keysAndValues[i], (V) keysAndValues[i + 1]);
+            map.put((K) keysAndValues[i], (V) keysAndValues[i + 1])
         }
-        return map;
+        return map
     }
 
-    public static <T> Set<T> newSet(T... values) {
+    static <T> Set<T> newSet(T... values) {
         if (values == null) {
-            return Collections.emptySet();
+            return Collections.emptySet()
         }
 
-        return new HashSet<>(Arrays.asList(values));
+        return new HashSet<>(Arrays.asList(values))
     }
 
-    public static <T> List<T> newList(T... values) {
+    static <T> List<T> newList(T... values) {
         if (values == null) {
-            return Collections.emptyList();
+            return Collections.emptyList()
         }
 
-        return new ArrayList<>(Arrays.asList(values));
+        return new ArrayList<>(Arrays.asList(values))
     }
 
     /**
@@ -78,11 +71,12 @@ public class CollectionUtils {
      * @param key The key that holds the child map
      * @return The child map
      */
-    public static Map getOrCreateChildMap(Map parent, String key) {
-        Object o = parent.get(key);
+    static Map getOrCreateChildMap(Map parent, String key) {
+        Object o = parent.get(key)
         if (o instanceof Map) {
-            return (Map) o;
+            return (Map) o
         }
-        return new LinkedHashMap();
+        return new LinkedHashMap()
     }
+
 }

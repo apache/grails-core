@@ -16,10 +16,11 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package grails.util;
+package grails.util
 
-import java.util.Optional;
-import java.util.function.Supplier;
+import java.util.function.Supplier
+
+import groovy.transform.CompileStatic
 
 /**
  * Helper methods for dealing with {@link Supplier}.
@@ -27,7 +28,8 @@ import java.util.function.Supplier;
  * @author James Kleeh
  * @since 1.0
  */
-public class SupplierUtil {
+@CompileStatic
+class SupplierUtil {
 
     /**
      * Caches the result of supplier in a thread safe manner.
@@ -36,24 +38,24 @@ public class SupplierUtil {
      * @param <T> The type of result
      * @return A new supplier that will cache the result
      */
-    public static <T> Supplier<T> memoized(Supplier<T> actual) {
-        return new Supplier<>() {
-            Supplier<T> delegate = this::initialize;
-            boolean initialized;
+    static <T> Supplier<T> memoized(Supplier<T> actual) {
+        return new Supplier<T>() {
+            Supplier<T> delegate = { -> initialize() } as Supplier<T>
+            boolean initialized
 
-            public T get() {
-                return delegate.get();
+            T get() {
+                return delegate.get()
             }
 
             private synchronized T initialize() {
                 if (!initialized) {
-                    T value = actual.get();
-                    delegate = () -> value;
-                    initialized = true;
+                    T value = actual.get()
+                    delegate = { -> value } as Supplier<T>
+                    initialized = true
                 }
-                return delegate.get();
+                return delegate.get()
             }
-        };
+        }
     }
 
     /**
@@ -64,31 +66,32 @@ public class SupplierUtil {
      * @param <T> The type of result
      * @return A new supplier that will cache the result
      */
-    public static <T> Supplier<T> memoizedNonEmpty(Supplier<T> actual) {
-        return new Supplier<>() {
-            Supplier<T> delegate = this::initialize;
-            boolean initialized;
+    static <T> Supplier<T> memoizedNonEmpty(Supplier<T> actual) {
+        return new Supplier<T>() {
+            Supplier<T> delegate = { -> initialize() } as Supplier<T>
+            boolean initialized
 
-            public T get() {
-                return delegate.get();
+            T get() {
+                return delegate.get()
             }
 
             private synchronized T initialize() {
                 if (!initialized) {
-                    T value = actual.get();
+                    T value = actual.get()
                     if (value == null) {
-                        return null;
+                        return null
                     }
                     if (value instanceof Optional) {
                         if (!((Optional) value).isPresent()) {
-                            return value;
+                            return value
                         }
                     }
-                    delegate = () -> value;
-                    initialized = true;
+                    delegate = { -> value } as Supplier<T>
+                    initialized = true
                 }
-                return delegate.get();
+                return delegate.get()
             }
-        };
+        }
     }
+
 }

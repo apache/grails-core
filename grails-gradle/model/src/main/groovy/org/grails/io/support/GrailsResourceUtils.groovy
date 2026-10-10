@@ -16,31 +16,15 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.io.support;
+package org.grails.io.support
 
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.net.MalformedURLException;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.net.URL;
-import java.net.URLConnection;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Iterator;
-import java.util.LinkedHashMap;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+import java.util.regex.Matcher
+import java.util.regex.Pattern
 
-import groovy.lang.Closure;
-import groovy.util.ConfigObject;
-import org.codehaus.groovy.runtime.DefaultGroovyMethods;
+import groovy.transform.CompileStatic
+import org.codehaus.groovy.runtime.DefaultGroovyMethods
 
-import grails.util.BuildSettings;
+import grails.util.BuildSettings
 
 /**
  * Utility methods for resource handling / figuring out class names.
@@ -49,171 +33,181 @@ import grails.util.BuildSettings;
  * @author Juergen Hoeller
  * @since 2.0
  */
-public class GrailsResourceUtils {
+@CompileStatic
+class GrailsResourceUtils {
 
-    public static final String CLASS_EXTENSION = ".class";
+    public static final String CLASS_EXTENSION = '.class'
 
-    private static final String WINDOWS_FOLDER_SEPARATOR = "\\";
+    private static final String WINDOWS_FOLDER_SEPARATOR = '\\'
 
-    private static final String TOP_PATH = "..";
+    private static final String TOP_PATH = '..'
 
-    private static final String CURRENT_PATH = ".";
+    private static final String CURRENT_PATH = '.'
 
-    private static final String FOLDER_SEPARATOR = "/";
-    public static final String JAR_URL_SEPARATOR = "!/";
+    private static final String FOLDER_SEPARATOR = '/'
+    public static final String JAR_URL_SEPARATOR = '!/'
 
     /** Pseudo URL prefix for loading from the class path: "classpath:" */
-    public static final String CLASSPATH_URL_PREFIX = "classpath:";
+    public static final String CLASSPATH_URL_PREFIX = 'classpath:'
 
     /** URL prefix for loading from the file system: "file:" */
-    public static final String FILE_URL_PREFIX = "file:";
+    public static final String FILE_URL_PREFIX = 'file:'
 
     /** URL protocol for a file in the file system: "file" */
-    public static final String URL_PROTOCOL_FILE = "file";
+    public static final String URL_PROTOCOL_FILE = 'file'
 
     /** URL protocol for an entry from a jar file: "jar" */
-    public static final String URL_PROTOCOL_JAR = "jar";
+    public static final String URL_PROTOCOL_JAR = 'jar'
 
     /** URL protocol for an entry from a zip file: "zip" */
-    public static final String URL_PROTOCOL_ZIP = "zip";
+    public static final String URL_PROTOCOL_ZIP = 'zip'
 
     /** URL protocol for an entry from a JBoss jar file: "vfszip" */
-    public static final String URL_PROTOCOL_VFSZIP = "vfszip";
+    public static final String URL_PROTOCOL_VFSZIP = 'vfszip'
 
     /** URL protocol for a JBoss VFS resource: "vfs" */
-    public static final String URL_PROTOCOL_VFS = "vfs";
+    public static final String URL_PROTOCOL_VFS = 'vfs'
 
     /** URL protocol for an entry from a WebSphere jar file: "wsjar" */
-    public static final String URL_PROTOCOL_WSJAR = "wsjar";
+    public static final String URL_PROTOCOL_WSJAR = 'wsjar'
 
     /** URL protocol for an entry from an OC4J jar file: "code-source" */
-    public static final String URL_PROTOCOL_CODE_SOURCE = "code-source";
+    public static final String URL_PROTOCOL_CODE_SOURCE = 'code-source'
     /**
      * The relative path to the WEB-INF directory
      */
-    public static final String WEB_INF = "/WEB-INF";
+    public static final String WEB_INF = '/WEB-INF'
 
     /**
      * The name of the Grails application directory
      */
-    public static final String GRAILS_APP_DIR = "grails-app";
+    public static final String GRAILS_APP_DIR = 'grails-app'
 
     /**
      * The name of the Web app dir within Grails
      */
-    public static final String WEB_APP_DIR = "web-app";
+    public static final String WEB_APP_DIR = 'web-app'
 
     /**
      * The path to the views directory
      */
-    public static final String VIEWS_DIR_PATH = GRAILS_APP_DIR + "/views/";
+    public static final String VIEWS_DIR_PATH = GRAILS_APP_DIR + '/views/'
     /**
      * The path to the views directory without a trailing slash
      */
-    public static final String VIEWS_DIR_PATH_NO_SLASH = GRAILS_APP_DIR + "/views";
+    public static final String VIEWS_DIR_PATH_NO_SLASH = GRAILS_APP_DIR + '/views'
 
-    public static final String DOMAIN_DIR_PATH = GRAILS_APP_DIR + "/domain/";
+    public static final String DOMAIN_DIR_PATH = GRAILS_APP_DIR + '/domain/'
 
-    public static final String REGEX_FILE_SEPARATOR = "[\\\\/]"; // backslashes need escaping in regexes
+    public static final String REGEX_FILE_SEPARATOR = '[\\\\/]' // backslashes need escaping in regexes
 
     /*
      Domain path is always matched against the normalized File representation of an URL and
      can therefore work with slashes as separators.
      */
-    public static Pattern DOMAIN_PATH_PATTERN = Pattern.compile(".+" + REGEX_FILE_SEPARATOR + GRAILS_APP_DIR + REGEX_FILE_SEPARATOR + "domain" + REGEX_FILE_SEPARATOR + "(.+)\\.(groovy|java)");
+    static Pattern DOMAIN_PATH_PATTERN = Pattern.compile('.+' + REGEX_FILE_SEPARATOR + GRAILS_APP_DIR + REGEX_FILE_SEPARATOR + 'domain' + REGEX_FILE_SEPARATOR + '(.+)\\.(groovy|java)')
 
     /*
      This pattern will match any resource within a given directory inside grails-app
      */
-    public static Pattern RESOURCE_PATH_PATTERN = Pattern.compile(".+?" + REGEX_FILE_SEPARATOR + GRAILS_APP_DIR + REGEX_FILE_SEPARATOR + "(.+?)" + REGEX_FILE_SEPARATOR + "(.+?\\.(groovy|java))");
+    static Pattern RESOURCE_PATH_PATTERN = Pattern.compile('.+?' + REGEX_FILE_SEPARATOR + GRAILS_APP_DIR + REGEX_FILE_SEPARATOR + '(.+?)' + REGEX_FILE_SEPARATOR + '(.+?\\.(groovy|java))')
 
-    public static Pattern SPRING_SCRIPTS_PATH_PATTERN = Pattern.compile(".+?" + REGEX_FILE_SEPARATOR + GRAILS_APP_DIR + REGEX_FILE_SEPARATOR + "conf" + REGEX_FILE_SEPARATOR + "spring" + REGEX_FILE_SEPARATOR + "(.+?\\.groovy)");
+    static Pattern SPRING_SCRIPTS_PATH_PATTERN = Pattern.compile('.+?' + REGEX_FILE_SEPARATOR + GRAILS_APP_DIR + REGEX_FILE_SEPARATOR + 'conf' + REGEX_FILE_SEPARATOR + 'spring' + REGEX_FILE_SEPARATOR + '(.+?\\.groovy)')
 
-    public static Pattern[] COMPILER_ROOT_PATTERNS = {
+    static Pattern[] COMPILER_ROOT_PATTERNS = [
         SPRING_SCRIPTS_PATH_PATTERN,
         RESOURCE_PATH_PATTERN
-    };
+    ] as Pattern[]
 
     /*
     Resources are resolved against the platform specific path and must therefore obey the
     specific File.separator.
      */
-    public static final Pattern GRAILS_RESOURCE_PATTERN_FIRST_MATCH;
-    public static final Pattern GRAILS_RESOURCE_PATTERN_SECOND_MATCH;
-    public static final Pattern GRAILS_RESOURCE_PATTERN_THIRD_MATCH;
-    public static final Pattern GRAILS_RESOURCE_PATTERN_FOURTH_MATCH;
-    public static final Pattern GRAILS_RESOURCE_PATTERN_FIFTH_MATCH;
-    public static final Pattern GRAILS_RESOURCE_PATTERN_SIXTH_MATCH;
-    public static final Pattern GRAILS_RESOURCE_PATTERN_SEVENTH_MATCH;
-    public static final Pattern GRAILS_RESOURCE_PATTERN_EIGHTH_MATCH;
-    public static final Pattern GRAILS_RESOURCE_PATTERN_NINTH_MATCH;
-    public static final Pattern GRAILS_RESOURCE_PATTERN_TENTH_MATCH;
-    public static final Pattern GRAILS_RESOURCE_PATTERN_ELEVENTH_MATCH;
+    public static final Pattern GRAILS_RESOURCE_PATTERN_FIRST_MATCH
+    public static final Pattern GRAILS_RESOURCE_PATTERN_SECOND_MATCH
+    public static final Pattern GRAILS_RESOURCE_PATTERN_THIRD_MATCH
+    public static final Pattern GRAILS_RESOURCE_PATTERN_FOURTH_MATCH
+    public static final Pattern GRAILS_RESOURCE_PATTERN_FIFTH_MATCH
+    public static final Pattern GRAILS_RESOURCE_PATTERN_SIXTH_MATCH
+    public static final Pattern GRAILS_RESOURCE_PATTERN_SEVENTH_MATCH
+    public static final Pattern GRAILS_RESOURCE_PATTERN_EIGHTH_MATCH
+    public static final Pattern GRAILS_RESOURCE_PATTERN_NINTH_MATCH
+    public static final Pattern GRAILS_RESOURCE_PATTERN_TENTH_MATCH
+    public static final Pattern GRAILS_RESOURCE_PATTERN_ELEVENTH_MATCH
 
     static {
-        String fs = REGEX_FILE_SEPARATOR;
+        String fs = REGEX_FILE_SEPARATOR
 
-        GRAILS_RESOURCE_PATTERN_FIRST_MATCH = Pattern.compile(createGrailsResourcePattern(fs, GRAILS_APP_DIR + fs + "conf" + fs + "spring"));
-        GRAILS_RESOURCE_PATTERN_THIRD_MATCH = Pattern.compile(createGrailsResourcePattern(fs, GRAILS_APP_DIR + fs + "[\\w-]+"));
-        GRAILS_RESOURCE_PATTERN_SEVENTH_MATCH = Pattern.compile(createGrailsResourcePattern(fs, "src" + fs + "main" + fs + "java"));
-        GRAILS_RESOURCE_PATTERN_EIGHTH_MATCH = Pattern.compile(createGrailsResourcePattern(fs, "src" + fs + "main" + fs + "groovy"));
+        GRAILS_RESOURCE_PATTERN_FIRST_MATCH = Pattern.compile(createGrailsResourcePattern(fs, GRAILS_APP_DIR + fs + 'conf' + fs + 'spring'))
+        GRAILS_RESOURCE_PATTERN_THIRD_MATCH = Pattern.compile(createGrailsResourcePattern(fs, GRAILS_APP_DIR + fs + '[\\w-]+'))
+        GRAILS_RESOURCE_PATTERN_SEVENTH_MATCH = Pattern.compile(createGrailsResourcePattern(fs, 'src' + fs + 'main' + fs + 'java'))
+        GRAILS_RESOURCE_PATTERN_EIGHTH_MATCH = Pattern.compile(createGrailsResourcePattern(fs, 'src' + fs + 'main' + fs + 'groovy'))
 
-        GRAILS_RESOURCE_PATTERN_NINTH_MATCH = Pattern.compile(createGrailsResourcePattern(fs, "src" + fs + "test" + fs + "groovy"));
-        GRAILS_RESOURCE_PATTERN_TENTH_MATCH = Pattern.compile(createGrailsResourcePattern(fs, "src" + fs + "test" + fs + "java"));
-        GRAILS_RESOURCE_PATTERN_ELEVENTH_MATCH = Pattern.compile(createGrailsResourcePattern(fs, "src" + fs + "test" + fs + "functional"));
+        GRAILS_RESOURCE_PATTERN_NINTH_MATCH = Pattern.compile(createGrailsResourcePattern(fs, 'src' + fs + 'test' + fs + 'groovy'))
+        GRAILS_RESOURCE_PATTERN_TENTH_MATCH = Pattern.compile(createGrailsResourcePattern(fs, 'src' + fs + 'test' + fs + 'java'))
+        GRAILS_RESOURCE_PATTERN_ELEVENTH_MATCH = Pattern.compile(createGrailsResourcePattern(fs, 'src' + fs + 'test' + fs + 'functional'))
 
-        GRAILS_RESOURCE_PATTERN_FIFTH_MATCH = Pattern.compile(createGrailsResourcePattern(fs, "grails-tests"));
-        fs = "/";
-        GRAILS_RESOURCE_PATTERN_SECOND_MATCH = Pattern.compile(createGrailsResourcePattern(fs, GRAILS_APP_DIR + fs + "conf" + fs + "spring"));
-        GRAILS_RESOURCE_PATTERN_FOURTH_MATCH = Pattern.compile(createGrailsResourcePattern(fs, GRAILS_APP_DIR + fs + "[\\w-]+"));
-        GRAILS_RESOURCE_PATTERN_SIXTH_MATCH = Pattern.compile(createGrailsResourcePattern(fs, "grails-tests"));
+        GRAILS_RESOURCE_PATTERN_FIFTH_MATCH = Pattern.compile(createGrailsResourcePattern(fs, 'grails-tests'))
+        fs = '/'
+        GRAILS_RESOURCE_PATTERN_SECOND_MATCH = Pattern.compile(createGrailsResourcePattern(fs, GRAILS_APP_DIR + fs + 'conf' + fs + 'spring'))
+        GRAILS_RESOURCE_PATTERN_FOURTH_MATCH = Pattern.compile(createGrailsResourcePattern(fs, GRAILS_APP_DIR + fs + '[\\w-]+'))
+        GRAILS_RESOURCE_PATTERN_SIXTH_MATCH = Pattern.compile(createGrailsResourcePattern(fs, 'grails-tests'))
+
+        // Assigned here, not as separate field initializers below: Groovy does not preserve
+        // Java's textual static-initialization order across a static {} block and later field
+        // initializers, so referencing these fields from a field initializer placed after this
+        // block would silently capture null (confirmed empirically) rather than the values just
+        // assigned above.
+        patterns = new Pattern[]{
+            GRAILS_RESOURCE_PATTERN_FIRST_MATCH,
+            GRAILS_RESOURCE_PATTERN_THIRD_MATCH,
+            GRAILS_RESOURCE_PATTERN_SEVENTH_MATCH,
+            GRAILS_RESOURCE_PATTERN_EIGHTH_MATCH,
+            GRAILS_RESOURCE_PATTERN_FOURTH_MATCH,
+            GRAILS_RESOURCE_PATTERN_FIFTH_MATCH,
+            GRAILS_RESOURCE_PATTERN_SIXTH_MATCH,
+            GRAILS_RESOURCE_PATTERN_NINTH_MATCH,
+            GRAILS_RESOURCE_PATTERN_TENTH_MATCH,
+            GRAILS_RESOURCE_PATTERN_ELEVENTH_MATCH
+        }
+
+        grailsAppResourcePatterns = new Pattern[]{
+            GRAILS_RESOURCE_PATTERN_FIRST_MATCH,
+            GRAILS_RESOURCE_PATTERN_THIRD_MATCH,
+            GRAILS_RESOURCE_PATTERN_FOURTH_MATCH,
+            GRAILS_RESOURCE_PATTERN_FIFTH_MATCH,
+            GRAILS_RESOURCE_PATTERN_SIXTH_MATCH,
+            GRAILS_RESOURCE_PATTERN_ELEVENTH_MATCH
+        }
     }
 
-    public static final Pattern[] patterns = new Pattern[]{
-        GRAILS_RESOURCE_PATTERN_FIRST_MATCH,
-        GRAILS_RESOURCE_PATTERN_THIRD_MATCH,
-        GRAILS_RESOURCE_PATTERN_SEVENTH_MATCH,
-        GRAILS_RESOURCE_PATTERN_EIGHTH_MATCH,
-        GRAILS_RESOURCE_PATTERN_FOURTH_MATCH,
-        GRAILS_RESOURCE_PATTERN_FIFTH_MATCH,
-        GRAILS_RESOURCE_PATTERN_SIXTH_MATCH,
-        GRAILS_RESOURCE_PATTERN_NINTH_MATCH,
-        GRAILS_RESOURCE_PATTERN_TENTH_MATCH,
-        GRAILS_RESOURCE_PATTERN_ELEVENTH_MATCH
-    };
+    public static final Pattern[] patterns
 
-    public static final Pattern[] grailsAppResourcePatterns = new Pattern[]{
-        GRAILS_RESOURCE_PATTERN_FIRST_MATCH,
-        GRAILS_RESOURCE_PATTERN_THIRD_MATCH,
-        GRAILS_RESOURCE_PATTERN_FOURTH_MATCH,
-        GRAILS_RESOURCE_PATTERN_FIFTH_MATCH,
-        GRAILS_RESOURCE_PATTERN_SIXTH_MATCH,
-        GRAILS_RESOURCE_PATTERN_ELEVENTH_MATCH
-    };
+    public static final Pattern[] grailsAppResourcePatterns
 
-    private static Map<String, Boolean> KNOWN_PATHS = new LinkedHashMap<>() {
+    private static Map<String, Boolean> KNOWN_PATHS = new LinkedHashMap<String, Boolean>() {
         @Override
         protected boolean removeEldestEntry(Map.Entry eldest) {
-            return this.size() > 100;
+            return this.size() > 100
         }
-    };
+    }
 
     private static Map<String, Boolean> KNOWN_DOMAIN_CLASSES = DefaultGroovyMethods.withDefault(new LinkedHashMap<String, Boolean>() {
         @Override
         protected boolean removeEldestEntry(Map.Entry<String, Boolean> eldest) {
-            return this.size() > 100;
+            return this.size() > 100
         }
-    }, new Closure(GrailsResourceUtils.class) {
+    }, new Closure(GrailsResourceUtils) {
 
         @Override
-        public Object call(Object... args) {
-            String path = args[0].toString();
-            return DOMAIN_PATH_PATTERN.matcher(path).find();
+        Object call(Object... args) {
+            String path = args[0].toString()
+            return DOMAIN_PATH_PATTERN.matcher(path).find()
         }
-    });
+    })
 
     private static String createGrailsResourcePattern(String separator, String base) {
-        return ".+" + separator + base + separator + "(.+)\\.(groovy|java)$";
+        return '.+' + separator + base + separator + '(.+)\\.(groovy|java)\$'
     }
 
     /**
@@ -223,9 +217,9 @@ public class GrailsResourceUtils {
      * @return true if it is a domain class
      */
 
-    public static boolean isDomainClass(URL url) {
-        if (url == null) return false;
-        return KNOWN_DOMAIN_CLASSES.get(url.getFile());
+    static boolean isDomainClass(URL url) {
+        if (url == null) return false
+        return KNOWN_DOMAIN_CLASSES.get(url.getFile())
     }
 
     /**
@@ -234,12 +228,12 @@ public class GrailsResourceUtils {
      * @param path the file path (may be <code>null</code>)
      * @return the extracted filename, or <code>null</code> if none
      */
-    public static String getFilename(String path) {
+    static String getFilename(String path) {
         if (path == null) {
-            return null;
+            return null
         }
-        int separatorIndex = path.lastIndexOf(FOLDER_SEPARATOR);
-        return (separatorIndex != -1 ? path.substring(separatorIndex + 1) : path);
+        int separatorIndex = path.lastIndexOf(FOLDER_SEPARATOR)
+        return (separatorIndex != -1 ? path.substring(separatorIndex + 1) : path)
     }
 
     /**
@@ -256,21 +250,21 @@ public class GrailsResourceUtils {
      * @see ClassLoader#getResource
      * @see Class#getResource
      */
-    public static String classPackageAsResourcePath(Class<?> clazz) {
+    static String classPackageAsResourcePath(Class<?> clazz) {
         if (clazz == null) {
-            return "";
+            return ''
         }
-        String className = clazz.getName();
-        int packageEndIndex = className.lastIndexOf('.');
+        String className = clazz.getName()
+        int packageEndIndex = className.lastIndexOf('.')
         if (packageEndIndex == -1) {
-            return "";
+            return ''
         }
-        String packageName = className.substring(0, packageEndIndex);
-        return packageName.replace('.', '/');
+        String packageName = className.substring(0, packageEndIndex)
+        return packageName.replace('.', '/')
     }
 
-    public static void useCachesIfNecessary(URLConnection con) {
-        con.setUseCaches(con.getClass().getName().startsWith("JNLP"));
+    static void useCachesIfNecessary(URLConnection con) {
+        con.setUseCaches(con.getClass().getName().startsWith('JNLP'))
     }
 
     /**
@@ -279,12 +273,12 @@ public class GrailsResourceUtils {
      * @param resource The Spring Resource
      * @return The class name or null if the resource is not a Grails class
      */
-    public static String getClassName(Resource resource) {
+    static String getClassName(Resource resource) {
         try {
-            return getClassName(resource.getFile().getAbsolutePath());
+            return getClassName(resource.getFile().getAbsolutePath())
         }
         catch (IOException e) {
-            return null;
+            return null
         }
     }
 
@@ -294,14 +288,14 @@ public class GrailsResourceUtils {
      * @param path The path to check
      * @return The class name or null if it doesn't exist
      */
-    public static String getClassName(String path) {
-        for (Pattern pattern : patterns) {
-            Matcher m = pattern.matcher(path);
+    static String getClassName(String path) {
+        for (Pattern pattern in patterns) {
+            Matcher m = pattern.matcher(path)
             if (m.find()) {
-                return m.group(1).replaceAll("[/\\\\]", ".");
+                return m.group(1).replaceAll('[/\\\\]', '.')
             }
         }
-        return null;
+        return null
     }
 
     /**
@@ -310,14 +304,14 @@ public class GrailsResourceUtils {
      * @param path The path to check
      * @return The class name or null if it doesn't exist
      */
-    public static String getClassNameForClassFile(String rootDir, String path) {
-        path = path.replace("/", ".");
-        path = path.replace('\\', '.');
-        path = path.substring(0, path.length() - CLASS_EXTENSION.length());
+    static String getClassNameForClassFile(String rootDir, String path) {
+        path = path.replace('/', '.')
+        path = path.replace('\\', '.')
+        path = path.substring(0, path.length() - CLASS_EXTENSION.length())
         if (rootDir != null) {
-            path = path.substring(rootDir.length());
+            path = path.substring(rootDir.length())
         }
-        return path;
+        return path
     }
 
     /**
@@ -330,18 +324,18 @@ public class GrailsResourceUtils {
      * @throws java.io.FileNotFoundException if the URL cannot be resolved to
      * a file in the file system
      */
-    public static File getFile(URL resourceUrl, String description) throws FileNotFoundException {
+    static File getFile(URL resourceUrl, String description) throws FileNotFoundException {
         if (!URL_PROTOCOL_FILE.equals(resourceUrl.getProtocol())) {
             throw new FileNotFoundException(
-                    description + " cannot be resolved to absolute file path " +
-                            "because it does not reside in the file system: " + resourceUrl);
+                    description + ' cannot be resolved to absolute file path ' +
+                            'because it does not reside in the file system: ' + resourceUrl)
         }
         try {
-            return new File(toURI(resourceUrl).getSchemeSpecificPart());
+            return new File(toURI(resourceUrl).getSchemeSpecificPart())
         }
         catch (URISyntaxException ex) {
             // Fallback for URLs that are not valid URIs (should hardly ever happen).
-            return new File(resourceUrl.getFile());
+            return new File(resourceUrl.getFile())
         }
     }
 
@@ -354,12 +348,12 @@ public class GrailsResourceUtils {
      * @param url the URL to check
      * @return whether the URL has been identified as a JAR URL
      */
-    public static boolean isJarURL(URL url) {
-        String protocol = url.getProtocol();
+    static boolean isJarURL(URL url) {
+        String protocol = url.getProtocol()
         return (URL_PROTOCOL_JAR.equals(protocol) ||
                 URL_PROTOCOL_ZIP.equals(protocol) ||
                 URL_PROTOCOL_WSJAR.equals(protocol) ||
-                (URL_PROTOCOL_CODE_SOURCE.equals(protocol) && url.getPath().contains(JAR_URL_SEPARATOR)));
+                (URL_PROTOCOL_CODE_SOURCE.equals(protocol) && url.getPath().contains(JAR_URL_SEPARATOR)))
     }
 
     /**
@@ -372,13 +366,13 @@ public class GrailsResourceUtils {
      * @throws FileNotFoundException if the URL cannot be resolved to
      * a file in the file system
      */
-    public static File getFile(URI resourceUri, String description) throws FileNotFoundException {
+    static File getFile(URI resourceUri, String description) throws FileNotFoundException {
         if (!URL_PROTOCOL_FILE.equals(resourceUri.getScheme())) {
             throw new FileNotFoundException(
-                    description + " cannot be resolved to absolute file path " +
-                            "because it does not reside in the file system: " + resourceUri);
+                    description + ' cannot be resolved to absolute file path ' +
+                            'because it does not reside in the file system: ' + resourceUri)
         }
-        return new File(resourceUri.getSchemeSpecificPart());
+        return new File(resourceUri.getSchemeSpecificPart())
     }
 
     /**
@@ -389,8 +383,8 @@ public class GrailsResourceUtils {
      * @throws FileNotFoundException if the URL cannot be resolved to
      * a file in the file system
      */
-    public static File getFile(URI resourceUri) throws FileNotFoundException {
-        return getFile(resourceUri, "URI");
+    static File getFile(URI resourceUri) throws FileNotFoundException {
+        return getFile(resourceUri, 'URI')
     }
 
     /**
@@ -403,8 +397,8 @@ public class GrailsResourceUtils {
      * @throws URISyntaxException if the URL wasn't a valid URI
      * @see java.net.URL#toURI()
      */
-    public static URI toURI(URL url) throws URISyntaxException {
-        return toURI(url.toString());
+    static URI toURI(URL url) throws URISyntaxException {
+        return toURI(url.toString())
     }
 
     /**
@@ -413,9 +407,9 @@ public class GrailsResourceUtils {
      * @param url the URL to check
      * @return whether the URL has been identified as a file system URL
      */
-    public static boolean isFileURL(URL url) {
-        String protocol = url.getProtocol();
-        return (URL_PROTOCOL_FILE.equals(protocol) || protocol.startsWith(URL_PROTOCOL_VFS));
+    static boolean isFileURL(URL url) {
+        String protocol = url.getProtocol()
+        return (URL_PROTOCOL_FILE.equals(protocol) || protocol.startsWith(URL_PROTOCOL_VFS))
     }
 
     /**
@@ -426,16 +420,16 @@ public class GrailsResourceUtils {
      * (relative to the full file path above)
      * @return the full file path that results from applying the relative path
      */
-    public static String applyRelativePath(String path, String relativePath) {
-        int separatorIndex = path.lastIndexOf(FOLDER_SEPARATOR);
+    static String applyRelativePath(String path, String relativePath) {
+        int separatorIndex = path.lastIndexOf(FOLDER_SEPARATOR)
         if (separatorIndex != -1) {
-            String newPath = path.substring(0, separatorIndex);
+            String newPath = path.substring(0, separatorIndex)
             if (!relativePath.startsWith(FOLDER_SEPARATOR)) {
-                newPath += FOLDER_SEPARATOR;
+                newPath += FOLDER_SEPARATOR
             }
-            return newPath + relativePath;
+            return newPath + relativePath
         }
-        return relativePath;
+        return relativePath
     }
 
     /**
@@ -446,77 +440,77 @@ public class GrailsResourceUtils {
      * @param path the original path
      * @return the normalized path
      */
-    public static String cleanPath(String path) {
+    static String cleanPath(String path) {
         if (path == null) {
-            return null;
+            return null
         }
-        String pathToUse = replace(path, WINDOWS_FOLDER_SEPARATOR, FOLDER_SEPARATOR);
+        String pathToUse = replace(path, WINDOWS_FOLDER_SEPARATOR, FOLDER_SEPARATOR)
 
         // Strip prefix from path to analyze, to not treat it as part of the
         // first path element. This is necessary to correctly parse paths like
         // "file:core/../core/io/Resource.class", where the ".." should just
         // strip the first "core" directory while keeping the "file:" prefix.
-        int prefixIndex = pathToUse.indexOf(":");
-        String prefix = "";
+        int prefixIndex = pathToUse.indexOf(':')
+        String prefix = ''
         if (prefixIndex != -1) {
-            prefix = pathToUse.substring(0, prefixIndex + 1);
-            pathToUse = pathToUse.substring(prefixIndex + 1);
+            prefix = pathToUse.substring(0, prefixIndex + 1)
+            pathToUse = pathToUse.substring(prefixIndex + 1)
         }
         if (pathToUse.startsWith(FOLDER_SEPARATOR)) {
-            prefix = prefix + FOLDER_SEPARATOR;
-            pathToUse = pathToUse.substring(1);
+            prefix = prefix + FOLDER_SEPARATOR
+            pathToUse = pathToUse.substring(1)
         }
 
-        String[] pathArray = delimitedListToStringArray(pathToUse, FOLDER_SEPARATOR);
-        List<String> pathElements = new LinkedList<>();
-        int tops = 0;
+        String[] pathArray = delimitedListToStringArray(pathToUse, FOLDER_SEPARATOR)
+        List<String> pathElements = new LinkedList<>()
+        int tops = 0
 
         for (int i = pathArray.length - 1; i >= 0; i--) {
-            String element = pathArray[i];
+            String element = pathArray[i]
             if (CURRENT_PATH.equals(element)) {
                 // Points to current directory - drop it.
             }
             else if (TOP_PATH.equals(element)) {
                 // Registering top path found.
-                tops++;
+                tops++
             }
             else {
                 if (tops > 0) {
                     // Merging path element with element corresponding to top path.
-                    tops--;
+                    tops--
                 }
                 else {
                     // Normal path element found.
-                    pathElements.add(0, element);
+                    pathElements.add(0, element)
                 }
             }
         }
 
         // Remaining top paths need to be retained.
         for (int i = 0; i < tops; i++) {
-            pathElements.add(0, TOP_PATH);
+            pathElements.add(0, TOP_PATH)
         }
 
-        return prefix + collectionToDelimitedString(pathElements, FOLDER_SEPARATOR);
+        return prefix + collectionToDelimitedString(pathElements, FOLDER_SEPARATOR)
     }
 
     private static String collectionToDelimitedString(Collection<?> coll, String delim) {
-        return collectionToDelimitedString(coll, delim, "", "");
+        return collectionToDelimitedString(coll, delim, '', '')
     }
 
     private static String collectionToDelimitedString(Collection<?> coll, String delim, String prefix, String suffix) {
         if (coll == null || coll.isEmpty()) {
-            return "";
+            return ''
         }
-        StringBuilder sb = new StringBuilder();
-        Iterator<?> it = coll.iterator();
+        StringBuilder sb = new StringBuilder()
+        Iterator<?> it = coll.iterator()
         while (it.hasNext()) {
-            sb.append(prefix).append(it.next()).append(suffix);
+            sb.append(prefix).append(it.next()).append(suffix)
             if (it.hasNext()) {
-                sb.append(delim);
+                sb.append(delim)
             }
         }
-        return sb.toString();
+        return sb.toString()
     }
 
     /**
@@ -530,7 +524,7 @@ public class GrailsResourceUtils {
      * @return an array of the tokens in the list
      */
     private static String[] delimitedListToStringArray(String str, String delimiter) {
-        return delimitedListToStringArray(str, delimiter, null);
+        return delimitedListToStringArray(str, delimiter, null)
     }
 
     /**
@@ -547,51 +541,51 @@ public class GrailsResourceUtils {
      */
     private static String[] delimitedListToStringArray(String str, String delimiter, String charsToDelete) {
         if (str == null) {
-            return new String[0];
+            return new String[0]
         }
         if (delimiter == null) {
-            return new String[] {str};
+            return [str] as String[]
         }
-        List<String> result = new ArrayList<>();
-        if ("".equals(delimiter)) {
+        List<String> result = new ArrayList<>()
+        if (''.equals(delimiter)) {
             for (int i = 0; i < str.length(); i++) {
-                result.add(deleteAny(str.substring(i, i + 1), charsToDelete));
+                result.add(deleteAny(str.substring(i, i + 1), charsToDelete))
             }
         }
         else {
-            int pos = 0;
-            int delPos;
+            int pos = 0
+            int delPos
             while ((delPos = str.indexOf(delimiter, pos)) != -1) {
-                result.add(deleteAny(str.substring(pos, delPos), charsToDelete));
-                pos = delPos + delimiter.length();
+                result.add(deleteAny(str.substring(pos, delPos), charsToDelete))
+                pos = delPos + delimiter.length()
             }
             if (str.length() > 0 && pos <= str.length()) {
                 // Add rest of String, but not in case of empty input.
-                result.add(deleteAny(str.substring(pos), charsToDelete));
+                result.add(deleteAny(str.substring(pos), charsToDelete))
             }
         }
-        return toStringArray(result);
+        return toStringArray(result)
     }
 
     private static String[] toStringArray(Collection<String> collection) {
         if (collection == null) {
-            return null;
+            return null
         }
-        return collection.toArray(new String[collection.size()]);
+        return collection.toArray(new String[collection.size()])
     }
 
     private static String deleteAny(String inString, String charsToDelete) {
         if (!hasLength(inString) || !hasLength(charsToDelete)) {
-            return inString;
+            return inString
         }
-        StringBuilder sb = new StringBuilder();
+        StringBuilder sb = new StringBuilder()
         for (int i = 0; i < inString.length(); i++) {
-            char c = inString.charAt(i);
-            if (charsToDelete.indexOf(c) == -1) {
-                sb.append(c);
+            char c = inString.charAt(i)
+            if (charsToDelete.indexOf((int) c) == -1) {
+                sb.append(c)
             }
         }
-        return sb.toString();
+        return sb.toString()
     }
 
     /**
@@ -604,26 +598,26 @@ public class GrailsResourceUtils {
      */
     private static String replace(String inString, String oldPattern, String newPattern) {
         if (!hasLength(inString) || !hasLength(oldPattern) || newPattern == null) {
-            return inString;
+            return inString
         }
-        StringBuilder sb = new StringBuilder();
-        int pos = 0; // our position in the old string
-        int index = inString.indexOf(oldPattern);
+        StringBuilder sb = new StringBuilder()
+        int pos = 0 // our position in the old string
+        int index = inString.indexOf(oldPattern)
         // the index of an occurrence we've found, or -1
-        int patLen = oldPattern.length();
+        int patLen = oldPattern.length()
         while (index >= 0) {
-            sb.append(inString.substring(pos, index));
-            sb.append(newPattern);
-            pos = index + patLen;
-            index = inString.indexOf(oldPattern, pos);
+            sb.append(inString.substring(pos, index))
+            sb.append(newPattern)
+            pos = index + patLen
+            index = inString.indexOf(oldPattern, pos)
         }
-        sb.append(inString.substring(pos));
+        sb.append(inString.substring(pos))
         // remember to append any characters to the right of a match
-        return sb.toString();
+        return sb.toString()
     }
 
     private static boolean hasLength(CharSequence str) {
-        return (str != null && str.length() > 0);
+        return (str != null && str.length() > 0)
     }
 
     /**
@@ -633,24 +627,24 @@ public class GrailsResourceUtils {
      * @return the URL for the actual jar file
      * @throws MalformedURLException if no valid jar file URL could be extracted
      */
-    public static URL extractJarFileURL(URL jarUrl) throws MalformedURLException {
-        String urlFile = jarUrl.getFile();
-        int separatorIndex = urlFile.indexOf(JAR_URL_SEPARATOR);
+    static URL extractJarFileURL(URL jarUrl) throws MalformedURLException {
+        String urlFile = jarUrl.getFile()
+        int separatorIndex = urlFile.indexOf(JAR_URL_SEPARATOR)
         if (separatorIndex != -1) {
-            String jarFile = urlFile.substring(0, separatorIndex);
+            String jarFile = urlFile.substring(0, separatorIndex)
             try {
-                return new URL(jarFile);
+                return new URL(jarFile)
             }
             catch (MalformedURLException ex) {
                 // Probably no protocol in original jar URL, like "jar:C:/mypath/myjar.jar".
                 // This usually indicates that the jar file resides in the file system.
-                if (!jarFile.startsWith("/")) {
-                    jarFile = "/" + jarFile;
+                if (!jarFile.startsWith('/')) {
+                    jarFile = '/' + jarFile
                 }
-                return new URL(FILE_URL_PREFIX + jarFile);
+                return new URL(FILE_URL_PREFIX + jarFile)
             }
         }
-        return jarUrl;
+        return jarUrl
     }
 
     /**
@@ -660,8 +654,8 @@ public class GrailsResourceUtils {
      * @return the URI instance
      * @throws URISyntaxException if the location wasn't a valid URI
      */
-    public static URI toURI(String location) throws URISyntaxException {
-        return new URI(replace(location, " ", "%20"));
+    static URI toURI(String location) throws URISyntaxException {
+        return new URI(replace(location, ' ', '%20'))
     }
 
     /**
@@ -671,19 +665,19 @@ public class GrailsResourceUtils {
      * @return true if it is a Grails path
      */
 
-    public static boolean isGrailsPath(String path) {
+    static boolean isGrailsPath(String path) {
         if (KNOWN_PATHS.containsKey(path)) {
-            return KNOWN_PATHS.get(path);
+            return KNOWN_PATHS.get(path)
         }
-        for (Pattern grailsAppResourcePattern : grailsAppResourcePatterns) {
-            Matcher m = grailsAppResourcePattern.matcher(path);
+        for (Pattern grailsAppResourcePattern in grailsAppResourcePatterns) {
+            Matcher m = grailsAppResourcePattern.matcher(path)
             if (m.find()) {
-                KNOWN_PATHS.put(path, true);
-                return true;
+                KNOWN_PATHS.put(path, true)
+                return true
             }
         }
-        KNOWN_PATHS.put(path, false);
-        return false;
+        KNOWN_PATHS.put(path, false)
+        return false
     }
 
     /**
@@ -692,14 +686,14 @@ public class GrailsResourceUtils {
      * @param path The path to check
      * @return true if it is a Grails path
      */
-    public static boolean isProjectSource(String path) {
-        for (Pattern grailsAppResourcePattern : patterns) {
-            Matcher m = grailsAppResourcePattern.matcher(path);
+    static boolean isProjectSource(String path) {
+        for (Pattern grailsAppResourcePattern in patterns) {
+            Matcher m = grailsAppResourcePattern.matcher(path)
             if (m.find()) {
-                return true;
+                return true
             }
         }
-        return false;
+        return false
     }
 
     /**
@@ -708,13 +702,13 @@ public class GrailsResourceUtils {
      * @param r The resoruce to check
      * @return true if it is a Grails path
      */
-    public static boolean isProjectSource(Resource r) {
+    static boolean isProjectSource(Resource r) {
         try {
-            String file = r.getURL().getFile();
-            return isProjectSource(file) || file.endsWith("GrailsPlugin.groovy");
+            String file = r.getURL().getFile()
+            return isProjectSource(file) || file.endsWith('GrailsPlugin.groovy')
         }
         catch (IOException e) {
-            return false;
+            return false
         }
     }
 
@@ -724,58 +718,58 @@ public class GrailsResourceUtils {
      * @param r The resource to check
      * @return True if it is a Grails resource
      */
-    public static boolean isGrailsResource(Resource r) {
+    static boolean isGrailsResource(Resource r) {
         try {
-            String file = r.getURL().getFile();
-            return isGrailsPath(file) || file.endsWith("GrailsPlugin.groovy");
+            String file = r.getURL().getFile()
+            return isGrailsPath(file) || file.endsWith('GrailsPlugin.groovy')
         }
         catch (IOException e) {
-            return false;
+            return false
         }
     }
 
-    public static Resource getViewsDir(Resource resource) {
-        if (resource == null) return null;
+    static Resource getViewsDir(Resource resource) {
+        if (resource == null) return null
 
-        Resource appDir = getAppDir(resource);
-        if (appDir == null) return null;
-        return appDir.createRelative("views");
+        Resource appDir = getAppDir(resource)
+        if (appDir == null) return null
+        return appDir.createRelative('views')
     }
 
-    public static Resource getAppDir(Resource resource) {
-        if (resource == null) return null;
+    static Resource getAppDir(Resource resource) {
+        if (resource == null) return null
 
         try {
-            File file = resource.getFile();
+            File file = resource.getFile()
             while (file != null && !file.getName().equals(GRAILS_APP_DIR)) {
-                file = file.getParentFile();
+                file = file.getParentFile()
             }
             if (file != null) {
-                return new FileSystemResource(file.getAbsolutePath() + '/');
+                return new FileSystemResource(file.getAbsolutePath() + '/')
             }
-        } catch (IOException e) {
+        } catch (IOException ignored) {
         }
 
         try {
-            String url = resource.getURL().toString();
+            String url = resource.getURL().toString()
 
-            int i = url.lastIndexOf(GRAILS_APP_DIR);
+            int i = url.lastIndexOf(GRAILS_APP_DIR)
             if (i > -1) {
-                url = url.substring(0, i + 10);
-                return new UrlResource(url + '/');
+                url = url.substring(0, i + 10)
+                return new UrlResource(url + '/')
             }
 
-            return null;
+            return null
         }
         catch (MalformedURLException e) {
-            return null;
+            return null
         }
         catch (IOException e) {
-            return null;
+            return null
         }
     }
 
-    private static final Pattern PLUGIN_PATTERN = Pattern.compile(".+?(/plugins/.+?/" + GRAILS_APP_DIR + "/.+)");
+    private static final Pattern PLUGIN_PATTERN = Pattern.compile('.+?(/plugins/.+?/' + GRAILS_APP_DIR + '/.+)')
 
     /**
      * Takes a Grails resource (one located inside the grails-app dir) and gets its relative path inside the WEB-INF directory
@@ -784,33 +778,33 @@ public class GrailsResourceUtils {
      * @param resource The Grails resource, which is a file inside the grails-app dir
      * @return The relative URL of the file inside the WEB-INF dir at deployment time or null if it cannot be established
      */
-    public static String getRelativeInsideWebInf(Resource resource) {
-        if (resource == null) return null;
+    static String getRelativeInsideWebInf(Resource resource) {
+        if (resource == null) return null
 
         try {
-            String url = resource.getURL().toString();
-            int i = url.indexOf(WEB_INF);
+            String url = resource.getURL().toString()
+            int i = url.indexOf(WEB_INF)
             if (i > -1) {
-                return url.substring(i);
+                return url.substring(i)
             }
 
-            Matcher m = PLUGIN_PATTERN.matcher(url);
+            Matcher m = PLUGIN_PATTERN.matcher(url)
             if (m.find()) {
-                return WEB_INF + m.group(1);
+                return WEB_INF + m.group(1)
             }
 
-            i = url.lastIndexOf(GRAILS_APP_DIR);
+            i = url.lastIndexOf(GRAILS_APP_DIR)
             if (i > -1) {
-                return WEB_INF + "/" + url.substring(i);
+                return WEB_INF + '/' + url.substring(i)
             }
         }
         catch (IOException e) {
-            return null;
+            return null
         }
-        return null;
+        return null
     }
 
-    private static final Pattern PLUGIN_RESOURCE_PATTERN = Pattern.compile(".+?/(plugins/.+?)/" + GRAILS_APP_DIR + "/.+");
+    private static final Pattern PLUGIN_RESOURCE_PATTERN = Pattern.compile('.+?/(plugins/.+?)/' + GRAILS_APP_DIR + '/.+')
 
     /**
      * Retrieves the static resource path for the given Grails resource artifact (controller/taglib etc.)
@@ -819,25 +813,25 @@ public class GrailsResourceUtils {
      * @param contextPath The additonal context path to prefix
      * @return The resource path
      */
-    public static String getStaticResourcePathForResource(Resource resource, String contextPath) {
+    static String getStaticResourcePathForResource(Resource resource, String contextPath) {
 
-        if (contextPath == null) contextPath = "";
-        if (resource == null) return contextPath;
+        if (contextPath == null) contextPath = ''
+        if (resource == null) return contextPath
 
-        String url;
+        String url
         try {
-            url = resource.getURL().toString();
+            url = resource.getURL().toString()
         }
         catch (IOException e) {
-            return contextPath;
+            return contextPath
         }
 
-        Matcher m = PLUGIN_RESOURCE_PATTERN.matcher(url);
+        Matcher m = PLUGIN_RESOURCE_PATTERN.matcher(url)
         if (m.find()) {
-            return (contextPath.length() > 0 ? contextPath + "/" : "") + m.group(1);
+            return (contextPath.length() > 0 ? contextPath + '/' : '') + m.group(1)
         }
 
-        return contextPath;
+        return contextPath
     }
 
     /**
@@ -852,14 +846,14 @@ public class GrailsResourceUtils {
      * @param path The path to evaluate
      * @return The path relative to the root folder grails-app
      */
-    public static String getPathFromRoot(String path) {
-        for (Pattern COMPILER_ROOT_PATTERN : COMPILER_ROOT_PATTERNS) {
-            Matcher m = COMPILER_ROOT_PATTERN.matcher(path);
+    static String getPathFromRoot(String path) {
+        for (Pattern COMPILER_ROOT_PATTERN in COMPILER_ROOT_PATTERNS) {
+            Matcher m = COMPILER_ROOT_PATTERN.matcher(path)
             if (m.find()) {
-                return m.group(m.groupCount() - 1);
+                return m.group(m.groupCount() - 1)
             }
         }
-        return null;
+        return null
     }
 
     /**
@@ -871,24 +865,24 @@ public class GrailsResourceUtils {
      * @param path The path
      * @return The path relative to the base directory or null if it can't be established
      */
-    public static String getPathFromBaseDir(String path) {
-        int i = path.indexOf("grails-app/");
+    static String getPathFromBaseDir(String path) {
+        int i = path.indexOf('grails-app/')
         if (i > -1) {
-            return path.substring(i + 11);
+            return path.substring(i + 11)
         }
         else {
             try {
-                File baseDir = BuildSettings.BASE_DIR;
-                String basePath = baseDir != null ? baseDir.getCanonicalPath() : null;
+                File baseDir = BuildSettings.BASE_DIR
+                String basePath = baseDir != null ? baseDir.getCanonicalPath() : null
                 if (basePath != null) {
-                    String canonicalPath = new File(path).getCanonicalPath();
-                    return canonicalPath.contains(basePath) ? canonicalPath.substring(basePath.length() + 1) : canonicalPath;
+                    String canonicalPath = new File(path).getCanonicalPath()
+                    return canonicalPath.contains(basePath) ? canonicalPath.substring(basePath.length() + 1) : canonicalPath
                 }
-            } catch (IOException e) {
+            } catch (IOException ignored) {
                 // ignore
             }
         }
-        return null;
+        return null
     }
 
     /**
@@ -900,15 +894,15 @@ public class GrailsResourceUtils {
      * @param path The path
      * @return The domain or null if not known
      */
-    public static String getArtefactDirectory(String path) {
+    static String getArtefactDirectory(String path) {
 
         if (path != null) {
-            final Matcher matcher = RESOURCE_PATH_PATTERN.matcher(path);
+            final Matcher matcher = RESOURCE_PATH_PATTERN.matcher(path)
             if (matcher.find()) {
-                return matcher.group(1);
+                return matcher.group(1)
             }
         }
-        return null;
+        return null
     }
 
     /**
@@ -936,48 +930,49 @@ public class GrailsResourceUtils {
      * @param pieces Strings to concatenate together into a uri
      * @return a uri
      */
-    public static String appendPiecesForUri(String... pieces) {
-        if (pieces == null || pieces.length == 0) return "";
+    static String appendPiecesForUri(String... pieces) {
+        if (pieces == null || pieces.length == 0) return ''
 
         // join parts && strip double slashes
-        StringBuilder builder = new StringBuilder(16 * pieces.length);
-        char previous = 0;
+        StringBuilder builder = new StringBuilder(16 * pieces.length)
+        char previous = 0
         for (int i = 0; i < pieces.length; i++) {
-            String piece = pieces[i];
+            String piece = pieces[i]
             if (piece != null && piece.length() > 0) {
                 for (int j = 0, maxlen = piece.length(); j < maxlen; j++) {
-                    char current = piece.charAt(j);
+                    char current = piece.charAt(j)
                     if (!(previous == '/' && current == '/')) {
-                        builder.append(current);
-                        previous = current;
+                        builder.append(current)
+                        previous = current
                     }
                 }
                 if (i + 1 < pieces.length && previous != '/') {
-                    builder.append('/');
-                    previous = '/';
+                    builder.append('/')
+                    previous = '/'
                 }
             }
         }
-        return builder.toString();
+        return builder.toString()
     }
 
-    @SuppressWarnings("unchecked")
-    public static Object instantiateFromConfig(ConfigObject config, String configKey, String defaultClassName)
+    @SuppressWarnings('unchecked')
+    static Object instantiateFromConfig(ConfigObject config, String configKey, String defaultClassName)
             throws InstantiationException, IllegalAccessException, ClassNotFoundException, LinkageError {
-        return instantiateFromFlatConfig(config.flatten(), configKey, defaultClassName);
+        return instantiateFromFlatConfig(config.flatten(), configKey, defaultClassName)
     }
 
-    public static Object instantiateFromFlatConfig(Map<String, Object> flatConfig, String configKey, String defaultClassName)
+    static Object instantiateFromFlatConfig(Map<String, Object> flatConfig, String configKey, String defaultClassName)
             throws InstantiationException, IllegalAccessException, ClassNotFoundException, LinkageError {
-        String className = defaultClassName;
-        Object configName = flatConfig.get(configKey);
+        String className = defaultClassName
+        Object configName = flatConfig.get(configKey)
         if (configName instanceof CharSequence) {
-            className = configName.toString();
+            className = configName.toString()
         }
-        return forName(className, DefaultResourceLoader.getDefaultClassLoader()).newInstance();
+        return forName(className, DefaultResourceLoader.getDefaultClassLoader()).newInstance()
     }
 
     private static Class<?> forName(String className, ClassLoader defaultClassLoader) throws ClassNotFoundException {
-        return defaultClassLoader.loadClass(className);
+        return defaultClassLoader.loadClass(className)
     }
+
 }
