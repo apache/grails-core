@@ -106,7 +106,7 @@ final class OutputEncodingStack {
         return outputStack
     }
 
-    static Writer currentWriter() {
+    static final Writer currentWriter() {
         OutputEncodingStack outputStack = currentStack(false)
         if (outputStack != null) {
             return outputStack.getOutWriter()
