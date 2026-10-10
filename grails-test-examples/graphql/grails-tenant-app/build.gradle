@@ -53,7 +53,6 @@ dependencies {
     implementation 'org.apache.grails:grails-views-gson'
     implementation 'org.apache.grails:grails-data-mongodb-gson-templates'
 
-    implementation 'org.hibernate:hibernate-core-jakarta'
 
     profile 'org.apache.grails.profiles:rest-api'
 

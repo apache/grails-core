@@ -50,13 +50,6 @@ dependencies {
     testAndDevelopmentOnly platform(project(':grails-hibernate7-bom'))
     testAndDevelopmentOnly 'org.webjars.npm:jquery'
 
-    runtimeOnly 'org.hibernate:hibernate-ehcache', {
-        // exclude javax variant of hibernate-core
-        exclude group: 'org.hibernate', module: 'hibernate-core'
-    }
-    runtimeOnly "org.jboss.spec.javax.transaction:jboss-transaction-api_1.3_spec:$jbossTransactionApiVersion", {
-        // required for hibernate-ehcache to work with javax variant of hibernate-core excluded
-    }
     implementation 'org.apache.grails:grails-cache'
 
     runtimeOnly 'org.apache.grails:grails-scaffolding'
