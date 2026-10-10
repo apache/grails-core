@@ -16,15 +16,38 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.databinding.converters;
+package grails.databinding.errors
 
 /**
+ * Represents a problem which occurred during data binding.
+ *
  * @author Jeff Brown
- * @since 2.3
+ * @since 3.0
  */
-public interface ConversionService {
+interface BindingError {
 
-    boolean canConvert(Class<?> source, Class<?> target);
+    /**
+     *
+     * @return the object that data binding was being imposed upon
+     */
+    Object getObject()
 
-    Object convert(Object objet, Class<?> targetType);
+    /**
+     *
+     * @return the name of the property that the data binding error occurred on
+     */
+    String getPropertyName()
+
+    /**
+     *
+     * @return The value which could not be bound to the property
+     */
+    Object getRejectedValue()
+
+    /**
+     *
+     * @return an exception thrown during the data binding process
+     */
+    Throwable getCause()
+
 }

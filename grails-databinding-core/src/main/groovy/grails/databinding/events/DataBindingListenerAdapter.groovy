@@ -16,35 +16,39 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package grails.databinding.events;
+package grails.databinding.events
 
-import grails.databinding.errors.BindingError;
+import groovy.transform.CompileStatic
+
+import grails.databinding.errors.BindingError
 
 /**
  * @author Jeff Brown
  * @since 3.0
  * @see DataBindingListener
  */
-public class DataBindingListenerAdapter implements DataBindingListener {
+@CompileStatic
+class DataBindingListenerAdapter implements DataBindingListener {
 
-    public boolean supports(Class<?> clazz) {
-        return true;
+    boolean supports(Class<?> clazz) {
+        return true
     }
 
-    public Boolean beforeBinding(Object target, Object errors) {
-        return true;
+    Boolean beforeBinding(Object target, Object errors) {
+        return true
     }
 
-    public Boolean beforeBinding(Object obj, String propertyName, Object value, Object errors) {
-        return true;
+    Boolean beforeBinding(Object obj, String propertyName, Object value, Object errors) {
+        return true
     }
 
-    public void afterBinding(Object obj, String propertyName, Object errors) {
+    void afterBinding(Object obj, String propertyName, Object errors) {
     }
 
-    public void afterBinding(Object target, Object errors) {
+    void afterBinding(Object target, Object errors) {
     }
 
-    public void bindingError(BindingError error, Object errors) {
+    void bindingError(BindingError error, Object errors) {
     }
+
 }

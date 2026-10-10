@@ -16,7 +16,7 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package grails.databinding;
+package grails.databinding
 
 /**
  * StructuredBindingEditors convert structured data in a Map
@@ -25,6 +25,7 @@ package grails.databinding;
  * the state of the object.
 <code>
 class Address {
+
     String state
     String city
 }
@@ -66,7 +67,8 @@ assert resident.workAddress.city == null
  * @since 3.0
  * @see SimpleDataBinder#registerStructuredEditor(Class, StructuredBindingEditor)
  */
-public interface StructuredBindingEditor<T> extends BindingHelper<T> {
+interface StructuredBindingEditor<T> extends BindingHelper<T> {
+
     /**
      * The value returned from this method will be bound to
      * the property specified by propertyName.
@@ -76,5 +78,6 @@ public interface StructuredBindingEditor<T> extends BindingHelper<T> {
      * @param source The source containing all of the values being bound to this object
      * @return The value which should be bound to propertyName
      */
-    T getPropertyValue(Object obj, String propertyName, DataBindingSource source);
+    T getPropertyValue(Object obj, String propertyName, DataBindingSource source)
+
 }
