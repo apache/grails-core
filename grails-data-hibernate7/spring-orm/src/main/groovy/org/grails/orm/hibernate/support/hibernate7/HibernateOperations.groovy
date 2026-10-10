@@ -19,6 +19,7 @@ import groovy.transform.CompileStatic
 import org.hibernate.Filter
 import org.hibernate.LockMode
 import org.hibernate.ReplicationMode
+import org.jspecify.annotations.Nullable
 import org.springframework.dao.DataAccessException
 
 /**
@@ -75,6 +76,7 @@ interface HibernateOperations {
      * @see HibernateTransactionManager
      * @see org.hibernate.Session
      */
+    @Nullable
     def <T> T execute(HibernateCallback<T> action) throws DataAccessException
 
     //-------------------------------------------------------------------------
@@ -95,6 +97,7 @@ interface HibernateOperations {
      * @throws DataAccessException in case of Hibernate errors
      * @see org.hibernate.Session#get(Class, Object)
      */
+    @Nullable
     def <T> T get(Class<T> entityClass, Serializable id) throws DataAccessException
 
     /**
@@ -113,6 +116,7 @@ interface HibernateOperations {
      * @throws DataAccessException in case of Hibernate errors
      * @see org.hibernate.Session#get(Class, Object, org.hibernate.LockOptions)
      */
+    @Nullable
     def <T> T get(Class<T> entityClass, Serializable id, LockMode lockMode) throws DataAccessException
 
     /**
@@ -128,6 +132,7 @@ interface HibernateOperations {
      * @throws DataAccessException in case of Hibernate errors
      * @see org.hibernate.Session#get(String, Object)
      */
+    @Nullable
     Object get(String entityName, Serializable id) throws DataAccessException
 
     /**
@@ -145,6 +150,7 @@ interface HibernateOperations {
      * @throws DataAccessException in case of Hibernate errors
      * @see org.hibernate.Session#get(String, Object, org.hibernate.LockOptions)
      */
+    @Nullable
     Object get(String entityName, Serializable id, LockMode lockMode) throws DataAccessException
 
     /**

@@ -26,6 +26,7 @@ import org.hibernate.Session
 import org.hibernate.context.spi.CurrentSessionContext
 import org.hibernate.engine.spi.SessionFactoryImplementor
 import org.hibernate.engine.transaction.jta.platform.spi.JtaPlatform
+import org.jspecify.annotations.Nullable
 import org.springframework.orm.jpa.EntityManagerHolder
 import org.springframework.transaction.support.TransactionSynchronizationManager
 
@@ -47,8 +48,10 @@ class SpringSessionContext implements CurrentSessionContext {
 
     private final SessionFactoryImplementor sessionFactory
 
+    @Nullable
     private TransactionManager transactionManager
 
+    @Nullable
     private CurrentSessionContext jtaSessionContext
 
     /**

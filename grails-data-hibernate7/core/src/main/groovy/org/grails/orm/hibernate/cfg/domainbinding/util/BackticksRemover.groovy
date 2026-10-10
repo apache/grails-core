@@ -32,7 +32,7 @@ import java.util.function.Function
 @CompileStatic
 class BackticksRemover implements Function<String, String> {
 
-    static final String BACKTICK = '`'
+    public static final String BACKTICK = '`'
 
     @Override
     String apply(String string) {

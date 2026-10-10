@@ -25,6 +25,7 @@ import org.hibernate.resource.beans.container.spi.BeanContainer.LifecycleOptions
 import org.hibernate.resource.beans.container.spi.ContainedBean
 import org.hibernate.resource.beans.spi.BeanInstanceProducer
 import org.hibernate.type.spi.TypeBootstrapContext
+import org.jspecify.annotations.Nullable
 import org.springframework.beans.BeansException
 import org.springframework.beans.factory.BeanCreationException
 import org.springframework.beans.factory.config.AutowireCapableBeanFactory
@@ -228,6 +229,7 @@ final class SpringBeanContainer implements BeanContainer {
 
         private final B beanInstance
 
+        @Nullable
         private Consumer<B> destructionCallback
 
         SpringContainedBean(B beanInstance) {

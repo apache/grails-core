@@ -19,6 +19,7 @@ import groovy.transform.CompileStatic
 import jakarta.persistence.PersistenceException
 import org.hibernate.HibernateException
 import org.hibernate.JDBCException
+import org.jspecify.annotations.Nullable
 import org.springframework.dao.DataAccessException
 import org.springframework.dao.support.PersistenceExceptionTranslator
 import org.springframework.jdbc.support.SQLExceptionTranslator
@@ -44,6 +45,7 @@ import org.springframework.orm.jpa.EntityManagerFactoryUtils
 @CompileStatic
 class HibernateExceptionTranslator implements PersistenceExceptionTranslator {
 
+    @Nullable
     private SQLExceptionTranslator jdbcExceptionTranslator
 
     /**
@@ -61,6 +63,7 @@ class HibernateExceptionTranslator implements PersistenceExceptionTranslator {
         this.jdbcExceptionTranslator = jdbcExceptionTranslator
     }
 
+    @Nullable
     @Override
     DataAccessException translateExceptionIfPossible(RuntimeException ex) {
         if (ex instanceof HibernateException) {

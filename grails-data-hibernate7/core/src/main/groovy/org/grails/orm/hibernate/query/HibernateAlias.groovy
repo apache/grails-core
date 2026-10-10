@@ -33,4 +33,9 @@ import org.grails.datastore.mapping.query.Query
 record HibernateAlias(String path, String alias, JoinType joinType)
         implements Query.Criterion, Query.QueryElement {
 
+    /** Creates an alias that joins with {@link JoinType#INNER}. */
+    HibernateAlias(String path, String alias) {
+        this(path, alias, JoinType.INNER)
+    }
+
 }

@@ -17,6 +17,7 @@ package org.grails.orm.hibernate.support.hibernate7
 
 import groovy.transform.CompileStatic
 import org.hibernate.HibernateException
+import org.jspecify.annotations.Nullable
 import org.springframework.dao.UncategorizedDataAccessException
 
 /**
@@ -37,7 +38,7 @@ class HibernateSystemException extends UncategorizedDataAccessException {
      * wrapping an arbitrary HibernateException.
      * @param cause the HibernateException thrown
      */
-    HibernateSystemException(HibernateException cause) {
+    HibernateSystemException(@Nullable HibernateException cause) {
         super(cause != null ? cause.getMessage() : null, cause)
     }
 

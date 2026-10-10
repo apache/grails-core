@@ -19,6 +19,7 @@ import java.sql.SQLException
 
 import groovy.transform.CompileStatic
 import org.hibernate.JDBCException
+import org.jspecify.annotations.Nullable
 import org.springframework.dao.UncategorizedDataAccessException
 
 /**
@@ -48,6 +49,7 @@ class HibernateJdbcException extends UncategorizedDataAccessException {
     /**
      * Return the SQL that led to the problem.
      */
+    @Nullable
     String getSql() {
         return ((JDBCException) getCause()).getSQL()
     }

@@ -26,6 +26,7 @@ import jakarta.transaction.TransactionSynchronizationRegistry
 import jakarta.transaction.UserTransaction
 import org.hibernate.TransactionException
 import org.hibernate.engine.transaction.jta.platform.spi.JtaPlatform
+import org.jspecify.annotations.Nullable
 import org.springframework.transaction.jta.UserTransactionAdapter
 import org.springframework.util.Assert
 
@@ -45,6 +46,7 @@ class ConfigurableJtaPlatform implements JtaPlatform {
 
     private final UserTransaction userTransaction
 
+    @Nullable
     private final TransactionSynchronizationRegistry transactionSynchronizationRegistry
 
     /**
@@ -54,8 +56,8 @@ class ConfigurableJtaPlatform implements JtaPlatform {
      * @param ut the JTA UserTransaction reference (optional)
      * @param tsr the JTA 1.1 TransactionSynchronizationRegistry (optional)
      */
-    ConfigurableJtaPlatform(TransactionManager tm, UserTransaction ut,
-                            TransactionSynchronizationRegistry tsr) {
+    ConfigurableJtaPlatform(TransactionManager tm, @Nullable UserTransaction ut,
+                            @Nullable TransactionSynchronizationRegistry tsr) {
         Assert.notNull(tm, 'TransactionManager reference must not be null')
         this.transactionManager = tm
         this.userTransaction = (ut != null ? ut : new UserTransactionAdapter(tm))
