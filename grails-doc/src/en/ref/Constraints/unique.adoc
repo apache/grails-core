@@ -64,6 +64,8 @@ username(unique: ['group', 'department'])
 
 In this example `username` must be unique in `group` and `department`. There might be same logins in different groups or different departments.
 
+A `null` value of a property in the group is compared as a value: it conflicts only with a row whose value of that property is also `null`. With `group unique: 'department'`, a group without a `department` may have the same name as a group of a department, but two groups with that name and no `department` conflict. This is the same for a group that has several properties and for an association in the group, such as a `parent` that is `null` for the top level nodes of a tree.
+
 This constraint influences  link:{hibernate5GuideFromRef}index.html#constraints[schema generation].
 
 Error Code: `className.propertyName.unique`

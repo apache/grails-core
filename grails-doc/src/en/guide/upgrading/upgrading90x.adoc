@@ -1,0 +1,42 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+=== Upgrade Instructions for Grails and Related Dependencies
+
+To ensure compatibility with Grails {version}, please review the following upgrade instructions carefully.
+This guide outlines the necessary steps and warnings to upgrade your Grails project from Grails 8.x to Grails 9.
+
+==== 1. A Null Value in the Group of a Unique Constraint Is Compared as a Value
+
+A `unique` constraint that names other properties, such as `url unique: 'httpMethod'`, validates the constrained property together with the properties of its group.
+Before Grails 9, a group property whose value was `null` was left out of the query that looks for a conflicting row.
+The constraint then checked the constrained property alone, so `new Language(language: 'en')` was rejected when a `Language` with `language: 'en'` and `country: 'US'` existed, although the two rows differ in `country`.
+
+In Grails 9 a `null` group value is compared as a value: only a row whose value of that group property is also `null` conflicts.
+With `language unique: 'country'`, `('en', null)` no longer conflicts with `('en', 'US')`, and a second `('en', null)` still does.
+The same holds for a nullable association in the group, so a folder with `name unique: 'parent'` may share its name with a folder under a parent, while two top level folders with the same name still conflict.
+
+A group with several properties compares every one of them, so `('A', null, 'web')` conflicts only with a row that has code `A`, no region and channel `web`.
+
+Applications that relied on the old behaviour are affected: a save that was rejected because a `null` group value matched every row of the constrained property now succeeds when the rows differ in that group property.
+The old behaviour was a defect and has no replacement.
+To keep a rule such as "the name is unique whatever the value of `parent`", declare the constraint on the one property, `name unique: true`.
+If the database must also reject the second `('en', null)` row, remember that most databases do not treat `null` values of a unique index as equal; the validation does, the index does not.
+
+The constraints reference describes the rule under the `unique` constraint.
