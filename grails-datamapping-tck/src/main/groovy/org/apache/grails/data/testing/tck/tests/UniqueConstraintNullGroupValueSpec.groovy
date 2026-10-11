@@ -21,6 +21,7 @@ package org.apache.grails.data.testing.tck.tests
 
 import spock.lang.IgnoreIf
 import spock.lang.Issue
+import spock.lang.PendingFeatureIf
 
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.apache.grails.data.testing.tck.domains.UniqueNullFolder
@@ -111,6 +112,9 @@ class UniqueConstraintNullGroupValueSpec extends GrailsDataTckSpec {
         duplicate.errors.getFieldError('name').code == 'unique'
     }
 
+    // Neo4j compiles isNull('parent') to `n.parent IS NULL`, but an association is a relationship there and not a node
+    // property, so the condition is always true and the top level folder conflicts with the one under a parent.
+    @PendingFeatureIf({ Boolean.getBoolean('neo4j.gorm.suite') })
     void 'a top level folder does not conflict with a folder of the same name under a parent'() {
         given:
         def other = new UniqueNullFolder(name: 'Other').save(failOnError: true, flush: true)
