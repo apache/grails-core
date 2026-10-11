@@ -16,25 +16,27 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.plugins.datasource;
+package org.grails.plugins.datasource
 
-import java.sql.Connection;
-import java.sql.SQLException;
-import java.util.Properties;
+import java.sql.Connection
+import java.sql.SQLException
 
-import org.springframework.jdbc.datasource.DriverManagerDataSource;
+import groovy.transform.CompileStatic
+import org.springframework.jdbc.datasource.DriverManagerDataSource
 
 /**
  * Used for secondary datasources that are read-only and not pooled.
  *
  * @author Burt Beckwith
  */
-public class ReadOnlyDriverManagerDataSource extends DriverManagerDataSource {
+@CompileStatic
+class ReadOnlyDriverManagerDataSource extends DriverManagerDataSource {
 
     @Override
     protected Connection getConnectionFromDriverManager(final String url, final Properties props) throws SQLException {
-        Connection connection = super.getConnectionFromDriverManager(url, props);
-        connection.setReadOnly(true);
-        return connection;
+        Connection connection = super.getConnectionFromDriverManager(url, props)
+        connection.setReadOnly(true)
+        return connection
     }
+
 }
