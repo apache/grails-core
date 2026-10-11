@@ -31,14 +31,16 @@ class GormIdentifierSnapshot16497Spec extends HibernateSnapshotIntegrationSpec {
         [NativeIdentifier16497, SequenceIdentifier16497, IdentityIdentifier16497]
     }
 
-    def 'native identifier snapshots through the GORM chain without a sequence default'() {
+    def 'native identifier snapshots through the GORM chain with the nextval default of its generated sequence'() {
         when:
         Column column = snapshotId('native_identifier_16497')
 
         then:
         noExceptionThrown()
         column.autoIncrement
-        !column.defaultValue?.toString()?.contains('nextval(')
+        // PostgreSQL's native strategy is a sequence, which the default generator now creates and the column defaults to
+        column.defaultValue.toString().contains('nextval(')
+        column.defaultValue.toString().contains('native_identifier_16497_SEQ')
     }
 
     def 'sequence identifier snapshots through the GORM chain with its nextval default'() {
