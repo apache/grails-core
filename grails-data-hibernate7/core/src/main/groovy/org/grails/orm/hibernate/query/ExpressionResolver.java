@@ -112,7 +112,13 @@ public class ExpressionResolver {
         if (aliasRegistry.isDefined(alias)) {
             HibernateAlias def = aliasRegistry.getDefinition(alias);
             if (def != null && def.path() != null) {
-                aliased = joinTracker.getRoot().join(def.path(), def.joinType());
+                // The association criteria and its alias must refer to the same physical join,
+                // regardless of whether a predicate, projection or order resolves it first.
+                aliased = joinTracker.getJoin(def.path());
+                if (aliased == null) {
+                    aliased = joinTracker.getRoot().join(def.path(), def.joinType());
+                    joinTracker.addJoin(def.path(), (From<?, ?>) aliased);
+                }
                 aliasRegistry.realize(alias, aliased);
                 joinTracker.addJoin(alias, (From<?, ?>) aliased);
                 return subPath != null ? getPath((From<?, ?>) aliased, subPath) : aliased;

@@ -73,6 +73,7 @@ class ExpressionResolverSpec extends Specification {
         result == namePath
         aliasRegistry.getRealized("f") == faceJoin
         joinTracker.getJoin("f") == faceJoin
+        joinTracker.getJoin("face") == faceJoin
     }
 
     def "test resolve with dot notation alias.property"() {
@@ -92,6 +93,7 @@ class ExpressionResolverSpec extends Specification {
         1 * root.join("face", JoinType.INNER) >> faceJoin
         1 * faceJoin.get("name") >> namePath
         result == namePath
+        joinTracker.getJoin("face") == faceJoin
     }
 
     def "test resolve using already joined path"() {
