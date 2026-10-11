@@ -4,53 +4,54 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package grails.gorm.rx.services;
+package grails.gorm.rx.services
 
-import java.lang.annotation.Documented;
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Inherited;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
+import java.lang.annotation.Documented
+import java.lang.annotation.ElementType
+import java.lang.annotation.Inherited
+import java.lang.annotation.Retention
+import java.lang.annotation.RetentionPolicy
+import java.lang.annotation.Target
 
-import org.codehaus.groovy.transform.GroovyASTTransformationClass;
+import org.codehaus.groovy.transform.GroovyASTTransformationClass
 
-import org.apache.grails.common.compiler.GroovyTransformOrder;
-import org.grails.datastore.gorm.transform.GormASTTransformationClass;
+import org.apache.grails.common.compiler.GroovyTransformOrder
+import org.grails.datastore.gorm.transform.GormASTTransformationClass
 
 /**
  * A transformation that transforms the body of a method to return an Observable that runs on the IO Scheduler
  *
  * @since 6.1
  */
-@Target({ElementType.METHOD})
+@Target([ElementType.METHOD])
 @Retention(RetentionPolicy.SOURCE)
 @Inherited
 @Documented
-@GroovyASTTransformationClass("org.grails.datastore.gorm.transform.OrderedGormTransformation")
-@GormASTTransformationClass("org.grails.gorm.rx.transform.RxScheduleIOTransformation")
-public @interface RxSchedule {
+@GroovyASTTransformationClass('org.grails.datastore.gorm.transform.OrderedGormTransformation')
+@GormASTTransformationClass('org.grails.gorm.rx.transform.RxScheduleIOTransformation')
+@interface RxSchedule {
 
     /**
      * @return A closure that returns the scheduler to run on. Default is {@link rx.schedulers.Schedulers#io()}
      */
-    Class scheduler() default Object.class;
+    Class scheduler() default Object
     /**
      * @return Whether the underlying query method returns a single result of an iterable
      */
-    boolean singleResult() default false;
+    boolean singleResult() default false
 
-    int priority() default GroovyTransformOrder.RX_SCHEDULER_ORDER;
+    int priority() default GroovyTransformOrder.RX_SCHEDULER_ORDER
+
 }
