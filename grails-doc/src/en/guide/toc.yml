@@ -277,6 +277,7 @@ async:
 validation:
   title: Validation
   constraints: Declaring Constraints
+  beanValidation: Bean Validation Annotations
   validatingConstraints: Validating Constraints
   sharingConstraints: Sharing Constraints Between Classes
   validationOnTheClient: Validation on the Client
