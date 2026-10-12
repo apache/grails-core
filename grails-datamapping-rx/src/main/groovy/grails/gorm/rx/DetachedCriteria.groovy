@@ -31,9 +31,8 @@ import org.grails.datastore.mapping.query.api.QueryArgumentsAware
 import org.grails.datastore.mapping.query.api.QueryableCriteria
 import org.grails.datastore.rx.query.RxQuery
 import org.grails.gorm.rx.api.RxGormEnhancer
-import rx.Observable
-import rx.Subscriber
-import rx.Subscription
+import io.reactivex.rxjava3.core.Observable
+import io.reactivex.rxjava3.core.Observer
 
 /**
  * Reactive version of {@link grails.gorm.DetachedCriteria}
@@ -111,7 +110,7 @@ class DetachedCriteria<T> extends AbstractDetachedCriteria<Observable<T>> implem
      */
     Observable<List<T>> toList(Map args = Collections.emptyMap(), @DelegatesTo(value = DetachedCriteria, strategy = Closure.DELEGATE_FIRST) Closure additionalCriteria = null) {
         Query query = prepareQuery(args, (Closure) additionalCriteria)
-        return ((RxQuery<T>)query).findAll(args).toList()
+        return ((RxQuery<T>)query).findAll(args).toList().toObservable()
     }
 
     /**
@@ -123,7 +122,7 @@ class DetachedCriteria<T> extends AbstractDetachedCriteria<Observable<T>> implem
      */
     Observable<List<T>> list(Map args = Collections.emptyMap(), @DelegatesTo(value = DetachedCriteria, strategy = Closure.DELEGATE_FIRST) Closure additionalCriteria = null) {
         Query query = prepareQuery(args, (Closure) additionalCriteria)
-        return ((RxQuery<T>)query).findAll(args).toList()
+        return ((RxQuery<T>)query).findAll(args).toList().toObservable()
     }
 
     /**
@@ -663,8 +662,8 @@ class DetachedCriteria<T> extends AbstractDetachedCriteria<Observable<T>> implem
     }
 
     @Override
-    Subscription subscribe(Subscriber<? super T> subscriber) {
-        findAll().subscribe(subscriber)
+    void subscribe(Observer<? super T> observer) {
+        findAll().subscribe(observer)
     }
 
     /**

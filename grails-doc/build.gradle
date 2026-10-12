@@ -641,7 +641,6 @@ publishGuideTask.configure { PublishGuideTask publish ->
                 'hibernate7Guide'          : hibernate7Guide,
                 'hibernate7GuideFromRef'    : '../' + hibernate7Guide,
                 'mongodb5Guide'            : '../grails-data/mongodb/manual/',
-                'rxGORMGuide'              : 'https://gorm.grails.org/7.3.4/rx/manual/', // last version released
                 'hibernate5Reference'      : 'https://docs.jboss.org/hibernate/orm/5.6/userguide/html_single/Hibernate_User_Guide.html',
                 'springbootapi'            : "https://docs.spring.io/spring-boot/${springBootVersion}/api/java/",
                 'springBootReference'      : "https://docs.spring.io/spring-boot/${springBootVersion}/reference/",
@@ -661,6 +660,7 @@ publishGuideTask.configure { PublishGuideTask publish ->
                 'gparsdocs'                : "https://gpars.org/$gparsVersion/groovydoc",
                 'rxjavadocs'               : 'https://reactivex.io/RxJava/1.x/javadoc',
                 'rxjava2docs'              : 'https://reactivex.io/RxJava/2.x/javadoc',
+                'rxjava3docs'              : 'https://reactivex.io/RxJava/3.x/javadoc',
                 'gspTagsRef'               : gspTagsRef,
                 'gspTagsRefFromRef'        : '../' + gspTagsRef,
                 'cacheTagsRef'             : '../ref/Tags%20-%20Cache/',

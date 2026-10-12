@@ -19,7 +19,7 @@
 
 package grails.gorm.rx.api
 
-import rx.Observable
+import io.reactivex.rxjava3.core.Observable
 
 /**
  * Methods on instances
@@ -37,9 +37,9 @@ interface RxGormInstanceOperations<D> {
     Serializable ident(D instance)
 
     /**
-     * Saves an entity and returns an {@link rx.Observable}, picking either an insert or an update automatically based on whether the object has an id already.
+     * Saves an entity and returns an {@link io.reactivex.rxjava3.core.Observable}, picking either an insert or an update automatically based on whether the object has an id already.
      *
-     * @return An {@link rx.Observable} with the result of the operation
+     * @return An {@link io.reactivex.rxjava3.core.Observable} with the result of the operation
      */
     Observable<D> save(D instance)
 

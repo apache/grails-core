@@ -17,23 +17,77 @@ specific language governing permissions and limitations
 under the License.
 ////
 
-Since Grails 3.2, you can use https://github.com/ReactiveX/RxJava[RxJava] to write reactive logic in your Grails controllers that leverages the underlying containers asynchronous processing capabilities.
+Grails integrates https://github.com/ReactiveX/RxJava[RxJava] 3 at three points. Each is a separate module that an application adds to `build.gradle`; Grails itself does not depend on RxJava.
 
-To get started simply declare a dependency on the plugin in `build.gradle`:
+==== Promises on RxJava
+
+`grails-async-rxjava3` provides a `grails.async.PromiseFactory` backed by RxJava 3, so every `Promise` the application creates is an RxJava subscription:
 
 [source,groovy]
 .build.gradle
 ----
-dependencies {
-    //...
-    implementation 'org.apache.grails:grails-rxjava3'
+runtimeOnly 'org.apache.grails.async:grails-async-rxjava3'
+----
+
+See <<asyncPromises,Promises>>.
+
+==== Events on RxJava
+
+`grails-events-rxjava3` provides an `EventBus` that delivers events through RxJava 3 subjects and schedulers:
+
+[source,groovy]
+.build.gradle
+----
+runtimeOnly 'org.apache.grails.events:grails-events-rxjava3'
+----
+
+See <<events,Events>>.
+
+==== RxJava Data Services
+
+With `grails-datamapping-rx` on the classpath, a GORM data service can declare methods that return `io.reactivex.rxjava3.core.Observable` or `io.reactivex.rxjava3.core.Single`. GORM implements the method as it does any other data service method and runs the blocking query on RxJava's IO scheduler, so the caller receives the result reactively without the datastore itself being non-blocking:
+
+[source,groovy]
+.build.gradle
+----
+implementation 'org.apache.grails.data:grails-datamapping-rx'
+----
+
+[source,groovy]
+----
+import grails.gorm.services.Service
+import io.reactivex.rxjava3.core.Observable
+import io.reactivex.rxjava3.core.Single
+
+@Service(Book)
+interface BookService {
+
+    Single<Book> findOne(String title)
+
+    Observable<Book> findAllByAuthor(String author)
 }
 ----
 
-You can then return `rx.Observable` as a return value from any controller and Grails will automatically apply the following steps:
+A `Single` that finds nothing signals a `java.util.NoSuchElementException`, since an RxJava 3 `Single` cannot complete without a value; an `Observable` that finds nothing completes without emitting. The `grails.gorm.rx.services.RxSchedule` annotation selects a different scheduler for a method. See the RxJava Support section of the GORM for link:{hibernate7Guide}index.html#dataServicesRxJava[Hibernate 7] or link:{hibernate5Guide}index.html#dataServicesRxJava[Hibernate 5] guide.
 
-1. Create a new asynchronous request
-2. Spawn a new thread that subscribes to the observable
-3. When the observable emits a result, process the result using the link:{controllersRef}respond.html[respond] method.
+==== RxJava Results from Controllers
 
-For more detailed instructions on how to use the RxJava plugin see the https://grails-plugins.github.io/grails-rxjava/latest/[user guide documentation] for the plugin.
+A controller action produces its response asynchronously by returning a `Promise`, as <<asyncRequests,Asynchronous Request Handling>> describes. To respond with the result of an `Observable` or `Single`, subscribe inside the task so the request thread is released while the operation runs:
+
+[source,groovy]
+----
+import static grails.async.web.WebPromises.*
+
+class BookController {
+
+    BookService bookService
+
+    def show(String title) {
+        task {
+            respond bookService.findOne(title).blockingGet()
+        }
+    }
+}
+----
+
+NOTE: Earlier versions of Grails offered the `rxjava` plugin (`org.grails.plugins:rxjava`), which let an action return an RxJava 1 `Observable` directly and added Server-Sent Events support. The plugin targets Grails 3 and RxJava 1 and has no release for Grails 7 or later, so it cannot be used with this version of Grails.

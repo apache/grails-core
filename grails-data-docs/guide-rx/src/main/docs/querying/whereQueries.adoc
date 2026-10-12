@@ -29,7 +29,7 @@ def query = Book.where {
 
 Note that no query is actually executed directly, instead the `where(Closure)` method returns an instance of link:../api/grails/gorm/rx/DetachedCriteria.html[DetachedCriteria].
 
-Like an `rx.Observable`, the `DetachedCriteria` class can be subscribed to:
+Like an `io.reactivex.rxjava3.core.Observable`, the `DetachedCriteria` class can be subscribed to:
 
 
 [source,groovy]
@@ -42,7 +42,7 @@ Book.where {
 }
 ----
 
-Alternatively you can execute one of the query methods to invoke the query and return an `rx.Observable`:
+Alternatively you can execute one of the query methods to invoke the query and return an `io.reactivex.rxjava3.core.Observable`:
 
 
 [source,groovy]

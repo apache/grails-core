@@ -17,33 +17,23 @@ specific language governing permissions and limitations
 under the License.
 ////
 
-{rxGORMGuide}[RxGORM] is new implementation of GORM that has the following goals:
+RxGORM is the reactive variant of GORM in `org.apache.grails.data:grails-datamapping-rx`. It has two parts.
 
-* Reactive
-* Non-blocking
-* Stateless
-* Simple
+The RxJava data services described above work with every GORM datastore. They give a service a reactive signature while the datastore driver underneath still blocks, in the same way that <<asyncGorm,Asynchronous GORM>> isolates blocking persistence operations on a separate thread.
 
-RxGORM, unlike the link:async.html#asyncGorm[Asynchronous GORM] implementation, aims to be truly non-blocking, down to the driver level.
-
-The following in an example of RxGORM in action:
+The `grails.gorm.rx.RxEntity` domain model goes further: a domain class that implements `RxEntity` instead of `GormEntity` returns an `Observable` from `get()`, `save()`, `delete()` and every dynamic finder, its `DetachedCriteria` and `CriteriaBuilder` are reactive, and associations are loaded lazily through `ObservableProxy` instances and observable collections:
 
 [source,groovy]
 ----
-Book.get(id)
-    .subscribe { Book it ->
-    println "Title = ${it.title}"
+import grails.gorm.rx.RxEntity
+
+class Book implements RxEntity<Book> {
+    String title
+}
+
+Book.get(id).subscribe { Book book ->
+    println "Title = ${book.title}"
 }
 ----
 
-You can combine RxGORM with the https://grails-plugins.github.io/grails-rxjava/latest[RxJava] plugin to implement reactive responses from Grails controllers. For example:
-
-[source,groovy]
-----
-def show() {
-	// returns an rx.Observable
-    Book.get(params.id?.toString())
-}
-----
-
-For more information on how to use RxGORM, see the {rxGORMGuide}[RxGORM user guide].
+That model needs a datastore implementation that is non-blocking down to the driver level, and none ships with Grails. RxGORM for MongoDB, the only implementation written, was last released for GORM 6.1 on RxJava 1, and GORM for Hibernate cannot provide one because Hibernate ORM accesses the database through blocking JDBC. The `RxEntity` API remains in the module for a datastore implementation built against this release; an application that wants reactive access to its data uses the RxJava data services.

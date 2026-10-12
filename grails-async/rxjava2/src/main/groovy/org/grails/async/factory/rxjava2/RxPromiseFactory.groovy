@@ -24,6 +24,9 @@ import java.util.concurrent.TimeUnit
 import groovy.transform.AutoFinal
 import groovy.transform.CompileStatic
 
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
+
 import io.reactivex.Observable
 import io.reactivex.Single
 import io.reactivex.schedulers.Schedulers
@@ -38,10 +41,22 @@ import org.grails.async.factory.BoundPromise
  *
  * @author Graeme Rocher
  * @since 3.3
+ *
+ * @deprecated RxJava 2 is no longer maintained. Use the RxJava 3 implementation in
+ * {@code grails-async-rxjava3} ({@code org.grails.async.factory.rxjava3.RxPromiseFactory}) instead.
+ * This class, and the {@code grails-async-rxjava2} module that provides it, will be removed in a future release.
  */
 @AutoFinal
 @CompileStatic
+@Deprecated(since = '9.0', forRemoval = true)
 class RxPromiseFactory extends AbstractPromiseFactory {
+
+    private static final Logger LOG = LoggerFactory.getLogger(RxPromiseFactory)
+
+    RxPromiseFactory() {
+        LOG.warn('The RxJava 2 promise factory (grails-async-rxjava2) is deprecated and will be removed in a future ' +
+                'release of Grails. Replace it with grails-async-rxjava3.')
+    }
 
     @Override
     <T> Promise<T> createPromise(Class<T> returnType) {

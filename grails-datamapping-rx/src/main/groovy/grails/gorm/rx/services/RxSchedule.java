@@ -44,7 +44,7 @@ import org.grails.datastore.gorm.transform.GormASTTransformationClass;
 public @interface RxSchedule {
 
     /**
-     * @return A closure that returns the scheduler to run on. Default is {@link rx.schedulers.Schedulers#io()}
+     * @return A closure that returns the scheduler to run on. Default is {@link io.reactivex.rxjava3.schedulers.Schedulers#io()}
      */
     Class scheduler() default Object.class;
     /**

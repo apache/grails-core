@@ -35,7 +35,7 @@ import org.grails.datastore.gorm.services.implementers.SingleResultProjectionSer
 import org.grails.datastore.gorm.services.implementers.SingleResultServiceImplementer
 import org.grails.datastore.mapping.core.Ordered
 import org.grails.gorm.rx.transform.RxScheduleIOTransformation
-import rx.Single
+import io.reactivex.rxjava3.core.Single
 import spock.lang.Specification
 import spock.lang.Unroll
 

@@ -31,7 +31,7 @@ import org.grails.datastore.mapping.query.Query
 import org.grails.datastore.mapping.query.QueryCreator
 import org.grails.datastore.gorm.events.ConfigurableApplicationEventPublisher
 import org.grails.gorm.rx.config.Settings
-import rx.Observable
+import io.reactivex.rxjava3.core.Observable
 
 /**
  * Represents a client connection pool that can be used to interact with a backing implementation in RxGORM

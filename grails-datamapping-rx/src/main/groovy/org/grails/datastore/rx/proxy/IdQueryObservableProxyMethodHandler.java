@@ -20,10 +20,11 @@ package org.grails.datastore.rx.proxy;
 
 import java.io.Serializable;
 
+import io.reactivex.rxjava3.core.Observable;
+import io.reactivex.rxjava3.core.ObservableSource;
+import io.reactivex.rxjava3.functions.Function;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import rx.Observable;
-import rx.functions.Func1;
 
 import org.grails.datastore.mapping.query.Query;
 import org.grails.datastore.rx.RxDatastoreClient;
@@ -55,9 +56,9 @@ public class IdQueryObservableProxyMethodHandler extends AbstractObservableProxy
         query.projections().id();
         Observable queryResult = ((RxQuery) query).singleResult();
 
-        queryResult = queryResult.switchMap(new Func1<Object, Observable>() {
+        queryResult = queryResult.switchMap(new Function<Object, ObservableSource<?>>() {
             @Override
-            public Observable call(Object id) {
+            public ObservableSource<?> apply(Object id) {
                 if (type.isInstance(id)) {
                     return Observable.just(id);
                 }
@@ -73,13 +74,13 @@ public class IdQueryObservableProxyMethodHandler extends AbstractObservableProxy
                     }
                 }
                 else {
-                    return null;
+                    return Observable.empty();
                 }
             }
         });
-        return queryResult.map(new Func1() {
+        return queryResult.map(new Function<Object, Object>() {
             @Override
-            public Object call(Object o) {
+            public Object apply(Object o) {
                 target = o;
                 return o;
             }
@@ -95,7 +96,7 @@ public class IdQueryObservableProxyMethodHandler extends AbstractObservableProxy
             if (LOG.isWarnEnabled()) {
                 LOG.warn("Entity of type [{}] with id [{}] lazy loaded using a blocking operation. Consider using ObservableProxy.subscribe(..) instead", type.getName(), proxyKey);
             }
-            this.target = observable.toBlocking().first();
+            this.target = observable.blockingFirst();
         }
         else {
             throw new BlockingOperationException("Cannot initialize proxy for class [" + type + "] using a blocking operation. Use ObservableProxy.subscribe(..) instead.");

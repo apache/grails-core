@@ -43,7 +43,7 @@ import org.codehaus.groovy.transform.GroovyASTTransformation
 import org.grails.datastore.gorm.transform.AbstractMethodDecoratingTransformation
 import org.grails.datastore.mapping.reflect.AstGenericsUtils
 import org.grails.gorm.rx.services.support.RxServiceSupport
-import rx.Scheduler
+import io.reactivex.rxjava3.core.Scheduler
 
 import static org.grails.datastore.mapping.reflect.AstUtils.ZERO_PARAMETERS
 import static org.codehaus.groovy.ast.tools.GeneralUtils.castX
@@ -52,9 +52,9 @@ import static org.codehaus.groovy.ast.tools.GeneralUtils.callX
 import static org.codehaus.groovy.ast.tools.GeneralUtils.returnS
 
 /**
- * A transformation that will convert a blocking GORM operation into an Observable that runs on the RxJava {@link rx.schedulers.Schedulers#io()} scheduler
+ * A transformation that will convert a blocking GORM operation into an Observable that runs on the RxJava {@link io.reactivex.rxjava3.schedulers.Schedulers#io()} scheduler
  *
- * @see {@link rx.schedulers.Schedulers#io()}
+ * @see {@link io.reactivex.rxjava3.schedulers.Schedulers#io()}
  *
  * @since 6.1
  */

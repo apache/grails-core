@@ -27,7 +27,7 @@ import org.grails.datastore.mapping.query.Query
 import org.grails.datastore.rx.RxDatastoreClient
 import org.grails.datastore.rx.query.RxQuery
 import org.springframework.core.convert.support.DefaultConversionService
-import rx.Observable
+import io.reactivex.rxjava3.core.Observable
 import spock.lang.Specification
 
 /**

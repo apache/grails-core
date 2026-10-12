@@ -19,7 +19,7 @@
 
 package org.grails.gorm.rx.services.support
 
-import rx.schedulers.Schedulers
+import io.reactivex.rxjava3.schedulers.Schedulers
 import spock.lang.Specification
 
 import java.util.concurrent.Callable
@@ -31,7 +31,7 @@ class RxServiceSupportSpec extends Specification {
         Callable<String> callable = { 'hello' } as Callable<String>
 
         when:
-        List<String> results = RxServiceSupport.create(Schedulers.trampoline(), callable).toList().toBlocking().single()
+        List<String> results = RxServiceSupport.create(Schedulers.trampoline(), callable).toList().blockingGet()
 
         then:
         results == ['hello']
@@ -42,7 +42,7 @@ class RxServiceSupportSpec extends Specification {
         Callable<List<String>> callable = { ['a', 'b', 'c'] } as Callable<List<String>>
 
         when:
-        List<String> results = RxServiceSupport.create(Schedulers.trampoline(), callable).toList().toBlocking().single()
+        List<String> results = RxServiceSupport.create(Schedulers.trampoline(), callable).toList().blockingGet()
 
         then:
         results == ['a', 'b', 'c']
@@ -53,7 +53,7 @@ class RxServiceSupportSpec extends Specification {
         Callable<List<String>> callable = { [] } as Callable<List<String>>
 
         when:
-        List<String> results = RxServiceSupport.create(Schedulers.trampoline(), callable).toList().toBlocking().single()
+        List<String> results = RxServiceSupport.create(Schedulers.trampoline(), callable).toList().blockingGet()
 
         then:
         results == []
@@ -64,7 +64,7 @@ class RxServiceSupportSpec extends Specification {
         Callable<String> callable = { null } as Callable<String>
 
         when:
-        List<String> results = RxServiceSupport.create(Schedulers.trampoline(), callable).toList().toBlocking().single()
+        List<String> results = RxServiceSupport.create(Schedulers.trampoline(), callable).toList().blockingGet()
 
         then:
         results == []
@@ -75,7 +75,7 @@ class RxServiceSupportSpec extends Specification {
         Callable<String> callable = { 'hello' } as Callable<String>
 
         when:
-        String result = RxServiceSupport.create(callable).toBlocking().first()
+        String result = RxServiceSupport.create(callable).blockingFirst()
 
         then:
         result == 'hello'
@@ -86,7 +86,7 @@ class RxServiceSupportSpec extends Specification {
         Callable<String> callable = { 'hello' } as Callable<String>
 
         when:
-        String result = RxServiceSupport.createSingle(Schedulers.trampoline(), callable).toBlocking().value()
+        String result = RxServiceSupport.createSingle(Schedulers.trampoline(), callable).blockingGet()
 
         then:
         result == 'hello'
@@ -98,7 +98,7 @@ class RxServiceSupportSpec extends Specification {
         Callable<String> callable = { throw failure } as Callable<String>
 
         when:
-        RxServiceSupport.createSingle(Schedulers.trampoline(), callable).toBlocking().value()
+        RxServiceSupport.createSingle(Schedulers.trampoline(), callable).blockingGet()
 
         then:
         IllegalStateException e = thrown(IllegalStateException)
@@ -110,7 +110,7 @@ class RxServiceSupportSpec extends Specification {
         Callable<String> callable = { 'hello' } as Callable<String>
 
         when:
-        String result = RxServiceSupport.createSingle(callable).toBlocking().value()
+        String result = RxServiceSupport.createSingle(callable).blockingGet()
 
         then:
         result == 'hello'

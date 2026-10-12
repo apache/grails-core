@@ -47,10 +47,14 @@ import org.grails.events.registry.EventSubscriberSubscription
  * @author Graeme Rocher
  * @since 3.3
  *
+ * @deprecated RxJava 2 is no longer maintained. Use the RxJava 3 implementation in
+ * {@code grails-events-rxjava3} ({@code org.grails.events.rxjava3.RxEventBus}) instead.
+ * This class, and the {@code grails-events-rxjava2} module that provides it, will be removed in a future release.
  */
 @Slf4j
 @AutoFinal
 @CompileStatic
+@Deprecated(since = '9.0', forRemoval = true)
 class RxEventBus extends AbstractEventBus {
 
     protected final Map<CharSequence, PublishSubject> subjects = new ConcurrentHashMap<CharSequence, PublishSubject>().withDefault {
@@ -61,6 +65,8 @@ class RxEventBus extends AbstractEventBus {
 
     RxEventBus(Scheduler scheduler = Schedulers.io()) {
         this.scheduler = scheduler
+        log.warn('The RxJava 2 event bus (grails-events-rxjava2) is deprecated and will be removed in a future ' +
+                'release of Grails. Replace it with grails-events-rxjava3.')
     }
 
     @Override

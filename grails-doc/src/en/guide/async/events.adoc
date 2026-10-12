@@ -51,11 +51,11 @@ The following table summarizes async framework support and the necessary depende
 |`grails-events-gpars`
 |`org.grails.events.gpars.ActorEventBus`
 
-|RxJava 1.2.x
+|RxJava 1.x (deprecated)
 |`grails-events-rxjava`
 |`org.grails.events.rxjava.RxEventBus`
 
-|RxJava 2.x
+|RxJava 2.x (deprecated)
 |`grails-events-rxjava2`
 |`org.grails.events.rxjava2.RxEventBus`
 
@@ -64,3 +64,7 @@ The following table summarizes async framework support and the necessary depende
 |`org.grails.events.rxjava3.RxEventBus`
 
 |===
+
+WARNING: The RxJava 1 and RxJava 2 implementations, `grails-events-rxjava` and `grails-events-rxjava2`, are deprecated since Grails 9.0 and will be removed in a future release.
+Both RxJava versions are no longer maintained. Their event buses log a warning when they are created.
+Replace either dependency with `grails-events-rxjava3`; the `EventBus` API an application uses is the same.

@@ -40,6 +40,7 @@ class AgentSkillsSpec extends Specification {
     private static final Map<String, File> PUBLISHED_SKILLS = [
             'grails-developer': new File('../../grails-skills/developer/skills/grails-developer'),
             'grails-8-upgrade': new File('../../grails-skills/upgrade-guide-8/skills/grails-8-upgrade'),
+            'grails-9-upgrade': new File('../../grails-skills/upgrade-guide-9/skills/grails-9-upgrade'),
     ]
 
     private static final Map<String, File> EXTRACTED_BY = [

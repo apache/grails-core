@@ -20,10 +20,10 @@ package org.grails.datastore.rx.proxy;
 
 import java.io.Serializable;
 
+import io.reactivex.rxjava3.core.Observable;
+import io.reactivex.rxjava3.functions.Function;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import rx.Observable;
-import rx.functions.Func1;
 
 import org.grails.datastore.rx.RxDatastoreClient;
 import org.grails.datastore.rx.exceptions.BlockingOperationException;
@@ -49,9 +49,9 @@ class IdentifierObservableProxyMethodHandler extends AbstractObservableProxyMeth
 
     protected Observable resolveObservable() {
         Observable observable = ((RxDatastoreClientImplementor) client).get(type, proxyKey, queryState);
-        return observable.map(new Func1() {
+        return observable.map(new Function<Object, Object>() {
             @Override
-            public Object call(Object o) {
+            public Object apply(Object o) {
                 target = o;
                 return o;
             }
@@ -73,7 +73,7 @@ class IdentifierObservableProxyMethodHandler extends AbstractObservableProxyMeth
                 if (LOG.isWarnEnabled()) {
                     LOG.warn("Entity of type [{}] with id [{}] lazy loaded using a blocking operation. Consider using ObservableProxy.subscribe(..) instead", type.getName(), proxyKey);
                 }
-                this.target = observable.toBlocking().first();
+                this.target = observable.blockingFirst();
             }
             else {
                 throw new BlockingOperationException("Cannot initialize proxy for class [" + type + "] using a blocking operation. Use ObservableProxy.subscribe(..) instead.");

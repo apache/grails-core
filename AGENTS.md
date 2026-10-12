@@ -71,6 +71,7 @@ export GRADLE_OPTS="-Dorg.gradle.jvmargs=-Xmx4G"
 > - Writing Java code → Read `.agents/skills/java-developer/SKILL.md`
 > - Writing or changing Gradle builds → Read `.agents/skills/gradle-developer/SKILL.md`
 > - Upgrading applications to Grails 8 → Read `.agents/skills/grails-8-upgrade/SKILL.md`
+> - Upgrading applications to Grails 9 → Read `.agents/skills/grails-9-upgrade/SKILL.md`
 > - Writing Hibernate code → Read `.agents/skills/hibernate-developer/SKILL.md`
 > - Fixing style/analysis violations → Read `.agents/skills/violation-fixer/SKILL.md`
 > - Fixing broken test → Read `.agents/skills/test-fixer/SKILL.md`
@@ -84,6 +85,7 @@ export GRADLE_OPTS="-Dorg.gradle.jvmargs=-Xmx4G"
 | **groovy-developer** | `.agents/skills/groovy-developer/SKILL.md` | Groovy 5 syntax, closures, DSLs, Spock |
 | **gradle-developer** | `.agents/skills/gradle-developer/SKILL.md` | Gradle 9 builds, BOM/platforms, convention plugins, wrappers |
 | **grails-8-upgrade** | `.agents/skills/grails-8-upgrade/SKILL.md` | Upgrading Grails applications from 7.x to 8 |
+| **grails-9-upgrade** | `.agents/skills/grails-9-upgrade/SKILL.md` | Upgrading Grails applications from 8.x to 9 |
 | **java-developer** | `.agents/skills/java-developer/SKILL.md` | Java 21 features, Groovy interop |
 | **hibernate-developer** | `.agents/skills/hibernate-developer/SKILL.md` | Hibernate 7 mapping, binders, generators |
 | **violation-fixer** | `.agents/skills/violation-fixer/SKILL.md` | Fix style/analysis violations (CodeNarc, Checkstyle, PMD, SpotBugs) |

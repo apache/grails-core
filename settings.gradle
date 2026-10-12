@@ -230,6 +230,7 @@ include(
         // Agent Skills (published for consumption by AI coding agents)
         'grails-skills-developer',
         'grails-skills-upgrade-guide-8',
+        'grails-skills-upgrade-guide-9',
 )
 
 project(':grails-bom').projectDir = file('grails-bom/default')
@@ -258,6 +259,7 @@ project(':grails-async').projectDir = file('grails-async/plugin')
 
 project(':grails-skills-developer').projectDir = file('grails-skills/developer')
 project(':grails-skills-upgrade-guide-8').projectDir = file('grails-skills/upgrade-guide-8')
+project(':grails-skills-upgrade-guide-9').projectDir = file('grails-skills/upgrade-guide-9')
 
 project(':grails-dependencies-starter-web').projectDir = file('grails-dependencies/starter-web')
 project(':grails-dependencies-test').projectDir = file('grails-dependencies/test')

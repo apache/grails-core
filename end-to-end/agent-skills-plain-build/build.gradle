@@ -30,6 +30,7 @@ dependencies {
     skill platform("org.apache.grails:grails-bom:${projectVersion}")
     skill 'org.apache.grails.skills:grails-developer'
     skill 'org.apache.grails.skills:grails-8-upgrade'
+    skill 'org.apache.grails.skills:grails-9-upgrade'
 }
 
 // As in agent-skills: this project's own directory, not the grails-core repository's .agents/skills

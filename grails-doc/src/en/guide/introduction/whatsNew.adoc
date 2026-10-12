@@ -85,6 +85,32 @@ grails -t forge create-app --features=gorm-async com.example.demo
 The feature layers on top of whichever GORM implementation is selected, defaulting to Hibernate when none is chosen.
 The `grails-datamapping-async` artifact it brings in is intended for direct consumption by applications and libraries, so it moved from the `org.apache.grails.data` group to `org.apache.grails`; see the xref:upgrading#upgrading80x[upgrade guide] for the coordinate change.
 
+==== RxGORM on RxJava 3
+
+RxGORM, the reactive variant of GORM in `grails-datamapping-rx`, is built on RxJava 3 instead of the
+unmaintained RxJava 1. Its APIs return `io.reactivex.rxjava3.core.Observable` and
+`io.reactivex.rxjava3.core.Single`, and the reactive `DetachedCriteria`, proxies and lazy associations
+are RxJava 3 `ObservableSource` instances that can be composed with any RxJava 3 operator. See the
+xref:upgrading#upgrading90x[upgrade guide] for the import and blocking-call changes.
+
+==== RxJava 1 and RxJava 2 Modules Deprecated
+
+The RxJava 1 and RxJava 2 implementations of the Grails promise and event bus APIs, `grails-async-rxjava`,
+`grails-async-rxjava2`, `grails-events-rxjava` and `grails-events-rxjava2`, are deprecated for removal
+since Grails 9.0. Both RxJava versions are no longer maintained. The implementations keep working, and they
+log a warning when their promise factory or event bus is created. The RxJava 3 implementations,
+`grails-async-rxjava3` and `grails-events-rxjava3`, remain supported and are the replacements:
+
+[source,groovy]
+.build.gradle
+----
+runtimeOnly 'org.apache.grails.async:grails-async-rxjava3'
+runtimeOnly 'org.apache.grails.events:grails-events-rxjava3'
+----
+
+The `Promise` and `EventBus` APIs an application uses are the same, so an application that only uses the
+Grails APIs needs no code change. See <<asyncPromises,Promises>> and <<events,Events>>.
+
 ==== Plugin Beans Register Before Spring Boot Auto-Configuration
 
 Grails {grailsMajorVersion} unifies and retimes the plugin lifecycle so that the beans a plugin contributes are registered before Spring Boot processes its auto-configurations.
@@ -449,7 +475,7 @@ the xref:upgrading#upgrading80x[upgrade guide] for details.
 
 ==== Agent Skills Published with Grails
 
-Grails now publishes its app-facing https://agentskills.io[Agent Skills] with every release: `org.apache.grails.skills:grails-developer`, for building Grails applications, and `org.apache.grails.skills:grails-8-upgrade`, for upgrading an application from Grails 7. The jars use the https://www.skillsjars.com[SkillsJars] layout and the Grails BOM manages them, so an application applies the SkillsJars Gradle plugin, declares the skills without a version, and runs `./gradlew extractSkillsJars` to write the skills for its Grails version to the directory its AI coding agent reads. See xref:gettingStarted#agentSkills[Agent Skills].
+Grails now publishes its app-facing https://agentskills.io[Agent Skills] with every release: `org.apache.grails.skills:grails-developer`, for building Grails applications, `org.apache.grails.skills:grails-8-upgrade`, for upgrading an application from Grails 7, and `org.apache.grails.skills:grails-9-upgrade`, for upgrading an application from Grails 8. The jars use the https://www.skillsjars.com[SkillsJars] layout and the Grails BOM manages them, so an application applies the SkillsJars Gradle plugin, declares the skills without a version, and runs `./gradlew extractSkillsJars` to write the skills for its Grails version to the directory its AI coding agent reads. See xref:gettingStarted#agentSkills[Agent Skills].
 
 ==== Test HTTP Client Form Requests
 

@@ -20,7 +20,7 @@
 package org.grails.datastore.rx.query
 
 import groovy.transform.CompileStatic
-import rx.Observable
+import io.reactivex.rxjava3.core.Observable
 
 /**
  * Represents a reactive query implementation in RxGORM

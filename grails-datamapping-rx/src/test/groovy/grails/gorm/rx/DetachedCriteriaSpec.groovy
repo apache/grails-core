@@ -39,9 +39,9 @@ import org.grails.gorm.rx.api.RxGormInstanceApi
 import org.grails.gorm.rx.api.RxGormStaticApi
 import org.grails.gorm.rx.api.RxGormValidationApi
 import org.springframework.core.convert.support.DefaultConversionService
-import rx.Observable
-import rx.Subscriber
-import rx.Subscription
+import io.reactivex.rxjava3.core.Observable
+import io.reactivex.rxjava3.core.Observer
+import io.reactivex.rxjava3.disposables.Disposable
 import spock.lang.Specification
 import spock.lang.Unroll
 
@@ -231,7 +231,7 @@ class DetachedCriteriaSpec extends Specification {
 
         then:
         1 * query.findAll([:]) >> Observable.just(first, second)
-        result.toBlocking().single() == [first, second]
+        result.blockingSingle() == [first, second]
     }
 
     void "list(Map, Closure) behaves the same as toList(Map, Closure)"() {
@@ -244,7 +244,7 @@ class DetachedCriteriaSpec extends Specification {
 
         then:
         1 * query.findAll([:]) >> Observable.just(volume)
-        result.toBlocking().single() == [volume]
+        result.blockingSingle() == [volume]
     }
 
     void "getCount(Map, Closure) applies a count projection and returns the reactive count"() {
@@ -259,7 +259,7 @@ class DetachedCriteriaSpec extends Specification {
         then:
         1 * query.projections() >> projectionList
         1 * query.singleResult(args) >> Observable.just(3)
-        result.toBlocking().single() == 3
+        result.blockingSingle() == 3
         projectionList.projectionList.size() == 1
         projectionList.projectionList[0] instanceof Query.CountProjection
     }
@@ -277,7 +277,7 @@ class DetachedCriteriaSpec extends Specification {
         1 * datastoreClient.createQuery(Volume, args) >> query
         1 * query.projections() >> projectionList
         1 * query.singleResult(args) >> Observable.just(7)
-        result.toBlocking().single() == 7
+        result.blockingSingle() == 7
         projectionList.projectionList[0] instanceof Query.CountProjection
     }
 
@@ -337,15 +337,19 @@ class DetachedCriteriaSpec extends Specification {
         result.is(observable)
     }
 
-    void "subscribe(Subscriber) subscribes the given subscriber to the observable returned by findAll()"() {
+    void "subscribe(Observer) subscribes the given observer to the observable returned by findAll()"() {
         given:
         DetachedCriteria<Volume> criteria = newCriteria()
         Volume volume = new Volume(title: 'A')
         List<Volume> received = []
         boolean completed = false
-        Subscriber<Volume> subscriber = new Subscriber<Volume>() {
+        Observer<Volume> subscriber = new Observer<Volume>() {
             @Override
-            void onCompleted() {
+            void onSubscribe(Disposable d) {
+            }
+
+            @Override
+            void onComplete() {
                 completed = true
             }
 
@@ -360,13 +364,12 @@ class DetachedCriteriaSpec extends Specification {
         }
 
         when:
-        Subscription subscription = criteria.subscribe(subscriber)
+        criteria.subscribe(subscriber)
 
         then:
         1 * query.findAll([:]) >> Observable.just(volume)
         received == [volume]
         completed
-        subscription != null
     }
 
     void "prepareQuery applies the default max only when it has been set via max(int)"() {

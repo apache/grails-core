@@ -154,11 +154,11 @@ The following table summarizes the available implementation and the dependency t
 |`grails-async-gpars`
 |`org.grails.async.factory.gpars.GparsPromiseFactory`
 
-|RxJava 1.2.x
+|RxJava 1.x (deprecated)
 |`grails-async-rxjava`
 |`org.grails.async.factory.rxjava.RxPromiseFactory`
 
-|RxJava 2.x
+|RxJava 2.x (deprecated)
 |`grails-async-rxjava2`
 |`org.grails.async.factory.rxjava2.RxPromiseFactory`
 
@@ -167,6 +167,10 @@ The following table summarizes the available implementation and the dependency t
 |`org.grails.async.factory.rxjava3.RxPromiseFactory`
 
 |===
+
+WARNING: The RxJava 1 and RxJava 2 implementations, `grails-async-rxjava` and `grails-async-rxjava2`, are deprecated since Grails 9.0 and will be removed in a future release.
+Both RxJava versions are no longer maintained. Their promise factories log a warning when they are created.
+Replace either dependency with `grails-async-rxjava3`; the `Promise` API an application uses is the same.
 
 You can also override the `grails.async.PromiseFactory` class used by `Promises` by setting the `promiseFactory` static field.
 

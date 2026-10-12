@@ -17,23 +17,21 @@ specific language governing permissions and limitations
 under the License.
 ////
 
-GORM Data Services also support returning RxJava 1.x https://reactivex.io/RxJava/1.x/javadoc/rx/Observable.html[rx.Observable] or https://reactivex.io/RxJava/1.x/javadoc/rx/Single.html[rx.Single] types.
+GORM Data Services also support returning RxJava 3 https://reactivex.io/RxJava/3.x/javadoc/io/reactivex/rxjava3/core/Observable.html[io.reactivex.rxjava3.core.Observable] or https://reactivex.io/RxJava/3.x/javadoc/io/reactivex/rxjava3/core/Single.html[io.reactivex.rxjava3.core.Single] types.
 
-NOTE: RxJava 2.x support is planned for a future release
+To use the RxJava support you need to ensure that the `grails-datamapping-rx` dependency is on the classpath by adding the following to `build.gradle`:
 
-To use the RxJava support you need to ensure that the `grails-datastore-gorm-rx` dependencies is on the classpath by adding the following to `build.gradle`:
-
-[source,groovy,subs="attributes"]
+[source,groovy]
 .build.gradle
 ----
-compile "org.grails:grails-datastore-gorm-rx:{version}"
+implementation "org.apache.grails.data:grails-datamapping-rx"
 ----
 
 For example:
 
 [source,groovy]
 ----
-import rx.*
+import io.reactivex.rxjava3.core.Single
 
 @Service(Book)
 interface BookService {
@@ -41,11 +39,11 @@ interface BookService {
 }
 ----
 
-When a `rx.Single` is used then a single result is returned. To query multiple results use an `rx.Observable` instead:
+When a `Single` is used then a single result is returned, and a query that finds nothing signals a `java.util.NoSuchElementException`, since an RxJava 3 `Single` cannot complete without a value. To query multiple results use an `Observable` instead, which completes without emitting when nothing is found:
 
 [source,groovy]
 ----
-import rx.*
+import io.reactivex.rxjava3.core.Observable
 
 @Service(Book)
 interface BookService {
@@ -53,7 +51,7 @@ interface BookService {
 }
 ----
 
-For regular GORM entities, GORM will by default execute the persistence operation using RxJava's https://reactivex.io/RxJava/1.x/javadoc/rx/schedulers/Schedulers.html#io()[IO Scheduler].
+For regular GORM entities, GORM will by default execute the persistence operation using RxJava's https://reactivex.io/RxJava/3.x/javadoc/io/reactivex/rxjava3/schedulers/Schedulers.html#io--[IO Scheduler].
 
 NOTE: For RxGORM entities where the underlying database supports non-blocking access the database driver will schedule the operation accordingly.
 
@@ -61,10 +59,10 @@ You can run the operation on a different scheduler using the `RxSchedule` annota
 
 [source,groovy]
 ----
-import rx.*
+import io.reactivex.rxjava3.core.Observable
+import io.reactivex.rxjava3.schedulers.Schedulers
 import grails.gorm.rx.services.RxSchedule
 import grails.gorm.services.Service
-import rx.schedulers.Schedulers
 
 @Service(Book)
 interface BookService {
