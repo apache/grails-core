@@ -42,6 +42,23 @@ class JpaCriteriaQueryCreatorSpec extends HibernateGormDatastoreSpec {
         manager.registerDomainClasses(JpaCriteriaQueryCreatorSpecPerson, JpaCriteriaQueryCreatorSpecPet, JpaCriteriaQueryCreatorSpecGraded)
     }
 
+    void 'alias projections retain the requested outer join'() {
+        given:
+        def owner = new JpaCriteriaQueryCreatorSpecPerson(firstName: 'Alice', lastName: 'Owner')
+                .save(failOnError: true)
+        new JpaCriteriaQueryCreatorSpecPerson(firstName: 'Bob', lastName: 'WithoutPet')
+                .save(failOnError: true)
+        new JpaCriteriaQueryCreatorSpecPet(name: 'pet', owner: owner)
+                .save(flush: true, failOnError: true)
+
+        expect:
+        JpaCriteriaQueryCreatorSpecPet.createCriteria().list {
+            createAlias('owner', 'o', 2)
+            projections { property('o.firstName') }
+            order('o.firstName', 'asc')
+        } == ['Alice', 'Bob']
+    }
+
     def "test createQuery"() {
         given:
        

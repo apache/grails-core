@@ -73,6 +73,26 @@ println "Rendering ${results.size()} Accounts of ${results.totalCount}"
 The `sort` and `order` arguments accepted alongside the pagination values are checked the same way as for link:list.html[list()]: `sort` must be a property path made up of identifiers separated by dots that resolves through the domain class mapping, and `order` must be `"asc"` or `"desc"` (case-insensitive, surrounding whitespace ignored). Any other value is rejected with an `IllegalArgumentException` before the query is built, so request parameters can be passed through without further checks. A dotted `sort` key whose first segment is an alias created with `createAlias` is left for the query to resolve; a bare name must be a property of the domain class.
 
 
+=== Association aliases
+
+With Hibernate, `createAlias('association', 'alias')` creates an inner join. Restrictions, projections, and ordering on `alias.property` reuse that association join rather than adding another join.
+
+For Hibernate 7, the three-argument overload accepts `0` for an inner join, `1` for a left outer join, or `2` for a right outer join. For example, to include books with no author as well as books whose author has a name:
+
+[source,groovy]
+----
+def books = Book.createCriteria().list {
+    createAlias('author', 'a', 1) // left outer join
+    or {
+        isNull('author')
+        isNotNull('a.name')
+    }
+}
+----
+
+The alias uses the requested join type. A left join alone does not guarantee that unmatched rows remain in the result: the restrictions must also allow the missing association, as the `or` block does above.
+
+
 === Description
 
 
