@@ -27,6 +27,7 @@ import java.time.format.DateTimeFormatter
 
 import javax.inject.Inject
 
+import org.apache.grails.buildsrc.DependencyCachePolicy
 import org.apache.tools.ant.taskdefs.condition.Os
 
 ext {
@@ -75,11 +76,7 @@ subprojects {
     }
 
     configurations.configureEach {
-        resolutionStrategy {
-            def cacheHours = isCiBuild || isReproducibleBuild ? 0 : 24
-            cacheDynamicVersionsFor(cacheHours, 'hours')
-            cacheChangingModulesFor(cacheHours, 'hours')
-        }
+        DependencyCachePolicy.apply(resolutionStrategy, isCiBuild as boolean, isReproducibleBuild as boolean)
     }
 }
 

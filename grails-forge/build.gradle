@@ -17,6 +17,8 @@
  *  under the License.
  */
 
+import org.apache.grails.buildsrc.DependencyCachePolicy
+
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneOffset
@@ -51,11 +53,7 @@ allprojects {
 
 subprojects {
     configurations.configureEach {
-        resolutionStrategy {
-            def cacheHours = isCiBuild || isReproducibleBuild ? 0 : 24
-            cacheDynamicVersionsFor(cacheHours, 'hours')
-            cacheChangingModulesFor(cacheHours, 'hours')
-        }
+        DependencyCachePolicy.apply(resolutionStrategy, isCiBuild as boolean, isReproducibleBuild as boolean)
     }
 }
 
