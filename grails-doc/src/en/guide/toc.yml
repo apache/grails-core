@@ -73,6 +73,7 @@ conf:
     transactionAwareDataSourceProxy: Transaction-aware DataSource Proxy
     databaseConsole: Database Console
     multipleDatasources: Multiple Datasources
+    sqlTail: Finding Query-Heavy Pages with sql-tail
   versioning: Versioning
   dependencyResolution: Dependency Resolution
 commandLine:

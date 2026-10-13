@@ -31,6 +31,7 @@ WARNING: This target is _not_ intended to be used for application deployment. Th
 ----
 grails run-app
 grails run-app -https // with HTTPS
+grails run-app --sql-tail // capture the SQL statements it runs for the sql-tail command
 grails test run-app
 ----
 
@@ -49,6 +50,7 @@ Arguments:
 * `port` - The port to use
 * `host` - The host to bind to
 * `https` - Start an HTTPS server (on port 8443 by default) alongside the main server. Just to be clear, the application will be accessible via HTTPS _and_ HTTP. A self-signed key will be generated. Intended for development use only.
+* `sql-tail` - Capture every SQL statement Hibernate runs, with the controller and action serving it, for the link:{commandLineRefFromRef}sql-tail.html[sql-tail] command. The application starts with `grails.gorm.sqlTail.enabled` set, and pays nothing for the capture when started without the flag.
 
 Supported system properties:
 

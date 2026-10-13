@@ -33,6 +33,7 @@ import org.grails.datastore.gorm.jdbc.connections.CachedDataSourceConnectionSour
 import org.grails.datastore.gorm.jdbc.connections.DataSourceConnectionSourceFactory;
 import org.grails.datastore.gorm.jdbc.connections.DataSourceSettings;
 import org.grails.datastore.gorm.jdbc.connections.DataSourceSettingsBuilder;
+import org.grails.datastore.gorm.jdbc.sqltail.SqlTailSettings;
 import org.grails.datastore.mapping.core.connections.AbstractConnectionSourceFactory;
 import org.grails.datastore.mapping.core.connections.ConnectionSource;
 import org.grails.datastore.mapping.core.connections.ConnectionSourceSettings;
@@ -109,6 +110,7 @@ public abstract class AbstractHibernateConnectionSourceFactory extends AbstractC
             String prefix = Settings.SETTING_DATASOURCES + "." + name;
             settings = buildSettingsWithPrefix(configuration, fallbackSettings, prefix);
         }
+        settings.setSqlTail(SqlTailSettings.from(configuration));
         return settings;
     }
 
@@ -139,6 +141,7 @@ public abstract class AbstractHibernateConnectionSourceFactory extends AbstractC
                 settings.setDataSource(dataSourceSettings);
             }
         }
+        settings.setSqlTail(SqlTailSettings.from(configuration));
         return settings;
     }
 }

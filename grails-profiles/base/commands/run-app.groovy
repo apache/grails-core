@@ -6,6 +6,7 @@ description("Runs a Grails application") {
     flag name:'port', description:"Specifies the port which to start Grails on (defaults to 8080 or 8443 for HTTPS)"
     flag name:'host', description:"Specifies the host to bind to"
     flag name:'verbose', description:"Show more output from the build during startup"
+    flag name:'sql-tail', description:"Captures every SQL statement Hibernate runs, with the controller and action serving it, for the sql-tail command"
 }
 
 if(!commandLine.isEnvironmentSet()) {
@@ -29,6 +30,12 @@ try {
     org.grails.cli.gradle.RunningApplicationProcess.clearStopRequest(buildDir)
 
     arguments.addAll commandLine.remainingArgs
+
+    // The Grails Gradle plugin hands every grails.* system property of the build to the forked application
+    // without the grails. prefix, so this reaches the application as grails.gorm.sqlTail.enabled.
+    if(flag('sql-tail')) {
+        arguments << '-Dgrails.grails.gorm.sqlTail.enabled=true'
+    }
 
     Integer port = flag('port')?.toInteger() ?: config.getProperty('server.port', Integer)
     String host = flag('host') ?: config.getProperty('server.address', String)

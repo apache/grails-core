@@ -1,0 +1,79 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+A page that is slow because it runs hundreds of queries is easy to miss in a log: `logSql` prints
+every statement, but not which page ran it or how many a request added up to. The `sql-tail`
+command answers that. It shows the pages of the running application ranked by the statements they
+run per request, and for each page the statement that repeats most within a single request, which
+is what an N+1 looks like.
+
+It takes two terminals. In the first, start the application with capture turned on:
+
+[source,shell]
+----
+grails run-app --sql-tail
+----
+
+or, with Gradle, `./gradlew bootRun -Pgrails.gorm.sqlTail.enabled`. In the second, follow the
+capture and use the application:
+
+[source,shell]
+----
+grails sql-tail
+----
+
+The summary refreshes as requests are served:
+
+----
+sql-tail build/sql-tail/capture.log  312 statements in 14 requests  (refreshes as statements run; Ctrl-C to stop)
+PAGE        REQUESTS  AVG/REQ    MAX   TOTAL  MOST REPEATED IN ONE REQUEST
+book/show          6     48.0     61     288  44× select ... from author a1_0 where a1_0.id=?
+book/index         5      4.2      5      21  5× select ... from book b1_0
+author/show        3      1.0      1       3  1× select ... from author a1_0 where a1_0.id=?
+----
+
+Statements are shown without their column lists, so the same query counts as one statement wherever
+it is run from. `--statements` ranks the statements themselves, `--page=book/show` shows the
+statements of one page, and `--stream` prints each statement as it runs with a header for each
+request, which shows a page load adding up. `--all --once` prints a report of everything captured
+so far and exits, which is also how to look at what an integration test run executed:
+
+[source,shell]
+----
+./gradlew integrationTest -Pgrails.gorm.sqlTail.enabled
+grails sql-tail --all --once
+----
+
+See link:{commandLineRef}sql-tail.html[sql-tail] for every option.
+
+Statements are attributed to the controller and action Grails resolved for the request on the
+thread that runs them, so a statement run by an interceptor, the action or a GSP all count for the
+same page. Work on another thread, an async task or a scheduled job, is shown under the name of
+its thread. A request that does not reach a controller is shown under its path.
+
+Capture is off unless the application is started with it. An application started without the
+flag carries no statement inspector, so it costs nothing in production or in development. The
+flag sets `grails.gorm.sqlTail.enabled`, which can also be kept in `application.yml` for the
+development environment, and `grails.gorm.sqlTail.file` moves the capture away from
+`build/sql-tail/capture.log`, where the command looks for it. The file is written fresh each time
+the application starts. An application started by Gradle writes under the build directory the
+build configures, even one moved with `layout.buildDirectory`, but the `grails` command runs
+outside Gradle and looks under `build` unless told otherwise: with a moved build directory set
+`grails.gorm.sqlTail.file`, which both sides read, or pass `--file`. An application that configures its own Hibernate `StatementInspector`
+keeps it: the capture runs after it and records the statement it returns.
