@@ -54,7 +54,7 @@ skill 'org.apache.grails.skills:grails-8-upgrade:{version}'
 
 ==== 1. Java 21 Minimum Requirement
 
-Grails 8 requires a minimum of Java 21 to both build and run Grails applications.
+Grails 8 requires a minimum of Java 21 to both build and run Grails applications. Grails 8 also supports Java 25 (the next LTS after Java 21).
 This is an increase from Grails 7, which required Java 17.
 Update your project's toolchain, CI pipelines, and deployment environments to use JDK 21 or later.
 
@@ -4738,3 +4738,39 @@ When upgrading from an earlier Grails 8 milestone or release candidate, update t
 
 With the configuration cache, task actions such as `doFirst` and `doLast` closures may not use `project`, other tasks or build script properties while they run, and Gradle fails the build when a build script or another Gradle plugin does.
 See xref:commandLine#gradleConfigurationCache[Using the Gradle Configuration Cache] for how to adapt build scripts and what to do about plugins that do not support it.
+
+[[java25-memory-upgrade]]
+==== 86. Java 25 Memory Requirements
+
+Grails 8 supports Java 25 (the next LTS after Java 21).
+Java 25 uses more off-heap memory than Java 21, and the most significant change is that the **metaspace is now unbounded by default**.
+On Java 21 and earlier, the JVM imposed an initial high-water mark of approximately 12 MB on metaspace growth; on Java 25 there is no upper limit unless you set one explicitly.
+
+A Grails application loads a large number of classes — plugins, Hibernate entity mappings, GSP-compiled views, Spring beans — so metaspace can grow well beyond what earlier JDKs allowed without intervention.
+In a container environment this is especially important: the heap limit (`-Xmx` or `-XX:MaxRAMPercentage`) does not cover metaspace, so a container sized only for the heap can be killed by the container runtime's OOM killer when metaspace grows beyond the remaining native memory budget.
+
+**What to do when running on Java 25:**
+
+Set an explicit metaspace ceiling with `-XX:MaxMetaspaceSize` so the JVM raises `OutOfMemoryError: Metaspace` before the container runtime kills the process:
+
+[source,bash]
+----
+java -Xmx512m -XX:MaxMetaspaceSize=256m -Dgrails.env=prod -jar application.jar
+----
+
+Or, using percentage-based heap sizing in a container:
+
+[source,bash]
+----
+java -XX:MaxRAMPercentage=60.0 -XX:MaxMetaspaceSize=256m -Dgrails.env=prod -jar application.jar
+----
+
+Tune `-XX:MaxMetaspaceSize` from a measured baseline: run the application under representative load, observe metaspace usage with `jcmd <pid> VM.metaspace`, and add a safety margin.
+
+The `-XX:+/-UseCompressedClassPointers` flag is deprecated in Java 25 and will be removed in a future release.
+
+* If your startup scripts pass `-XX:+UseCompressedClassPointers` (the default), remove it — it is superfluous.
+* If they pass `-XX:-UseCompressedClassPointers` to disable compressed class pointers, remove it.
+If you encounter class-space exhaustion after removing it, increase the class space with `-XX:CompressedClassSpaceSize=4g` instead.
+
+See <<java25-memory,Java 25 Memory Considerations>> in the deployment guide for full details, including systemd service unit examples and guidance on the metaspace free-ratio flags.

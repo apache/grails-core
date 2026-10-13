@@ -80,6 +80,46 @@ Configure writable paths explicitly when using a read-only root filesystem.
 Heap dumps and other diagnostics need a writable destination with sufficient space and controlled access.
 Keep JVM debugging and management interfaces private; they should not be exposed through the application's public ingress.
 
+[[java25-memory]]
+=== Java 25 Metaspace and Off-Heap Memory
+
+Java 25 uses more off-heap memory than earlier LTS releases. Metaspace has no upper limit by default (MaxMetaspaceSize is unlimited on every JDK since 8). Grails applications load many classes (plugins, Hibernate mappings, GSP-compiled views), so metaspace can make up a large part of the process's native memory.
+In a container environment this matters most: the JVM heap limit (`-Xmx` or `-XX:MaxRAMPercentage`) does not cover metaspace, so a container sized only for the heap can be killed by the container runtime's OOM killer when metaspace grows beyond the remaining native memory budget.
+
+**Recommended settings for Java 25:**
+
+Set an explicit metaspace ceiling so the JVM raises `OutOfMemoryError: Metaspace` before the container runtime kills the process:
+
+[source,bash]
+----
+java -Xmx512m -XX:MaxMetaspaceSize=256m -Dgrails.env=prod -jar application.jar
+----
+
+Or, using percentage-based heap sizing in a container:
+
+[source,bash]
+----
+java -XX:MaxRAMPercentage=60.0 -XX:MaxMetaspaceSize=256m -Dgrails.env=prod -jar application.jar
+----
+
+Tune `-XX:MaxMetaspaceSize` from a measured baseline: run the application under representative load, observe the metaspace usage with `jcmd <pid> VM.metaspace` or a monitoring agent, and add a safety margin.
+
+For a systemd service unit, add the flags to `ExecStart`:
+
+[source,ini]
+----
+ExecStart=/usr/bin/java \
+    -Xmx512m \
+    -XX:MaxMetaspaceSize=256m \
+    -Dgrails.env=prod \
+    -jar /opt/myapp/application.jar \
+    --spring.config.additional-location=file:/etc/myapp/
+----
+
+NOTE: The `-XX:+/-UseCompressedClassPointers` flag is deprecated in Java 25. Removal is scheduled (https://github.com/openjdk/jdk/commit/da296cbea1[JDK-8363996]) which makes `UseCompressedClassPointers` obsolete in JDK 27. This means the flag is accepted with a warning and ignored. Anyone who relies on `-XX:-UseCompressedClassPointers` will be using compressed class space on 27 whether or not they remove the flag.
+
+If your startup scripts pass `-XX:+UseCompressedClassPointers` (the default), remove it.
+
 == Graceful shutdown and rolling updates
 
 Spring Boot 4.1 enables graceful shutdown by default for supported embedded web servers.

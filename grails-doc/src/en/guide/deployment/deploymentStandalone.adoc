@@ -45,6 +45,7 @@ java -Xmx768m -Dgrails.env=prod -jar build/libs/myapp-0.1.jar \
 
 This example requires `/etc/myapp/` to exist. Place external `application.yml` or `application.properties` there.
 Size the heap for your workload and leave memory for metaspace, thread stacks, direct buffers, native libraries, and the operating system.
+Metaspace is unbounded by default; see link:deployment.html#java25-memory[Java 25 Metaspace and Off-Heap Memory] for recommended settings.
 
 If the application applies the Gradle `war` plugin, it can instead produce an executable WAR:
 
