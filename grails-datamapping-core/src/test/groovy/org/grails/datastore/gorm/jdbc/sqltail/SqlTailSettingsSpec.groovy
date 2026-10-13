@@ -78,17 +78,19 @@ class SqlTailSettingsSpec extends Specification {
 
     @RestoreSystemProperties
     void "a relative build directory is joined to the application directory when that is known"() {
-        given:
+        given: 'directories that are absolute on this platform, with a drive on Windows'
+        File applicationDir = new File('/apps/library').absoluteFile
+        File absoluteBuildDir = new File('/var/build').absoluteFile
         System.setProperty(SqlTailSettings.TARGET_DIR_PROPERTY, 'out/custom-build')
-        System.setProperty(SqlTailSettings.BASE_DIR_PROPERTY, '/apps/library')
+        System.setProperty(SqlTailSettings.BASE_DIR_PROPERTY, applicationDir.path)
 
         expect:
-        SqlTailSettings.defaultFile() == new File('/apps/library/out/custom-build', 'sql-tail/capture.log')
+        SqlTailSettings.defaultFile() == new File(new File(applicationDir, 'out/custom-build'), 'sql-tail/capture.log')
 
         when: 'the build directory is absolute'
-        System.setProperty(SqlTailSettings.TARGET_DIR_PROPERTY, '/var/build')
+        System.setProperty(SqlTailSettings.TARGET_DIR_PROPERTY, absoluteBuildDir.path)
 
         then:
-        SqlTailSettings.defaultFile() == new File('/var/build', 'sql-tail/capture.log')
+        SqlTailSettings.defaultFile() == new File(absoluteBuildDir, 'sql-tail/capture.log')
     }
 }

@@ -33,14 +33,14 @@ class SqlTailRendererSpec extends Specification {
         summary.add(record('r1', 'book/show', 'GET /book/show/1', 'select b1_0.id from book b1_0 where b1_0.id=?'))
         summary.add(record('r2', 'book/index', 'GET /book/index', 'select b1_0.id from book b1_0'))
         SqlTailRenderer renderer = new SqlTailRenderer(out, false)
+        File file = new File('build/sql-tail/capture.log')
 
         when:
-        renderer.renderTitle(new File('build/sql-tail/capture.log'), summary, false)
+        renderer.renderTitle(file, summary, false)
         renderer.renderPages(summary, 30)
 
         then:
-        output() == '''\
-sql-tail build/sql-tail/capture.log  5 statements in 2 requests
+        output() == "sql-tail ${file}  5 statements in 2 requests\n" + '''\
 PAGE        REQUESTS  AVG/REQ    MAX   TOTAL  MOST REPEATED IN ONE REQUEST
 book/show          1      4.0      4       4  3× select ... from author a1_0 where a1_0.id=?
 book/index         1      1.0      1       1  1× select ... from book b1_0
@@ -162,8 +162,9 @@ Statements of book/show
         output() == '\u001B[H\u001B[2J\n' + ('=' * 80) + '\n'
     }
 
+    /** The output with the platform's line separator, which println writes, read as a newline. */
     private String output() {
-        new String(bytes.toByteArray(), 'UTF-8')
+        new String(bytes.toByteArray(), 'UTF-8').replace(System.lineSeparator(), '\n')
     }
 
     private static SqlTailRecord record(String requestId, String page, String request, String sql) {

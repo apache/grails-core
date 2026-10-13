@@ -152,8 +152,9 @@ class SqlTailRunnerSpec extends Specification {
         thread.join(TimeUnit.SECONDS.toMillis(10))
     }
 
+    /** The output with the platform's line separator, which println writes, read as a newline. */
     private String output() {
-        new String(bytes.toByteArray(), 'UTF-8')
+        new String(bytes.toByteArray(), 'UTF-8').replace(System.lineSeparator(), '\n')
     }
 
     private static String line(String requestId, String page, String sql) {
