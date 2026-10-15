@@ -73,4 +73,20 @@ class MongoSyncSpec extends ApplicationContextSpec implements CommandOutputFixtu
         template.contains('implementation "org.mongodb:mongodb-driver-sync"')
         template.contains('testImplementation "org.testcontainers:testcontainers-mongodb"')
     }
+
+    void 'Grails Data owns the Mongo URLs when the synchronous driver is also selected'() {
+        when:
+        GeneratorContext ctx = buildGeneratorContext(features)
+
+        then:
+        ctx.configuration.get('environments.development.grails.mongodb.url') == 'mongodb://embedded/devDb'
+        ctx.configuration.get('environments.test.grails.mongodb.url') == 'mongodb://embedded/testDb'
+        ctx.configuration.get('grails.mongodb.url') == 'mongodb://${MONGO_HOST:localhost}:${MONGO_PORT:27017}/prodDb'
+
+        where:
+        features << [
+                ['gorm-mongodb', 'mongo-sync', 'mongodb-testing-support'],
+                ['mongodb-testing-support', 'mongo-sync', 'gorm-mongodb']
+        ]
+    }
 }

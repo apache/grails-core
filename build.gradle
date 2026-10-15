@@ -46,6 +46,9 @@ ext {
             DateTimeFormatter.ISO_DATE.format(LocalDate.ofInstant(buildInstant as Instant, ZoneOffset.UTC))
     buildDate = (buildInstant as Instant).atZone(ZoneOffset.UTC) // for reproducible builds
     isCiBuild = System.getenv().get('CI') as Boolean
+    // GitHub Actions sets GITHUB_EVENT_NAME on every step; a pull request run restores the Gradle
+    // user home read-only from the base branch, so it reuses whatever that branch last resolved
+    isPullRequestBuild = System.getenv('GITHUB_EVENT_NAME') == 'pull_request'
     // Set DO_NOT_CACHE_TESTS=1 to force test tasks to re-run on every invocation without
     // needing --rerun-tasks. Useful for repeatedly running the same test command while
     // chasing flaky tests across runs.
@@ -170,7 +173,15 @@ subprojects {
 
     configurations.configureEach {
         resolutionStrategy {
-            def cacheHours = isCiBuild || isReproducibleBuild ? 0 : 24
+            // Push and release runs always refetch dynamic versions and snapshots so they test what the
+            // repositories serve now. A pull request run reuses metadata the base branch resolved within
+            // the last day, so a repository that is down or slow does not fail the run at configuration time.
+            // validateDependencyVersions rejects dynamic versions, so in practice the cache covers only the
+            // snapshots in dependencies.gradle (Asset Pipeline, SiteMesh, grails-publish between releases):
+            // a pull request sees the snapshot the base branch last resolved, for up to a day. To test a
+            // newer snapshot sooner, push to the base branch, which refetches it and saves the Gradle user
+            // home that pull request runs restore, or run the build with --refresh-dependencies.
+            def cacheHours = (isCiBuild && !isPullRequestBuild) || isReproducibleBuild ? 0 : 24
             cacheDynamicVersionsFor(cacheHours, 'hours')
             cacheChangingModulesFor(cacheHours, 'hours')
         }

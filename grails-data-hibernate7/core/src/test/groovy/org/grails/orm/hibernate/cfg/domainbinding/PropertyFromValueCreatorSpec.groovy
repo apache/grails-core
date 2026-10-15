@@ -19,12 +19,16 @@
 
 package org.grails.orm.hibernate.cfg.domainbinding
 
+import org.hibernate.mapping.ManyToOne
 import org.hibernate.mapping.Property
 import org.hibernate.mapping.Table
 import org.hibernate.mapping.Value
 import spock.lang.Specification
 
+import org.grails.orm.hibernate.cfg.HibernateCompositeIdentity
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToOneProperty
 import org.grails.orm.hibernate.cfg.domainbinding.binder.PropertyBinder
 import org.grails.orm.hibernate.cfg.domainbinding.util.PropertyFromValueCreator
 
@@ -81,5 +85,33 @@ class PropertyFromValueCreatorSpec extends Specification {
         1 * value.setTypeUsingReflection("com.example.MyEntity", "myProp")
         0 * value.createForeignKey()
         prop.getValue() == value
+    }
+
+    def "a many-to-one to a #identifier identifier #outcome Hibernate's foreign key, which pairs the columns by position"() {
+        given:
+        def propertyBinder = Mock(PropertyBinder)
+        def creator = new PropertyFromValueCreator(propertyBinder)
+
+        def value = Mock(ManyToOne)
+        def grailsProperty = Mock(HibernateToOneProperty)
+        def associatedEntity = Mock(GrailsHibernatePersistentEntity)
+
+        grailsProperty.getOwnerClassName() >> "com.example.MyEntity"
+        grailsProperty.getName() >> "parent"
+        grailsProperty.getHibernateAssociatedEntity() >> associatedEntity
+        associatedEntity.getHibernateCompositeIdentity() >> compositeIdentity
+        value.getTable() >> new Table("my_table")
+        propertyBinder.bindProperty(grailsProperty, value) >> new Property()
+
+        when:
+        creator.createProperty(value, grailsProperty)
+
+        then: 'the composite identifier binder pairs the columns of a composite key with the identifier columns itself'
+        foreignKeys * value.createForeignKey()
+
+        where:
+        identifier  | compositeIdentity                             || foreignKeys | outcome
+        'simple'    | Optional.empty()                              || 1           | 'gets'
+        'composite' | Optional.of(new HibernateCompositeIdentity()) || 0           | 'does not get'
     }
 }

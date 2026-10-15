@@ -42,7 +42,7 @@ import org.gradle.api.provider.Provider
 class GrailsCodeStylePlugin implements Plugin<Project> {
 
     // The directory-override keys keep the legacy 'grails.codestyle.dir.*' names so existing
-    // project configuration (e.g. grails-forge's custom checkstyle dir) keeps working unchanged.
+    // projects with custom Checkstyle or CodeNarc directories keep working unchanged.
     static String CHECKSTYLE_DIR_PROPERTY = 'grails.codestyle.dir.checkstyle'
     static String CHECKSTYLE_ENABLED_PROPERTY = 'grails.code-style.enabled.checkstyle'
     static String CHECKSTYLE_CONFIG_FILE_NAME = 'checkstyle.xml'

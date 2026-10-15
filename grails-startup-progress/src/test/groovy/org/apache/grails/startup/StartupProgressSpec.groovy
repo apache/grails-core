@@ -1057,10 +1057,12 @@ class StartupProgressSpec extends Specification {
     /**
      * A page load as a browser makes it, with the fetch metadata browsers send on navigation. It goes
      * through {@link HttpClient} because {@link HttpURLConnection} silently drops {@code Sec-} headers.
+     * Every page load here expects an answer, so one that gets none fails with the reason. It waits as long
+     * as the rest of this spec does, since a CI runner can take seconds to take a connection or answer.
      */
     private Response pageLoad(String path) {
         HttpRequest.Builder builder = HttpRequest.newBuilder(URI.create("http://localhost:${port}${path}"))
-                .timeout(Duration.ofSeconds(10))
+                .timeout(Duration.ofSeconds(30))
                 .header('Accept', HTML)
                 .header('Sec-Fetch-Mode', 'navigate')
                 .header('Sec-Fetch-Dest', 'document')
@@ -1068,7 +1070,7 @@ class StartupProgressSpec extends Specification {
             builder.header('Cookie', cookie)
         }
         HttpRequest request = builder.build()
-        try (HttpClient client = HttpClient.newBuilder().version(HttpClient.Version.HTTP_1_1).connectTimeout(Duration.ofSeconds(2)).build()) {
+        try (HttpClient client = HttpClient.newBuilder().version(HttpClient.Version.HTTP_1_1).connectTimeout(Duration.ofSeconds(15)).build()) {
             HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString())
             return new Response(
                     status: response.statusCode(),
@@ -1077,9 +1079,6 @@ class StartupProgressSpec extends Specification {
                     cacheControl: response.headers().firstValue('Cache-Control').orElse(null),
                     retryAfter: response.headers().firstValue('Retry-After').orElse(null),
                     body: response.body())
-        }
-        catch (IOException ignored) {
-            return null
         }
     }
 
@@ -1092,8 +1091,8 @@ class StartupProgressSpec extends Specification {
             connection.setRequestProperty('Cookie', cookie)
         }
         headers.each { String name, String value -> connection.setRequestProperty(name, value) }
-        connection.connectTimeout = 2000
-        connection.readTimeout = 10_000
+        connection.connectTimeout = 15_000
+        connection.readTimeout = 30_000
         connection.setRequestProperty('Accept', accept)
         try {
             if (method == 'POST') {
@@ -1130,9 +1129,32 @@ class StartupProgressSpec extends Specification {
         }
     }
 
+    /**
+     * A port nothing listens on. The application binds every address, which succeeds even when another process
+     * listens on the port on the loopback address alone, and that process then answers this spec's requests to
+     * localhost, so a port held there is not free.
+     */
     private static int freePort() {
-        try (ServerSocket socket = new ServerSocket(0)) {
-            return socket.localPort
+        for (int attempt = 0; attempt < 100; attempt++) {
+            int candidate
+            try (ServerSocket socket = new ServerSocket(0)) {
+                candidate = socket.localPort
+            }
+            if (isFreeOnLoopback(candidate)) {
+                return candidate
+            }
+        }
+        throw new IllegalStateException('No port is free on the loopback address as well as on every address')
+    }
+
+    private static boolean isFreeOnLoopback(int port) {
+        try (ServerSocket socket = new ServerSocket()) {
+            socket.reuseAddress = false
+            socket.bind(new InetSocketAddress(InetAddress.loopbackAddress, port))
+            return true
+        }
+        catch (IOException ignored) {
+            return false
         }
     }
 

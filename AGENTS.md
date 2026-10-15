@@ -62,6 +62,7 @@ export GRADLE_OPTS="-Dorg.gradle.jvmargs=-Xmx4G"
 13. **Mandatory test coverage** - Any class touched in a commit MUST be covered with tests that verify all behavior. You must run ALL tests in the affected module(s) and ensure they pass before committing.
 14. **The BOM must manage the latest version** - `validateDependencyVersions` enforces that the BOM (`dependencies.gradle`) manages a version `>=` every transitively-resolved version. When it fails, **bump the version in `dependencies.gradle`** so the BOM wins — never silence it with `allowedBomOverrides` or an exclusion unless there is an explicit, documented conflict or an agreed-upon workaround. See [Dependency Management](#dependency-management).
 15. **GitHub Actions must use ASF-approved references** - Every third-party action SHA must appear in the ASF allowlist; `actions/*` use the full tag of their latest release and `apache/*` use version or branch references, never SHAs. See [GitHub Actions](#github-actions).
+16. **Workflows cache Gradle through one policy** - Every `setup-gradle` step takes `cache-read-only` from `.github/actions/gradle-cache-policy`; never write `true` or `false` there, never cache `~/.gradle` with `actions/cache`, and never pass `cache-writer` outside the core build. See [Gradle caching](#gradle-caching).
 
 ## Available Skills
 
@@ -71,6 +72,7 @@ export GRADLE_OPTS="-Dorg.gradle.jvmargs=-Xmx4G"
 > - Writing Java code → Read `.agents/skills/java-developer/SKILL.md`
 > - Writing or changing Gradle builds → Read `.agents/skills/gradle-developer/SKILL.md`
 > - Upgrading applications to Grails 8 → Read `.agents/skills/grails-8-upgrade/SKILL.md`
+> - Using AI models from a Grails application → Read `.agents/skills/grails-ai-developer/SKILL.md`
 > - Writing Hibernate code → Read `.agents/skills/hibernate-developer/SKILL.md`
 > - Fixing style/analysis violations → Read `.agents/skills/violation-fixer/SKILL.md`
 > - Fixing broken test → Read `.agents/skills/test-fixer/SKILL.md`
@@ -84,6 +86,7 @@ export GRADLE_OPTS="-Dorg.gradle.jvmargs=-Xmx4G"
 | **groovy-developer** | `.agents/skills/groovy-developer/SKILL.md` | Groovy 5 syntax, closures, DSLs, Spock |
 | **gradle-developer** | `.agents/skills/gradle-developer/SKILL.md` | Gradle 9 builds, BOM/platforms, convention plugins, wrappers |
 | **grails-8-upgrade** | `.agents/skills/grails-8-upgrade/SKILL.md` | Upgrading Grails applications from 7.x to 8 |
+| **grails-ai-developer** | `.agents/skills/grails-ai-developer/SKILL.md` | Using AI models from an application: providers, chat client, streaming, testing |
 | **java-developer** | `.agents/skills/java-developer/SKILL.md` | Java 21 features, Groovy interop |
 | **hibernate-developer** | `.agents/skills/hibernate-developer/SKILL.md` | Hibernate 7 mapping, binders, generators |
 | **violation-fixer** | `.agents/skills/violation-fixer/SKILL.md` | Fix style/analysis violations (CodeNarc, Checkstyle, PMD, SpotBugs) |
@@ -131,7 +134,7 @@ This repository contains multiple independent Gradle projects:
 | **grails-core** (root) | Main framework with 60+ modules | `./gradlew build` |
 | **build-logic/** | Gradle convention plugins for the build | `cd build-logic && ./gradlew build` |
 | **grails-gradle/** | Grails Gradle plugins | `cd grails-gradle && ./gradlew build` |
-| **grails-forge/** | Application generator (like Spring Initializr) | `cd grails-forge && ./gradlew build` |
+| **grails-forge/** | Application generator (like Spring Initializr): a Grails plugin (`grails-forge-core`) hosted by a Grails web application (`grails-forge-web`) and a non-web Grails application (`grails-forge-cli`), consuming the framework by coordinates | `cd grails-forge && ./gradlew build` |
 | **end-to-end/** | End-to-end tests consuming published Grails artifacts (see `end-to-end/README.md` for required setup) | `cd end-to-end && ./gradlew check` |
 
 Each project has its own `settings.gradle` and independent build. When working on a specific project, run Gradle commands from that project's directory.
@@ -144,6 +147,7 @@ All managed dependency versions live in `dependencies.gradle` (the single source
 - **Do not suppress validation to work around a bump.** `allowedBomOverrides` (per-project ext) and dependency exclusions are reserved for an explicit, documented conflict or an agreed-upon workaround — never as a shortcut to silence a version the BOM should simply manage. Comment the reason when you must use one.
 - **A dependency managed in more than one BOM must use the *same* version everywhere.** Versions appear in `gradleBomDependencyVersions` (build tooling / `grails-gradle-bom`), `bomDependencyVersions` (`grails-bom`), and per-BOM `customBomVersions` blocks (e.g. `grails-hibernate7-bom`). `grails-bom` re-declares the gradle-BOM constraints, and the Hibernate BOMs are consumed via `enforcedPlatform`. Declaring one coordinate (e.g. `org.ow2.asm:asm`) at two different versions across these maps produces irreconcilable strict constraints and breaks `enforcedPlatform` resolution. Pin it once, consistently.
 - **Only libraries the Grails project also works on may use a snapshot version.** Between releases, `dependencies.gradle` often points at a `-SNAPSHOT` or release-candidate version of one of our own libraries, such as the Asset Pipeline (`cloud.wondrify`), SiteMesh 3 (`org.sitemesh`), or the Grails Publish plugin (`org.apache.grails.gradle:grails-publish`). These are switched to their published version before a Grails release (see `RELEASE.md`). Do not suggest replacing them with a released version, and do not flag them in reviews. Never use a snapshot of any other library, such as Jackson or Spring. The snapshot repositories in `GrailsRepoSettingsPlugin` only serve the `org.apache.grails*`, `org.apache.groovy*`, `cloud.wondrify*`, and `org.sitemesh*` groups, so a snapshot of any other library will not resolve (unless `GRAILS_INCLUDE_MAVEN_LOCAL` is set for a local build). Do not widen those content filters to get one.
+- **No dynamic versions in any BOM-bearing configuration.** The same task fails when any dependency of a BOM-bearing configuration is requested with a version range, a `+` prefix, or a `latest.*` selector, even when a BOM constraint overrides it (Gradle's own `failOnDynamicVersions()` misses that case). A dynamic version makes every resolution list the module's versions in the repository once the listing cache expires, which is every CI build, so the build depends on the repository answering even when every artifact is cached. Fix it where the range enters the graph: a build script of this repository pins the version or uses the BOM-managed coordinate; for a published module, exclude the module from that dependency and declare the BOM-managed coordinate next to it (see the `ehcache` declaration in `grails-spring-security`); a dependency *constraint* with a range (marked `(constraint)`, as Hibernate publishes for `log4j-core`) is not removed by an exclusion and needs a component metadata rule. `allowedDynamicVersions` (per-project ext, `group:name` keys) is the last resort, with a commented reason.
 - **Prefer inheriting from the Spring Boot BOM.** Do not re-pin a coordinate that `spring-boot-dependencies` (4.1.x) already manages unless you are intentionally overriding it to a newer version (e.g. a security fix); note the reason inline.
 - **An override of a Spring Boot managed version must use Spring Boot's property name, and must change the version.** `validateBomProperties` (plugin `org.apache.grails.buildsrc.bom-property-validator`, run in its own CI job) checks the POM each Grails BOM publishes against `spring-boot-dependencies` (`parentBoms` in `dependencies.gradle`). It fails when a pin is declared under a different property than the one Boot controls it with - for a module Boot manages through an imported BOM, that is the import's property (`jackson-bom.version`, not `jackson3.version`) - and when a pin repeats Boot's version. Rename the version key (and the dependency keys that must prefix it) or drop the pin.
 - **Every version key must be used.** The same task (opt out with `-PskipBomPropertyValidation`, not `skipDependencyValidation`) fails when a version property a BOM owns (`bomVersionProperties` in each BOM's build script) is used by no entry of its published POM - a key no dependency references, or one whose dependency keys do not reduce to it. Delete the key or add the dependency that should use it. The few deliberate exceptions to these rules live, each with its reason, in `bomUnusedVersionExemptions` / `bomPropertyNameExemptions` / `bomRedundantVersionExemptions` in `dependencies.gradle`.
@@ -296,6 +300,23 @@ Rules:
 - `actions/*` and `apache/*` (including our own `apache/grails-github-actions`) are allowed by namespace, so every version is approved. Reference `actions/*` by the full tag of the latest release (for example `actions/checkout@v7.0.1`, not `@v7`), and our own actions by branch (for example `apache/grails-github-actions/pre-release@asf`). Never pin either by SHA; `validateRepositoryConventions` rejects SHA pins for these namespaces and `actions/*` references that are not a full `vX.Y.Z` tag.
 - Do not use a newer third-party SHA, tag, or major version until it is on the allowlist. If you need a new pin, open a PR against `apache/infrastructure-actions` (`actions.yml`, not the generated `approved_patterns.yml`).
 - Before adding or bumping a third-party `uses:` line, search `approved_patterns.yml` for that action and copy an approved SHA.
+
+### Gradle caching
+
+GitHub keeps about 10 GB of Actions cache per repository and evicts the least recently used entries. A run can restore entries only from its own branch and the default branch, and a pull request also from its base branch. The workflows are arranged around those two limits:
+
+- The Gradle User Home is cached only by `gradle/actions/setup-gradle`, with its default provider. Do not add an `actions/cache` step for `~/.gradle`, `cache-disabled`, or `cache-provider: basic`; release verification is the one job left uncached on purpose.
+- Every `setup-gradle` step is preceded by the local action `.github/actions/gradle-cache-policy` and takes `cache-read-only` from its `read-only` output. A job that fetches this repository with a sparse checkout must list `.github/actions` in it, or the action is not there to run. Do not write `true` or `false` there: the policy lives in that action, so changing it means editing one file on the oldest release branch and merging up.
+- Only the core build job (`build` in `gradle.yml`) passes `cache-writer`, from the one matrix entry per OS flagged `cache_writer: true`. A new job or workflow never passes it.
+- The action lets a writer save only on a push or dispatch, only on a branch whose major version is at least the default branch's, and, for Windows and macOS, only on that major's first branch (`x.0.x`). With 8.0.x as the default branch, 7.x never writes, Linux writes on every 8.x and 9.x branch, and Windows and macOS write on 8.0.x and 9.0.x. The rule follows the default branch: when a new one is promoted, older majors stop writing without an edit.
+- A cache whose content is the same on every branch, such as the mongod download the embedded MongoDB tests run, is restored everywhere but saved only by a push to the default branch, whose entries every branch can read. Use separate `actions/cache/restore` and `actions/cache/save` steps for it, never the combined `actions/cache` step, which saves on every branch and pull request.
+
+Why it is this way:
+
+- When every job saved on every push (about 25 entries and 3.5 GiB per push on 8.x), the cache stayed over its limit and evicted entries within hours. Jobs then started with an empty Gradle User Home and downloaded everything, and a single transient "Could not find" from Maven Central or the Gradle plugin portal failed them. Gradle does not retry a "not found".
+- Minor branches cannot read their major's entries, only the default branch's, so an older major's entries serve only the branch that wrote them. Writing them took space the active lines needed.
+- `setup-gradle` restores the newest entry whose key starts with the job's id before it falls back to the newest entry for the OS. With many writers, the core `build` job restored the `buildForge` job's entry and lacked artifacts only the core build uses. One writer per OS leaves one candidate.
+- A writer saves about 0.9 GiB per OS and branch, so the rule keeps the cache near 7 GiB.
 
 ## Branch Naming (Auto-Labels PRs)
 

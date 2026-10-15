@@ -21,7 +21,7 @@ package org.grails.forge.feature.spring
 
 import spock.lang.Unroll
 
-import org.grails.forge.BeanContextSpec
+import org.grails.forge.ApplicationContextSpec
 import org.grails.forge.BuildBuilder
 import org.grails.forge.application.ApplicationType
 import org.grails.forge.fixture.CommandOutputFixture
@@ -29,7 +29,7 @@ import org.grails.forge.options.DevelopmentReloading
 import org.grails.forge.options.Options
 import org.grails.forge.options.ServletImpl
 
-class SpringBootSpec extends BeanContextSpec implements CommandOutputFixture {
+class SpringBootSpec extends ApplicationContextSpec implements CommandOutputFixture {
 
     @Unroll
     void "test spring boot starter dependencies for #applicationType application"() {

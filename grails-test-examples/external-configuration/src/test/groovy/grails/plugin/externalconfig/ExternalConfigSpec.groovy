@@ -196,6 +196,37 @@ class ExternalConfigSpec extends Specification implements GrailsUnitTest {
         file.delete()
     }
 
+    @RestoreSystemProperties
+    @Unroll("external yml document with sequence profile selector and active profiles #activeProfiles")
+    def "external yml documents with sequence profile selectors are loaded only for a matching profile"() {
+        given:
+        System.setProperty('spring.profiles.active', activeProfiles)
+        def file = File.createTempFile('external-config-sequence-profile', '.yml')
+        file.text = """\
+            sequence.config: default
+            ---
+            spring.config.activate.on-profile: [alpha, beta]
+            sequence.config: selected
+            """.stripIndent()
+
+        and:
+        addToEnvironment('grails.config.locations': ["file:${file.absolutePath}"])
+
+        when:
+        listener.environmentPrepared(null, environment)
+
+        then:
+        getConfigProperty('sequence.config') == expectedValue
+
+        cleanup:
+        file.delete()
+
+        where:
+        activeProfiles | expectedValue
+        'gamma'        | 'default'
+        'dev,beta'     | 'selected'
+    }
+
     @Unroll("when getting #configExtension config with file in classpath")
     def "when getting config with file in classpath"() {
         given:

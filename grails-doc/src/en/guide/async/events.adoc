@@ -19,7 +19,7 @@ under the License.
 
 Grails 3.3 introduces a new Events API that replaces the previous implementation that was based on Reactor 2.x (which is no longer maintained and deprecated).
 
-In Grails 3.3 and above a new link:{api}grails/events/bus/EventBus.html[EventBus] abstraction has been introduced. Like the `PromiseFactory` notion, there are implementations of the `EventBus` interface for common asynchronous frameworks like GPars and RxJava.
+In Grails 3.3 and above a new link:{api}grails/events/bus/EventBus.html[EventBus] abstraction has been introduced. Like the `PromiseFactory` notion, there are implementations of the `EventBus` interface for common asynchronous frameworks like Groovy's `groovy.concurrent` actors and RxJava, as well as a deprecated implementation for GPars.
 
 To use the Grails Events abstraction you should add a dependency on the `events` plugin to your `build.gradle` file:
 
@@ -47,7 +47,11 @@ The following table summarizes async framework support and the necessary depende
 |===
 |Framework | Dependency | Implementation Class
 
-|GPars 1.2.x
+|Groovy `groovy.concurrent`
+|`grails-events-groovy-concurrent`
+|`org.grails.events.groovy.ActorEventBus`
+
+|GPars 1.2.x (deprecated)
 |`grails-events-gpars`
 |`org.grails.events.gpars.ActorEventBus`
 
@@ -64,3 +68,5 @@ The following table summarizes async framework support and the necessary depende
 |`org.grails.events.rxjava3.RxEventBus`
 
 |===
+
+The GPars event bus is deprecated and will be removed in a future release; Groovy 6 provides actors in `groovy.concurrent`, which the `grails-events-groovy-concurrent` bus uses. Replace the dependency rather than adding both, because the event bus builder refuses to start when more than one `EventBus` implementation is on the classpath.

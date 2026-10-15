@@ -1,0 +1,48 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+=== Upgrade Instructions for Grails and Related Dependencies
+
+To ensure compatibility with Grails {version}, please review the following upgrade instructions carefully.
+This guide outlines the necessary steps and warnings to upgrade your Grails project from Grails 8.x to Grails 9.
+
+==== 1. GPars Integration Deprecated in Favour of Groovy Concurrency
+
+Grails 9 builds on Groovy 6, which brings a unified concurrency and parallel-processing toolkit into core under https://groovy-lang.org/releasenotes/groovy-6.0.html#concurrency-toolkit[GEP-18: Integrated Concurrency and Parallel Processing]. The `groovy.concurrent` package provides `Awaitable`, `DataflowVariable`, `Actor`, `Agent`, `Pool`, `ParallelScope` and the parallel collection methods such as `eachParallel` and `collectParallel`. The Groovy release notes describe the toolkit as modernising the patterns from GPars around virtual threads, structured concurrency and Groovy 6's `async`/`await`, and state that previous users of GPars will find much of its functionality there.
+
+With those patterns part of the language, Grails no longer needs the separate GPars library, which was last released in 2014 and depends on Groovy 2.x and the Multiverse STM engine. The `grails-async-gpars` and `grails-events-gpars` modules remain available in Grails 9 but are deprecated for removal: their classes carry `@Deprecated(since = '9.0', forRemoval = true)` and log a warning when selected. They will be removed in a future release.
+
+Their replacements are `grails-async-groovy-concurrent`, providing `org.grails.async.factory.groovy.AwaitablePromiseFactory`, and `grails-events-groovy-concurrent`, providing `org.grails.events.groovy.ActorEventBus`. Both are selected the same way the GPars modules are, by adding the dependency in place of the GPars one:
+
+[source,groovy]
+.build.gradle
+----
+runtimeOnly 'org.apache.grails.async:grails-async-groovy-concurrent'
+runtimeOnly 'org.apache.grails.events:grails-events-groovy-concurrent'
+----
+
+Do not keep both the GPars and the Groovy module on the classpath: only the first service-loaded `PromiseFactory` is used, and the event bus builder refuses to start when more than one `EventBus` implementation is found.
+
+The Groovy promise factory follows the failure contract of the default `CompletableFuture` factory rather than the GPars one: direct and chained `get()` calls throw `ExecutionException` with the original failure as the cause, a single-promise `onError` recovers with its callback result, and the aggregate `onError` observes the failure and leaves the returned promise failed. `onComplete` and `then` return a new promise instead of the receiver. Promises created by this factory are also Groovy `Awaitable` instances and can be passed to `await` directly.
+
+The Groovy actor event bus delivers each event to its subscribers in publication order on a single Groovy actor. A subscriber that throws without a reply handler is logged and does not stop delivery to the remaining subscribers or later events.
+
+Applications that use GPars directly, for example `GParsPool.withPool { list.eachParallel { } }`, should move to the Groovy equivalents: the parallel collection methods are available on every `Collection` without a pool, and `groovy.concurrent.ParallelScope.withPool(n) { scope -> list.eachParallel { } }` runs them on a pool of a chosen size. Once the deprecated modules are removed, Grails will no longer bring GPars onto the classpath, so an application that still needs it must declare `org.codehaus.gpars:gpars` itself.
+
+NOTE: Groovy 6 marks the concurrency toolkit as incubating. The Grails modules that build on it expose only the Grails `Promise` and `EventBus` contracts, so changes to the Groovy API in later Groovy releases are absorbed by Grails rather than by application code.

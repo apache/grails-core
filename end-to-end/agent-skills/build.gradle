@@ -39,6 +39,7 @@ group = 'agentskills'
 dependencies {
     skill 'org.apache.grails.skills:grails-developer'
     skill 'org.apache.grails.skills:grails-8-upgrade'
+    skill 'org.apache.grails.skills:grails-ai-developer'
 }
 
 // extractSkillsJars replaces everything in this directory. An application at the root of its

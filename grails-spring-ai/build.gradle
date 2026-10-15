@@ -1,0 +1,96 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ */
+
+plugins {
+    id 'groovy'
+    id 'java-library'
+    id 'project-report'
+    id 'org.apache.grails.buildsrc.properties'
+    id 'org.apache.grails.buildsrc.dependency-validator'
+    id 'org.apache.grails.buildsrc.compile'
+    id 'org.apache.grails.buildsrc.publish'
+    id 'org.apache.grails.buildsrc.sbom'
+    id 'org.apache.grails.buildsrc.vulnerability-scan'
+    id 'org.apache.grails.gradle.grails-code-style'
+    id 'org.apache.grails.gradle.grails-plugin'
+    id 'org.apache.grails.gradle.grails-jacoco'
+}
+
+version = projectVersion
+group = 'org.apache.grails'
+
+ext {
+    pomTitle = 'Grails Spring AI Plugin'
+    pomDescription = 'Integrates Spring AI with Grails applications: Spring AI versions managed by the Grails BOM, ' +
+            'environment-aware defaults and chat responses streamed from controller actions'
+}
+
+dependencies {
+
+    implementation platform(project(':grails-bom'))
+
+    api 'org.springframework.ai:spring-ai-client-chat', {
+        // api: ChatClient, the fluent API an application programs against
+        // impl: ChatClientResponse
+    }
+    api 'org.springframework.ai:spring-ai-model', {
+        // api: ChatModel, ChatResponse, Message, the model abstractions an application programs against
+    }
+    api 'io.projectreactor:reactor-core', {
+        // api: Flux, what ChatClient.stream() returns and an action returns to stream a response
+    }
+    // Auto-configuration shared by every provider, so a ChatClient.Builder exists however the model is added
+    runtimeOnly 'org.springframework.ai:spring-ai-autoconfigure-model-chat-client' // ChatClient.Builder
+    runtimeOnly 'org.springframework.ai:spring-ai-autoconfigure-model-chat-memory' // ChatMemory
+    runtimeOnly 'org.springframework.ai:spring-ai-autoconfigure-model-tool' // ToolCallingManager
+    runtimeOnly 'org.springframework.ai:spring-ai-autoconfigure-retry' // RetryTemplate shared by the model clients
+    // Spring AI logs prompts and completions through observation handlers, which only an ObservationRegistry
+    // bean invokes; Boot's auto-configuration of one lives here, so the development defaults log without the actuator
+    runtimeOnly 'org.springframework.boot:spring-boot-micrometer-observation'
+
+    compileOnly project(':grails-core'), { // Provided as this is a Grails plugin
+        // api: Plugin
+    }
+    compileOnly project(':grails-async'), {
+        // impl: StreamItemRenderer, registered only when grails-async is present
+    }
+    compileOnly 'org.springframework:spring-core' // Ordered
+    compileOnly 'org.springframework.boot:spring-boot-autoconfigure' // @AutoConfiguration
+    compileOnly 'org.apache.groovy:groovy' // Provided as this is a Grails plugin
+    compileOnly 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation
+
+    testImplementation project(':grails-async')
+    testImplementation project(':grails-core')
+    testImplementation testFixtures(project(':grails-core')) // LogCapture, with Logback as the test logging binding
+    testImplementation 'org.apache.groovy:groovy-yaml'
+    testImplementation 'org.spockframework:spock-core'
+    testImplementation 'org.springframework:spring-test'
+    testImplementation 'org.springframework.ai:spring-ai-autoconfigure-model-chat-client' // ChatClientAutoConfiguration
+    testImplementation 'org.springframework.boot:spring-boot-autoconfigure'
+    testImplementation 'org.springframework.boot:spring-boot-micrometer-observation' // ObservationAutoConfiguration
+    testImplementation 'org.springframework.boot:spring-boot-test'
+
+    testRuntimeOnly 'org.assertj:assertj-core' // required by the spring-boot-test context runners
+}
+
+apply {
+    from rootProject.layout.projectDirectory.file('gradle/docs-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/grails-extension-gradle-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/test-config.gradle')
+}

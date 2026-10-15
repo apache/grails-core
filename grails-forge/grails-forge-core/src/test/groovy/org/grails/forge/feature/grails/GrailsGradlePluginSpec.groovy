@@ -19,7 +19,7 @@
 
 package org.grails.forge.feature.grails
 
-import org.grails.forge.BeanContextSpec
+import org.grails.forge.ApplicationContextSpec
 import org.grails.forge.BuildBuilder
 import org.grails.forge.application.ApplicationType
 import org.grails.forge.fixture.CommandOutputFixture
@@ -28,7 +28,7 @@ import org.grails.forge.options.JdkVersion
 import org.grails.forge.options.Options
 import org.grails.forge.options.TestFramework
 
-class GrailsGradlePluginSpec extends BeanContextSpec implements CommandOutputFixture {
+class GrailsGradlePluginSpec extends ApplicationContextSpec implements CommandOutputFixture {
 
     void "test build gradle file and gradle properties"() {
         when:

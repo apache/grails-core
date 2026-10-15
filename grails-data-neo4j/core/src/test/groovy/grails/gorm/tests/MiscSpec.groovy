@@ -26,7 +26,7 @@ import grails.gorm.dirty.checking.DirtyCheck
 import grails.neo4j.Neo4jEntity
 import grails.neo4j.mapping.MappingBuilder
 import groovy.beans.Bindable
-import groovyx.gpars.GParsPool
+import groovy.concurrent.ParallelScope
 
 import org.grails.datastore.gorm.neo4j.util.IteratorUtil
 import org.neo4j.driver.exceptions.ClientException
@@ -194,7 +194,7 @@ class MiscSpec extends Neo4jGormDatastoreSpec {
     // This test is failing due to a bug in the driver
     void "test concurrent native accesses"() {
         when:
-        GParsPool.withPool(concurrency) {
+        ParallelScope.withPool(concurrency) { scope ->
             (1..count).eachParallel { counter ->
                 def session = manager.boltDriver.session()
                 def tx = session.beginTransaction()
@@ -219,7 +219,7 @@ class MiscSpec extends Neo4jGormDatastoreSpec {
     // This test is failing due to a bug in the driver
     void "test concurrent accesses"() {
         when:
-        GParsPool.withPool(concurrency) {
+        ParallelScope.withPool(concurrency) { scope ->
             (1..count).eachParallel { counter ->
                 Team.withTransaction {
                     new Team(name: "Team $counter").save(flush:true, failOnError: true,validate:false)
@@ -315,7 +315,7 @@ class MiscSpec extends Neo4jGormDatastoreSpec {
     @Ignore("temporaritly removed since this seems to had side effect")
     def "verify concurrent adding does not cause LockingExceptions"() {
         when:
-        GParsPool.withPool(numberOfThreads) {
+        ParallelScope.withPool(numberOfThreads) { scope ->
             (1..numberOfTeams).eachParallel { counter ->
                 Team.withNewTransaction {
 

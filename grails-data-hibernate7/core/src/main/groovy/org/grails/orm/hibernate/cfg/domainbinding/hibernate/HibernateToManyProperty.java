@@ -53,6 +53,21 @@ import static org.grails.orm.hibernate.cfg.domainbinding.util.CascadeBehavior.SA
 /** Marker interface for Hibernate to-many associations */
 public interface HibernateToManyProperty extends PropertyWithMapping<PropertyConfig>, HibernateAssociation {
 
+    /**
+     * Decides whether a property is bound as a collection, with a collection table of its own, or as a plain
+     * column of its owner's table. A to-many property mapped with a user type or as {@code serializable} is a
+     * plain column. This is the single condition that {@code GrailsPropertyBinder} routes by and that the
+     * unique group key creation relies on.
+     *
+     * @param property the property to inspect
+     * @return true if the property is a to-many bound as a collection
+     */
+    static boolean isBoundAsCollection(HibernatePersistentProperty property) {
+        return property instanceof HibernateToManyProperty &&
+                !property.isUserButNotCollectionType() &&
+                !property.isSerializableType();
+    }
+
     default boolean hasSort() {
         return StringUtils.hasText(getHibernateMappedForm().getSort());
     }

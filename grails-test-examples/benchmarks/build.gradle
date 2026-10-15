@@ -131,6 +131,31 @@ tasks.register('jmhCompare', JavaExec) {
     mainClass = 'org.apache.grails.benchmarks.report.JmhCompare'
 }
 
+tasks.register('appIndyBench', JavaExec) {
+    group = 'verification'
+    description = 'Runs app-level HTTP benches for grailsIndy=false then true and compares JMH-shaped JSON.'
+    classpath = sourceSets.report.runtimeClasspath
+    mainClass = 'org.apache.grails.benchmarks.report.AppIndyBench'
+    def warmup = providers.gradleProperty('appBenchWarmup').orElse('200')
+    def samples = providers.gradleProperty('appBenchSamples').orElse('1000')
+    def chunks = providers.gradleProperty('appBenchChunks').orElse('10')
+    def maxWorkers = providers.gradleProperty('appBenchMaxWorkers').orElse('4')
+    // A relative -PappBenchOutDir resolves against the repository root, like the default, rather than
+    // against this project's directory, which is where the JavaExec process runs.
+    def rootDirectory = rootProject.layout.projectDirectory
+    def outputDir = providers.gradleProperty('appBenchOutDir')
+            .map { String path -> rootDirectory.dir(path).asFile.absolutePath }
+            .orElse(rootDirectory.dir('build/app-bench').asFile.absolutePath)
+    args(
+            '--project-dir', rootDirectory.asFile.absolutePath,
+            '--output-dir', outputDir.get(),
+            '--warmup', warmup.get(),
+            '--samples', samples.get(),
+            '--chunks', chunks.get(),
+            '--max-workers', maxWorkers.get()
+    )
+}
+
 // The jmh source set compiles and runs against everything main depends on.
 configurations.jmh.extendsFrom(configurations.implementation)
 

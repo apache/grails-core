@@ -67,7 +67,7 @@ This git repo is **several independent Gradle builds**, not one flat multiprojec
 | **Root framework** | repo root | 60+ published modules, BOMs, test-examples, profiles, docs | `./gradlew …` from root |
 | **build-logic** | `build-logic/` | Shared **convention plugins** via `includeBuild` | `cd build-logic && ./gradlew …` (or root pluginManagement includeBuild) |
 | **grails-gradle** | `grails-gradle/` | **Published** Grails Gradle plugins for apps | `cd grails-gradle && ./gradlew …` |
-| **grails-forge** | `grails-forge/` | App generator (own wrapper, own deps) | `cd grails-forge && ./gradlew …` |
+| **grails-forge** | `grails-forge/` | App generator: a Grails plugin and two Grails applications built against the framework by coordinates (`includeBuild('..')` substitution) | `cd grails-forge && ./gradlew …` |
 | **end-to-end** | `end-to-end/` | Tests against **published** artifacts in `build/local-maven` | Full 3-step flow below (see `end-to-end/README.md`) |
 | **gradle-bootstrap** | `gradle-bootstrap/` | Regenerates shared wrappers from `.sdkmanrc` | `gradle -p gradle-bootstrap` (see wrapper section) |
 
@@ -136,7 +136,7 @@ Presence-based flags (property **present**, value optional) match `skipFunctiona
 
 ## Gradle Version Sync (Hard Rule)
 
-Current line: **Gradle 9.8.0** (`distributionUrl` + `gradleToolingApiVersion=9.8.0`). Upstream may already ship a newer 9.8.x patch - this repo rides close to latest **only after** a deliberate multi-location bump PR. Do not "helpfully" jump one wrapper ahead of the rest.
+Current line: **Gradle 9.8.1** (`distributionUrl` + `gradleToolingApiVersion=9.8.1`). Upstream may already ship a newer 9.8.x patch - this repo rides close to latest **only after** a deliberate multi-location bump PR. Do not "helpfully" jump one wrapper ahead of the rest.
 
 **Two Groovy stacks:** Gradle itself embeds **Groovy 4** for build logic. Application/runtime code on 8.0.x is **Groovy 5**. That is why `dependencies.gradle` keeps separate maps:
 
@@ -162,7 +162,7 @@ Never unify those casually.
    - `grails-profiles/base/skeleton/` and `grails-profiles/profile/skeleton/`
    - `grails-shell-cli/src/test/resources/gradle-sample/` (and `bin/test` copy if present)
    - Forge **generated-app** wrapper assets (all of these - properties alone is not enough):
-     - `grails-forge/grails-forge-core/.../gradleWrapperProperties.rocker.raw` (properties template)
+     - `grails-forge/grails-forge-core/grails-app/views/forge/.../gradleWrapperProperties.gsp` (properties page)
      - `grails-forge/grails-forge-core/src/main/resources/gradle/gradlew`
      - `grails-forge/grails-forge-core/src/main/resources/gradle/gradlew.bat`
      - `grails-forge/grails-forge-core/src/main/resources/gradle/wrapper/gradle-wrapper.jar`
@@ -188,7 +188,7 @@ Also keep `gradlew.bat` LF line endings on this line (PR #15709). Comment at top
 | `projectVersion` | framework version |
 | `slf4jPreventExclusion` | `true` - Grails Gradle plugin POM behavior |
 
-CI vs local behavior is branched on `System.getenv('CI')` and `SOURCE_DATE_EPOCH` (reproducible builds disable remote cache).
+CI vs local behavior is branched on `System.getenv('CI')`, `GITHUB_EVENT_NAME` (a `pull_request` run keeps the 24 hour dynamic-version and changing-module cache that push and release runs set to zero, so it sees the snapshot the base branch last resolved; push to the base branch or run with `--refresh-dependencies` for a newer one) and `SOURCE_DATE_EPOCH` (reproducible builds disable remote cache).
 
 `groovydocMaxHeapSize` and `guideMaxHeapSize` are **not** keys in `gradle.properties` - do not add
 them. Each documentation JVM carries its own default (1g per groovydoc task, raised to 3g/2g by the
@@ -327,6 +327,8 @@ Applied via `org.apache.grails.buildsrc.dependency-validator`.
 
 Implementation detail (`GrailsDependencyValidatorPlugin`): for each resolved coordinate that the BOM also manages, it fails when **`bomVersion != resolvedVersion`** - any mismatch, not only "resolved is newer."
 
+It also fails when any edge of a BOM-bearing configuration **requests a dynamic version** (a range such as `[3,3.1)`, a `1.+` prefix, or `latest.*`), reported as `from -> group:name:version`. Gradle's `failOnDynamicVersions()` does not catch a range that a BOM constraint overrides, which is the usual shape, and the range still costs a version listing on every CI build (`cacheDynamicVersionsFor` is 0 there), so one failed request to Maven Central disables the repository for the whole build. The declarer carries a marker that says which fix applies: `(declared in a build script)` means pin the version or use the BOM-managed coordinate in that script; a published module means exclude the module from that dependency and declare the BOM-managed coordinate next to it, as `grails-spring-security` does for `jaxb-runtime` from `ehcache`; `(constraint)` means an exclusion has no effect (Hibernate 7 publishes a `strictly [2.17.1, 3[` constraint on `log4j-core`) and a component metadata rule (`components.withModule(...) { allVariants { withDependencyConstraints { ... } } }`) must rewrite it. `ext.allowedDynamicVersions = ['group:name']` with a commented reason is the last resort. Never widen `cacheDynamicVersionsFor` to hide it.
+
 How to fix by direction:
 
 | Situation | Fix |
@@ -334,6 +336,7 @@ How to fix by direction:
 | Transitive resolved **newer** than BOM | **Bump** the pin in `dependencies.gradle` so the BOM is `>=` the winner (usual case; AGENTS.md rule 14) |
 | Resolved **older** / forced / strict conflict | Find the force, strict constraint, or second platform pulling the other version; remove the force, align platforms, or document a deliberate override |
 | Intentional divergence that must stay | `ext.allowedBomOverrides = ['group:name', …]` with a **commented reason** - last resort |
+| A dependency **requests a range** (`from -> group:name:[a,b)` in the failure) | Build script: pin or use the BOM-managed coordinate. Published module: `exclude group:, module:` on that dependency plus the unversioned (BOM-managed) coordinate next to it. `(constraint)`: component metadata rule. Last resort: `ext.allowedDynamicVersions` with a reason |
 | Whole project cannot validate | Prefer `ext.skipDependencyValidation = true` in the build script. CLI: `-PskipDependencyValidation` is presence-based and skips validation; `-PskipDependencyValidation=true` is also valid. Use the documented form that best communicates intent. |
 
 Also:
@@ -652,16 +655,16 @@ Develocity: `https://develocity.apache.org` - build scans publish when authentic
 
 Use official docs for API signatures and deprecations (pin URLs to the version you are bumping toward):
 
-- [Gradle 9.8 release notes](https://docs.gradle.org/9.8.0/release-notes.html)
-- [Upgrading major version 9](https://docs.gradle.org/9.8.0/userguide/upgrading_major_version_9.html)
-- [Upgrading within Gradle 9.x](https://docs.gradle.org/9.8.0/userguide/upgrading_version_9.html)
-- [Java Library plugin](https://docs.gradle.org/9.8.0/userguide/java_library_plugin.html)
-- [Java Platform / BOM](https://docs.gradle.org/9.8.0/userguide/java_platform_plugin.html)
-- [Platforms](https://docs.gradle.org/9.8.0/userguide/platforms.html)
-- [Sharing build logic via included builds](https://docs.gradle.org/9.8.0/userguide/sharing_build_logic_between_subprojects.html)
-- [Task configuration avoidance](https://docs.gradle.org/9.8.0/userguide/task_configuration_avoidance.html)
-- [Configuration cache](https://docs.gradle.org/9.8.0/userguide/configuration_cache.html) and its [requirements](https://docs.gradle.org/9.8.0/userguide/configuration_cache_requirements.html)
-- [Version catalogs](https://docs.gradle.org/9.8.0/userguide/version_catalogs.html) (docs like them - **this repo does not**)
+- [Gradle 9.8 release notes](https://docs.gradle.org/9.8.1/release-notes.html)
+- [Upgrading major version 9](https://docs.gradle.org/9.8.1/userguide/upgrading_major_version_9.html)
+- [Upgrading within Gradle 9.x](https://docs.gradle.org/9.8.1/userguide/upgrading_version_9.html)
+- [Java Library plugin](https://docs.gradle.org/9.8.1/userguide/java_library_plugin.html)
+- [Java Platform / BOM](https://docs.gradle.org/9.8.1/userguide/java_platform_plugin.html)
+- [Platforms](https://docs.gradle.org/9.8.1/userguide/platforms.html)
+- [Sharing build logic via included builds](https://docs.gradle.org/9.8.1/userguide/sharing_build_logic_between_subprojects.html)
+- [Task configuration avoidance](https://docs.gradle.org/9.8.1/userguide/task_configuration_avoidance.html)
+- [Configuration cache](https://docs.gradle.org/9.8.1/userguide/configuration_cache.html) and its [requirements](https://docs.gradle.org/9.8.1/userguide/configuration_cache_requirements.html)
+- [Version catalogs](https://docs.gradle.org/9.8.1/userguide/version_catalogs.html) (docs like them - **this repo does not**)
 
 ### Docs say X - we do Y
 

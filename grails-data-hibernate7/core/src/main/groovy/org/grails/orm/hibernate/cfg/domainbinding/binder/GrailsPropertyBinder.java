@@ -90,9 +90,8 @@ public class GrailsPropertyBinder {
             value = foreignKeyOneToOneBinder.bind(oneToOne, path);
         } else if (currentGrailsProp instanceof HibernateManyToOneProperty manyToOne) {
             value = manyToOneBinder.bindManyToOne(manyToOne, table, path);
-        } else if (currentGrailsProp instanceof HibernateToManyProperty toMany &&
-                !currentGrailsProp.isSerializableType()) {
-            value = collectionBinder.bindCollection(toMany, path);
+        } else if (HibernateToManyProperty.isBoundAsCollection(currentGrailsProp)) {
+            value = collectionBinder.bindCollection((HibernateToManyProperty) currentGrailsProp, path);
         } else if (currentGrailsProp instanceof HibernateEmbeddedProperty embedded) {
             value = componentBinder.bindComponent(embedded, path);
         } else if (currentGrailsProp instanceof HibernateSimpleProperty simple) {

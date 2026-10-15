@@ -85,6 +85,20 @@ grails -t forge create-app --features=gorm-async com.example.demo
 The feature layers on top of whichever GORM implementation is selected, defaulting to Hibernate when none is chosen.
 The `grails-datamapping-async` artifact it brings in is intended for direct consumption by applications and libraries, so it moved from the `org.apache.grails.data` group to `org.apache.grails`; see the xref:upgrading#upgrading80x[upgrade guide] for the coordinate change.
 
+==== Spring AI Integration
+
+The new `grails-spring-ai` plugin integrates https://spring.io/projects/spring-ai[Spring AI] {springAiVersion}.
+The Spring AI version is managed by the Grails BOM, a `ChatClient.Builder` is auto-configured for whichever provider the application adds, the plugin ships defaults suited to a web application, and `grails-testing-support-ai` gives unit and integration tests a scripted chat model so they need neither a provider nor credentials.
+New applications select it with the `grails-spring-ai`, `spring-ai-openai`, `spring-ai-anthropic` or `spring-ai-ollama` features, and the `org.apache.grails.skills:grails-ai-developer` agent skill teaches AI coding agents the same.
+See xref:usingAi#aiInstallation[Using AI in Your Application].
+
+==== Streaming Responses from Controller Actions
+
+A controller action can return a Reactive Streams `Publisher`, such as a Reactor `Flux`, and Grails streams every item it emits to the client as a server-sent event while the container thread is released.
+Items are rendered as text or JSON, or through a `StreamItemRenderer` bean for a type of its own, which is how `grails-spring-ai` streams the chat responses of a model.
+Such an action streams instead of rendering its view as it did before; set `grails.async.streaming.enabled` to `false` to keep the previous behaviour. A publisher that emits at most one item, such as a Reactor `Mono`, is not streamed but resolved, its value being the action's result as a returned `Promise`'s value is. See xref:upgrading#upgrading81x[the upgrade guide].
+See xref:async#asyncStreaming[Streaming Responses].
+
 ==== Plugin Beans Register Before Spring Boot Auto-Configuration
 
 Grails {grailsMajorVersion} unifies and retimes the plugin lifecycle so that the beans a plugin contributes are registered before Spring Boot processes its auto-configurations.

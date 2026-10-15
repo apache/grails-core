@@ -75,5 +75,9 @@ class BidirectionalOneToManyLinkerSpec extends HibernateGormDatastoreSpec {
         key.getColumns().first().getLength() == 10
         key.getColumns().first().getSqlType() == "bigint"
         key.getColumns().first().isNullable()
+
+        and: 'the key creates no foreign key of its own, the to-one side creates the one key of the association'
+        !key.isForeignKeyEnabled()
+        !key.isConstrained()
     }
 }

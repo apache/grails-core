@@ -74,6 +74,10 @@ ext {
             'cas-client-core.version'       : '4.1.1',
             'bootstrap-icons.version'       : '1.13.1',
             'bootstrap.version'             : '5.3.8',
+            // Overrides the 1.18.11 Spring Boot 4.1 manages, on every classpath, so the BOM manages the
+            // version Selenium 4.49.0 pulls in transitively - see selenium.version. Can return to Boot's
+            // version when the Selenium pin is dropped.
+            'byte-buddy.version'            : '1.18.13',
             'checker-qual.version'          : '3.55.1',
             'commons-codec.version'         : '1.22.1',
             'geb-spock.version'             : '8.0.1',
@@ -108,6 +112,10 @@ ext {
             // (CVE-2026-18710); 5.12.0 is the current release of that line.
             'mongodb.version'               : '5.12.0',
             'nimbus-jose-jwt.version'       : '10.10',
+            // Overrides the 1.62.0 Spring Boot 4.1 manages, on every classpath, so the BOM manages the
+            // version Selenium 4.49.0 pulls in transitively - see selenium.version. Can return to Boot's
+            // version when the Selenium pin is dropped.
+            'opentelemetry.version'         : '1.65.0',
             // Includes the follow-up logout redirect and direct-client CSRF fixes on the 6.5.x line.
             'pac4j.version'                 : '6.5.9',
             // Security: overrides the transitive 3.5.1. 4.0.3 fixes CVE-2025-67030 flagged against plexus-utils.
@@ -121,9 +129,19 @@ ext {
             'rxjava2.version'               : '2.2.21',
             'sitemesh.version'              : '2.6.0',
             'scribejava.version'            : '8.3.3',
+            // Overrides the 4.43.0 Spring Boot 4.1 manages. selenium/standalone-chrome, the image
+            // ContainerGebSpec starts, is only published for linux/arm64 from 4.47.0, so the default
+            // Geb functional test runs natively on Apple silicon. The image tag must match the
+            // Selenium version on the test classpath, so stay on a version with a published image.
+            // Boot's selenium-htmlunit.version (htmlunit3-driver) stays at 4.43.0: the newest
+            // htmlunit3-driver needs a HtmlUnit newer than Boot manages, and nothing here uses it.
+            'selenium.version'              : '4.49.0',
             // Logback 1.6.5 requires 2.0.19; align the SLF4J family above Boot's managed 2.0.18.
             'slf4j.version'                 : '2.0.19',
             'spock.version'                 : '2.5-groovy-6.0',
+            // Not managed by spring-boot-dependencies. Spring AI 2.0.x is the Spring Boot 4.0 / 4.1
+            // line; grails-bom imports its BOM so applications and grails-spring-ai share one Spring AI version.
+            'spring-ai-bom.version'         : '2.0.1',
             // Not managed by spring-boot-dependencies. springdoc 3.x is the Spring Boot 4 /
             // Spring Framework 7 line; the grails-openapi module compiles against its
             // OpenApiCustomizer SPI and apps add the webmvc-ui starter for Swagger UI.
@@ -154,14 +172,21 @@ ext {
             'asset-pipeline-bom': "cloud.wondrify:asset-pipeline-bom:${bomDependencyVersions['asset-pipeline-bom.version']}",
             'groovy-bom'        : "org.apache.groovy:groovy-bom:${bomDependencyVersions['groovy.version']}",
             'jackson-bom'       : "tools.jackson:jackson-bom:${bomDependencyVersions['jackson-bom.version']}",
+            'opentelemetry-bom' : "io.opentelemetry:opentelemetry-bom:${bomDependencyVersions['opentelemetry.version']}",
+            'selenium-bom'      : "org.seleniumhq.selenium:selenium-bom:${bomDependencyVersions['selenium.version']}",
             'slf4j-bom'         : "org.slf4j:slf4j-bom:${bomDependencyVersions['slf4j.version']}",
             'spock-bom'         : "org.spockframework:spock-bom:${bomDependencyVersions['spock.version']}",
+            'spring-ai-bom'     : "org.springframework.ai:spring-ai-bom:${bomDependencyVersions['spring-ai-bom.version']}",
     ]
 
     // Note: the name of the dependency must be the prefix of the property name so properties in the pom are resolved correctly
     bomDependencies = [
             'bootstrap'                : "org.webjars.npm:bootstrap:${bomDependencyVersions['bootstrap.version']}",
             'bootstrap-icons'          : "org.webjars.npm:bootstrap-icons:${bomDependencyVersions['bootstrap-icons.version']}",
+            // Keeps the BOM authoritative for the version Selenium 4.49.0 pulls in - see byte-buddy.version.
+            // Both artifacts are pinned so a classpath cannot mix Byte Buddy versions.
+            'byte-buddy'               : "net.bytebuddy:byte-buddy:${bomDependencyVersions['byte-buddy.version']}",
+            'byte-buddy-agent'         : "net.bytebuddy:byte-buddy-agent:${bomDependencyVersions['byte-buddy.version']}",
             'cas-client-core'          : "org.apereo.cas.client:cas-client-core:${bomDependencyVersions['cas-client-core.version']}",
             'checker-qual'             : "org.checkerframework:checker-qual:${bomDependencyVersions['checker-qual.version']}",
             'commons-codec'            : "commons-codec:commons-codec:${bomDependencyVersions['commons-codec.version']}",

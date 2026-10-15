@@ -53,6 +53,7 @@ dependencies {
     implementation project(':grails-dependencies-starter-web')
     implementation project(':grails-testing-support-core')
     implementation project(':grails-data-hibernate5')
+    implementation project(':grails-spring-ai') // spring-ai-model, for the Spring AI version and reference links
     implementation 'org.apache.grails:grails-gradle-plugins'
     implementation 'org.testcontainers:testcontainers'
     implementation 'org.springframework:spring-core'
@@ -284,7 +285,9 @@ generateConfigReference.configure { Task it ->
             project(':grails-views-markup').tasks.named('jar'),
             project(':grails-web-url-mappings').tasks.named('jar'),
             project(':grails-startup-progress').tasks.named('jar'),
-            project(':grails-openapi').tasks.named('jar')
+            project(':grails-openapi').tasks.named('jar'),
+            project(':grails-async').tasks.named('jar'),
+            project(':grails-testing-support-ai').tasks.named('jar')
     )
 
     it.description = 'Generates the Application Properties reference from configuration metadata.'
@@ -307,7 +310,9 @@ generateConfigReference.configure { Task it ->
             project(':grails-views-markup').tasks.named('jar').flatMap { task -> task.archiveFile },
             project(':grails-web-url-mappings').tasks.named('jar').flatMap { task -> task.archiveFile },
             project(':grails-startup-progress').tasks.named('jar').flatMap { task -> task.archiveFile },
-            project(':grails-openapi').tasks.named('jar').flatMap { task -> task.archiveFile }
+            project(':grails-openapi').tasks.named('jar').flatMap { task -> task.archiveFile },
+            project(':grails-async').tasks.named('jar').flatMap { task -> task.archiveFile },
+            project(':grails-testing-support-ai').tasks.named('jar').flatMap { task -> task.archiveFile }
     ]
     it.inputs.files(metadataJars)
     it.outputs.file(outputFile)
@@ -608,6 +613,9 @@ publishGuideTask.configure { PublishGuideTask publish ->
         def grailsMajorVersion = projectVersion.tokenize('.')[0]
         def springVersion = getVersion('spring-core')
         def springBootVersion = getVersion('spring-boot')
+        def springAiVersion = getVersion('spring-ai-model')
+        // The reference is published per minor line, and the current line also answers under its number
+        def springAiDocsVersion = springAiVersion.tokenize('.').take(2).join('.')
         def spockVersion = getVersion("spock-core")
         def spockVersionForURL = getVersion("spock-core")?.split("-")[0]
         def hibernate5Guide = '../grails-data/hibernate5/manual/'
@@ -647,6 +655,8 @@ publishGuideTask.configure { PublishGuideTask publish ->
                 'springBootReference'      : "https://docs.spring.io/spring-boot/${springBootVersion}/reference/",
                 'springBootHowTo'          : "https://docs.spring.io/spring-boot/${springBootVersion}/how-to/",
                 'springBootVersion'        : springBootVersion,
+                'springAiVersion'          : springAiVersion,
+                'springAiReference'        : "https://docs.spring.io/spring-ai/reference/${springAiDocsVersion}/",
                 'springVersion'            : springVersion,
                 'gradleVersion'            : gradle.gradleVersion,
                 'GrailsVersion'            : projectVersion,

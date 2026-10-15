@@ -216,11 +216,11 @@ public class CollectionBinder {
 
     private void registerSecondPass(HibernateToManyProperty property, Collection collection) {
         if (collection instanceof org.hibernate.mapping.List) {
-            mappings.addSecondPass(new ListSecondPass(listSecondPassBinder, property));
+            mappings.addSecondPass(new ListSecondPass(listSecondPassBinder, property, collection));
         } else if (collection instanceof org.hibernate.mapping.Map) {
-            mappings.addSecondPass(new MapSecondPass(mapSecondPassBinder, property));
+            mappings.addSecondPass(new MapSecondPass(mapSecondPassBinder, property, collection));
         } else {
-            mappings.addSecondPass(new SetSecondPass(collectionSecondPassBinder, property));
+            mappings.addSecondPass(new SetSecondPass(collectionSecondPassBinder, property, collection));
         }
     }
 }

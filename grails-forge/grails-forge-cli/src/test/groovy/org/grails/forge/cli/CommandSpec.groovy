@@ -15,6 +15,9 @@
  */
 package org.grails.forge.cli
 
+import org.springframework.context.ConfigurableApplicationContext
+import spock.lang.AutoCleanup
+import spock.lang.Shared
 import spock.lang.Specification
 import spock.util.concurrent.PollingConditions
 import spock.util.environment.OperatingSystem
@@ -22,6 +25,11 @@ import spock.util.environment.OperatingSystem
 import java.nio.file.Files
 
 class CommandSpec extends Specification {
+
+    /** The Forge CLI's Grails application, started once per specification: what the specs run commands on. */
+    @Shared
+    @AutoCleanup
+    ConfigurableApplicationContext beanContext = Application.builder().run()
 
     File dir = Files.createTempDirectory('grailsforgetmp').toFile()
     StringBuilder output

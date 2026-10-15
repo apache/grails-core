@@ -44,6 +44,7 @@ import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateBasicProper
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEnumProperty
 import org.grails.orm.hibernate.cfg.domainbinding.util.BackticksRemover
 import org.grails.orm.hibernate.cfg.domainbinding.util.ColumnNameForPropertyAndPathFetcher
+import org.grails.orm.hibernate.cfg.domainbinding.util.CreateKeyForProps
 import org.grails.orm.hibernate.cfg.domainbinding.util.DefaultColumnNameFetcher
 
 class EnumTypeBinderSpec extends HibernateGormDatastoreSpec {
@@ -209,6 +210,25 @@ class EnumTypeBinderSpec extends HibernateGormDatastoreSpec {
         column.getCustomWrite() == "upper(?)"
         metadata[0].toString().contains("AVAILABLE")
         metadata[1] == "the status"
+    }
+
+    def "should create the unique group key for the enum column on the bound table"() {
+        given:
+        def grailsDomainBinder = getGrailsDomainBinder()
+        def namingStrategy = grailsDomainBinder.getNamingStrategy()
+        def defaultColumnNameFetcher = new DefaultColumnNameFetcher(namingStrategy, new BackticksRemover())
+        def columnNameFetcher = new ColumnNameForPropertyAndPathFetcher(namingStrategy, defaultColumnNameFetcher, new BackticksRemover())
+        def createKeyForProps = Mock(CreateKeyForProps)
+        def keyBinder = new EnumTypeBinder(grailsDomainBinder.getMetadataBuildingContext(), columnNameFetcher,
+                indexBinder, columnBinder, namingStrategy, createKeyForProps)
+        def table = new Table("person")
+        def property = setupProperty(Person01, "status", table)
+
+        when:
+        keyBinder.bindEnumType(property as HibernateEnumProperty, "myPath")
+
+        then:
+        1 * createKeyForProps.createKeyForProps(property, "myPath", table, "my_path_status")
     }
 }
 

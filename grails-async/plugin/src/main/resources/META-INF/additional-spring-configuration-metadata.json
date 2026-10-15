@@ -1,0 +1,21 @@
+{
+    "groups": [
+        {
+            "name": "grails.async.streaming",
+            "description": "Streaming of a reactive Publisher returned from a controller action as server-sent events."
+        }
+    ],
+    "properties": [
+        {
+            "name": "grails.async.streaming.enabled",
+            "type": "java.lang.Boolean",
+            "description": "Whether a `Publisher` returned from a controller action is written to the client as a stream of server-sent events.",
+            "defaultValue": true
+        },
+        {
+            "name": "grails.async.streaming.timeout",
+            "type": "java.time.Duration",
+            "description": "How long a streamed response may stay open, for example `5m`. When not set, a stream has no timeout, as Spring MVC's server-sent event streams have none."
+        }
+    ]
+}

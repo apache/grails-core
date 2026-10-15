@@ -64,6 +64,13 @@ class GrailsDependencyValidatorPlugin implements Plugin<Project> {
      */
     static final String ALLOWED_OVERRIDES_EXT = 'allowedBomOverrides'
 
+    /**
+     * Project ext property name that holds a collection of {@code "group:name"} keys whose dynamic
+     * version requests are tolerated. Use this only for a request that cannot be rewritten, with the
+     * reason commented next to it.
+     */
+    static final String ALLOWED_DYNAMIC_VERSIONS_EXT = 'allowedDynamicVersions'
+
     /** Opts a project out of {@link #VALIDATE_TASK_NAME}; see {@link GradleUtils#isOptedOut}. */
     static final String SKIP_PROPERTY = 'skipDependencyValidation'
 
@@ -94,50 +101,45 @@ class GrailsDependencyValidatorPlugin implements Plugin<Project> {
      *
      * <p>Inspecting the dependency graph needs the project, so it happens while the task's inputs are
      * computed - after the build scripts have run, and before any task executes - rather than from a
-     * {@code doLast} block. The task itself then only compares the two version maps it was given.</p>
+     * {@code doLast} block. The BOM is detected and its configurations found, resolved and walked once,
+     * in a memoized provider of a {@link BomDependencyGraph}; the modules that walk resolved are what
+     * the BOM probing starts from, and every task input is mapped off that one result. The task itself
+     * then only compares the values it was given.</p>
      *
-     * <p>Every provider short-circuits when the project opts out, so a skipped project never pays for
+     * <p>The provider short-circuits when the project opts out, so a skipped project never pays for
      * the resolution or the BOM probing.</p>
      */
     private static void registerDependencyVersionValidation(Project project) {
-        Provider<String> bomPath = project.provider {
+        Provider<BomDependencyGraph> graph = project.provider({
             if (GradleUtils.isOptedOut(project, SKIP_PROPERTY)) {
-                return ''
+                return BomDependencyGraph.NONE
             }
-            String detected = detectBomPath(project)
-            if (detected == null) {
-                return ''
+            String bomPath = detectBomPath(project)
+            if (bomPath == null) {
+                return BomDependencyGraph.NONE
             }
+            String bomName = bomPath.substring(bomPath.lastIndexOf(':') + 1)
+            Set<Configuration> configurations = findBomConfigurations(project, bomName)
             // no BOM-bearing configuration means there is nothing to compare against
-            String bomName = detected.substring(detected.lastIndexOf(':') + 1)
-            findBomConfigurations(project, bomName).isEmpty() ? '' : detected
-        }
-
-        Provider<Map<String, String>> bomVersions = bomPath.map { String path ->
-            if (!path) {
-                return Collections.<String, String> emptyMap()
+            if (configurations.isEmpty()) {
+                return BomDependencyGraph.NONE
             }
-            String bomName = path.substring(path.lastIndexOf(':') + 1)
-            collectBomVersions(project, path, findBomConfigurations(project, bomName))
-        }
-
-        Provider<Map<String, String>> resolvedVersions = bomPath.map { String path ->
-            if (!path) {
-                return Collections.<String, String> emptyMap()
-            }
-            String bomName = path.substring(path.lastIndexOf(':') + 1)
-            collectResolvedVersions(findBomConfigurations(project, bomName))
-        }
+            BomDependencyGraph walked = BomDependencyGraph.collect(project.path, bomPath, configurations)
+            walked.withBomVersions(collectBomVersions(project, bomPath, walked.resolvedVersions.keySet()))
+        }.memoize())
 
         project.tasks.register(VALIDATE_TASK_NAME, ValidateDependencyVersionsTask) {
             ValidateDependencyVersionsTask task ->
                 task.group = 'verification'
-                task.description = 'Validates that no transitive dependency upgrades a version beyond what the BOM manages.'
+                task.description = 'Validates that no transitive dependency upgrades a version beyond what the BOM manages, and that none is requested with a dynamic version.'
                 task.projectName.set(project.name)
-                task.bomPath.set(bomPath)
-                task.bomVersions.set(bomVersions)
-                task.resolvedVersions.set(resolvedVersions)
+                task.bomPath.set(graph.map { BomDependencyGraph it -> it.bomPath })
+                task.bomVersions.set(graph.map { BomDependencyGraph it -> it.bomVersions })
+                task.resolvedVersions.set(graph.map { BomDependencyGraph it -> it.resolvedVersions })
+                task.dynamicVersionRequests.set(graph.map { BomDependencyGraph it -> it.dynamicVersionRequests })
+                task.resolutionWarnings.set(graph.map { BomDependencyGraph it -> it.resolutionWarnings })
                 task.allowedOverrides.set(project.provider { GradleUtils.extStrings(project, ALLOWED_OVERRIDES_EXT) })
+                task.allowedDynamicVersions.set(project.provider { GradleUtils.extStrings(project, ALLOWED_DYNAMIC_VERSIONS_EXT) })
         }
     }
 
@@ -228,10 +230,11 @@ class GrailsDependencyValidatorPlugin implements Plugin<Project> {
      * Collects all BOM-managed dependency versions in two phases:
      * <ol>
      *   <li>Direct constraints from the BOM project's {@code api} configuration</li>
-     *   <li>Inherited platform constraints (e.g., spring-boot-dependencies) via per-module probing</li>
+     *   <li>Inherited platform constraints (e.g., spring-boot-dependencies) via per-module probing of
+     *   the {@code "group:name"} keys the BOM-bearing configurations resolved</li>
      * </ol>
      */
-    private static Map<String, String> collectBomVersions(Project project, String bomPath, Set<Configuration> bomConfigurations) {
+    private static Map<String, String> collectBomVersions(Project project, String bomPath, Set<String> resolvedModules) {
         Map<String, String> bomVersions = new LinkedHashMap<>()
 
         // Phase 1: Direct constraints from BOM
@@ -251,7 +254,6 @@ class GrailsDependencyValidatorPlugin implements Plugin<Project> {
         }
 
         // Phase 2: Probe inherited platform constraints for modules not in direct constraints
-        Set<String> resolvedModules = collectAllResolvedModuleKeys(bomConfigurations)
         Set<String> toProbe = new LinkedHashSet<>(resolvedModules)
         toProbe.removeAll(bomVersions.keySet())
 
@@ -332,42 +334,5 @@ class GrailsDependencyValidatorPlugin implements Plugin<Project> {
             }
         }
         false
-    }
-
-    /**
-     * Collects the resolved version for each external module across the given configurations.
-     */
-    private static Map<String, String> collectResolvedVersions(Set<Configuration> configurations) {
-        Map<String, String> versions = new LinkedHashMap<>()
-        for (Configuration config : configurations) {
-            try {
-                for (ResolvedComponentResult component : config.incoming.resolutionResult.allComponents) {
-                    if (component.id instanceof ModuleComponentIdentifier) {
-                        ModuleComponentIdentifier mid = (ModuleComponentIdentifier) component.id
-                        versions.put("${mid.group}:${mid.module}" as String, mid.version)
-                    }
-                }
-            } catch (Exception ignored) {
-                // Skip configurations that fail to resolve
-            }
-        }
-        return versions
-    }
-
-    private static Set<String> collectAllResolvedModuleKeys(Set<Configuration> configurations) {
-        Set<String> modules = new LinkedHashSet<>()
-        for (Configuration config : configurations) {
-            try {
-                for (ResolvedComponentResult component : config.incoming.resolutionResult.allComponents) {
-                    if (component.id instanceof ModuleComponentIdentifier) {
-                        ModuleComponentIdentifier mid = (ModuleComponentIdentifier) component.id
-                        modules.add("${mid.group}:${mid.module}" as String)
-                    }
-                }
-            } catch (Exception ignored) {
-                // Skip
-            }
-        }
-        return modules
     }
 }

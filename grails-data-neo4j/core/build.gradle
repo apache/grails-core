@@ -64,7 +64,6 @@ dependencies {
     testImplementation 'org.spockframework:spock-core'
     testImplementation 'jakarta.validation:jakarta.validation-api'
     testImplementation 'org.hibernate.validator:hibernate-validator'
-    testImplementation "org.codehaus.gpars:gpars:$gparsVersion"
     testImplementation 'org.objenesis:objenesis'
 
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'

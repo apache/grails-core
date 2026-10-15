@@ -34,8 +34,12 @@ import org.grails.orm.hibernate.cfg.domainbinding.util.ColumnNameForPropertyAndP
 import org.grails.orm.hibernate.cfg.domainbinding.util.DefaultColumnNameFetcher
 import org.grails.orm.hibernate.cfg.domainbinding.util.SimpleValueColumnFetcher
 import org.grails.orm.hibernate.cfg.domainbinding.util.BackticksRemover
+import org.grails.orm.hibernate.cfg.domainbinding.secondpass.ListSecondPass
+import org.grails.orm.hibernate.cfg.domainbinding.secondpass.MapSecondPass
+import org.grails.orm.hibernate.cfg.domainbinding.secondpass.SetSecondPass
 import org.grails.orm.hibernate.cfg.domainbinding.util.TableForManyCalculator
 import org.hibernate.boot.spi.InFlightMetadataCollector
+import org.hibernate.boot.spi.SecondPass
 import org.hibernate.mapping.OneToMany
 import org.hibernate.mapping.Table
 
@@ -69,7 +73,7 @@ class CollectionBinderSpec extends HibernateGormDatastoreSpec {
         def dcnf = new DefaultColumnNameFetcher(ns, backticksRemover)
         def cnfpapf = new ColumnNameForPropertyAndPathFetcher(ns, dcnf, backticksRemover)
         def etb = new EnumTypeBinder(mbc, cnfpapf, ns)
-        def citmto = new CompositeIdentifierToManyToOneBinder(new org.grails.orm.hibernate.cfg.domainbinding.util.ForeignKeyColumnCountCalculator(), ns, dcnf, backticksRemover, svb)
+        def citmto = new CompositeIdentifierToManyToOneBinder(mockCollector, new org.grails.orm.hibernate.cfg.domainbinding.util.ForeignKeyColumnCountCalculator(), ns, dcnf, backticksRemover, svb)
         def mtob = new ManyToOneBinder(mbc, ns, svb, new ManyToOneValuesBinder(), citmto)
         def ch = new CollectionHolder(mbc)
         mockCalculator = Mock(TableForManyCalculator)
@@ -78,7 +82,7 @@ class CollectionBinderSpec extends HibernateGormDatastoreSpec {
     }
 
     def setupSpec() {
-        manager.registerDomainClasses(Person, Pet, CBManyToManyA, CBManyToManyB, CBNamedOwner, CBNamedInverse, CBOwnNameOwner, CBOwnNameInverse)
+        manager.registerDomainClasses(Person, Pet, CBManyToManyA, CBManyToManyB, CBNamedOwner, CBNamedInverse, CBOwnNameOwner, CBOwnNameInverse, CBListOwner, CBMapOwner, CBElement)
     }
 
     void "test bindCollection delegates configuration to property.setCollection"() {
@@ -116,6 +120,49 @@ class CollectionBinderSpec extends HibernateGormDatastoreSpec {
         collection.collectionTable.name == "custom_join_table"
         collection.collectionTable.schema == "custom_schema"
         collection.collectionTable.catalog == "custom_catalog"
+    }
+
+    void "bindCollection registers the second pass that matches the kind of collection"() {
+        given:
+        def entity = mappingContext.getPersistentEntity(owner.name) as GrailsHibernatePersistentEntity
+        def property = entity.getPropertyByName(propertyName) as HibernateToManyProperty
+        SecondPass registered = null
+
+        when:
+        def collection = binder.bindCollection(property, "")
+
+        then:
+        1 * mockCollector.addCollectionBinding(_)
+        1 * mockCollector.addSecondPass(_) >> { SecondPass pass -> registered = pass }
+        passType.isInstance(registered)
+        property.getCollection().is(collection)
+
+        where:
+        owner       | propertyName | passType
+        Person      | 'pets'       | SetSecondPass
+        CBListOwner | 'items'      | ListSecondPass
+        CBMapOwner  | 'tags'       | MapSecondPass
+    }
+
+    void "binding one property twice registers a second pass and a collection for each binding"() {
+        given:
+        def entity = mappingContext.getPersistentEntity(Person.name) as GrailsHibernatePersistentEntity
+        def property = entity.getPropertyByName("pets") as HibernateToManyProperty
+        List<SecondPass> registered = []
+
+        when:
+        def first = binder.bindCollection(property, "")
+        def second = binder.bindCollection(property, "embedded")
+
+        then:
+        2 * mockCollector.addCollectionBinding(_)
+        2 * mockCollector.addSecondPass(_) >> { SecondPass pass -> registered << pass }
+        registered.size() == 2
+        !registered[0].is(registered[1])
+        !first.is(second)
+
+        and: "the property only remembers the collection it was last given"
+        property.getCollection().is(second)
     }
 
     void "the inverse side of a many-to-many adopts the join table the owner configures"() {
@@ -224,4 +271,23 @@ class CBManyToManyB {
     Long id
     static hasMany = [owners: CBManyToManyA]
     static belongsTo = CBManyToManyA
+}
+
+@Entity
+class CBElement {
+    Long id
+}
+
+@Entity
+class CBListOwner {
+    Long id
+    List<CBElement> items
+    static hasMany = [items: CBElement]
+}
+
+@Entity
+class CBMapOwner {
+    Long id
+    Map<String, CBElement> tags
+    static hasMany = [tags: CBElement]
 }

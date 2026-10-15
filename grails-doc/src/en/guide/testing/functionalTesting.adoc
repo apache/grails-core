@@ -52,7 +52,7 @@ class HomeSpec extends GebSpec {
 
 When the test is run the application container will be loaded up in the background and you can send requests to the running application using the Geb API.
 
-Web applications generated with Grails Forge include the `geb-with-testcontainers` feature by default. Its functional spec extends `ContainerGebSpec`, which runs the browser in a container and therefore needs Docker or a compatible container runtime. See the https://github.com/apache/grails-core/tree/7.0.x/grails-geb#readme[Grails Geb plugin README] for details.
+Web applications generated with Grails Forge include the `geb-with-testcontainers` feature by default. Its functional spec extends `ContainerGebSpec`, which runs the browser in a container and therefore needs Docker or a compatible container runtime. See <<browserContainerImage>> for the image it starts and how to change it.
 
 To run functional tests against browsers installed on your machine instead, select the `geb-with-local-browsers` feature. Before Grails 7.0.18 this feature was named `geb-with-webdriver-binaries`. It replaces `geb-with-testcontainers`, and the two features cannot be selected together. The generated project then contains:
 
@@ -106,6 +106,44 @@ class MySpec extends Specification {
 }
 ----
 
+[[browserContainerImage]]
+==== Browser Container Image
+
+By default, `ContainerGebSpec` starts the `selenium/standalone-chrome` image at the Selenium version found on the test classpath, which the Grails BOM manages.
+Selenium publishes that image for both amd64 and arm64 from 4.47.0, so the default functional test runs natively on Apple silicon and other arm64 hosts.
+Overriding `selenium.version` to a release older than 4.47.0 brings back the amd64-only Chrome image.
+
+To start a different browser, provide a `GebConfig.groovy` on the integration test classpath whose `driver` closure returns a `RemoteWebDriver`, set its `containerBrowser` property to the browser name, and add the matching Selenium driver dependency:
+
+[source,groovy]
+----
+import org.openqa.selenium.firefox.FirefoxOptions
+import org.openqa.selenium.remote.RemoteWebDriver
+
+driver = {
+    new RemoteWebDriver(new FirefoxOptions())
+}
+containerBrowser = 'firefox'
+----
+
+[source,groovy]
+----
+dependencies {
+    integrationTestImplementation 'org.seleniumhq.selenium:selenium-firefox-driver'
+}
+----
+
+The `selenium/standalone-firefox` image has been published for arm64 since before 4.47.0, while `selenium/standalone-edge` is amd64-only as of 4.49.0.
+
+To pull the image from somewhere else, for example a private registry mirror, set the `grails.geb.container.image.template` system property on the test task.
+The template may use the `pass:[${browser}]` and `pass:[${version}]` placeholders, which are replaced with the browser name and the Selenium version:
+
+[source,groovy]
+----
+tasks.named('integrationTest') {
+    systemProperty 'grails.geb.container.image.template', 'registry.example.com/selenium/standalone-${browser}:${version}'
+}
+----
 
 ==== Simulating Latency
 

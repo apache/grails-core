@@ -782,6 +782,9 @@ implementation 'org.apache.grails.plugins:grails-cache:7.0.0'
 // Async support
 implementation 'org.apache.grails.plugins:grails-async:7.0.0'
 
+// AI models through Spring AI (Grails 8.1+); see the grails-ai-developer skill
+implementation 'org.apache.grails:grails-spring-ai'
+
 // Fields plugin for form rendering
 implementation 'org.apache.grails.plugins:grails-fields:7.0.0'
 

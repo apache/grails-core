@@ -19,8 +19,8 @@
 
 package org.grails.forge.cli
 
-import io.micronaut.context.BeanContext
-import io.micronaut.core.util.functional.ThrowingSupplier
+import org.springframework.context.ApplicationContext
+import org.grails.forge.util.ThrowingSupplier
 import org.grails.forge.application.ApplicationType
 import org.grails.forge.application.OperatingSystem
 import org.grails.forge.application.generator.ProjectGenerator
@@ -32,7 +32,7 @@ import org.grails.forge.util.NameUtils
 
 trait CommandFixture {
 
-    abstract BeanContext getBeanContext()
+    abstract ApplicationContext getBeanContext()
 
     abstract File getDir()
 
