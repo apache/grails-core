@@ -142,6 +142,42 @@ class NamingStrategyProviderSpec extends HibernateGormDatastoreSpec {
         then:
         strategy instanceof PhysicalNamingStrategySnakeCaseImpl
     }
+
+    void "a strategy class without a no-arg constructor is an InstantiationException"() {
+        given:
+        NamingStrategyProvider provider = new NamingStrategyProvider()
+
+        when:
+        provider.configureNamingStrategy("noDefault", NoDefaultConstructorStrategy)
+
+        then:
+        thrown(InstantiationException)
+    }
+
+    void "an exception thrown by the strategy constructor reaches the caller itself"() {
+        given:
+        NamingStrategyProvider provider = new NamingStrategyProvider()
+
+        when:
+        provider.configureNamingStrategy("failing", FailingConstructorStrategy)
+
+        then:
+        IllegalStateException e = thrown()
+        e.message == 'no strategy today'
+    }
+}
+
+class NoDefaultConstructorStrategy extends MockPhysicalNamingStrategy {
+
+    NoDefaultConstructorStrategy(String name) {
+    }
+}
+
+class FailingConstructorStrategy extends MockPhysicalNamingStrategy {
+
+    FailingConstructorStrategy() {
+        throw new IllegalStateException('no strategy today')
+    }
 }
 
 class MockPhysicalNamingStrategy implements PhysicalNamingStrategy {
