@@ -17,25 +17,20 @@
  *  under the License.
  */
 
-package org.grails.web.pages;
+package org.grails.web.pages
 
-import java.util.Collection;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import groovy.transform.CompileStatic
+import org.springframework.beans.factory.SmartInitializingSingleton
+import org.springframework.context.ApplicationListener
+import org.springframework.context.event.ContextRefreshedEvent
+import org.springframework.core.annotation.AnnotationUtils
 
-import org.springframework.beans.factory.SmartInitializingSingleton;
-import org.springframework.context.ApplicationListener;
-import org.springframework.context.event.ContextRefreshedEvent;
-import org.springframework.core.annotation.AnnotationUtils;
-
-import grails.artefact.Artefact;
-import grails.core.gsp.GrailsTagLibClass;
-import grails.gsp.TagLib;
-import org.grails.core.artefact.gsp.TagLibArtefactHandler;
-import org.grails.core.gsp.DefaultGrailsTagLibClass;
-import org.grails.taglib.TagLibraryLookup;
+import grails.artefact.Artefact
+import grails.core.gsp.GrailsTagLibClass
+import grails.gsp.TagLib
+import org.grails.core.artefact.gsp.TagLibArtefactHandler
+import org.grails.core.gsp.DefaultGrailsTagLibClass
+import org.grails.taglib.TagLibraryLookup
 
 /**
  * GSP TagLibraryLookup class that's used for standalone GSP
@@ -43,41 +38,42 @@ import org.grails.taglib.TagLibraryLookup;
  * @author Lari Hotari
  * @since 2.4.0
  */
-public class StandaloneTagLibraryLookup extends TagLibraryLookup
+@CompileStatic
+class StandaloneTagLibraryLookup extends TagLibraryLookup
         implements SmartInitializingSingleton, ApplicationListener<ContextRefreshedEvent> {
 
-    Set<Object> tagLibInstancesSet;
+    Set<Object> tagLibInstancesSet
 
     private StandaloneTagLibraryLookup() {
 
     }
 
-    public void afterPropertiesSet() {
-        registerTagLibraries();
-        registerTemplateNamespace();
+    void afterPropertiesSet() {
+        registerTagLibraries()
+        registerTemplateNamespace()
     }
 
     protected void registerTagLibraries() {
         if (tagLibInstancesSet != null) {
-            for (Object tagLibInstance : tagLibInstancesSet) {
-                registerTagLib(new DefaultGrailsTagLibClass(tagLibInstance.getClass()));
+            for (Object tagLibInstance in tagLibInstancesSet) {
+                registerTagLib(new DefaultGrailsTagLibClass(tagLibInstance.getClass()))
             }
         }
     }
 
     @Override
     protected void putTagLib(Map<String, Object> tags, String name, GrailsTagLibClass taglib) {
-        for (Object tagLibInstance : tagLibInstancesSet) {
+        for (Object tagLibInstance in tagLibInstancesSet) {
             if (tagLibInstance.getClass() == taglib.getClazz()) {
-                tags.put(name, tagLibInstance);
-                break;
+                tags.put(name, tagLibInstance)
+                break
             }
         }
     }
 
-    public void setTagLibInstances(List<Object> tagLibInstances) {
-        this.tagLibInstancesSet = new LinkedHashSet<>();
-        tagLibInstancesSet.addAll(tagLibInstances);
+    void setTagLibInstances(List<Object> tagLibInstances) {
+        this.tagLibInstancesSet = new LinkedHashSet<>()
+        tagLibInstancesSet.addAll(tagLibInstances)
     }
 
     /**
@@ -86,21 +82,21 @@ public class StandaloneTagLibraryLookup extends TagLibraryLookup
      * leaving the first render of a page racing the tag libraries it uses.
      */
     @Override
-    public void afterSingletonsInstantiated() {
-        detectAndRegisterTabLibBeans();
+    void afterSingletonsInstantiated() {
+        detectAndRegisterTabLibBeans()
     }
 
     @Override
-    public void onApplicationEvent(ContextRefreshedEvent event) {
-        detectAndRegisterTabLibBeans();
+    void onApplicationEvent(ContextRefreshedEvent event) {
+        detectAndRegisterTabLibBeans()
     }
 
-    public void detectAndRegisterTabLibBeans() {
+    void detectAndRegisterTabLibBeans() {
         if (tagLibInstancesSet == null) {
-            tagLibInstancesSet = new LinkedHashSet<>();
+            tagLibInstancesSet = new LinkedHashSet<>()
         }
-        register(applicationContext.getBeansWithAnnotation(TagLib.class).values());
-        register(tagLibraryArtefacts());
+        register(applicationContext.getBeansWithAnnotation(TagLib).values())
+        register(tagLibraryArtefacts())
     }
 
     /**
@@ -110,22 +106,23 @@ public class StandaloneTagLibraryLookup extends TagLibraryLookup
      * application, where the same class is found by scanning artefacts instead.
      */
     private Collection<Object> tagLibraryArtefacts() {
-        Collection<Object> artefacts = new LinkedHashSet<>();
-        for (Object bean : applicationContext.getBeansWithAnnotation(Artefact.class).values()) {
-            Artefact artefact = AnnotationUtils.findAnnotation(bean.getClass(), Artefact.class);
-            if (artefact != null && TagLibArtefactHandler.TYPE.equals(artefact.value())) {
-                artefacts.add(bean);
+        Collection<Object> artefacts = new LinkedHashSet<>()
+        for (Object bean in applicationContext.getBeansWithAnnotation(Artefact).values()) {
+            Artefact artefact = AnnotationUtils.findAnnotation(bean.getClass(), Artefact)
+            if (artefact != null && TagLibArtefactHandler.TYPE == artefact.value()) {
+                artefacts.add(bean)
             }
         }
-        return artefacts;
+        return artefacts
     }
 
     private void register(Collection<Object> detectedInstances) {
-        for (Object instance : detectedInstances) {
+        for (Object instance in detectedInstances) {
             if (!tagLibInstancesSet.contains(instance)) {
-                tagLibInstancesSet.add(instance);
-                registerTagLib(new DefaultGrailsTagLibClass(instance.getClass()));
+                tagLibInstancesSet.add(instance)
+                registerTagLib(new DefaultGrailsTagLibClass(instance.getClass()))
             }
         }
     }
+
 }

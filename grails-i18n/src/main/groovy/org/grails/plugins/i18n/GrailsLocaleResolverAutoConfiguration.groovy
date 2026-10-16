@@ -16,22 +16,25 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.plugins.i18n;
+package org.grails.plugins.i18n
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 
-import org.springframework.beans.factory.BeanClassLoaderAware;
-import org.springframework.beans.factory.config.BeanDefinition;
-import org.springframework.beans.factory.support.BeanDefinitionRegistry;
-import org.springframework.boot.autoconfigure.AutoConfiguration;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
-import org.springframework.context.annotation.Import;
-import org.springframework.context.annotation.ImportBeanDefinitionRegistrar;
-import org.springframework.core.type.AnnotationMetadata;
-import org.springframework.util.ClassUtils;
-import org.springframework.web.servlet.DispatcherServlet;
-import org.springframework.web.servlet.config.annotation.WebMvcConfigurationSupport;
+import org.springframework.beans.factory.BeanClassLoaderAware
+import org.springframework.beans.factory.config.BeanDefinition
+import org.springframework.beans.factory.support.BeanDefinitionRegistry
+import org.springframework.boot.autoconfigure.AutoConfiguration
+import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication
+import org.springframework.context.annotation.Import
+import org.springframework.context.annotation.ImportBeanDefinitionRegistrar
+import org.springframework.core.type.AnnotationMetadata
+import org.springframework.util.ClassUtils
+import org.springframework.web.servlet.DispatcherServlet
+import org.springframework.web.servlet.config.annotation.WebMvcConfigurationSupport
+
+import groovy.transform.CompileStatic
+import groovy.transform.PackageScope
 
 /**
  * When an application declares {@code @EnableWebMvc}, Spring's {@link WebMvcConfigurationSupport}
@@ -51,54 +54,58 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurationSupp
  * it does not exist as a compilable class for this class to reference directly) so the removal
  * happens before its condition is evaluated.
  */
-@AutoConfiguration(beforeName = "org.grails.plugins.i18n.I18nAutoConfiguration")
+@AutoConfiguration(beforeName = 'org.grails.plugins.i18n.I18nAutoConfiguration')
 @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
-@Import(GrailsLocaleResolverAutoConfiguration.RemoveWebMvcSupportLocaleResolverRegistrar.class)
-public class GrailsLocaleResolverAutoConfiguration {
+@Import(GrailsLocaleResolverAutoConfiguration.RemoveWebMvcSupportLocaleResolverRegistrar)
+@CompileStatic
+class GrailsLocaleResolverAutoConfiguration {
 
+    @PackageScope
     static class RemoveWebMvcSupportLocaleResolverRegistrar implements ImportBeanDefinitionRegistrar, BeanClassLoaderAware {
 
-        private static final Logger LOG = LoggerFactory.getLogger(RemoveWebMvcSupportLocaleResolverRegistrar.class);
+        private static final Logger LOG = LoggerFactory.getLogger(RemoveWebMvcSupportLocaleResolverRegistrar)
 
-        private static final String LOCALE_RESOLVER_BEAN_NAME = DispatcherServlet.LOCALE_RESOLVER_BEAN_NAME;
+        private static final String LOCALE_RESOLVER_BEAN_NAME = DispatcherServlet.LOCALE_RESOLVER_BEAN_NAME
 
-        private ClassLoader classLoader;
+        private ClassLoader classLoader
 
         @Override
-        public void setBeanClassLoader(ClassLoader classLoader) {
-            this.classLoader = classLoader;
+        void setBeanClassLoader(ClassLoader classLoader) {
+            this.classLoader = classLoader
         }
 
         @Override
-        public void registerBeanDefinitions(AnnotationMetadata importingClassMetadata, BeanDefinitionRegistry registry) {
+        void registerBeanDefinitions(AnnotationMetadata importingClassMetadata, BeanDefinitionRegistry registry) {
             if (!registry.containsBeanDefinition(LOCALE_RESOLVER_BEAN_NAME)) {
-                return;
+                return
             }
             if (isWebMvcSupportContributed(registry.getBeanDefinition(LOCALE_RESOLVER_BEAN_NAME), registry)) {
-                registry.removeBeanDefinition(LOCALE_RESOLVER_BEAN_NAME);
+                registry.removeBeanDefinition(LOCALE_RESOLVER_BEAN_NAME)
                 LOG.debug("Removed the WebMvcConfigurationSupport '{}' bean so the Grails locale resolver takes precedence",
-                        LOCALE_RESOLVER_BEAN_NAME);
+                        LOCALE_RESOLVER_BEAN_NAME)
             }
         }
 
         // True only when the bean is the localeResolver @Bean factory method of a
         // WebMvcConfigurationSupport (i.e. contributed by @EnableWebMvc), not an application bean.
         private boolean isWebMvcSupportContributed(BeanDefinition beanDefinition, BeanDefinitionRegistry registry) {
-            String factoryBeanName = beanDefinition.getFactoryBeanName();
+            String factoryBeanName = beanDefinition.getFactoryBeanName()
             if (factoryBeanName == null || !LOCALE_RESOLVER_BEAN_NAME.equals(beanDefinition.getFactoryMethodName()) ||
                     !registry.containsBeanDefinition(factoryBeanName)) {
-                return false;
+                return false
             }
-            String factoryClassName = registry.getBeanDefinition(factoryBeanName).getBeanClassName();
+            String factoryClassName = registry.getBeanDefinition(factoryBeanName).getBeanClassName()
             if (factoryClassName == null) {
-                return false;
+                return false
             }
             try {
-                return WebMvcConfigurationSupport.class.isAssignableFrom(ClassUtils.forName(factoryClassName, classLoader));
+                return WebMvcConfigurationSupport.isAssignableFrom(ClassUtils.forName(factoryClassName, classLoader))
             }
-            catch (ClassNotFoundException ex) {
-                return false;
+            catch (ClassNotFoundException ignored) {
+                return false
             }
         }
+
     }
+
 }

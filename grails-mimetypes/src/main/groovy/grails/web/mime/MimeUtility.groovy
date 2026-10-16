@@ -16,22 +16,20 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package grails.web.mime;
-
-import java.util.List;
+package grails.web.mime
 
 /**
  * @author Graeme Rocher
  * @since 2.0
  */
-public interface MimeUtility {
+interface MimeUtility {
 
     /**
      * Gets the known configured MimeType instances
      *
      * @return An array of MimeType instances
      */
-    List<MimeType> getKnownMimeTypes();
+    List<MimeType> getKnownMimeTypes()
 
     /**
      * Obtains a MimeType for the given extension
@@ -39,7 +37,7 @@ public interface MimeUtility {
      * @param extension The extension
      * @return The MimeType instance or null if not known
      */
-    MimeType getMimeTypeForExtension(String extension);
+    MimeType getMimeTypeForExtension(String extension)
 
     /**
      * Obtains a MimeType for the given extension
@@ -47,5 +45,6 @@ public interface MimeUtility {
      * @param uri The URI to use
      * @return The MimeType instance or null if not known
      */
-    MimeType getMimeTypeForURI(String uri);
+    MimeType getMimeTypeForURI(String uri)
+
 }
