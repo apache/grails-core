@@ -18,10 +18,10 @@
  */
 package org.apache.grails.core.aot
 
-import org.springframework.aot.generate.ClassNameGenerator
 import org.springframework.aot.generate.DefaultGenerationContext
 import org.springframework.aot.generate.GeneratedFiles
 import org.springframework.aot.generate.InMemoryGeneratedFiles
+import org.springframework.aot.generate.NameGenerator
 import org.springframework.beans.factory.config.RuntimeBeanReference
 import org.springframework.beans.factory.support.AbstractBeanDefinition
 import org.springframework.beans.factory.support.RootBeanDefinition
@@ -59,7 +59,7 @@ class VarargsBeanRegistrationAotProcessorSpec extends Specification {
 
         InMemoryGeneratedFiles generatedFiles = new InMemoryGeneratedFiles()
         DefaultGenerationContext generationContext = new DefaultGenerationContext(
-                new ClassNameGenerator(ClassName.get('com.example', 'Subject')), generatedFiles)
+                new NameGenerator(ClassName.get('com.example', 'Subject')), generatedFiles)
         new ApplicationContextAotGenerator().processAheadOfTime(context, generationContext)
         generationContext.writeGeneratedContent()
 

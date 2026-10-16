@@ -96,7 +96,7 @@ More information can be found in the official https://logback.qos.ch/documentati
 === Structured Logging
 
 Grails does not enable structured logging. Existing Logback configuration and plain-text output remain unchanged
-unless an application explicitly selects a Spring Boot structured format. Spring Boot 4.1 provides the JSON format
+unless an application explicitly selects a Spring Boot structured format. Spring Boot provides the JSON format
 IDs `ecs` (Elastic Common Schema), `gelf` (Graylog Extended Log Format), and `logstash` for console and file output.
 For the complete reference, see the https://docs.spring.io/spring-boot/reference/features/logging.html#features.logging.structured[Spring Boot structured logging documentation].
 

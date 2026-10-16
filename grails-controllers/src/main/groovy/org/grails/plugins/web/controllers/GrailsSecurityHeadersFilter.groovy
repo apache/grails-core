@@ -74,6 +74,7 @@ class GrailsSecurityHeadersFilter extends OncePerRequestFilter {
     private static final Logger logger = LoggerFactory.getLogger(GrailsSecurityHeadersFilter)
 
     private static final String HTTPS = 'https'
+    private static final String FORWARDED = 'Forwarded'
 
     private final GrailsSecurityHeadersProperties properties
 
@@ -172,11 +173,10 @@ class GrailsSecurityHeadersFilter extends OncePerRequestFilter {
 
     /**
      * Whether the client connection is secure. Falls back to the scheme a reverse proxy
-     * forwards in the RFC 7239 {@code Forwarded} header or in {@code X-Forwarded-Proto}
-     * (and {@code X-Forwarded-Ssl}), read the same way Spring's {@code ForwardedHeaderFilter}
-     * reads them, when the container itself saw plain HTTP. That is the case behind a
-     * TLS-terminating proxy that has not been configured through
-     * {@code server.forward-headers-strategy}. Trusting the forwarded scheme is safe for
+     * forwards in the RFC 7239 {@code Forwarded} header when the request has one, otherwise in
+     * {@code X-Forwarded-Proto} (and {@code X-Forwarded-Ssl}), when the container itself saw
+     * plain HTTP. That is the case behind a TLS-terminating proxy that has not been configured
+     * through {@code server.forward-headers-strategy}. Trusting the forwarded scheme is safe for
      * HSTS: user agents ignore a {@code Strict-Transport-Security} header received over a
      * non-secure transport (RFC 6797, section 8.1), so a spoofed header on a plain
      * connection has no effect.
@@ -191,7 +191,14 @@ class GrailsSecurityHeadersFilter extends OncePerRequestFilter {
             // scheme alone rather than to its URL: java.net.URI rejects request paths the
             // container may accept, such as those allowed through Tomcat's relaxedPathChars.
             URI base = URI.create(request.getScheme() + '://localhost')
-            String scheme = ForwardedHeaderUtils.adaptFromForwardedHeaders(base, headers).build().getScheme()
+            ForwardedHeaderUtils.ForwardedInfo forwarded
+            if (StringUtils.hasText(headers.getFirst(FORWARDED))) {
+                forwarded = ForwardedHeaderUtils.parseStandardHeader(base, headers, null, null)
+            }
+            else {
+                forwarded = ForwardedHeaderUtils.parseXForwardedHeaders(base, headers, null, null)
+            }
+            String scheme = forwarded.uriComponentsBuilder().build().getScheme()
             return HTTPS.equalsIgnoreCase(scheme)
         }
         catch (IllegalArgumentException malformedForwardedHeaders) {

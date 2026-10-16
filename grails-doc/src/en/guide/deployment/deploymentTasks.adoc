@@ -191,6 +191,7 @@ See the link:{springBootReference}actuator/endpoints.html#actuator.endpoints.kub
 Many deployments terminate TLS at a reverse proxy or ingress. Keep certificate renewal there and restrict direct access to the application port.
 Configure forwarded-header handling only for a trusted proxy path, and have the boundary proxy remove untrusted client-supplied `Forwarded` and `X-Forwarded-*` headers.
 Choose `server.forward-headers-strategy=NATIVE` for supported embedded-container handling or `FRAMEWORK` for Spring's handling, according to your proxy's headers and trust configuration.
+`FRAMEWORK` reads the `+X-Forwarded-*+` headers; if your proxy sends the RFC 7239 `Forwarded` header instead, also set `spring.mvc.forwarded-headers.header-format=STANDARD`.
 Test redirects, absolute URLs, secure cookies, and client-address handling through that proxy. See the link:{springBootHowTo}webserver.html#howto.webserver.use-behind-a-proxy-server[Spring Boot proxy guidance].
 
 To terminate TLS in the embedded server instead, merge settings such as these into `application.yml` and mount the keystore read-only:

@@ -920,6 +920,8 @@ class GrailsSecurityHeadersAutoConfigurationSpec extends Specification {
         'Forwarded'         | 'for=192.0.2.60; PROTO=https'                || true
         'Forwarded'         | 'for=192.0.2.60;proto=http, proto=https'     || false
         'Forwarded'         | 'for=192.0.2.60'                             || false
+        'Forwarded'         | 'for=unknown;proto=https'                    || true
+        'Forwarded'         | 'for="[2001:db8:cafe::17]:4711";proto=https' || true
         'X-Forwarded-Ssl'   | 'on'                                         || true
         'X-Forwarded-For'   | '192.0.2.60'                                 || false
     }
@@ -947,6 +949,30 @@ class GrailsSecurityHeadersAutoConfigurationSpec extends Specification {
         'X-Forwarded-Port' | 'not-a-port'
         'X-Forwarded-Host' | 'a:b:c'
         'Forwarded'        | 'host=a:b:c;proto=https'
+        'Forwarded'        | 'for=2001:db8:cafe::17;proto=https'
+    }
+
+    @Unroll
+    void 'HSTS reads only the Forwarded header when the request has one: #headerName: #headerValue'() {
+        given: 'X-Forwarded-* headers are not consulted next to a Forwarded header'
+        def request = new MockHttpServletRequest('GET', '/')
+        request.secure = false
+        request.addHeader('Forwarded', 'for=192.0.2.60')
+        request.addHeader(headerName, headerValue)
+        def response = new MockHttpServletResponse()
+        def properties = new GrailsSecurityHeadersProperties()
+        properties.hsts.enabled = true
+
+        when:
+        new GrailsSecurityHeadersFilter(properties).doFilter(request, response, new MockFilterChain())
+
+        then:
+        response.getHeader('Strict-Transport-Security') == null
+
+        where:
+        headerName          | headerValue
+        'X-Forwarded-Proto' | 'https'
+        'X-Forwarded-Ssl'   | 'on'
     }
 
     @Unroll

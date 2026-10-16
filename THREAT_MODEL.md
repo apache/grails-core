@@ -19,7 +19,7 @@ limitations under the License.
 ## §1 Header
 
 - **Project**: Apache Grails (`apache/grails-core`)
-- **Version binding**: 9.0.x branch. A report against version *N* is triaged against this document as it stood at *N*, not at HEAD.
+- **Version binding**: 9.1.x branch. A report against version *N* is triaged against this document as it stood at *N*, not at HEAD.
 - **Date**: 2026-01
 - **Author**: Apache Grails PMC and contributors (initial draft).
 - **Status**: **DRAFT** - not yet ratified by maintainers. Open questions in §14 must be resolved before this document is binding.

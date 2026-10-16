@@ -17,12 +17,109 @@ specific language governing permissions and limitations
 under the License.
 ////
 
-=== Upgrade Instructions for Grails and Related Dependencies
+=== Upgrade Instructions for Grails 8 to Grails 9
 
-To ensure compatibility with Grails {version}, please review the following upgrade instructions carefully.
-This guide outlines the necessary steps and warnings to upgrade your Grails project from Grails 8.x to Grails 9.
+This guide outlines the changes introduced in Grails 9 and the steps required to upgrade your application.
 
-==== 1. GPars Integration Deprecated in Favour of Groovy Concurrency
+==== 1. Spring Boot 4.2 and Spring Framework 7.1
+
+Grails 9 moves from Spring Boot 4.1 and Spring Framework 7.0, which Grails 8 uses, to Spring Boot {springBootVersion} and Spring Framework {springVersion}.
+The managed versions that change include Spring Security 7.2, Spring Data 2026.1, Micrometer 1.18 and Reactor 2026.0.
+Review the https://github.com/spring-projects/spring-boot/wiki/Spring-Boot-4.2-Release-Notes[Spring Boot 4.2 Release Notes] and the https://github.com/spring-projects/spring-framework/wiki/Spring-Framework-7.1-Release-Notes[Spring Framework 7.1 Release Notes] for the changes that affect your application.
+The ones most likely to affect a Grails application are:
+
+* *`server.forward-headers-strategy: framework` reads only the `+X-Forwarded-*+` headers by default.*
+Spring Framework 7.1's `ForwardedHeaderFilter` reads either the RFC 7239 `Forwarded` header or the `+X-Forwarded-*+` headers, and Spring Boot 4.2 configures it for `+X-Forwarded-*+`.
+Before, it read `Forwarded` when the request carried one and `+X-Forwarded-*+` otherwise.
+If your reverse proxy sends `Forwarded`, set `spring.mvc.forwarded-headers.header-format: standard`.
+Spring Boot 4.2 also registers the filter from its Spring MVC auto-configuration, which backs off when the application declares `@EnableWebMvc`; such an application must now register a `ForwardedHeaderFilter` itself.
+
+* *Embedded Tomcat keeps relative redirect locations relative.*
+`server.tomcat.servlet.use-relative-redirects`, renamed from `server.tomcat.use-relative-redirects`, now defaults to `true`, Tomcat's own default.
+A redirect sent through `HttpServletResponse.sendRedirect` with a path, such as a controller `chain` call, a Spring Security redirect or a `redirect:` view name, now has a relative `Location` header instead of an absolute URL.
+A controller `redirect` sets the `Location` header itself and still sends an absolute URL unless you pass `absolute: false`.
+Browsers resolve relative locations; set the property to `false` if a client or test expects an absolute URL.
+
+* *`TestRestTemplate` is deprecated for removal.*
+Spring Framework 7.1 deprecates `RestTemplate`, and Spring Boot 4.2 deprecates `TestRestTemplate` and `@AutoConfigureTestRestTemplate` with it.
+Move `@SpringBootTest` tests to `RestTestClient`, which `@AutoConfigureRestTestClient` injects:
++
+[source,groovy]
+----
+// Before
+import org.springframework.boot.resttestclient.TestRestTemplate
+import org.springframework.boot.resttestclient.autoconfigure.AutoConfigureTestRestTemplate
+
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@AutoConfigureTestRestTemplate
+class BookApiSpec extends Specification {
+    @Autowired TestRestTemplate rest
+}
+
+// After
+import org.springframework.boot.resttestclient.autoconfigure.AutoConfigureRestTestClient
+import org.springframework.test.web.servlet.client.RestTestClient
+
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@AutoConfigureRestTestClient
+class BookApiSpec extends Specification {
+    @Autowired RestTestClient client
+}
+----
+
+* *Spring MVC no longer detects the JAXB XML converter.*
+Spring Framework 7.1 stops auto-detecting the JAXB message converter for server applications.
+Grails `render` and `respond` write XML through Grails' own converters and are unaffected.
+A Spring MVC `@RestController` that returns JAXB-annotated objects needs the converter registered explicitly, as the Spring Framework 7.1 release notes show.
+
+* *Tests load static nested `@Configuration` classes from their superclasses and enclosing classes.*
+The Spring TestContext Framework used to ignore such a class unless its class hierarchy declared `@ContextConfiguration`, and now adds it to the test's application context.
+Grails 8 already logs a warning for each one it ignores, so a test run on Grails 8 shows the affected tests.
+Remove the `@Configuration` annotation, or move the class to a top-level class, if the test should not load it.
+
+==== 2. graphql-java 26 for GraphQL Applications
+
+Spring Boot 4.2 manages graphql-java 26, so applications using the GraphQL plugin (`grails-data-graphql`) move from graphql-java 25 to graphql-java 26.1.
+graphql-java 26.0 contains breaking changes, listed in its https://github.com/graphql-java/graphql-java/releases/tag/v26.0[release notes].
+The ones that can affect a Grails application are:
+
+* *Query complexity limits are enforced by default.*
+A query nested more than 100 levels deep, or selecting more than 100,000 fields, now fails validation with a `MaxQueryDepthExceeded` or `MaxQueryFieldsExceeded` error.
+To raise the limits, or to turn them off, set new defaults when the application starts, for example in `BootStrap.groovy`:
++
+[source,groovy]
+----
+import graphql.validation.QueryComplexityLimits
+
+class BootStrap {
+
+    def init = {
+        QueryComplexityLimits.setDefaultLimits(QueryComplexityLimits.newLimits()
+                .maxDepth(150)
+                .maxFieldsCount(200_000)
+                .build())
+        // or, to turn the limits off:
+        // QueryComplexityLimits.setDefaultLimits(QueryComplexityLimits.NONE)
+    }
+}
+----
++
+graphql-java's parser separately rejects a query nested more than about 165 levels deep, so a `maxDepth` above that has no effect.
+
+* *Schemas built in code are validated like schemas built from SDL.*
+A required argument or input field (non-null with no default value) can no longer be deprecated.
+The schema the plugin generates never deprecates an argument or an input field, but arguments and input types an application adds through a `GraphQLSchemaInterceptor` must follow the rule.
+
+* *Additional schema types must be named types.*
+`GraphQLSchemaInterceptor.interceptSchema` still receives the additional types as a `Set<GraphQLType>`, and the plugin unwraps list and non-null wrappers before it builds the schema, so existing interceptors need no change.
+Code that builds a `GraphQLSchema` directly must pass `GraphQLNamedType` instances to `GraphQLSchema.Builder.additionalTypes`.
+
+The other breaking changes (the validation rule filter, the removal of `DirectiveInfo`, and the JSpecify nullability annotations) only affect code that uses graphql-java directly.
+The nullability annotations document existing behavior and do not change what graphql-java returns at runtime.
+
+The plugin continues to use graphql-java-extended-scalars 24.0, its latest release, which works with graphql-java 26.1.
+
+==== 3. GPars Integration Deprecated in Favour of Groovy Concurrency
 
 Grails 9 builds on Groovy 6, which brings a unified concurrency and parallel-processing toolkit into core under https://groovy-lang.org/releasenotes/groovy-6.0.html#concurrency-toolkit[GEP-18: Integrated Concurrency and Parallel Processing]. The `groovy.concurrent` package provides `Awaitable`, `DataflowVariable`, `Actor`, `Agent`, `Pool`, `ParallelScope` and the parallel collection methods such as `eachParallel` and `collectParallel`. The Groovy release notes describe the toolkit as modernising the patterns from GPars around virtual threads, structured concurrency and Groovy 6's `async`/`await`, and state that previous users of GPars will find much of its functionality there.
 
