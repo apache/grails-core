@@ -41,6 +41,10 @@ import org.springframework.validation.annotation.Validated
 import org.springframework.validation.beanvalidation.MessageSourceResourceBundleLocator
 import org.springframework.validation.beanvalidation.SpringConstraintValidatorFactory
 
+import grails.gorm.validation.ConstrainedProperty
+import grails.gorm.validation.PersistentEntityValidator
+import org.grails.datastore.gorm.validation.constraints.eval.ConstraintsEvaluator
+import org.grails.datastore.gorm.validation.constraints.registry.ConstraintRegistry
 import org.grails.datastore.gorm.validation.constraints.registry.DefaultValidatorRegistry
 import org.grails.datastore.mapping.core.connections.ConnectionSourceSettings
 import org.grails.datastore.mapping.model.MappingContext
@@ -111,21 +115,67 @@ class JakartaValidatorRegistry extends DefaultValidatorRegistry implements Valid
         new GormValidatorFactoryAdapter(validatorConfiguration.buildValidatorFactory())
     }
 
+    /**
+     * Builds a validator factory for the given context and message source
+     *
+     * @param context The context
+     * @param messageSource The message source
+     * @return The validator factory
+     * @since 8.0.1
+     */
+    static ValidatorFactory createValidatorFactory(MappingContext context, MessageSource messageSource) {
+        return buildConfigurationFor(context, messageSource).buildValidatorFactory()
+    }
+
     @Override
     Validator getValidator(PersistentEntity entity) {
-        def ann = entity.javaClass.getAnnotation(Validated)
-        if (ann != null && isAvailable()) {
-            def validator = validatorFactory.getValidator()
-            if (validator instanceof GormValidatorAdapter) {
-                return (Validator) validator
-            }
-            else {
-                return new GormValidatorAdapter(validator)
-            }
-        }
-        else {
+        if (!isBeanValidated(entity)) {
             return super.getValidator(entity)
         }
+        Validator validator = validatorMap.get(entity)
+        if (validator == null) {
+            validator = createEntityValidator(entity, messageSource, constraintsEvaluator, constraintRegistry, validatorFactory)
+            validatorMap.put(entity, validator)
+        }
+        return validator
+    }
+
+    /**
+     * @param entity The entity
+     * @return Whether the entity is validated with Bean Validation, i.e. it is annotated with {@link Validated} (GORM
+     * adds the annotation to any entity carrying Bean Validation constraint annotations)
+     * @since 8.0.1
+     */
+    static boolean isBeanValidated(PersistentEntity entity) {
+        return isAvailable() && entity.javaClass.getAnnotation(Validated) != null
+    }
+
+    /**
+     * Creates the validator for an entity validated with Bean Validation. It validates the Bean Validation annotations
+     * and the GORM constraints of the entity, and exposes both as constraints. The GORM {@code nullable} constraint is
+     * left to Bean Validation for the properties whose nullability is declared with an annotation, so a null value
+     * is reported once.
+     *
+     * @param entity The entity
+     * @param messageSource The message source
+     * @param constraintsEvaluator The evaluator of the GORM constraints
+     * @param constraintRegistry The registry the constraints are built with
+     * @param validatorFactory The Bean Validation validator factory
+     * @return The validator
+     * @since 8.0.1
+     */
+    static GormValidatorAdapter createEntityValidator(PersistentEntity entity, MessageSource messageSource,
+            ConstraintsEvaluator constraintsEvaluator, ConstraintRegistry constraintRegistry, ValidatorFactory validatorFactory) {
+        jakarta.validation.Validator beanValidator = validatorFactory.getValidator()
+        if (beanValidator instanceof GormValidatorAdapter) {
+            beanValidator = ((GormValidatorAdapter) beanValidator).thisValidator
+        }
+        PersistentEntityValidator entityValidator = new PersistentEntityValidator(entity, messageSource, constraintsEvaluator)
+        Class<?> entityClass = entity.javaClass
+        JakartaConstraintsTranslator.delegateNullabilityToBeanValidation(entityClass, entityValidator.constrainedProperties)
+        Map<String, ConstrainedProperty> constrainedProperties = new JakartaConstraintsTranslator()
+                .translate(entityClass, entityValidator.constrainedProperties, constraintRegistry)
+        return new GormValidatorAdapter(beanValidator, entityValidator, constrainedProperties)
     }
 
     @Override

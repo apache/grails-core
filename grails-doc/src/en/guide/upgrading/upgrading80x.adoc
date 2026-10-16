@@ -4779,3 +4779,14 @@ When upgrading from an earlier Grails 8 milestone or release candidate, update t
 
 With the configuration cache, task actions such as `doFirst` and `doLast` closures may not use `project`, other tasks or build script properties while they run, and Gradle fails the build when a build script or another Gradle plugin does.
 See xref:commandLine#gradleConfigurationCache[Using the Gradle Configuration Cache] for how to adapt build scripts and what to do about plugins that do not support it.
+
+==== 86. Bean Validation Annotated Domain Classes
+
+As of Grails 8.0.1, a domain class carrying Jakarta Bean Validation annotations (such as `@NotNull` or `@Size`) is validated against its `constraints` block as well as its annotations. Previously the presence of a single annotation disabled the `constraints` block for validation, although the block still defined the database schema, so an instance could pass `validate()` and then fail on a `NOT NULL` column. The nullability of a property that has a nullability annotation (`@NotNull`, `@NotBlank`, `@NotEmpty` or `@Null`) is decided by the annotation alone, so a `null` value is reported once.
+
+Two further corrections apply to such domain classes:
+
+* `@NotNull`, `@NotBlank` and `@NotEmpty` now report a `null` property. Previously a `null` value was skipped by validation, so an instance with a missing required property was considered valid.
+* Class level constraints are now validated.
+
+The `constrainedProperties` of an annotated domain class, previously empty, now describe the annotations and the `constraints` block, so scaffolding and plugins reading them (such as the fields plugin) see the annotated properties as constrained. Unit tests mocking such a domain class validate the annotations as well. Review tests that relied on the previous behaviour, and see the link:validation.html#beanValidation[Bean Validation Annotations] section of the validation guide for details.

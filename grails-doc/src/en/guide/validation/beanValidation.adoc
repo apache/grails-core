@@ -1,0 +1,53 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+==== Bean Validation Annotations
+
+Domain classes can also be constrained with https://jakarta.ee/specifications/bean-validation/[Jakarta Bean Validation] annotations, either instead of or alongside the `constraints` block:
+
+[source,groovy]
+----
+import jakarta.validation.constraints.Email
+import jakarta.validation.constraints.Max
+import jakarta.validation.constraints.Min
+import jakarta.validation.constraints.NotBlank
+import jakarta.validation.constraints.NotNull
+import jakarta.validation.constraints.Size
+
+class Member {
+    @NotBlank @Size(max = 30) String name
+    @NotNull @Email String email
+    @NotNull @Min(1L) @Max(5L) Integer level
+    String referenceCode
+
+    static constraints = {
+        referenceCode nullable: false, matches: /[A-Z]{2}-\d{4}/
+    }
+}
+----
+
+GORM detects the annotations at compile time and validates such a domain class with the Bean Validation provider (Hibernate Validator) in addition to its own constraints. Calling `validate()` or `save()` checks both, and each violation is reported once in the `errors` of the instance: the annotations with Spring's Bean Validation message codes (for example `NotBlank.com.example.Member.name`, `NotBlank.name` and `NotBlank`, falling back to the message of the annotation), and the `constraints` block with the usual link:{constraintsRef}[constraint] codes.
+
+The nullability of a property is decided by its annotations when it has any: `@NotNull`, `@NotBlank` and `@NotEmpty` make it required and `@Null` keeps it empty, regardless of the `grails.gorm.default.nullable` setting or a `nullable` constraint in the block. Declare every other rule once, either as an annotation or in the block, as a rule declared in both places is checked twice.
+
+GORM cascades validation to the associations of an annotated domain class exactly as it does for any other domain class, so `@Valid` is not needed on an association between domain classes and has no additional effect there.
+
+The constrained properties of the domain class (its `constrainedProperties`), used by scaffolding and plugins such as the fields plugin, describe the annotations as well: `@NotNull` as `nullable: false`, `@Size` as `minSize` and `maxSize`, `@Min` and `@Max` as `min` and `max`, `@Email` as `email`, `@Pattern` as `matches`, `@AssertTrue` and `@AssertFalse` as `inList`, and Hibernate Validator's `@Length`, `@Range`, `@URL` and `@CreditCardNumber` as their GORM counterparts. A custom constraint composed of these annotations is described through them; annotations without an equivalent, such as `@Past` or a custom constraint with its own validator, are only validated.
+
+Unit tests mocking a domain class with link:testing.html#unitTestingDomainClasses[DataTest] or `DomainUnitTest` validate the annotations and the `constraints` block the same way.
