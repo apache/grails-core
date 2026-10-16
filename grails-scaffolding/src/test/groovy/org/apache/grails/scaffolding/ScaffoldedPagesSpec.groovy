@@ -95,4 +95,19 @@ class ScaffoldedPagesSpec extends Specification {
         expect:
         ScaffoldedPages.expand(bytes('Título ${className}'), model()) == 'Título Book'
     }
+
+    void 'a model naming only the domain class still names a page'() {
+        expect:
+        ScaffoldedPages.uri('show', [fullName: 'com.example.Book'], bytes('plain text')) ==~
+                /\/grails-scaffolded\/com\.example\.Book\/show-[0-9a-f]{16}\.gsp/
+    }
+
+    void 'a template that cannot be compiled is reported'() {
+        when:
+        ScaffoldedPages.expand(bytes('<% if ( %>'), model())
+
+        then:
+        thrown(Exception)
+    }
+
 }

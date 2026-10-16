@@ -16,13 +16,10 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.plugins.testing;
+package org.grails.plugins.testing
 
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
-
-import org.springframework.mock.web.MockMultipartFile;
+import groovy.transform.CompileStatic
+import org.springframework.mock.web.MockMultipartFile
 
 /**
  * Extends the default Spring MockMultipartFile to provide an implementation of transferTo that
@@ -31,35 +28,37 @@ import org.springframework.mock.web.MockMultipartFile;
  * @author Graeme Rocher
  * @since 2.0
  */
-public class GrailsMockMultipartFile extends MockMultipartFile {
+@CompileStatic
+class GrailsMockMultipartFile extends MockMultipartFile {
 
-    private File targetFileLocation;
+    private File targetFileLocation
 
-    public GrailsMockMultipartFile(String name, byte[] content) {
-        super(name, content);
+    GrailsMockMultipartFile(String name, byte[] content) {
+        super(name, content)
     }
 
-    public GrailsMockMultipartFile(String name, InputStream contentStream) throws IOException {
-        super(name, contentStream);
+    GrailsMockMultipartFile(String name, InputStream contentStream) throws IOException {
+        super(name, contentStream)
     }
 
-    public GrailsMockMultipartFile(String name, String originalFilename, String contentType, byte[] content) {
-        super(name, originalFilename, contentType, content);
+    GrailsMockMultipartFile(String name, String originalFilename, String contentType, byte[] content) {
+        super(name, originalFilename, contentType, content)
     }
 
-    public GrailsMockMultipartFile(String name, String originalFilename, String contentType, InputStream contentStream) throws IOException {
-        super(name, originalFilename, contentType, contentStream);
+    GrailsMockMultipartFile(String name, String originalFilename, String contentType, InputStream contentStream) throws IOException {
+        super(name, originalFilename, contentType, contentStream)
     }
 
     @Override
-    public void transferTo(File dest) throws IOException, IllegalStateException {
-        this.targetFileLocation = dest;
+    void transferTo(File dest) throws IOException, IllegalStateException {
+        this.targetFileLocation = dest
     }
 
     /**
      * @return The location where the MultipartFile was transfered to
      */
-    public File getTargetFileLocation() {
-        return targetFileLocation;
+    File getTargetFileLocation() {
+        return targetFileLocation
     }
+
 }

@@ -16,11 +16,11 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package grails.test;
+package grails.test
 
-import groovy.lang.Closure;
-import groovy.mock.interceptor.LooseExpectation;
-import groovy.mock.interceptor.StrictExpectation;
+import groovy.mock.interceptor.LooseExpectation
+import groovy.mock.interceptor.StrictExpectation
+import groovy.transform.CompileStatic
 
 /**
  * This closure proxy stores an expectation and checks it before each
@@ -28,12 +28,13 @@ import groovy.mock.interceptor.StrictExpectation;
  *
  * @author Peter Ledbrook
  */
-public class MockClosureProxy extends AbstractClosureProxy {
+@CompileStatic
+class MockClosureProxy extends AbstractClosureProxy {
 
-    private static final long serialVersionUID = -1373536726646006925L;
+    private static final long serialVersionUID = -1373536726646006925L
 
-    String methodName;
-    Object expectation;
+    String methodName
+    Object expectation
 
     /**
      * Constructor.
@@ -41,16 +42,16 @@ public class MockClosureProxy extends AbstractClosureProxy {
      * @param methodName
      * @param expectation
      */
-    public MockClosureProxy(Closure<?> target, String methodName, Object expectation) {
-        super(target);
-        this.methodName = methodName;
-        this.expectation = expectation;
+    MockClosureProxy(Closure<?> target, String methodName, Object expectation) {
+        super(target)
+        this.methodName = methodName
+        this.expectation = expectation
 
         if (!(expectation instanceof LooseExpectation) && !(expectation instanceof StrictExpectation)) {
             throw new IllegalArgumentException(
-                    "Expectation must be either groovy.mock.interceptor.LooseExpectation or " +
-                    " groovy.mock.interceptor.StrictExpectation (actual class: " +
-                    expectation.getClass() + ")");
+                    'Expectation must be either groovy.mock.interceptor.LooseExpectation or ' +
+                    ' groovy.mock.interceptor.StrictExpectation (actual class: ' +
+                    expectation.getClass() + ')')
         }
     }
 
@@ -64,10 +65,10 @@ public class MockClosureProxy extends AbstractClosureProxy {
     @Override
     protected void doBeforeCall(Object[] args) {
         if (expectation instanceof LooseExpectation) {
-            ((LooseExpectation) expectation).match(methodName);
+            ((LooseExpectation) expectation).match(methodName)
         }
         else {
-            ((StrictExpectation) expectation).match(methodName);
+            ((StrictExpectation) expectation).match(methodName)
         }
     }
 
@@ -88,6 +89,7 @@ public class MockClosureProxy extends AbstractClosureProxy {
      */
     @Override
     protected Closure<?> createWrapper(Closure<?> c) {
-        return new MockClosureProxy(c, methodName, expectation);
+        return new MockClosureProxy(c, methodName, expectation)
     }
+
 }

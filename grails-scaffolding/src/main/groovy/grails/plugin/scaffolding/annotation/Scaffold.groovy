@@ -17,12 +17,12 @@
  *  under the License.
  */
 
-package grails.plugin.scaffolding.annotation;
+package grails.plugin.scaffolding.annotation
 
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
+import java.lang.annotation.ElementType
+import java.lang.annotation.Retention
+import java.lang.annotation.RetentionPolicy
+import java.lang.annotation.Target
 
 /**
  * Scaffolding annotation for Controllers and Services.
@@ -68,7 +68,7 @@ import java.lang.annotation.Target;
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.TYPE)
-public @interface Scaffold {
+@interface Scaffold {
 
     /**
      * Class to extend OR domain class (context-dependent).
@@ -97,7 +97,7 @@ public @interface Scaffold {
      *
      * @return the class to extend or domain class
      */
-    Class<?> value() default Void.class;
+    Class<?> value() default Void
 
     /**
      * Domain/entity class (alternative to value).
@@ -111,7 +111,7 @@ public @interface Scaffold {
      *
      * @return the domain class
      */
-    Class<?> domain() default Void.class;
+    Class<?> domain() default Void
 
     /**
      * Whether this service/controller is read-only.
@@ -122,5 +122,6 @@ public @interface Scaffold {
      *
      * @return true if read-only, false otherwise
      */
-    boolean readOnly() default false;
+    boolean readOnly() default false
+
 }

@@ -16,16 +16,16 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package grails.plugin.cache;
+package grails.plugin.cache
 
-import java.lang.annotation.Documented;
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Inherited;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
+import java.lang.annotation.Documented
+import java.lang.annotation.ElementType
+import java.lang.annotation.Inherited
+import java.lang.annotation.Retention
+import java.lang.annotation.RetentionPolicy
+import java.lang.annotation.Target
 
-import org.codehaus.groovy.transform.GroovyASTTransformationClass;
+import org.codehaus.groovy.transform.GroovyASTTransformationClass
 
 /**
  * Indicates that a method (or all methods on a class) trigger(s)
@@ -36,23 +36,24 @@ import org.codehaus.groovy.transform.GroovyASTTransformationClass;
  * @author Jeff Brown
  * @author Graeme Rocher
  */
-@Target({ ElementType.METHOD, ElementType.TYPE })
+@Target([ElementType.METHOD, ElementType.TYPE])
 @Retention(RetentionPolicy.RUNTIME)
 @Inherited
 @Documented
-@GroovyASTTransformationClass("org.grails.plugin.cache.compiler.CachePutTransformation")
-public @interface CachePut {
+@GroovyASTTransformationClass('org.grails.plugin.cache.compiler.CachePutTransformation')
+@interface CachePut {
 
     /**
      * Name of the caches in which the update takes place.
      * <p>May be used to determine the target cache (or caches), matching the
      * qualifier value.
      */
-    String[] value();
+    String[] value()
 
     /**
      * A closure for computing the key dynamically.
      * <p>Default is null, meaning all method parameters are considered as a key.
      */
-    Class[] key() default {};
+    Class[] key() default []
+
 }

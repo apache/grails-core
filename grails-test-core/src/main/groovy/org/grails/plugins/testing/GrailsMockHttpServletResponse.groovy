@@ -16,7 +16,9 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.plugins.testing;
+package org.grails.plugins.testing
+
+import groovy.transform.CompileStatic
 
 /**
  * Refer to the groovydoc of {@link GrailsMockHttpServletResponse} for further information.
@@ -24,20 +26,22 @@ package org.grails.plugins.testing;
  * @author Graeme Rocher
  * @since 2.1
  */
-public class GrailsMockHttpServletResponse extends AbstractGrailsMockHttpServletResponse {
-    
+@CompileStatic
+class GrailsMockHttpServletResponse extends AbstractGrailsMockHttpServletResponse {
+
     @Override
-    public void setForwardedUrl(final String forwardedUrl) {
-        String strippedUrl = forwardedUrl;
+    void setForwardedUrl(final String forwardedUrl) {
+        String strippedUrl = forwardedUrl
         if (strippedUrl != null) {
-            if (strippedUrl.startsWith("/grails/")) {
+            if (strippedUrl.startsWith('/grails/')) {
                 // Strip off /grails, leave the second /
-                strippedUrl = strippedUrl.substring(7);
+                strippedUrl = strippedUrl.substring(7)
             }
-            if (strippedUrl.endsWith(".dispatch")) {
-                strippedUrl = strippedUrl.substring(0, strippedUrl.length() - 9);
+            if (strippedUrl.endsWith('.dispatch')) {
+                strippedUrl = strippedUrl.substring(0, strippedUrl.length() - 9)
             }
         }
-        super.setForwardedUrl(strippedUrl);
+        super.setForwardedUrl(strippedUrl)
     }
+
 }
