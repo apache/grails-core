@@ -16,27 +16,25 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.commons;
-
-import grails.core.ArtefactHandler;
-import groovy.lang.GroovyClassLoader;
-import org.grails.core.artefact.DomainClassArtefactHandler;
-import org.junit.jupiter.api.Test;
-
-import static org.junit.jupiter.api.Assertions.assertTrue;
+package org.grails.commons
 
 /**
- * @author Marc Palmer
+ * Original author: marc
  */
-public class DomainClassArtefactHandlerTests {
+class TestBean {
+    private static String welcomeMessage = 'hello'
 
-    @Test
-    public void testIsDomainClass() {
+    private String userName = 'marc'
 
-        GroovyClassLoader gcl = new GroovyClassLoader();
-        Class<?> c = gcl.parseClass("@grails.persistence.Entity\nclass Test { Long id;Long version;}\n");
+    public String favouriteArtist = 'Cardiacs'
 
-        ArtefactHandler handler = new DomainClassArtefactHandler();
-        assertTrue(handler.isArtefact(c));
+    public static String favouriteFood = 'indian'
+
+    String getUserName() {
+        return userName
+    }
+
+    static String getWelcomeMessage() {
+        return welcomeMessage
     }
 }

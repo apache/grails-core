@@ -16,25 +16,19 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.commons;
+package org.grails.commons.spring
 
-/**
- * Original author: marc
- */
-public class TestBean {
-    static private String welcomeMessage = "hello";
+import grails.core.GrailsApplication
 
-    private String userName = "marc";
+class GrailsMockDependantObject {
 
-    public String favouriteArtist = "Cardiacs";
+    GrailsApplication application
 
-    public static String favouriteFood = "indian";
-
-    public String getUserName() {
-        return userName;
+    GrailsApplication getApplication() {
+        return application
     }
 
-    public static String getWelcomeMessage() {
-        return welcomeMessage;
+    void setApplication(GrailsApplication application) {
+        this.application = application
     }
 }

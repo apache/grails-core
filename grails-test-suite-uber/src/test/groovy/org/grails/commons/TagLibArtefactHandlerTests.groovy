@@ -16,27 +16,27 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.commons;
+package org.grails.commons
 
-import grails.core.ArtefactHandler;
-import groovy.lang.GroovyClassLoader;
-import org.grails.web.servlet.boostrap.BootstrapArtefactHandler;
-import org.junit.jupiter.api.Test;
+import grails.core.ArtefactHandler
+import groovy.lang.GroovyClassLoader
+import org.grails.core.artefact.gsp.TagLibArtefactHandler
+import org.junit.jupiter.api.Test
 
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue
 
 /**
  * @author Marc Palmer
  */
-public class BootStrapArtefactHandlerTests {
+class TagLibArtefactHandlerTests {
 
     @Test
-    public void testIsBootStrapClass() {
-        GroovyClassLoader gcl = new GroovyClassLoader();
+    void testIsTagLibClass() {
+        GroovyClassLoader gcl = new GroovyClassLoader()
 
-        Class<?> c = gcl.parseClass("class TestBootStrap { }\n");
+        Class<?> c = gcl.parseClass('class TestTagLib { }\n')
 
-        ArtefactHandler handler = new BootstrapArtefactHandler();
-        assertTrue(handler.isArtefact(c));
+        ArtefactHandler handler = new TagLibArtefactHandler()
+        assertTrue(handler.isArtefact(c))
     }
 }
