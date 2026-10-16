@@ -16,13 +16,12 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.web.mapping;
+package org.grails.web.mapping
 
-import groovy.lang.Closure;
+import groovy.transform.CompileStatic
+import org.springframework.web.context.request.RequestContextHolder
 
-import org.springframework.web.context.request.RequestContextHolder;
-
-import org.grails.web.servlet.mvc.GrailsWebRequest;
+import org.grails.web.servlet.mvc.GrailsWebRequest
 
 /**
  * Resolves the value a URL mapping captured for one of its named tokens - the {@code $controller},
@@ -41,22 +40,23 @@ import org.grails.web.servlet.mvc.GrailsWebRequest;
  *
  * @since 8.0
  */
+@CompileStatic
 class RuntimeConstraintEvaluator extends Closure<Object> {
 
-    private static final long serialVersionUID = -2404119898659287216L;
+    private static final long serialVersionUID = -2404119898659287216L
 
-    private final String constraintName;
+    private final String constraintName
 
     RuntimeConstraintEvaluator(Object owner, String constraintName) {
-        super(owner);
-        this.constraintName = constraintName;
+        super(owner)
+        this.constraintName = constraintName
     }
 
     /**
      * @return the name of the constrained property this evaluator resolves
      */
     String getConstraintName() {
-        return constraintName;
+        return constraintName
     }
 
     /**
@@ -65,8 +65,8 @@ class RuntimeConstraintEvaluator extends Closure<Object> {
      * not a {@code call(Object...)} override so that a statically-typed override returning request
      * parameters does not exist on the {@code Closure} type surface.
      */
-    public Object doCall(Object... args) {
-        GrailsWebRequest webRequest = (GrailsWebRequest) RequestContextHolder.currentRequestAttributes();
-        return webRequest.getParams().get(constraintName);
+    Object doCall(Object... args) {
+        GrailsWebRequest webRequest = (GrailsWebRequest) RequestContextHolder.currentRequestAttributes()
+        return webRequest.getParams().get(constraintName)
     }
 }
