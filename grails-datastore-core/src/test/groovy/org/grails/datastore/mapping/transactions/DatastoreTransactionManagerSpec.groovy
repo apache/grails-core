@@ -24,16 +24,22 @@ import ch.qos.logback.classic.spi.ILoggingEvent
 import ch.qos.logback.core.read.ListAppender
 import jakarta.persistence.FlushModeType
 import org.slf4j.LoggerFactory
+import org.springframework.dao.DataAccessResourceFailureException
+import org.springframework.dao.InvalidDataAccessApiUsageException
 import org.springframework.transaction.CannotCreateTransactionException
 import org.springframework.transaction.IllegalTransactionStateException
 import org.springframework.transaction.TransactionDefinition
+import org.springframework.transaction.TransactionStatus
+import org.springframework.transaction.TransactionSystemException
 import org.springframework.transaction.TransactionUsageException
 import org.springframework.transaction.UnexpectedRollbackException
+import org.springframework.transaction.support.DefaultTransactionDefinition
 import org.springframework.transaction.support.TransactionSynchronization
 import org.springframework.transaction.support.TransactionSynchronizationManager
 import org.springframework.transaction.support.TransactionTemplate
 import spock.lang.Specification
 
+import org.grails.datastore.mapping.core.ConnectionNotFoundException
 import org.grails.datastore.mapping.core.Datastore
 import org.grails.datastore.mapping.core.DatastoreUtils
 import org.grails.datastore.mapping.core.Session
@@ -522,6 +528,161 @@ class DatastoreTransactionManagerSpec extends Specification {
         then:
         thrown(CannotCreateTransactionException)
         1 * transaction.rollback()
+    }
+
+    void "the manager requires a datastore"() {
+        when:
+        new DatastoreTransactionManager().datastore
+
+        then:
+        IllegalArgumentException e = thrown()
+        e.message == 'Cannot use DatastoreTransactionManager without a datastore set!'
+
+        expect:
+        transactionManager.datastore.is(datastore)
+    }
+
+    void "a new transaction connects a session, binds it and honours the timeout"() {
+        when:
+        TransactionStatus status = transactionManager.getTransaction(new DefaultTransactionDefinition(timeout: 20))
+
+        then:
+        1 * datastore.connect() >> session
+        1 * session.beginTransaction(_ as TransactionDefinition) >> transaction
+        1 * transaction.setTimeout(20)
+        0 * session.setFlushMode(_)
+        1 * session.setSynchronizedWithTransaction(true)
+        status.newTransaction
+        ((SessionHolder) TransactionSynchronizationManager.getResource(datastore)).session.is(session)
+        ((SessionHolder) TransactionSynchronizationManager.getResource(datastore)).synchronizedWithTransaction
+
+        when:
+        transactionManager.commit(status)
+
+        then:
+        1 * session.flush()
+        1 * transaction.commit()
+        1 * session.disconnect()
+        1 * session.setSynchronizedWithTransaction(false)
+    }
+
+    void "commit failures are reported as transaction system exceptions"() {
+        given:
+        transaction.commit() >> { throw new InvalidDataAccessApiUsageException('commit failed') }
+        TransactionStatus status = transactionManager.getTransaction(new DefaultTransactionDefinition())
+
+        when:
+        transactionManager.commit(status)
+
+        then:
+        TransactionSystemException e = thrown()
+        e.message == 'Could not commit Datastore transaction'
+        e.cause.message == 'commit failed'
+        1 * session.disconnect()
+    }
+
+    void "rollback failures are reported as transaction system exceptions and still clear the session"() {
+        given:
+        transaction.rollback() >> { throw new InvalidDataAccessApiUsageException('rollback failed') }
+        TransactionStatus status = transactionManager.getTransaction(new DefaultTransactionDefinition())
+
+        when:
+        transactionManager.rollback(status)
+
+        then:
+        TransactionSystemException e = thrown()
+        e.message == 'Could not rollback Datastore transaction'
+        1 * session.clear()
+    }
+
+    void "setting rollback only on the status rolls back on commit"() {
+        given:
+        TransactionStatus status = transactionManager.getTransaction(new DefaultTransactionDefinition())
+
+        when:
+        status.setRollbackOnly()
+
+        then:
+        status.rollbackOnly
+
+        when:
+        transactionManager.commit(status)
+
+        then:
+        1 * transaction.rollback()
+        0 * transaction.commit()
+    }
+
+    void "a failure to begin the transaction closes a newly connected session"() {
+        when:
+        transactionManager.getTransaction(new DefaultTransactionDefinition())
+
+        then: 'declared here, as an interaction in a then block takes precedence over the one in setup'
+        session.beginTransaction(_ as TransactionDefinition) >> { throw new IllegalStateException('cannot begin') }
+        CannotCreateTransactionException e = thrown()
+        e.message == 'Could not open Datastore Session for transaction'
+        e.cause.message == 'cannot begin'
+        1 * session.disconnect()
+        0 * transaction.rollback()
+        !TransactionSynchronizationManager.hasResource(datastore)
+    }
+
+    void "a thread bound session holder is reused and not closed after completion"() {
+        given:
+        SessionHolder holder = new SessionHolder(session)
+        TransactionSynchronizationManager.bindResource(datastore, holder)
+
+        when:
+        TransactionStatus status = transactionManager.getTransaction(new DefaultTransactionDefinition())
+
+        then:
+        0 * datastore.connect()
+        1 * session.setSynchronizedWithTransaction(true)
+        TransactionSynchronizationManager.getResource(datastore).is(holder)
+
+        when:
+        transactionManager.commit(status)
+
+        then:
+        1 * transaction.commit()
+        0 * session.disconnect()
+        1 * session.setSynchronizedWithTransaction(false)
+        TransactionSynchronizationManager.getResource(datastore).is(holder)
+    }
+
+    void "datastore managed sessions use the current session and are not closed"() {
+        given:
+        transactionManager.datastoreManagedSession = true
+
+        when:
+        TransactionStatus status = transactionManager.getTransaction(new DefaultTransactionDefinition())
+
+        then:
+        1 * datastore.getCurrentSession() >> session
+        0 * datastore.connect()
+        ((SessionHolder) TransactionSynchronizationManager.getResource(datastore)).session.is(session)
+
+        when:
+        transactionManager.commit(status)
+
+        then:
+        1 * transaction.commit()
+        1 * session.disconnect()
+        !((SessionHolder) TransactionSynchronizationManager.getResource(datastore)).synchronizedWithTransaction
+    }
+
+    void "a missing datastore managed session is reported as a resource failure"() {
+        given:
+        transactionManager.datastoreManagedSession = true
+        datastore.getCurrentSession() >> { throw new ConnectionNotFoundException('none') }
+
+        when:
+        transactionManager.getTransaction(new DefaultTransactionDefinition())
+
+        then:
+        DataAccessResourceFailureException e = thrown()
+        e.message.startsWith('Could not obtain Datastore-managed Session for Spring-managed transaction')
+        e.cause instanceof ConnectionNotFoundException
     }
 
     private TransactionTemplate getReadOnlyTemplate() {
