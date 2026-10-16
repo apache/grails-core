@@ -1,0 +1,57 @@
+%{--
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+--}%
+<%@ page trimLogicLines="true" expressionCodec="none" %>
+<%@ page import="org.grails.forge.application.Project" %>
+<%@ page import="org.grails.forge.options.JdkVersion" %>
+<%@ page import="org.grails.forge.template.GspView" %>
+<%@ model="Project project" %>
+<%@ model="JdkVersion jdkVersion" %>
+name: Java CI
+on: [push, pull_request]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      checks: write
+      contents: read
+    steps:
+${GspView.of('/forge/feature/github/workflows/templates/javaSetup.gsp', [jdkVersion: jdkVersion]).render()}      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v6.1.0
+        with:
+          # 'basic' is the MIT-licensed cache provider; the default 'enhanced' provider is proprietary (Gradle commercial Terms of Use)
+          cache-provider: basic
+          # Uncomment the build-scan parameters if you want to publish a Gradle build scan
+          # in order to see all the build logs, a complete task timeline, test outputs,
+          # and the resolved dependencies of your build.
+          # build-scan-publish: true
+          # build-scan-terms-of-use-url: "https://gradle.com/terms-of-service"
+          # build-scan-terms-of-use-agree: "yes"
+      - name: Run Tests
+        if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
+        id: tests
+        run: ./gradlew check
+      - name: Run Build
+        if: github.event_name == 'push'
+        id: build
+        run: ./gradlew build
+      - name: Publish Test Report
+        if: failure()
+        uses: scacap/action-surefire-report@v1
+        with:
+          report_paths: '**/build/test-results/**/TEST-*.xml'

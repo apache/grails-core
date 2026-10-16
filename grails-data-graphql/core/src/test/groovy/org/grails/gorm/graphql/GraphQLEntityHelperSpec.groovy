@@ -19,10 +19,13 @@
 
 package org.grails.gorm.graphql
 
+import org.grails.datastore.mapping.model.IllegalMappingException
 import org.grails.datastore.mapping.model.PersistentEntity
+import org.grails.datastore.mapping.model.PersistentProperty
 import org.grails.gorm.graphql.domain.general.description.Annotation
 import org.grails.gorm.graphql.domain.hibernate.description.MappingComment
 import org.grails.gorm.graphql.domain.general.description.MappingDescription
+import org.grails.gorm.graphql.entity.dsl.GraphQLMapping
 
 /**
  * Created by jameskleeh on 7/25/17.
@@ -55,5 +58,142 @@ class GraphQLEntityHelperSpec extends HibernateSpec {
 
         expect:
         GraphQLEntityHelper.getDescription(entity) == 'MappingDescription class'
+    }
+
+    void "test getMapping returns null when no static graphql property is present"() {
+        given:
+        PersistentEntity entity = Stub(PersistentEntity) {
+            getJavaClass() >> NoGraphqlMapping
+        }
+
+        expect:
+        GraphQLEntityHelper.getMapping(entity) == null
+    }
+
+    void "test getMapping builds a default mapping from a Boolean true"() {
+        given:
+        PersistentEntity entity = Stub(PersistentEntity) {
+            getJavaClass() >> BooleanGraphqlMapping
+        }
+
+        expect:
+        GraphQLEntityHelper.getMapping(entity) instanceof GraphQLMapping
+    }
+
+    void "test getMapping builds a mapping from a Closure"() {
+        given:
+        PersistentEntity entity = Stub(PersistentEntity) {
+            getJavaClass() >> ClosureGraphqlMapping
+        }
+
+        expect:
+        GraphQLEntityHelper.getMapping(entity).description == 'from closure'
+    }
+
+    void "test getMapping initializes a lazy mapping"() {
+        given:
+        PersistentEntity entity = Stub(PersistentEntity) {
+            getJavaClass() >> LazyGraphqlMapping
+        }
+
+        expect:
+        GraphQLEntityHelper.getMapping(entity).description == 'from lazy'
+    }
+
+    void "test getMapping returns a prebuilt mapping as-is"() {
+        given:
+        PersistentEntity entity = Stub(PersistentEntity) {
+            getJavaClass() >> PrebuiltGraphqlMapping
+        }
+
+        expect:
+        GraphQLEntityHelper.getMapping(entity).is(PrebuiltGraphqlMapping.graphql)
+    }
+
+    void "test getMapping verifies that mapped properties exist on the entity"() {
+        given:
+        PersistentEntity entity = Stub(PersistentEntity) {
+            getJavaClass() >> PropertyGraphqlMapping
+            getPropertyByName('title') >> Stub(PersistentProperty)
+        }
+
+        expect:
+        GraphQLEntityHelper.getMapping(entity).propertyMappings.keySet() == ['title'] as Set
+    }
+
+    void "test getMapping throws when a mapped property does not exist on the entity"() {
+        given:
+        PersistentEntity entity = Stub(PersistentEntity) {
+            getJavaClass() >> PropertyGraphqlMapping
+            getPropertyByName('title') >> null
+        }
+
+        when:
+        GraphQLEntityHelper.getMapping(entity)
+
+        then:
+        IllegalMappingException ex = thrown(IllegalMappingException)
+        ex.message.contains("'title'")
+        ex.message.contains(PropertyGraphqlMapping.name)
+    }
+
+    void "test getMapping throws for an unsupported graphql property type"() {
+        given:
+        PersistentEntity entity = Stub(PersistentEntity) {
+            getJavaClass() >> InvalidGraphqlMapping
+            getName() >> 'InvalidGraphqlMapping'
+        }
+
+        when:
+        GraphQLEntityHelper.getMapping(entity)
+
+        then:
+        IllegalMappingException ex = thrown(IllegalMappingException)
+        ex.message.contains('InvalidGraphqlMapping')
+    }
+
+    void "test getMapping caches the result for repeated calls with the same entity"() {
+        given:
+        PersistentEntity entity = Stub(PersistentEntity) {
+            getJavaClass() >> BooleanGraphqlMapping
+        }
+
+        expect:
+        GraphQLEntityHelper.getMapping(entity).is(GraphQLEntityHelper.getMapping(entity))
+    }
+
+    static class NoGraphqlMapping {
+    }
+
+    static class BooleanGraphqlMapping {
+        static graphql = true
+    }
+
+    static class ClosureGraphqlMapping {
+        static graphql = {
+            description 'from closure'
+        }
+    }
+
+    static class LazyGraphqlMapping {
+        static graphql = GraphQLMapping.lazy {
+            description 'from lazy'
+        }
+    }
+
+    static class PrebuiltGraphqlMapping {
+        static graphql = GraphQLMapping.build {
+            description 'prebuilt'
+        }
+    }
+
+    static class PropertyGraphqlMapping {
+        static graphql = GraphQLMapping.build {
+            title description: 'Title'
+        }
+    }
+
+    static class InvalidGraphqlMapping {
+        static graphql = 42
     }
 }

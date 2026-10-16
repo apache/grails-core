@@ -81,4 +81,4 @@ aws cloudformation list-exports \
   --output text
 ```
 
-GitHub Actions assumes the shared stack's `DeployRoleArn`. Upload a normal JAR deployment ZIP to the exported artifact bucket, create an Elastic Beanstalk application version, then update one exported environment name. The trust policy allows `apache/grails-core` maintenance branches matching `refs/heads/*.x` and tags matching `refs/tags/v*`. The deploy policy is restricted to the application, its versions, and the seven declared slot environment names.
+GitHub Actions assumes the shared stack's `DeployRoleArn`. Upload the `grails-forge-web/build/distributions/grails-forge-web-aws.zip` Elastic Beanstalk source bundle to the exported artifact bucket, create an Elastic Beanstalk application version, then update one exported environment name. The trust policy allows `apache/grails-core` maintenance branches matching `refs/heads/*.x` and tags matching `refs/tags/v*`. The deploy policy is restricted to the application, its versions, and the seven declared slot environment names.

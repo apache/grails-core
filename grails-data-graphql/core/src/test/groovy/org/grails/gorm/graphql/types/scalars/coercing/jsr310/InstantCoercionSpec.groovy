@@ -19,6 +19,8 @@
 
 package org.grails.gorm.graphql.types.scalars.coercing.jsr310
 
+import graphql.GraphQLContext
+import graphql.execution.CoercedVariables
 import graphql.language.BooleanValue
 import graphql.language.IntValue
 import graphql.language.StringValue
@@ -37,22 +39,22 @@ class InstantCoercionSpec extends Specification {
         Instant instant = Instant.ofEpochSecond(1600000000)
 
         expect:
-        coercion.serialize(instant).is(instant)
+        coercion.serialize(instant, GraphQLContext.default, Locale.default).is(instant)
     }
 
     void "test serialize with an epoch seconds number"() {
         expect:
-        coercion.serialize(1600000000L) == Instant.ofEpochSecond(1600000000)
+        coercion.serialize(1600000000L, GraphQLContext.default, Locale.default) == Instant.ofEpochSecond(1600000000)
     }
 
     void "test serialize with an ISO-8601 string"() {
         expect:
-        coercion.serialize('2020-09-13T12:26:40Z') == Instant.parse('2020-09-13T12:26:40Z')
+        coercion.serialize('2020-09-13T12:26:40Z', GraphQLContext.default, Locale.default) == Instant.parse('2020-09-13T12:26:40Z')
     }
 
     void "test serialize with an unsupported type throws"() {
         when:
-        coercion.serialize(true)
+        coercion.serialize(true, GraphQLContext.default, Locale.default)
 
         then:
         thrown(CoercingSerializeException)
@@ -63,12 +65,12 @@ class InstantCoercionSpec extends Specification {
         Instant instant = Instant.ofEpochSecond(1600000000)
 
         expect:
-        coercion.parseValue(instant).is(instant)
+        coercion.parseValue(instant, GraphQLContext.default, Locale.default).is(instant)
     }
 
     void "test parseValue with an unsupported type throws"() {
         when:
-        coercion.parseValue(true)
+        coercion.parseValue(true, GraphQLContext.default, Locale.default)
 
         then:
         thrown(CoercingParseValueException)
@@ -76,21 +78,16 @@ class InstantCoercionSpec extends Specification {
 
     void "test parseLiteral with an IntValue"() {
         expect:
-        coercion.parseLiteral(new IntValue(BigInteger.valueOf(1600000000))) == Instant.ofEpochSecond(1600000000)
+        coercion.parseLiteral(new IntValue(BigInteger.valueOf(1600000000)), CoercedVariables.emptyVariables(), GraphQLContext.default, Locale.default) == Instant.ofEpochSecond(1600000000)
     }
 
     void "test parseLiteral with a StringValue"() {
         expect:
-        coercion.parseLiteral(new StringValue('2020-09-13T12:26:40Z')) == Instant.parse('2020-09-13T12:26:40Z')
+        coercion.parseLiteral(new StringValue('2020-09-13T12:26:40Z'), CoercedVariables.emptyVariables(), GraphQLContext.default, Locale.default) == Instant.parse('2020-09-13T12:26:40Z')
     }
 
     void "test parseLiteral with an unrecognized Value type returns null"() {
         expect:
-        coercion.parseLiteral(new BooleanValue(true)) == null
-    }
-
-    void "test parseLiteral with a non Value type returns null"() {
-        expect:
-        coercion.parseLiteral('2020-09-13T12:26:40Z') == null
+        coercion.parseLiteral(new BooleanValue(true), CoercedVariables.emptyVariables(), GraphQLContext.default, Locale.default) == null
     }
 }

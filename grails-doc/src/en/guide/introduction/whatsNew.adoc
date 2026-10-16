@@ -85,6 +85,20 @@ grails -t forge create-app --features=gorm-async com.example.demo
 The feature layers on top of whichever GORM implementation is selected, defaulting to Hibernate when none is chosen.
 The `grails-datamapping-async` artifact it brings in is intended for direct consumption by applications and libraries, so it moved from the `org.apache.grails.data` group to `org.apache.grails`; see the xref:upgrading#upgrading80x[upgrade guide] for the coordinate change.
 
+==== Spring AI Integration
+
+The new `grails-spring-ai` plugin integrates https://spring.io/projects/spring-ai[Spring AI] {springAiVersion}.
+The Spring AI version is managed by the Grails BOM, a `ChatClient.Builder` is auto-configured for whichever provider the application adds, the plugin ships defaults suited to a web application, and `grails-testing-support-ai` gives unit and integration tests a scripted chat model so they need neither a provider nor credentials.
+New applications select it with the `grails-spring-ai`, `spring-ai-openai`, `spring-ai-anthropic` or `spring-ai-ollama` features, and the `org.apache.grails.skills:grails-ai-developer` agent skill teaches AI coding agents the same.
+See xref:usingAi#aiInstallation[Using AI in Your Application].
+
+==== Streaming Responses from Controller Actions
+
+A controller action can return a Reactive Streams `Publisher`, such as a Reactor `Flux`, and Grails streams every item it emits to the client as a server-sent event while the container thread is released.
+Items are rendered as text or JSON, or through a `StreamItemRenderer` bean for a type of its own, which is how `grails-spring-ai` streams the chat responses of a model.
+Such an action streams instead of rendering its view as it did before; set `grails.async.streaming.enabled` to `false` to keep the previous behaviour. A publisher that emits at most one item, such as a Reactor `Mono`, is not streamed but resolved, its value being the action's result as a returned `Promise`'s value is. See xref:upgrading#upgrading81x[the upgrade guide].
+See xref:async#asyncStreaming[Streaming Responses].
+
 ==== Plugin Beans Register Before Spring Boot Auto-Configuration
 
 Grails {grailsMajorVersion} unifies and retimes the plugin lifecycle so that the beans a plugin contributes are registered before Spring Boot processes its auto-configurations.
@@ -116,6 +130,22 @@ See the xref:upgrading#upgrading80x[upgrade guide] for details.
 
 Unit tests get the same hooks: a test declares its beans in a `beans` block, as an application or plugin does, or overrides `beanRegistrar()`, or declares a static nested `@Configuration` class — and `doWithSpring()` on the testing traits is deprecated to match.
 See <<unitTesting,Unit Testing>>.
+
+==== Fluent Application Builder with Context Hierarchies
+
+`GrailsAppBuilder` is now a complete counterpart of Spring Boot's `SpringApplicationBuilder`. Every builder method returns the Grails builder, the application it runs is a `GrailsApp` with the Grails startup defaults, and a parent/child context hierarchy built with `child()`, `parent()` and `sibling()` starts a `GrailsApp` in every context:
+
+[source,groovy]
+----
+new GrailsAppBuilder(SharedConfiguration)
+        .child(Application)
+        .run(args)
+----
+
+The Grails plugin lifecycle runs in the one context of the hierarchy whose sources include the `Application` class; the other contexts are plain Spring contexts that share the Grails beans through the parent chain, and a second Grails application in the same hierarchy is refused at startup.
+As in Spring Boot, the parent cannot host a web server, so a web application is the child of a shared parent, while a Grails application that serves no web requests, such as a command-line tool built without the web plugins, can be the parent of plain Spring children.
+A Grails application without a web server no longer prints a `Grails application running at ...` line when it starts.
+See <<applicationBuilder,Building the Application>>.
 
 ==== CLI Commands Move to Companion `-cli` Artifacts
 
@@ -582,6 +612,23 @@ grails {
 
 See the <<deploymentAotCache,Ahead-of-Time Caching>> section, which includes measured figures and the
 conditions under which a JVM will decline a cache.
+
+==== Startup Progress Page
+
+With the new `grails-startup-progress` module, which Forge offers as a feature of the same name,
+`./gradlew bootRun` no longer leaves port 8080 closed while the application starts. From the moment the
+application context is prepared, a browser opening the application sees a progress page: the stage the start
+has reached, how many beans have been created and which one is being created now, and the beans that have
+taken longest so far. The page reloads into the application once it is ready, after `BootStrap` has run, and
+shows the exception if the start fails. It is on by default in development mode and can be turned on
+elsewhere with `grails.startup.progress.enabled`. With `grails.startup.progress.openBrowser`, which `bootRun`
+also takes as a Gradle property, for example `./gradlew bootRun -Pgrails.startup.progress.openBrowser`, a
+browser opens on the page as the application starts. Bean names and failures are shown only to a browser signed
+in with the address the application logs, which the browser it opens is. Once the application is running, the
+same view is a report of how long each stage of the start took, at `/__grails/startup`, and a client sending
+`Accept: application/json` gets it as data. Work done during the start can report its own progress with
+`grails.boot.StartupTask`, which the database migration plugin uses to show how many change sets are left to
+run. See <<startupProgress,Watching the Application Start>>.
 
 ==== Banner Colour, Container Version and Start Mark
 

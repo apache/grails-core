@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<!--
+  Licensed to the Apache Software Foundation (ASF) under one
+  or more contributor license agreements.  See the NOTICE file
+  distributed with this work for additional information
+  regarding copyright ownership.  The ASF licenses this file
+  to you under the Apache License, Version 2.0 (the
+  "License"); you may not use this file except in compliance
+  with the License.  You may obtain a copy of the License at
+
+    https://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing,
+  software distributed under the License is distributed on an
+  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+  KIND, either express or implied.  See the License for the
+  specific language governing permissions and limitations
+  under the License.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Starting {{APPLICATION_NAME}}</title>
+<link rel="icon" href="data:,">
+<noscript><meta http-equiv="refresh" content="5"></noscript>
+<style>
+:root {
+    color-scheme: light dark;
+    --bg: #f5f6f8;
+    --card: #ffffff;
+    --text: #1d2125;
+    --muted: #5d6974;
+    --line: #e2e6ea;
+    --track: #e8ecf0;
+    --accent: #2e8b47;
+    --danger: #c42b2b;
+    --danger-soft: #fdeded;
+}
+@media (prefers-color-scheme: dark) {
+    :root {
+        --bg: #101316;
+        --card: #191e23;
+        --text: #e6eaee;
+        --muted: #9aa5b0;
+        --line: #2a3138;
+        --track: #2a3138;
+        --accent: #5cc177;
+        --danger: #f07070;
+        --danger-soft: #361c1c;
+    }
+}
+* { box-sizing: border-box; }
+body {
+    margin: 0;
+    min-height: 100vh;
+    padding: 10vh 16px 32px;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    background: var(--bg);
+    color: var(--text);
+    font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+main {
+    width: 100%;
+    max-width: 640px;
+    padding: 28px 28px 20px;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, .04), 0 8px 24px rgba(0, 0, 0, .06);
+}
+.eyebrow { margin: 0 0 6px; font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+h1 { margin: 0 0 4px; font-size: 22px; line-height: 1.3; overflow-wrap: anywhere; }
+.summary { margin: 0 0 20px; color: var(--muted); }
+.bar { height: 8px; overflow: hidden; border-radius: 999px; background: var(--track); }
+.fill { width: 0; height: 100%; border-radius: inherit; background-color: var(--accent); transition: width .4s ease; }
+.fill.busy {
+    background-image: linear-gradient(45deg, rgba(255, 255, 255, .22) 25%, transparent 25%, transparent 50%, rgba(255, 255, 255, .22) 50%, rgba(255, 255, 255, .22) 75%, transparent 75%);
+    background-size: 16px 16px;
+    animation: stripes 1s linear infinite;
+}
+.failed .fill { background-color: var(--danger); }
+@keyframes stripes { to { background-position: 16px 0; } }
+.meta { display: flex; justify-content: space-between; margin: 8px 0 18px; font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+ol { margin: 0; padding: 0; list-style: none; }
+li { display: flex; align-items: center; gap: 10px; padding: 6px 0; color: var(--muted); }
+.mark { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; border: 2px solid var(--line); border-radius: 50%; }
+li.done { color: var(--text); }
+li.done .mark { background: var(--accent); border-color: var(--accent); }
+li.done .mark::after { content: ""; width: 5px; height: 9px; border: solid #fff; border-width: 0 2px 2px 0; transform: translateY(-1px) rotate(45deg); }
+li.active { color: var(--text); font-weight: 600; }
+li.active .mark { border-color: var(--accent); border-top-color: transparent; animation: spin .8s linear infinite; }
+li.error { color: var(--danger); font-weight: 600; }
+li.error .mark { background: var(--danger); border-color: var(--danger); }
+li.error .mark::after { content: "!"; color: #fff; font-size: 12px; font-weight: 700; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.count { font-weight: 400; color: var(--muted); font-variant-numeric: tabular-nums; }
+.task { margin: 14px 0 0; }
+.task-head { display: flex; justify-content: space-between; gap: 12px; font-size: 14px; }
+.bar.small { height: 5px; margin: 6px 0 4px; }
+.task .activity { margin: 0; }
+.took { margin-left: auto; font-size: 13px; font-weight: 400; color: var(--muted); font-variant-numeric: tabular-nums; }
+code, pre { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+code { font-size: 12.5px; color: var(--text); }
+.activity { margin: 12px 0 0; font-size: 13px; color: var(--muted); overflow-wrap: anywhere; }
+section { margin-top: 20px; padding-top: 14px; border-top: 1px solid var(--line); }
+h2 { margin: 0 0 8px; font-size: 12px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+td { padding: 3px 0; vertical-align: top; overflow-wrap: anywhere; }
+td.ms { padding-left: 12px; text-align: right; white-space: nowrap; color: var(--muted); font-variant-numeric: tabular-nums; }
+.failure { margin-top: 20px; padding: 14px 16px; border: 1px solid var(--danger); border-radius: 8px; background: var(--danger-soft); }
+.failure h2 { color: var(--danger); }
+.failure p { margin: 0 0 8px; overflow-wrap: anywhere; }
+summary { cursor: pointer; font-size: 13px; }
+pre { max-height: 320px; margin: 8px 0 0; padding: 10px; overflow: auto; font-size: 12px; line-height: 1.45; white-space: pre; background: var(--card); border: 1px solid var(--line); border-radius: 6px; }
+.notice { margin: 16px 0 0; font-size: 13px; color: var(--muted); }
+footer { margin-top: 22px; font-size: 12px; color: var(--muted); }
+[hidden] { display: none !important; }
+@media (prefers-reduced-motion: reduce) {
+    .fill, .fill.busy, li.active .mark { animation: none; transition: none; }
+}
+</style>
+</head>
+<body>
+<main id="page">
+    <p class="eyebrow">Apache Grails</p>
+    <h1><span id="verb">Starting</span> <span id="name">{{APPLICATION_NAME}}</span></h1>
+    <p class="summary" id="summary" aria-live="polite">This page reloads by itself once the application is ready.</p>
+    <div class="bar" id="bar" role="progressbar" aria-label="Startup progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div class="fill busy" id="fill"></div></div>
+    <div class="meta"><span id="percent">0%</span><span id="elapsed"></span></div>
+    {{#DETAILS}}
+    <ol id="phases">
+        <li><span class="mark"></span><span>Preparing the application context</span><span class="took"></span></li>
+        <li><span class="mark"></span><span>Loading plugins and bean definitions</span><span class="took"></span></li>
+        <li><span class="mark"></span><span>Creating beans <span class="count" id="beans"></span></span><span class="took"></span></li>
+        <li><span class="mark"></span><span>Starting the web server</span><span class="took"></span></li>
+        <li><span class="mark"></span><span>Running plugin startup and BootStrap</span><span class="took"></span></li>
+    </ol>
+    <p class="activity" id="activity" hidden></p>
+    <div class="task" id="task" hidden>
+        <div class="task-head"><span id="task-description"></span><span class="count" id="task-count"></span></div>
+        <div class="bar small"><div class="fill" id="task-fill"></div></div>
+        <p class="activity" id="task-item"></p>
+    </div>
+    <section id="tasks" hidden>
+        <h2>Startup tasks</h2>
+        <table><tbody id="task-rows"></tbody></table>
+    </section>
+    <section id="slowest" hidden>
+        <h2>Slowest beans so far, not counting their dependencies</h2>
+        <table><tbody id="slowest-rows"></tbody></table>
+    </section>
+    {{/DETAILS}}
+    <div class="failure" id="failure" hidden>
+        <h2>The application failed to start</h2>
+        <p id="failure-message"></p>
+        {{#DETAILS}}<details id="failure-details"><summary>Stack trace</summary><pre id="failure-trace"></pre></details>{{/DETAILS}}
+    </div>
+    {{#SIGN_IN}}<p class="notice" id="signin">Open the address in the application's log to see how the start is going and why a start fails.</p>{{/SIGN_IN}}
+    <p class="notice" id="notice" hidden></p>
+    <footer>Apache Grails {{GRAILS_VERSION}}</footer>
+</main>
+<script type="application/json" id="startup-config">{{CONFIG}}</script>
+<script>
+(function () {
+    'use strict';
+    var config = JSON.parse(document.getElementById('startup-config').textContent);
+    var phases = ['PREPARING', 'LOADING_DEFINITIONS', 'CREATING_BEANS', 'STARTING_WEB_SERVER', 'INITIALIZING'];
+    var name = document.getElementById('name').textContent;
+    var last = null;
+    var misses = 0;
+
+    function el(id) {
+        return document.getElementById(id);
+    }
+
+    function poll() {
+        fetch(config.statusPath, { cache: 'no-store', credentials: 'same-origin', headers: { Accept: 'application/json' } })
+            .then(function (response) {
+                if (!response.headers.has(config.phaseHeader)) {
+                    // whatever answers on the port now knows nothing of the start, so it is the application
+                    ready();
+                    return null;
+                }
+                return response.json().then(function (status) {
+                    misses = 0;
+                    if (status.phase === 'READY') {
+                        ready();
+                        return;
+                    }
+                    render(status);
+                    window.setTimeout(poll, status.phase === 'FAILED' ? 2000 : 500);
+                });
+            })
+            .catch(function () {
+                misses++;
+                disconnected();
+                window.setTimeout(poll, Math.min(500 * misses, 3000));
+            });
+    }
+
+    function ready() {
+        el('page').classList.remove('failed');
+        el('fill').className = 'fill';
+        setProgress(100);
+        el('percent').textContent = '100%';
+        el('summary').textContent = 'The application is ready. Loading it now…';
+        el('notice').hidden = true;
+        document.title = name;
+        if (config.reload) {
+            window.location.reload();
+        }
+        else {
+            window.location.replace(window.location.href);
+        }
+    }
+
+    function render(status) {
+        var failed = status.phase === 'FAILED';
+        var index = phases.indexOf(failed ? status.failedPhase : status.phase);
+        last = status;
+        el('notice').hidden = true;
+        el('page').classList.toggle('failed', failed);
+
+        renderPhases(status, index, failed);
+        setProgress(status.progress);
+        el('fill').className = failed ? 'fill' : 'fill busy';
+        el('percent').textContent = failed ? 'Stopped' : status.progress + '%';
+        el('elapsed').textContent = (status.elapsedMillis / 1000).toFixed(1) + ' s';
+
+        renderActivity(status.activity);
+        renderTasks(status.tasks || [], false);
+        renderSlowest((status.slowestBeans || []).slice(0, 5));
+
+        el('verb').textContent = failed ? 'Could not start' : 'Starting';
+        el('summary').textContent = failed
+            ? 'Startup stopped. Fix the problem and start the application again; this page reconnects by itself.'
+            : 'This page reloads by itself once the application is ready.';
+        document.title = failed ? 'Failed: ' + name : '(' + status.progress + '%) Starting ' + name;
+
+        el('failure').hidden = !failed;
+        if (failed) {
+            var failure = status.failure || {};
+            el('failure-message').textContent = failure.type
+                ? failure.type + (failure.message ? ': ' + failure.message : '')
+                : 'The cause is in the application log.';
+            if (el('failure-trace')) {
+                el('failure-trace').textContent = failure.stackTrace || '';
+                el('failure-details').hidden = !failure.stackTrace;
+            }
+        }
+    }
+
+    /** The report of a finished start, drawn once from the status the page was given. */
+    function renderReport(status) {
+        renderPhases(status, phases.length, false);
+        el('fill').className = 'fill';
+        setProgress(100);
+        el('percent').textContent = 'Ready';
+        el('elapsed').textContent = duration(status.elapsedMillis);
+        renderTasks(status.tasks || [], true);
+        renderSlowest(status.slowestBeans || []);
+        if (el('slowest')) {
+            el('slowest').querySelector('h2').textContent = 'Slowest beans, not counting their dependencies';
+        }
+        el('verb').textContent = 'Started';
+        el('summary').textContent = 'Started in ' + duration(status.elapsedMillis) + '.';
+        document.title = name + ' started in ' + duration(status.elapsedMillis);
+    }
+
+    /**
+     * Marks the phases done, and the one at the index running or failed, with the bean counts and how long
+     * each finished phase took. The list is only on a page signed in to see the details of the start.
+     */
+    function renderPhases(status, index, failed) {
+        if (!el('phases')) {
+            return;
+        }
+        var items = el('phases').children;
+        for (var i = 0; i < items.length; i++) {
+            items[i].className = i < index ? 'done' : i === index ? (failed ? 'error' : 'active') : '';
+        }
+        var created = status.beansExpected > 0 ? Math.min(status.beansCreated, status.beansExpected) : status.beansCreated;
+        el('beans').textContent = status.beansExpected > 0 ? '(' + created + ' of ' + status.beansExpected + ')' : created > 0 ? '(' + created + ')' : '';
+        var took = {};
+        (status.phases || []).forEach(function (phase) {
+            took[phase.name] = phase.millis;
+        });
+        for (var i = 0; i < items.length; i++) {
+            items[i].querySelector('.took').textContent = i < index && phases[i] in took ? duration(took[phases[i]]) : '';
+        }
+    }
+
+    function duration(millis) {
+        return millis >= 1000 ? (millis / 1000).toFixed(1) + ' s' : millis + ' ms';
+    }
+
+    function renderActivity(bean) {
+        var activity = el('activity');
+        if (!activity) {
+            return;
+        }
+        activity.hidden = !bean;
+        activity.textContent = '';
+        if (bean) {
+            activity.append('Creating bean ', code(bean));
+        }
+    }
+
+    /**
+     * Shows the task running, with how far it has got and the item it is on, and lists the tasks that have
+     * finished with how much each did and how long it took.
+     */
+    function renderTasks(tasks, report) {
+        var box = el('task');
+        if (!box) {
+            return;
+        }
+        var running = null;
+        tasks.forEach(function (task) {
+            if (task.running) {
+                running = task;
+            }
+        });
+        box.hidden = report || !running;
+        if (running && !report) {
+            el('task-description').textContent = running.description;
+            el('task-count').textContent = running.total >= 0 ? running.completed + ' of ' + running.total : running.completed + ' done';
+            var fill = el('task-fill');
+            fill.className = running.total > 0 ? 'fill' : 'fill busy';
+            fill.style.width = (running.total > 0 ? Math.min(100, running.completed * 100 / running.total) : 100) + '%';
+            var item = el('task-item');
+            item.textContent = '';
+            if (running.item) {
+                item.append('Now on ', code(running.item));
+            }
+        }
+        var finished = tasks.filter(function (task) {
+            return !task.running;
+        });
+        var rows = el('task-rows');
+        rows.textContent = '';
+        el('tasks').hidden = finished.length === 0;
+        finished.forEach(function (task) {
+            var row = rows.insertRow();
+            row.insertCell().textContent = task.description + ' (' + task.completed + (task.total >= 0 && task.total !== task.completed ? ' of ' + task.total : '') + ')';
+            var millis = row.insertCell();
+            millis.className = 'ms';
+            millis.textContent = duration(task.millis);
+        });
+    }
+
+    function renderSlowest(beans) {
+        var rows = el('slowest-rows');
+        if (!rows) {
+            return;
+        }
+        rows.textContent = '';
+        el('slowest').hidden = beans.length === 0;
+        beans.forEach(function (bean) {
+            var row = rows.insertRow();
+            row.insertCell().append(code(bean.name));
+            var millis = row.insertCell();
+            millis.className = 'ms';
+            millis.textContent = duration(bean.millis);
+        });
+    }
+
+    function disconnected() {
+        // the port is free for a moment while the web server takes it over, so stay quiet briefly
+        if (misses < 3) {
+            return;
+        }
+        var notice = el('notice');
+        notice.hidden = false;
+        notice.textContent = last && last.phase === 'FAILED'
+            ? 'The application has stopped. Waiting for it to start again…'
+            : 'Cannot reach the application. Waiting for it to start…';
+    }
+
+    function setProgress(value) {
+        el('fill').style.width = value + '%';
+        el('bar').setAttribute('aria-valuenow', String(value));
+    }
+
+    function code(text) {
+        var node = document.createElement('code');
+        node.textContent = text;
+        return node;
+    }
+
+    if (config.report) {
+        renderReport(config.report);
+    }
+    else {
+        poll();
+    }
+})();
+</script>
+</body>
+</html>

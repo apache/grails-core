@@ -145,4 +145,15 @@ class SharedParentGrailsChildSpec extends Specification implements HttpClientSup
         second.json().names == ['Grace', 'Linus']
         parent.getBean(AuditTrail).entries.containsAll(['registered Grace', 'registered Linus'])
     }
+
+    void 'closing the Grails child returns the loan to the parent, which stays up'() {
+        when:
+        child.close()
+
+        then:
+        parent.isActive()
+        !parent.containsBean(GrailsApplication.APPLICATION_ID)
+        !parent.containsBean(GrailsPluginManager.BEAN_NAME)
+        parent.getBean(AuditTrail).entries.contains('greeted Ada')
+    }
 }

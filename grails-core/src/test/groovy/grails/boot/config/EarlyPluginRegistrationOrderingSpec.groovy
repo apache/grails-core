@@ -200,6 +200,36 @@ class EarlyPluginRegistrationOrderingSpec extends Specification {
             Environment.setInitializing(false)
     }
 
+    void 'a context whose parent already holds a Grails application refuses to start as a second one'() {
+        given: 'a parent context standing for a running Grails application'
+            def parent = new AnnotationConfigApplicationContext()
+            parent.beanFactory.registerSingleton(GrailsApplication.APPLICATION_ID, new DefaultGrailsApplication())
+            parent.refresh()
+
+        and: 'a child beneath it that is a Grails application in its own right'
+            def ctx = new AnnotationConfigApplicationContext()
+            ctx.parent = parent
+            registerDiscovery(ctx, earlyOrderingPluginClass)
+            new GrailsPluginLifecycleInitializer().initialize(ctx)
+
+        when:
+            ctx.refresh()
+
+        then: 'the lifecycle keeps JVM-wide state, so one hierarchy cannot hold two Grails applications'
+            IllegalStateException e = thrown()
+            e.message.contains('Only one context in a hierarchy can be the Grails application')
+
+        and: 'nothing of the lifecycle was started for it'
+            !ctx.beanFactory.containsSingleton(GrailsApplication.APPLICATION_ID)
+            !Environment.isInitializing()
+
+        cleanup:
+            ctx.close()
+            parent.close()
+            Holders.clear()
+            Environment.setInitializing(false)
+    }
+
     void 'a plugin beanRegistrar bean registered early makes a @ConditionalOnMissingBean auto-config bean defer'() {
         given: 'a context whose configuration would, by itself, register a conditional myResolver'
             def ctx = new AnnotationConfigApplicationContext()

@@ -63,13 +63,12 @@ class RestfulResponseSpec extends Specification {
 
         when:
         customizer().contribute(openApi, null)
+        def responses = openApi.paths['/notes/{id}'].delete.responses
 
         then:
-        with(openApi.paths['/notes/{id}'].delete.responses) {
-            containsKey('204')
-            !containsKey('200')
-            get('204').content == null
-        }
+        responses.containsKey('204')
+        !responses.containsKey('200')
+        responses.get('204').content == null
     }
 
     void 'an action that validates what it binds documents the validation failure'() {

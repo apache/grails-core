@@ -19,12 +19,15 @@ under the License.
 
 Grails publishes https://agentskills.io[Agent Skills] that teach AI coding agents how to work with Grails. A skill is a `SKILL.md` file of instructions that an agent loads when a task calls for it.
 
+This section is about AI as a development tool. Using AI models from the application itself, through Spring AI, is covered in <<usingAi,Using AI in Your Application>>.
+
 [options="header",cols="1,2,3"]
 |===
 | Skill | Coordinates | Use
 
 | `grails-developer` | `org.apache.grails.skills:grails-developer` | Building Grails applications: controllers, services, GORM, views, plugins, and testing with Spock and Geb
 | `grails-8-upgrade` | `org.apache.grails.skills:grails-8-upgrade` | Upgrading an application from Grails 7 to Grails 8
+| `grails-ai-developer` | `org.apache.grails.skills:grails-ai-developer` | Using AI models from an application: providers, the chat client, streamed answers, configuration and testing, see <<usingAi,Using AI in Your Application>>
 |===
 
 The skills are released with Grails, under the same version, and the Grails BOM manages them, so an application gets the skills written for the Grails version it builds with.

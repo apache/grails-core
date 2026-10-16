@@ -1,0 +1,127 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+`GrailsApp.run(Application, args)` is the shortest way to start a Grails application. When the application needs configuring before it starts -- additional profiles, default properties, a different banner, or a parent/child context hierarchy -- use link:{api}grails/boot/GrailsAppBuilder.html[GrailsAppBuilder], the Grails counterpart of Spring Boot's {springbootapi}org/springframework/boot/builder/SpringApplicationBuilder.html[SpringApplicationBuilder].
+
+`GrailsAppBuilder` extends `SpringApplicationBuilder`, so every method of the Spring Boot builder is available. Each of them returns the `GrailsAppBuilder`, and the application the builder runs is a link:{api}grails/boot/GrailsApp.html[GrailsApp], so the Grails startup defaults described in <<bean-overriding-and-circular-references>> apply and the Grails environment is an active profile:
+
+[source,groovy]
+----
+import grails.boot.GrailsAppBuilder
+import grails.boot.config.GrailsAutoConfiguration
+
+class Application extends GrailsAutoConfiguration {
+
+    static void main(String[] args) {
+        new GrailsAppBuilder(Application)
+                .profiles('metrics')
+                .properties('server.port=8081')
+                .run(args)
+    }
+}
+----
+
+Call `application()` to reach the `GrailsApp` itself, for example to assign a custom banner as shown in <<customizing-the-banner>>.
+
+[id=application-context-hierarchies]
+=== Application Context Hierarchies
+
+Spring Boot's builder can arrange application contexts in a parent/child hierarchy: the beans of a parent context are visible to its children, the children close when the parent closes, and sibling contexts share the parent without seeing each other. `GrailsAppBuilder` offers the same `child()`, `parent()` and `sibling()` methods, each returning a `GrailsAppBuilder`, so every context in the hierarchy is started by a `GrailsApp`.
+
+Exactly one context in a hierarchy is the Grails application: the one whose sources include the `Application` class, which is to say a `GrailsAutoConfiguration` subclass. The Grails plugin lifecycle -- the plugin manager, the `grailsApplication` bean and the beans every plugin contributes -- runs in that context only, and the other contexts are plain Spring contexts. This is stricter than standing alone: `GrailsApp.run(MyConfig, args)` runs the plugin lifecycle for a plain configuration class, but the same class placed in a hierarchy with `child()` or `parent()` starts as a plain Spring context, without a plugin manager, a `grailsApplication` bean or any plugin bean, and logs at `INFO` that it did so. Inside a hierarchy, the context meant to be the Grails application must have the `Application` class among its sources. A context whose parent chain already holds a Grails application refuses to start as a second one.
+
+As in Spring Boot, a parent context cannot host an embedded web server, because the servlets could not be initialized at the right point of the child's lifecycle: creating a child switches the parent to `WebApplicationType.NONE` and turns its banner off. The `Application` class therefore belongs in the child when the application serves web requests, with the shared infrastructure in the parent:
+
+[source,groovy]
+----
+import grails.boot.GrailsAppBuilder
+import grails.boot.config.GrailsAutoConfiguration
+import org.springframework.context.annotation.Bean
+import org.springframework.context.annotation.Configuration
+
+@Configuration
+class SharedConfiguration {
+
+    @Bean
+    AuditTrail auditTrail() {
+        new AuditTrail()
+    }
+}
+
+class Application extends GrailsAutoConfiguration {
+
+    static void main(String[] args) {
+        new GrailsAppBuilder(SharedConfiguration)
+                .child(Application)
+                .run(args)
+    }
+}
+----
+
+Keep the parent to plain `@Configuration` classes such as `SharedConfiguration` above, and leave auto-configuration to the Grails application. A parent annotated with `@SpringBootApplication` or `@EnableAutoConfiguration` would run the Grails and GORM auto-configurations itself, and because the `@ConditionalOnMissingBean` conditions of the child's auto-configuration look through the parent chain, the child's own auto-configured beans would back off in favour of the parent's.
+
+The beans of the parent, such as `auditTrail` above, can be injected into the controllers and services of the Grails application like any other bean. While the Grails application runs, its `grailsApplication` and `pluginManager` beans are registered with the parent context as well, so the parent and any sibling context can look them up; they are removed from the parent again when the Grails application closes, or when it fails to start, so a parent that outlives its Grails child holds nothing of it and another Grails child can start beneath the parent. A bean of the parent that injects `grailsApplication` or `pluginManager` directly is destroyed along with them, because it holds an application that has closed, and is created again the next time it is asked for. A parent bean that must outlive the Grails application looks them up through an {springapi}org/springframework/beans/factory/ObjectProvider.html[ObjectProvider] instead:
+
+[source,groovy]
+----
+import grails.core.GrailsApplication
+import org.springframework.beans.factory.ObjectProvider
+
+class AuditTrail {
+
+    private final ObjectProvider<GrailsApplication> grailsApplication
+
+    AuditTrail(ObjectProvider<GrailsApplication> grailsApplication) {
+        this.grailsApplication = grailsApplication
+    }
+
+    String applicationName() {
+        grailsApplication.ifAvailable?.metadata?.applicationName ?: 'none running'
+    }
+}
+----
+
+The reverse arrangement, a Grails application as the parent of plain child contexts, is open to a Grails application that serves no web requests, such as a command-line tool, a batch job or a message consumer: one built from `grails-core`, `grails-services` and a GORM implementation rather than from the web starter. A web application cannot take the parent's place, because the GSP and URL mappings plugins need a servlet environment and do not start without a web server. The children reach the Grails beans through the parent and run no plugin lifecycle of their own. A command-line tool puts the work in an {springbootapi}org/springframework/boot/ApplicationRunner.html[ApplicationRunner] of the child, lets an {springbootapi}org/springframework/boot/ExitCodeGenerator.html[ExitCodeGenerator] decide the exit code, and hands it to the JVM through `SpringApplication.exit`, as any Spring Boot command-line application does:
+
+[source,groovy]
+----
+import grails.boot.GrailsAppBuilder
+import grails.boot.config.GrailsAutoConfiguration
+import org.springframework.boot.SpringApplication
+import org.springframework.boot.WebApplicationType
+import org.springframework.context.ConfigurableApplicationContext
+
+class Application extends GrailsAutoConfiguration {
+
+    static void main(String[] args) {
+        ConfigurableApplicationContext command = new GrailsAppBuilder(Application)
+                .web(WebApplicationType.NONE)
+                .child(ReportingCommand)
+                .web(WebApplicationType.NONE)
+                .run(args)
+        System.exit(SpringApplication.exit(command))
+    }
+}
+----
+
+`parent()` attaches a parent to a builder that already exists, and `sibling()` creates another child of the same parent; a context that is already running can serve as the parent through `parent(ConfigurableApplicationContext)`. The default properties, environment and additional profiles configured on a parent are copied to the children created from it, as they are in Spring Boot.
+
+A Grails application without a web server, whether it stands alone or is part of a hierarchy, reports no `Grails application running at ...` address when it starts, since nothing is listening.
+
+NOTE: `GrailsApp` records each application the builder places in a hierarchy through its `contextHierarchyMember` property. That is what tells a context without the `Application` class to leave the plugin lifecycle to the one that has it. An application that assembles a hierarchy by hand, rather than through the builder, sets the property itself.

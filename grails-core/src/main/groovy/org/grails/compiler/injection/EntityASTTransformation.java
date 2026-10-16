@@ -48,7 +48,7 @@ public class EntityASTTransformation implements ASTTransformation, CompilationUn
     public void visit(ASTNode[] astNodes, SourceUnit sourceUnit) {
 
         if (!(astNodes[0] instanceof AnnotationNode node) || !(astNodes[1] instanceof AnnotatedNode parent)) {
-            throw new RuntimeException("Internal error: wrong types: $node.class / $parent.class");
+            throw new RuntimeException("Internal error: wrong types: " + astNodes[0].getClass() + " / " + astNodes[1].getClass());
         }
 
         if (!MY_TYPE.equals(node.getClassNode()) || !(parent instanceof ClassNode cNode)) {

@@ -19,6 +19,7 @@
 
 package org.grails.datastore.gorm.events
 
+import org.springframework.context.ApplicationEvent
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.context.ApplicationListener
 
@@ -35,5 +36,5 @@ interface ConfigurableApplicationEventPublisher extends ApplicationEventPublishe
      *
      * @param listener The application listener
      */
-    void addApplicationListener(ApplicationListener<?> listener)
+    void addApplicationListener(ApplicationListener<? extends ApplicationEvent> listener)
 }

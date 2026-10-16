@@ -19,6 +19,8 @@
 
 package org.grails.gorm.graphql.types.scalars.coercing
 
+import graphql.GraphQLContext
+import graphql.execution.CoercedVariables
 import graphql.language.IntValue
 import graphql.language.StringValue
 import graphql.schema.CoercingParseValueException
@@ -34,17 +36,17 @@ class TimeZoneCoercionSpec extends Specification {
         TimeZone timeZone = TimeZone.getTimeZone('America/New_York')
 
         expect:
-        coercion.serialize(timeZone).is(timeZone)
+        coercion.serialize(timeZone, GraphQLContext.default, Locale.default).is(timeZone)
     }
 
     void "test serialize with a time zone id string"() {
         expect:
-        coercion.serialize('America/New_York') == TimeZone.getTimeZone('America/New_York')
+        coercion.serialize('America/New_York', GraphQLContext.default, Locale.default) == TimeZone.getTimeZone('America/New_York')
     }
 
     void "test serialize with an unsupported type throws"() {
         when:
-        coercion.serialize(42)
+        coercion.serialize(42, GraphQLContext.default, Locale.default)
 
         then:
         thrown(CoercingSerializeException)
@@ -55,12 +57,12 @@ class TimeZoneCoercionSpec extends Specification {
         TimeZone timeZone = TimeZone.getTimeZone('Europe/Paris')
 
         expect:
-        coercion.parseValue(timeZone).is(timeZone)
+        coercion.parseValue(timeZone, GraphQLContext.default, Locale.default).is(timeZone)
     }
 
     void "test parseValue with an unsupported type throws"() {
         when:
-        coercion.parseValue(42)
+        coercion.parseValue(42, GraphQLContext.default, Locale.default)
 
         then:
         thrown(CoercingParseValueException)
@@ -68,11 +70,11 @@ class TimeZoneCoercionSpec extends Specification {
 
     void "test parseLiteral with a StringValue"() {
         expect:
-        coercion.parseLiteral(new StringValue('Europe/Paris')) == TimeZone.getTimeZone('Europe/Paris')
+        coercion.parseLiteral(new StringValue('Europe/Paris'), CoercedVariables.emptyVariables(), GraphQLContext.default, Locale.default) == TimeZone.getTimeZone('Europe/Paris')
     }
 
     void "test parseLiteral with a non StringValue returns null"() {
         expect:
-        coercion.parseLiteral(new IntValue(BigInteger.ONE)) == null
+        coercion.parseLiteral(new IntValue(BigInteger.ONE), CoercedVariables.emptyVariables(), GraphQLContext.default, Locale.default) == null
     }
 }

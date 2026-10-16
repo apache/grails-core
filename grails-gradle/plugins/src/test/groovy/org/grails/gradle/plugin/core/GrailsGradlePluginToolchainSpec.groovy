@@ -133,6 +133,30 @@ class GrailsGradlePluginToolchainSpec extends GradleSpecification {
         result.output.contains('CONSOLE_AVAILABLE=true')
     }
 
+    def "BootRun hands startup progress settings given as Gradle properties to the application"() {
+        given:
+        setupTestResourceProject('bootrun-startup-progress')
+
+        when:
+        def result = executeTask('inspectBootRunStartupProgress',
+                ['-Pgrails.startup.progress.openBrowser', '-Pgrails.startup.progress.browserCommand=firefox,--new-window'])
+
+        then: 'each reaches the application under its own name, a bare one as true'
+        result.output.contains('STARTUP_PROGRESS_ARG -Dgrails.startup.progress.openBrowser=true')
+        result.output.contains('STARTUP_PROGRESS_ARG -Dgrails.startup.progress.browserCommand=firefox,--new-window')
+    }
+
+    def "BootRun hands no startup progress settings to the application when none are given"() {
+        given:
+        setupTestResourceProject('bootrun-startup-progress')
+
+        when:
+        def result = executeTask('inspectBootRunStartupProgress')
+
+        then:
+        !result.output.contains('STARTUP_PROGRESS_ARG')
+    }
+
     def "custom heap sizes are not overridden by fork settings"() {
         given:
         setupTestResourceProject('fork-settings-custom')

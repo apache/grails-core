@@ -147,7 +147,9 @@ Creates an application
                           github-workflow-java-ci, jrebel, testcontainers, sqlserver,
                           grails-console, views-markup, asset-pipeline-grails, views-json,
                           gorm-neo4j, asciidoctor, grails-web-console,
-                          logbackGroovy, mongo-sync, shade, geb, properties
+                          logbackGroovy, mongo-sync, shade, geb, properties,
+                          grails-spring-ai, spring-ai-openai, spring-ai-anthropic,
+                          spring-ai-ollama
   -d, --data, -g, --gorm=Grails Data Implementation
                         Which Grails Data implementation to configure (-g, --gorm are legacy
                           aliases). Possible values: hibernate5, hibernate7, mongodb.

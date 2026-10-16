@@ -239,10 +239,8 @@ class PluginUtilsSpec extends Specification {
         def mapWithIncludes = ['includes': ['dev', 'test'] as Set]
 
         then:
-        with(PluginUtils) {
-            supportsValueInIncludeExcludeMap(mapWithIncludes, 'dev')
-            !supportsValueInIncludeExcludeMap(mapWithIncludes, 'prod')
-        }
+        PluginUtils.supportsValueInIncludeExcludeMap(mapWithIncludes, 'dev')
+        !PluginUtils.supportsValueInIncludeExcludeMap(mapWithIncludes, 'prod')
     }
 
     def "supportsValueInIncludeExcludeMap checks excludes"() {
@@ -250,10 +248,8 @@ class PluginUtilsSpec extends Specification {
         def mapWithExcludes = ['excludes': ['prod'] as Set]
 
         then:
-        with(PluginUtils) {
-            supportsValueInIncludeExcludeMap(mapWithExcludes, 'dev')
-            !supportsValueInIncludeExcludeMap(mapWithExcludes, 'prod')
-        }
+        PluginUtils.supportsValueInIncludeExcludeMap(mapWithExcludes, 'dev')
+        !PluginUtils.supportsValueInIncludeExcludeMap(mapWithExcludes, 'prod')
     }
 
     def "scanPluginDescriptors returns empty list when no descriptors found"() {

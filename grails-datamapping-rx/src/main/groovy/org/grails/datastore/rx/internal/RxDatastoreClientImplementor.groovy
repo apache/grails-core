@@ -31,7 +31,6 @@ import rx.Observable
 /**
  * Internal non-client methods implemented by the implementor
  *
- * @author Graeme Rocher
  * @since 6.0
  */
 interface RxDatastoreClientImplementor<T> extends RxDatastoreClient<T> {

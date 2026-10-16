@@ -19,6 +19,8 @@
 
 package org.grails.gorm.graphql.types.scalars.coercing
 
+import graphql.GraphQLContext
+import graphql.execution.CoercedVariables
 import graphql.language.ArrayValue
 import graphql.language.IntValue
 import graphql.language.StringValue
@@ -37,17 +39,17 @@ class TimeCoercionSpec extends Specification {
         Time time = Time.valueOf('10:15:30')
 
         expect:
-        coercion.serialize(time).is(time)
+        coercion.serialize(time, GraphQLContext.default, Locale.default).is(time)
     }
 
     void "test serialize with a valid time string"() {
         expect:
-        coercion.serialize('10:15:30') == Time.valueOf('10:15:30')
+        coercion.serialize('10:15:30', GraphQLContext.default, Locale.default) == Time.valueOf('10:15:30')
     }
 
     void "test serialize with an unsupported type throws"() {
         when:
-        coercion.serialize(true)
+        coercion.serialize(true, GraphQLContext.default, Locale.default)
 
         then:
         thrown(CoercingSerializeException)
@@ -55,7 +57,7 @@ class TimeCoercionSpec extends Specification {
 
     void "test serialize with an invalid time string throws"() {
         when:
-        coercion.serialize('not a time')
+        coercion.serialize('not a time', GraphQLContext.default, Locale.default)
 
         then:
         thrown(CoercingSerializeException)
@@ -66,12 +68,12 @@ class TimeCoercionSpec extends Specification {
         Time time = Time.valueOf('10:15:30')
 
         expect:
-        coercion.parseValue(time).is(time)
+        coercion.parseValue(time, GraphQLContext.default, Locale.default).is(time)
     }
 
     void "test parseValue with an unsupported type throws"() {
         when:
-        coercion.parseValue(true)
+        coercion.parseValue(true, GraphQLContext.default, Locale.default)
 
         then:
         thrown(CoercingParseValueException)
@@ -82,21 +84,21 @@ class TimeCoercionSpec extends Specification {
         long millis = 1600000000000
 
         expect:
-        coercion.parseLiteral(new IntValue(BigInteger.valueOf(millis))) == new Time(millis)
+        coercion.parseLiteral(new IntValue(BigInteger.valueOf(millis)), CoercedVariables.emptyVariables(), GraphQLContext.default, Locale.default) == new Time(millis)
     }
 
     void "test parseLiteral with a valid StringValue"() {
         expect:
-        coercion.parseLiteral(new StringValue('10:15:30')) == Time.valueOf('10:15:30')
+        coercion.parseLiteral(new StringValue('10:15:30'), CoercedVariables.emptyVariables(), GraphQLContext.default, Locale.default) == Time.valueOf('10:15:30')
     }
 
     void "test parseLiteral with an invalid StringValue returns null"() {
         expect:
-        coercion.parseLiteral(new StringValue('not a time')) == null
+        coercion.parseLiteral(new StringValue('not a time'), CoercedVariables.emptyVariables(), GraphQLContext.default, Locale.default) == null
     }
 
     void "test parseLiteral with an unsupported value type returns null"() {
         expect:
-        coercion.parseLiteral(new ArrayValue([])) == null
+        coercion.parseLiteral(new ArrayValue([]), CoercedVariables.emptyVariables(), GraphQLContext.default, Locale.default) == null
     }
 }

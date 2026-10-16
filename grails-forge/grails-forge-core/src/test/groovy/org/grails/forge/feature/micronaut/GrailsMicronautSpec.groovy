@@ -19,11 +19,11 @@
 
 package org.grails.forge.feature.micronaut
 
-import org.grails.forge.BeanContextSpec
+import org.grails.forge.ApplicationContextSpec
 import org.grails.forge.BuildBuilder
 import org.grails.forge.options.JdkVersion
 
-class GrailsMicronautSpec extends BeanContextSpec {
+class GrailsMicronautSpec extends ApplicationContextSpec {
 
     void "test grails-micronaut adds the dependency when JDK 25 is selected"() {
         when:

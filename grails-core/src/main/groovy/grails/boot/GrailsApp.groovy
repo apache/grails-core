@@ -22,7 +22,6 @@ package grails.boot
 import java.util.concurrent.ConcurrentLinkedQueue
 
 import groovy.transform.CompileStatic
-import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import org.codehaus.groovy.control.CompilationFailedException
 import org.codehaus.groovy.control.CompilationUnit
@@ -82,18 +81,19 @@ class GrailsApp extends SpringApplication {
     ConfigurableEnvironment configuredEnvironment
 
     /**
-     * Whether this application is one context of a parent/child hierarchy, which {@link GrailsAppBuilder}
-     * records on every application it places in one with {@code child()}, {@code parent()} or
-     * {@code sibling()}.
+     * Whether this application is one context of a parent/child hierarchy, as {@link GrailsAppBuilder}
+     * builds with {@code child()}, {@code parent()} and {@code sibling()}.
      *
      * <p>A standalone {@code GrailsApp} runs the Grails plugin lifecycle whatever its sources are. A
      * hierarchy member runs it only when one of its sources is a Grails application class, that is a
      * {@link GrailsApplicationClass} such as a {@code GrailsAutoConfiguration} subclass, so the
      * other contexts of the hierarchy stay plain Spring contexts and share the Grails beans through
      * their parent rather than each starting a plugin manager of its own. A member that skips the
-     * lifecycle says so in its log.</p>
+     * lifecycle says so in its log. The builder sets this on every application it places in a
+     * hierarchy; an application assembling a hierarchy by hand sets it itself.</p>
+     *
+     * @since 8.1
      */
-    @PackageScope
     boolean contextHierarchyMember = false
 
     /**
@@ -170,7 +170,7 @@ class GrailsApp extends SpringApplication {
      *
      * <p>The stash is also what marks the context as launched by Grails, which is what selects the
      * plugin lifecycle for a context whose sources are plain configuration classes. A
-     * {@link #contextHierarchyMember hierarchy member} stashes its sources only when one of them
+     * {@link #isContextHierarchyMember() hierarchy member} stashes its sources only when one of them
      * is a Grails application class, leaving the plain contexts of the hierarchy without the
      * lifecycle, and logs that it did so.</p>
      */
@@ -464,15 +464,16 @@ class GrailsApp extends SpringApplication {
     }
 
     protected printRunStatus(ConfigurableApplicationContext applicationContext) {
+        if (!(applicationContext instanceof WebServerApplicationContext)) {
+            // nothing is listening: a context without a web server, such as the parent of a hierarchy
+            return
+        }
         try {
             GrailsApplication app = applicationContext.getBean(GrailsApplication)
             String protocol = app.config.getProperty('server.ssl.key-store') ? 'https' : 'http'
             String contextPath = app.config.getProperty('server.servlet.context-path', '')
             String hostName = app.config.getProperty('server.address', 'localhost')
-            int port
-            if (applicationContext instanceof WebServerApplicationContext) {
-                port = applicationContext.webServer.port
-            }
+            int port = ((WebServerApplicationContext) applicationContext).webServer.port
             println("Grails application running at ${protocol}://${hostName}:${port}${contextPath} in environment: ${Environment.current.name}")
 
         } catch (ignore) {

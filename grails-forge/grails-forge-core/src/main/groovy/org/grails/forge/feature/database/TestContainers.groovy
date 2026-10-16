@@ -1,0 +1,134 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ */
+package org.grails.forge.feature.database
+
+import groovy.transform.CompileStatic
+import jakarta.annotation.Nonnull
+import jakarta.annotation.Nullable
+import org.springframework.stereotype.Component
+import org.grails.forge.application.ApplicationType
+import org.grails.forge.application.generator.GeneratorContext
+import org.grails.forge.build.dependencies.Dependency
+import org.grails.forge.feature.Category
+import org.grails.forge.feature.Feature
+import org.grails.forge.feature.config.ApplicationConfiguration
+import org.grails.forge.feature.config.Configuration
+import org.grails.forge.feature.test.Spock
+import org.grails.forge.template.StringTemplate
+
+@Component
+@CompileStatic
+class TestContainers implements Feature {
+
+    private static final String TESTCONTAINERS_GROUP_ID = 'org.testcontainers'
+
+    @Nonnull
+    @Override
+    String getName() {
+        return 'testcontainers'
+    }
+
+    @Override
+    String getTitle() {
+        return 'Testcontainers'
+    }
+
+    @Override
+    String getCategory() {
+        return Category.TESTING
+    }
+
+    @Override
+    String getDescription() {
+        return 'Leverage Testcontainers to run databases and other services in Docker containers during testing.'
+    }
+
+    @Override
+    void apply(GeneratorContext generatorContext) {
+        generatorContext.addDependency(testContainerTestDependency('testcontainers'))
+        generatorContext.getFeature(DatabaseDriverFeature).ifPresent(driverFeature -> {
+            generatorContext.getFeature(DatabaseDriverConfigurationFeature).ifPresent(driverConfiguration -> {
+                String driver = 'org.testcontainers.jdbc.ContainerDatabaseDriver'
+                if (driverFeature instanceof SQLServer) {
+                    generatorContext.addTemplate('sqlserverEula', new StringTemplate('src/test/resources/container-license-acceptance.txt', 'mcr.microsoft.com/mssql/server:2019-CU4-ubuntu-16.04'))
+                }
+                urlForDatabaseDriverFeature(driverFeature).ifPresent(url -> {
+                    Configuration testConfig = generatorContext.getConfiguration('test', ApplicationConfiguration.testConfig())
+                    testConfig.put(driverConfiguration.getUrlKey(), url)
+                    testConfig.put(driverConfiguration.getDriverKey(), driver)
+                })
+                artifactIdForDriverFeature(driverFeature).ifPresent(dependencyArtifactId ->
+                    generatorContext.addDependency(testContainerTestDependency(dependencyArtifactId)))
+            })
+        })
+
+        if (generatorContext.isFeaturePresent(Spock)) {
+            generatorContext.addDependency(testContainerTestDependency('testcontainers-spock'))
+        }
+
+        if (generatorContext.isFeaturePresent(MongoFeature) || generatorContext.isFeaturePresent(GrailsDataMongoDB)) {
+            generatorContext.addDependency(testContainerTestDependency('testcontainers-mongodb'))
+        }
+    }
+
+    @Nonnull
+    private static Dependency.Builder testContainerTestDependency(@Nonnull String artifactId) {
+        return Dependency.builder()
+            .groupId(TESTCONTAINERS_GROUP_ID)
+            .artifactId(artifactId)
+            .testImplementation()
+    }
+
+    @Nonnull
+    private static Optional<String> artifactIdForDriverFeature(@Nonnull DatabaseDriverFeature driverFeature) {
+        if (driverFeature instanceof MySQL) {
+            return Optional.of('testcontainers-mysql')
+        } else if (driverFeature instanceof PostgreSQL) {
+            return Optional.of('testcontainers-postgresql')
+        } else if (driverFeature instanceof SQLServer) {
+            return Optional.of('testcontainers-mssqlserver')
+        }
+        return Optional.empty()
+    }
+
+    @Nonnull
+    private static Optional<String> urlForDatabaseDriverFeature(@Nonnull DatabaseDriverFeature driverFeature) {
+        if (driverFeature instanceof MySQL) {
+            return Optional.of('jdbc:tc:mysql:8:///db')
+
+        } else if (driverFeature instanceof PostgreSQL) {
+            return Optional.of('jdbc:tc:postgresql:12:///postgres')
+
+        } else if (driverFeature instanceof SQLServer) {
+            return Optional.of('jdbc:tc:sqlserver:2019-CU4-ubuntu-16.04://databaseName=tempdb')
+        }
+        return Optional.empty()
+    }
+
+    @Override
+    boolean supports(ApplicationType applicationType) {
+        return true
+    }
+
+    @Nullable
+    @Override
+    String getThirdPartyDocumentation() {
+        return 'https://java.testcontainers.org/'
+    }
+}

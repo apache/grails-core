@@ -37,6 +37,8 @@ gettingStarted:
   developmentReloading: Development Reloading
 upgrading:
   title: Upgrading from the previous versions
+  upgrading90x: Upgrading from Grails 8 to Grails 9
+  upgrading81x: Upgrading from Grails 8.0 to Grails 8.1
   upgrading80x: Upgrading from Grails 7 to Grails 8
   upgrading72x: Upgrading from Grails 7.1 to Grails 7.2
   upgrading71x: Upgrading from Grails 7.0 to Grails 7.1
@@ -62,6 +64,7 @@ conf:
   applicationClass:
       title: The Application Class
       executing: Executing the Application Class
+      applicationBuilder: Building the Application
       customizing: Customizing the Application Class
       applicationLifeCycle: The Application LifeCycle
   environments: Environments
@@ -273,6 +276,7 @@ async:
     asyncServerSentEvents: Server Sent Events
     asyncRxGorm: RxGORM
   asyncRequests: Asynchronous Request Handling
+  asyncStreaming: Streaming Responses
   asyncServletApi: Servlet 3.0 Async
 validation:
   title: Validation
@@ -373,6 +377,14 @@ redis:
   redisMemoizationAnnotations: Memoization Annotations
   redisMultipleServers: Multiple Redis Servers
   redisUsefulLinks: Useful Links
+usingAi:
+  title: Using AI in Your Application
+  aiInstallation: Installation
+  aiProviders: Model Providers
+  aiConfiguration: Configuration
+  aiChatClient: Using the Chat Client
+  aiStreaming: Streaming Model Responses
+  aiTesting: Testing
 plugins:
   title: Plugins
   creatingAndInstallingPlugins: Creating and Installing Plugins

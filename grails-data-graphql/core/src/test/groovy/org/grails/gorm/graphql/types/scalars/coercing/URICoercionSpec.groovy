@@ -19,6 +19,8 @@
 
 package org.grails.gorm.graphql.types.scalars.coercing
 
+import graphql.GraphQLContext
+import graphql.execution.CoercedVariables
 import graphql.language.IntValue
 import graphql.language.StringValue
 import graphql.schema.CoercingParseValueException
@@ -34,17 +36,17 @@ class URICoercionSpec extends Specification {
         URI uri = new URI('https://grails.apache.org')
 
         expect:
-        coercion.serialize(uri).is(uri)
+        coercion.serialize(uri, GraphQLContext.default, Locale.default).is(uri)
     }
 
     void "test serialize with a valid uri string"() {
         expect:
-        coercion.serialize('https://grails.apache.org') == new URI('https://grails.apache.org')
+        coercion.serialize('https://grails.apache.org', GraphQLContext.default, Locale.default) == new URI('https://grails.apache.org')
     }
 
     void "test serialize with an unsupported type throws"() {
         when:
-        coercion.serialize(42)
+        coercion.serialize(42, GraphQLContext.default, Locale.default)
 
         then:
         thrown(CoercingSerializeException)
@@ -52,7 +54,7 @@ class URICoercionSpec extends Specification {
 
     void "test serialize with an invalid uri string throws"() {
         when:
-        coercion.serialize(' ')
+        coercion.serialize(' ', GraphQLContext.default, Locale.default)
 
         then:
         thrown(CoercingSerializeException)
@@ -63,12 +65,12 @@ class URICoercionSpec extends Specification {
         URI uri = new URI('https://grails.apache.org')
 
         expect:
-        coercion.parseValue(uri).is(uri)
+        coercion.parseValue(uri, GraphQLContext.default, Locale.default).is(uri)
     }
 
     void "test parseValue with an unsupported type throws"() {
         when:
-        coercion.parseValue(42)
+        coercion.parseValue(42, GraphQLContext.default, Locale.default)
 
         then:
         thrown(CoercingParseValueException)
@@ -76,16 +78,16 @@ class URICoercionSpec extends Specification {
 
     void "test parseLiteral with a valid StringValue"() {
         expect:
-        coercion.parseLiteral(new StringValue('https://grails.apache.org')) == new URI('https://grails.apache.org')
+        coercion.parseLiteral(new StringValue('https://grails.apache.org'), CoercedVariables.emptyVariables(), GraphQLContext.default, Locale.default) == new URI('https://grails.apache.org')
     }
 
     void "test parseLiteral with an invalid StringValue returns null"() {
         expect:
-        coercion.parseLiteral(new StringValue(' ')) == null
+        coercion.parseLiteral(new StringValue(' '), CoercedVariables.emptyVariables(), GraphQLContext.default, Locale.default) == null
     }
 
     void "test parseLiteral with a non StringValue returns null"() {
         expect:
-        coercion.parseLiteral(new IntValue(BigInteger.ONE)) == null
+        coercion.parseLiteral(new IntValue(BigInteger.ONE), CoercedVariables.emptyVariables(), GraphQLContext.default, Locale.default) == null
     }
 }

@@ -18,6 +18,7 @@
  */
 package org.grails.plugins.web.async
 
+import java.time.Duration
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.RejectedExecutionException
@@ -26,7 +27,9 @@ import java.util.concurrent.atomic.AtomicInteger
 
 import org.springframework.beans.factory.support.BeanRegistryAdapter
 import org.springframework.beans.factory.support.DefaultListableBeanFactory
+import org.springframework.core.Ordered
 import org.springframework.core.env.StandardEnvironment
+import org.springframework.mock.env.MockEnvironment
 import org.springframework.core.task.AsyncTaskExecutor
 import org.springframework.core.task.TaskDecorator
 import org.springframework.core.task.SyncTaskExecutor
@@ -42,11 +45,16 @@ import org.springframework.beans.factory.BeanNotOfRequiredTypeException
 
 import grails.async.PromiseFactory
 import grails.async.Promises
+import grails.async.web.StreamItemRenderer
 import grails.async.web.WebPromises
 import grails.events.bus.EventBus
 import org.grails.events.bus.spring.EventBusFactoryBean
 import org.grails.web.servlet.mvc.GrailsWebRequest
 import org.grails.plugins.web.async.mvc.AsyncActionResultTransformer
+import org.grails.plugins.web.async.mvc.DefaultStreamItemRenderer
+import org.grails.plugins.web.async.mvc.JacksonStreamItemRenderer
+import org.grails.plugins.web.async.mvc.PublisherActionResultTransformer
+import reactor.core.publisher.Flux
 
 import spock.lang.Specification
 
@@ -70,6 +78,92 @@ class ControllersAsyncGrailsPluginSpec extends Specification {
         beanFactory.getBeanDefinition('grailsPromiseFactory').beanClassName == PromiseFactory.name
         beanFactory.getBeanDefinition('grailsWebRequestTaskDecorator').beanClassName == TaskDecorator.name
         beanFactory.getBeanDefinition('grailsPromiseExecutor').fallback
+    }
+
+    void "beanRegistrar registers the beans that stream a Publisher as server-sent events"() {
+        given:
+        def beanFactory = new DefaultListableBeanFactory()
+        def registrar = new ControllersAsyncGrailsPlugin().beanRegistrar()
+
+        when:
+        new BeanRegistryAdapter(beanFactory, new StandardEnvironment(), registrar.getClass()).register(registrar)
+
+        then:
+        beanFactory.getBeanDefinition('publisherActionResultTransformer').beanClassName == PublisherActionResultTransformer.name
+        beanFactory.getBeanDefinition('defaultStreamItemRenderer').beanClassName == DefaultStreamItemRenderer.name
+        beanFactory.getBeanDefinition('jacksonStreamItemRenderer').beanClassName == JacksonStreamItemRenderer.name
+        beanFactory.getBean('publisherActionResultTransformer', PublisherActionResultTransformer).timeout == null
+    }
+
+    void "the streaming beans are not registered when grails.async.streaming.enabled is false"() {
+        given:
+        def beanFactory = new DefaultListableBeanFactory()
+        def environment = new MockEnvironment().withProperty(ControllersAsyncGrailsPlugin.STREAMING_ENABLED, 'false')
+        def registrar = new ControllersAsyncGrailsPlugin().beanRegistrar()
+
+        when:
+        new BeanRegistryAdapter(beanFactory, environment, registrar.getClass()).register(registrar)
+
+        then:
+        !beanFactory.containsBeanDefinition('publisherActionResultTransformer')
+        !beanFactory.containsBeanDefinition('defaultStreamItemRenderer')
+        !beanFactory.containsBeanDefinition('jacksonStreamItemRenderer')
+        beanFactory.containsBeanDefinition('asyncPromiseResponseActionResultTransformer')
+    }
+
+    void "the transformer streams through every renderer in order with the configured timeout"() {
+        given:
+        def beanFactory = new DefaultListableBeanFactory()
+        def environment = new MockEnvironment().withProperty(ControllersAsyncGrailsPlugin.STREAMING_TIMEOUT, '2m')
+        beanFactory.registerSingleton('shoutingStreamItemRenderer', new ShoutingStreamItemRenderer())
+        def registrar = new ControllersAsyncGrailsPlugin().beanRegistrar()
+        new BeanRegistryAdapter(beanFactory, environment, registrar.getClass()).register(registrar)
+        def request = new MockHttpServletRequest(new MockServletContext())
+        request.asyncSupported = true
+        def response = new MockHttpServletResponse()
+        def webRequest = new GrailsWebRequest(request, response, request.servletContext)
+
+        when:
+        PublisherActionResultTransformer transformer = beanFactory.getBean('publisherActionResultTransformer', PublisherActionResultTransformer)
+        transformer.transformActionResult(webRequest, '/stream/index', Flux.just('hi', [count: 1]))
+
+        then:
+        transformer.timeout == Duration.ofMinutes(2)
+        response.contentAsString == 'data: HI\n\ndata: {"count":1}\n\nevent: complete\ndata: \n\n'
+    }
+
+    void "a renderer that is not Ordered, registered after the plugin's beans, still wins over the built-in ones"() {
+        given:
+        def beanFactory = new DefaultListableBeanFactory()
+        def registrar = new ControllersAsyncGrailsPlugin().beanRegistrar()
+        new BeanRegistryAdapter(beanFactory, new StandardEnvironment(), registrar.getClass()).register(registrar)
+        StreamItemRenderer unordered = { Object item -> item instanceof Map ? 'a map' : null } as StreamItemRenderer
+        beanFactory.registerSingleton('applicationStreamItemRenderer', unordered)
+        def request = new MockHttpServletRequest(new MockServletContext())
+        request.asyncSupported = true
+        def response = new MockHttpServletResponse()
+        def webRequest = new GrailsWebRequest(request, response, request.servletContext)
+
+        when:
+        PublisherActionResultTransformer transformer = beanFactory.getBean('publisherActionResultTransformer', PublisherActionResultTransformer)
+        transformer.transformActionResult(webRequest, '/stream/index', Flux.just([count: 1], 'text', 7))
+
+        then: 'the map goes to the application renderer, the rest to the built-in ones'
+        response.contentAsString == 'data: a map\n\ndata: text\n\ndata: 7\n\nevent: complete\ndata: \n\n'
+    }
+
+    static class ShoutingStreamItemRenderer implements StreamItemRenderer, Ordered {
+
+        @Override
+        String render(Object item) {
+            item instanceof CharSequence ? item.toString().toUpperCase() : null
+        }
+
+        @Override
+        int getOrder() {
+            Ordered.HIGHEST_PRECEDENCE
+        }
+
     }
 
     void 'promise factory uses the application task executor'() {

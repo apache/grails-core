@@ -57,9 +57,4 @@ class AbstractDatastoreInitializerWebApplicationSpec extends Specification {
         expect:
         !isWeb(new DefaultListableBeanFactory())
     }
-
-    static class TestDatastoreInitializer extends AbstractDatastoreInitializer {
-        Closure getBeanDefinitions(BeanDefinitionRegistry beanDefinitionRegistry) { { -> } }
-        protected Class getPersistenceInterceptorClass() { null }
-    }
 }

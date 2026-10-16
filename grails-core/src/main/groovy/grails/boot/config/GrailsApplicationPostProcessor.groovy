@@ -25,10 +25,12 @@ import groovy.util.logging.Slf4j
 import org.springframework.beans.BeansException
 import org.springframework.beans.factory.BeanFactory
 import org.springframework.beans.factory.BeanRegistrar
+import org.springframework.beans.factory.DisposableBean
 import org.springframework.beans.factory.config.ConfigurableBeanFactory
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory
 import org.springframework.beans.factory.support.BeanDefinitionRegistry
 import org.springframework.beans.factory.support.BeanDefinitionRegistryPostProcessor
+import org.springframework.beans.factory.support.DefaultSingletonBeanRegistry
 import org.springframework.context.annotation.AnnotationConfigUtils
 import org.springframework.aot.AotDetector
 import org.springframework.beans.factory.support.RootBeanDefinition
@@ -75,7 +77,8 @@ import org.apache.grails.core.plugins.PluginDiscovery
  */
 @CompileStatic
 @Slf4j
-class GrailsApplicationPostProcessor implements BeanDefinitionRegistryPostProcessor, ApplicationContextAware, ApplicationListener<ApplicationContextEvent> {
+class GrailsApplicationPostProcessor implements BeanDefinitionRegistryPostProcessor, ApplicationContextAware,
+        ApplicationListener<ApplicationContextEvent>, DisposableBean {
 
     static final boolean RELOADING_ENABLED = Environment.isReloadingAgentEnabled()
 
@@ -365,16 +368,65 @@ class GrailsApplicationPostProcessor implements BeanDefinitionRegistryPostProces
         registry.registerBeanDefinition(beanName, definition)
     }
 
+    /**
+     * Registers the {@code grailsApplication} and {@code pluginManager} singletons with this context,
+     * and with its parent when it has one, so that the parent and any sibling context can look the
+     * Grails application up while it runs. What is lent to the parent is taken back when this
+     * processor is destroyed (see {@link #destroy}), so a parent that outlives the Grails
+     * application does not keep a closed one, and a new Grails application can start beneath it.
+     */
     @Override
     void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory) throws BeansException {
+        registerSingletonIfAbsent(beanFactory, GrailsApplication.APPLICATION_ID, grailsApplication)
+        registerSingletonIfAbsent(beanFactory, GrailsPluginManager.BEAN_NAME, pluginManager)
         BeanFactory parentBeanFactory = beanFactory.getParentBeanFactory()
         if (parentBeanFactory instanceof ConfigurableBeanFactory) {
             ConfigurableBeanFactory configurableBeanFactory = parentBeanFactory
             registerSingletonIfAbsent(configurableBeanFactory, GrailsApplication.APPLICATION_ID, grailsApplication)
             registerSingletonIfAbsent(configurableBeanFactory, GrailsPluginManager.BEAN_NAME, pluginManager)
-        } else {
-            registerSingletonIfAbsent(beanFactory, GrailsApplication.APPLICATION_ID, grailsApplication)
-            registerSingletonIfAbsent(beanFactory, GrailsPluginManager.BEAN_NAME, pluginManager)
+        }
+    }
+
+    /**
+     * Withdraws from the parent context the singletons {@link #postProcessBeanFactory} lent it. This
+     * is done here rather than on {@code ContextClosedEvent} because the event is published only by
+     * a context that finished starting: a context whose refresh fails is destroyed and never closed
+     * in that sense, while Spring destroys this bean on both paths. Without this, one Grails child
+     * that failed to start would leave its half-initialised application in the parent, and the
+     * parent would refuse every Grails child started beneath it afterwards.
+     */
+    @Override
+    void destroy() {
+        withdrawSingletonsFromParent(applicationContext)
+    }
+
+    /**
+     * Withdraws from the parent context the singletons {@link #postProcessBeanFactory} lent it, and
+     * only those: a singleton the parent holds for another reason is left alone.
+     */
+    private void withdrawSingletonsFromParent(ApplicationContext context) {
+        if (!(context instanceof ConfigurableApplicationContext)) {
+            return
+        }
+        BeanFactory parentBeanFactory = ((ConfigurableApplicationContext) context).beanFactory.parentBeanFactory
+        if (parentBeanFactory instanceof DefaultSingletonBeanRegistry) {
+            DefaultSingletonBeanRegistry registry = (DefaultSingletonBeanRegistry) parentBeanFactory
+            withdrawSingletonIfLent(registry, GrailsApplication.APPLICATION_ID, grailsApplication)
+            withdrawSingletonIfLent(registry, GrailsPluginManager.BEAN_NAME, pluginManager)
+        }
+    }
+
+    /**
+     * {@code destroySingleton} also destroys the beans of the parent recorded as depending on the
+     * withdrawn singleton, that is any parent bean that injected {@code grailsApplication} or
+     * {@code pluginManager} directly. That is intended: such a bean holds a reference to an
+     * application that has closed, and it is created again, against the next loan, the next time it
+     * is asked for. A parent bean that must outlive the Grails application looks the Grails beans up
+     * through an {@code ObjectProvider} instead of injecting them.
+     */
+    private static void withdrawSingletonIfLent(DefaultSingletonBeanRegistry registry, String beanName, Object singleton) {
+        if (registry.getSingleton(beanName).is(singleton)) {
+            registry.destroySingleton(beanName)
         }
     }
 

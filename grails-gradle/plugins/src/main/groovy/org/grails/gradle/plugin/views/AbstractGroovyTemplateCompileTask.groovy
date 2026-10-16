@@ -134,6 +134,7 @@ abstract class AbstractGroovyTemplateCompileTask extends AbstractCompile {
                         if (jvmArgs) {
                             javaExecSpec.jvmArgs(jvmArgs)
                         }
+
                         javaExecSpec.maxHeapSize = compileOptions.forkOptions.memoryMaximumSize
                         javaExecSpec.minHeapSize = compileOptions.forkOptions.memoryInitialSize
 

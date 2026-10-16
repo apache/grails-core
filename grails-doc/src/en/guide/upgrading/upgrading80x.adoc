@@ -4724,6 +4724,8 @@ The dynamic finder implementations in the `org.grails.datastore.gorm.finders` pa
 * `FindOrSaveByFinder`
 * `CountByFinder`
 
+The RxGORM equivalents in `org.grails.gorm.rx.finders` have been removed as well.
+
 `DynamicFinder` is now a concrete class that only parses a finder method name and builds its query criteria. It no longer implements `FinderMethod`, has no `invoke` or `doInvokeInternal` methods, and its constructor takes a method pattern, the junction operators, a `MappingContext` and a boolean-clause flag. Finder execution lives in three classes that compose a `DynamicFinder` instead of extending it and are created through static factory methods:
 
 [source,groovy]

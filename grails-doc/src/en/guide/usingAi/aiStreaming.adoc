@@ -1,0 +1,64 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+A model answers token by token, and a client that shows the tokens as they arrive feels far faster than one that waits for the whole answer. The `ChatClient` streams through `stream()`, which returns a Reactor `Flux`, and a Grails controller action can return that `Flux` directly:
+
+[source,groovy]
+.grails-app/controllers/my/app/ChatController.groovy
+----
+package my.app
+
+import org.springframework.ai.chat.client.ChatClient
+
+class ChatController {
+
+    ChatClient.Builder chatClientBuilder
+
+    def ask(String question) {
+        chatClientBuilder.build()
+                .prompt()
+                .user(question)
+                .stream()
+                .content()
+    }
+}
+----
+
+Grails handles the request asynchronously, commits the response as `text/event-stream` and writes every item the `Flux` emits to the client as a server-sent event, so the text of the answer arrives as the model produces it, and ends the response with an event named `complete` that the client closes on; should the model fail part way, the stream still ends with that event, its data then being `error`. Returning `stream().chatResponse()` works as well: the plugin renders each chat response as the text it carries. A browser reads the events with `EventSource`:
+
+[source,javascript]
+----
+const answer = document.getElementById('answer');
+const source = new EventSource('/chat/ask?question=' + encodeURIComponent(question));
+source.onmessage = event => { answer.textContent += event.data; };
+source.addEventListener('complete', () => source.close());
+----
+
+This is the general streaming support of Grails, which any Reactive Streams `Publisher` returned from an action gets; the <<asyncStreaming,Streaming Responses>> section of the asynchronous programming chapter describes the event format, how other kinds of item are rendered and the `grails.async.streaming` settings. A stream has no timeout unless `grails.async.streaming.timeout` sets one, so a slow or reasoning model that takes minutes to answer is not cut off; set it to bound how long an answer may take:
+
+[source,yaml]
+.grails-app/conf/application.yml
+----
+grails:
+    async:
+        streaming:
+            timeout: 5m
+----
+
+A `Mono`, such as `stream().content().collect(...)` or the result of a single call, is not streamed: it is resolved, and its value is the action's result as a returned `Promise`'s value is.

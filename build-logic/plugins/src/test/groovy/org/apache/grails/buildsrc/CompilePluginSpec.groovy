@@ -88,14 +88,14 @@ class CompilePluginSpec extends Specification {
         """
     }
 
-    def "disables invokedynamic on GroovyCompile tasks by default"() {
+    def "enables invokedynamic on GroovyCompile tasks by default"() {
         when:
         def result = runPrintIndy()
 
         then:
         result.task(':printIndy').outcome == TaskOutcome.SUCCESS
-        result.output.contains('MAIN_INDY=false')
-        result.output.contains('TEST_INDY=false')
+        result.output.contains('MAIN_INDY=true')
+        result.output.contains('TEST_INDY=true')
     }
 
     def "preserves parameter names for Groovy and joint-compiled Java sources"() {
@@ -107,19 +107,9 @@ class CompilePluginSpec extends Specification {
         result.output.contains('MAIN_JOINT_JAVAC_ARGS=[-parameters]')
     }
 
-    def "enables invokedynamic when grailsIndy is true"() {
+    def "keeps invokedynamic on when grailsIndy is false"() {
         when:
-        def result = runPrintIndy('-PgrailsIndy=true')
-
-        then:
-        result.task(':printIndy').outcome == TaskOutcome.SUCCESS
-        result.output.contains('MAIN_INDY=true')
-        result.output.contains('TEST_INDY=true')
-    }
-
-    def "trims whitespace when parsing grailsIndy"() {
-        when:
-        def result = runPrintIndy('-PgrailsIndy= true ')
+        def result = runPrintIndy('-PgrailsIndy=false')
 
         then:
         result.task(':printIndy').outcome == TaskOutcome.SUCCESS

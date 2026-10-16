@@ -27,6 +27,7 @@ import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.IdentityHashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -60,6 +61,7 @@ import org.codehaus.groovy.ast.expr.ListExpression;
 import org.codehaus.groovy.ast.expr.MethodCallExpression;
 import org.codehaus.groovy.ast.expr.PropertyExpression;
 import org.codehaus.groovy.ast.expr.StaticMethodCallExpression;
+import org.codehaus.groovy.ast.expr.SwitchExpression;
 import org.codehaus.groovy.ast.expr.TernaryExpression;
 import org.codehaus.groovy.ast.expr.TupleExpression;
 import org.codehaus.groovy.ast.expr.VariableExpression;
@@ -79,6 +81,7 @@ import org.codehaus.groovy.ast.stmt.SynchronizedStatement;
 import org.codehaus.groovy.ast.stmt.ThrowStatement;
 import org.codehaus.groovy.ast.stmt.TryCatchStatement;
 import org.codehaus.groovy.ast.stmt.WhileStatement;
+import org.codehaus.groovy.ast.stmt.YieldStatement;
 import org.codehaus.groovy.control.SourceUnit;
 import org.codehaus.groovy.control.messages.WarningMessage;
 import org.codehaus.groovy.syntax.Token;
@@ -151,6 +154,8 @@ import org.grails.datastore.mapping.reflect.AstUtils;
  * run any number of times, so a body that assigns a local declared outside it is re-walked from
  * the merged loop-head state until that state is stable before findings are reported: an
  * assignment late in the body is seen by a use earlier in it, which the next iteration reaches.
+ * The arms of a {@code switch} expression are walked like the cases of a {@code switch}
+ * statement, each {@code yield} carrying its state past the expression.
  * {@code break}, {@code continue} and, in a closure, {@code return} carry their state to the
  * exit or head they jump to, and a path ending in such a jump or in {@code throw} contributes
  * nothing to the state after the statement. A jump or an exception that leaves a {@code try}
@@ -323,9 +328,12 @@ public class GormQuerySafetyTransformer extends ClassCodeVisitorSupport {
     private List<CodeFacts> enclosingFacts = Collections.emptyList();
     /** The closures being walked, innermost first. */
     private final Deque<ClosureExpression> closures = new ArrayDeque<>();
+    /** The {@code switch} expressions being walked, innermost first. */
+    private final Deque<SwitchExpression> switchExpressions = new ArrayDeque<>();
     /**
-     * The loops, {@code switch} statements and closure bodies being walked, innermost first, that
-     * a {@code break}, {@code continue} or {@code return} can carry its state to.
+     * The loops, {@code switch} statements and expressions and closure bodies being walked,
+     * innermost first, that a {@code break}, {@code continue}, {@code yield} or {@code return}
+     * can carry its state to.
      */
     private final Deque<JumpTarget> jumpTargets = new ArrayDeque<>();
     /**
@@ -445,6 +453,7 @@ public class GormQuerySafetyTransformer extends ClassCodeVisitorSupport {
         concatenatedStringVars.clear();
         constantTextVars.clear();
         closures.clear();
+        switchExpressions.clear();
         facts = new CodeFacts();
     }
 
@@ -670,6 +679,36 @@ public class GormQuerySafetyTransformer extends ClassCodeVisitorSupport {
             TrackingSnapshot end = walkFrom(merge(before, fallThrough), defaultStatement);
             restore(merge(normalExit(defaultStatement, end), target.exit), end);
         } finally {
+            jumpTargets.pop();
+        }
+    }
+
+    /**
+     * Visits a {@code switch} expression like a {@code switch} statement (see {@link #visitSwitch}).
+     * Every arm ends with a {@code yield}, which leaves the expression the way a {@code break}
+     * leaves the statement, so the state afterwards is merged from every {@code yield}.
+     */
+    @Override
+    public void visitSwitchExpression(SwitchExpression expression) {
+        expression.getExpression().visit(this);
+        TrackingSnapshot before = snapshot();
+        JumpTarget target = new JumpTarget(null, JumpTarget.Kind.SWITCH_EXPRESSION);
+        jumpTargets.push(target);
+        switchExpressions.push(expression);
+        try {
+            TrackingSnapshot fallThrough = null;
+            for (CaseStatement caseStatement : expression.getCaseStatements()) {
+                restore(merge(before, fallThrough));
+                visitStatement(caseStatement);
+                caseStatement.getExpression().visit(this);
+                caseStatement.getCode().visit(this);
+                fallThrough = normalExit(caseStatement.getCode(), snapshot());
+            }
+            Statement defaultStatement = expression.getDefaultStatement();
+            TrackingSnapshot end = walkFrom(merge(before, fallThrough), defaultStatement);
+            restore(merge(normalExit(defaultStatement, end), target.exit), end);
+        } finally {
+            switchExpressions.pop();
             jumpTargets.pop();
         }
     }
@@ -903,6 +942,21 @@ public class GormQuerySafetyTransformer extends ClassCodeVisitorSupport {
     }
 
     @Override
+    public void visitYieldStatement(YieldStatement statement) {
+        super.visitYieldStatement(statement);
+        // A yield leaves the innermost switch expression; it cannot cross a closure boundary.
+        for (JumpTarget target : jumpTargets) {
+            if (target.kind == JumpTarget.Kind.CLOSURE) {
+                return;
+            }
+            if (target.kind == JumpTarget.Kind.SWITCH_EXPRESSION) {
+                jump(target, false, snapshot());
+                return;
+            }
+        }
+    }
+
+    @Override
     public void visitReturnStatement(ReturnStatement statement) {
         super.visitReturnStatement(statement);
         // Returning from a closure ends one run of its body; the next run starts from its head.
@@ -946,11 +1000,11 @@ public class GormQuerySafetyTransformer extends ClassCodeVisitorSupport {
 
     /**
      * The innermost enclosing loop (or, for a {@code break}, {@code switch}) that a jump leaves,
-     * by label when it has one. A jump cannot cross a closure boundary.
+     * by label when it has one. A jump cannot cross a closure or {@code switch} expression boundary.
      */
     private JumpTarget jumpTarget(String label, boolean loopsOnly) {
         for (JumpTarget target : jumpTargets) {
-            if (target.kind == JumpTarget.Kind.CLOSURE) {
+            if (target.kind == JumpTarget.Kind.CLOSURE || target.kind == JumpTarget.Kind.SWITCH_EXPRESSION) {
                 return null;
             }
             boolean kindMatches = target.kind == JumpTarget.Kind.LOOP || !loopsOnly;
@@ -977,7 +1031,8 @@ public class GormQuerySafetyTransformer extends ClassCodeVisitorSupport {
 
     private static boolean completesAbruptly(Statement statement) {
         if (statement instanceof BreakStatement || statement instanceof ContinueStatement ||
-                statement instanceof ReturnStatement || statement instanceof ThrowStatement) {
+                statement instanceof ReturnStatement || statement instanceof ThrowStatement ||
+                statement instanceof YieldStatement) {
             return true;
         }
         if (statement instanceof BlockStatement) {
@@ -1088,14 +1143,15 @@ public class GormQuerySafetyTransformer extends ClassCodeVisitorSupport {
     }
 
     /**
-     * A loop, {@code switch} or closure body being walked, with the states that jumps inside it
-     * carry to its exit ({@code break}) and to its head ({@code continue}, or {@code return} from
-     * a closure), and the state at the end of its most recent walk.
+     * A loop, {@code switch} statement or expression, or closure body being walked, with the
+     * states that jumps inside it carry to its exit ({@code break}, or {@code yield} from a
+     * {@code switch} expression) and to its head ({@code continue}, or {@code return} from a
+     * closure), and the state at the end of its most recent walk.
      */
     private static final class JumpTarget {
 
         enum Kind {
-            LOOP, SWITCH, CLOSURE
+            LOOP, SWITCH, SWITCH_EXPRESSION, CLOSURE
         }
 
         final Kind kind;
@@ -1194,6 +1250,8 @@ public class GormQuerySafetyTransformer extends ClassCodeVisitorSupport {
         final Map<ClosureExpression, Set<Object>> closureLocals = new IdentityHashMap<>();
         /** The innermost closure declaring each local declared inside one. */
         final Map<Object, ClosureExpression> declaringClosures = new HashMap<>();
+        /** The innermost {@code switch} expression declaring each local declared inside one. */
+        final Map<Object, SwitchExpression> declaringSwitchExpressions = new HashMap<>();
         /**
          * The locals that hold only constant text however their assignments are ordered, filled
          * in by {@link #settleConstants} once the scan is complete.
@@ -1210,7 +1268,10 @@ public class GormQuerySafetyTransformer extends ClassCodeVisitorSupport {
 
         private final Set<Expression> statementExpressions = Collections.newSetFromMap(new IdentityHashMap<>());
         private final Deque<Set<Object>> closureScopes = new ArrayDeque<>();
-        /** The closure or anonymous inner class creation owning each of {@link #closureScopes}. */
+        /**
+         * The closure, anonymous inner class creation or {@code switch} expression owning each of
+         * {@link #closureScopes}.
+         */
         private final Deque<Expression> scopeOwners = new ArrayDeque<>();
         /** The loop and closure bodies being scanned, innermost first. */
         private final Deque<BodyScope> openBodies = new ArrayDeque<>();
@@ -1232,6 +1293,20 @@ public class GormQuerySafetyTransformer extends ClassCodeVisitorSupport {
             openScope(expression, locals);
             try {
                 scanBody(expression.getCode(), locals, () -> super.visitClosureExpression(expression));
+            } finally {
+                closeScope();
+            }
+        }
+
+        /**
+         * The value of a {@code switch} expression is classified where it is assigned, before its
+         * arms are walked, so the locals its arms declare or assign are judged as a closure's are.
+         */
+        @Override
+        public void visitSwitchExpression(SwitchExpression expression) {
+            openScope(expression, new HashSet<>());
+            try {
+                super.visitSwitchExpression(expression);
             } finally {
                 closeScope();
             }
@@ -1381,12 +1456,20 @@ public class GormQuerySafetyTransformer extends ClassCodeVisitorSupport {
 
         private void declareLocal(Object key) {
             owned.add(key);
-            Set<Object> closureScope = closureScopes.peek();
-            if (closureScope != null) {
+            // A switch expression runs in place, so its locals are also those of the scope around it.
+            Iterator<Expression> owners = scopeOwners.iterator();
+            for (Set<Object> closureScope : closureScopes) {
                 closureScope.add(key);
+                if (!(owners.next() instanceof SwitchExpression)) {
+                    break;
+                }
             }
-            if (scopeOwners.peek() instanceof ClosureExpression) {
-                declaringClosures.put(key, (ClosureExpression) scopeOwners.peek());
+            Expression owner = scopeOwners.peek();
+            if (owner instanceof ClosureExpression) {
+                declaringClosures.put(key, (ClosureExpression) owner);
+            }
+            else if (owner instanceof SwitchExpression) {
+                declaringSwitchExpressions.put(key, (SwitchExpression) owner);
             }
             for (BodyScope scope : openBodies) {
                 scope.locals.add(key);
@@ -1484,10 +1567,10 @@ public class GormQuerySafetyTransformer extends ClassCodeVisitorSupport {
             TernaryExpression ternary = (TernaryExpression) expression;
             return classify(ternary.getTrueExpression(), declaredType).or(classify(ternary.getFalseExpression(), declaredType));
         }
-        ClosureExpression called = calledClosure(expression);
-        if (called != null) {
+        List<Expression> results = resultsOf(expression);
+        if (results != null) {
             Origin origin = Origin.CONSTANT;
-            for (Expression result : resultsOf(called)) {
+            for (Expression result : results) {
                 origin = origin.or(classify(result, declaredType));
             }
             return origin;
@@ -1548,9 +1631,9 @@ public class GormQuerySafetyTransformer extends ClassCodeVisitorSupport {
             TernaryExpression ternary = (TernaryExpression) expression;
             return isUnsafeSource(ternary.getTrueExpression()) || isUnsafeSource(ternary.getFalseExpression());
         }
-        ClosureExpression called = calledClosure(expression);
-        if (called != null) {
-            for (Expression result : resultsOf(called)) {
+        List<Expression> results = resultsOf(expression);
+        if (results != null) {
+            for (Expression result : results) {
                 if (isUnsafeSource(result)) {
                     return true;
                 }
@@ -1560,9 +1643,24 @@ public class GormQuerySafetyTransformer extends ClassCodeVisitorSupport {
     }
 
     /**
+     * The expressions whose value {@code expression} takes when it is a closure literal called on
+     * the spot, as in {@code { ... }()}, or a {@code switch} expression, or {@code null} for any
+     * other expression.
+     */
+    private static List<Expression> resultsOf(Expression expression) {
+        ClosureExpression called = calledClosure(expression);
+        if (called != null) {
+            return resultsOf(called);
+        }
+        if (expression instanceof SwitchExpression) {
+            return resultsOf((SwitchExpression) expression);
+        }
+        return null;
+    }
+
+    /**
      * The closure literal {@code expression} calls on the spot, as in {@code { ... }()}, or
-     * {@code null}. A {@code switch} expression compiles to such a call, so this is how the value
-     * of one is followed.
+     * {@code null}.
      */
     private static ClosureExpression calledClosure(Expression expression) {
         if (expression instanceof MethodCallExpression) {
@@ -1593,6 +1691,35 @@ public class GormQuerySafetyTransformer extends ClassCodeVisitorSupport {
             }
         });
         addTailResults(closure.getCode(), results);
+        return results;
+    }
+
+    /**
+     * The expressions a {@code switch} expression can take: those of its own {@code yield}
+     * statements, not those of {@code switch} expressions nested in it.
+     */
+    private static List<Expression> resultsOf(SwitchExpression switchExpression) {
+        List<Expression> results = new ArrayList<>();
+        CodeVisitorSupport yields = new CodeVisitorSupport() {
+            @Override
+            public void visitYieldStatement(YieldStatement statement) {
+                results.add(statement.getExpression());
+            }
+
+            @Override
+            public void visitSwitchExpression(SwitchExpression nested) {
+                // A nested switch expression's yields give that expression its value, not this one.
+            }
+
+            @Override
+            public void visitClosureExpression(ClosureExpression nested) {
+                // A yield cannot leave a closure.
+            }
+        };
+        for (CaseStatement caseStatement : switchExpression.getCaseStatements()) {
+            caseStatement.getCode().visit(yields);
+        }
+        switchExpression.getDefaultStatement().visit(yields);
         return results;
     }
 
@@ -1673,9 +1800,9 @@ public class GormQuerySafetyTransformer extends ClassCodeVisitorSupport {
             TernaryExpression ternary = (TernaryExpression) expression;
             return isConstantText(ternary.getTrueExpression()) && isConstantText(ternary.getFalseExpression());
         }
-        ClosureExpression called = calledClosure(expression);
-        if (called != null) {
-            for (Expression result : resultsOf(called)) {
+        List<Expression> results = resultsOf(expression);
+        if (results != null) {
+            for (Expression result : results) {
                 if (!isConstantText(result)) {
                     return false;
                 }
@@ -1723,11 +1850,15 @@ public class GormQuerySafetyTransformer extends ClassCodeVisitorSupport {
      * Whether the walk cannot know what the local under {@code key} holds at this point, so it is
      * judged by every assignment to it in the code: one assigned where the walk cannot place the
      * assignment (see {@link CodeFacts#unordered}), one declared outside the closure being walked,
-     * which may run at any later point, and one declared inside a closure that is not being walked,
-     * whose state is only tracked while it is.
+     * which may run at any later point, and one declared inside a closure or {@code switch}
+     * expression that is not being walked, whose state is only tracked while it is.
      */
     private boolean isJudgedByEveryAssignment(Object key) {
         if (facts.unordered.contains(key) || isSharedWithEnclosingClosure(key)) {
+            return true;
+        }
+        SwitchExpression declaringSwitch = facts.declaringSwitchExpressions.get(key);
+        if (declaringSwitch != null && !switchExpressions.contains(declaringSwitch)) {
             return true;
         }
         ClosureExpression declaring = facts.declaringClosures.get(key);
@@ -2004,10 +2135,10 @@ public class GormQuerySafetyTransformer extends ClassCodeVisitorSupport {
             TernaryExpression ternary = (TernaryExpression) argument;
             return findingFor(ternary.getTrueExpression()).or(findingFor(ternary.getFalseExpression()));
         }
-        ClosureExpression called = calledClosure(argument);
-        if (called != null) {
+        List<Expression> results = resultsOf(argument);
+        if (results != null) {
             Finding finding = Finding.NONE;
-            for (Expression result : resultsOf(called)) {
+            for (Expression result : results) {
                 finding = finding.or(findingFor(result));
             }
             return finding;

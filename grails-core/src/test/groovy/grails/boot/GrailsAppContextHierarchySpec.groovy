@@ -38,8 +38,8 @@ import org.apache.grails.core.testing.support.LogCapture
 
 /**
  * Covers what {@link GrailsApp} does differently as a member of a context hierarchy: it runs the
- * plugin lifecycle only where the Grails application class is, and says so when it leaves the
- * lifecycle out.
+ * plugin lifecycle only where the Grails application class is, says so when it leaves the lifecycle
+ * out, and a context without a web server reports no address.
  */
 @RestoreSystemProperties
 class GrailsAppContextHierarchySpec extends Specification {
@@ -137,6 +137,22 @@ class GrailsAppContextHierarchySpec extends Specification {
         context.beanFactory.containsSingleton(GrailsPluginManager.BEAN_NAME)
         context.getBean(HierarchyPlainConfig.PlainMarker) != null
         !loggedSkippedLifecycle(HierarchyPlainConfig)
+    }
+
+    void 'no running address is reported for a context without a web server'() {
+        given:
+        PrintStream originalOut = System.out
+        ByteArrayOutputStream captured = new ByteArrayOutputStream()
+        System.setOut(new PrintStream(captured, true))
+
+        when:
+        context = application(HierarchyPlainConfig).run()
+
+        then: 'nothing is listening, so there is no address to report'
+        !captured.toString().contains('Grails application running at')
+
+        cleanup:
+        System.setOut(originalOut)
     }
 }
 

@@ -55,6 +55,12 @@ List<Map<String, String>> resolveGroovydocLinks() {
     // specific org.springframework.boot. entry must come before the broader
     // org.springframework. entry or every Boot class link resolves against the
     // Framework javadocs instead, where the Boot classes don't exist.
+    // Spring AI shares the org.springframework. prefix as well, so its entry has to precede the
+    // Framework one for the same reason.
+    def springAiVersion = resolveProjectVersion('spring-ai-model')
+    if (springAiVersion) {
+        links << [packages: 'org.springframework.ai.', href: "https://docs.spring.io/spring-ai/docs/${springAiVersion}/api/"]
+    }
     def springBootVersion = resolveProjectVersion('spring-boot')
     if (springBootVersion) {
         // Boot 3.4 retired the older docs.spring.io/spring-boot/docs/<version>/api/ layout.

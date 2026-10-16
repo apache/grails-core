@@ -35,11 +35,13 @@ import spock.lang.Tag
 @Tag('http-client')
 class HelloControllerSpec extends Specification implements HttpClientSupport {
 
-    void 'the application boots with Spring Dependency Management and serves a request'() {
+    void 'the application boots with Spring Dependency Management and serves controller and GSP requests'() {
         when:
-        def response = http('/hello')
+        def controllerResponse = http('/hello')
+        def gspResponse = http('/')
 
         then:
-        response.assertEquals(200, 'Hello from Spring Dependency Management')
+        controllerResponse.assertEquals(200, 'Hello from Spring Dependency Management')
+        gspResponse.assertContains(200, 'Spring Dependency Management Example')
     }
 }

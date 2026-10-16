@@ -22,20 +22,12 @@ plugins {
     id 'java-library'
     id 'org.apache.grails.buildsrc.properties'
     id 'org.apache.grails.buildsrc.dependency-validator'
-    id 'org.grails.forge.rocker'
     id 'org.apache.grails.buildsrc.compile'
+    id 'org.apache.grails.gradle.grails-code-style'
 }
 
 version = projectVersion
 group = 'org.apache.grails.forge'
-
-sourceSets {
-    test {
-        rocker {
-            srcDir('src/test/groovy')
-        }
-    }
-}
 
 configurations.register('generateConfig')
 configurations.configureEach {
@@ -46,31 +38,32 @@ configurations.configureEach {
 }
 
 dependencies {
-    implementation gradleTestKit()
-    implementation platform("io.micronaut.platform:micronaut-platform:$micronautVersion")
+    implementation platform("org.apache.grails:grails-bom:$projectVersion")
     generateConfig "info.picocli:picocli-codegen:$picocliVersion"
 
-    implementation 'io.micronaut:micronaut-inject-groovy'
-
-    testImplementation enforcedPlatform('org.spockframework:spock-bom:2.4-groovy-4.0')
     testImplementation project(':grails-forge-cli')
+    testImplementation testFixtures(project(':grails-forge-cli'))
     testImplementation project(':grails-forge-core')
-    testImplementation "ch.qos.logback:logback-classic"
-    testImplementation 'io.micronaut.picocli:micronaut-picocli'
-
-    testCompileOnly 'io.micronaut:micronaut-inject-groovy'
+    // gradleTestKit() is a file collection: the TestKit jar, the Gradle API jar, and the Groovy 4 that
+    // Gradle itself runs on. Only the first two are wanted. Left in, Gradle's Groovy would be the one the
+    // compiler infers for these Groovy 5 specs and the runtime their call sites run against; GradleRunner
+    // does not need it. The collection also carries Gradle's SLF4J binding, which is why there is no
+    // Logback here: Spring Boot refuses to start the Forge application over another binding.
+    testImplementation gradleTestKit().files.filter { File jar -> !jar.name.startsWith('groovy-') }
 
     testImplementation 'org.apache.groovy:groovy'
-    testImplementation "org.spockframework:spock-core", {
+    testImplementation 'org.spockframework:spock-core', {
         exclude group: 'org.apache.groovy', module: 'groovy-all'
     }
 
-    testRuntimeOnly "ch.qos.logback:logback-classic"
-    testRuntimeOnly "org.objenesis:objenesis:$objenesisVersion"
+    testRuntimeOnly 'org.objenesis:objenesis'
     testImplementation 'org.apache.groovy:groovy-test'
 }
 
+ext {
+    forgeTestsNeedLocalMaven = true
+}
+
 apply {
-    from rootProject.layout.projectDirectory.file('gradle/groovy-version-pin.gradle')
     from rootProject.layout.projectDirectory.file('gradle/test-config.gradle')
 }

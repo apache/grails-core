@@ -24,6 +24,7 @@ import java.util.concurrent.Executor
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 
+import org.springframework.beans.factory.DisposableBean
 import org.springframework.beans.factory.FactoryBean
 import org.springframework.beans.BeanWrapperImpl
 import org.springframework.beans.factory.InitializingBean
@@ -37,12 +38,11 @@ import org.grails.events.bus.ExecutorEventBus
 /**
  * Factory bean for usage within Spring
  *
- * @author Graeme Rocher
  * @since 3.3
  */
 @Slf4j
 @CompileStatic
-class EventBusFactoryBean extends EventBusBuilder implements FactoryBean<EventBus>, InitializingBean, ApplicationContextAware {
+class EventBusFactoryBean extends EventBusBuilder implements FactoryBean<EventBus>, InitializingBean, DisposableBean, ApplicationContextAware {
 
     ApplicationContext applicationContext
     EventBus eventBus
@@ -65,6 +65,17 @@ class EventBusFactoryBean extends EventBusBuilder implements FactoryBean<EventBu
     @Override
     void afterPropertiesSet() throws Exception {
         this.eventBus = super.build()
+    }
+
+    /**
+     * Closes the event bus with the application context when the implementation owns resources,
+     * such as the actor loop behind the Groovy and GPars event buses.
+     */
+    @Override
+    void destroy() throws Exception {
+        if (eventBus instanceof Closeable) {
+            ((Closeable) eventBus).close()
+        }
     }
 
     @Override

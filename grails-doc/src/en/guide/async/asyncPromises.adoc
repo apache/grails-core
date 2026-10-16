@@ -150,7 +150,11 @@ The following table summarizes the available implementation and the dependency t
 |===
 |Framework | Dependency | Implementation Class
 
-|GPars 1.2.x
+|Groovy `groovy.concurrent`
+|`grails-async-groovy-concurrent`
+|`org.grails.async.factory.groovy.AwaitablePromiseFactory`
+
+|GPars 1.2.x (deprecated, see below)
 |`grails-async-gpars`
 |`org.grails.async.factory.gpars.GparsPromiseFactory`
 
@@ -167,6 +171,12 @@ The following table summarizes the available implementation and the dependency t
 |`org.grails.async.factory.rxjava3.RxPromiseFactory`
 
 |===
+
+The `grails-async-groovy-concurrent` dependency selects a factory built on Groovy's own https://groovy-lang.org/releasenotes/groovy-6.0.html#concurrency-toolkit[`groovy.concurrent`] API, the toolkit that replaces GPars in Groovy 6. Tasks run through link:{groovyapi}groovy/concurrent/Awaitable.html[Awaitable], unfulfilled promises are link:{groovyapi}groovy/concurrent/DataflowVariable.html[DataflowVariable] instances, and every promise it creates is itself an `Awaitable`, so it can be passed to Groovy's `await` and to combinators such as `Awaitable.all` without conversion. Tasks are submitted to the executor Groovy uses for `async` blocks, which runs on virtual threads by default. Configure it with link:{groovyapi}groovy/concurrent/Awaitable.html[Awaitable.setExecutor], for example from `Application` before the context starts.
+
+NOTE: Like the GPars and RxJava factories, a service-loaded factory is created by the framework, so in a Grails application it does not use Boot's `applicationTaskExecutor` or the `TaskDecorator` beans that the default factory receives. `Awaitable.setExecutor` is the supported way to change where its tasks run.
+
+The GPars integration in `grails-async-gpars` is deprecated and will be removed in a future release, because Groovy 6 folds the GPars patterns into `groovy.concurrent`. It logs a warning when it is selected. Replace the dependency with `grails-async-groovy-concurrent`; do not add both, since only one service-loaded `PromiseFactory` is used.
 
 You can also override the `grails.async.PromiseFactory` class used by `Promises` by setting the `promiseFactory` static field.
 

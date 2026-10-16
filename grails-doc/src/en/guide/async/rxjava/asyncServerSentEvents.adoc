@@ -19,6 +19,8 @@ under the License.
 
 Server-sent events (SSE) is a technology where a browser receives automatic updates from a server via HTTP connection. The Server-Sent Events EventSource API is standardized as part of HTML5 by the W3C.
 
+Grails itself streams any Reactive Streams `Publisher` returned from a controller action as server-sent events, which needs no plugin; see <<asyncStreaming,Streaming Responses>>. The RxJava plugin described here offers an RxJava 1 `Observable` based API for the same purpose.
+
 
 The https://grails-plugins.github.io/grails-rxjava/latest/[RxJava plugin] adds support for SSE to Grails making it simple to write controllers that maintain continuous non-blocking communication with a JavaScript client.
 

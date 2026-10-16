@@ -83,6 +83,8 @@ The following options are available to configure for Grails applications using t
 
 Data fetchers in GraphQL have a "context". The context is really just an Object field that can contain anything you like with the purpose of exposing it to the data fetching environment. For example, the default context created by the plugin is a Map that contains the request locale. The locale is used to render validation error messages.
 
+The plugin passes the context object to graphql-java as both the execution context and the execution root. `DataFetchingEnvironment.getContext()` is deprecated in graphql-java, so read the object from `environment.root` in data fetchers. The default validation errors response handler reads the locale from `environment.root` as well.
+
 TIP: If you prefer to set the context to a custom class, implement link:{api}/org/grails/gorm/graphql/fetcher/context/LocaleAwareContext.html[LocaleAwareContext] and the default validation errors response handler will retrieve the locale from the object.
 
 It is common to need to manipulate the context to include data that some or all of your data fetchers might need. If a fetcher needs to be aware of the current user and you are using the spring security plugin, you may want to add the `springSecurityService` to the context.
@@ -121,6 +123,6 @@ Then in a data fetcher:
 [source,groovy]
 ----
 T get(DataFetchingEnvironment environment) {
-    ((Map) environment.context).springSecurityService
+    ((Map) environment.root).springSecurityService
 }
 ----

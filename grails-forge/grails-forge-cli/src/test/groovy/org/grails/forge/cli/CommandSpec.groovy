@@ -15,6 +15,9 @@
  */
 package org.grails.forge.cli
 
+import org.springframework.context.ConfigurableApplicationContext
+import spock.lang.AutoCleanup
+import spock.lang.Shared
 import spock.lang.Specification
 import spock.util.concurrent.PollingConditions
 import spock.util.environment.OperatingSystem
@@ -22,6 +25,11 @@ import spock.util.environment.OperatingSystem
 import java.nio.file.Files
 
 class CommandSpec extends Specification {
+
+    /** The Forge CLI's Grails application, started once per specification: what the specs run commands on. */
+    @Shared
+    @AutoCleanup
+    ConfigurableApplicationContext beanContext = Application.builder().run()
 
     File dir = Files.createTempDirectory('grailsforgetmp').toFile()
     StringBuilder output
@@ -66,8 +74,9 @@ class CommandSpec extends Specification {
     private static final int POLL_INITIAL_DELAY_MILLIS = 3000
     private static final int POLL_DELAY_MILLIS = 1000
 
-    // Once the process has exited the output can no longer grow, so allow the consumer thread
-    // started by consumeProcessOutputStream a moment to drain before deciding the value is absent.
+    // Once the process has exited the output can no longer grow, so allow the stdout and stderr
+    // consumer threads started by consumeProcessOutput a moment to drain before deciding the
+    // value is absent.
     private static final int OUTPUT_DRAIN_MILLIS = 2000
 
     PollingConditions getDefaultPollingConditions() {
@@ -116,7 +125,7 @@ class CommandSpec extends Specification {
         pb.environment().put('JAVA_HOME', System.getenv('JAVA_HOME') ?: System.getProperty('java.home'))
         pb.environment().put('GRAILS_REPO_URL', System.getenv('GRAILS_REPO_URL') ?: null)
         process = pb.directory(dir).start()
-        process.consumeProcessOutputStream(output)
+        process.consumeProcessOutput(output, output)
         process
     }
 

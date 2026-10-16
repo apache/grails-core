@@ -1,0 +1,14 @@
+plugins {
+    id 'org.apache.grails.gradle.grails-app'
+}
+
+tasks.register('inspectBootRunStartupProgress') {
+    def startupProgressArgs = providers.provider {
+        tasks.named('bootRun', JavaExec).get().allJvmArgs.findAll { it.startsWith('-Dgrails.startup.progress.') }
+    }
+    doLast {
+        startupProgressArgs.get().each {
+            println "STARTUP_PROGRESS_ARG ${it}"
+        }
+    }
+}

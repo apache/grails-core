@@ -30,7 +30,6 @@ import org.grails.gorm.rx.api.RxGormEnhancer
 /**
  * A trait for domain classes that should be treated as multi tenant
  *
- * @author Graeme Rocher
  * @since 6.0
  */
 @CompileStatic
@@ -55,7 +54,7 @@ trait MultiTenant<D> extends RxEntity<D> {
      * @return The result of the closure
      */
     @Generated
-    static RxGormAllOperations<D> eachTenant( @DelegatesTo(RxGormAllOperations) Closure callable) {
+    static RxGormAllOperations<D> eachTenant(@DelegatesTo(RxGormAllOperations) Closure callable) {
         RxGormEnhancer.findStaticApi(this, ConnectionSource.DEFAULT).eachTenant callable
     }
 

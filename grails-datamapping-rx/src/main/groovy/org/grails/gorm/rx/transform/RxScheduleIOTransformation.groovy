@@ -24,14 +24,13 @@ import groovy.transform.CompileStatic
 import org.codehaus.groovy.ast.AnnotationNode
 import org.codehaus.groovy.ast.ClassHelper
 import org.codehaus.groovy.ast.ClassNode
-import org.codehaus.groovy.ast.GenericsType
 import org.codehaus.groovy.ast.MethodNode
+import org.codehaus.groovy.ast.Parameter
 import org.codehaus.groovy.ast.VariableScope
 import org.codehaus.groovy.ast.expr.ArgumentListExpression
 import org.codehaus.groovy.ast.expr.CastExpression
 import org.codehaus.groovy.ast.expr.ClosureExpression
 import org.apache.grails.common.compiler.GroovyTransformOrder
-import org.codehaus.groovy.ast.expr.ConstantExpression
 import org.codehaus.groovy.ast.expr.Expression
 import org.codehaus.groovy.ast.expr.MethodCallExpression
 import org.codehaus.groovy.ast.stmt.BlockStatement
@@ -41,10 +40,7 @@ import org.codehaus.groovy.ast.tools.GenericsUtils
 import org.codehaus.groovy.control.CompilePhase
 import org.codehaus.groovy.control.SourceUnit
 import org.codehaus.groovy.transform.GroovyASTTransformation
-import org.grails.datastore.gorm.multitenancy.transform.TenantTransform
-import org.grails.datastore.gorm.transform.AbstractDatastoreMethodDecoratingTransformation
 import org.grails.datastore.gorm.transform.AbstractMethodDecoratingTransformation
-import org.grails.datastore.mapping.core.Ordered
 import org.grails.datastore.mapping.reflect.AstGenericsUtils
 import org.grails.gorm.rx.services.support.RxServiceSupport
 import rx.Scheduler
@@ -53,25 +49,35 @@ import static org.grails.datastore.mapping.reflect.AstUtils.ZERO_PARAMETERS
 import static org.codehaus.groovy.ast.tools.GeneralUtils.castX
 import static org.codehaus.groovy.ast.tools.GeneralUtils.classX
 import static org.codehaus.groovy.ast.tools.GeneralUtils.callX
+import static org.codehaus.groovy.ast.tools.GeneralUtils.returnS
 
 /**
  * A transformation that will convert a blocking GORM operation into an Observable that runs on the RxJava {@link rx.schedulers.Schedulers#io()} scheduler
  *
  * @see {@link rx.schedulers.Schedulers#io()}
  *
- * @author Graeme Rocher
  * @since 6.1
  */
 @CompileStatic
 @GroovyASTTransformation(phase = CompilePhase.CANONICALIZATION)
 class RxScheduleIOTransformation extends AbstractMethodDecoratingTransformation {
+
     private static final Object APPLIED_MARKER = new Object()
     public static final String RENAMED_METHOD_PREFIX = '$rx__'
 
     public static final ClassNode ANNOTATION_TYPE = ClassHelper.make(RxSchedule)
     public static final AnnotationNode ANNOTATION = new AnnotationNode(ANNOTATION_TYPE)
-    public static final String ANN_SINGLE_RESULT = "singleResult"
-    public static final String ANN_SCHEDULER = "scheduler"
+    public static final String ANN_SINGLE_RESULT = 'singleResult'
+    public static final String ANN_SCHEDULER = 'scheduler'
+
+    /**
+     * Node metadata key used to stash the original (Rx-wrapped, e.g. {@code Single<Number>}) return type of a
+     * method while it is temporarily narrowed to its unwrapped synchronous type (e.g. {@code Number}) so that
+     * decorators applied by the underlying implementer (such as the automatic {@code @Transactional} wrapping)
+     * build their delegating call against the type the synchronous body actually returns, rather than the
+     * Rx-wrapped type the public method exposes. See {@code SingleResultAdapter} / {@code ObservableResultAdapter}.
+     */
+    public static final String WRAPPED_RETURN_TYPE = 'rxWrappedReturnType'
 
     @Override
     protected ClassNode getAnnotationType() {
@@ -91,21 +97,30 @@ class RxScheduleIOTransformation extends AbstractMethodDecoratingTransformation 
     @Override
     protected MethodNode weaveNewMethod(SourceUnit sourceUnit, AnnotationNode annotationNode, ClassNode classNode, MethodNode methodNode, Map<String, ClassNode> genericsSpec) {
         Object appliedMarker = getAppliedMarker()
-        if ( methodNode.getNodeMetaData(appliedMarker) == appliedMarker ) {
+        if (methodNode.getNodeMetaData(appliedMarker) == appliedMarker) {
             return methodNode
         }
-        if(methodNode.isAbstract()) {
+        if (methodNode.isAbstract()) {
             return methodNode
+        }
+
+        ClassNode wrappedReturnType = (ClassNode) methodNode.getNodeMetaData(WRAPPED_RETURN_TYPE)
+        if (wrappedReturnType != null) {
+            // Restore the Rx-wrapped return type (e.g. Single<Number>) that SingleResultAdapter/
+            // ObservableResultAdapter temporarily narrowed to the unwrapped synchronous type before other
+            // decorators (e.g. @Transactional) wove this method, so this transform builds its own delegating
+            // cast, and the renamed/decorated methods below, against the correct wrapped type.
+            methodNode.setReturnType(wrappedReturnType)
         }
 
         List<MethodNode> decorated = (List<MethodNode>)methodNode.getNodeMetaData(DECORATED_METHODS)
         ClassNode newReturnType = resolveReturnTypeForNewMethod(methodNode)
-        if(RxAstUtils.isObservable(methodNode.returnType)) {
+        if (RxAstUtils.isObservable(methodNode.returnType)) {
             newReturnType = GenericsUtils.makeClassSafeWithGenerics(Iterable, newReturnType)
         }
-        if(decorated != null) {
+        if (decorated != null) {
 
-            for(MethodNode mn in decorated) {
+            for (MethodNode mn in decorated) {
                 mn.setReturnType(newReturnType)
                 alignReturnType(mn, newReturnType)
             }
@@ -120,7 +135,7 @@ class RxScheduleIOTransformation extends AbstractMethodDecoratingTransformation 
     protected void alignReturnType(MethodNode newMethod, ClassNode newReturnType) {
         newMethod.setReturnType(newReturnType)
         BlockStatement newMethodBody = (BlockStatement) newMethod.code
-        if(newMethodBody != null) {
+        if (newMethodBody != null) {
 
             ReturnStatement rs = null
             Statement last = newMethodBody.statements[-1]
@@ -138,19 +153,29 @@ class RxScheduleIOTransformation extends AbstractMethodDecoratingTransformation 
     protected MethodCallExpression buildDelegatingMethodCall(SourceUnit sourceUnit, AnnotationNode annotationNode, ClassNode classNode, MethodNode methodNode, MethodCallExpression originalMethodCallExpr, BlockStatement newMethodBody) {
         Expression schedulerExpression = annotationNode.getMember(ANN_SCHEDULER)
         ArgumentListExpression args = new ArgumentListExpression()
-        if(schedulerExpression instanceof ClosureExpression) {
+        if (schedulerExpression instanceof ClosureExpression) {
             args.addExpression(
-                castX(ClassHelper.make(Scheduler), callX(schedulerExpression, "call"))
+                castX(ClassHelper.make(Scheduler), callX(schedulerExpression, 'call'))
             )
         }
 
         VariableScope variableScope = methodNode.getVariableScope()
-        if(RxAstUtils.isSingle(methodNode.returnType)) {
-            return makeDelegatingClosureCall( classX(RxServiceSupport), "createSingle", args, ZERO_PARAMETERS, originalMethodCallExpr, variableScope)
+        if (RxAstUtils.isSingle(methodNode.returnType)) {
+            return makeDelegatingClosureCall(classX(RxServiceSupport), 'createSingle', args, ZERO_PARAMETERS, originalMethodCallExpr, variableScope)
         }
         else {
-            return makeDelegatingClosureCall( classX(RxServiceSupport), "create", args, ZERO_PARAMETERS, originalMethodCallExpr, variableScope)
+            return makeDelegatingClosureCall(classX(RxServiceSupport), 'create', args, ZERO_PARAMETERS, originalMethodCallExpr, variableScope)
         }
+    }
+
+    @Override
+    protected Statement createDelegingMethodBody(Parameter[] parameters, MethodCallExpression originalMethodCall) {
+        // RxServiceSupport.create(Callable<T>) accepts a callable that returns either a single T or an
+        // Iterable<T> to flatten, a distinction it resolves at runtime via instanceof, not through T. Returning
+        // the call result as-is here would let the static compiler infer T from the closure's surrounding
+        // context (the wrapped return type, e.g. Book) and inject a narrowing cast that fails whenever the
+        // delegate actually returns an Iterable<Book> to flatten - so erase the static type to Object instead.
+        return returnS(castX(ClassHelper.OBJECT_TYPE, originalMethodCall))
     }
 
     @Override
@@ -160,6 +185,6 @@ class RxScheduleIOTransformation extends AbstractMethodDecoratingTransformation 
 
     @Override
     int priority() {
-        return GroovyTransformOrder.RX_SCHEDULE_IO_ORDER
+        return GroovyTransformOrder.RX_SCHEDULER_ORDER
     }
 }

@@ -63,6 +63,46 @@ class TaskExecuterEventBusSpec  extends Specification {
         Executor executor
     }
 
+    void 'closing the context closes a closeable event bus'() {
+        given:
+        def context = new GenericApplicationContext()
+        context.registerBean('eventBus', ClosingEventBusFactoryBean)
+        context.refresh()
+        def eventBus = context.getBean('eventBus', ClosingEventBus)
+
+        expect:
+        eventBus.active
+
+        when:
+        context.close()
+
+        then:
+        !eventBus.active
+    }
+
+    static class ClosingEventBusFactoryBean extends EventBusFactoryBean {
+
+        @Override
+        protected grails.events.bus.EventBus createDefaultEventBus() {
+            return new ClosingEventBus()
+        }
+    }
+
+    static class ClosingEventBus extends ExecutorEventBus implements Closeable {
+
+        private boolean closed
+
+        @Override
+        boolean isActive() {
+            return !closed
+        }
+
+        @Override
+        void close() {
+            closed = true
+        }
+    }
+
     void 'Test task executor event bus single arg'() {
 
         given: 'a task executor event bus'

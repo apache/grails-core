@@ -199,11 +199,12 @@ class GrailsPluginGradlePlugin extends GrailsGradlePlugin {
             it.classpath += sourceSets.ast.output
         }
 
-        taskContainer.whenTaskAdded {
-            if (it.name == 'compileWebappGroovyPages') {
-                it.configure {
-                    it.dependsOn(copyAstClasses)
-                }
+        // configureEach, not whenTaskAdded: the eager hook realizes every registered task at this point,
+        // processResources among them, and the resource processing then reads the grails extension
+        // before the build script has configured it (native2ascii, for one)
+        taskContainer.configureEach { Task task ->
+            if (task.name == 'compileWebappGroovyPages') {
+                task.dependsOn(copyAstClasses)
             }
         }
 
