@@ -23,6 +23,7 @@ import grails.gorm.transactions.Rollback
 import org.grails.datastore.gorm.GormRegistry
 import org.grails.datastore.mapping.core.DatastoreUtils
 import org.grails.orm.hibernate.cfg.Settings
+import org.hibernate.FlushMode
 import org.springframework.core.env.PropertyResolver
 import org.springframework.transaction.PlatformTransactionManager
 import spock.lang.AutoCleanup
@@ -103,6 +104,104 @@ class HibernateGormValidationApiSpec extends Specification {
         then:
         result == false
         !session.contains(book)
+    }
+
+    void "a failed validate() restores the session flush mode so the transaction still flushes valid saves on commit"() {
+        given:
+        ValidatedBook.withNewTransaction { ValidatedBook.executeUpdate('delete from ValidatedBook') }
+        FlushMode modeBefore = null
+        FlushMode modeAfter = null
+        boolean valid = true
+
+        when:
+        ValidatedBook.withTransaction {
+            def session = hibernateDatastore.sessionFactory.currentSession
+            new ValidatedBook(title: 'valid one').save()
+            def invalid = new ValidatedBook(title: null)
+            modeBefore = session.hibernateFlushMode
+            valid = invalid.validate()
+            modeAfter = session.hibernateFlushMode
+            new ValidatedBook(title: 'valid two').save()
+        }
+
+        then:
+        !valid
+        modeAfter == modeBefore
+        modeAfter != FlushMode.MANUAL
+        ValidatedBook.withNewSession { ValidatedBook.list()*.title.sort() } == ['valid one', 'valid two']
+    }
+
+    void "an invalid instance that failed validate() is not persisted by the commit flush when it is never attached"() {
+        given:
+        ValidatedBook.withNewTransaction { ValidatedBook.executeUpdate('delete from ValidatedBook') }
+
+        when:
+        ValidatedBook.withTransaction {
+            new ValidatedBook(title: 'ok').save()
+            assert !new ValidatedBook(title: null).validate()
+            assert new ValidatedBook(title: null).save() == null
+        }
+
+        then:
+        ValidatedBook.withNewSession { ValidatedBook.list()*.title } == ['ok']
+    }
+
+    void "clearErrors then validate again within a transaction still restores the flush mode"() {
+        given:
+        ValidatedBook.withNewTransaction { ValidatedBook.executeUpdate('delete from ValidatedBook') }
+        FlushMode mode = null
+
+        when:
+        ValidatedBook.withTransaction {
+            def session = hibernateDatastore.sessionFactory.currentSession
+            FlushMode before = session.hibernateFlushMode
+            def book = new ValidatedBook(title: null)
+            assert !book.validate()
+            book.clearErrors()
+            assert !book.validate()
+            mode = session.hibernateFlushMode
+            assert mode == before
+            new ValidatedBook(title: 'saved').save()
+        }
+
+        then:
+        mode != FlushMode.MANUAL
+        ValidatedBook.withNewSession { ValidatedBook.list()*.title } == ['saved']
+    }
+
+    void "validate before the transaction begins in an earlier transaction does not stop a later transaction from flushing"() {
+        given:
+        ValidatedBook.withNewTransaction { ValidatedBook.executeUpdate('delete from ValidatedBook') }
+        def invalid = new ValidatedBook(title: null)
+
+        when:
+        boolean valid = ValidatedBook.withNewTransaction { invalid.validate() }
+        ValidatedBook.withTransaction {
+            new ValidatedBook(title: 'after').save()
+        }
+
+        then:
+        !valid
+        ValidatedBook.withNewSession { ValidatedBook.list()*.title } == ['after']
+    }
+
+    void "an invalid dirty instance is not auto flushed by a query after a failed validate()"() {
+        given:
+        ValidatedBook.withNewTransaction { ValidatedBook.executeUpdate('delete from ValidatedBook') }
+        def id = ValidatedBook.withNewTransaction { new ValidatedBook(title: 'original').save(flush: true).id }
+
+        when:
+        ValidatedBook.withTransaction {
+            def book = ValidatedBook.get(id)
+            book.title = null
+            assert !book.validate()
+            ValidatedBook.findAllByTitle('anything')
+            book.discard()
+        }
+
+        then:
+        notThrown(Exception)
+        ValidatedBook.withNewSession { ValidatedBook.get(id).title } == 'original'
     }
 
     @Rollback
