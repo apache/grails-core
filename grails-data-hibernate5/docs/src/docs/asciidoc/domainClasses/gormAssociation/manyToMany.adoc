@@ -40,6 +40,21 @@ GORM maps a many-to-many using a join table at the database level. The owning si
 
 WARNING: One side must declare `belongsTo`. If neither side does, neither side writes the join table, so the relationship is not stored. GORM logs a warning at startup for such a mapping.
 
+This also applies to a many-to-many between a class and itself, where both properties are on the same class. Without `belongsTo`, the relationship is not stored and GORM logs the same warning at startup:
+
+[source,groovy]
+----
+class User {
+    String name
+    static hasMany   = [following: User, followers: User]
+    static mappedBy  = [following: 'followers', followers: 'following']
+    static belongsTo = User             // <1>
+}
+----
+<1> Without this line, `user.addToFollowing(other); user.save()` writes nothing, and both `following` and `followers` read back empty.
+
+A many-to-many with a `Map` on either side needs no `belongsTo` to be stored, because the `Map` side writes the join table, so it logs no warning.
+
 For example this will work and cascade saves:
 
 [source,groovy]

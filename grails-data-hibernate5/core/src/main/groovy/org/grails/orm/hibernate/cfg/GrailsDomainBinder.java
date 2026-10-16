@@ -1131,17 +1131,23 @@ public class GrailsDomainBinder implements MetadataContributor {
     /**
      * A bidirectional many-to-many is written by its owning side, which {@code belongsTo} designates. When neither
      * side declares {@code belongsTo}, both sides are inverse and the relationship is never stored, so warn about it
-     * once per relationship.
+     * once per relationship. A Map-valued side is never inverse once its second pass has run, because
+     * {@code bindMapSecondPass} makes it write the join table, so a relationship with a Map on either side is stored
+     * and gets no warning. A circular many-to-many, whose two properties are on the same class, is warned about as
+     * well, because it loses data the same way; its two sides tie on the owner name, so the property names decide
+     * which side warns.
      */
     protected void warnIfManyToManyHasNoOwningSide(ToMany property) {
-        if (!(property instanceof ManyToMany) || !property.isBidirectional() || property.isCircular()) {
+        if (!(property instanceof ManyToMany) || !property.isBidirectional()) {
             return;
         }
         Association otherSide = property.getInverseSide();
-        if (otherSide == null || otherSide.isOwningSide()) {
+        if (otherSide == null || otherSide.isOwningSide() ||
+                Map.class.isAssignableFrom(property.getType()) || Map.class.isAssignableFrom(otherSide.getType())) {
             return;
         }
-        if (property.getOwner().getName().compareTo(otherSide.getOwner().getName()) > 0) {
+        int byOwner = property.getOwner().getName().compareTo(otherSide.getOwner().getName());
+        if (byOwner > 0 || byOwner == 0 && property.getName().compareTo(otherSide.getName()) > 0) {
             return;
         }
         LOG.warn("Neither side of the many-to-many between [{}.{}] and [{}.{}] declares belongsTo, so the relationship " +
