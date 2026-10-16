@@ -124,6 +124,19 @@ class Tenants {
     }
 
     /**
+     * Whether the current thread runs without a tenant id, as it does inside {@link #withoutId(Closure)}. The name of
+     * the default connection source does not count as running without a tenant id, whether the tenant resolver
+     * resolves it or {@link #withId(Serializable, Closure)} binds it, so it restricts a lookup by id as it restricts a
+     * query.
+     *
+     * @return Whether the current thread runs without a tenant id
+     * @since 7.0.18
+     */
+    static boolean isWithoutId() {
+        CurrentTenant.isWithoutTenant()
+    }
+
+    /**
      * Execute the given closure without any tenant id. In Multi tenancy mode SINGLE this will execute against the default data source. If multi tenancy mode
      * MULTI this will execute without including the "tenantId" on any query. Use with caution.
      *
@@ -347,10 +360,19 @@ class Tenants {
         private static final ThreadLocal<Serializable> currentTenantThreadLocal = new ThreadLocal<>()
 
         /**
-         * @return Obtain the current tenant
+         * @return Obtain the current tenant, which is the default connection source while the thread runs without a tenant
          */
         static Serializable get() {
-            currentTenantThreadLocal.get()
+            Serializable bound = currentTenantThreadLocal.get()
+            bound.is(Binding.WITHOUT_TENANT) ? ConnectionSource.DEFAULT : bound
+        }
+
+        /**
+         * @return Whether the thread runs without a tenant, as inside {@link Tenants#withoutId(Closure)}, rather than
+         * with the name of the default connection source as its tenant id
+         */
+        static boolean isWithoutTenant() {
+            currentTenantThreadLocal.get().is(Binding.WITHOUT_TENANT)
         }
 
         /**
@@ -373,7 +395,7 @@ class Tenants {
          * @return The result of the closure
          */
         static <T> T withTenant(Serializable tenantId, Closure<T> callable) {
-            def previous = get()
+            Serializable previous = currentTenantThreadLocal.get()
             try {
                 set(tenantId)
                 callable.call(tenantId)
@@ -394,9 +416,9 @@ class Tenants {
          * @return The result of the closure
          */
         static <T> T withoutTenant(Closure<T> callable) {
-            def previous = get()
+            Serializable previous = currentTenantThreadLocal.get()
             try {
-                set(ConnectionSource.DEFAULT)
+                set(Binding.WITHOUT_TENANT)
                 callable.call()
             } finally {
                 if (previous == null) {
@@ -405,6 +427,16 @@ class Tenants {
                     set(previous)
                 }
             }
+        }
+
+        /**
+         * Bound to the thread in place of a tenant id while it runs without a tenant, so that
+         * {@link #isWithoutTenant()} tells that apart from the name of the default connection source bound as the
+         * tenant id, and so that a nested {@link #withTenant(Serializable, Closure)} replaces and restores it like a
+         * tenant id.
+         */
+        private static enum Binding {
+            WITHOUT_TENANT
         }
     }
 
