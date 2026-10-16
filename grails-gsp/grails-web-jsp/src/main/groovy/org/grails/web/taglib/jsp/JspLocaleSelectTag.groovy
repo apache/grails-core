@@ -16,37 +16,41 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.web.taglib.jsp;
+package org.grails.web.taglib.jsp
+
+import groovy.transform.CompileStatic
 
 /**
  * @author Graeme Rocher
  * @since 28-Feb-2006
  */
-public class JspLocaleSelectTag extends JspInvokeGrailsTagLibTag {
-    private static final long serialVersionUID = -4480286502501857452L;
+@CompileStatic
+class JspLocaleSelectTag extends JspInvokeGrailsTagLibTag {
 
-    private static final String TAG_NAME = "localeSelect";
+    private static final long serialVersionUID = -4480286502501857452L
 
-    private String name;
-    private String value;
+    private static final String TAG_NAME = 'localeSelect'
 
-    public JspLocaleSelectTag() {
-        setTagName(TAG_NAME);
+    private String name
+    private String value
+
+    JspLocaleSelectTag() {
+        setTagName(TAG_NAME)
     }
 
-    public String getName() {
-        return name;
+    String getName() {
+        return name
     }
 
-    public void setName(String name) {
-        this.name = name;
+    void setName(String name) {
+        this.name = name
     }
 
-    public String getValue() {
-        return value;
+    String getValue() {
+        return value
     }
 
-    public void setValue(String value) {
-        this.value = value;
+    void setValue(String value) {
+        this.value = value
     }
 }

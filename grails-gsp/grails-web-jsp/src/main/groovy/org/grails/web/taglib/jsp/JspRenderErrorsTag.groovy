@@ -16,55 +16,61 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.web.taglib.jsp;
+package org.grails.web.taglib.jsp
+
+import groovy.transform.CompileStatic
 
 /**
+ * JSP facade onto the GSP renderErrors tag
+ *
  * @author Graeme Rocher
  * @since 28-Feb-2006
  */
-public class JspSelectTag extends JspInvokeGrailsTagLibTag {
-    private static final long serialVersionUID = 294858160471737590L;
+@CompileStatic
+class JspRenderErrorsTag extends JspInvokeGrailsTagLibTag {
 
-    private static final String TAG_NAME = "select";
+    private static final long serialVersionUID = 6077206372374860458L
 
-    private String name;
-    private String from;
-    private String optionKey;
-    private String optionValue;
+    private static final String TAG_NAME = 'renderErrors'
 
-    public JspSelectTag() {
-        setTagName(TAG_NAME);
+    private String bean
+    private String model
+    private String field
+    private String as
+
+    JspRenderErrorsTag() {
+        setTagName(TAG_NAME)
     }
 
-    public String getName() {
-        return name;
+    String getAs() {
+        return as
     }
 
-    public void setName(String name) {
-        this.name = name;
+    void setAs(String as) {
+        this.as = as
     }
 
-    public String getFrom() {
-        return from;
+    String getBean() {
+        return bean
     }
 
-    public void setFrom(String from) {
-        this.from = from;
+    void setBean(String bean) {
+        this.bean = bean
     }
 
-    public String getOptionKey() {
-        return optionKey;
+    String getModel() {
+        return model
     }
 
-    public void setOptionKey(String optionKey) {
-        this.optionKey = optionKey;
+    void setModel(String model) {
+        this.model = model
     }
 
-    public String getOptionValue() {
-        return optionValue;
+    String getField() {
+        return field
     }
 
-    public void setOptionValue(String optionValue) {
-        this.optionValue = optionValue;
+    void setField(String field) {
+        this.field = field
     }
 }

@@ -16,46 +16,52 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.web.taglib.jsp;
+package org.grails.web.taglib.jsp
+
+import groovy.transform.CompileStatic
 
 /**
+ * JSP facade onto the GSP hasErrors tag
+ *
  * @author Graeme Rocher
  * @since 28-Feb-2006
  */
-public class JspDatePickerTag extends JspInvokeGrailsTagLibTag {
-    private static final long serialVersionUID = 3331667092741188327L;
+@CompileStatic
+class JspHasErrorsTag extends JspInvokeGrailsTagLibTag {
 
-    private static final String TAG_NAME = "datePicker";
+    private static final long serialVersionUID = -5226668051247749800L
 
-    private String name;
-    private String value;
-    private String precision;
+    private static final String TAG_NAME = 'hasErrors'
 
-    public JspDatePickerTag() {
-        setTagName(TAG_NAME);
+    private String bean
+    private String model
+    private String field
+
+    JspHasErrorsTag() {
+        setTagName(TAG_NAME)
     }
 
-    public String getName() {
-        return name;
+    String getBean() {
+        return bean
     }
 
-    public void setName(String name) {
-        this.name = name;
+    void setBean(String bean) {
+        this.bean = bean
     }
 
-    public String getValue() {
-        return value;
+    String getModel() {
+        return model
     }
 
-    public void setValue(String value) {
-        this.value = value;
+    void setModel(String model) {
+        this.model = model
     }
 
-    public String getPrecision() {
-        return precision;
+    String getField() {
+        return field
     }
 
-    public void setPrecision(String precision) {
-        this.precision = precision;
+    void setField(String field) {
+        this.field = field
     }
 }

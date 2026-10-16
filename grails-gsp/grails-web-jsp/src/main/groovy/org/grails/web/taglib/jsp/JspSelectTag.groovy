@@ -16,57 +16,59 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.web.taglib.jsp;
+package org.grails.web.taglib.jsp
+
+import groovy.transform.CompileStatic
 
 /**
- * JSP facade onto the GSP renderErrors tag
- *
  * @author Graeme Rocher
  * @since 28-Feb-2006
  */
-public class JspRenderErrorsTag extends JspInvokeGrailsTagLibTag {
-    private static final long serialVersionUID = 6077206372374860458L;
+@CompileStatic
+class JspSelectTag extends JspInvokeGrailsTagLibTag {
 
-    private static final String TAG_NAME = "renderErrors";
+    private static final long serialVersionUID = 294858160471737590L
 
-    private String bean;
-    private String model;
-    private String field;
-    private String as;
+    private static final String TAG_NAME = 'select'
 
-    public JspRenderErrorsTag() {
-        setTagName(TAG_NAME);
+    private String name
+    private String from
+    private String optionKey
+    private String optionValue
+
+    JspSelectTag() {
+        setTagName(TAG_NAME)
     }
 
-    public String getAs() {
-        return as;
+    String getName() {
+        return name
     }
 
-    public void setAs(String as) {
-        this.as = as;
+    void setName(String name) {
+        this.name = name
     }
 
-    public String getBean() {
-        return bean;
+    String getFrom() {
+        return from
     }
 
-    public void setBean(String bean) {
-        this.bean = bean;
+    void setFrom(String from) {
+        this.from = from
     }
 
-    public String getModel() {
-        return model;
+    String getOptionKey() {
+        return optionKey
     }
 
-    public void setModel(String model) {
-        this.model = model;
+    void setOptionKey(String optionKey) {
+        this.optionKey = optionKey
     }
 
-    public String getField() {
-        return field;
+    String getOptionValue() {
+        return optionValue
     }
 
-    public void setField(String field) {
-        this.field = field;
+    void setOptionValue(String optionValue) {
+        this.optionValue = optionValue
     }
 }

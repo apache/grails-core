@@ -16,23 +16,34 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.gsp.jsp;
+package org.grails.web.taglib.jsp
 
-import java.io.FilterInputStream;
-import java.io.InputStream;
+import groovy.transform.CompileStatic
 
 /**
+ * JSP facade onto the GSP actionSubmit tag
+ *
  * @author Graeme Rocher
- * @since 1.0
+ * @since 28-Feb-2006
  */
-class UncloseableInputStream extends FilterInputStream {
+@CompileStatic
+class JspActionSubmitTag extends JspInvokeGrailsTagLibTag {
 
-    protected UncloseableInputStream(InputStream inputStream) {
-        super(inputStream);
+    private static final long serialVersionUID = 8087116162719522950L
+
+    private static final String TAG_NAME = 'actionSubmit'
+
+    private String value
+
+    JspActionSubmitTag() {
+        setTagName(TAG_NAME)
     }
 
-    @Override
-    public void close() {
-        // do nothing
+    String getValue() {
+        return value
+    }
+
+    void setValue(String value) {
+        this.value = value
     }
 }

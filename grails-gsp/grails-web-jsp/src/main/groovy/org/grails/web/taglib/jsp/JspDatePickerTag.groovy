@@ -16,30 +16,50 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.web.taglib.jsp;
+package org.grails.web.taglib.jsp
+
+import groovy.transform.CompileStatic
 
 /**
- * JSP facade onto the GSP actionSubmit tag
- *
  * @author Graeme Rocher
  * @since 28-Feb-2006
  */
-public class JspActionSubmitTag extends JspInvokeGrailsTagLibTag {
-    private static final long serialVersionUID = 8087116162719522950L;
+@CompileStatic
+class JspDatePickerTag extends JspInvokeGrailsTagLibTag {
 
-    private static final String TAG_NAME = "actionSubmit";
+    private static final long serialVersionUID = 3331667092741188327L
 
-    private String value;
+    private static final String TAG_NAME = 'datePicker'
 
-    public JspActionSubmitTag() {
-        setTagName(TAG_NAME);
+    private String name
+    private String value
+    private String precision
+
+    JspDatePickerTag() {
+        setTagName(TAG_NAME)
     }
 
-    public String getValue() {
-        return value;
+    String getName() {
+        return name
     }
 
-    public void setValue(String value) {
-        this.value = value;
+    void setName(String name) {
+        this.name = name
+    }
+
+    String getValue() {
+        return value
+    }
+
+    void setValue(String value) {
+        this.value = value
+    }
+
+    String getPrecision() {
+        return precision
+    }
+
+    void setPrecision(String precision) {
+        this.precision = precision
     }
 }

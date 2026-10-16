@@ -16,58 +16,62 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.web.taglib.jsp;
+package org.grails.web.taglib.jsp
+
+import groovy.transform.CompileStatic
 
 /**
  * A JSP facade that delegates to the Grails taglib link tag.
  *
  * @author Graeme Rocher
  */
-public class JspLinkTag extends JspInvokeGrailsTagLibTag {
-    private static final long serialVersionUID = 5302909740441701754L;
+@CompileStatic
+class JspLinkTag extends JspInvokeGrailsTagLibTag {
 
-    private static final String TAG_NAME = "link";
+    private static final long serialVersionUID = 5302909740441701754L
 
-    private String controller;
-    private String action;
-    private String id;
-    private String url;
+    private static final String TAG_NAME = 'link'
 
-    public JspLinkTag() {
-        super.setTagName(TAG_NAME);
+    private String controller
+    private String action
+    private String id
+    private String url
+
+    JspLinkTag() {
+        super.setTagName(TAG_NAME)
     }
 
-    public String getController() {
-        return controller;
+    String getController() {
+        return controller
     }
 
-    public void setController(String controller) {
-        this.controller = controller;
+    void setController(String controller) {
+        this.controller = controller
     }
 
-    public String getAction() {
-        return action;
+    String getAction() {
+        return action
     }
 
-    public void setAction(String action) {
-        this.action = action;
-    }
-
-    @Override
-    public String getId() {
-        return id;
+    void setAction(String action) {
+        this.action = action
     }
 
     @Override
-    public void setId(String id) {
-        this.id = id;
+    String getId() {
+        return id
     }
 
-    public String getUrl() {
-        return url;
+    @Override
+    void setId(String id) {
+        this.id = id
     }
 
-    public void setUrl(String url) {
-        this.url = url;
+    String getUrl() {
+        return url
+    }
+
+    void setUrl(String url) {
+        this.url = url
     }
 }
