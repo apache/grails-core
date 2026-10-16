@@ -14,7 +14,7 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-package org.apache.grails.gradle.common;
+package org.apache.grails.gradle.common
 
 /**
  * Registered SAX and Xerces parser feature identifiers used to harden XML parsing.
@@ -36,7 +36,7 @@ package org.apache.grails.gradle.common;
  *
  * @since 8.0.0
  */
-public enum XmlParserFeature {
+enum XmlParserFeature {
 
     /**
      * Rejects any document carrying a {@code DOCTYPE} declaration.
@@ -47,22 +47,22 @@ public enum XmlParserFeature {
      * {@code web.xml} — routinely carry a DOCTYPE, so their readers need a parser that leaves this
      * disabled while keeping the entity and DTD features below switched off.
      */
-    DISALLOW_DOCTYPE_DECL("http://apache.org/xml/features/disallow-doctype-decl"),
+    DISALLOW_DOCTYPE_DECL('http://apache.org/xml/features/disallow-doctype-decl'),
 
     /**
      * Blocks resolution of external general entities, the primary XXE vector.
      */
-    EXTERNAL_GENERAL_ENTITIES("http://xml.org/sax/features/external-general-entities"),
+    EXTERNAL_GENERAL_ENTITIES('http://xml.org/sax/features/external-general-entities'),
 
     /**
      * Blocks resolution of external parameter entities.
      */
-    EXTERNAL_PARAMETER_ENTITIES("http://xml.org/sax/features/external-parameter-entities"),
+    EXTERNAL_PARAMETER_ENTITIES('http://xml.org/sax/features/external-parameter-entities'),
 
     /**
      * Stops the parser building a grammar from a DTD.
      */
-    LOAD_DTD_GRAMMAR("http://apache.org/xml/features/nonvalidating/load-dtd-grammar"),
+    LOAD_DTD_GRAMMAR('http://apache.org/xml/features/nonvalidating/load-dtd-grammar'),
 
     /**
      * Skips external DTD subsets instead of retrieving them.
@@ -71,24 +71,24 @@ public enum XmlParserFeature {
      * raises an error when a document references an external DTD. Skipping is what allows a
      * descriptor that names a DTD, such as a JSP 1.2 tag library, to parse without retrieving it.
      */
-    LOAD_EXTERNAL_DTD("http://apache.org/xml/features/nonvalidating/load-external-dtd");
+    LOAD_EXTERNAL_DTD('http://apache.org/xml/features/nonvalidating/load-external-dtd')
 
-    private final String featureName;
+    private final String featureName
 
     XmlParserFeature(String featureName) {
-        this.featureName = featureName;
+        this.featureName = featureName
     }
 
     /**
      * @return the registered identifier to pass to {@code setFeature}
      */
-    public String getFeatureName() {
-        return featureName;
+    String getFeatureName() {
+        return featureName
     }
 
     @Override
-    public String toString() {
-        return featureName;
+    String toString() {
+        return featureName
     }
 
 }

@@ -17,38 +17,39 @@
  *  under the License.
  */
 
-package grails.doc.internal;
+package grails.doc.internal
 
-import java.net.URI;
-import java.net.URISyntaxException;
+import groovy.transform.CompileStatic
+import org.apache.commons.text.StringEscapeUtils
 
-import org.apache.commons.text.StringEscapeUtils;
+@CompileStatic
+class StringEscapeCategory {
 
-public class StringEscapeCategory {
     private StringEscapeCategory() {
     }
 
     public static String encodeAsUrlPath(String str) {
         try {
-            String uri = new URI("http", "localhost", '/' + str, "").toASCIIString();
-            return uri.substring(17, uri.length() - 1);
+            String uri = new URI('http', 'localhost', '/' + str, '').toASCIIString()
+            return uri.substring(17, uri.length() - 1)
         }
         catch (URISyntaxException ex) {
-            throw new RuntimeException(ex);
+            throw new RuntimeException(ex)
         }
     }
 
     public static String encodeAsUrlFragment(String str) {
         try {
-            String uri = new URI("http", "localhost", "/", str).toASCIIString();
-            return uri.substring(18, uri.length());
+            String uri = new URI('http', 'localhost', '/', str).toASCIIString()
+            return uri.substring(18, uri.length())
         }
         catch (URISyntaxException ex) {
-            throw new RuntimeException(ex);
+            throw new RuntimeException(ex)
         }
     }
 
     public static String encodeAsHtml(String str) {
-        return StringEscapeUtils.escapeHtml4(str);
+        return StringEscapeUtils.escapeHtml4(str)
     }
+
 }

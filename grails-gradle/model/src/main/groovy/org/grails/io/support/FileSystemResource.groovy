@@ -16,16 +16,9 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.io.support;
+package org.grails.io.support
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.net.URI;
-import java.net.URL;
+import groovy.transform.CompileStatic
 
 /**
  * Based on Spring FileSystemResource implementation.
@@ -36,20 +29,21 @@ import java.net.URL;
  * @since 28.12.2003
  * @see java.io.File
  */
-public class FileSystemResource implements Resource {
+@CompileStatic
+class FileSystemResource implements Resource {
 
-    private final File file;
-    private final String path;
+    private final File file
+    private final String path
 
     /**
      * Create a new FileSystemResource from a File handle.
      *
      * @param file a File handle
      */
-    public FileSystemResource(File file) {
-        assertNotNull(file, "File must not be null");
-        this.file = file;
-        path = GrailsResourceUtils.cleanPath(file.getPath());
+    FileSystemResource(File file) {
+        assertNotNull(file, 'File must not be null')
+        this.file = file
+        path = GrailsResourceUtils.cleanPath(file.getPath())
     }
 
     /**
@@ -57,25 +51,25 @@ public class FileSystemResource implements Resource {
      *
      * @param path a file path
      */
-    public FileSystemResource(String path) {
-        assertNotNull(path, "Path must not be null");
-        file = new File(path);
-        this.path = GrailsResourceUtils.cleanPath(path);
+    FileSystemResource(String path) {
+        assertNotNull(path, 'Path must not be null')
+        file = new File(path)
+        this.path = GrailsResourceUtils.cleanPath(path)
     }
 
     /**
      * Return the file path for this resource.
      */
-    public final String getPath() {
-        return path;
+    final String getPath() {
+        return path
     }
 
     /**
      * This implementation returns whether the underlying file exists.
      * @see java.io.File#exists()
      */
-    public boolean exists() {
-        return file.exists();
+    boolean exists() {
+        return file.exists()
     }
 
     /**
@@ -84,58 +78,58 @@ public class FileSystemResource implements Resource {
      * @see java.io.File#canRead()
      * @see java.io.File#isDirectory()
      */
-    public boolean isReadable() {
-        return file.canRead() && !file.isDirectory();
+    boolean isReadable() {
+        return file.canRead() && !file.isDirectory()
     }
 
     /**
      * This implementation opens a FileInputStream for the underlying file.
      * @see java.io.FileInputStream
      */
-    public InputStream getInputStream() throws IOException {
-        return new FileInputStream(file);
+    InputStream getInputStream() throws IOException {
+        return new FileInputStream(file)
     }
 
     /**
      * This implementation returns a URL for the underlying file.
      * @see java.io.File#toURI()
      */
-    public URL getURL() throws IOException {
-        return file.toURI().toURL();
+    URL getURL() throws IOException {
+        return file.toURI().toURL()
     }
 
     /**
      * This implementation returns a URI for the underlying file.
      * @see java.io.File#toURI()
      */
-    public URI getURI() throws IOException {
-        return file.toURI();
+    URI getURI() throws IOException {
+        return file.toURI()
     }
 
     /**
      * This implementation returns the underlying File reference.
      */
-    public File getFile() {
-        return file;
+    File getFile() {
+        return file
     }
 
     /**
      * This implementation returns the underlying File's length.
      */
-    public long contentLength() throws IOException {
-        return file.length();
+    long contentLength() throws IOException {
+        return file.length()
     }
 
-    public long lastModified() throws IOException {
-        return file.lastModified();
+    long lastModified() throws IOException {
+        return file.lastModified()
     }
 
     /**
      * This implementation returns the name of the file.
      * @see java.io.File#getName()
      */
-    public String getFilename() {
-        return file.getName();
+    String getFilename() {
+        return file.getName()
     }
 
     /**
@@ -143,17 +137,17 @@ public class FileSystemResource implements Resource {
      * path of the file.
      * @see java.io.File#getAbsolutePath()
      */
-    public String getDescription() {
-        return "file [" + file.getAbsolutePath() + "]";
+    String getDescription() {
+        return 'file [' + file.getAbsolutePath() + ']'
     }
 
     /**
      * This implementation creates a FileSystemResource, applying the given path
      * relative to the path of the underlying file of this resource descriptor.
      */
-    public Resource createRelative(String relativePath) {
-        String pathToUse = GrailsResourceUtils.applyRelativePath(path, relativePath);
-        return new FileSystemResource(pathToUse);
+    Resource createRelative(String relativePath) {
+        String pathToUse = GrailsResourceUtils.applyRelativePath(path, relativePath)
+        return new FileSystemResource(pathToUse)
     }
 
     // implementation of WritableResource
@@ -164,43 +158,44 @@ public class FileSystemResource implements Resource {
      * @see java.io.File#canWrite()
      * @see java.io.File#isDirectory()
      */
-    public boolean isWritable() {
-        return file.canWrite() && !file.isDirectory();
+    boolean isWritable() {
+        return file.canWrite() && !file.isDirectory()
     }
 
     /**
      * This implementation opens a FileOutputStream for the underlying file.
      * @see java.io.FileOutputStream
      */
-    public OutputStream getOutputStream() throws IOException {
-        return new FileOutputStream(file);
+    OutputStream getOutputStream() throws IOException {
+        return new FileOutputStream(file)
     }
 
     /**
      * This implementation compares the underlying File references.
      */
     @Override
-    public boolean equals(Object obj) {
-        return (obj == this ||
-                (obj instanceof FileSystemResource && path.equals(((FileSystemResource) obj).path)));
+    boolean equals(Object obj) {
+        return (this.is(obj) ||
+                (obj instanceof FileSystemResource && path.equals(((FileSystemResource) obj).path)))
     }
 
     /**
      * This implementation returns the hash code of the underlying File reference.
      */
     @Override
-    public int hashCode() {
-        return path.hashCode();
+    int hashCode() {
+        return path.hashCode()
     }
 
     protected void assertNotNull(Object object, String message) {
         if (object == null) {
-            throw new IllegalArgumentException(message);
+            throw new IllegalArgumentException(message)
         }
     }
 
     @Override
-    public String toString() {
-        return file.toString();
+    String toString() {
+        return file.toString()
     }
+
 }

@@ -16,68 +16,71 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package grails.util;
+package grails.util
 
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentHashMap
+
+import groovy.transform.CompileStatic
 
 /**
  * @author Burt Beckwith
  * @since 2.0
  */
-public class Holder<T> {
+@CompileStatic
+class Holder<T> {
 
-    private Map<Integer, T> instances = new ConcurrentHashMap<>();
+    private Map<Integer, T> instances = new ConcurrentHashMap<>()
     // TODO remove mappedOnly and singleton
-    private T singleton;
-    private String name;
+    private T singleton
+    private String name
 
-    public Holder(String name) {
-        this.name = name;
+    Holder(String name) {
+        this.name = name
     }
 
-    public T get() {
-        return get(false);
+    T get() {
+        return get(false)
     }
 
-    public T get(boolean mappedOnly) {
-        T t = instances.get(getClassLoaderId());
+    T get(boolean mappedOnly) {
+        T t = instances.get(getClassLoaderId())
         if (t != null) {
-            return t;
+            return t
         }
 
-        t = lookupSecondary();
+        t = lookupSecondary()
         if (t != null) {
-            return t;
+            return t
         }
 
         // t = instances.get(System.identityHashCode(getClass().getClassLoader()));
         if (!mappedOnly) {
-            t = singleton;
+            t = singleton
         }
-        return t;
+        return t
     }
 
     protected T lookupSecondary() {
         // override in subclass if needed
-        return null;
+        return null
     }
 
-    public void set(T t) {
-        int id = getClassLoaderId();
-        int thisClassLoaderId = System.identityHashCode(getClass().getClassLoader());
+    void set(T t) {
+        int id = getClassLoaderId()
+        int thisClassLoaderId = System.identityHashCode(getClass().getClassLoader())
         if (t == null) {
-            instances.remove(id);
-            instances.remove(thisClassLoaderId);
+            instances.remove(id)
+            instances.remove(thisClassLoaderId)
         }
         else {
-            instances.put(id, t);
-            instances.put(thisClassLoaderId, t);
+            instances.put(id, t)
+            instances.put(thisClassLoaderId, t)
         }
-        singleton = t;
+        singleton = t
     }
 
     private int getClassLoaderId() {
-        return Environment.isWarDeployed() ? System.identityHashCode(Thread.currentThread().getContextClassLoader()) : System.identityHashCode(getClass().getClassLoader());
+        return Environment.isWarDeployed() ? System.identityHashCode(Thread.currentThread().getContextClassLoader()) : System.identityHashCode(getClass().getClassLoader())
     }
+
 }
