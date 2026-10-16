@@ -45,7 +45,7 @@ applicationType: web
 defaultPackage: org.example
 reloading: devtools
 sourceLanguage: groovy
-features: [gorm-hibernate5, asset-pipeline-grails]
+features: [gorm-hibernate7, asset-pipeline-grails]
 '''
         File yamlFile = new File(tempDir.toFile(), "grails-forge-cli.yml")
         yamlFile.text = yamlContent
@@ -59,7 +59,7 @@ features: [gorm-hibernate5, asset-pipeline-grails]
         config.reloading.name() == "DEVTOOLS"
         config.applicationType.getName() == "web"
         config.sourceLanguage.name() == "GROOVY"
-        config.features.contains("gorm-hibernate5")
+        config.features.contains("gorm-hibernate7")
         !config.legacy
     }
 
@@ -98,7 +98,7 @@ applicationType: plugin
 defaultPackage: org.example.plugin
 reloading: jrebel
 sourceLanguage: groovy
-features: [gorm-hibernate5]
+features: [gorm-hibernate7]
 '''
         File yamlFile = new File(tempDir.toFile(), "grails-cli.yml")
         yamlFile.text = yamlContent

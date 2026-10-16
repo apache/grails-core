@@ -28,7 +28,7 @@ version = '0.1'
 group = 'grails.spring.security.group'
 
 dependencies {
-    implementation platform(project(':grails-bom'))
+    implementation platform(project(':grails-hibernate7-bom'))
     implementation 'org.apache.grails:grails-spring-security'
     implementation 'org.apache.grails:grails-core'
     implementation 'org.apache.grails.data:grails-datastore-core', {
@@ -52,7 +52,7 @@ dependencies {
     runtimeOnly 'com.h2database:h2'
     runtimeOnly 'com.zaxxer:HikariCP'
     runtimeOnly 'org.apache.grails:grails-url-mappings'
-    runtimeOnly 'org.apache.grails:grails-data-hibernate5'
+    runtimeOnly 'org.apache.grails:grails-data-hibernate7'
     runtimeOnly 'org.springframework.boot:spring-boot-autoconfigure'
     runtimeOnly 'org.springframework.boot:spring-boot-starter-logging'
     runtimeOnly 'org.springframework.boot:spring-boot-starter-tomcat'

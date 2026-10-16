@@ -43,7 +43,7 @@ class User implements UserDetails {
         collection 'users'
     }
 
-    <% } else if (features.contains('gorm-hibernate5') || features.contains('gorm-hibernate7')) { %>
+    <% } else if (features.contains('gorm-hibernate7')) { %>
     static mapping = {
         table 'users'
     }

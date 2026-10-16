@@ -28,8 +28,8 @@ import org.grails.forge.build.dependencies.Dependency
 @CompileStatic
 class MySQL extends DatabaseDriverFeature {
 
-    MySQL(GrailsDataHibernate5 grailsDataHibernate5, TestContainers testContainers) {
-        super(grailsDataHibernate5, testContainers)
+    MySQL(GrailsDataHibernate7 grailsDataHibernate7, TestContainers testContainers) {
+        super(grailsDataHibernate7, testContainers)
     }
 
     @Override

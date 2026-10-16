@@ -28,14 +28,14 @@ version = '0.1'
 group = 'misc.functional.test.app'
 
 dependencies {
-    implementation platform(project(':grails-bom'))
+    implementation platform(project(':grails-hibernate7-bom'))
     implementation 'org.apache.grails:grails-spring-security-acl'
     implementation 'org.apache.grails:grails-core'
     implementation 'org.apache.grails:grails-rest-transforms'
     implementation 'org.apache.grails:grails-web-boot'
     implementation 'org.apache.grails:grails-gsp'
     implementation 'org.apache.grails:grails-layout'
-    implementation 'org.apache.grails:grails-data-hibernate5'
+    implementation 'org.apache.grails:grails-data-hibernate7'
 
     compileOnly 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation
 

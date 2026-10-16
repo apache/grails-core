@@ -55,9 +55,6 @@ dependencies {
     runtimeOnly 'org.apache.grails:grails-url-mappings'
     runtimeOnly 'org.apache.grails:grails-fields'
     runtimeOnly 'org.hibernate.orm:hibernate-jcache'
-    runtimeOnly "org.jboss.spec.javax.transaction:jboss-transaction-api_1.3_spec:$jbossTransactionApiVersion", {
-        // required for hibernate-ehcache to work with javax variant of hibernate-core excluded
-    }
     runtimeOnly 'org.springframework.boot:spring-boot-autoconfigure'
     runtimeOnly 'org.springframework.boot:spring-boot-starter-logging'
     runtimeOnly 'org.springframework.boot:spring-boot-starter-tomcat'

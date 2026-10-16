@@ -18,6 +18,6 @@ defaultPackage: org.example.grails.layout
 reloading: devtools
 sourceLanguage: groovy
 buildTool: gradle
-gormImpl: gorm-hibernate5
+gormImpl: gorm-hibernate7
 servletImpl: spring-boot-starter-tomcat
-features: [app-name, asset-pipeline-grails, base, gorm-hibernate5, gradle, grails-application, grails-console, grails-dependencies, grails-gorm-testing-support, grails-gradle-plugin, grails-gsp, grails-url-mappings, grails-web, grails-web-testing-support, h2, logback, micronaut-inject-groovy, readme, scaffolding, spock, spring-boot-autoconfigure, spring-boot-starter, spring-boot-starter-tomcat, yaml]
+features: [app-name, asset-pipeline-grails, base, gorm-hibernate7, gradle, grails-application, grails-console, grails-dependencies, grails-gorm-testing-support, grails-gradle-plugin, grails-gsp, grails-url-mappings, grails-web, grails-web-testing-support, h2, logback, micronaut-inject-groovy, readme, scaffolding, spock, spring-boot-autoconfigure, spring-boot-starter, spring-boot-starter-tomcat, yaml]

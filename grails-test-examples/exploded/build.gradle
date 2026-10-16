@@ -34,7 +34,7 @@ apply plugin: 'org.apache.grails.gradle.grails-web'
 apply plugin: 'org.apache.grails.gradle.grails-gsp'
 
 dependencies {
-    implementation platform(project(':grails-bom'))
+    implementation platform(project(':grails-hibernate7-bom'))
 
     implementation 'org.apache.grails:grails-dependencies-starter-web'
     implementation 'com.h2database:h2'
@@ -44,7 +44,7 @@ dependencies {
         implementation 'org.apache.grails:grails-sitemesh3'
     }
 
-    implementation 'org.apache.grails:grails-data-hibernate5'
+    implementation 'org.apache.grails:grails-data-hibernate7'
     implementation 'org.apache.grails:grails-cache'
 
     runtimeOnly 'org.apache.grails:grails-scaffolding'

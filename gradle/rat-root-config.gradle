@@ -66,7 +66,6 @@ tasks.named('rat') {
             'grails-fields/grails-app/views/templates/_fields/*.gsp', // template files that people are expected to use in the end application
             'grails-geb/src/main/templates/*.groovy', // template files that people are expected to use in the end application
             'grails-doc/src/en/ref/Versions/Grails BOM.adoc', // exclude generated data
-            'grails-doc/src/en/ref/Versions/Grails BOM Hibernate5.adoc', // exclude generated data
             'grails-doc/src/en/ref/Versions/Grails BOM Hibernate7.adoc', // exclude generated data
             'grails-doc/src/en/ref/Versions/Grails BOM Neo4j.adoc', // exclude generated data
             'grails-doc/src/en/ref/Configuration/Application Properties.adoc', // exclude generated data
@@ -86,7 +85,6 @@ tasks.named('rat') {
             '*/build', // root build directories
             'grails-events/compat/build', // build directories
             'grails-data-hibernate7/*/build/**', // build directories
-            'grails-data-hibernate5/*/build/**', // build directories
             'build-logic/docs-core/src/main/template/**', // template files that people are expected to use in the end application
             'build-logic/vulnerability-scan/build/**', // exclude build artifacts
             'grails-common/src/main/groovy/org/apache/grails/common/compiler/asm/Attribute.java', // See license file, BSD licensed

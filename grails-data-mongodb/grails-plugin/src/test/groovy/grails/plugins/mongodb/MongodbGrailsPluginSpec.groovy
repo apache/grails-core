@@ -53,7 +53,7 @@ class MongodbGrailsPluginSpec extends Specification {
         plugin.issueManagement == [system: 'Github', url: 'https://github.com/apache/grails-core/issues']
         plugin.scm == [url: 'https://github.com/apache/grails-core']
         plugin.observe == ['services', 'domainClass']
-        plugin.loadAfter == ['domainClass', 'hibernate', 'hibernate5', 'hibernate7', 'services']
+        plugin.loadAfter == ['domainClass', 'hibernate', 'hibernate7', 'services']
     }
 
     void "doWithSpring registers the core MongoDB datastore bean definitions"() {

@@ -45,9 +45,4 @@ include::{grailsTestExamplesMongodbBaseDir}/src/test/groovy/functional/tests/Boo
 
 Note that the default implementation is to scan your classpath searching for domain classes, from the package defined
 in the configuration property `grails.codegen.defaultPackage`, and all the way down its subpackages. If your application
-is large, classpath scanning may be slow, so it's better to override the method `getDomainClasses()`:
-
-[source,groovy]
-----
-include::{grailsTestExamplesMongodbHibernate5Dir}/src/test/groovy/functional/tests/BookFongoSpec.groovy[tags=getDomainClasses,indent=0]
-----
+is large, classpath scanning may be slow, so it's better to override the method `getDomainClasses()`.

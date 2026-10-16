@@ -19,6 +19,7 @@
 package org.grails.forge.feature.database
 
 import groovy.transform.CompileStatic
+import org.springframework.context.annotation.Primary
 import org.springframework.stereotype.Component
 import org.grails.forge.application.ApplicationType
 import org.grails.forge.application.generator.GeneratorContext
@@ -28,6 +29,7 @@ import org.grails.forge.feature.FeatureContext
 import org.grails.forge.options.GormImpl
 import org.grails.forge.options.Options
 
+@Primary
 @Component
 @CompileStatic
 class GrailsDataHibernate7 extends GormFeature implements DatabaseDriverConfigurationFeature {

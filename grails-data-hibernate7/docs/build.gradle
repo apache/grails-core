@@ -50,7 +50,7 @@ dependencies {
         documentation "org.apache.grails.data:$it"
     }
     rootProject.subprojects
-            .findAll { it.findProperty('gormApiDocs') && !it.path.contains('hibernate5') }
+            .findAll { it.findProperty('gormApiDocs') }
             .each { documentation project(":$it.name") }
 }
 
@@ -77,7 +77,7 @@ tasks.register('asciidoctor', ConvertAsciidocTask) { ConvertAsciidocTask it ->
 
 tasks.withType(Groovydoc).configureEach {
     it.dependsOn(rootProject.subprojects
-            .findAll { it.findProperty('gormApiDocs') && !it.path.contains('hibernate5') }
+            .findAll { it.findProperty('gormApiDocs') }
             .collect { ":${it.name}:groovydoc" })
 
     it.docTitle = "GORM for Hibernate 7 - $project.version"
@@ -87,7 +87,7 @@ tasks.withType(Groovydoc).configureEach {
     }.sum()
 
     rootProject.subprojects
-            .findAll { it.findProperty('gormApiDocs') && !it.path.contains('hibernate5') }
+            .findAll { it.findProperty('gormApiDocs') }
             .each { sourceFiles += it.files('src/main/groovy') }
 
     it.source = sourceFiles

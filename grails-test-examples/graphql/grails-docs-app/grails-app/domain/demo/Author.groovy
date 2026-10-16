@@ -26,7 +26,7 @@ class Author {
     String name
 
     // tag::locationDefinition[]
-    Map homeLocation
+    Map<String, String> homeLocation
     // end::locationDefinition[]
 
     // tag::associationDefinition[]

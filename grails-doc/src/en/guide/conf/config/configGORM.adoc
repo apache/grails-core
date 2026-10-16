@@ -17,7 +17,7 @@ specific language governing permissions and limitations
 under the License.
 ////
 
-NOTE: GORM for Hibernate runs on Hibernate 5.6 by default, with Hibernate 7.4 available as a drop-in replacement. If you are moving an application to Hibernate 7, see the link:upgrading.html#_hibernate_5_to_hibernate_7_migration[Hibernate 5 to Hibernate 7 Migration] guide for the full list of differences and workarounds.
+NOTE: GORM for Hibernate runs on Hibernate 7.4. If you are moving an application from Hibernate 5, see the link:upgrading.html#_hibernate_5_to_hibernate_7_migration[Hibernate 5 to Hibernate 7 Migration] guide for the full list of differences and workarounds.
 
 Grails provides the following GORM configuration options:
 

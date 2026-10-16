@@ -42,13 +42,13 @@ class GraphqlGormSpec extends ApplicationContextSpec implements CommandOutputFix
         features.contains('gorm-graphql')
     }
 
-    void "test gorm-graphql defaults to gorm-hibernate5 when no GORM impl is selected"() {
+    void "test gorm-graphql defaults to gorm-hibernate7 when no GORM impl is selected"() {
         when:
         Features features = getFeatures(['gorm-graphql'])
 
         then: 'GraphQL alone falls back to Hibernate as the GORM impl'
         features.contains('gorm-graphql')
-        features.contains('gorm-hibernate5')
+        features.contains('gorm-hibernate7')
     }
 
     void "test gorm-graphql is selectable alongside gorm-mongodb"() {
@@ -64,7 +64,7 @@ class GraphqlGormSpec extends ApplicationContextSpec implements CommandOutputFix
         then: 'GraphQL is layered on top of MongoDB without forcing Hibernate'
         features.contains('gorm-graphql')
         features.contains('gorm-mongodb')
-        !features.contains('gorm-hibernate5')
+        !features.contains('gorm-hibernate7')
     }
 
     void "test gorm-graphql category is API"() {

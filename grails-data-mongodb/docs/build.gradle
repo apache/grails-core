@@ -88,12 +88,10 @@ tasks.register('asciidoctor', ConvertAsciidocTask) { ConvertAsciidocTask it ->
             'pluginVersion'                          : projectVersion,
             'mongoDriverVersion'                     : resolveMongodbVersion.resolved,
             'grailsTestExamplesMongodbBaseDir'       : project.layout.projectDirectory.dir('src/docs/asciidoc').asFile.relativePath(rootProject.findProject(':grails-test-examples-mongodb-base').layout.projectDirectory.asFile),
-            'grailsTestExamplesMongodbHibernate5Dir' : project.layout.projectDirectory.dir('src/docs/asciidoc').asFile.relativePath(rootProject.findProject(':grails-test-examples-mongodb-hibernate5').layout.projectDirectory.asFile),
             'grailsDataMongodbCoreDir'               : project.layout.projectDirectory.dir('src/docs/asciidoc/querying').asFile.relativePath(rootProject.findProject(':grails-data-mongodb-core').layout.projectDirectory.asFile)
     ]
     it.includedFiles.from(
             rootProject.findProject(':grails-test-examples-mongodb-base').layout.projectDirectory.dir('src/test/groovy'),
-            rootProject.findProject(':grails-test-examples-mongodb-hibernate5').layout.projectDirectory.dir('src/test/groovy'),
             rootProject.findProject(':grails-data-mongodb-core').layout.projectDirectory.dir('src/test/groovy'))
 }
 

@@ -41,13 +41,13 @@ class AsyncGormSpec extends ApplicationContextSpec implements CommandOutputFixtu
         features.contains('gorm-async')
     }
 
-    void "test gorm-async defaults to gorm-hibernate5 when no GORM impl is selected"() {
+    void "test gorm-async defaults to gorm-hibernate7 when no GORM impl is selected"() {
         when:
         Features features = getFeatures(['gorm-async'])
 
         then: 'async alone falls back to Hibernate as the GORM impl'
         features.contains('gorm-async')
-        features.contains('gorm-hibernate5')
+        features.contains('gorm-hibernate7')
     }
 
     void "test gorm-async is selectable alongside gorm-mongodb"() {
@@ -63,7 +63,7 @@ class AsyncGormSpec extends ApplicationContextSpec implements CommandOutputFixtu
         then: 'async is layered on top of MongoDB without forcing Hibernate'
         features.contains('gorm-async')
         features.contains('gorm-mongodb')
-        !features.contains('gorm-hibernate5')
+        !features.contains('gorm-hibernate7')
     }
 
     void "test gorm-async category is Database"() {

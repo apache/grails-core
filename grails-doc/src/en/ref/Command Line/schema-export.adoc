@@ -91,8 +91,8 @@ repositories {
     maven { url = "https://repo.grails.org/grails/restricted/" }
 }
 dependencies {
-    classpath 'org.apache.grails:grails-bom-hibernate5'
-    classpath 'org.apache.grails:grails-hibernate5'
+    classpath platform('org.apache.grails:grails-hibernate7-bom:{GrailsVersion}')
+    classpath 'org.apache.grails:grails-data-hibernate7'
 }
 ----
 

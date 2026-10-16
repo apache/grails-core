@@ -28,7 +28,7 @@ version = '0.1'
 group = 'grails.plugin.springsecurity.acl'
 
 dependencies {
-    implementation platform(project(':grails-bom'))
+    implementation platform(project(':grails-hibernate7-bom'))
     implementation 'org.apache.grails:grails-spring-security-acl'
     implementation 'org.apache.grails:grails-core'
     implementation 'org.apache.grails:grails-web-boot'
@@ -43,7 +43,7 @@ dependencies {
     runtimeOnly 'org.apache.grails:grails-databinding'
     runtimeOnly 'org.apache.grails:grails-services'
     runtimeOnly 'org.apache.grails:grails-url-mappings'
-    runtimeOnly 'org.apache.grails:grails-data-hibernate5'
+    runtimeOnly 'org.apache.grails:grails-data-hibernate7'
     runtimeOnly 'org.springframework.boot:spring-boot-autoconfigure'
     runtimeOnly 'org.springframework.boot:spring-boot-starter-logging'
     runtimeOnly 'org.springframework.boot:spring-boot-starter-tomcat'

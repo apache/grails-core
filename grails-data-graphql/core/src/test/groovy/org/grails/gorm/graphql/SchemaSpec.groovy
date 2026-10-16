@@ -43,7 +43,9 @@ class SchemaSpec extends Specification implements GraphQLSchemaSpec {
 
     void setupSpec() {
         hibernateDatastore = new HibernateDatastore(
-                DatastoreUtils.createPropertyResolver(Collections.singletonMap(Settings.SETTING_DB_CREATE, 'create-drop')),
+                DatastoreUtils.createPropertyResolver([(Settings.SETTING_DB_CREATE): 'create-drop',
+                                                       // Hibernate 7 rejects Byte[]/Character[] properties unless wrapper arrays are allowed
+                                                       'hibernate.type.wrapper_array_handling': 'allow']),
                 GeneralPackage.getPackage(), HibernatePackage.getPackage())
         schema = new Schema(hibernateDatastore.mappingContext).generate()
         queryType = schema.queryType

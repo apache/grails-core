@@ -440,7 +440,7 @@ public class DynamicFinder implements FinderGrammar {
     /**
      * Populates arguments for the given query form the given map
      * @param targetClass Unused - kept for call-site/API compatibility with existing callers in
-     * grails-data-hibernate5/7 and grails-data-mongodb
+     * grails-data-hibernate7 and grails-data-mongodb
      * @param query The query
      * @param argMap The query arguments
      */

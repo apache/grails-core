@@ -83,6 +83,9 @@ grails:
 
 ---
 hibernate:
+    type:
+        # TypeTest maps Byte[] and Character[] properties, which Hibernate 7 rejects unless wrapper arrays are allowed
+        wrapper_array_handling: allow
     cache:
         queries: false
         use_second_level_cache: false

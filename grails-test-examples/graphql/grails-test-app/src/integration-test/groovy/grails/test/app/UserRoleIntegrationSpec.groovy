@@ -141,7 +141,7 @@ class UserRoleIntegrationSpec extends Specification implements GraphQLSpec {
         obj.user.id == userId
         obj.role.id == roleId
         outCount == 1
-        query ==~ 'Hibernate: select this_.user_id as user_id[0-9]+_[0-9]+_[0-9]+_, this_.role_id as role_id[0-9]+_[0-9]+_[0-9]+_ from user_role this_ where this_.user_id=\\? and this_.role_id=\\? limit \\?\n'
+        query ==~ 'Hibernate: select ur1_0\\.role_id,ur1_0\\.user_id from user_role ur1_0 where ur1_0\\.user_id=\\? and ur1_0\\.role_id=\\?\n'
 
         when:
         outCount = 0
@@ -167,7 +167,7 @@ class UserRoleIntegrationSpec extends Specification implements GraphQLSpec {
         outCount == 1
         // Hibernate column ordering varies between versions; the User domain is mapped
         // to `app_user` because `user` is a reserved keyword in modern H2.
-        query ==~ 'Hibernate: select .*from user_role this_ inner join app_user user2_ on this_\\.user_id=user2_\\.id inner join role role3_ on this_\\.role_id=role3_\\.id where this_\\.user_id=\\? and this_\\.role_id=\\?\n'
+        query ==~ 'Hibernate: select .*from user_role ur1_0 left join role r1_0 on r1_0\\.id=ur1_0\\.role_id left join app_user u1_0 on u1_0\\.id=ur1_0\\.user_id where ur1_0\\.user_id=\\? and ur1_0\\.role_id=\\?\n'
 
         cleanup:
         System.setOut(originalOut)

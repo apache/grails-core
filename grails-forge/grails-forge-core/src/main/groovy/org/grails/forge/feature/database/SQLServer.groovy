@@ -28,8 +28,8 @@ import org.grails.forge.build.dependencies.Dependency
 @CompileStatic
 class SQLServer extends DatabaseDriverFeature {
 
-    SQLServer(GrailsDataHibernate5 grailsDataHibernate5, TestContainers testContainers) {
-        super(grailsDataHibernate5, testContainers)
+    SQLServer(GrailsDataHibernate7 grailsDataHibernate7, TestContainers testContainers) {
+        super(grailsDataHibernate7, testContainers)
     }
 
     @Override

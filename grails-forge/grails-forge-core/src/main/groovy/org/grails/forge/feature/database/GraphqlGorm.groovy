@@ -32,7 +32,7 @@ import org.grails.forge.feature.FeatureContext
  * Adds the {@code grails-data-graphql} plugin to the generated application.
  *
  * <p>GraphQL is a layer on top of GORM rather than a GORM implementation, so
- * this feature is selectable in addition to (not instead of) {@link GrailsDataHibernate5}
+ * this feature is selectable in addition to (not instead of) {@link GrailsDataHibernate7}
  * or {@link GrailsDataMongoDB}. If the user opts into GraphQL without explicitly
  * selecting a GORM persistence layer, Hibernate is added as a sensible default
  * via {@link #processSelectedFeatures(FeatureContext)}.</p>
@@ -41,10 +41,10 @@ import org.grails.forge.feature.FeatureContext
 @CompileStatic
 class GraphqlGorm implements Feature {
 
-    private final GrailsDataHibernate5 grailsDataHibernate5
+    private final GrailsDataHibernate7 grailsDataHibernate7
 
-    GraphqlGorm(GrailsDataHibernate5 grailsDataHibernate5) {
-        this.grailsDataHibernate5 = grailsDataHibernate5
+    GraphqlGorm(GrailsDataHibernate7 grailsDataHibernate7) {
+        this.grailsDataHibernate7 = grailsDataHibernate7
     }
 
     @Override
@@ -77,7 +77,7 @@ class GraphqlGorm implements Feature {
         // GraphQL needs a GORM implementation to introspect; default to Hibernate
         // when the user has not explicitly chosen a GORM provider.
         if (!featureContext.isPresent(GormFeature) && !featureContext.isPresent(GormOneOfFeature)) {
-            featureContext.addFeature(grailsDataHibernate5)
+            featureContext.addFeature(grailsDataHibernate7)
         }
     }
 

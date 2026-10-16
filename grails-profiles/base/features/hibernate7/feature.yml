@@ -1,0 +1,12 @@
+description: Adds GORM for Hibernate 7 to the project
+dependencies:
+    - scope: build
+      coords: 'org.apache.grails:grails-data-hibernate7'
+    - scope: implementation
+      coords: 'platform("org.apache.grails:grails-hibernate7-bom:$grailsVersion")'
+    - scope: implementation
+      coords: "org.apache.grails:grails-data-hibernate7"
+    - scope: runtimeOnly
+      coords: "com.h2database:h2"
+    - scope: runtimeOnly
+      coords: "com.zaxxer:HikariCP"

@@ -32,7 +32,7 @@ import org.grails.forge.util.VersionInfo
  * Adds the {@code grails-datamapping-async} dependency to the generated application.
  *
  * <p>Asynchronous Grails Data is a layer on top of GORM rather than a GORM implementation, so
- * this feature is selectable in addition to (not instead of) {@link GrailsDataHibernate5}
+ * this feature is selectable in addition to (not instead of) {@link GrailsDataHibernate7}
  * or {@link GrailsDataMongoDB}. If the user opts into asynchronous Grails Data without explicitly
  * selecting a GORM persistence layer, Hibernate is added as a sensible default
  * via {@link #processSelectedFeatures(FeatureContext)}.</p>
@@ -41,10 +41,10 @@ import org.grails.forge.util.VersionInfo
 @CompileStatic
 class AsyncGorm implements Feature {
 
-    private final GrailsDataHibernate5 grailsDataHibernate5
+    private final GrailsDataHibernate7 grailsDataHibernate7
 
-    AsyncGorm(GrailsDataHibernate5 grailsDataHibernate5) {
-        this.grailsDataHibernate5 = grailsDataHibernate5
+    AsyncGorm(GrailsDataHibernate7 grailsDataHibernate7) {
+        this.grailsDataHibernate7 = grailsDataHibernate7
     }
 
     @Override
@@ -77,7 +77,7 @@ class AsyncGorm implements Feature {
         // asynchronous Grails Data needs a GORM implementation to operate on; default to Hibernate
         // when the user has not explicitly chosen a GORM provider.
         if (!featureContext.isPresent(GormFeature) && !featureContext.isPresent(GormOneOfFeature)) {
-            featureContext.addFeature(grailsDataHibernate5)
+            featureContext.addFeature(grailsDataHibernate7)
         }
     }
 

@@ -52,7 +52,9 @@ abstract class HibernateSpec extends Specification {
      * @return The configuration
      */
     Map<String, Object> getConfiguration() {
-        [(Settings.SETTING_DB_CREATE): 'create-drop', (Settings.SETTING_DATASOURCE + '.logSql'):  true] as Map<String, Object>
+        [(Settings.SETTING_DB_CREATE): 'create-drop', (Settings.SETTING_DATASOURCE + '.logSql'):  true,
+         // The test domains map Byte[] and Character[] properties; Hibernate 7 rejects those wrapper arrays unless allowed
+         'hibernate.type.wrapper_array_handling': 'allow'] as Map<String, Object>
     }
 
     /**

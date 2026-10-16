@@ -36,7 +36,7 @@ class ForgeRequestSupportSpec extends Specification {
         def filter = ForgeRequestSupport.featureFilter(null, 'hibernate', null, null)
 
         then:
-        filter.gorm == GormImpl.HIBERNATE5
+        filter.gorm == GormImpl.HIBERNATE7
         filter.reloading == null
         filter.servlet == null
         filter.javaVersion == null

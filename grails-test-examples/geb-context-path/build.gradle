@@ -31,7 +31,7 @@ version = projectVersion
 
 dependencies {
 
-    implementation platform(project(':grails-bom'))
+    implementation platform(project(':grails-hibernate7-bom'))
 
     implementation 'org.apache.grails:grails-core'
     implementation 'org.apache.grails:grails-logging'
@@ -47,7 +47,7 @@ dependencies {
     } else {
         implementation 'org.apache.grails:grails-sitemesh3'
     }
-    implementation 'org.apache.grails:grails-data-hibernate5'
+    implementation 'org.apache.grails:grails-data-hibernate7'
     implementation 'org.springframework.boot:spring-boot-autoconfigure'
     implementation 'org.springframework.boot:spring-boot-starter'
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
@@ -55,7 +55,7 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-tomcat'
     implementation 'org.springframework.boot:spring-boot-starter-validation'
 
-    testAndDevelopmentOnly platform(project(':grails-bom'))
+    testAndDevelopmentOnly platform(project(':grails-hibernate7-bom'))
     testAndDevelopmentOnly 'org.webjars.npm:bootstrap'
     testAndDevelopmentOnly 'org.webjars.npm:jquery'
 

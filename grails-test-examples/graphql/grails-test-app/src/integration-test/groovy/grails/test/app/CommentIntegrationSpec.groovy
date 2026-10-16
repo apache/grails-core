@@ -140,7 +140,7 @@ class CommentIntegrationSpec extends Specification implements GraphQLSpec {
         obj.parentComment.id == 1
         outCount == 1
         // Hibernate column ordering varies between versions; assert structurally instead.
-        queries[0] ==~ 'Hibernate: select .*this_\\.parent_comment_id.*from comment this_ where this_\\.id=\\? limit \\?\n'
+        queries[0] ==~ 'Hibernate: select .*c1_0\\.parent_comment_id.*from comment c1_0 where c1_0\\.id=\\?\n'
 
         when:
         outCount = 0
@@ -162,7 +162,7 @@ class CommentIntegrationSpec extends Specification implements GraphQLSpec {
         obj.parentComment.text == 'First comment'
         outCount == 1
         // Hibernate column ordering varies between versions; assert structurally instead.
-        queries[0] ==~ 'Hibernate: select .*from comment this_ left outer join comment comment2_ on this_\\.parent_comment_id=comment2_\\.id where this_\\.id=\\?\n'
+        queries[0] ==~ 'Hibernate: select .*from comment c1_0 left join comment pc1_0 on pc1_0\\.id=c1_0\\.parent_comment_id where c1_0\\.id=\\?\n'
 
         cleanup:
         System.setOut(originalOut)

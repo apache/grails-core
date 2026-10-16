@@ -150,8 +150,8 @@ class TagIntegrationSpec extends Specification implements GraphQLSpec {
 
         then:
         //queries.size() == 2 ignored due to GORM issue https://github.com/apache/grails-data-mapping/issues/989
-        queries[0] ==~ 'Hibernate: select this_.id as id[0-9]+_[0-9]+_[0-9]+_, this_.version as version[0-9]+_[0-9]+_[0-9]+_, this_.name as name[0-9]+_[0-9]+_[0-9]+_ from tag this_ where this_.id=\\? limit \\?\n'
-        queries[1] ==~ 'Hibernate: select this_.id as id[0-9]+_[0-9]+_[0-9]+_, this_.version as version[0-9]+_[0-9]+_[0-9]+_, this_.title as title[0-9]+_[0-9]+_[0-9]+_, this_.date_created as date_cre[0-9]+_[0-9]+_[0-9]+_, this_.last_updated as last_upd[0-9]+_[0-9]+_[0-9]+_, tags3_.post_tags_id as post_tag[0-9]+_[0-9]+_, tags_alias1_.id as tag_id[0-9]+_[0-9]+_, tags_alias1_.id as id[0-9]+_[0-9]+_[0-9]+_, tags_alias1_.version as version[0-9]+_[0-9]+_[0-9]+_, tags_alias1_.name as name[0-9]+_[0-9]+_[0-9]+_ from post this_ inner join post_tag tags3_ on this_.id=tags3_.post_tags_id inner join tag tags_alias1_ on tags3_.tag_id=tags_alias1_.id where tags_alias1_.id=\\?\n'
+        queries[0] ==~ 'Hibernate: select t1_0\\.id,t1_0\\.name,t1_0\\.version from tag t1_0 where t1_0\\.id=\\?\n'
+        queries[1] ==~ 'Hibernate: select .*from post p1_0 left join post_tag t1_0 on p1_0\\.id=t1_0\\.post_tags_id left join tag t1_1 on t1_1\\.id=t1_0\\.tag_id join post_tag t2_0 on p1_0\\.id=t2_0\\.post_tags_id where t2_0\\.tag_id=\\?\n'
 
         cleanup:
         System.setOut(originalOut)

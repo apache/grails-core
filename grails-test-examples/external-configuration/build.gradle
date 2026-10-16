@@ -29,7 +29,7 @@ version = '0.1'
 group = 'test.app'
 
 dependencies {
-    implementation platform(project(':grails-bom'))
+    implementation platform(project(':grails-hibernate7-bom'))
 
     implementation 'org.apache.grails:grails-core'
     implementation 'org.apache.grails:grails-logging'
@@ -44,7 +44,7 @@ dependencies {
     } else {
         implementation 'org.apache.grails:grails-sitemesh3'
     }
-    implementation 'org.apache.grails:grails-data-hibernate5'
+    implementation 'org.apache.grails:grails-data-hibernate7'
     implementation 'org.apache.grails:grails-scaffolding'
     implementation 'org.springframework.boot:spring-boot-autoconfigure'
     implementation 'org.springframework.boot:spring-boot-starter'

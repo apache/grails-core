@@ -28,15 +28,15 @@ import org.grails.forge.feature.OneOfFeature
 abstract class DatabaseDriverFeature implements OneOfFeature {
 
     private final TestContainers testContainers
-    private final GrailsDataHibernate5 grailsDataHibernate5
+    private final GrailsDataHibernate7 grailsDataHibernate7
 
     DatabaseDriverFeature() {
         this.testContainers = null
-        this.grailsDataHibernate5 = null
+        this.grailsDataHibernate7 = null
     }
 
-    DatabaseDriverFeature(GrailsDataHibernate5 grailsDataHibernate5, TestContainers testContainers) {
-        this.grailsDataHibernate5 = grailsDataHibernate5
+    DatabaseDriverFeature(GrailsDataHibernate7 grailsDataHibernate7, TestContainers testContainers) {
+        this.grailsDataHibernate7 = grailsDataHibernate7
         this.testContainers = testContainers
     }
 
@@ -55,8 +55,8 @@ abstract class DatabaseDriverFeature implements OneOfFeature {
         if (!featureContext.isPresent(TestContainers) && testContainers != null) {
             featureContext.addFeature(testContainers)
         }
-        if (!featureContext.isPresent(DatabaseDriverConfigurationFeature) && grailsDataHibernate5 != null) {
-            featureContext.addFeature(grailsDataHibernate5)
+        if (!featureContext.isPresent(DatabaseDriverConfigurationFeature) && grailsDataHibernate7 != null) {
+            featureContext.addFeature(grailsDataHibernate7)
         }
     }
 

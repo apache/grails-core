@@ -84,7 +84,7 @@ Grails 4.0 is built on Spring 5 and Spring Boot 2.1. See the https://github.com/
 
 Grails 4.x supports a minimum version of Hibernate 5.4 and GORM 7.x. Several changes have been made to GORM to support the newer version of Hibernate and simplify GORM itself.
 
-The details of these changes are covered in the  link:{hibernate5Guide}index.html#upgradeNotes[GORM upgrade documentation].
+The details of these changes are covered in the  link:{hibernate7Guide}index.html#upgradeNotes[GORM upgrade documentation].
 
 ### Spring Boot 2.1 Actuator
 

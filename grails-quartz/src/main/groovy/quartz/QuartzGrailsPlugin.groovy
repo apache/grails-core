@@ -379,8 +379,7 @@ class QuartzGrailsPlugin extends Plugin {
     private boolean hasHibernate(manager) {
         manager?.hasGrailsPlugin('hibernate') ||
                 manager?.hasGrailsPlugin('hibernate3') ||
-                manager?.hasGrailsPlugin('hibernate4') ||
-                manager?.hasGrailsPlugin('hibernate5')
+                manager?.hasGrailsPlugin('hibernate4')
     }
 
     void refreshJobs(boolean ignoreErrors = false) {

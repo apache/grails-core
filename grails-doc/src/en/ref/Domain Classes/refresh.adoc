@@ -56,7 +56,7 @@ Book.withTransaction {
 === Description
 
 
-Equivalent to the Hibernate https://javadoc.io/doc/org.hibernate/hibernate-core/{hibernate5Version}/org/hibernate/Session.html#refresh-java.lang.Object-[refresh] method.
+Equivalent to the Hibernate https://javadoc.io/doc/org.hibernate.orm/hibernate-core/{hibernate7Version}/org/hibernate/Session.html#refresh-java.lang.Object-[refresh] method.
 
 Re-reads the state of the given instance from the underlying database. It is inadvisable to use this to implement long-running sessions that span many business tasks. However this method is useful in certain special circumstances. For example
 
@@ -68,7 +68,7 @@ Pass `lock: true` to reload the instance's database state and version under a pe
 
 To request a different lock, pass a `jakarta.persistence.LockModeType` (or its name) instead of `true`. For example `entity.refresh(lock: LockModeType.PESSIMISTIC_READ)` reloads the instance under a pessimistic READ lock. `lock: true` is equivalent to `lock: LockModeType.PESSIMISTIC_WRITE`; `lock: false` and `lock: LockModeType.NONE` request no lock and behave like `entity.refresh()`. A value that is neither a boolean, a `LockModeType`, nor the name of one throws `IllegalArgumentException`. The semantics of each lock mode are those of the JPA `LockModeType` of the same name.
 
-The lock modes behave as follows on Hibernate 5 and Hibernate 7:
+The lock modes behave as follows on Hibernate 7:
 
 [cols="2,2,3",options="header"]
 |===
@@ -118,6 +118,6 @@ Book.secondary.withTransaction {
 ----
 <1> Reloads and locks the row on the `secondary` connection. The transaction and the instance must both belong to that connection; a transaction on the default datasource does not satisfy the requirement.
 
-Refreshing under a lock is supported by GORM for Hibernate 5 and Hibernate 7. Other datastores throw `UnsupportedOperationException` rather than silently falling back to a plain refresh.
+Refreshing under a lock is supported by GORM for Hibernate 7. Other datastores throw `UnsupportedOperationException` rather than silently falling back to a plain refresh.
 
 `entity.refresh()` is unchanged. `entity.refresh([:])`, `entity.refresh(lock: false)` and `entity.refresh(lock: LockModeType.NONE)` behave exactly like `entity.refresh()`: a plain refresh with no lock and no transaction requirement. To lock by identifier and reload an already-managed instance under the lock, use link:{domainClassesRefFromRef}lock.html[DomainClass.lock(id, refresh: true)]. There is no `entity.lock(refresh: true)`: that call throws `IllegalArgumentException` pointing to the two supported forms.

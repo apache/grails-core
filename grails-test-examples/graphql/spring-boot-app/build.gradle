@@ -32,21 +32,16 @@ group = 'examples'
 
 dependencies {
 
-    implementation platform(project(':grails-bom'))
+    implementation platform(project(':grails-hibernate7-bom'))
 
     implementation 'org.springframework.boot:spring-boot-starter'
     implementation 'org.springframework.boot:spring-boot-starter-web'
 
     implementation 'org.springframework.boot:spring-boot-hibernate'
 
-    implementation 'org.apache.grails:grails-data-hibernate5-spring-boot'
-    implementation 'org.apache.grails.data:grails-data-hibernate5-core'
+    implementation 'org.apache.grails:grails-data-hibernate7-spring-boot'
+    implementation 'org.apache.grails.data:grails-data-hibernate7-core'
     implementation 'org.apache.grails.data:grails-datamapping-core'
-    implementation 'org.hibernate:hibernate-core-jakarta'
-    implementation('org.hibernate:hibernate-ehcache') {
-        // Exclude javax variant of hibernate-core
-        exclude group: 'org.hibernate', module: 'hibernate-core'
-    }
     implementation 'jakarta.transaction:jakarta.transaction-api'
     implementation 'jakarta.persistence:jakarta.persistence-api'
 

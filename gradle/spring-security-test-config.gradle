@@ -26,7 +26,6 @@ tasks.withType(Test).configureEach {
     boolean skipped = [
             'skipSpringSecurityTests',
             'onlyFunctionalTests',
-            'onlyHibernate5Tests',
             'onlyHibernate7Tests',
             'onlyMongodbTests',
             'onlyNeo4jTests',
