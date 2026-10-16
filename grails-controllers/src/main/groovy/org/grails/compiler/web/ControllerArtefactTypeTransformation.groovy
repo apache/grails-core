@@ -17,17 +17,18 @@
  *  under the License.
  */
 
-package org.grails.compiler.web;
+package org.grails.compiler.web
 
-import org.codehaus.groovy.ast.AnnotationNode;
-import org.codehaus.groovy.ast.ClassNode;
-import org.codehaus.groovy.control.CompilePhase;
-import org.codehaus.groovy.control.SourceUnit;
-import org.codehaus.groovy.transform.GroovyASTTransformation;
+import groovy.transform.CompileStatic
+import org.codehaus.groovy.ast.AnnotationNode
+import org.codehaus.groovy.ast.ClassNode
+import org.codehaus.groovy.control.CompilePhase
+import org.codehaus.groovy.control.SourceUnit
+import org.codehaus.groovy.transform.GroovyASTTransformation
 
-import grails.web.Controller;
-import org.grails.compiler.injection.ArtefactTypeAstTransformation;
-import org.grails.core.artefact.ControllerArtefactHandler;
+import grails.web.Controller
+import org.grails.compiler.injection.ArtefactTypeAstTransformation
+import org.grails.core.artefact.ControllerArtefactHandler
 
 /**
  * A transformation that makes an Artefact a controller
@@ -36,15 +37,17 @@ import org.grails.core.artefact.ControllerArtefactHandler;
  * @since 3.0
  */
 @GroovyASTTransformation(phase = CompilePhase.CANONICALIZATION)
-public class ControllerArtefactTypeTransformation extends ArtefactTypeAstTransformation {
+@CompileStatic
+class ControllerArtefactTypeTransformation extends ArtefactTypeAstTransformation {
+
     @Override
     protected String resolveArtefactType(SourceUnit sourceUnit, AnnotationNode annotationNode, ClassNode classNode) {
-        return ControllerArtefactHandler.TYPE;
+        return ControllerArtefactHandler.TYPE
     }
 
     @Override
     protected Class getAnnotationTypeClass() {
-        return Controller.class;
+        return Controller
     }
-}
 
+}

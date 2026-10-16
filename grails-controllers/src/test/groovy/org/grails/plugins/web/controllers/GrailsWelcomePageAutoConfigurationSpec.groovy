@@ -57,4 +57,26 @@ class GrailsWelcomePageAutoConfigurationSpec extends Specification {
                     assert context.containsBean('welcomePageNotAcceptableHandlerMapping')
                 }
     }
+
+    void 'the registrar copes with a context that holds none of the welcome-page mappings'() {
+        expect:
+        new WebApplicationContextRunner()
+                .withConfiguration(AutoConfigurations.of(GrailsWelcomePageAutoConfiguration))
+                .run { context ->
+                    assert context.startupFailure == null
+                    assert !context.containsBean('welcomePageHandlerMapping')
+                }
+    }
+
+    void 'only the welcome-page mappings that exist are removed'() {
+        expect:
+        new WebApplicationContextRunner()
+                .withBean('welcomePageHandlerMapping', Object, { new Object() })
+                .withBean('unrelatedMapping', Object, { new Object() })
+                .withConfiguration(AutoConfigurations.of(GrailsWelcomePageAutoConfiguration))
+                .run { context ->
+                    assert !context.containsBean('welcomePageHandlerMapping')
+                    assert context.containsBean('unrelatedMapping')
+                }
+    }
 }

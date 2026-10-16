@@ -16,20 +16,20 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.plugins.web.controllers;
+package org.grails.plugins.web.controllers
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import org.springframework.boot.autoconfigure.AutoConfiguration;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnBooleanProperty;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
-import org.springframework.boot.servlet.filter.OrderedFormContentFilter;
-import org.springframework.boot.webmvc.autoconfigure.WebMvcAutoConfiguration;
-import org.springframework.context.annotation.Bean;
-import org.springframework.web.filter.FormContentFilter;
+import groovy.transform.CompileStatic
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
+import org.springframework.boot.autoconfigure.AutoConfiguration
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBooleanProperty
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
+import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication
+import org.springframework.boot.servlet.filter.OrderedFormContentFilter
+import org.springframework.boot.webmvc.autoconfigure.WebMvcAutoConfiguration
+import org.springframework.context.annotation.Bean
+import org.springframework.web.filter.FormContentFilter
 
 /**
  * Guarantees a {@link FormContentFilter} for every Grails servlet web application, so
@@ -49,17 +49,18 @@ import org.springframework.web.filter.FormContentFilter;
  * {@code spring.mvc.formcontent.filter.enabled=false} disables the filter here just as it does for Boot,
  * so it remains a true off-switch rather than something Grails silently re-enables.
  */
-@AutoConfiguration(after = WebMvcAutoConfiguration.class)
+@AutoConfiguration(after = WebMvcAutoConfiguration)
 @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
-public class GrailsFormContentFilterAutoConfiguration {
+@CompileStatic
+class GrailsFormContentFilterAutoConfiguration {
 
-    private static final Logger logger = LoggerFactory.getLogger(GrailsFormContentFilterAutoConfiguration.class);
+    private static final Logger logger = LoggerFactory.getLogger(GrailsFormContentFilterAutoConfiguration)
 
     @Bean
-    @ConditionalOnMissingBean(FormContentFilter.class)
-    @ConditionalOnBooleanProperty(name = "spring.mvc.formcontent.filter.enabled", matchIfMissing = true)
-    public OrderedFormContentFilter formContentFilter() {
-        return new OrderedFormContentFilter();
+    @ConditionalOnMissingBean(FormContentFilter)
+    @ConditionalOnBooleanProperty(name = 'spring.mvc.formcontent.filter.enabled', matchIfMissing = true)
+    OrderedFormContentFilter formContentFilter() {
+        return new OrderedFormContentFilter()
     }
 
     /**
@@ -69,13 +70,13 @@ public class GrailsFormContentFilterAutoConfiguration {
      * bodies unparsed — for controllers or for a plugin such as Spring Security.
      */
     @Bean
-    @ConditionalOnMissingBean(FormContentFilter.class)
-    @ConditionalOnProperty(name = "spring.mvc.formcontent.filter.enabled", havingValue = "false")
-    public FormContentParsingDisabledWarning formContentParsingDisabledWarning() {
-        logger.warn("Form-content parsing is disabled (spring.mvc.formcontent.filter.enabled=false): " +
-                "form-encoded PUT, PATCH and DELETE request bodies will not be parsed into request " +
-                "parameters, for controllers or for the Spring Security filter chain.");
-        return new FormContentParsingDisabledWarning();
+    @ConditionalOnMissingBean(FormContentFilter)
+    @ConditionalOnProperty(name = 'spring.mvc.formcontent.filter.enabled', havingValue = 'false')
+    FormContentParsingDisabledWarning formContentParsingDisabledWarning() {
+        logger.warn('Form-content parsing is disabled (spring.mvc.formcontent.filter.enabled=false): ' +
+                'form-encoded PUT, PATCH and DELETE request bodies will not be parsed into request ' +
+                'parameters, for controllers or for the Spring Security filter chain.')
+        return new FormContentParsingDisabledWarning()
     }
 
     /**
@@ -84,4 +85,5 @@ public class GrailsFormContentFilterAutoConfiguration {
      */
     public static final class FormContentParsingDisabledWarning {
     }
+
 }

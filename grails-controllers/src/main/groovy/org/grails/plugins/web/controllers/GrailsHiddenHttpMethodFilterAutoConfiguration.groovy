@@ -16,22 +16,23 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.plugins.web.controllers;
+package org.grails.plugins.web.controllers
 
-import jakarta.servlet.Filter;
+import jakarta.servlet.Filter
 
-import org.springframework.boot.autoconfigure.AutoConfiguration;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
-import org.springframework.boot.web.servlet.FilterRegistrationBean;
-import org.springframework.boot.webmvc.autoconfigure.WebMvcAutoConfiguration;
-import org.springframework.context.annotation.Bean;
+import groovy.transform.CompileStatic
+import org.springframework.boot.autoconfigure.AutoConfiguration
+import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
+import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication
+import org.springframework.boot.web.servlet.FilterRegistrationBean
+import org.springframework.boot.webmvc.autoconfigure.WebMvcAutoConfiguration
+import org.springframework.context.annotation.Bean
 
-import grails.config.Settings;
-import org.grails.web.config.http.GrailsFilters;
-import org.grails.web.filters.HiddenHttpMethodFilter;
-import org.grails.web.util.HiddenHttpMethod;
+import grails.config.Settings
+import org.grails.web.config.http.GrailsFilters
+import org.grails.web.filters.HiddenHttpMethodFilter
+import org.grails.web.util.HiddenHttpMethod
 
 /**
  * Registers Grails' hidden HTTP method filter, which rewrites a {@code POST} carrying a {@code _method}
@@ -54,21 +55,22 @@ import org.grails.web.util.HiddenHttpMethod;
  *
  * @since 8.0
  */
-@AutoConfiguration(after = WebMvcAutoConfiguration.class)
+@AutoConfiguration(after = WebMvcAutoConfiguration)
 @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
-public class GrailsHiddenHttpMethodFilterAutoConfiguration {
+@CompileStatic
+class GrailsHiddenHttpMethodFilterAutoConfiguration {
 
     @Bean
     @ConditionalOnMissingBean(
-            value = {org.springframework.web.filter.HiddenHttpMethodFilter.class, HiddenHttpMethodFilter.class},
-            name = "hiddenHttpMethodFilter")
-    @ConditionalOnExpression("${" + Settings.WEB_HIDDEN_METHOD_FILTER_ENABLED + ":false} " +
-            "or ${" + HiddenHttpMethod.SPRING_FILTER_ENABLED + ":false}")
-    public FilterRegistrationBean<Filter> hiddenHttpMethodFilter() {
-        FilterRegistrationBean<Filter> registrationBean = new FilterRegistrationBean<>();
-        registrationBean.setFilter(new HiddenHttpMethodFilter());
-        registrationBean.addUrlPatterns(Settings.DEFAULT_WEB_SERVLET_PATH);
-        registrationBean.setOrder(GrailsFilters.HIDDEN_HTTP_METHOD_FILTER.getOrder());
-        return registrationBean;
+            value = [org.springframework.web.filter.HiddenHttpMethodFilter, HiddenHttpMethodFilter],
+            name = 'hiddenHttpMethodFilter')
+    @ConditionalOnExpression('\${' + Settings.WEB_HIDDEN_METHOD_FILTER_ENABLED + ':false} ' +
+            'or \${' + HiddenHttpMethod.SPRING_FILTER_ENABLED + ':false}')
+    FilterRegistrationBean<Filter> hiddenHttpMethodFilter() {
+        FilterRegistrationBean<Filter> registrationBean = new FilterRegistrationBean<>()
+        registrationBean.setFilter(new HiddenHttpMethodFilter())
+        registrationBean.addUrlPatterns(Settings.DEFAULT_WEB_SERVLET_PATH)
+        registrationBean.setOrder(GrailsFilters.HIDDEN_HTTP_METHOD_FILTER.getOrder())
+        return registrationBean
     }
 }

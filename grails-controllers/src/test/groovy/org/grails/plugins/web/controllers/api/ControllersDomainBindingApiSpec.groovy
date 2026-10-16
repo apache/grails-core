@@ -24,7 +24,9 @@ import spock.lang.Specification
 
 import grails.core.DefaultGrailsApplication
 import grails.core.GrailsApplication
+import grails.util.Environment
 import grails.util.Holders
+import org.grails.core.exceptions.GrailsConfigurationException
 import org.grails.core.support.GrailsApplicationDiscoveryStrategy
 import org.grails.datastore.mapping.keyvalue.mapping.config.KeyValueMappingContext
 
@@ -132,6 +134,110 @@ class ControllersDomainBindingApiSpec extends Specification {
         widget.name == 'spanner'
         0 * beanFactory.autowireBeanProperties(_, _, _)
     }
+
+    void 'the no argument initializer does not throw and leaves the instance untouched when no application has been bound yet'() {
+        given:
+        Holders.clear()
+        def gadget = new Gadget()
+
+        when:
+        ControllersDomainBindingApi.initialize(gadget)
+
+        then:
+        noExceptionThrown()
+        gadget.name == null
+    }
+
+    void 'nothing is bound to the application while the environment is still initializing'() {
+        given:
+        setAutowire(true)
+        Environment.setInitializing(true)
+        def widget = new Widget()
+
+        when:
+        ControllersDomainBindingApi.initialize(widget, [name: 'spanner'])
+        ControllersDomainBindingApi.initialize(widget)
+
+        then:
+        widget.name == 'spanner'
+        0 * beanFactory.autowireBeanProperties(_, _, _)
+
+        cleanup:
+        Environment.setInitializing(false)
+    }
+
+    void 'an application whose mapping context is not ready yet is treated as having no domain class'() {
+        given:
+        Holders.clear()
+        def uninitialized = new DefaultGrailsApplication()
+        Holders.addApplicationDiscoveryStrategy(new GrailsApplicationDiscoveryStrategy() {
+
+            @Override
+            GrailsApplication findGrailsApplication() {
+                uninitialized
+            }
+
+            @Override
+            ApplicationContext findApplicationContext() {
+                applicationContext
+            }
+        })
+        def widget = new Widget()
+
+        when:
+        ControllersDomainBindingApi.initialize(widget, [name: 'spanner'])
+        ControllersDomainBindingApi.initialize(widget)
+
+        then:
+        widget.name == 'spanner'
+        0 * beanFactory.autowireBeanProperties(_, _, _)
+    }
+
+    void 'a mapping that asks for autowiring is left alone when no application context is bound'() {
+        given:
+        setAutowire(true)
+        Holders.clear()
+        Holders.addApplicationDiscoveryStrategy(new GrailsApplicationDiscoveryStrategy() {
+
+            @Override
+            GrailsApplication findGrailsApplication() {
+                grailsApplication
+            }
+
+            @Override
+            ApplicationContext findApplicationContext() {
+                null
+            }
+        })
+
+        when:
+        ControllersDomainBindingApi.initialize(new Widget())
+
+        then:
+        noExceptionThrown()
+        0 * beanFactory.autowireBeanProperties(_, _, _)
+    }
+
+    void 'autowiring is skipped quietly when the bean factory reports the mapping context is not initialized'() {
+        given:
+        setAutowire(true)
+        def widget = new Widget()
+
+        when:
+        ControllersDomainBindingApi.initialize(widget)
+
+        then:
+        1 * beanFactory.autowireBeanProperties(widget, AutowireCapableBeanFactory.AUTOWIRE_BY_NAME, false) >> {
+            throw new GrailsConfigurationException('not initialized')
+        }
+        noExceptionThrown()
+    }
+
+    void 'AUTOWIRE_DOMAIN_METHOD constant is stable'() {
+        expect:
+        ControllersDomainBindingApi.AUTOWIRE_DOMAIN_METHOD == 'autowireDomain'
+    }
+
 }
 
 class Widget {

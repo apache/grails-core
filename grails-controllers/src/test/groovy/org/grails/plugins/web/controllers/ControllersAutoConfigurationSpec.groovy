@@ -23,6 +23,7 @@ import java.util.function.Supplier
 
 import jakarta.servlet.Filter
 
+import grails.config.Settings
 import grails.core.DefaultGrailsApplication
 import grails.core.GrailsApplication
 
@@ -40,12 +41,14 @@ import org.springframework.mock.web.MockHttpServletRequest
 import org.springframework.mock.web.MockHttpServletResponse
 import org.springframework.mock.web.MockServletContext
 import org.springframework.web.context.WebApplicationContext
+import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry
 import org.springframework.web.context.support.StaticWebApplicationContext
 import org.springframework.web.filter.RequestContextFilter
 import org.springframework.web.servlet.handler.SimpleMappingExceptionResolver
 
 import org.grails.web.config.http.GrailsFilters
 import org.grails.web.errors.GrailsExceptionResolver
+import org.grails.web.servlet.mvc.GrailsDispatcherServlet
 import org.grails.web.servlet.mvc.GrailsWebRequestFilter
 
 import spock.lang.Specification
@@ -216,6 +219,87 @@ class ControllersAutoConfigurationSpec extends Specification {
                 }
     }
 
+    void 'the dispatcher servlet resolves the hidden method itself unless a servlet filter does the rewrite'() {
+        expect:
+        new WebApplicationContextRunner()
+                .withBean(GrailsApplication, grailsApplicationSupplier())
+                .withPropertyValues(properties as String[])
+                .withConfiguration(AutoConfigurations.of(ControllersAutoConfiguration, WebMvcAutoConfiguration))
+                .run { context ->
+                    assert context.getBean(GrailsDispatcherServlet).resolveHiddenHttpMethod == resolvesInServlet
+                }
+
+        where:
+        properties                                                    || resolvesInServlet
+        []                                                            || true
+        ["${Settings.WEB_HIDDEN_METHOD_FILTER_ENABLED}=true"]         || false
+    }
+
+    void 'a configured grails servlet path is used for the dispatcher servlet registration'() {
+        expect:
+        new WebApplicationContextRunner()
+                .withBean(GrailsApplication, grailsApplicationSupplier())
+                .withPropertyValues("${Settings.WEB_SERVLET_PATH}=/grails/*")
+                .withConfiguration(AutoConfigurations.of(ControllersAutoConfiguration, WebMvcAutoConfiguration))
+                .run { context ->
+                    assert context.getBean(DispatcherServletRegistrationBean).urlMappings == ['/grails/*'] as Set
+                }
+    }
+
+    void 'the dispatcher servlet registration maps to #expected when the application class loader #description'() {
+        expect:
+        new WebApplicationContextRunner()
+                .withBean(GrailsApplication, grailsApplicationSupplier(loader))
+                .withConfiguration(AutoConfigurations.of(ControllersAutoConfiguration, WebMvcAutoConfiguration))
+                .run { context ->
+                    assert context.getBean(DispatcherServletRegistrationBean).urlMappings == [expected] as Set
+                }
+
+        where:
+        description              | loader                                      || expected
+        'can see Tomcat'         | ControllersAutoConfigurationSpec.classLoader || Settings.DEFAULT_TOMCAT_SERVLET_PATH
+        'cannot see Tomcat'      | new URLClassLoader(new URL[0], null)         || Settings.DEFAULT_WEB_SERVLET_PATH
+    }
+
+    void 'resource handlers are not added over mappings the application already registered'() {
+        given:
+        def registry = new ResourceHandlerRegistry(new StaticWebApplicationContext(), new MockServletContext())
+        registry.addResourceHandler('/webjars/**').addResourceLocations('classpath:/mine/')
+        registry.addResourceHandler('/static/**').addResourceLocations('classpath:/mine/')
+
+        when:
+        new ControllersAutoConfiguration.GrailsWebMvcConfigurer(0, true, '/static/**').addResourceHandlers(registry)
+
+        then:
+        registry.hasMappingForPattern('/webjars/**')
+        registry.hasMappingForPattern('/static/**')
+        !registry.hasMappingForPattern('/other/**')
+    }
+
+    void 'resource handlers are added for webjars and the resources pattern by default'() {
+        given:
+        def registry = new ResourceHandlerRegistry(new StaticWebApplicationContext(), new MockServletContext())
+
+        when:
+        new ControllersAutoConfiguration.GrailsWebMvcConfigurer(0, true, '/static/**').addResourceHandlers(registry)
+
+        then:
+        registry.hasMappingForPattern('/webjars/**')
+        registry.hasMappingForPattern('/static/**')
+    }
+
+    void 'no resource handlers are added when resource mappings are disabled'() {
+        given:
+        def registry = new ResourceHandlerRegistry(new StaticWebApplicationContext(), new MockServletContext())
+
+        when:
+        new ControllersAutoConfiguration.GrailsWebMvcConfigurer(0, false, '/static/**').addResourceHandlers(registry)
+
+        then:
+        !registry.hasMappingForPattern('/webjars/**')
+        !registry.hasMappingForPattern('/static/**')
+    }
+
     private static MockServletContext servletContextWithWebApplicationContext() {
         def servletContext = new MockServletContext()
         servletContext.setAttribute(
@@ -229,9 +313,9 @@ class ControllersAutoConfigurationSpec extends Specification {
         servletContext
     }
 
-    private Supplier<GrailsApplication> grailsApplicationSupplier() {
+    private Supplier<GrailsApplication> grailsApplicationSupplier(ClassLoader loader = getClass().classLoader) {
         () -> Mock(GrailsApplication) {
-            getClassLoader() >> getClass().classLoader
+            getClassLoader() >> loader
         }
     }
 
