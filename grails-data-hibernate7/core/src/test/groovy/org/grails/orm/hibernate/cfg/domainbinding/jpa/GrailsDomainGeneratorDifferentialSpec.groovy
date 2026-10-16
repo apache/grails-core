@@ -460,7 +460,7 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
     }
 
     /**
-     * Boots a group of entities with the classic binder. GORM only gives an entity a tenant id (and the binder only adds the tenant filter) in
+     * Boots a group of entities with the classic binder (stated, since native binding is the default). GORM only gives an entity a tenant id (and the binder only adds the tenant filter) in
      * discriminator multi-tenancy mode, so a group with multi-tenant entities is booted in that mode when it can be.
      */
     private static HibernateDatastore boot(List<Class<?>> group) {
@@ -468,6 +468,7 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
             try {
                 return new HibernateDatastore([
                         'dataSource.dbCreate'                     : 'create-drop',
+                        'hibernate.generatedDomainClasses'        : false,
                         'grails.gorm.multiTenancy.mode'          : MultiTenancySettings.MultiTenancyMode.DISCRIMINATOR,
                         'grails.gorm.multiTenancy.tenantResolver': new SystemPropertyTenantResolver(),
                 ], group as Class[])
@@ -475,7 +476,8 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
                 // a domain that needs another configuration is booted by default below
             }
         }
-        return new HibernateDatastore(group as Class[])
+        // the same create-drop the no-argument constructor applies, which resolves the SQL types the records hold
+        return new HibernateDatastore(['dataSource.dbCreate': 'create-drop', 'hibernate.generatedDomainClasses': false], group as Class[])
     }
 
     /**

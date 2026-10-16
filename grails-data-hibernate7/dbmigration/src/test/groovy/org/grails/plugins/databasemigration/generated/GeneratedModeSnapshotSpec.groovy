@@ -41,9 +41,11 @@ import liquibase.structure.core.PrimaryKey
 import liquibase.structure.core.Sequence
 import liquibase.structure.core.Table
 import liquibase.structure.core.UniqueConstraint
+import org.hibernate.boot.spi.MetadataImplementor
 import org.hibernate.dialect.H2Dialect
 import spock.lang.AutoCleanup
 import spock.lang.Specification
+import spock.lang.Unroll
 
 import org.grails.orm.hibernate.HibernateDatastore
 import org.grails.plugins.databasemigration.liquibase.GormDatabase
@@ -183,6 +185,36 @@ class GeneratedModeSnapshotSpec extends Specification {
         binder.any { it.contains('<addForeignKeyConstraint') }
         binder - generated == []
         generated - binder == []
+    }
+    /**
+     * The order of the columns of a table in the generated change log is the order Hibernate's mapping model holds them,
+     * because the migration commands configure no schema action and Hibernate only reorders the columns of the model for
+     * one (hbm2ddl.auto / dbCreate). Hibernate's annotation binder, which native binding uses, binds the persistent
+     * attributes of a class sorted by name, so after the identifier the columns follow the names of the properties, the
+     * version among them, and the foreign keys it resolves in a second pass come last. The classic binder listed the
+     * identifier, the version, then the properties in declaration order. Liquibase does not compare the order of
+     * columns, so dbm-gorm-diff against an existing database is not affected; only a createTable change set lists them
+     * in the new order.
+     */
+    @Unroll
+    def "without a schema action the columns of a table are in the order the binding created them (generated: #generated)"() {
+        when:
+        boot(generated, [SnapAuthor, SnapBook])
+
+        then:
+        tableColumns('snap_book') == columns
+
+        where:
+        generated | columns
+        false     | ['id', 'version', 'title', 'isbn', 'author_id']
+        true      | ['id', 'isbn', 'title', 'version', 'author_id']
+    }
+
+    private List<String> tableColumns(String table) {
+        org.hibernate.mapping.Table mapping = ((MetadataImplementor) datastore.metadata).collectTableMappings().find {
+            it.name.equalsIgnoreCase(table)
+        }
+        return mapping.columns*.name*.toLowerCase()
     }
 }
 
