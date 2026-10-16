@@ -1,0 +1,64 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ */
+package org.grails.cli.command
+
+import groovy.transform.CompileStatic
+import org.springframework.boot.cli.command.AbstractCommand
+import org.springframework.boot.cli.command.options.OptionHandler
+import org.springframework.boot.cli.command.options.OptionHelp
+import org.springframework.boot.cli.command.status.ExitStatus
+
+/**
+ * Base class for a {@link org.springframework.boot.cli.command.Command} that parse options using an {@link OptionHandler}.
+ *
+ * @author Phillip Webb
+ * @author Dave Syer
+ * @since 1.0.0
+ * @see OptionHandler
+ */
+@CompileStatic
+abstract class OptionParsingCommand extends AbstractCommand {
+
+    private final OptionHandler handler
+
+    protected OptionParsingCommand(String name, String description, OptionHandler handler) {
+        super(name, description)
+        this.handler = handler
+    }
+
+    @Override
+    String getHelp() {
+        return this.handler.getHelp()
+    }
+
+    @Override
+    Collection<OptionHelp> getOptionsHelp() {
+        return this.handler.getOptionsHelp()
+    }
+
+    @Override
+    final ExitStatus run(String... args) throws Exception {
+        return this.handler.run(args)
+    }
+
+    protected OptionHandler getHandler() {
+        return this.handler
+    }
+
+}

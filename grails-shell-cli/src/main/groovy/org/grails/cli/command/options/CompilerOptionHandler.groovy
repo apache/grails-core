@@ -1,0 +1,76 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ */
+package org.grails.cli.command.options
+
+import groovy.transform.CompileStatic
+import joptsimple.OptionSpec
+import org.springframework.boot.cli.command.options.OptionHandler
+
+/**
+ * An {@link OptionHandler} for commands that result in the compilation of one or more
+ * Groovy scripts.
+ *
+ * @author Andy Wilkinson
+ * @author Dave Syer
+ * @since 1.0.0
+ */
+@CompileStatic
+class CompilerOptionHandler extends OptionHandler {
+
+    private OptionSpec<Void> noGuessImportsOption
+
+    private OptionSpec<Void> noGuessDependenciesOption
+
+    private OptionSpec<Boolean> autoconfigureOption
+
+    private OptionSpec<String> classpathOption
+
+    @Override
+    protected final void options() {
+        this.noGuessImportsOption = option('no-guess-imports', 'Do not attempt to guess imports')
+        this.noGuessDependenciesOption = option('no-guess-dependencies', 'Do not attempt to guess dependencies')
+        this.autoconfigureOption = option('autoconfigure', 'Add autoconfigure compiler transformations')
+            .withOptionalArg()
+            .ofType(Boolean)
+            .defaultsTo(true)
+        this.classpathOption = option(Arrays.asList('classpath', 'cp'), 'Additional classpath entries')
+            .withRequiredArg()
+        doOptions()
+    }
+
+    protected void doOptions() {
+    }
+
+    OptionSpec<Void> getNoGuessImportsOption() {
+        return this.noGuessImportsOption
+    }
+
+    OptionSpec<Void> getNoGuessDependenciesOption() {
+        return this.noGuessDependenciesOption
+    }
+
+    OptionSpec<String> getClasspathOption() {
+        return this.classpathOption
+    }
+
+    OptionSpec<Boolean> getAutoconfigureOption() {
+        return this.autoconfigureOption
+    }
+
+}
