@@ -37,6 +37,7 @@ import org.springframework.web.servlet.DispatcherServlet
 
 import grails.util.Holders
 import org.grails.web.context.ServletEnvironmentGrailsApplicationDiscoveryStrategy
+import org.grails.web.util.GrailsApplicationAttributes
 import org.grails.web.util.HiddenHttpMethod
 import org.grails.web.util.WebUtils
 
@@ -60,18 +61,18 @@ class GrailsDispatcherServlet extends DispatcherServlet implements ServletContex
 
     @Override
     protected ServletRequestAttributes buildRequestAttributes(HttpServletRequest request, HttpServletResponse response, RequestAttributes previousAttributes) {
-        if (previousAttributes == null || !(previousAttributes instanceof GrailsWebRequest)) {
-            return buildGrailsWebRequest(request, response)
+        GrailsWebRequest webRequest = previousAttributes instanceof GrailsWebRequest
+                ? (GrailsWebRequest) previousAttributes
+                : GrailsWebRequest.lookup(request)
+        // A later RequestContextFilter can replace the thread binding while the Grails filter's
+        // request attribute still holds the active instance used by URL mappings.
+        if (webRequest == null || !webRequest.isActive()) {
+            webRequest = buildGrailsWebRequest(request, response)
         }
-        else {
-            GrailsWebRequest webRequest = (GrailsWebRequest) previousAttributes
-            if (webRequest.isActive()) {
-                return webRequest
-            }
-            else {
-                return buildGrailsWebRequest(request, response)
-            }
-        }
+        // Publish new instances too, including when a completed request is redispatched.
+        // FrameworkServlet owns binding and restoring RequestContextHolder around the dispatch.
+        request.setAttribute(GrailsApplicationAttributes.WEB_REQUEST, webRequest)
+        return webRequest
     }
 
     protected GrailsWebRequest buildGrailsWebRequest(HttpServletRequest request, HttpServletResponse response) {
