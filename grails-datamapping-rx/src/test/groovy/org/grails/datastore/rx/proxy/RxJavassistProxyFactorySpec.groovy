@@ -177,8 +177,58 @@ class RxJavassistProxyFactorySpec extends Specification {
         then:
         thrown(UnsupportedOperationException)
     }
+
+    void "isInitialized(Object, associationName) reports an initialized proxy as initialized"() {
+        given:
+        ObservableProxy proxy = Stub(ObservableProxy) {
+            isInitialized() >> true
+        }
+
+        expect:
+        factory.isInitialized(proxy, 'someAssociation')
+    }
+
+    void "the generated proxy class does not intercept finalize, bridge or synthetic methods but intercepts regular ones"() {
+        given:
+        RxDatastoreClientImplementor client = Stub(RxDatastoreClientImplementor)
+        client.get(ProxyFilterTarget, _ as Serializable, _ as QueryState) >> Observable.empty()
+
+        when:
+        ProxyFilterTarget proxy = factory.createProxy(client, new QueryState(), ProxyFilterTarget, 1L)
+        List<java.lang.reflect.Method> declared = proxy.getClass().declaredMethods.toList()
+
+        then:
+        declared.any { it.name == 'describe' }
+        declared.every { it.name != 'finalize' }
+        declared.every { !it.name.contains('super$') }
+        declared.every { !it.bridge }
+    }
 }
 
 class Widget {
     String name
+}
+
+class ProxyFilterTarget implements Comparable<ProxyFilterTarget> {
+
+    String name
+
+    String describe() {
+        name
+    }
+
+    @Override
+    String toString() {
+        "ProxyFilterTarget(${name})"
+    }
+
+    @Override
+    int compareTo(ProxyFilterTarget other) {
+        name <=> other.name
+    }
+
+    @Override
+    protected void finalize() {
+    }
+
 }

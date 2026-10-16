@@ -16,18 +16,17 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.datastore.mapping.simple;
+package org.grails.datastore.mapping.simple
 
-import java.util.Map;
+import groovy.transform.CompileStatic
+import org.springframework.context.ApplicationEventPublisher
 
-import org.springframework.context.ApplicationEventPublisher;
-
-import org.grails.datastore.mapping.core.AbstractSession;
-import org.grails.datastore.mapping.engine.Persister;
-import org.grails.datastore.mapping.model.MappingContext;
-import org.grails.datastore.mapping.model.PersistentEntity;
-import org.grails.datastore.mapping.simple.engine.SimpleMapEntityPersister;
-import org.grails.datastore.mapping.transactions.Transaction;
+import org.grails.datastore.mapping.core.AbstractSession
+import org.grails.datastore.mapping.engine.Persister
+import org.grails.datastore.mapping.model.MappingContext
+import org.grails.datastore.mapping.model.PersistentEntity
+import org.grails.datastore.mapping.simple.engine.SimpleMapEntityPersister
+import org.grails.datastore.mapping.transactions.Transaction
 
 /**
  * A simple implementation of the {@link org.grails.datastore.mapping.core.Session} interface that backs onto an in-memory map.
@@ -36,66 +35,69 @@ import org.grails.datastore.mapping.transactions.Transaction;
  * @author Graeme Rocher
  * @since 1.0
  */
-@SuppressWarnings("rawtypes")
-public class SimpleMapSession extends AbstractSession<Map> {
-    private Map<String, Map> datastore;
+@SuppressWarnings('rawtypes')
+@CompileStatic
+class SimpleMapSession extends AbstractSession<Map> {
 
-    public SimpleMapSession(SimpleMapDatastore datastore, MappingContext mappingContext,
+    private Map<String, Map> datastore
+
+    SimpleMapSession(SimpleMapDatastore datastore, MappingContext mappingContext,
                ApplicationEventPublisher publisher) {
-        super(datastore, mappingContext, publisher);
-        this.datastore = datastore.getBackingMap();
+        super(datastore, mappingContext, publisher)
+        this.datastore = datastore.getBackingMap()
     }
 
     @Override
-    public boolean isPendingAlready(Object obj) {
-        return false;
+    boolean isPendingAlready(Object obj) {
+        return false
     }
 
     @Override
     protected Persister createPersister(Class cls, MappingContext mappingContext) {
-        PersistentEntity entity = mappingContext.getPersistentEntity(cls.getName());
+        PersistentEntity entity = mappingContext.getPersistentEntity(cls.getName())
         if (entity == null) {
-            return null;
+            return null
         }
         return new SimpleMapEntityPersister(mappingContext, entity, this,
-            (SimpleMapDatastore) getDatastore(), publisher);
+            (SimpleMapDatastore) getDatastore(), publisher)
     }
 
-    public Map<String, Map> getBackingMap() {
-        return datastore;
+    Map<String, Map> getBackingMap() {
+        return datastore
     }
 
     @Override
     protected Transaction beginTransactionInternal() {
-        return new MockTransaction(this);
+        return new MockTransaction(this)
     }
 
-    public Map getNativeInterface() {
-        return datastore;
+    Map getNativeInterface() {
+        return datastore
     }
 
     private class MockTransaction implements Transaction {
-        public MockTransaction(SimpleMapSession simpleMapSession) {
+        MockTransaction(SimpleMapSession simpleMapSession) {
         }
 
-        public void commit() {
+        void commit() {
             // do nothing
         }
 
-        public void rollback() {
+        void rollback() {
             // do nothing
         }
 
-        public Object getNativeTransaction() {
-            return this;
+        Object getNativeTransaction() {
+            return this
         }
 
-        public boolean isActive() {
-            return true;
+        boolean isActive() {
+            return true
         }
 
-        public void setTimeout(int timeout) {
+        void setTimeout(int timeout) {
             // do nothing
         }
     }
+
 }

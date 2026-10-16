@@ -16,27 +16,22 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.gorm.graphql.entity;
+package org.grails.gorm.graphql.entity
 
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.stream.Collectors;
+import java.util.stream.Collectors
 
-import graphql.execution.MergedField;
-import graphql.language.Field;
-import graphql.language.Selection;
-import graphql.language.SelectionSet;
-import graphql.schema.DataFetchingEnvironment;
+import graphql.execution.MergedField
+import graphql.language.Field
+import graphql.language.Selection
+import graphql.language.SelectionSet
+import graphql.schema.DataFetchingEnvironment
+import groovy.transform.CompileStatic
 
-import org.grails.datastore.gorm.GormEnhancer;
-import org.grails.datastore.mapping.model.PersistentEntity;
-import org.grails.datastore.mapping.model.types.Association;
-import org.grails.datastore.mapping.model.types.ToMany;
-import org.grails.datastore.mapping.model.types.ToOne;
+import org.grails.datastore.gorm.GormEnhancer
+import org.grails.datastore.mapping.model.PersistentEntity
+import org.grails.datastore.mapping.model.types.Association
+import org.grails.datastore.mapping.model.types.ToMany
+import org.grails.datastore.mapping.model.types.ToOne
 
 /**
  * Helper class to determine which properties should be eagerly
@@ -45,26 +40,27 @@ import org.grails.datastore.mapping.model.types.ToOne;
  * @author James Kleeh
  * @since 1.0.0
  */
-public class EntityFetchOptions {
+@CompileStatic
+class EntityFetchOptions {
 
-    private final Map<String, Association<?>> associations = new LinkedHashMap<>();
-    protected final PersistentEntity entity;
-    protected final Set<String> associationNames;
-    protected final String propertyName;
+    private final Map<String, Association<?>> associations = new LinkedHashMap<>()
+    protected final PersistentEntity entity
+    protected final Set<String> associationNames
+    protected final String propertyName
 
-    private static final String JOIN = "join";
-    private static final String FETCH = "fetch";
+    private static final String JOIN = 'join'
+    private static final String FETCH = 'fetch'
 
-    public EntityFetchOptions(Class<?> entityClass) {
-        this(entityClass, null);
+    EntityFetchOptions(Class<?> entityClass) {
+        this(entityClass, null)
     }
 
-    public EntityFetchOptions(Class<?> entityClass, String projectionName) {
-        this(GormEnhancer.findStaticApi(entityClass).getGormPersistentEntity(), projectionName);
+    EntityFetchOptions(Class<?> entityClass, String projectionName) {
+        this(GormEnhancer.findStaticApi(entityClass).getGormPersistentEntity(), projectionName)
     }
 
-    public EntityFetchOptions(PersistentEntity entity) {
-        this(entity, null);
+    EntityFetchOptions(PersistentEntity entity) {
+        this(entity, null)
     }
 
     /**
@@ -74,75 +70,75 @@ public class EntityFetchOptions {
      * @param entity The {@link PersistentEntity} being queried
      * @param projectionName The name of the property being projected
      */
-    public EntityFetchOptions(PersistentEntity entity, String projectionName) {
+    EntityFetchOptions(PersistentEntity entity, String projectionName) {
         if (entity == null) {
-            throw new IllegalArgumentException("Cannot retrieve fetch options for a null entity. Is GORM initialized?");
+            throw new IllegalArgumentException('Cannot retrieve fetch options for a null entity. Is GORM initialized?')
         }
 
-        this.entity = entity;
-        this.propertyName = projectionName;
+        this.entity = entity
+        this.propertyName = projectionName
         for (Association<?> association : entity.getAssociations()) {
-            associations.put(association.getName(), association);
+            associations.put(association.getName(), association)
         }
 
-        associationNames = associations.keySet();
+        associationNames = associations.keySet()
     }
 
     /**
      * @return The associations of the {@link PersistentEntity}. The key
      * is the property name and the value is the association.
      */
-    public Map<String, Association<?>> getAssociations() {
-        return associations;
+    Map<String, Association<?>> getAssociations() {
+        return associations
     }
 
     protected boolean isForeignKeyInChild(Association<?> association) {
-        return association instanceof ToOne<?> toOne && toOne.isForeignKeyInChild() || association instanceof ToMany;
+        return association instanceof ToOne<?> toOne && toOne.isForeignKeyInChild() || association instanceof ToMany
     }
 
     protected void handleField(String parentName, Field selectedField, Set<String> joinProperties) {
-        String resolvedName;
+        String resolvedName
 
         if (parentName != null) {
-            resolvedName = parentName + "." + selectedField.getName();
+            resolvedName = parentName + '.' + selectedField.getName()
         } else {
-            resolvedName = selectedField.getName();
+            resolvedName = selectedField.getName()
         }
 
-        Association<?> association = associations.get(selectedField.getName());
+        Association<?> association = associations.get(selectedField.getName())
 
-        PersistentEntity entity = association.getAssociatedEntity();
+        PersistentEntity entity = association.getAssociatedEntity()
 
         if (entity == null) {
-            joinProperties.add(resolvedName);
-            return;
+            joinProperties.add(resolvedName)
+            return
         }
 
-        final SelectionSet set = selectedField.getSelectionSet();
+        final SelectionSet set = selectedField.getSelectionSet()
         // SelectionSet#getSelections() is declared to return a raw List<Selection> in graphql-java itself,
         // so there's no parameterized type available to hold its result without an unchecked cast.
-        @SuppressWarnings("rawtypes")
-        List<Selection> selections = (set == null ? new ArrayList<>() : set.getSelections());
+        @SuppressWarnings('rawtypes')
+        List<Selection> selections = (set == null ? new ArrayList<>() : set.getSelections())
 
         if (!association.isEmbedded()) {
             if (isForeignKeyInChild(association)) {
-                joinProperties.add(resolvedName);
+                joinProperties.add(resolvedName)
             }
             else if (selections.size() == 1 && selections.getFirst() instanceof Field field) {
                 if (!entity.isIdentityName(field.getName())) {
-                    joinProperties.add(resolvedName);
+                    joinProperties.add(resolvedName)
                 }
             }
             else {
-                joinProperties.add(resolvedName);
+                joinProperties.add(resolvedName)
             }
         }
 
-        List<Field> fields = new ArrayList<>();
+        List<Field> fields = new ArrayList<>()
 
         selections.stream()
-                .filter(Field.class::isInstance)
-                .map(Field.class::cast)
+                .filter(selection -> selection instanceof Field)
+                .map(selection -> (Field) selection)
                 .forEach((Field field) -> {
                     if (field.getName().equals(association.getReferencedPropertyName())) {
                         if (field.getSelectionSet() != null) {
@@ -151,23 +147,23 @@ public class EntityFetchOptions {
                                     .getSelectionSet()
                                     .getSelections()
                                     .stream()
-                                    .filter(Field.class::isInstance)
-                                    .map(Field.class::cast)
-                                    .collect(Collectors.toList());
+                                    .filter(selection -> selection instanceof Field)
+                                    .map(selection -> (Field) selection)
+                                    .collect(Collectors.toList())
 
-                            joinProperties.addAll(getJoinProperties(nestedFields));
+                            joinProperties.addAll(getJoinProperties(nestedFields))
                         }
                     }
                     else {
-                        fields.add(field);
+                        fields.add(field)
                     }
-                });
+                })
 
-        joinProperties.addAll(new EntityFetchOptions(entity, resolvedName).getJoinProperties(fields));
+        joinProperties.addAll(new EntityFetchOptions(entity, resolvedName).getJoinProperties(fields))
     }
 
-    public Set<String> getJoinProperties(List<Field> fields) {
-        return getJoinProperties(fields, false);
+    Set<String> getJoinProperties(List<Field> fields) {
+        return getJoinProperties(fields, false)
     }
 
     /**
@@ -177,28 +173,28 @@ public class EntityFetchOptions {
      * @param skipCollections Whether to exclude associations that are collections
      * @return The list of properties to eagerly fetch
      */
-    public Set<String> getJoinProperties(List<Field> fields, boolean skipCollections) {
-        Set<String> joinProperties = new HashSet<>();
+    Set<String> getJoinProperties(List<Field> fields, boolean skipCollections) {
+        Set<String> joinProperties = new HashSet<>()
 
         if (fields != null) {
             fields.stream()
                     .filter(field -> associationNames.contains(field.getName()))
                     .filter(field -> {
                         if (skipCollections) {
-                            return !(associations.get(field.getName()) instanceof ToMany);
+                            return !(associations.get(field.getName()) instanceof ToMany)
                         }
                         else {
-                            return true;
+                            return true
                         }
                     })
-                    .forEach(field -> handleField(propertyName, field, joinProperties));
+                    .forEach(field -> handleField(propertyName, field, joinProperties))
         }
 
-        return joinProperties;
+        return joinProperties
     }
 
-    public Set<String> getJoinProperties(DataFetchingEnvironment environment) {
-        return getJoinProperties(environment, false);
+    Set<String> getJoinProperties(DataFetchingEnvironment environment) {
+        return getJoinProperties(environment, false)
     }
 
     /**
@@ -210,12 +206,12 @@ public class EntityFetchOptions {
      * @param skipCollections Whether to exclude associations that are collections
      * @return The list of properties to eagerly fetch
      */
-    public Set<String> getJoinProperties(DataFetchingEnvironment environment, boolean skipCollections) {
-        MergedField environmentMergedField = environment.getMergedField();
+    Set<String> getJoinProperties(DataFetchingEnvironment environment, boolean skipCollections) {
+        MergedField environmentMergedField = environment.getMergedField()
 
-        List<Field> fields;
+        List<Field> fields
         if (environmentMergedField == null) {
-            fields = new ArrayList<>();
+            fields = new ArrayList<>()
         }
         else {
             fields = environmentMergedField
@@ -223,12 +219,12 @@ public class EntityFetchOptions {
                     .stream()
                     .filter(field -> field.getSelectionSet() != null)
                     .flatMap(field -> field.getSelectionSet().getSelections().stream())
-                    .filter(Field.class::isInstance)
-                    .map(Field.class::cast)
-                    .collect(Collectors.toList());
+                    .filter(selection -> selection instanceof Field)
+                    .map(selection -> (Field) selection)
+                    .collect(Collectors.toList())
         }
 
-        return getJoinProperties(fields, skipCollections);
+        return getJoinProperties(fields, skipCollections)
     }
 
     /**
@@ -237,22 +233,22 @@ public class EntityFetchOptions {
      * @param properties The properties to fetch
      * @return The fetch argument
      */
-    public Map<String, Map<String, String>> getFetchArgument(Set<String> properties) {
+    Map<String, Map<String, String>> getFetchArgument(Set<String> properties) {
         if (properties.isEmpty()) {
-            return new LinkedHashMap<>();
+            return new LinkedHashMap<>()
         }
-        Map<String, Map<String, String>> arguments = new LinkedHashMap<>(1);
-        Map<String, String> joins = new LinkedHashMap<>(properties.size());
+        Map<String, Map<String, String>> arguments = new LinkedHashMap<>(1)
+        Map<String, String> joins = new LinkedHashMap<>(properties.size())
 
         for (String prop: properties) {
-            joins.put(prop, JOIN);
+            joins.put(prop, JOIN)
         }
-        arguments.put(FETCH, joins);
-        return arguments;
+        arguments.put(FETCH, joins)
+        return arguments
     }
 
-    public Map<String, Map<String, String>> getFetchArgument(DataFetchingEnvironment environment) {
-        return getFetchArgument(environment, false);
+    Map<String, Map<String, String>> getFetchArgument(DataFetchingEnvironment environment) {
+        return getFetchArgument(environment, false)
     }
 
     /**
@@ -265,7 +261,8 @@ public class EntityFetchOptions {
      * @param skipCollections Whether to exclude associations that are collections
      * @return The fetch argument
      */
-    public Map<String, Map<String, String>> getFetchArgument(DataFetchingEnvironment environment, boolean skipCollections) {
-        return getFetchArgument(getJoinProperties(environment, skipCollections));
+    Map<String, Map<String, String>> getFetchArgument(DataFetchingEnvironment environment, boolean skipCollections) {
+        return getFetchArgument(getJoinProperties(environment, skipCollections))
     }
+
 }

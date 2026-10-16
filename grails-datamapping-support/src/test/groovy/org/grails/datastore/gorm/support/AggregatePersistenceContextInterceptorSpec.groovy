@@ -193,4 +193,23 @@ class AggregatePersistenceContextInterceptorSpec extends Specification {
         1 * first.setReadWrite()
         1 * second.setReadWrite()
     }
+
+    void "an interceptor created without a list of interceptors ignores every operation"() {
+        given:
+        def interceptor = new AggregatePersistenceContextInterceptor(null)
+
+        when:
+        interceptor.reconnect()
+        interceptor.destroy()
+        interceptor.clear()
+        interceptor.disconnect()
+        interceptor.flush()
+        interceptor.init()
+        interceptor.setReadOnly()
+        interceptor.setReadWrite()
+
+        then:
+        noExceptionThrown()
+        !interceptor.isOpen()
+    }
 }
