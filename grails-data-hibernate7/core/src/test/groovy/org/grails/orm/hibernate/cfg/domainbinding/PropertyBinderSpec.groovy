@@ -151,6 +151,20 @@ class PropertyBinderSpec extends HibernateGormDatastoreSpec {
         enumBound.getCascade() == stringBound.getCascade()
     }
 
+    void "accessorName is property by default and field when the mapping says field"() {
+        given:
+        def entity = (HibernatePersistentEntity) getMappingContext().getPersistentEntity(PBEntity.name)
+        def persistentProperty = (HibernatePersistentProperty) entity.getPropertyByName("name")
+        def mockConfig = new org.grails.orm.hibernate.cfg.PropertyConfig()
+        mockConfig.setAccessType(jakarta.persistence.AccessType.FIELD)
+        def fieldProp = Spy(persistentProperty)
+        fieldProp.getHibernateMappedForm() >> mockConfig
+
+        expect:
+        binder.accessorName(persistentProperty) == "property"
+        binder.accessorName(fieldProp) == "field"
+    }
+
     void "test accessorName for field access"() {
         given:
         def entity = (HibernatePersistentEntity) getMappingContext().getPersistentEntity(PBEntity.name)

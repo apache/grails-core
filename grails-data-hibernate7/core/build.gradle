@@ -131,6 +131,14 @@ sourceSets {
     }
 }
 
+tasks.named('compileTestGroovy', GroovyCompile) {
+    // The test sources declare about 1,200 GORM entities (every mapping native domain binding is checked against),
+    // and the GORM AST transformations of that many classes do not fit the 2G heap CompilePlugin gives every
+    // compiler daemon: a full recompile fails with "Java heap space" after half an hour of collecting. A later -Xmx
+    // in the Groovy fork options wins over the plugin's; memoryMaximumSize does not, the plugin's -Xmx replaces it.
+    groovyOptions.forkOptions.jvmArgs += ['-Xmx4G']
+}
+
 apply {
     from rootProject.layout.projectDirectory.file('gradle/hibernate7-test-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/grails-data-tck-config.gradle')

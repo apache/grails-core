@@ -84,8 +84,8 @@ class UnidirectionalOneToManyBinderSpec extends HibernateGormDatastoreSpec {
     def "test bindUnidirectionalOneToMany with join table"() {
         given:
         def grailsDomainBinder = getGrailsDomainBinder()
-        def ownerEntity = grailsDomainBinder.hibernateMappingContext.getPersistentEntity(UniOwner.name) as GrailsHibernatePersistentEntity
-        def petEntity = grailsDomainBinder.hibernateMappingContext.getPersistentEntity(UniPet.name) as GrailsHibernatePersistentEntity
+        def ownerEntity = mappingContext.getPersistentEntity(UniOwner.name) as GrailsHibernatePersistentEntity
+        def petEntity = mappingContext.getPersistentEntity(UniPet.name) as GrailsHibernatePersistentEntity
 
         def ownerToPetsProperty = ownerEntity.getPropertyByName("pets") as HibernateOneToManyProperty
 
@@ -114,8 +114,8 @@ class UnidirectionalOneToManyBinderSpec extends HibernateGormDatastoreSpec {
     def "test bindUnidirectionalOneToMany with backref"() {
         given:
         def grailsDomainBinder = getGrailsDomainBinder()
-        def ownerEntity = grailsDomainBinder.hibernateMappingContext.getPersistentEntity(UniOwner.name) as GrailsHibernatePersistentEntity
-        def petEntity = grailsDomainBinder.hibernateMappingContext.getPersistentEntity(UniPet.name) as GrailsHibernatePersistentEntity
+        def ownerEntity = mappingContext.getPersistentEntity(UniOwner.name) as GrailsHibernatePersistentEntity
+        def petEntity = mappingContext.getPersistentEntity(UniPet.name) as GrailsHibernatePersistentEntity
 
         def mappings = grailsDomainBinder.metadataBuildingContext.metadataCollector
         def ownerPersistentClass = mappings.getEntityBinding(UniOwner.name)

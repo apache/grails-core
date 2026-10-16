@@ -56,6 +56,28 @@ class GrailsDataHibernate7TckManager extends GrailsDataTckManager {
     ConfigObject grailsConfig = new ConfigObject()
     boolean isTransactional = true
 
+    /**
+     * System property that boots every datastore through the generated-domain-class path
+     * ({@code hibernate.generatedDomainClasses}). It is off by default; the Gradle property
+     * {@code -Pgrails.test.generatedDomainClasses=true} sets it on the test JVM, which runs the whole module suite in
+     * generated mode. The datastores this manager builds read it, and so does the default of
+     * {@code HibernateConnectionSourceSettings}, which covers the specs that build their own {@code HibernateDatastore}
+     * without setting {@code hibernate.generatedDomainClasses} themselves.
+     */
+    static final String GENERATED_MODE_PROPERTY = 'grails.hibernate.generatedDomainClasses'
+
+    boolean generatedDomainClasses = Boolean.getBoolean(GENERATED_MODE_PROPERTY)
+
+    /**
+     * Registers the classes like {@link #registerDomainClasses} and boots the datastore through the generated-domain-class
+     * path: Hibernate's annotation binder binds classes generated from the GORM mapping, and the real domain classes are what
+     * sessions persist and load. {@code registerDomainClasses} is unchanged and keeps booting through the domain binder.
+     */
+    void registerGeneratedDomainClasses(Class... classes) {
+        generatedDomainClasses = true
+        registerDomainClasses(classes)
+    }
+
     @Override
     void setup(Class<? extends Specification> spec) {
         cleanRegistry()
@@ -67,6 +89,9 @@ class GrailsDataHibernate7TckManager extends GrailsDataTckManager {
         grailsApplication = new DefaultGrailsApplication(domainClasses as Class[], new GroovyClassLoader(GrailsDataHibernate7TckManager.getClassLoader()))
         grailsConfig.dataSource.dbCreate = "create-drop"
         grailsConfig.hibernate.proxy_factory_class = "org.grails.orm.hibernate.proxy.ByteBuddyGroovyProxyFactory"
+        if (generatedDomainClasses) {
+            grailsConfig.hibernate.generatedDomainClasses = true
+        }
         grailsConfig.'grails.gorm.default.mapping' = {
             id generator: 'identity'
         }
@@ -154,6 +179,7 @@ class GrailsDataHibernate7TckManager extends GrailsDataTckManager {
                 'hibernate.cache.queries'  : 'true',
                 'hibernate.hbm2ddl.auto'   : 'create-drop',
                 'hibernate.proxy_factory_class' : 'org.grails.orm.hibernate.proxy.ByteBuddyGroovyProxyFactory',
+                'hibernate.generatedDomainClasses' : generatedDomainClasses,
                 'grails.gorm.default.mapping' : {
                     id generator: 'identity'
                 },
@@ -199,6 +225,7 @@ class GrailsDataHibernate7TckManager extends GrailsDataTckManager {
                 'hibernate.cache.queries'                   : 'true',
                 'hibernate.hbm2ddl.auto'                    : 'create-drop',
                 'hibernate.proxy_factory_class'             : 'org.grails.orm.hibernate.proxy.ByteBuddyGroovyProxyFactory',
+                'hibernate.generatedDomainClasses'          : generatedDomainClasses,
                 'grails.gorm.default.mapping'               : {
                     id generator: 'identity'
                 },

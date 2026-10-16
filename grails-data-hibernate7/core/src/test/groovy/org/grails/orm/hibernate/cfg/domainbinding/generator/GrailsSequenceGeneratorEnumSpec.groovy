@@ -26,6 +26,7 @@ import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersi
 import org.grails.orm.hibernate.cfg.HibernateSimpleIdentity
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy
 
+import org.hibernate.boot.spi.MetadataBuildingContext
 import org.hibernate.engine.jdbc.env.spi.JdbcEnvironment
 import org.hibernate.generator.Assigned
 import org.hibernate.generator.GeneratorCreationContext
@@ -71,11 +72,16 @@ class GrailsSequenceGeneratorEnumSpec extends HibernateGormDatastoreSpec {
         // Use the real PostgreSQL database from the running datastore so DDL type
         // registries (needed by TableGenerator.registerExportables) are correct.
         def db = datastore.metadata.database
-        def table = new org.hibernate.mapping.Table("grails_sequence_generator_enum_spec_entity")
+        // The constructor argument is the contributor, not the table name
+        def table = new org.hibernate.mapping.Table("grails")
+        table.setName("grails_sequence_generator_enum_spec_entity")
         def column = new Column("id")
         def value = Mock(Value) {
             getColumns() >> [column]
             getTable()   >> table
+            getBuildingContext() >> Mock(MetadataBuildingContext) {
+                getCurrentContributorName() >> "grails"
+            }
         }
         def property = Mock(Property) {
             getName() >> "id"

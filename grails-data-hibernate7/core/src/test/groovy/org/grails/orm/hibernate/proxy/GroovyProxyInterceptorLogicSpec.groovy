@@ -138,4 +138,19 @@ class GroovyProxyInterceptorLogicSpec extends Specification {
         GroovyProxyInterceptorLogic.getIdentifier(proxy) == id
         GroovyProxyInterceptorLogic.getIdentifier(new Object()) == null
     }
+
+    def "isInitialized reports Groovy proxy state and null for non-proxies"() {
+        given:
+        def proxyMc = Mock(ProxyInstanceMetaClass) {
+            isProxyInitiated() >> initiated
+        }
+        def proxy = new TestGroovyObject(metaClass: proxyMc)
+
+        expect:
+        GroovyProxyInterceptorLogic.isInitialized(proxy) == initiated
+        GroovyProxyInterceptorLogic.isInitialized(new Object()) == null
+
+        where:
+        initiated << [true, false]
+    }
 }
