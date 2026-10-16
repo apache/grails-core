@@ -37,12 +37,12 @@ tasks.named('rat') {
             'licenses/**', // licenses directory excluded
             'grails-doc/distribution-artifacts/licenses/**', // third-party license texts bundled in the documentation distribution
             '.git-blame-ignore-revs', // git configuration isn't code
-            'grails-web-common/src/main/groovy/org/grails/web/json/JSONObject.java',
-            'grails-web-common/src/main/groovy/org/grails/web/json/JSONArray.java',
-            'grails-web-common/src/main/groovy/org/grails/web/json/JSONTokener.java',
-            'grails-web-common/src/main/groovy/org/grails/web/json/JSONElement.java',
-            'grails-web-common/src/main/groovy/org/grails/web/json/JSONException.java',
-            'grails-web-common/src/main/groovy/org/grails/web/json/JSONWriter.java',
+            'grails-web-common/src/main/groovy/org/grails/web/json/JSONObject.groovy',
+            'grails-web-common/src/main/groovy/org/grails/web/json/JSONArray.groovy',
+            'grails-web-common/src/main/groovy/org/grails/web/json/JSONTokener.groovy',
+            'grails-web-common/src/main/groovy/org/grails/web/json/JSONElement.groovy',
+            'grails-web-common/src/main/groovy/org/grails/web/json/JSONException.groovy',
+            'grails-web-common/src/main/groovy/org/grails/web/json/JSONWriter.groovy',
             '**/.gitattributes', // git configuration isn't code
             '**/.gradle/**', '**/wrapper/**', 'gradlew*',  // gradle wrapper files excluded from src zip
             '**/*.html', // html files are only in test
