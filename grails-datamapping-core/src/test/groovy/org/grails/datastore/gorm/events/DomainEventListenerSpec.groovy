@@ -150,6 +150,24 @@ class DomainEventListenerSpec extends Specification {
         1 * ea.setProperty(GormProperties.VERSION, 0)
     }
 
+    void "beforeInsert swallows an exception raised while setting the initial version"() {
+        given:
+        PersistentEntity entity = entityFor(NoHooksDomain, true, Long)
+        DomainEventListener listener = new DomainEventListener(plainDatastore(Stub(MappingContext) { getPersistentEntities() >> [] }))
+        EntityAccess ea = Mock(EntityAccess) {
+            getEntity() >> new NoHooksDomain()
+            getPersistentEntity() >> entity
+        }
+
+        when:
+        boolean result = listener.beforeInsert(entity, ea)
+
+        then:
+        1 * ea.setProperty(GormProperties.VERSION, 0) >> { throw new IllegalStateException('cannot set version') }
+        noExceptionThrown()
+        result
+    }
+
     void "beforeInsert sets an initial java.sql.Timestamp version when the version type is a Timestamp"() {
         given:
         PersistentEntity entity = entityFor(NoHooksDomain, true, Timestamp)
