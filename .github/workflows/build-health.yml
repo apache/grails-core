@@ -59,7 +59,7 @@ jobs:
           -Dorg.gradle.jvmargs="-Dfile.encoding=UTF-8 -Xmx5G"
       - name: "📤 Upload Reports"
         if: always()
-        uses: actions/upload-artifact@v7.0.1
+        uses: actions/upload-artifact@v7.0.2
         with:
           name: core-build-health
           path: |
@@ -102,7 +102,7 @@ jobs:
         run: ./gradlew buildHealth --continue
       - name: "📤 Upload Reports"
         if: always()
-        uses: actions/upload-artifact@v7.0.1
+        uses: actions/upload-artifact@v7.0.2
         with:
           name: gradle-plugin-build-health
           path: grails-gradle/build/reports/dependency-analysis/
@@ -143,7 +143,7 @@ jobs:
         run: ./gradlew buildHealth --continue
       - name: "📤 Upload Reports"
         if: always()
-        uses: actions/upload-artifact@v7.0.1
+        uses: actions/upload-artifact@v7.0.2
         with:
           name: forge-build-health
           path: grails-forge/build/reports/dependency-analysis/
