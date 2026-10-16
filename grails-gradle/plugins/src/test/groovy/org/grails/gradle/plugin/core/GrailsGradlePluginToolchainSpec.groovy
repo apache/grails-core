@@ -157,6 +157,32 @@ class GrailsGradlePluginToolchainSpec extends GradleSpecification {
         !result.output.contains('STARTUP_PROGRESS_ARG')
     }
 
+    def "forked application and test JVMs receive sql-tail settings given as Gradle properties"() {
+        given:
+        setupTestResourceProject('fork-sql-tail')
+
+        when:
+        def result = executeTask('inspectSqlTail',
+                ['-Pgrails.gorm.sqlTail.enabled', '-Pgrails.gorm.sqlTail.file=build/statements.log'])
+
+        then: 'bootRun and test both get them, a bare one as true'
+        result.output.contains('SQL_TAIL_ARG bootRun -Dgrails.gorm.sqlTail.enabled=true')
+        result.output.contains('SQL_TAIL_ARG bootRun -Dgrails.gorm.sqlTail.file=build/statements.log')
+        result.output.contains('SQL_TAIL_ARG test -Dgrails.gorm.sqlTail.enabled=true')
+        result.output.contains('SQL_TAIL_ARG test -Dgrails.gorm.sqlTail.file=build/statements.log')
+    }
+
+    def "forked JVMs receive no sql-tail settings when none are given"() {
+        given:
+        setupTestResourceProject('fork-sql-tail')
+
+        when:
+        def result = executeTask('inspectSqlTail')
+
+        then:
+        !result.output.contains('SQL_TAIL_ARG')
+    }
+
     def "custom heap sizes are not overridden by fork settings"() {
         given:
         setupTestResourceProject('fork-settings-custom')

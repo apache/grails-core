@@ -3,6 +3,10 @@
         {
             "name": "dataSource",
             "description": "DataSource"
+        },
+        {
+            "name": "grails.gorm.sqlTail",
+            "description": "SQL statement capture for the sql-tail command"
         }
     ],
     "properties": [
@@ -86,6 +90,17 @@
             "type": "java.lang.String",
             "description": "The connection pool implementation class when multiple are on the classpath.",
             "defaultValue": "com.zaxxer.hikari.HikariDataSource"
+        },
+        {
+            "name": "grails.gorm.sqlTail.enabled",
+            "type": "java.lang.Boolean",
+            "description": "Whether Hibernate records every SQL statement it runs, with the controller and action serving the request, to the file the sql-tail command tails. Off by default: an application started without it carries no statement inspector. Turned on for one run by grails run-app --sql-tail or ./gradlew bootRun -Pgrails.gorm.sqlTail.enabled.",
+            "defaultValue": false
+        },
+        {
+            "name": "grails.gorm.sqlTail.file",
+            "type": "java.lang.String",
+            "description": "The file captured statements are written to, absolute or relative to the working directory. When not set the file is sql-tail/capture.log under the build directory, where the sql-tail command looks for it."
         }
     ]
 }

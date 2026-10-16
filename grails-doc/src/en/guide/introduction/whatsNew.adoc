@@ -658,6 +658,18 @@ same view is a report of how long each stage of the start took, at `/__grails/st
 `grails.boot.StartupTask`, which the database migration plugin uses to show how many change sets are left to
 run. See <<startupProgress,Watching the Application Start>>.
 
+==== Finding Query-Heavy Pages with sql-tail
+
+The new `sql-tail` command shows the pages of a running application ranked by the SQL statements they run per
+request, and for each page the statement that repeats most within one request, which is what an N+1 looks like.
+Start the application with `grails run-app --sql-tail` (or `./gradlew bootRun -Pgrails.gorm.sqlTail.enabled`), then
+`grails sql-tail` in a second terminal follows the capture and refreshes as requests are served. `--statements`
+ranks the statements, `--page=book/show` shows one page's, `--stream` prints each statement as it runs, and
+`--all --once` reports a whole run, including an integration test run. The command reads a capture file and does
+not boot the application. Capture is off unless the application is started with it, and an application started
+without it carries no statement inspector. Hibernate 5 and Hibernate 7 are both supported. See
+xref:conf#sqlTail[Finding Query-Heavy Pages with sql-tail].
+
 ==== Banner Colour, Container Version and Start Mark
 
 The startup banner is coloured, reports the servlet container it is running on, and says how the application was

@@ -20,6 +20,7 @@
 plugins {
     id 'groovy'
     id 'java-library'
+    id 'org.apache.grails.gradle.grails-plugin-cli'
     id 'org.apache.grails.buildsrc.properties'
     id 'org.apache.grails.buildsrc.dependency-validator'
     id 'org.apache.grails.buildsrc.compile'
@@ -34,6 +35,12 @@ plugins {
 version = projectVersion
 group = 'org.apache.grails.data'
 
+cliArtifact {
+    automaticModuleName = 'org.apache.grails.datamapping.core.cli'
+    // this framework module wires its cli dependencies with project dependencies below
+    defaultDependencies = false
+}
+
 ext {
     pomTitle = 'Grails GORM'
     pomDescription = 'GORM - Grails Data Access Framework'
@@ -42,6 +49,19 @@ ext {
 dependencies {
 
     implementation platform(project(':grails-bom'))
+
+    // the cli tier — published separately as org.apache.grails.data:grails-datamapping-core-cli; the sql-tail
+    // command and the reader behind it stay off application runtime classpaths
+    cliImplementation platform(project(':grails-bom'))
+    cliApi project(project.path)
+    cliImplementation 'org.apache.groovy:groovy'
+    cliCompileOnly 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation
+    // compiles and runs the sql-tail command script the way the shell does
+    testCliImplementation(project(':grails-shell-cli')) {
+        exclude group: 'org.slf4j', module: 'slf4j-simple'
+        // Keep legacy org.codehaus.groovy artifacts off this module's Groovy 5 classpath.
+        exclude group: 'org.codehaus.groovy'
+    }
 
     api project(':grails-datastore-core'), {
         // api: BuildableCriteria, ConnectionSourcesProvider, Criteria, Datastore, MappingContext, PersistentEntity,
@@ -104,6 +124,9 @@ dependencies {
     }
 
     compileOnly 'org.slf4j:slf4j-api'
+    // sql-tail attributes captured statements to the web request on the thread when Spring Web is present
+    compileOnly 'org.springframework:spring-web'
+    compileOnly 'jakarta.servlet:jakarta.servlet-api'
 
     testImplementation project(':grails-core'), {
         // impl: ValidationException
@@ -116,6 +139,9 @@ dependencies {
     testImplementation 'org.spockframework:spock-core'
 
     testImplementation 'com.zaxxer:HikariCP'
+    testImplementation 'org.springframework:spring-web'
+    testImplementation 'org.springframework:spring-test'
+    testImplementation 'jakarta.servlet:jakarta.servlet-api'
     testImplementation 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation and tests
     testRuntimeOnly 'com.h2database:h2'
 }

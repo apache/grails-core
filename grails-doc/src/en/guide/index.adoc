@@ -1556,6 +1556,11 @@ include::ref/Command Line/schema-export.adoc[]
 
 include::ref/Command Line/shell.adoc[]
 
+[[ref-command-line-sql-tail]]
+==== sql-tail
+
+include::ref/Command Line/sql-tail.adoc[]
+
 [[ref-command-line-stats]]
 ==== stats
 

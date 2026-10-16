@@ -1,0 +1,17 @@
+plugins {
+    id 'org.apache.grails.gradle.grails-app'
+}
+
+tasks.register('inspectSqlTail') {
+    def sqlTailArgs = providers.provider {
+        [
+                bootRun: tasks.named('bootRun', JavaExec).get().allJvmArgs.findAll { it.startsWith('-Dgrails.gorm.sqlTail.') },
+                test: tasks.named('test', Test).get().allJvmArgs.findAll { it.startsWith('-Dgrails.gorm.sqlTail.') }
+        ]
+    }
+    doLast {
+        sqlTailArgs.get().each { String task, List<String> args ->
+            args.each { println "SQL_TAIL_ARG ${task} ${it}" }
+        }
+    }
+}

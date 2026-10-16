@@ -47,6 +47,7 @@ import org.grails.datastore.gorm.jdbc.connections.CachedDataSourceConnectionSour
 import org.grails.datastore.gorm.jdbc.connections.DataSourceConnectionSourceFactory;
 import org.grails.datastore.gorm.jdbc.connections.DataSourceSettings;
 import org.grails.datastore.gorm.jdbc.connections.DataSourceSettingsBuilder;
+import org.grails.datastore.gorm.jdbc.sqltail.SqlTailSettings;
 import org.grails.datastore.gorm.validation.jakarta.JakartaValidatorRegistry;
 import org.grails.datastore.mapping.core.connections.AbstractConnectionSourceFactory;
 import org.grails.datastore.mapping.core.connections.ConnectionSource;
@@ -57,6 +58,7 @@ import org.grails.orm.hibernate.HibernateEventListeners;
 import org.grails.orm.hibernate.cfg.HibernateMappingContext;
 import org.grails.orm.hibernate.cfg.HibernateMappingContextConfiguration;
 import org.grails.orm.hibernate.cfg.Settings;
+import org.grails.orm.hibernate.sqltail.SqlTailStatementInspector;
 import org.grails.orm.hibernate.support.ClosureEventTriggeringInterceptor;
 
 /**
@@ -213,6 +215,7 @@ public class HibernateConnectionSourceFactory
         configuration.setSessionFactoryBeanName(
                 ConnectionSource.DEFAULT.equals(name) ? "sessionFactory" : "sessionFactory_" + name);
         configuration.addProperties(settings.toProperties());
+        SqlTailStatementInspector.install(name, settings.getSqlTail(), configuration.getProperties());
         return configuration;
     }
 
@@ -303,6 +306,7 @@ public class HibernateConnectionSourceFactory
                 DataSourceSettings dsFallback = extractDataSourceFallback(fallbackSettings);
                 settings.setDataSource(new DataSourceSettingsBuilder(configuration, qualified, dsFallback).build());
             }
+            settings.setSqlTail(SqlTailSettings.from(configuration));
             return settings;
         }
         return buildSettingsWithPrefix(configuration, fallbackSettings, Settings.SETTING_DATASOURCES + "." + name);
@@ -319,6 +323,7 @@ public class HibernateConnectionSourceFactory
                         .isEmpty()) {
             settings.setDataSource(new DataSourceSettingsBuilder(configuration, prefix, dsFallback).build());
         }
+        settings.setSqlTail(SqlTailSettings.from(configuration));
         return settings;
     }
 

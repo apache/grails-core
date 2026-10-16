@@ -52,6 +52,7 @@ import org.grails.orm.hibernate.HibernateEventListeners;
 import org.grails.orm.hibernate.cfg.GrailsDomainBinder;
 import org.grails.orm.hibernate.cfg.HibernateMappingContext;
 import org.grails.orm.hibernate.cfg.HibernateMappingContextConfiguration;
+import org.grails.orm.hibernate.sqltail.SqlTailStatementInspector;
 import org.grails.orm.hibernate.support.AbstractClosureEventTriggeringInterceptor;
 import org.grails.orm.hibernate.support.ClosureEventTriggeringInterceptor;
 
@@ -267,6 +268,7 @@ public class HibernateConnectionSourceFactory extends AbstractHibernateConnectio
         configuration.setSessionFactoryBeanName(isDefault ? "sessionFactory" : "sessionFactory_" + name);
         Properties hibernateProperties = settings.toProperties();
         configuration.addProperties(hibernateProperties);
+        SqlTailStatementInspector.install(name, settings.getSqlTail(), configuration.getProperties());
         return configuration;
     }
 
