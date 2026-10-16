@@ -34,10 +34,11 @@ import spock.lang.Unroll
 import org.grails.orm.hibernate.HibernateDatastore
 
 /**
- * A {@code type} mapped on a collection property. The domain binder keeps the collection a collection only when the type is
- * neither a class that is not a collection type nor {@code serializable}: those two make the property one column of the owner's
- * table, typed with the user type or serialized, with the index, the unique group and the column settings of any other column. A
- * type name Hibernate knows ({@code text}) makes the binder fail to boot, and on a collection of entities it changes nothing.
+ * A {@code type} mapped on a collection property. As with the classic binding of Grails 8, the collection stays a collection only
+ * when the type is neither a class that is not a collection type nor {@code serializable}: those two make the property one column of
+ * the owner's table, typed with the user type or serialized, with the index, the unique group and the column settings of any other
+ * column. A type name Hibernate knows ({@code text}) is refused (classic binding failed to boot it), and on a collection of entities it
+ * changes nothing. The columns stated here are the ones classic binding created.
  */
 class GeneratedDomainClassesCollectionTypeSpec extends Specification {
 
@@ -46,19 +47,18 @@ class GeneratedDomainClassesCollectionTypeSpec extends Specification {
     @AutoCleanup
     HibernateDatastore datastore
 
-    private HibernateDatastore boot(List<Class> group, boolean generated) {
+    private HibernateDatastore boot(List<Class> group) {
         datastore?.close()
         datastore = new HibernateDatastore([
-                'dataSource.url'                  : "jdbc:h2:mem:cts${BOOTS.incrementAndGet()};LOCK_TIMEOUT=10000".toString(),
-                'dataSource.dbCreate'             : 'create-drop',
-                'hibernate.generatedDomainClasses': generated,
+                'dataSource.url'     : "jdbc:h2:mem:cts${BOOTS.incrementAndGet()};LOCK_TIMEOUT=10000".toString(),
+                'dataSource.dbCreate': 'create-drop',
         ], group as Class[])
         return datastore
     }
 
     /** The tables of the boot model as plain data: columns with SQL type and nullability, indexes, unique keys. */
-    private Map<String, Map> schema(List<Class> group, boolean generated) {
-        HibernateDatastore booted = boot(group, generated)
+    private Map<String, Map> schema(List<Class> group) {
+        HibernateDatastore booted = boot(group)
         Map<String, Map> result = new TreeMap<String, Map>()
         for (Table table : booted.metadata.collectTableMappings()) {
             if (table.physicalTable) {
@@ -77,13 +77,11 @@ class GeneratedDomainClassesCollectionTypeSpec extends Specification {
     }
 
     @Unroll
-    void "#label is one column of the owner's table, as the domain binder binds it"() {
+    void "#label is one column of the owner's table, as classic binding bound it"() {
         when:
-        Map<String, Map> binder = schema(group, false)
-        Map<String, Map> generated = schema(group, true)
+        Map<String, Map> generated = schema(group)
 
         then:
-        generated == binder
         generated.keySet() == tables as Set
         generated[table].columns[column] == type
 
@@ -101,9 +99,9 @@ class GeneratedDomainClassesCollectionTypeSpec extends Specification {
         'a set with a user type, an index and a unique group' | [CtsUserTypeKeys] | ['cts_user_type_keys'] | 'cts_user_type_keys' | 'tags' | 'varchar(255)'
     }
 
-    void "the index and the unique group of a collection stored in one column are on the owner's table, where the binder creates them"() {
+    void "the index and the unique group of a collection stored in one column are on the owner's table, where classic binding created them"() {
         when:
-        Map<String, Map> generated = schema([CtsSerializableKeys, CtsUserTypeKeys], true)
+        Map<String, Map> generated = schema([CtsSerializableKeys, CtsUserTypeKeys])
 
         then:
         generated['cts_serializable_keys'].indexes == [cts_ser_idx: ['tags']]
@@ -114,7 +112,7 @@ class GeneratedDomainClassesCollectionTypeSpec extends Specification {
 
     void "a collection with a user type is stored with the user type and read back"() {
         given:
-        boot([CtsUserTypeSet, CtsUserTypeList], true)
+        boot([CtsUserTypeSet, CtsUserTypeList])
 
         when:
         Long setId = CtsUserTypeSet.withTransaction { new CtsUserTypeSet(tags: ['a', 'b'] as Set).save(failOnError: true, flush: true).id }
@@ -131,7 +129,7 @@ class GeneratedDomainClassesCollectionTypeSpec extends Specification {
     @Unroll
     void "a serializable #label is stored in one column, read back and updated"() {
         given:
-        boot(group, true)
+        boot(group)
 
         when:
         Long id = type.withTransaction { type.newInstance("${property}": initial).save(failOnError: true, flush: true).id }
@@ -148,10 +146,9 @@ class GeneratedDomainClassesCollectionTypeSpec extends Specification {
         'enums'   | [CtsSerializableEnums] | CtsSerializableEnums  | 'colors' | [CtsTypeColor.RED] as Set | [CtsTypeColor.GREEN] as Set
     }
 
-    void "a type mapped on a collection of entities changes nothing in both bindings"() {
+    void "a type mapped on a collection of entities changes nothing"() {
         when:
-        Map<String, Map> binder = schema([CtsEntityTyped, CtsKid], false)
-        Map<String, Map> generated = schema([CtsEntityTyped, CtsKid], true)
+        Map<String, Map> generated = schema([CtsEntityTyped, CtsKid])
         Long id = CtsEntityTyped.withTransaction {
             CtsEntityTyped owner = new CtsEntityTyped()
             owner.addToKids(new CtsKid(name: 'k'))
@@ -159,21 +156,14 @@ class GeneratedDomainClassesCollectionTypeSpec extends Specification {
         }
 
         then: "the collection stays a join table"
-        generated == binder
-        generated.keySet().contains('cts_entity_typed_cts_kid')
+        generated.keySet() == ['cts_entity_typed', 'cts_entity_typed_cts_kid', 'cts_kid'] as Set
         CtsEntityTyped.withNewSession { CtsEntityTyped.get(id).kids*.name } == ['k']
     }
 
     @Unroll
-    void "a #label cannot be bound by the domain binder, and the generated mode says why instead of binding something else"() {
+    void "a #label is refused by name, as classic binding could not bind it either"() {
         when:
-        boot(group, false)
-
-        then: "the binder fails to boot"
-        thrown(Exception)
-
-        when:
-        boot(group, true)
+        boot(group)
 
         then:
         Exception e = thrown()

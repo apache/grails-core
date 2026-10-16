@@ -37,8 +37,7 @@ import org.grails.orm.hibernate.cfg.domainbinding.util.ColumnNameForPropertyAndP
  *
  * <p>Use {@code instanceof HibernateEnumProperty} instead of {@code isEnumType()} to branch on
  * enum properties at binding time. Each implementation resolves its own enum class and column
- * name so {@link org.grails.orm.hibernate.cfg.domainbinding.binder.EnumTypeBinder} can bind any
- * of them through a single code path.
+ * name so the binding can describe any of them through a single code path.
  */
 @CompileStatic
 interface HibernateEnumProperty extends HibernatePersistentProperty {
@@ -66,9 +65,9 @@ interface HibernateEnumProperty extends HibernatePersistentProperty {
 
     /**
      * Whether this property is a {@code hasMany} basic-collection element rather than a scalar
-     * enum-typed property. {@link org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsPropertyBinder}
-     * uses this to decide whether to bind it directly here, or let it fall through to the normal
-     * to-many collection path (whose element is bound later, from within the collection binder).
+     * enum-typed property. The binding uses this to decide whether to describe it directly here, or let
+     * it fall through to the normal to-many collection path (whose element is described as a collection
+     * element).
      */
     default boolean isCollectionElement() {
         return false

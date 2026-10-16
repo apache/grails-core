@@ -30,10 +30,10 @@ import org.grails.orm.hibernate.HibernateDatastore
 
 /**
  * {@code insertable: false} and {@code updatable: false} on a property that has no column of its own. A collection and the
- * inverse side of a one-to-one are written through their own tables or by the other side, so the domain binder writes them
- * whatever the flags say, and the generated classes ignore the flags there the same way, instead of refusing the mapping. An
- * embedded object is written through the columns of its properties, which the binder keeps out of the insert or the update, and so
- * do the generated classes.
+ * inverse side of a one-to-one are written through their own tables or by the other side, so the classic binding of Grails 8 wrote
+ * them whatever the flags said, and the generated classes ignore the flags there the same way, instead of refusing the mapping. An
+ * embedded object is written through the columns of its properties, which are kept out of the insert or the update, as classic
+ * binding kept them. The schema and the behaviour stated here are the ones classic binding gave.
  */
 class GeneratedDomainClassesWriteFlagsSpec extends Specification {
 
@@ -42,18 +42,17 @@ class GeneratedDomainClassesWriteFlagsSpec extends Specification {
     @AutoCleanup
     HibernateDatastore datastore
 
-    private HibernateDatastore boot(List<Class> group, boolean generated) {
+    private HibernateDatastore boot(List<Class> group) {
         datastore?.close()
         datastore = new HibernateDatastore([
-                'dataSource.url'                  : "jdbc:h2:mem:gdw${BOOTS.incrementAndGet()};LOCK_TIMEOUT=10000".toString(),
-                'dataSource.dbCreate'             : 'create-drop',
-                'hibernate.generatedDomainClasses': generated,
+                'dataSource.url'     : "jdbc:h2:mem:gdw${BOOTS.incrementAndGet()};LOCK_TIMEOUT=10000".toString(),
+                'dataSource.dbCreate': 'create-drop',
         ], group as Class[])
         return datastore
     }
 
-    private Map<String, Map> schema(List<Class> group, boolean generated) {
-        HibernateDatastore booted = boot(group, generated)
+    private Map<String, Map> schema(List<Class> group) {
+        HibernateDatastore booted = boot(group)
         Map<String, Map> result = new TreeMap<String, Map>()
         for (Table table : booted.metadata.collectTableMappings()) {
             if (table.physicalTable) {
@@ -70,32 +69,42 @@ class GeneratedDomainClassesWriteFlagsSpec extends Specification {
     }
 
     @Unroll
-    void "#label: the generated mode creates the schema of the domain binder"() {
+    void "#label: the schema of classic binding is created"() {
         expect:
-        schema(group, true) == schema(group, false)
+        schema(group) == expected
 
         where:
-        label                                   | group
-        'insertable false on a basic collection' | [GdwTagsOwner]
-        'updatable false on a basic collection'  | [GdwUpdTagsOwner]
-        'insertable false on a collection of entities' | [GdwItemsOwner, GdwItem]
-        'insertable false on an embedded object' | [GdwEmbeddedOwner]
-        'updatable false on an embedded object'  | [GdwUpdEmbeddedOwner]
-        'insertable false on a many-to-many'     | [GdwManyA, GdwManyB]
-        'insertable false on the hasOne side'    | [GdwHasOneOwner, GdwHasOneDetail]
+        label << ['insertable false on a basic collection', 'updatable false on a basic collection', 'insertable false on a collection of entities',
+                  'insertable false on an embedded object', 'updatable false on an embedded object', 'insertable false on a many-to-many',
+                  'insertable false on the hasOne side']
+        group << [[GdwTagsOwner], [GdwUpdTagsOwner], [GdwItemsOwner, GdwItem], [GdwEmbeddedOwner], [GdwUpdEmbeddedOwner], [GdwManyA, GdwManyB],
+                  [GdwHasOneOwner, GdwHasOneDetail]]
+        expected << [
+                [gdw_tags_owner: [columns: [id: 'bigint not null', version: 'bigint not null'], primaryKey: ['id'], foreignKeys: []],
+                 gdw_tags_owner_tags: [columns: [gdw_tags_owner_id: 'bigint', tags_java_lang_string: 'varchar(255)'], primaryKey: null, foreignKeys: ['[gdw_tags_owner_id] -> gdw_tags_owner']]],
+                [gdw_upd_tags_owner: [columns: [id: 'bigint not null', version: 'bigint not null'], primaryKey: ['id'], foreignKeys: []],
+                 gdw_upd_tags_owner_tags: [columns: [gdw_upd_tags_owner_id: 'bigint', tags_java_lang_string: 'varchar(255)'], primaryKey: null, foreignKeys: ['[gdw_upd_tags_owner_id] -> gdw_upd_tags_owner']]],
+                [gdw_item: [columns: [id: 'bigint not null', version: 'bigint not null', name: 'varchar(255)'], primaryKey: ['id'], foreignKeys: []],
+                 gdw_items_owner: [columns: [id: 'bigint not null', version: 'bigint not null'], primaryKey: ['id'], foreignKeys: []],
+                 gdw_items_owner_gdw_item: [columns: [gdw_item_id: 'bigint', gdw_items_owner_items_id: 'bigint'], primaryKey: null, foreignKeys: ['[gdw_item_id] -> gdw_item', '[gdw_items_owner_items_id] -> gdw_items_owner']]],
+                [gdw_embedded_owner: [columns: [id: 'bigint not null', version: 'bigint not null', home_street: 'varchar(255)'], primaryKey: ['id'], foreignKeys: []]],
+                [gdw_upd_embedded_owner: [columns: [id: 'bigint not null', version: 'bigint not null', home_street: 'varchar(255)'], primaryKey: ['id'], foreignKeys: []]],
+                [gdw_manya: [columns: [id: 'bigint not null', version: 'bigint not null'], primaryKey: ['id'], foreignKeys: []],
+                 gdw_manya_bs: [columns: [gdw_manya_id: 'bigint not null', gdw_manyb_id: 'bigint not null'], primaryKey: ['gdw_manya_id', 'gdw_manyb_id'], foreignKeys: ['[gdw_manya_id] -> gdw_manya', '[gdw_manyb_id] -> gdw_manyb']],
+                 gdw_manyb: [columns: [id: 'bigint not null', version: 'bigint not null', name: 'varchar(255)'], primaryKey: ['id'], foreignKeys: []]],
+                [gdw_has_one_detail: [columns: [id: 'bigint not null', owner_id: 'bigint not null', version: 'bigint not null', label: 'varchar(255)'], primaryKey: ['id'], foreignKeys: ['[owner_id] -> gdw_has_one_owner']],
+                 gdw_has_one_owner: [columns: [id: 'bigint not null', version: 'bigint not null'], primaryKey: ['id'], foreignKeys: []]],
+        ]
     }
 
     @Unroll
-    void "#label: the property is written and updated in both modes, whatever the flag says"() {
+    void "#label: the property is written and updated whatever the flag says"() {
         when:
-        Map<Boolean, List> results = [false, true].collectEntries { boolean generated ->
-            boot(group, generated)
-            [(generated): this."${cycle}"()]
-        }
+        boot(group)
+        List results = this."${cycle}"()
 
         then:
-        results[true] == results[false]
-        results[true] == expected
+        results == expected
 
         where:
         label                                   | group                          | cycle                | expected

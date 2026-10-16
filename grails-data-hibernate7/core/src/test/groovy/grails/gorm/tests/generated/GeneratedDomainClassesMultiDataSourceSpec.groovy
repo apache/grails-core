@@ -30,28 +30,26 @@ import org.grails.datastore.mapping.core.DatastoreUtils
 import org.grails.orm.hibernate.HibernateDatastore
 
 /**
- * Several data sources over the generated mapping, each entity mapped to one of them (or to all): every data source has
- * its own session factory and its own generated classes, and the tables of each database are those the domain binder
- * creates.
+ * Several data sources, each entity mapped to one of them (or to all): every data source has its own session factory and its
+ * own generated classes, and the tables of each database are those the classic binding of Grails 8 created, stated here.
  */
 class GeneratedDomainClassesMultiDataSourceSpec extends Specification {
 
     @AutoCleanup
     HibernateDatastore datastore
 
-    private HibernateDatastore boot(boolean generated, List<Class> classes) {
+    private HibernateDatastore boot(List<Class> classes) {
         datastore?.close()
         long stamp = System.nanoTime()
         datastore = new HibernateDatastore(DatastoreUtils.createPropertyResolver([
-                'dataSource.url'                  : "jdbc:h2:mem:gdcMdDefault${generated}${stamp};LOCK_TIMEOUT=10000".toString(),
-                'dataSource.dbCreate'             : 'create-drop',
-                'dataSource.dialect'              : H2Dialect.name,
-                'dataSources.second.url'          : "jdbc:h2:mem:gdcMdSecond${generated}${stamp};LOCK_TIMEOUT=10000".toString(),
-                'dataSources.second.dbCreate'     : 'create-drop',
-                'hibernate.hbm2ddl.auto'          : 'create-drop',
-                'hibernate.cache.queries'         : 'false',
-                'hibernate.cache.use_query_cache' : 'false',
-                'hibernate.generatedDomainClasses': generated,
+                'dataSource.url'                 : "jdbc:h2:mem:gdcMdDefault${stamp};LOCK_TIMEOUT=10000".toString(),
+                'dataSource.dbCreate'            : 'create-drop',
+                'dataSource.dialect'             : H2Dialect.name,
+                'dataSources.second.url'         : "jdbc:h2:mem:gdcMdSecond${stamp};LOCK_TIMEOUT=10000".toString(),
+                'dataSources.second.dbCreate'    : 'create-drop',
+                'hibernate.hbm2ddl.auto'         : 'create-drop',
+                'hibernate.cache.queries'        : 'false',
+                'hibernate.cache.use_query_cache': 'false',
         ]), classes as Class[])
         return datastore
     }
@@ -75,8 +73,8 @@ class GeneratedDomainClassesMultiDataSourceSpec extends Specification {
         return result
     }
 
-    private Map scenario(boolean generated) {
-        HibernateDatastore booted = boot(generated, [GdcMdPrimary, GdcMdSecond, GdcMdSecondChild, GdcMdAll])
+    private Map scenario() {
+        HibernateDatastore booted = boot([GdcMdPrimary, GdcMdSecond, GdcMdSecondChild, GdcMdAll])
         Map result = [:]
         GdcMdPrimary.withTransaction { new GdcMdPrimary(name: 'primary').save(flush: true, failOnError: true) }
         GdcMdSecond.withTransaction {
@@ -94,8 +92,8 @@ class GeneratedDomainClassesMultiDataSourceSpec extends Specification {
                 allSecond  : GdcMdAll.second.withNewSession { GdcMdAll.second.list()*.name },
         ]
         result.urls = [
-                primary: GdcMdPrimary.withNewSession { Session s -> s.doReturningWork { it.metaData.getURL() } }.replaceAll(/(true|false)\d+$/, ''),
-                second : GdcMdSecond.withNewSession { Session s -> s.doReturningWork { it.metaData.getURL() } }.replaceAll(/(true|false)\d+$/, ''),
+                primary: GdcMdPrimary.withNewSession { Session s -> s.doReturningWork { it.metaData.getURL() } },
+                second : GdcMdSecond.withNewSession { Session s -> s.doReturningWork { it.metaData.getURL() } },
         ]
         result.defaultTables = tables(booted.connectionSources.defaultConnectionSource.dataSource)
         result.secondTables = tables(booted.connectionSources.getConnectionSource('second').dataSource)
@@ -106,10 +104,9 @@ class GeneratedDomainClassesMultiDataSourceSpec extends Specification {
         return result
     }
 
-    def "each entity lives in the data source it is mapped to, and the databases are built like binder mode builds them"() {
+    def "each entity lives in the data source it is mapped to, and the databases are built as classic binding built them"() {
         when:
-        Map binder = scenario(false)
-        Map generated = scenario(true)
+        Map generated = scenario()
 
         then: 'the rows are in the right database, through the named data source api and through a lazy collection'
         generated.counts == [
@@ -122,20 +119,26 @@ class GeneratedDomainClassesMultiDataSourceSpec extends Specification {
                 default: ['GdcMdAll', 'GdcMdPrimary'],
                 second : ['GdcMdAll', 'GdcMdSecond', 'GdcMdSecondChild'],
         ]
-        generated.mapped == binder.mapped
 
-        and: 'the tables, columns and foreign keys of both databases equal binder mode'
-        generated.defaultTables.keySet() == ['GDC_MD_ALL', 'GDC_MD_PRIMARY'] as Set
-        generated.secondTables.keySet() == ['GDC_MD_ALL', 'GDC_MD_SECOND', 'GDC_MD_SECOND_CHILD'] as Set
-        generated.defaultTables == binder.defaultTables
-        generated.secondTables == binder.secondTables
-        generated.counts == binder.counts
-        generated.urls == binder.urls
+        and: 'the tables, columns and foreign keys of both databases are the ones classic binding created'
+        generated.defaultTables == [
+                GDC_MD_ALL    : ['ID BIGINT NO fks=0', 'NAME CHARACTER VARYING YES fks=0', 'VERSION BIGINT NO fks=0'],
+                GDC_MD_PRIMARY: ['ID BIGINT NO fks=0', 'NAME CHARACTER VARYING YES fks=0', 'VERSION BIGINT NO fks=0'],
+        ]
+        generated.secondTables == [
+                GDC_MD_ALL         : ['ID BIGINT NO fks=0', 'NAME CHARACTER VARYING YES fks=0', 'VERSION BIGINT NO fks=0'],
+                GDC_MD_SECOND      : ['ID BIGINT NO fks=0', 'NAME CHARACTER VARYING YES fks=0', 'VERSION BIGINT NO fks=0'],
+                GDC_MD_SECOND_CHILD: ['ID BIGINT NO fks=1', 'LABEL CHARACTER VARYING YES fks=1', 'PARENT_ID BIGINT YES fks=1', 'VERSION BIGINT NO fks=1'],
+        ]
+
+        and: 'each session talks to the database of its data source'
+        generated.urls.primary.contains('gdcMdDefault')
+        generated.urls.second.contains('gdcMdSecond')
     }
 
     def "a data source added at run time gets the generated classes of the entities mapped to all data sources"() {
         given:
-        boot(true, [GdcMdPrimary, GdcMdAll])
+        boot([GdcMdPrimary, GdcMdAll])
 
         when:
         datastore.connectionSources.addConnectionSource('late', [
@@ -150,9 +153,9 @@ class GeneratedDomainClassesMultiDataSourceSpec extends Specification {
         datastore.getDatastoreForConnection('late').sessionFactory.metamodel.entity(GdcMdAll).javaType == GdcMdAll
     }
 
-    def "an association across data sources is refused by name, as a mapping exception, in #mode mode"() {
+    def "an association across data sources is refused by name, as a mapping exception"() {
         when:
-        boot(generated, [CrossDataSourceRef, GdcMdSecond, GdcMdSecondChild])
+        boot([CrossDataSourceRef, GdcMdSecond, GdcMdSecondChild])
 
         then:
         Exception e = thrown()
@@ -162,12 +165,8 @@ class GeneratedDomainClassesMultiDataSourceSpec extends Specification {
         }
         root instanceof MappingException
         root.message.contains(GdcMdSecond.name)
-        generated ? (root.message.contains(CrossDataSourceRef.name) && root.message.contains('data source')) : root.message.contains('cross_data_source_ref')
-
-        where:
-        generated | mode
-        false     | 'binder'
-        true      | 'generated'
+        root.message.contains(CrossDataSourceRef.name)
+        root.message.contains('data source')
     }
 }
 

@@ -28,9 +28,10 @@ import spock.lang.Unroll
 import org.grails.orm.hibernate.HibernateDatastore
 
 /**
- * The default {@code sort} of a bidirectional {@code hasMany}. The domain binder orders a set and a map by the property, also when it
- * is an association (it orders by the foreign key), and a list stays in the order of its index column, so the sort changes nothing for
- * it. The generated mode accepts all three the same way instead of refusing the list, the map and the sort by an association.
+ * The default {@code sort} of a bidirectional {@code hasMany}. A set and a map are ordered by the property, also when it is an
+ * association (by the foreign key), and a list stays in the order of its index column, so the sort changes nothing for it, which is
+ * what the classic binding of Grails 8 did; native binding accepts all three the same way instead of refusing the list, the map and
+ * the sort by an association. The orders stated here are the ones classic binding gave.
  */
 class GeneratedDomainClassesCollectionSortSpec extends Specification {
 
@@ -39,27 +40,23 @@ class GeneratedDomainClassesCollectionSortSpec extends Specification {
     @AutoCleanup
     HibernateDatastore datastore
 
-    private HibernateDatastore boot(List<Class> group, boolean generated) {
+    private HibernateDatastore boot(List<Class> group) {
         datastore?.close()
         datastore = new HibernateDatastore([
-                'dataSource.url'                  : "jdbc:h2:mem:gcs${BOOTS.incrementAndGet()};LOCK_TIMEOUT=10000".toString(),
-                'dataSource.dbCreate'             : 'create-drop',
-                'hibernate.generatedDomainClasses': generated,
+                'dataSource.url'     : "jdbc:h2:mem:gcs${BOOTS.incrementAndGet()};LOCK_TIMEOUT=10000".toString(),
+                'dataSource.dbCreate': 'create-drop',
         ], group as Class[])
         return datastore
     }
 
     @Unroll
-    void "#label: the elements come back in the same order in both modes"() {
+    void "#label: the elements come back in the order classic binding gave them"() {
         when:
-        Map<Boolean, Object> results = [false, true].collectEntries { boolean generated ->
-            boot(group, generated)
-            [(generated): this."${cycle}"()]
-        }
+        boot(group)
+        Object results = this."${cycle}"()
 
         then:
-        results[true] == results[false]
-        results[true] == expected
+        results == expected
 
         where:
         label                              | group                          | cycle          | expected

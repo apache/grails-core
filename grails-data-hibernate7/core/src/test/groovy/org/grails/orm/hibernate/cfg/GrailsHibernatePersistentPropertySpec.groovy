@@ -177,7 +177,7 @@ class GrailsHibernatePersistentPropertySpec extends HibernateGormDatastoreSpec {
 
     void "test getTypeName(SimpleValue) and getTypeParameters(SimpleValue)"() {
         given:
-        def domainBinder = getGrailsDomainBinder()
+        def domainBinder = getMappingContributor()
         def metadataBuildingContext = domainBinder.getMetadataBuildingContext()
         def table = new Table("TEST")
         PersistentEntity entity = createPersistentEntity(TestEntityWithTypeName)
@@ -192,7 +192,7 @@ class GrailsHibernatePersistentPropertySpec extends HibernateGormDatastoreSpec {
 
     void "test getTypeName(SimpleValue) with fallback"() {
         given:
-        def domainBinder = getGrailsDomainBinder()
+        def domainBinder = getMappingContributor()
         def metadataBuildingContext = domainBinder.getMetadataBuildingContext()
         def table = new Table("TEST2")
         PersistentEntity entity = createPersistentEntity(TestEntityWithEnum)
@@ -206,7 +206,7 @@ class GrailsHibernatePersistentPropertySpec extends HibernateGormDatastoreSpec {
 
     void "test getTypeName(SimpleValue) for DependantValue"() {
         given:
-        def domainBinder = getGrailsDomainBinder()
+        def domainBinder = getMappingContributor()
         def metadataBuildingContext = domainBinder.getMetadataBuildingContext()
         def table = new Table("TEST3")
         PersistentEntity entity = createPersistentEntity(BMTOWLMAuthor)

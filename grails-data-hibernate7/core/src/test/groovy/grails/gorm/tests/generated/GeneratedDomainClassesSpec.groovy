@@ -36,7 +36,7 @@ import org.hibernate.persister.entity.EntityPersister
 class GeneratedDomainClassesSpec extends HibernateGormDatastoreSpec {
 
     void setupSpec() {
-        registerGeneratedDomainClasses(GdcAuthor, GdcBook, GdcNovel)
+        manager.registerDomainClasses(GdcAuthor, GdcBook, GdcNovel)
     }
 
     private GdcBook savedBook(String title = 'Dune', GdcAuthor author = new GdcAuthor(name: 'Herbert').save(flush: true)) {

@@ -34,9 +34,9 @@ import spock.lang.Specification
 import org.grails.orm.hibernate.HibernateDatastore
 
 /**
- * A custom collection type ({@code UserCollectionType}) as the {@code type} of a {@code hasMany}. On a collection of domain classes both
- * bindings boot with the same schema; the domain binder never uses the class, the generated mode applies it. On a collection of basic
- * values the domain binder does not boot.
+ * A custom collection type ({@code UserCollectionType}) as the {@code type} of a {@code hasMany}. On a collection of domain classes the
+ * schema is the one the classic binding of Grails 8 created, and the type is applied (classic binding named it to Hibernate in a way
+ * Hibernate never used). On a collection of basic values the mapping is refused by name, as classic binding did not boot it.
  */
 class GeneratedDomainClassesCustomCollectionTypeSpec extends Specification {
 
@@ -45,12 +45,11 @@ class GeneratedDomainClassesCustomCollectionTypeSpec extends Specification {
     @AutoCleanup
     HibernateDatastore datastore
 
-    private HibernateDatastore boot(List<Class> group, boolean generated) {
+    private HibernateDatastore boot(List<Class> group) {
         datastore?.close()
         datastore = new HibernateDatastore([
-                'dataSource.url'                  : "jdbc:h2:mem:tns${BOOTS.incrementAndGet()};LOCK_TIMEOUT=10000".toString(),
-                'dataSource.dbCreate'             : 'create-drop',
-                'hibernate.generatedDomainClasses': generated,
+                'dataSource.url'     : "jdbc:h2:mem:tns${BOOTS.incrementAndGet()};LOCK_TIMEOUT=10000".toString(),
+                'dataSource.dbCreate': 'create-drop',
         ], group as Class[])
         return datastore
     }
@@ -74,46 +73,31 @@ class GeneratedDomainClassesCustomCollectionTypeSpec extends Specification {
         return result
     }
 
-    void "a custom collection type on a collection of entities is a table in both bindings, and only the generated mode puts the custom type to use"() {
+    void "a custom collection type on a collection of entities is a join table, and the custom type is put to use"() {
         when:
-        Map<Boolean, Map> observed = [false, true].collectEntries { boolean generated ->
-            TnSetCollectionType.CREATED.set(0)
-            TnSetCollectionType.WRAPS.set(0)
-            HibernateDatastore booted = boot([TnCollectionOwner, TnCollectionKid], generated)
-            Long id = TnCollectionOwner.withTransaction {
-                TnCollectionOwner owner = new TnCollectionOwner(name: 'o')
-                owner.addToKids(new TnCollectionKid(name: 'a'))
-                owner.addToKids(new TnCollectionKid(name: 'b'))
-                owner.save(failOnError: true, flush: true).id
-            }
-            Map result = TnCollectionOwner.withNewSession {
-                [kids: TnCollectionOwner.get(id).kids*.name.sort()]
-            }
-            result.schema = schema(booted)
-            result.customTypeUsed = TnSetCollectionType.CREATED.get() > 0 && TnSetCollectionType.WRAPS.get() > 0
-            [(generated): result]
+        TnSetCollectionType.CREATED.set(0)
+        TnSetCollectionType.WRAPS.set(0)
+        HibernateDatastore booted = boot([TnCollectionOwner, TnCollectionKid])
+        Long id = TnCollectionOwner.withTransaction {
+            TnCollectionOwner owner = new TnCollectionOwner(name: 'o')
+            owner.addToKids(new TnCollectionKid(name: 'a'))
+            owner.addToKids(new TnCollectionKid(name: 'b'))
+            owner.save(failOnError: true, flush: true).id
         }
+        List<String> kids = TnCollectionOwner.withNewSession { TnCollectionOwner.get(id).kids*.name.sort() }
 
-        then: "the schema and the data are the same"
-        observed[true].schema == observed[false].schema
-        observed[true].kids == ['a', 'b']
-        observed[false].kids == ['a', 'b']
-        observed[true].schema.keySet().containsAll(['tn_collection_owner', 'tn_collection_kid', 'tn_collection_owner_tn_collection_kid'])
+        then: "the schema is the one classic binding created, and the data is read back"
+        schema(booted).keySet() == ['tn_collection_owner', 'tn_collection_kid', 'tn_collection_owner_tn_collection_kid'] as Set
+        kids == ['a', 'b']
 
-        and: "the domain binder names the custom type to Hibernate in a way Hibernate never uses, so it silently keeps its own set; the generated mode applies the type the mapping names"
-        !observed[false].customTypeUsed
-        observed[true].customTypeUsed
+        and: "the type the mapping names is applied (classic binding named it to Hibernate in a way Hibernate never used)"
+        TnSetCollectionType.CREATED.get() > 0
+        TnSetCollectionType.WRAPS.get() > 0
     }
 
-    void "a custom collection type on a collection of basic values is not accepted by the domain binder, and the generated mode says why"() {
+    void "a custom collection type on a collection of basic values is refused by name, as classic binding did not boot it"() {
         when:
-        boot([TnCollectionBasic], false)
-
-        then:
-        thrown(Exception)
-
-        when:
-        boot([TnCollectionBasic], true)
+        boot([TnCollectionBasic])
 
         then:
         Exception e = thrown()

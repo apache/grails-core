@@ -131,7 +131,7 @@ class UserTypeMappingSpec extends Specification {
 
     private static String typeNameOf(HibernateDatastore datastore, Class entity) {
         SimpleValue value = datastore.metadata.getEntityBinding(entity.name).getProperty('active').value as SimpleValue
-        // the domain binder states the type by name, Hibernate's annotation binder (hibernate.generatedDomainClasses) by the type it resolves
+        // Hibernate's annotation binder states the type it resolves, not a name (the classic binder of Grails 8 stated the name)
         value.typeName ?: resolvedTypeName(value.type)
     }
 

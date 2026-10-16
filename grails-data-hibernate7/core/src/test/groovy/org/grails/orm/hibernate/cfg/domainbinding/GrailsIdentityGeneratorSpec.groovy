@@ -48,7 +48,7 @@ class GrailsIdentityGeneratorSpec extends HibernateGormDatastoreSpec {
         
         def table = new Table("test")
         def hibernateProperty = new Property()
-        def value = new BasicValue(getGrailsDomainBinder().getMetadataBuildingContext(), table)
+        def value = new BasicValue(getMappingContributor().getMetadataBuildingContext(), table)
         def column = new Column("test_id")
         value.addColumn(column)
         hibernateProperty.setValue(value)
@@ -73,7 +73,7 @@ class GrailsIdentityGeneratorSpec extends HibernateGormDatastoreSpec {
         
         def table = new Table("test")
         def hibernateProperty = new Property()
-        def value = new BasicValue(getGrailsDomainBinder().getMetadataBuildingContext(), table)
+        def value = new BasicValue(getMappingContributor().getMetadataBuildingContext(), table)
         def column = new Column("test_id2")
         value.addColumn(column)
         hibernateProperty.setValue(value)

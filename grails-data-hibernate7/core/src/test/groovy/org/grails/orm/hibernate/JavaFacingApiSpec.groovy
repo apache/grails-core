@@ -28,9 +28,6 @@ import spock.lang.Specification
 import grails.orm.HibernateCriteriaBuilder
 import org.grails.orm.hibernate.cfg.GrailsHibernateUtil
 import org.grails.orm.hibernate.cfg.IdentityEnumType
-import org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBinder
-import org.grails.orm.hibernate.cfg.domainbinding.binder.RootPersistentClassCommonValuesBinder
-import org.grails.orm.hibernate.cfg.domainbinding.collectionType.CollectionHolder
 import org.grails.orm.hibernate.cfg.domainbinding.util.BackticksRemover
 import org.grails.orm.hibernate.cfg.domainbinding.util.NamingStrategyProvider
 import org.grails.orm.hibernate.query.HibernateAlias
@@ -68,7 +65,6 @@ class JavaFacingApiSpec extends Specification {
         BackticksRemover                        | 'BACKTICK'
         ClosureEventTriggeringInterceptor       | 'BEFORE_INSERT_EVENT'
         ClosureEventTriggeringInterceptor       | 'ONLOAD_SAVE'
-        RootPersistentClassCommonValuesBinder   | 'LOG'
         SessionFactoryUtils                     | 'SESSION_SYNCHRONIZATION_ORDER'
         OpenSessionInViewInterceptor            | 'PARTICIPATE_SUFFIX'
     }
@@ -103,12 +99,6 @@ class JavaFacingApiSpec extends Specification {
         alias.joinType() == JoinType.INNER
     }
 
-    void 'CollectionHolder stays a record'() {
-        expect:
-        CollectionHolder.isRecord()
-        CollectionHolder.recordComponents*.name == ['map']
-    }
-
     void '#type.simpleName configureNamingStrategy keeps declaring its checked exceptions'() {
         when:
         List<Class<?>> declared = type.getMethod('configureNamingStrategy', String, Object).exceptionTypes as List
@@ -117,7 +107,7 @@ class JavaFacingApiSpec extends Specification {
         declared.containsAll([ClassNotFoundException, InstantiationException, IllegalAccessException])
 
         where:
-        type << [GrailsDomainBinder, NamingStrategyProvider]
+        type << [NamingStrategyProvider]
     }
 
     void '#method of #type.simpleName keeps its Nullable result'() {

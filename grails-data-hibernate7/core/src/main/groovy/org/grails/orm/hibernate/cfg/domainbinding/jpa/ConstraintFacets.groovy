@@ -29,7 +29,7 @@ import groovy.transform.CompileStatic
  * before the primary key, which Hibernate then drops after taking its column order for the primary key ({@code null} when there is
  * no such key).</p>
  *
- * <p>The indexes come from {@code index:} on a column ({@code IndexBinder}), the unique keys from {@code unique:} with
+ * <p>The indexes come from {@code index:} on a column (bound by {@code IndexBinder}), the unique keys from {@code unique:} with
  * a group of properties ({@code CreateKeyForProps}). A plain {@code unique: true} is a unique column, not a unique key.</p>
  *
  * @since 9.0

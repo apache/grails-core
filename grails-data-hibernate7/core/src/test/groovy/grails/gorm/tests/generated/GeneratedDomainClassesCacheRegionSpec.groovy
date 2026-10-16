@@ -34,27 +34,24 @@ import org.grails.datastore.mapping.core.DatastoreUtils
 import org.grails.orm.hibernate.HibernateDatastore
 
 /**
- * The second-level cache regions of the generated-domain-class binding carry the names the domain binder gives them: Hibernate
- * derives a region name from the entity name or the collection role, which are the names of the generated classes in this mode,
- * so an application that configures its cache regions by the names of its domain classes would silently lose that configuration.
- * The same domain classes are booted both ways and the regions Hibernate ends up with are compared.
+ * The second-level cache regions carry the names the classic binding of Grails 8 gave them: Hibernate derives a region name from
+ * the entity name or the collection role, which are the names of the generated classes, so an application that configures its cache
+ * regions by the names of its domain classes would silently lose that configuration. The regions stated here are the ones classic
+ * binding gave.
  */
 class GeneratedDomainClassesCacheRegionSpec extends Specification {
 
     @Shared HibernateDatastore generated
-    @Shared HibernateDatastore binder
 
     void setupSpec() {
-        generated = boot('gdcRegionsGenerated', true, [:])
-        binder = boot('gdcRegionsBinder', false, [:])
+        generated = boot('gdcRegionsGenerated', [:])
     }
 
     void cleanupSpec() {
         generated?.close()
-        binder?.close()
     }
 
-    private static HibernateDatastore boot(String name, boolean generatedClasses, Map<String, Object> extra) {
+    private static HibernateDatastore boot(String name, Map<String, Object> extra) {
         Map<String, Object> config = [
                 'dataSource.url'                : "jdbc:h2:mem:${name};LOCK_TIMEOUT=10000".toString(),
                 'dataSource.dbCreate'           : 'create-drop',
@@ -62,7 +59,6 @@ class GeneratedDomainClassesCacheRegionSpec extends Specification {
                                                    'region.factory_class'  : 'org.hibernate.cache.jcache.internal.JCacheRegionFactory'] +
                         extra.findAll { String key, Object value -> key.startsWith('hibernate.cache.') }
                                 .collectEntries { String key, Object value -> [(key.substring('hibernate.cache.'.length())): value] },
-                'hibernate.generatedDomainClasses': generatedClasses,
         ] as Map<String, Object>
         return new HibernateDatastore(DatastoreUtils.createPropertyResolver(config),
                 GdcRegionAuthor, GdcRegionBook, GdcRegionVehicle, GdcRegionCar, GdcRegionWheel, GdcRegionNatural,
@@ -103,7 +99,6 @@ class GeneratedDomainClassesCacheRegionSpec extends Specification {
 
     def "a cached root entity and a cached subclass hierarchy use the region of the real root class"() {
         expect:
-        entityRegions(binder)[GdcRegionBook.name] == GdcRegionBook.name
         entityRegions(generated)[GdcRegionBook.name] == GdcRegionBook.name
         entityRegions(generated)[GdcRegionVehicle.name] == GdcRegionVehicle.name
         entityRegions(generated)[GdcRegionCar.name] == GdcRegionVehicle.name
@@ -112,35 +107,35 @@ class GeneratedDomainClassesCacheRegionSpec extends Specification {
 
     def "a cached collection uses the real role as its region, for a root and for a subclass owner"() {
         expect:
-        collectionRegions(binder) == [
+        collectionRegions(generated) == [
                 (GdcRegionBook.name + '.authors'): GdcRegionBook.name + '.authors',
                 (GdcRegionCar.name + '.wheels')  : GdcRegionCar.name + '.wheels']
-        collectionRegions(generated) == collectionRegions(binder)
     }
 
-    def "a collection of an embedded type is not cached in either binding"() {
+    def "a collection of an embedded type is not cached"() {
         expect:
-        !collectionRegions(binder).keySet().any { String key -> key.startsWith(GdcRegionPerson.name) }
         !collectionRegions(generated).keySet().any { String key -> key.startsWith(GdcRegionPerson.name) }
     }
 
-    def "the regions of the generated binding equal the regions of the domain binder"() {
+    def "the regions are the regions classic binding gave"() {
         expect:
-        entityRegions(generated) == entityRegions(binder)
-        collectionRegions(generated) == collectionRegions(binder)
-        naturalIdRegions(generated) == naturalIdRegions(binder)
-        regionNames(generated) == regionNames(binder)
+        entityRegions(generated) == [
+                (GdcRegionAuthor.name)  : null, (GdcRegionBook.name): GdcRegionBook.name, (GdcRegionVehicle.name): GdcRegionVehicle.name,
+                (GdcRegionCar.name)     : GdcRegionVehicle.name, (GdcRegionWheel.name): null, (GdcRegionNatural.name): GdcRegionNatural.name,
+                (GdcRegionUncached.name): null, (GdcRegionPerson.name): null,
+        ]
+        regionNames(generated) == [GdcRegionBook.name, GdcRegionVehicle.name, GdcRegionNatural.name,
+                                   GdcRegionBook.name + '.authors', GdcRegionCar.name + '.wheels'] as Set
     }
 
-    def "a natural id of a cached entity has no cache of its own in either binding"() {
+    def "a natural id of a cached entity has no cache of its own"() {
         expect:
-        naturalIdRegions(binder).isEmpty()
         naturalIdRegions(generated).isEmpty()
     }
 
-    def "the JCache caches of the generated binding carry the real names under the configured region prefix"() {
+    def "the JCache caches carry the real names under the configured region prefix"() {
         given:
-        HibernateDatastore prefixed = boot('gdcRegionsPrefixed', true, ['hibernate.cache.region_prefix': 'app'])
+        HibernateDatastore prefixed = boot('gdcRegionsPrefixed', ['hibernate.cache.region_prefix': 'app'])
         Set<String> caches = Caching.cachingProvider.cacheManager.cacheNames.findAll { String name -> name.startsWith('app.') } as Set<String>
 
         expect:
@@ -153,7 +148,7 @@ class GeneratedDomainClassesCacheRegionSpec extends Specification {
 
     def "the second-level cache works end to end under the real region names"() {
         given: 'a datastore of its own, because GORM binds an entity class to the datastore booted last'
-        HibernateDatastore datastore = boot('gdcRegionsEndToEnd', true, [:])
+        HibernateDatastore datastore = boot('gdcRegionsEndToEnd', [:])
         Statistics statistics = datastore.sessionFactory.statistics
         statistics.statisticsEnabled = true
         Serializable id = GdcRegionBook.withNewTransaction {

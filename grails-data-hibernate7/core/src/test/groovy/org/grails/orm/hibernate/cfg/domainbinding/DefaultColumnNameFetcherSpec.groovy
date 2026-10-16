@@ -33,19 +33,19 @@ class DefaultColumnNameFetcherSpec extends HibernateGormDatastoreSpec {
     @Unroll
     void "Test getDefaultColumnName for #description"() {
         given:
-        def namingStrategy =grailsDomainBinder.getNamingStrategy()
+        def namingStrategy =mappingContributor.getNamingStrategy()
         def backticksRemover = new BackticksRemover()
         def fetcher = new DefaultColumnNameFetcher(namingStrategy, backticksRemover)
 
         // Setup related entities that might be needed by the main entity
-        createPersistentEntity(AssociatedEntity, grailsDomainBinder)
-        createPersistentEntity(SpecBaseEntity, grailsDomainBinder)
-        createPersistentEntity(AManyToManyEntity, grailsDomainBinder) // Add the new clean
-        createPersistentEntity(BManyToManyEntity, grailsDomainBinder) // A// entity
-        createPersistentEntity(DefaultColumnNameFetcherSpecEntity, grailsDomainBinder)
-        createPersistentEntity(InheritedEntity, grailsDomainBinder)
+        createPersistentEntity(AssociatedEntity)
+        createPersistentEntity(SpecBaseEntity)
+        createPersistentEntity(AManyToManyEntity) // Add the new clean
+        createPersistentEntity(BManyToManyEntity) // A// entity
+        createPersistentEntity(DefaultColumnNameFetcherSpecEntity)
+        createPersistentEntity(InheritedEntity)
 
-        def persistentEntity = createPersistentEntity(entityClass, grailsDomainBinder)
+        def persistentEntity = createPersistentEntity(entityClass)
         PersistentProperty property = persistentEntity.getPropertyByName(propertyName)
 
 
@@ -68,14 +68,14 @@ class DefaultColumnNameFetcherSpec extends HibernateGormDatastoreSpec {
 
     void "single-arg constructor creates its own BackticksRemover"() {
         given:
-        def namingStrategy = grailsDomainBinder.getNamingStrategy()
+        def namingStrategy = mappingContributor.getNamingStrategy()
         def fetcher = new DefaultColumnNameFetcher(namingStrategy)
-        createPersistentEntity(AssociatedEntity, grailsDomainBinder)
-        createPersistentEntity(SpecBaseEntity, grailsDomainBinder)
-        createPersistentEntity(AManyToManyEntity, grailsDomainBinder)
-        createPersistentEntity(BManyToManyEntity, grailsDomainBinder)
-        createPersistentEntity(DefaultColumnNameFetcherSpecEntity, grailsDomainBinder)
-        def persistentEntity = createPersistentEntity(DefaultColumnNameFetcherSpecEntity, grailsDomainBinder)
+        createPersistentEntity(AssociatedEntity)
+        createPersistentEntity(SpecBaseEntity)
+        createPersistentEntity(AManyToManyEntity)
+        createPersistentEntity(BManyToManyEntity)
+        createPersistentEntity(DefaultColumnNameFetcherSpecEntity)
+        def persistentEntity = createPersistentEntity(DefaultColumnNameFetcherSpecEntity)
         def property = persistentEntity.getPropertyByName('name')
 
         when:
@@ -86,13 +86,13 @@ class DefaultColumnNameFetcherSpec extends HibernateGormDatastoreSpec {
     }
     void "getDefaultColumnName for inherited true ManyToOne uses owner root entity prefix (L75-L78)"() {
         given:
-        def namingStrategy = grailsDomainBinder.getNamingStrategy()
+        def namingStrategy = mappingContributor.getNamingStrategy()
         def backticksRemover = new BackticksRemover()
         def fetcher = new DefaultColumnNameFetcher(namingStrategy, backticksRemover)
 
-        createPersistentEntity(DCFNOwner, grailsDomainBinder)
-        createPersistentEntity(DCFNKid, grailsDomainBinder)
-        def entity = createPersistentEntity(DCFNSubKid, grailsDomainBinder)
+        createPersistentEntity(DCFNOwner)
+        createPersistentEntity(DCFNKid)
+        def entity = createPersistentEntity(DCFNSubKid)
 
         def property = entity.getPropertyByName("parent")
 

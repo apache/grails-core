@@ -109,13 +109,13 @@ If you are migrating an application from Hibernate 5 or the Grails Hibernate 5 p
 | Grails 9 refuses to start when a bidirectional many-to-many has no `belongsTo` on either side. Earlier versions bound both sides as inverse, so no join table row was ever written and the relationship was silently lost.
 | Declare `belongsTo` on the side that should be owned, for example `static belongsTo = Author` in `Book`. For a many-to-many from a class to itself, `belongsTo` names the class itself. The startup error names both sides of each affected relationship. See <<gormAssociation-manyToMany,Many-to-Many Associations>>.
 
-| Mapping fixes on classic binding
+| Mapping fixes
 | `insertable: false` and `updatable: false` are honored, enum columns receive the `comment`, `defaultValue`, `read` and `write` of their column mapping, the elements of basic-value collections of an owner with several unidirectional collections are stored, and the inverse side of a many-to-many reads the join table that its owner writes.
-| Review domain classes that use `insertable: false` or `updatable: false`, because values that used to be written are no longer written. Compare the generated schema of enum properties with your database before using `dbCreate=update`. See <<nativeDomainBinding,Native Domain Binding>> for the related schema differences.
+| Review domain classes that use `insertable: false` or `updatable: false`, because values that used to be written are no longer written. Compare the generated schema of enum properties with your database before using `dbCreate=update`. See <<advancedGORMFeatures-nativeDomainBinding,Native Domain Binding>> for the related schema differences.
 
-| Native domain binding (the default)
-| Hibernate's own annotation binder binds the domain classes; `hibernate.generatedDomainClasses` defaults to `true`. A few mapping options that classic binding could not use either are refused at startup, and the generated schema differs from classic binding in documented cases. `hibernate.generatedDomainClasses: false` selects the classic binding, which is deprecated, logs a warning at startup and will be removed.
-| Before upgrading an existing database, fix the mappings listed in <<nativeDomainBinding-refused,Mappings Native Binding Refuses>> and run `dbm-gorm-diff` against a copy of the database with the upgraded application. See <<nativeDomainBinding-schema,Differences in the Schema>> and <<nativeDomainBinding-enabling,Enabling Native Binding>> for the temporary fallback.
+| Native domain binding (the only binding)
+| Hibernate's own annotation binder binds the domain classes. The classic binding of Grails 8 was removed, with the `hibernate.generatedDomainClasses` setting that selected it: an application that still sets the setting starts normally and logs a warning. A few mapping options that the classic binding could not use either are refused at startup, and the generated schema differs from the one of Grails 8 in documented cases.
+| Before upgrading an existing database, fix the mappings listed in <<nativeDomainBinding-refused,Mappings That Are Not Supported>> and run `dbm-gorm-diff` against a copy of the database with the upgraded application. See <<nativeDomainBinding-schema,Changes in the Schema from Grails 8>>, and remove the setting (<<nativeDomainBinding-enabling,The Setting of Grails 8>>).
 
 | Query locks and query cache
 | Locked queries are not query-cacheable.

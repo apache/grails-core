@@ -34,8 +34,8 @@ import org.grails.datastore.mapping.multitenancy.resolvers.SystemPropertyTenantR
 import org.grails.orm.hibernate.HibernateDatastore
 
 /**
- * A multi-tenant id that has a mapped type. The domain binder gives the column the type and builds the tenant filter from the bound
- * property, so a tenant still sees only its own rows; the generated mode does the same instead of refusing the mapping.
+ * A multi-tenant id that has a mapped type. The column gets the type and the tenant filter compares it, so a tenant still sees only
+ * its own rows, as with the classic binding of Grails 8; native binding does the same instead of refusing the mapping.
  */
 @RestoreSystemProperties
 class GeneratedDomainClassesTenantTypeSpec extends Specification {
@@ -45,7 +45,7 @@ class GeneratedDomainClassesTenantTypeSpec extends Specification {
     @AutoCleanup
     HibernateDatastore datastore
 
-    private HibernateDatastore boot(boolean generated) {
+    private HibernateDatastore boot() {
         datastore?.close()
         System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, 'ford')
         datastore = new HibernateDatastore(DatastoreUtils.createPropertyResolver([
@@ -56,7 +56,6 @@ class GeneratedDomainClassesTenantTypeSpec extends Specification {
                 'dataSource.dialect'                          : H2Dialect.name,
                 'hibernate.cache.queries'                     : 'false',
                 'hibernate.cache.use_query_cache'             : 'false',
-                'hibernate.generatedDomainClasses'            : generated,
         ]), GdtTypedTenantItem)
         return datastore
     }
@@ -73,38 +72,31 @@ class GeneratedDomainClassesTenantTypeSpec extends Specification {
         return result
     }
 
-    void "the tenant id column has the mapped type in both modes"() {
+    void "the tenant id column has the mapped type"() {
         when:
-        boot(false)
-        Map<String, String> binder = columns()
-        boot(true)
+        boot()
         Map<String, String> generated = columns()
 
         then:
-        generated == binder
         generated['gdt_typed_tenant_item.company_id'].startsWith('clob')
     }
 
-    void "a tenant sees only its own rows in both modes"() {
+    void "a tenant sees only its own rows"() {
         when:
-        Map<Boolean, List> results = [false, true].collectEntries { boolean generated ->
-            boot(generated)
-            System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, 'ford')
-            GdtTypedTenantItem.withTransaction { new GdtTypedTenantItem(name: 'mustang').save(failOnError: true, flush: true) }
-            System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, 'tesla')
-            GdtTypedTenantItem.withTransaction {
-                new GdtTypedTenantItem(name: 'model s').save(failOnError: true, flush: true)
-                new GdtTypedTenantItem(name: 'model 3').save(failOnError: true, flush: true)
-            }
-            List tesla = GdtTypedTenantItem.withNewSession { [GdtTypedTenantItem.count(), GdtTypedTenantItem.list()*.name.sort()] }
-            System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, 'ford')
-            List ford = GdtTypedTenantItem.withNewSession { [GdtTypedTenantItem.count(), GdtTypedTenantItem.list()*.name, GdtTypedTenantItem.findByName('model s')] }
-            [(generated): [tesla, ford]]
+        boot()
+        System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, 'ford')
+        GdtTypedTenantItem.withTransaction { new GdtTypedTenantItem(name: 'mustang').save(failOnError: true, flush: true) }
+        System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, 'tesla')
+        GdtTypedTenantItem.withTransaction {
+            new GdtTypedTenantItem(name: 'model s').save(failOnError: true, flush: true)
+            new GdtTypedTenantItem(name: 'model 3').save(failOnError: true, flush: true)
         }
+        List tesla = GdtTypedTenantItem.withNewSession { [GdtTypedTenantItem.count(), GdtTypedTenantItem.list()*.name.sort()] }
+        System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, 'ford')
+        List ford = GdtTypedTenantItem.withNewSession { [GdtTypedTenantItem.count(), GdtTypedTenantItem.list()*.name, GdtTypedTenantItem.findByName('model s')] }
 
         then:
-        results[true] == results[false]
-        results[true] == [[2, ['model 3', 'model s']], [1, ['mustang'], null]]
+        [tesla, ford] == [[2, ['model 3', 'model s']], [1, ['mustang'], null]]
     }
 }
 

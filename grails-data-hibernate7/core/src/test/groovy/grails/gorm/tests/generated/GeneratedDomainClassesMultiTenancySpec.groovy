@@ -23,7 +23,6 @@ import grails.gorm.annotation.Entity
 import org.hibernate.dialect.H2Dialect
 import spock.lang.AutoCleanup
 import spock.lang.Specification
-import spock.lang.Unroll
 import spock.util.environment.RestoreSystemProperties
 
 import org.grails.datastore.mapping.core.DatastoreUtils
@@ -52,7 +51,6 @@ class GeneratedDomainClassesMultiTenancySpec extends Specification {
                 'hibernate.cache.queries'                     : 'false',
                 'hibernate.cache.use_query_cache'             : 'false',
                 'hibernate.hbm2ddl.auto'                      : 'create',
-                'hibernate.generatedDomainClasses'            : true,
         ]), GdcTenantItem)
 
         when:
@@ -82,22 +80,20 @@ class GeneratedDomainClassesMultiTenancySpec extends Specification {
     }
 
     /**
-     * The tenant id may be a part of a composite identifier (grails-test-examples/hibernate7/issue450): the classic binder binds
-     * the part like any other column of the key, and the tenant filter compares the same column.
+     * The tenant id may be a part of a composite identifier (grails-test-examples/hibernate7/issue450): the part is bound like any
+     * other column of the key, as the classic binding of Grails 8 bound it, and the tenant filter compares the same column.
      */
-    @Unroll
-    def "the tenant id can be a part of the composite identifier (generated: #generated)"() {
+    def "the tenant id can be a part of the composite identifier"() {
         given:
         System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, 'grails')
         datastore = new HibernateDatastore(DatastoreUtils.createPropertyResolver([
                 'grails.gorm.multiTenancy.mode'               : MultiTenancySettings.MultiTenancyMode.DISCRIMINATOR,
                 'grails.gorm.multiTenancy.tenantResolverClass': SystemPropertyTenantResolver.name,
-                'dataSource.url'                              : "jdbc:h2:mem:gdcTenantComposite${generated};LOCK_TIMEOUT=10000".toString(),
+                'dataSource.url'                              : 'jdbc:h2:mem:gdcTenantComposite;LOCK_TIMEOUT=10000',
                 'dataSource.dialect'                          : H2Dialect.name,
                 'hibernate.cache.queries'                     : 'false',
                 'hibernate.cache.use_query_cache'             : 'false',
                 'hibernate.hbm2ddl.auto'                      : 'create',
-                'hibernate.generatedDomainClasses'            : generated,
         ]), GdcTenantCompositeBook)
         String grailsId = UUID.randomUUID().toString()
         String groovyId = UUID.randomUUID().toString()
@@ -122,9 +118,6 @@ class GeneratedDomainClassesMultiTenancySpec extends Specification {
         then:
         GdcTenantCompositeBook.withNewSession { GdcTenantCompositeBook.list()*.title } == ['The definitive Guide to Grails 2']
         GdcTenantCompositeBook.withNewSession { GdcTenantCompositeBook.findByTitle('Groovy in Action') } == null
-
-        where:
-        generated << [false, true]
     }
 }
 

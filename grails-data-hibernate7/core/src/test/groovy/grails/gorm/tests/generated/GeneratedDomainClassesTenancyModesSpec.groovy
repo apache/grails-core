@@ -33,8 +33,8 @@ import org.grails.datastore.mapping.multitenancy.resolvers.SystemPropertyTenantR
 import org.grails.orm.hibernate.HibernateDatastore
 
 /**
- * Schema and database per tenant over the generated mapping: every tenant has its own session factory, built from the same
- * generated classes, and its tables are those the domain binder creates. Discriminator tenancy has its own spec.
+ * Schema and database per tenant: every tenant has its own session factory, built from the same generated classes, and its
+ * tables are those the classic binding of Grails 8 created, stated here. Discriminator tenancy has its own spec.
  */
 @RestoreSystemProperties
 class GeneratedDomainClassesTenancyModesSpec extends Specification {
@@ -48,19 +48,18 @@ class GeneratedDomainClassesTenancyModesSpec extends Specification {
         tenants = ['north', 'south']
     }
 
-    private HibernateDatastore boot(boolean generated, MultiTenancySettings.MultiTenancyMode mode, Map extra = [:]) {
+    private HibernateDatastore boot(MultiTenancySettings.MultiTenancyMode mode, Map extra = [:]) {
         datastore?.close()
         System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, 'north')
         datastore = new HibernateDatastore(DatastoreUtils.createPropertyResolver([
                 'grails.gorm.multiTenancy.mode'               : mode,
                 'grails.gorm.multiTenancy.tenantResolverClass': GdcTenantsResolver,
-                'dataSource.url'                              : "jdbc:h2:mem:gdcTenancy${generated}${System.nanoTime()};LOCK_TIMEOUT=10000".toString(),
+                'dataSource.url'                              : "jdbc:h2:mem:gdcTenancy${System.nanoTime()};LOCK_TIMEOUT=10000".toString(),
                 'dataSource.dbCreate'                         : 'create',
                 'dataSource.dialect'                          : H2Dialect.name,
                 'hibernate.hbm2ddl.auto'                      : 'create',
                 'hibernate.cache.queries'                     : 'false',
                 'hibernate.cache.use_query_cache'             : 'false',
-                'hibernate.generatedDomainClasses'            : generated,
         ] + extra), GdcTenantAuthor, GdcTenantBook)
         return datastore
     }
@@ -99,8 +98,8 @@ class GeneratedDomainClassesTenancyModesSpec extends Specification {
         return result
     }
 
-    private Map scenario(boolean generated) {
-        HibernateDatastore booted = boot(generated, MultiTenancySettings.MultiTenancyMode.SCHEMA)
+    private Map scenario() {
+        HibernateDatastore booted = boot(MultiTenancySettings.MultiTenancyMode.SCHEMA)
         Map result = [:]
         ['north', 'south'].each { String tenant ->
             Tenants.withId(tenant) {
@@ -135,29 +134,30 @@ class GeneratedDomainClassesTenancyModesSpec extends Specification {
         return result
     }
 
-    def "schema per tenant isolates the rows of each tenant and builds each tenant's tables like binder mode"() {
+    def "schema per tenant isolates the rows of each tenant and builds each tenant's tables as classic binding built them"() {
         when:
-        Map binder = scenario(false)
-        Map generated = scenario(true)
+        Map generated = scenario()
 
         then: 'rows stay in their tenant, through a lazy collection too'
         generated.counts == [north: [1, 2, ['north one', 'north two']], south: [1, 3, ['south one', 'south three', 'south two']]]
         generated.east == 0
         generated.each == [north: 1, south: 1, east: 0]
 
-        and: 'every tenant schema has the tables, columns and constraints binder mode creates'
-        generated.tables.keySet().any { it.startsWith('north.') }
-        generated.tables.keySet().any { it.startsWith('south.') }
-        generated.tables.keySet().any { it.startsWith('east.') }
-        generated.tables == binder.tables
-        generated.constraints == binder.constraints
-        generated.counts == binder.counts
-        generated.each == binder.each
+        and: 'every tenant schema has the tables, columns and constraints classic binding created'
+        generated.tables == ['PUBLIC', 'east', 'north', 'south'].collectEntries { String schema ->
+            [("${schema}.GDC_TENANT_AUTHOR".toString()): ['ID BIGINT NO', 'NAME CHARACTER VARYING YES', 'VERSION BIGINT NO'],
+             ("${schema}.GDC_TENANT_BOOK".toString())  : ['AUTHOR_ID BIGINT YES', 'ID BIGINT NO', 'TITLE CHARACTER VARYING YES', 'VERSION BIGINT NO']]
+        }
+        generated.constraints == ['PUBLIC', 'east', 'north', 'south'].collectEntries { String schema ->
+            [("${schema}.GDC_TENANT_AUTHOR PRIMARY KEY".toString()): 1,
+             ("${schema}.GDC_TENANT_BOOK FOREIGN KEY".toString())  : 1,
+             ("${schema}.GDC_TENANT_BOOK PRIMARY KEY".toString())  : 1]
+        }
     }
 
     def "a session factory of a tenant maps the real domain classes under their own names"() {
         when:
-        HibernateDatastore booted = boot(true, MultiTenancySettings.MultiTenancyMode.SCHEMA)
+        HibernateDatastore booted = boot(MultiTenancySettings.MultiTenancyMode.SCHEMA)
         HibernateDatastore north = booted.getDatastoreForConnection('north')
 
         then:
@@ -168,68 +168,64 @@ class GeneratedDomainClassesTenancyModesSpec extends Specification {
         }
     }
 
-    def "tables with and without an explicit schema land in the schema binder mode puts them in, under a default schema"() {
+    def "tables with and without an explicit schema land in the schema classic binding put them in, under a default schema"() {
         when:
-        Map results = [false, true].collectEntries { boolean generated ->
-            datastore?.close()
-            datastore = new HibernateDatastore(DatastoreUtils.createPropertyResolver([
-                    'dataSource.url'                  : "jdbc:h2:mem:gdcSchemas${generated}${System.nanoTime()};LOCK_TIMEOUT=10000;INIT=CREATE SCHEMA IF NOT EXISTS gdc_default\\;CREATE SCHEMA IF NOT EXISTS gdc_shared".toString(),
-                    'dataSource.dbCreate'             : 'create',
-                    'dataSource.dialect'              : H2Dialect.name,
-                    'hibernate.hbm2ddl.auto'          : 'create',
-                    'hibernate.default_schema'        : 'gdc_default',
-                    'hibernate.generatedDomainClasses': generated,
-            ]), GdcSchemaPlain, GdcSchemaOwner, GdcSchemaChild)
-            GdcSchemaOwner.withTransaction {
-                GdcSchemaOwner owner = new GdcSchemaOwner(name: 'owner')
-                owner.tags = ['a', 'b'] as Set
-                owner.addToChildren(new GdcSchemaChild(label: 'child'))
-                owner.save(flush: true, failOnError: true)
-                new GdcSchemaPlain(name: 'plain').save(flush: true, failOnError: true)
-            }
-            Map found = GdcSchemaOwner.withNewSession {
-                GdcSchemaOwner owner = GdcSchemaOwner.first()
-                [tags: owner.tags.sort(), children: owner.children*.label, plain: GdcSchemaPlain.count()]
-            }
-            [generated, [found: found, tables: tablesAndColumns(datastore.connectionSources.defaultConnectionSource.dataSource)]]
+        datastore?.close()
+        datastore = new HibernateDatastore(DatastoreUtils.createPropertyResolver([
+                'dataSource.url'          : "jdbc:h2:mem:gdcSchemas${System.nanoTime()};LOCK_TIMEOUT=10000;INIT=CREATE SCHEMA IF NOT EXISTS gdc_default\\;CREATE SCHEMA IF NOT EXISTS gdc_shared".toString(),
+                'dataSource.dbCreate'     : 'create',
+                'dataSource.dialect'      : H2Dialect.name,
+                'hibernate.hbm2ddl.auto'  : 'create',
+                'hibernate.default_schema': 'gdc_default',
+        ]), GdcSchemaPlain, GdcSchemaOwner, GdcSchemaChild)
+        GdcSchemaOwner.withTransaction {
+            GdcSchemaOwner owner = new GdcSchemaOwner(name: 'owner')
+            owner.tags = ['a', 'b'] as Set
+            owner.addToChildren(new GdcSchemaChild(label: 'child'))
+            owner.save(flush: true, failOnError: true)
+            new GdcSchemaPlain(name: 'plain').save(flush: true, failOnError: true)
         }
+        Map found = GdcSchemaOwner.withNewSession {
+            GdcSchemaOwner owner = GdcSchemaOwner.first()
+            [tags: owner.tags.sort(), children: owner.children*.label, plain: GdcSchemaPlain.count()]
+        }
+        Map<String, List<String>> tables = tablesAndColumns(datastore.connectionSources.defaultConnectionSource.dataSource)
 
         then:
-        results[true].found == [tags: ['a', 'b'], children: ['child'], plain: 1]
-        results[true].tables.keySet() == ['GDC_DEFAULT.GDC_SCHEMA_CHILD', 'GDC_DEFAULT.GDC_SCHEMA_PLAIN', 'GDC_SHARED.GDC_SCHEMA_OWNER', 'GDC_SHARED.GDC_SCHEMA_OWNER_TAGS'] as Set
-        results[true].tables == results[false].tables
+        found == [tags: ['a', 'b'], children: ['child'], plain: 1]
+        tables.keySet() == ['GDC_DEFAULT.GDC_SCHEMA_CHILD', 'GDC_DEFAULT.GDC_SCHEMA_PLAIN', 'GDC_SHARED.GDC_SCHEMA_OWNER', 'GDC_SHARED.GDC_SCHEMA_OWNER_TAGS'] as Set
     }
 
-    def "database per tenant isolates the rows of each tenant and builds each database like binder mode"() {
+    def "database per tenant isolates the rows of each tenant and builds each database as classic binding built it"() {
         when:
-        Map results = [false, true].collectEntries { boolean generated ->
-            HibernateDatastore booted = boot(generated, MultiTenancySettings.MultiTenancyMode.DATABASE, [
-                    'dataSources.north.url': "jdbc:h2:mem:gdcTenancyNorth${generated}${System.nanoTime()};LOCK_TIMEOUT=10000".toString(),
-                    'dataSources.south.url': "jdbc:h2:mem:gdcTenancySouth${generated}${System.nanoTime()};LOCK_TIMEOUT=10000".toString(),
-            ])
-            ['north', 'south'].each { String tenant ->
-                Tenants.withId(tenant) {
-                    GdcTenantAuthor.withTransaction {
-                        GdcTenantAuthor author = new GdcTenantAuthor(name: "author of ${tenant}".toString())
-                        author.addToBooks(new GdcTenantBook(title: "${tenant} one".toString()))
-                        author.save(flush: true, failOnError: true)
-                    }
+        HibernateDatastore booted = boot(MultiTenancySettings.MultiTenancyMode.DATABASE, [
+                'dataSources.north.url': "jdbc:h2:mem:gdcTenancyNorth${System.nanoTime()};LOCK_TIMEOUT=10000".toString(),
+                'dataSources.south.url': "jdbc:h2:mem:gdcTenancySouth${System.nanoTime()};LOCK_TIMEOUT=10000".toString(),
+        ])
+        ['north', 'south'].each { String tenant ->
+            Tenants.withId(tenant) {
+                GdcTenantAuthor.withTransaction {
+                    GdcTenantAuthor author = new GdcTenantAuthor(name: "author of ${tenant}".toString())
+                    author.addToBooks(new GdcTenantBook(title: "${tenant} one".toString()))
+                    author.save(flush: true, failOnError: true)
                 }
             }
-            Map counts = ['north', 'south'].collectEntries { String tenant ->
-                [tenant, Tenants.withId(tenant) {
-                    GdcTenantAuthor.withNewSession { [GdcTenantAuthor.count(), GdcTenantAuthor.first().books*.title] }
-                }]
-            }
-            [generated, [counts: counts,
-                         north: tablesAndColumns(booted.connectionSources.getConnectionSource('north').dataSource),
-                         south: constraints(booted.connectionSources.getConnectionSource('south').dataSource)]]
+        }
+        Map counts = ['north', 'south'].collectEntries { String tenant ->
+            [tenant, Tenants.withId(tenant) {
+                GdcTenantAuthor.withNewSession { [GdcTenantAuthor.count(), GdcTenantAuthor.first().books*.title] }
+            }]
         }
 
         then:
-        results[true].counts == [north: [1, ['north one']], south: [1, ['south one']]]
-        results[true].north.keySet().any { it.endsWith('.GDC_TENANT_AUTHOR') }
-        results[true] == results[false]
+        counts == [north: [1, ['north one']], south: [1, ['south one']]]
+        tablesAndColumns(booted.connectionSources.getConnectionSource('north').dataSource) == [
+                'PUBLIC.GDC_TENANT_AUTHOR': ['ID BIGINT NO', 'NAME CHARACTER VARYING YES', 'VERSION BIGINT NO'],
+                'PUBLIC.GDC_TENANT_BOOK'  : ['AUTHOR_ID BIGINT YES', 'ID BIGINT NO', 'TITLE CHARACTER VARYING YES', 'VERSION BIGINT NO'],
+        ]
+        constraints(booted.connectionSources.getConnectionSource('south').dataSource) == [
+                'PUBLIC.GDC_TENANT_AUTHOR PRIMARY KEY': 1, 'PUBLIC.GDC_TENANT_BOOK FOREIGN KEY': 1, 'PUBLIC.GDC_TENANT_BOOK PRIMARY KEY': 1,
+        ]
     }
 }
 

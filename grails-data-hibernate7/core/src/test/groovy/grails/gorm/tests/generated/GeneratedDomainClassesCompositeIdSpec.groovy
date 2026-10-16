@@ -35,7 +35,7 @@ import org.hibernate.persister.entity.EntityPersister
 class GeneratedDomainClassesCompositeIdSpec extends HibernateGormDatastoreSpec {
 
     void setupSpec() {
-        registerGeneratedDomainClasses(
+        manager.registerDomainClasses(
                 GdcCidItem, GdcCidSpecial, GdcCidOwner, GdcCidPart, GdcCidRef, GdcCidBox, GdcCidThing, GdcCidSequenced)
     }
 

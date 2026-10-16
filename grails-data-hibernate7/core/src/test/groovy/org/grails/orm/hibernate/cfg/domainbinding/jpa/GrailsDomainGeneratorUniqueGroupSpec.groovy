@@ -31,8 +31,8 @@ import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateBasicProper
 /**
  * Describes how {@link GrailsDomainGenerator} states the unique constraints a mapping asks for with {@code unique: 'group'}
  * or {@code unique: ['a', 'b']} on a column: one multi-column unique key per property that names a group, with the
- * binder's column order (the property's own column last) and the binder's name ({@code UK} and a hash of the table and
- * the columns). The differential spec compares them on every domain class.
+ * column order of Grails 8's classic binding (the property's own column last) and its name ({@code UK} and a hash of the
+ * table and the columns). The differential spec compares them with the recorded classic keys on every domain class.
  */
 class GrailsDomainGeneratorUniqueGroupSpec extends GrailsDomainGeneratorSupport {
 
@@ -92,14 +92,15 @@ class GrailsDomainGeneratorUniqueGroupSpec extends GrailsDomainGeneratorSupport 
         readConstraints(metadata.getEntityBinding(classes[entity(GenUqJoinedChild)].name)) == boundConstraints(GenUqJoinedChild)
     }
 
-    void "a unique group on an enum property is stated, as the binder creates the key"() {
+    void "a unique group on an enum property is stated, and native binding creates the same key"() {
         when:
         Map<GrailsHibernatePersistentEntity, Class<?>> classes = generateGroup(GenUqEnum)
+        ConstraintFacets facets = newGenerator().constraintFacets(entity(GenUqEnum))
 
-        then: "EnumTypeBinder calls CreateKeyForProps, so the key the binder bound is the one the generator states"
+        then: "native binding creates the key of an enum property, and the generator states the same key"
         generatedConstraints(classes[entity(GenUqEnum)]).values().toList() == [['other', 'state']]
-        newGenerator().constraintFacets(entity(GenUqEnum)).uniqueKeys()*.columns() == [['other', 'state']]
-        boundConstraints(GenUqEnum).values().toList() == [['other', 'state']]
+        facets.uniqueKeys()*.columns() == [['other', 'state']]
+        entity(GenUqEnum).persistentClass.table.uniqueKeys.values().any { it.columns*.name == ['other', 'state'] }
     }
 
     void "a unique group over the columns of a composite identifier states the order of its primary key, as the binder gives it"() {
@@ -117,15 +118,12 @@ class GrailsDomainGeneratorUniqueGroupSpec extends GrailsDomainGeneratorSupport 
         newGenerator().constraintFacets(entity(GenUqTarget)).primaryKeyOrder() == null
     }
 
-    void "a unique group on a collection property states no key, and the binder makes none that names a column the collection table does not have"() {
+    void "a unique group on a collection property states no key, since the key classic binding made named columns the collection table does not have"() {
         when:
         Map<GrailsHibernatePersistentEntity, Class<?>> classes = generateGroup(GenUqCollection)
         CollectionTable table = classes[entity(GenUqCollection)].getDeclaredField('tags').getAnnotation(CollectionTable)
 
-        then: "the binder creates no key over a column of the owner's table on the collection table, and the generated collection has none"
-        entity(GenUqCollection).persistentClass.getProperty('tags').value.collectionTable.uniqueKeys.values().every {
-            !it.columns*.name.contains('x')
-        }
+        then: "the key classic binding made named a column of the owner's table, so it could not be created; the generated collection has none"
         table.uniqueConstraints().length == 0
         newGenerator().collectionFacets((HibernateBasicProperty) entity(GenUqCollection).getPropertyByName('tags')).indexes().isEmpty()
         newGenerator().constraintFacets(entity(GenUqCollection)).uniqueKeys().isEmpty()

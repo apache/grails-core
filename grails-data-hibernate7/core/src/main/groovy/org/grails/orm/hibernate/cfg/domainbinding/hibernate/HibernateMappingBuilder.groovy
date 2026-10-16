@@ -54,8 +54,8 @@ import org.grails.orm.hibernate.cfg.PropertyDefinitionDelegate
 import org.grails.orm.hibernate.cfg.SortConfig
 
 /**
- * Implements the ORM mapping DSL constructing a model that can be evaluated by the
- * GrailsDomainBinder class which maps GORM classes onto the database.
+ * Implements the ORM mapping DSL constructing a model that the domain binding reads to map
+ * GORM classes onto the database.
  *
  * @author Graeme Rocher
  * @since 1.0

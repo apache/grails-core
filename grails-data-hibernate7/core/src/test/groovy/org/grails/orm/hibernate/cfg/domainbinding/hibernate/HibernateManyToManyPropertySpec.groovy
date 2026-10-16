@@ -31,7 +31,7 @@ class HibernateManyToManyPropertySpec extends HibernateGormDatastoreSpec {
         given:
         def entityA = (HibernatePersistentEntity) getMappingContext().getPersistentEntity(HMMPA.name)
         def property = (HibernateManyToManyProperty) entityA.getPropertyByName("others")
-        def mbc = getGrailsDomainBinder().metadataBuildingContext
+        def mbc = getMappingContributor().metadataBuildingContext
         def rootClass = new org.hibernate.mapping.RootClass(mbc)
         rootClass.setEntityName(HMMPA.name)
         def mockCollection = new org.hibernate.mapping.Set(mbc, rootClass)
@@ -64,7 +64,7 @@ class HibernateManyToManyPropertySpec extends HibernateGormDatastoreSpec {
         given:
         def entityA = (HibernatePersistentEntity) getMappingContext().getPersistentEntity(HMMPA.name)
         def property = (HibernateManyToManyProperty) entityA.getPropertyByName("others")
-        def mbc = getGrailsDomainBinder().metadataBuildingContext
+        def mbc = getMappingContributor().metadataBuildingContext
         def rootClass = new org.hibernate.mapping.RootClass(mbc)
         rootClass.setEntityName(HMMPA.name)
         def mockCollection = new org.hibernate.mapping.Set(mbc, rootClass)
@@ -83,7 +83,7 @@ class HibernateManyToManyPropertySpec extends HibernateGormDatastoreSpec {
         given:
         def entityA = (HibernatePersistentEntity) getMappingContext().getPersistentEntity(HMMPA.name)
         def propertyA = (HibernateManyToManyProperty) entityA.getPropertyByName("others")
-        def mbc = getGrailsDomainBinder().metadataBuildingContext
+        def mbc = getMappingContributor().metadataBuildingContext
         
         def rootClass = new org.hibernate.mapping.RootClass(mbc)
         rootClass.setEntityName(HMMPA.name)

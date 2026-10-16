@@ -49,18 +49,9 @@ class HibernateMappingContextConfigurationSpec extends Specification {
         config.dataSourceName == 'default'
     }
 
-    def "native domain binding is on by default and the classic domain binder can be selected"() {
-        given:
-        def config = new HibernateMappingContextConfiguration()
-
+    def "the configuration has no switch of the domain binding"() {
         expect:
-        config.generatedDomainClasses
-
-        when:
-        config.setGeneratedDomainClasses(false)
-
-        then:
-        !config.generatedDomainClasses
+        !new HibernateMappingContextConfiguration().hasProperty('generatedDomainClasses')
     }
 
     def "setBytecodeProvider stores the provider and getGrailsBytecodeProvider returns it"() {

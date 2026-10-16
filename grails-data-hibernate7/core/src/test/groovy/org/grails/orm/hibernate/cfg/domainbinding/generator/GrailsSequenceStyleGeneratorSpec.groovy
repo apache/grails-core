@@ -76,7 +76,7 @@ class GrailsSequenceStyleGeneratorSpec extends HibernateGormDatastoreSpec {
 
     def "test constructor logic with default parameters"() {
         given:
-        def binder = getGrailsDomainBinder()
+        def binder = getMappingContributor()
         def context = Mock(GeneratorCreationContext)
         def persistentEntity = getPersistentEntity(SequenceStyleGeneratorSpecEntity) as GrailsHibernatePersistentEntity
         def rootClass = new RootClass(binder.getMetadataBuildingContext())
@@ -107,7 +107,7 @@ class GrailsSequenceStyleGeneratorSpec extends HibernateGormDatastoreSpec {
     @Unroll
     def "test no target table is supplied when the mapping names the sequence itself (#description)"() {
         given:
-        def binder = getGrailsDomainBinder()
+        def binder = getMappingContributor()
         def context = Mock(GeneratorCreationContext)
         def rootClass = new RootClass(binder.getMetadataBuildingContext())
         rootClass.setTable(new Table('orm', 'sequence_style_generator_spec_entity'))
@@ -137,7 +137,7 @@ class GrailsSequenceStyleGeneratorSpec extends HibernateGormDatastoreSpec {
     @Unroll
     def "test the target table is supplied when the named sequence is blank (#description)"() {
         given:
-        def binder = getGrailsDomainBinder()
+        def binder = getMappingContributor()
         def context = Mock(GeneratorCreationContext)
         def rootClass = new RootClass(binder.getMetadataBuildingContext())
         rootClass.setTable(new Table('orm', 'sequence_style_generator_spec_entity'))
@@ -164,7 +164,7 @@ class GrailsSequenceStyleGeneratorSpec extends HibernateGormDatastoreSpec {
 
     def "test no target table is supplied when there is no root class"() {
         given: "a generator for something without one, such as a component identifier"
-        def binder = getGrailsDomainBinder()
+        def binder = getMappingContributor()
         def context = Mock(GeneratorCreationContext)
         def mappedId = Mock(HibernateSimpleIdentity)
 
@@ -183,7 +183,7 @@ class GrailsSequenceStyleGeneratorSpec extends HibernateGormDatastoreSpec {
 
     def "test constructor with null mappedId and null jdbcEnvironment"() {
         given:
-        def binder = getGrailsDomainBinder()
+        def binder = getMappingContributor()
         def context = Mock(GeneratorCreationContext)
 
         context.getServiceRegistry() >> binder.getMetadataBuildingContext().getBuildingOptions().getServiceRegistry()
@@ -199,7 +199,7 @@ class GrailsSequenceStyleGeneratorSpec extends HibernateGormDatastoreSpec {
 
     def "test constructor with database structure and physical names"() {
         given:
-        def binder = getGrailsDomainBinder()
+        def binder = getMappingContributor()
         def context = Mock(GeneratorCreationContext)
         def database = binder.getMetadataBuildingContext().getMetadataCollector().getDatabase()
         def jdbcEnvironment = binder.getJdbcEnvironment()

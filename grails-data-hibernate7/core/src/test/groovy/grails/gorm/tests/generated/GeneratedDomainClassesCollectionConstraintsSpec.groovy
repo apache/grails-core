@@ -29,11 +29,11 @@ import spock.lang.Unroll
 import org.grails.orm.hibernate.HibernateDatastore
 
 /**
- * An {@code index:} or a {@code unique:} group mapped on a collection property, booted through the generated classes and through
- * the domain binder. The binder binds the key column of a collection like any other column, so {@code index:} creates an index
- * over the key column of the collection table (and, for a collection of enums, over the element column too), named as the mapping
- * says; a unique group names columns of the owner's table, which the collection table does not have, so it creates no key in the
- * generated mode (the binder's impossible key is a defect fixed on the 8.0.x line).
+ * An {@code index:} or a {@code unique:} group mapped on a collection property. The classic binding of Grails 8 bound the key column
+ * of a collection like any other column, so {@code index:} creates an index over the key column of the collection table (and, for a
+ * collection of enums, over the element column too), named as the mapping says; a unique group names columns of the owner's table,
+ * which the collection table does not have, so it creates no key (the impossible key classic binding made was a defect fixed on the
+ * 8.0.x line). The indexes, keys and tables stated here are the ones classic binding created.
  */
 class GeneratedDomainClassesCollectionConstraintsSpec extends Specification {
 
@@ -42,19 +42,18 @@ class GeneratedDomainClassesCollectionConstraintsSpec extends Specification {
     @AutoCleanup
     HibernateDatastore datastore
 
-    private HibernateDatastore boot(List<Class> group, boolean generated) {
+    private HibernateDatastore boot(List<Class> group) {
         datastore?.close()
         datastore = new HibernateDatastore([
-                'dataSource.url'                  : "jdbc:h2:mem:ccs${BOOTS.incrementAndGet()};LOCK_TIMEOUT=10000".toString(),
-                'dataSource.dbCreate'             : 'create-drop',
-                'hibernate.generatedDomainClasses': generated,
+                'dataSource.url'     : "jdbc:h2:mem:ccs${BOOTS.incrementAndGet()};LOCK_TIMEOUT=10000".toString(),
+                'dataSource.dbCreate': 'create-drop',
         ], group as Class[])
         return datastore
     }
 
     /** The tables of the boot model as plain data: the columns with their type, the indexes and the unique keys. */
-    private Map<String, Map> schema(List<Class> group, boolean generated) {
-        HibernateDatastore booted = boot(group, generated)
+    private Map<String, Map> schema(List<Class> group) {
+        HibernateDatastore booted = boot(group)
         Map<String, Map> result = new TreeMap<String, Map>()
         for (Table table : booted.metadata.collectTableMappings()) {
             if (table.physicalTable) {
@@ -91,37 +90,36 @@ class GeneratedDomainClassesCollectionConstraintsSpec extends Specification {
     }
 
     @Unroll
-    void "an index mapped on #label creates the indexes the domain binder creates"() {
+    void "an index mapped on #label creates the indexes classic binding created"() {
         when:
-        Map<String, Map> binder = schema(group, false)
-        Map<String, Map> generated = schema(group, true)
+        Map<String, Map> generated = schema(group)
 
-        then: "the indexes and keys of every table are the binder's (the binder leaves an unused column in the table of a map of values)"
-        generated.keySet() == binder.keySet()
-        generated.collectEntries { String name, Map description -> [(name): [description.indexes, description.uniqueKeys]] } ==
-                binder.collectEntries { String name, Map description -> [(name): [description.indexes, description.uniqueKeys]] }
+        then: "the tables, and the indexes and keys of the collection table, are the ones classic binding created"
+        generated.keySet() == tables as Set
         generated[table].indexes == indexes
+        generated[table].uniqueKeys == uniqueKeys
+        generated.findAll { String name, Map description -> name != table }.every { String name, Map description -> description.indexes.isEmpty() }
 
         where:
-        label                                    | group                | table                  | indexes
-        'a set of strings'                       | [CcsSetIdx]          | 'ccs_set_idx_tags'     | [ccs_tags_idx: ['ccs_set_idx_id']]
-        'a set, with true'                       | [CcsIndexTrue]       | 'ccs_index_true_tags'  | [ccs_index_true_tags_ccs_index_true_id_idx: ['ccs_index_true_id']]
-        'a set, with two names'                  | [CcsIndexMulti]      | 'ccs_index_multi_tags' | [ccs_a: ['ccs_index_multi_id'], ccs_b: ['ccs_index_multi_id']]
-        'a set, with false'                      | [CcsIndexFalse]      | 'ccs_index_false_tags' | [:]
-        'a set of enums, over the element too'   | [CcsEnumIdx]         | 'ccs_enum_idx_colors'  | [ccs_color_idx: ['ccs_color', 'ccs_enum_idx_id']]
-        'a list, which names its index column'   | [CcsListIdx]         | 'ccs_list_idx_items'   | [ccs_items_idx: ['ccs_list_idx_id']]
-        'a map'                                  | [CcsMapIdx]          | 'ccs_map_idx_attrs'    | [ccs_attrs_idx: ['ccs_map_idx_id']]
-        'a map, with the settings of the index column' | [CcsMapSettings] | 'ccs_map_settings_attrs' | ['[column:ccs_k': ['ccs_map_settings_id'], 'type:string]': ['ccs_map_settings_id']]
-        'a list of long, with the settings of the index column' | [CcsListSettings] | 'ccs_list_settings_items' | ['[column:ccs_ix': ['ccs_list_settings_id'], 'type:long]': ['ccs_list_settings_id']]
-        'a one-to-many through a join table'     | [CcsKidOwner, CcsKid] | 'ccs_kid_owner_ccs_kid' | [ccs_kids_idx: ['ccs_kid_owner_kids_id']]
-        'a many-to-many, on both sides'          | [CcsLeft, CcsRight]  | 'ccs_left_rights'      | [ccs_right_idx: ['ccs_right_id'], ccs_left_idx: ['ccs_left_id']]
-        'a collection with a mapped join key'    | [CcsJoinKey]         | 'ccs_tags_table'       | [:]
-        'a one-to-many mapped by a foreign key'  | [CcsParent, CcsChild] | 'ccs_child'           | [:]
+        label                                    | group                | tables                               | table                  | indexes                                                                                           | uniqueKeys
+        'a set of strings'                       | [CcsSetIdx]          | ['ccs_set_idx', 'ccs_set_idx_tags']  | 'ccs_set_idx_tags'     | [ccs_tags_idx: ['ccs_set_idx_id']]                                                                | [['ccs_set_idx_id', 'tags_java_lang_string']]
+        'a set, with true'                       | [CcsIndexTrue]       | ['ccs_index_true', 'ccs_index_true_tags'] | 'ccs_index_true_tags' | [ccs_index_true_tags_ccs_index_true_id_idx: ['ccs_index_true_id']]                            | [['ccs_index_true_id', 'tags_java_lang_string']]
+        'a set, with two names'                  | [CcsIndexMulti]      | ['ccs_index_multi', 'ccs_index_multi_tags'] | 'ccs_index_multi_tags' | [ccs_a: ['ccs_index_multi_id'], ccs_b: ['ccs_index_multi_id']]                             | [['ccs_index_multi_id', 'tags_java_lang_string']]
+        'a set, with false'                      | [CcsIndexFalse]      | ['ccs_index_false', 'ccs_index_false_tags'] | 'ccs_index_false_tags' | [:]                                                                                         | [['ccs_index_false_id', 'tags_java_lang_string']]
+        'a set of enums, over the element too'   | [CcsEnumIdx]         | ['ccs_enum_idx', 'ccs_enum_idx_colors'] | 'ccs_enum_idx_colors' | [ccs_color_idx: ['ccs_color', 'ccs_enum_idx_id']]                                                | [['ccs_color', 'ccs_enum_idx_id']]
+        'a list, which names its index column'   | [CcsListIdx]         | ['ccs_list_idx', 'ccs_list_idx_items'] | 'ccs_list_idx_items'  | [ccs_items_idx: ['ccs_list_idx_id']]                                                              | []
+        'a map'                                  | [CcsMapIdx]          | ['ccs_map_idx', 'ccs_map_idx_attrs'] | 'ccs_map_idx_attrs'    | [ccs_attrs_idx: ['ccs_map_idx_id']]                                                               | []
+        'a map, with the settings of the index column' | [CcsMapSettings] | ['ccs_map_settings', 'ccs_map_settings_attrs'] | 'ccs_map_settings_attrs' | ['[column:ccs_k': ['ccs_map_settings_id'], 'type:string]': ['ccs_map_settings_id']] | []
+        'a list of long, with the settings of the index column' | [CcsListSettings] | ['ccs_list_settings', 'ccs_list_settings_items'] | 'ccs_list_settings_items' | ['[column:ccs_ix': ['ccs_list_settings_id'], 'type:long]': ['ccs_list_settings_id']] | []
+        'a one-to-many through a join table'     | [CcsKidOwner, CcsKid] | ['ccs_kid', 'ccs_kid_owner', 'ccs_kid_owner_ccs_kid'] | 'ccs_kid_owner_ccs_kid' | [ccs_kids_idx: ['ccs_kid_owner_kids_id']]                                           | [['ccs_kid_id', 'ccs_kid_owner_kids_id']]
+        'a many-to-many, on both sides'          | [CcsLeft, CcsRight]  | ['ccs_left', 'ccs_left_rights', 'ccs_right'] | 'ccs_left_rights' | [ccs_right_idx: ['ccs_right_id'], ccs_left_idx: ['ccs_left_id']]                                | []
+        'a collection with a mapped join key'    | [CcsJoinKey]         | ['ccs_join_key', 'ccs_tags_table']   | 'ccs_tags_table'       | [:]                                                                                               | [['owner_fk', 'tag_value']]
+        'a one-to-many mapped by a foreign key'  | [CcsParent, CcsChild] | ['ccs_child', 'ccs_parent']         | 'ccs_child'            | [:]                                                                                               | []
     }
 
     void "the indexes are created in the database, over the key column of the collection table"() {
         when:
-        boot([CcsSetIdx, CcsEnumIdx], true)
+        boot([CcsSetIdx, CcsEnumIdx])
 
         then:
         h2Indexes('ccs_set_idx_tags') == ['ccs_tags_idx']
@@ -130,21 +128,17 @@ class GeneratedDomainClassesCollectionConstraintsSpec extends Specification {
 
     void "a closure mapped as the index names no index, as its name would be the closure's own, which differs on every boot"() {
         when:
-        Map<String, Map> binder = schema([CcsClosureIdx], false)
-        Map<String, Map> generated = schema([CcsClosureIdx], true)
+        Map<String, Map> generated = schema([CcsClosureIdx])
 
-        then: "both name the index column after the closure, and only the binder creates an index, named after the closure instance"
-        generated['ccs_closure_idx_items'].columns == binder['ccs_closure_idx_items'].columns
-        generated['ccs_closure_idx_items'].columns.keySet().contains('ccs_cx')
+        then: "the index column is named by the closure, and no index is created (classic binding created one named after the closure instance)"
+        generated['ccs_closure_idx_items'].columns.keySet() == ['ccs_cx', 'ccs_closure_idx_id', 'items_java_lang_string'] as Set
         generated['ccs_closure_idx_items'].indexes.isEmpty()
-        binder['ccs_closure_idx_items'].indexes.size() == 1
-        binder['ccs_closure_idx_items'].indexes.keySet().first().contains('closure')
     }
 
     @Unroll
     void "a unique group mapped on #label creates no key, since the collection table does not hold the columns of the group"() {
         when:
-        Map<String, Map> generated = schema(group, true)
+        Map<String, Map> generated = schema(group)
 
         then: "the owner's table has no key either, and the table of the collection holds the keys of the set only"
         generated[owner].uniqueKeys.isEmpty()
@@ -160,7 +154,7 @@ class GeneratedDomainClassesCollectionConstraintsSpec extends Specification {
 
     void "a collection with a unique group and an index saves and loads, and the group does not reject a repeated value"() {
         given:
-        boot([CcsUqGroup, CcsSetIdx], true)
+        boot([CcsUqGroup, CcsSetIdx])
 
         when:
         Long id = CcsUqGroup.withTransaction {
@@ -181,7 +175,7 @@ class GeneratedDomainClassesCollectionConstraintsSpec extends Specification {
 
     void "a list, a map and a one-to-many with an index save, reload and are found through queries"() {
         given:
-        boot([CcsListIdx, CcsMapIdx, CcsKidOwner, CcsKid, CcsLeft, CcsRight], true)
+        boot([CcsListIdx, CcsMapIdx, CcsKidOwner, CcsKid, CcsLeft, CcsRight])
 
         when:
         Long listId = CcsListIdx.withTransaction { new CcsListIdx(items: ['a', 'b', 'c']).save(failOnError: true, flush: true).id }
