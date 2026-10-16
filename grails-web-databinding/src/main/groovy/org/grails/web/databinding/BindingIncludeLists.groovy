@@ -16,34 +16,24 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.web.databinding;
+package org.grails.web.databinding
 
-import java.lang.reflect.Field;
-import java.lang.reflect.Method;
-import java.lang.reflect.Modifier;
-import java.math.BigDecimal;
-import java.math.BigInteger;
-import java.net.URL;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
+import java.lang.reflect.Field
+import java.lang.reflect.Method
+import java.lang.reflect.Modifier
+import java.util.concurrent.ConcurrentHashMap
 
-import groovy.lang.GroovySystem;
-import groovy.lang.MetaClass;
-import org.codehaus.groovy.transform.trait.Traits;
+import groovy.transform.CompileStatic
+import org.codehaus.groovy.transform.trait.Traits
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 
-import grails.config.Settings;
-import grails.core.GrailsApplication;
-import grails.util.Environment;
-import grails.util.Holders;
-import org.grails.config.NavigableMap;
+import grails.config.Settings
+import grails.core.GrailsApplication
+import grails.util.Environment
+import grails.util.Holders
+import org.grails.config.NavigableMap
 
 /**
  * The properties data binding binds on a type: the include list Grails generates for a domain class
@@ -56,31 +46,31 @@ import org.grails.config.NavigableMap;
  *
  * @since 8.0
  */
-@SuppressWarnings({"rawtypes", "unchecked"})
-public final class BindingIncludeLists {
+@SuppressWarnings(['rawtypes', 'unchecked'])
+@CompileStatic
+final class BindingIncludeLists {
 
-    private static final Logger LOG = LoggerFactory.getLogger(BindingIncludeLists.class);
-    private static final List NO_BINDING_INCLUDE_LIST = new NoBindingIncludeList();
-    private static final Map<Class, List> CLASS_TO_BINDING_INCLUDE_LIST = new ConcurrentHashMap<>();
-    private static final Map<Class, List> CLASS_TO_LEGACY_BINDING_INCLUDE_LIST = new ConcurrentHashMap<>();
-    private static final String CONSTRAINTS_MAP_ACCESSOR = "getConstraintsMap";
-    private static final String VALIDATEABLE_TRAIT = "grails.validation.Validateable";
+    private static final Logger LOG = LoggerFactory.getLogger(BindingIncludeLists)
+    private static final List NO_BINDING_INCLUDE_LIST = new NoBindingIncludeList()
+    private static final Map<Class, List> CLASS_TO_BINDING_INCLUDE_LIST = new ConcurrentHashMap<>()
+    private static final Map<Class, List> CLASS_TO_LEGACY_BINDING_INCLUDE_LIST = new ConcurrentHashMap<>()
+    private static final String CONSTRAINTS_MAP_ACCESSOR = 'getConstraintsMap'
     // Asked on every bind, so it is answered once for each class; a ClassValue does not keep a reloaded class reachable.
-    private static final ClassValue<Boolean> INHERITS_CONSTRAINTS_MAP = new ClassValue<>() {
+    private static final ClassValue<Boolean> INHERITS_CONSTRAINTS_MAP = new ClassValue<Boolean>() {
         @Override
         protected Boolean computeValue(final Class<?> type) {
             try {
-                final Method accessor = type.getMethod(CONSTRAINTS_MAP_ACCESSOR);
+                final Method accessor = type.getMethod('getConstraintsMap')
                 // Only the static accessor Validateable adds answers for the class implementing it. An instance
                 // getter a superclass declares answers for the instance, so its map is the one to bind with.
-                final Traits.TraitBridge traitBridge = accessor.getAnnotation(Traits.TraitBridge.class);
+                final Traits.TraitBridge traitBridge = accessor.getAnnotation(Traits.TraitBridge)
                 return accessor.getDeclaringClass() != type && Modifier.isStatic(accessor.getModifiers()) &&
-                        traitBridge != null && VALIDATEABLE_TRAIT.equals(traitBridge.traitClass().getName());
+                        traitBridge != null && 'grails.validation.Validateable'.equals(traitBridge.traitClass().getName())
             } catch (NoSuchMethodException | SecurityException ignored) {
-                return false;
+                return false
             }
         }
-    };
+    }
 
     private static final class NoBindingIncludeList extends ArrayList {
     }
@@ -91,7 +81,7 @@ public final class BindingIncludeLists {
      */
     private static final class GeneratedBindingIncludeList extends ArrayList {
         private GeneratedBindingIncludeList(final Collection values) {
-            super(values);
+            super(values)
         }
     }
 
@@ -106,57 +96,57 @@ public final class BindingIncludeLists {
      * @return the names, patterns included, of the properties bound, or {@code null} where binding
      * the type is not restricted
      */
-    public static List forType(final Class type, final boolean denyByDefault) {
+    static List forType(final Class type, final boolean denyByDefault) {
         final Map<Class, List> includeListCache = denyByDefault ?
-                CLASS_TO_BINDING_INCLUDE_LIST : CLASS_TO_LEGACY_BINDING_INCLUDE_LIST;
-        List includeList = null;
+                CLASS_TO_BINDING_INCLUDE_LIST : CLASS_TO_LEGACY_BINDING_INCLUDE_LIST
+        List includeList = null
         try {
             if (includeListCache.containsKey(type)) {
-                includeList = includeListCache.get(type);
+                includeList = includeListCache.get(type)
                 if (includeList == NO_BINDING_INCLUDE_LIST) {
-                    includeList = null;
+                    includeList = null
                 }
             } else {
                 // Resolve the runtime-derived bindable names only on a cache miss - this walks the
                 // target's constraints and would otherwise run on every bind of a cached class.
-                final List runtimeBindableNames = denyByDefault ? bindablePropertyNames(type) : null;
-                includeList = runtimeBindableNames;
+                final List runtimeBindableNames = denyByDefault ? bindablePropertyNames(type) : null
+                includeList = runtimeBindableNames
                 // Compatibility metadata describes its declaring class, not an unenhanced subclass.
                 // Match Grails 7's class-local lookup so a parent's generated list cannot hide new properties.
-                final Field legacyWhiteListField = getPublicDeclaredField(type, DefaultASTDatabindingHelper.LEGACY_DATABINDING_WHITELIST);
+                final Field legacyWhiteListField = getPublicDeclaredField(type, DefaultASTDatabindingHelper.LEGACY_DATABINDING_WHITELIST)
                 final Field defaultWhiteListField = denyByDefault ?
                         getPairedField(type, DefaultASTDatabindingHelper.DEFAULT_DATABINDING_WHITELIST,
                                 DefaultASTDatabindingHelper.LEGACY_DATABINDING_WHITELIST) :
-                        getPublicDeclaredField(type, DefaultASTDatabindingHelper.DEFAULT_DATABINDING_WHITELIST);
+                        getPublicDeclaredField(type, DefaultASTDatabindingHelper.DEFAULT_DATABINDING_WHITELIST)
                 if (!denyByDefault) {
-                    includeList = getStaticListFieldValue(legacyWhiteListField);
+                    includeList = getStaticListFieldValue(legacyWhiteListField)
                     if (includeList == null) {
-                        includeList = getStaticListFieldValue(defaultWhiteListField);
+                        includeList = getStaticListFieldValue(defaultWhiteListField)
                     }
                 } else if (defaultWhiteListField != null) {
-                    final List generatedIncludeList = getStaticListFieldValue(defaultWhiteListField);
-                    final Collection combinedIncludeList = new LinkedHashSet();
+                    final List generatedIncludeList = getStaticListFieldValue(defaultWhiteListField)
+                    final Collection combinedIncludeList = new LinkedHashSet()
                     if (generatedIncludeList != null) {
-                        combinedIncludeList.addAll(generatedIncludeList);
+                        combinedIncludeList.addAll(generatedIncludeList)
                     }
                     if (runtimeBindableNames != null) {
-                        combinedIncludeList.addAll(runtimeBindableNames);
+                        combinedIncludeList.addAll(runtimeBindableNames)
                     }
-                    includeList = new ArrayList(combinedIncludeList);
+                    includeList = new ArrayList(combinedIncludeList)
                 }
                 if (denyByDefault) {
-                    includeList = asGenerated(includeList);
+                    includeList = asGenerated(includeList)
                 }
                 if (!Environment.getCurrent().isReloadEnabled()) {
-                    includeListCache.put(type, includeList == null ? NO_BINDING_INCLUDE_LIST : includeList);
+                    includeListCache.put(type, includeList == null ? NO_BINDING_INCLUDE_LIST : includeList)
                 }
             }
-        } catch (Exception e) {
+        } catch (Exception ignored) {
         }
         if (denyByDefault) {
-            includeList = asGenerated(includeList);
+            includeList = asGenerated(includeList)
         }
-        return includeList;
+        return includeList
     }
 
     /**
@@ -165,30 +155,30 @@ public final class BindingIncludeLists {
      *
      * @return the names, or {@code null} where binding the type is not restricted
      */
-    public static List<String> propertyNames(final Class type) {
-        final List includeList = forType(type, isDenyByDefaultEnabled());
+    static List<String> propertyNames(final Class type) {
+        final List includeList = forType(type, isDenyByDefaultEnabled())
         if (includeList == null) {
-            return null;
+            return null
         }
-        final List<String> names = new ArrayList<>();
-        for (Object name : includeList) {
+        final List<String> names = new ArrayList<>()
+        for (Object name in includeList) {
             if (name != null && !DefaultASTDatabindingHelper.NO_BINDABLE_PROPERTIES.equals(name)) {
-                names.add(name.toString());
+                names.add(name.toString())
             }
         }
-        return Collections.unmodifiableList(names);
+        return Collections.unmodifiableList(names)
     }
 
     /**
      * Whether {@code grails.databinding.denyByDefault} is enabled in the running application.
      */
-    public static boolean isDenyByDefaultEnabled() {
-        GrailsApplication application = Holders.findApplication();
+    static boolean isDenyByDefaultEnabled() {
+        GrailsApplication application = Holders.findApplication()
         if (application != null) {
             return resolveDenyByDefault(
-                    application.getConfig().getProperty(Settings.DATABINDING_DENY_BY_DEFAULT, Object.class, null));
+                    application.getConfig().getProperty(Settings.DATABINDING_DENY_BY_DEFAULT, Object, null))
         }
-        return resolveDenyByDefault(Holders.getFlatConfig().get(Settings.DATABINDING_DENY_BY_DEFAULT));
+        return resolveDenyByDefault(Holders.getFlatConfig().get(Settings.DATABINDING_DENY_BY_DEFAULT))
     }
 
     /**
@@ -206,84 +196,84 @@ public final class BindingIncludeLists {
      * @param value the raw configured value, which may be {@code null} or an absent-key placeholder
      * @return true when secure deny-by-default binding applies
      */
-    public static boolean resolveDenyByDefault(final Object value) {
+    static boolean resolveDenyByDefault(final Object value) {
         if (value == null || value instanceof NavigableMap.NullSafeNavigator) {
-            return false;
+            return false
         }
         if (value instanceof Boolean) {
-            return (Boolean) value;
+            return (Boolean) value
         }
         if (value instanceof CharSequence) {
-            final String configuredValue = value.toString().trim();
-            if ("true".equalsIgnoreCase(configuredValue)) {
-                return true;
+            final String configuredValue = value.toString().trim()
+            if ('true'.equalsIgnoreCase(configuredValue)) {
+                return true
             }
-            if ("false".equalsIgnoreCase(configuredValue)) {
-                return false;
+            if ('false'.equalsIgnoreCase(configuredValue)) {
+                return false
             }
         }
-        LOG.warn("Unrecognised value [{}] for configuration property [{}]; secure data binding will be enabled.",
-                value, Settings.DATABINDING_DENY_BY_DEFAULT);
-        return true;
+        LOG.warn('Unrecognised value [{}] for configuration property [{}]; secure data binding will be enabled.',
+                value, Settings.DATABINDING_DENY_BY_DEFAULT)
+        return true
     }
 
     /**
      * Forgets the include lists read, so they are read again, as when the classes are reloaded.
      */
-    public static void clearCaches() {
-        CLASS_TO_BINDING_INCLUDE_LIST.clear();
-        CLASS_TO_LEGACY_BINDING_INCLUDE_LIST.clear();
+    static void clearCaches() {
+        CLASS_TO_BINDING_INCLUDE_LIST.clear()
+        CLASS_TO_LEGACY_BINDING_INCLUDE_LIST.clear()
     }
 
-    public static List asGenerated(final List includeList) {
+    static List asGenerated(final List includeList) {
         if (includeList instanceof GeneratedBindingIncludeList) {
-            return includeList;
+            return includeList
         }
         final Collection values = includeList == null || includeList.isEmpty() ?
-                Collections.singletonList(DefaultASTDatabindingHelper.NO_BINDABLE_PROPERTIES) : includeList;
-        return new GeneratedBindingIncludeList(values);
+                Collections.singletonList(DefaultASTDatabindingHelper.NO_BINDABLE_PROPERTIES) : includeList
+        return new GeneratedBindingIncludeList(values)
     }
 
-    public static boolean isGenerated(final List includeList) {
-        return includeList instanceof GeneratedBindingIncludeList;
+    static boolean isGenerated(final List includeList) {
+        return includeList instanceof GeneratedBindingIncludeList
     }
 
     /**
      * The properties a type constrains {@code bindable: true}.
      */
-    public static List bindablePropertyNames(final Class type) {
-        return propertyNamesWithBindableValue(constrainedProperties(type), Boolean.TRUE);
+    static List bindablePropertyNames(final Class type) {
+        return propertyNamesWithBindableValue(constrainedProperties(type), Boolean.TRUE)
     }
 
     /**
      * The properties a type constrains {@code bindable: false}, which binding never binds without an
      * explicit include list naming them.
      */
-    public static List<String> unbindablePropertyNames(final Class type) {
-        final List<String> names = new ArrayList<>();
-        for (Object name : propertyNamesWithBindableValue(constrainedProperties(type), Boolean.FALSE)) {
-            names.add(name.toString());
+    static List<String> unbindablePropertyNames(final Class type) {
+        final List<String> names = new ArrayList<>()
+        for (Object name in propertyNamesWithBindableValue(constrainedProperties(type), Boolean.FALSE)) {
+            names.add(name.toString())
         }
-        return Collections.unmodifiableList(names);
+        return Collections.unmodifiableList(names)
     }
 
-    public static List propertyNamesWithBindableValue(final Map constrainedProperties, final Boolean bindableValue) {
+    static List propertyNamesWithBindableValue(final Map constrainedProperties, final Boolean bindableValue) {
         if (constrainedProperties == null || constrainedProperties.isEmpty()) {
-            return Collections.emptyList();
+            return Collections.emptyList()
         }
-        final List propertyNames = new ArrayList();
-        for (Object entryObject : constrainedProperties.entrySet()) {
-            Map.Entry entry = (Map.Entry) entryObject;
+        final List propertyNames = new ArrayList()
+        for (Object entryObject in constrainedProperties.entrySet()) {
+            Map.Entry entry = (Map.Entry) entryObject
             if (bindableValue.equals(bindableConstraintValue(entry.getValue()))) {
-                String propertyName = String.valueOf(entry.getKey());
-                propertyNames.add(propertyName);
+                String propertyName = String.valueOf(entry.getKey())
+                propertyNames.add(propertyName)
                 if (Boolean.TRUE.equals(bindableValue) && !isSimpleType(constrainedPropertyType(entry.getValue()))) {
-                    propertyNames.add(propertyName + "_*");
-                    propertyNames.add(propertyName + ".*");
+                    propertyNames.add(propertyName + '_*')
+                    propertyNames.add(propertyName + '.*')
                 }
             }
         }
-        return propertyNames;
+        return propertyNames
     }
 
     /**
@@ -292,36 +282,36 @@ public final class BindingIncludeLists {
      * {@code getConstraintsMap()} instead of implementing {@code Validateable} itself would answer with
      * its superclass's constraints alone, so its own are evaluated, with those it inherits.
      */
-    public static Map constrainedProperties(final Class type) {
+    static Map constrainedProperties(final Class type) {
         if (inheritsConstraintsMap(type)) {
-            final Map constrainedProperties = evaluateConstrainedProperties(type);
+            final Map constrainedProperties = evaluateConstrainedProperties(type)
             if (!constrainedProperties.isEmpty()) {
-                return constrainedProperties;
+                return constrainedProperties
             }
         }
-        MetaClass metaClass = GroovySystem.getMetaClassRegistry().getMetaClass(type);
+        MetaClass metaClass = GroovySystem.getMetaClassRegistry().getMetaClass(type)
         try {
-            Object constrainedProperties = metaClass.invokeStaticMethod(type, CONSTRAINTS_MAP_ACCESSOR, new Object[0]);
+            Object constrainedProperties = metaClass.invokeStaticMethod(type, CONSTRAINTS_MAP_ACCESSOR, new Object[0])
             if (constrainedProperties instanceof Map) {
-                return (Map) constrainedProperties;
+                return (Map) constrainedProperties
             }
         } catch (Exception ignored) {
         }
         try {
-            Object constrainedProperties = metaClass.getProperty(type, "constraints");
+            Object constrainedProperties = metaClass.getProperty(type, 'constraints')
             if (constrainedProperties instanceof Map) {
-                return (Map) constrainedProperties;
+                return (Map) constrainedProperties
             }
         } catch (Exception ignored) {
         }
         try {
-            Map constrainedProperties = evaluateConstrainedProperties(type);
+            Map constrainedProperties = evaluateConstrainedProperties(type)
             if (constrainedProperties != null) {
-                return constrainedProperties;
+                return constrainedProperties
             }
         } catch (Exception ignored) {
         }
-        return Collections.emptyMap();
+        return Collections.emptyMap()
     }
 
     /**
@@ -330,95 +320,95 @@ public final class BindingIncludeLists {
      * {@code getConstraintsMap()} instance getter a superclass declares is not inherited in this sense: it
      * answers for the instance it is called on.
      */
-    public static boolean inheritsConstraintsMap(final Class type) {
-        return INHERITS_CONSTRAINTS_MAP.get(type);
+    static boolean inheritsConstraintsMap(final Class type) {
+        return INHERITS_CONSTRAINTS_MAP.get(type)
     }
 
-    public static Map evaluateConstrainedProperties(final Class type) {
+    static Map evaluateConstrainedProperties(final Class type) {
         try {
-            Class<?> validationSupport = Class.forName("org.grails.web.plugins.support.ValidationSupport");
-            Object constrainedProperties = validationSupport.getMethod("getConstrainedPropertiesForClass", Class.class, boolean.class).invoke(null, type, false);
+            Class<?> validationSupport = Class.forName('org.grails.web.plugins.support.ValidationSupport')
+            Object constrainedProperties = validationSupport.getMethod('getConstrainedPropertiesForClass', Class, boolean).invoke(null, type, false)
             if (constrainedProperties instanceof Map) {
-                return (Map) constrainedProperties;
+                return (Map) constrainedProperties
             }
         } catch (Exception ignored) {
         }
-        return Collections.emptyMap();
+        return Collections.emptyMap()
     }
 
-    public static Object bindableConstraintValue(final Object constrainedProperty) {
-        MetaClass metaClass = GroovySystem.getMetaClassRegistry().getMetaClass(constrainedProperty.getClass());
+    static Object bindableConstraintValue(final Object constrainedProperty) {
+        MetaClass metaClass = GroovySystem.getMetaClassRegistry().getMetaClass(constrainedProperty.getClass())
         try {
-            Object value = metaClass.invokeMethod(constrainedProperty, "getMetaConstraintValue", new Object[] { DefaultASTDatabindingHelper.BINDABLE_CONSTRAINT_NAME });
+            Object value = metaClass.invokeMethod(constrainedProperty, 'getMetaConstraintValue', [DefaultASTDatabindingHelper.BINDABLE_CONSTRAINT_NAME] as Object[])
             if (value != null) {
-                return value;
+                return value
             }
         } catch (Exception ignored) {
         }
         try {
-            Object metaConstraints = metaClass.getProperty(constrainedProperty, "metaConstraints");
+            Object metaConstraints = metaClass.getProperty(constrainedProperty, 'metaConstraints')
             if (metaConstraints instanceof Map) {
-                return ((Map) metaConstraints).get(DefaultASTDatabindingHelper.BINDABLE_CONSTRAINT_NAME);
+                return ((Map) metaConstraints).get(DefaultASTDatabindingHelper.BINDABLE_CONSTRAINT_NAME)
             }
         } catch (Exception ignored) {
         }
         try {
-            Object delegate = metaClass.getProperty(constrainedProperty, "property");
+            Object delegate = metaClass.getProperty(constrainedProperty, 'property')
             if (delegate != null && delegate != constrainedProperty) {
-                return bindableConstraintValue(delegate);
+                return bindableConstraintValue(delegate)
             }
         } catch (Exception ignored) {
         }
-        return null;
+        return null
     }
 
     private static Class constrainedPropertyType(final Object constrainedProperty) {
-        MetaClass metaClass = GroovySystem.getMetaClassRegistry().getMetaClass(constrainedProperty.getClass());
+        MetaClass metaClass = GroovySystem.getMetaClassRegistry().getMetaClass(constrainedProperty.getClass())
         try {
-            Object propertyType = metaClass.invokeMethod(constrainedProperty, "getPropertyType", new Object[0]);
+            Object propertyType = metaClass.invokeMethod(constrainedProperty, 'getPropertyType', new Object[0])
             if (propertyType instanceof Class) {
-                return (Class) propertyType;
+                return (Class) propertyType
             }
         } catch (Exception ignored) {
         }
-        return null;
+        return null
     }
 
     private static boolean isSimpleType(final Class propertyType) {
-        return propertyType != null && (propertyType.isPrimitive() || String.class.equals(propertyType) ||
-                Boolean.class.equals(propertyType) || Character.class.equals(propertyType) || Number.class.isAssignableFrom(propertyType) ||
-                BigInteger.class.equals(propertyType) || BigDecimal.class.equals(propertyType) || URL.class.equals(propertyType));
+        return propertyType != null && (propertyType.isPrimitive() || propertyType == String ||
+                propertyType == Boolean || propertyType == Character || Number.isAssignableFrom(propertyType) ||
+                propertyType == BigInteger || propertyType == BigDecimal || propertyType == URL)
     }
 
     private static Field getPairedField(final Class objectClass, final String fieldName, final String pairedFieldName) {
-        Class currentClass = objectClass;
+        Class currentClass = objectClass
         while (currentClass != null) {
-            final Field field = getPublicDeclaredField(currentClass, fieldName);
-            final Field pairedField = getPublicDeclaredField(currentClass, pairedFieldName);
+            final Field field = getPublicDeclaredField(currentClass, fieldName)
+            final Field pairedField = getPublicDeclaredField(currentClass, pairedFieldName)
             if (field != null && pairedField != null) {
-                return field;
+                return field
             }
-            currentClass = currentClass.getSuperclass();
+            currentClass = currentClass.getSuperclass()
         }
-        return null;
+        return null
     }
 
     private static Field getPublicDeclaredField(final Class objectClass, final String fieldName) {
         try {
-            final Field field = objectClass.getDeclaredField(fieldName);
-            return Modifier.isPublic(field.getModifiers()) ? field : null;
+            final Field field = objectClass.getDeclaredField(fieldName)
+            return Modifier.isPublic(field.getModifiers()) ? field : null
         } catch (NoSuchFieldException ignored) {
-            return null;
+            return null
         }
     }
 
     private static List getStaticListFieldValue(final Field field) throws IllegalAccessException {
         if (field != null && (field.getModifiers() & Modifier.STATIC) != 0) {
-            final Object value = field.get(null);
+            final Object value = field.get(null)
             if (value instanceof List) {
-                return (List) value;
+                return (List) value
             }
         }
-        return null;
+        return null
     }
 }

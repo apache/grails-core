@@ -16,19 +16,26 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
+package org.grails.web.databinding.bindingsource
 
-package grails.gsp;
+import groovy.transform.CompileStatic
 
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
+import org.grails.databinding.bindingsource.DataBindingSourceCreationException
 
-import org.codehaus.groovy.transform.GroovyASTTransformationClass;
+/**
+ * Represents an error creation a data binding source because the request
+ * body is invalid.  Examples would be malformed JSON or XML.
+ *
+ * @author Jeff Brown
+ * @since 2.3
+ */
+@CompileStatic
+class InvalidRequestBodyException extends DataBindingSourceCreationException {
 
-@Retention(RetentionPolicy.RUNTIME)
-@Target({ElementType.TYPE})
-@GroovyASTTransformationClass("grails.gsp.taglib.compiler.TagLibArtefactTypeAstTransformation")
-public @interface TagLib {
+    private static final long serialVersionUID = 1L
+
+    InvalidRequestBodyException(Exception cause) {
+        super(cause)
+    }
 
 }

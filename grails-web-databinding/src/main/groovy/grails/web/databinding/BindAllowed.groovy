@@ -16,15 +16,17 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.web.databinding;
+package grails.web.databinding
 
-import org.codehaus.groovy.ast.ClassNode;
-import org.codehaus.groovy.classgen.GeneratorContext;
-import org.codehaus.groovy.control.SourceUnit;
+import java.lang.annotation.ElementType
+import java.lang.annotation.Retention
+import java.lang.annotation.RetentionPolicy
+import java.lang.annotation.Target
 
-/**
- * @author Jeff Brown
- */
-public interface ASTDatabindingHelper {
-    void injectDatabindingCode(SourceUnit source, GeneratorContext context, ClassNode classNode);
+@Retention(RetentionPolicy.RUNTIME)
+@Target(ElementType.PARAMETER)
+@interface BindAllowed {
+
+    String[] value()
+
 }

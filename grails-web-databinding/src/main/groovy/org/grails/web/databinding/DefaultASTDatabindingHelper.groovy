@@ -1,0 +1,387 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ */
+package org.grails.web.databinding
+
+import java.lang.reflect.Modifier
+
+import groovy.transform.CompileStatic
+import org.codehaus.groovy.ast.ClassNode
+import org.codehaus.groovy.ast.FieldNode
+import org.codehaus.groovy.ast.MethodNode
+import org.codehaus.groovy.ast.Parameter
+import org.codehaus.groovy.ast.expr.ClosureExpression
+import org.codehaus.groovy.ast.expr.ConstantExpression
+import org.codehaus.groovy.ast.expr.Expression
+import org.codehaus.groovy.ast.expr.ListExpression
+import org.codehaus.groovy.classgen.GeneratorContext
+import org.codehaus.groovy.control.SourceUnit
+
+import grails.util.CollectionUtils
+import grails.util.GrailsNameUtils
+import org.grails.compiler.injection.GrailsASTUtils
+
+@CompileStatic
+class DefaultASTDatabindingHelper implements ASTDatabindingHelper {
+
+    public static final String CONSTRAINTS_FIELD_NAME = 'constraints'
+    public static final String BINDABLE_CONSTRAINT_NAME = 'bindable'
+
+    public static final String DEFAULT_DATABINDING_WHITELIST = '\$defaultDatabindingWhiteList'
+    public static final String LEGACY_DATABINDING_WHITELIST = '\$legacyDatabindingWhiteList'
+    public static final String NO_BINDABLE_PROPERTIES = '\$_NO_BINDABLE_PROPERTIES_\$'
+    private static Map<ClassNode, Set<String>> CLASS_NODE_TO_WHITE_LIST_PROPERTY_NAMES = new HashMap<>()
+
+    private static Map<ClassNode, Set<String>> CLASS_NODE_TO_LEGACY_WHITE_LIST_PROPERTY_NAMES = new HashMap<>()
+
+    private static Map<ClassNode, Set<String>> CLASS_NODE_TO_EXPLICITLY_BINDABLE_SPECIAL_PROPERTY_NAMES = new HashMap<>()
+
+    private static final List<ClassNode> SIMPLE_TYPES = [
+            new ClassNode(Boolean),
+            new ClassNode(Boolean.TYPE),
+            new ClassNode(Byte),
+            new ClassNode(Byte.TYPE),
+            new ClassNode(Character),
+            new ClassNode(Character.TYPE),
+            new ClassNode(Short),
+            new ClassNode(Short.TYPE),
+            new ClassNode(Integer),
+            new ClassNode(Integer.TYPE),
+            new ClassNode(Long),
+            new ClassNode(Long.TYPE),
+            new ClassNode(Float),
+            new ClassNode(Float.TYPE),
+            new ClassNode(Double),
+            new ClassNode(Double.TYPE),
+            new ClassNode(BigInteger),
+            new ClassNode(BigDecimal),
+            new ClassNode(String),
+            new ClassNode(URL)
+    ]
+
+    private static final Set<String> DOMAIN_CLASS_PROPERTIES_TO_EXCLUDE_BY_DEFAULT = CollectionUtils.newSet('id', 'version', 'dateCreated', 'lastUpdated')
+
+    void injectDatabindingCode(final SourceUnit source, final GeneratorContext context, final ClassNode classNode) {
+        addDefaultDatabindingWhitelistField(source, classNode)
+    }
+
+    private void addDefaultDatabindingWhitelistField(final SourceUnit sourceUnit, final ClassNode classNode) {
+        final FieldNode defaultWhitelistField = classNode.getDeclaredField(DEFAULT_DATABINDING_WHITELIST)
+        if (defaultWhitelistField == null) {
+            final Set<String> propertyNamesToIncludeInWhiteList = getPropertyNamesToIncludeInWhiteList(sourceUnit, classNode)
+            addWhitelistField(classNode, DEFAULT_DATABINDING_WHITELIST, propertyNamesToIncludeInWhiteList, true)
+        }
+
+        final FieldNode legacyWhitelistField = classNode.getDeclaredField(LEGACY_DATABINDING_WHITELIST)
+        if (legacyWhitelistField == null) {
+            final Set<String> legacyPropertyNamesToIncludeInWhiteList = getLegacyPropertyNamesToIncludeInWhiteList(sourceUnit, classNode)
+            addWhitelistField(classNode, LEGACY_DATABINDING_WHITELIST, legacyPropertyNamesToIncludeInWhiteList, true)
+        }
+    }
+
+    private void addWhitelistField(final ClassNode classNode, final String fieldName, final Set<String> propertyNamesToIncludeInWhiteList, final boolean denyWhenEmpty) {
+        final ListExpression listExpression = new ListExpression()
+        if (propertyNamesToIncludeInWhiteList.size() > 0) {
+            for (String propertyName in propertyNamesToIncludeInWhiteList) {
+                listExpression.addExpression(new ConstantExpression(propertyName))
+
+                final FieldNode declaredField = getDeclaredFieldInInheritanceHierarchy(classNode, propertyName)
+                boolean isSimpleType = false
+                if (declaredField != null) {
+                    final ClassNode type = declaredField.getType()
+                    if (type != null) {
+                        isSimpleType = SIMPLE_TYPES.contains(type)
+                    }
+                }
+                if (!isSimpleType) {
+                    listExpression.addExpression(new ConstantExpression(propertyName + '_*'))
+                    listExpression.addExpression(new ConstantExpression(propertyName + '.*'))
+                }
+            }
+        } else if (denyWhenEmpty) {
+            listExpression.addExpression(new ConstantExpression(NO_BINDABLE_PROPERTIES))
+        }
+
+        classNode.addField(fieldName,
+                Modifier.STATIC | Modifier.PUBLIC | Modifier.FINAL, new ClassNode(List),
+                listExpression)
+    }
+
+    private FieldNode getDeclaredFieldInInheritanceHierarchy(final ClassNode classNode, String propertyName) {
+        FieldNode fieldNode = classNode.getDeclaredField(propertyName)
+        if (fieldNode == null) {
+            if (!classNode.getSuperClass().equals(new ClassNode(Object))) {
+                return getDeclaredFieldInInheritanceHierarchy(classNode.getSuperClass(), propertyName)
+            }
+        }
+        return fieldNode
+    }
+
+    private Set<String> getPropertyNamesToIncludeInWhiteListForParentClass(final SourceUnit sourceUnit, final ClassNode parentClassNode) {
+        final Set<String> propertyNames
+        if (CLASS_NODE_TO_WHITE_LIST_PROPERTY_NAMES.containsKey(parentClassNode)) {
+            propertyNames = CLASS_NODE_TO_WHITE_LIST_PROPERTY_NAMES.get(parentClassNode)
+        } else {
+            propertyNames = getPropertyNamesToIncludeInWhiteList(sourceUnit, parentClassNode)
+        }
+        return propertyNames
+    }
+
+    private Set<String> getExplicitlyBindableSpecialPropertyNamesForParentClass(final SourceUnit sourceUnit, final ClassNode parentClassNode) {
+        if (!CLASS_NODE_TO_EXPLICITLY_BINDABLE_SPECIAL_PROPERTY_NAMES.containsKey(parentClassNode)) {
+            getPropertyNamesToIncludeInWhiteList(sourceUnit, parentClassNode)
+        }
+        final Set<String> explicitlyBindable = CLASS_NODE_TO_EXPLICITLY_BINDABLE_SPECIAL_PROPERTY_NAMES.get(parentClassNode)
+        return explicitlyBindable != null ? explicitlyBindable : new HashSet<>()
+    }
+
+    private Set<String> getPropertyNamesToIncludeInWhiteList(final SourceUnit sourceUnit, final ClassNode classNode) {
+        final Set<String> propertyNamesToIncludeInWhiteList = new HashSet<>()
+        final Set<String> unbindablePropertyNames = new HashSet<>()
+        final Set<String> bindablePropertyNames = new HashSet<>()
+
+        // Special properties (id/version/dateCreated/lastUpdated) made bindable via an explicit constraint
+        // somewhere in the class hierarchy. These are tracked separately so the inherited-whitelist filter
+        // below can tell an explicit bindable: true from a special property that merely landed in a non-domain
+        // parent's whitelist by default (for example id/version injected onto a @DirtyCheck base class).
+        final Set<String> explicitlyBindableSpecialPropertyNames = new HashSet<>()
+        final boolean isDomainClass = GrailsASTUtils.isDomainClass(classNode, sourceUnit)
+        if (!classNode.getSuperClass().equals(new ClassNode(Object))) {
+            final Set<String> parentClassPropertyNames = getPropertyNamesToIncludeInWhiteListForParentClass(sourceUnit, classNode.getSuperClass())
+            final Set<String> parentExplicitlyBindableSpecialPropertyNames = getExplicitlyBindableSpecialPropertyNamesForParentClass(sourceUnit, classNode.getSuperClass())
+            explicitlyBindableSpecialPropertyNames.addAll(parentExplicitlyBindableSpecialPropertyNames)
+            for (final String parentPropertyName in parentClassPropertyNames) {
+                // A domain class never binds its special properties (id/version/dateCreated/lastUpdated) by
+                // default, so don't inherit them from a non-domain parent such as a @DirtyCheck base class.
+                // An explicit bindable: true constraint declared up the hierarchy is honoured, however.
+                if (isDomainClass && DOMAIN_CLASS_PROPERTIES_TO_EXCLUDE_BY_DEFAULT.contains(parentPropertyName) &&
+                        !parentExplicitlyBindableSpecialPropertyNames.contains(parentPropertyName)) {
+                    continue
+                }
+                bindablePropertyNames.add(parentPropertyName)
+            }
+        }
+
+        final FieldNode constraintsFieldNode = classNode.getDeclaredField(CONSTRAINTS_FIELD_NAME)
+        if (constraintsFieldNode != null && constraintsFieldNode.hasInitialExpression()) {
+            final Expression constraintsInitialExpression = constraintsFieldNode.getInitialExpression()
+            if (constraintsInitialExpression instanceof ClosureExpression) {
+
+                final Map<String, Map<String, Expression>> constraintsInfo = GrailsASTUtils.getConstraintMetadata((ClosureExpression) constraintsInitialExpression)
+
+                for (Map.Entry<String, Map<String, Expression>> constraintConfig in constraintsInfo.entrySet()) {
+                    final String propertyName = constraintConfig.getKey()
+                    final Map<String, Expression> mapEntryExpressions = constraintConfig.getValue()
+                    for (Map.Entry<String, Expression> entry in mapEntryExpressions.entrySet()) {
+                        final String constraintName = entry.getKey()
+                        if (BINDABLE_CONSTRAINT_NAME.equals(constraintName)) {
+                            final Expression valueExpression = entry.getValue()
+                            Boolean bindableValue = null
+                            if (valueExpression instanceof ConstantExpression) {
+                                final Object constantValue = ((ConstantExpression) valueExpression).getValue()
+                                if (constantValue instanceof Boolean) {
+                                    bindableValue = (Boolean) constantValue
+                                }
+                            }
+                            if (bindableValue != null) {
+                                if (Boolean.TRUE.equals(bindableValue)) {
+                                    unbindablePropertyNames.remove(propertyName)
+                                    bindablePropertyNames.add(propertyName)
+                                    if (DOMAIN_CLASS_PROPERTIES_TO_EXCLUDE_BY_DEFAULT.contains(propertyName)) {
+                                        explicitlyBindableSpecialPropertyNames.add(propertyName)
+                                    }
+                                } else {
+                                    bindablePropertyNames.remove(propertyName)
+                                    unbindablePropertyNames.add(propertyName)
+                                    explicitlyBindableSpecialPropertyNames.remove(propertyName)
+                                }
+                            } else {
+                                GrailsASTUtils.warning(sourceUnit, valueExpression, 'The bindable constraint for property [' +
+                                        propertyName + '] in class [' + classNode.getName() +
+                                        '] has a value which is not a boolean literal and will be ignored.')
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        propertyNamesToIncludeInWhiteList.addAll(bindablePropertyNames)
+        CLASS_NODE_TO_WHITE_LIST_PROPERTY_NAMES.put(classNode, propertyNamesToIncludeInWhiteList)
+        CLASS_NODE_TO_EXPLICITLY_BINDABLE_SPECIAL_PROPERTY_NAMES.put(classNode, explicitlyBindableSpecialPropertyNames)
+        return propertyNamesToIncludeInWhiteList
+    }
+
+    private Set<String> getLegacyPropertyNamesToIncludeInWhiteListForParentClass(final SourceUnit sourceUnit, final ClassNode parentClassNode) {
+        final Set<String> propertyNames
+        if (CLASS_NODE_TO_LEGACY_WHITE_LIST_PROPERTY_NAMES.containsKey(parentClassNode)) {
+            propertyNames = CLASS_NODE_TO_LEGACY_WHITE_LIST_PROPERTY_NAMES.get(parentClassNode)
+        } else {
+            propertyNames = getLegacyPropertyNamesToIncludeInWhiteList(sourceUnit, parentClassNode)
+        }
+        return propertyNames
+    }
+
+    private Set<String> getLegacyPropertyNamesToIncludeInWhiteList(final SourceUnit sourceUnit, final ClassNode classNode) {
+        final Set<String> propertyNamesToIncludeInWhiteList = new HashSet<>()
+        final Set<String> unbindablePropertyNames = new HashSet<>()
+        final Set<String> bindablePropertyNames = new HashSet<>()
+
+        final Set<String> explicitlyBindableSpecialPropertyNames = new HashSet<>()
+        final boolean isDomainClass = GrailsASTUtils.isDomainClass(classNode, sourceUnit)
+        if (!classNode.getSuperClass().equals(new ClassNode(Object))) {
+            final Set<String> parentClassPropertyNames = getLegacyPropertyNamesToIncludeInWhiteListForParentClass(sourceUnit, classNode.getSuperClass())
+            final Set<String> parentExplicitlyBindableSpecialPropertyNames = getExplicitlyBindableSpecialPropertyNamesForParentClass(sourceUnit, classNode.getSuperClass())
+            explicitlyBindableSpecialPropertyNames.addAll(parentExplicitlyBindableSpecialPropertyNames)
+            for (final String parentPropertyName in parentClassPropertyNames) {
+                if (isDomainClass && DOMAIN_CLASS_PROPERTIES_TO_EXCLUDE_BY_DEFAULT.contains(parentPropertyName) &&
+                        !parentExplicitlyBindableSpecialPropertyNames.contains(parentPropertyName)) {
+                    continue
+                }
+                bindablePropertyNames.add(parentPropertyName)
+            }
+        }
+
+        final FieldNode constraintsFieldNode = classNode.getDeclaredField(CONSTRAINTS_FIELD_NAME)
+        if (constraintsFieldNode != null && constraintsFieldNode.hasInitialExpression()) {
+            final Expression constraintsInitialExpression = constraintsFieldNode.getInitialExpression()
+            if (constraintsInitialExpression instanceof ClosureExpression) {
+
+                final Map<String, Map<String, Expression>> constraintsInfo = GrailsASTUtils.getConstraintMetadata((ClosureExpression) constraintsInitialExpression)
+
+                for (Map.Entry<String, Map<String, Expression>> constraintConfig in constraintsInfo.entrySet()) {
+                    final String propertyName = constraintConfig.getKey()
+                    final Map<String, Expression> mapEntryExpressions = constraintConfig.getValue()
+                    for (Map.Entry<String, Expression> entry in mapEntryExpressions.entrySet()) {
+                        final String constraintName = entry.getKey()
+                        if (BINDABLE_CONSTRAINT_NAME.equals(constraintName)) {
+                            final Expression valueExpression = entry.getValue()
+                            Boolean bindableValue = null
+                            if (valueExpression instanceof ConstantExpression) {
+                                final Object constantValue = ((ConstantExpression) valueExpression).getValue()
+                                if (constantValue instanceof Boolean) {
+                                    bindableValue = (Boolean) constantValue
+                                }
+                            }
+                            if (bindableValue != null) {
+                                if (Boolean.TRUE.equals(bindableValue)) {
+                                    unbindablePropertyNames.remove(propertyName)
+                                    bindablePropertyNames.add(propertyName)
+                                    if (DOMAIN_CLASS_PROPERTIES_TO_EXCLUDE_BY_DEFAULT.contains(propertyName)) {
+                                        explicitlyBindableSpecialPropertyNames.add(propertyName)
+                                    }
+                                } else {
+                                    bindablePropertyNames.remove(propertyName)
+                                    unbindablePropertyNames.add(propertyName)
+                                    explicitlyBindableSpecialPropertyNames.remove(propertyName)
+                                }
+                            } else {
+                                GrailsASTUtils.warning(sourceUnit, valueExpression, 'The bindable constraint for property [' +
+                                        propertyName + '] in class [' + classNode.getName() +
+                                        '] has a value which is not a boolean literal and will be ignored.')
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        final Set<String> fieldsInTransientsList = getPropertyNamesExpressedInTransientsList(classNode)
+
+        propertyNamesToIncludeInWhiteList.addAll(bindablePropertyNames)
+        final List<FieldNode> fields = classNode.getFields()
+        for (FieldNode fieldNode in fields) {
+            final String fieldName = fieldNode.getName()
+            if ((!unbindablePropertyNames.contains(fieldName)) &&
+                    (bindablePropertyNames.contains(fieldName) || shouldFieldBeInWhiteList(fieldNode, fieldsInTransientsList, isDomainClass))) {
+                propertyNamesToIncludeInWhiteList.add(fieldName)
+            }
+        }
+
+        final Map<String, MethodNode> declaredMethodsMap = classNode.getDeclaredMethodsMap()
+        for (Map.Entry<String, MethodNode> methodEntry in declaredMethodsMap.entrySet()) {
+            final MethodNode value = methodEntry.getValue()
+            if (classNode.equals(value.getDeclaringClass())) {
+                Parameter[] parameters = value.getParameters()
+                if (parameters != null && parameters.length == 1) {
+                    final String methodName = value.getName()
+                    if (methodName.startsWith('set')) {
+                        final Parameter parameter = parameters[0]
+                        final ClassNode paramType = parameter.getType()
+                        if (!paramType.equals(new ClassNode(Object))) {
+                            final String restOfMethodName = methodName.substring(3)
+                            final String propertyName = GrailsNameUtils.getPropertyName(restOfMethodName)
+                            if (!unbindablePropertyNames.contains(propertyName) &&
+                                    (!isDomainClass || !DOMAIN_CLASS_PROPERTIES_TO_EXCLUDE_BY_DEFAULT.contains(propertyName))) {
+                                propertyNamesToIncludeInWhiteList.add(propertyName)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        CLASS_NODE_TO_LEGACY_WHITE_LIST_PROPERTY_NAMES.put(classNode, propertyNamesToIncludeInWhiteList)
+        Map<String, ClassNode> allAssociationMap = GrailsASTUtils.getAllAssociationMap(classNode)
+        for (String associationName in allAssociationMap.keySet()) {
+            if (!propertyNamesToIncludeInWhiteList.contains(associationName) && !unbindablePropertyNames.contains(associationName)) {
+                propertyNamesToIncludeInWhiteList.add(associationName)
+            }
+        }
+        return propertyNamesToIncludeInWhiteList
+    }
+
+    private boolean shouldFieldBeInWhiteList(final FieldNode fieldNode, final Set<String> fieldsInTransientsList, final boolean isDomainClass) {
+        boolean shouldInclude = true
+        final int modifiers = fieldNode.getModifiers()
+        final String fieldName = fieldNode.getName()
+        if ((modifiers & Modifier.STATIC) != 0 ||
+                (modifiers & Modifier.TRANSIENT) != 0 ||
+                fieldsInTransientsList.contains(fieldName) ||
+                (fieldNode.getType().equals(new ClassNode(Object)) && !fieldNode.getType().isUsingGenerics())) {
+            shouldInclude = false
+        } else if (isDomainClass) {
+            if (DOMAIN_CLASS_PROPERTIES_TO_EXCLUDE_BY_DEFAULT.contains(fieldName)) {
+                shouldInclude = false
+            }
+        }
+        return shouldInclude
+    }
+
+    private Set<String> getPropertyNamesExpressedInTransientsList(final ClassNode classNode) {
+        final Set<String> transientFields = new HashSet<>()
+        final FieldNode transientsField = classNode.getField('transients')
+        if (transientsField != null && transientsField.isStatic()) {
+            final Expression initialValueExpression = transientsField.getInitialValueExpression()
+            if (initialValueExpression instanceof ListExpression) {
+                final ListExpression le = (ListExpression) initialValueExpression
+                final List<Expression> expressions = le.getExpressions()
+                for (Expression expr in expressions) {
+                    if (expr instanceof ConstantExpression) {
+                        final ConstantExpression ce = (ConstantExpression) expr
+                        final Object contantValue = ce.getValue()
+                        if (contantValue instanceof String) {
+                            transientFields.add((String) contantValue)
+                        }
+                    }
+                }
+            }
+        }
+        return transientFields
+    }
+
+}
