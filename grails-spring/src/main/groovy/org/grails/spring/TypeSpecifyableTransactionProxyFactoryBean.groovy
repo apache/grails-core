@@ -16,9 +16,10 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.spring;
+package org.grails.spring
 
-import org.springframework.transaction.interceptor.TransactionProxyFactoryBean;
+import groovy.transform.CompileStatic
+import org.springframework.transaction.interceptor.TransactionProxyFactoryBean
 
 /**
  * Allows the type of the underlying object to be specified explicitly.
@@ -30,21 +31,23 @@ import org.springframework.transaction.interceptor.TransactionProxyFactoryBean;
  *
  * Used by org.codehaus.groovy.grails.plugins.services.ServicesGrailsPlugin.
  */
-@SuppressWarnings("serial")
-public class TypeSpecifyableTransactionProxyFactoryBean extends TransactionProxyFactoryBean {
+@SuppressWarnings('serial')
+@CompileStatic
+class TypeSpecifyableTransactionProxyFactoryBean extends TransactionProxyFactoryBean {
 
-    private Class<?> type;
+    private Class<?> type
 
-    public TypeSpecifyableTransactionProxyFactoryBean(Class<?> type) {
-        this.type = type;
+    TypeSpecifyableTransactionProxyFactoryBean(Class<?> type) {
+        this.type = type
     }
 
     @Override
-    public Class<?> getObjectType() {
+    Class<?> getObjectType() {
         if (type != null) {
-            return type;
+            return type
         }
 
-        return super.getObjectType();
+        return super.getObjectType()
     }
+
 }
