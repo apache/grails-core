@@ -17,35 +17,33 @@
  *  under the License.
  */
 
-package org.grails.web.servlet.mvc;
+package org.grails.web.converters
 
-import grails.core.support.proxy.EntityProxyHandler;
+/**
+ * Created by jameskleeh on 2/7/17.
+ */
+class Author {
+    private String name
+    private Integer age
 
-public class MockHibernateProxyHandler implements EntityProxyHandler {
-    public boolean isProxy(Object o) {
-        return false;
+    Author(String name, Integer age) {
+        this.name = name
+        this.age = age
     }
 
-    public Object unwrapIfProxy(Object instance) {
-        return null;
+    String getName() {
+        return name
     }
 
-    public boolean isInitialized(Object o) {
-        return false;
+    void setName(String name) {
+        this.name = name
     }
 
-    public void initialize(Object o) {
+    Integer getAge() {
+        return age
     }
 
-    public boolean isInitialized(Object obj, String associationName) {
-        return false;
-    }
-
-    public Object getProxyIdentifier(Object o) {
-        return null;
-    }
-
-    public Class<?> getProxiedClass(Object o) {
-        return null;
+    void setAge(Integer age) {
+        this.age = age
     }
 }

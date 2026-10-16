@@ -17,8 +17,10 @@
  *  under the License.
  */
 
-package org.grails.web.servlet.mvc;
+package org.grails.web.servlet.mvc
 
-public interface LazyInitializer {
-    Object getImplementation();
+interface LazyInitializer {
+
+    Object getImplementation()
+
 }
