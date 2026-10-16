@@ -91,9 +91,7 @@ abstract class AbstractHibernateGormValidationApi<D> extends GormValidationApi<D
                     validator.validate(instance, errors)
                 }
             } finally {
-                if (!errors.hasErrors()) {
-                    restoreFlushMode(session, previous)
-                }
+                restoreFlushMode(session, previous)
             }
 
         }

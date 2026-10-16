@@ -108,9 +108,7 @@ class HibernateGormValidationApi<D> extends GormValidationApi<D> {
                     validator.validate instance, errors
                 }
             } finally {
-                if (!errors.hasErrors()) {
-                    session.setHibernateFlushMode(previous)
-                }
+                session.setHibernateFlushMode(previous)
             }
         }
 
