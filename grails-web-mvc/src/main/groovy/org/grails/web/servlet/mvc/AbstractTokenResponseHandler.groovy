@@ -16,9 +16,9 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.web.servlet.mvc;
+package org.grails.web.servlet.mvc
 
-import groovy.lang.Closure;
+import groovy.transform.CompileStatic
 
 /**
  * Implements the behavior of wasInvoked in the TokenResponseHandler interface.
@@ -28,27 +28,29 @@ import groovy.lang.Closure;
  * @author Graeme Rocher
  * @since 1.1
  */
-public abstract class AbstractTokenResponseHandler implements TokenResponseHandler {
+@CompileStatic
+abstract class AbstractTokenResponseHandler implements TokenResponseHandler {
 
-    private boolean invoked = false;
-    private boolean valid;
+    private boolean invoked = false
+    private boolean valid
 
-    public AbstractTokenResponseHandler(boolean valid) {
-        this.valid = valid;
+    AbstractTokenResponseHandler(boolean valid) {
+        this.valid = valid
     }
 
-    public final Object invalidToken(@SuppressWarnings("rawtypes") Closure callable) {
-        invoked = true;
-        return invalidTokenInternal(callable);
+    final Object invalidToken(@SuppressWarnings('rawtypes') Closure callable) {
+        invoked = true
+        return invalidTokenInternal(callable)
     }
 
-    protected abstract Object invalidTokenInternal(@SuppressWarnings("rawtypes") Closure callable);
+    protected abstract Object invalidTokenInternal(@SuppressWarnings('rawtypes') Closure callable)
 
-    public boolean wasInvoked() {
-        return invoked;
+    boolean wasInvoked() {
+        return invoked
     }
 
-    public boolean wasInvalidToken() {
-        return !valid;
+    boolean wasInvalidToken() {
+        return !valid
     }
+
 }

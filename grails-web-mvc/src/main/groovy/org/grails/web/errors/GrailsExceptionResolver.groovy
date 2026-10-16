@@ -16,137 +16,129 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.web.errors;
+package org.grails.web.errors
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Enumeration;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import jakarta.servlet.ServletContext
+import jakarta.servlet.ServletException
+import jakarta.servlet.http.HttpServletRequest
+import jakarta.servlet.http.HttpServletResponse
 
-import org.codehaus.groovy.control.CompilationFailedException;
-import org.codehaus.groovy.runtime.InvokerInvocationException;
+import groovy.transform.CompileStatic
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
+import org.codehaus.groovy.control.CompilationFailedException
+import org.codehaus.groovy.runtime.InvokerInvocationException
+import org.springframework.beans.BeanUtils
+import org.springframework.beans.BeansException
+import org.springframework.context.ApplicationContext
+import org.springframework.web.context.ServletContextAware
+import org.springframework.web.context.request.async.AsyncRequestTimeoutException
+import org.springframework.web.servlet.ModelAndView
+import org.springframework.web.servlet.View
+import org.springframework.web.servlet.ViewResolver
+import org.springframework.web.servlet.handler.SimpleMappingExceptionResolver
 
-import jakarta.servlet.ServletContext;
-import jakarta.servlet.ServletException;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import org.springframework.beans.BeanUtils;
-import org.springframework.beans.BeansException;
-import org.springframework.context.ApplicationContext;
-import org.springframework.web.context.ServletContextAware;
-import org.springframework.web.context.request.async.AsyncRequestTimeoutException;
-import org.springframework.web.servlet.ModelAndView;
-import org.springframework.web.servlet.View;
-import org.springframework.web.servlet.ViewResolver;
-import org.springframework.web.servlet.handler.SimpleMappingExceptionResolver;
-
-import grails.config.Config;
-import grails.config.Settings;
-import grails.core.GrailsApplication;
-import grails.core.support.GrailsApplicationAware;
-import grails.util.Environment;
-import grails.web.mapping.UrlMappingInfo;
-import grails.web.mapping.UrlMappingsHolder;
-import grails.web.mapping.exceptions.UrlMappingException;
-import grails.web.mvc.GrailsResponseMutator;
-import org.apache.grails.core.GrailsBootstrapRegistryInitializer;
-import org.grails.core.exceptions.GrailsRuntimeException;
-import org.grails.exceptions.ExceptionUtils;
-import org.grails.exceptions.reporting.DefaultStackTraceFilterer;
-import org.grails.exceptions.reporting.StackTraceFilterer;
-import org.grails.web.mapping.DefaultUrlMappingInfo;
-import org.grails.web.mapping.UrlMappingUtils;
-import org.grails.web.servlet.mvc.GrailsWebRequest;
-import org.grails.web.servlet.mvc.exceptions.GrailsMVCException;
-import org.grails.web.util.GrailsApplicationAttributes;
-import org.grails.web.util.WebUtils;
+import grails.config.Config
+import grails.config.Settings
+import grails.core.GrailsApplication
+import grails.core.support.GrailsApplicationAware
+import grails.util.Environment
+import grails.web.mapping.UrlMappingInfo
+import grails.web.mapping.UrlMappingsHolder
+import grails.web.mapping.exceptions.UrlMappingException
+import grails.web.mvc.GrailsResponseMutator
+import org.apache.grails.core.GrailsBootstrapRegistryInitializer
+import org.grails.core.exceptions.GrailsRuntimeException
+import org.grails.exceptions.ExceptionUtils
+import org.grails.exceptions.reporting.DefaultStackTraceFilterer
+import org.grails.exceptions.reporting.StackTraceFilterer
+import org.grails.web.mapping.DefaultUrlMappingInfo
+import org.grails.web.mapping.UrlMappingUtils
+import org.grails.web.servlet.mvc.GrailsWebRequest
+import org.grails.web.servlet.mvc.exceptions.GrailsMVCException
+import org.grails.web.util.GrailsApplicationAttributes
+import org.grails.web.util.WebUtils
 
 /**
  * Wraps any runtime exceptions with a GrailsWrappedException instance.
  *
  * @author Graeme Rocher
  */
-public class GrailsExceptionResolver extends SimpleMappingExceptionResolver implements ServletContextAware, GrailsApplicationAware {
+@CompileStatic
+class GrailsExceptionResolver extends SimpleMappingExceptionResolver implements ServletContextAware, GrailsApplicationAware {
 
-    public static final String EXCEPTION_ATTRIBUTE = WebUtils.EXCEPTION_ATTRIBUTE;
+    public static final String EXCEPTION_ATTRIBUTE = WebUtils.EXCEPTION_ATTRIBUTE
 
     /** Marks a request that is currently inside a forward to a status-code controller mapping. */
     private static final String ERROR_HANDLER_FORWARD_IN_PROGRESS_ATTRIBUTE =
-            "org.grails.web.errors.ERROR_HANDLER_FORWARD_IN_PROGRESS";
+            'org.grails.web.errors.ERROR_HANDLER_FORWARD_IN_PROGRESS'
 
-    protected static final Logger LOG = LoggerFactory.getLogger(GrailsExceptionResolver.class);
-    protected static final String LINE_SEPARATOR = System.getProperty("line.separator");
+    protected static final Logger LOG = LoggerFactory.getLogger(GrailsExceptionResolver)
+    protected static final String LINE_SEPARATOR = System.getProperty('line.separator')
 
-    protected ServletContext servletContext;
-    protected GrailsApplication grailsApplication;
-    protected StackTraceFilterer stackFilterer;
-    protected AuditorAwareLookup auditorAwareLookup;
-    private volatile boolean logFlagsResolved;
-    private boolean logFullStackTrace;
-    private boolean logAuditor;
-    private boolean logRemoteAddr;
+    protected ServletContext servletContext
+    protected GrailsApplication grailsApplication
+    protected StackTraceFilterer stackFilterer
+    protected AuditorAwareLookup auditorAwareLookup
+    private volatile boolean logFlagsResolved
+    private boolean logFullStackTrace
+    private boolean logAuditor
+    private boolean logRemoteAddr
 
     /* (non-Javadoc)
      * @see org.springframework.web.servlet.handler.SimpleMappingExceptionResolver#resolveException(jakarta.servlet.http.HttpServletRequest, jakarta.servlet.http.HttpServletResponse, java.lang.Object, java.lang.Exception)
      */
     @Override
-    public ModelAndView resolveException(HttpServletRequest request, HttpServletResponse response,
+    ModelAndView resolveException(HttpServletRequest request, HttpServletResponse response,
                                          Object handler, Exception ex) {
         // don't reuse cached controller attribute
-        request.removeAttribute(GrailsApplicationAttributes.GRAILS_CONTROLLER_CLASS_AVAILABLE);
+        request.removeAttribute(GrailsApplicationAttributes.GRAILS_CONTROLLER_CLASS_AVAILABLE)
 
-        ex = findWrappedException(ex);
+        ex = findWrappedException(ex)
 
         if (!(ex instanceof AsyncRequestTimeoutException)) {
-            logFullStackTraceIfEnabled(ex);
-            filterStackTrace(ex);
+            logFullStackTraceIfEnabled(ex)
+            filterStackTrace(ex)
         }
 
-        ModelAndView mv = super.resolveException(request, response, handler, ex);
+        ModelAndView mv = super.resolveException(request, response, handler, ex)
 
-        setStatus(request, response, mv, ex);
+        setStatus(request, response, mv, ex)
 
         if (ex instanceof AsyncRequestTimeoutException) {
-            LOG.debug("Async request timed out: {}", request.getRequestURI());
+            LOG.debug('Async request timed out: {}', request.getRequestURI())
         }
         else {
-            logStackTrace(ex, request);
+            logStackTrace(ex, request)
         }
 
-        UrlMappingsHolder urlMappings = lookupUrlMappings();
+        UrlMappingsHolder urlMappings = lookupUrlMappings()
         if (urlMappings != null) {
-            mv = resolveViewOrForward(ex, urlMappings, request, response, mv);
+            mv = resolveViewOrForward(ex, urlMappings, request, response, mv)
         }
 
-        return mv;
+        return mv
     }
 
-    public String getRequestLogMessage(Throwable e, HttpServletRequest request) {
-        Throwable cause = getRootCause(e);
-        String exceptionName = cause.getClass().getSimpleName();
-        return getRequestLogMessage(exceptionName, request, cause.getMessage());
+    String getRequestLogMessage(Throwable e, HttpServletRequest request) {
+        Throwable cause = getRootCause(e)
+        String exceptionName = cause.getClass().getSimpleName()
+        return getRequestLogMessage(exceptionName, request, cause.getMessage())
     }
 
-    public String getRequestLogMessage(HttpServletRequest request) {
-        return getRequestLogMessage("Exception", request, null);
+    String getRequestLogMessage(HttpServletRequest request) {
+        return getRequestLogMessage('Exception', request, null)
     }
 
-    public void setServletContext(ServletContext servletContext) {
+    void setServletContext(ServletContext servletContext) {
 
-        this.servletContext = servletContext;
+        this.servletContext = servletContext
     }
 
-    public void setGrailsApplication(GrailsApplication grailsApplication) {
-        this.grailsApplication = grailsApplication;
-        createStackFilterer();
-        this.auditorAwareLookup = new AuditorAwareLookup(grailsApplication.getMainContext());
+    void setGrailsApplication(GrailsApplication grailsApplication) {
+        this.grailsApplication = grailsApplication
+        createStackFilterer()
+        this.auditorAwareLookup = new AuditorAwareLookup(grailsApplication.getMainContext())
     }
 
     /**
@@ -154,119 +146,119 @@ public class GrailsExceptionResolver extends SimpleMappingExceptionResolver impl
      * @param ex The exception
      * @return The root cause
      */
-    public static Throwable getRootCause(Throwable ex) {
-        return ExceptionUtils.getRootCause(ex);
+    static Throwable getRootCause(Throwable ex) {
+        return ExceptionUtils.getRootCause(ex)
     }
 
-    public static int extractLineNumber(CompilationFailedException e) {
-        return ExceptionUtils.extractLineNumber(e);
+    static int extractLineNumber(CompilationFailedException e) {
+        return ExceptionUtils.extractLineNumber(e)
     }
 
-    public static RuntimeException getFirstRuntimeException(Throwable e) {
-        return ExceptionUtils.getFirstRuntimeException(e);
+    static RuntimeException getFirstRuntimeException(Throwable e) {
+        return ExceptionUtils.getFirstRuntimeException(e)
     }
 
     protected void filterStackTrace(Exception e) {
-        stackFilterer.filter(e, true);
+        stackFilterer.filter(e, true)
     }
 
     protected void setStatus(HttpServletRequest request, HttpServletResponse response, ModelAndView mv, Exception e) {
-        int status = exceptionStatus(e);
-        response.setStatus(status);
-        request.setAttribute(WebUtils.ERROR_STATUS_CODE_ATTRIBUTE, status);
-        final GrailsWrappedRuntimeException gwre = new GrailsWrappedRuntimeException(servletContext, e);
-        mv.addObject(WebUtils.ERROR_EXCEPTION_ATTRIBUTE, gwre);
-        mv.addObject(WebUtils.EXCEPTION_ATTRIBUTE, gwre);
+        int status = exceptionStatus(e)
+        response.setStatus(status)
+        request.setAttribute(WebUtils.ERROR_STATUS_CODE_ATTRIBUTE, status)
+        final GrailsWrappedRuntimeException gwre = new GrailsWrappedRuntimeException(servletContext, e)
+        mv.addObject(WebUtils.ERROR_EXCEPTION_ATTRIBUTE, gwre)
+        mv.addObject(WebUtils.EXCEPTION_ATTRIBUTE, gwre)
     }
 
     protected UrlMappingsHolder lookupUrlMappings() {
         try {
-            return UrlMappingUtils.lookupUrlMappings(servletContext);
+            return UrlMappingUtils.lookupUrlMappings(servletContext)
         }
         catch (Exception ignored) {
             // ignore, no app ctx in this case.
-            return null;
+            return null
         }
     }
 
     Map extractRequestParamsWithUrlMappingHolder(UrlMappingsHolder urlMappings, HttpServletRequest request) {
-        Map params = new HashMap();
+        Map params = new HashMap()
         try {
-            UrlMappingInfo requestInfo = urlMappings.match(request.getRequestURI());
+            UrlMappingInfo requestInfo = urlMappings.match(request.getRequestURI())
             if (requestInfo != null) {
-                params.putAll(UrlMappingUtils.findAllParamsNotInUrlMappingKeywords(requestInfo.getParameters()));
+                params.putAll(UrlMappingUtils.findAllParamsNotInUrlMappingKeywords(requestInfo.getParameters()))
             }
         } catch (UrlMappingException ulrMappingException) {
-            logger.debug("Could not find urlMapping which matches: " + request.getRequestURI());
+            logger.debug('Could not find urlMapping which matches: ' + request.getRequestURI())
         }
-        return params;
+        return params
     }
 
     protected ModelAndView resolveViewOrForward(Exception ex, UrlMappingsHolder urlMappings, HttpServletRequest request,
             HttpServletResponse response, ModelAndView mv) {
 
-        UrlMappingInfo info;
-        boolean mapsToView;
-        boolean mapsToController;
+        UrlMappingInfo info
+        boolean mapsToView
+        boolean mapsToController
         try {
-            info = matchStatusCode(ex, urlMappings);
+            info = matchStatusCode(ex, urlMappings)
             if (info != null) {
-                Map params = extractRequestParamsWithUrlMappingHolder(urlMappings, request);
+                Map params = extractRequestParamsWithUrlMappingHolder(urlMappings, request)
                 if (params != null && !params.isEmpty()) {
-                    Map infoParams = info.getParameters();
+                    Map infoParams = info.getParameters()
                     if (infoParams != null) {
-                        params.putAll(info.getParameters());
+                        params.putAll(info.getParameters())
                     }
-                    info = new DefaultUrlMappingInfo(info, params, grailsApplication);
+                    info = new DefaultUrlMappingInfo(info, params, grailsApplication)
                 }
             }
-            mapsToView = info != null && info.getViewName() != null;
-            mapsToController = !mapsToView && info != null && info.getControllerName() != null;
+            mapsToView = info != null && info.getViewName() != null
+            mapsToController = !mapsToView && info != null && info.getControllerName() != null
         }
         catch (RuntimeException e) {
             // An error handler that cannot be resolved for this request - a mapping that computes its controller
             // from request state Grails did not set up, for example - must not replace the exception being
             // resolved, so the default error view renders that exception instead
-            LOG.error("Unable to resolve the error handler mapped for [{}]: {}", request.getRequestURI(), e.getMessage(), e);
-            return mv;
+            LOG.error('Unable to resolve the error handler mapped for [{}]: {}', request.getRequestURI(), e.getMessage(), e)
+            return mv
         }
 
         try {
             if (mapsToView) {
-                resolveView(request, info, mv);
+                resolveView(request, info, mv)
             }
             else if (mapsToController) {
                 if (isErrorHandlerForwardInProgress(request)) {
-                    LOG.error("The error handler for this request failed as well; not forwarding to it again");
-                    return mv;
+                    LOG.error('The error handler for this request failed as well; not forwarding to it again')
+                    return mv
                 }
-                String uri = determineUri(request);
+                String uri = determineUri(request)
                 if (GrailsWebRequest.lookup(request) == null) {
-                    LOG.warn("Not forwarding [{}] to the error handler it maps to, because the request has no " +
-                            "GrailsWebRequest to dispatch it with; rendering the default error view instead", uri);
-                    return mv;
+                    LOG.warn('Not forwarding [{}] to the error handler it maps to, because the request has no ' +
+                            'GrailsWebRequest to dispatch it with; rendering the default error view instead', uri)
+                    return mv
                 }
                 if (!response.isCommitted()) {
                     if (response instanceof GrailsResponseMutator) {
                         // prevent further mutation of the request since an error page needs rendered instead
-                        ((GrailsResponseMutator) response).deactivateResponseMutator();
+                        ((GrailsResponseMutator) response).deactivateResponseMutator()
                     }
-                    request.setAttribute(ERROR_HANDLER_FORWARD_IN_PROGRESS_ATTRIBUTE, Boolean.TRUE);
+                    request.setAttribute(ERROR_HANDLER_FORWARD_IN_PROGRESS_ATTRIBUTE, Boolean.TRUE)
                     try {
-                        forwardRequest(info, request, response, mv, uri);
+                        forwardRequest(info, request, response, mv, uri)
                     }
                     finally {
-                        request.removeAttribute(ERROR_HANDLER_FORWARD_IN_PROGRESS_ATTRIBUTE);
+                        request.removeAttribute(ERROR_HANDLER_FORWARD_IN_PROGRESS_ATTRIBUTE)
                     }
                     // return an empty ModelAndView since the error handler has been processed
-                    return new ModelAndView();
+                    return new ModelAndView()
                 }
             }
-            return mv;
+            return mv
         }
         catch (Exception e) {
-            LOG.error("Unable to render errors view: {}", e.getMessage(), e);
-            throw new GrailsRuntimeException(e);
+            LOG.error('Unable to render errors view: {}', e.getMessage(), e)
+            throw new GrailsRuntimeException(e)
         }
     }
 
@@ -287,56 +279,56 @@ public class GrailsExceptionResolver extends SimpleMappingExceptionResolver impl
      * @return True when this request is inside an error handler forward
      */
     protected boolean isErrorHandlerForwardInProgress(HttpServletRequest request) {
-        return request.getAttribute(ERROR_HANDLER_FORWARD_IN_PROGRESS_ATTRIBUTE) != null;
+        return request.getAttribute(ERROR_HANDLER_FORWARD_IN_PROGRESS_ATTRIBUTE) != null
     }
 
     protected void forwardRequest(UrlMappingInfo info, HttpServletRequest request, HttpServletResponse response,
             ModelAndView mv, String uri) throws ServletException, IOException {
-        info.configure(GrailsWebRequest.lookup(request));
+        info.configure(GrailsWebRequest.lookup(request))
         String forwardUrl = UrlMappingUtils.forwardRequestForUrlMappingInfo(
-                request, response, info, mv.getModel(), true);
-        LOG.debug("Matched URI [{}] to URL mapping [{}], forwarding to [{}] with response [{}]",
-                uri, info, forwardUrl, response.getClass());
+                request, response, info, mv.getModel(), true)
+        LOG.debug('Matched URI [{}] to URL mapping [{}], forwarding to [{}] with response [{}]',
+                uri, info, forwardUrl, response.getClass())
     }
 
     protected String determineUri(HttpServletRequest request) {
-        String uri = (String) request.getAttribute(WebUtils.FORWARD_REQUEST_URI_ATTRIBUTE);
+        String uri = (String) request.getAttribute(WebUtils.FORWARD_REQUEST_URI_ATTRIBUTE)
         if (uri == null) {
-            uri = request.getRequestURI();
+            uri = request.getRequestURI()
         }
-        return uri;
+        return uri
     }
 
     protected void resolveView(HttpServletRequest request, UrlMappingInfo info, ModelAndView mv) throws Exception {
-        ViewResolver viewResolver = WebUtils.lookupViewResolver(servletContext);
-        View v = UrlMappingUtils.resolveView(request, info, info.getViewName(), viewResolver);
+        ViewResolver viewResolver = WebUtils.lookupViewResolver(servletContext)
+        View v = UrlMappingUtils.resolveView(request, info, info.getViewName(), viewResolver)
         if (v != null) {
-            mv.setView(v);
+            mv.setView(v)
         }
     }
 
     protected UrlMappingInfo matchStatusCode(Exception ex, UrlMappingsHolder urlMappings) {
-        int status = exceptionStatus(ex);
-        UrlMappingInfo info = urlMappings.matchStatusCode(status, ex);
+        int status = exceptionStatus(ex)
+        UrlMappingInfo info = urlMappings.matchStatusCode(status, ex)
         if (info == null) {
             info = urlMappings.matchStatusCode(status,
-                    getRootCause(ex));
+                    getRootCause(ex))
         }
         if (info == null) {
-            info = urlMappings.matchStatusCode(status);
+            info = urlMappings.matchStatusCode(status)
         }
-        return info;
+        return info
     }
 
     private static int exceptionStatus(Exception ex) {
         if (ex instanceof AsyncRequestTimeoutException timeout) {
-            return timeout.getStatusCode().value();
+            return timeout.getStatusCode().value()
         }
-        return HttpServletResponse.SC_INTERNAL_SERVER_ERROR;
+        return HttpServletResponse.SC_INTERNAL_SERVER_ERROR
     }
 
     protected void logStackTrace(Exception e, HttpServletRequest request) {
-        LOG.error(getRequestLogMessage(e, request), e);
+        LOG.error(getRequestLogMessage(e, request), e)
     }
 
     /**
@@ -348,23 +340,23 @@ public class GrailsExceptionResolver extends SimpleMappingExceptionResolver impl
      */
     protected void logFullStackTraceIfEnabled(Exception e) {
         if (shouldLogFullStackTrace()) {
-            DefaultStackTraceFilterer.STACK_LOG.error(StackTraceFilterer.FULL_STACK_TRACE_MESSAGE, e);
+            DefaultStackTraceFilterer.STACK_LOG.error(StackTraceFilterer.FULL_STACK_TRACE_MESSAGE, e)
         }
     }
 
     protected boolean shouldLogFullStackTrace() {
-        resolveLogFlags();
-        return logFullStackTrace;
+        resolveLogFlags()
+        return logFullStackTrace
     }
 
     protected boolean shouldLogAuditor() {
-        resolveLogFlags();
-        return logAuditor;
+        resolveLogFlags()
+        return logAuditor
     }
 
     protected boolean shouldLogRemoteAddr() {
-        resolveLogFlags();
-        return logRemoteAddr;
+        resolveLogFlags()
+        return logRemoteAddr
     }
 
     /**
@@ -375,19 +367,19 @@ public class GrailsExceptionResolver extends SimpleMappingExceptionResolver impl
      */
     private void resolveLogFlags() {
         if (logFlagsResolved) {
-            return;
+            return
         }
         synchronized (this) {
             if (logFlagsResolved) {
-                return;
+                return
             }
-            Config config = grailsApplication != null ? grailsApplication.getConfig() : null;
+            Config config = grailsApplication != null ? grailsApplication.getConfig() : null
             if (config != null) {
-                logFullStackTrace = config.getProperty(Settings.SETTING_LOG_FULL_STACKTRACE, Boolean.class, false);
-                logAuditor = config.getProperty(Settings.SETTING_LOG_AUDITOR, Boolean.class, false);
-                logRemoteAddr = config.getProperty(Settings.SETTING_LOG_REMOTE_ADDR, Boolean.class, false);
+                logFullStackTrace = config.getProperty(Settings.SETTING_LOG_FULL_STACKTRACE, Boolean, false)
+                logAuditor = config.getProperty(Settings.SETTING_LOG_AUDITOR, Boolean, false)
+                logRemoteAddr = config.getProperty(Settings.SETTING_LOG_REMOTE_ADDR, Boolean, false)
             }
-            logFlagsResolved = true;
+            logFlagsResolved = true
         }
     }
 
@@ -401,7 +393,7 @@ public class GrailsExceptionResolver extends SimpleMappingExceptionResolver impl
      * appended verbatim as {@code ip: <value>}.
      */
     protected String resolveRemoteAddr(HttpServletRequest request) {
-        return request.getRemoteAddr();
+        return request.getRemoteAddr()
     }
 
     /**
@@ -410,80 +402,80 @@ public class GrailsExceptionResolver extends SimpleMappingExceptionResolver impl
      * Emits nothing when no tokens apply, so the baseline headline format is unchanged.
      */
     protected void appendRequestContext(StringBuilder sb, HttpServletRequest request) {
-        List<String> tokens = new ArrayList<>(2);
+        List<String> tokens = new ArrayList<>(2)
         if (shouldLogRemoteAddr()) {
-            String remoteAddr = resolveRemoteAddr(request);
+            String remoteAddr = resolveRemoteAddr(request)
             if (remoteAddr != null && !remoteAddr.isEmpty()) {
-                tokens.add("ip: " + remoteAddr);
+                tokens.add('ip: ' + remoteAddr)
             }
         }
         if (shouldLogAuditor() && auditorAwareLookup != null) {
             auditorAwareLookup.getCurrentAuditor().ifPresent(auditor ->
-                tokens.add("user: " + auditor)
-            );
+                tokens.add('user: ' + auditor)
+            )
         }
         if (!tokens.isEmpty()) {
-            sb.append(" (").append(String.join(", ", tokens)).append(")");
+            sb.append(' (').append(String.join(', ', tokens)).append(')')
         }
     }
 
     protected Exception findWrappedException(Exception e) {
         if ((e instanceof InvokerInvocationException) || (e instanceof GrailsMVCException)) {
-            Throwable t = getRootCause(e);
+            Throwable t = getRootCause(e)
             if (t instanceof Exception) {
-                e = (Exception) t;
+                e = (Exception) t
             }
         }
-        return e;
+        return e
     }
 
     protected String getRequestLogMessage(String exceptionName, HttpServletRequest request, String message) {
-        StringBuilder sb = new StringBuilder();
+        StringBuilder sb = new StringBuilder()
 
         sb.append(exceptionName)
-          .append(" occurred when processing request: ")
-          .append("[").append(request.getMethod().toUpperCase()).append("] ");
+          .append(' occurred when processing request: ')
+          .append('[').append(request.getMethod().toUpperCase()).append('] ')
 
         if (request.getAttribute(WebUtils.FORWARD_REQUEST_URI_ATTRIBUTE) != null) {
-            sb.append(request.getAttribute(WebUtils.FORWARD_REQUEST_URI_ATTRIBUTE));
+            sb.append(request.getAttribute(WebUtils.FORWARD_REQUEST_URI_ATTRIBUTE))
         } else {
-            sb.append(request.getRequestURI());
+            sb.append(request.getRequestURI())
         }
 
-        appendRequestContext(sb, request);
+        appendRequestContext(sb, request)
 
-        Config config = grailsApplication != null ? grailsApplication.getConfig() : null;
-        final boolean shouldLogRequestParameters = config != null ? config.getProperty(Settings.SETTING_LOG_REQUEST_PARAMETERS, Boolean.class, Environment.getCurrent() == Environment.DEVELOPMENT) : false;
+        Config config = grailsApplication != null ? grailsApplication.getConfig() : null
+        final boolean shouldLogRequestParameters = config != null ? config.getProperty(Settings.SETTING_LOG_REQUEST_PARAMETERS, Boolean, Environment.getCurrent() == Environment.DEVELOPMENT) : false
 
         if (shouldLogRequestParameters) {
             // The exception being logged may be the container refusing to parse a multipart body, in which
             // case every parameter read on this request fails too - see WebUtils.readParameterNames.
-            Enumeration<String> params = WebUtils.readParameterNames(request);
+            Enumeration<String> params = WebUtils.readParameterNames(request)
 
             if (params.hasMoreElements()) {
-                String param;
-                String values[];
-                int i;
+                String param
+                String[] values
+                int i
 
-                sb.append(" - parameters:");
-                @SuppressWarnings("unchecked")
-                List<String> blackList = (config.getProperty(Settings.SETTING_EXCEPTION_RESOLVER_PARAM_EXCLUDES, List.class, Collections.emptyList()));
+                sb.append(' - parameters:')
+                @SuppressWarnings('unchecked')
+                List<String> blackList = (config.getProperty(Settings.SETTING_EXCEPTION_RESOLVER_PARAM_EXCLUDES, List, Collections.emptyList()))
 
                 if (blackList == null) {
-                    blackList = Collections.emptyList();
+                    blackList = Collections.emptyList()
                 }
                 while (params.hasMoreElements()) {
-                    param = params.nextElement();
-                    values = request.getParameterValues(param);
+                    param = params.nextElement()
+                    values = request.getParameterValues(param)
 
                     if (values != null) {
                         for (i = 0; i < values.length; i++) {
-                            sb.append(LINE_SEPARATOR).append(param).append(": ");
+                            sb.append(LINE_SEPARATOR).append(param).append(': ')
 
                             if (isExcludedRequestParameter(param, blackList)) {
-                                sb.append("***");
+                                sb.append('***')
                             } else {
-                                sb.append(values[i]);
+                                sb.append(values[i])
                             }
                         }
                     }
@@ -491,42 +483,42 @@ public class GrailsExceptionResolver extends SimpleMappingExceptionResolver impl
             }
         }
 
-        sb.append(LINE_SEPARATOR);
+        sb.append(LINE_SEPARATOR)
         if (message != null) {
-            sb.append(message).append(". ");
+            sb.append(message).append('. ')
         }
-        sb.append("Stacktrace follows:");
+        sb.append('Stacktrace follows:')
 
-        return sb.toString();
+        return sb.toString()
     }
 
     protected boolean isExcludedRequestParameter(String parameterName, List<String> excludedParameterNames) {
         if (parameterName == null || excludedParameterNames == null) {
-            return false;
+            return false
         }
-        for (String excludedParameterName : excludedParameterNames) {
+        for (String excludedParameterName in excludedParameterNames) {
             if (excludedParameterName != null && parameterName.equalsIgnoreCase(excludedParameterName)) {
-                return true;
+                return true
             }
         }
-        return false;
+        return false
     }
 
     protected void createStackFilterer() {
-        StackTraceFilterer promoted = resolvePromotedStackTraceFilterer();
+        StackTraceFilterer promoted = resolvePromotedStackTraceFilterer()
         if (promoted != null) {
-            stackFilterer = promoted;
-            return;
+            stackFilterer = promoted
+            return
         }
         try {
-            Class filtererClass = grailsApplication.getConfig().getProperty(Settings.SETTING_LOGGING_STACKTRACE_FILTER_CLASS, Class.class, DefaultStackTraceFilterer.class);
-            stackFilterer = BeanUtils.instantiateClass(filtererClass, StackTraceFilterer.class);
+            Class filtererClass = grailsApplication.getConfig().getProperty(Settings.SETTING_LOGGING_STACKTRACE_FILTER_CLASS, Class, DefaultStackTraceFilterer)
+            stackFilterer = BeanUtils.instantiateClass(filtererClass, StackTraceFilterer)
         }
         catch (Throwable t) {
-            logger.error("Problem instantiating StackTracePrinter class, using default: " + t.getMessage());
-            stackFilterer = new DefaultStackTraceFilterer();
+            logger.error('Problem instantiating StackTracePrinter class, using default: ' + t.getMessage())
+            stackFilterer = new DefaultStackTraceFilterer()
         }
-        applyLogFullStackTraceOnFilter();
+        applyLogFullStackTraceOnFilter()
     }
 
     /**
@@ -547,16 +539,16 @@ public class GrailsExceptionResolver extends SimpleMappingExceptionResolver impl
      * {@code grails.logging.stackTraceFiltererClass} so both consume the same instance.
      */
     protected StackTraceFilterer resolvePromotedStackTraceFilterer() {
-        ApplicationContext context = grailsApplication.getMainContext();
+        ApplicationContext context = grailsApplication.getMainContext()
         if (context == null) {
-            return null;
+            return null
         }
         try {
             return context.getBean(GrailsBootstrapRegistryInitializer.STACK_TRACE_FILTERER_BEAN_NAME,
-                    StackTraceFilterer.class);
+                    StackTraceFilterer)
         }
         catch (BeansException e) {
-            return null;
+            return null
         }
     }
 
@@ -568,11 +560,12 @@ public class GrailsExceptionResolver extends SimpleMappingExceptionResolver impl
      */
     protected void applyLogFullStackTraceOnFilter() {
         if (stackFilterer instanceof DefaultStackTraceFilterer) {
-            Config config = grailsApplication != null ? grailsApplication.getConfig() : null;
+            Config config = grailsApplication != null ? grailsApplication.getConfig() : null
             boolean logOnFilter = config == null ?
                 true :
-                config.getProperty(Settings.SETTING_LOG_FULL_STACKTRACE_ON_FILTER, Boolean.class, true);
-            ((DefaultStackTraceFilterer) stackFilterer).setLogFullStackTraceOnFilter(logOnFilter);
+                config.getProperty(Settings.SETTING_LOG_FULL_STACKTRACE_ON_FILTER, Boolean, true)
+            ((DefaultStackTraceFilterer) stackFilterer).setLogFullStackTraceOnFilter(logOnFilter)
         }
     }
+
 }
