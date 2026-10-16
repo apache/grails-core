@@ -141,7 +141,7 @@ class RenderGrailsLayoutTagLib implements RequestConstants, TagLibrary, GrailsAp
         }
 
         Page page = null
-        if (!((TypeConvertingMap) attrs).boolean('parse') && gspGrailsLayoutPage != null && gspGrailsLayoutPage.used) {
+        if (!((TypeConvertingMap) attrs).boolean('parse') && gspGrailsLayoutPage != null && gspGrailsLayoutPage.isUsed()) {
             page = gspGrailsLayoutPage
         } else {
             def parser = createPageParser(contentType)

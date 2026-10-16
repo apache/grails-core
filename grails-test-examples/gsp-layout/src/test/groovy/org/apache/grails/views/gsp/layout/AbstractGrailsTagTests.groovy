@@ -544,7 +544,7 @@ abstract class AbstractGrailsTagTests {
         request.removeAttribute(EmbeddedGrailsLayoutView.GSP_GRAILS_LAYOUT_PAGE)
 
         def page = null
-        if (!params.parse && gspGrailsLayoutPage != null && gspGrailsLayoutPage.used) {
+        if (!params.parse && gspGrailsLayoutPage != null && gspGrailsLayoutPage.isUsed()) {
             page = gspGrailsLayoutPage
         } else {
             def parser = new GrailsHTMLPageParser()

@@ -78,13 +78,25 @@ class StandaloneGroovyPageViewResolverSpec extends Specification {
         }
     }
 
-    private WebApplicationContextRunner runner() {
+    void 'a JSP whose resource lookup is malformed is left to the view resolvers after this one'() {
+        expect:
+        runner(new MockServletContext("file:${documentRoot.absolutePath}", new FileSystemResourceLoader()) {
+            @Override
+            URL getResource(String path) throws MalformedURLException {
+                throw new MalformedURLException(path)
+            }
+        }).run { context ->
+            assert context.getBean('gspViewResolver', ViewResolver).resolveViewName('bad.jsp', Locale.ROOT) == null
+        }
+    }
+
+    private WebApplicationContextRunner runner(MockServletContext servletContext = null) {
         new WebApplicationContextRunner()
                 .withConfiguration(AutoConfigurations.of(GspAutoConfiguration, SiteMeshViewResolverAutoConfiguration))
                 .withPropertyValues('spring.gsp.templateRoots=classpath:/templates', 'spring.gsp.view.cacheTimeout=0',
                         'sitemesh.viewResolver.wrapMode=delegate')
                 .withInitializer { context ->
-                    context.servletContext = new MockServletContext(
+                    context.servletContext = servletContext ?: new MockServletContext(
                             "file:${documentRoot.absolutePath}", new FileSystemResourceLoader())
                 }
     }
