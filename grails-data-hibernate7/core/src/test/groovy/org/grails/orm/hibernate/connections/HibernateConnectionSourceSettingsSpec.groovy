@@ -118,6 +118,55 @@ class HibernateConnectionSourceSettingsSpec extends Specification {
         listeners['create-onflush'].is(onFlushListener)
     }
 
+    void "the generated domain classes switch is off by default and can be turned on"() {
+        given:
+        String property = 'grails.hibernate.generatedDomainClasses'
+        String previous = System.clearProperty(property)
+
+        when:
+        def settings = new HibernateConnectionSourceSettings()
+
+        then:
+        !settings.hibernate.generatedDomainClasses
+
+        when:
+        settings.hibernate.generatedDomainClasses = true
+
+        then:
+        settings.hibernate.generatedDomainClasses
+
+        cleanup:
+        if (previous != null) {
+            System.setProperty(property, previous)
+        }
+    }
+
+    void "the JVM-wide system property switches the generated domain classes default on, and a configured value wins"() {
+        given:
+        String property = 'grails.hibernate.generatedDomainClasses'
+        String previous = System.getProperty(property)
+        System.setProperty(property, 'true')
+
+        when:
+        def settings = new HibernateConnectionSourceSettings()
+
+        then:
+        settings.hibernate.generatedDomainClasses
+
+        when:
+        settings.hibernate.generatedDomainClasses = false
+
+        then:
+        !settings.hibernate.generatedDomainClasses
+
+        cleanup:
+        if (previous == null) {
+            System.clearProperty(property)
+        } else {
+            System.setProperty(property, previous)
+        }
+    }
+
     void "test toProperties with dirty checking and custom config"() {
         given:
         def settings = new HibernateConnectionSourceSettings()

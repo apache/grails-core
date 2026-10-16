@@ -121,11 +121,10 @@ class HibernateMappingContext extends AbstractMappingContext {
         return super.getPersistentEntity(entityName)
     }
 
-    List<HibernatePersistentEntity> getHibernatePersistentEntities(String dataSourceName) {
+    List<HibernatePersistentEntity> getHibernatePersistentEntities() {
         List<HibernatePersistentEntity> result = new ArrayList<>()
         for (PersistentEntity entity : persistentEntities) {
             if (entity instanceof HibernatePersistentEntity) {
-                entity.setDataSourceName(dataSourceName)
                 result.add(entity)
             }
         }

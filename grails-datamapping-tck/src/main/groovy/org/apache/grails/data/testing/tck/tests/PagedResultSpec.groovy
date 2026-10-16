@@ -23,8 +23,6 @@ import spock.lang.IgnoreIf
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.apache.grails.data.testing.tck.domains.Person
 
-// Hibernate 7 has its own test because it subtypes the paged list
-@IgnoreIf({ System.getProperty('hibernate7.gorm.suite') })
 class PagedResultSpec extends GrailsDataTckSpec {
 
     @Override
@@ -49,7 +47,7 @@ class PagedResultSpec extends GrailsDataTckSpec {
         def results = Person.list(offset: 2, max: 2)
 
         then: 'You get a paged result list back'
-        results.getClass().simpleName == 'PagedResultList' // Grails/Hibernate has a custom class in different package
+        results.getClass().simpleName.endsWith('PagedResultList') // Hibernate subtypes it (HibernatePagedResultList), in a different package
         results.size() == 2
         results[0].firstName == 'Bart'
         results[1].firstName == 'Lisa'
@@ -64,7 +62,7 @@ class PagedResultSpec extends GrailsDataTckSpec {
         def results = Person.list(offset: 2, max: 2, sort: 'firstName', order: 'DESC')
 
         then: 'You get a paged result list back'
-        results.getClass().simpleName == 'PagedResultList' // Grails/Hibernate has a custom class in different package
+        results.getClass().simpleName.endsWith('PagedResultList') // Hibernate subtypes it (HibernatePagedResultList), in a different package
         results.size() == 2
         results[0].firstName == 'Homer'
         results[1].firstName == 'Fred'
@@ -102,7 +100,7 @@ class PagedResultSpec extends GrailsDataTckSpec {
         }
 
         then: 'You get a paged result list back'
-        results.getClass().simpleName == 'PagedResultList' // Grails/Hibernate has a custom class in different package
+        results.getClass().simpleName.endsWith('PagedResultList') // Hibernate subtypes it (HibernatePagedResultList), in a different package
         results.size() == 2
         results[0].firstName == 'Marge'
         results[1].firstName == 'Bart'
@@ -119,7 +117,7 @@ class PagedResultSpec extends GrailsDataTckSpec {
         }
 
         then: 'You get a paged result list back'
-        results.getClass().simpleName == 'PagedResultList' // Grails/Hibernate has a custom class in different package
+        results.getClass().simpleName.endsWith('PagedResultList') // Hibernate subtypes it (HibernatePagedResultList), in a different package
         results.size() == 2
         results[0].firstName == 'Lisa'
         results[1].firstName == 'Homer'

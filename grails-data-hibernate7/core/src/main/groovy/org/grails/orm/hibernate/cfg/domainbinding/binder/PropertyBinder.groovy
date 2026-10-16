@@ -46,6 +46,26 @@ class PropertyBinder {
     }
 
     /**
+     * Decides how Hibernate reads and writes the property of a real instance: the mapping's {@code accessType}
+     * ({@code property} unless the mapping says {@code field}), and the trait accessor for a trait-implemented getter
+     * read by field.
+     *
+     * @param persistentProperty The grails property instance
+     * @return The Hibernate property accessor name
+     */
+    String accessorName(HibernatePersistentProperty persistentProperty) {
+        PropertyConfig config = persistentProperty.hibernateMappedForm
+        AccessType accessType = AccessType.getAccessStrategy(config != null ? config.accessType : new PropertyConfig().accessType)
+        return accessType == AccessType.FIELD ?
+                Optional.ofNullable(persistentProperty.reader)
+                        .map { EntityReflector.PropertyReader reader -> reader.getter() }
+                        .map { getter -> getter.getAnnotation(Traits.Implemented) }
+                        .map { annotation -> TraitPropertyAccessStrategy.name }
+                        .orElse(accessType.type) :
+                accessType.type
+    }
+
+    /**
      * Binds a property to Hibernate runtime meta model. Deals with cascade strategy based on the
      * Grails domain model
      *
@@ -73,16 +93,7 @@ class PropertyBinder {
             updatable = config.updatable
         }
 
-        AccessType accessType = AccessType.getAccessStrategy(config.accessType)
-
-        String accessorName = accessType == AccessType.FIELD ?
-                Optional.ofNullable(persistentProperty.reader)
-                        .map { EntityReflector.PropertyReader reader -> reader.getter() }
-                        .map { getter -> getter.getAnnotation(Traits.Implemented) }
-                        .map { annotation -> TraitPropertyAccessStrategy.name }
-                        .orElse(accessType.type) :
-                accessType.type
-        prop.propertyAccessorName = accessorName
+        prop.propertyAccessorName = accessorName(persistentProperty)
 
         prop.optional = persistentProperty.isNullable()
         // No enum type is excluded here on its own account: a plain scalar enum property is never an

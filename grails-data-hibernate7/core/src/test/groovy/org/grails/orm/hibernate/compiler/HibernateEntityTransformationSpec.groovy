@@ -19,6 +19,7 @@
 package org.grails.orm.hibernate.compiler
 
 import groovy.transform.Generated
+import org.grails.datastore.mapping.model.config.GormProperties
 import org.hibernate.engine.spi.EntityEntry
 import org.hibernate.engine.spi.ManagedEntity
 import org.hibernate.engine.spi.PersistentAttributeInterceptable
@@ -280,6 +281,23 @@ class MapWithEntity {
         'hibernate' || true
         'GORM'      || true
         'mongodb'   || false
+    }
+
+    void "test mapWith #strategy applies the transformation"() {
+        when:
+        Class cls = new GroovyClassLoader().parseClass("""
+import grails.gorm.hibernate.annotation.ManagedEntity
+@ManagedEntity
+class MappedWith${strategy.capitalize()}Entity {
+    static mapWith = '${strategy}'
+}
+""")
+
+        then:
+        PersistentAttributeInterceptable.isAssignableFrom(cls)
+
+        where:
+        strategy << ['hibernate', GormProperties.DEFAULT_MAPPING_STRATEGY]
     }
 
     void "test addTo retargeting"() {

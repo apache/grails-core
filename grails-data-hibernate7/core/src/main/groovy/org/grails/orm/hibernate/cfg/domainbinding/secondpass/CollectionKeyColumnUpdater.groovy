@@ -25,7 +25,13 @@ import org.hibernate.mapping.DependantValue
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyCollectionProperty
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty
 
-/** Forces columns to be nullable and checks if the key is updatable. */
+/**
+ * Forces columns to be nullable and decides whether the key is updatable.
+ *
+ * <p>The key of an entity collection is a foreign key in the target table, which several unidirectional collections
+ * of one owner must not all update. The key of a collection of basic values or enums lives in a table of its own
+ * and must stay updatable, because Hibernate writes no rows for a collection whose key is not.</p>
+ */
 @CompileStatic
 class CollectionKeyColumnUpdater {
 
@@ -51,11 +57,6 @@ class CollectionKeyColumnUpdater {
             }
         }
 
-        // Collections of basic values or enums (HibernateToManyCollectionProperty) always keep an updatable key: they
-        // have no inverse side, and Hibernate writes no rows for a collection whose key is not updatable.
-        // For entity collections (HibernateToManyEntityProperty) the key is non-updatable when the owner has two or
-        // more unidirectional to-many properties (counting every unidirectional HibernateToManyProperty of the owner),
-        // the existing rule for issue 10811.
         key.updateable = property instanceof HibernateToManyCollectionProperty || unidirectionalCount <= 1
     }
 

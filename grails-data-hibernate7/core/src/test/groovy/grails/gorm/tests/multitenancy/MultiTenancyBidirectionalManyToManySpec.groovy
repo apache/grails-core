@@ -76,12 +76,11 @@ class MultiTenancyBidirectionalManyToManySpec extends Specification {
     }
 
     Number createSomeUsers() {
-        Department department = new Department(name: "Grails")
-        department.addToUsers(new User(username: "John Doe"))
-        department.addToUsers(new User(username: "Hanna William"))
-        department.addToUsers(new User(username: "Mark"))
-        department.addToUsers(new User(username: "Karl"))
-
+        Department department = departmentService.save("Grails")
+        department.addToUsers(username: "John Doe").save()
+        department.addToUsers(username: "Hanna William").save()
+        department.addToUsers(username: "Mark").save()
+        department.addToUsers(username: "Karl").save()
         department.save(flush: true)
         department.users.size()
     }

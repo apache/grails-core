@@ -179,6 +179,7 @@ tasks.named('rat') {
             'local-tasks.gradle', // exclude local helper scripts
             '**/spring-configuration-metadata.json', // JSON files cannot contain license headers
             'grails-test-examples/spring-security/cas/test1/src/main/resources/cas/services/*.json', // CAS service registry definitions; JSON files cannot contain license headers
+            'grails-data-hibernate7/core/src/test/resources/classic-oracle/**', // recorded output of the classic domain binder, one record per line; a license header would alter the compared text
             'grails-test-examples/benchmarks/src/reportTest/resources/jmh-golden/**', // byte-exact JMH report fixtures; a license header would alter the compared bytes
     ] + rootProject.subprojects.collectMany { project ->
         String projectPath = rootProject.projectDir.relativePath(project.projectDir).toString().replace(File.separator, '/')
