@@ -43,10 +43,13 @@ import spock.lang.PendingFeature
  */
 class GrailsDomainBinderCompositeIdDefectSpec extends HibernateGormDatastoreSpec {
 
+    /** The defects are the classic binder's, so the datastores select it whatever the default is. */
+    private static final Map<String, Object> CLASSIC = ['hibernate.generatedDomainClasses': false]
+
     @PendingFeature(reason = 'the key of a join table to a composite identifier gets the columns of the element, so Hibernate refuses the foreign key')
     void "a unidirectional collection of entities with a composite identifier can be bound"() {
         when:
-        HibernateDatastore datastore = new HibernateDatastore(UnbootableJoinToComposite, UnbootableComposite)
+        HibernateDatastore datastore = new HibernateDatastore(CLASSIC, UnbootableJoinToComposite, UnbootableComposite)
 
         then:
         notThrown(Exception)
@@ -58,7 +61,7 @@ class GrailsDomainBinderCompositeIdDefectSpec extends HibernateGormDatastoreSpec
     @PendingFeature(reason = 'ForeignKeyColumnCountCalculator counts a composite identifier part that refers to an entity with a simple identifier as no column, so the foreign key has fewer columns than the key and Hibernate refuses it')
     void "a foreign key to a composite identifier with a part that refers to an entity can be bound"() {
         when:
-        HibernateDatastore datastore = new HibernateDatastore(UnbootableRefToParts, UnbootableParts, UnbootableTarget)
+        HibernateDatastore datastore = new HibernateDatastore(CLASSIC, UnbootableRefToParts, UnbootableParts, UnbootableTarget)
 
         then:
         notThrown(Exception)
@@ -70,7 +73,7 @@ class GrailsDomainBinderCompositeIdDefectSpec extends HibernateGormDatastoreSpec
     @PendingFeature(reason = 'CompositeIdentifierToManyToOneBinder expands a nested composite identifier one level only, so a foreign key to a composite identifier three levels deep has fewer columns than the key')
     void "a foreign key to a composite identifier three levels deep can be bound"() {
         when:
-        HibernateDatastore datastore = new HibernateDatastore(UnbootableRefToTop, UnbootableTop, UnbootableMiddle, UnbootableFlat)
+        HibernateDatastore datastore = new HibernateDatastore(CLASSIC, UnbootableRefToTop, UnbootableTop, UnbootableMiddle, UnbootableFlat)
 
         then:
         notThrown(Exception)
@@ -82,7 +85,7 @@ class GrailsDomainBinderCompositeIdDefectSpec extends HibernateGormDatastoreSpec
     @PendingFeature(reason = 'the key of a joined subclass is bound with one column, so a joined subclass of an entity with a composite identifier cannot be bound')
     void "a joined subclass of an entity with a composite identifier can be bound"() {
         when:
-        HibernateDatastore datastore = new HibernateDatastore(UnbootableJoinedParent, UnbootableJoinedChild)
+        HibernateDatastore datastore = new HibernateDatastore(CLASSIC, UnbootableJoinedParent, UnbootableJoinedChild)
 
         then:
         notThrown(Exception)
