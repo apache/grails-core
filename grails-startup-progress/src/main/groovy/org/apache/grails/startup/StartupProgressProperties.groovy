@@ -16,14 +16,14 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.apache.grails.startup;
+package org.apache.grails.startup
 
-import java.util.ArrayList;
-import java.util.List;
+import groovy.transform.CompileStatic
+import groovy.transform.PackageScope
 
-import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.boot.context.properties.ConfigurationProperties
 
-import grails.util.Environment;
+import grails.util.Environment
 
 /**
  * Settings for the page Grails serves on the application's port while the application starts,
@@ -35,45 +35,47 @@ import grails.util.Environment;
  *
  * @since 8.1
  */
-@ConfigurationProperties(prefix = "grails.startup.progress")
-public class StartupProgressProperties {
+@ConfigurationProperties(prefix = 'grails.startup.progress')
+@CompileStatic
+class StartupProgressProperties {
 
-    static final String DEFAULT_STATUS_PATH = "/__grails/startup-progress";
+    @PackageScope
+    static final String DEFAULT_STATUS_PATH = '/__grails/startup-progress'
 
-    private Boolean enabled;
+    private Boolean enabled
 
-    private String statusPath = DEFAULT_STATUS_PATH;
+    private String statusPath = DEFAULT_STATUS_PATH
 
-    private Boolean showDetails;
+    private Boolean showDetails
 
-    private boolean openBrowser;
+    private boolean openBrowser
 
-    private List<String> browserCommand = new ArrayList<>();
+    private List<String> browserCommand = new ArrayList<>()
 
-    private final Endpoint endpoint = new Endpoint();
+    private final Endpoint endpoint = new Endpoint()
 
     /**
      * Whether Grails answers on the application's port with a progress page until the embedded web
      * server takes the port over. {@code null} means development mode decides.
      */
-    public Boolean getEnabled() {
-        return enabled;
+    Boolean getEnabled() {
+        return enabled
     }
 
-    public void setEnabled(Boolean enabled) {
-        this.enabled = enabled;
+    void setEnabled(Boolean enabled) {
+        this.enabled = enabled
     }
 
     /**
      * The path, below the context path, that the progress page polls for the progress of the start. Once the
      * application is ready, a poll there is told so, so the path is the application's no longer.
      */
-    public String getStatusPath() {
-        return statusPath;
+    String getStatusPath() {
+        return statusPath
     }
 
-    public void setStatusPath(String statusPath) {
-        this.statusPath = statusPath;
+    void setStatusPath(String statusPath) {
+        this.statusPath = statusPath
     }
 
     /**
@@ -81,12 +83,12 @@ public class StartupProgressProperties {
      * exception when startup fails, to a browser signed in with the address the application logs.
      * {@code null} means development mode decides.
      */
-    public Boolean getShowDetails() {
-        return showDetails;
+    Boolean getShowDetails() {
+        return showDetails
     }
 
-    public void setShowDetails(Boolean showDetails) {
-        this.showDetails = showDetails;
+    void setShowDetails(Boolean showDetails) {
+        this.showDetails = showDetails
     }
 
     /**
@@ -94,12 +96,12 @@ public class StartupProgressProperties {
      * served, or on the application once it is ready when the page is not served. A browser is opened once
      * per address for the life of the JVM, so a restart by Spring Boot DevTools does not open another.
      */
-    public boolean isOpenBrowser() {
-        return openBrowser;
+    boolean isOpenBrowser() {
+        return openBrowser
     }
 
-    public void setOpenBrowser(boolean openBrowser) {
-        this.openBrowser = openBrowser;
+    void setOpenBrowser(boolean openBrowser) {
+        this.openBrowser = openBrowser
     }
 
     /**
@@ -107,61 +109,65 @@ public class StartupProgressProperties {
      * the operating system's own is used: {@code open} on macOS, {@code xdg-open} elsewhere on Unix, and
      * {@code rundll32 url.dll,FileProtocolHandler} on Windows.
      */
-    public List<String> getBrowserCommand() {
-        return browserCommand;
+    List<String> getBrowserCommand() {
+        return browserCommand
     }
 
-    public void setBrowserCommand(List<String> browserCommand) {
-        this.browserCommand = browserCommand;
+    void setBrowserCommand(List<String> browserCommand) {
+        this.browserCommand = browserCommand
     }
 
     /** The startup report the application serves once it has started. */
-    public Endpoint getEndpoint() {
-        return endpoint;
+    Endpoint getEndpoint() {
+        return endpoint
     }
 
+    @PackageScope
     boolean isEnabledOrDefault() {
-        return enabled != null ? enabled : Environment.isDevelopmentMode();
+        return enabled != null ? enabled : Environment.isDevelopmentMode()
     }
 
+    @PackageScope
     boolean isShowDetailsOrDefault() {
-        return showDetails != null ? showDetails : Environment.isDevelopmentMode();
+        return showDetails != null ? showDetails : Environment.isDevelopmentMode()
     }
 
     /**
      * Where, and whether, the application serves a report of how it started once it is running: the time
      * each stage took and the slowest beans, as a page or, to a client asking for JSON, as data.
      */
-    public static class Endpoint {
+    static class Endpoint {
 
-        static final String DEFAULT_PATH = "/__grails/startup";
+        @PackageScope
+        static final String DEFAULT_PATH = '/__grails/startup'
 
-        private Boolean enabled;
+        private Boolean enabled
 
-        private String path = DEFAULT_PATH;
+        private String path = DEFAULT_PATH
 
         /**
          * Whether the application serves the startup report. {@code null} means development mode decides.
          */
-        public Boolean getEnabled() {
-            return enabled;
+        Boolean getEnabled() {
+            return enabled
         }
 
-        public void setEnabled(Boolean enabled) {
-            this.enabled = enabled;
+        void setEnabled(Boolean enabled) {
+            this.enabled = enabled
         }
 
         /** The path of the startup report, below the context path. */
-        public String getPath() {
-            return path;
+        String getPath() {
+            return path
         }
 
-        public void setPath(String path) {
-            this.path = path;
+        void setPath(String path) {
+            this.path = path
         }
 
+        @PackageScope
         boolean isEnabledOrDefault() {
-            return enabled != null ? enabled : Environment.isDevelopmentMode();
+            return enabled != null ? enabled : Environment.isDevelopmentMode()
         }
     }
 }

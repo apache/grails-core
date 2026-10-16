@@ -16,41 +16,40 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.apache.grails.startup;
+package org.apache.grails.startup
 
-import java.io.IOException;
-import java.io.OutputStream;
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
-import java.util.List;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.FutureTask;
+import java.util.concurrent.ExecutionException
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
+import java.util.concurrent.FutureTask
 
-import com.sun.net.httpserver.HttpExchange;
-import com.sun.net.httpserver.HttpServer;
+import com.sun.net.httpserver.HttpExchange
+import com.sun.net.httpserver.HttpServer
+import groovy.transform.CompileStatic
+import groovy.transform.PackageScope
 
 /**
  * Holds the application's port until the embedded web server is about to take it over, answering every
  * request on it with the {@link StartupProgressResponder}: the progress page for a browser, the status
  * the page polls for, and a plain {@code 503} for anything else.
  */
+@CompileStatic
 final class StartupProgressServer {
 
-    private final InetSocketAddress address;
+    private final InetSocketAddress address
 
-    private final StartupProgressResponder responder;
+    private final StartupProgressResponder responder
 
-    private HttpServer server;
+    private HttpServer server
 
-    private ExecutorService executor;
+    private ExecutorService executor
 
-    private volatile boolean running;
+    private volatile boolean running
 
+    @PackageScope
     StartupProgressServer(InetAddress address, int port, StartupProgressResponder responder) {
-        this.address = new InetSocketAddress(address, port);
-        this.responder = responder;
+        this.address = new InetSocketAddress(address, port)
+        this.responder = responder
     }
 
     /**
@@ -63,22 +62,23 @@ final class StartupProgressServer {
      *
      * @throws IOException when the port cannot be bound, typically because something else holds it
      */
+    @PackageScope
     void start() throws IOException {
         if (running) {
-            return;
+            return
         }
-        HttpServer httpServer = HttpServer.create(address, 0);
+        HttpServer httpServer = HttpServer.create(address, 0)
         ExecutorService pool = Executors.newFixedThreadPool(2, runnable -> {
-            Thread thread = new Thread(runnable, "grails-startup-progress");
-            thread.setDaemon(true);
-            return thread;
-        });
-        httpServer.createContext("/", this::handle);
-        httpServer.setExecutor(pool);
-        startFromDaemonThread(httpServer);
-        server = httpServer;
-        executor = pool;
-        running = true;
+            Thread thread = new Thread(runnable, 'grails-startup-progress')
+            thread.setDaemon(true)
+            return thread
+        })
+        httpServer.createContext('/', (HttpExchange request) -> handle(request))
+        httpServer.setExecutor(pool)
+        startFromDaemonThread(httpServer)
+        server = httpServer
+        executor = pool
+        running = true
     }
 
     /**
@@ -86,53 +86,55 @@ final class StartupProgressServer {
      * daemon status of the thread that calls {@code start()}, and nothing else makes it a daemon.
      */
     private static void startFromDaemonThread(HttpServer httpServer) throws IOException {
-        FutureTask<Void> start = new FutureTask<>(httpServer::start, null);
-        Thread starter = new Thread(start, "grails-startup-progress-start");
-        starter.setDaemon(true);
-        starter.start();
-        boolean interrupted = false;
+        FutureTask<Void> start = new FutureTask<Void>(() -> httpServer.start(), null)
+        Thread starter = new Thread(start, 'grails-startup-progress-start')
+        starter.setDaemon(true)
+        starter.start()
+        boolean interrupted = false
         try {
             while (true) {
                 try {
-                    start.get();
-                    return;
+                    start.get()
+                    return
                 }
-                catch (InterruptedException ex) {
+                catch (InterruptedException ignored) {
                     // the server is starting whether or not this thread is interrupted, so wait for it either way
-                    interrupted = true;
+                    interrupted = true
                 }
                 catch (ExecutionException ex) {
-                    throw new IOException("The startup progress server could not be started", ex.getCause());
+                    throw new IOException('The startup progress server could not be started', ex.getCause())
                 }
             }
         }
         finally {
             if (interrupted) {
-                Thread.currentThread().interrupt();
+                Thread.currentThread().interrupt()
             }
         }
     }
 
+    @PackageScope
     boolean isRunning() {
-        return running;
+        return running
     }
 
     /**
      * Closes the listening socket and returns once it is released, so the web server can bind the port
      * straight after.
      */
+    @PackageScope
     void stop() {
         if (!running) {
-            return;
+            return
         }
-        running = false;
-        server.stop(0);
-        executor.shutdownNow();
+        running = false
+        server.stop(0)
+        executor.shutdownNow()
     }
 
     private void handle(HttpExchange exchange) throws IOException {
-        try (exchange) {
-            responder.respond(new JdkExchange(exchange), StartupProgressResponder.Takes.EVERY_REQUEST);
+        try (HttpExchange closeable = exchange) {
+            responder.respond(new JdkExchange(closeable), StartupProgressResponder.Takes.EVERY_REQUEST)
         }
     }
 
@@ -140,48 +142,48 @@ final class StartupProgressServer {
     private record JdkExchange(HttpExchange exchange) implements StartupProgressResponder.Exchange {
 
         @Override
-        public String method() {
-            return exchange.getRequestMethod();
+        String method() {
+            return exchange.getRequestMethod()
         }
 
         @Override
-        public String path() {
-            return exchange.getRequestURI().getRawPath();
+        String path() {
+            return exchange.getRequestURI().getRawPath()
         }
 
         @Override
-        public String query() {
-            return exchange.getRequestURI().getRawQuery();
+        String query() {
+            return exchange.getRequestURI().getRawQuery()
         }
 
         @Override
-        public String header(String name) {
-            return exchange.getRequestHeaders().getFirst(name);
+        String header(String name) {
+            return exchange.getRequestHeaders().getFirst(name)
         }
 
         @Override
-        public List<String> headers(String name) {
-            List<String> values = exchange.getRequestHeaders().get(name);
-            return values != null ? values : List.of();
+        List<String> headers(String name) {
+            List<String> values = exchange.getRequestHeaders().get(name)
+            return values != null ? values : List.of()
         }
 
         @Override
-        public void setHeader(String name, String value) {
-            exchange.getResponseHeaders().set(name, value);
+        void setHeader(String name, String value) {
+            exchange.getResponseHeaders().set(name, value)
         }
 
         @Override
-        public void send(int status, String contentType, byte[] body) throws IOException {
+        void send(int status, String contentType, byte[] body) throws IOException {
             if (contentType != null) {
-                exchange.getResponseHeaders().set("Content-Type", contentType);
+                exchange.getResponseHeaders().set('Content-Type', contentType)
             }
-            if (body.length == 0 || "HEAD".equals(exchange.getRequestMethod())) {
-                exchange.sendResponseHeaders(status, -1);
-                return;
+            if (body.length == 0 || 'HEAD'.equals(exchange.getRequestMethod())) {
+                exchange.sendResponseHeaders(status, -1)
+                return
             }
-            exchange.sendResponseHeaders(status, body.length);
+            exchange.sendResponseHeaders(status, body.length)
             try (OutputStream out = exchange.getResponseBody()) {
-                out.write(body);
+                out.write(body)
             }
         }
     }
