@@ -16,7 +16,7 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.exceptions.reporting;
+package org.grails.exceptions.reporting
 
 /**
  * Improves the output of stack traces produced by exceptions in a Grails application.
@@ -24,7 +24,7 @@ package org.grails.exceptions.reporting;
  * @since 2.0
  * @author Graeme Rocher
  */
-public interface StackTraceFilterer {
+interface StackTraceFilterer {
 
     /**
      * Message used as the header for full stack trace log entries emitted on the
@@ -32,21 +32,21 @@ public interface StackTraceFilterer {
      * {@code GrailsExceptionResolver} writes the entry when
      * {@code grails.exceptionresolver.logFullStackTrace} is enabled.
      */
-    String FULL_STACK_TRACE_MESSAGE = "Full Stack Trace:";
-    String SYS_PROP_DISPLAY_FULL_STACKTRACE = "grails.full.stacktrace";
+    String FULL_STACK_TRACE_MESSAGE = 'Full Stack Trace:'
+    String SYS_PROP_DISPLAY_FULL_STACKTRACE = 'grails.full.stacktrace'
 
     /**
      * Adds a package name that should be filtered
      *
      * @param name The name of the package
      */
-    void addInternalPackage(String name);
+    void addInternalPackage(String name)
 
     /**
      * Sets the package where the stack trace should end
      * @param cutOffPackage The cut off package
      */
-    void setCutOffPackage(String cutOffPackage);
+    void setCutOffPackage(String cutOffPackage)
 
     /**
      * <p>Remove all apparently Grails-internal trace entries from the exception instance<p>
@@ -55,7 +55,7 @@ public interface StackTraceFilterer {
      * @param recursive Whether to recursively filter the cause
      * @return The exception passed in, after cleaning the stack trace
      */
-    Throwable filter(Throwable source, boolean recursive);
+    Throwable filter(Throwable source, boolean recursive)
 
     /**
      * <p>Remove all apparently Grails-internal trace entries from the exception instance<p>
@@ -63,10 +63,11 @@ public interface StackTraceFilterer {
      * @param source The source exception
      * @return The exception passed in, after cleaning the stack trace
      */
-    Throwable filter(Throwable source);
+    Throwable filter(Throwable source)
 
     /**
      * @param shouldFilter Whether to filter stack traces or not
      */
-    void setShouldFilter(boolean shouldFilter);
+    void setShouldFilter(boolean shouldFilter)
+
 }

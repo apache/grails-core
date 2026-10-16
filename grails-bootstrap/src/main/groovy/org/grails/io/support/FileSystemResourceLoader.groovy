@@ -16,7 +16,9 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.io.support;
+package org.grails.io.support
+
+import groovy.transform.CompileStatic
 
 /**
  * {@link ResourceLoader} implementation that resolves plain paths as
@@ -35,7 +37,8 @@ package org.grails.io.support;
  * @since 1.1.3
  * @see DefaultResourceLoader
  */
-public class FileSystemResourceLoader extends DefaultResourceLoader {
+@CompileStatic
+class FileSystemResourceLoader extends DefaultResourceLoader {
 
     /**
      * Resolve resource paths as file system paths.
@@ -47,9 +50,10 @@ public class FileSystemResourceLoader extends DefaultResourceLoader {
      */
     @Override
     protected Resource getResourceByPath(String path) {
-        if (path != null && path.startsWith("/")) {
-            path = path.substring(1);
+        if (path != null && path.startsWith('/')) {
+            path = path.substring(1)
         }
-        return new FileSystemResource(path);
+        return new FileSystemResource(path)
     }
+
 }

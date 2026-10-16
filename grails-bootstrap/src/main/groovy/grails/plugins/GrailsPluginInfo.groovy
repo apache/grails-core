@@ -16,63 +16,62 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package grails.plugins;
+package grails.plugins
 
-import java.util.Map;
-
-import org.grails.io.support.Resource;
+import org.grails.io.support.Resource
 
 /**
  * Base interface that just contains information about a particular plugin.
  * @author Graeme Rocher
  * @since 1.3
  */
-public interface GrailsPluginInfo {
+interface GrailsPluginInfo {
 
     /**
      * Defines the convention that appears within plugin class names
      */
-    String TRAILING_NAME = "GrailsPlugin";
+    String TRAILING_NAME = 'GrailsPlugin'
 
     /**
      * The name of the plugin
      */
-    String NAME = "name";
+    String NAME = 'name'
 
     /**
      * Defines the name of the property that specifies the plugin version
      */
-    String VERSION = "version";
+    String VERSION = 'version'
 
     /**
      * @return The name of the plug-in
      */
-    String getName();
+    String getName()
 
     /**
      * @return The version of the plug-in
      */
-    String getVersion();
+    String getVersion()
 
     /**
      * @return The full name of the plugin including version
      */
-    String getFullName();
+    String getFullName()
 
     /**
      * @return the Resource that represents the plugin descriptor (the *GrailsPlugin.groovy or grails-plugin.yml file)
      */
-    Resource getDescriptor();
+    Resource getDescriptor()
 
     /**
      * @return The directory where the plugin exists or null if it cannot be read
      */
-    Resource getPluginDir();
+    Resource getPluginDir()
 
     /**
      * Gets the properties of the plugin as a map
      * @return A map of the properties
      */
-    @SuppressWarnings("rawtypes")
-    Map getProperties();
+    @SuppressWarnings('rawtypes')
+    Map getProperties()
+
 }

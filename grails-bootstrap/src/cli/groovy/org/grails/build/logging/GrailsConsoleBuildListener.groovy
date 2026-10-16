@@ -16,26 +16,28 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.build.logging;
+package org.grails.build.logging
 
-import org.apache.tools.ant.BuildEvent;
-import org.apache.tools.ant.BuildListener;
+import groovy.transform.CompileStatic
+import org.apache.tools.ant.BuildEvent
+import org.apache.tools.ant.BuildListener
 
-import grails.build.logging.GrailsConsole;
+import grails.build.logging.GrailsConsole
 
 /**
  * Mainly silences a lot of redundant Ant output.
  */
-public class GrailsConsoleBuildListener implements BuildListener {
+@CompileStatic
+class GrailsConsoleBuildListener implements BuildListener {
 
-    private GrailsConsole ui;
+    private GrailsConsole ui
 
-    public GrailsConsoleBuildListener() {
-        this(GrailsConsole.getInstance());
+    GrailsConsoleBuildListener() {
+        this(GrailsConsole.getInstance())
     }
 
-    public GrailsConsoleBuildListener(GrailsConsole ui) {
-        this.ui = ui;
+    GrailsConsoleBuildListener(GrailsConsole ui) {
+        this.ui = ui
     }
 
     /**
@@ -45,7 +47,7 @@ public class GrailsConsoleBuildListener implements BuildListener {
      * @param start An event with any relevant extra information.
      *              Must not be <code>null</code>.
      */
-    public final void buildStarted(final BuildEvent start) {
+    final void buildStarted(final BuildEvent start) {
         // ignore
     }
 
@@ -58,7 +60,7 @@ public class GrailsConsoleBuildListener implements BuildListener {
      *
      * @see BuildEvent#getException()
      */
-    public final void buildFinished(final BuildEvent finish) {
+    final void buildFinished(final BuildEvent finish) {
         // ignore
     }
 
@@ -70,7 +72,7 @@ public class GrailsConsoleBuildListener implements BuildListener {
      *
      * @see BuildEvent#getTarget()
      */
-    public final void targetStarted(final BuildEvent start) {
+    final void targetStarted(final BuildEvent start) {
         // ignore
     }
 
@@ -83,7 +85,7 @@ public class GrailsConsoleBuildListener implements BuildListener {
      *
      * @see BuildEvent#getException()
      */
-    public final void targetFinished(final BuildEvent finish) {
+    final void targetFinished(final BuildEvent finish) {
         // ignore
     }
 
@@ -95,7 +97,7 @@ public class GrailsConsoleBuildListener implements BuildListener {
      *
      * @see BuildEvent#getTask()
      */
-    public final void taskStarted(final BuildEvent start) {
+    final void taskStarted(final BuildEvent start) {
         // ignore
     }
 
@@ -108,8 +110,8 @@ public class GrailsConsoleBuildListener implements BuildListener {
      *
      * @see BuildEvent#getException()
      */
-    public final void taskFinished(final BuildEvent finish) {
-        ui.indicateProgress();
+    final void taskFinished(final BuildEvent finish) {
+        ui.indicateProgress()
     }
 
     /** <p>When a message is sent to this logger, Ant calls this method.</p>
@@ -119,7 +121,8 @@ public class GrailsConsoleBuildListener implements BuildListener {
      * @see BuildEvent#getMessage()
      * @see BuildEvent#getPriority()
      */
-    public void messageLogged(final BuildEvent event) {
+    void messageLogged(final BuildEvent event) {
         // empty
     }
+
 }

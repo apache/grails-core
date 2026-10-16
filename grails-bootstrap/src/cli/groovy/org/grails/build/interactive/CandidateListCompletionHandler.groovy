@@ -16,14 +16,13 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.build.interactive;
+package org.grails.build.interactive
 
-import java.util.List;
-
-import org.jline.reader.Candidate;
-import org.jline.reader.Completer;
-import org.jline.reader.LineReader;
-import org.jline.reader.ParsedLine;
+import groovy.transform.CompileStatic
+import org.jline.reader.Candidate
+import org.jline.reader.Completer
+import org.jline.reader.LineReader
+import org.jline.reader.ParsedLine
 
 /**
  * A Completer implementation that wraps candidate list completion behavior.
@@ -33,22 +32,23 @@ import org.jline.reader.ParsedLine;
  * @author Graeme Rocher
  * @since 2.0
  */
-public class CandidateListCompletionHandler implements Completer {
+@CompileStatic
+class CandidateListCompletionHandler implements Completer {
 
-    private final Completer delegate;
+    private final Completer delegate
 
-    public CandidateListCompletionHandler() {
-        this.delegate = null;
+    CandidateListCompletionHandler() {
+        this.delegate = null
     }
 
-    public CandidateListCompletionHandler(Completer delegate) {
-        this.delegate = delegate;
+    CandidateListCompletionHandler(Completer delegate) {
+        this.delegate = delegate
     }
 
     @Override
-    public void complete(LineReader reader, ParsedLine line, List<Candidate> candidates) {
+    void complete(LineReader reader, ParsedLine line, List<Candidate> candidates) {
         if (delegate != null) {
-            delegate.complete(reader, line, candidates);
+            delegate.complete(reader, line, candidates)
         }
     }
 
@@ -59,29 +59,29 @@ public class CandidateListCompletionHandler implements Completer {
      * <i>foobar</i>, <i>foobaz</i>, <i>foobuz</i>, the
      * method will return <i>foob</i>.
      */
-    public static String getUnambiguousCompletions(final List<Candidate> candidates) {
+    static String getUnambiguousCompletions(final List<Candidate> candidates) {
         if (candidates == null || candidates.isEmpty()) {
-            return null;
+            return null
         }
 
         // convert to an array for speed
-        String[] strings = new String[candidates.size()];
+        String[] strings = new String[candidates.size()]
         for (int i = 0; i < candidates.size(); i++) {
-            strings[i] = candidates.get(i).value();
+            strings[i] = candidates.get(i).value()
         }
 
-        String first = strings[0];
-        StringBuilder candidate = new StringBuilder();
+        String first = strings[0]
+        StringBuilder candidate = new StringBuilder()
 
         for (int i = 0, count = first.length(); i < count; i++) {
             if (startsWith(first.substring(0, i + 1), strings)) {
-                candidate.append(first.charAt(i));
+                candidate.append(first.charAt(i))
             } else {
-                break;
+                break
             }
         }
 
-        return candidate.toString();
+        return candidate.toString()
     }
 
     /**
@@ -91,10 +91,11 @@ public class CandidateListCompletionHandler implements Completer {
     private static boolean startsWith(final String starts, final String[] candidates) {
         for (int i = 0; i < candidates.length; i++) {
             if (!candidates[i].startsWith(starts)) {
-                return false;
+                return false
             }
         }
 
-        return true;
+        return true
     }
+
 }

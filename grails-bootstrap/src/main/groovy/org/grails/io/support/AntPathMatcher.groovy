@@ -16,17 +16,13 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.io.support;
+package org.grails.io.support
 
-import java.util.Comparator;
-import java.util.LinkedHashMap;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+import java.util.regex.Matcher
+import java.util.regex.Pattern
 
-import org.codehaus.groovy.runtime.StringGroovyMethods;
+import groovy.transform.CompileStatic
+import org.codehaus.groovy.runtime.StringGroovyMethods
 
 /**
  * PathMatcher implementation for Ant-style path patterns. Examples are provided below.
@@ -50,30 +46,31 @@ import org.codehaus.groovy.runtime.StringGroovyMethods;
  * @author Arjen Poutsma
  * @since 16.07.2003
  */
-public class AntPathMatcher {
+@CompileStatic
+class AntPathMatcher {
 
-    private static final Pattern VARIABLE_PATTERN = Pattern.compile("\\{[^/]+?\\}");
+    private static final Pattern VARIABLE_PATTERN = Pattern.compile('\\{[^/]+?\\}')
 
     /** Default path separator: "/" */
-    public static final String DEFAULT_PATH_SEPARATOR = "/";
+    public static final String DEFAULT_PATH_SEPARATOR = '/'
 
-    private String pathSeparator = DEFAULT_PATH_SEPARATOR;
+    private String pathSeparator = DEFAULT_PATH_SEPARATOR
 
     /** Set the path separator to use for pattern parsing. Default is "/", as in Ant. */
-    public void setPathSeparator(String pathSeparator) {
-        this.pathSeparator = pathSeparator == null ? DEFAULT_PATH_SEPARATOR : pathSeparator;
+    void setPathSeparator(String pathSeparator) {
+        this.pathSeparator = pathSeparator == null ? DEFAULT_PATH_SEPARATOR : pathSeparator
     }
 
-    public boolean isPattern(String path) {
-        return (path.indexOf('*') != -1 || path.indexOf('?') != -1);
+    boolean isPattern(String path) {
+        return (path.indexOf('*') != -1 || path.indexOf('?') != -1)
     }
 
-    public boolean match(String pattern, String path) {
-        return doMatch(pattern, path, true, null);
+    boolean match(String pattern, String path) {
+        return doMatch(pattern, path, true, null)
     }
 
-    public boolean matchStart(String pattern, String path) {
-        return doMatch(pattern, path, false, null);
+    boolean matchStart(String pattern, String path) {
+        return doMatch(pattern, path, false, null)
     }
 
     /**
@@ -88,132 +85,132 @@ public class AntPathMatcher {
                               Map<String, String> uriTemplateVariables) {
 
         if (path.startsWith(pathSeparator) != pattern.startsWith(pathSeparator)) {
-            return false;
+            return false
         }
 
-        String[] pattDirs = tokenize(pattern);
-        String[] pathDirs = tokenize(path);
+        String[] pattDirs = tokenize(pattern)
+        String[] pathDirs = tokenize(path)
 
-        int pattIdxStart = 0;
-        int pattIdxEnd = pattDirs.length - 1;
-        int pathIdxStart = 0;
-        int pathIdxEnd = pathDirs.length - 1;
+        int pattIdxStart = 0
+        int pattIdxEnd = pattDirs.length - 1
+        int pathIdxStart = 0
+        int pathIdxEnd = pathDirs.length - 1
 
         // Match all elements up to the first **
         while (pattIdxStart <= pattIdxEnd && pathIdxStart <= pathIdxEnd) {
-            String patDir = pattDirs[pattIdxStart];
-            if ("**".equals(patDir)) {
-                break;
+            String patDir = pattDirs[pattIdxStart]
+            if ('**'.equals(patDir)) {
+                break
             }
             if (!matchStrings(patDir, pathDirs[pathIdxStart], uriTemplateVariables)) {
-                return false;
+                return false
             }
-            pattIdxStart++;
-            pathIdxStart++;
+            pattIdxStart++
+            pathIdxStart++
         }
 
         if (pathIdxStart > pathIdxEnd) {
             // Path is exhausted, only match if rest of pattern is * or **'s
             if (pattIdxStart > pattIdxEnd) {
                 return (pattern.endsWith(pathSeparator) ? path.endsWith(pathSeparator) :
-                        !path.endsWith(pathSeparator));
+                        !path.endsWith(pathSeparator))
             }
             if (!fullMatch) {
-                return true;
+                return true
             }
-            if (pattIdxStart == pattIdxEnd && pattDirs[pattIdxStart].equals("*") && path.endsWith(pathSeparator)) {
-                return true;
+            if (pattIdxStart == pattIdxEnd && pattDirs[pattIdxStart].equals('*') && path.endsWith(pathSeparator)) {
+                return true
             }
             for (int i = pattIdxStart; i <= pattIdxEnd; i++) {
-                if (!pattDirs[i].equals("**")) {
-                    return false;
+                if (!pattDirs[i].equals('**')) {
+                    return false
                 }
             }
-            return true;
+            return true
         }
         else if (pattIdxStart > pattIdxEnd) {
             // String not exhausted, but pattern is. Failure.
-            return false;
+            return false
         }
-        else if (!fullMatch && "**".equals(pattDirs[pattIdxStart])) {
+        else if (!fullMatch && '**'.equals(pattDirs[pattIdxStart])) {
             // Path start definitely matches due to "**" part in pattern.
-            return true;
+            return true
         }
 
         // up to last '**'
         while (pattIdxStart <= pattIdxEnd && pathIdxStart <= pathIdxEnd) {
-            String patDir = pattDirs[pattIdxEnd];
-            if (patDir.equals("**")) {
-                break;
+            String patDir = pattDirs[pattIdxEnd]
+            if (patDir.equals('**')) {
+                break
             }
             if (!matchStrings(patDir, pathDirs[pathIdxEnd], uriTemplateVariables)) {
-                return false;
+                return false
             }
-            pattIdxEnd--;
-            pathIdxEnd--;
+            pattIdxEnd--
+            pathIdxEnd--
         }
         if (pathIdxStart > pathIdxEnd) {
             // String is exhausted
             for (int i = pattIdxStart; i <= pattIdxEnd; i++) {
-                if (!pattDirs[i].equals("**")) {
-                    return false;
+                if (!pattDirs[i].equals('**')) {
+                    return false
                 }
             }
-            return true;
+            return true
         }
 
         while (pattIdxStart != pattIdxEnd && pathIdxStart <= pathIdxEnd) {
-            int patIdxTmp = -1;
+            int patIdxTmp = -1
             for (int i = pattIdxStart + 1; i <= pattIdxEnd; i++) {
-                if (pattDirs[i].equals("**")) {
-                    patIdxTmp = i;
-                    break;
+                if (pattDirs[i].equals('**')) {
+                    patIdxTmp = i
+                    break
                 }
             }
             if (patIdxTmp == pattIdxStart + 1) {
                 // '**/**' situation, so skip one
-                pattIdxStart++;
-                continue;
+                pattIdxStart++
+                continue
             }
             // Find the pattern between padIdxStart & padIdxTmp in str between
             // strIdxStart & strIdxEnd
-            int patLength = (patIdxTmp - pattIdxStart - 1);
-            int strLength = (pathIdxEnd - pathIdxStart + 1);
-            int foundIdx = -1;
+            int patLength = (patIdxTmp - pattIdxStart - 1)
+            int strLength = (pathIdxEnd - pathIdxStart + 1)
+            int foundIdx = -1
 
             strLoop:
             for (int i = 0; i <= strLength - patLength; i++) {
                 for (int j = 0; j < patLength; j++) {
-                    String subPat = pattDirs[pattIdxStart + j + 1];
-                    String subStr = pathDirs[pathIdxStart + i + j];
+                    String subPat = pattDirs[pattIdxStart + j + 1]
+                    String subStr = pathDirs[pathIdxStart + i + j]
                     if (!matchStrings(subPat, subStr, uriTemplateVariables)) {
-                        continue strLoop;
+                        continue strLoop
                     }
                 }
-                foundIdx = pathIdxStart + i;
-                break;
+                foundIdx = pathIdxStart + i
+                break
             }
 
             if (foundIdx == -1) {
-                return false;
+                return false
             }
 
-            pattIdxStart = patIdxTmp;
-            pathIdxStart = foundIdx + patLength;
+            pattIdxStart = patIdxTmp
+            pathIdxStart = foundIdx + patLength
         }
 
         for (int i = pattIdxStart; i <= pattIdxEnd; i++) {
-            if (!pattDirs[i].equals("**")) {
-                return false;
+            if (!pattDirs[i].equals('**')) {
+                return false
             }
         }
 
-        return true;
+        return true
     }
 
     private String[] tokenize(String pattern) {
-        List<String> list = StringGroovyMethods.tokenize((CharSequence) pattern, (CharSequence) pathSeparator);
-        return list.toArray(new String[list.size()]);
+        List<String> list = StringGroovyMethods.tokenize((CharSequence) pattern, (CharSequence) pathSeparator)
+        return list.toArray(new String[list.size()])
     }
 
     /**
@@ -224,8 +221,8 @@ public class AntPathMatcher {
      * @return <code>true</code> if the string matches against the pattern, or <code>false</code> otherwise.
      */
     private boolean matchStrings(String pattern, String str, Map<String, String> uriTemplateVariables) {
-        AntPathStringMatcher matcher = new AntPathStringMatcher(pattern, str, uriTemplateVariables);
-        return matcher.matchStrings();
+        AntPathStringMatcher matcher = new AntPathStringMatcher(pattern, str, uriTemplateVariables)
+        return matcher.matchStrings()
     }
 
     /**
@@ -241,40 +238,40 @@ public class AntPathMatcher {
      * <p>Assumes that {@link #match} returns <code>true</code> for '<code>pattern</code>' and '<code>path</code>', but
      * does <strong>not</strong> enforce this.
      */
-    public String extractPathWithinPattern(String pattern, String path) {
-        String[] patternParts = tokenize(pattern);
-        String[] pathParts = tokenize(path);
+    String extractPathWithinPattern(String pattern, String path) {
+        String[] patternParts = tokenize(pattern)
+        String[] pathParts = tokenize(path)
 
-        StringBuilder builder = new StringBuilder();
+        StringBuilder builder = new StringBuilder()
 
         // Add any path parts that have a wildcarded pattern part.
-        int puts = 0;
+        int puts = 0
         for (int i = 0; i < patternParts.length; i++) {
-            String patternPart = patternParts[i];
+            String patternPart = patternParts[i]
             if ((patternPart.indexOf('*') > -1 || patternPart.indexOf('?') > -1) && pathParts.length >= i + 1) {
                 if (puts > 0 || (i == 0 && !pattern.startsWith(pathSeparator))) {
-                    builder.append(pathSeparator);
+                    builder.append(pathSeparator)
                 }
-                builder.append(pathParts[i]);
-                puts++;
+                builder.append(pathParts[i])
+                puts++
             }
         }
 
         // Append any trailing path parts.
         for (int i = patternParts.length; i < pathParts.length; i++) {
             if (puts > 0 || i > 0) {
-                builder.append(pathSeparator);
+                builder.append(pathSeparator)
             }
-            builder.append(pathParts[i]);
+            builder.append(pathParts[i])
         }
 
-        return builder.toString();
+        return builder.toString()
     }
 
-    public Map<String, String> extractUriTemplateVariables(String pattern, String path) {
-        Map<String, String> variables = new LinkedHashMap<>();
-        /*boolean result =*/ doMatch(pattern, path, true, variables);
-        return variables;
+    Map<String, String> extractUriTemplateVariables(String pattern, String path) {
+        Map<String, String> variables = new LinkedHashMap<>()
+        doMatch(pattern, path, true, variables)
+        return variables
     }
 
     /**
@@ -296,64 +293,64 @@ public class AntPathMatcher {
      * @return the combination of the two patterns
      * @throws IllegalArgumentException when the two patterns cannot be combined
      */
-    public String combine(String pattern1, String pattern2) {
+    String combine(String pattern1, String pattern2) {
         if (!hasText(pattern1) && !hasText(pattern2)) {
-            return "";
+            return ''
         }
         if (!hasText(pattern1)) {
-            return pattern2;
+            return pattern2
         }
         if (!hasText(pattern2)) {
-            return pattern1;
+            return pattern1
         }
-        if (!pattern1.contains("{") && match(pattern1, pattern2)) {
-            return pattern2;
+        if (!pattern1.contains('{') && match(pattern1, pattern2)) {
+            return pattern2
         }
-        if (pattern1.endsWith("/*")) {
-            if (pattern2.startsWith("/")) {
+        if (pattern1.endsWith('/*')) {
+            if (pattern2.startsWith('/')) {
                 // /hotels/* + /booking -> /hotels/booking
-                return pattern1.substring(0, pattern1.length() - 1) + pattern2.substring(1);
+                return pattern1.substring(0, pattern1.length() - 1) + pattern2.substring(1)
             }
             // /hotels/* + booking -> /hotels/booking
-            return pattern1.substring(0, pattern1.length() - 1) + pattern2;
+            return pattern1.substring(0, pattern1.length() - 1) + pattern2
         }
-        if (pattern1.endsWith("/**")) {
-            if (pattern2.startsWith("/")) {
+        if (pattern1.endsWith('/**')) {
+            if (pattern2.startsWith('/')) {
                 // /hotels/** + /booking -> /hotels/**/booking
-                return pattern1 + pattern2;
+                return pattern1 + pattern2
             }
             // /hotels/** + booking -> /hotels/**/booking
-            return pattern1 + "/" + pattern2;
+            return pattern1 + '/' + pattern2
         }
-        int dotPos1 = pattern1.indexOf('.');
+        int dotPos1 = pattern1.indexOf('.')
         if (dotPos1 == -1) {
             // simply concatenate the two patterns
-            if (pattern1.endsWith("/") || pattern2.startsWith("/")) {
-                return pattern1 + pattern2;
+            if (pattern1.endsWith('/') || pattern2.startsWith('/')) {
+                return pattern1 + pattern2
             }
-            return pattern1 + "/" + pattern2;
+            return pattern1 + '/' + pattern2
         }
-        String fileName1 = pattern1.substring(0, dotPos1);
-        String extension1 = pattern1.substring(dotPos1);
-        String fileName2;
-        String extension2;
-        int dotPos2 = pattern2.indexOf('.');
+        String fileName1 = pattern1.substring(0, dotPos1)
+        String extension1 = pattern1.substring(dotPos1)
+        String fileName2
+        String extension2
+        int dotPos2 = pattern2.indexOf('.')
         if (dotPos2 != -1) {
-            fileName2 = pattern2.substring(0, dotPos2);
-            extension2 = pattern2.substring(dotPos2);
+            fileName2 = pattern2.substring(0, dotPos2)
+            extension2 = pattern2.substring(dotPos2)
         }
         else {
-            fileName2 = pattern2;
-            extension2 = "";
+            fileName2 = pattern2
+            extension2 = ''
         }
-        String fileName = fileName1.endsWith("*") ? fileName2 : fileName1;
-        String extension = extension1.startsWith("*") ? extension2 : extension1;
+        String fileName = fileName1.endsWith('*') ? fileName2 : fileName1
+        String extension = extension1.startsWith('*') ? extension2 : extension1
 
-        return fileName + extension;
+        return fileName + extension
     }
 
     private boolean hasText(String txt) {
-        return txt != null && txt.length() > 0;
+        return txt != null && txt.length() > 0
     }
 
     /**
@@ -368,89 +365,89 @@ public class AntPathMatcher {
      * @param path the full path to use for comparison
      * @return a comparator capable of sorting patterns in order of explicitness
      */
-    public Comparator<String> getPatternComparator(String path) {
-        return new AntPatternComparator(path);
+    Comparator<String> getPatternComparator(String path) {
+        return new AntPatternComparator(path)
     }
 
     private static class AntPatternComparator implements Comparator<String> {
 
-        private final String path;
+        private final String path
 
         private AntPatternComparator(String path) {
-            this.path = path;
+            this.path = path
         }
 
-        public int compare(String pattern1, String pattern2) {
+        int compare(String pattern1, String pattern2) {
             if (pattern1 == null && pattern2 == null) {
-                return 0;
+                return 0
             }
             else if (pattern1 == null) {
-                return 1;
+                return 1
             }
             else if (pattern2 == null) {
-                return -1;
+                return -1
             }
-            boolean pattern1EqualsPath = pattern1.equals(path);
-            boolean pattern2EqualsPath = pattern2.equals(path);
+            boolean pattern1EqualsPath = pattern1.equals(path)
+            boolean pattern2EqualsPath = pattern2.equals(path)
             if (pattern1EqualsPath && pattern2EqualsPath) {
-                return 0;
+                return 0
             }
             else if (pattern1EqualsPath) {
-                return -1;
+                return -1
             }
             else if (pattern2EqualsPath) {
-                return 1;
+                return 1
             }
-            int wildCardCount1 = getWildCardCount(pattern1);
-            int wildCardCount2 = getWildCardCount(pattern2);
+            int wildCardCount1 = getWildCardCount(pattern1)
+            int wildCardCount2 = getWildCardCount(pattern2)
 
-            int bracketCount1 = countOccurrencesOf(pattern1, "{");
-            int bracketCount2 = countOccurrencesOf(pattern2, "{");
+            int bracketCount1 = countOccurrencesOf(pattern1, '{')
+            int bracketCount2 = countOccurrencesOf(pattern2, '{')
 
-            int totalCount1 = wildCardCount1 + bracketCount1;
-            int totalCount2 = wildCardCount2 + bracketCount2;
+            int totalCount1 = wildCardCount1 + bracketCount1
+            int totalCount2 = wildCardCount2 + bracketCount2
 
             if (totalCount1 != totalCount2) {
-                return totalCount1 - totalCount2;
+                return totalCount1 - totalCount2
             }
 
-            int pattern1Length = getPatternLength(pattern1);
-            int pattern2Length = getPatternLength(pattern2);
+            int pattern1Length = getPatternLength(pattern1)
+            int pattern2Length = getPatternLength(pattern2)
 
             if (pattern1Length != pattern2Length) {
-                return pattern2Length - pattern1Length;
+                return pattern2Length - pattern1Length
             }
 
             if (wildCardCount1 < wildCardCount2) {
-                return -1;
+                return -1
             }
             else if (wildCardCount2 < wildCardCount1) {
-                return 1;
+                return 1
             }
 
             if (bracketCount1 < bracketCount2) {
-                return -1;
+                return -1
             }
             else if (bracketCount2 < bracketCount1) {
-                return 1;
+                return 1
             }
 
-            return 0;
+            return 0
         }
 
         private int getWildCardCount(String pattern) {
-            if (pattern.endsWith(".*")) {
-                pattern = pattern.substring(0, pattern.length() - 2);
+            if (pattern.endsWith('.*')) {
+                pattern = pattern.substring(0, pattern.length() - 2)
             }
-            return countOccurrencesOf(pattern, "*");
+            return countOccurrencesOf(pattern, '*')
         }
 
         /**
          * Returns the length of the given pattern, where template variables are considered to be 1 long.
          */
         private int getPatternLength(String pattern) {
-            Matcher m = VARIABLE_PATTERN.matcher(pattern);
-            return m.replaceAll("#").length();
+            Matcher m = VARIABLE_PATTERN.matcher(pattern)
+            return m.replaceAll('#').length()
         }
     }
 
@@ -467,64 +464,64 @@ public class AntPathMatcher {
      */
     static class AntPathStringMatcher {
 
-        private static final Pattern GLOB_PATTERN = Pattern.compile("\\?|\\*|\\{((?:\\{[^/]+?\\}|[^/{}]|\\\\[{}])+?)\\}");
+        private static final Pattern GLOB_PATTERN = Pattern.compile('\\?|\\*|\\{((?:\\{[^/]+?\\}|[^/{}]|\\\\[{}])+?)\\}')
 
-        private final String DEFAULT_VARIABLE_PATTERN = "(.*)";
+        private final String DEFAULT_VARIABLE_PATTERN = '(.*)'
 
-        private final Pattern pattern;
+        private final Pattern pattern
 
-        private String str;
+        private String str
 
-        private final List<String> variableNames = new LinkedList<>();
+        private final List<String> variableNames = new LinkedList<>()
 
-        private final Map<String, String> uriTemplateVariables;
+        private final Map<String, String> uriTemplateVariables
 
         /** Construct a new instance of the <code>AntPatchStringMatcher</code>. */
         AntPathStringMatcher(String pattern, String str, Map<String, String> uriTemplateVariables) {
-            this.str = str;
-            this.uriTemplateVariables = uriTemplateVariables;
-            this.pattern = createPattern(pattern);
+            this.str = str
+            this.uriTemplateVariables = uriTemplateVariables
+            this.pattern = createPattern(pattern)
         }
 
         private Pattern createPattern(String p) {
-            StringBuilder patternBuilder = new StringBuilder();
-            Matcher m = GLOB_PATTERN.matcher(p);
-            int end = 0;
+            StringBuilder patternBuilder = new StringBuilder()
+            Matcher m = GLOB_PATTERN.matcher(p)
+            int end = 0
             while (m.find()) {
-                patternBuilder.append(quote(p, end, m.start()));
-                String match = m.group();
-                if ("?".equals(match)) {
-                    patternBuilder.append('.');
+                patternBuilder.append(quote(p, end, m.start()))
+                String match = m.group()
+                if ('?'.equals(match)) {
+                    patternBuilder.append('.')
                 }
-                else if ("*".equals(match)) {
-                    patternBuilder.append(".*");
+                else if ('*'.equals(match)) {
+                    patternBuilder.append('.*')
                 }
-                else if (match.startsWith("{") && match.endsWith("}")) {
-                    int colonIdx = match.indexOf(':');
+                else if (match.startsWith('{') && match.endsWith('}')) {
+                    int colonIdx = match.indexOf(':')
                     if (colonIdx == -1) {
-                        patternBuilder.append(DEFAULT_VARIABLE_PATTERN);
-                        variableNames.add(m.group(1));
+                        patternBuilder.append(DEFAULT_VARIABLE_PATTERN)
+                        variableNames.add(m.group(1))
                     }
                     else {
-                        String variablePattern = match.substring(colonIdx + 1, match.length() - 1);
-                        patternBuilder.append('(');
-                        patternBuilder.append(variablePattern);
-                        patternBuilder.append(')');
-                        String variableName = match.substring(1, colonIdx);
-                        variableNames.add(variableName);
+                        String variablePattern = match.substring(colonIdx + 1, match.length() - 1)
+                        patternBuilder.append('(')
+                        patternBuilder.append(variablePattern)
+                        patternBuilder.append(')')
+                        String variableName = match.substring(1, colonIdx)
+                        variableNames.add(variableName)
                     }
                 }
-                end = m.end();
+                end = m.end()
             }
-            patternBuilder.append(quote(p, end, p.length()));
-            return Pattern.compile(patternBuilder.toString());
+            patternBuilder.append(quote(p, end, p.length()))
+            return Pattern.compile(patternBuilder.toString())
         }
 
         private String quote(String s, int start, int end) {
             if (start == end) {
-                return "";
+                return ''
             }
-            return Pattern.quote(s.substring(start, end));
+            return Pattern.quote(s.substring(start, end))
         }
 
         /**
@@ -532,19 +529,19 @@ public class AntPathMatcher {
          *
          * @return <code>true</code> if the string matches against the pattern, or <code>false</code> otherwise.
          */
-        public boolean matchStrings() {
-            Matcher matcher = pattern.matcher(str);
+        boolean matchStrings() {
+            Matcher matcher = pattern.matcher(str)
             if (!matcher.matches()) {
-                return false;
+                return false
             }
             if (uriTemplateVariables != null) {
                 for (int i = 1, count = matcher.groupCount(); i <= count; i++) {
-                    String name = variableNames.get(i - 1);
-                    String value = matcher.group(i);
-                    uriTemplateVariables.put(name, value);
+                    String name = variableNames.get(i - 1)
+                    String value = matcher.group(i)
+                    uriTemplateVariables.put(name, value)
                 }
             }
-            return true;
+            return true
         }
     }
 
@@ -553,17 +550,18 @@ public class AntPathMatcher {
      * @param str string to search in. Return 0 if this is null.
      * @param sub string to search for. Return 0 if this is null.
      */
-    public static int countOccurrencesOf(String str, String sub) {
+    static int countOccurrencesOf(String str, String sub) {
         if (str == null || sub == null || str.length() == 0 || sub.length() == 0) {
-            return 0;
+            return 0
         }
-        int count = 0;
-        int pos = 0;
-        int idx;
+        int count = 0
+        int pos = 0
+        int idx
         while ((idx = str.indexOf(sub, pos)) != -1) {
-            ++count;
-            pos = idx + sub.length();
+            ++count
+            pos = idx + sub.length()
         }
-        return count;
+        return count
     }
+
 }
