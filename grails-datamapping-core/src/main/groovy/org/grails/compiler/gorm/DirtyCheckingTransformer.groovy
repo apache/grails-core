@@ -72,6 +72,7 @@ import static org.grails.datastore.mapping.reflect.AstUtils.OBJECT_CLASS_NODE
 import static org.grails.datastore.mapping.reflect.AstUtils.addAnnotationIfNecessary
 import static org.grails.datastore.mapping.reflect.AstUtils.hasAnnotation
 import static org.grails.datastore.mapping.reflect.AstUtils.isDomainClass
+import static org.grails.datastore.mapping.reflect.AstUtils.isDomainClassUncached
 
 /**
  *
@@ -139,7 +140,7 @@ class DirtyCheckingTransformer implements CompilationUnitAware {
         }
 
         while (!shouldWeave) {
-            if (isDomainClass(superClass) || !superClass.getAnnotations(DIRTY_CHECK_CLASS_NODE).isEmpty()) {
+            if (isDomainClassUncached(superClass) || !superClass.getAnnotations(DIRTY_CHECK_CLASS_NODE).isEmpty()) {
                 break
             }
             superClass = superClass.getSuperClass()

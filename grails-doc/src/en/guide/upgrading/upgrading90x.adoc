@@ -305,3 +305,30 @@ It applies nothing else. Null properties are written whatever `@JsonInclude` or
 `spring.jackson.default-property-inclusion` say, properties are written in the converter's order rather than by
 `@JsonPropertyOrder` or sorted alphabetically, and `@JsonView`, `@JsonFilter`, `@JsonAnyGetter`, `@JsonIgnoreType`,
 `@JsonFormat` and `@JsonSerialize` on a property, and mix-ins, other than the property names they give, do not apply.
+
+==== 5. Generated GORM Identity and Version Properties Stay Within Domain Classes
+
+Grails 9 no longer adds generated `id` and `version` properties to a non-domain superclass of a domain class.
+Previously, these properties could be added to a shared abstract base class, causing command objects extending that same base class to inherit persistence properties and fail validation for `id` and `version`.
+Generated properties now remain within the domain-class hierarchy. Domain subclasses still inherit them from domain superclasses, and explicitly declared `id` and `version` properties on a superclass are still inherited normally.
+
+This affects any plain base class compiled alongside a domain subclass, even if the base is not shared with a command object.
+Review the following compatibility changes before upgrading:
+
+* *Statically compiled base-class methods:* A plain base annotated with `@CompileStatic` can no longer refer to generated `id` or `version` as its own properties. For example, an `isNew()` method whose body is `id == null` could compile in Grails 8 when the fields were generated on the base, but now fails with `[Static type checking] - The variable [id] is undeclared.` Move persistence-dependent methods to the domain class, or give the base an explicit property or accessor contract implemented by its subclasses. A dynamically compiled base method can still resolve these properties at runtime when invoked on a domain instance; this does not make them available on plain instances or command objects.
+* *String representation and equality:* `@ToString` and `@EqualsAndHashCode` on a plain base no longer have generated `id` and `version` among that base's declared properties. Review any explicit property lists and any hand-written `equals` or `hashCode` implementation that assumes these fields are declared on the base. Move persistence-dependent behavior to the domain class or adapt it to an explicit contract. Dynamic property access on a domain instance can still resolve inherited or subclass properties, but the base itself no longer declares the generated fields.
+* *Stale compiled classes:* A previously compiled base `.class` can retain `id` and `version` until it is rebuilt. An incremental build can therefore hide the new behavior or leave subclasses inheriting stale fields. Clean and rebuild the application and any affected plugins.
+
+When upgrading an affected application:
+
+* Keep a superclass shared by domain classes and command objects in `src/main/groovy`, outside `grails-app/domain`, and do not annotate it as an entity.
+* Remove constraints or other workarounds on command objects that existed only to accommodate the accidentally inherited `id` and `version` properties.
+* Update code that relied on a non-domain superclass having generated persistence properties to access them through a domain class instead. If non-domain classes genuinely need these properties, declare them explicitly; such declarations remain inherited by all subclasses.
+* Perform a clean build of the application and any affected plugins to remove previously compiled classes containing the generated properties:
+
+[,console]
+----
+./gradlew clean build
+----
+
+See xref:theWebLayer#commandObjects[Command Objects] for a trait-based alternative to sharing a non-domain superclass with a domain class.

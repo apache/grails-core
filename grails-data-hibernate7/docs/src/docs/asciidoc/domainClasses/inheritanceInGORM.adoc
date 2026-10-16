@@ -70,3 +70,9 @@ class BlogPost extends Content { ... }
 ----
 
 TIP: Prefer table-per-hierarchy (the default) for most use cases. It requires no `JOIN` for polymorphic queries and is the most performant strategy.
+
+=== Plain Superclasses
+
+A domain class can also extend a plain, non-domain class kept in `src/main/groovy` without an entity annotation.
+Generated `id` and `version` properties are declared within the domain hierarchy, not on the plain base. If a domain ancestor exists above a plain intermediate class, the generated properties remain on that domain ancestor rather than being duplicated on the child.
+Annotating a plain base with `grails.gorm.dirty.checking.DirtyCheck` opts it into dirty checking, but does not make it a domain class or cause generated `id` and `version` properties to be placed on it. Explicitly declared properties are still inherited normally.
