@@ -16,18 +16,34 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package grails.databinding;
 
-/**
- * 
- * @since 3.0
- * @see StructuredBindingEditor
- */
-public interface TypedStructuredBindingEditor<T> extends StructuredBindingEditor<T> {
+package org.grails.databinding.errors
 
-    /**
-     * 
-     * @return the type that this editor is used for binding to
-     */
-    Class<T> getTargetType();
+import spock.lang.Specification
+
+class SimpleBindingErrorSpec extends Specification {
+
+    void 'the constructor arguments are exposed through the BindingError accessors'() {
+        given:
+        def target = new Object()
+        def cause = new NumberFormatException('not a number')
+
+        when:
+        def error = new SimpleBindingError(target, 'age', 'abc', cause)
+
+        then:
+        error.object.is(target)
+        error.propertyName == 'age'
+        error.rejectedValue == 'abc'
+        error.cause.is(cause)
+    }
+
+    void 'a null rejected value and cause are preserved'() {
+        when:
+        def error = new SimpleBindingError('target', 'name', null, null)
+
+        then:
+        error.rejectedValue == null
+        error.cause == null
+    }
 }

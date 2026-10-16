@@ -16,7 +16,7 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package grails.databinding;
+package grails.databinding
 
 /**
  * Classes which implement this interface may participate in the data binding
@@ -27,7 +27,7 @@ package grails.databinding;
  * @since 3.0
  * @see BindUsing
  */
-public interface BindingHelper<T> {
+interface BindingHelper<T> {
 
     /**
      * The value returned from this method will be bound to
@@ -38,5 +38,6 @@ public interface BindingHelper<T> {
      * @param source The Map containing all of the values being bound to this object
      * @return The value which should be bound to propertyName
      */
-    T getPropertyValue(Object obj, String propertyName, DataBindingSource source);
+    T getPropertyValue(Object obj, String propertyName, DataBindingSource source)
+
 }

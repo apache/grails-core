@@ -16,11 +16,18 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
+package grails.databinding.converters
 
-package grails.databinding.initializers;
+/**
+ * @author Jeff Brown
+ * @since 3.0
+ */
+interface ValueConverter {
 
-public interface ValueInitializer {
-    Object initialize();
+    boolean canConvert(Object value)
 
-    Class<?> getTargetType();
+    Object convert(Object value)
+
+    Class<?> getTargetType()
+
 }

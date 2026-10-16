@@ -16,10 +16,10 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package grails.databinding;
+package grails.databinding
 
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Retention
+import java.lang.annotation.RetentionPolicy
 
 /**
  * This annotation may be applied to a class or to a field to
@@ -35,6 +35,7 @@ import java.lang.annotation.RetentionPolicy;
  *
 <pre>
 class SomeClass {
+
     &#064;BindUsing({
         obj, source -&gt; source['name']?.toUpperCase()
     })
@@ -61,6 +62,8 @@ class SomeClass {
  * @see DataBindingSource
  */
 @Retention(RetentionPolicy.RUNTIME)
-public @interface BindUsing {
-    Class<?> value();
+@interface BindUsing {
+
+    Class<?> value()
+
 }

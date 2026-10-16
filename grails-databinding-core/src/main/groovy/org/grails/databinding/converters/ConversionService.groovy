@@ -16,42 +16,16 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.databinding.errors;
-
-import grails.databinding.errors.BindingError;
+package org.grails.databinding.converters
 
 /**
  * @author Jeff Brown
  * @since 2.3
  */
-public class SimpleBindingError implements BindingError {
+interface ConversionService {
 
-    private final Object object;
-    private final String propertyName;
-    private final Object rejectedValue;
-    private final Throwable cause;
+    boolean canConvert(Class<?> source, Class<?> target)
 
-    public SimpleBindingError(Object object, String propertyName,
-            Object rejectedValue, Throwable cause) {
-        this.object = object;
-        this.propertyName = propertyName;
-        this.rejectedValue = rejectedValue;
-        this.cause = cause;
-    }
+    Object convert(Object objet, Class<?> targetType)
 
-    public Object getObject() {
-        return object;
-    }
-
-    public String getPropertyName() {
-        return propertyName;
-    }
-
-    public Object getRejectedValue() {
-        return rejectedValue;
-    }
-
-    public Throwable getCause() {
-        return cause;
-    }
 }

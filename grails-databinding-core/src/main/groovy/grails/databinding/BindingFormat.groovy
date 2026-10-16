@@ -16,36 +16,36 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package grails.databinding.errors;
+package grails.databinding
+
+import java.lang.annotation.ElementType
+import java.lang.annotation.Retention
+import java.lang.annotation.RetentionPolicy
+import java.lang.annotation.Target
+
+import org.codehaus.groovy.transform.GroovyASTTransformationClass
 
 /**
- * Represents a problem which occurred during data binding.
- * 
+ * Apply BindingFormat to a field to provide a format
+ * to be used when binding a String to this field.
+ *
+<pre>
+class DateContainer {
+
+    &#064;BindingFormat('MMddyyyy')
+    Date someDate
+}
+</pre>
+ *
  * @author Jeff Brown
- * @since 3.0
+ * @since 2.3
  */
-public interface BindingError {
-    /**
-     * 
-     * @return the object that data binding was being imposed upon
-     */
-    Object getObject();
+@Retention(RetentionPolicy.RUNTIME)
+@Target(ElementType.FIELD)
+@GroovyASTTransformationClass('org.grails.databinding.compiler.BindingFormatASTTransformation')
+@interface BindingFormat {
 
-    /**
-     * 
-     * @return the name of the property that the data binding error occurred on
-     */
-    String getPropertyName();
+    String value() default ''
+    String code() default ''
 
-    /**
-     * 
-     * @return The value which could not be bound to the property
-     */
-    Object getRejectedValue();
-
-    /**
-     * 
-     * @return an exception thrown during the data binding process
-     */
-    Throwable getCause();
 }

@@ -16,16 +16,46 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package grails.databinding.converters;
+package org.grails.databinding.errors
+
+import groovy.transform.CompileStatic
+
+import grails.databinding.errors.BindingError
 
 /**
  * @author Jeff Brown
- * @since 3.0
+ * @since 2.3
  */
-public interface ValueConverter {
-    boolean canConvert(Object value);
+@CompileStatic
+class SimpleBindingError implements BindingError {
 
-    Object convert(Object value);
+    private final Object object
+    private final String propertyName
+    private final Object rejectedValue
+    private final Throwable cause
 
-    Class<?> getTargetType();
+    SimpleBindingError(Object object, String propertyName,
+            Object rejectedValue, Throwable cause) {
+        this.object = object
+        this.propertyName = propertyName
+        this.rejectedValue = rejectedValue
+        this.cause = cause
+    }
+
+    Object getObject() {
+        return object
+    }
+
+    String getPropertyName() {
+        return propertyName
+    }
+
+    Object getRejectedValue() {
+        return rejectedValue
+    }
+
+    Throwable getCause() {
+        return cause
+    }
+
 }

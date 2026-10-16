@@ -16,33 +16,39 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package grails.databinding;
+package grails.databinding.events
 
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
+import groovy.transform.CompileStatic
 
-import org.codehaus.groovy.transform.GroovyASTTransformationClass;
+import grails.databinding.errors.BindingError
 
 /**
- * Apply BindingFormat to a field to provide a format
- * to be used when binding a String to this field.
- *
-<pre>
-class DateContainer {
-    &#064;BindingFormat('MMddyyyy')
-    Date someDate
-}
-</pre>
- *
  * @author Jeff Brown
- * @since 2.3
+ * @since 3.0
+ * @see DataBindingListener
  */
-@Retention(RetentionPolicy.RUNTIME)
-@Target(ElementType.FIELD)
-@GroovyASTTransformationClass("org.grails.databinding.compiler.BindingFormatASTTransformation")
-public @interface BindingFormat {
-    String value() default "";
-    String code() default "";
+@CompileStatic
+class DataBindingListenerAdapter implements DataBindingListener {
+
+    boolean supports(Class<?> clazz) {
+        return true
+    }
+
+    Boolean beforeBinding(Object target, Object errors) {
+        return true
+    }
+
+    Boolean beforeBinding(Object obj, String propertyName, Object value, Object errors) {
+        return true
+    }
+
+    void afterBinding(Object obj, String propertyName, Object errors) {
+    }
+
+    void afterBinding(Object target, Object errors) {
+    }
+
+    void bindingError(BindingError error, Object errors) {
+    }
+
 }
