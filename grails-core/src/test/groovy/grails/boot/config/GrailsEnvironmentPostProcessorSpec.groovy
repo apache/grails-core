@@ -19,10 +19,9 @@
 package grails.boot.config
 
 import grails.util.Environment
-import org.apache.grails.core.plugins.PluginDescriptor
 import org.apache.grails.core.plugins.PluginDiscovery
 import org.apache.grails.core.plugins.PluginInfo
-import org.apache.grails.core.plugins.PluginMetadata
+import org.apache.grails.core.plugins.TestPluginInfos
 import org.springframework.boot.bootstrap.ConfigurableBootstrapContext
 import org.springframework.boot.SpringApplication
 import org.springframework.core.env.StandardEnvironment
@@ -274,22 +273,7 @@ class GrailsEnvironmentPostProcessorSpec extends Specification {
     }
 
     private static PluginInfo createPluginInfo(String name, Resource configResource) {
-        def metadata = new PluginMetadata(
-                name,
-                '1.0',
-                '*',
-                CoreTestGrailsPlugin,
-                new String[0],
-                new String[0],
-                Collections.emptyMap(),
-                new String[0],
-                new String[0],
-                new String[0],
-                Collections.emptyMap(),
-                true
-        )
-        def descriptor = new PluginDescriptor(null, [], [])
-        return new PluginInfo(descriptor, metadata, configResource, false)
+        return TestPluginInfos.withConfigResource(name, CoreTestGrailsPlugin, configResource)
     }
 }
 

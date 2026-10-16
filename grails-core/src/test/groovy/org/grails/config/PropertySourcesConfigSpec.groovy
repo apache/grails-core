@@ -26,6 +26,8 @@ import spock.lang.Specification
 
 import jakarta.persistence.FlushModeType
 
+import org.grails.core.exceptions.GrailsConfigurationException
+
 /**
  * @author graemerocher
  */
@@ -91,6 +93,24 @@ class PropertySourcesConfigSpec extends Specification {
         then:
         !(securityConfig.userLookup instanceof NavigableMap)
         !(securityConfig.filterChain.chainMap instanceof NavigableMap)
+    }
+
+    void 'getProperty with allowed values rejects a value outside the list and names the key, value and choices'() {
+        given:
+        def propertySources = new MutablePropertySources()
+        propertySources.addLast(new MapPropertySource('test', ['flush.mode': 'commit']))
+        def config = new PropertySourcesConfig(propertySources)
+
+        expect:
+        config.getProperty('flush.mode', String, 'auto', ['auto', 'commit']) == 'commit'
+        config.getProperty('flush.missing', String, 'auto', ['auto', 'commit']) == 'auto'
+
+        when:
+        config.getProperty('flush.mode', String, 'auto', ['auto', 'manual'])
+
+        then:
+        GrailsConfigurationException e = thrown()
+        e.message == 'Invalid configuration value [commit] for key [flush.mode]. Possible values [auto, manual]'
     }
 
     /*

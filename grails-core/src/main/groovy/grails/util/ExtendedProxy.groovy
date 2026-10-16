@@ -1,0 +1,66 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ */
+package grails.util
+
+import groovy.transform.CompileStatic
+import org.codehaus.groovy.runtime.DefaultGroovyMethods
+import org.codehaus.groovy.runtime.InvokerHelper
+
+/**
+ * Extends the Groovy Proxy implementation and adds proxying of property getters/setters.
+ *
+ * @author Graeme Rocher
+ * @author Jonathan Carlson
+ */
+@CompileStatic
+class ExtendedProxy extends groovy.util.Proxy {
+
+    @SuppressWarnings('rawtypes')
+    private Map propertyMap
+
+    ExtendedProxy() {
+        propertyMap = DefaultGroovyMethods.getProperties(this)
+    }
+
+    @Override
+    Object getProperty(String property) {
+        Object propertyValue = propertyMap.get(property)
+        if (propertyValue == null) {
+            propertyValue = InvokerHelper.getMetaClass(getAdaptee()).getProperty(getAdaptee(), property)
+        }
+        return propertyValue
+    }
+
+    @Override
+    void setProperty(String property, Object newValue) {
+        if (propertyMap.containsKey(property)) {
+            super.setProperty(property, newValue)
+        }
+        else {
+            InvokerHelper.getMetaClass(getAdaptee()).setProperty(getAdaptee(), property, newValue)
+        }
+    }
+
+    @Override
+    void setMetaClass(MetaClass metaClass) {
+        super.setMetaClass(metaClass)
+        propertyMap = DefaultGroovyMethods.getProperties(this)
+    }
+
+}
