@@ -214,6 +214,8 @@ class RunningApplicationProcessSpec extends Specification {
         then:
         result == RunningApplicationProcess.StopResult.STOPPED
         !pidFile.exists()
-        !process.isAlive()
+
+        and: "the process exits; Windows records its exit code, which is all stop() sees, before it finishes tearing it down"
+        process.waitFor(5, TimeUnit.SECONDS)
     }
 }

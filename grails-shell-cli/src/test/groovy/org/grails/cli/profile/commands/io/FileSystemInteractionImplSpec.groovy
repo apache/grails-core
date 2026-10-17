@@ -80,7 +80,7 @@ class FileSystemInteractionImplSpec extends Specification {
         }
 
         then:
-        interaction.projectPath(missing) == 'nested/missing.txt'
+        interaction.projectPath(missing) == new File('nested', 'missing.txt').path
         interaction.projectPath('missing.txt') == 'missing.txt'
         !interaction.resource(missing).exists()
         pendingInteraction.file('build.gradle') == new File(pending, 'build.gradle')
