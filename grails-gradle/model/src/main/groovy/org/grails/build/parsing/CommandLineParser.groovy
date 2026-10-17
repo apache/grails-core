@@ -89,7 +89,7 @@ class CommandLineParser {
      * An empty or null toProcess parameter results in a zero sized array.
      */
     static String[] translateCommandline(String toProcess) {
-        if (toProcess == null || toProcess.length() == 0) {
+        if (toProcess == null || toProcess.isEmpty()) {
             //no command? no string
             return new String[0]
         }
@@ -108,39 +108,39 @@ class CommandLineParser {
             String nextTok = tok.nextToken()
             switch (state) {
                 case inQuote:
-                    if ("\'".equals(nextTok)) {
+                    if (nextTok == "\'") {
                         lastTokenHasBeenQuoted = true
                         state = normal
                     } else {
-                        current.append(nextTok)
+                        current << nextTok
                     }
                     break
                 case inDoubleQuote:
-                    if ('"'.equals(nextTok)) {
+                    if (nextTok == '"') {
                         lastTokenHasBeenQuoted = true
                         state = normal
                     } else {
-                        current.append(nextTok)
+                        current << nextTok
                     }
                     break
                 default:
-                    if ("\'".equals(nextTok)) {
+                    if (nextTok == "\'") {
                         state = inQuote
-                    } else if ('"'.equals(nextTok)) {
+                    } else if (nextTok == '"') {
                         state = inDoubleQuote
-                    } else if (' '.equals(nextTok)) {
-                        if (lastTokenHasBeenQuoted || current.length() != 0) {
+                    } else if (nextTok == ' ') {
+                        if (lastTokenHasBeenQuoted || !current.isEmpty()) {
                             result.add(current.toString())
                             current.setLength(0)
                         }
                     } else {
-                        current.append(nextTok)
+                        current << nextTok
                     }
                     lastTokenHasBeenQuoted = false
                     break
             }
         }
-        if (lastTokenHasBeenQuoted || current.length() != 0) {
+        if (lastTokenHasBeenQuoted || !current.isEmpty()) {
             result.add(current.toString())
         }
         if (state == inQuote || state == inDoubleQuote) {
@@ -190,7 +190,7 @@ class CommandLineParser {
         for (String arg in args) {
             if (arg == null) continue
             String trimmed = arg.trim()
-            if (trimmed != null && trimmed.length() > 0) {
+            if (trimmed != null && !trimmed.isEmpty()) {
                 if (trimmed.charAt(0) == '"' && trimmed.charAt(trimmed.length() - 1) == '"') {
                     trimmed = trimmed.substring(1, trimmed.length() - 1)
                 }
@@ -204,7 +204,7 @@ class CommandLineParser {
                         continue
                     }
                     if (firstArgumentIsCommand && ENV_ARGS.containsKey(trimmed)) {
-                        cl.setEnvironment(ENV_ARGS.get(trimmed))
+                        cl.setEnvironment(ENV_ARGS[trimmed])
                     }
                     else {
                         if (firstArgumentIsCommand) {
@@ -224,15 +224,15 @@ class CommandLineParser {
         String ls = System.getProperty('line.separator')
         usageMessage = 'Available options:'
         StringBuilder sb = new StringBuilder(usageMessage)
-        sb.append(ls)
+        sb << ls
         for (Option option in declaredOptions.values()) {
-            String name = option.getName()
+            String name = option.name
             int extraPadding = longestOptionNameLength - name.length()
-            sb.append(' -').append(name)
+            sb << ' -' << name
             for (int i = 0; i < extraPadding; i++) {
-                sb.append(' ')
+                sb << ' '
             }
-            sb.append(DEFAULT_PADDING).append(option.getDescription()).append(ls)
+            sb << DEFAULT_PADDING << option.description << ls
         }
 
         return sb.toString()
@@ -262,7 +262,7 @@ class CommandLineParser {
             validateOptionName(name)
             String value = split[1].trim()
             if (declaredOptions.containsKey(name)) {
-                cl.addDeclaredOption(name, declaredOptions.get(name), value)
+                cl.addDeclaredOption(name, declaredOptions[name], value)
             }
             else {
                 cl.addUndeclaredOption(name, value)
@@ -272,7 +272,7 @@ class CommandLineParser {
 
         validateOptionName(arg)
         if (declaredOptions.containsKey(arg)) {
-            cl.addDeclaredOption(arg, declaredOptions.get(arg))
+            cl.addDeclaredOption(arg, declaredOptions[arg])
         }
         else {
             cl.addUndeclaredOption(arg)

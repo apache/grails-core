@@ -72,11 +72,11 @@ class CollectionUtils {
      * @return The child map
      */
     static Map getOrCreateChildMap(Map parent, String key) {
-        Object o = parent.get(key)
+        Object o = parent[key]
         if (o instanceof Map) {
-            return (Map) o
+            return o
         }
-        return new LinkedHashMap()
+        return [:]
     }
 
 }

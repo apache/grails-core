@@ -219,7 +219,7 @@ class GrailsResourceUtils {
 
     static boolean isDomainClass(URL url) {
         if (url == null) return false
-        return KNOWN_DOMAIN_CLASSES.get(url.getFile())
+        return KNOWN_DOMAIN_CLASSES[url.file]
     }
 
     /**
@@ -254,7 +254,7 @@ class GrailsResourceUtils {
         if (clazz == null) {
             return ''
         }
-        String className = clazz.getName()
+        String className = clazz.name
         int packageEndIndex = className.lastIndexOf('.')
         if (packageEndIndex == -1) {
             return ''
@@ -264,7 +264,7 @@ class GrailsResourceUtils {
     }
 
     static void useCachesIfNecessary(URLConnection con) {
-        con.setUseCaches(con.getClass().getName().startsWith('JNLP'))
+        con.useCaches = con.getClass().name.startsWith('JNLP')
     }
 
     /**
@@ -275,7 +275,7 @@ class GrailsResourceUtils {
      */
     static String getClassName(Resource resource) {
         try {
-            return getClassName(resource.getFile().getAbsolutePath())
+            return getClassName(resource.file.absolutePath)
         }
         catch (IOException e) {
             return null
@@ -325,17 +325,17 @@ class GrailsResourceUtils {
      * a file in the file system
      */
     static File getFile(URL resourceUrl, String description) throws FileNotFoundException {
-        if (!URL_PROTOCOL_FILE.equals(resourceUrl.getProtocol())) {
+        if (URL_PROTOCOL_FILE != resourceUrl.protocol) {
             throw new FileNotFoundException(
                     description + ' cannot be resolved to absolute file path ' +
                             'because it does not reside in the file system: ' + resourceUrl)
         }
         try {
-            return new File(toURI(resourceUrl).getSchemeSpecificPart())
+            return new File(toURI(resourceUrl).schemeSpecificPart)
         }
         catch (URISyntaxException ex) {
             // Fallback for URLs that are not valid URIs (should hardly ever happen).
-            return new File(resourceUrl.getFile())
+            return new File(resourceUrl.file)
         }
     }
 
@@ -349,11 +349,11 @@ class GrailsResourceUtils {
      * @return whether the URL has been identified as a JAR URL
      */
     static boolean isJarURL(URL url) {
-        String protocol = url.getProtocol()
-        return (URL_PROTOCOL_JAR.equals(protocol) ||
-                URL_PROTOCOL_ZIP.equals(protocol) ||
-                URL_PROTOCOL_WSJAR.equals(protocol) ||
-                (URL_PROTOCOL_CODE_SOURCE.equals(protocol) && url.getPath().contains(JAR_URL_SEPARATOR)))
+        String protocol = url.protocol
+        return (URL_PROTOCOL_JAR == protocol ||
+                URL_PROTOCOL_ZIP == protocol ||
+                URL_PROTOCOL_WSJAR == protocol ||
+                (URL_PROTOCOL_CODE_SOURCE == protocol && url.path.contains(JAR_URL_SEPARATOR)))
     }
 
     /**
@@ -367,12 +367,12 @@ class GrailsResourceUtils {
      * a file in the file system
      */
     static File getFile(URI resourceUri, String description) throws FileNotFoundException {
-        if (!URL_PROTOCOL_FILE.equals(resourceUri.getScheme())) {
+        if (URL_PROTOCOL_FILE != resourceUri.scheme) {
             throw new FileNotFoundException(
                     description + ' cannot be resolved to absolute file path ' +
                             'because it does not reside in the file system: ' + resourceUri)
         }
-        return new File(resourceUri.getSchemeSpecificPart())
+        return new File(resourceUri.schemeSpecificPart)
     }
 
     /**
@@ -408,8 +408,8 @@ class GrailsResourceUtils {
      * @return whether the URL has been identified as a file system URL
      */
     static boolean isFileURL(URL url) {
-        String protocol = url.getProtocol()
-        return (URL_PROTOCOL_FILE.equals(protocol) || protocol.startsWith(URL_PROTOCOL_VFS))
+        String protocol = url.protocol
+        return (URL_PROTOCOL_FILE == protocol || protocol.startsWith(URL_PROTOCOL_VFS))
     }
 
     /**
@@ -467,10 +467,10 @@ class GrailsResourceUtils {
 
         for (int i = pathArray.length - 1; i >= 0; i--) {
             String element = pathArray[i]
-            if (CURRENT_PATH.equals(element)) {
+            if (CURRENT_PATH == element) {
                 // Points to current directory - drop it.
             }
-            else if (TOP_PATH.equals(element)) {
+            else if (TOP_PATH == element) {
                 // Registering top path found.
                 tops++
             }
@@ -505,9 +505,9 @@ class GrailsResourceUtils {
         StringBuilder sb = new StringBuilder()
         Iterator<?> it = coll.iterator()
         while (it.hasNext()) {
-            sb.append(prefix).append(it.next()).append(suffix)
+            sb << prefix << it.next() << suffix
             if (it.hasNext()) {
-                sb.append(delim)
+                sb << delim
             }
         }
         return sb.toString()
@@ -547,21 +547,21 @@ class GrailsResourceUtils {
             return [str] as String[]
         }
         List<String> result = new ArrayList<>()
-        if (''.equals(delimiter)) {
+        if (delimiter == '') {
             for (int i = 0; i < str.length(); i++) {
-                result.add(deleteAny(str.substring(i, i + 1), charsToDelete))
+                result << deleteAny(str.substring(i, i + 1), charsToDelete)
             }
         }
         else {
             int pos = 0
             int delPos
             while ((delPos = str.indexOf(delimiter, pos)) != -1) {
-                result.add(deleteAny(str.substring(pos, delPos), charsToDelete))
+                result << deleteAny(str.substring(pos, delPos), charsToDelete)
                 pos = delPos + delimiter.length()
             }
-            if (str.length() > 0 && pos <= str.length()) {
+            if (!str.isEmpty() && pos <= str.length()) {
                 // Add rest of String, but not in case of empty input.
-                result.add(deleteAny(str.substring(pos), charsToDelete))
+                result << deleteAny(str.substring(pos), charsToDelete)
             }
         }
         return toStringArray(result)
@@ -582,7 +582,7 @@ class GrailsResourceUtils {
         for (int i = 0; i < inString.length(); i++) {
             char c = inString.charAt(i)
             if (charsToDelete.indexOf((int) c) == -1) {
-                sb.append(c)
+                sb << c
             }
         }
         return sb.toString()
@@ -606,18 +606,18 @@ class GrailsResourceUtils {
         // the index of an occurrence we've found, or -1
         int patLen = oldPattern.length()
         while (index >= 0) {
-            sb.append(inString.substring(pos, index))
-            sb.append(newPattern)
+            sb << inString.substring(pos, index)
+            sb << newPattern
             pos = index + patLen
             index = inString.indexOf(oldPattern, pos)
         }
-        sb.append(inString.substring(pos))
+        sb << inString.substring(pos)
         // remember to append any characters to the right of a match
         return sb.toString()
     }
 
     private static boolean hasLength(CharSequence str) {
-        return (str != null && str.length() > 0)
+        return (str != null && !str.isEmpty())
     }
 
     /**
@@ -628,7 +628,7 @@ class GrailsResourceUtils {
      * @throws MalformedURLException if no valid jar file URL could be extracted
      */
     static URL extractJarFileURL(URL jarUrl) throws MalformedURLException {
-        String urlFile = jarUrl.getFile()
+        String urlFile = jarUrl.file
         int separatorIndex = urlFile.indexOf(JAR_URL_SEPARATOR)
         if (separatorIndex != -1) {
             String jarFile = urlFile.substring(0, separatorIndex)
@@ -667,7 +667,7 @@ class GrailsResourceUtils {
 
     static boolean isGrailsPath(String path) {
         if (KNOWN_PATHS.containsKey(path)) {
-            return KNOWN_PATHS.get(path)
+            return KNOWN_PATHS[path]
         }
         for (Pattern grailsAppResourcePattern in grailsAppResourcePatterns) {
             Matcher m = grailsAppResourcePattern.matcher(path)
@@ -704,7 +704,7 @@ class GrailsResourceUtils {
      */
     static boolean isProjectSource(Resource r) {
         try {
-            String file = r.getURL().getFile()
+            String file = r.URL.file
             return isProjectSource(file) || file.endsWith('GrailsPlugin.groovy')
         }
         catch (IOException e) {
@@ -720,7 +720,7 @@ class GrailsResourceUtils {
      */
     static boolean isGrailsResource(Resource r) {
         try {
-            String file = r.getURL().getFile()
+            String file = r.URL.file
             return isGrailsPath(file) || file.endsWith('GrailsPlugin.groovy')
         }
         catch (IOException e) {
@@ -740,18 +740,18 @@ class GrailsResourceUtils {
         if (resource == null) return null
 
         try {
-            File file = resource.getFile()
-            while (file != null && !file.getName().equals(GRAILS_APP_DIR)) {
-                file = file.getParentFile()
+            File file = resource.file
+            while (file != null && file.name != GRAILS_APP_DIR) {
+                file = file.parentFile
             }
             if (file != null) {
-                return new FileSystemResource(file.getAbsolutePath() + '/')
+                return new FileSystemResource(file.absolutePath + '/')
             }
         } catch (IOException ignored) {
         }
 
         try {
-            String url = resource.getURL().toString()
+            String url = resource.URL.toString()
 
             int i = url.lastIndexOf(GRAILS_APP_DIR)
             if (i > -1) {
@@ -782,7 +782,7 @@ class GrailsResourceUtils {
         if (resource == null) return null
 
         try {
-            String url = resource.getURL().toString()
+            String url = resource.URL.toString()
             int i = url.indexOf(WEB_INF)
             if (i > -1) {
                 return url.substring(i)
@@ -820,7 +820,7 @@ class GrailsResourceUtils {
 
         String url
         try {
-            url = resource.getURL().toString()
+            url = resource.URL.toString()
         }
         catch (IOException e) {
             return contextPath
@@ -828,7 +828,7 @@ class GrailsResourceUtils {
 
         Matcher m = PLUGIN_RESOURCE_PATTERN.matcher(url)
         if (m.find()) {
-            return (contextPath.length() > 0 ? contextPath + '/' : '') + m.group(1)
+            return (!contextPath.isEmpty() ? contextPath + '/' : '') + m.group(1)
         }
 
         return contextPath
@@ -873,9 +873,9 @@ class GrailsResourceUtils {
         else {
             try {
                 File baseDir = BuildSettings.BASE_DIR
-                String basePath = baseDir != null ? baseDir.getCanonicalPath() : null
+                String basePath = baseDir != null ? baseDir.canonicalPath : null
                 if (basePath != null) {
-                    String canonicalPath = new File(path).getCanonicalPath()
+                    String canonicalPath = new File(path).canonicalPath
                     return canonicalPath.contains(basePath) ? canonicalPath.substring(basePath.length() + 1) : canonicalPath
                 }
             } catch (IOException ignored) {
@@ -938,16 +938,16 @@ class GrailsResourceUtils {
         char previous = 0
         for (int i = 0; i < pieces.length; i++) {
             String piece = pieces[i]
-            if (piece != null && piece.length() > 0) {
+            if (piece != null && !piece.isEmpty()) {
                 for (int j = 0, maxlen = piece.length(); j < maxlen; j++) {
                     char current = piece.charAt(j)
                     if (!(previous == '/' && current == '/')) {
-                        builder.append(current)
+                        builder << current
                         previous = current
                     }
                 }
                 if (i + 1 < pieces.length && previous != '/') {
-                    builder.append('/')
+                    builder << '/'
                     previous = '/'
                 }
             }
@@ -964,11 +964,11 @@ class GrailsResourceUtils {
     static Object instantiateFromFlatConfig(Map<String, Object> flatConfig, String configKey, String defaultClassName)
             throws InstantiationException, IllegalAccessException, ClassNotFoundException, LinkageError {
         String className = defaultClassName
-        Object configName = flatConfig.get(configKey)
+        Object configName = flatConfig[configKey]
         if (configName instanceof CharSequence) {
             className = configName.toString()
         }
-        return forName(className, DefaultResourceLoader.getDefaultClassLoader()).newInstance()
+        return forName(className, DefaultResourceLoader.defaultClassLoader).newInstance()
     }
 
     private static Class<?> forName(String className, ClassLoader defaultClassLoader) throws ClassNotFoundException {

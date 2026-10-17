@@ -48,14 +48,14 @@ class DefaultResourceLoader implements ResourceLoader {
     static ClassLoader getDefaultClassLoader() {
         ClassLoader cl = null
         try {
-            cl = Thread.currentThread().getContextClassLoader()
+            cl = Thread.currentThread().contextClassLoader
         }
         catch (Throwable ignored) {
             // Cannot access thread context ClassLoader - falling back to system class loader...
         }
         if (cl == null) {
             // No thread context class loader -> use class loader of this class.
-            cl = DefaultResourceLoader.getClassLoader()
+            cl = DefaultResourceLoader.classLoader
         }
         return cl
     }
@@ -127,13 +127,13 @@ class DefaultResourceLoader implements ResourceLoader {
 
         @SuppressWarnings('unused')
         String getPathWithinContext() {
-            return getPath()
+            return path
         }
 
         @Override
         Resource createRelative(String relativePath) {
-            String pathToUse = GrailsResourceUtils.applyRelativePath(getPath(), relativePath)
-            return new ClassPathContextResource(pathToUse, getClassLoader())
+            String pathToUse = GrailsResourceUtils.applyRelativePath(path, relativePath)
+            return new ClassPathContextResource(pathToUse, classLoader)
         }
     }
 

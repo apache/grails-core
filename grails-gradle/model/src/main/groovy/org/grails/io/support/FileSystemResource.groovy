@@ -43,7 +43,7 @@ class FileSystemResource implements Resource {
     FileSystemResource(File file) {
         assertNotNull(file, 'File must not be null')
         this.file = file
-        path = GrailsResourceUtils.cleanPath(file.getPath())
+        path = GrailsResourceUtils.cleanPath(file.path)
     }
 
     /**
@@ -129,7 +129,7 @@ class FileSystemResource implements Resource {
      * @see java.io.File#getName()
      */
     String getFilename() {
-        return file.getName()
+        return file.name
     }
 
     /**
@@ -138,7 +138,7 @@ class FileSystemResource implements Resource {
      * @see java.io.File#getAbsolutePath()
      */
     String getDescription() {
-        return 'file [' + file.getAbsolutePath() + ']'
+        return "file [${file.absolutePath}]"
     }
 
     /**
@@ -176,7 +176,7 @@ class FileSystemResource implements Resource {
     @Override
     boolean equals(Object obj) {
         return (this.is(obj) ||
-                (obj instanceof FileSystemResource && path.equals(((FileSystemResource) obj).path)))
+                (obj instanceof FileSystemResource && path == ((FileSystemResource) obj).path))
     }
 
     /**

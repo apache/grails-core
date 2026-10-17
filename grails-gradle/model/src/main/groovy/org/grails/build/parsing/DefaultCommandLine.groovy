@@ -18,6 +18,9 @@
  */
 package org.grails.build.parsing
 
+import groovy.transform.CompileStatic
+import groovy.transform.PackageScope
+
 import grails.util.Environment
 
 /**
@@ -26,205 +29,202 @@ import grails.util.Environment
  * @author Graeme Rocher
  * @since 2.0
  */
-// TODO(groovyism-cleanup): the semicolons below are intentionally kept so this
-// conversion commit stays above git's rename-similarity threshold against the
-// original DefaultCommandLine.java (76% with them, 45% without) and preserves
-// file history. The stacked groovyism-cleanup PR removes them and this suppression.
-@SuppressWarnings('UnnecessarySemicolon')
+@CompileStatic
 class DefaultCommandLine implements CommandLine {
 
-    Properties systemProperties = new Properties();
-    LinkedHashMap<String, Object> undeclaredOptions = new LinkedHashMap<>();
-    LinkedHashMap<String, SpecifiedOption> declaredOptions = new LinkedHashMap<>();
-    List<String> remainingArgs = new ArrayList<>();
-    private String environment;
-    private String commandName;
-    private String[] rawArguments;
+    @PackageScope Properties systemProperties = new Properties()
+    @PackageScope LinkedHashMap<String, Object> undeclaredOptions = new LinkedHashMap<>()
+    @PackageScope LinkedHashMap<String, SpecifiedOption> declaredOptions = new LinkedHashMap<>()
+    @PackageScope List<String> remainingArgs = new ArrayList<>()
+    private String environment
+    private String commandName
+    private String[] rawArguments
 
     void addDeclaredOption(String name, Option option) {
-        addDeclaredOption(name, option, Boolean.TRUE);
+        addDeclaredOption(name, option, Boolean.TRUE)
     }
 
     void addUndeclaredOption(String option) {
-        undeclaredOptions.put(option, Boolean.TRUE);
+        undeclaredOptions.put(option, Boolean.TRUE)
     }
 
     void addUndeclaredOption(String option, Object value) {
-        undeclaredOptions.put(option, value);
+        undeclaredOptions.put(option, value)
     }
 
     void addDeclaredOption(String name, Option option, Object value) {
-        SpecifiedOption so = new SpecifiedOption();
-        so.option = option;
-        so.value = value;
+        SpecifiedOption so = new SpecifiedOption()
+        so.option = option
+        so.value = value
 
-        declaredOptions.put(name, so);
+        declaredOptions.put(name, so)
     }
 
     @Override
     CommandLine parseNew(String[] args) {
-        DefaultCommandLine defaultCommandLine = new DefaultCommandLine();
-        defaultCommandLine.systemProperties.putAll(systemProperties);
-        defaultCommandLine.undeclaredOptions.putAll(undeclaredOptions);
-        defaultCommandLine.declaredOptions.putAll(declaredOptions);
-        CommandLineParser parser = new CommandLineParser();
-        return parser.parse(defaultCommandLine, args);
+        DefaultCommandLine defaultCommandLine = new DefaultCommandLine()
+        defaultCommandLine.systemProperties.putAll(systemProperties)
+        defaultCommandLine.undeclaredOptions.putAll(undeclaredOptions)
+        defaultCommandLine.declaredOptions.putAll(declaredOptions)
+        CommandLineParser parser = new CommandLineParser()
+        return parser.parse(defaultCommandLine, args)
     }
 
     void setEnvironment(String environment) {
-        this.environment = environment;
-        System.setProperty(Environment.KEY, environment);
+        this.environment = environment
+        System.setProperty(Environment.KEY, environment)
     }
 
     void setCommand(String name) {
-        commandName = name;
+        commandName = name
     }
 
     String getEnvironment() {
-        boolean useDefaultEnv = environment == null;
-        String env;
+        boolean useDefaultEnv = environment == null
+        String env
         if (useDefaultEnv && commandName != null) {
-            env = lookupEnvironmentForCommand();
+            env = lookupEnvironmentForCommand()
         }
         else {
-            String fallbackEnv = System.getProperty(Environment.KEY) != null ? System.getProperty(Environment.KEY) : Environment.DEVELOPMENT.getName();
-            env = environment != null ? environment : fallbackEnv;
+            String fallbackEnv = System.getProperty(Environment.KEY) != null ? System.getProperty(Environment.KEY) : Environment.DEVELOPMENT.getName()
+            env = environment != null ? environment : fallbackEnv
         }
 
-        System.setProperty(Environment.KEY, env);
-        System.setProperty(Environment.DEFAULT, String.valueOf(useDefaultEnv));
+        System.setProperty(Environment.KEY, env)
+        System.setProperty(Environment.DEFAULT, String.valueOf(useDefaultEnv))
 
-        return env;
+        return env
     }
 
     String lookupEnvironmentForCommand() {
-        String fallbackEnv = System.getProperty(Environment.KEY) != null ? System.getProperty(Environment.KEY) : Environment.DEVELOPMENT.getName();
-        String env = CommandLineParser.DEFAULT_ENVS.get(commandName);
-        return env == null ? fallbackEnv : env;
+        String fallbackEnv = System.getProperty(Environment.KEY) != null ? System.getProperty(Environment.KEY) : Environment.DEVELOPMENT.getName()
+        String env = CommandLineParser.DEFAULT_ENVS[commandName]
+        return env == null ? fallbackEnv : env
     }
 
     boolean isEnvironmentSet() {
-        return environment != null;
+        return environment != null
     }
 
     void setCommandName(String cmd) {
-        if (REFRESH_DEPENDENCIES_ARGUMENT.equals(cmd)) {
-            addUndeclaredOption(REFRESH_DEPENDENCIES_ARGUMENT);
+        if (REFRESH_DEPENDENCIES_ARGUMENT == cmd) {
+            addUndeclaredOption(REFRESH_DEPENDENCIES_ARGUMENT)
         }
-        commandName = cmd;
+        commandName = cmd
     }
 
     String getCommandName() {
-        return commandName;
+        return commandName
     }
 
     void addRemainingArg(String arg) {
-        remainingArgs.add(arg);
+        remainingArgs.add(arg)
     }
 
     List<String> getRemainingArgs() {
-        return remainingArgs;
+        return remainingArgs
     }
 
     String[] getRemainingArgsArray() {
-        return remainingArgs.toArray(new String[remainingArgs.size()]);
+        return remainingArgs.toArray(new String[remainingArgs.size()])
     }
 
     Properties getSystemProperties() {
-        return systemProperties;
+        return systemProperties
     }
 
     boolean hasOption(String name) {
-        return declaredOptions.containsKey(name) || undeclaredOptions.containsKey(name);
+        return declaredOptions.containsKey(name) || undeclaredOptions.containsKey(name)
     }
 
     Object optionValue(String name) {
         if (declaredOptions.containsKey(name)) {
-            SpecifiedOption specifiedOption = declaredOptions.get(name);
-            return specifiedOption.value;
+            SpecifiedOption specifiedOption = declaredOptions[name]
+            return specifiedOption.value
         }
         if (undeclaredOptions.containsKey(name)) {
-            return undeclaredOptions.get(name);
+            return undeclaredOptions[name]
         }
-        return null;
+        return null
     }
 
     @Override
     Map.Entry<String, Object> lastOption() {
-        final Iterator<Map.Entry<String, Object>> i = undeclaredOptions.entrySet().iterator();
+        final Iterator<Map.Entry<String, Object>> i = undeclaredOptions.entrySet().iterator()
         while (i.hasNext()) {
-            Map.Entry<String, Object> next = i.next();
+            Map.Entry<String, Object> next = i.next()
             if (!i.hasNext()) {
-                return next;
+                return next
             }
         }
-        return null;
+        return null
     }
 
     String getRemainingArgsString() {
-        return remainingArgsToString(' ', false);
+        return remainingArgsToString(' ', false)
     }
 
     @Override
     String getRemainingArgsWithOptionsString() {
-        return remainingArgsToString(' ', true);
+        return remainingArgsToString(' ', true)
     }
 
     String getRemainingArgsLineSeparated() {
-        return remainingArgsToString('\n', false);
+        return remainingArgsToString('\n', false)
     }
 
     private String remainingArgsToString(String separator, boolean includeOptions) {
-        StringBuilder sb = new StringBuilder();
-        String sep = '';
-        List<String> args = new ArrayList<>(remainingArgs);
+        StringBuilder sb = new StringBuilder()
+        String sep = ''
+        List<String> args = new ArrayList<>(remainingArgs)
         if (includeOptions) {
-            for (Map.Entry<String, Object> entry : undeclaredOptions.entrySet()) {
-                if (entry.getValue() instanceof Boolean && ((Boolean) entry.getValue())) {
-                    args.add('-' + entry.getKey());
+            for (Map.Entry<String, Object> entry in undeclaredOptions.entrySet()) {
+                if (entry.value instanceof Boolean && ((Boolean) entry.value)) {
+                    args.add('-' + entry.key)
                 }
                 else {
-                    args.add('-' + entry.getKey() + '=' + entry.getValue());
+                    args.add('-' + entry.key + '=' + entry.value)
                 }
             }
         }
-        for (String arg : args) {
-            sb.append(sep).append(arg);
-            sep = separator;
+        for (String arg in args) {
+            sb << sep << arg
+            sep = separator
         }
-        return sb.toString();
+        return sb.toString()
     }
 
     Map<String, Object> getUndeclaredOptions() {
-        return undeclaredOptions;
+        return undeclaredOptions
     }
 
     void addSystemProperty(String name, String value) {
-        if (Environment.KEY.equals(name)) {
-            setEnvironment(value);
+        if (name == Environment.KEY) {
+            setEnvironment(value)
         }
-        systemProperties.put(name, value);
+        systemProperties.put(name, value)
     }
 
     void setRawArguments(String[] args) {
-        this.rawArguments = args;
+        this.rawArguments = args
     }
 
     @Override
     String[] getRawArguments() {
-        return rawArguments;
+        return rawArguments
     }
 
     static class SpecifiedOption {
-        private Option option;
-        private Object value;
+        private Option option
+        private Object value
 
         Option getOption() {
-            return option;
+            return option
         }
 
         Object getValue() {
-            return value;
+            return value
         }
     }
+
 }

@@ -91,7 +91,7 @@ class GrailsNameUtils {
      * @param cls The class name
      */
     static String getFullClassName(Class cls) {
-        String className = cls.getName()
+        String className = cls.name
 
         return getFullClassName(className)
     }
@@ -126,7 +126,7 @@ class GrailsNameUtils {
      * @return The property name representation
      */
     static String getClassNameRepresentation(String name) {
-        if (name == null || name.length() == 0) {
+        if (name == null || name.isEmpty()) {
             return ''
         }
 
@@ -136,9 +136,9 @@ class GrailsNameUtils {
             String token = token1.trim()
             int length = token.length()
             if (length > 0) {
-                buf.append(token.substring(0, 1).toUpperCase(Locale.ENGLISH))
+                buf << token.substring(0, 1).toUpperCase(Locale.ENGLISH)
                 if (length > 1) {
-                    buf.append(token.substring(1))
+                    buf << token.substring(1)
                 }
             }
         }
@@ -163,9 +163,8 @@ class GrailsNameUtils {
         StringBuilder buf = new StringBuilder()
         String[] tokens = name.split('-')
         for (String token in tokens) {
-            if (token == null || token.length() == 0) continue
-            buf.append(token.substring(0, 1).toUpperCase())
-                .append(token.substring(1))
+            if (token == null || token.isEmpty()) continue
+            buf << token.substring(0, 1).toUpperCase() << token.substring(1)
         }
         return buf.toString()
     }
@@ -179,7 +178,7 @@ class GrailsNameUtils {
      * @return The logical class name
      */
     static String getLogicalName(Class<?> clazz, String trailingName) {
-        return getLogicalName(clazz.getName(), trailingName)
+        return getLogicalName(clazz.name, trailingName)
     }
 
     /**
@@ -285,7 +284,7 @@ class GrailsNameUtils {
      * @return The short name of the class
      */
     static String getShortName(Class<?> targetClass) {
-        return getShortName(targetClass.getName())
+        return getShortName(targetClass.name)
     }
 
     /**
@@ -325,7 +324,7 @@ class GrailsNameUtils {
      * @return The script name representation
      */
     static String getScriptName(Class<?> clazz) {
-        return clazz == null ? null : getScriptName(clazz.getName())
+        return clazz == null ? null : getScriptName(clazz.name)
     }
 
     /**
@@ -368,7 +367,7 @@ class GrailsNameUtils {
      * not valid, i.e. if it doesn't end with "GrailsPlugin.groovy".
      */
     static String getPluginName(String descriptorName) {
-        if (descriptorName == null || descriptorName.length() == 0) {
+        if (descriptorName == null || descriptorName.isEmpty()) {
             return descriptorName
         }
 
@@ -401,7 +400,7 @@ class GrailsNameUtils {
             }
 
             if (Character.isLowerCase(c) || Character.isDigit(c)) {
-                if (Character.isLowerCase(c) && w.length() == 0) {
+                if (Character.isLowerCase(c) && w.isEmpty()) {
                     c = Character.toUpperCase(c)
                 }
                 else if (w.length() > 1 && Character.isUpperCase(w.charAt(w.length() - 1))) {
@@ -412,7 +411,7 @@ class GrailsNameUtils {
                 words.set(i, w + c)
             }
             else if (Character.isUpperCase(c)) {
-                if ((i == 0 && w.length() == 0) || (Character.isUpperCase(w.charAt(w.length() - 1)) && Character.isUpperCase(chars[j - 1]))) {
+                if ((i == 0 && w.isEmpty()) || (Character.isUpperCase(w.charAt(w.length() - 1)) && Character.isUpperCase(chars[j - 1]))) {
                     words.set(i, w + c)
                 }
                 else {
@@ -424,9 +423,9 @@ class GrailsNameUtils {
         StringBuilder buf = new StringBuilder()
         for (Iterator<String> j = words.iterator(); j.hasNext();) {
             String word = j.next()
-            buf.append(word)
+            buf << word
             if (j.hasNext()) {
-                buf.append(' ')
+                buf << ' '
             }
         }
         return buf.toString()
@@ -445,7 +444,7 @@ class GrailsNameUtils {
      * blank.
      */
     static boolean isBlank(String str) {
-        return str == null || str.trim().length() == 0
+        return str == null || str.trim().isEmpty()
     }
 
     /**
@@ -508,12 +507,12 @@ class GrailsNameUtils {
     static String getPropertyNameConvention(Object object, String suffix) {
         if (object != null) {
             Class<?> type = object.getClass()
-            if (type.isArray()) {
-                return getPropertyName(type.getComponentType()) + suffix + 'Array'
+            if (type.array) {
+                return getPropertyName(type.componentType) + suffix + 'Array'
             }
 
             if (object instanceof Collection) {
-                Collection coll = (Collection) object
+                Collection coll = object
                 if (coll.isEmpty()) {
                     return 'emptyCollection'
                 }
@@ -529,7 +528,7 @@ class GrailsNameUtils {
             }
 
             if (object instanceof Map) {
-                Map map = (Map) object
+                Map map = object
 
                 if (map.isEmpty()) {
                     return 'emptyMap'
@@ -567,7 +566,7 @@ class GrailsNameUtils {
      * @return The property name equivalent
      */
     static String getPropertyForGetter(String getterName, Class returnType) {
-        return getPropertyForGetter(getterName, returnType.getName())
+        return getPropertyForGetter(getterName, returnType.name)
     }
 
     /**
@@ -579,13 +578,13 @@ class GrailsNameUtils {
      * @return The property name equivalent
      */
     static String getPropertyForGetter(String getterName, String returnType) {
-        if (getterName == null || getterName.length() == 0) return null
+        if (getterName == null || getterName.isEmpty()) return null
 
         if (getterName.startsWith('get')) {
             String prop = getterName.substring(3)
             return convertValidPropertyMethodSuffix(prop)
         }
-        if (getterName.startsWith('is') && returnType.equals('boolean')) {
+        if (getterName.startsWith('is') && returnType == 'boolean') {
             String prop = getterName.substring(2)
             return convertValidPropertyMethodSuffix(prop)
         }
@@ -600,7 +599,7 @@ class GrailsNameUtils {
      * @return The property name or null
      */
     static String convertValidPropertyMethodSuffix(String suffix) {
-        if (suffix.length() == 0) return null
+        if (suffix.isEmpty()) return null
 
         // We assume all characters are Character.isJavaIdentifierPart, but the first one may not be a valid
         // starting character.
@@ -646,7 +645,7 @@ class GrailsNameUtils {
      * @return true if it is a javabean property getter
      */
     static boolean isGetter(String name, Class returnType, Class<?>[] args) {
-        if (name == null || name.length() == 0 || args == null) return false
+        if (name == null || name.isEmpty() || args == null) return false
         if (args.length != 0) return false
 
         if (name.startsWith('get')) {
@@ -701,7 +700,7 @@ class GrailsNameUtils {
      * @return true if suffix indicates a property name
      */
     protected static boolean isPropertyMethodSuffix(String suffix) {
-        if (suffix.length() == 0) return false
+        if (suffix.isEmpty()) return false
         if (!Character.isJavaIdentifierStart(suffix.charAt(0))) return false
         if (suffix.length() == 1) return Character.isUpperCase(suffix.charAt(0))
         return Character.isUpperCase(suffix.charAt(0)) || Character.isUpperCase(suffix.charAt(1))
@@ -715,7 +714,7 @@ class GrailsNameUtils {
      * @return The property name equivalent
      */
     static String getPropertyForSetter(String setterName) {
-        if (setterName == null || setterName.length() == 0) return null
+        if (setterName == null || setterName.isEmpty()) return null
 
         if (setterName.startsWith('set')) {
             String prop = setterName.substring(3)

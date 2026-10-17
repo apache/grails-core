@@ -33,7 +33,7 @@ class Option {
     private String description
 
     Option(String name, String description) {
-        if (name == null || name.length() == 0) {
+        if (name == null || name.isEmpty()) {
             throw new IllegalArgumentException('illegal option specified')
         }
 

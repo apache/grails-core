@@ -43,7 +43,7 @@ class Holder<T> {
     }
 
     T get(boolean mappedOnly) {
-        T t = instances.get(getClassLoaderId())
+        T t = instances[getClassLoaderId()]
         if (t != null) {
             return t
         }
@@ -67,7 +67,7 @@ class Holder<T> {
 
     void set(T t) {
         int id = getClassLoaderId()
-        int thisClassLoaderId = System.identityHashCode(getClass().getClassLoader())
+        int thisClassLoaderId = System.identityHashCode(getClass().classLoader)
         if (t == null) {
             instances.remove(id)
             instances.remove(thisClassLoaderId)
@@ -80,7 +80,7 @@ class Holder<T> {
     }
 
     private int getClassLoaderId() {
-        return Environment.isWarDeployed() ? System.identityHashCode(Thread.currentThread().getContextClassLoader()) : System.identityHashCode(getClass().getClassLoader())
+        return Environment.isWarDeployed() ? System.identityHashCode(Thread.currentThread().contextClassLoader) : System.identityHashCode(getClass().classLoader)
     }
 
 }

@@ -110,7 +110,7 @@ class ClassPathResource extends AbstractFileResolvingResource {
      * Return the ClassLoader that this resource will be obtained from.
      */
     final ClassLoader getClassLoader() {
-        return classLoader == null ? clazz.getClassLoader() : classLoader
+        return classLoader == null ? clazz.classLoader : classLoader
     }
 
     /**
@@ -198,12 +198,12 @@ class ClassPathResource extends AbstractFileResolvingResource {
         StringBuilder builder = new StringBuilder('class path resource [')
 
         if (clazz != null) {
-            builder.append(GrailsResourceUtils.classPackageAsResourcePath(clazz))
-            builder.append('/')
+            builder << GrailsResourceUtils.classPackageAsResourcePath(clazz)
+            builder << '/'
         }
 
-        builder.append(path)
-        builder.append(']')
+        builder << path
+        builder << ']'
         return builder.toString()
     }
 
@@ -217,7 +217,7 @@ class ClassPathResource extends AbstractFileResolvingResource {
         }
         if (obj instanceof ClassPathResource) {
             ClassPathResource otherRes = (ClassPathResource) obj
-            return (path.equals(otherRes.path) &&
+            return (path == otherRes.path &&
                     nullSafeEquals(classLoader, otherRes.@classLoader) &&
                     nullSafeEquals(clazz, otherRes.@clazz))
         }
@@ -234,7 +234,7 @@ class ClassPathResource extends AbstractFileResolvingResource {
         if (o1.equals(o2)) {
             return true
         }
-        if (o1.getClass().isArray() && o2.getClass().isArray()) {
+        if (o1.getClass().array && o2.getClass().array) {
             if (o1 instanceof Object[] && o2 instanceof Object[]) {
                 return Arrays.equals((Object[]) o1, (Object[]) o2)
             }

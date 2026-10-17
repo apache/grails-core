@@ -70,7 +70,7 @@ abstract class AbstractFileResolvingResource implements Resource {
      * @param con the URLConnection to set the flag on
      */
     private static void useCachesIfNecessary(URLConnection con) {
-        con.setUseCaches(con.getClass().getName().startsWith('JNLP'))
+        con.useCaches = con.getClass().name.startsWith('JNLP')
     }
 
     boolean exists() {
@@ -87,8 +87,8 @@ abstract class AbstractFileResolvingResource implements Resource {
             HttpURLConnection httpCon =
                     (con instanceof HttpURLConnection ? (HttpURLConnection) con : null)
             if (httpCon != null) {
-                httpCon.setRequestMethod('HEAD')
-                int code = httpCon.getResponseCode()
+                httpCon.requestMethod = 'HEAD'
+                int code = httpCon.responseCode
                 if (code == HttpURLConnection.HTTP_OK) {
                     return true
                 }
@@ -96,7 +96,7 @@ abstract class AbstractFileResolvingResource implements Resource {
                     return false
                 }
             }
-            if (con.getContentLength() >= 0) {
+            if (con.contentLength >= 0) {
                 return true
             }
             if (httpCon != null) {
@@ -140,9 +140,9 @@ abstract class AbstractFileResolvingResource implements Resource {
         URLConnection con = url.openConnection()
         useCachesIfNecessary(con)
         if (con instanceof HttpURLConnection) {
-            ((HttpURLConnection) con).setRequestMethod('HEAD')
+            con.requestMethod = 'HEAD'
         }
-        return con.getContentLength()
+        return con.contentLength
     }
 
     long lastModified() throws IOException {
@@ -155,9 +155,9 @@ abstract class AbstractFileResolvingResource implements Resource {
         URLConnection con = url.openConnection()
         useCachesIfNecessary(con)
         if (con instanceof HttpURLConnection) {
-            ((HttpURLConnection) con).setRequestMethod('HEAD')
+            con.requestMethod = 'HEAD'
         }
-        return con.getLastModified()
+        return con.lastModified
     }
 
 }

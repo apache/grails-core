@@ -88,9 +88,9 @@ class SpringIOUtils {
             ch = (byte) (ch >>> 4) // shift the bits down
             ch = (byte) (ch & 0x0F) // must do this is high order bit is on!
 
-            out.append(CHARS[ch]) // convert the nibble to a String Character
+            out << CHARS[ch] // convert the nibble to a String Character
             ch = (byte) (in[i] & 0x0F) // Strip off low nibble
-            out.append(CHARS[ch]) // convert the nibble to a String Character
+            out << CHARS[ch] // convert the nibble to a String Character
         }
         //CheckStyle:MagicNumber ON
 
@@ -120,14 +120,14 @@ class SpringIOUtils {
     }
 
     private static MessageDigest getMessageDigest(String algorithm) {
-        String mdAlgorithm = (String) algorithms.get(algorithm)
+        String mdAlgorithm = (String) algorithms[algorithm]
         if (mdAlgorithm == null) {
-            throw new IllegalArgumentException('unknown algorithm ' + algorithm)
+            throw new IllegalArgumentException("unknown algorithm ${algorithm}")
         }
         try {
             return MessageDigest.getInstance(mdAlgorithm)
         } catch (NoSuchAlgorithmException e) {
-            throw new IllegalArgumentException('unknown algorithm ' + algorithm)
+            throw new IllegalArgumentException("unknown algorithm ${algorithm}")
         }
     }
 
@@ -139,15 +139,15 @@ class SpringIOUtils {
      * @return The new array
      */
     static Object[] addAll(Object[] array1, Object[] array2) {
-        Object[] joinedArray = (Object[]) Array.newInstance(array1.getClass().getComponentType(), array1.length + array2.length)
+        Object[] joinedArray = (Object[]) Array.newInstance(array1.getClass().componentType, array1.length + array2.length)
         System.arraycopy(array1, 0, joinedArray, 0, array1.length)
         try {
             System.arraycopy(array2, 0, joinedArray, array1.length, array2.length)
         } catch (ArrayStoreException ase) {
-            final Class<?> type1 = array1.getClass().getComponentType()
-            final Class<?> type2 = array2.getClass().getComponentType()
+            final Class<?> type1 = array1.getClass().componentType
+            final Class<?> type2 = array2.getClass().componentType
             if (!type1.isAssignableFrom(type2)) {
-                throw new IllegalArgumentException('Cannot store ' + type2.getName() + ' in an array of ' + type1.getName())
+                throw new IllegalArgumentException("Cannot store ${type2.name} in an array of ${type1.name}")
             }
             throw ase // No, so rethrow original
         }
@@ -167,10 +167,10 @@ class SpringIOUtils {
      * @param targetDir The target directory
      */
     static void copyAll(Resource base, Resource[] resources, File targetDir) throws IOException {
-        final URL baseUrl = base.getURL()
+        final URL baseUrl = base.URL
         for (Resource resource in resources) {
-            final InputStream input = resource.getInputStream()
-            final File target = new File(targetDir, resource.getURL().toString().substring(baseUrl.toString().length()))
+            final InputStream input = resource.inputStream
+            final File target = new File(targetDir, resource.URL.toString().substring(baseUrl.toString().length()))
             copy(new BufferedInputStream(input), new BufferedOutputStream(new FileOutputStream(target)))
         }
     }
@@ -199,7 +199,7 @@ class SpringIOUtils {
     static int copy(Resource in, File out) throws IOException {
         assert in != null : 'No input File specified'
         assert out != null : 'No output File specified'
-        return copy(new BufferedInputStream(in.getInputStream()),
+        return copy(new BufferedInputStream(in.inputStream),
                 new BufferedOutputStream(new FileOutputStream(out)))
     }
 
@@ -375,8 +375,7 @@ class SpringIOUtils {
      */
     static void closeQuietly(Closeable closeable) {
         try {
-            if (closeable != null)
-                closeable.close()
+            closeable?.close()
         } catch (IOException ignored) {
             // ignore
         }
@@ -500,7 +499,7 @@ class SpringIOUtils {
         }
         setFeature(factory, XMLConstants.FEATURE_SECURE_PROCESSING, true)
         setFeature(factory, XmlParserFeature.DISALLOW_DOCTYPE_DECL.featureName, !allowDocTypeDeclaration)
-        for (XmlParserFeature feature : DISABLED_PARSER_FEATURES) {
+        for (XmlParserFeature feature in DISABLED_PARSER_FEATURES) {
             setFeature(factory, feature.featureName, false)
         }
         return factory
@@ -521,7 +520,7 @@ class SpringIOUtils {
         } catch (ParserConfigurationException | SAXException e) {
             LoggerFactory.getLogger(SpringIOUtils).warn(
                     'XML parser factory [{}] does not support feature [{}]: {}',
-                    factory.getClass().getName(), name, e.getMessage())
+                    factory.getClass().name, name, e.message)
         }
     }
 

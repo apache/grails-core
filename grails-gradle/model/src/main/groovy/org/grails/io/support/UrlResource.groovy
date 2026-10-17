@@ -108,19 +108,19 @@ class UrlResource extends AbstractFileResolvingResource {
         URLConnection con = url.openConnection()
         useCachesIfNecessary(con)
         try {
-            return con.getInputStream()
+            return con.inputStream
         }
         catch (IOException ex) {
             // Close the HTTP connection (if applicable).
             if (con instanceof HttpURLConnection) {
-                ((HttpURLConnection) con).disconnect()
+                con.disconnect()
             }
             throw ex
         }
     }
 
     private static void useCachesIfNecessary(URLConnection con) {
-        con.setUseCaches(con.getClass().getName().startsWith('JNLP'))
+        con.useCaches = con.getClass().name.startsWith('JNLP')
     }
 
     /**
@@ -172,14 +172,14 @@ class UrlResource extends AbstractFileResolvingResource {
      * @see java.io.File#getName()
      */
     String getFilename() {
-        return new File(url.getFile()).getName()
+        return new File(url.file).name
     }
 
     /**
      * This implementation returns a description that includes the URL.
      */
     String getDescription() {
-        return 'URL [' + url + ']'
+        return "URL [${url}]"
     }
 
     /**
@@ -188,7 +188,7 @@ class UrlResource extends AbstractFileResolvingResource {
     @Override
     boolean equals(Object obj) {
         return (this.is(obj) ||
-                (obj instanceof UrlResource && cleanedUrl.equals(((UrlResource) obj).cleanedUrl)))
+                (obj instanceof UrlResource && cleanedUrl == ((UrlResource) obj).cleanedUrl))
     }
 
     /**
