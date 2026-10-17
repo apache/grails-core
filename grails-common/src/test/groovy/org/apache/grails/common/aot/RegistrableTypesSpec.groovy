@@ -18,7 +18,10 @@
  */
 package org.apache.grails.common.aot
 
+import java.lang.reflect.Modifier
+
 import org.springframework.asm.ClassWriter
+import org.springframework.asm.ConstantDynamic
 import org.springframework.asm.Handle
 import org.springframework.asm.Label
 import org.springframework.asm.MethodVisitor
@@ -93,6 +96,135 @@ class RegistrableTypesSpec extends Specification {
 
         where:
             shape << Shape.values()
+    }
+
+    void 'the utility class cannot be instantiated by accident'() {
+        given:
+            def constructor = RegistrableTypes.getDeclaredConstructor()
+
+        expect:
+            Modifier.isPrivate(constructor.modifiers)
+
+        when:
+            constructor.accessible = true
+            constructor.newInstance()
+
+        then:
+            noExceptionThrown()
+    }
+
+    void 'bytecode is rejected when the absent type is named by a supertype'() {
+        expect:
+            !RegistrableTypes.referencesLoad(declaring(superName, interfaces), loader)
+
+        where:
+            superName            | interfaces
+            'com/example/Absent' | null
+            'java/lang/Object'   | ['com/example/Absent'] as String[]
+    }
+
+    void 'bytecode naming only types that load by its supertypes is accepted'() {
+        expect:
+            RegistrableTypes.referencesLoad(declaring('java/lang/Number', ['java/lang/Runnable'] as String[]), loader)
+    }
+
+    void 'bytecode is rejected when an instruction names the absent type'() {
+        expect:
+            !RegistrableTypes.referencesLoad(bodyOf(instruction), loader)
+
+        where:
+            instruction << [
+                { MethodVisitor m -> m.visitTypeInsn(Opcodes.NEW, 'com/example/Absent') },
+                { MethodVisitor m -> m.visitTypeInsn(Opcodes.ANEWARRAY, 'com/example/Absent') },
+                { MethodVisitor m -> m.visitTypeInsn(Opcodes.CHECKCAST, '[[Lcom/example/Absent;') },
+                { MethodVisitor m ->
+                    m.visitFieldInsn(Opcodes.GETSTATIC, 'com/example/Absent', 'VALUE', 'Ljava/lang/Object;')
+                },
+                { MethodVisitor m ->
+                    m.visitFieldInsn(Opcodes.GETSTATIC, 'java/lang/Object', 'VALUE', '[Lcom/example/Absent;')
+                },
+                { MethodVisitor m ->
+                    m.visitMethodInsn(Opcodes.INVOKESTATIC, 'com/example/Absent', 'call', '()V', false)
+                },
+                { MethodVisitor m -> m.visitMultiANewArrayInsn('[[Lcom/example/Absent;', 2) },
+                { MethodVisitor m -> m.visitLdcInsn(Type.getType('[Lcom/example/Absent;')) },
+                { MethodVisitor m -> m.visitLdcInsn(Type.getMethodType('(Lcom/example/Absent;)V')) },
+                { MethodVisitor m -> m.visitLdcInsn(handle('com/example/Absent', '()V')) }
+            ]
+    }
+
+    void 'bytecode naming only types that load in those places is accepted'() {
+        expect:
+            RegistrableTypes.referencesLoad(bodyOf(instruction), loader)
+
+        where:
+            instruction << [
+                { MethodVisitor m -> m.visitTypeInsn(Opcodes.NEW, 'java/lang/Object') },
+                { MethodVisitor m -> m.visitTypeInsn(Opcodes.CHECKCAST, '[[Ljava/lang/String;') },
+                { MethodVisitor m -> m.visitTypeInsn(Opcodes.CHECKCAST, '[I') },
+                { MethodVisitor m ->
+                    m.visitFieldInsn(Opcodes.GETSTATIC, 'java/lang/Boolean', 'TRUE', 'Ljava/lang/Boolean;')
+                },
+                { MethodVisitor m -> m.visitMultiANewArrayInsn('[[Ljava/lang/String;', 2) },
+                { MethodVisitor m -> m.visitLdcInsn(Type.getMethodType('(Ljava/lang/String;)V')) },
+                { MethodVisitor m -> m.visitLdcInsn('plain constant') },
+                { MethodVisitor m -> m.visitLdcInsn(Type.getType(Number)) },
+                { MethodVisitor m -> m.visitLdcInsn(handle('java/lang/Number', '()V')) }
+            ]
+    }
+
+    void 'bytecode is rejected when a dynamic constant names the absent type'() {
+        expect:
+            !RegistrableTypes.referencesLoad(bodyOf { MethodVisitor m ->
+                m.visitLdcInsn(dynamic(descriptor, owner, argument))
+            }, loader)
+
+        where:
+            descriptor                 | owner                | argument
+            'Lcom/example/Absent;'     | 'java/lang/Object'   | Type.getType(Number)
+            'Ljava/lang/Object;'       | 'com/example/Absent' | Type.getType(Number)
+            'Ljava/lang/Object;'       | 'java/lang/Object'   | Type.getObjectType('com/example/Absent')
+    }
+
+    void 'a dynamic constant naming only types that load is accepted'() {
+        expect:
+            RegistrableTypes.referencesLoad(bodyOf { MethodVisitor m ->
+                m.visitLdcInsn(dynamic('Ljava/lang/Object;', 'java/lang/Object', Type.getType(Number)))
+            }, loader)
+    }
+
+    private static Handle handle(String owner, String descriptor) {
+        new Handle(Opcodes.H_INVOKESTATIC, owner, 'call', descriptor, false)
+    }
+
+    private static ConstantDynamic dynamic(String descriptor, String bootstrapOwner, Object argument) {
+        new ConstantDynamic('constant', descriptor,
+                new Handle(Opcodes.H_INVOKESTATIC, bootstrapOwner, 'bootstrap',
+                        '(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/Class;)Ljava/lang/Object;',
+                        false),
+                argument)
+    }
+
+    private InputStream declaring(String superName, String[] interfaces) {
+        ClassWriter writer = new ClassWriter(0)
+        writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC | Opcodes.ACC_ABSTRACT,
+                'org/apache/grails/common/aot/Written', null, superName, interfaces)
+        writer.visitEnd()
+        new ByteArrayInputStream(writer.toByteArray())
+    }
+
+    private InputStream bodyOf(Closure<?> instruction) {
+        ClassWriter writer = new ClassWriter(0)
+        writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC | Opcodes.ACC_ABSTRACT,
+                'org/apache/grails/common/aot/Written', null, 'java/lang/Object', null)
+        MethodVisitor method = writer.visitMethod(Opcodes.ACC_PUBLIC, 'body', '()V', null, null)
+        method.visitCode()
+        instruction.call(method)
+        method.visitInsn(Opcodes.RETURN)
+        method.visitMaxs(0, 0)
+        method.visitEnd()
+        writer.visitEnd()
+        new ByteArrayInputStream(writer.toByteArray())
     }
 
     /** The places a class file can name a type, one per shape. */

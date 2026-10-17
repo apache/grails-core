@@ -16,11 +16,11 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.async.transform.internal;
+package org.grails.async.transform.internal
 
-import org.codehaus.groovy.ast.ClassNode;
-import org.codehaus.groovy.ast.MethodNode;
-import org.codehaus.groovy.ast.expr.ListExpression;
+import org.codehaus.groovy.ast.ClassNode
+import org.codehaus.groovy.ast.MethodNode
+import org.codehaus.groovy.ast.expr.ListExpression
 
 /**
  * Interface for a class that handles transforming async transactional methods
@@ -28,6 +28,8 @@ import org.codehaus.groovy.ast.expr.ListExpression;
  * @author Graeme Rocher
  * @since 2.3
  */
-public interface DelegateAsyncTransactionalMethodTransformer {
-    void transformTransactionalMethod(ClassNode classNode, ClassNode delegateClassNode, MethodNode methodNode, ListExpression promiseDecoratorLookupArguments);
+interface DelegateAsyncTransactionalMethodTransformer {
+
+    void transformTransactionalMethod(ClassNode classNode, ClassNode delegateClassNode, MethodNode methodNode, ListExpression promiseDecoratorLookupArguments)
+
 }

@@ -278,6 +278,178 @@ class AutoConfigurationImportsWriterSpec extends Specification {
         source.errorCollector.getSyntaxError(0).message.contains('Could not write generated auto-configuration imports')
     }
 
+    void 'the utility class cannot be instantiated by accident'() {
+        given:
+        def constructor = AutoConfigurationImportsWriter.getDeclaredConstructor()
+
+        expect:
+        java.lang.reflect.Modifier.isPrivate(constructor.modifiers)
+
+        when:
+        constructor.accessible = true
+        constructor.newInstance()
+
+        then:
+        noExceptionThrown()
+    }
+
+    void 'nothing is written without a class name or an output directory'() {
+        expect:
+        !AutoConfigurationImportsWriter.register(className, hasDirectory ? targetDir : null, null, null)
+
+        and:
+        !new File(targetDir, IMPORTS).exists()
+
+        where:
+        className                    | hasDirectory
+        null                         | true
+        ''                           | true
+        'com.example.GreetingConfig' | false
+    }
+
+    void 'reconciling without an output directory does nothing'() {
+        expect:
+        !AutoConfigurationImportsWriter.reconcile(null, null, null)
+    }
+
+    void 'registering the same class twice writes once'() {
+        expect: 'the second call finds the file already says what it would write'
+        AutoConfigurationImportsWriter.register('com.example.GreetingAutoConfiguration', targetDir, null, 'build one')
+        !AutoConfigurationImportsWriter.register('com.example.GreetingAutoConfiguration', targetDir, null, 'build one')
+        importsEntries() == ['com.example.GreetingAutoConfiguration']
+    }
+
+    void 'a registration with no compilation to scope to is pruned only by the class files present'() {
+        given:
+        AutoConfigurationImportsWriter.register('com.example.FirstAutoConfiguration', targetDir, null, null)
+
+        when: 'the second registers with nothing remembering the first, whose class file was never written'
+        AutoConfigurationImportsWriter.register('com.example.SecondAutoConfiguration', targetDir, null, null)
+
+        then:
+        importsEntries() == ['com.example.SecondAutoConfiguration']
+    }
+
+    void 'reconciling keeps an entry registered by the compilation before its class file is written'() {
+        given:
+        Object compilation = new Object()
+        AutoConfigurationImportsWriter.register('com.example.PendingAutoConfiguration', targetDir, null, compilation)
+
+        expect:
+        !AutoConfigurationImportsWriter.reconcile(targetDir, compilation, null)
+        importsEntries() == ['com.example.PendingAutoConfiguration']
+    }
+
+    void 'reconciling drops an entry registered by a different compilation whose class is gone'() {
+        given:
+        AutoConfigurationImportsWriter.register('com.example.GoneAutoConfiguration', targetDir, null, new Object())
+
+        expect:
+        AutoConfigurationImportsWriter.reconcile(targetDir, new Object(), null)
+        importsEntries() == []
+    }
+
+    void 'reconciling removes a generated file left beside a hand-authored one'() {
+        given:
+        AutoConfigurationImportsWriter.register('com.example.GreetingAutoConfiguration', targetDir, null, null)
+        File handAuthored = new File(projectDir, "src/main/resources/${IMPORTS}")
+        handAuthored.parentFile.mkdirs()
+        handAuthored.text = 'com.example.GreetingAutoConfiguration\n'
+
+        expect:
+        AutoConfigurationImportsWriter.reconcile(targetDir, null, null)
+        !new File(targetDir, IMPORTS).exists()
+    }
+
+    void 'a hand-authored file missing the generated class is tolerated when there is no source to warn on'() {
+        given:
+        File handAuthored = new File(projectDir, "src/main/resources/${IMPORTS}")
+        handAuthored.parentFile.mkdirs()
+        handAuthored.text = 'com.elsewhere.FromAnotherJar\n'
+
+        expect:
+        !AutoConfigurationImportsWriter.register('com.example.GreetingAutoConfiguration', targetDir, null, null)
+        !new File(targetDir, IMPORTS).exists()
+    }
+
+    void 'a write failure with no source to report to is an exception'() {
+        given:
+        new File(targetDir, 'META-INF').text = 'not a directory'
+
+        when:
+        AutoConfigurationImportsWriter.register('com.example.BrokenAutoConfiguration', targetDir, null, null)
+
+        then:
+        IllegalStateException e = thrown()
+        e.message.contains('Could not write generated auto-configuration imports')
+        e.cause instanceof IOException
+    }
+
+    void 'comments and blank lines in an existing file are not carried over as entries'() {
+        given:
+        File imports = new File(targetDir, IMPORTS)
+        imports.parentFile.mkdirs()
+        imports.text = '# generated\n\n   \ncom.example.GreetingAutoConfiguration\n'
+        new File(targetDir, 'com/example').mkdirs()
+        new File(targetDir, 'com/example/GreetingAutoConfiguration.class').text = 'class'
+
+        when:
+        AutoConfigurationImportsWriter.register('com.example.FarewellAutoConfiguration', targetDir, null, null)
+
+        then:
+        imports.readLines() == ['com.example.FarewellAutoConfiguration', 'com.example.GreetingAutoConfiguration']
+    }
+
+    void 'an imports file that cannot be read is replaced by the entry being registered'() {
+        given: 'bytes that are not valid UTF-8, which the reader rejects'
+        File imports = new File(targetDir, IMPORTS)
+        imports.parentFile.mkdirs()
+        imports.bytes = [0xC3, 0x28, 0xFF] as byte[]
+
+        when:
+        AutoConfigurationImportsWriter.register('com.example.GreetingAutoConfiguration', targetDir, null, null)
+
+        then:
+        imports.readLines() == ['com.example.GreetingAutoConfiguration']
+    }
+
+    void 'a base directory that does not exist falls back to the directory above the build output'() {
+        given:
+        System.setProperty('base.dir', new File(projectDir, 'missing').absolutePath)
+        File handAuthored = new File(projectDir, "src/main/resources/${IMPORTS}")
+        handAuthored.parentFile.mkdirs()
+        handAuthored.text = 'com.elsewhere.FromAnotherJar\n'
+
+        expect: 'the hand-authored file is still found, so nothing is generated beside it'
+        !AutoConfigurationImportsWriter.register('com.example.GreetingAutoConfiguration', targetDir, null, null)
+        !new File(targetDir, IMPORTS).exists()
+    }
+
+    void 'a maven style target directory marks the module root as well'() {
+        given:
+        System.clearProperty('base.dir')
+        File mavenTarget = new File(projectDir, 'target/classes')
+        mavenTarget.mkdirs()
+        File handAuthored = new File(projectDir, "src/main/resources/${IMPORTS}")
+        handAuthored.parentFile.mkdirs()
+        handAuthored.text = 'com.elsewhere.FromAnotherJar\n'
+
+        expect:
+        !AutoConfigurationImportsWriter.register('com.example.GreetingAutoConfiguration', mavenTarget, null, null)
+        !new File(mavenTarget, IMPORTS).exists()
+    }
+
+    void 'an output directory outside any build or target directory has no hand-authored file to find'() {
+        given:
+        System.clearProperty('base.dir')
+        File elsewhere = new File(projectDir, 'out/classes')
+        elsewhere.mkdirs()
+
+        expect:
+        AutoConfigurationImportsWriter.register('com.example.GreetingAutoConfiguration', elsewhere, null, null)
+        new File(elsewhere, IMPORTS).readLines() == ['com.example.GreetingAutoConfiguration']
+    }
+
     private List<String> collectedWarnings = []
 
     private List<String> warnings() {
