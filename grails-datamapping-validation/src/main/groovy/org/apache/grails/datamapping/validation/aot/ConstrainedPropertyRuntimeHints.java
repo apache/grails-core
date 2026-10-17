@@ -48,6 +48,11 @@ import org.springframework.aot.hint.RuntimeHintsRegistrar;
  * database. Which of the two an image was traced against is not a property anyone would think to
  * keep constant.</p>
  *
+ * <p>The default error messages are registered too. {@code ConstrainedProperty} loads them with
+ * {@code ResourceBundle.getBundle} as it is initialized, and an image answers that only for a bundle
+ * it was asked to keep: without it the first class to touch a constraint fails to initialize, which
+ * in a web application is the URL mappings, so the server never starts.</p>
+ *
  * @since 8.0
  */
 public class ConstrainedPropertyRuntimeHints implements RuntimeHintsRegistrar {
@@ -62,6 +67,12 @@ public class ConstrainedPropertyRuntimeHints implements RuntimeHintsRegistrar {
         "org.grails.datastore.gorm.validation.constraints.builder.ConstrainedPropertyBuilder"
     };
 
+    /**
+     * The bundle {@code ConstrainedProperty.MESSAGE_BUNDLE} is loaded from. Written out rather than read
+     * from that interface, whose initialization is what loads it.
+     */
+    private static final String DEFAULT_ERROR_MESSAGES = "grails.gorm.validation.DefaultErrorMessages";
+
     @Override
     public void registerHints(RuntimeHints hints, @Nullable ClassLoader classLoader) {
         for (String type : CONSTRAINED_TYPES) {
@@ -70,6 +81,7 @@ public class ConstrainedPropertyRuntimeHints implements RuntimeHintsRegistrar {
                     MemberCategory.INVOKE_PUBLIC_METHODS,
                     MemberCategory.INVOKE_DECLARED_CONSTRUCTORS);
         }
+        hints.resources().registerResourceBundle(DEFAULT_ERROR_MESSAGES);
     }
 
 }

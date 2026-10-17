@@ -18,12 +18,18 @@
  */
 package grails.boot.config
 
+import jakarta.annotation.PostConstruct
+
 import org.springframework.aot.AotDetector
+import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.support.BeanDefinitionRegistry
 import org.springframework.beans.factory.support.DefaultListableBeanFactory
 import org.springframework.beans.factory.support.RootBeanDefinition
 import org.springframework.context.annotation.AnnotationConfigUtils
+import org.springframework.context.support.GenericApplicationContext
 import spock.lang.Specification
+
+import org.apache.grails.core.aot.GeneratedBeanDefinitions
 
 /**
  * Covers the processors that read the injection annotations being restored when running on
@@ -64,6 +70,16 @@ class GrailsApplicationPostProcessorAnnotationConfigSpec extends Specification {
             registry.containsBeanDefinition(AnnotationConfigUtils.COMMON_ANNOTATION_PROCESSOR_BEAN_NAME)
     }
 
+    void 'the injection processors are created without reflection'() {
+        when:
+            withGeneratedArtifacts(true) { register() }
+
+        then: 'they are registered while running on generated artifacts, which includes a native image'
+            [AnnotationConfigUtils.AUTOWIRED_ANNOTATION_PROCESSOR_BEAN_NAME, AnnotationConfigUtils.COMMON_ANNOTATION_PROCESSOR_BEAN_NAME].every {
+                ((RootBeanDefinition) registry.getBeanDefinition(it)).instanceSupplier != null
+            }
+    }
+
     void 'the processor that reads configuration classes is not'() {
         when:
             withGeneratedArtifacts(true) { register() }
@@ -95,4 +111,83 @@ class GrailsApplicationPostProcessorAnnotationConfigSpec extends Specification {
             registry.getBeanDefinition(
                     AnnotationConfigUtils.AUTOWIRED_ANNOTATION_PROCESSOR_BEAN_NAME).is(existing)
     }
+
+    void 'a bean the generated code created is injected and initialized once, and one declared later still is'() {
+        given: 'a bean the generated code created, injected and given its initialization method by that code'
+            def context = new GenericApplicationContext()
+            context.registerBean('collaborator', CollaboratorFixture)
+            context.registerBeanDefinition('generated', new RootBeanDefinition(InjectedFixture).tap {
+                instanceSupplier = { new InjectedFixture().tap { setCollaborator(new CollaboratorFixture()) } }
+                initMethodNames = ['initialize'] as String[]
+            })
+            GeneratedBeanDefinitions.record(context.beanFactory)
+
+        and: 'a bean declared after it, as a plugin declares one'
+            context.registerBean('declaredLater', InjectedFixture)
+
+        when:
+            withGeneratedArtifacts(true) {
+                GrailsApplicationPostProcessor.registerAnnotationConfigProcessorsForGeneratedArtifacts(context)
+            }
+            context.refresh()
+
+        then: 'injected twice, a side-effecting autowired method runs twice'
+            context.getBean('generated', InjectedFixture).injections == 1
+            context.getBean('generated', InjectedFixture).initializations == 1
+
+        and: 'the bean the generated code did not create is injected by the processors'
+            context.getBean('declaredLater', InjectedFixture).injections == 1
+            context.getBean('declaredLater', InjectedFixture).initializations == 1
+
+        cleanup:
+            context.close()
+    }
+
+    void 'a bean the generated code created as an interface is injected and initialized by the processors'() {
+        given: 'a bean the generated code created from a factory method declaring an interface, as the link ' +
+                'generator is created, so the code saw none of the members of the class it returns'
+            def context = new GenericApplicationContext()
+            context.registerBean('collaborator', CollaboratorFixture)
+            context.registerBeanDefinition('declaredAsInterface', new RootBeanDefinition(InjectedType).tap {
+                instanceSupplier = { new InjectedFixture() }
+            })
+            GeneratedBeanDefinitions.record(context.beanFactory)
+
+        when:
+            withGeneratedArtifacts(true) {
+                GrailsApplicationPostProcessor.registerAnnotationConfigProcessorsForGeneratedArtifacts(context)
+            }
+            context.refresh()
+
+        then: 'nobody else injects it: left alone, the link generator rendered no link'
+            context.getBean('declaredAsInterface', InjectedFixture).injections == 1
+            context.getBean('declaredAsInterface', InjectedFixture).initializations == 1
+
+        cleanup:
+            context.close()
+    }
+
+    static class CollaboratorFixture {
+    }
+
+    static interface InjectedType {
+    }
+
+    static class InjectedFixture implements InjectedType {
+
+        int injections
+
+        int initializations
+
+        @Autowired
+        void setCollaborator(CollaboratorFixture collaborator) {
+            injections++
+        }
+
+        @PostConstruct
+        void initialize() {
+            initializations++
+        }
+    }
 }
+

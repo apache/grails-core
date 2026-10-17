@@ -113,6 +113,15 @@ public final class PluginUtils {
     public static final String PLUGIN_YML_CONFIG_PATH = "/" + PLUGIN_YML_CONFIG;
 
     /**
+     * Where the build keeps a copy of each plugin's configuration for an application running on code
+     * generated ahead of time, in a directory named after the plugin class.
+     *
+     * @since 9.0
+     * @see #getGeneratedConfigurationPath(String, String)
+     */
+    public static final String GENERATED_CONFIG_PATH = "META-INF/grails/plugin-configuration/";
+
+    /**
      * The naming suffix required for Grails plugin implementation classes.
      */
     public static final String GRAILS_PLUGIN_SUFFIX = "GrailsPlugin";
@@ -516,10 +525,19 @@ public final class PluginUtils {
      * <p>The lookup probes for both {@code plugin.yml} and {@code plugin.groovy}. If both exist, a
      * {@link RuntimeException} is thrown because a plugin may define only one configuration source.</p>
      *
+     * <p>A copy the build made while generating code ahead of time is preferred, when there is one. A native
+     * image has no class roots: every class in it is at the same root, so every plugin's {@code plugin.yml}
+     * would be looked for at the same path, and the copy is the only place a plugin's own is found.</p>
+     *
      * @param pluginClass the plugin class to resolve relative to
      * @return the configuration resource, or {@code null} if no config file is present
+     * @see #getGeneratedConfigurationPath(String, String)
      */
     public static Resource readPluginConfiguration(Class<?> pluginClass) {
+        Resource generatedResource = findGeneratedConfiguration(pluginClass);
+        if (generatedResource != null) {
+            return generatedResource;
+        }
         var ymlResource = getConfigurationResource(pluginClass, PLUGIN_YML_CONFIG_PATH);
         var groovyResource = getConfigurationResource(pluginClass, PLUGIN_GROOVY_CONFIG_PATH);
 
@@ -534,6 +552,33 @@ public final class PluginUtils {
         }
         if (groovyResourceExists) {
             return groovyResource;
+        }
+        return null;
+    }
+
+    /**
+     * The classpath location of the copy the build makes of a plugin's configuration while generating code
+     * ahead of time, which {@link #readPluginConfiguration(Class)} prefers to the original.
+     *
+     * @param pluginClassName the fully qualified name of the plugin class
+     * @param configFileName the name of the configuration file, {@code plugin.yml} or {@code plugin.groovy}
+     * @return the location of the copy, relative to the root of the classpath
+     * @since 9.0
+     */
+    public static String getGeneratedConfigurationPath(String pluginClassName, String configFileName) {
+        return GENERATED_CONFIG_PATH + pluginClassName + "/" + configFileName;
+    }
+
+    private static Resource findGeneratedConfiguration(Class<?> pluginClass) {
+        ClassLoader classLoader = pluginClass.getClassLoader();
+        if (classLoader == null) {
+            return null;
+        }
+        for (String configFileName : List.of(PLUGIN_YML_CONFIG, PLUGIN_GROOVY_CONFIG)) {
+            URL generated = classLoader.getResource(getGeneratedConfigurationPath(pluginClass.getName(), configFileName));
+            if (generated != null) {
+                return new UrlResource(generated);
+            }
         }
         return null;
     }

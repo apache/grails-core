@@ -18,8 +18,11 @@
  */
 package grails.boot.config;
 
+import org.springframework.aot.AotDetector;
 import org.springframework.context.ApplicationContextInitializer;
 import org.springframework.context.ConfigurableApplicationContext;
+
+import org.apache.grails.core.aot.GeneratedBeanDefinitions;
 
 /**
  * Registers the {@link GrailsEarlyPluginRegistrationPostProcessor} on the context via
@@ -29,12 +32,19 @@ import org.springframework.context.ConfigurableApplicationContext;
  * {@code doWithSpring} be present in the registry before Boot's {@code @ConditionalOnMissingBean}
  * guards are evaluated, so auto-configured defaults back off in favour of plugin beans.
  *
+ * <p>On generated artifacts it also records the bean definitions the generated code contributed. Spring Boot
+ * applies the generated initializer before any other, and no plugin has declared a bean yet, so what the
+ * context holds here is exactly what was generated. See {@link GeneratedBeanDefinitions}.</p>
+ *
  * @since 8.0
  */
 public class GrailsPluginLifecycleInitializer implements ApplicationContextInitializer<ConfigurableApplicationContext> {
 
     @Override
     public void initialize(ConfigurableApplicationContext applicationContext) {
+        if (AotDetector.useGeneratedArtifacts()) {
+            GeneratedBeanDefinitions.record(applicationContext.getBeanFactory());
+        }
         applicationContext.addBeanFactoryPostProcessor(new GrailsEarlyPluginRegistrationPostProcessor(applicationContext));
     }
 }
