@@ -22,9 +22,9 @@ package org.grails.web.mime
 import grails.core.DefaultGrailsApplication
 import grails.spring.BeanBuilder
 import grails.util.Holders
+import grails.web.mime.MimeType
 import org.grails.config.PropertySourcesConfig
 import org.grails.plugins.web.mime.MimeTypesConfiguration
-import org.grails.web.mime.HttpServletResponseExtension
 import org.springframework.context.ApplicationContext
 import org.springframework.context.support.GenericApplicationContext
 import org.springframework.core.env.MapPropertySource
@@ -42,8 +42,6 @@ class AcceptHeaderParserSpec extends Specification {
     def config
 
     void setup() {
-        // Clear the static mimeTypes cache to prevent test environment pollution
-        HttpServletResponseExtension.@mimeTypes = null
         def configObject = new ConfigSlurper()
                 .parse("""
 grails.mime.types = [ xml: ['text/xml', 'application/xml'],
@@ -56,6 +54,7 @@ grails.mime.types = [ xml: ['text/xml', 'application/xml'],
                       all: '*/*',
                       json: 'application/json',
                       html: ['text/html','application/xhtml+xml'],
+                      acme: 'application/vnd.Acme+json',
                       foov1: 'application/vnd.foo+json;v=1.0',
                       foov2: 'application/vnd.foo+json;v=2.0'
                     ]
@@ -68,8 +67,6 @@ grails.mime.types = [ xml: ['text/xml', 'application/xml'],
     void cleanup() {
         config = null
         Holders.setConfig null
-        // Clear the static mimeTypes cache after each test for test isolation
-        HttpServletResponseExtension.@mimeTypes = null
     }
 
     void testXmlContentTypeWithCharset() {
@@ -85,6 +82,18 @@ grails.mime.types = [ xml: ['text/xml', 'application/xml'],
         'UTF-8' == mimes[0].parameters.charset
         '1.0' == mimes[0].parameters.q
         '1.0' == mimes[0].quality
+    }
+
+    void 'a +xml type at least as preferred as application/xml, after it in the header, is promoted over it as in Grails 8'() {
+        expect: 'atom takes the place of the xml before it, ahead of json, which is as preferred'
+        getAcceptHeaderParser().parse('application/xml;q=0.9, application/json, application/atom+xml')*.extension ==
+                ['atom', 'json', 'xml']
+    }
+
+    void 'a bare * with parameters, which Java clients send, is not a match, as in Grails 8'() {
+        expect:
+        getAcceptHeaderParser().parse('text/html, image/gif, image/jpeg, *; q=.2, */*; q=.2')*.name == ['text/html', '*/*']
+        getAcceptHeaderParser().parse('*;q=0.5')*.name == MimeType.createDefaults()*.name
     }
 
     protected DefaultAcceptHeaderParser getAcceptHeaderParser() {
@@ -131,6 +140,14 @@ grails.mime.types = [ xml: ['text/xml', 'application/xml'],
         "json" == mimes[0].extension
     }
 
+    void 'malformed tokens with empty parameters do not break negotiation'() {
+        expect:
+        getAcceptHeaderParser().parse("${token},application/json")*.extension == ['json']
+
+        where:
+        token << ['text/ html;', 'text/ html;;', ';', 'text/ html;=']
+    }
+
     void testFirefox2AcceptHeaderOrdering() {
 
         when:
@@ -161,6 +178,22 @@ grails.mime.types = [ xml: ['text/xml', 'application/xml'],
         then:
         4 ==  mimes.size()
         ['html','html','xml', 'all'] == mimes.extension
+    }
+
+    void "retains header order when a lenient quality value precedes another equally ranked type"() {
+        when:
+        MimeType[] mimeTypes = getAcceptHeaderParser().parse('application/xml;q=invalid,text/html')
+
+        then:
+        mimeTypes*.extension == ['xml', 'html']
+    }
+
+    void "a lenient quality value is still recognised when a space precedes the parameter"() {
+        when: "Spring rejects the header, so the lenient path parses it"
+        MimeType[] mimeTypes = getAcceptHeaderParser().parse('text/html ; q=2.0')
+
+        then: "the media type name is trimmed, so it still matches the configured types"
+        mimeTypes*.extension == ['html']
     }
 
     void testAcceptHeaderWithQNumberOrdering() {
@@ -220,5 +253,56 @@ grails.mime.types = [ xml: ['text/xml', 'application/xml'],
         then:
         ['foov1'] == mimesV1.extension
         ['foov2'] == mimesV2.extension
+    }
+
+    void "matches a configured media type with capitals whatever the case of the header"() {
+        expect:
+        getAcceptHeaderParser().parse(header)*.extension == ['acme']
+        getAcceptHeaderParser().parse(header)*.name == ['application/vnd.Acme+json']
+
+        where:
+        header << ['application/vnd.Acme+json', 'application/vnd.acme+json', 'APPLICATION/VND.ACME+JSON;q=0.5']
+    }
+
+    void "preserves configured header parameters on the negotiated mime type"() {
+        when:
+        MimeType[] mimeTypes = getAcceptHeaderParser().parse('application/json;charset=UTF-8;profile=compact;q=0.7')
+
+        then:
+        mimeTypes*.name == ['application/json']
+        mimeTypes*.extension == ['json']
+        mimeTypes[0].parameters == [q: '0.7', charset: 'UTF-8', profile: 'compact']
+    }
+
+    void "orders configured mime types by quality while retaining header order for equal quality"() {
+        when:
+        MimeType[] mimeTypes = getAcceptHeaderParser().parse(
+                'text/plain;q=0.8,application/json;q=0.9,text/html;q=0.9,*/*;q=0.1'
+        )
+
+        then:
+        mimeTypes*.name == ['application/json', 'text/html', 'text/plain', '*/*']
+        mimeTypes*.extension == ['json', 'html', 'text', 'all']
+    }
+
+    void "filters unconfigured media types without disturbing configured choices"() {
+        when:
+        MimeType[] mimeTypes = getAcceptHeaderParser().parse(
+                'image/avif,application/json;q=0.8,image/webp;q=0.7,text/plain;q=0.6'
+        )
+
+        then:
+        mimeTypes*.name == ['application/json', 'text/plain']
+        mimeTypes*.extension == ['json', 'text']
+    }
+
+    void "falls back to the configured media type when a requested vendor version is unknown"() {
+        when:
+        MimeType[] mimeTypes = getAcceptHeaderParser().parse('application/vnd.foo+json;v=3.0')
+
+        then:
+        mimeTypes*.name == ['application/vnd.foo+json']
+        mimeTypes*.extension == ['foov1']
+        mimeTypes*.version == ['3.0']
     }
 }

@@ -23,7 +23,7 @@ import grails.rest.render.hal.HalXmlRenderer
 import grails.util.GrailsWebUtil
 import org.grails.plugins.web.rest.render.*
 import org.grails.web.converters.configuration.ConvertersConfigurationHolder
-import org.grails.web.converters.configuration.ConvertersConfigurationInitializer
+import org.grails.web.converters.configuration.XmlConvertersConfigurationInitializer
 import org.springframework.context.support.StaticMessageSource
 import org.springframework.web.util.WebUtils
 
@@ -33,7 +33,7 @@ import org.springframework.web.util.WebUtils
 class HalDomainClassXmlRendererSpec extends BaseDomainClassRendererSpec {
 
     void setup() {
-        def initializer = new ConvertersConfigurationInitializer(grailsApplication: new DefaultGrailsApplication())
+        def initializer = new XmlConvertersConfigurationInitializer(grailsApplication: new DefaultGrailsApplication())
         initializer.initialize()
     }
     

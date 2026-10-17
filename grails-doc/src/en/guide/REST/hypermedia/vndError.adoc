@@ -17,17 +17,20 @@ specific language governing permissions and limitations
 under the License.
 ////
 
-https://github.com/blongden/vnd.error[Vnd.Error] is a standardised way of expressing an error response.
+https://github.com/blongden/vnd.error[Vnd.Error] is a legacy error response format. Grails 9 keeps the
+`{"errors": [...]}` body it has always sent for validation errors, and Grails 10 sends an RFC 9457
+`application/problem+json` response instead.
 
-By default when a validation error occurs when attempting to POST new resources then the errors object will be sent back allow with a 422 respond code:
+In Grails 9, when a validation error occurs while POSTing a new resource, `respond` sends the errors
+back as they were in Grails 8, with a 422 response code. With `grails.converters.json.legacy: false`, each entry
+carries its error `codes` in place of the `rejected-value`, which can be a password or a token:
 
 [source,groovy]
 ----
 $ curl -i -H "Accept: application/json"  -H "Content-Type: application/json" -X POST -d "" http://localhost:8080/books
 
-HTTP/1.1 422 Unprocessable Entity
-Server: Apache-Coyote/1.1
-Content-Type: application/json;charset=ISO-8859-1
+HTTP/1.1 422
+Content-Type: application/json;charset=UTF-8
 
 {
   "errors": [
@@ -41,26 +44,58 @@ Content-Type: application/json;charset=ISO-8859-1
 }
 ----
 
-If you wish to change the format to Vnd.Error then simply register `grails.rest.render.errors.VndErrorJsonRenderer` bean in `grails-app/conf/spring/resources.groovy`:
+With `grails.web.rendering.json.spring: true`, which is the default from Grails 10, `respond` sends the
+errors as an RFC 9457 problem instead, and new applications should use that response:
+
+[source,groovy]
+----
+HTTP/1.1 422
+Content-Type: application/problem+json;charset=UTF-8
+
+{
+  "detail": "Request validation failed with 1 error.",
+  "instance": "/books",
+  "status": 422,
+  "title": "Validation failed",
+  "errors": [
+    {
+      "object": "rest.test.Book",
+      "field": "title",
+      "codes": [
+        "rest.test.Book.title.nullable.error.rest.test.Book.title",
+        "nullable"
+      ],
+      "message": "Property [title] of class [class rest.test.Book] cannot be null"
+    }
+  ]
+}
+----
+
+The `codes` list is shortened here; it holds every message code tried for the error, most specific first.
+The xref:upgrading#upgrading90x[upgrade guide] describes the setting.
+
+If a compatibility client requires Vnd.Error JSON, explicitly register the
+`grails.rest.render.errors.VndErrorJsonRenderer` bean in `grails-app/conf/spring/resources.groovy`:
 
 
 [source,groovy]
 ----
 beans = {
     vndJsonErrorRenderer(grails.rest.render.errors.VndErrorJsonRenderer)
-    // for Vnd.Error XML format
-    vndXmlErrorRenderer(grails.rest.render.errors.VndErrorXmlRenderer)
 }
 ----
+
+The `VndErrorXmlRenderer` and legacy XML validation-error marshaller are deprecated since Grails 9.0
+and will be removed in Grails 11. Keep them only for existing XML clients while migrating
+to Problem Details JSON. They remain available when the optional `grails-xml` module is installed.
 
 Then if you alter the client request to accept Vnd.Error you get an appropriate response:
 
 [source,groovy]
 ----
 $ curl -i -H "Accept: application/vnd.error+json,application/json" -H "Content-Type: application/json" -X POST -d "" http://localhost:8080/books
-HTTP/1.1 200 OK
-Server: Apache-Coyote/1.1
-Content-Type: application/vnd.error+json;charset=ISO-8859-1
+HTTP/1.1 422
+Content-Type: application/vnd.error+json;charset=UTF-8
 
 [
     {

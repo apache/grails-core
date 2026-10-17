@@ -37,8 +37,8 @@ import org.springframework.beans.BeanUtils
  *
  * <p>swagger-core names a property as Jackson does, which is not always the name Grails renders and
  * binds it by: Jackson describes {@code getISBN()} as {@code isbn}, where Grails uses {@code ISBN},
- * and {@code @JsonProperty} renames a property Grails' converters, JSON views and data binding still
- * render and bind by its own name. A property is described by the name Grails uses, unless its
+ * and {@code @JsonProperty} renames a property that JSON views, data binding and Grails' converters,
+ * as they render by default, still render and bind by its own name. A property is described by the name Grails uses, unless its
  * description is renamed on purpose, with {@code @Schema(name)}.</p>
  */
 @CompileStatic

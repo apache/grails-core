@@ -379,23 +379,39 @@ public class JSONTokener {
             } catch (Exception e) {
                 return s;
             }
-
-            if (number.scale() == 0) {
-                try {
-                    return number.intValueExact();
-                } catch (Exception e) {
-                    try {
-                        return number.longValueExact();
-                    } catch (Exception f) {
-                        return number.toBigInteger();
-                    }
-                }
-            } else {
-                double doubleValue = number.doubleValue();
-                return number.equals(BigDecimal.valueOf(doubleValue)) ? doubleValue : number;
-            }
+            return number(number);
         }
         return s;
+    }
+
+    /**
+     * The number type Grails' JSON parsing gives a number: an {@code Integer}, a {@code Long} or a {@code BigInteger}
+     * for a number written with as many digits after the decimal point as its exponent moves, such as {@code 15} or
+     * {@code 1.5e1}; a {@code Double} for any other number written with the digits {@code Double.toString} writes for
+     * it, such as {@code 2.5}; and otherwise a {@code BigDecimal}, which keeps the scale a {@code Double} would lose, as
+     * that of {@code 1.00} or {@code 1e3}, or the value of a number beyond the range of a {@code Double}, such as
+     * {@code 1e400}.
+     *
+     * @param number a parsed number
+     * @return the number, as the type Grails' JSON parsing gives it
+     */
+    static Number number(BigDecimal number) {
+        if (number.scale() == 0) {
+            try {
+                return number.intValueExact();
+            } catch (ArithmeticException e) {
+                try {
+                    return number.longValueExact();
+                } catch (ArithmeticException f) {
+                    return number.toBigInteger();
+                }
+            }
+        }
+        double doubleValue = number.doubleValue();
+        if (Double.isInfinite(doubleValue)) {
+            return number;
+        }
+        return number.equals(BigDecimal.valueOf(doubleValue)) ? doubleValue : number;
     }
 
     /**

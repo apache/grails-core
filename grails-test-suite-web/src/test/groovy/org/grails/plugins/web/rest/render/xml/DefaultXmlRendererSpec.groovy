@@ -29,9 +29,8 @@ import grails.web.mime.MimeType
 import groovy.xml.slurpersupport.GPathResult
 import org.grails.plugins.web.rest.render.ServletRenderContext
 import org.grails.web.converters.configuration.ConvertersConfigurationHolder
-import org.grails.web.converters.configuration.ConvertersConfigurationInitializer
+import org.grails.web.converters.configuration.XmlConvertersConfigurationInitializer
 import org.grails.web.converters.marshaller.xml.ValidationErrorsMarshaller
-import org.grails.web.mime.HttpServletResponseExtension
 import org.grails.web.servlet.mvc.GrailsWebRequest
 import org.springframework.mock.web.MockHttpServletRequest
 import org.springframework.mock.web.MockHttpServletResponse
@@ -44,17 +43,13 @@ import spock.lang.Specification
 class DefaultXmlRendererSpec extends Specification implements DomainUnitTest<XmlBook> {
 
     void setup() {
-        // Clear the static mimeTypes cache to prevent test environment pollution
-        HttpServletResponseExtension.@mimeTypes = null
-        final initializer = new ConvertersConfigurationInitializer()
+        final initializer = new XmlConvertersConfigurationInitializer()
         initializer.grailsApplication = new DefaultGrailsApplication()
         initializer.initialize()
         XML.registerObjectMarshaller(new ValidationErrorsMarshaller())
     }
 
     void cleanup() {
-        // Clear the static mimeTypes cache after each test for test isolation
-        HttpServletResponseExtension.@mimeTypes = null
         GroovySystem.metaClassRegistry.removeMetaClass(ValidationErrors)
         ConvertersConfigurationHolder.clear()
     }

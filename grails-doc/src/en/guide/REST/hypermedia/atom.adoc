@@ -43,7 +43,20 @@ https://tools.ietf.org/html/rfc4287[Atom] is another standard interchange format
 </feed>
 ----
 
-To use Atom rendering again simply define a custom renderer:
+WARNING: The Atom renderers are deprecated since Grails 9.0 and will be removed in Grails 11, with the rest of the legacy
+XML conversion. Keep them only for existing feed clients while migrating.
+
+Atom/feed rendering needs the optional XML module. The Grails 9 web starter and `grails-web-boot` bring it; an
+application without either, and every application from Grails 10, adds it:
+
+[source,groovy]
+----
+dependencies {
+    implementation 'org.apache.grails:grails-xml'
+}
+----
+
+Then explicitly define the feed renderers needed by the application:
 
 [source,groovy]
 ----

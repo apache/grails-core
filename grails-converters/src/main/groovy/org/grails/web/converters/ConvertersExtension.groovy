@@ -23,7 +23,6 @@ import groovy.transform.CompileStatic
 import jakarta.servlet.http.HttpServletRequest
 
 import grails.converters.JSON
-import grails.converters.XML
 import org.grails.web.servlet.mvc.GrailsWebRequest
 
 /**
@@ -41,10 +40,6 @@ class ConvertersExtension {
 
     static getJSON(HttpServletRequest request) {
         JSON.parse(request)
-    }
-
-    static getXML(HttpServletRequest request) {
-        XML.parse(request)
     }
 
     static <T> T asType(instance, Class<T> clazz) {

@@ -26,9 +26,9 @@ import org.grails.web.json.JSONArray
 import org.grails.web.json.JSONObject
 
 /**
- * {@code JSON.parse}, and so {@code request.JSON}, parse with Grails' own {@code JSONTokener}, which writing JSON through
- * Jackson does not change: the lenient syntax it accepts, the number types it returns and its {@code Map} and
- * {@code List} containers.
+ * With {@code grails.converters.json.legacy} left {@code true}, the default in Grails 9, {@code JSON.parse}, and so
+ * {@code request.JSON}, parse with Grails' own {@code JSONTokener}: the lenient syntax it accepts, the number types it
+ * returns and its {@code Map} and {@code List} containers. {@code JsonMapperParsingSpec} covers the other setting.
  */
 class JsonParsingSpec extends Specification {
 
@@ -81,6 +81,8 @@ class JsonParsingSpec extends Specification {
         '0.123456789012345678901' || BigDecimal | '0.123456789012345678901'
         '1.00'                    || BigDecimal | '1.00'
         '1e3'                     || BigDecimal | '1E+3'
+        '1e400'                   || BigDecimal | '1E+400'
+        '-1e400'                  || BigDecimal | '-1E+400'
     }
 
     void "JSON.parse returns Grails' Map and List containers, with Java nulls"() {

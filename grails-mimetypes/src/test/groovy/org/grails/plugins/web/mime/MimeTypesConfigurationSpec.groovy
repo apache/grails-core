@@ -18,23 +18,27 @@
  */
 package org.grails.plugins.web.mime
 
+import org.springframework.beans.factory.ObjectProvider
+import org.springframework.context.ApplicationContext
+import org.springframework.context.annotation.Bean
+import org.springframework.context.annotation.Configuration
+import org.springframework.context.annotation.Import
+import org.springframework.mock.web.MockServletContext
+import org.springframework.web.context.support.AnnotationConfigWebApplicationContext
+import org.springframework.web.servlet.LocaleResolver
+import org.springframework.web.servlet.config.annotation.EnableWebMvc
+
 import grails.core.DefaultGrailsApplication
+import grails.core.GrailsApplication
 import grails.spring.BeanBuilder
 import grails.web.mime.MimeType
-import org.grails.web.mime.HttpServletResponseExtension
+import grails.web.mime.MimeTypeProvider
+import org.grails.web.mime.DefaultMimeUtility
+import org.grails.web.mime.GrailsContentNegotiationStrategy
+import org.grails.web.mime.GrailsMimeTypesWebMvcConfigurer
 import spock.lang.Specification
 
 class MimeTypesConfigurationSpec extends Specification {
-
-    void setup() {
-        // Clear the static mimeTypes cache to prevent test environment pollution
-        HttpServletResponseExtension.@mimeTypes = null
-    }
-
-    void cleanup() {
-        // Clear the static mimeTypes cache after each test for test isolation
-        HttpServletResponseExtension.@mimeTypes = null
-    }
 
     void "test when no mimeTypes configured then the defaults should be used"() {
         when:
@@ -106,6 +110,57 @@ class MimeTypesConfigurationSpec extends Specification {
         and: "other defaults are untouched"
         mimeTypes.find { it.extension == 'html' && it.name == 'text/html' }
         mimeTypes.findAll { it.extension == 'xml' }*.name == ['text/xml', 'application/xml']
+    }
+
+    void 'Grails format resolution resolves against the MIME types of the MimeUtility, as request.format does'() {
+        given:
+        def custom = [new MimeType('application/vnd.acme+json', 'acme'), new MimeType('text/html', 'html')] as MimeType[]
+        def mimeUtility = Stub(ObjectProvider) { getObject() >> new DefaultMimeUtility(custom) }
+
+        expect:
+        MimeTypesConfiguration.grailsMimeTypesWebMvcConfigurer(mimeUtility, new DefaultGrailsApplication())
+                .contentNegotiationStrategy.configuredMimeTypes as List == custom as List
+    }
+
+    void 'a MIME type provider that needs Spring MVC infrastructure does not close a startup cycle'() {
+        given: 'circular references disallowed, as Spring Boot does, so that a cycle fails the refresh'
+        def context = new AnnotationConfigWebApplicationContext()
+        context.allowCircularReferences = false
+        context.servletContext = new MockServletContext()
+        context.register(CycleConfiguration)
+
+        when:
+        context.refresh()
+
+        then:
+        noExceptionThrown()
+        context.getBean(GrailsMimeTypesWebMvcConfigurer).contentNegotiationStrategy instanceof GrailsContentNegotiationStrategy
+
+        cleanup:
+        context.close()
+    }
+
+    @Configuration(proxyBeanMethods = false)
+    @EnableWebMvc
+    @Import(MimeTypesConfiguration)
+    static class CycleConfiguration {
+
+        @Bean
+        GrailsApplication grailsApplication(ApplicationContext applicationContext) {
+            def application = new DefaultGrailsApplication()
+            application.setApplicationContext(applicationContext)
+            application
+        }
+
+        @Bean
+        MimeTypeProvider localeAwareMimeTypeProvider(LocaleResolver localeResolver) {
+            new MimeTypeProvider() {
+                @Override
+                MimeType[] getMimeTypes() {
+                    [] as MimeType[]
+                }
+            }
+        }
     }
 
     private MimeType[] resolveMimeTypes(Map config, boolean mergeDefaults = false) {

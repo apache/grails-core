@@ -18,9 +18,12 @@
  */
 package org.grails.plugins.web.mime
 
+import java.util.function.Supplier
+
 import groovy.transform.CompileStatic
 import groovy.transform.TypeCheckingMode
 
+import org.springframework.beans.factory.ObjectProvider
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.context.annotation.Primary
@@ -34,6 +37,8 @@ import grails.web.mime.MimeTypeResolver
 import grails.web.mime.MimeUtility
 import org.grails.web.mime.DefaultMimeTypeResolver
 import org.grails.web.mime.DefaultMimeUtility
+import org.grails.web.mime.GrailsContentNegotiationStrategy
+import org.grails.web.mime.GrailsMimeTypesWebMvcConfigurer
 
 /**
  * Configuration for Codecs
@@ -120,6 +125,21 @@ class MimeTypesConfiguration {
     @Primary
     protected MimeTypeResolver mimeTypeResolver() {
         return new DefaultMimeTypeResolver()
+    }
+
+    /**
+     * Static, so that registering the configurer does not create this configuration, whose
+     * constructor collects every {@code MimeTypeProvider}, among them the renderers. Spring MVC
+     * creates its configurers while its infrastructure beans are created, and a renderer that
+     * depends on one of those beans would otherwise close a cycle.
+     */
+    @Bean
+    static GrailsMimeTypesWebMvcConfigurer grailsMimeTypesWebMvcConfigurer(
+            ObjectProvider<MimeUtility> mimeUtility, GrailsApplication grailsApplication) {
+        // The MIME types request.format and response.format resolve against as well
+        return new GrailsMimeTypesWebMvcConfigurer({ ->
+            new GrailsContentNegotiationStrategy(mimeUtility.getObject().knownMimeTypes as MimeType[], grailsApplication.config)
+        } as Supplier<GrailsContentNegotiationStrategy>)
     }
 
     @CompileStatic(TypeCheckingMode.SKIP)

@@ -112,6 +112,20 @@ class ConfigurationMetadataPluginSpec extends Specification {
         '''.stripIndent())
     }
 
+    def 'constructor parameter named metaClass is treated as data rather than a Groovy property'() {
+        given:
+        write('src/main/java/fixture/MetaClassArgument.java', '''
+            package fixture;
+            public class MetaClassArgument {
+                public MetaClassArgument(String metaClass) { }
+            }
+        '''.stripIndent())
+
+        expect:
+        run('generateConfigurationMetadata', '--max-workers=1', '-Dorg.gradle.jvmargs=-Xmx512m')
+                .task(':generateConfigurationMetadata').outcome == TaskOutcome.SUCCESS
+    }
+
     def "generates canonical metadata across clean incremental edit and source deletion builds"() {
         when: 'a clean jar is built'
         BuildResult clean = run('clean', 'jar')

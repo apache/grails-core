@@ -18,14 +18,9 @@
  */
 package org.grails.web.converters.jackson;
 
-import java.util.Arrays;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 import groovy.lang.GroovyObject;
-
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 import org.springframework.util.ClassUtils;
 
@@ -34,25 +29,28 @@ import grails.core.support.proxy.DefaultProxyHandler;
 import grails.core.support.proxy.EntityProxyHandler;
 import grails.core.support.proxy.ProxyHandler;
 import org.grails.core.artefact.DomainClassArtefactHandler;
+import org.grails.datastore.gorm.GormEnhancer;
+import org.grails.datastore.mapping.core.Datastore;
+import org.grails.datastore.mapping.model.MappingContext;
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.PersistentProperty;
-import org.grails.datastore.mapping.model.config.GormProperties;
 import org.grails.datastore.mapping.proxy.EntityProxy;
 import org.grails.datastore.mapping.reflect.ClassPropertyFetcher;
+import org.grails.web.converters.Converter.CircularReferenceBehaviour;
 import org.grails.web.converters.ConverterUtil;
 import org.grails.web.converters.marshaller.ByDatasourceDomainClassFetcher;
 import org.grails.web.converters.marshaller.ByGrailsApplicationDomainClassFetcher;
 import org.grails.web.converters.marshaller.DomainClassFetcher;
 
 /**
- * How a {@link DomainClassSerializer} renders domain class instances: whether it writes the version and the class
+ * How a {@link DomainClassJacksonModule} renders domain class instances: whether it writes the version and the class
  * name, whether it renders associated domain class instances in full (deep) or as references of their id, and which
  * properties it writes.
  *
  * <p>The defaults are the converter's JSON defaults ({@code grails.converters.json.domain.include.version},
  * {@code grails.converters.json.domain.include.class} and {@code grails.converters.json.default.deep}), and every
- * property is written except those named by {@code @JsonIgnoreProperties} on the domain class or a superclass, as
- * Jackson leaves them out. GORM adds one to every domain class that names its own properties, such as
+ * persistent property is written except those Jackson leaves out, such as a property annotated {@code @JsonIgnore} or
+ * named by {@code @JsonIgnoreProperties}. GORM adds that annotation to every domain class, naming properties such as
  * {@code errors} and {@code tenantId}; the version is written when it is included regardless. Subclasses override the
  * methods to render differently.
  *
@@ -61,20 +59,6 @@ import org.grails.web.converters.marshaller.DomainClassFetcher;
 public class DomainClassRendering {
 
     private static final String HIBERNATE_PROXY = "org.hibernate.proxy.HibernateProxy";
-
-    private static final ClassValue<Set<String>> IGNORED_PROPERTIES = new ClassValue<>() {
-        @Override
-        protected Set<String> computeValue(Class<?> type) {
-            Set<String> ignored = new HashSet<>();
-            for (Class<?> current = type; current != null && current != Object.class; current = current.getSuperclass()) {
-                JsonIgnoreProperties ignoreProperties = current.getAnnotation(JsonIgnoreProperties.class);
-                if (ignoreProperties != null && !ignoreProperties.allowGetters()) {
-                    ignored.addAll(Arrays.asList(ignoreProperties.value()));
-                }
-            }
-            return Set.copyOf(ignored);
-        }
-    };
 
     private final GrailsApplication grailsApplication;
 
@@ -85,6 +69,8 @@ public class DomainClassRendering {
     private final boolean includeClass;
 
     private final boolean deep;
+
+    private final CircularReferenceBehaviour circularReferenceBehaviour;
 
     private final List<DomainClassFetcher> domainClassFetchers;
 
@@ -97,6 +83,22 @@ public class DomainClassRendering {
      */
     public DomainClassRendering(GrailsApplication grailsApplication, ProxyHandler proxyHandler, boolean includeVersion,
             boolean includeClass, boolean deep) {
+        this(grailsApplication, proxyHandler, includeVersion, includeClass, deep, null);
+    }
+
+    /**
+     * @param grailsApplication the application whose domain classes are rendered
+     * @param proxyHandler unwraps proxied domain class instances
+     * @param includeVersion whether to write the version
+     * @param includeClass whether to write the class name
+     * @param deep whether to render associated domain class instances in full, rather than as references of their id
+     * @param circularReferenceBehaviour what to write for an instance that is reached again while it is being written,
+     * as {@code grails.converters.json.circular.reference.behaviour} selects for the JSON converter; {@code null}
+     * writes a reference of its id
+     */
+    public DomainClassRendering(GrailsApplication grailsApplication, ProxyHandler proxyHandler, boolean includeVersion,
+            boolean includeClass, boolean deep, CircularReferenceBehaviour circularReferenceBehaviour) {
+        this.circularReferenceBehaviour = circularReferenceBehaviour;
         this.grailsApplication = grailsApplication;
         this.proxyHandler = proxyHandler != null ? proxyHandler : new DefaultProxyHandler();
         this.includeVersion = includeVersion;
@@ -129,12 +131,20 @@ public class DomainClassRendering {
     }
 
     /**
+     * @return what is written for an instance reached again while it is being written, or {@code null} for a reference
+     * of its id
+     */
+    public CircularReferenceBehaviour getCircularReferenceBehaviour() {
+        return circularReferenceBehaviour;
+    }
+
+    /**
      * @param object a domain class instance
      * @param property the name of one of its properties, or {@code class} or {@code version}
      * @return whether the property is written
      */
     public boolean includes(Object object, String property) {
-        return GormProperties.VERSION.equals(property) || !IGNORED_PROPERTIES.get(object.getClass()).contains(property);
+        return true;
     }
 
     /**
@@ -173,7 +183,7 @@ public class DomainClassRendering {
     /**
      * Whether the type is a GORM or Hibernate proxy class, which subclasses the class it proxies.
      */
-    private static boolean isProxyClass(Class<?> type) {
+    static boolean isProxyClass(Class<?> type) {
         if (EntityProxy.class.isAssignableFrom(type)) {
             return true;
         }
@@ -186,11 +196,18 @@ public class DomainClassRendering {
     }
 
     /**
+     * A GORM proxy is unwrapped by itself when the proxy handler leaves it as it is: only Hibernate registers a proxy
+     * handler, so that of an application on another datastore, such as MongoDB, unwraps nothing.
+     *
      * @param value a domain class instance, or a proxy of one
      * @return the instance itself
      */
     public Object unwrap(Object value) {
-        return proxyHandler.unwrapIfProxy(value);
+        Object unwrapped = proxyHandler.unwrapIfProxy(value);
+        if (unwrapped == value && value instanceof EntityProxy<?> proxy) {
+            return proxy.getTarget();
+        }
+        return unwrapped;
     }
 
     /**
@@ -205,6 +222,23 @@ public class DomainClassRendering {
             }
         }
         return null;
+    }
+
+    /**
+     * @param type a domain class, which is not a proxy class
+     * @return its persistent entity, or {@code null} if it has none
+     * @throws org.grails.core.exceptions.GrailsConfigurationException if GORM has not yet made its mapping metadata
+     * readable
+     */
+    PersistentEntity findEntityOfType(Class<?> type) {
+        PersistentEntity entity = grailsApplication != null ?
+                grailsApplication.getMappingContext().getPersistentEntity(type.getName()) : null;
+        if (entity == null) {
+            Datastore datastore = GormEnhancer.findDatastore(type);
+            MappingContext mappingContext = datastore != null ? datastore.getMappingContext() : null;
+            entity = mappingContext != null ? mappingContext.getPersistentEntity(type.getName()) : null;
+        }
+        return entity;
     }
 
     /**
@@ -237,6 +271,9 @@ public class DomainClassRendering {
             if (id != null) {
                 return id;
             }
+        }
+        if (reference instanceof EntityProxy<?> proxy && proxy.getProxyKey() != null) {
+            return proxy.getProxyKey();
         }
         return propertyValue(reference, idProperty);
     }

@@ -22,6 +22,8 @@ package grails.views.mvc.renderer
 import groovy.transform.CompileStatic
 import groovy.transform.InheritConstructors
 
+import org.springframework.http.HttpStatus
+import org.springframework.http.ProblemDetail
 import org.springframework.web.servlet.ModelAndView
 import org.springframework.web.servlet.view.AbstractUrlBasedView
 
@@ -32,6 +34,7 @@ import grails.rest.render.RendererRegistry
 import grails.views.mvc.SmartViewResolver
 import grails.views.resolve.TemplateResolverUtils
 import grails.web.mime.MimeType
+import org.grails.plugins.web.rest.render.ProblemDetailResponse
 import org.grails.plugins.web.rest.render.ServletRenderContext
 import org.grails.plugins.web.rest.render.html.DefaultHtmlRenderer
 import org.grails.web.util.GrailsApplicationAttributes
@@ -66,6 +69,13 @@ abstract class DefaultViewRenderer<T> extends DefaultHtmlRenderer<T> {
     @Override
     void render(Object object, RenderContext context) {
         def arguments = context.arguments
+        // A problem carries its own content type, which a view would replace: only the view that respond names renders
+        // it, answering with the status the problem carries
+        boolean problem = object instanceof ProblemDetail
+        if (problem && !arguments?.view) {
+            renderDefault(object, context)
+            return
+        }
         def ct = arguments?.contentType
 
         if (ct) {
@@ -107,7 +117,7 @@ abstract class DefaultViewRenderer<T> extends DefaultHtmlRenderer<T> {
             view = (AbstractUrlBasedView) viewResolver.resolveView(viewUri, request, response)
         }
 
-        if (view == null) {
+        if (view == null && !problem) {
             if (proxyHandler != null) {
                 object = (T) proxyHandler.unwrapIfProxy(object)
             }
@@ -118,6 +128,9 @@ abstract class DefaultViewRenderer<T> extends DefaultHtmlRenderer<T> {
         }
 
         if (view != null) {
+            if (problem) {
+                ProblemDetailResponse.prepare((ProblemDetail) object, context)
+            }
             Map<String, Object> model
             if (object instanceof Map) {
                 def map = (Map) object
@@ -140,7 +153,30 @@ abstract class DefaultViewRenderer<T> extends DefaultHtmlRenderer<T> {
             modelAndView.setView(view)
         }
         else {
+            renderDefault(object, context)
+        }
+    }
+
+    /**
+     * Without a view, the object is rendered by the renderer the format had before views were added. A format nothing
+     * else renders, such as XML without the {@code grails-xml} module, is not acceptable: the error is sent, as
+     * {@code respond} sends it when it finds no renderer, so that the application's error page applies. A problem is
+     * written as {@code application/problem+json} instead, as {@code respond} writes one in a format nothing writes.
+     */
+    private void renderDefault(Object object, RenderContext context) {
+        Renderer<?> problemRenderer = defaultRenderer == null && object instanceof ProblemDetail ?
+                rendererRegistry?.findRenderer(MimeType.JSON, object) : null
+        if (defaultRenderer != null) {
             defaultRenderer.render(object, context)
+        }
+        else if (problemRenderer != null) {
+            problemRenderer.render(object, context)
+        }
+        else if (context instanceof ServletRenderContext) {
+            ((ServletRenderContext) context).webRequest.currentResponse.sendError(HttpStatus.NOT_ACCEPTABLE.value())
+        }
+        else {
+            context.setStatus(HttpStatus.NOT_ACCEPTABLE)
         }
     }
 

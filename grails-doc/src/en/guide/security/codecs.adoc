@@ -106,7 +106,7 @@ The value `html` also selects HTML4 style escaping. Any other value, such as `xm
 
 *XMLCodec*
 
-This codec performs XML escaping and unescaping. It escapes & , < , > , " , ' , \\\\ , @ , ` , non breaking space (\\\\u00a0), line separator (\\\\u2028) and paragraph separator (\\\\u2029).
+This codec performs XML escaping and unescaping. Encoding an object other than text or a primitive renders it as XML with `grails.converters.XML` when the application includes the `grails-xml` module, which the Grails 9 web starter and `grails-web-boot` bring; without the module the object's string is escaped. It escapes & , < , > , " , ' , \\\\ , @ , ` , non breaking space (\\\\u00a0), line separator (\\\\u2028) and paragraph separator (\\\\u2029).
 
 
 *HTMLJSCodec*

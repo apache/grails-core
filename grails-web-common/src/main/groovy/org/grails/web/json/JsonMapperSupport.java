@@ -19,18 +19,24 @@
 package org.grails.web.json;
 
 import java.io.Writer;
+import java.util.ArrayList;
 import java.util.Enumeration;
+import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.function.Predicate;
 import java.util.stream.BaseStream;
 
+import tools.jackson.core.JacksonException;
 import tools.jackson.core.JsonGenerator;
 import tools.jackson.core.JsonParser;
 import tools.jackson.core.JsonToken;
 import tools.jackson.core.PrettyPrinter;
 import tools.jackson.core.StreamWriteFeature;
+import tools.jackson.databind.DeserializationFeature;
 import tools.jackson.databind.ObjectWriter;
 import tools.jackson.databind.SerializationContext;
 import tools.jackson.databind.SerializationFeature;
@@ -50,11 +56,11 @@ import tools.jackson.databind.util.TokenBuffer;
  * The Jackson {@link JsonMapper} that {@code grails.converters.JSON} writes through: Spring Boot's auto-configured
  * mapper in an application, so that {@code spring.jackson.*} settings apply, or a default mapper otherwise.
  *
- * <p>The mapper writes the JSON token stream, and writes every value that it has a dedicated serializer for, such as
- * dates and times, {@code Month}, {@code UUID}, {@code Locale}, {@code byte[]}, types with a {@code @JsonValue} and
- * the types that Jackson modules registered with the application serialize. Grails marshallers still render domain
- * classes, beans, records, enums, collections, maps, arrays and {@code Optional}, so the values they contain are
- * rendered as any other value is. The JSON text is written through {@link HtmlSafeJsonWriter}.
+ * <p>The mapper writes the JSON token stream, and the values the converter hands it: every value that it has a dedicated
+ * serializer for, such as dates and times, {@code Month}, {@code UUID}, {@code Locale}, {@code byte[]}, types with a
+ * {@code @JsonValue} and the types that Jackson modules registered with the application serialize, and, rendering as
+ * Spring Boot does, beans, records, collections, maps, arrays and {@code Optional} values, whose nested values the
+ * converter renders as any other value. The JSON text is written through {@link HtmlSafeJsonWriter}.
  *
  * <p>JSON is written with a copy of the mapper whose serializers offer the values nested in a value they write, such
  * as a property that a module's serializer writes, to the nested value writer the value is written with
@@ -73,28 +79,11 @@ public final class JsonMapperSupport {
 
     private final JsonMapper writingMapper;
 
-    private final ClassValue<Boolean> rendersValue = new ClassValue<>() {
-        @Override
-        protected Boolean computeValue(Class<?> type) {
-            if (isContainer(type)) {
-                return false;
-            }
-            try {
-                ValueSerializer<?> serializer = serializationContext().findValueSerializer(type);
-                if (Enum.class.isAssignableFrom(type) && serializer instanceof JsonValueSerializer) {
-                    // an enum renders by name(), so that it binds back, even when it has a @JsonValue
-                    return false;
-                }
-                return !(serializer instanceof BeanSerializerBase || serializer instanceof ToEmptyObjectSerializer ||
-                        serializer instanceof EnumSerializer || serializer instanceof ReferenceTypeSerializer ||
-                        serializer instanceof StdContainerSerializer || serializer instanceof UnsupportedTypeSerializer);
-            }
-            catch (RuntimeException | LinkageError e) {
-                // a type Jackson cannot build a serializer for is left to the Grails marshallers
-                return false;
-            }
-        }
-    };
+    private final Map<Object, Object> attributes;
+
+    private final ClassValue<Boolean> rendersValue;
+
+    private final ClassValue<Boolean> writesObjectIds;
 
     /**
      * @param mapper the mapper to write JSON with
@@ -102,6 +91,78 @@ public final class JsonMapperSupport {
     public JsonMapperSupport(JsonMapper mapper) {
         this.mapper = Objects.requireNonNull(mapper, "mapper cannot be null");
         this.writingMapper = mapper.rebuild().addModule(NestedValueSerializer.module()).build();
+        this.attributes = Map.of();
+        this.rendersValue = rendersValue();
+        this.writesObjectIds = writesObjectIds();
+    }
+
+    private ClassValue<Boolean> writesObjectIds() {
+        return new ClassValue<>() {
+            @Override
+            protected Boolean computeValue(Class<?> type) {
+                try {
+                    return serializationContext().findValueSerializer(type).usesObjectId();
+                }
+                catch (RuntimeException | LinkageError e) {
+                    return false;
+                }
+            }
+        };
+    }
+
+    private ClassValue<Boolean> rendersValue() {
+        return new ClassValue<>() {
+            @Override
+            protected Boolean computeValue(Class<?> type) {
+                if (isContainer(type)) {
+                    return false;
+                }
+                try {
+                    ValueSerializer<?> serializer = innermost(serializationContext().findValueSerializer(type));
+                    if (Enum.class.isAssignableFrom(type) && serializer instanceof JsonValueSerializer) {
+                        // an enum renders by name(), so that it binds back, even when it has a @JsonValue
+                        return false;
+                    }
+                    return !(serializer instanceof BeanSerializerBase || serializer instanceof ToEmptyObjectSerializer ||
+                            serializer instanceof EnumSerializer || serializer instanceof ReferenceTypeSerializer ||
+                            serializer instanceof StdContainerSerializer || serializer instanceof UnsupportedTypeSerializer);
+                }
+                catch (RuntimeException | LinkageError e) {
+                    // a type Jackson cannot build a serializer for is left to the Grails marshallers
+                    return false;
+                }
+            }
+        };
+    }
+
+    /** The serializer another one wraps, such as a bean serializer that tracks cycles, which decides what it writes. */
+    private static ValueSerializer<?> innermost(ValueSerializer<?> serializer) {
+        ValueSerializer<?> current = serializer;
+        for (ValueSerializer<?> delegatee = current.getDelegatee(); delegatee != null && delegatee != current;
+                delegatee = current.getDelegatee()) {
+            current = delegatee;
+        }
+        return current;
+    }
+
+    private JsonMapperSupport(JsonMapperSupport base, Map<Object, Object> attributes) {
+        this.mapper = base.mapper;
+        this.writingMapper = base.writingMapper;
+        this.attributes = attributes;
+        this.rendersValue = base.rendersValue;
+        this.writesObjectIds = base.writesObjectIds;
+    }
+
+    /**
+     * @param key the key of a serialization context attribute
+     * @param value its value, which serializers read with {@code SerializationContext#getAttribute}
+     * @return a support that writes with the same mapper, whose generators carry the attribute in addition to this
+     *         one's, so that a serializer can read what the writer knows about the write
+     */
+    public JsonMapperSupport withAttribute(Object key, Object value) {
+        Map<Object, Object> combined = new HashMap<>(attributes);
+        combined.put(key, value);
+        return new JsonMapperSupport(this, Map.copyOf(combined));
     }
 
     /**
@@ -122,7 +183,7 @@ public final class JsonMapperSupport {
      */
     public JsonGenerator createGenerator(Writer out, boolean prettyPrint) {
         // not indented unless asked to be, even when the mapper indents its output (spring.jackson.serialization.indent-output)
-        ObjectWriter writer = (prettyPrint ? writingMapper.writerWithDefaultPrettyPrinter() :
+        ObjectWriter writer = withAttributes(prettyPrint ? writingMapper.writerWithDefaultPrettyPrinter() :
                 writingMapper.writer().without(SerializationFeature.INDENT_OUTPUT))
                 .without(StreamWriteFeature.AUTO_CLOSE_TARGET)
                 .without(StreamWriteFeature.FLUSH_PASSED_TO_STREAM);
@@ -138,10 +199,19 @@ public final class JsonMapperSupport {
      * @return a generator writing to {@code out}
      */
     public JsonGenerator createGenerator(Writer out, PrettyPrinter prettyPrinter) {
-        ObjectWriter writer = writingMapper.writer().with(prettyPrinter)
+        ObjectWriter writer = withAttributes(writingMapper.writer().with(prettyPrinter))
                 .without(StreamWriteFeature.AUTO_CLOSE_TARGET)
                 .without(StreamWriteFeature.FLUSH_PASSED_TO_STREAM);
         return writer.createGenerator(new HtmlSafeJsonWriter(out));
+    }
+
+    /** The writer with this support's attributes added to those the mapper gives every write, which they leave in place. */
+    private ObjectWriter withAttributes(ObjectWriter writer) {
+        ObjectWriter attributed = writer;
+        for (Map.Entry<Object, Object> attribute : attributes.entrySet()) {
+            attributed = attributed.withAttribute(attribute.getKey(), attribute.getValue());
+        }
+        return attributed;
     }
 
     /**
@@ -156,6 +226,19 @@ public final class JsonMapperSupport {
      */
     public boolean rendersValue(Class<?> type) {
         return rendersValue.get(type);
+    }
+
+    /**
+     * Whether the mapper writes values of the type with object ids, as for a class annotated {@code @JsonIdentityInfo}:
+     * it writes the id of a value it has written already in the document, including a value reached again while it is
+     * being written.
+     *
+     * @param type a value type
+     * @return whether the mapper writes object ids for values of the type
+     * @since 9.0
+     */
+    public boolean writesObjectIds(Class<?> type) {
+        return writesObjectIds.get(type);
     }
 
     /**
@@ -183,6 +266,82 @@ public final class JsonMapperSupport {
      */
     public void writeValue(JsonGenerator generator, Object value, Predicate<Object> nestedValueWriter) {
         NestedValueSerializer.write(generator, value, nestedValueWriter);
+    }
+
+    /**
+     * Parses JSON text with the mapper's own parser, so that the parser features the mapper is configured with decide what
+     * is accepted, such as comments or single quotes. Objects and arrays become the {@link JSONObject}s and
+     * {@link JSONArray}s that {@code grails.converters.JSON#parse} has always returned, with the number types Grails' own
+     * parser gives: an {@code Integer}, a {@code Long} or a {@code BigInteger} for a number written with as many digits
+     * after the decimal point as its exponent moves, such as {@code 15} or {@code 1.5e1}; a {@code Double} for any other
+     * number written with the digits {@code Double.toString} writes for it, such as {@code 2.5}; and otherwise a
+     * {@code BigDecimal}, such as {@code 1.00}, {@code 1e3} or {@code 1e400}. NaN and Infinity, which a mapper may
+     * accept, are {@code Double}s.
+     *
+     * <p>Text after the value is rejected, as the mapper rejects it when it reads a value, unless the mapper disables
+     * {@code DeserializationFeature.FAIL_ON_TRAILING_TOKENS}.
+     *
+     * @param text the JSON text
+     * @return the value: a {@code JSONObject}, a {@code JSONArray}, a {@code String}, a number, a {@code Boolean} or
+     *         {@code null}
+     * @throws JSONException if the text is not JSON the mapper's parser accepts
+     * @since 9.0
+     */
+    public Object parse(String text) throws JSONException {
+        try (JsonParser parser = mapper.createParser(text)) {
+            JsonToken token = parser.nextToken();
+            if (token == null) {
+                throw new JSONException("A JSON text must have a value");
+            }
+            Object value = readValue(parser, token);
+            if (mapper.isEnabled(DeserializationFeature.FAIL_ON_TRAILING_TOKENS) && parser.nextToken() != null) {
+                throw new JSONException("Unexpected " + parser.currentToken() + " after the JSON value");
+            }
+            return value;
+        }
+        catch (JacksonException e) {
+            throw new JSONException(e);
+        }
+    }
+
+    private static Object readValue(JsonParser parser, JsonToken token) {
+        switch (token) {
+            case START_OBJECT -> {
+                Map<String, Object> properties = new LinkedHashMap<>();
+                for (JsonToken next = parser.nextToken(); next == JsonToken.PROPERTY_NAME; next = parser.nextToken()) {
+                    String name = parser.currentName();
+                    properties.put(name, readValue(parser, parser.nextToken()));
+                }
+                return new JSONObject(properties);
+            }
+            case START_ARRAY -> {
+                List<Object> elements = new ArrayList<>();
+                for (JsonToken next = parser.nextToken(); next != JsonToken.END_ARRAY; next = parser.nextToken()) {
+                    if (next == null) {
+                        throw new JSONException("A JSON array must end with ']'");
+                    }
+                    elements.add(readValue(parser, next));
+                }
+                return new JSONArray(elements);
+            }
+            case VALUE_STRING -> {
+                return parser.getString();
+            }
+            case VALUE_NUMBER_INT, VALUE_NUMBER_FLOAT -> {
+                // NaN and Infinity, which the mapper may accept, have no decimal value
+                return parser.isNaN() ? parser.getDoubleValue() : JSONTokener.number(parser.getDecimalValue());
+            }
+            case VALUE_TRUE -> {
+                return Boolean.TRUE;
+            }
+            case VALUE_FALSE -> {
+                return Boolean.FALSE;
+            }
+            case VALUE_NULL -> {
+                return null;
+            }
+            default -> throw new JSONException("Unexpected " + token + " in a JSON text");
+        }
     }
 
     /**

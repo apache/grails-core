@@ -26,9 +26,9 @@ import grails.util.GrailsWebMockUtil
 import grails.web.mime.MimeType
 import org.grails.config.PropertySourcesConfig
 import org.grails.core.lifecycle.ShutdownOperations
+import org.grails.web.util.GrailsApplicationAttributes
 import org.grails.plugins.web.mime.MimeTypesConfiguration
 import org.grails.web.mime.DefaultMimeUtility
-import org.grails.web.mime.HttpServletResponseExtension
 import org.springframework.context.ApplicationContext
 import org.springframework.context.support.GenericApplicationContext
 import org.springframework.core.env.MapPropertySource
@@ -55,8 +55,6 @@ class RequestAndResponseMimeTypesApiSpec extends Specification{
     }
 
     void setup() {
-        // Clear the static mimeTypes cache to prevent test environment pollution
-        HttpServletResponseExtension.@mimeTypes = null
         application = new DefaultGrailsApplication()
         application.config = testConfig
     }
@@ -64,8 +62,6 @@ class RequestAndResponseMimeTypesApiSpec extends Specification{
     void cleanup() {
         RequestContextHolder.resetRequestAttributes()
         ShutdownOperations.runOperations()
-        // Clear the static mimeTypes cache after each test for test isolation
-        HttpServletResponseExtension.@mimeTypes = null
     }
 
     void "Test format property is valid for CONTENT_TYPE header only"() {
@@ -152,6 +148,79 @@ class RequestAndResponseMimeTypesApiSpec extends Specification{
             request.getFormat() == "all" // call twice to test cached value
             request.format == 'all'
             response.format == 'json'
+    }
+
+    void "media type names in the Accept header are matched case-insensitively"() {
+        when: "The Accept header names a configured media type in mixed case"
+            final webRequest = boundMimeTypeRequest()
+            MockHttpServletRequest request = webRequest.currentRequest
+            request.addHeader('Accept', 'Application/JSON')
+
+        then:
+            webRequest.currentResponse.format == 'json'
+    }
+
+    @Unroll
+    void "a configured media type with capitals matches #header in the Accept and Content-Type headers"() {
+        when:
+            final webRequest = boundMimeTypeRequest()
+            MockHttpServletRequest request = webRequest.currentRequest
+            def response = webRequest.currentResponse
+            request.contentType = header
+            request.addHeader('Accept', header)
+            def result = response.withFormat {
+                json { 'json' }
+                acme { 'acme' }
+            }
+
+        then:
+            request.format == 'acme'
+            response.format == 'acme'
+            result == 'acme'
+
+        where:
+            header << ['application/vnd.Acme+json', 'application/vnd.acme+json']
+    }
+
+    void "a bare * in the Accept header matches no configured media type"() {
+        when:
+            final webRequest = boundMimeTypeRequest()
+            MockHttpServletRequest request = webRequest.currentRequest
+            request.addHeader('Accept', '*')
+
+        then: "as in Grails 8, the whole configured list is the answer, not */* alone"
+            webRequest.currentResponse.format == 'all'
+            webRequest.currentResponse.mimeTypes.size() > 1
+    }
+
+    void "the format parameter overrides the Accept header"() {
+        when:
+            final webRequest = boundMimeTypeRequest()
+            webRequest.currentRequest.addHeader('Accept', 'application/json')
+            webRequest.params.format = 'xml'
+
+        then:
+            webRequest.currentResponse.format == 'xml'
+    }
+
+    void "the response format request attribute overrides the Accept header"() {
+        when:
+            final webRequest = boundMimeTypeRequest()
+            webRequest.currentRequest.addHeader('Accept', 'application/json')
+            webRequest.currentRequest.setAttribute(GrailsApplicationAttributes.RESPONSE_FORMAT, 'xml')
+
+        then:
+            webRequest.currentResponse.format == 'xml'
+    }
+
+    void "an Accept header without a configured media type resolves to the all format"() {
+        when: "The Accept header names only media types that are not configured"
+            final webRequest = boundMimeTypeRequest()
+            MockHttpServletRequest request = webRequest.currentRequest
+            request.addHeader('Accept', 'image/avif, image/webp')
+
+        then:
+            webRequest.currentResponse.format == 'all'
     }
 
     void "Test withFormat method with CONTENT_TYPE header only"() {
@@ -307,6 +376,32 @@ class RequestAndResponseMimeTypesApiSpec extends Specification{
 
     
 
+    @Unroll
+    void "withFormat follows the Accept header of an XHR request from #userAgent unless #additionalConfig"() {
+        setup:
+            def config = getTestConfig()
+            config.merge(new ConfigSlurper().parse('grails.mime.disable.accept.header.userAgents = ["Trident"]\n' + additionalConfig))
+            application.setConfig(config)
+            final webRequest = boundMimeTypeRequest()
+            def request = webRequest.currentRequest
+            request.addHeader('Accept', 'application/xml, text/html, */*')
+            request.addHeader('User-Agent', userAgent)
+            request.addHeader('X-Requested-With', 'XMLHttpRequest')
+            def responseResult = webRequest.currentResponse.withFormat {
+                json { 'got json' }
+                html { 'got html' }
+            }
+
+        expect:
+            responseResult == formatResponse
+
+        where:
+            formatResponse | userAgent | additionalConfig
+            'got html'     | 'Trident' | ''
+            'got json'     | 'Trident' | 'grails.mime.disable.accept.header.userAgentsXhr = true'
+            'got json'     | 'Mozilla' | 'grails.mime.use.accept.header = false'
+    }
+
     private MimeType[] buildMimeTypes() {
         final def mainContext = new GenericApplicationContext()
         mainContext.refresh()
@@ -336,6 +431,7 @@ grails.mime.types = [
                       css: 'text/css',
                       csv: 'text/csv',
                       json: ['application/json','text/json'],
+                      acme: 'application/vnd.Acme+json',
                       form: 'application/x-www-form-urlencoded',
                       multipartForm: 'multipart/form-data'
                     ]

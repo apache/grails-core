@@ -31,15 +31,26 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.regex.Pattern
 
+import groovy.json.JsonSlurper
+
+import com.fasterxml.jackson.annotation.JsonFormat
+import com.fasterxml.jackson.annotation.JsonIdentityInfo
 import com.fasterxml.jackson.annotation.JsonIgnore
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties
+import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.annotation.JsonProperty
+import com.fasterxml.jackson.annotation.JsonTypeInfo
+import com.fasterxml.jackson.annotation.JsonPropertyOrder
+import com.fasterxml.jackson.annotation.JsonUnwrapped
 import com.fasterxml.jackson.annotation.JsonValue
+import com.fasterxml.jackson.annotation.ObjectIdGenerators
 import spock.lang.Shared
 import spock.lang.Specification
 import spock.lang.Timeout
 import tools.jackson.core.JsonGenerator
 import tools.jackson.databind.SerializationContext
 import tools.jackson.databind.SerializationFeature
+import tools.jackson.databind.cfg.ContextAttributes
 import tools.jackson.databind.json.JsonMapper
 import tools.jackson.databind.module.SimpleModule
 import tools.jackson.databind.ser.std.StdSerializer
@@ -49,6 +60,8 @@ import org.springframework.context.support.GenericApplicationContext
 import org.springframework.validation.BeanPropertyBindingResult
 
 import grails.converters.JSON
+import grails.persistence.PersistenceMethod
+import grails.web.controllers.ControllerMethod
 import grails.core.DefaultGrailsApplication
 import grails.core.support.proxy.DefaultProxyHandler
 import grails.core.support.proxy.ProxyHandler
@@ -58,8 +71,10 @@ import org.grails.web.converters.configuration.ConvertersConfigurationHolder
 import org.grails.web.converters.configuration.ConvertersConfigurationInitializer
 import org.grails.web.converters.configuration.ObjectMarshallerRegisterer
 import org.grails.web.converters.exceptions.ConverterException
+import org.grails.web.converters.jackson.GrailsJsonMapperCustomizer
 import org.grails.web.converters.marshaller.ClosureObjectMarshaller
 import org.grails.web.converters.marshaller.ObjectMarshaller
+import org.grails.web.converters.marshaller.json.JsonMapperValueMarshaller
 import org.grails.web.converters.marshaller.json.ValidationErrorsMarshaller
 import org.grails.web.json.DateTimeValues
 import org.grails.web.json.JSONWriter
@@ -105,6 +120,68 @@ class JsonMapperRenderingSpec extends Specification {
 
         expect:
         new JSON(map).toString(true) == jackson.writerWithDefaultPrettyPrinter().writeValueAsString(map)
+    }
+
+    void "a property's @JsonFormat shape applies, as the JsonMapper applies it"() {
+        given:
+        def bean = new ShapedValues(count: 5L, born: new Date(0))
+
+        expect:
+        new JSON(bean).toString() == '{"born":"1970-01-01","count":"5"}'
+        new JSON(bean).toString() == jackson.writeValueAsString(bean)
+    }
+
+    void "a @JsonUnwrapped property is written into the enclosing object, as the JsonMapper writes it"() {
+        given:
+        def holder = new UnwrapHolder(address: new UnwrapAddress(street: 'Main'), note: 'n')
+
+        expect:
+        new JSON(holder).toString() == '{"street":"Main","note":"n"}'
+        new JSON(holder).toString() == jackson.writeValueAsString(holder)
+    }
+
+    void "the annotations of a property apply to the bean, collection or map it holds, as the JsonMapper applies them"() {
+        given:
+        def account = new Account(user: 'ada', secret: 's3cret')
+        def holder = new AccountHolder(account: account, accounts: [account], accountsByName: [ada: account])
+
+        expect:
+        new JSON(holder).toString() ==
+                '{"account":{"user":"ada"},"accounts":[{"user":"ada"}],"accountsByName":{"ada":{"user":"ada"}}}'
+        new JSON(holder).toString() == jackson.writeValueAsString(holder)
+    }
+
+    void "an enum written with a type id renders by name, with the type id the JsonMapper writes"() {
+        given:
+        def holder = new TypedValueHolder(value: Tint.RED)
+
+        expect:
+        new JSON(holder).toString() == jackson.writeValueAsString(holder)
+        new JSON(holder).toString().contains('"RED"')
+    }
+
+    void "the default attributes of the application's JsonMapper reach its serializers"() {
+        given:
+        def context = applicationContext {
+            it.registerBean(JsonMapper, {
+                JsonMapper.builder()
+                        .defaultAttributes(ContextAttributes.getEmpty().withSharedAttribute('who', 'app'))
+                        .addModule(new SimpleModule().addSerializer(Echo, new EchoSerializer()))
+                        .build()
+            })
+        }
+        initialize([:], context)
+
+        expect:
+        new JSON([echo: new Echo()]).toString() == '{"echo":"app"}'
+
+        cleanup:
+        context.close()
+    }
+
+    void "the methods Grails adds to a bean as persistence or controller methods are not written"() {
+        expect:
+        new JSON(new MarkedMethods(title: 'Grails')).toString() == '{"title":"Grails"}'
     }
 
     void "enums render by name, as in Grails 8, and a Month as its number"() {
@@ -267,6 +344,81 @@ class JsonMapperRenderingSpec extends Specification {
         'INSERT_NULL' | 'null'                 || null
     }
 
+    void "a bean with @JsonIdentityInfo reached again renders as the mapper's object id, not as a circular reference"() {
+        given:
+        def first = new IdentifiedNode(name: 'first')
+        first.next = new IdentifiedNode(name: 'second', next: first)
+
+        expect:
+        new JSON(first).toString() == '{"@id":1,"name":"first","next":{"@id":2,"name":"second","next":1}}'
+    }
+
+    @Timeout(10)
+    void "a bean with @JsonIdentityInfo that a registered marshaller writes is a circular reference when reached again"() {
+        given:
+        JSON.registerObjectMarshaller(IdentifiedNode) { IdentifiedNode node -> [name: node.name, next: node.next] }
+        def first = new IdentifiedNode(name: 'first')
+        first.next = new IdentifiedNode(name: 'second', next: first)
+
+        when:
+        def json = JSON.parse(new JSON(first).toString())
+
+        then: 'the mapper never writes the bean, so it has no object id to write'
+        json.name == 'first'
+        json.next.name == 'second'
+        json.next.next._ref
+        json.next.next['class'] == IdentifiedNode.name
+    }
+
+    @Timeout(10)
+    void "a bean with @JsonIdentityInfo that a subclass of the mapper's marshaller writes itself is a circular reference when reached again"() {
+        given:
+        JSON.registerObjectMarshaller(new JsonMapperValueMarshaller() {
+            @Override
+            boolean supports(Object object) {
+                object instanceof IdentifiedNode
+            }
+
+            @Override
+            void marshalObject(Object object, JSON converter) {
+                IdentifiedNode node = (IdentifiedNode) object
+                converter.convertAnother([name: node.name, next: node.next])
+            }
+        })
+        def first = new IdentifiedNode(name: 'first')
+        first.next = new IdentifiedNode(name: 'second', next: first)
+
+        when:
+        def json = JSON.parse(new JSON(first).toString())
+
+        then:
+        json.name == 'first'
+        json.next.name == 'second'
+        json.next.next._ref
+        json.next.next['class'] == IdentifiedNode.name
+    }
+
+    void "a subclass of the mapper's marshaller that writes a single value itself writes it wherever it is nested"() {
+        given:
+        def id = UUID.fromString('0f8fad5b-d9cb-469f-a165-70867728950e')
+        JSON.registerObjectMarshaller(new JsonMapperValueMarshaller() {
+            @Override
+            boolean supports(Object object) {
+                object instanceof UUID
+            }
+
+            @Override
+            void marshalObject(Object object, JSON converter) {
+                converter.convertAnother(object.toString().toUpperCase())
+            }
+        })
+
+        expect:
+        new JSON(id).toString() == '"0F8FAD5B-D9CB-469F-A165-70867728950E"'
+        new JSON([id: id, ids: [id]]).toString() ==
+                '{"id":"0F8FAD5B-D9CB-469F-A165-70867728950E","ids":["0F8FAD5B-D9CB-469F-A165-70867728950E"]}'
+    }
+
     void "with the PATH circular reference behaviour, a reference through a module serializer has the path of the value it writes"() {
         given:
         def context = moduleContext()
@@ -356,6 +508,23 @@ class JsonMapperRenderingSpec extends Specification {
         context.close()
     }
 
+    void "validation errors render without the values that were rejected, as the mapper writes them"() {
+        given:
+        def errors = new BeanPropertyBindingResult(new Holder(name: 'secret'), 'holder')
+        errors.rejectValue('name', 'invalid', 'Name is invalid')
+
+        when:
+        def written = new JsonSlurper().parseText(new JSON(errors).toString())
+
+        then:
+        written.errors.size() == 1
+        written.errors[0].keySet() as List == ['object', 'field', 'codes', 'message']
+        written.errors[0].object == 'holder'
+        written.errors[0].field == 'name'
+        written.errors[0].message == 'Name is invalid'
+        !new JSON(errors).toString().contains('secret')
+    }
+
     void "the validation errors marshaller takes precedence over a module serializer for Errors"() {
         given: 'the errors marshaller registered as the converters plugin registers it'
         def context = applicationContext {
@@ -377,6 +546,25 @@ class JsonMapperRenderingSpec extends Specification {
         context.close()
     }
 
+    void "an application serializer takes precedence over the converter's own, as it does in Grails responses"() {
+        given:
+        def context = applicationContext {
+            it.registerBean(JsonMapper, {
+                JsonMapper.builder().addModule(new SimpleModule().addSerializer(BeanPropertyBindingResult, new MapperErrorsSerializer())).build()
+            })
+        }
+        initialize([:], context)
+        def errors = new BeanPropertyBindingResult(new Object(), 'test')
+        errors.reject('failed', 'Error happening on test object.')
+
+        expect:
+        new JSON(errors).toString() == '"written by the mapper"'
+        new GrailsJsonMapperCustomizer().forGrails(context.getBean(JsonMapper)).writeValueAsString(errors) == '"written by the mapper"'
+
+        cleanup:
+        context.close()
+    }
+
     void "a Throwable is rendered by the bean marshallers, as in Grails 8"() {
         given:
         def error = new IllegalStateException('boom')
@@ -388,9 +576,30 @@ class JsonMapperRenderingSpec extends Specification {
         rendered == new JSON([error: error]).toString()
     }
 
-    void "a record renders as an object of its components, without the Jackson annotations on them"() {
+    void "a record renders as Jackson renders it, with the annotations on its components"() {
         expect:
-        new JSON([person: new Person('Ada', 'x')]).toString() == '{"person":{"firstName":"Ada","ssn":"x"}}'
+        new JSON([person: new Person('Ada', 'x')]).toString() == '{"person":{"first_name":"Ada"}}'
+    }
+
+    void "a map with a null key fails, as it does for Spring Boot, where the Grails 8 converter left the entry out"() {
+        when:
+        new JSON([(null): 1, a: 2]).toString()
+
+        then:
+        def e = thrown(RuntimeException)
+        e.message.contains('Null key for a Map not allowed in JSON')
+    }
+
+    void "a collection that contains itself renders as an empty collection where it repeats, as before"() {
+        given:
+        List list = []
+        list << list
+        Map map = [:]
+        map.self = map
+
+        expect:
+        new JSON(list).toString() == '[[]]'
+        new JSON(map).toString() == '{"self":{}}'
     }
 
     void "a marshaller an ObjectMarshallerRegisterer registers takes precedence"() {
@@ -410,7 +619,21 @@ class JsonMapperRenderingSpec extends Specification {
         context.close()
     }
 
-    void "beans, map entries and domain-like objects are rendered by their marshallers"() {
+    void "a bean renders as Jackson renders it, with the annotations on its properties"() {
+        expect:
+        new JSON(new AnnotatedBean(firstName: 'Ada', secret: 's')).toString() == '{"first_name":"Ada"}'
+    }
+
+    void "the includes and excludes of the converter decide which properties of a bean are written"() {
+        given:
+        def json = new JSON(new Holder(name: 'Fred', role: Role.ADMIN, unit: ChronoUnit.DAYS))
+        json.setExcludes(Holder, ['created', 'amount', 'unit'])
+
+        expect:
+        json.toString() == '{"name":"Fred","role":"ADMIN"}'
+    }
+
+    void "beans and map entries are rendered by the mapper"() {
         given:
         def bean = new Holder(name: 'Fred', created: new Date(1790305200000L), role: Role.ADMIN, unit: ChronoUnit.DAYS,
                 amount: new BigDecimal('10.50'))
@@ -418,7 +641,7 @@ class JsonMapperRenderingSpec extends Specification {
         expect:
         new JSON(bean).toString() ==
                 '{"amount":10.50,"created":"2026-09-25T03:00:00.000Z","name":"Fred","role":"ADMIN","unit":"DAYS"}'
-        new JSON([entry: new AbstractMap.SimpleEntry('k', 1)]).toString() == '{"entry":{"key":"k","value":1}}'
+        new JSON([entry: new AbstractMap.SimpleEntry('k', 1)]).toString() == '{"entry":{"k":1}}'
     }
 
     void "a value a marshaller writes directly to the writer is quoted, as JSONWriter quotes it"() {
@@ -559,6 +782,13 @@ class JsonMapperRenderingSpec extends Specification {
 
 enum Role { HEAD, DISPATCHER, ADMIN }
 
+enum Tint { RED }
+
+class TypedValueHolder {
+    @JsonTypeInfo(use = JsonTypeInfo.Id.CLASS)
+    Object value
+}
+
 enum BodyStatus {
     ACTIVE('A') {
         @Override
@@ -636,6 +866,76 @@ record Point(int x, int y) {}
 
 record Dated(Date when) {}
 
+class ShapedValues {
+    @JsonFormat(shape = JsonFormat.Shape.STRING)
+    Long count
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = 'yyyy-MM-dd', timezone = 'UTC')
+    Date born
+}
+
+class UnwrapAddress {
+    String street
+}
+
+class UnwrapHolder {
+    @JsonUnwrapped
+    UnwrapAddress address
+    String note
+}
+
+class Account {
+    String user
+    String secret
+}
+
+@JsonPropertyOrder(['account', 'accounts', 'accountsByName'])
+class AccountHolder {
+    @JsonIgnoreProperties(['secret'])
+    Account account
+    @JsonIgnoreProperties(['secret'])
+    List<Account> accounts
+    @JsonIgnoreProperties(['secret'])
+    Map<String, Account> accountsByName
+}
+
+class Echo { }
+
+/** Writes the attribute a write carries. */
+class EchoSerializer extends StdSerializer<Echo> {
+
+    EchoSerializer() {
+        super(Echo)
+    }
+
+    @Override
+    void serialize(Echo value, JsonGenerator generator, SerializationContext context) {
+        generator.writeString(String.valueOf(context.getAttribute('who')))
+    }
+}
+
+class MarkedMethods {
+    String title
+
+    @PersistenceMethod
+    List<String> getDirtyPropertyNames() {
+        ['title']
+    }
+
+    @ControllerMethod
+    String getActionName() {
+        'show'
+    }
+}
+
+class AnnotatedBean {
+    @JsonProperty('first_name')
+    String firstName
+    @JsonIgnore
+    String secret
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    String nickname
+}
+
 record Person(@JsonProperty('first_name') String firstName, @JsonIgnore String ssn) {}
 
 class MapperErrorsSerializer extends StdSerializer<BeanPropertyBindingResult> {
@@ -688,6 +988,12 @@ class Node {
     String name
     Node parent
     List<Node> children
+}
+
+@JsonIdentityInfo(generator = ObjectIdGenerators.IntSequenceGenerator)
+class IdentifiedNode {
+    String name
+    IdentifiedNode next
 }
 
 class Secret {

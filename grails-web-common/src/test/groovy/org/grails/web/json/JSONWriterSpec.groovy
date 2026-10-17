@@ -127,6 +127,56 @@ class JSONWriterSpec extends Specification {
         out.toString() == '["<\\/a>1\\u2028","<\\/b>\\u2028","<\\u002fc>\\u2028"]'
     }
 
+    void 'a scalar root is a complete JSON document with #writerType.simpleName'() {
+        given:
+        def output = new StringWriter()
+        def writer = writerType.getConstructor(Writer).newInstance(output)
+
+        when:
+        writer.value(value)
+
+        then:
+        output.toString() == expected
+
+        when: 'a second root is refused and leaves the text as it was'
+        writer.value('another root')
+
+        then:
+        thrown(JSONException)
+        output.toString() == expected
+
+        where:
+        [writerType, value, expected] << [JSONWriter, PrettyPrintJSONWriter].collectMany { type ->
+            [
+                [type, 'ok', '"ok"'],
+                [type, 'a"b\nc', '"a\\"b\\nc"'],
+                [type, "Hi ${'Ada'}", '"Hi Ada"'],
+                [type, 42L, '42'],
+                [type, 1.5d, '1.5'],
+                [type, true, 'true'],
+                [type, null, 'null'],
+            ]
+        }
+    }
+
+    void "a JsonMapperSupport with an attribute writes with it, and the one it derives from does not"() {
+        given: 'a serializer that writes the attribute of the write'
+        def mapper = JsonMapper.builder().addModule(new SimpleModule()
+                .addSerializer(Box, new AttributeSerializer())).build()
+        def support = new JsonMapperSupport(mapper)
+        def derived = support.withAttribute('who', 'the writer')
+        def plain = new StringWriter()
+        def attributed = new StringWriter()
+
+        when:
+        new JSONWriter(plain, support, false).value(new JsonMapperValue(new Box(content: 'x'), support))
+        new JSONWriter(attributed, derived, false).value(new JsonMapperValue(new Box(content: 'x'), derived))
+
+        then:
+        plain.toString() == '"none"'
+        attributed.toString() == '"the writer"'
+    }
+
     void "a single value is a JSON text, written without a flush"() {
         when:
         new JSONWriter(out).value('x')
@@ -328,5 +378,17 @@ class BoxSerializer extends StdSerializer<Box> {
         generator.writeName('content')
         generator.writePOJO(box.content)
         generator.writeEndObject()
+    }
+}
+
+class AttributeSerializer extends StdSerializer<Box> {
+
+    AttributeSerializer() {
+        super(Box)
+    }
+
+    @Override
+    void serialize(Box box, JsonGenerator generator, SerializationContext context) {
+        generator.writeString((context.getAttribute('who') ?: 'none') as String)
     }
 }

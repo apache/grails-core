@@ -1,0 +1,10 @@
+{
+    "properties": [
+        {
+            "name": "grails.web.rendering.json.spring",
+            "type": "java.lang.Boolean",
+            "defaultValue": false,
+            "description": "Render respond JSON through Spring MVC converters. Opt-in in Grails 9, default in Grails 10; the legacy response path is removed in Grails 11."
+        }
+    ]
+}

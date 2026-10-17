@@ -39,6 +39,9 @@ dependencies {
     implementation platform(project(':grails-bom'))
 
     api project(':grails-web-common')
+    // Compatibility default through Grails 9, as in the web starter, for the applications forge and the profiles
+    // generate, which list the Grails modules rather than the starter; optional from Grails 10.
+    api project(':grails-xml')
     api 'org.apache.groovy:groovy'
 
     testImplementation project(':grails-controllers')

@@ -18,38 +18,58 @@
  */
 package org.grails.web.converters.marshaller.json;
 
+import java.lang.reflect.Method;
+
+import org.springframework.util.ReflectionUtils;
+
 import grails.converters.JSON;
-import org.grails.web.converters.configuration.ConvertersConfigurationHolder;
 import org.grails.web.converters.exceptions.ConverterException;
 import org.grails.web.converters.marshaller.ObjectMarshaller;
 import org.grails.web.json.JSONException;
 import org.grails.web.json.JsonMapperValue;
 
 /**
- * Renders a value with the {@link org.grails.web.json.JsonMapperSupport JsonMapper} that {@link JSON} writes through,
- * as Spring Boot renders it, when the mapper has a dedicated serializer for a single value of its type: dates and
- * times, {@code Month}, {@code UUID}, {@code Locale}, {@code byte[]}, types with a {@code @JsonValue} and the types
- * that Jackson modules registered with the application serialize
- * (see {@link org.grails.web.json.JsonMapperSupport#rendersValue(Class)}).
+ * Renders a value with the {@link org.grails.web.json.JsonMapperSupport JsonMapper} that {@link JSON} writes through, as
+ * Spring Boot renders it: a single value, such as a date or time, a {@code UUID} or a type with a {@code @JsonValue}, a
+ * collection, a map, an array, a record, an {@code Optional}, an enum or a bean, with the rules of
+ * {@link org.grails.web.converters.jackson.ConverterJsonModule}.
  *
- * <p>It is registered after {@code ProxyUnwrappingMarshaller} and the domain class marshaller, and ahead of the enum,
- * record, {@code Optional}, collection, map and bean marshallers, so those never see such a value. Any marshaller an
+ * <p>It is registered last, after {@code ProxyUnwrappingMarshaller} and the domain class marshaller, so those never lose
+ * a value to it, and every value no marshaller before it supports is written by the mapper. Any marshaller an
  * application registers takes precedence for the types it supports.
  *
- * <p>A value nested in a value the mapper writes, such as a property that a Jackson module's serializer writes with
- * {@code JsonGenerator#writePOJO}, is rendered by the converter as any other value is, so marshallers apply to it.
- * Only the values the converter would render with the mapper anyway are left to the mapper.
+ * <p>A value nested in a value the mapper writes, such as a property of a bean, an element of a collection or a property
+ * that a Jackson module's serializer writes with {@code JsonGenerator#writePOJO}, is rendered by the converter as any
+ * other value is, so marshallers apply to it. Only the single values the mapper writes anyway are left to it.
  *
  * @since 9.0
  */
 public class JsonMapperValueMarshaller implements ObjectMarshaller<JSON> {
 
+    private static final ClassValue<Boolean> OVERRIDES_MARSHAL_OBJECT = new ClassValue<>() {
+        @Override
+        protected Boolean computeValue(Class<?> type) {
+            Method marshalObject = ReflectionUtils.findMethod(type, "marshalObject", Object.class, JSON.class);
+            return marshalObject != null && marshalObject.getDeclaringClass() != JsonMapperValueMarshaller.class;
+        }
+    };
+
     public boolean supports(Object object) {
-        return ConvertersConfigurationHolder.getJsonMapperSupport().rendersValue(object.getClass());
+        return true;
     }
 
     public void marshalObject(Object object, JSON converter) throws ConverterException {
         write(object, converter);
+    }
+
+    /**
+     * @param marshaller the marshaller of a value
+     * @return whether it writes the value with the converter's mapper, as this marshaller and the domain class
+     *         marshaller do, unless a subclass writes it itself
+     */
+    public static boolean writesWithMapper(ObjectMarshaller<JSON> marshaller) {
+        return marshaller instanceof JsonMapperValueMarshaller && !OVERRIDES_MARSHAL_OBJECT.get(marshaller.getClass()) ||
+                marshaller instanceof DomainClassMarshaller domainClassMarshaller && domainClassMarshaller.writesWithMapper();
     }
 
     /**
@@ -66,7 +86,10 @@ public class JsonMapperValueMarshaller implements ObjectMarshaller<JSON> {
     }
 
     private static boolean writeNested(Object nested, JSON converter) {
-        if (converter.lookupObjectMarshaller(nested) instanceof JsonMapperValueMarshaller) {
+        // A single value is left to the mapper, but any other goes back through the converter, which keeps track of the
+        // objects it is rendering, so that one that contains itself is found
+        if (writesWithMapper(converter.lookupObjectMarshaller(nested)) &&
+                converter.getJsonMapperSupport().rendersValue(nested.getClass())) {
             return false;
         }
         converter.getWriter().writeNested(() -> converter.convertAnother(nested));

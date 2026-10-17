@@ -18,14 +18,79 @@
  */
 package org.grails.web.databinding.bindingsource.json
 
-import groovy.json.JsonException
+import groovy.json.JsonParserType
+import groovy.json.JsonSlurper
+
+import org.grails.core.lifecycle.ShutdownOperations
+import org.grails.web.databinding.bindingsource.HalJsonDataBindingSourceCreator
+import org.grails.web.databinding.bindingsource.JsonApiDataBindingSourceCreator
 import org.grails.web.databinding.bindingsource.JsonDataBindingSourceCreator
+import grails.web.databinding.GrailsWebDataBinder
+import grails.web.mime.MimeType
 
 import spock.lang.Specification
 
 import java.nio.charset.StandardCharsets
 
+import org.grails.web.databinding.bindingsource.InvalidRequestBodyException
+
+import tools.jackson.core.json.JsonReadFeature
+import tools.jackson.databind.json.JsonMapper
+import org.springframework.context.annotation.AnnotationConfigApplicationContext
+import org.springframework.context.support.PropertySourcesPlaceholderConfigurer
+import org.springframework.core.env.MapPropertySource
+
 class JsonDataBindingSourceCreatorSpec extends Specification {
+
+    void 'JSON decimals bind as BigDecimal so fractional values keep their digits'() {
+        given: "a body carrying values that lose digits when read as a double"
+        def json = '{"price": 1.15, "precise": 12345678901234567890.12345, "qty": 3}'
+        def inputStream = new ByteArrayInputStream(json.getBytes(StandardCharsets.UTF_8))
+
+        when:
+        def bindingSource = new JsonDataBindingSourceCreator()
+                .createDataBindingSource(MimeType.JSON, Object, inputStream)
+
+        then: "decimals arrive as BigDecimal, matching the digits the request sent"
+        bindingSource['price'] instanceof BigDecimal
+        bindingSource['price'] == 1.15G
+        bindingSource['precise'] instanceof BigDecimal
+        bindingSource['precise'].toPlainString() == '12345678901234567890.12345'
+
+        and: "integral values are unaffected"
+        bindingSource['qty'] instanceof Integer
+        bindingSource['qty'] == 3
+    }
+
+    void 'with Jackson, #number binds as the legacy parser binds it'() {
+        given:
+        def body = { new ByteArrayInputStream("{\"n\": ${number}}".getBytes(StandardCharsets.UTF_8)) }
+        def jackson = new JsonDataBindingSourceCreator(jsonMapper: JsonMapper.builder().build(), useJackson: true)
+
+        when:
+        def parsed = jackson.createDataBindingSource(MimeType.JSON, Object, body())['n']
+        def legacy = new JsonDataBindingSourceCreator().createDataBindingSource(MimeType.JSON, Object, body())['n']
+
+        then:
+        parsed.getClass() == legacy.getClass()
+        parsed == legacy
+
+        where:
+        number << ['3', '-7', '2147483648', '9223372036854775807', '9223372036854775808', '1.15', '1.0', '1e3', '-0',
+                   '12345678901234567890.12345']
+    }
+
+    void 'JSON decimals inside a collection body also bind as BigDecimal'() {
+        given:
+        def inputStream = new ByteArrayInputStream('[{"price": 1.15}]'.getBytes(StandardCharsets.UTF_8))
+
+        when:
+        def sources = new JsonDataBindingSourceCreator()
+                .createCollectionDataBindingSource(MimeType.JSON, Object, inputStream)
+
+        then:
+        sources.dataBindingSources.first()['price'] instanceof BigDecimal
+    }
 
     void 'Test JSON parsing'() {
         given:
@@ -36,7 +101,7 @@ class JsonDataBindingSourceCreatorSpec extends Specification {
 }'''
 
         def inputStream = new ByteArrayInputStream(json.getBytes(StandardCharsets.UTF_8))
-        def bindingSource = new JsonDataBindingSourceCreator().createBindingSource(inputStream, StandardCharsets.UTF_8.name())
+        def bindingSource = new JsonDataBindingSourceCreator().createDataBindingSource(MimeType.JSON, Object, inputStream)
 
         when:
         def propertyNames = bindingSource.propertyNames
@@ -74,9 +139,183 @@ class JsonDataBindingSourceCreatorSpec extends Specification {
 
 
         when:
-        def bindingSource = new JsonDataBindingSourceCreator().createBindingSource(inputStream, "UTF-8")
+        def bindingSource = new JsonDataBindingSourceCreator().createDataBindingSource(MimeType.JSON, Object, inputStream)
 
         then:
-        thrown JsonException
+        thrown InvalidRequestBodyException
     }
+
+    void 'uses an injected Boot JsonMapper for request parsing'() {
+        given:
+        def jsonMapper = JsonMapper.builder()
+                .enable(JsonReadFeature.ALLOW_JAVA_COMMENTS)
+                .build()
+        def creator = new JsonDataBindingSourceCreator(jsonMapper: jsonMapper, useJackson: true)
+        def inputStream = new ByteArrayInputStream('{/* configured mapper */"name":"Grails"}'.bytes)
+
+        when:
+        def bindingSource = creator.createDataBindingSource(MimeType.JSON, Object, inputStream)
+
+        then:
+        bindingSource['name'] == 'Grails'
+    }
+
+    void 'Jackson parsed sources preserve nested indexed null and missing values through public binding'() {
+        given:
+        def json = '''{
+  "name": "updated",
+  "protectedValue": "attempted",
+  "missingValue": null,
+  "child": {"name": "nested"},
+  "children": [{"name": "zero"}, {"name": "one"}]
+}'''
+        def source = new JsonDataBindingSourceCreator(useJackson: true).createDataBindingSource(
+                MimeType.JSON, JsonBindingTarget, new ByteArrayInputStream(json.bytes))
+        def target = new JsonBindingTarget(
+                name: 'original', protectedValue: 'protected', missingValue: 'retained')
+
+        when:
+        new GrailsWebDataBinder(null).bind(
+                target, source, ['name', 'missingValue', 'child', 'children'], ['protectedValue'])
+
+        then:
+        target.name == 'updated'
+        target.protectedValue == 'protected'
+        target.missingValue == null
+        target.child.name == 'nested'
+        target.children*.name == ['zero', 'one']
+    }
+
+    void 'missing JSON properties do not clear existing target values'() {
+        given:
+        def source = new JsonDataBindingSourceCreator().createDataBindingSource(
+                MimeType.JSON, JsonBindingTarget, new StringReader('{"name":"updated"}'))
+        def target = new JsonBindingTarget(name: 'original', missingValue: 'retained')
+
+        when:
+        new GrailsWebDataBinder(null).bind(target, source)
+
+        then:
+        target.name == 'updated'
+        target.missingValue == 'retained'
+    }
+
+    void 'top-level JSON arrays create one binding source per object element'() {
+        when:
+        def sources = new JsonDataBindingSourceCreator().createCollectionDataBindingSource(
+                MimeType.JSON, JsonBindingTarget, new StringReader('[{"name":"first"},42,{"name":"third"}]'))
+
+        then:
+        (sources.dataBindingSources[0].propertyNames as Set) == (['name'] as Set)
+        sources.dataBindingSources[1].propertyNames.empty
+        (sources.dataBindingSources[2].propertyNames as Set) == (['name'] as Set)
+        sources.dataBindingSources[0]['name'] == 'first'
+        sources.dataBindingSources[2]['name'] == 'third'
+    }
+
+    void 'Grails 9 accepts legacy syntax by default and Jackson is an explicit opt in'() {
+        expect:
+        new JsonDataBindingSourceCreator().createDataBindingSource(MimeType.JSON, Object, new StringReader(body))['a'] != null
+
+        when:
+        new JsonDataBindingSourceCreator(useJackson: true)
+                .createDataBindingSource(MimeType.JSON, Object, new StringReader(body))
+
+        then:
+        thrown(InvalidRequestBodyException)
+
+        where:
+        body << ['{"a":1} trailing', '{"a":1,}', '{"a":01}', '{"a":"\t"}', '{"a":1}//c']
+    }
+
+    void 'the legacy parsing notice is logged once however many JSON binding sources start'() {
+        given: 'a new application'
+        ShutdownOperations.runOperations()
+
+        when:
+        String output = stderrWhile {
+            [new JsonDataBindingSourceCreator(), new HalJsonDataBindingSourceCreator(),
+             new JsonApiDataBindingSourceCreator()]*.initialize()
+        }
+
+        then:
+        output.readLines().count { it.contains(LEGACY_PARSING_NOTICE) } == 1
+        output.contains('Set grails.databinding.json.jackson=true to opt into Jackson; it becomes the default in Grails 10.')
+
+        when: 'the next application opts into Jackson'
+        ShutdownOperations.runOperations()
+        output = stderrWhile { new JsonDataBindingSourceCreator(useJackson: true).initialize() }
+
+        then:
+        !output.contains(LEGACY_PARSING_NOTICE)
+    }
+
+    void 'the JsonSlurper of the legacy path is deprecated for removal in Grails 11'() {
+        expect:
+        JsonDataBindingSourceCreator.getDeclaredField('jsonSlurper').getAnnotation(Deprecated).forRemoval()
+        JsonDataBindingSourceCreator.getDeclaredField('jsonSlurper').getAnnotation(Deprecated).since() == '9.0'
+    }
+
+    void 'an application JsonSlurper bean parses bodies on the legacy path, as on Grails 8'() {
+        given: 'a lax parser, which accepts unquoted keys'
+        def context = new AnnotationConfigApplicationContext()
+        context.registerBean(PropertySourcesPlaceholderConfigurer)
+        context.registerBean(JsonSlurper) { new JsonSlurper().setType(JsonParserType.LAX) }
+        context.registerBean(JsonDataBindingSourceCreator)
+        context.refresh()
+
+        expect:
+        context.getBean(JsonDataBindingSourceCreator)
+                .createDataBindingSource(MimeType.JSON, Object, new StringReader('{name: Grails}'))['name'] == 'Grails'
+
+        cleanup:
+        context.close()
+    }
+
+    void 'Jackson request parsing uses the conventional Boot mapper when two non primary mappers exist'() {
+        given:
+        def context = new AnnotationConfigApplicationContext()
+        context.environment.propertySources.addFirst(new MapPropertySource('test', ['grails.databinding.json.jackson': true]))
+        context.registerBean(PropertySourcesPlaceholderConfigurer)
+        context.registerBean('jacksonJsonMapper', JsonMapper) {
+            JsonMapper.builder().enable(JsonReadFeature.ALLOW_JAVA_COMMENTS).build()
+        }
+        context.registerBean('otherMapper', JsonMapper) { JsonMapper.builder().build() }
+        context.registerBean(JsonDataBindingSourceCreator)
+        context.refresh()
+
+        expect:
+        context.getBean(JsonDataBindingSourceCreator).createDataBindingSource(MimeType.JSON, Object,
+                new StringReader('{/* comment */"name":"Grails"}'))['name'] == 'Grails'
+
+        cleanup:
+        context.close()
+    }
+
+    private static final String LEGACY_PARSING_NOTICE = 'Legacy JSON request parsing is deprecated for removal in Grails 11.'
+
+    private static String stderrWhile(Closure<?> work) {
+        PrintStream original = System.err
+        def buffer = new ByteArrayOutputStream()
+        System.setErr(new PrintStream(buffer, true))
+        try {
+            work.call()
+        }
+        finally {
+            System.setErr(original)
+        }
+        buffer.toString()
+    }
+}
+
+class JsonBindingTarget {
+    String name
+    String protectedValue
+    String missingValue
+    JsonBindingChild child
+    List<JsonBindingChild> children
+}
+
+class JsonBindingChild {
+    String name
 }

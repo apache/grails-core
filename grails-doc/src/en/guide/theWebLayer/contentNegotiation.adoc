@@ -112,7 +112,10 @@ You can also define this parameter in the link:theWebLayer.html#urlmappings[URL 
 
 You could code your controller action to return XML based on this property, but you can also make use of the controller-specific `withFormat()` method:
 
-NOTE: This example requires the addition of the `org.apache.grails:grails-converters` plugin
+NOTE: XML conversion in this example requires `org.apache.grails:grails-xml`, which the web starter and
+`grails-web-boot` bring in Grails 9. Applications without either, and applications upgrading to Grails 10, add it
+explicitly. `grails.converters.XML` is deprecated for removal in Grails 11, with the rest of the legacy XML
+conversion.
 
 [source,groovy]
 ----
@@ -203,7 +206,7 @@ When this setting is active, `XMLHttpRequest`-style requests (those sending an `
 
 An accept header of '\*/\*' results in a value of `all` for the `format` property.
 
-NOTE: If the accept header is used but contains no registered content types, Grails will assume a broken browser is making the request and will set the HTML format - note that this is different from how the other content negotiation modes work as those would activate the "all" format!
+An accept header that contains no registered content types also results in `all`. Media type names in the accept header and in `Content-Type` are matched case-insensitively, so `Application/JSON` results in `json`.
 
 
 

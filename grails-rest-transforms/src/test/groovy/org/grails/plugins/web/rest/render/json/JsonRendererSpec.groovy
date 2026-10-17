@@ -22,6 +22,7 @@ import grails.core.DefaultGrailsApplication
 import grails.persistence.Entity
 import grails.rest.render.json.JsonRenderer
 import grails.util.GrailsWebMockUtil
+import grails.web.render.NamedJsonRenderer
 import org.grails.config.NavigableMapConfig
 import org.grails.config.PropertySourcesConfig
 import org.grails.core.lifecycle.ShutdownOperations
@@ -94,6 +95,27 @@ class JsonRendererSpec extends Specification {
         then:"Only included properties are rendered"
             webRequest.response.contentAsString == '{"title":"Undertow"}'
 
+    }
+
+    void "a named configuration receives the renderer's own includes and excludes"() {
+        given:
+        def namedRenderer = Mock(NamedJsonRenderer)
+        def renderer = new JsonRenderer(Album)
+        renderer.namedJsonRenderer = namedRenderer
+        renderer.includes = ['title', 'isbn']
+        renderer.excludes = ['isbn']
+
+        when:
+        final webRequest = GrailsWebMockUtil.bindMockWebRequest()
+        renderer.render(new Album(title: "Undertow", isbn: "38047301"),
+                new ServletRenderContext(webRequest, [jsonConfiguration: 'plain', excludes: ['other']]))
+
+        then:
+        1 * namedRenderer.contains('plain') >> true
+        1 * namedRenderer.render('plain', _ as Album, _, ['title', 'isbn'], ['isbn']) >> { arguments ->
+            arguments[2].write('{"title":"Undertow"}')
+        }
+        webRequest.response.contentAsString == '{"title":"Undertow"}'
     }
 
     void "Test render domain class with JsonRenderer"() {

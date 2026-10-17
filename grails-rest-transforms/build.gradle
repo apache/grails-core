@@ -24,6 +24,7 @@ plugins {
     id 'org.apache.grails.buildsrc.properties'
     id 'org.apache.grails.buildsrc.dependency-validator'
     id 'org.apache.grails.buildsrc.compile'
+    id 'org.apache.grails.buildsrc.configuration-metadata'
     id 'org.apache.grails.buildsrc.publish'
     id 'org.apache.grails.buildsrc.sbom'
     id 'org.apache.grails.buildsrc.vulnerability-scan'
@@ -37,6 +38,7 @@ group = 'org.apache.grails'
 dependencies {
 
     implementation platform(project(':grails-bom'))
+    implementation 'tools.jackson.core:jackson-databind'
 
     api 'jakarta.xml.bind:jakarta.xml.bind-api'
 
@@ -55,8 +57,6 @@ dependencies {
     testImplementation testFixtures(project(':grails-web-common'))
     testImplementation project(':grails-url-mappings')
     testImplementation project(':grails-test-suite-base')
-
-    testImplementation 'tools.jackson.core:jackson-databind'
 
     compileOnly 'jakarta.servlet:jakarta.servlet-api'
     compileOnly 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation

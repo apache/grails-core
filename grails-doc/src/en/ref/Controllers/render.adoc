@@ -80,6 +80,11 @@ render(contentType: "application/json") {
     book(title: b.title, author: b.author)
 }
 
+// render a value as JSON with the mapper respond uses, derived from Spring Boot's Jackson mapper,
+// or with a configuration registered with the NamedJsonConfigurationRegistry
+render json: book
+render json: book, jsonConfiguration: 'catalog', excludes: ['isbn']
+
 // render with status code
 render(status: 503, text: "Failed to update book ${b.id}")
 
@@ -115,3 +120,6 @@ Parameters:
 * `file` (optional) - The byte[], java.io.File, or inputStream you wish to send with the response. File responses are rendered with `Content-Disposition: attachment` by default. If a `Content-Disposition` header is already set on the response, Grails leaves it alone.
 * `fileName` (optional) - For specifying an attachment file name while rendering a file. Unsafe characters in the filename are escaped before they are written to the header.
 * `inline` (optional) - Set to `true` while rendering a file to omit the default attachment `Content-Disposition` header.
+* `json` (optional) - A value to write as JSON with the mapper `respond` uses, which Grails derives from Spring Boot's Jackson `JsonMapper` and which writes domain class instances as `grails.converters.JSON` renders them, whatever `grails.converters.json.legacy` is set to
+* `jsonConfiguration` (optional) - With `json`, the name of a configuration registered with the `NamedJsonConfigurationRegistry` to write the value with, such as `deep`, which Grails registers to write the associations of domain class instances in full. A name that is not registered throws `IllegalArgumentException`
+* `includes`, `excludes` (optional) - With `json`, the properties of the value written, or of each element of a collection or array, to include or leave out

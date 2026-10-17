@@ -100,6 +100,7 @@ class GrailsApplicationBuilder {
     Set<Class<?>> configurationClasses
     Closure doWithConfig
     Set<String> includePlugins
+    Class<?> testClass
     boolean loadExternalBeans
     boolean localOverride = false
 
@@ -212,6 +213,17 @@ class GrailsApplicationBuilder {
             ((AnnotationConfigRegistry) context).register(ClassUtils.forName(it, classLoader))
         }
 
+        if (isWebTest()) {
+            // Boot's mapper, and the message converter customizers the web test traits apply as Spring MVC does
+            [
+                    'org.springframework.boot.jackson.autoconfigure.JacksonAutoConfiguration',
+                    'org.springframework.boot.http.converter.autoconfigure.HttpMessageConvertersAutoConfiguration'
+            ].each { String autoConfiguration ->
+                if (ClassUtils.isPresent(autoConfiguration, classLoader)) {
+                    ((AnnotationConfigRegistry) context).register(ClassUtils.forName(autoConfiguration, classLoader))
+                }
+            }
+        }
         prepareContext(context, beanFactory)
         // Added by hand, so it runs before the configuration classes are read, as an application's
         // early phase does
@@ -221,10 +233,49 @@ class GrailsApplicationBuilder {
         return context
     }
 
+    /**
+     * A web test gets the beans of the converters and XML plugins without including the plugins,
+     * whose controllers and urlMappings dependencies would be discovered too: Jackson and data
+     * binding read them during the refresh. They are registered after the test's post-processor has
+     * registered the plugin beans: creating the default one applies the test's {@code doWithConfig}
+     * to the environment, which their registrars read.
+     */
+    protected void registerWebPluginBeans(ConfigurableApplicationContext context, BeanDefinitionRegistry registry) {
+        if (!isWebTest()) {
+            return
+        }
+        ClassLoader classLoader = this.class.classLoader
+        PluginDiscovery discovery = context.beanFactory.getBean(PluginDiscovery.BEAN_NAME, PluginDiscovery)
+        String convertersPlugin = 'org.grails.plugins.converters.ConvertersGrailsPlugin'
+        if (discovery.findPlugin('converters') == null && ClassUtils.isPresent(convertersPlugin, classLoader)) {
+            registerPluginBeans(context, registry, convertersPlugin)
+        }
+        String xmlPlugin = 'org.grails.plugins.xml.XmlGrailsPlugin'
+        if (discovery.findPlugin('xml') == null && ClassUtils.isPresent(xmlPlugin, classLoader)) {
+            registerPluginBeans(context, registry, xmlPlugin)
+        }
+    }
+
+    private static void registerPluginBeans(ConfigurableApplicationContext context,
+            BeanDefinitionRegistry registry, String className) {
+        Class<?> pluginClass = ClassUtils.forName(className, GrailsApplicationBuilder.classLoader)
+        Object plugin = pluginClass.getDeclaredConstructor().newInstance()
+        BeanRegistrar registrar = (BeanRegistrar) pluginClass.getMethod('beanRegistrar').invoke(plugin)
+        new BeanRegistryAdapter(registry, context.beanFactory, context.environment, registrar.getClass()).register(registrar)
+    }
+
     protected void prepareContext(ConfigurableApplicationContext applicationContext, ConfigurableBeanFactory beanFactory) {
         def discovery = registerPluginDiscoveryBean(applicationContext, beanFactory)
         registerGrailsAppPostProcessorBean(beanFactory, discovery)
         AnnotationConfigUtils.registerAnnotationConfigProcessors((BeanDefinitionRegistry) beanFactory)
+    }
+
+    private boolean isWebTest() {
+        // Resolve the optional web trait without making core testing support depend on it.
+        // Inspect the test type so trait ordering with DataTest cannot discard web setup.
+        String webTrait = 'grails.testing.web.GrailsWebUnitTest'
+        return testClass != null && ClassUtils.isPresent(webTrait, testClass.classLoader) &&
+                ClassUtils.forName(webTrait, testClass.classLoader).isAssignableFrom(testClass)
     }
 
     protected PluginDiscovery registerPluginDiscoveryBean(ConfigurableApplicationContext applicationContext, ConfigurableBeanFactory beanFactory) {
@@ -234,7 +285,11 @@ class GrailsApplicationBuilder {
         }
         def discovery = new DefaultPluginDiscovery()
         // we must load the classpath since the plugin manager needs to find the default plugins
-        discovery.pluginFilter = new IncludingPluginFilter(includePlugins ?: DEFAULT_INCLUDED_PLUGINS)
+        Set<String> plugins = new HashSet<String>(includePlugins ?: DEFAULT_INCLUDED_PLUGINS)
+        if (isWebTest()) {
+            plugins.add('restResponder')
+        }
+        discovery.pluginFilter = new IncludingPluginFilter(plugins)
         discovery.init(applicationContext.getEnvironment())
         beanFactory.registerSingleton(PluginDiscovery.BEAN_NAME, discovery)
         discovery
@@ -478,22 +533,23 @@ class GrailsApplicationBuilder {
             // A subclass whose registerGrailsAppPostProcessorBean registers another post-processor, or
             // none, is left to register plugin beans the way that post-processor does
             ConfigurableListableBeanFactory beanFactory = context.beanFactory
-            if (!beanFactory.containsBean(POST_PROCESSOR_BEAN_NAME) ||
-                    !beanFactory.isTypeMatch(POST_PROCESSOR_BEAN_NAME, TestRuntimeGrailsApplicationPostProcessor)) {
-                return
-            }
-            def processor = beanFactory.getBean(POST_PROCESSOR_BEAN_NAME, TestRuntimeGrailsApplicationPostProcessor)
-            Map<String, BeanDefinition> before = [:]
-            for (String name : registry.beanDefinitionNames) {
-                before[name] = registry.getBeanDefinition(name)
-            }
-            processor.registerPluginBeans(registry)
-            for (String name : registry.beanDefinitionNames) {
-                BeanDefinition definition = registry.getBeanDefinition(name)
-                if (!before[name].is(definition)) {
-                    builder.pluginBeanDefinitions[name] = definition
+            if (beanFactory.containsBean(POST_PROCESSOR_BEAN_NAME) &&
+                    beanFactory.isTypeMatch(POST_PROCESSOR_BEAN_NAME, TestRuntimeGrailsApplicationPostProcessor)) {
+                // Creating the processor applies the test's doWithConfig
+                def processor = beanFactory.getBean(POST_PROCESSOR_BEAN_NAME, TestRuntimeGrailsApplicationPostProcessor)
+                Map<String, BeanDefinition> before = [:]
+                for (String name : registry.beanDefinitionNames) {
+                    before[name] = registry.getBeanDefinition(name)
+                }
+                processor.registerPluginBeans(registry)
+                for (String name : registry.beanDefinitionNames) {
+                    BeanDefinition definition = registry.getBeanDefinition(name)
+                    if (!before[name].is(definition)) {
+                        builder.pluginBeanDefinitions[name] = definition
+                    }
                 }
             }
+            builder.registerWebPluginBeans(context, registry)
         }
 
         @Override

@@ -22,13 +22,16 @@ import java.util.function.Supplier
 
 import groovy.transform.CompileStatic
 
+import tools.jackson.databind.json.JsonMapper
+
 import org.springframework.beans.factory.BeanRegistrar
 import org.springframework.beans.factory.BeanRegistry
+import org.springframework.beans.factory.NoSuchBeanDefinitionException
 import org.springframework.beans.factory.ObjectProvider
 import org.springframework.core.env.Environment
 
 import grails.converters.JSON
-import grails.converters.XML
+import grails.converters.json.NamedJsonConfigurationRegistry
 import grails.core.GrailsApplication
 import grails.core.support.proxy.ProxyHandler
 import grails.plugins.Plugin
@@ -39,8 +42,9 @@ import org.grails.web.converters.configuration.ConvertersConfigurationInitialize
 import org.grails.web.converters.configuration.ObjectMarshallerRegisterer
 import org.grails.web.converters.jackson.DomainClassJacksonModule
 import org.grails.web.converters.jackson.DomainClassRendering
+import org.grails.web.converters.jackson.GrailsJsonMapperCustomizer
+import org.grails.web.converters.jackson.JacksonNamedJsonRenderer
 import org.grails.web.converters.marshaller.json.ValidationErrorsMarshaller as JsonErrorsMarshaller
-import org.grails.web.converters.marshaller.xml.ValidationErrorsMarshaller as XmlErrorsMarshaller
 
 /**
  * Allows the "obj as XML" and "obj as JSON" syntax.
@@ -66,16 +70,38 @@ class ConvertersGrailsPlugin extends Plugin {
         return { BeanRegistry registry, Environment environment ->
             registry.registerBean('jsonErrorsMarshaller', JsonErrorsMarshaller)
 
-            registry.registerBean('xmlErrorsMarshaller', XmlErrorsMarshaller)
-
             registry.registerBean('convertersConfigurationInitializer', ConvertersConfigurationInitializer)
-
-            registry.registerBean('errorsXmlMarshallerRegisterer', ObjectMarshallerRegisterer) {
+            registry.registerBean('grailsJsonMapperCustomizer', GrailsJsonMapperCustomizer) {
                 it.supplier {
-                    new ObjectMarshallerRegisterer(
-                            marshaller: it.bean('xmlErrorsMarshaller', XmlErrorsMarshaller),
-                            converterClass: XML
+                    new GrailsJsonMapperCustomizer(
+                            it.bean('grailsApplication', GrailsApplication),
+                            it.bean('proxyHandler', ProxyHandler)
                     )
+                }
+            }
+            registry.registerBean('namedJsonConfigurationRegistry', NamedJsonConfigurationRegistry) {
+                it.supplier { context ->
+                    // Resolved when a configuration is first written, not here: the registry can be
+                    // created before Jackson auto-configuration has produced Boot's mapper, and
+                    // substituting a separately built one would silently drop spring.jackson.*,
+                    // the application's builder customizers and the Grails serializers.
+                    new NamedJsonConfigurationRegistry({ ->
+                        JsonMapper mapper = context.beanProvider(JsonMapper).getIfUnique()
+                        if (mapper == null) {
+                            try {
+                                mapper = context.bean('jacksonJsonMapper', JsonMapper)
+                            }
+                            catch (NoSuchBeanDefinitionException ignored) {
+                                return null
+                            }
+                        }
+                        context.bean('grailsJsonMapperCustomizer', GrailsJsonMapperCustomizer).forGrails(mapper)
+                    })
+                }
+            }
+            registry.registerBean('namedJsonRenderer', JacksonNamedJsonRenderer) {
+                it.supplier {
+                    new JacksonNamedJsonRenderer(it.bean('namedJsonConfigurationRegistry', NamedJsonConfigurationRegistry))
                 }
             }
 
@@ -92,12 +118,17 @@ class ConvertersGrailsPlugin extends Plugin {
                 }
             }
 
-            registry.registerBean('errorsJsonMarshallerRegisterer', ObjectMarshallerRegisterer) {
-                it.supplier {
-                    new ObjectMarshallerRegisterer(
-                            marshaller: it.bean('jsonErrorsMarshaller', JsonErrorsMarshaller),
-                            converterClass: JSON
-                    )
+            // The Grails 8 rendering of validation errors goes with the Grails 8 JSON converter. Rendered through the
+            // JsonMapper, validation errors are written by the mapper's serializer, as respond writes them.
+            if (environment.getProperty(ConvertersConfigurationInitializer.SETTING_CONVERTERS_JSON_LEGACY, Boolean,
+                    ConvertersConfigurationInitializer.LEGACY_JSON_BY_DEFAULT)) {
+                registry.registerBean('errorsJsonMarshallerRegisterer', ObjectMarshallerRegisterer) {
+                    it.supplier {
+                        new ObjectMarshallerRegisterer(
+                                marshaller: it.bean('jsonErrorsMarshaller', JsonErrorsMarshaller),
+                                converterClass: JSON
+                        )
+                    }
                 }
             }
         }

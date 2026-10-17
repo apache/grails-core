@@ -16,6 +16,12 @@ KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License.
 ////
+
+NOTE: XML conversion, renderers and binding require `org.apache.grails:grails-xml`. The Grails 9
+web starter and `grails-web-boot` bring it; applications without either, and applications upgrading to Grails 10,
+must add the dependency explicitly, as xref:upgrading#upgrading90x[the upgrade guide] describes under
+"XML Web Support Moves to a Separate Module". Advertising an XML format alone does not install XML support.
+
 Grails applications can publish an https://www.openapis.org/[OpenAPI] description of their REST
 endpoints. The optional `grails-openapi` module derives it from the application itself - its URL
 mappings, its controllers, its domain classes and command objects, and their constraints - and
@@ -590,14 +596,19 @@ for `xml` by default. Only a data format, `json` or `xml`, carries the shape des
 renders a view, a form or a HAL document, such as `html` or `hal`, is listed without one. A request
 body is described in the data formats alone.
 
-The XML is described as the converters render it, with the OpenAPI `xml` object: a domain class or a
+The XML is described as the Grails XML converter renders it, with the OpenAPI `xml` object: a domain class or a
 command object as an element named for its class, such as `book`, its identifier as the `id`
 attribute and its version as an attribute, an association as an element carrying the associated
 identifier as the `id` attribute, a collection of values as an element holding one named for the
 class of each, such as `<lines><string>a</string></lines>`, and a listing as a `list` element
 holding one for each. The `xml` object cannot describe a map, which Grails renders as `entry`
 elements keyed by an attribute, and the document describes the XML Grails renders by default, not
-that of `grails.converters.xml.default.deep` or `grails.converters.xml.domain.include.class`.
+that of `grails.converters.xml.default.deep` or `grails.converters.xml.domain.include.class`. The
+JSON shapes are likewise those of the Grails JSON converter as Grails 8 rendered them. The opt-ins of the
+xref:upgrading#upgrading90x[upgrade guide], `grails.web.rendering.json.spring`,
+`grails.converters.json.legacy: false` and `grails.web.rendering.xml.spring`, have Jackson or Spring's converters
+write by their own rules, and the document does not follow them: a Jackson naming strategy, inclusion or annotation on
+a bean or a domain class, or an element name that Spring's XML converter chooses, is not described.
 
 `RestfulController` answers its own `save` and `update` with a `Location` header naming the
 resource, which the `201` and `200` responses describe, and its `patch` too, which `update` serves.

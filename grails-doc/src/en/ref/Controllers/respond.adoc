@@ -66,8 +66,24 @@ Supported `arguments`:
 * `model` - The model to use in case of HTML rendering
 * `status` - The response status
 * `formats` - A list of formats to respond with
-* `includes` - Properties to include if rendering with the converters API
-* `excludes` - Properties to exclude if rendering with the converters API
+* `includes`, `excludes` - For a JSON or XML response, the properties of the value written, or of each element of a collection or array, to include or leave out. For JSON written through Spring, they apply to domain class instances and to beans, and a value without properties, such as a map or a string, throws `IllegalArgumentException`
+* `jsonConfiguration` - For a JSON response, the name of a configuration registered with the `NamedJsonConfigurationRegistry` to write the value with, such as `deep`, which Grails registers to write the associations of domain class instances in full. A name that is not registered throws `IllegalArgumentException`
+
+A Spring `ProblemDetail` is written as `application/problem+json`, or as `application/problem+xml` for an XML response,
+through Spring's message converters, with the status the problem carries, and an absent `instance` is set to the current
+resource path. A client that accepts neither JSON nor XML, such as a browser asking for HTML, is answered with
+`application/problem+json`, as Spring MVC answers it. XML is rendered by the `grails-xml` module, without which a client
+asking for XML is answered with `application/problem+json` as well. Spring writes XML problems with
+`jackson-dataformat-xml`; without it, Grails writes them in the same format. A view, whether a GSP, a JSON view or a
+markup view, renders a problem only when `respond` names it with the `view` argument, and the response keeps the problem's
+status; the action's view and the templates found by convention do not render problems:
+
+[source,groovy]
+----
+respond validationProblemDetailFactory.create(book.errors)   // 422 application/problem+json
+respond ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, 'The book is checked out')
+respond problem, view: 'conflict'                            // the conflict view, with the problem's status
+----
 
 WARNING: Due to the way Groovy works, while responding with a Map and arguments it is important to respond in this manner `respond([:], status: 200)` instead of this manner `respond([:], [status: 200])`. Failure to do so will result in the arguments being reversed.
 

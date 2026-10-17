@@ -42,10 +42,8 @@ import org.grails.databinding.converters.DefaultConvertersConfiguration
 import org.grails.web.databinding.bindingsource.DataBindingSourceRegistry
 import org.grails.web.databinding.bindingsource.DefaultDataBindingSourceRegistry
 import org.grails.web.databinding.bindingsource.HalJsonDataBindingSourceCreator
-import org.grails.web.databinding.bindingsource.HalXmlDataBindingSourceCreator
 import org.grails.web.databinding.bindingsource.JsonApiDataBindingSourceCreator
 import org.grails.web.databinding.bindingsource.JsonDataBindingSourceCreator
-import org.grails.web.databinding.bindingsource.XmlDataBindingSourceCreator
 
 /**
  * Plugin for configuring the data binding features of Grails
@@ -103,10 +101,8 @@ class DataBindingGrailsPlugin extends Plugin {
 
         // Each of these is nothing but its own no-argument construction, and each type's
         // JavaBeans-derived name is exactly the bean name the hand-written class declared.
-        bean(XmlDataBindingSourceCreator)
         bean(JsonDataBindingSourceCreator)
         bean(HalJsonDataBindingSourceCreator)
-        bean(HalXmlDataBindingSourceCreator)
         bean(JsonApiDataBindingSourceCreator)
 
         // Declared as an array rather than the original varargs parameter; Spring resolves both the

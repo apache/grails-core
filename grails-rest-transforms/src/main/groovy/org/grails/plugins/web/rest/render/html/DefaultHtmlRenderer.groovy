@@ -22,6 +22,7 @@ import groovy.transform.CompileStatic
 
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Value
+import org.springframework.http.ProblemDetail
 import org.springframework.validation.BeanPropertyBindingResult
 import org.springframework.validation.Errors
 
@@ -31,6 +32,7 @@ import grails.rest.render.Renderer
 import grails.util.GrailsNameUtils
 import grails.util.GrailsWebUtil
 import grails.web.mime.MimeType
+import org.grails.plugins.web.rest.render.ProblemDetailResponse
 
 /**
  * A default renderer for HTML that returns an appropriate model
@@ -83,6 +85,11 @@ class DefaultHtmlRenderer<T> implements Renderer<T> {
 
         if (!context.viewName) {
             context.setViewName(context.actionName)
+        }
+
+        if (object instanceof ProblemDetail) {
+            // The view answers with the status the problem carries, as the problem written in JSON or XML does
+            ProblemDetailResponse.prepare((ProblemDetail) object, context)
         }
 
         if (object instanceof Errors) {
