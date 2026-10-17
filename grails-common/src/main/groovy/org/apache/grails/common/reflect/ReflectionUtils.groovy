@@ -187,12 +187,7 @@ final class ReflectionUtils {
             return false
         }
         String name = clazz.name
-        for (String prefix : NON_APPLICATION_PACKAGES) {
-            if (name.startsWith(prefix)) {
-                return false
-            }
-        }
-        return true
+        return NON_APPLICATION_PACKAGES.every { String prefix -> !name.startsWith(prefix) }
     }
 
 }

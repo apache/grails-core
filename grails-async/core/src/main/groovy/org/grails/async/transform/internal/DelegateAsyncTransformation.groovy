@@ -72,7 +72,7 @@ class DelegateAsyncTransformation implements ASTTransformation, TransformWithPri
     @Override
     void visit(ASTNode[] nodes, SourceUnit source) {
         if (nodes.length != 2 || !(nodes[0] instanceof AnnotationNode) || !(nodes[1] instanceof AnnotatedNode)) {
-            throw new GroovyBugError('Internal error: expecting [AnnotationNode, AnnotatedNode] but got: ' + Arrays.asList(nodes))
+            throw new GroovyBugError('Internal error: expecting [AnnotationNode, AnnotatedNode] but got: ' + nodes.toList())
         }
 
         AnnotatedNode parent = (AnnotatedNode) nodes[1]
@@ -116,7 +116,7 @@ class DelegateAsyncTransformation implements ASTTransformation, TransformWithPri
                 if (existingMethod == null) {
                     ClassNode promiseNode = ClassHelper.make(Promise).getPlainNodeReference()
                     ClassNode originalReturnType = m.getReturnType()
-                    if (!VOID.equals(originalReturnType.getNameWithoutPackage())) {
+                    if (VOID != originalReturnType.getNameWithoutPackage()) {
                         ClassNode returnType
                         if (ClassHelper.isPrimitiveType(originalReturnType.redirect())) {
                             returnType = ClassHelper.getWrapper(originalReturnType.redirect())

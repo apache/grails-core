@@ -97,18 +97,18 @@ final class AutoConfigurationImportsWriter {
      * @return {@code true} when the file was written
      */
     static boolean register(String className, File targetDirectory, SourceUnit source, Object compilation) {
-        if (className == null || className.isEmpty() || targetDirectory == null) {
+        if (!className || targetDirectory == null) {
             return false
         }
 
         File sourceDirectory = findSourceDirectory(targetDirectory)
         File handAuthored = sourceDirectory == null ? null : new File(sourceDirectory, SOURCE_IMPORTS_LOCATION)
-        if (handAuthored != null && handAuthored.isFile()) {
+        if (handAuthored?.isFile()) {
             Set<String> handAuthoredEntries = new TreeSet<>()
             readEntries(handAuthored, handAuthoredEntries)
-            if (!handAuthoredEntries.contains(className)) {
-                warn(source, className + ' is generated from a beans closure but is not listed in ' +
-                        SOURCE_IMPORTS_LOCATION + ', so Spring Boot will not read it. Add it there, or delete ' +
+            if (!(className in handAuthoredEntries)) {
+                warn(source, "$className is generated from a beans closure but is not listed in " +
+                        "$SOURCE_IMPORTS_LOCATION, so Spring Boot will not read it. Add it there, or delete " +
                         'that file once it holds nothing that is not generated and it will be written for you.')
             }
             write(new File(targetDirectory, IMPORTS_LOCATION), Collections.emptySet(), source)
@@ -127,12 +127,12 @@ final class AutoConfigurationImportsWriter {
         // auto-configuration it cannot load. Anything this compilation registered is kept regardless:
         // its class file is written in a later phase than this one runs in.
         Set<String> entries = new TreeSet<>(onDisk)
-        entries.removeIf({ entry -> !registeredHere.contains(entry) && !isGeneratedHere(targetDirectory, entry) })
+        entries.removeIf { entry -> !(entry in registeredHere) && !isGeneratedHere(targetDirectory, entry) }
         entries.addAll(registeredHere)
 
         // Against what is on disk rather than against the pruned set: a call that only drops a stale
         // entry adds nothing, and comparing the two would leave the entry it just decided to drop.
-        if (entries.equals(onDisk) && importsFile.isFile()) {
+        if (entries == onDisk && importsFile.isFile()) {
             return false
         }
 
@@ -149,14 +149,14 @@ final class AutoConfigurationImportsWriter {
             if (entries.isEmpty()) {
                 return Files.deleteIfExists(importsFile.toPath())
             }
-            Files.createDirectories(importsFile.toPath().getParent())
+            Files.createDirectories(importsFile.toPath().parent)
             // Sorted and newline-terminated, so recompiling the same sources rewrites the same bytes.
             Files.write(importsFile.toPath(), (String.join('\n', entries) + '\n')
                     .getBytes(StandardCharsets.UTF_8))
             return true
         }
         catch (IOException notWritable) {
-            String message = 'Could not write generated auto-configuration imports at ' + importsFile
+            String message = "Could not write generated auto-configuration imports at $importsFile"
             if (source != null) {
                 source.addErrorAndContinue(new SyntaxException(message, 1, 1))
             }
@@ -189,7 +189,7 @@ final class AutoConfigurationImportsWriter {
         File importsFile = new File(targetDirectory, IMPORTS_LOCATION)
         File sourceDirectory = findSourceDirectory(targetDirectory)
         File handAuthored = sourceDirectory == null ? null : new File(sourceDirectory, SOURCE_IMPORTS_LOCATION)
-        if (handAuthored != null && handAuthored.isFile()) {
+        if (handAuthored?.isFile()) {
             return write(importsFile, Collections.emptySet(), source)
         }
         if (!importsFile.isFile()) {
@@ -200,13 +200,10 @@ final class AutoConfigurationImportsWriter {
         Set<String> entries = new TreeSet<>()
         readEntries(importsFile, entries)
         Set<String> registeredHere = registeredBy(compilation)
-        Set<String> kept = new TreeSet<>()
-        for (String entry in entries) {
-            if (registeredHere.contains(entry) || isGeneratedHere(targetDirectory, entry)) {
-                kept.add(entry)
-            }
-        }
-        if (kept.equals(entries)) {
+        Set<String> kept = new TreeSet<>(entries.findAll { String entry ->
+            entry in registeredHere || isGeneratedHere(targetDirectory, entry)
+        })
+        if (kept == entries) {
             return false
         }
         return write(importsFile, kept, source)
@@ -218,13 +215,14 @@ final class AutoConfigurationImportsWriter {
             // then rests entirely on which class files are present, which is right for a single one.
             return Collections.synchronizedSet(new TreeSet<>())
         }
-        return REGISTERED_BY_COMPILATION.computeIfAbsent(compilation,
-                { key -> Collections.synchronizedSet(new TreeSet<>()) })
+        return REGISTERED_BY_COMPILATION.computeIfAbsent(compilation) { Object key ->
+            Collections.synchronizedSet(new TreeSet<>())
+        }
     }
 
     /** Whether {@code className} is still a class this module generates into its own output. */
     private static boolean isGeneratedHere(File targetDirectory, String className) {
-        return new File(targetDirectory, className.replace('.'.charAt(0), File.separatorChar) + CLASS_FILE_EXTENSION).isFile()
+        return new File(targetDirectory, className.replace('.' as char, File.separatorChar) + CLASS_FILE_EXTENSION).isFile()
     }
 
     private static void warn(SourceUnit source, String message) {
@@ -247,10 +245,10 @@ final class AutoConfigurationImportsWriter {
             }
         }
         File directory = targetDirectory
-        while (directory != null && !('build'.equals(directory.getName()) || 'target'.equals(directory.getName()))) {
-            directory = directory.getParentFile()
+        while (directory && !(directory.name == 'build' || directory.name == 'target')) {
+            directory = directory.parentFile
         }
-        return directory == null ? null : directory.getParentFile()
+        return directory?.parentFile
     }
 
     /** Adds the names in {@code file}, skipping blanks and the {@code #} comments Spring Boot skips. */

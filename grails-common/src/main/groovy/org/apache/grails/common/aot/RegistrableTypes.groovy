@@ -86,12 +86,7 @@ final class RegistrableTypes {
         catch (IOException | RuntimeException ex) {
             return false
         }
-        for (String name in referenced) {
-            if (!ClassUtils.isPresent(name, classLoader)) {
-                return false
-            }
-        }
-        return true
+        return referenced.every { String name -> ClassUtils.isPresent(name, classLoader) }
     }
 
     /** Collects the types a class names, in its own declaration and in the bodies of its methods. */
@@ -126,11 +121,11 @@ final class RegistrableTypes {
                 return
             }
             Type element = type
-            while (element.getSort() == Type.ARRAY) {
-                element = element.getElementType()
+            while (element.sort == Type.ARRAY) {
+                element = element.elementType
             }
-            if (element.getSort() == Type.OBJECT) {
-                add(element.getInternalName())
+            if (element.sort == Type.OBJECT) {
+                add(element.internalName)
             }
         }
 
@@ -148,25 +143,22 @@ final class RegistrableTypes {
         /** Adds whichever constant carries a type: a class literal, a handle, or a method type. */
         private void addConstant(@Nullable Object constant) {
             if (constant instanceof Type) {
-                Type type = (Type) constant
-                if (type.getSort() == Type.METHOD) {
-                    addMethodDescriptor(type.getDescriptor())
+                if (constant.sort == Type.METHOD) {
+                    addMethodDescriptor(constant.descriptor)
                 }
                 else {
-                    addType(type)
+                    addType(constant)
                 }
             }
             else if (constant instanceof Handle) {
-                Handle handle = (Handle) constant
-                add(handle.getOwner())
-                addMethodDescriptor(handle.getDesc())
+                add(constant.owner)
+                addMethodDescriptor(constant.desc)
             }
             else if (constant instanceof ConstantDynamic) {
-                ConstantDynamic dynamic = (ConstantDynamic) constant
-                addType(Type.getType(dynamic.getDescriptor()))
-                add(dynamic.getBootstrapMethod().getOwner())
-                for (int i = 0; i < dynamic.getBootstrapMethodArgumentCount(); i++) {
-                    addConstant(dynamic.getBootstrapMethodArgument(i))
+                addType(Type.getType(constant.descriptor))
+                add(constant.bootstrapMethod.owner)
+                for (int i = 0; i < constant.bootstrapMethodArgumentCount; i++) {
+                    addConstant(constant.getBootstrapMethodArgument(i))
                 }
             }
         }
@@ -175,11 +167,7 @@ final class RegistrableTypes {
         void visit(int version, int access, String name, String signature, String superName,
                 String[] interfaces) {
             add(superName)
-            if (interfaces != null) {
-                for (String each in interfaces) {
-                    add(each)
-                }
-            }
+            interfaces?.each { String each -> add(each) }
         }
 
         @Override
@@ -193,11 +181,7 @@ final class RegistrableTypes {
         MethodVisitor visitMethod(int access, String name, String descriptor, String signature,
                 String[] exceptions) {
             addMethodDescriptor(descriptor)
-            if (exceptions != null) {
-                for (String each in exceptions) {
-                    add(each)
-                }
-            }
+            exceptions?.each { String each -> add(each) }
             return new MethodVisitor(SpringAsmInfo.ASM_VERSION) {
                 @Override
                 void visitTypeInsn(int opcode, String type) {

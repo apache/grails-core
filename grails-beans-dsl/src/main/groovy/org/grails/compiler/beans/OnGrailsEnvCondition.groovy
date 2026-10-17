@@ -59,7 +59,7 @@ class OnGrailsEnvCondition implements Condition {
         if (current == null) {
             return false
         }
-        for (String candidate in (String[]) value) {
+        for (String candidate in value) {
             if (current.equalsIgnoreCase(candidate)) {
                 return true
             }
@@ -68,11 +68,11 @@ class OnGrailsEnvCondition implements Condition {
     }
 
     private String currentEnvironmentName(ConditionContext context) {
-        String fromGrails = currentEnvironmentNameFromGrails(context.getClassLoader())
+        String fromGrails = currentEnvironmentNameFromGrails(context.classLoader)
         if (fromGrails != null) {
             return fromGrails
         }
-        context.getEnvironment().getProperty(ENVIRONMENT_PROPERTY)
+        context.environment.getProperty(ENVIRONMENT_PROPERTY)
     }
 
     private String currentEnvironmentNameFromGrails(ClassLoader classLoader) {
@@ -89,7 +89,7 @@ class OnGrailsEnvCondition implements Condition {
             }
             Method getName = environmentClass.getMethod('getName')
             Object name = getName.invoke(current)
-            return name == null ? null : name.toString().toLowerCase(Locale.ENGLISH)
+            return name?.toString()?.toLowerCase(Locale.ENGLISH)
         }
         catch (ReflectiveOperationException | RuntimeException | LinkageError ignored) {
             // Not a Grails application, or an Environment that cannot answer - fall back to the
