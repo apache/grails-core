@@ -31,6 +31,9 @@ import org.springframework.jdbc.datasource.LazyConnectionDataSourceProxy
 import org.springframework.jdbc.datasource.TransactionAwareDataSourceProxy
 import spock.lang.Specification
 
+import javax.sql.DataSource
+
+
 class DataSourceConnectionSourceFactorySpec extends Specification {
 
     void "create binds flattened default data source pool properties from the Spring Environment"() {
@@ -85,7 +88,7 @@ class DataSourceConnectionSourceFactorySpec extends Specification {
 
         then:
         connectionSource.name == 'secondary'
-        def dataSource = connectionSource.source.targetDataSource.targetDataSource
+        def dataSource = unwrap(connectionSource.source)
         dataSource instanceof HikariDataSource
         dataSource.maximumPoolSize == 24
 
@@ -111,7 +114,7 @@ class DataSourceConnectionSourceFactorySpec extends Specification {
         def connectionSource = factory.create(ConnectionSource.DEFAULT, environment)
 
         then:
-        def dataSource = connectionSource.source.targetDataSource.targetDataSource
+        def dataSource = unwrap(connectionSource.source)
         dataSource instanceof HikariDataSource
         dataSource.maximumPoolSize == 32
         dataSource.minimumIdle == 8
@@ -138,7 +141,7 @@ class DataSourceConnectionSourceFactorySpec extends Specification {
 
         then:
         config.getProperty('dataSource.properties', Map) == [maximumPoolSize: 20]
-        def dataSource = connectionSource.source.targetDataSource.targetDataSource
+        def dataSource = unwrap(connectionSource.source)
         dataSource instanceof HikariDataSource
         dataSource.maximumPoolSize == 20
 
@@ -165,7 +168,7 @@ class DataSourceConnectionSourceFactorySpec extends Specification {
         then:
         connectionSource.settings.properties.is(properties)
         connectionSource.settings.properties == [maximumPoolSize: 20]
-        connectionSource.source.targetDataSource.targetDataSource.maximumPoolSize == 20
+        unwrap(connectionSource.source).maximumPoolSize == 20
 
         cleanup:
         connectionSource?.close()
@@ -202,7 +205,7 @@ class DataSourceConnectionSourceFactorySpec extends Specification {
                 maximumPoolSize: '16',
                 dataSourceProperties: [connectionCollation: 'utf8mb4_unicode_ci', empty: '']
         ]
-        def dataSource = connectionSource.source.targetDataSource.targetDataSource
+        def dataSource = unwrap(connectionSource.source)
         dataSource instanceof HikariDataSource
         dataSource.maximumPoolSize == 16
         dataSource.dataSourceProperties.getProperty('connectionCollation') == 'utf8mb4_unicode_ci'
@@ -237,7 +240,7 @@ class DataSourceConnectionSourceFactorySpec extends Specification {
         then:
         connectionSource.settings.properties.maximumPoolSize == 16
         connectionSource.settings.properties.dataSourceProperties == [connectionCollation: 'utf8mb4_unicode_ci', empty: '']
-        def dataSource = connectionSource.source.targetDataSource.targetDataSource
+        def dataSource = unwrap(connectionSource.source)
         dataSource instanceof HikariDataSource
         dataSource.maximumPoolSize == 16
         dataSource.dataSourceProperties.getProperty('connectionCollation') == 'utf8mb4_unicode_ci'
@@ -266,7 +269,7 @@ class DataSourceConnectionSourceFactorySpec extends Specification {
 
         then:
         connectionSource.settings.properties.dataSourceProperties.connectionCollation == 'high'
-        def dataSource = connectionSource.source.targetDataSource.targetDataSource
+        def dataSource = unwrap(connectionSource.source)
         dataSource instanceof HikariDataSource
         dataSource.maximumPoolSize == 16
         dataSource.dataSourceProperties.getProperty('connectionCollation') == 'high'
@@ -292,7 +295,7 @@ class DataSourceConnectionSourceFactorySpec extends Specification {
         def connectionSource = factory.create(ConnectionSource.DEFAULT, environment)
 
         then:
-        def dataSource = connectionSource.source.targetDataSource.targetDataSource
+        def dataSource = unwrap(connectionSource.source)
         dataSource instanceof HikariDataSource
         dataSource.dataSourceProperties.getProperty('oracle.jdbc.sendBooleanAsNativeBoolean') == 'true'
         !dataSource.dataSourceProperties.containsKey('oracle')
@@ -403,5 +406,15 @@ class DataSourceConnectionSourceFactorySpec extends Specification {
 
         expect:
         factory.connectionSourcesConfigurationKey == 'dataSources'
+    }
+
+    private static DataSource unwrap(DataSource dataSource) {
+        DataSource current = dataSource
+        while (current instanceof TransactionAwareDataSourceProxy || current instanceof LazyConnectionDataSourceProxy) {
+            current = current instanceof TransactionAwareDataSourceProxy ?
+                    ((TransactionAwareDataSourceProxy) current).targetDataSource :
+                    ((LazyConnectionDataSourceProxy) current).targetDataSource
+        }
+        return current
     }
 }
