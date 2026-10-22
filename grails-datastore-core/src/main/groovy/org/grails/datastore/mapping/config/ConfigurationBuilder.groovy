@@ -32,7 +32,10 @@ import groovy.util.logging.Slf4j
 
 import org.springframework.core.convert.ConversionFailedException
 import org.springframework.core.convert.ConverterNotFoundException
+import org.springframework.core.env.ConfigurableEnvironment
+import org.springframework.core.env.EnumerablePropertySource
 import org.springframework.core.env.PropertyResolver
+import org.springframework.core.env.PropertySource
 import org.springframework.util.ClassUtils
 import org.springframework.util.ReflectionUtils
 
@@ -258,7 +261,7 @@ abstract class ConfigurationBuilder<B, C> {
                         }
 
                         if (newBuilder instanceof Map) {
-                            Map subMap = propertyResolver.getProperty(propertyPath, Map, Collections.emptyMap())
+                            Map subMap = resolveMapProperty(propertyPath, Collections.emptyMap())
                             if (!subMap.isEmpty()) {
                                 ((Map) newBuilder).putAll(subMap)
                             }
@@ -395,7 +398,9 @@ abstract class ConfigurationBuilder<B, C> {
 
                         def value
                         try {
-                            value = propertyResolver.getProperty(propertyPathForArg, argType, fallBackValue)
+                            value = argType == Map
+                                    ? resolveMapProperty(propertyPathForArg, (Map) fallBackValue)
+                                    : propertyResolver.getProperty(propertyPathForArg, argType, fallBackValue)
                         } catch (ConversionFailedException e) {
                             value = handleConversionException(e, argType, propertyPathForArg, fallBackValue)
                         } catch (ConverterNotFoundException e) {
@@ -423,6 +428,152 @@ abstract class ConfigurationBuilder<B, C> {
 
         }
 
+    }
+
+    private Map resolveMapProperty(String propertyPath, Map fallBackValue) {
+        Map directValue
+        RuntimeException conversionFailure = null
+        try {
+            directValue = propertyResolver.getProperty(propertyPath, Map)
+        } catch (ConversionFailedException | ConverterNotFoundException e) {
+            conversionFailure = e
+            directValue = null
+        }
+        if (directValue != null && !directValue.isEmpty()) {
+            return directValue
+        }
+        if (propertyResolver instanceof ConfigurableEnvironment) {
+            ConfigurableEnvironment environment = (ConfigurableEnvironment) propertyResolver
+            String prefix = propertyPath + '.'
+            Map<String, Object> result = new LinkedHashMap<>()
+            Set<String> resolvedNames = new HashSet<>()
+            for (PropertySource<?> propertySource : environment.propertySources) {
+                if (propertySource instanceof EnumerablePropertySource) {
+                    for (String name : ((EnumerablePropertySource<?>) propertySource).propertyNames) {
+                        if (!name.startsWith(prefix) || !resolvedNames.add(name)) {
+                            continue
+                        }
+                        Object value = readEnvironmentValue(environment, propertySource, name)
+                        if (value == null) {
+                            continue
+                        }
+                        String[] segments = name.substring(prefix.length()).split('\\.')
+                        Map<String, Object> current = result
+                        for (int segmentIndex = 0; segmentIndex < segments.length - 1; segmentIndex++) {
+                            String segment = segments[segmentIndex]
+                            Object child = current.get(segment)
+                            if (!(child instanceof Map)) {
+                                child = new LinkedHashMap<String, Object>()
+                                current.put(segment, child)
+                            }
+                            current = (Map<String, Object>) child
+                        }
+                        String leaf = segments[segments.length - 1]
+                        if (value instanceof Map) {
+                            Map<String, Object> copied = copyConfigMap((Map<?, ?>) value)
+                            Object existing = current.get(leaf)
+                            if (existing instanceof Map) {
+                                mergeMissing((Map<String, Object>) existing, copied)
+                            }
+                            else {
+                                current.put(leaf, copied)
+                            }
+                            claimMapPaths(resolvedNames, name, copied)
+                        }
+                        else if (!(current.get(leaf) instanceof Map)) {
+                            current.put(leaf, value)
+                        }
+                    }
+                }
+            }
+            if (!result.isEmpty()) {
+                return result
+            }
+        }
+        if (conversionFailure != null) {
+            throw conversionFailure
+        }
+        return directValue != null ? directValue : fallBackValue
+    }
+
+    /**
+     * Read one flattened entry without forcing it to String. A descendant may already be a
+     * Map, as Hibernate listener settings are, and String conversion throws before that map
+     * can be bound.
+     */
+    private static Object readEnvironmentValue(ConfigurableEnvironment environment, PropertySource<?> propertySource, String name) {
+        try {
+            return environment.getProperty(name, Object)
+        } catch (ConversionFailedException | ConverterNotFoundException ignored) {
+            return propertySource.getProperty(name)
+        }
+    }
+
+    private static Map<String, Object> copyConfigMap(Map<?, ?> source) {
+        Map<String, Object> copy = new LinkedHashMap<>()
+        for (Map.Entry<?, ?> entry : source.entrySet()) {
+            if (entry.key == null || entry.value == null) {
+                continue
+            }
+            Object value = entry.value instanceof Map ? copyConfigMap((Map<?, ?>) entry.value) : entry.value
+            putNormalized(copy, entry.key.toString(), value)
+        }
+        return copy
+    }
+
+    /**
+     * A ConfigSlurper map may store {@code oracle.jdbc.flag} as one literal key, while YAML
+     * stores the same setting as nested keys. Expand the literal form so precedence compares
+     * one structure. {@code DataSourceBuilder} flattens it back to the JDBC property name.
+     */
+    private static void putNormalized(Map<String, Object> target, String key, Object value) {
+        int dot = key.indexOf('.')
+        if (dot < 0) {
+            Object existing = target.get(key)
+            if (existing instanceof Map && value instanceof Map) {
+                mergeMissing((Map<String, Object>) existing, (Map<String, Object>) value)
+            }
+            else if (!target.containsKey(key)) {
+                target.put(key, value)
+            }
+            return
+        }
+        String head = key.substring(0, dot)
+        String tail = key.substring(dot + 1)
+        Object child = target.get(head)
+        if (!(child instanceof Map)) {
+            if (target.containsKey(head)) {
+                return
+            }
+            child = new LinkedHashMap<String, Object>()
+            target.put(head, child)
+        }
+        putNormalized((Map<String, Object>) child, tail, value)
+    }
+
+    private static void claimMapPaths(Set<String> resolvedNames, String name, Map<?, ?> value) {
+        for (Map.Entry<?, ?> entry : value.entrySet()) {
+            if (entry.key == null) {
+                continue
+            }
+            String childName = name + '.' + entry.key.toString()
+            resolvedNames.add(childName)
+            if (entry.value instanceof Map) {
+                claimMapPaths(resolvedNames, childName, (Map<?, ?>) entry.value)
+            }
+        }
+    }
+
+    private static void mergeMissing(Map<String, Object> target, Map<String, Object> extra) {
+        for (Map.Entry<String, Object> entry : extra.entrySet()) {
+            Object existing = target.get(entry.key)
+            if (existing instanceof Map && entry.value instanceof Map) {
+                mergeMissing((Map<String, Object>) existing, (Map<String, Object>) entry.value)
+            }
+            else if (!target.containsKey(entry.key)) {
+                target.put(entry.key, entry.value)
+            }
+        }
     }
 
     protected Object newChildBuilderForFallback(Object childBuilder, Object fallbackConfig) {
