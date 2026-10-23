@@ -22,6 +22,7 @@ import groovy.transform.AutoClone
 import groovy.transform.builder.Builder
 import groovy.transform.builder.SimpleStrategy
 
+import org.apache.grails.data.core.querytail.QueryTailSettings
 import org.grails.datastore.gorm.neo4j.config.Neo4jDriverConfigBuilder
 import org.grails.datastore.gorm.neo4j.config.Settings
 import org.grails.datastore.mapping.core.connections.ConnectionSourceSettings
@@ -75,6 +76,14 @@ class Neo4jConnectionSourceSettings extends ConnectionSourceSettings implements 
      * Neo4j embedded mode options
      */
     EmbeddedSettings embedded = new EmbeddedSettings()
+
+    /**
+     * The query-tail capture settings, read from {@code grails.gorm.queryTail}: the same for every
+     * connection source of an application
+     *
+     * @since 8.1
+     */
+    QueryTailSettings queryTail = new QueryTailSettings()
 
     @AutoClone
     @Builder(builderStrategy = SimpleStrategy, prefix = '')

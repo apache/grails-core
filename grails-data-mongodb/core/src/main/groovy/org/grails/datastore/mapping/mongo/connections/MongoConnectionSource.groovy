@@ -23,6 +23,7 @@ import groovy.transform.CompileStatic
 
 import com.mongodb.client.MongoClient
 
+import org.apache.grails.data.mongo.core.querytail.QueryTailCommandListener
 import org.grails.datastore.mapping.core.connections.DefaultConnectionSource
 
 /**
@@ -39,6 +40,14 @@ import org.grails.datastore.mapping.core.connections.DefaultConnectionSource
 class MongoConnectionSource extends DefaultConnectionSource<MongoClient, MongoConnectionSourceSettings> {
 
     private volatile MongoClient client
+
+    /**
+     * The query-tail listener registered on the client, which {@link #close()} closes, or null when
+     * capture is not enabled
+     *
+     * @since 8.1
+     */
+    QueryTailCommandListener queryTail
 
     /**
      * A connection source for a client GORM created, which {@link #close()} closes.
@@ -86,15 +95,14 @@ class MongoConnectionSource extends DefaultConnectionSource<MongoClient, MongoCo
 
     @Override
     void close() throws IOException {
-        if (!closeable) {
-            closed = true
-            return
-        }
         try {
-            client.close()
+            if (closeable) {
+                client.close()
+            }
         }
         finally {
             closed = true
+            queryTail?.close()
         }
     }
 }

@@ -21,6 +21,7 @@ package org.grails.orm.hibernate.connections
 import javax.sql.DataSource
 
 import grails.gorm.annotation.Entity
+import org.apache.grails.data.core.querytail.QueryTailSettings
 import org.grails.datastore.gorm.jdbc.connections.DataSourceSettings
 import org.grails.datastore.mapping.core.DatastoreUtils
 import org.grails.datastore.mapping.core.connections.ConnectionSource
@@ -118,6 +119,24 @@ class HibernateConnectionSourceFactorySpec extends Specification {
         configuration.dataSourceName == "secondary"
         configuration.getProperties().get(AvailableSettings.CLASSLOADERS).is(applicationClassLoader)
         configuration.getProperties().get(Environment.DATASOURCE).is(connectionSourceDataSource)
+    }
+
+    void "the query-tail settings are read from grails.gorm.queryTail on every settings path and inherited at runtime"() {
+        given:
+        HibernateConnectionSourceFactory factory = new HibernateConnectionSourceFactory(Foo)
+        Map config = ['dataSource.url': 'jdbc:h2:mem:queryTailFactory', 'dataSource.dialect': H2Dialect.name]
+        Map enabled = [(QueryTailSettings.SETTING_ENABLED): 'true', (QueryTailSettings.SETTING_FILE): 'build/query-tail/factory.log']
+
+        when:
+        def defaults = factory.buildSettings(ConnectionSource.DEFAULT, DatastoreUtils.createPropertyResolver(config + enabled), null, true)
+        def named = factory.buildSettings('secondary', DatastoreUtils.createPropertyResolver(config + enabled), null, false)
+        def runtime = factory.buildRuntimeSettings('runtime', DatastoreUtils.createPropertyResolver(url: 'jdbc:h2:mem:runtime'), defaults)
+        def plain = factory.buildSettings(ConnectionSource.DEFAULT, DatastoreUtils.createPropertyResolver(config), null, true)
+
+        then:
+        [defaults, named, runtime].every { it.queryTail.enabled && it.queryTail.file == 'build/query-tail/factory.log' }
+        !plain.queryTail.enabled
+        plain.queryTail.file == null
     }
 
     void "buildConfiguration uses the connection source class loader when the application context has no class loader"() {

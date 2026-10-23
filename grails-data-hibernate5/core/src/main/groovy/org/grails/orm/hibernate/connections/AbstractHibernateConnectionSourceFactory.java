@@ -29,6 +29,7 @@ import org.hibernate.SessionFactory;
 
 import org.springframework.core.env.PropertyResolver;
 
+import org.apache.grails.data.core.querytail.QueryTailSettings;
 import org.grails.datastore.gorm.jdbc.connections.CachedDataSourceConnectionSourceFactory;
 import org.grails.datastore.gorm.jdbc.connections.DataSourceConnectionSourceFactory;
 import org.grails.datastore.gorm.jdbc.connections.DataSourceSettings;
@@ -109,6 +110,7 @@ public abstract class AbstractHibernateConnectionSourceFactory extends AbstractC
             String prefix = Settings.SETTING_DATASOURCES + "." + name;
             settings = buildSettingsWithPrefix(configuration, fallbackSettings, prefix);
         }
+        settings.setQueryTail(QueryTailSettings.from(configuration, extractQueryTailFallback(fallbackSettings)));
         return settings;
     }
 
@@ -139,6 +141,16 @@ public abstract class AbstractHibernateConnectionSourceFactory extends AbstractC
                 settings.setDataSource(dataSourceSettings);
             }
         }
+        settings.setQueryTail(QueryTailSettings.from(configuration, extractQueryTailFallback(fallbackSettings)));
         return settings;
+    }
+
+    /**
+     * The query-tail settings a connection source falls back to: those of the connection source it is
+     * built after. A connection source added at runtime is configured with its own settings only, and
+     * captures as the application does.
+     */
+    private static <F extends ConnectionSourceSettings> QueryTailSettings extractQueryTailFallback(F fallbackSettings) {
+        return fallbackSettings instanceof HibernateConnectionSourceSettings hcs ? hcs.getQueryTail() : null;
     }
 }

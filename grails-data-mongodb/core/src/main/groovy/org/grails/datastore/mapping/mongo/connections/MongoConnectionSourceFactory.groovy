@@ -33,6 +33,8 @@ import org.bson.codecs.configuration.CodecRegistry
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.core.env.PropertyResolver
 
+import org.apache.grails.data.core.querytail.QueryTailSettings
+import org.apache.grails.data.mongo.core.querytail.QueryTailCommandListener
 import org.grails.datastore.mapping.core.connections.AbstractConnectionSourceFactory
 import org.grails.datastore.mapping.core.connections.ConnectionSource
 import org.grails.datastore.mapping.core.connections.ConnectionSourceSettings
@@ -87,6 +89,7 @@ class MongoConnectionSourceFactory extends AbstractConnectionSourceFactory<Mongo
         if (builder != null) {
             settings.options = builder
         }
+        settings.queryTail = QueryTailSettings.from(configuration, extractQueryTailFallback(fallbackSettings))
 
         if (isDefaultDataSource) {
             CodecRegistry codecRegistry = CodecRegistries.fromCodecs(codecs as List<? extends Codec<?>>)
@@ -122,9 +125,21 @@ class MongoConnectionSourceFactory extends AbstractConnectionSourceFactory<Mongo
         for (MongoClientSettingsBuilderCustomizer customizer : clientSettingsCustomizers) {
             customizer.customize(builder)
         }
+        QueryTailCommandListener queryTail = QueryTailCommandListener.install(name, settings.queryTail, builder)
         MongoClientSettings clientSettings = builder.build()
         MongoClient client = new RestartableMongoClient(name, { MongoClients.create(clientSettings) } as Supplier<MongoClient>)
-        return new MongoConnectionSource(name, client, settings)
+        MongoConnectionSource connectionSource = new MongoConnectionSource(name, client, settings)
+        connectionSource.queryTail = queryTail
+        return connectionSource
+    }
+
+    /**
+     * The query-tail settings a connection source inherits: those of the settings it falls back on, so
+     * that every connection source of an application captures as the default one does, including one
+     * added at runtime, which is configured with its own settings only.
+     */
+    private static <F extends ConnectionSourceSettings> QueryTailSettings extractQueryTailFallback(F fallbackSettings) {
+        fallbackSettings instanceof MongoConnectionSourceSettings ? ((MongoConnectionSourceSettings) fallbackSettings).queryTail : null
     }
 
     @Override
@@ -135,6 +150,7 @@ class MongoConnectionSourceFactory extends AbstractConnectionSourceFactory<Mongo
         if (builder != null) {
             settings.options = builder
         }
+        settings.queryTail = QueryTailSettings.from(configuration, extractQueryTailFallback(fallbackSettings))
         return settings
     }
 }

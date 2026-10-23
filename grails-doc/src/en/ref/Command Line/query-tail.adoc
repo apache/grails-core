@@ -1,0 +1,74 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+
+== query-tail
+
+=== Purpose
+
+Shows the statements a running application executes, SQL through Hibernate, Cypher through Neo4j
+and commands through MongoDB, grouped by the controller and action that ran them, so that the pages
+running the most queries, and the queries repeating within one request, stand out. The application must be started with capture turned on; see
+link:{guidePath}conf.html#queryTail[Finding Query-Heavy Pages with query-tail].
+
+=== Examples
+
+[source,groovy]
+----
+grails run-app --query-tail         // in one terminal: run the application with capture on
+
+grails query-tail                   // in another: the pages, refreshing as requests are served
+grails query-tail --statements      // the statements themselves, the most run first
+grails query-tail --page=book/show  // the statements of one page
+grails query-tail --stream          // every statement as it runs, grouped by request
+grails query-tail --all --once      // a report of everything captured so far, then exit
+----
+
+=== Description
+
+Usage:
+
+[source,groovy]
+----
+grails query-tail [--statements | --stream] [--page=<controller/action>] [--top=<n>] [--all] [--once] [--file=<path>]
+----
+
+Without options the command follows the capture and shows the pages, the ones running the most
+statements per request first: for each page how many requests were seen, the average and the
+highest number of statements per request, the total, and the statement that repeated most within a
+single request. The summary refreshes as statements run; press Ctrl-C to stop.
+
+Arguments:
+
+* `statements` - Rank the statements themselves instead of the pages that run them, with how often each ran and on how many pages.
+* `stream` - Print every statement as it runs, with a header for each request, instead of a summary. A request that comes back after another interrupted it is headed as continued.
+* `page` - Only the statements of one page, given as `controller/action` or as a controller name; implies `--statements`, or filters the stream when `--stream` is given.
+* `top` - How many rows to show. Defaults to 30.
+* `all` - Read what the application has run so far, not only what it runs from now on.
+* `once` - Print the summary of what has been captured and exit, which with `--all` is a report of the whole run so far.
+* `file` - The capture file. Defaults to the one the application writes, `build/query-tail/capture.log` or the file `grails.gorm.queryTail.file` names. A build directory moved in `build.gradle` is followed by the application but not by this command, which runs outside Gradle: name the file in `grails.gorm.queryTail.file` or give it here.
+
+The command does not start the application, and it is not a reason to boot it: it runs without
+the application context and only reads the capture file. When there is no capture yet it waits for
+one and says how to start the application so that it writes one. When the application restarts,
+the command starts over with the new run. Statements run outside a web request, by a scheduled job
+for example, are shown under the thread that ran them.
+
+Statements are shown as they were captured, without their values: literals appear as `?` and
+comments are left out. See link:{guidePath}conf.html#queryTail[Finding Query-Heavy Pages with query-tail].

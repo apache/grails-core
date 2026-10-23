@@ -41,6 +41,7 @@ import org.springframework.context.MessageSourceAware;
 import org.springframework.context.support.StaticMessageSource;
 import org.springframework.core.io.Resource;
 
+import org.apache.grails.data.hibernate5.core.querytail.QueryTailStatementInspector;
 import org.grails.datastore.gorm.jdbc.connections.DataSourceSettings;
 import org.grails.datastore.gorm.jdbc.connections.SpringDataSourceConnectionSourceFactory;
 import org.grails.datastore.gorm.validation.jakarta.JakartaValidatorRegistry;
@@ -267,6 +268,7 @@ public class HibernateConnectionSourceFactory extends AbstractHibernateConnectio
         configuration.setSessionFactoryBeanName(isDefault ? "sessionFactory" : "sessionFactory_" + name);
         Properties hibernateProperties = settings.toProperties();
         configuration.addProperties(hibernateProperties);
+        QueryTailStatementInspector.install(name, settings.getQueryTail(), configuration);
         return configuration;
     }
 

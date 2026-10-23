@@ -157,6 +157,32 @@ class GrailsGradlePluginToolchainSpec extends GradleSpecification {
         !result.output.contains('STARTUP_PROGRESS_ARG')
     }
 
+    def "forked application and test JVMs receive query-tail settings given as Gradle properties"() {
+        given:
+        setupTestResourceProject('fork-query-tail')
+
+        when:
+        def result = executeTask('inspectQueryTail',
+                ['-Pgrails.gorm.queryTail.enabled', '-Pgrails.gorm.queryTail.file=build/statements.log'])
+
+        then: 'bootRun and test both get them, a bare one as true'
+        result.output.contains('QUERY_TAIL_ARG bootRun -Dgrails.gorm.queryTail.enabled=true')
+        result.output.contains('QUERY_TAIL_ARG bootRun -Dgrails.gorm.queryTail.file=build/statements.log')
+        result.output.contains('QUERY_TAIL_ARG test -Dgrails.gorm.queryTail.enabled=true')
+        result.output.contains('QUERY_TAIL_ARG test -Dgrails.gorm.queryTail.file=build/statements.log')
+    }
+
+    def "forked JVMs receive no query-tail settings when none are given"() {
+        given:
+        setupTestResourceProject('fork-query-tail')
+
+        when:
+        def result = executeTask('inspectQueryTail')
+
+        then:
+        !result.output.contains('QUERY_TAIL_ARG')
+    }
+
     def "custom heap sizes are not overridden by fork settings"() {
         given:
         setupTestResourceProject('fork-settings-custom')

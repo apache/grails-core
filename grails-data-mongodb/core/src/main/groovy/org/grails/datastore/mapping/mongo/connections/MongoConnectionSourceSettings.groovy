@@ -25,6 +25,8 @@ import groovy.transform.builder.SimpleStrategy
 
 import com.mongodb.MongoClientSettings
 
+import org.apache.grails.data.core.querytail.QueryTailSettings
+
 /**
  * Settings for MongoDB driver
  *
@@ -39,4 +41,12 @@ class MongoConnectionSourceSettings extends AbstractMongoConnectionSourceSetting
      * The MongoClientOptions object
      */
     MongoClientSettings.Builder options = MongoClientSettings.builder()
+
+    /**
+     * The query-tail capture settings, read from {@code grails.gorm.queryTail}: the same for every
+     * connection source of an application
+     *
+     * @since 8.1
+     */
+    QueryTailSettings queryTail = new QueryTailSettings()
 }

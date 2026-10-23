@@ -43,6 +43,8 @@ import org.springframework.context.support.StaticMessageSource;
 import org.springframework.core.env.PropertyResolver;
 import org.springframework.core.io.Resource;
 
+import org.apache.grails.data.core.querytail.QueryTailSettings;
+import org.apache.grails.data.hibernate7.core.querytail.QueryTailStatementInspector;
 import org.grails.datastore.gorm.jdbc.connections.CachedDataSourceConnectionSourceFactory;
 import org.grails.datastore.gorm.jdbc.connections.DataSourceConnectionSourceFactory;
 import org.grails.datastore.gorm.jdbc.connections.DataSourceSettings;
@@ -141,6 +143,15 @@ public class HibernateConnectionSourceFactory
         return null;
     }
 
+    /**
+     * The query-tail settings a connection source falls back to: those of the connection source it is
+     * built after. A connection source added at runtime is configured with its own settings only, and
+     * captures as the application does.
+     */
+    private static <F extends ConnectionSourceSettings> QueryTailSettings extractQueryTailFallback(F fallbackSettings) {
+        return fallbackSettings instanceof HibernateConnectionSourceSettings hcs ? hcs.getQueryTail() : null;
+    }
+
     public Class<?>[] getPersistentClasses() {
         return persistentClasses != null ? persistentClasses.clone() : new Class[0];
     }
@@ -213,6 +224,7 @@ public class HibernateConnectionSourceFactory
         configuration.setSessionFactoryBeanName(
                 ConnectionSource.DEFAULT.equals(name) ? "sessionFactory" : "sessionFactory_" + name);
         configuration.addProperties(settings.toProperties());
+        QueryTailStatementInspector.install(name, settings.getQueryTail(), configuration);
         return configuration;
     }
 
@@ -303,6 +315,7 @@ public class HibernateConnectionSourceFactory
                 DataSourceSettings dsFallback = extractDataSourceFallback(fallbackSettings);
                 settings.setDataSource(new DataSourceSettingsBuilder(configuration, qualified, dsFallback).build());
             }
+            settings.setQueryTail(QueryTailSettings.from(configuration, extractQueryTailFallback(fallbackSettings)));
             return settings;
         }
         return buildSettingsWithPrefix(configuration, fallbackSettings, Settings.SETTING_DATASOURCES + "." + name);
@@ -319,6 +332,7 @@ public class HibernateConnectionSourceFactory
                         .isEmpty()) {
             settings.setDataSource(new DataSourceSettingsBuilder(configuration, prefix, dsFallback).build());
         }
+        settings.setQueryTail(QueryTailSettings.from(configuration, extractQueryTailFallback(fallbackSettings)));
         return settings;
     }
 
