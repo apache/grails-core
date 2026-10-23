@@ -19,12 +19,20 @@
 
 package grails.config
 
+import groovy.transform.CompileStatic
+
 /**
  * Constants for names of settings in Grails
+ *
+ * <p>Compiled statically, because one constant is computed rather than written out and the interface
+ * is initialized as an application starts: compiled dynamically, its {@code System.getProperty} call
+ * was dispatched through a metaclass, which a native image cannot do for a JDK method nothing
+ * registered.</p>
  *
  * @author Graeme Rocher
  * @since 3.0
  */
+@CompileStatic
 interface Settings {
 
     /**

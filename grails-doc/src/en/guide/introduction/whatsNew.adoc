@@ -696,7 +696,9 @@ java -Dspring.aot.enabled=true -jar build/libs/myapp.jar
 
 AOT processing is also what a GraalVM native image requires: Spring Boot refuses to start an image without a
 build-time generated initializer. Reachability metadata for the application's own artefacts and compiled pages is
-written from the build output, and `traceNativeMetadata` records what the framework reflects on along a request path.
+written from the build output, the framework registers the reflection it does on its own behalf while the
+application starts -- finding the plugins, creating their beans and artefacts, and what Groovy does for enums,
+traits and closures -- and `traceNativeMetadata` records what the framework reflects on along a request path.
 
 See the <<deploymentAot,Ahead-of-Time Processing>> section for what it changes at runtime and what it
 does not yet cover.
