@@ -229,7 +229,7 @@ public class JpaCriteriaQueryCreator<T> {
                         // double quotes is case sensitive, while backquotes (MySQL) and square brackets (SQL Server)
                         // leave a column alias case insensitive
                         String groupBy = sqlGroupProjection.getSql().trim();
-                        String name = SqlProjection.unquote(groupBy);
+                        String name = SqlText.of(groupBy, SqlSyntax.forCriteriaBuilder(criteriaBuilder)).unquoted();
                         boolean caseSensitive = groupBy.startsWith("\"") && !name.equals(groupBy);
                         SqlProjection aliased = findSqlProjection(name, !caseSensitive);
                         return translator.translateSql(aliased != null ? aliased.getSql() : sqlGroupProjection.getSql(), null);

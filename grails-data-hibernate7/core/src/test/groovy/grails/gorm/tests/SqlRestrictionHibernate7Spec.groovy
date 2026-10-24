@@ -119,6 +119,13 @@ class SqlRestrictionHibernate7Spec extends HibernateGormDatastoreSpec {
             }
         }*.name == ['ABCDEF']
 
+        and: 'where the database has arrays, the placeholders in an array literal are bound'
+        if (db in ['H2', 'Postgres']) {
+            assert SqlRestrictionParent.createCriteria().list {
+                sqlRestriction('length({alias}.name) = ANY(ARRAY [CAST(? AS INTEGER), CAST(? AS INTEGER)])', [3, 6])
+            }*.name.sort() == ['ABC', 'ABCDEF']
+        }
+
         and: 'a count'
         SqlRestrictionParent.createCriteria().count {
             sqlRestriction('length({alias}.name) > ?', [3])
