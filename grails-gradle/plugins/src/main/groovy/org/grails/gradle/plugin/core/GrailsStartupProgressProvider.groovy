@@ -21,8 +21,6 @@ package org.grails.gradle.plugin.core
 import groovy.transform.CompileStatic
 
 import org.gradle.api.provider.Provider
-import org.gradle.api.tasks.Input
-import org.gradle.process.CommandLineArgumentProvider
 
 /**
  * Hands the startup progress settings a developer keeps as Gradle properties to the application
@@ -39,25 +37,11 @@ import org.gradle.process.CommandLineArgumentProvider
  * @since 8.1
  */
 @CompileStatic
-class GrailsStartupProgressProvider implements CommandLineArgumentProvider {
+class GrailsStartupProgressProvider extends GrailsPropertyArgumentProvider {
 
     static final String PREFIX = 'grails.startup.progress.'
 
-    private final Provider<Map<String, String>> settings
-
     GrailsStartupProgressProvider(Provider<Map<String, String>> settings) {
-        this.settings = settings
-    }
-
-    @Input
-    Map<String, String> getSettings() {
-        settings.getOrElse([:])
-    }
-
-    @Override
-    Iterable<String> asArguments() {
-        getSettings().collect { String name, String value ->
-            "-D${name}=${value ?: 'true'}".toString()
-        }
+        super(settings)
     }
 }

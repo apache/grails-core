@@ -22,6 +22,7 @@ import com.mongodb.client.MongoClient
 import com.mongodb.ReadPreference
 import com.mongodb.MongoClientSettings
 import com.mongodb.event.CommandListener
+import org.apache.grails.data.core.querytail.QueryTailSettings
 import org.grails.datastore.mapping.core.DatastoreUtils
 import org.grails.datastore.mapping.core.connections.ConnectionSource
 import org.grails.datastore.mapping.core.connections.ConnectionSources
@@ -31,11 +32,54 @@ import org.grails.datastore.mapping.mongo.connections.MongoConnectionSource
 import org.grails.datastore.mapping.mongo.connections.MongoConnectionSourceFactory
 import org.grails.datastore.mapping.mongo.connections.MongoConnectionSourceSettings
 import spock.lang.Specification
+import spock.lang.TempDir
 
 /**
  * Created by graemerocher on 30/06/16.
  */
 class MongoConnectionSourceFactorySpec extends Specification {
+
+    @TempDir
+    File tempDir
+
+    void "the query-tail settings are read from grails.gorm.queryTail, every connection source inherits them, and each registers a listener"() {
+        given:
+        File file = new File(tempDir, 'capture.log')
+        MongoConnectionSourceFactory factory = new MongoConnectionSourceFactory()
+
+        when:
+        ConnectionSources<MongoClient, MongoConnectionSourceSettings> sources = ConnectionSourcesInitializer.create(factory,
+                DatastoreUtils.createPropertyResolver(
+                        (MongoSettings.SETTING_URL): 'mongodb://localhost/myDb',
+                        (MongoSettings.SETTING_CONNECTIONS): [another: [url: 'mongodb://localhost/anotherDb']],
+                        (QueryTailSettings.SETTING_ENABLED): 'true',
+                        (QueryTailSettings.SETTING_FILE): file.path))
+        MongoConnectionSource runtime = sources.addConnectionSource('runtime', [url: 'mongodb://localhost/runtimeDb']) as MongoConnectionSource
+        List<MongoConnectionSource> all = sources.allConnectionSources.collect { it as MongoConnectionSource }
+
+        then:
+        all*.name as Set == [ConnectionSource.DEFAULT, 'another', 'runtime'] as Set
+        all.every { it.settings.queryTail.enabled && it.settings.queryTail.file == file.path }
+        all.every { it.queryTail.file == file && it.queryTail.dataSourceName == it.name }
+        runtime.queryTail.dataSourceName == 'runtime'
+
+        cleanup:
+        sources?.close()
+    }
+
+    void "without the setting no connection source registers a listener"() {
+        when:
+        ConnectionSources<MongoClient, MongoConnectionSourceSettings> sources = ConnectionSourcesInitializer.create(
+                new MongoConnectionSourceFactory(), DatastoreUtils.createPropertyResolver((MongoSettings.SETTING_URL): 'mongodb://localhost/myDb'))
+
+        then:
+        !sources.defaultConnectionSource.settings.queryTail.enabled
+        (sources.defaultConnectionSource as MongoConnectionSource).queryTail == null
+        tempDir.list().length == 0
+
+        cleanup:
+        sources?.close()
+    }
 
     void "Test MongoDB connection sources factory creates the correct configuration"() {
         when:"A factory instance"

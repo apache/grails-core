@@ -75,6 +75,7 @@ import org.springframework.transaction.PlatformTransactionManager;
 
 import grails.gorm.multitenancy.Tenants;
 import grails.util.GrailsMessageSourceUtils;
+import org.apache.grails.data.mongo.core.querytail.QueryTailCommandListener;
 import org.grails.datastore.bson.codecs.CodecExtensions;
 import org.grails.datastore.gorm.GormEnhancer;
 import org.grails.datastore.gorm.GormInstanceApi;
@@ -319,6 +320,7 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
         for (PersistentEntity entity : mappingContext.getPersistentEntities()) {
             registerEntity(entity);
         }
+        QueryTailCommandListener.bind(connectionSources.getAllConnectionSources(), this);
         if (!(connectionSources instanceof SingletonConnectionSources)) {
             final MongoDatastore parent = this;
             Iterable<ConnectionSource<MongoClient, MongoConnectionSourceSettings>> allConnectionSources = connectionSources.getAllConnectionSources();
@@ -340,6 +342,7 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
                     final SingletonConnectionSources<MongoClient, MongoConnectionSourceSettings> singletonConnectionSources = new SingletonConnectionSources<>(connectionSource, connectionSources.getBaseConfiguration());
                     MongoDatastore childDatastore = createChildDatastore(mappingContext, eventPublisher, parent, singletonConnectionSources);
                     datastoresByConnectionSource.put(connectionSource.getName(), childDatastore);
+                    QueryTailCommandListener.bind(Collections.singletonList(connectionSource), parent);
                     registerAllEntitiesWithEnhancer();
                     // Decided under the lifecycle monitor, so a connection registered while start() or stop() is
                     // under way waits for it and is then treated as the datastore now is.

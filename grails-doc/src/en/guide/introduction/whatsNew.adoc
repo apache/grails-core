@@ -737,6 +737,21 @@ same view is a report of how long each stage of the start took, at `/__grails/st
 `grails.boot.StartupTask`, which the database migration plugin uses to show how many change sets are left to
 run. See <<startupProgress,Watching the Application Start>>.
 
+==== Finding Query-Heavy Pages with query-tail
+
+The new `query-tail` command shows the pages of a running application ranked by the statements they run per
+request, and for each page the statement that repeats most within one request, which is what an N+1 looks like.
+It covers every store GORM runs statements on: SQL through Hibernate 5 and 7, Cypher through Neo4j and commands
+through MongoDB.
+Start the application with `grails run-app --query-tail` (or `./gradlew bootRun -Pgrails.gorm.queryTail.enabled`), then
+`grails query-tail` in a second terminal follows the capture and refreshes as requests are served. `--statements`
+ranks the statements, `--page=book/show` shows one page's, `--stream` prints each statement as it runs, and
+`--all --once` reports a whole run, including an integration test run. The command reads a capture file and does
+not boot the application. Capture is off unless the application is started with it, and an application started
+without it carries nothing that records. Statements are captured without their values: literals are recorded as `?`
+and comments are dropped, while the database runs each statement as written. See
+xref:conf#queryTail[Finding Query-Heavy Pages with query-tail].
+
 ==== Banner Colour, Container Version and Start Mark
 
 The startup banner is coloured, reports the servlet container it is running on, and says how the application was

@@ -20,10 +20,17 @@ package org.grails.orm.hibernate.cfg
 
 import javax.sql.DataSource
 
+import grails.gorm.annotation.Entity
 import org.grails.datastore.gorm.jdbc.connections.DataSourceSettings
+import org.grails.datastore.mapping.core.DatastoreUtils
 import org.grails.datastore.mapping.core.connections.ConnectionSource
+import org.grails.orm.hibernate.connections.HibernateConnectionSourceFactory
+import org.hibernate.SessionFactory
+import org.hibernate.SessionFactoryObserver
 import org.hibernate.cfg.AvailableSettings
 import org.hibernate.cfg.Environment
+import org.hibernate.engine.spi.SessionFactoryImplementor
+import org.hibernate.service.internal.AbstractServiceRegistryImpl
 import org.springframework.context.ApplicationContext
 import spock.lang.Specification
 
@@ -37,6 +44,29 @@ class HibernateMappingContextConfigurationSpec extends Specification {
 
     def cleanup() {
         Thread.currentThread().contextClassLoader = originalContextClassLoader
+        RecordingSessionFactoryObserver.events.clear()
+    }
+
+    void "an observer set on the configuration before the build is told of the session factory, and the registry is still destroyed"() {
+        given:
+        def connectionSource = new HibernateConnectionSourceFactory(ObservedConfigurationBook).create(ConnectionSource.DEFAULT,
+                DatastoreUtils.createPropertyResolver([
+                        'dataSource.url'       : 'jdbc:h2:mem:observedConfigurationDB;LOCK_TIMEOUT=10000',
+                        'dataSource.dbCreate'  : 'create-drop',
+                        'hibernate.configClass': ObservingConfiguration.name]))
+        SessionFactoryImplementor sessionFactory = connectionSource.source as SessionFactoryImplementor
+        def registry = sessionFactory.serviceRegistry.parentServiceRegistry as AbstractServiceRegistryImpl
+
+        expect:
+        RecordingSessionFactoryObserver.events == ['created']
+        registry.active
+
+        when:
+        connectionSource.close()
+
+        then:
+        RecordingSessionFactoryObserver.events == ['created', 'closing', 'closed']
+        !registry.active
     }
 
     void "setApplicationContext uses the context class loader when DevTools is not active"() {
@@ -259,5 +289,39 @@ class HibernateMappingContextConfigurationSpec extends Specification {
 
     private static ClassLoader loaderUnder(ClassLoader parent) {
         new URLClassLoader([] as URL[], parent)
+    }
+}
+
+@Entity
+class ObservedConfigurationBook {
+    Long id
+    Long version
+    String title
+}
+
+class ObservingConfiguration extends HibernateMappingContextConfiguration {
+
+    ObservingConfiguration() {
+        setSessionFactoryObserver(new RecordingSessionFactoryObserver())
+    }
+}
+
+class RecordingSessionFactoryObserver implements SessionFactoryObserver {
+
+    static final List<String> events = [].asSynchronized()
+
+    @Override
+    void sessionFactoryCreated(SessionFactory factory) {
+        events << 'created'
+    }
+
+    @Override
+    void sessionFactoryClosing(SessionFactory factory) {
+        events << 'closing'
+    }
+
+    @Override
+    void sessionFactoryClosed(SessionFactory factory) {
+        events << 'closed'
     }
 }

@@ -33,6 +33,7 @@ import org.hibernate.cfg.NamingStrategy
 import org.springframework.core.io.Resource
 
 import org.grails.datastore.gorm.jdbc.connections.DataSourceSettings
+import org.apache.grails.data.core.querytail.QueryTailSettings
 import org.grails.datastore.mapping.core.connections.ConnectionSourceSettings
 import org.grails.orm.hibernate.HibernateEventListeners
 import org.grails.orm.hibernate.dirty.GrailsEntityDirtinessStrategy
@@ -61,6 +62,14 @@ class HibernateConnectionSourceSettings extends ConnectionSourceSettings {
      * Settings for Hibernate
      */
     HibernateSettings hibernate = new HibernateSettings()
+
+    /**
+     * The query-tail capture settings, read from {@code grails.gorm.queryTail}: the same for every
+     * connection source of an application
+     *
+     * @since 8.1
+     */
+    QueryTailSettings queryTail = new QueryTailSettings()
 
     /**
      * Convert to hibernate properties

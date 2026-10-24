@@ -125,6 +125,9 @@ class GrailsGradlePlugin implements Plugin<Project> {
     private static final String CLI_PID_FILE_PROPERTY = 'grails.cli.pid.file'
     private static final String RUN_APP_PID_FILE_NAME = 'run-app.pid'
 
+    /** The Gradle property prefix of the query-tail capture settings handed to forked JVMs, {@code -Pgrails.gorm.queryTail.enabled}. */
+    private static final String QUERY_TAIL_PROPERTY_PREFIX = 'grails.gorm.queryTail.'
+
     /**
      * A {@code configurationScript} configured on a GroovyCompile task, keyed by compile task name
      * and captured when the task graph is ready, for the generator task to fold into the combined
@@ -1055,6 +1058,10 @@ ${importStatements}
             // path relative to the project, not its name, so that two instances of one checkout have one each
             task.jvmArgumentProviders.add(new GrailsProjectOutputDirProvider(BuildSettings.PROJECT_TARGET_DIR,
                     project.projectDir, project.layout.buildDirectory, task.systemProperties))
+            // query-tail capture settings given as Gradle properties reach every forked application and test
+            // JVM under their own names: ./gradlew bootRun -Pgrails.gorm.queryTail.enabled
+            task.jvmArgumentProviders.add(new GrailsPropertyArgumentProvider(
+                    project.providers.gradlePropertiesPrefixedBy(QUERY_TAIL_PROPERTY_PREFIX)))
             task.systemProperty(Environment.KEY, defaultGrailsEnv)
             task.systemProperty(Environment.FULL_STACKTRACE, System.getProperty(Environment.FULL_STACKTRACE) ?: '')
             if (task.minHeapSize == null) {

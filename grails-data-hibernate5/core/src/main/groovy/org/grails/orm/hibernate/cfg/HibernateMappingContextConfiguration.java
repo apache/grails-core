@@ -302,17 +302,7 @@ public class HibernateMappingContextConfiguration extends Configuration implemen
                 PropertyAccessStrategy.class, "traitProperty", TraitPropertyAccessStrategy.class
         );
 
-        setSessionFactoryObserver(new SessionFactoryObserver() {
-            private static final long serialVersionUID = 1;
-
-            public void sessionFactoryCreated(SessionFactory factory) {}
-
-            public void sessionFactoryClosed(SessionFactory factory) {
-                if (serviceRegistry != null) {
-                    ((ServiceRegistryImplementor) serviceRegistry).destroy();
-                }
-            }
-        });
+        setSessionFactoryObserver(new ServiceRegistryClosingObserver(getSessionFactoryObserver()));
 
         StandardServiceRegistryBuilder standardServiceRegistryBuilder = createStandardServiceRegistryBuilder(bootstrapServiceRegistry)
                                                                                     .applySettings(getProperties());
@@ -400,5 +390,49 @@ public class HibernateMappingContextConfiguration extends Configuration implemen
 
     public void setMetadataContributor(MetadataContributor metadataContributor) {
         this.metadataContributor = metadataContributor;
+    }
+
+    /**
+     * Destroys the service registry once the session factory has closed. The observer set on the
+     * configuration before the build, such as the one query-tail capture installs, is told first.
+     */
+    private class ServiceRegistryClosingObserver implements SessionFactoryObserver {
+
+        private static final long serialVersionUID = 1;
+
+        private final SessionFactoryObserver configured;
+
+        ServiceRegistryClosingObserver(SessionFactoryObserver configured) {
+            // a configuration built again keeps the observer it was given, not the one the last build set
+            this.configured = configured instanceof ServiceRegistryClosingObserver previous ? previous.configured : configured;
+        }
+
+        @Override
+        public void sessionFactoryCreated(SessionFactory factory) {
+            if (configured != null) {
+                configured.sessionFactoryCreated(factory);
+            }
+        }
+
+        @Override
+        public void sessionFactoryClosing(SessionFactory factory) {
+            if (configured != null) {
+                configured.sessionFactoryClosing(factory);
+            }
+        }
+
+        @Override
+        public void sessionFactoryClosed(SessionFactory factory) {
+            try {
+                if (configured != null) {
+                    configured.sessionFactoryClosed(factory);
+                }
+            }
+            finally {
+                if (serviceRegistry != null) {
+                    ((ServiceRegistryImplementor) serviceRegistry).destroy();
+                }
+            }
+        }
     }
 }

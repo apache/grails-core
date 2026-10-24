@@ -19,9 +19,14 @@
 package org.grails.datastore.mapping.mongo.connections
 
 import com.mongodb.client.MongoClient
+import org.apache.grails.data.mongo.core.querytail.QueryTailCommandListener
 import spock.lang.Specification
+import spock.lang.TempDir
 
 class MongoConnectionSourceSpec extends Specification {
+
+    @TempDir
+    File tempDir
 
     void 'it hands out the client it was built with, and owns it'() {
         given:
@@ -63,6 +68,41 @@ class MongoConnectionSourceSpec extends Specification {
         then:
         1 * replacement.close()
         0 * original.close()
+    }
+
+    void 'closing it closes the query-tail listener registered on its client, after the client'() {
+        given:
+        MongoClient client = Mock(MongoClient)
+        QueryTailCommandListener listener = new QueryTailCommandListener('reporting', new File(tempDir, 'capture.log'))
+        def source = new MongoConnectionSource('reporting', client, new MongoConnectionSourceSettings())
+        source.queryTail = listener
+
+        expect:
+        listener.capture.open
+
+        when:
+        source.close()
+
+        then:
+        1 * client.close()
+        !listener.capture.open
+        source.closed
+    }
+
+    void 'closing one that does not own its client still closes the query-tail listener'() {
+        given:
+        MongoClient client = Mock(MongoClient)
+        QueryTailCommandListener listener = new QueryTailCommandListener('reporting', new File(tempDir, 'capture.log'))
+        def source = new MongoConnectionSource('reporting', client, new MongoConnectionSourceSettings(), false)
+        source.queryTail = listener
+
+        when:
+        source.close()
+
+        then:
+        0 * client.close()
+        !listener.capture.open
+        source.closed
     }
 
     void 'one built around a client the application supplied reports that it does not own it'() {

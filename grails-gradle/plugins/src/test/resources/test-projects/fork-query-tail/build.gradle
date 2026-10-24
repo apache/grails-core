@@ -1,0 +1,17 @@
+plugins {
+    id 'org.apache.grails.gradle.grails-app'
+}
+
+tasks.register('inspectQueryTail') {
+    def queryTailArgs = providers.provider {
+        [
+                bootRun: tasks.named('bootRun', JavaExec).get().allJvmArgs.findAll { it.startsWith('-Dgrails.gorm.queryTail.') },
+                test: tasks.named('test', Test).get().allJvmArgs.findAll { it.startsWith('-Dgrails.gorm.queryTail.') }
+        ]
+    }
+    doLast {
+        queryTailArgs.get().each { String task, List<String> args ->
+            args.each { println "QUERY_TAIL_ARG ${task} ${it}" }
+        }
+    }
+}

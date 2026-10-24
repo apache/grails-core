@@ -20,6 +20,7 @@ package org.grails.orm.hibernate.connections
 
 import grails.gorm.annotation.Entity
 import grails.gorm.tests.HibernateGormDatastoreSpec
+import org.apache.grails.data.core.querytail.QueryTailSettings
 import org.grails.datastore.mapping.core.DatastoreUtils
 import org.grails.datastore.mapping.core.connections.ConnectionSource
 import org.grails.datastore.mapping.core.exceptions.ConfigurationException
@@ -234,6 +235,23 @@ class HibernateConnectionSourceFactorySpec extends HibernateGormDatastoreSpec {
         then:
         settings != null
         settings instanceof HibernateConnectionSourceSettings
+    }
+
+    void "the query-tail settings are read from grails.gorm.queryTail on every settings path and inherited at runtime"() {
+        given:
+        def factory = new HibernateConnectionSourceFactory(Foo)
+        Map enabled = [(QueryTailSettings.SETTING_ENABLED): 'true', (QueryTailSettings.SETTING_FILE): 'build/query-tail/factory.log']
+
+        when:
+        def defaults = factory.buildSettings(ConnectionSource.DEFAULT, DatastoreUtils.createPropertyResolver(h2Config() + enabled), null, true)
+        def named = factory.buildSettings('secondary', DatastoreUtils.createPropertyResolver(h2Config() + enabled), null, false)
+        def runtime = factory.buildRuntimeSettings('runtime', DatastoreUtils.createPropertyResolver(url: 'jdbc:h2:mem:runtime'), defaults)
+        def plain = factory.buildSettings(ConnectionSource.DEFAULT, DatastoreUtils.createPropertyResolver(h2Config()), null, true)
+
+        then:
+        [defaults, named, runtime].every { it.queryTail.enabled && it.queryTail.file == 'build/query-tail/factory.log' }
+        !plain.queryTail.enabled
+        plain.queryTail.file == null
     }
 
     void "buildSettings for named datasource builds settings with datasource prefix"() {

@@ -1,0 +1,147 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+A page that is slow because it runs hundreds of queries is easy to miss in a log: `logSql` prints
+every statement, but not which page ran it or how many a request added up to. The `query-tail`
+command answers that. It shows the pages of the running application ranked by the statements they
+run per request, and for each page the statement that repeats most within a single request, which
+is what an N+1 looks like. It covers every store GORM runs statements on: SQL through Hibernate,
+Cypher through Neo4j and commands through MongoDB.
+
+It takes two terminals. In the first, start the application with capture turned on:
+
+[source,shell]
+----
+grails run-app --query-tail
+----
+
+or, with Gradle, `./gradlew bootRun -Pgrails.gorm.queryTail.enabled`. In the second, follow the
+capture and use the application:
+
+[source,shell]
+----
+grails query-tail
+----
+
+The summary refreshes as requests are served:
+
+----
+query-tail build/query-tail/capture.log  312 statements in 14 requests  (refreshes as statements run; Ctrl-C to stop)
+PAGE        REQUESTS  AVG/REQ    MAX   TOTAL  MOST REPEATED IN ONE REQUEST
+book/show          6     48.0     61     288  44× select ... from author a1_0 where a1_0.id=?
+book/index         5      4.2      5      21  5× select ... from book b1_0
+author/show        3      1.0      1       3  1× select ... from author a1_0 where a1_0.id=?
+----
+
+Statements are shown without their column lists, so the same query counts as one statement wherever
+it is run from. `--statements` ranks the statements themselves, `--page=book/show` shows the
+statements of one page, and `--stream` prints each statement as it runs with a header for each
+request, which shows a page load adding up. `--all --once` prints a report of everything captured
+so far and exits, which is also how to look at what an integration test run executed:
+
+[source,shell]
+----
+./gradlew integrationTest -Pgrails.gorm.queryTail.enabled
+grails query-tail --all --once
+----
+
+See link:{commandLineRef}query-tail.html[query-tail] for every option.
+
+Statements are attributed to the controller and action Grails resolved for the request on the
+thread that runs them, so a statement run by an interceptor, the action or a GSP all count for the
+same page. Work on another thread, an async task or a scheduled job, is shown under the name of
+its thread. A request that does not reach a controller is shown under its path. A request whose
+statements land on two pages, one forwarded to another action or one that queries in a filter
+before its controller is chosen, counts as a request of each page with the statements it ran there.
+In the `--stream` view, requests served at the same time interleave: a request that comes back is
+headed as continued, and the count printed when another request interrupts it is its running total.
+The request itself is recorded as its method and path, with the values in the path replaced by `?`:
+the values the URL mapping took from it and those of its query string, found whether or not the
+client percent-encoded them, and any segment that is a number, a UUID or a long hexadecimal token,
+so an id, a token or a key carried in a path never reaches the capture file either.
+
+Statements are captured without their values. Every string, number, dollar-quoted literal and
+Transact-SQL amount is recorded as `?` and every comment is dropped, so a password written into a
+native query, a key in a comment, or a literal Hibernate copies into its SQL comments with
+`hibernate.use_sql_comments` never reaches the capture file or the command. Only the recorded copy
+changes: the database runs the statement as written. Where a value or a comment ends is read by the
+lexical rules of the database the dialect belongs to, which were verified against the databases
+themselves: H2, PostgreSQL, CockroachDB, Oracle, Db2, HSQLDB, Informix, MySQL and MariaDB, SQL
+Server and Sybase, and Cloud Spanner's GoogleSQL, with SAP HANA read from its documentation and
+Derby, whose Hibernate 5 dialect extends Db2's, read as Db2. A rule that depends on a server setting
+the capture cannot see, such as whether a backslash escapes a quote in MySQL and PostgreSQL, or
+whether MySQL starts a `--` comment before a character outside ASCII, which its connection character
+set decides, is read every way the setting allows, and the statement is recorded only when every
+reading finds the same values. A statement that fails that, that has a literal or comment that
+never ends, or whose `/*! ... */` comment MySQL runs as SQL on some server versions, is recorded as
+`(statement withheld: its values could not be redacted)`, never as written. A square bracket after
+whitespace or a comment is read both ways on H2 as well, as a name in its SQL Server mode and as the
+start of an array literal after `ARRAY`, so `ARRAY ['x']` and `ARRAY/**/['x']` are withheld while
+`[name]` is recorded.
+
+Double-quoted text is a value on some databases and a name on others. MySQL and MariaDB read it as
+a string, and so do Informix, and SQL Server and Sybase when `QUOTED_IDENTIFIER` is off, which is
+Sybase's default, so on those databases it is recorded as `?`, even when a statement written by hand
+uses it to quote a name. Cloud Spanner's GoogleSQL reads it as a string too, and a string there can be
+triple-quoted and then hold quotes of its own, which is how statements are read with Hibernate 7's
+Spanner dialect. Any other dialect, such as SQLite's, whose database reads double-quoted text as a
+string when no column has that name, Firebird's, SQL Anywhere's, whose database reads `//` as a
+comment, Spanner's PostgreSQL dialect, or a dialect that is not Hibernate's, such as the Spanner
+dialect with Hibernate 5, is read in every known syntax, so a statement that quotes a name in double
+quotes, doubles a quote inside a string, or triple-quotes a string is withheld there.
+
+Cypher statements are read by the rules of Cypher, verified against Neo4j 5 and Neo4j 3.5: a string
+in single or double quotes with a backslash escaping inside it, a name in backticks, `//` and
+`/* */` comments, and `$name` parameters, which are kept, as a parameter names a value without
+holding it; the values GORM passes as parameters are never recorded. The two versions differ on two
+points, and the capture takes neither side. Neo4j 5 ends a `//` comment at a carriage return where
+3.5 does not, so a statement with a bare carriage return in a comment is read both ways. Neo4j 5
+decodes a `\uXXXX` escape before it parses, where 3.5 reads one only inside a string, so a statement
+with a backslash outside a string or a comment is withheld. Statements run through the driver's
+asynchronous and reactive sessions, which GORM does not use, are not recorded.
+
+A MongoDB command is a document rather than text, so it is recorded as its name, the database and
+collection it runs against, and the document of its entries with every value replaced:
+`find shop.book {"filter": {"title": ?}, "sort": {"title": ?}, "limit": ?}`. Its keys are kept, as
+they name the command's options, its operators and the fields of the collection, except where a key
+may hold data: below the top level of a document, a key is recorded as `?` too unless the mapping
+of the domain classes knows it as a field, so the keys inside a map property, inside a dynamic
+attribute, or inside a document of a collection no domain class is mapped to are not recorded, nor
+is any segment of a dotted path past such a key. A numeric key is kept only where it indexes a list
+the mapping knows, as in `stops.0.city`; in a map, or at the top of a document, it is recorded as
+`?` like any other key that may be data. The entries the driver adds for its session and its
+transaction are left out.
+
+Capture is off unless the application is started with it. An application started without the
+flag carries no statement inspector, driver wrapper or command listener, so it costs nothing in
+production or in development. The
+flag sets `grails.gorm.queryTail.enabled`, which can also be kept in `application.yml` for the
+development environment, and `grails.gorm.queryTail.file` moves the capture away from
+`build/query-tail/capture.log`, where the command looks for it. The file is written fresh each time
+the application starts, and data sources added at runtime record to it like the others. JVMs that
+run at the same time with the flag, such as the parallel forks of a test task, share the file: the
+first to start truncates it, the others append to its run with their requests numbered apart, and a
+lock file beside the capture coordinates them. It is
+closed when the application's session factories, Neo4j drivers and MongoDB connections close, so a
+restart in the same JVM, such as a DevTools restart, starts a new capture, and the command starts
+its summary over. An application started by Gradle writes under the build directory the
+build configures, even one moved with `layout.buildDirectory`, but the `grails` command runs
+outside Gradle and looks under `build` unless told otherwise: with a moved build directory set
+`grails.gorm.queryTail.file`, which both sides read, or pass `--file`. An application that configures its own Hibernate `StatementInspector`
+keeps it: the capture runs after it and records the statement it returns, without its values.

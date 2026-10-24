@@ -36,6 +36,8 @@ import org.neo4j.harness.ServerControls;
 
 import org.springframework.core.env.PropertyResolver;
 
+import org.apache.grails.data.core.querytail.QueryTailSettings;
+import org.apache.grails.data.neo4j.core.querytail.QueryTailDriver;
 import org.grails.datastore.gorm.neo4j.config.Settings;
 import org.grails.datastore.gorm.neo4j.util.EmbeddedNeo4jServer;
 import org.grails.datastore.mapping.core.connections.AbstractConnectionSourceFactory;
@@ -67,7 +69,17 @@ public class Neo4jConnectionSourceFactory extends AbstractConnectionSourceFactor
         String prefix = isDefaultDataSource ? Settings.PREFIX : Settings.SETTING_CONNECTIONS + "." + name;
         Neo4jConnectionSourceSettingsBuilder settingsBuilder = new Neo4jConnectionSourceSettingsBuilder(configuration, prefix, fallbackSettings);
         Neo4jConnectionSourceSettings settings = settingsBuilder.build();
+        settings.setQueryTail(QueryTailSettings.from(configuration, extractQueryTailFallback(fallbackSettings)));
         return settings;
+    }
+
+    /**
+     * The query-tail settings a connection source inherits: those of the settings it falls back on, so
+     * that every connection source of an application captures as the default one does, including one
+     * added at runtime, which is configured with its own settings only.
+     */
+    private static <F extends ConnectionSourceSettings> QueryTailSettings extractQueryTailFallback(F fallbackSettings) {
+        return fallbackSettings instanceof Neo4jConnectionSourceSettings neo4jSettings ? neo4jSettings.getQueryTail() : null;
     }
 
     @Override
@@ -104,7 +116,7 @@ public class Neo4jConnectionSourceFactory extends AbstractConnectionSourceFactor
                     serverControls = url != null ? EmbeddedNeo4jServer.start(url, dataDir, options) : EmbeddedNeo4jServer.start(dataDir, options);
                     Config config = Config.builder().withoutEncryption().build();
                     URI boltURI = serverControls.boltURI();
-                    Driver driver = GraphDatabase.driver(boltURI, config);
+                    Driver driver = QueryTailDriver.install(name, settings.getQueryTail(), GraphDatabase.driver(boltURI, config));
                     return new Neo4jEmbeddedConnectionSource(name, driver, settings, serverControls);
                 } catch (Throwable e) {
                     throw new DatastoreConfigurationException("Unable to start embedded Neo4j server: " + e.getMessage(), e);
@@ -121,7 +133,8 @@ public class Neo4jConnectionSourceFactory extends AbstractConnectionSourceFactor
         }
 
         Config driverConfig = settings.getOptions().build();
-        Driver driver = GraphDatabase.driver(url != null ? url : Settings.DEFAULT_URL, authToken, driverConfig);
+        Driver driver = QueryTailDriver.install(name, settings.getQueryTail(),
+                GraphDatabase.driver(url != null ? url : Settings.DEFAULT_URL, authToken, driverConfig));
         return new DefaultConnectionSource<>(name, driver, settings);
     }
 
