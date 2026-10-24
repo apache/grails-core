@@ -21,12 +21,19 @@ package org.grails.orm.hibernate.cfg.domainbinding.secondpass;
 import java.util.Objects;
 
 import org.hibernate.mapping.DependantValue;
-import org.hibernate.mapping.Table;
 
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyCollectionProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty;
 
-/** Forces columns to be nullable and checks if the key is updatable. */
+/**
+ * Makes the columns of a collection key nullable and the key updatable.
+ *
+ * <p>The key is always updatable. The Hibernate 5 binder made every collection key not updatable, which Hibernate 5
+ * tolerated, and the Hibernate 7 binder kept that for an owner with several unidirectional to-many properties, after
+ * the rule of issue 10811. Hibernate 7's collection persister writes no rows for a collection whose key is not
+ * updatable, so such an owner silently lost the elements of every one of those collections, even with
+ * {@code failOnError}. When two of them share a join table, the uniqueness of its rows is the business of
+ * {@link SharedJoinTableUniqueKeyBinder}.</p>
+ */
 public class CollectionKeyColumnUpdater {
 
     private final CollectionKeyBinder collectionKeyBinder;
@@ -36,28 +43,11 @@ public class CollectionKeyColumnUpdater {
         this.collectionKeyBinder = collectionKeyBinder;
     }
 
-    /** Creates the key, sets it on the collection, and updates its columns. */
+    /** Creates the key, sets it on the collection, and makes its columns nullable and the key updatable. */
     public void bind(HibernateToManyProperty property) {
         DependantValue key = collectionKeyBinder.bind(property);
         key.getColumns().stream().filter(Objects::nonNull).forEach(column -> column.setNullable(true));
-        Table collectionTable = property.getCollection().getCollectionTable();
-        long unidirectionalCount = property.getHibernateOwner()
-                .getPersistentPropertiesToBind()
-                .stream()
-                .filter(HibernateToManyProperty::isBoundAsCollection)
-                .map(HibernateToManyProperty.class::cast)
-                .filter(p -> !p.isBidirectional())
-                .filter(p -> Objects.equals(p.getCollection().getCollectionTable(), collectionTable))
-                .count();
-
-        // Collections of basic values or enums (HibernateToManyCollectionProperty) always keep an updatable key: they
-        // have no inverse side, and Hibernate writes no rows for a collection whose key is not updatable.
-        // For entity collections (HibernateToManyEntityProperty) the key is non-updatable only when the owner has
-        // two or more unidirectional to-many properties that share this collection's join table, the rule for issue
-        // 10811. Unidirectional collections with join tables of their own keep an updatable key, as they have no
-        // second key column to leave null. A to-many that is not bound as a collection (a serializable or user type)
-        // has no join table and no Hibernate collection, so it is neither counted nor asked for one.
-        key.setUpdateable(property instanceof HibernateToManyCollectionProperty || unidirectionalCount <= 1);
+        key.setUpdateable(true);
     }
 
 }

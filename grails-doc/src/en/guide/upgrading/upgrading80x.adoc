@@ -1460,7 +1460,7 @@ A type that spans several columns no longer implements `UserType` with several `
 
 Under Hibernate 7, an owner with two or more unidirectional `hasMany` associations wrote no rows to their join tables: an element added to any of them was lost at flush (issue https://github.com/apache/grails-core/issues/16665[#16665]). This is fixed when each association has a join table of its own, which is the default (`item_roles` and `item_tags` for `static hasMany = [roles: Role, tags: Tag]`) and also the case when two associations to the same class map different tables with `joinTable`. Each such join table is written, as under Hibernate 5.
 
-Two unidirectional associations mapped onto one shared join table, with a key column each, are read but their new elements are still not written. That is issue https://github.com/apache/grails-core/issues/10811[#10811] and is not fixed by this change; map a table per association until it is.
+Two unidirectional sets mapped onto one shared join table, with a key column each, are written as well: each association keeps its rows unique by its own key column and the element. A list or a map is left as it was: its join table is keyed by the index, and its elements may repeat. On most databases that is a unique key per association; on Oracle, which compares the non-null columns of a partially null row in a unique key, it is one unique key over the key columns of both associations and the element. A schema created by an earlier Grails 8 release has the single unique key Hibernate made for the first association: `dbCreate` of `update` adds the second one, and on Oracle a migration has to replace that key with the wider one.
 
 ==== 27. GORM Properties Are Nullable by Default
 
