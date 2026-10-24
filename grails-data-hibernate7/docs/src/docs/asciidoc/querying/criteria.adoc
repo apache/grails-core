@@ -199,6 +199,18 @@ NOTE: Note that the parameter there is SQL. The `first_name` attribute reference
 
 Each `?` in the SQL is bound to the value at the same position in the list, so the number of `?` placeholders must match the number of values, and a value must not be `null`. A `?` in a string literal, such as `'%?'`, in a quoted identifier or in a comment is not a placeholder.
 
+The SQL is read the way the database reads it, from the dialect of the connection the query runs on, so that a `?` the database does not read as a placeholder is not counted as one:
+
+* On SQL Server and Sybase, square brackets quote an identifier, so a `?` inside `[...]` is part of a name, and block comments nest. On every other database, square brackets hold an array literal or an array subscript, and the placeholders inside them are bound as any other: `pages = ANY(ARRAY[?, ?])` takes two values on PostgreSQL or H2.
+* On MySQL and MariaDB, a backslash escapes in a string, so `'it\'s ?'` is one string; `#` starts a comment, and `--` starts one only when a space follows it.
+* On PostgreSQL, a block comment nests, `$tag$...$tag$` is a string, an `E'...'` string escapes with a backslash, and `??` is a literal question mark, not two placeholders. H2 has `$$...$$` strings.
+* On Oracle, `q'[...]'` is a string.
+* On H2, `//` starts a comment as `--` does, and `$$...$$` is a string.
+
+On every database a string in single quotes, an identifier in double quotes and a comment hold no placeholder. A backquote is read as quoting on every database, as it does on MySQL, MariaDB and H2 in their MySQL mode. The defaults of each server are assumed: the server modes that change what a quote or a backslash means, such as `NO_BACKSLASH_ESCAPES` and `ANSI_QUOTES` of MySQL, are not read from the server. In HQL, only `/* ... */` is a comment: Hibernate rejects `--` and `//`.
+
+The SQL of a `sqlProjection` column alias may be written as a string in single quotes on MySQL and SQL Server, which accept that form.
+
 When the query joins other tables, qualify the columns with `{alias}`, which stands for the table alias of the queried class, so that a column a joined table also has is not ambiguous:
 
 [source,java]
@@ -243,7 +255,7 @@ def results = c.list {
 }
 ----
 
-The first argument to the `sqlProjection` method is the SQL which defines the projected values, separated by commas, each one optionally followed by `as` and its column alias. The second argument is the list of column aliases of the projected values, and the third is the list of their types. A type is a constant of `org.hibernate.type.StandardBasicTypes`, such as `INTEGER`, `LONG`, `STRING` or `TIMESTAMP`, which the DSL provides under the same name, an `org.hibernate.type.Type` or a Java class.
+The first argument to the `sqlProjection` method is the SQL which defines the projected values, separated by commas, each one optionally followed by `as` and its column alias, which may be quoted the way the database quotes an identifier: in double quotes, in backquotes, or in square brackets on SQL Server. The second argument is the list of column aliases of the projected values, and the third is the list of their types. A type is a constant of `org.hibernate.type.StandardBasicTypes`, such as `INTEGER`, `LONG`, `STRING` or `TIMESTAMP`, which the DSL provides under the same name, an `org.hibernate.type.Type` or a Java class.
 
 The query above returns the perimeter and the area of each box, in a list each: `[[18, 14], [20, 16], [22, 18], [26, 36]]`. If only one value is projected, the alias and the type do not need to be in a list:
 
