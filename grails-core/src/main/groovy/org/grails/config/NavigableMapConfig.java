@@ -19,15 +19,19 @@
 package org.grails.config;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
-import java.util.StringTokenizer;
+import java.util.TreeMap;
 
 import groovy.util.ConfigObject;
 import org.codehaus.groovy.runtime.DefaultGroovyMethods;
@@ -55,6 +59,7 @@ public abstract class NavigableMapConfig implements Config {
     protected static final Logger LOG = LoggerFactory.getLogger(NavigableMapConfig.class);
     protected ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
     protected ConfigurableConversionService conversionService = new DefaultConversionService();
+    private volatile SystemEnvironmentIndex systemEnvironment = new SystemEnvironmentIndex(System.getenv());
     protected NavigableMap configMap = new NavigableMap() {
         @Override
         protected Object mergeMapEntry(NavigableMap targetMap, String sourceKey, Object newValue) {
@@ -217,9 +222,17 @@ public abstract class NavigableMapConfig implements Config {
         return value;
     }
 
+    /**
+     * Reads the process environment again, so that a variable installed after this config was
+     * created, as a test can do reflectively, is seen by the lookups that follow.
+     */
+    protected void refreshSystemEnvironment() {
+        systemEnvironment = new SystemEnvironmentIndex(System.getenv());
+    }
+
     @Override
     public <T> T getProperty(String key, Class<T> targetType, T defaultValue) {
-        Object value = findInSystemEnvironment(key);
+        Object value = systemEnvironment.get(key);
         if (value == null) {
             value = getValueWithDotNotatedKeySupport(configMap, key);
         }
@@ -228,54 +241,6 @@ public abstract class NavigableMapConfig implements Config {
         }
 
         return convertValueIfNecessary(value, targetType, defaultValue);
-    }
-
-    private Object findInSystemEnvironment(String key) {
-        String propertyName = resolvePropertyName(key);
-        return propertyName != null ? System.getenv(propertyName) : null;
-    }
-
-    private String resolvePropertyName(String name) {
-        String resolvedName = checkPropertyName(name);
-        if (resolvedName != null) {
-            return resolvedName;
-        }
-        String uppercasedName = name.toUpperCase();
-        if (!name.equals(uppercasedName)) {
-            resolvedName = checkPropertyName(uppercasedName);
-            if (resolvedName != null) {
-                return resolvedName;
-            }
-        }
-        return name;
-    }
-
-    private String checkPropertyName(String name) {
-        // Check name as-is
-        if (containsKey(name)) {
-            return name;
-        }
-        // Check name with just dots replaced
-        String noDotName = name.replace('.', '_');
-        if (!name.equals(noDotName) && containsKey(noDotName)) {
-            return noDotName;
-        }
-        // Check name with just hyphens replaced
-        String noHyphenName = name.replace('-', '_');
-        if (!name.equals(noHyphenName) && containsKey(noHyphenName)) {
-            return noHyphenName;
-        }
-        // Check name with dots and hyphens replaced
-        String noDotNoHyphenName = noDotName.replace('-', '_');
-        if (!noDotName.equals(noDotNoHyphenName) && containsKey(noDotNoHyphenName)) {
-            return noDotNoHyphenName;
-        }
-        // Give up
-        return null;
-    }
-
-    private boolean containsKey(String name) {
-        return System.getenv(name) != null;
     }
 
     private Map<Object, Object> convertToMap(NavigableMap from, IdentityHashMap<NavigableMap, Map<Object, Object>> cache) {
@@ -404,27 +369,142 @@ public abstract class NavigableMapConfig implements Config {
             return null;
         }
 
-        List<String> keys = convertTokensIntoArrayList(new StringTokenizer(key, "."));
-        if (keys.size() == 0) {
-            return null;
-        }
-
         Object value = null;
-        for (int i = 0; i < keys.size(); i++) {
-            if (i == 0) {
-                value = configMap.get(keys.get(i));
-            } else if (value instanceof Map) {
-                value = ((Map) value).get(keys.get(i));
+        boolean first = true;
+        int length = key.length();
+        int start = 0;
+        while (start < length) {
+            int end = key.indexOf('.', start);
+            if (end < 0) {
+                end = length;
             }
+            if (end > start) {
+                String segment = key.substring(start, end);
+                if (first) {
+                    value = configMap.get(segment);
+                    first = false;
+                } else if (value instanceof Map) {
+                    value = ((Map<?, ?>) value).get(segment);
+                } else {
+                    break;
+                }
+            }
+            start = end + 1;
         }
         return value;
     }
 
-    private List<String> convertTokensIntoArrayList(StringTokenizer st) {
-        List<String> elements = new ArrayList<>();
-        while (st.hasMoreTokens()) {
-            elements.add(st.nextToken());
+    /**
+     * The process environment as it stood when this config was created, indexed so that a key no
+     * variable can match is answered without allocating.
+     * <p>
+     * A key matches a variable in any of the spellings Spring's {@code SystemEnvironmentPropertySource}
+     * accepts: as written, with dots replaced by underscores, with hyphens replaced by underscores,
+     * with both replaced, and the upper-cased form of each. Every one of those spellings has the same
+     * canonical name, so a key whose canonical name belongs to no variable cannot match and is
+     * rejected without probing: the hash of its canonical name is computed over its characters and
+     * looked up among the hashes of the variables' canonical names. Only a key whose hash is present
+     * builds the canonical name for the exact check and then runs the spelling-by-spelling resolution,
+     * which keeps the precedence between spellings as it was.
+     * <p>
+     * The environment of a running JVM cannot change, so one snapshot per config instance is exact;
+     * {@link #refreshSystemEnvironment()} takes a new one for a test that installs variables
+     * reflectively. The memory it takes is proportional to the number of environment variables, not
+     * to the size of the configuration or to the number of keys looked up.
+     */
+    private static final class SystemEnvironmentIndex {
+
+        /**
+         * {@code System.getenv(String)} matches a variable name case-insensitively on Windows, where
+         * the operating system does, and exactly everywhere else. The snapshot keeps that contract.
+         */
+        private static final boolean IS_WINDOWS = System.getProperty("os.name", "").startsWith("Windows");
+
+        private final Map<String, String> variables;
+        private final Set<String> canonicalNames;
+        private final int[] canonicalHashes;
+
+        SystemEnvironmentIndex(Map<String, String> environment) {
+            this.variables = IS_WINDOWS ? new TreeMap<>(String.CASE_INSENSITIVE_ORDER) : HashMap.newHashMap(environment.size());
+            this.variables.putAll(environment);
+            this.canonicalNames = HashSet.newHashSet(variables.size());
+            for (String name : variables.keySet()) {
+                canonicalNames.add(canonicalName(name));
+            }
+            this.canonicalHashes = canonicalNames.stream().mapToInt(String::hashCode).sorted().toArray();
         }
-        return elements;
+
+        String get(String key) {
+            if (key == null || !mayMatch(key)) {
+                return null;
+            }
+            return variables.get(resolvePropertyName(key));
+        }
+
+        /**
+         * Whether the canonical name of the key belongs to a variable. The name's hash is computed
+         * over the key's characters without building the name, and only a key whose hash is present
+         * builds it for the exact check. A character above ASCII can upper-case to more than one
+         * character, as {@code ß} does, so a key that contains one takes the exact check directly.
+         */
+        private boolean mayMatch(String key) {
+            int hash = 0;
+            for (int i = 0, length = key.length(); i < length; i++) {
+                char c = key.charAt(i);
+                if (c > 127) {
+                    return canonicalNames.contains(canonicalName(key));
+                }
+                if (c == '.' || c == '-') {
+                    c = '_';
+                } else if (c >= 'a' && c <= 'z') {
+                    c = (char) (c - ('a' - 'A'));
+                }
+                hash = 31 * hash + c;
+            }
+            return Arrays.binarySearch(canonicalHashes, hash) >= 0 && canonicalNames.contains(canonicalName(key));
+        }
+
+        private static String canonicalName(String name) {
+            return name.toUpperCase(Locale.ROOT).replace('.', '_').replace('-', '_');
+        }
+
+        private String resolvePropertyName(String name) {
+            String resolvedName = checkPropertyName(name);
+            if (resolvedName != null) {
+                return resolvedName;
+            }
+            String uppercasedName = name.toUpperCase(Locale.ROOT);
+            if (!name.equals(uppercasedName)) {
+                resolvedName = checkPropertyName(uppercasedName);
+                if (resolvedName != null) {
+                    return resolvedName;
+                }
+            }
+            return name;
+        }
+
+        private String checkPropertyName(String name) {
+            // Check name as-is
+            if (variables.containsKey(name)) {
+                return name;
+            }
+            // Check name with just dots replaced
+            String noDotName = name.replace('.', '_');
+            if (!name.equals(noDotName) && variables.containsKey(noDotName)) {
+                return noDotName;
+            }
+            // Check name with just hyphens replaced
+            String noHyphenName = name.replace('-', '_');
+            if (!name.equals(noHyphenName) && variables.containsKey(noHyphenName)) {
+                return noHyphenName;
+            }
+            // Check name with dots and hyphens replaced
+            String noDotNoHyphenName = noDotName.replace('-', '_');
+            if (!noDotName.equals(noDotNoHyphenName) && variables.containsKey(noDotNoHyphenName)) {
+                return noDotNoHyphenName;
+            }
+            // Give up
+            return null;
+        }
     }
 }

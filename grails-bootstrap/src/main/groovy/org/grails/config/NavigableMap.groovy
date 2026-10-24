@@ -18,7 +18,6 @@
  */
 package org.grails.config
 
-import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
 import groovy.util.logging.Slf4j
@@ -89,7 +88,6 @@ class NavigableMap implements Map<String, Object>, Cloneable {
         delegateMap.containsValue(value)
     }
 
-    @CompileDynamic
     @Override
     Object get(Object key) {
         Object result = delegateMap.get(key)
