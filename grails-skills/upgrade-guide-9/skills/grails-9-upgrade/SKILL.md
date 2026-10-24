@@ -1,6 +1,6 @@
 ---
 name: grails-9-upgrade
-description: Guide for upgrading Grails applications from Grails 8.x to Grails 9, covering the Groovy 6 baseline, the GPars deprecation in favour of groovy.concurrent, invokedynamic compilation, the separate grails-xml module, the opt-in settings for Spring JSON rendering, Jackson request binding, Spring MVC exception handlers and response bodies, the Jackson-backed JSON converter and domain class rendering, named JSON configurations, RFC 9457 validation problems, format resolution, web unit tests, generated GORM id and version properties, RxGORM on RxJava 3 (imports, blocking calls, subscribers, empty results), and the deprecated RxJava 1 and RxJava 2 async and events modules
+description: Guide for upgrading Grails applications from Grails 8.x to Grails 9, covering the Groovy 6 baseline, the GPars deprecation in favour of groovy.concurrent, invokedynamic compilation, the separate grails-xml module, the opt-in settings for Spring JSON rendering, Jackson request binding, Spring MVC exception handlers and response bodies, the Jackson-backed JSON converter and domain class rendering, named JSON configurations, RFC 9457 validation problems, format resolution, web unit tests, generated GORM id and version properties, RxGORM on RxJava 3 (imports, blocking calls, subscribers, empty results), the deprecated RxJava 1 and RxJava 2 async and events modules, and the configuration lookups that stop at a value that is not a map and read the flat key first
 license: Apache-2.0
 ---
 
@@ -426,6 +426,15 @@ A datastore implementation of RxGORM compiled for Grails 8 or earlier, such as t
 - Code that hands RxJava types to the Grails ones, such as the `rx.Scheduler` given to the `RxEventBus` constructor, moves to the RxJava 3 types as described above.
 - Configure RxJava 3 scheduling through `io.reactivex.rxjava3.plugins.RxJavaPlugins` instead of RxJava 1 `RxJavaHooks` or RxJava 2 `RxJavaPlugins`.
 
+## Configuration Lookups Stop at a Value That Is Not a Map and Read the Flat Key First
+
+`getProperty` on `grailsApplication.config` answers a dotted key that runs past a value that is not a map, such as `server.url.port` when `server.url` is a string or `grails.gorm.default.constraints.nullable` when the parent is a closure from `application.groovy`, with `null` or the default, and `containsProperty` of such a key is `false`; Grails 8 answered with the parent value. `navigate` answers the same way. The flat key that `merge` writes for every nested value is read before the nested maps are walked, so where the two representations have been made to disagree the flat key wins.
+
+- Code that reads a child of a string, a list or a closure and relied on being answered with the parent reads the parent instead.
+- A dotted key written directly, with `config.put('a.b', value)` or `config['a.b'] = value`, is now read by `getProperty('a.b')`, as it always was by `config['a.b']`.
+- A value written directly into a nested map with `config.a.put('b', value)` is no longer read by `getProperty('a.b')`. Assign through dot notation, `config.a.b = value`, or by subscript, `config.a['b'] = value`, which write both representations.
+- A dotted key inside a nested map passed to `merge`, such as `config.merge([logging: [level: ['org.springframework': 'DEBUG']]])`, no longer writes a second key at the root. The configuration files are flattened before they are merged and never did.
+
 ## Verification Checklist
 
 - [ ] `gradle.properties` names the Grails 9 version and the wrapper is Gradle 9.8 or later
@@ -438,6 +447,7 @@ A datastore implementation of RxGORM compiled for Grails 8 or earlier, such as t
 - [ ] No build file declares `grails-async-gpars` or `grails-events-gpars`, and no source file imports `groovyx.gpars`
 - [ ] No source file calls `GParsPool.withPool` or `GParsConfig`
 - [ ] No build file sets `grails { indy = true }`, and build logic reads `grails.indy` with `getOrElse` or `present`
+- [ ] No code reads a child of a string, list or closure configuration value expecting the parent, and none writes into a nested configuration map with `put` and reads the value back through `getProperty`
 - [ ] An application that sets `indy = false` declares `org.apache.groovy:groovy-callsite` for every source set that needs it
 - [ ] An application that serves or reads XML declares `org.apache.grails:grails-xml`, and a JSON-only one excludes it
 - [ ] Every opt-in setting the application depends on is set explicitly, and the tests pass with the Grails 10 values of the three JSON settings

@@ -795,6 +795,11 @@ scheduler does not know about explains why it is not registered — neither ends
 any more. See <<quartzLongRunningJobs,Long-Running Jobs>> for what a job that outlives its trigger's
 interval needs, and <<upgrading80x>> for the details.
 
+==== Faster Configuration Lookups
+
+`grailsApplication.config.getProperty` no longer probes the process environment on every call. The environment is read once, when the configuration is created, and its variable names are indexed, so a property that no variable can match is answered without touching `System.getenv`, and the walk through a dotted key no longer tokenises it. A test that installs environment variables after the application has started calls `refresh()` on the configuration to have them seen; see xref:upgrading#upgrading81x[the upgrade guide].
+In Grails 9 the flat key that a merge writes is read before the nested maps are walked, and a key that runs past a value that is not a map is absent rather than answered with that value; see xref:upgrading#upgrading90x[the Grails 9 upgrade guide].
+
 ==== Compiled Tag Resolution
 
 Tag libraries are now described when they are compiled, and that description resolves tag calls in

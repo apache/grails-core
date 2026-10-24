@@ -143,8 +143,8 @@ class GrailsConfigSpec extends Specification{
         when:
         config.a.b = null
         config.a.b.c = 1
-        then:
-        config.configMap == [a: [b: [c: 1]], 'a.b.c':1]
+        then: 'the flat alias of the recreated block is written, as it is by the map syntax'
+        config.configMap == [a: [b: [c: 1]], 'a.b.c':1, 'a.b': [c: 1]]
     }
     
     def "should support casting to Map"() {

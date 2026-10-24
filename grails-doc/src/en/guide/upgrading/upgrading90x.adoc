@@ -1229,3 +1229,18 @@ See <<asyncPromises,Promises>> and <<events,Events>>.
 
 `grails-async-rxjava3` carries a `null` value as the RxJava 1 factory and every other promise factory do: `createPromise()` and `createPromise(Class)` give a promise whose `get()` returns `null`, a task that returns `null` resolves to `null`, and a `null` value keeps its place in the list that `onComplete`, `onError` and `waitAll` deliver.
 `grails-async-rxjava2` does not: there `createPromise()` and `onComplete` over a list holding a bound promise of `null` fail with a `NullPointerException`, and a task that returns `null` resolves to the `java.lang.Void` class.
+
+==== 20. Configuration Lookups Stop at a Value That Is Not a Map and Read the Flat Key First
+
+`getProperty` on `grailsApplication.config` resolves a dotted key by walking the nested maps of the configuration. In Grails 8 a key that ran past a value that is not a map, such as `server.url.port` when `server.url` is a string, was answered with that value, and `containsProperty` of such a key was `true`. The same held for a key that ran past a list, or past a closure from `application.groovy` such as `grails.gorm.default.constraints.nullable`. In Grails 9 such a key is absent: `getProperty` returns `null` or the default, `containsProperty` returns `false`, and `navigate` on the configuration answers the same way.
+
+Grails 9 also reads the flat key that `merge` writes for every nested value before it walks the nested maps. Every documented way of writing configuration, that is the configuration files, `merge` and dot-notation assignment such as `config.a.b = value`, writes both the flat key and the nested entry, so nothing changes for them. What changes is which value `getProperty` answers with once the two have been made to disagree:
+
+- A dotted key written directly, with `config.put('a.b', value)` or `config['a.b'] = value`, is now read by `getProperty('a.b')`, as it always was by `config['a.b']`.
+- A value written directly into a nested map with `config.a.put('b', value)` is no longer read by `getProperty('a.b')`; dot navigation, `config.a.b`, still reads it. Subscript assignment, `config.a['b'] = value`, writes both representations, as `config.a.b = value` does.
+
+A dotted key inside a nested map passed to `merge`, such as `config.merge([logging: [level: ['org.springframework': 'DEBUG']]])`, used to be written a second time as a key at the root, where it could overwrite a real `org.springframework` property; it is now written only under its parent, as `logging.level.org.springframework`. The configuration files are not affected: they are flattened before they are merged, so they never took that path.
+
+===== Required Actions
+
+Code that reads a child of a string, a list or a closure and relied on being answered with the parent reads the parent instead. Code that writes directly into a nested map and reads the value back through `getProperty` assigns through dot notation instead, which writes both representations.
