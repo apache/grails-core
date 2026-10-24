@@ -35,6 +35,9 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 
 import org.grails.datastore.mapping.cache.TPCacheAdapterRepository;
 import org.grails.datastore.mapping.config.Property;
+import org.grails.datastore.mapping.config.Settings;
+import org.grails.datastore.mapping.config.UniqueNulls;
+import org.grails.datastore.mapping.core.connections.ConnectionSourcesProvider;
 import org.grails.datastore.mapping.model.MappingContext;
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.PersistentProperty;
@@ -118,6 +121,21 @@ public abstract class AbstractDatastore implements Datastore, StatelessDatastore
     public AbstractDatastore(MappingContext mappingContext, Map<String, Object> connectionDetails,
               ConfigurableApplicationContext ctx, TPCacheAdapterRepository cacheAdapterRepository) {
         this(mappingContext, mapToPropertyResolver(connectionDetails), ctx, cacheAdapterRepository);
+    }
+
+    /**
+     * The {@code grails.gorm.unique.nulls} setting, whose default {@code database} reads the unique index of the
+     * database this datastore keeps.
+     */
+    @Override
+    public UniqueNulls getUniqueNulls() {
+        PropertyResolver configuration = connectionDetails;
+        if (configuration == null && this instanceof ConnectionSourcesProvider<?, ?> provider && provider.getConnectionSources() != null) {
+            configuration = provider.getConnectionSources().getBaseConfiguration();
+        }
+        UniqueNulls configured = configuration == null ? null :
+                UniqueNulls.of(configuration.getProperty(Settings.SETTING_UNIQUE_NULLS));
+        return configured == null || configured == UniqueNulls.DATABASE ? getDatabaseUniqueNulls() : configured;
     }
 
     protected static PropertyResolver mapToPropertyResolver(Map<String, Object> connectionDetails) {

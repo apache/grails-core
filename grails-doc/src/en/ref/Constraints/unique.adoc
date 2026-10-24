@@ -64,6 +64,73 @@ username(unique: ['group', 'department'])
 
 In this example `username` must be unique in `group` and `department`. There might be same logins in different groups or different departments.
 
+==== Null values in a composite key
+
+A property of the key can be `null`: a `country` that is optional in `language unique: 'country'`, a `parent` that is `null` for the top level nodes of a tree, or the constrained property itself when it is `nullable`. Whether such a row can be a duplicate of another is a question databases answer in two ways for their unique index, so the constraint has four readings of a `null`, selected per constraint or for the whole application:
+
+[cols="1,4"]
+|===
+|Reading |A `null` in the key
+
+|`database` (default)
+|Is read the way the unique index of the database does: `skip` where the index treats `null` values as distinct, `value` where it compares them. The validation and the index then agree.
+
+|`skip`
+|Is never a duplicate, as in a SQL unique predicate: `('en', null)` twice is valid, and the lookup is not made.
+
+|`value`
+|Is a value that matches only another `null`: `('en', null)` conflicts with another `('en', null)` and with no row that has a country. This holds for the constrained property as well.
+
+|`wildcard`
+|In the group, leaves its property out of the lookup, so it matches every row: `('en', null)` conflicts with `('en', 'US')`. A `null` constrained property is not checked.
+|===
+
+With the rows `('en', 'US')`, `('en', null)`, `(null, 'US')` and `(null, null)`, a new `('en', null)` is a duplicate under `value` and `wildcard` and is valid under `skip`; a new `(null, 'US')` is a duplicate only under `value`, where it matches the stored `(null, 'US')`.
+
+The unique index Hibernate creates for the group treats `null` values as follows, which is what `database` reads. The two Hibernate versions render the index differently for SQL Server, so the table says which version each row describes:
+
+[cols="2,1,1,3"]
+|===
+|Database |Hibernate |Reading |Why
+
+|H2, PostgreSQL, MySQL, MariaDB
+|5 and 7
+|`skip`
+|`null` values are distinct in a unique index.
+
+|SQL Server
+|7
+|`skip`
+|Hibernate 7 creates the index over nullable columns as a filtered unique index that leaves the rows with a `null` out.
+
+|DB2
+|5 and 7
+|`skip`
+|The index is created with `exclude null keys` (`DB2UniqueDelegate` in Hibernate 5, a filtered index in Hibernate 7), which leaves the rows with a `null` out.
+
+|SQL Server, Sybase
+|5
+|`value`
+|Hibernate 5 has no filtered-index delegate, so these dialects get a plain unique constraint, which compares `null` values: `('en', null)` twice is a violation.
+
+|Oracle
+|5 and 7
+|`value`
+|A row with a `null` in some of the key columns is indexed, and its other columns are compared, so `('en', null)` twice is a violation.
+|===
+
+A datastore that keeps no such index, such as MongoDB, reads `database` as `value`.
+
+To select a reading for one constraint, give the constraint a map with the `group` and the reading as `nulls`:
+
+[source,groovy]
+----
+url unique: [group: 'httpMethod', nulls: 'wildcard']
+language unique: [group: ['country', 'script'], nulls: 'skip']
+----
+
+`group` takes a property name or a list of them, as the shorter forms do. To select the reading of every constraint without one, set `grails.gorm.unique.nulls` to `database`, `skip`, `value` or `wildcard`; see GORM configuration in the user guide.
+
 This constraint influences  link:{hibernate5GuideFromRef}index.html#constraints[schema generation].
 
 Error Code: `className.propertyName.unique`

@@ -295,6 +295,22 @@ class Property implements Cloneable {
         this.uniquenessGroup.addAll(names)
     }
 
+    /**
+     * The map form of the {@code unique} constraint, {@code [group: ..., nulls: ...]}: the property is unique within
+     * its {@code group}, a property name or a list of them, or on its own without one. How the validation reads a
+     * {@code null} in the key, the {@code nulls} option, is not a property of the mapping.
+     */
+    void setUnique(Map options) {
+        Object group = options.get('group')
+        if (group instanceof List) {
+            setUnique((List<String>) group)
+        } else if (group instanceof CharSequence) {
+            setUnique(group.toString())
+        } else {
+            setUnique(true)
+        }
+    }
+
     void unique(boolean unique) {
         setUnique(unique)
     }
@@ -305,6 +321,10 @@ class Property implements Cloneable {
 
     void unique(List<String> names) {
         setUnique(names)
+    }
+
+    void unique(Map options) {
+        setUnique(options)
     }
 
     List<String> getUniquenessGroup() {

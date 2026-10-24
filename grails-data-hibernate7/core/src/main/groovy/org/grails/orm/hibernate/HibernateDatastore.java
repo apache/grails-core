@@ -50,6 +50,7 @@ import org.hibernate.FlushMode;
 import org.hibernate.SessionFactory;
 import org.hibernate.boot.Metadata;
 import org.hibernate.cfg.Environment;
+import org.hibernate.dialect.Dialect;
 import org.hibernate.engine.spi.SessionFactoryImplementor;
 import org.hibernate.event.service.spi.EventListenerRegistry;
 import org.hibernate.event.spi.EventType;
@@ -92,6 +93,7 @@ import org.grails.datastore.gorm.validation.constraints.MappingContextAwareConst
 import org.grails.datastore.gorm.validation.constraints.builtin.UniqueConstraint;
 import org.grails.datastore.gorm.validation.constraints.registry.ConstraintRegistry;
 import org.grails.datastore.gorm.validation.registry.support.ValidatorRegistries;
+import org.grails.datastore.mapping.config.UniqueNulls;
 import org.grails.datastore.mapping.core.AbstractDatastore;
 import org.grails.datastore.mapping.core.ConnectionNotFoundException;
 import org.grails.datastore.mapping.core.Datastore;
@@ -126,6 +128,7 @@ import org.grails.orm.hibernate.cfg.Settings;
 import org.grails.orm.hibernate.connections.HibernateConnectionSource;
 import org.grails.orm.hibernate.connections.HibernateConnectionSourceFactory;
 import org.grails.orm.hibernate.connections.HibernateConnectionSourceSettings;
+import org.grails.orm.hibernate.dialect.UniqueNullsPerDialect;
 import org.grails.orm.hibernate.event.listener.HibernateEventListener;
 import org.grails.orm.hibernate.multitenancy.MultiTenantCollectionEventListener;
 import org.grails.orm.hibernate.multitenancy.MultiTenantEventListener;
@@ -986,6 +989,16 @@ public class HibernateDatastore extends AbstractDatastore
 
     public SessionFactory getSessionFactory() {
         return sessionFactory;
+    }
+
+    /**
+     * How the unique index Hibernate creates for the database of this datastore treats a {@code null} in a composite
+     * key; see {@link UniqueNullsPerDialect}.
+     */
+    @Override
+    public UniqueNulls getDatabaseUniqueNulls() {
+        Dialect dialect = ((SessionFactoryImplementor) getSessionFactory()).getJdbcServices().getDialect();
+        return UniqueNullsPerDialect.forDialect(dialect).uniqueNulls();
     }
 
     /**

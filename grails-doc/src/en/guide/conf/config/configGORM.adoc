@@ -23,6 +23,8 @@ Grails provides the following GORM configuration options:
 
 * `grails.gorm.failOnError`  - If set to `true`, causes the `save()` method on domain classes to throw a `grails.validation.ValidationException` if link:validation.html[validation] fails during a save.  This option may also be assigned a list of Strings representing package names.  If the value is a list of Strings then the failOnError behavior will only be applied to domain classes in those packages (including sub-packages).  See the link:{domainClassesRef}save.html[save] method docs for more information.
 
+* `grails.gorm.unique.nulls` - How the `unique` constraint reads a `null` in a composite key: `database` (the default, which follows the unique index of the database), `skip`, `value` or `wildcard`. A constraint selects its own reading with `unique: [group: ..., nulls: ...]`. See the link:{constraintsRef}unique.html[unique constraint] reference.
+
 For example, to enable failOnError for all domain classes:
 
 [source,yaml]

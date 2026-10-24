@@ -38,6 +38,8 @@ import jakarta.annotation.PreDestroy;
 
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
+import org.hibernate.dialect.Dialect;
+import org.hibernate.engine.spi.SessionFactoryImplementor;
 
 import org.springframework.beans.BeanUtils;
 import org.springframework.context.ApplicationContext;
@@ -53,6 +55,7 @@ import org.grails.datastore.gorm.jdbc.schema.DefaultSchemaHandler;
 import org.grails.datastore.gorm.jdbc.schema.SchemaHandler;
 import org.grails.datastore.gorm.validation.registry.support.ValidatorRegistries;
 import org.grails.datastore.mapping.config.Settings;
+import org.grails.datastore.mapping.config.UniqueNulls;
 import org.grails.datastore.mapping.core.AbstractDatastore;
 import org.grails.datastore.mapping.core.Datastore;
 import org.grails.datastore.mapping.core.DatastoreAware;
@@ -76,6 +79,7 @@ import org.grails.datastore.mapping.validation.ValidatorRegistry;
 import org.grails.orm.hibernate.cfg.HibernateMappingContext;
 import org.grails.orm.hibernate.connections.HibernateConnectionSource;
 import org.grails.orm.hibernate.connections.HibernateConnectionSourceSettings;
+import org.grails.orm.hibernate.dialect.UniqueNullsPerDialect;
 import org.grails.orm.hibernate.event.listener.AbstractHibernateEventListener;
 
 /**
@@ -284,6 +288,16 @@ public abstract class AbstractHibernateDatastore extends AbstractDatastore imple
      */
     public SessionFactory getSessionFactory() {
         return sessionFactory;
+    }
+
+    /**
+     * How the unique index Hibernate creates for the database of this datastore treats a {@code null} in a composite
+     * key; see {@link UniqueNullsPerDialect}.
+     */
+    @Override
+    public UniqueNulls getDatabaseUniqueNulls() {
+        Dialect dialect = ((SessionFactoryImplementor) getSessionFactory()).getJdbcServices().getDialect();
+        return UniqueNullsPerDialect.forDialect(dialect).uniqueNulls();
     }
 
     /**

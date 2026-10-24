@@ -1229,3 +1229,34 @@ See <<asyncPromises,Promises>> and <<events,Events>>.
 
 `grails-async-rxjava3` carries a `null` value as the RxJava 1 factory and every other promise factory do: `createPromise()` and `createPromise(Class)` give a promise whose `get()` returns `null`, a task that returns `null` resolves to `null`, and a `null` value keeps its place in the list that `onComplete`, `onError` and `waitAll` deliver.
 `grails-async-rxjava2` does not: there `createPromise()` and `onComplete` over a list holding a bound promise of `null` fail with a `NullPointerException`, and a task that returns `null` resolves to the `java.lang.Void` class.
+
+==== 20. A Null in a Unique Constraint's Composite Key Follows the Database
+
+A `unique` constraint that names other properties, such as `url unique: 'httpMethod'`, validates the constrained property together with the properties of its group.
+Before Grails 9, a group property whose value was `null` was left out of the query that looks for a conflicting row.
+The constraint then checked the constrained property alone, so `new Language(language: 'en')` was rejected when a `Language` with `language: 'en'` and `country: 'US'` existed, although the two rows differ in `country`.
+That was stricter than any reading of `null`: in SQL a `null` never conflicts, and where `null` is a value it conflicts only with another `null`.
+
+In Grails 9 the constraint reads a `null` in its key, in the group and in the constrained property, as the unique index of the database does, so that the validation and the index agree:
+
+* `skip` on H2, PostgreSQL, MySQL, MariaDB and DB2, and on SQL Server with Hibernate 7, whose index leaves a row with a `null` out: `('en', null)` is never a duplicate.
+* `value` on Oracle, on SQL Server and Sybase with Hibernate 5 (a plain unique constraint compares `null` values), and on a datastore with no such index such as MongoDB: a `null` conflicts only with another `null`.
+
+Applications that relied on a `null` group value matching every row of the constrained property are affected: their saves are no longer rejected when the rows differ in that group property. To keep the previous behavior for a constraint, ask for the `wildcard` reading:
+
+[source,groovy]
+----
+url unique: [group: 'httpMethod', nulls: 'wildcard']
+----
+
+To select a reading for the whole application, set `grails.gorm.unique.nulls` to `database` (the default), `skip`, `value` or `wildcard`:
+
+[source,yaml]
+----
+grails:
+    gorm:
+        unique:
+            nulls: wildcard
+----
+
+`name unique: true` is not a replacement for `wildcard`, since it makes the name unique across every parent. The constraints reference describes the four readings and the reading each database gets under `database`.

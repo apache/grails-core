@@ -351,6 +351,7 @@ class HibernateMappingBuilder implements MappingConfigurationBuilder<Mapping, Pr
         if (uniqueVal instanceof Boolean) property.setUnique((boolean) (Boolean) uniqueVal)
         else if (uniqueVal instanceof String) property.setUnique((String) uniqueVal)
         else if (uniqueVal instanceof List) property.setUnique((List<String>) uniqueVal)
+        else if (uniqueVal instanceof Map) property.setUnique((Map) uniqueVal)
         if (namedArgs.nullable instanceof Boolean) property.nullable = (Boolean) namedArgs.nullable
         if (namedArgs.maxSize instanceof Number) property.maxSize = (Number) namedArgs.maxSize
         if (namedArgs.minSize instanceof Number) property.minSize = (Number) namedArgs.minSize
@@ -385,6 +386,7 @@ class HibernateMappingBuilder implements MappingConfigurationBuilder<Mapping, Pr
             Object indexVal = namedArgs['index']
             if (indexVal) cc.index = indexVal
             Object ccUniqueVal = namedArgs['unique']
+            if (ccUniqueVal instanceof Map) ccUniqueVal = ((Map) ccUniqueVal).get('group') ?: true
             if (ccUniqueVal != null) cc.unique = ccUniqueVal
             Object readVal = namedArgs['read']
             if (readVal) cc.read = readVal.toString()
