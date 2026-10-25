@@ -316,11 +316,6 @@ public class PredicateGenerator {
                     fromsByProvider.getRoot().join(definition.path(), definition.joinType()) :
                     fromsByProvider.getRoot().join(associationName, fromsByProvider.getLocalJoinType(associationName));
             fromsByProvider.addFrom(associationName, associationRoot);
-            // A later path through the association, such as face.name in
-            // eq('face.name', 'Santa') owner { face { ... } eq('face.name', 'Homer') }, is resolved against the aliases
-            // realized by the outer contexts before the joins of this one, so the join is realized as an alias of this
-            // context too.
-            fromsByProvider.registerAlias(associationName, associationRoot);
         }
 
         // Create a nested context for this association

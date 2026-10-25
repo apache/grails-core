@@ -731,6 +731,32 @@ class PredicateGeneratorSpec extends HibernateGormDatastoreSpec {
         subqueryRoot.joins*.attribute*.name == ["pets"]
     }
 
+    def "test getPredicates takes a path of a subquery from the root of the subquery when an outer association block joined the same name"() {
+        given: "an association block of the outer query for face, then a subquery projecting the name of its own face"
+        def subCriteria = new DetachedCriteria(PredicateGeneratorSpecPerson).build {
+            projections {
+                property("face.name")
+            }
+        }
+        List criteria = new DetachedCriteria(PredicateGeneratorSpecPerson).build {
+            face {
+                eq("name", "Funny")
+            }
+        }.criteria + [new Query.In("firstName", subCriteria)]
+
+        when:
+        def predicates = predicateGenerator.getPredicates(query, root, criteria, fromProvider, personEntity)
+        From outerFace = root.joins.find { it.attribute.name == "face" }
+        SqmSubQuery subquery = (predicates[1] as SqmInListPredicate).listExpressions.first() as SqmSubQuery
+        SqmPath selection = subquery.selection as SqmPath
+
+        then: "the projected name is the name of the face of the root of the subquery, not of the outer join"
+        predicates.length == 2
+        outerFace != null
+        !selection.lhs.is(outerFace)
+        selection.lhs.lhs.is(subquery.roots.first())
+    }
+
     /**
      * Returns the path on the left of each comparison in the predicate.
      */

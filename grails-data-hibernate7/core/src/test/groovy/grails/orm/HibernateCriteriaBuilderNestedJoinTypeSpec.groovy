@@ -215,6 +215,23 @@ class HibernateCriteriaBuilderNestedJoinTypeSpec extends Specification {
     }
 
     @Rollback
+    void 'the name of a nested block resolves to its join when an outer criterion went through the same name'() {
+        given:
+        savePets()
+
+        expect: 'face in the owner block is the face of the owner, not the face of the pet'
+        Pet.createCriteria().list {
+            eq('face.name', 'Santa')
+            owner {
+                face {
+                    isNotNull('id')
+                }
+                eq('face', Face.findByName('Homer'))
+            }
+        }*.name == ['Lucky']
+    }
+
+    @Rollback
     void 'an association block of a subquery joins from the root of the subquery'() {
         given:
         savePets()
@@ -237,6 +254,45 @@ class HibernateCriteriaBuilderNestedJoinTypeSpec extends Specification {
             })
             order('name')
         }*.name == ['Lucky', 'Rex']
+    }
+
+    @Rollback
+    void 'a subquery projecting a path through an association of an outer block takes the path from its own root'() {
+        given: 'a pet of Homer named after Ned'
+        savePets()
+        new Pet(name: 'Ned', age: 3, owner: Person.findByFirstName('Homer')).save(flush: true)
+
+        expect: 'the subquery selects the first name of the owner of every pet, not of the owner of the outer pet'
+        new DetachedCriteria(Pet).build {
+            owner {
+                eq('firstName', 'Homer')
+            }
+            'in'('name', new DetachedCriteria(Pet).build {
+                projections {
+                    property('owner.firstName')
+                }
+            })
+        }.list()*.name == ['Ned']
+    }
+
+    @Rollback
+    void 'a subquery in a nested block projecting a path through an association of that block takes the path from its own root'() {
+        given:
+        savePets()
+
+        expect: 'the subquery selects the name of the face of every pet (Santa), not the name of the face of the owner'
+        Pet.createCriteria().list {
+            owner {
+                face {
+                    isNotNull('id')
+                }
+                notIn('firstName', new DetachedCriteria(Pet).build {
+                    projections {
+                        property('face.name')
+                    }
+                })
+            }
+        }*.name == ['Lucky']
     }
 
     @Rollback

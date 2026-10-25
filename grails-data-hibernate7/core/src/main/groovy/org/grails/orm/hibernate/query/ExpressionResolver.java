@@ -48,7 +48,12 @@ public class ExpressionResolver {
             cleanPath = cleanPath.substring(5);
         }
 
-        // 1. Check for materialized aliases (Materialized Selects/Joins)
+        // 1. Check for materialized aliases (Materialized Selects/Joins), a join from THIS root first, for the reason
+        //    given in resolveFromAlias
+        From<?, ?> local = joinTracker.getLocalJoin(cleanPath);
+        if (local != null) {
+            return local;
+        }
         if (aliasRegistry.hasRealized(cleanPath)) {
             return aliasRegistry.getRealized(cleanPath);
         }
@@ -81,7 +86,7 @@ public class ExpressionResolver {
             }
         }
 
-        // 5. Check Join Tracker (Already joined paths)
+        // 5. Check PARENT Join Tracker (Already joined paths)
         From<?, ?> joined = joinTracker.getJoin(cleanPath);
         if (joined != null) {
             return joined;
@@ -92,7 +97,14 @@ public class ExpressionResolver {
     }
 
     private Expression<?> resolveFromAlias(String alias, String subPath) {
-        // 1. Check if already realized in THIS or PARENT registry
+        // 1. Check if already joined from THIS root, such as face by face { ... } in owner { ... }: it is the
+        //    association of this root, which an alias realized by a PARENT registry for the same name must not hide
+        From<?, ?> local = joinTracker.getLocalJoin(alias);
+        if (local != null) {
+            return subPath != null ? getPath(local, subPath) : local;
+        }
+
+        // 2. Check if already realized in THIS or PARENT registry
         Expression<?> aliased = aliasRegistry.getRealized(alias);
         if (aliased != null) {
             if (subPath != null && aliased instanceof From<?, ?> from) {
@@ -101,14 +113,14 @@ public class ExpressionResolver {
             return aliased; // It's a non-From expression (projection alias) or subPath is null
         }
 
-        // 2. Check if already joined in THIS or PARENT JoinTracker (correlated joins)
+        // 3. Check if already joined in PARENT JoinTracker (correlated joins)
         aliased = joinTracker.getJoin(alias);
         if (aliased != null) {
             aliasRegistry.realize(alias, aliased);
             return subPath != null ? getPath((From<?, ?>) aliased, subPath) : aliased;
         }
 
-        // 3. If defined but not joined, materialize it on the CURRENT root
+        // 4. If defined but not joined, materialize it on the CURRENT root
         if (aliasRegistry.isDefined(alias)) {
             HibernateAlias def = aliasRegistry.getDefinition(alias);
             if (def != null && def.path() != null) {
