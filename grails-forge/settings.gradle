@@ -43,10 +43,12 @@ apply from: file('../gradle/dependency-analysis.settings.gradle')
 
 def isCI = System.getenv().containsKey('CI')
 def isLocal = !isCI
+def hasDevelocityAccessKey = System.getenv('DEVELOCITY_ACCESS_KEY') != null
 def isReproducibleBuild = System.getenv('SOURCE_DATE_EPOCH') != null
 
 develocity {
     server = 'https://develocity.apache.org'
+    projectId = 'grails'
     buildScan {
         tag('grails')
         tag('grails-forge')
@@ -58,7 +60,7 @@ develocity {
 buildCache {
     local { enabled = (isLocal && !isReproducibleBuild) || (isCI && isReproducibleBuild) }
     remote(develocity.buildCache) {
-        push = isCI
+        push = hasDevelocityAccessKey
         enabled = !isReproducibleBuild
     }
 }

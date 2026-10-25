@@ -342,6 +342,77 @@ class HibernateGormStaticApiSpec extends HibernateGormDatastoreSpec {
         results.isEmpty()
     }
 
+    void "Test findAll and executeQuery with a subquery and no select clause"() {
+        given:
+        new HibernateGormStaticApiEntity(name: "Arsenal").save(failOnError: true)
+        new HibernateGormStaticApiEntity(name: "test").save(failOnError: true)
+        new Club(name: "Arsenal").save(flush: true, failOnError: true)
+
+        when: "the select of the subquery is the only one in the query"
+        String hql = "from HibernateGormStaticApiEntity where name in (select name from Club where name like :pattern)"
+        def found = HibernateGormStaticApiEntity.findAll(hql, [pattern: 'A%'])
+        def executed = HibernateGormStaticApiEntity.executeQuery(hql, [pattern: 'A%'])
+
+        then: "the query is run as written and returns the entities"
+        found*.name == ['Arsenal']
+        executed*.name == ['Arsenal']
+        executed.every { it instanceof HibernateGormStaticApiEntity }
+    }
+
+    void "Test executeUpdate with a subquery"() {
+        given:
+        new HibernateGormStaticApiEntity(name: "Arsenal").save(failOnError: true)
+        new HibernateGormStaticApiEntity(name: "test").save(failOnError: true)
+        new Club(name: "Arsenal").save(flush: true, failOnError: true)
+
+        when:
+        int updated = HibernateGormStaticApiEntity.executeUpdate(
+                "update HibernateGormStaticApiEntity set nullableName = 'club' where name in (select name from Club)")
+        int deleted = HibernateGormStaticApiEntity.executeUpdate(
+                "delete from HibernateGormStaticApiEntity where name not in (select name from Club)")
+        session.clear()
+
+        then:
+        updated == 1
+        deleted == 1
+        HibernateGormStaticApiEntity.list()*.nullableName == ['club']
+    }
+
+    void "Test executeUpdate with insert select"() {
+        given:
+        new HibernateGormStaticApiEntity(name: "Arsenal").save(failOnError: true)
+        new HibernateGormStaticApiEntity(name: "Chelsea").save(flush: true, failOnError: true)
+
+        when:
+        int inserted = HibernateGormStaticApiEntity.executeUpdate("insert into Club (name) select name from HibernateGormStaticApiEntity")
+
+        then:
+        inserted == 2
+        Club.list()*.name.sort() == ['Arsenal', 'Chelsea']
+    }
+
+    void "Test executeQuery with a subquery in the select clause"() {
+        given:
+        new HibernateGormStaticApiEntity(name: "test").save(failOnError: true)
+        new Club(name: "Arsenal").save(failOnError: true)
+        new Club(name: "Chelsea").save(flush: true, failOnError: true)
+
+        when:
+        def rows = HibernateGormStaticApiEntity.executeQuery(
+                "select name, (select count(*) from Club) from HibernateGormStaticApiEntity")
+
+        then:
+        rows.collect { it as List } == [['test', 2L]]
+    }
+
+    void "Test executeQuery with a comment before the select clause"() {
+        given:
+        new HibernateGormStaticApiEntity(name: "test").save(flush: true, failOnError: true)
+
+        expect:
+        HibernateGormStaticApiEntity.executeQuery("/* the entity's (name) */ select name from HibernateGormStaticApiEntity") == ['test']
+    }
+
 
 
 

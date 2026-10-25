@@ -21,6 +21,7 @@ package org.grails.orm.hibernate.cfg.domainbinding.secondpass;
 import java.util.Objects;
 
 import org.hibernate.mapping.DependantValue;
+import org.hibernate.mapping.Table;
 
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyCollectionProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty;
@@ -39,19 +40,23 @@ public class CollectionKeyColumnUpdater {
     public void bind(HibernateToManyProperty property) {
         DependantValue key = collectionKeyBinder.bind(property);
         key.getColumns().stream().filter(Objects::nonNull).forEach(column -> column.setNullable(true));
+        Table collectionTable = property.getCollection().getCollectionTable();
         long unidirectionalCount = property.getHibernateOwner()
                 .getPersistentPropertiesToBind()
                 .stream()
-                .filter(HibernateToManyProperty.class::isInstance)
+                .filter(HibernateToManyProperty::isBoundAsCollection)
                 .map(HibernateToManyProperty.class::cast)
                 .filter(p -> !p.isBidirectional())
+                .filter(p -> Objects.equals(p.getCollection().getCollectionTable(), collectionTable))
                 .count();
 
         // Collections of basic values or enums (HibernateToManyCollectionProperty) always keep an updatable key: they
         // have no inverse side, and Hibernate writes no rows for a collection whose key is not updatable.
-        // For entity collections (HibernateToManyEntityProperty) the key is non-updatable when the owner has two or
-        // more unidirectional to-many properties (counting every unidirectional HibernateToManyProperty of the owner),
-        // the existing rule for issue 10811.
+        // For entity collections (HibernateToManyEntityProperty) the key is non-updatable only when the owner has
+        // two or more unidirectional to-many properties that share this collection's join table, the rule for issue
+        // 10811. Unidirectional collections with join tables of their own keep an updatable key, as they have no
+        // second key column to leave null. A to-many that is not bound as a collection (a serializable or user type)
+        // has no join table and no Hibernate collection, so it is neither counted nor asked for one.
         key.setUpdateable(property instanceof HibernateToManyCollectionProperty || unidirectionalCount <= 1);
     }
 

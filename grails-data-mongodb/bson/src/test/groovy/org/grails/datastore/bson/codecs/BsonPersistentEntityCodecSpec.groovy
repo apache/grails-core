@@ -20,6 +20,13 @@
 package org.grails.datastore.bson.codecs
 
 import groovy.json.JsonSlurper
+import org.bson.BsonDocument
+import org.bson.BsonDocumentReader
+import org.bson.BsonDocumentWriter
+import org.bson.codecs.BsonValueCodecProvider
+import org.bson.codecs.DecoderContext
+import org.bson.codecs.EncoderContext
+import org.bson.codecs.ValueCodecProvider
 import org.bson.codecs.configuration.CodecRegistries
 import org.bson.codecs.configuration.CodecRegistry
 import org.bson.json.JsonMode
@@ -27,6 +34,7 @@ import org.bson.json.JsonWriterSettings
 import org.grails.datastore.bson.json.JsonReader
 import org.grails.datastore.bson.json.JsonWriter
 import org.grails.datastore.bson.codecs.domain.Person
+import org.grails.datastore.bson.codecs.domain.Profile
 import org.grails.datastore.mapping.keyvalue.mapping.config.KeyValueMappingContext
 import org.grails.datastore.mapping.model.MappingContext
 import org.grails.datastore.mapping.model.PersistentEntity
@@ -169,6 +177,25 @@ class BsonPersistentEntityCodecSpec extends Specification {
         person.age == 12
         person.pattern == /\sfoo+/
     }
+
+    void "Test a Map property round-trips entries whose keys name bean properties of the map"() {
+        given: "A mapping context and a registry that can encode the map's values"
+        MappingContext mappingContext = new KeyValueMappingContext("test")
+        PersistentEntity entity = mappingContext.addPersistentEntity(Profile)
+        CodecRegistry codecRegistry = CodecRegistries.fromProviders(new CodecExtensions(), new ValueCodecProvider(), new BsonValueCodecProvider())
+        BsonPersistentEntityCodec codec = new BsonPersistentEntityCodec(codecRegistry, entity)
+        Map feature = [type: 'Feature', geometry: [type: 'Point', coordinates: [100.0d, 0.0d]], properties: [name: 'Test'], metaClass: 'm']
+        BsonDocument document = new BsonDocument()
+
+        when: "A profile holding a GeoJSON-shaped map is encoded and decoded again"
+        codec.encode(new BsonDocumentWriter(document), new Profile(name: 'Fred', attributes: feature), EncoderContext.builder().build())
+        Profile profile = codec.decode(new BsonDocumentReader(document), DecoderContext.builder().build())
+
+        then: "Every entry survives, including the ones Groovy 5 resolves as properties when read by subscript"
+        document.getDocument('attributes').getDocument('properties').getString('name').value == 'Test'
+        profile.name == 'Fred'
+        profile.attributes.get('properties') == [name: 'Test']
+        profile.attributes.get('metaClass') == 'm'
+        profile.attributes == feature
+    }
 }
-
-

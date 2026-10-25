@@ -306,7 +306,8 @@ public class AntPathMatcher {
         if (!hasText(pattern2)) {
             return pattern1;
         }
-        if (!pattern1.contains("{") && match(pattern1, pattern2)) {
+        boolean pattern1ContainsUriVar = pattern1.indexOf('{') != -1;
+        if (!pattern1ContainsUriVar && match(pattern1, pattern2)) {
             return pattern2;
         }
         if (pattern1.endsWith("/*")) {
@@ -325,31 +326,26 @@ public class AntPathMatcher {
             // /hotels/** + booking -> /hotels/**/booking
             return pattern1 + "/" + pattern2;
         }
-        int dotPos1 = pattern1.indexOf('.');
-        if (dotPos1 == -1) {
+        int starDotPos1 = pattern1.indexOf("*.");
+        if (pattern1ContainsUriVar || starDotPos1 == -1 || pathSeparator.equals(".")) {
             // simply concatenate the two patterns
             if (pattern1.endsWith("/") || pattern2.startsWith("/")) {
                 return pattern1 + pattern2;
             }
             return pattern1 + "/" + pattern2;
         }
-        String fileName1 = pattern1.substring(0, dotPos1);
-        String extension1 = pattern1.substring(dotPos1);
-        String fileName2;
-        String extension2;
+        String extension1 = pattern1.substring(starDotPos1 + 1);
         int dotPos2 = pattern2.indexOf('.');
-        if (dotPos2 != -1) {
-            fileName2 = pattern2.substring(0, dotPos2);
-            extension2 = pattern2.substring(dotPos2);
+        String fileName2 = dotPos2 == -1 ? pattern2 : pattern2.substring(0, dotPos2);
+        String extension2 = dotPos2 == -1 ? "" : pattern2.substring(dotPos2);
+        boolean extension1All = extension1.equals(".*") || extension1.isEmpty();
+        boolean extension2All = extension2.equals(".*") || extension2.isEmpty();
+        if (!extension1All && !extension2All) {
+            throw new IllegalArgumentException("Cannot combine patterns: " + pattern1 + " vs " + pattern2);
         }
-        else {
-            fileName2 = pattern2;
-            extension2 = "";
-        }
-        String fileName = fileName1.endsWith("*") ? fileName2 : fileName1;
-        String extension = extension1.startsWith("*") ? extension2 : extension1;
+        String extension = extension1All ? extension2 : extension1;
 
-        return fileName + extension;
+        return fileName2 + extension;
     }
 
     private boolean hasText(String txt) {
@@ -538,6 +534,12 @@ public class AntPathMatcher {
                 return false;
             }
             if (uriTemplateVariables != null) {
+                if (variableNames.size() != matcher.groupCount()) {
+                    throw new IllegalArgumentException("The number of capturing groups in the pattern segment " +
+                            pattern + " does not match the number of URI template variables it defines, " +
+                            "which can occur if capturing groups are used in a URI template regex. " +
+                            "Use non-capturing groups instead.");
+                }
                 for (int i = 1, count = matcher.groupCount(); i <= count; i++) {
                     String name = variableNames.get(i - 1);
                     String value = matcher.group(i);

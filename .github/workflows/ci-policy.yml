@@ -1,0 +1,142 @@
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#     https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Decides, once per run of a calling workflow, whether that workflow's test jobs run. Every workflow that
+# runs tests calls this workflow as its first job, `policy`, and gates its test jobs on the run-tests
+# output, so the rules live here and nowhere else; see the "CI policy" section of AGENTS.md for the
+# reasons behind them.
+#
+# The tests run when the first line of the commit message starts with [run tests] and do not run when it
+# starts with [skip tests]; a marker anywhere else is ignored. Without a marker, an explicit request runs
+# them: the "run ci" label on a pull request, or the run-tests input of a manual run. Without either, the
+# target branch decides: the default branch and every release branch above it run the tests; a release
+# branch below the default (7.0.x while 8.0.x is the default) and a branch that is not a release branch
+# (the base of a feature-to-feature pull request) build and publish without them. The commit is the head
+# commit of the push, of the pull request, or of the dispatched branch. Two exceptions: a manual run in a
+# fork, whose runner time is the fork owner's and not the ASF's, runs the tests unless the message says
+# [skip tests]; and when the commit cannot be read from the API after several attempts, the tests run,
+# as they did before this policy existed, so an API outage costs runner time rather than a test result.
+#
+# The "no ci" label and the draft rule (a draft runs nothing without the "run ci" label) are not handled
+# here: the calling job carries them in its `if`, so such a pull request runs no job at all, not even this one.
+# When the tests do not run, a notice annotation on the run says so, so an all-green pull request shows it.
+name: "CI policy"
+on:
+  workflow_call:
+    outputs:
+      run-tests:
+        description: "'true' when the calling workflow runs its test jobs, 'false' when it runs only its build and publish jobs"
+        value: ${{ jobs.decide.outputs.run-tests }}
+permissions:
+  contents: read
+jobs:
+  decide:
+    name: "Decide whether the tests run"
+    runs-on: ubuntu-24.04
+    outputs:
+      run-tests: ${{ steps.decide.outputs.run-tests }}
+    steps:
+      - name: "⚖️ Apply the CI policy"
+        id: decide
+        # The commit message is untrusted input (a pull request may come from any fork), so it reaches the
+        # script only through the environment, never through expression interpolation.
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT_NAME: ${{ github.event_name }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          TARGET_BRANCH: ${{ github.base_ref || github.ref_name }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          PUSH_MESSAGE: ${{ github.event.head_commit.message }}
+          REPOSITORY_OWNER: ${{ github.repository_owner }}
+          RUN_CI_LABEL: ${{ contains(github.event.pull_request.labels.*.name, 'run ci') }}
+          DISPATCH_RUN_TESTS: ${{ github.event.inputs.run-tests }}
+        run: |
+          set -euo pipefail
+          message_read=true
+          if [[ "$EVENT_NAME" == push ]]; then
+            message="$PUSH_MESSAGE"
+          else
+            # A pull_request or workflow_dispatch payload carries no commit message, so read the head commit,
+            # retrying with a growing pause: a transient API error must not decide the run.
+            message_read=false
+            for pause in 2 4 8 16 0; do
+              if message="$(gh api "repos/${GITHUB_REPOSITORY}/commits/${HEAD_SHA}" --jq '.commit.message')"; then
+                message_read=true
+                break
+              fi
+              if (( pause > 0 )); then
+                echo "Reading commit ${HEAD_SHA} failed; retrying in ${pause}s"
+                sleep "$pause"
+              fi
+            done
+          fi
+          if [[ "$message_read" == true ]]; then
+            subject="${message%%$'\n'*}"
+            subject="${subject#"${subject%%[![:space:]]*}"}"
+          else
+            subject="(the commit message could not be read)"
+          fi
+
+          run_tests=true
+          if [[ "$message_read" != true ]]; then
+            reason="the commit message could not be read from the GitHub API after 5 attempts, and then the tests run"
+            echo "::warning title=CI policy::Could not read commit ${HEAD_SHA} from the GitHub API after 5 attempts; the tests run."
+          elif [[ "$subject" == '[skip tests]'* ]]; then
+            run_tests=false
+            reason="the commit message starts with [skip tests]"
+          elif [[ "$subject" == '[run tests]'* ]]; then
+            reason="the commit message starts with [run tests]"
+          elif [[ "$EVENT_NAME" == pull_request && "$RUN_CI_LABEL" == true ]]; then
+            reason="the pull request carries the 'run ci' label and the commit message does not start with [skip tests]"
+          elif [[ "$EVENT_NAME" == workflow_dispatch && "$DISPATCH_RUN_TESTS" == true ]]; then
+            reason="the manual run asked for the tests with its run-tests input and the commit message does not start with [skip tests]"
+          elif [[ "$EVENT_NAME" == workflow_dispatch && "$REPOSITORY_OWNER" != apache ]]; then
+            reason="a manual run in the fork $GITHUB_REPOSITORY runs the tests unless the commit message starts with [skip tests]"
+          elif [[ "$TARGET_BRANCH" =~ ^([0-9]+)\.([0-9]+)\.x$ ]]; then
+            target_major=${BASH_REMATCH[1]}
+            target_minor=${BASH_REMATCH[2]}
+            if [[ "$DEFAULT_BRANCH" =~ ^([0-9]+)\.([0-9]+)\.x$ ]]; then
+              default_major=${BASH_REMATCH[1]}
+              default_minor=${BASH_REMATCH[2]}
+              if (( target_major < default_major || (target_major == default_major && target_minor < default_minor) )); then
+                run_tests=false
+                reason="$TARGET_BRANCH is below the default branch $DEFAULT_BRANCH and nothing asked for the tests: no [run tests] commit, no 'run ci' label, no run-tests input"
+              else
+                reason="$TARGET_BRANCH is the default branch $DEFAULT_BRANCH or above it and the commit message does not start with [skip tests]"
+              fi
+            else
+              reason="the default branch '$DEFAULT_BRANCH' is not a release branch"
+            fi
+          else
+            run_tests=false
+            reason="'$TARGET_BRANCH' is not a release branch and nothing asked for the tests: no [run tests] commit, no 'run ci' label, no run-tests input"
+          fi
+
+          echo "run-tests=$run_tests" >> "$GITHUB_OUTPUT"
+          decision="Tests run: $run_tests, because $reason."
+          echo "$decision"
+          if [[ "$run_tests" == false ]]; then
+            # An annotation shows on the run's summary page, so a reviewer of an all-green pull request sees
+            # that the tests were skipped without opening this job. Only fixed text and branch names go in it.
+            echo "::notice title=CI policy::Tests did not run: $reason."
+          fi
+          echo "Decided for $EVENT_NAME on $TARGET_BRANCH at $HEAD_SHA: $subject"
+          {
+            echo "### ⚖️ CI policy"
+            echo
+            echo "$decision"
+            echo
+            echo "Event \`$EVENT_NAME\`, branch \`$TARGET_BRANCH\`, commit \`${HEAD_SHA:0:10}\`: $subject"
+          } >> "$GITHUB_STEP_SUMMARY"

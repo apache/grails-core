@@ -19,25 +19,44 @@ on:
     branches:
       - '[0-9]+.[0-9]+.x'
   pull_request:
+    # ready_for_review is not a default type: a draft runs nothing until it is ready or labelled "run ci".
+    types: [ opened, synchronize, reopened, ready_for_review ]
     branches:
       - '[0-9]+.[0-9]+.x'
   workflow_dispatch:
-# queue jobs and only allow 1 run per branch due to the likelihood of hitting GitHub resource limits
+    inputs:
+      run-tests:
+        description: "Run the build where the branch rule would skip it (a release branch below the default); a [skip tests] head commit still skips it"
+        type: boolean
+        default: false
+# One run per branch or pull request: a new commit cancels the run in flight, whose result would be for a
+# superseded commit, and overlapping runs of this build are likely to hit GitHub resource limits. This
+# workflow publishes nothing, so nothing here needs to survive the cancel.
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  cancel-in-progress: true
 permissions:
   contents: read
 jobs:
+  policy:
+    name: "CI policy"
+    # A pull request labelled "no ci", or a draft without the "run ci" label, skips this job; every other
+    # job needs it, so nothing runs for such a pull request.
+    if: >-
+      github.event_name != 'pull_request'
+      || (!contains(github.event.pull_request.labels.*.name, 'no ci')
+          && (!github.event.pull_request.draft || contains(github.event.pull_request.labels.*.name, 'run ci')))
+    uses: ./.github/workflows/ci-policy.yml
   build_groovy:
-    if: ${{ !contains(github.event.head_commit.message, '[skip tests]') }}
+    needs: [policy]
+    if: ${{ needs.policy.outputs.run-tests == 'true' }}
     name: "Build Groovy Snapshot"
     runs-on: ubuntu-latest
     outputs:
       groovyVersion: ${{ steps.groovy-version.outputs.value }}
     steps:
       - name: "☕️ Setup JDK"
-        uses: actions/setup-java@v6.0.1
+        uses: actions/setup-java@v6.1.0
         with:
           java-version: 21
           distribution: liberica
@@ -50,12 +69,15 @@ jobs:
         #     the canary build reuses our Develocity / build-cache settings.
         # Both paths must be listed here; otherwise the init-script step fails
         # with "The specified initialization script ... does not exist."
+        #   - .github/actions: the local gradle-cache-policy action the Setup Gradle
+        #     step runs first; without it the job fails before building anything.
         uses: actions/checkout@v7.0.1
         with:
           sparse-checkout-cone-mode: false
           sparse-checkout: |
             dependencies.gradle
             .github/scripts/groovy-snapshot-canary-build.init.gradle
+            .github/actions
       - name: "📝 Derive matching Apache Groovy branch from dependencies.gradle"
         id: groovy-branch
         run: |
@@ -76,11 +98,15 @@ jobs:
           rm dependencies.gradle
       - name: "📥 Checkout Apache Groovy (${{ steps.groovy-branch.outputs.value }})"
         run: git clone --depth 1 https://github.com/apache/groovy.git -b ${{ steps.groovy-branch.outputs.value }} --single-branch
+      - name: "🗄️ Decide the Gradle cache mode"
+        id: gradle-cache-policy
+        uses: ./.github/actions/gradle-cache-policy
       - name: "🐘 Setup Gradle"
         uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
         with:
-          cache-disabled: true # this workflow rebuilds Groovy each run; a Gradle home cache is not useful here
-          develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY  }}
+          # Decided by the step above; see .github/actions/gradle-cache-policy.
+          cache-read-only: ${{ steps.gradle-cache-policy.outputs.read-only }}
+          develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY }}
       - name: "🔍 Setup TestLens"
         uses: testlens-app/setup-testlens@d29a2be31512b3aeda3adcef09fbe0d55af90c51 # v1.9.4
       - name: "📝 Store Groovy version to use when building Grails"
@@ -115,7 +141,10 @@ jobs:
             gradle_task: testShard
           - shard_index: 2
             gradle_task: testShard
-    runs-on: ubuntu-latest
+    # ubuntu-22.04 for the reason gradle.yml's mongodbFunctional job gives: this job runs the MongoDB specifications
+    # against mongo:8.0, and ubuntu-latest is now the ubuntu-26.04 image, whose 7.0.0-1017-azure kernel MongoDB 8.0
+    # refuses to start on (https://github.com/actions/runner-images/issues/15005). Move back with that job.
+    runs-on: ubuntu-22.04
     steps:
       - name: "⚙️ Maximize build space"
         run: |
@@ -132,35 +161,27 @@ jobs:
       - name: "📥 Checkout project"
         uses: actions/checkout@v7.0.1
       - name: "☕️ Setup JDK"
-        uses: actions/setup-java@v6.0.1
+        uses: actions/setup-java@v6.1.0
         with:
           java-version: 21
           distribution: liberica
-      - name: "🗄️ Restore dependency jar cache"
-        id: dependency-cache
+      - name: "🗄️ Restore the mongod the embedded server runs"
+        id: embedmongo-cache
         uses: actions/cache/restore@v6.1.0
         with:
-          # Cache only downloaded dependency jars and wrapper distributions, never Grails build outputs.
-          # Keyed by branch version so each release branch maintains its own warm cache.
-          # Fixed-depth paths: the post step re-hashes after the build, where a `**` glob walks every output and times out.
-          path: |
-            ~/.gradle/caches/modules-2
-            ~/.gradle/wrapper
-          key: gradle-deps-${{ runner.os }}-${{ github.base_ref || github.ref_name }}-${{ hashFiles('dependencies.gradle', 'gradle/wrapper/gradle-wrapper.properties', '*/gradle/wrapper/gradle-wrapper.properties') }}
-          restore-keys: |
-            gradle-deps-${{ runner.os }}-${{ github.base_ref || github.ref_name }}-
-      - name: "🗄️ Cache the mongod the embedded server runs"
-        uses: actions/cache@v6.1.0
-        with:
-          # Separate from the dependency jars, for the reasons given on the same step in
-          # gradle.yml. The version is the one -PmongodbContainerVersion asks for below.
+          # Outside the Gradle User Home that setup-gradle caches, for the reasons given on the same
+          # step in gradle.yml. The version is the one -PmongodbContainerVersion asks for below.
           path: ~/.embedmongo
           key: embedmongo-${{ runner.os }}-8.0
+      - name: "🗄️ Decide the Gradle cache mode"
+        id: gradle-cache-policy
+        uses: ./.github/actions/gradle-cache-policy
       - name: "🐘 Setup Gradle"
         uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
         with:
-          cache-disabled: true # dependency jars are cached by the explicit branch-keyed step above
-          develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY  }}
+          # Decided by the step above; see .github/actions/gradle-cache-policy.
+          cache-read-only: ${{ steps.gradle-cache-policy.outputs.read-only }}
+          develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY }}
       - name: "🔍 Setup TestLens"
         uses: testlens-app/setup-testlens@d29a2be31512b3aeda3adcef09fbe0d55af90c51 # v1.9.4
       - name: "📥 Fetch the locally built Groovy artifacts"
@@ -187,11 +208,11 @@ jobs:
           -PmongodbContainerVersion=8.0
         env:
           GRAILS_INCLUDE_MAVEN_LOCAL: true
-      - name: "🗄️ Save dependency jar cache"
-        if: ${{ success() && matrix.shard_index == 0 && steps.dependency-cache.outputs.cache-hit != 'true' }}
+      - name: "🗄️ Save the mongod the embedded server runs"
+        # The download is the same on every branch, and every branch can restore the default branch's entries,
+        # so only a push to the default branch saves it; other branches and pull requests only restore it.
+        if: ${{ success() && github.event_name != 'pull_request' && github.ref_name == github.event.repository.default_branch && steps.embedmongo-cache.outputs.cache-hit != 'true' }}
         uses: actions/cache/save@v6.1.0
         with:
-          path: |
-            ~/.gradle/caches/modules-2
-            ~/.gradle/wrapper
-          key: gradle-deps-${{ runner.os }}-${{ github.base_ref || github.ref_name }}-${{ hashFiles('dependencies.gradle', 'gradle/wrapper/gradle-wrapper.properties', '*/gradle/wrapper/gradle-wrapper.properties') }}
+          path: ~/.embedmongo
+          key: ${{ steps.embedmongo-cache.outputs.cache-primary-key }}

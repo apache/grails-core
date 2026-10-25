@@ -29,11 +29,14 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 import javax.sql.DataSource;
@@ -48,6 +51,8 @@ import org.hibernate.SessionFactory;
 import org.hibernate.boot.Metadata;
 import org.hibernate.cfg.Environment;
 import org.hibernate.engine.spi.SessionFactoryImplementor;
+import org.hibernate.event.service.spi.EventListenerRegistry;
+import org.hibernate.event.spi.EventType;
 import org.hibernate.integrator.spi.Integrator;
 import org.hibernate.integrator.spi.IntegratorService;
 import org.hibernate.service.ServiceRegistry;
@@ -106,6 +111,8 @@ import org.grails.datastore.mapping.model.DatastoreConfigurationException;
 import org.grails.datastore.mapping.model.MappingContext;
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.config.GormProperties;
+import org.grails.datastore.mapping.model.types.Association;
+import org.grails.datastore.mapping.model.types.ToMany;
 import org.grails.datastore.mapping.multitenancy.AllTenantsResolver;
 import org.grails.datastore.mapping.multitenancy.MultiTenancySettings;
 import org.grails.datastore.mapping.multitenancy.SchemaMultiTenantCapableDatastore;
@@ -120,6 +127,7 @@ import org.grails.orm.hibernate.connections.HibernateConnectionSource;
 import org.grails.orm.hibernate.connections.HibernateConnectionSourceFactory;
 import org.grails.orm.hibernate.connections.HibernateConnectionSourceSettings;
 import org.grails.orm.hibernate.event.listener.HibernateEventListener;
+import org.grails.orm.hibernate.multitenancy.MultiTenantCollectionEventListener;
 import org.grails.orm.hibernate.multitenancy.MultiTenantEventListener;
 import org.grails.orm.hibernate.query.HibernateQueryArgument;
 import org.grails.orm.hibernate.support.ClosureEventTriggeringInterceptor;
@@ -145,6 +153,12 @@ public class HibernateDatastore extends AbstractDatastore
                 MessageSourceAware,
                 MultipleConnectionSourceCapableDatastore {
     private static final Logger LOG = LoggerFactory.getLogger(HibernateDatastore.class);
+
+    /**
+     * Set while the current tenant is resolved for the tenant filter, so that a query the tenant resolver runs on an
+     * entity that is not multi-tenant does not resolve the tenant again.
+     */
+    private static final ThreadLocal<Boolean> RESOLVING_TENANT = new ThreadLocal<>();
 
     /** @deprecated Use {@link HibernateQueryArgument#CONFIG_CACHE_QUERIES} */
     @Deprecated(since = "8.0", forRemoval = true)
@@ -217,6 +231,7 @@ public class HibernateDatastore extends AbstractDatastore
     protected final HibernateGormEnhancer gormEnhancer;
     protected final Map<String, HibernateDatastore> datastoresByConnectionSource = Collections.synchronizedMap(new LinkedHashMap<>());
     private final List<ConnectionSource<SessionFactory, HibernateConnectionSourceSettings>> schemaTenantConnectionSources = new CopyOnWriteArrayList<>();
+    private final Map<PersistentEntity, Boolean> multiTenantCollections = new ConcurrentHashMap<>();
     protected final Metadata metadata;
     protected final org.grails.orm.hibernate.proxy.GrailsBytecodeProvider bytecodeProvider;
 
@@ -287,6 +302,7 @@ public class HibernateDatastore extends AbstractDatastore
         interceptor.setDatastore(this);
         interceptor.setEventPublisher(eventPublisher);
         registerEventListeners(this.eventPublisher);
+        registerTenantFilterListeners();
         configureValidatorRegistry(mappingContext);
         this.mappingContext.addMappingContextListener(new MappingContext.Listener() {
             @Override
@@ -535,6 +551,21 @@ public class HibernateDatastore extends AbstractDatastore
         }
         if (eventTriggeringInterceptor != null) {
             eventPublisher.addApplicationListener(eventTriggeringInterceptor);
+        }
+    }
+
+    /**
+     * With DISCRIMINATOR multi-tenancy, registers the Hibernate listener that sets the tenant filter before Hibernate
+     * initializes a collection of a multi-tenant entity.
+     */
+    protected void registerTenantFilterListeners() {
+        if (multiTenantMode == MultiTenancySettings.MultiTenancyMode.DISCRIMINATOR) {
+            EventListenerRegistry listenerRegistry = ((SessionFactoryImplementor) getSessionFactory())
+                    .getServiceRegistry()
+                    .getService(EventListenerRegistry.class);
+            if (listenerRegistry != null) {
+                listenerRegistry.prependListeners(EventType.INIT_COLLECTION, new MultiTenantCollectionEventListener(this));
+            }
         }
     }
 
@@ -1037,17 +1068,87 @@ public class HibernateDatastore extends AbstractDatastore
         }
     }
 
+    /**
+     * Enable the tenant id filter for the current tenant. Inside {@link Tenants#withoutId(groovy.lang.Closure)} the
+     * filter is disabled instead.
+     */
     public void enableMultiTenancyFilter() {
-        Serializable currentId = Tenants.currentId(this);
-        if (ConnectionSource.DEFAULT.equals(currentId)) {
-            disableMultiTenancyFilter();
+        enableMultiTenancyFilter(getHibernateTemplate().getSessionFactory().getCurrentSession());
+    }
+
+    /**
+     * Enable the tenant id filter for the current tenant on the given session. Inside
+     * {@link Tenants#withoutId(groovy.lang.Closure)} the filter is disabled instead.
+     *
+     * @param session The session
+     */
+    public void enableMultiTenancyFilter(org.hibernate.Session session) {
+        Serializable currentId = currentTenantId();
+        if (Tenants.isWithoutId(this)) {
+            session.disableFilter(GormProperties.TENANT_IDENTITY);
         } else {
-            getHibernateTemplate()
-                    .getSessionFactory()
-                    .getCurrentSession()
-                    .enableFilter(GormProperties.TENANT_IDENTITY)
-                    .setParameter(GormProperties.TENANT_IDENTITY, currentId);
+            session.enableFilter(GormProperties.TENANT_IDENTITY).setParameter(GormProperties.TENANT_IDENTITY, currentId);
         }
+    }
+
+    /**
+     * Enable the tenant id filter before a query on the given entity. For a multi-tenant entity, this is what
+     * {@link #enableMultiTenancyFilter()} does. A query on an entity that is not multi-tenant can fetch a collection of
+     * a multi-tenant entity by join, directly or through other associations, so for such an entity the filter is
+     * enabled as well when there is a current tenant. Without a current tenant, and for a query that the tenant
+     * resolver runs, the filter is left as it is.
+     *
+     * @param entity The entity that is queried
+     * @since 8.0.1
+     */
+    public void enableMultiTenancyFilter(PersistentEntity entity) {
+        if (entity.isMultiTenant()) {
+            enableMultiTenancyFilter();
+        } else if (RESOLVING_TENANT.get() == null && hasMultiTenantCollection(entity)) {
+            try {
+                enableMultiTenancyFilter();
+            } catch (TenantNotFoundException e) {
+                LOG.debug("No current tenant for a query on [{}]; the tenant filter is left as it is", entity.getName());
+            }
+        }
+    }
+
+    private Serializable currentTenantId() {
+        if (RESOLVING_TENANT.get() != null) {
+            return Tenants.currentId(this);
+        }
+        RESOLVING_TENANT.set(Boolean.TRUE);
+        try {
+            return Tenants.currentId(this);
+        } finally {
+            RESOLVING_TENANT.remove();
+        }
+    }
+
+    private boolean hasMultiTenantCollection(PersistentEntity entity) {
+        return multiTenantCollections.computeIfAbsent(entity, e -> reachesMultiTenantCollection(e, new HashSet<>()));
+    }
+
+    private static boolean reachesMultiTenantCollection(PersistentEntity entity, Set<PersistentEntity> visited) {
+        if (!visited.add(entity)) {
+            return false;
+        }
+        List<Association> associations = entity.getAssociations();
+        if (associations != null) {
+            for (Association association : associations) {
+                PersistentEntity associated = association.getAssociatedEntity();
+                if (associated == null) {
+                    continue;
+                }
+                if (association instanceof ToMany && associated.isMultiTenant()) {
+                    return true;
+                }
+                if (reachesMultiTenantCollection(associated, visited)) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     public void disableMultiTenancyFilter() {

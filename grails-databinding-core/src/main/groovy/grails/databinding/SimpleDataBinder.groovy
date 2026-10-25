@@ -403,6 +403,9 @@ class SimpleDataBinder implements DataBinder {
                 }
             }
         } else if (Map.isAssignableFrom(propertyType)) {
+            // Map.put rather than mapInstance[index] = ...: on Groovy 5 a String subscript on a Map
+            // resolves as property access, so an index such as "properties" would throw
+            // ReadOnlyPropertyException instead of storing the entry.
             Map mapInstance = initializeMap(obj, propName)
             if (mapInstance.size() < autoGrowCollectionLimit || mapInstance.containsKey(indexedPropertyReferenceDescriptor.index)) {
                 def referencedType = getReferencedTypeForCollection(propName, obj)
@@ -410,17 +413,17 @@ class SimpleDataBinder implements DataBinder {
                     if (val instanceof Map) {
                         def indexedInstance = instantiateAndBindOrUseMapConstructor(referencedType, (Map) val, listener)
                         if (indexedInstance != null) {
-                            mapInstance[indexedPropertyReferenceDescriptor.index] = indexedInstance
+                            mapInstance.put(indexedPropertyReferenceDescriptor.index, indexedInstance)
                         }
                     } else if (val instanceof DataBindingSource) {
                         def indexedInstance = referencedType.getDeclaredConstructor().newInstance()
                         bind(indexedInstance, val, listener)
-                        mapInstance[indexedPropertyReferenceDescriptor.index] = indexedInstance
+                        mapInstance.put(indexedPropertyReferenceDescriptor.index, indexedInstance)
                     } else {
-                        mapInstance[indexedPropertyReferenceDescriptor.index] = convert(referencedType, val)
+                        mapInstance.put(indexedPropertyReferenceDescriptor.index, convert(referencedType, val))
                     }
                 } else {
-                    mapInstance[indexedPropertyReferenceDescriptor.index] = val
+                    mapInstance.put(indexedPropertyReferenceDescriptor.index, val)
                 }
             }
         }

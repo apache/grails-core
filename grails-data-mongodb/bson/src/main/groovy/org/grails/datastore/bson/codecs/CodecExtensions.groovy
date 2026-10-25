@@ -219,14 +219,17 @@ class CodecExtensions implements CodecProvider {
             Map<String, Object> convert(BsonDocument source) {
                 Map<String, Object> map = [:]
 
+                // Map.get and Map.put rather than the subscript operator: on Groovy 5 a String subscript
+                // on a Map resolves as property access, so a key such as "properties" would read the
+                // bean property of the map, or throw ReadOnlyPropertyException on assignment.
                 for (key in source.keySet()) {
-                    def v = source[key]
+                    def v = source.get(key)
                     if (v != null) {
                         def converter = BSON_VALUE_CONVERTERS[v.getClass()]?.first()
-                        map[key] = (converter ? converter.convert(v) : v)
+                        map.put(key, converter ? converter.convert(v) : v)
                     }
                     else {
-                        map[key] = v
+                        map.put(key, v)
                     }
 
                 }
@@ -294,7 +297,8 @@ class CodecExtensions implements CodecProvider {
                     def converter = BSON_VALUE_CONVERTERS.get(bsonValue.getClass())?.first()
                     value = converter ? converter.convert(bsonValue) : bsonValue
                 }
-                map[key] = value
+                // Map.put rather than a subscript: a key such as "properties" is a bean property on Groovy 5
+                map.put(key, value)
                 bsonType = reader.readBsonType()
             }
             reader.readEndDocument()

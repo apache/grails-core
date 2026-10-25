@@ -615,6 +615,20 @@ class SimpleDataBinderSpec extends Specification {
         target.values.one.name == 'First'
     }
 
+    void 'Test binding an indexed typed map entry whose key names a bean property of the map'() {
+        given:
+        def binder = new SimpleDataBinder()
+        def target = new MapConstructorValueHolder()
+
+        when:
+        binder.bind(target, ['values[properties]': [name: 'First'], 'values[metaClass]': [name: 'Second']] as SimpleMapDataBindingSource)
+
+        then:
+        target.values.get('properties').name == 'First'
+        target.values.get('metaClass').name == 'Second'
+        target.values.size() == 2
+    }
+
     void 'Test an empty whiteList binds no properties'() {
         given:
         def binder = new SimpleDataBinder()

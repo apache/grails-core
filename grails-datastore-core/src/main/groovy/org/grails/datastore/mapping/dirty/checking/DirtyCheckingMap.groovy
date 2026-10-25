@@ -25,13 +25,27 @@ import java.util.function.Function
 import groovy.transform.CompileStatic
 
 /**
- * A map that can be dirty checked
+ * A map that can be dirty checked.
+ *
+ * <p>Property access and String-keyed subscript access resolve to a map entry, as they do on the
+ * wrapped map. Groovy 5 resolves both through a Map's own accessors before its entries, so the
+ * accessors this wrapper declares ({@code target}, {@code parent}, {@code property},
+ * {@code originalSize}, {@code assigned}) would otherwise hide entries of those names, which the
+ * plain map the wrapper replaces exposes; see {@link #getProperty(String)}. Statically compiled
+ * dotted access binds to the accessor at compile time, as it always has; use {@code get} there.
  *
  * @author Graeme Rocher
  * @since 4.1
  */
 @CompileStatic
 class DirtyCheckingMap implements Map, DirtyCheckableCollection {
+
+    /**
+     * The bean properties this class declares. Kept in step with the fields below; the
+     * DirtyCheckingCollectionSpec checks the two against each other.
+     */
+    private static final Set<String> ACCESSOR_NAMES = Collections.unmodifiableSet(
+            ['target', 'parent', 'property', 'originalSize', 'assigned'] as Set<String>)
 
     final @Delegate Map target
     final DirtyCheckable parent
@@ -54,6 +68,33 @@ class DirtyCheckingMap implements Map, DirtyCheckableCollection {
     @Override
     boolean isAssigned() {
         return assigned
+    }
+
+    /**
+     * Resolves a name this wrapper declares as an accessor to the map entry of that name, so
+     * {@code map.parent} and {@code map['parent']} read what {@code map.get('parent')} reads.
+     * Every other name resolves as it does on the wrapped map.
+     */
+    @Override
+    Object getProperty(String name) {
+        if (ACCESSOR_NAMES.contains(name)) {
+            return target.get(name)
+        }
+        return getMetaClass().getProperty(this, name)
+    }
+
+    /**
+     * Stores a value under a name this wrapper declares as an accessor as a map entry, marking the
+     * owner dirty, so {@code map.parent = value} and {@code map['parent'] = value} do what
+     * {@code map.put('parent', value)} does. Every other name resolves as it does on the wrapped map.
+     */
+    @Override
+    void setProperty(String name, Object value) {
+        if (ACCESSOR_NAMES.contains(name)) {
+            put(name, value)
+            return
+        }
+        getMetaClass().setProperty(this, name, value)
     }
 
     @Override

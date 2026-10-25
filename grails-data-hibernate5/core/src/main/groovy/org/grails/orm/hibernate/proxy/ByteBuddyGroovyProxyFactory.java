@@ -20,6 +20,7 @@ package org.grails.orm.hibernate.proxy;
 
 import java.io.Serial;
 import java.io.Serializable;
+import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 import java.util.Set;
 
@@ -36,6 +37,8 @@ import static org.hibernate.internal.util.collections.ArrayHelper.EMPTY_CLASS_AR
 
 /**
  * A ProxyFactory implementation for ByteBuddy that uses {@link ByteBuddyGroovyInterceptor}.
+ * The proxy class comes from {@link GroovyProxyClassBuilder}, and is generated and checked once, in
+ * {@link #postInstantiate}, so {@link #getProxy} has nothing left to fail on but the instantiation itself.
  * Mirrors the Hibernate 7 implementation in grails-data-hibernate7.
  *
  * @since 8.0
@@ -45,7 +48,7 @@ public class ByteBuddyGroovyProxyFactory extends ByteBuddyProxyFactory {
     @Serial
     private static final long serialVersionUID = 1L;
 
-    private final transient ByteBuddyProxyHelper byteBuddyProxyHelper;
+    private final transient GroovyProxyClassBuilder proxyClassBuilder;
     private Class<?> persistentClass;
     private String entityName;
     private Class<?>[] interfaces;
@@ -54,6 +57,7 @@ public class ByteBuddyGroovyProxyFactory extends ByteBuddyProxyFactory {
     private transient CompositeType componentIdType;
     private boolean overridesEquals;
     private Class<?> proxyClass;
+    private transient Constructor<?> proxyConstructor;
     private final boolean lazyToString;
 
     public ByteBuddyGroovyProxyFactory(ByteBuddyProxyHelper byteBuddyProxyHelper) {
@@ -62,7 +66,7 @@ public class ByteBuddyGroovyProxyFactory extends ByteBuddyProxyFactory {
 
     public ByteBuddyGroovyProxyFactory(ByteBuddyProxyHelper byteBuddyProxyHelper, boolean lazyToString) {
         super(byteBuddyProxyHelper);
-        this.byteBuddyProxyHelper = byteBuddyProxyHelper;
+        this.proxyClassBuilder = new GroovyProxyClassBuilder(byteBuddyProxyHelper);
         this.lazyToString = lazyToString;
     }
 
@@ -84,10 +88,21 @@ public class ByteBuddyGroovyProxyFactory extends ByteBuddyProxyFactory {
         this.componentIdType = componentIdType;
         this.overridesEquals = ReflectHelper.overridesEquals(persistentClass);
 
-        this.proxyClass = byteBuddyProxyHelper.buildProxy(persistentClass, this.interfaces);
+        this.proxyClass = proxyClassBuilder.build(entityName, persistentClass, this.interfaces);
+        this.proxyConstructor = resolveConstructor(entityName, proxyClass);
 
         // do NOT call super.postInstantiate: the stock factory keeps private state for its own
         // getProxy(), which is fully replaced here
+    }
+
+    private static Constructor<?> resolveConstructor(String entityName, Class<?> proxyClass) {
+        try {
+            return proxyClass.getDeclaredConstructor();
+        }
+        catch (NoSuchMethodException e) {
+            throw new HibernateException("Unable to generate proxy for " + entityName +
+                    ": the entity needs a default constructor", e);
+        }
     }
 
     @Override
@@ -105,13 +120,8 @@ public class ByteBuddyGroovyProxyFactory extends ByteBuddyProxyFactory {
                     overridesEquals,
                     lazyToString);
 
-            final HibernateProxy hibernateProxy =
-                    (HibernateProxy) proxyClass.getDeclaredConstructor().newInstance();
-
-            if (hibernateProxy instanceof ProxyConfiguration) {
-                ((ProxyConfiguration) hibernateProxy).$$_hibernate_set_interceptor(interceptor);
-            }
-
+            final HibernateProxy hibernateProxy = (HibernateProxy) proxyConstructor.newInstance();
+            ((ProxyConfiguration) hibernateProxy).$$_hibernate_set_interceptor(interceptor);
             return hibernateProxy;
         } catch (Exception e) {
             throw new HibernateException("Unable to generate proxy for " + entityName, e);

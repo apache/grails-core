@@ -38,15 +38,28 @@ public class SetSecondPass implements org.hibernate.boot.spi.SecondPass, GrailsS
     private static final long serialVersionUID = -5540526942092611348L;
 
     protected final HibernateToManyProperty property;
+    private final org.hibernate.mapping.Collection collection;
     private final CollectionSecondPassBinder collectionSecondPassBinder;
 
     public SetSecondPass(CollectionSecondPassBinder collectionSecondPassBinder, HibernateToManyProperty property) {
+        this(collectionSecondPassBinder, property, null);
+    }
+
+    /**
+     * @param collection the collection this pass binds. The same property can be bound more than once, for instance
+     * when its owner is an entity that is also embedded in another, and each binding has its own collection.
+     */
+    public SetSecondPass(CollectionSecondPassBinder collectionSecondPassBinder, HibernateToManyProperty property, org.hibernate.mapping.Collection collection) {
         this.collectionSecondPassBinder = collectionSecondPassBinder;
         this.property = property;
+        this.collection = collection;
     }
 
     @Override
     public void doSecondPass(Map persistentClasses) throws MappingException {
+        if (collection != null) {
+            property.setHibernateCollection(collection);
+        }
         collectionSecondPassBinder.bindCollectionSecondPass(property);
         createCollectionKeys(property.getCollection());
     }

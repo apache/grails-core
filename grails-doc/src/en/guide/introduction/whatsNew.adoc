@@ -189,6 +189,9 @@ with `grails { legacyCommandSupport = true }` (or declare `grailsCliLegacy` them
 xref:upgrading#upgrading80x[upgrade guide] for the migration steps and the full upgrade-impact
 breakdown.
 
+The Grails Data plugin itself (`grails-data-hibernate5` or `grails-data-hibernate7`) is an application dependency only: generated builds no longer place it on the `buildscript` classpath or in `buildSrc`, where Gradle's own Groovy would run the compile-time transformations the plugin carries while compiling the build scripts.
+See the xref:upgrading#upgrading80x[upgrade guide] for the equivalent change in an existing build.
+
 ==== GSP Tag Library Improvements
 
 Grails {grailsMajorVersion} continues the move toward method-based TagLib handlers while preserving compatibility with existing closure-based tags.

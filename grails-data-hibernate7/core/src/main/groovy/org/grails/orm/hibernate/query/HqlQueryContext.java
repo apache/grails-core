@@ -23,15 +23,12 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 import java.util.stream.Collectors;
 
 import groovy.lang.GString;
 
-import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 
 import org.hibernate.jpa.AvailableHints;
@@ -115,9 +112,13 @@ public record HqlQueryContext(
             .filter(e -> AvailableHints.getDefinedHints().contains(e.getKey()))
             .collect(Collectors.toUnmodifiableMap(Map.Entry::getKey, Map.Entry::getValue));
 
-        var hql = Optional.ofNullable(positionalParamsCopy.isEmpty() ?
-                resolveHql(queryCharseq, isNative, namedParamsCopy) :
-                resolveHql(queryCharseq, isNative, positionalParamsCopy))
+        String resolved = positionalParamsCopy.isEmpty() ?
+                resolveHql(queryCharseq, namedParamsCopy) :
+                resolveHql(queryCharseq, isNative, positionalParamsCopy);
+        // native SQL is not HQL and is never read as such; an HQL query is read once, and its normalized form and
+        // its result type come from that reading, except an update, which runs as written
+        HqlText reading = isNative ? null : HqlText.of(resolved);
+        var hql = Optional.ofNullable(isNative || isUpdate ? resolved : reading.normalized())
             .filter(s -> !s.trim().isEmpty())
             .orElseGet(() -> "from %s".formatted(entity.getName()));
 
@@ -126,7 +127,7 @@ public record HqlQueryContext(
 
         // a native query always returns entities, as Hibernate 5 did by adding the entity to every native query
         Class<?> targetClass = targetClassOverride != null ? targetClassOverride :
-                isNative ? entity.getJavaClass() : getTarget(hql, entity.getJavaClass());
+                isNative ? entity.getJavaClass() : reading.target(entity.getJavaClass());
 
         return new HqlQueryContext(
             hql,
@@ -141,13 +142,11 @@ public record HqlQueryContext(
 
     // ─── HQL resolution ──────────────────────────────────────────────────────
 
-    static @Nullable String resolveHql(
-            CharSequence queryCharseq, boolean isNative, Map<String, Object> namedParams) {
+    static @Nullable String resolveHql(CharSequence queryCharseq, Map<String, Object> namedParams) {
         String raw = queryCharseq instanceof GString gstr ?
                 buildNamedParameterQueryFromGString(gstr, namedParams) :
                 queryCharseq != null ? queryCharseq.toString() : "";
-        String normalized = normalizeMultiLineQueryString(raw);
-        return isNative ? normalized : normalizeNonAliasedSelect(normalized);
+        return normalizeMultiLineQueryString(raw);
     }
 
     static @Nullable String resolveHql(
@@ -155,261 +154,30 @@ public record HqlQueryContext(
         String raw = queryCharseq instanceof GString gstr ?
                 buildPositionalParameterQueryFromGString(gstr, positionalParams, isNative) :
                 queryCharseq != null ? queryCharseq.toString() : "";
-        String normalized = normalizeMultiLineQueryString(raw);
-        return isNative ? normalized : normalizeNonAliasedSelect(normalized);
+        return normalizeMultiLineQueryString(raw);
     }
 
     // ─── Projection analysis ─────────────────────────────────────────────────
+    // The query is read once, by HqlText; these entry points read a text of their own for the callers that have one.
 
-    /**
-     * Returns the result target class for a query: the entity class when there is no explicit SELECT
-     * or the SELECT is the root alias, {@code Object.class} for any other single projection, such as a
-     * property, a joined alias or a function, or {@code Object[].class} for multiple projections.
-     */
     static Class<?> getTarget(CharSequence hql, Class<?> clazz) {
-        String normalized = normalizeNonAliasedSelect(hql == null ? null : hql.toString());
-        return switch (countHqlProjections(normalized)) {
-            case 0 -> clazz;
-            case 1 -> {
-                String clause = getSingleProjectionClause(normalized);
-                if (clause != null) {
-                    if (clause.startsWith("count(") || clause.startsWith("sum(") ||
-                            clause.startsWith("avg(") || clause.startsWith("min(") ||
-                            clause.startsWith("max(")) {
-                        yield null; // Let Hibernate determine the result type for aggregates
-                    }
-                }
-                yield isRootAliasProjection(normalized, clause) ? clazz : Object.class;
-            }
-            default -> Object[].class;
-        };
+        return HqlText.of(hql).target(clazz);
     }
 
-    static @Nullable String getSingleProjectionClause(CharSequence hql) {
-        if (hql == null) return null;
-        String s = hql.toString().toLowerCase(Locale.ROOT).trim();
-        int selectIdx = s.indexOf("%s ".formatted(HibernateQueryArgument.HQL_SELECT.value()));
-        if (selectIdx < 0) return null;
-        int fromIdx = s.indexOf(" %s ".formatted(HibernateQueryArgument.HQL_FROM.value()), selectIdx);
-        return extractSelectClause(s, selectIdx, fromIdx);
-    }
-
-    static @Nonnull String extractSelectClause(String s, int selectIdx, int fromIdx) {
-        String clause = s.substring(
-                        selectIdx + HibernateQueryArgument.HQL_SELECT.value().length(),
-                        fromIdx < 0 ? s.length() : fromIdx)
-                .trim();
-        if (clause.startsWith(HibernateQueryArgument.HQL_DISTINCT.value() + " ")) {
-            clause = clause.substring(
-                            HibernateQueryArgument.HQL_DISTINCT.value().length() + 1)
-                    .trim();
-        } else if (clause.startsWith(HibernateQueryArgument.HQL_ALL.value() + " ")) {
-            clause = clause.substring(HibernateQueryArgument.HQL_ALL.value().length() + 1)
-                    .trim();
-        }
-        return clause;
-    }
-
-    /**
-     * Returns the number of top-level projections in the SELECT clause: 0 if no explicit SELECT, 1
-     * for a single projection (including DISTINCT x or NEW map(…)), 2 for two or more comma-separated
-     * top-level projections.
-     *
-     * <p>Commas inside parentheses or string literals are ignored.
-     */
     static int countHqlProjections(CharSequence hql) {
-        if (hql == null || hql.isEmpty()) return 0;
-        String s = hql.toString().trim();
-        String lower = s.toLowerCase(Locale.ROOT);
-        int selectIdx = lower.indexOf(HibernateQueryArgument.HQL_SELECT.value() + " ");
-        if (selectIdx < 0) return 0;
-
-        int fromIdx = lower.indexOf(" %s ".formatted(HibernateQueryArgument.HQL_FROM.value()), selectIdx);
-        String sel = s.substring(
-                        selectIdx + HibernateQueryArgument.HQL_SELECT.value().length(),
-                        fromIdx < 0 ? s.length() : fromIdx)
-                .trim();
-        if (sel.isEmpty()) return 0;
-
-        // Strip leading DISTINCT/ALL
-        String selLower = sel.toLowerCase(Locale.ROOT);
-        if (selLower.startsWith(HibernateQueryArgument.HQL_DISTINCT.value() + " "))
-            sel = sel.substring(HibernateQueryArgument.HQL_DISTINCT.value().length() + 1)
-                    .trim();
-        else if (selLower.startsWith(HibernateQueryArgument.HQL_ALL.value() + " "))
-            sel = sel.substring(HibernateQueryArgument.HQL_ALL.value().length() + 1)
-                    .trim();
-
-        // Count top-level commas, ignoring those inside parens or string literals
-        int commas = getCommas(sel);
-        return commas == 0 ? 1 : 2;
+        return HqlText.of(hql).projectionCount();
     }
 
     static int getCommas(String sel) {
-        int depth = 0;
-        int commas = 0;
-        boolean inSingle = false;
-        boolean inDouble = false;
-        int i = 0;
-        while (i < sel.length()) {
-            char c = sel.charAt(i);
-            if (!inDouble && c == '\'') {
-                if (inSingle && i + 1 < sel.length() && sel.charAt(i + 1) == '\'') {
-                    // escaped '' — skip next
-                    i++;
-                } else {
-                    inSingle = !inSingle;
-                }
-            } else if (!inSingle && c == '"') {
-                inDouble = !inDouble;
-            } else if (!inSingle && !inDouble) {
-                if (c == '(') {
-                    depth++;
-                } else if (c == ')' && depth > 0) {
-                    depth--;
-                } else if (c == ',' && depth == 0) {
-                    commas++;
-                }
-            }
-            i++;
-        }
-        return commas;
+        return SqlText.hql(sel).countTopLevel(',');
     }
 
-    // ─── HQL normalization ────────────────────────────────────────────────────
-
-    /**
-     * Injects a synthetic alias {@code "e"} into unaliased SELECT queries so that projection
-     * detection works uniformly. The FROM remainder is left intact.
-     *
-     * <p>Examples: {@code "select name from Person"} → {@code "select e.name from Person e"}<br>
-     * {@code "select Person from Person"} → {@code "select e from Person e"}
-     */
     static @Nullable String normalizeNonAliasedSelect(String hql) {
-        if (hql == null) return null;
-        String s = hql.trim();
-        if (s.isEmpty()) return s;
-
-        String lower = s.toLowerCase();
-        int selectIdx = lower.indexOf(HibernateQueryArgument.HQL_SELECT.value() + " ");
-        if (selectIdx < 0) return s; // no SELECT clause — nothing to normalize
-
-        int fromIdx = lower.indexOf(" %s ".formatted(HibernateQueryArgument.HQL_FROM.value()), selectIdx);
-        if (fromIdx < 0) return s; // malformed — leave as-is
-
-        int selectStart = selectIdx + HibernateQueryArgument.HQL_SELECT.value().length() + 1;
-        String selectClauseOrig = s.substring(selectStart, fromIdx).trim();
-        String selectClauseLower = lower.substring(selectStart, fromIdx).trim();
-
-        // Parse entity name from the FROM head
-        int afterFrom = fromIdx + HibernateQueryArgument.HQL_FROM.value().length() + 2;
-        int entityEnd = afterFrom;
-        while (entityEnd < s.length() && !Character.isWhitespace(s.charAt(entityEnd))) entityEnd++;
-        String entityName = s.substring(afterFrom, entityEnd);
-        if (entityName.isEmpty()) return s;
-
-        // Skip whitespace, then optional "as" keyword
-        int cur = entityEnd;
-        while (cur < s.length() && Character.isWhitespace(s.charAt(cur))) cur++;
-        if (cur + 2 <= s.length() &&
-                s.substring(cur, cur + 2).equalsIgnoreCase(HibernateQueryArgument.HQL_AS.value())) {
-            cur += HibernateQueryArgument.HQL_AS.value().length();
-            while (cur < s.length() && Character.isWhitespace(s.charAt(cur))) cur++;
-        }
-
-        // Read the next token; a clause keyword means no user-defined alias is present
-        int tokenEnd = cur;
-        while (tokenEnd < s.length() && !Character.isWhitespace(s.charAt(tokenEnd))) tokenEnd++;
-        boolean hasAlias = isHasAlias(s, cur, tokenEnd);
-        if (hasAlias) return s;
-
-        // Strip DISTINCT/ALL prefix before adjusting the projection
-        String prefix = "";
-        String projOrig = selectClauseOrig;
-        String projLower = selectClauseLower;
-        if (projLower.startsWith(HibernateQueryArgument.HQL_DISTINCT.value() + " ")) {
-            prefix = HibernateQueryArgument.HQL_DISTINCT.value() + " ";
-            projOrig = selectClauseOrig.substring(prefix.length()).trim();
-            projLower = projLower.substring(prefix.length()).trim();
-        } else if (projLower.startsWith(HibernateQueryArgument.HQL_ALL.value() + " ")) {
-            prefix = HibernateQueryArgument.HQL_ALL.value() + " ";
-            projOrig = selectClauseOrig.substring(prefix.length()).trim();
-            projLower = projLower.substring(prefix.length()).trim();
-        }
-
-        // Qualify the projection with the synthetic alias
-        String adjusted = getAdjusted(projLower, entityName, projOrig);
-
-        return HibernateQueryArgument.HQL_SELECT.value() + " " + prefix + adjusted + " " +
-                HibernateQueryArgument.HQL_FROM.value() + " " + entityName + " e" + s.substring(entityEnd);
+        return hql == null ? null : HqlText.of(hql).normalized();
     }
 
-    private static String getAdjusted(String projLower, String entityName, String projOrig) {
-        String adjusted;
-        if (projLower.equalsIgnoreCase(entityName)) {
-            adjusted = "e"; // "select Person from Person" → "select e"
-        } else if (!projLower.contains("(") &&
-                !projLower.contains(".") &&
-                !projLower.startsWith(HibernateQueryArgument.HQL_NEW.value() + " ")) {
-            adjusted = "e." + projOrig; // "select name from Person"   → "select e.name"
-        } else {
-            adjusted = projOrig; // functions / constructor expr / already qualified
-        }
-        return adjusted;
-    }
-
-    private static boolean isHasAlias(String s, int cur, int tokenEnd) {
-        String token = s.substring(cur, tokenEnd).toLowerCase(Locale.ROOT);
-        return !token.isEmpty() &&
-                !Set.of(
-                                HibernateQueryArgument.HQL_WHERE.value(),
-                                HibernateQueryArgument.HQL_JOIN.value(),
-                                HibernateQueryArgument.HQL_LEFT.value(),
-                                HibernateQueryArgument.HQL_RIGHT.value(),
-                                HibernateQueryArgument.HQL_INNER.value(),
-                                HibernateQueryArgument.HQL_OUTER.value(),
-                                HibernateQueryArgument.HQL_GROUP.value(),
-                                HibernateQueryArgument.HQL_ORDER.value(),
-                                HibernateQueryArgument.HQL_HAVING.value())
-                        .contains(token);
-    }
-
-    // ─── Private helpers ─────────────────────────────────────────────────────
-
-    /**
-     * Whether the single projection is the alias of the queried entity. An unaliased query has been given the
-     * alias {@code e} by {@link #normalizeNonAliasedSelect(String)}, which also turns a projection of the entity
-     * name into {@code e}.
-     */
-    private static boolean isRootAliasProjection(String normalizedHql, @Nullable String clause) {
-        if (clause == null) {
-            return true;
-        }
-        String rootAlias = getRootAlias(normalizedHql);
-        return rootAlias != null && clause.equals(rootAlias.toLowerCase(Locale.ROOT));
-    }
-
-    /** The alias of the entity named first after FROM, or {@code null} if it has none. */
-    static @Nullable String getRootAlias(@Nullable String hql) {
-        if (hql == null) return null;
-        String s = hql.trim();
-        String lower = s.toLowerCase(Locale.ROOT);
-        int selectIdx = lower.indexOf(HibernateQueryArgument.HQL_SELECT.value() + " ");
-        int fromIdx = lower.indexOf(" %s ".formatted(HibernateQueryArgument.HQL_FROM.value()), Math.max(selectIdx, 0));
-        if (fromIdx < 0) return null;
-        int cur = fromIdx + HibernateQueryArgument.HQL_FROM.value().length() + 2;
-        while (cur < s.length() && Character.isWhitespace(s.charAt(cur))) cur++;
-        while (cur < s.length() && !Character.isWhitespace(s.charAt(cur))) cur++;
-        while (cur < s.length() && Character.isWhitespace(s.charAt(cur))) cur++;
-        if (cur + 2 < s.length() &&
-                s.substring(cur, cur + 2).equalsIgnoreCase(HibernateQueryArgument.HQL_AS.value()) &&
-                Character.isWhitespace(s.charAt(cur + 2))) {
-            cur += HibernateQueryArgument.HQL_AS.value().length();
-            while (cur < s.length() && Character.isWhitespace(s.charAt(cur))) cur++;
-        }
-        int tokenEnd = cur;
-        while (tokenEnd < s.length() && !Character.isWhitespace(s.charAt(tokenEnd)) && s.charAt(tokenEnd) != ',') tokenEnd++;
-        return isHasAlias(s, cur, tokenEnd) ? s.substring(cur, tokenEnd) : null;
+    static boolean isHasAlias(String s, int cur, int tokenEnd) {
+        return HqlText.isClauseAlias(s, cur, tokenEnd);
     }
 
     private static String normalizeMultiLineQueryString(String query) {

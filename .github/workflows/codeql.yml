@@ -32,6 +32,8 @@ on:
       - '[4-9]+.[0-9]+.x'
       - '8.0.x-hibernate7.*'
   pull_request:
+    # ready_for_review is not a default type: a draft runs nothing until it is ready or labelled "run ci".
+    types: [ opened, synchronize, reopened, ready_for_review ]
     # The branches below must be a subset of the branches above
     branches:
       - '[4-9]+.[0-9]+.x'
@@ -41,8 +43,13 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 jobs:
+  # A pull request labelled "no ci", or a draft without the "run ci" label, skips every job of this workflow.
   analyze:
     name: Analyze
+    if: >-
+      github.event_name != 'pull_request'
+      || (!contains(github.event.pull_request.labels.*.name, 'no ci')
+          && (!github.event.pull_request.draft || contains(github.event.pull_request.labels.*.name, 'run ci')))
     runs-on: ubuntu-latest
     permissions:
       actions: read
@@ -60,13 +67,13 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v7.0.1
     - name: "☕️ Setup JDK"
-      uses: actions/setup-java@v6.0.1
+      uses: actions/setup-java@v6.1.0
       with:
         distribution: liberica
         java-version: 21
     # Initializes the CodeQL tools for scanning.
     - name: Initialize CodeQL
-      uses: github/codeql-action/init@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2 # v4.38.2
+      uses: github/codeql-action/init@24c54180a607b1449ed407dd24f251e4e9147c8d # v4.38.3
       with:
         languages: ${{ matrix.language }}
         # The autobuild action runs `./gradlew testClasses`, which compiles Groovy sample apps that are covered by regular CI.
@@ -77,4 +84,4 @@ jobs:
         # queries: ./path/to/local/query, your-org/your-repo/queries@main
 
     - name: Perform CodeQL Analysis
-      uses: github/codeql-action/analyze@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2 # v4.38.2
+      uses: github/codeql-action/analyze@24c54180a607b1449ed407dd24f251e4e9147c8d # v4.38.3

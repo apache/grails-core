@@ -44,7 +44,7 @@ public class GrailsProxyFactoryFactory implements ProxyFactoryFactory, java.io.S
     @Override
     public ProxyFactory buildProxyFactory(SessionFactoryImplementor sessionFactory) {
         return new ByteBuddyGroovyProxyFactory(grailsBytecodeProvider.getProxyHelper(),
-                isLazyToString(sessionFactory));
+                grailsBytecodeProvider.getByteBuddyState(), isLazyToString(sessionFactory));
     }
 
     private static boolean isLazyToString(SessionFactoryImplementor sessionFactory) {

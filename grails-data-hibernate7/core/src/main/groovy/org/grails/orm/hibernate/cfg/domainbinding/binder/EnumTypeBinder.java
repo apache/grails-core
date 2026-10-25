@@ -34,6 +34,7 @@ import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
 import org.grails.orm.hibernate.cfg.PropertyConfig;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEnumProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.util.ColumnNameForPropertyAndPathFetcher;
+import org.grails.orm.hibernate.cfg.domainbinding.util.CreateKeyForProps;
 import org.grails.orm.hibernate.cfg.domainbinding.util.GrailsEnumType;
 
 import static org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBinder.ENUM_CLASS_PROP;
@@ -47,6 +48,7 @@ public class EnumTypeBinder {
     private final IndexBinder indexBinder;
     private final ColumnConfigToColumnBinder columnConfigToColumnBinder;
     private final PersistentEntityNamingStrategy namingStrategy;
+    private final CreateKeyForProps createKeyForProps;
 
     public EnumTypeBinder(
             MetadataBuildingContext metadataBuildingContext,
@@ -66,11 +68,28 @@ public class EnumTypeBinder {
             IndexBinder indexBinder,
             ColumnConfigToColumnBinder columnConfigToColumnBinder,
             PersistentEntityNamingStrategy namingStrategy) {
+        this(
+                metadataBuildingContext,
+                columnNameForPropertyAndPathFetcher,
+                indexBinder,
+                columnConfigToColumnBinder,
+                namingStrategy,
+                new CreateKeyForProps(columnNameForPropertyAndPathFetcher));
+    }
+
+    protected EnumTypeBinder(
+            MetadataBuildingContext metadataBuildingContext,
+            ColumnNameForPropertyAndPathFetcher columnNameForPropertyAndPathFetcher,
+            IndexBinder indexBinder,
+            ColumnConfigToColumnBinder columnConfigToColumnBinder,
+            PersistentEntityNamingStrategy namingStrategy,
+            CreateKeyForProps createKeyForProps) {
         this.metadataBuildingContext = metadataBuildingContext;
         this.columnNameForPropertyAndPathFetcher = columnNameForPropertyAndPathFetcher;
         this.indexBinder = indexBinder;
         this.columnConfigToColumnBinder = columnConfigToColumnBinder;
         this.namingStrategy = namingStrategy;
+        this.createKeyForProps = createKeyForProps;
     }
 
     public BasicValue bindEnumType(@Nonnull HibernateEnumProperty property, String path) {
@@ -99,6 +118,7 @@ public class EnumTypeBinder {
         Table t = simpleValue.getTable();
         t.addColumn(column);
         simpleValue.addColumn(column);
+        createKeyForProps.createKeyForProps(property, path, t, columnName);
 
         if (!pc.getColumns().isEmpty()) {
             ColumnConfig columnConfig = pc.getColumns().get(0);

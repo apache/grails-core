@@ -131,10 +131,12 @@ public class GrailsDomainBinder implements AdditionalMappingContributor, TypeCon
         var jdbcEnvironment = getJdbcEnvironment();
         var defaultColumnNameFetcher =
                 new DefaultColumnNameFetcher(namingStrategy, backticksRemover);
-        var columnNameForPropertyAndPathFetcher =
-                new ColumnNameForPropertyAndPathFetcher(namingStrategy, defaultColumnNameFetcher, backticksRemover);
+        var columnNameForPropertyAndPathFetcher = new ColumnNameForPropertyAndPathFetcher(
+                namingStrategy, defaultColumnNameFetcher, backticksRemover, metadataBuildingContext);
         var simpleValueBinder =
                 new SimpleValueBinder(metadataBuildingContext, namingStrategy, jdbcEnvironment);
+        var compositeUserTypeBinder =
+                new CompositeUserTypeBinder(metadataBuildingContext, namingStrategy, jdbcEnvironment);
         var enumTypeBinder =
                 new EnumTypeBinder(metadataBuildingContext, columnNameForPropertyAndPathFetcher, namingStrategy);
         var propertyFromValueCreator = new PropertyFromValueCreator();
@@ -142,6 +144,7 @@ public class GrailsDomainBinder implements AdditionalMappingContributor, TypeCon
         var simpleValueColumnFetcher = new SimpleValueColumnFetcher();
         var compositeIdentifierToManyToOneBinder =
                 new CompositeIdentifierToManyToOneBinder(
+                        metadataCollector,
                         new org.grails.orm.hibernate.cfg.domainbinding.util.ForeignKeyColumnCountCalculator(),
                         namingStrategy,
                         defaultColumnNameFetcher,
@@ -178,6 +181,7 @@ public class GrailsDomainBinder implements AdditionalMappingContributor, TypeCon
                 componentBinder,
                 collectionBinder,
                 simpleValueBinder,
+                compositeUserTypeBinder,
                 oneToOneBinder,
                 manyToOneBinder,
                 foreignKeyOneToOneBinder);

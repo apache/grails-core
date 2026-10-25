@@ -33,6 +33,7 @@ import org.hibernate.type.CompositeType;
  */
 public class ByteBuddyGroovyInterceptor extends ByteBuddyInterceptor {
 
+    private final Class<?>[] interfaces;
     private final boolean lazyToString;
 
     @SuppressWarnings({ "unchecked", "rawtypes" })
@@ -57,6 +58,7 @@ public class ByteBuddyGroovyInterceptor extends ByteBuddyInterceptor {
                 componentIdType,
                 session,
                 overridesEquals);
+        this.interfaces = interfaces;
         this.lazyToString = lazyToString;
     }
 
@@ -79,5 +81,26 @@ public class ByteBuddyGroovyInterceptor extends ByteBuddyInterceptor {
         }
 
         return super.intercept(proxy, method, args);
+    }
+
+    /**
+     * Writes the proxy as a {@link SerializableGroovyProxy}, which reads back through
+     * {@link ByteBuddyGroovyProxyFactory} as the same Groovy-aware proxy. Hibernate's own serialized form
+     * only rebuilds stock proxies, through the global bytecode provider.
+     */
+    @Override
+    protected Object serializableProxy() {
+        return new SerializableGroovyProxy(
+                getEntityName(),
+                persistentClass,
+                interfaces,
+                getInternalIdentifier(),
+                isReadOnlySettingAvailable() ? Boolean.valueOf(isReadOnly()) : isReadOnlyBeforeAttachedToSession(),
+                getSessionFactoryUuid(),
+                isAllowLoadOutsideTransaction(),
+                getIdentifierMethod,
+                setIdentifierMethod,
+                componentIdType,
+                lazyToString);
     }
 }

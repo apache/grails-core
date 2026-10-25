@@ -109,7 +109,7 @@ class SqlProjectionHibernate7Spec extends HibernateGormDatastoreSpec {
         and: 'grouped by a quoted column alias'
         SqlProjectionDbBox.createCriteria().list {
             projections {
-                sqlGroupProjection 'width as "box width", sum(height) as [total height]', '"box width"',
+                sqlGroupProjection 'width as "box width", sum(height) as "total height"', '"box width"',
                         ['box width', 'total height'], [INTEGER, INTEGER]
             }
             order('total height')
@@ -160,6 +160,13 @@ class SqlProjectionHibernate7Spec extends HibernateGormDatastoreSpec {
         constants*.getAt(1) == [8, 9]
         constants*.getAt(2) == [3L, 1L]
         constants*.getAt(3) == [false, true]
+
+        and: 'a string in single quotes in the group by clause is a literal, not the alias of the projection'
+        db != 'MySQL' || SqlProjectionDbBox.createCriteria().list {
+            projections {
+                sqlGroupProjection 'sum(height) as total', "'total'", ['total'], [INTEGER]
+            }
+        } == [33]
 
         and: 'a paged list counts the total'
         SqlProjectionDbBox.createCriteria().list(max: 2) {

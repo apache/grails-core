@@ -82,6 +82,8 @@ dependencies {
     // such as create-controller, generate-all, and scaffolding that parse and generate web-layer code.
     implementation 'jakarta.servlet:jakarta.servlet-api'
     compileOnly "net.sf.jopt-simple:jopt-simple:$joptSimpleVersion"
+    // compileOnly stays off the test compile classpath. OptionParsingCommand tests call joptsimple directly.
+    testImplementation "net.sf.jopt-simple:jopt-simple:$joptSimpleVersion"
 
     // Maven Resolver API & friends
     implementation "org.apache.maven.resolver:maven-resolver-api:$apacheMavenResolverVersion"

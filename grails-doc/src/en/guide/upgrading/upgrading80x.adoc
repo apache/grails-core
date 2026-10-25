@@ -497,6 +497,7 @@ implementation 'org.apache.grails:grails-undertow'
 
 The existing `server.undertow.*` configuration properties continue to work.
 Note that `server.undertow.max-http-post-size` now defaults to 2MB, matching Undertow's hardened default (CVE-2024-3884, CVE-2024-4027); set it to `-1` to restore the previous unlimited behavior.
+As Spring Boot's Tomcat and Jetty servers do, Undertow deletes the temporary directories it creates under `java.io.tmpdir` when the application stops: one for uploaded files and, when the application has no document root, one for the document root. Uploaded files left in them are deleted with them.
 The Grails Forge generator offers Undertow as a selectable servlet implementation again (for example, `--servlet=undertow` on the API/CLI, or the `grails-undertow` feature).
 
 ==== 12. HandlerAdapter.getLastModified Removed
@@ -1449,6 +1450,24 @@ class SportsCar extends Car {
 }
 ----
 
+===== 26.11 Custom User Types
+
+Hibernate 7 changed the `org.hibernate.usertype.UserType` contract. The interface is generic in the Java type, `sqlTypes()` became `getSqlType()`, and `nullSafeGet()` and `nullSafeSet()` take a column position and a `WrapperOptions` in place of the column names and the session. A `UserType` written for Hibernate 5 does not compile against Hibernate 7 and must be rewritten.
+
+A type that spans several columns no longer implements `UserType` with several `sqlTypes()`. It implements `org.hibernate.usertype.CompositeUserType`, whose `embeddable()` method names a class whose persistent attributes describe the columns. GORM binds such a property as a component: the columns of its `type` mapping are assigned to the attributes in the alphabetical order of their names, which is also the index that `getPropertyValue()` and `instantiate()` use, and a column that is not listed is named after the property and the attribute. In Hibernate 5, the columns followed the order of `getPropertyNames()` instead, so check the column order of every multi-column mapping when you port a `CompositeUserType`. The GORM guide describes the mapping under _Custom Hibernate Types_.
+
+===== 26.12 Several Unidirectional hasMany Associations on One Owner
+
+Under Hibernate 7, an owner with two or more unidirectional `hasMany` associations wrote no rows to their join tables: an element added to any of them was lost at flush (issue https://github.com/apache/grails-core/issues/16665[#16665]). This is fixed when each association has a join table of its own, which is the default for associations to different classes (`item_roles` and `item_tags` for `static hasMany = [roles: Role, tags: Tag]`) and also the case when two associations to the same class map different tables with `joinTable`. Each such join table is written, as under Hibernate 5.
+
+Two unidirectional associations to the same class share one join table by default, named after the owner and the element class, with a key column per association (`item_role` with `item_roles_id` and `item_deny_roles_id` for `static hasMany = [roles: Role, denyRoles: Role]`). Such a table is read, but new elements are not written, and neither are those of associations that `joinTable` maps onto one table. That is issue https://github.com/apache/grails-core/issues/10811[#10811] and is not fixed by this change; name a `joinTable` per association to give each its own table.
+
+Removing one element of a unidirectional `hasMany` set or bag, with `removeFrom*` or by binding a smaller set of ids, deleted every join table row of the owner, so the association lost all its elements (issue https://github.com/apache/grails-core/issues/16691[#16691]). Hibernate 7 deletes such a row by the owner's key and only those element columns that are not nullable, and the element column of a GORM join table is nullable. GORM now gives a set or a bag of entities in a join table a collection persister that deletes the row by the owner and the element, as Hibernate 5 did; the schema does not change. An application that configures a persister class resolver of its own with `hibernate.persister.resolver` keeps it, and with it the Hibernate 7 behaviour.
+
+===== 26.13 Collection Criteria Next to Association Blocks
+
+Under Hibernate 7, calling a collection criterion such as `isNotEmpty('pets')`, `isEmpty('pets')`, or `sizeEq('pets', n)` next to an association block for the same collection (`pets { ... }`) threw a `ClassCastException` because the path resolved to the join rather than the collection attribute (issue https://github.com/apache/grails-core/issues/16633[#16633]). Collection criteria now resolve to the collection property on the parent whether they appear before or after an association block of the same name.
+
 ==== 27. GORM Properties Are Nullable by Default
 
 Grails 8 changes the validation default so that an *unconstrained persistent (domain) property is nullable by default* rather than required.
@@ -1591,6 +1610,35 @@ Its setter is retained, so assigning `attrs.gspTagSyntaxCall` still invokes that
 Subscript assignment, `attrs['gspTagSyntaxCall'] = value`, now stores an attribute of that name, as `attrs.put('gspTagSyntaxCall', value)` does; in Grails 7 it invoked the setter.
 
 NOTE: When adding a class that extends `grails.util.TypeConvertingMap`, do not declare a no-argument `getX()` or `isX()` method on it, or the entry `x` becomes unreachable for the same reason. Statically compiled callers bind directly to the accessor, so the collision cannot be corrected at runtime.
+
+===== 28.4 Map entries named `properties` or `metaClass`
+
+The accessor-first resolution described above applies to every `Map`, not only to a class that declares an accessor of its own, because every Groovy object has the `properties` and `metaClass` properties.
+In Groovy 4 `map.properties` and `map['properties']` read the map entry.
+In Groovy 5 both return the Groovy meta-properties of the map object, in dynamic and in statically compiled code alike, and `map['properties'] = value` throws `groovy.lang.ReadOnlyPropertyException`.
+`metaClass` reads the same way. Assigning to it through a subscript was never a map put: in Groovy 4 as in Groovy 5 it sets the metaclass of the map, and a value that is not a `MetaClass` throws `groovy.lang.GroovyCastException`.
+`class` and `empty` are exempt and still address the map entry.
+
+Such keys are common in data an application does not control; the `properties` member of a GeoJSON `Feature` is one.
+Grails 8 stores and loads them through the `Map` API, so they round-trip through a `Map` property or an embedded map of a GORM for MongoDB entity, and through data binding of a `Map` property, whether the value arrives as a nested map or as an indexed key such as `attributes[properties]`.
+
+Application code that reads one of these keys from a `Map` must call `get`:
+
+[source,groovy]
+----
+Map feature = place.geoJson    // a Map property holding a GeoJSON Feature
+
+feature.get('properties')      // the entry
+feature.properties             // the meta-properties of the map object
+feature['properties']          // the same, on Groovy 5
+----
+
+With GORM for MongoDB, a loaded `Map` property comes back as a dirty-checking wrapper with accessors of its own, named `target`, `parent`, `property`, `originalSize` and `assigned`.
+The wrapper resolves those five names to the map entry, in dotted and subscript form, so an entry such as `parent` reads and writes through the wrapper as it does through the plain map, and as it did in Grails 7.
+The one form that still reaches the accessor is dotted access from statically compiled code, which binds at compile time as it always has; read such an entry with `get` there.
+
+With GORM for Hibernate, a loaded `Map` property is Hibernate's `PersistentMap`, and its accessors are not redirected.
+In Groovy 5, `attrs.key`, `attrs['value']`, `attrs.owner`, `attrs.role`, `attrs.size`, `attrs.session` and `attrs.dirty`, among others, return the state of the collection rather than the entry; read such an entry with `get`.
 
 ==== 29. MIME Types Are Now Framework Defaults
 
@@ -4132,7 +4180,7 @@ Code that relied on `mutex` failing fast on a stale version should check the ver
 
 Datastores that cannot reload under a lock keep their previous behaviour.
 
-==== 71. `id generator: 'sequence'` Derives Its Name From the Table on Hibernate 7
+==== 71. Sequence Names on Hibernate 7: `id generator: 'sequence'` and the Default Id Mapping
 
 On GORM for Hibernate 7, mapping an identifier with `id generator: 'sequence'` and no `params: [sequence:
 '...']` failed at session factory bootstrap:
@@ -4173,6 +4221,47 @@ static mapping = {
 ----
 
 Mappings that already name a sequence are unaffected, and so is GORM for Hibernate 5.
+
+The default id mapping, with no `id` entry in `mapping` at all, is affected the same way on a database whose
+dialect draws native ids from a sequence, such as PostgreSQL and Oracle. Grails 7 on Hibernate 5 took every
+default-mapped id from the single `hibernate_sequence`. Grails 8 on Hibernate 7 creates one sequence per
+domain class, named after its table with the `_SEQ` suffix (`book_SEQ` for `book`). Databases that generate
+native ids with IDENTITY or auto-increment columns, such as H2, MySQL and MariaDB, are unaffected.
+
+Because this is the mapping most domain classes use, an application that upgrades against an existing
+PostgreSQL or Oracle schema meets it on every domain class, and what happens depends on `dbCreate`:
+
+[cols="1,3",options="header"]
+|===
+| `dbCreate` | Result
+
+| `create`, `create-drop`
+| The sequences are created with the tables. Nothing to do.
+
+| `validate`
+| Startup fails with `Schema validation: missing sequence [book_SEQ]`.
+
+| `none`
+| The first save fails, because the sequence does not exist.
+
+| `update`
+| Hibernate creates `book_SEQ` starting at 1, which collides with the ids already in the table.
+|===
+
+To upgrade such a database, do one of the following:
+
+* Keep drawing ids from `hibernate_sequence` for every unnamed sequence, which is the drop-in choice for a
+  database that already has it:
++
+[source,yaml]
+----
+hibernate:
+    id:
+        db_structure_naming_strategy: legacy
+----
+
+* Add the new sequences to the schema, each starting above the highest id already in its table. The schema
+  snapshot of the database migration plugin includes them.
 
 ==== 72. Calls on a Class Inside a Named Connection's Session or Transaction Use That Connection
 
@@ -4738,3 +4827,61 @@ When upgrading from an earlier Grails 8 milestone or release candidate, update t
 
 With the configuration cache, task actions such as `doFirst` and `doLast` closures may not use `project`, other tasks or build script properties while they run, and Gradle fails the build when a build script or another Gradle plugin does.
 See xref:commandLine#gradleConfigurationCache[Using the Gradle Configuration Cache] for how to adapt build scripts and what to do about plugins that do not support it.
+
+==== 86. Grails Data Plugins Leave the Buildscript Classpath
+
+Builds generated by earlier versions of Grails Forge placed the Grails Data plugin on the Gradle `buildscript` classpath, next to the Grails Gradle plugins, and in `buildSrc` when the build used one:
+
+[source,groovy]
+.build.gradle (before)
+----
+buildscript {
+    dependencies {
+        classpath "org.apache.grails:grails-gradle-plugins"
+        classpath "org.apache.grails:grails-data-hibernate5"
+    }
+}
+----
+
+Remove that `classpath` entry (and the matching `implementation` line in `buildSrc/build.gradle`), keeping only the `implementation` dependency of the application itself:
+
+[source,groovy]
+.build.gradle (after)
+----
+buildscript {
+    dependencies {
+        classpath "org.apache.grails:grails-gradle-plugins"
+    }
+}
+
+dependencies {
+    implementation "org.apache.grails:grails-data-hibernate5"
+}
+----
+
+The entry was a leftover from the days when the Grails CLI found a plugin's commands through the build classpath; commands now ship in companion `-cli` artifacts that the Grails Gradle plugin discovers from the application's dependencies (see <<cli-companion-artifacts,CLI Commands Move to Companion `-cli` Artifacts>>).
+Left in place, the plugin and its transitive Grails Data modules are loaded by the Groovy that Gradle embeds while it compiles `build.gradle`, and the global compile-time transformations those modules register run in that older Groovy.
+A build whose `buildscript` classpath still carries the plugin can fail at configuration time with an error such as `java.lang.NoSuchMethodError: 'java.lang.Number org.codehaus.groovy.runtime.typehandling.NumberMath.remainder(java.lang.Number, java.lang.Number)'` raised from `GlobalDetachedCriteriaASTTransformation`.
+The same applies to `grails-data-hibernate7` and to any other Grails module that registers a global transformation: none of them belong on the `buildscript` classpath.
+
+==== 87. Only Tenants.withoutId runs without a tenant with DISCRIMINATOR multi-tenancy
+
+With `DISCRIMINATOR` multi-tenancy, only `Tenants.withoutId` and `@WithoutTenant` run without a tenant. A tenant id of `default` is a tenant id like any other, whether a `TenantResolver` returns it or it is passed to `Tenants.withId`. Queries return the instances of the tenant `default`, and a saved instance gets the tenant id `default`.
+
+* Code that relied on a resolver returning `default` to work with every tenant has to run inside `Tenants.withoutId` or in a method annotated with `@WithoutTenant`. Examples are `SubDomainTenantResolver` on `localhost` during development, and `new FixedTenantResolver()`.
+* With GORM for MongoDB, GORM for Neo4j and GORM's in-memory datastore, queries inside `Tenants.withoutId` still return only the instances of the tenant `default`. There, `Tenants.withoutId` only lets a saved instance keep the tenant id that is set on it.
+* With a numeric tenant id, a resolver that returns `default` now fails, as it does with GORM for Hibernate. Inside `Tenants.withoutId`, GORM for MongoDB, GORM for Neo4j and GORM's in-memory datastore still use `0` for a numeric tenant id.
+* Inside `Tenants.withoutId`, `Tenants.currentId()` returns `default`, and `Tenants.withCurrent` and `@CurrentTenant` keep running without a tenant. `Tenants.isWithoutId(datastore)` tells whether the current code runs without a tenant id for a datastore, and `Tenants.isWithoutId()` does so for the default datastore. Unlike in Grails 7.0.x, `Tenants.isWithoutId()` looks up that datastore, as `Tenants.currentId()` does, so it throws an `IllegalStateException` when GORM isn't initialized or more than one GORM implementation is configured. Use `Tenants.isWithoutId(datastore)` there.
+* GORM for Hibernate also restricts a collection of a multi-tenant entity to the current tenant when it is loaded lazily or fetched by join, also when it is a many-to-many collection or a query fetches it by join through another association, and `load` and `proxy` of a multi-tenant entity run a query, as `get` does. Like `get`, they return `null` when no instance is found, instead of a proxy that fails when it is used. A collection of a multi-tenant entity that is mapped with `fetch: 'join'` is loaded eagerly with a select of its own instead, and loading one lazily without a current tenant, outside `Tenants.withoutId`, throws `TenantNotFoundException`.
+* Before a query on an entity that isn't multi-tenant but has a collection of a multi-tenant entity, directly or through its associations, GORM for Hibernate now calls the `TenantResolver` and activates the filter for the current tenant, so that a collection the query fetches by join is restricted. When there is no current tenant, because the resolver throws a `TenantNotFoundException` or returns `null`, such a query runs as before. Any other exception from the resolver fails the query. A query that the resolver runs on an entity that isn't multi-tenant while GORM resolves the tenant does not call the resolver again. A query on a multi-tenant entity does, so a resolver must not run one.
+* A `TenantResolver` that returns `null` now causes a `TenantNotFoundException`, as a resolver that finds no tenant does, in every multi-tenancy mode.
+* The `DATABASE` and `SCHEMA` modes are otherwise unchanged.
+
+==== 88. Lookups by id are restricted to the current tenant with DISCRIMINATOR multi-tenancy
+
+With `DISCRIMINATOR` multi-tenancy, GORM for MongoDB, GORM for Neo4j and GORM's in-memory datastore used by unit tests now restrict `get`, `read`, `exists`, `getAll`, `load` and `proxy` to the current tenant, as queries and dynamic finders already were. Previously these methods looked an instance up by its id alone, so they returned an instance that belongs to another tenant. GORM for Hibernate is unchanged: it already restricts `get`, `read`, `exists` and `getAll` to the current tenant, and `load` and `proxy` since the previous note.
+
+* The id of another tenant's instance is treated like an id that does not exist: `get` and `read` return `null`, `exists` returns `false`, `getAll` returns `null` in its place, and the proxy returned by `load` or `proxy` throws when it is initialized.
+* Without a current tenant, these methods throw `TenantNotFoundException`, as a query does. `getAll` without ids still returns an empty list.
+* Inside `Tenants.withoutId { }` lookups by id work as before. With GORM for MongoDB and GORM's in-memory datastore they are not restricted to a tenant, and neither is a proxy returned by `load` or `proxy` that is initialized there. As the previous note says, only `withoutId` lifts the restriction: a tenant id of `default` restricts a lookup by id to that tenant as it restricts a query.
+* A lookup by id still finds an instance that the session holds for the current tenant, including one that has been saved but not flushed, and it does not flush the session.

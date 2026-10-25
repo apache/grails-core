@@ -311,6 +311,11 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
 
     @Override
     D load(Serializable id) {
+        if (persistentEntity.isMultiTenant()) {
+            // Hibernate's tenant filter does not apply to a load by identifier, so a multi-tenant entity is loaded
+            // through a query, as get(id) does, rather than handed to whichever tenant asks for the id
+            return get(id)
+        }
         id = convertIdentifier(id)
         if (id != null) {
             return (D) hibernateTemplate.load((Class) persistentClass, id)
@@ -321,6 +326,9 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
 
     @Override
     D proxy(Serializable id) {
+        if (persistentEntity.isMultiTenant()) {
+            return get(id)
+        }
         id = convertIdentifier(id)
         if (id != null) {
             // Use the configured MappingContext proxyFactory (e.g. GroovyProxyFactory) so proxies are created correctly

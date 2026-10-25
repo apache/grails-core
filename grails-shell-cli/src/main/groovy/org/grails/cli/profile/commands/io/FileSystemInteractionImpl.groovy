@@ -87,7 +87,7 @@ class FileSystemInteractionImpl implements FileSystemInteraction {
         FileSystemInteraction.CopySpec spec = new FileSystemInteraction.CopySpec()
         callable.delegate = spec
         callable.call()
-        if (spec.from && spec.into) {
+        if (spec.from && spec.into != null) {
             if (spec.from instanceof Iterable) {
                 copyAll((Iterable) spec.from, spec.into)
             }
@@ -161,7 +161,7 @@ class FileSystemInteractionImpl implements FileSystemInteraction {
         else if (path instanceof Resource) return ((Resource) path).file
         else {
             def baseDir = executionContext.baseDir
-            new File(baseDir ?: new File('.'), path.toString())
+            new File(baseDir != null ? baseDir : new File('.'), path.toString())
         }
     }
 
@@ -216,7 +216,7 @@ class FileSystemInteractionImpl implements FileSystemInteraction {
      */
     @Override
     Resource resource(Object path) {
-        if (!path) return null
+        if (path == null || path.toString().isEmpty()) return null
         if (path instanceof Resource) return (Resource) path
         def f = file(path)
         if (f?.exists() && f.isFile()) {
@@ -264,7 +264,8 @@ class FileSystemInteractionImpl implements FileSystemInteraction {
     @Override
     String projectPath(Object path) {
         def file = file(path)
-        if (file) {
+        // a File that does not exist is false on Groovy 5 and later, so test for null explicitly
+        if (file != null) {
             def basePath = executionContext.baseDir.canonicalPath
             return (file.canonicalPath - basePath).substring(1)
         }

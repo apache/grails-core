@@ -78,6 +78,8 @@ grails.plugin.springsecurity.filterChain.chainMap = [
 
 For the `/webservice/pass:[**]` URLs, we want all filters except for the standard `ExceptionTranslationFilter` since we want to use just the one configured for Basic Auth. And for the `/pass:[**]` URLs (everything else) we want everything except for the Basic Auth filter and its configured `ExceptionTranslationFilter`.
 
+If you exclude `anonymousAuthenticationFilter`, a request without credentials has no authentication identity. Requests to secured URLs then trigger the configured authentication entry point. For an API configured with an HTTP 401 entry point, the response is `401 Unauthorized`; a form-login entry point may instead redirect to the login page. Keep an appropriate exception-translation filter in the chain (for example, the one configured for Basic Auth or REST) so authentication failures can be translated into the intended response.
+
 Additionally, you can use a `chainMap` configuration to declare one or more URL patterns which should have no filters applied. Use the name `'none'` for these patterns, e.g.
 
 [source,groovy]

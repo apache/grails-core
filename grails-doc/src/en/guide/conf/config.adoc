@@ -53,6 +53,35 @@ For example:
 my.tmp.dir = "${userHome}/.grails/tmp"
 ----
 
+=== Profile-specific YAML Documents
+
+Use `spring.config.activate.on-profile` to load a YAML document only when its profile condition matches. Grails evaluates these conditions against the comma-separated profiles in the JVM's `spring.profiles.active` system property. For example, `-Dspring.profiles.active=dev,alpha` activates both `dev` and `alpha`; whitespace around each name is ignored.
+
+NOTE: Only the `spring.profiles.active` system property is considered when selecting YAML documents. Profiles activated any other way, such as with the `SPRING_PROFILES_ACTIVE` environment variable, the `--spring.profiles.active` command-line argument, or the name of the Grails environment, which Grails also activates as a profile at startup, do not affect document selection. For example, with `SPRING_PROFILES_ACTIVE=prod` and no `spring.profiles.active` system property, a document whose selector is `'!prod'` is still loaded.
+
+Conditions support a single profile name or Spring profile expressions using `|` (OR), `&` (AND), `!` (NOT), and parentheses. When combining `&` and `|` in one expression, use parentheses to make the grouping explicit. Quote expressions in YAML, especially those beginning with `!`.
+
+A selector can list alternatives separated by commas, such as `'dev,test'`, or as a YAML sequence, such as `on-profile: [dev, test]`. The document is loaded when any alternative matches, and each alternative can be a profile expression. Missing, empty, and whitespace-only selectors impose no profile restriction. Blank alternatives are ignored, so a list restricts the document unless all of its alternatives are blank. Leading and trailing whitespace around a selector or alternative is ignored.
+
+[source,yaml]
+----
+sample:
+    message: Default message
+---
+spring:
+    config:
+        activate:
+            on-profile: '(dev | test) & !prod'
+sample:
+    message: Development or test message
+----
+
+With `-Dspring.profiles.active=dev,alpha`, the second document overrides `sample.message`. With `-Dspring.profiles.active=dev,prod`, it does not. A negated condition such as `'!prod'` also matches when the system property specifies no profiles.
+
+The legacy `spring.profiles` document selector supports the same expressions and retains case-insensitive profile-name matching for compatibility. The modern `spring.config.activate.on-profile` selector is case-sensitive. Both nested YAML keys and dotted keys are supported. If a document declares both selectors, both conditions must match. Settings such as `spring.profiles.active` and `spring.profiles.include` are not document selectors. Once a document is selected, its selectors are removed from the loaded configuration, so they are not evaluated again at startup and are not available as configuration values.
+
+Groovy configuration files (`application.groovy` and `runtime.groovy`) do not support document-level Spring profile selectors. Assignments such as `spring.profiles = 'prod'` or `spring.config.activate.'on-profile' = 'prod'` are retained as configuration data and do not conditionally exclude the file or its settings. For conditional Groovy configuration, use `environments` blocks selected by the Grails environment, as described in <<environments,Per Environment Configuration>>.
+
 
 === Accessing Configuration with GrailsApplication
 
@@ -95,6 +124,8 @@ class MyController {
 
 
 Notice that the `Config` instance is a merged configuration based on Spring's {springapi}org/springframework/context/annotation/PropertySource.html[PropertySource] concept and reads configuration from the environment, system properties and the local application configuration merging them into a single object.
+
+The `Config.merge(Map)` method merges the supplied values into the runtime configuration. Spring profile conditions such as `spring.config.activate.on-profile` are evaluated when YAML documents are loaded, not when an already-loaded configuration is copied or merged. Restoring a configuration snapshot therefore preserves its values even if the JVM's `spring.profiles.active` system property has changed since the snapshot was created. Merging configuration does not change the active profiles of the Spring application context.
 
 `GrailsApplication` can be easily injected into services and other Grails artifacts:
 

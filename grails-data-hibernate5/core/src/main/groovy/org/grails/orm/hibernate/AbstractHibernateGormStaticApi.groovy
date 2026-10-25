@@ -178,6 +178,11 @@ abstract class AbstractHibernateGormStaticApi<D> extends GormStaticApi<D> {
 
     @Override
     D load(Serializable id) {
+        if (persistentEntity.isMultiTenant()) {
+            // Hibernate's tenant filter does not apply to a load by identifier, so a multi-tenant entity is loaded
+            // through a query, as get(id) does, rather than handed to whichever tenant asks for the id
+            return get(id)
+        }
         id = convertIdentifier(id)
         if (id != null) {
             return (D) hibernateTemplate.load((Class)persistentClass, id)

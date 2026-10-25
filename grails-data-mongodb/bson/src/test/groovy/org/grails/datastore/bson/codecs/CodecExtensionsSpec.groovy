@@ -26,6 +26,8 @@ import org.bson.BsonBoolean
 import org.bson.BsonDateTime
 import org.bson.BsonDecimal128
 import org.bson.BsonDocument
+import org.bson.BsonDocumentReader
+import org.bson.BsonDocumentWriter
 import org.bson.BsonDouble
 import org.bson.BsonInt32
 import org.bson.BsonInt64
@@ -42,8 +44,11 @@ import org.bson.BsonWriter
 import org.bson.codecs.Codec
 import org.bson.codecs.DecoderContext
 import org.bson.codecs.BsonStringCodec
+import org.bson.codecs.BsonValueCodecProvider
 import org.bson.codecs.DocumentCodec
 import org.bson.codecs.EncoderContext
+import org.bson.codecs.ValueCodecProvider
+import org.bson.codecs.configuration.CodecRegistries
 import org.bson.codecs.configuration.CodecRegistry
 import org.bson.types.Decimal128
 import org.bson.types.ObjectId
@@ -205,6 +210,68 @@ class CodecExtensionsSpec extends Specification {
 
         expect:
         CodecExtensions.getBsonConverter(BsonDocument).convert(document) == [a: 1, b: 'two']
+    }
+
+    void "converts a BsonDocument entry whose key names a bean property of the map or the document"() {
+        given: "keys that Groovy 5 resolves as properties when a Map or BsonDocument is read by subscript"
+        BsonDocument document = new BsonDocument()
+        document.put('properties', new BsonDocument('name', new BsonString('Test')))
+        document.put('metaClass', new BsonString('m'))
+        document.put('firstKey', new BsonString('f'))
+        document.put('class', new BsonString('c'))
+
+        when:
+        Map result = CodecExtensions.getBsonConverter(BsonDocument).convert(document)
+
+        then:
+        result.get('properties') == [name: 'Test']
+        result.get('metaClass') == 'm'
+        result.get('firstKey') == 'f'
+        result.get('class') == 'c'
+        result.size() == 4
+    }
+
+    void "MapCodec decodes an entry whose key names a bean property of the map"() {
+        given:
+        CodecExtensions.MapCodec codec = new CodecExtensions.MapCodec()
+        CodecRegistry registry = Stub(CodecRegistry)
+        registry.get(BsonString) >> new BsonStringCodec()
+        codec.codecRegistry = registry
+        BsonReader reader = Mock(BsonReader) {
+            getCurrentBsonType() >> BsonType.STRING
+            readBsonType() >>> [BsonType.STRING, BsonType.STRING, BsonType.END_OF_DOCUMENT]
+            readName() >>> ['properties', 'metaClass']
+            readString() >>> ['p', 'm']
+        }
+
+        when:
+        Map result = codec.decode(reader, DecoderContext.builder().build())
+
+        then:
+        result.get('properties') == 'p'
+        result.get('metaClass') == 'm'
+        result.size() == 2
+    }
+
+    void "MapCodec round-trips a GeoJSON-shaped map, whose properties entry names a bean property, through a BSON document"() {
+        given: "a registry that can encode the map's values"
+        CodecRegistry registry = CodecRegistries.fromProviders(new CodecExtensions(), new ValueCodecProvider(), new BsonValueCodecProvider())
+        Codec<Map> codec = registry.get(Map)
+        Map feature = [type: 'Feature', geometry: [type: 'Point', coordinates: [100.0d, 0.0d]], properties: [name: 'Test'], metaClass: 'm']
+        BsonDocument document = new BsonDocument()
+
+        when:
+        codec.encode(new BsonDocumentWriter(document), feature, EncoderContext.builder().build())
+        Map decoded = codec.decode(new BsonDocumentReader(document), DecoderContext.builder().build())
+
+        then: "the document holds the entries under their own names"
+        document.getDocument('properties').getString('name').value == 'Test'
+        document.getString('metaClass').value == 'm'
+
+        and: "decoding restores them as map entries"
+        decoded.get('properties') == [name: 'Test']
+        decoded.get('metaClass') == 'm'
+        decoded == feature
     }
 
     void "MapCodec decodes each entry, converting its bson value to the plain Java equivalent"() {

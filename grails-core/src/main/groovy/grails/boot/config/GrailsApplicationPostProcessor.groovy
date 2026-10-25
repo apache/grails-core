@@ -19,6 +19,8 @@
 
 package grails.boot.config
 
+import java.util.function.Supplier
+
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 
@@ -33,8 +35,6 @@ import org.springframework.context.annotation.AnnotationConfigUtils
 import org.springframework.aot.AotDetector
 import org.springframework.beans.factory.support.RootBeanDefinition
 import org.springframework.beans.factory.config.BeanDefinition
-import org.springframework.context.annotation.CommonAnnotationBeanPostProcessor
-import org.springframework.beans.factory.annotation.AutowiredAnnotationBeanPostProcessor
 import org.springframework.beans.factory.support.BeanRegistryAdapter
 import org.springframework.context.ApplicationContext
 import org.springframework.context.ApplicationContextAware
@@ -65,6 +65,9 @@ import org.grails.core.lifecycle.ShutdownOperations
 import org.grails.datastore.mapping.model.MappingContext
 import org.grails.spring.DefaultRuntimeSpringConfiguration
 import org.grails.spring.RuntimeSpringConfigUtilities
+import org.apache.grails.core.aot.GeneratedArtifactsAutowiredAnnotationBeanPostProcessor
+import org.apache.grails.core.aot.GeneratedArtifactsCommonAnnotationBeanPostProcessor
+import org.apache.grails.core.aot.GeneratedBeanDefinitions
 import org.apache.grails.core.plugins.PluginDiscovery
 
 /**
@@ -344,23 +347,36 @@ class GrailsApplicationPostProcessor implements BeanDefinitionRegistryPostProces
      *
      * <p>They are registered under the names Spring uses itself, so a context that already has them
      * keeps what it has, and a context running without generated artifacts is untouched.</p>
+     *
+     * <p>They do not inject again what the generated code injected into an instance it created: injected a
+     * second time, a bean runs a side-effecting {@code @Autowired} method twice, and every executor's metrics
+     * were registered twice. The initialization and destruction methods the generated code recorded from
+     * annotations are taken off its definitions, for the common processor calls them. See
+     * {@link GeneratedBeanDefinitions}.</p>
      */
     protected static void registerAnnotationConfigProcessorsForGeneratedArtifacts(BeanDefinitionRegistry registry) {
         if (!AotDetector.useGeneratedArtifacts()) {
             return
         }
         registerInfrastructureBean(registry, AnnotationConfigUtils.AUTOWIRED_ANNOTATION_PROCESSOR_BEAN_NAME,
-                AutowiredAnnotationBeanPostProcessor)
+                GeneratedArtifactsAutowiredAnnotationBeanPostProcessor, () -> new GeneratedArtifactsAutowiredAnnotationBeanPostProcessor())
         registerInfrastructureBean(registry, AnnotationConfigUtils.COMMON_ANNOTATION_PROCESSOR_BEAN_NAME,
-                CommonAnnotationBeanPostProcessor)
+                GeneratedArtifactsCommonAnnotationBeanPostProcessor, () -> new GeneratedArtifactsCommonAnnotationBeanPostProcessor())
+        GeneratedBeanDefinitions.leaveAnnotatedLifecycleMethodsToProcessor(registry)
     }
 
-    private static void registerInfrastructureBean(BeanDefinitionRegistry registry, String beanName,
-            Class<?> beanClass) {
+    /**
+     * Registers a processor created by the given supplier rather than reflectively, because these are
+     * registered while running on generated artifacts, which includes a native image, where a constructor
+     * is called reflectively only if something asked for it. The suppliers are lambdas: a constructor
+     * reference is resolved through Groovy, reflectively, even under static compilation.
+     */
+    private static <T> void registerInfrastructureBean(BeanDefinitionRegistry registry, String beanName,
+            Class<T> beanClass, Supplier<T> supplier) {
         if (registry.containsBeanDefinition(beanName)) {
             return
         }
-        RootBeanDefinition definition = new RootBeanDefinition(beanClass)
+        RootBeanDefinition definition = new RootBeanDefinition(beanClass, supplier)
         definition.role = BeanDefinition.ROLE_INFRASTRUCTURE
         registry.registerBeanDefinition(beanName, definition)
     }

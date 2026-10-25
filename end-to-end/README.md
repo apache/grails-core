@@ -60,7 +60,7 @@ neither the core build nor a contributor's default environment inherits a second
 
 | Where | JDK | Why |
 |---|---|---|
-| `legacy-g7-command-plugin/.sdkmanrc` | 17, Gradle 8.14.5 | What Grails 7 pins, so the fixture is built the way a Grails 7 plugin actually was. `gradle-bootstrap` generates this wrapper from that file via its `legacyG7Wrapper` task, rather than copying the shared one. |
+| `legacy-g7-command-plugin/.sdkmanrc` | 17, Gradle 8.14.6 | What Grails 7 pins, so the fixture is built the way a Grails 7 plugin actually was. `gradle-bootstrap` generates this wrapper from that file via its `legacyG7Wrapper` task, rather than copying the shared one. |
 | the repository's root `.sdkmanrc` | 21 | The Grails 8 baseline. This build consumes artifacts from the core build, so it runs on whatever the core build runs on — it deliberately does not re-pin that. |
 
 ## Running locally

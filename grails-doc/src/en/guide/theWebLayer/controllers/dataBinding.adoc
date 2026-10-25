@@ -218,6 +218,8 @@ assert album.players.keyboards.name == 'Anthony George Banks'
 assert album.players.drums.name == 'Phil Collins'
 ----
 
+NOTE: A key that is also a property of every Groovy object, such as `properties` or `metaClass`, binds like any other key, whether it arrives as an entry of a nested `Map` or as an index such as `players[properties]`. Read such an entry with `album.players.get('properties')`: on Groovy 5, `album.players.properties` and `album.players['properties']` return the meta-properties of the map object rather than the entry.
+
 
 ==== Binding Request Data to the Model
 

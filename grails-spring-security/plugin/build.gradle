@@ -18,109 +18,116 @@
  */
 
 plugins {
-	id 'groovy'
-	id 'java-library'
-	id 'project-report'
-	id 'java-test-fixtures'
-	id 'org.apache.grails.buildsrc.properties'
-	id 'org.apache.grails.buildsrc.dependency-validator'
-	id 'org.apache.grails.buildsrc.compile'
-	id 'org.apache.grails.buildsrc.configuration-metadata'
-	id 'org.apache.grails.buildsrc.publish'
-	id 'org.apache.grails.buildsrc.sbom'
-	id 'org.apache.grails.gradle.grails-code-style'
-	id 'org.apache.grails.gradle.grails-gsp'
-	id 'org.apache.grails.gradle.grails-plugin'
-	id 'org.apache.grails.gradle.grails-plugin-cli'
+    id 'groovy'
+    id 'java-library'
+    id 'project-report'
+    id 'java-test-fixtures'
+    id 'org.apache.grails.buildsrc.properties'
+    id 'org.apache.grails.buildsrc.dependency-validator'
+    id 'org.apache.grails.buildsrc.compile'
+    id 'org.apache.grails.buildsrc.configuration-metadata'
+    id 'org.apache.grails.buildsrc.publish'
+    id 'org.apache.grails.buildsrc.sbom'
+    id 'org.apache.grails.gradle.grails-code-style'
+    id 'org.apache.grails.gradle.grails-gsp'
+    id 'org.apache.grails.gradle.grails-plugin'
+    id 'org.apache.grails.gradle.grails-plugin-cli'
 }
 
 version = projectVersion
 group = 'org.apache.grails'
 
 cliArtifact {
-	automaticModuleName = 'org.apache.grails.security.cli'
-	// this framework module wires its cli dependencies with project dependencies below
-	defaultDependencies = false
+    automaticModuleName = 'org.apache.grails.security.cli'
+    // this framework module wires its cli dependencies with project dependencies below
+    defaultDependencies = false
 }
 
 
 dependencies {
 
-	implementation platform(project(':grails-bom'))
+    implementation platform(project(':grails-bom'))
 
-	// the cli tier — published separately as a companion -cli artifact
-	cliImplementation platform(project(':grails-bom'))
-	cliApi project(project.path)
-	cliApi(project(':grails-core')) {
-		capabilities {
-			requireCapability('org.apache.grails:grails-core-cli')
-		}
-	}
-	// GrailsConsole (used by the s2-* commands) needs jline at compile time
-	cliImplementation 'org.jline:jline'
+    // the cli tier — published separately as a companion -cli artifact
+    cliImplementation platform(project(':grails-bom'))
+    cliApi project(project.path)
+    cliApi(project(':grails-core')) {
+        capabilities {
+            requireCapability('org.apache.grails:grails-core-cli')
+        }
+    }
+    // GrailsConsole (used by the s2-* commands) needs jline at compile time
+    cliImplementation 'org.jline:jline'
 
     cliCompileOnly 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation
 
-	api project(':grails-spring-security-compat')
-	api project(':grails-async') // AsyncGrailsWebRequest is used in public API
-	api project(':grails-mimetypes')
-	api project(':grails-datastore-core') // API because used in templates
-	api project(':grails-datamapping-core') // API because used in templates
-	api project(':grails-events-transforms') // API because used in templates
-	api project(':grails-web-common')
-	api project(':grails-web-url-mappings')
-	api 'org.springframework:spring-beans'
-	api 'org.springframework:spring-context'
-	api 'org.springframework:spring-web'
-	api 'org.springframework.security:spring-security-core'
-	api 'org.springframework.security:spring-security-web'
+    api project(':grails-spring-security-compat')
+    api project(':grails-async') // AsyncGrailsWebRequest is used in public API
+    api project(':grails-mimetypes')
+    api project(':grails-datastore-core') // API because used in templates
+    api project(':grails-datamapping-core') // API because used in templates
+    api project(':grails-events-transforms') // API because used in templates
+    api project(':grails-web-common')
+    api project(':grails-web-url-mappings')
+    api 'org.springframework:spring-beans'
+    api 'org.springframework:spring-context'
+    api 'org.springframework:spring-web'
+    api 'org.springframework.security:spring-security-core'
+    api 'org.springframework.security:spring-security-web'
 
-	implementation 'org.apache.commons:commons-text'
-	implementation 'org.ehcache:ehcache', {
+    implementation 'org.apache.commons:commons-text'
+    implementation 'org.ehcache:ehcache', {
         capabilities {
             requireCapability('org.ehcache:ehcache-jakarta')
         }
+        // ehcache requires jaxb-runtime as the version range [3,3.1). A range makes every
+        // resolution list the module's versions on Maven Central once the listing cache expires
+        // (on every CI build), so one failed request there disables the repository for the rest
+        // of the build; validateDependencyVersions rejects dynamic versions for that reason. The
+        // BOM-managed version replaces the range below.
+        exclude group: 'org.glassfish.jaxb', module: 'jaxb-runtime'
     }
-	implementation project(':grails-converters')
-	implementation project(':grails-events') // Events Plugin is required to implement EventBus
-	implementation project(':grails-rest-transforms')
-	implementation project(':grails-bootstrap')
-	implementation 'org.springframework:spring-context-support'
-	implementation 'org.springframework:spring-core'
-	implementation 'org.springframework:spring-tx'
-	implementation 'org.springframework.boot:spring-boot'
-	implementation 'org.springframework.security:spring-security-crypto'
+    runtimeOnly 'org.glassfish.jaxb:jaxb-runtime' // the version ehcache requires as a range, see above
+    implementation project(':grails-converters')
+    implementation project(':grails-events') // Events Plugin is required to implement EventBus
+    implementation project(':grails-rest-transforms')
+    implementation project(':grails-bootstrap')
+    implementation 'org.springframework:spring-context-support'
+    implementation 'org.springframework:spring-core'
+    implementation 'org.springframework:spring-tx'
+    implementation 'org.springframework.boot:spring-boot'
+    implementation 'org.springframework.security:spring-security-crypto'
 
-	compileOnly 'jakarta.servlet:jakarta.servlet-api' // Provided
-	compileOnly 'org.jline:jline' // for shell commands
-	compileOnly project(':grails-core') // Provided as this is a Grails Plugin
-	compileOnly 'org.apache.groovy:groovy' // Compile-time annotations
-	compileOnly 'org.slf4j:slf4j-nop' // Prevents warnings about missing slf4j implementation during compilation
-	compileOnly 'org.springframework.boot:spring-boot-autoconfigure' // AutoConfigurationImportFilter SPI
+    compileOnly 'jakarta.servlet:jakarta.servlet-api' // Provided
+    compileOnly 'org.jline:jline' // for shell commands
+    compileOnly project(':grails-core') // Provided as this is a Grails Plugin
+    compileOnly 'org.apache.groovy:groovy' // Compile-time annotations
+    compileOnly 'org.slf4j:slf4j-nop' // Prevents warnings about missing slf4j implementation during compilation
+    compileOnly 'org.springframework.boot:spring-boot-autoconfigure' // AutoConfigurationImportFilter SPI
 
-	runtimeOnly project(':grails-services') // A service is defined in the plugin
+    runtimeOnly project(':grails-services') // A service is defined in the plugin
 
-	testFixturesImplementation(platform(project(':grails-bom')))
-	testFixturesImplementation 'org.springframework.security:spring-security-core'
-	testFixturesImplementation 'org.springframework.security:spring-security-config'
+    testFixturesImplementation(platform(project(':grails-bom')))
+    testFixturesImplementation 'org.springframework.security:spring-security-core'
+    testFixturesImplementation 'org.springframework.security:spring-security-config'
 
     testFixturesCompileOnly 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation
 
-	testImplementation project(':grails-testing-support-datamapping')
-	testImplementation project(':grails-testing-support-web')
-	testImplementation 'org.springframework:spring-test'
-	testImplementation 'org.springframework.boot:spring-boot-starter-test'
-	testImplementation 'org.springframework.security:spring-security-config'
-	testImplementation 'org.spockframework:spock-core'
+    testImplementation project(':grails-testing-support-datamapping')
+    testImplementation project(':grails-testing-support-web')
+    testImplementation 'org.springframework:spring-test'
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation 'org.springframework.security:spring-security-config'
+    testImplementation 'org.spockframework:spock-core'
 
-	testRuntimeOnly 'net.bytebuddy:byte-buddy'
-	testRuntimeOnly 'org.slf4j:slf4j-nop' // Prevents warnings about missing slf4j implementation during tests
+    testRuntimeOnly 'net.bytebuddy:byte-buddy'
+    testRuntimeOnly 'org.slf4j:slf4j-nop' // Prevents warnings about missing slf4j implementation during tests
 }
 
 apply {
     from rootProject.layout.projectDirectory.file('gradle/grails-extension-gradle-config.gradle')
-	from rootProject.layout.projectDirectory.file('gradle/docs-config.gradle')
-	from rootProject.layout.projectDirectory.file('gradle/spring-security-test-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/docs-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/spring-security-test-config.gradle')
 }
 
 tasks.named('generateConfigurationMetadata') {

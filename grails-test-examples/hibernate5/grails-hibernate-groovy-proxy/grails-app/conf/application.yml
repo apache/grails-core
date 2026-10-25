@@ -29,4 +29,8 @@ dataSource:
   driverClassName: org.h2.Driver
   dbCreate: create-drop
   url: jdbc:h2:mem:books;LOCK_TIMEOUT=10000;DB_CLOSE_ON_EXIT=FALSE
+hibernate:
+  # A proxy that crossed a serialization boundary has no session; this is Hibernate's path for
+  # loading it through the SessionFactory it came from, which TraitDefaultValuesProxySpec relies on.
+  enable_lazy_load_no_trans: true
 

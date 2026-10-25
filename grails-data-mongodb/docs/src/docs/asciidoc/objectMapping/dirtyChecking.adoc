@@ -47,6 +47,11 @@ also track iterator-based mutation — Groovy's `removeAll(Closure)` / `retainAl
 methods (`putIfAbsent`, `merge`, `compute*`, `replace*`) and removals through the `entrySet()` / `keySet()` /
 `values()` views.
 
+The `Map` wrapper also resolves the names of its own accessors (`target`, `parent`, `property`, `originalSize` and
+`assigned`) to map entries, so a document key of one of those names reads and writes through the wrapper as it does
+through a plain map. Dotted access from statically compiled code binds to the accessor at compile time, so read such
+an entry with `get` there.
+
 Assigning a collection that belongs to *another* entity re-binds it to the entity being assigned to, so
 `bookA.tags = bookB.tags` followed by `bookA.tags.add('classic')` marks `bookA` dirty rather than `bookB`.
 The two properties go on sharing the same underlying collection afterwards, exactly as a plain Groovy

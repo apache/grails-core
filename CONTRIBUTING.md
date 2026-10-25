@@ -274,6 +274,25 @@ Grails makes use of [Release Drafter](https://github.com/release-drafter/release
 commit messages are important. They should follow the project's rules. While a change can be incrementally made under
 many commits, pull requests should be squashed into a single, meaningful commit message.
 
+### Continuous Integration
+
+Every push and pull request runs the GitHub Actions workflows, and runner time is shared with every other Apache
+project, so two controls limit what runs:
+
+* A draft pull request runs no workflow unless it carries the `run ci` label; marking it ready for review starts CI.
+  A pull request labelled `no ci` runs no workflow at all, draft or not. (The Release Drafter still labels every
+  pull request into a release branch; it runs no build.) Labels are read when a push arrives, so add `run ci` (or
+  remove `no ci`) and then push, or mark the draft ready, to get a run. Pushing to a draft still cancels the run in
+  flight for it, as every push to a pull request or a branch does.
+* The tests run by default only on the default branch and the release branches above it. Elsewhere, that is on an
+  older release branch such as `7.0.x` while `8.0.x` is the default, and on a pull request whose base is a side
+  branch rather than a release branch, a push or pull request builds without running the tests unless asked: a
+  commit message starting with `[run tests]`, or the `run ci` label on the pull request, runs them. On the default
+  branch and above, a commit message starting with `[skip tests]` skips them, and it does so even with the label.
+  The marker is read from the first line of the head commit's message. A manual run (`workflow_dispatch`) of a
+  workflow in `apache/grails-core` follows the same rule unless its `run-tests` input is ticked; in your own fork
+  it runs the tests unless the commit message starts with `[skip tests]`.
+
 ### Change Review Process
 
 The Apache Grails project uses different review processes based on the change being made. We use both a

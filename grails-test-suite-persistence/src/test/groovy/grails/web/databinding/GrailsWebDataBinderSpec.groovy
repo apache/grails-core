@@ -901,6 +901,55 @@ class GrailsWebDataBinderSpec extends Specification implements DataTest {
         team.members.betsy.name == 'Sarah Elizabeth Brown'
     }
 
+    @Issue('https://github.com/apache/grails-core/issues/16675')
+    void 'Test binding a nested Map whose keys name bean properties of the map to an untyped Map property'() {
+        given: 'a GeoJSON Feature, whose properties member Groovy 5 resolves as a bean property when assigned by subscript'
+        def container = new RawCollectionContainer()
+        def feature = [type: 'Feature', geometry: [type: 'Point', coordinates: [100.0d, 0.0d]], properties: [name: 'Test'], metaClass: 'm']
+
+        when:
+        binder.bind(container, new SimpleMapDataBindingSource([rawMap: feature]))
+
+        then:
+        container.rawMap.get('properties') == [name: 'Test']
+        container.rawMap.get('metaClass') == 'm'
+        container.rawMap == feature
+    }
+
+    @Issue('https://github.com/apache/grails-core/issues/16675')
+    void 'Test binding a nested Map whose keys name bean properties of the map to a typed Map property'() {
+        given:
+        def team = new Team()
+
+        when:
+        binder.bind(team, new SimpleMapDataBindingSource([states: [properties: 'p', metaClass: 'm', class: 'c']]))
+
+        then:
+        team.states.get('properties') == 'p'
+        team.states.get('metaClass') == 'm'
+        team.states.get('class') == 'c'
+        team.states.size() == 3
+    }
+
+    @Issue('https://github.com/apache/grails-core/issues/16675')
+    void 'Test binding indexed Map entries whose keys name bean properties of the map'() {
+        given:
+        def team = new Team()
+        def existing = new Author(name: 'Existing').save(flush: true, failOnError: true)
+
+        when: 'one entry is a new instance and one refers to a persistent instance by id'
+        binder.bind(team, new SimpleMapDataBindingSource([
+            'members[properties]': [name: 'Jeff Scott Brown'],
+            'members[metaClass]': [id: existing.id]
+        ]))
+
+        then:
+        team.members.size() == 2
+        team.members.get('properties') instanceof Author
+        team.members.get('properties').name == 'Jeff Scott Brown'
+        team.members.get('metaClass').id == existing.id
+    }
+
     void 'Test binding to Set with subscript'() {
 
         given:

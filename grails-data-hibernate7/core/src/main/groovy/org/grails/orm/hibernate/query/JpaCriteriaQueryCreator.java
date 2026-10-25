@@ -229,7 +229,7 @@ public class JpaCriteriaQueryCreator<T> {
                         // double quotes is case sensitive, while backquotes (MySQL) and square brackets (SQL Server)
                         // leave a column alias case insensitive
                         String groupBy = sqlGroupProjection.getSql().trim();
-                        String name = SqlProjection.unquote(groupBy);
+                        String name = SqlText.of(groupBy, SqlSyntax.forCriteriaBuilder(criteriaBuilder)).unquoted();
                         boolean caseSensitive = groupBy.startsWith("\"") && !name.equals(groupBy);
                         SqlProjection aliased = findSqlProjection(name, !caseSensitive);
                         return translator.translateSql(aliased != null ? aliased.getSql() : sqlGroupProjection.getSql(), null);
@@ -272,6 +272,11 @@ public class JpaCriteriaQueryCreator<T> {
 
     @SuppressWarnings("unchecked")
     private void assignOrderBy(CriteriaQuery<?> cq, JpaQueryContext context) {
+        if (isCountOnly()) {
+            // a count returns one row whatever the order, and an ORDER BY on a column that is not aggregated fails
+            // on H2 and most other databases, so a count query leaves the criteria's orders out
+            return;
+        }
         List<Query.Order> orders = detachedCriteria.getOrders();
         if (!orders.isEmpty()) {
             var jpaOrders = orders.stream()
@@ -294,6 +299,17 @@ public class JpaCriteriaQueryCreator<T> {
                     .toArray(jakarta.persistence.criteria.Order[]::new);
             cq.orderBy(jpaOrders);
         }
+    }
+
+    /**
+     * Whether the query selects nothing but counts, as {@code count()} and {@code countDistinct()} do: such a query
+     * has one row, so the criteria's orders do not apply to it. A query that groups and counts keeps its orders.
+     */
+    private boolean isCountOnly() {
+        List<Query.Projection> projectionList = projections.getProjectionList();
+        return !projectionList.isEmpty() && projectionList.stream()
+                .allMatch(projection -> projection instanceof Query.CountProjection ||
+                        projection instanceof Query.CountDistinctProjection);
     }
 
     private void discoverAliases(List<Query.Criterion> criteria, JpaQueryContext context) {

@@ -21,6 +21,7 @@ package grails.gorm.tests.multitenancy
 
 import grails.gorm.MultiTenant
 import grails.gorm.annotation.Entity
+import grails.gorm.multitenancy.Tenants
 import grails.neo4j.Neo4jEntity
 import grails.neo4j.Relationship
 import org.grails.datastore.gorm.neo4j.Neo4jDatastore
@@ -29,6 +30,7 @@ import org.grails.datastore.mapping.core.Session
 import org.grails.datastore.mapping.multitenancy.AllTenantsResolver
 import org.grails.datastore.mapping.multitenancy.exceptions.TenantNotFoundException
 import org.grails.datastore.mapping.multitenancy.resolvers.SystemPropertyTenantResolver
+import org.springframework.dao.DataIntegrityViolationException
 import spock.lang.AutoCleanup
 import spock.lang.Shared
 import spock.lang.Specification
@@ -118,6 +120,42 @@ class MultiTenancySpec extends Specification {
 
         then:"The result is correct"
         tenantIds == [test1:2, test2:0]
+    }
+
+    void "Test lookups by id are restricted to the current tenant"() {
+        given:"an instance of another tenant and one of the current tenant"
+        System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, "test1")
+        Serializable otherId = CompanyC.withTransaction { new CompanyC(name: "Other").save(flush: true).id }
+        System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, "test2")
+        Serializable ownId = CompanyC.withTransaction { new CompanyC(name: "Own").save(flush: true).id }
+
+        expect:"get, read, exists and getAll find the instance of the current tenant only"
+        CompanyC.withNewSession { CompanyC.get(ownId)?.name } == "Own"
+        CompanyC.withNewSession { CompanyC.read(ownId)?.name } == "Own"
+        CompanyC.withNewSession { CompanyC.exists(ownId) }
+        CompanyC.withNewSession { CompanyC.get(otherId) } == null
+        CompanyC.withNewSession { CompanyC.read(otherId) } == null
+        !CompanyC.withNewSession { CompanyC.exists(otherId) }
+        CompanyC.withNewSession { CompanyC.getAll(otherId, ownId)*.name } == [null, "Own"]
+
+        and:"load initializes a proxy for the instance of the current tenant"
+        CompanyC.withNewSession { CompanyC.load(ownId).name } == "Own"
+
+        and:"inside withoutId a lookup by id is not restricted to a tenant"
+        Tenants.withoutId(datastore) { CompanyC.getAll(otherId, ownId)*.name } == ["Other", "Own"]
+
+        when:"a proxy for an instance of another tenant is used"
+        CompanyC.withNewSession { CompanyC.load(otherId).name }
+
+        then:"it fails to initialize like one for an instance that does not exist"
+        thrown(DataIntegrityViolationException)
+
+        when:"an instance is looked up by id without a tenant"
+        System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, "")
+        CompanyC.withNewSession { CompanyC.get(ownId) }
+
+        then:"an exception is thrown"
+        thrown(TenantNotFoundException)
     }
 
     List getDomainClasses() {

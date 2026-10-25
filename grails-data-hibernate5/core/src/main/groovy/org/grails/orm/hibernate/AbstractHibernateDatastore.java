@@ -23,8 +23,12 @@ import java.io.IOException;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ConcurrentHashMap;
 
 import javax.sql.DataSource;
 
@@ -57,7 +61,10 @@ import org.grails.datastore.mapping.core.connections.ConnectionSources;
 import org.grails.datastore.mapping.core.connections.MultipleConnectionSourceCapableDatastore;
 import org.grails.datastore.mapping.core.connections.SingletonConnectionSources;
 import org.grails.datastore.mapping.model.MappingContext;
+import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.config.GormProperties;
+import org.grails.datastore.mapping.model.types.Association;
+import org.grails.datastore.mapping.model.types.ToMany;
 import org.grails.datastore.mapping.multitenancy.AllTenantsResolver;
 import org.grails.datastore.mapping.multitenancy.MultiTenancySettings;
 import org.grails.datastore.mapping.multitenancy.SchemaMultiTenantCapableDatastore;
@@ -82,6 +89,13 @@ public abstract class AbstractHibernateDatastore extends AbstractDatastore imple
     public static final String CONFIG_PROPERTY_CACHE_QUERIES = "grails.hibernate.cache.queries";
     public static final String CONFIG_PROPERTY_OSIV_READONLY = "grails.hibernate.osiv.readonly";
     public static final String CONFIG_PROPERTY_PASS_READONLY_TO_HIBERNATE = "grails.hibernate.pass.readonly";
+
+    /**
+     * Set while the current tenant is resolved for the tenant filter, so that a query the tenant resolver runs on an
+     * entity that is not multi-tenant does not resolve the tenant again.
+     */
+    private static final ThreadLocal<Boolean> RESOLVING_TENANT = new ThreadLocal<>();
+
     protected final SessionFactory sessionFactory;
     protected final ConnectionSources<SessionFactory, HibernateConnectionSourceSettings> connectionSources;
     protected final String defaultFlushModeName;
@@ -97,6 +111,7 @@ public abstract class AbstractHibernateDatastore extends AbstractDatastore imple
     protected final boolean markDirty;
     protected final String dataSourceName;
     protected final TenantResolver tenantResolver;
+    private final Map<PersistentEntity, Boolean> multiTenantCollections = new ConcurrentHashMap<>();
     private boolean destroyed;
 
     protected AbstractHibernateDatastore(ConnectionSources<SessionFactory, HibernateConnectionSourceSettings> connectionSources, HibernateMappingContext mappingContext) {
@@ -398,21 +413,91 @@ public abstract class AbstractHibernateDatastore extends AbstractDatastore imple
     }
 
     /**
-     * Enable the tenant id filter for the given datastore and entity
-     *
+     * Enable the tenant id filter for the current tenant. Inside {@link Tenants#withoutId(groovy.lang.Closure)} the
+     * filter is disabled instead.
      */
     public void enableMultiTenancyFilter() {
-        Serializable currentId = Tenants.currentId(this);
-        if (ConnectionSource.DEFAULT.equals(currentId)) {
-            disableMultiTenancyFilter();
+        enableMultiTenancyFilter(getHibernateTemplate().getSessionFactory().getCurrentSession());
+    }
+
+    /**
+     * Enable the tenant id filter for the current tenant on the given session. Inside
+     * {@link Tenants#withoutId(groovy.lang.Closure)} the filter is disabled instead.
+     *
+     * @param session The session
+     */
+    public void enableMultiTenancyFilter(Session session) {
+        Serializable currentId = currentTenantId();
+        if (Tenants.isWithoutId(this)) {
+            session.disableFilter(GormProperties.TENANT_IDENTITY);
         }
         else {
-            getHibernateTemplate()
-                    .getSessionFactory()
-                    .getCurrentSession()
-                    .enableFilter(GormProperties.TENANT_IDENTITY)
+            session.enableFilter(GormProperties.TENANT_IDENTITY)
                     .setParameter(GormProperties.TENANT_IDENTITY, currentId);
         }
+    }
+
+    /**
+     * Enable the tenant id filter before a query on the given entity. For a multi-tenant entity, this is what
+     * {@link #enableMultiTenancyFilter()} does. A query on an entity that is not multi-tenant can fetch a collection of
+     * a multi-tenant entity by join, directly or through other associations, so for such an entity the filter is
+     * enabled as well when there is a current tenant. Without a current tenant, and for a query that the tenant
+     * resolver runs, the filter is left as it is.
+     *
+     * @param entity The entity that is queried
+     * @since 7.0.18
+     */
+    public void enableMultiTenancyFilter(PersistentEntity entity) {
+        if (entity.isMultiTenant()) {
+            enableMultiTenancyFilter();
+        }
+        else if (RESOLVING_TENANT.get() == null && hasMultiTenantCollection(entity)) {
+            try {
+                enableMultiTenancyFilter();
+            }
+            catch (TenantNotFoundException e) {
+                LOG.debug("No current tenant for a query on [{}]; the tenant filter is left as it is", entity.getName());
+            }
+        }
+    }
+
+    private Serializable currentTenantId() {
+        if (RESOLVING_TENANT.get() != null) {
+            return Tenants.currentId(this);
+        }
+        RESOLVING_TENANT.set(Boolean.TRUE);
+        try {
+            return Tenants.currentId(this);
+        }
+        finally {
+            RESOLVING_TENANT.remove();
+        }
+    }
+
+    private boolean hasMultiTenantCollection(PersistentEntity entity) {
+        return multiTenantCollections.computeIfAbsent(entity, e -> reachesMultiTenantCollection(e, new HashSet<>()));
+    }
+
+    private static boolean reachesMultiTenantCollection(PersistentEntity entity, Set<PersistentEntity> visited) {
+        if (!visited.add(entity)) {
+            return false;
+        }
+        List<Association> associations = entity.getAssociations();
+        if (associations != null) {
+            for (Association association : associations) {
+                PersistentEntity associated = association.getAssociatedEntity();
+                if (associated == null) {
+                    continue;
+                }
+                if (association instanceof ToMany && associated.isMultiTenant()) {
+                    return true;
+                }
+                if (reachesMultiTenantCollection(associated, visited)) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     /**

@@ -46,6 +46,10 @@ dependencies {
 
     api 'org.slf4j:slf4j-api'
 
+    // ByteBuddy is used directly to wrap Hibernate's proxy class so getMetaClass() can answer
+    // before the interceptor is assigned; the version is managed by the Spring Boot BOM
+    implementation 'net.bytebuddy:byte-buddy'
+
     api 'org.apache.groovy:groovy'
     api project(':grails-datamapping-core')
     api project(':grails-data-hibernate5-spring-orm')

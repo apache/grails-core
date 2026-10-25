@@ -38,14 +38,33 @@ on:
     branches:
       - '[0-9]+.[0-9]+.x'
   pull_request:
+    # ready_for_review is not a default type: a draft runs nothing until it is ready or labelled "run ci".
+    types: [ opened, synchronize, reopened, ready_for_review ]
   workflow_dispatch:
+    inputs:
+      run-tests:
+        description: "Run the test jobs where the branch rule would skip them (a release branch below the default); a [skip tests] head commit still skips them"
+        type: boolean
+        default: false
+# One run per branch or pull request: a new commit cancels the run in flight, whose result would be for a
+# superseded commit. This workflow publishes nothing, so nothing here needs to survive the cancel.
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  cancel-in-progress: true
 jobs:
+  policy:
+    name: "CI policy"
+    # A pull request labelled "no ci", or a draft without the "run ci" label, skips this job; every other
+    # job needs it, so nothing runs for such a pull request.
+    if: >-
+      github.event_name != 'pull_request'
+      || (!contains(github.event.pull_request.labels.*.name, 'no ci')
+          && (!github.event.pull_request.draft || contains(github.event.pull_request.labels.*.name, 'run ci')))
+    uses: ./.github/workflows/ci-policy.yml
   endToEnd:
     name: "End to End Tests (end-to-end build only)"
-    if: ${{ !contains(github.event.head_commit.message, '[skip tests]') }}
+    needs: [ policy ]
+    if: ${{ needs.policy.outputs.run-tests == 'true' }}
     runs-on: ubuntu-24.04
     steps:
       - name: "📥 Checkout repository"
@@ -68,29 +87,21 @@ jobs:
         # Both, in one step. The last version listed becomes the default JAVA_HOME (the Grails 8
         # side); the fixture step below switches to the matching JAVA_HOME_<major>_X64 for its
         # single invocation.
-        uses: actions/setup-java@v6.0.1
+        uses: actions/setup-java@v6.1.0
         with:
           distribution: liberica
           java-version: |
             ${{ steps.jdks.outputs.fixture-java }}
             ${{ steps.jdks.outputs.build-java }}
-      - name: "🗄️ Restore dependency jar cache"
-        uses: actions/cache@v6.1.0
-        with:
-          # Cache only downloaded dependency jars and wrapper distributions, never Grails build outputs.
-          # Keyed by branch version so each release branch maintains its own warm cache.
-          # Fixed-depth paths: the post step re-hashes after the build, where a `**` glob walks every output and times out.
-          path: |
-            ~/.gradle/caches/modules-2
-            ~/.gradle/wrapper
-          key: gradle-deps-${{ runner.os }}-${{ github.base_ref || github.ref_name }}-${{ hashFiles('dependencies.gradle', 'gradle/wrapper/gradle-wrapper.properties', '*/gradle/wrapper/gradle-wrapper.properties') }}
-          restore-keys: |
-            gradle-deps-${{ runner.os }}-${{ github.base_ref || github.ref_name }}-
+      - name: "🗄️ Decide the Gradle cache mode"
+        id: gradle-cache-policy
+        uses: ./.github/actions/gradle-cache-policy
       - name: "🐘 Setup Gradle"
         uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
         with:
-          cache-disabled: true # dependency jars are cached by the explicit branch-keyed step above
-          develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY  }}
+          # Decided by the step above; see .github/actions/gradle-cache-policy.
+          cache-read-only: ${{ steps.gradle-cache-policy.outputs.read-only }}
+          develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY }}
       - name: "📦 Setup: publish grails-gradle to the local repository the tests resolve from"
         # Both builds publish into the same build/local-maven, and both are needed: the Grails BOM
         # constrains org.apache.grails.gradle artifacts. grails-forge depends on this same pair of

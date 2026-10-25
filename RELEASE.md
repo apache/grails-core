@@ -27,6 +27,14 @@ Prior to starting the release process, ensure that any other dependent library i
 
 Due to a limitation with GitHub, private groups cannot be used as approvers for an environment.  For this reason, prior to performing the release, add GitHub username to asf.yaml in the environment section for approvers. Only 6 approvers may exist on a given environment.
 
+A push to a release branch below the default branch builds and publishes without running the tests (see the CI policy in `AGENTS.md`), so the commit a release is cut from may never have been tested as a whole on that branch. Before creating the release, run the `CI` workflow manually on the release branch with its `run-tests` input ticked and wait for it to pass:
+
+```bash
+gh workflow run gradle.yml --repo apache/grails-core --ref 7.0.x -f run-tests=true
+```
+
+The command line works on any branch whose `gradle.yml` has the input; the manual-run form in the GitHub UI offers it once the default branch has it.
+
 ## 1. Staging 
 
 During the staging step, we must create a source distribution & stage any binary artifacts that end users will consume.

@@ -19,15 +19,22 @@
 package org.grails.io.support
 
 import groovyjarjarasm.asm.ClassWriter
-import groovyjarjarasm.asm.MethodVisitor
 import groovyjarjarasm.asm.Opcodes
+
 import spock.lang.Specification
 import spock.lang.TempDir
 
 class MainClassFinderSpec extends Specification {
 
+    private static final int PUBLIC_STATIC = Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC
+    private static final int PRIVATE_STATIC = Opcodes.ACC_PRIVATE | Opcodes.ACC_STATIC
+
     @TempDir
     File tmp
+
+    void cleanup() {
+        MainClassFinder.mainClasses.clear()
+    }
 
     void 'the main class is found on the compile classpath when the build directory is not build/'() {
         given:
@@ -101,6 +108,141 @@ class MainClassFinderSpec extends Specification {
         MainClassFinder.searchMainClass(spec, [pluginClasses], new File(app, 'out/integ'), false) == null
     }
 
+    void 'findMainClass finds a nested Grails application and its class file'() {
+        given:
+        File application = writeClass(tmp, 'example/nested/Application')
+        new File(tmp, 'notes.txt').text = 'not bytecode'
+        writeClass(tmp, 'example/PlainMain', 'java/lang/Object')
+
+        when:
+        def holder = MainClassFinder.findMainClass(tmp, false)
+
+        then:
+        holder.className == 'example.nested.Application'
+        holder.classFile == application
+    }
+
+    void 'findMainClass rejects a candidate with superclass #superName access #access and signature #descriptor'() {
+        given:
+        writeClass(tmp, 'example/Application', superName, access, descriptor)
+
+        expect:
+        MainClassFinder.findMainClass(tmp, false) == null
+
+        where:
+        superName                                  | access             | descriptor
+        'java/lang/Object'                          | PUBLIC_STATIC      | '([Ljava/lang/String;)V'
+        'grails/boot/config/GrailsAutoConfiguration' | PRIVATE_STATIC     | '([Ljava/lang/String;)V'
+        'grails/boot/config/GrailsAutoConfiguration' | Opcodes.ACC_PUBLIC | '([Ljava/lang/String;)V'
+        'grails/boot/config/GrailsAutoConfiguration' | PUBLIC_STATIC      | '()V'
+    }
+
+    void 'findMainClass ignores hidden directories and classes without a main method'() {
+        given:
+        writeClass(tmp, '.hidden/Application')
+        writeClass(tmp, 'example/NoMain', 'grails/boot/config/GrailsAutoConfiguration', 0, null)
+
+        expect:
+        MainClassFinder.findMainClass(tmp, false) == null
+    }
+
+    void 'findMainClass returns null for missing and empty directories'() {
+        expect:
+        MainClassFinder.findMainClass(new File(tmp, 'missing'), false) == null
+        MainClassFinder.findMainClass(tmp, false) == null
+    }
+
+    void 'findMainClass rejects a file as the search root'() {
+        given:
+        File file = new File(tmp, 'file.txt')
+        file.text = 'content'
+
+        when:
+        MainClassFinder.findMainClass(file, false)
+
+        then:
+        def error = thrown(IllegalArgumentException)
+        error.message.contains('Invalid root folder')
+    }
+
+    void 'findMainClass can bypass its cache and rescan after a cached class is deleted'() {
+        given:
+        File application = writeClass(tmp, 'example/Application')
+        def original = MainClassFinder.findMainClass(tmp)
+
+        when:
+        writeClass(tmp, 'example/Application', 'java/lang/Object')
+
+        then:
+        MainClassFinder.findMainClass(tmp).is(original)
+        MainClassFinder.findMainClass(tmp, false) == null
+
+        when:
+        assert application.delete()
+        File replacement = writeClass(tmp, 'example/Replacement')
+        def result = MainClassFinder.findMainClass(tmp)
+
+        then:
+        result.className == 'example.Replacement'
+        result.classFile == replacement
+    }
+
+    void 'searchMainClass discovers #classesPath using the #marker project marker'() {
+        given:
+        if (marker == 'grails-app') {
+            assert new File(tmp, marker).mkdirs()
+        } else {
+            new File(tmp, marker).text = ''
+        }
+        File source = new File(tmp, 'src/main/groovy/example/Application.groovy')
+        assert source.parentFile.mkdirs()
+        source.text = 'package example'
+        File classes = new File(tmp, classesPath)
+        writeClass(classes, 'example/Application')
+
+        expect:
+        MainClassFinder.searchMainClass(source.toURI(), false) == 'example.Application'
+
+        where:
+        classesPath                 | marker
+        'build/classes/main'        | 'build.gradle'
+        'build/classes/groovy/main' | 'grails-app'
+    }
+
+    void 'searchMainClass caches by URI and invalidates deleted class files'() {
+        given:
+        new File(tmp, 'build.gradle').text = ''
+        File source = new File(tmp, 'Application.groovy')
+        source.text = 'package example'
+        File classes = new File(tmp, 'build/classes/main')
+        File application = writeClass(classes, 'example/Application')
+
+        expect:
+        MainClassFinder.searchMainClass(source.toURI()) == 'example.Application'
+        MainClassFinder.searchMainClass(source.toURI()) == 'example.Application'
+
+        when:
+        writeClass(classes, 'example/Application', 'java/lang/Object')
+
+        then:
+        MainClassFinder.searchMainClass(source.toURI(), false) == null
+        MainClassFinder.searchMainClass(source.toURI()) == 'example.Application'
+
+        when:
+        assert application.delete()
+        writeClass(classes, 'example/Replacement')
+
+        then:
+        MainClassFinder.searchMainClass(source.toURI()) == 'example.Replacement'
+    }
+
+    void 'searchMainClass returns null for absent projects and unsupported URIs'() {
+        expect:
+        MainClassFinder.searchMainClass(null, false) == null
+        MainClassFinder.searchMainClass(new URI('https://example.invalid/Application.groovy'), false) == null
+        MainClassFinder.searchMainClass(new File(tmp, 'missing.groovy').toURI(), false) == null
+    }
+
     private File project(String name) {
         File dir = new File(tmp, name)
         new File(dir, 'grails-app').mkdirs()
@@ -110,17 +252,26 @@ class MainClassFinderSpec extends Specification {
 
     /** A class with a main method extending GrailsAutoConfiguration, which is what the finder looks for. */
     private static void writeMainClass(File classesDir, String className) {
-        String internalName = className.replace('.', '/')
+        writeClass(classesDir, className.replace('.', '/'))
+    }
+
+    private static File writeClass(File root, String name,
+                                   String superName = 'grails/boot/config/GrailsAutoConfiguration',
+                                   int access = Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC,
+                                   String descriptor = '([Ljava/lang/String;)V') {
         ClassWriter writer = new ClassWriter(0)
-        writer.visit(Opcodes.V17, Opcodes.ACC_PUBLIC, internalName, null, 'grails/boot/config/GrailsAutoConfiguration', null)
-        MethodVisitor main = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, 'main', '([Ljava/lang/String;)V', null, null)
-        main.visitCode()
-        main.visitInsn(Opcodes.RETURN)
-        main.visitMaxs(0, 1)
-        main.visitEnd()
+        writer.visit(Opcodes.V17, Opcodes.ACC_PUBLIC, name, null, superName, null)
+        if (descriptor != null) {
+            def method = writer.visitMethod(access, 'main', descriptor, null, null)
+            method.visitCode()
+            method.visitInsn(Opcodes.RETURN)
+            method.visitMaxs(0, 2)
+            method.visitEnd()
+        }
         writer.visitEnd()
-        File file = new File(classesDir, "${internalName}.class")
-        file.parentFile.mkdirs()
+        File file = new File(root, name + '.class')
+        assert file.parentFile.mkdirs() || file.parentFile.isDirectory()
         file.bytes = writer.toByteArray()
+        file
     }
 }

@@ -104,8 +104,10 @@ public class PrettyPrintJSONWriter extends JSONWriter {
 
     @Override
     protected JSONWriter end(Mode m, char c) {
-        newline();
-        indent();
+        if (this.mode == m) {
+            newline();
+            indent();
+        }
         return super.end(m, c);
     }
 

@@ -20,6 +20,7 @@ package org.grails.orm.hibernate.proxy
 
 import grails.gorm.tests.HibernateGormDatastoreSpec
 import grails.gorm.annotation.Entity
+import groovy.transform.CompileStatic
 import org.hibernate.Hibernate
 import org.hibernate.proxy.HibernateProxy
 
@@ -184,6 +185,33 @@ class ByteBuddyGroovyInterceptorSpec extends HibernateGormDatastoreSpec {
 
         then:
         thrown(RuntimeException)
+    }
+
+    void "an uninitialized proxy serializes to a form that reads back as the same Groovy-aware proxy"() {
+        given:
+        def proxy = manager.hibernateSession.getReference(Location, savedId)
+
+        when:
+        def deserialized = roundTrip(proxy)
+
+        then: 'serialization did not initialize the proxy, and the copy is the same proxy class with the id at hand'
+        !Hibernate.isInitialized(proxy)
+        deserialized instanceof Location
+        deserialized instanceof HibernateProxy
+        deserialized.getClass().is(proxy.getClass())
+        !Hibernate.isInitialized(deserialized)
+        deserialized.id == savedId
+        deserialized.metaClass != null
+        !Hibernate.isInitialized(deserialized)
+    }
+
+    @CompileStatic
+    private static Object roundTrip(Object object) {
+        ByteArrayOutputStream bytes = new ByteArrayOutputStream()
+        new ObjectOutputStream(bytes).withCloseable { ObjectOutputStream out -> out.writeObject(object) }
+        new ObjectInputStream(new ByteArrayInputStream(bytes.toByteArray())).withCloseable { ObjectInputStream input ->
+            input.readObject()
+        }
     }
 }
 

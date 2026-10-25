@@ -22,6 +22,7 @@ import java.util.Map;
 
 import org.hibernate.bytecode.enhance.spi.EnhancementContext;
 import org.hibernate.bytecode.enhance.spi.Enhancer;
+import org.hibernate.bytecode.internal.bytebuddy.ByteBuddyState;
 import org.hibernate.bytecode.spi.BytecodeProvider;
 import org.hibernate.bytecode.spi.ProxyFactoryFactory;
 import org.hibernate.bytecode.spi.ReflectionOptimizer;
@@ -37,14 +38,21 @@ public class GrailsBytecodeProvider implements BytecodeProvider, java.io.Seriali
 
     private static final long serialVersionUID = 1L;
 
+    private final ByteBuddyState byteBuddyState;
     private final ByteBuddyProxyHelper proxyHelper;
 
     public GrailsBytecodeProvider() {
+        this.byteBuddyState = new ByteBuddyState();
         this.proxyHelper = createProxyHelper();
     }
 
     protected ByteBuddyProxyHelper createProxyHelper() {
-        return new ByteBuddyProxyHelper(new org.hibernate.bytecode.internal.bytebuddy.ByteBuddyState());
+        return new ByteBuddyProxyHelper(byteBuddyState);
+    }
+
+    /** The state the proxy classes are loaded through, which the Groovy proxy wrapper is loaded through as well. */
+    public ByteBuddyState getByteBuddyState() {
+        return byteBuddyState;
     }
 
     public ByteBuddyProxyHelper getProxyHelper() {

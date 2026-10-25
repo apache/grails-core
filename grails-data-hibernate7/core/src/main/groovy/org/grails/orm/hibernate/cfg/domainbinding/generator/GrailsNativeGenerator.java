@@ -19,19 +19,27 @@
 package org.grails.orm.hibernate.cfg.domainbinding.generator;
 
 import java.io.Serial;
-import java.lang.reflect.Field;
+import java.util.Properties;
 
 import jakarta.persistence.GenerationType;
 
-import org.hibernate.HibernateException;
+import org.hibernate.boot.model.relational.Database;
+import org.hibernate.boot.model.relational.SqlStringGenerationContext;
+import org.hibernate.boot.model.relational.internal.SqlStringGenerationContextImpl;
+import org.hibernate.engine.jdbc.env.spi.JdbcEnvironment;
 import org.hibernate.engine.spi.SharedSessionContractImplementor;
 import org.hibernate.generator.EventType;
 import org.hibernate.generator.GeneratorCreationContext;
 import org.hibernate.id.NativeGenerator;
-import org.hibernate.id.enhanced.SequenceStyleGenerator;
 
 /**
  * A native generator that supports Grails assigned identifiers and fixes Hibernate 7 ClassCastException.
+ *
+ * <p>Hibernate drives {@link NativeGenerator} through {@code initialize} (which picks the delegate for the
+ * dialect), {@code configure} (which configures a sequence or table delegate), {@code registerExportables} (which
+ * adds the delegate's sequence or table to the schema export) and {@code initialize(SqlStringGenerationContext)}.
+ * Grails creates this generator itself instead of through Hibernate's generator binding, so it has to run every one
+ * of those steps. Skipping the middle ones leaves the delegate of a sequence based dialect without its sequence.
  *
  * @since 8.0
  */
@@ -40,18 +48,30 @@ public class GrailsNativeGenerator extends NativeGenerator {
     @Serial
     private static final long serialVersionUID = 1L;
 
-    public GrailsNativeGenerator(GeneratorCreationContext context) {
-        // This triggers the internal switch logic in NativeGenerator,
-        // which calls setIdentity(true) on the column for H2.
-        try {
-            this.initialize(null, null, context);
-        } catch (Exception ignored) {
-            // ignore for now, helps with testing robustness where context might be incomplete
-        }
+    /** Carries the default {@code @NativeGenerator} the way Hibernate reads it from an unannotated identifier. */
+    @org.hibernate.annotations.NativeGenerator
+    private static final class DefaultNativeGenerator {}
+
+    private static final org.hibernate.annotations.NativeGenerator DEFAULT_ANNOTATION =
+            DefaultNativeGenerator.class.getAnnotation(org.hibernate.annotations.NativeGenerator.class);
+
+    public GrailsNativeGenerator(GeneratorCreationContext context, JdbcEnvironment jdbcEnvironment) {
+        // Picks the delegate for the dialect; for IDENTITY it also calls setIdentity(true) on the column.
+        this.initialize(DEFAULT_ANNOTATION, null, context);
+        this.configure(context, new Properties());
+
+        Database database = context.getDatabase();
+        this.registerExportables(database);
+
+        var physicalName = database.getDefaultNamespace().getPhysicalName();
+        String catalog = (physicalName.catalog() != null) ? physicalName.catalog().getCanonicalName() : null;
+        String schema = (physicalName.schema() != null) ? physicalName.schema().getCanonicalName() : null;
+        SqlStringGenerationContext sqlContext =
+                SqlStringGenerationContextImpl.fromExplicit(jdbcEnvironment, database, catalog, schema);
+        this.initialize(sqlContext);
     }
 
     @Override
-    @SuppressWarnings("PMD.AvoidAccessibilityAlteration")
     public Object generate(
             SharedSessionContractImplementor session, Object entity, Object currentValue, EventType eventType) {
         // 1. Support Grails assigned identifiers
@@ -66,25 +86,7 @@ public class GrailsNativeGenerator extends NativeGenerator {
             return null;
         }
 
-        // 3. Prevent NPE if configuration failed (e.g. DDL error)
-        // Access private field dialectNativeGenerator in NativeGenerator
-        try {
-            Field field = NativeGenerator.class.getDeclaredField("dialectNativeGenerator");
-            field.setAccessible(true);
-            Object delegate = field.get(this);
-            if (delegate instanceof SequenceStyleGenerator ssg) {
-                if (ssg.getDatabaseStructure() == null) {
-                    throw new HibernateException(
-                            "Identifier generator (SequenceStyleGenerator) was not properly initialized. This usually happens if table creation failed (check previous logs for DDL errors).");
-                }
-            }
-        } catch (HibernateException e) {
-            throw e;
-        } catch (Exception ignored) {
-            // ignore reflection errors
-        }
-
-        // 4. For Sequences/UUIDs, delegate to the standard logic
+        // 3. For Sequences/UUIDs, delegate to the standard logic
         return super.generate(session, entity, null, eventType);
     }
 }
