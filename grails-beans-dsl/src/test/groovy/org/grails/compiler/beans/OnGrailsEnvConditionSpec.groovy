@@ -114,4 +114,84 @@ class OnGrailsEnvConditionSpec extends Specification {
         expect:
         !condition.matches(context, metadataFor('development'))
     }
+
+    void "a value that is not a list of environment names means no match"() {
+        given:
+        def metadata = Stub(AnnotatedTypeMetadata) {
+            getAnnotationAttributes(ConditionalOnGrailsEnv.name) >> ([value: 'development'] as Map)
+        }
+
+        expect:
+        !condition.matches(contextFor('development', loaderThrowing(new ClassNotFoundException('grails.util.Environment'))), metadata)
+    }
+
+    void "a null class loader resolves the environment through the default loader"() {
+        given: "Grails is on this classpath, so the environment it reports is the one that decides"
+        String name = grails.util.Environment.current.name
+
+        expect:
+        condition.matches(contextFor('some-other-env', null), metadataFor(name))
+        !condition.matches(contextFor(name, null), metadataFor('not-' + name))
+    }
+
+    void "the environment Grails reports wins over the grails.env property"() {
+        given:
+        String name = grails.util.Environment.current.name
+
+        expect:
+        condition.matches(contextFor('production', getClass().classLoader), metadataFor(name))
+    }
+
+    void "an Environment that has no current environment falls back to the property"() {
+        given:
+        def context = contextFor('development', environmentLoader('static Object getCurrent() { null }'))
+
+        expect:
+        condition.matches(context, metadataFor('development'))
+        !condition.matches(context, metadataFor('production'))
+    }
+
+    void "a current environment without a name falls back to the property"() {
+        given:
+        def context = contextFor('development', environmentLoader(
+                'static Object getCurrent() { new Environment() }\nObject getName() { null }'))
+
+        expect:
+        condition.matches(context, metadataFor('development'))
+    }
+
+    void "an environment name from Grails is lower-cased before it is compared"() {
+        given:
+        def context = contextFor(null, environmentLoader(
+                'static Object getCurrent() { new Environment() }\nObject getName() { \'STAGING\' }'))
+
+        expect:
+        condition.matches(context, metadataFor('staging'))
+        !condition.matches(context, metadataFor('production'))
+    }
+
+    void "an Environment that fails when asked for its name falls back to the property"() {
+        given:
+        def context = contextFor('development', environmentLoader(
+                'static Object getCurrent() { new Environment() }\nObject getName() { throw new IllegalStateException(\'boom\') }'))
+
+        expect:
+        condition.matches(context, metadataFor('development'))
+    }
+
+    /**
+     * A loader that answers {@code grails.util.Environment} with a class compiled from the given
+     * members, so the condition meets an Environment that behaves as the test needs.
+     */
+    private ClassLoader environmentLoader(String members) {
+        GroovyClassLoader compiler = new GroovyClassLoader(getClass().classLoader)
+        Class<?> fake = compiler.parseClass("package grails.util\nclass Environment {\n${members}\n}")
+        new ClassLoader(getClass().classLoader) {
+            @Override
+            Class<?> loadClass(String name, boolean resolve) throws ClassNotFoundException {
+                name == 'grails.util.Environment' ? fake : super.loadClass(name, resolve)
+            }
+        }
+    }
+
 }

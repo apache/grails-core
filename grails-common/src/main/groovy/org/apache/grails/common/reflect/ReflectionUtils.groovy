@@ -16,20 +16,20 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.apache.grails.common.reflect;
+package org.apache.grails.common.reflect
 
-import java.lang.reflect.Field;
-import java.lang.reflect.InaccessibleObjectException;
-import java.lang.reflect.Method;
-import java.lang.reflect.Modifier;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
+import java.lang.reflect.Field
+import java.lang.reflect.InaccessibleObjectException
+import java.lang.reflect.Method
+import java.lang.reflect.Modifier
+import java.util.concurrent.ConcurrentHashMap
 
-import org.jspecify.annotations.Nullable;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import groovy.transform.CompileStatic
+import org.jspecify.annotations.Nullable
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 
-import org.springframework.util.ClassUtils;
+import org.springframework.util.ClassUtils
 
 /**
  * Reads the properties of a bean whose class is not {@code public}.
@@ -45,19 +45,20 @@ import org.springframework.util.ClassUtils;
  *
  * @since 8.0.0
  */
-public final class ReflectionUtils {
+@CompileStatic
+final class ReflectionUtils {
 
-    private static final Logger LOG = LoggerFactory.getLogger(ReflectionUtils.class);
+    private static final Logger LOG = LoggerFactory.getLogger(ReflectionUtils)
 
     /** Best-effort upper bound, so that generated class names cannot grow the set without limit. */
-    private static final int MAX_WARNED_CLASSES = 1024;
+    private static final int MAX_WARNED_CLASSES = 1024
 
     /**
      * Keyed by class name rather than by {@link Class}, so that reporting a class never retains its
      * class loader. A reload therefore does not report the same class again, which is intended: a
      * reload loop would otherwise repeat every warning.
      */
-    private static final Set<String> WARNED_NON_PUBLIC_CLASSES = ConcurrentHashMap.newKeySet();
+    private static final Set<String> WARNED_NON_PUBLIC_CLASSES = ConcurrentHashMap.newKeySet()
 
     /**
      * Packages whose classes an application cannot declare public itself, so reporting them would
@@ -67,10 +68,10 @@ public final class ReflectionUtils {
      * <p>The {@code grails} packages are deliberately absent: a framework class reaching this code
      * is worth seeing, and the tests declare their fixtures under {@code org.grails}.
      */
-    private static final String[] NON_APPLICATION_PACKAGES = {
-        "java.", "javax.", "jakarta.", "groovy.", "org.apache.groovy.", "org.codehaus.groovy.",
-        "org.springframework."
-    };
+    private static final String[] NON_APPLICATION_PACKAGES = [
+        'java.', 'javax.', 'jakarta.', 'groovy.', 'org.apache.groovy.', 'org.codehaus.groovy.',
+        'org.springframework.'
+    ] as String[]
 
     private ReflectionUtils() {
     }
@@ -89,17 +90,17 @@ public final class ReflectionUtils {
      * @param target      the instance being read, or {@code null} for a static read method
      * @return a method that may be invoked on {@code target}
      */
-    public static Method resolveInvokableReadMethod(Method readMethod, Class<?> targetClass, @Nullable Object target)
+    static Method resolveInvokableReadMethod(Method readMethod, Class<?> targetClass, @Nullable Object target)
             throws NoSuchMethodException {
-        Method invokable = ClassUtils.getPubliclyAccessibleMethodIfPossible(readMethod, targetClass);
+        Method invokable = ClassUtils.getPubliclyAccessibleMethodIfPossible(readMethod, targetClass)
         if (canAccess(invokable, target)) {
-            return invokable;
+            return invokable
         }
         // getDeclaredMethod cannot fail here: invokable was resolved from this very class's methods.
-        Method widened = invokable.getDeclaringClass()
-                .getDeclaredMethod(invokable.getName(), invokable.getParameterTypes());
-        widened.setAccessible(true);
-        return widened;
+        Method widened = invokable.declaringClass
+                .getDeclaredMethod(invokable.name, invokable.parameterTypes)
+        widened.setAccessible(true)
+        return widened
     }
 
     /**
@@ -113,21 +114,21 @@ public final class ReflectionUtils {
      * @return {@code false} when the field cannot be read, in which case the caller should skip it
      *         rather than fail the whole read
      */
-    public static boolean tryMakeReadable(Field field, @Nullable Object target) {
+    static boolean tryMakeReadable(Field field, @Nullable Object target) {
         if (canAccess(field, target)) {
-            return true;
+            return true
         }
         try {
-            field.setAccessible(true);
-            return true;
+            field.setAccessible(true)
+            return true
         }
         catch (InaccessibleObjectException | SecurityException e) {
             // The declaring class is in a named module that does not open its package to us
             if (LOG.isDebugEnabled()) {
-                LOG.debug("Cannot read field [{}] of [{}]: {}",
-                        field.getName(), field.getDeclaringClass().getName(), e.getMessage());
+                LOG.debug('Cannot read field [{}] of [{}]: {}',
+                        field.name, field.declaringClass.name, e.message)
             }
-            return false;
+            return false
         }
     }
 
@@ -142,31 +143,31 @@ public final class ReflectionUtils {
      *
      * @return whether this call was the one that reported the class
      */
-    public static boolean warnOnNonPublicClass(@Nullable Class<?> clazz) {
-        if (clazz == null || Modifier.isPublic(clazz.getModifiers()) || !isApplicationClass(clazz)) {
-            return false;
+    static boolean warnOnNonPublicClass(@Nullable Class<?> clazz) {
+        if (clazz == null || Modifier.isPublic(clazz.modifiers) || !isApplicationClass(clazz)) {
+            return false
         }
         if (WARNED_NON_PUBLIC_CLASSES.size() >= MAX_WARNED_CLASSES ||
-                !WARNED_NON_PUBLIC_CLASSES.add(clazz.getName())) {
-            return false;
+                !WARNED_NON_PUBLIC_CLASSES.add(clazz.name)) {
+            return false
         }
         if (LOG.isWarnEnabled()) {
-            LOG.warn("Class [{}] is not public. Grails reads its properties through compatibility handling that may " +
-                            "be withdrawn in a future major release. Declare it as a named public class so that it " +
-                            "reads as a standard JavaBean, or register an ObjectMarshaller for it if the class is " +
-                            "not yours. To silence this, set the log level of [{}] above WARN. " +
-                            "(warned once per class)",
-                    clazz.getName(), LOG.getName());
+            LOG.warn('Class [{}] is not public. Grails reads its properties through compatibility handling that may ' +
+                            'be withdrawn in a future major release. Declare it as a named public class so that it ' +
+                            'reads as a standard JavaBean, or register an ObjectMarshaller for it if the class is ' +
+                            'not yours. To silence this, set the log level of [{}] above WARN. ' +
+                            '(warned once per class)',
+                    clazz.name, LOG.name)
         }
-        return true;
+        return true
     }
 
     /**
      * Forgets which classes have been reported. Intended for tests, which would otherwise depend on
      * whether another test in the same JVM reported the same class first.
      */
-    public static void resetWarnedClasses() {
-        WARNED_NON_PUBLIC_CLASSES.clear();
+    static void resetWarnedClasses() {
+        WARNED_NON_PUBLIC_CLASSES.clear()
     }
 
     /**
@@ -174,23 +175,24 @@ public final class ReflectionUtils {
      * property descriptors or declared fields should not have to know.
      */
     private static boolean canAccess(Method method, @Nullable Object target) {
-        return method.canAccess(Modifier.isStatic(method.getModifiers()) ? null : target);
+        return method.canAccess(Modifier.isStatic(method.modifiers) ? null : target)
     }
 
     private static boolean canAccess(Field field, @Nullable Object target) {
-        return field.canAccess(Modifier.isStatic(field.getModifiers()) ? null : target);
+        return field.canAccess(Modifier.isStatic(field.modifiers) ? null : target)
     }
 
     private static boolean isApplicationClass(Class<?> clazz) {
         if (clazz.isSynthetic()) {
-            return false;
+            return false
         }
-        String name = clazz.getName();
+        String name = clazz.name
         for (String prefix : NON_APPLICATION_PACKAGES) {
             if (name.startsWith(prefix)) {
-                return false;
+                return false
             }
         }
-        return true;
+        return true
     }
+
 }

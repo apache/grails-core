@@ -22,6 +22,10 @@ import java.beans.PropertyDescriptor
 import java.lang.reflect.Field
 import java.lang.reflect.Method
 import java.lang.reflect.Modifier
+import java.util.concurrent.ConcurrentHashMap
+
+import org.springframework.asm.ClassWriter
+import org.springframework.asm.Opcodes
 
 import org.springframework.beans.BeanUtils
 
@@ -170,5 +174,82 @@ class ReflectionUtilsSpec extends Specification {
 
         and:
             !ReflectionUtils.warnOnNonPublicClass(null)
+    }
+
+    void 'the utility class cannot be instantiated by accident'() {
+        given:
+        def constructor = ReflectionUtils.getDeclaredConstructor()
+
+        expect:
+            Modifier.isPrivate(constructor.modifiers)
+
+        when:
+        constructor.accessible = true
+        constructor.newInstance()
+
+        then:
+            noExceptionThrown()
+    }
+
+    void 'a static read method is resolved even when an instance is supplied'() {
+        given:
+        Method readMethod = Integer.getMethod('parseInt', String)
+
+        when:
+        Method invokable = ReflectionUtils.resolveInvokableReadMethod(readMethod, Integer, 'ignored')
+
+        then:
+            invokable.invoke(null, '7') == 7
+    }
+
+    void 'a static field is readable even when an instance is supplied'() {
+        given:
+        Field field = Integer.getDeclaredField('MAX_VALUE')
+
+        expect:
+            ReflectionUtils.tryMakeReadable(field, 'ignored')
+    }
+
+    void 'a field of a class in a module that does not open its package is skipped, not failed'() {
+        given: 'the table of a ConcurrentHashMap, in a java.base package the test JVM does not open'
+        Field field = ConcurrentHashMap.getDeclaredField('table')
+
+        expect:
+            !ReflectionUtils.tryMakeReadable(field, new ConcurrentHashMap())
+    }
+
+    void 'a lambda class is synthetic and is not reported'() {
+        given:
+        Runnable lambda = () -> { }
+
+        expect:
+            !ReflectionUtils.warnOnNonPublicClass(lambda.getClass())
+    }
+
+    void 'the set of reported classes is bounded'() {
+        given: 'more distinct non-public classes than the bookkeeping is willing to remember'
+        def loader = new ClassLoader(getClass().classLoader) {
+            Class<?> define(String name) {
+                ClassWriter writer = new ClassWriter(0)
+                writer.visit(Opcodes.V21, 0, name.replace('.', '/'), null, 'java/lang/Object', null)
+                writer.visitEnd()
+                byte[] bytes = writer.toByteArray()
+                defineClass(name, bytes, 0, bytes.length)
+            }
+        }
+        int reported = 0
+        Class<?> last = null
+
+        when:
+        for (int i = 0; i < 1100; i++) {
+            last = loader.define("org.apache.grails.common.reflect.generated.Bounded${i}")
+            if (ReflectionUtils.warnOnNonPublicClass(last)) {
+                reported++
+            }
+        }
+
+        then: 'the bound is respected, and a class past it is not reported'
+            reported == 1024
+            !ReflectionUtils.warnOnNonPublicClass(last)
     }
 }

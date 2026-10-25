@@ -16,21 +16,15 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.compiler.beans;
+package org.grails.compiler.beans
 
-import java.io.File;
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.util.Collections;
-import java.util.Map;
-import java.util.Set;
-import java.util.TreeSet;
-import java.util.WeakHashMap;
+import java.nio.charset.StandardCharsets
+import java.nio.file.Files
 
-import org.codehaus.groovy.control.SourceUnit;
-import org.codehaus.groovy.control.messages.WarningMessage;
-import org.codehaus.groovy.syntax.SyntaxException;
+import groovy.transform.CompileStatic
+import org.codehaus.groovy.control.SourceUnit
+import org.codehaus.groovy.control.messages.WarningMessage
+import org.codehaus.groovy.syntax.SyntaxException
 
 /**
  * Registers a generated auto-configuration in
@@ -62,19 +56,20 @@ import org.codehaus.groovy.syntax.SyntaxException;
  *
  * @since 8.0
  */
-public final class AutoConfigurationImportsWriter {
+@CompileStatic
+final class AutoConfigurationImportsWriter {
 
     public static final String IMPORTS_LOCATION =
-            "META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports";
+            'META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports'
 
-    static final String SOURCE_IMPORTS_LOCATION = "src/main/resources/" + IMPORTS_LOCATION;
+    static final String SOURCE_IMPORTS_LOCATION = 'src/main/resources/' + IMPORTS_LOCATION
 
     /** Set by the Grails Gradle plugin on the compiler's fork options; see GrailsAppBaseDirProvider. */
-    private static final String BASE_DIR_PROPERTY = "base.dir";
+    private static final String BASE_DIR_PROPERTY = 'base.dir'
 
-    private static final String COMMENT_START = "#";
+    private static final String COMMENT_START = '#'
 
-    private static final String CLASS_FILE_EXTENSION = ".class";
+    private static final String CLASS_FILE_EXTENSION = '.class'
 
     /**
      * What each compilation has registered so far, so an entry survives the pruning below before the
@@ -83,7 +78,7 @@ public final class AutoConfigurationImportsWriter {
      * compilation, which is what makes the state per-build rather than per-JVM in a reused daemon.
      */
     private static final Map<Object, Set<String>> REGISTERED_BY_COMPILATION =
-            Collections.synchronizedMap(new WeakHashMap<>());
+            Collections.synchronizedMap(new WeakHashMap<>())
 
     private AutoConfigurationImportsWriter() {
     }
@@ -101,47 +96,47 @@ public final class AutoConfigurationImportsWriter {
      * @param compilation what scopes names registered before their class files are written
      * @return {@code true} when the file was written
      */
-    public static boolean register(String className, File targetDirectory, SourceUnit source, Object compilation) {
+    static boolean register(String className, File targetDirectory, SourceUnit source, Object compilation) {
         if (className == null || className.isEmpty() || targetDirectory == null) {
-            return false;
+            return false
         }
 
-        File sourceDirectory = findSourceDirectory(targetDirectory);
-        File handAuthored = sourceDirectory == null ? null : new File(sourceDirectory, SOURCE_IMPORTS_LOCATION);
+        File sourceDirectory = findSourceDirectory(targetDirectory)
+        File handAuthored = sourceDirectory == null ? null : new File(sourceDirectory, SOURCE_IMPORTS_LOCATION)
         if (handAuthored != null && handAuthored.isFile()) {
-            Set<String> handAuthoredEntries = new TreeSet<>();
-            readEntries(handAuthored, handAuthoredEntries);
+            Set<String> handAuthoredEntries = new TreeSet<>()
+            readEntries(handAuthored, handAuthoredEntries)
             if (!handAuthoredEntries.contains(className)) {
-                warn(source, className + " is generated from a beans closure but is not listed in " +
-                        SOURCE_IMPORTS_LOCATION + ", so Spring Boot will not read it. Add it there, or delete " +
-                        "that file once it holds nothing that is not generated and it will be written for you.");
+                warn(source, className + ' is generated from a beans closure but is not listed in ' +
+                        SOURCE_IMPORTS_LOCATION + ', so Spring Boot will not read it. Add it there, or delete ' +
+                        'that file once it holds nothing that is not generated and it will be written for you.')
             }
-            write(new File(targetDirectory, IMPORTS_LOCATION), Collections.emptySet(), source);
-            return false;
+            write(new File(targetDirectory, IMPORTS_LOCATION), Collections.emptySet(), source)
+            return false
         }
 
-        Set<String> registeredHere = registeredBy(compilation);
-        registeredHere.add(className);
+        Set<String> registeredHere = registeredBy(compilation)
+        registeredHere.add(className)
 
-        File importsFile = new File(targetDirectory, IMPORTS_LOCATION);
-        Set<String> onDisk = new TreeSet<>();
-        readEntries(importsFile, onDisk);
+        File importsFile = new File(targetDirectory, IMPORTS_LOCATION)
+        Set<String> onDisk = new TreeSet<>()
+        readEntries(importsFile, onDisk)
 
         // A descriptor that was renamed, deleted, or given a different autoConfigurationName leaves
         // an entry naming a class that is no longer generated, and Spring Boot fails to start on an
         // auto-configuration it cannot load. Anything this compilation registered is kept regardless:
         // its class file is written in a later phase than this one runs in.
-        Set<String> entries = new TreeSet<>(onDisk);
-        entries.removeIf(entry -> !registeredHere.contains(entry) && !isGeneratedHere(targetDirectory, entry));
-        entries.addAll(registeredHere);
+        Set<String> entries = new TreeSet<>(onDisk)
+        entries.removeIf({ entry -> !registeredHere.contains(entry) && !isGeneratedHere(targetDirectory, entry) })
+        entries.addAll(registeredHere)
 
         // Against what is on disk rather than against the pruned set: a call that only drops a stale
         // entry adds nothing, and comparing the two would leave the entry it just decided to drop.
         if (entries.equals(onDisk) && importsFile.isFile()) {
-            return false;
+            return false
         }
 
-        return write(importsFile, entries, source);
+        return write(importsFile, entries, source)
     }
 
     /**
@@ -152,23 +147,23 @@ public final class AutoConfigurationImportsWriter {
     private static boolean write(File importsFile, Set<String> entries, SourceUnit source) {
         try {
             if (entries.isEmpty()) {
-                return Files.deleteIfExists(importsFile.toPath());
+                return Files.deleteIfExists(importsFile.toPath())
             }
-            Files.createDirectories(importsFile.toPath().getParent());
+            Files.createDirectories(importsFile.toPath().getParent())
             // Sorted and newline-terminated, so recompiling the same sources rewrites the same bytes.
-            Files.write(importsFile.toPath(), (String.join("\n", entries) + "\n")
-                    .getBytes(StandardCharsets.UTF_8));
-            return true;
+            Files.write(importsFile.toPath(), (String.join('\n', entries) + '\n')
+                    .getBytes(StandardCharsets.UTF_8))
+            return true
         }
         catch (IOException notWritable) {
-            String message = "Could not write generated auto-configuration imports at " + importsFile;
+            String message = 'Could not write generated auto-configuration imports at ' + importsFile
             if (source != null) {
-                source.addErrorAndContinue(new SyntaxException(message, 1, 1));
+                source.addErrorAndContinue(new SyntaxException(message, 1, 1))
             }
             else {
-                throw new IllegalStateException(message, notWritable);
+                throw new IllegalStateException(message, notWritable)
             }
-            return false;
+            return false
         }
     }
 
@@ -187,54 +182,54 @@ public final class AutoConfigurationImportsWriter {
      * @param source the source being compiled, used to report a metadata write failure
      * @return {@code true} when an entry was dropped
      */
-    public static boolean reconcile(File targetDirectory, Object compilation, SourceUnit source) {
+    static boolean reconcile(File targetDirectory, Object compilation, SourceUnit source) {
         if (targetDirectory == null) {
-            return false;
+            return false
         }
-        File importsFile = new File(targetDirectory, IMPORTS_LOCATION);
-        File sourceDirectory = findSourceDirectory(targetDirectory);
-        File handAuthored = sourceDirectory == null ? null : new File(sourceDirectory, SOURCE_IMPORTS_LOCATION);
+        File importsFile = new File(targetDirectory, IMPORTS_LOCATION)
+        File sourceDirectory = findSourceDirectory(targetDirectory)
+        File handAuthored = sourceDirectory == null ? null : new File(sourceDirectory, SOURCE_IMPORTS_LOCATION)
         if (handAuthored != null && handAuthored.isFile()) {
-            return write(importsFile, Collections.emptySet(), source);
+            return write(importsFile, Collections.emptySet(), source)
         }
         if (!importsFile.isFile()) {
             // Nothing generated here, which is also how a module keeping the file by hand looks.
-            return false;
+            return false
         }
 
-        Set<String> entries = new TreeSet<>();
-        readEntries(importsFile, entries);
-        Set<String> registeredHere = registeredBy(compilation);
-        Set<String> kept = new TreeSet<>();
-        for (String entry : entries) {
+        Set<String> entries = new TreeSet<>()
+        readEntries(importsFile, entries)
+        Set<String> registeredHere = registeredBy(compilation)
+        Set<String> kept = new TreeSet<>()
+        for (String entry in entries) {
             if (registeredHere.contains(entry) || isGeneratedHere(targetDirectory, entry)) {
-                kept.add(entry);
+                kept.add(entry)
             }
         }
         if (kept.equals(entries)) {
-            return false;
+            return false
         }
-        return write(importsFile, kept, source);
+        return write(importsFile, kept, source)
     }
 
     private static Set<String> registeredBy(Object compilation) {
         if (compilation == null) {
             // No compilation to scope to, so nothing is remembered between calls; the pruning below
             // then rests entirely on which class files are present, which is right for a single one.
-            return Collections.synchronizedSet(new TreeSet<>());
+            return Collections.synchronizedSet(new TreeSet<>())
         }
         return REGISTERED_BY_COMPILATION.computeIfAbsent(compilation,
-                key -> Collections.synchronizedSet(new TreeSet<>()));
+                { key -> Collections.synchronizedSet(new TreeSet<>()) })
     }
 
     /** Whether {@code className} is still a class this module generates into its own output. */
     private static boolean isGeneratedHere(File targetDirectory, String className) {
-        return new File(targetDirectory, className.replace('.', File.separatorChar) + CLASS_FILE_EXTENSION).isFile();
+        return new File(targetDirectory, className.replace('.'.charAt(0), File.separatorChar) + CLASS_FILE_EXTENSION).isFile()
     }
 
     private static void warn(SourceUnit source, String message) {
         if (source != null) {
-            source.getErrorCollector().addWarning(WarningMessage.LIKELY_ERRORS, message, null, source);
+            source.getErrorCollector().addWarning(WarningMessage.LIKELY_ERRORS, message, null, source)
         }
     }
 
@@ -244,34 +239,34 @@ public final class AutoConfigurationImportsWriter {
      * one, otherwise the directory above the output root.
      */
     private static File findSourceDirectory(File targetDirectory) {
-        String baseDir = System.getProperty(BASE_DIR_PROPERTY);
+        String baseDir = System.getProperty(BASE_DIR_PROPERTY)
         if (baseDir != null && !baseDir.isEmpty()) {
-            File candidate = new File(baseDir);
+            File candidate = new File(baseDir)
             if (candidate.isDirectory()) {
-                return candidate;
+                return candidate
             }
         }
-        File directory = targetDirectory;
-        while (directory != null && !("build".equals(directory.getName()) || "target".equals(directory.getName()))) {
-            directory = directory.getParentFile();
+        File directory = targetDirectory
+        while (directory != null && !('build'.equals(directory.getName()) || 'target'.equals(directory.getName()))) {
+            directory = directory.getParentFile()
         }
-        return directory == null ? null : directory.getParentFile();
+        return directory == null ? null : directory.getParentFile()
     }
 
     /** Adds the names in {@code file}, skipping blanks and the {@code #} comments Spring Boot skips. */
     private static void readEntries(File file, Set<String> entries) {
         if (file == null || !file.isFile()) {
-            return;
+            return
         }
         try {
-            for (String line : Files.readAllLines(file.toPath(), StandardCharsets.UTF_8)) {
-                String entry = line.trim();
+            for (String line in Files.readAllLines(file.toPath(), StandardCharsets.UTF_8)) {
+                String entry = line.trim()
                 if (!entry.isEmpty() && !entry.startsWith(COMMENT_START)) {
-                    entries.add(entry);
+                    entries.add(entry)
                 }
             }
         }
-        catch (IOException unreadable) {
+        catch (IOException ignored) {
             // Nothing to merge that can be read; the generated entry is still written below.
         }
     }
