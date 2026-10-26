@@ -17,10 +17,17 @@ limitations under the License.
 > Working design for review, not an implemented specification.
 > Imported on 2026-10-26 from [issue #16348, comment 6150508865](https://github.com/apache/grails-core/issues/16348#issuecomment-6150508865),
 > revision 10 (last updated 2026-10-13T17:07:30Z).
-> The proposal below is preserved as the starting point for local iteration.
-> Its code references and status statements describe the original proposal's base.
-> Local review baseline: `upstream/8.1.x` at `abd7ea720d0e3db96a48a89ee82ce7e79e069524`.
-> PR #16551 merged on 2026-10-14; its pending-merge references below are historical.
+> The verbatim import is preserved in commit `74bb32a3ef`; this is revision 11.
+> Implementation target: **9.0.x**. The Grails-application conversion landed in 8.1.x;
+> profiles and the existing command behavior remain on that line.
+> Reviewed code baseline: `8.1.x` at `abd7ea720d0e3db96a48a89ee82ce7e79e069524`,
+> compared with `9.0.x` at `95495799582ccbfbf7246fb75aec62239a5676f9` for the relevant Forge/CLI sources.
+> Older inventory pointers and external-repository observations retain their October 13 provenance;
+> verify those locations against the implementation branch rather than treating line numbers as stable.
+
+# One generator: Forge, feature packs, and a profile-free console
+
+**Issue:** apache/grails-core #16348 · **Target:** 9.0.x · **Revision:** 11, 2026-10-26
 
 Contents
 
@@ -36,47 +43,48 @@ Contents
 3. [3. What profiles offered](#gaps)
 4. [4. Removal inventory](#removal)
 5. [5. Delivery](#phases)
-6. [6. Open decisions](#decisions)
+6. [6. Decisions and implementation gates](#decisions)
 7. [7. Testing and docs](#testing)
 8. [A. Command tree](#appendix-a)
 9. [B. Facts relied on](#appendix-b)
 10. [Change log](#changelog)
 
-apache/grails-core #16348
+This plan makes Forge the sole application-generation engine, lets plugins contribute descriptors and templates without compiling code into Forge or invoking Gradle during generation, and moves interactive and lifecycle commands into a profile-free command layer. The existing shell's useful services survive; its profile dispatcher, published shell entry point and artifact do not define the new architecture.
 
-# One generator: Forge, feature packs, and a profile-free console
+**Release boundary, decided 2026-10-26:** PR #16551, merged on 2026-10-14, converted Forge to a Grails plugin hosted by Grails applications and belongs to 8.1.x. Every new capability and removal described here belongs to 9.0.x: packs, presets, the catalog, project state, `feature add`, migration, the unified CLI and profile removal. There is no 8.1 implementation-replacement phase, dual-written manifest, or new command tree alongside the old dispatcher. The 8.1 guide continues to describe profiles and both existing CLI paths.
 
-**Base** feat/forge-grails-composite (PR #16551, target 8.1.x) **Verified** 2026-10-13 **PR state** approved, conflicting with the 8.1.x tip **Revision** 10, 2026-10-13 (see [change log](#changelog))
-
-This plan evaluates the proposal to make `grails-forge-cli` the only application generator, let plugins extend generation without compiling code into Forge or running Gradle, remove profiles, and keep `grails-shell-cli` as the interactive console. File pointers are relative to the PR #16551 branch. Merging that PR, after resolving its conflict with the current `8.1.x` tip, is step zero.
-
+<a id="verdict"></a>
 ## 1. Verdict on the proposal
 
-The direction is right. Profiles bought two things in Grails 3: a skeleton engine and an extensibility story, since anyone could publish a profile jar without a Grails pull request. Forge is now the better skeleton engine (exclusive options, Hibernate 7 BOM switching, preview and diff, a website, version slots) but has no extensibility story. Every feature is a compiled `@Component` in `grails-forge-core` found by component scan, and the shipped CLI is one 48 MB shadow jar with no extension directory (`grails-forge/grails-cli/build.gradle:117`). A declarative, data-only feature format that plugins ship inside their jars restores what profiles offered without compiling anything into Forge and without Gradle at generation time.
+Profiles bought two things in Grails 3: a skeleton engine and an extensibility story, since anyone could publish a profile jar without a Grails pull request. Forge is the better skeleton engine (exclusive options, BOM switching, preview and diff, a website, version slots), but its features are compiled `@Component`s in `grails-forge-core`. A declarative descriptor plus executable GSP source templates restores extensibility without compiling a feature class into Forge or running Gradle during generation. The descriptor is data; the pack as a whole is trusted code, not a data-only format.
 
 | Proposal item | Verdict | Adjustment |
 | --- | --- | --- |
 | 1. forge-cli searches plugin metadata and selects plugins | Yes | The metadata is `apache/grails-plugins-metadata`: 256 reviewed plugin entries with coordinates, labels, docs and an indexer that already downloads each released jar to read its descriptor. Nothing in the framework reads it yet: today's shell `list-plugins` command still scrapes an HTML directory listing of the legacy `org.grails.plugins` repository (`grails-profiles/base/commands/list-plugins.groovy:7`), and Forge reads only its own `pom.xml` for third-party versions. Both go away. The plan makes Forge read `grails-plugins-index.json` from the repository's `main` branch and adds one artifact: a **feature pack** (per-plugin descriptor plus templates) that the indexer learns to detect. |
-| 2. forge-cli updates existing apps with a plugin's feature | Yes, scoped | Make it `grails feature add`, built on the existing `FeatureDiffer` (web-only today) and applied as a three-way patch with a dry run. Not a general rewriter. The `update-cli-config` command the code tells users to run was never implemented (`grails-forge-cli/.../CodeGenConfig.groovy:181`); a `project migrate` command replaces it. |
+| 2. forge-cli updates existing apps with a plugin's feature | Yes, scoped | `grails feature add` uses a committed generation baseline, locked inputs and a transactional three-way merge. Existing `FeatureDiffer` supplies text-diff presentation, not a ready-made merge or historical baseline. `project migrate` replaces the never-implemented `update-cli-config` guidance. |
 | 3. Remove `create-app` from grails-shell-cli | Yes | Keep the command name; it becomes Forge's. Delete the dispatcher (`DelegatingShellApplication`), `-t/--type`, and `GRAILS_PREFERRED_SHELL`, which still defaults to the profile shell (`:56`). |
 | 4. Remove profiles | Yes, staged | The widest blast radius. Every app build has a `profile` configuration with a default `org.apache.grails.profiles:web` dependency (`grails-gradle/plugins/.../GrailsGradlePlugin.groovy:461-490`); `grails.profile` is injected as an active Spring profile at runtime (`grails-core/.../GrailsApplicationPostProcessor.groovy:451`); 109 in-repo `application.yml` files set it; the BOM publishes profile constraints; the release verifier inspects the base profile jar (`etc/bin/verify-jar-artifacts.sh:208-236`). Nothing is removed in a minor release: the modules, shell code, `profile` Gradle configuration and runtime `grails.profile` injection all go in 9.0.x together, with `project migrate` and the upgrade guide carrying existing applications. |
-| 5. grails-shell-cli stays as the interactive console | Yes, but a rewrite | The shell codes almost nothing itself. Inside a project every command, including `help`, `gradle` and plugin `ApplicationCommand`s, is dispatched through the resolved profile (`grails-shell-cli/.../GrailsCli.groovy:385`, `AbstractProfile.groovy:461-499`), and roughly 40 user-facing commands (run-app, test-app, clean, compile, war, console, every artefact `create-*`) are profile scripts. The console needs a profile-free command catalog and built-in lifecycle commands. |
-| `.grails/` directory, gitignored | Partly | Use `.grails/`, but **commit** the manifest (`.grails/project.yml`) and ignore only caches and run state. `feature add`, codegen gating, IDE detection and teammates' clones all need the manifest. Forge already renders a `.gitignore` (`grails-forge-core/grails-app/views/forge/feature/build/gitignore.gsp`), so the ignore rules are a template edit. |
+| 5. Keep the shell's interactive capabilities | Yes, re-home them | In-project dispatch currently goes through a profile, and lifecycle commands live in profile scripts. Move the console services, built-ins and completion behind a profile-free command catalog and the unified CLI entry point. The existing `grails-shell-cli` artifact and `org.grails.cli.GrailsCli` remain for 8.1 projects and are retired on 9.0. |
+| `.grails/` directory, gitignored | Partly | Commit `project.yml`, `forge.lock.yml` and `baseline/`; ignore caches, transaction journals, run state and history. Team members need the same generation inputs and merge ancestor, not just a list of feature names. |
 
+<a id="architecture"></a>
 ## 2. Target architecture
 
-Section 2 describes the end state. Section 5 says what can land in `8.1.x` (additions, and replacements that function the same) and what waits for `9.0.x` (every removal).
+Section 2 describes the 9.0 target. Section 5 sequences its implementation and defines the gates before profile removal. Unless explicitly labelled historical, proposed CLI behavior below is 9.0 behavior.
 
+<a id="one-cli"></a>
 ### 2.1 One `grails` command tree
 
-- Picocli root = Forge's `ForgeCommand`, renamed `grails`. Subcommands: `create-app`, `create-restapi`, `create-plugin`, `create-web-plugin`, `create-rest-api-plugin` (#14932), `feature list|search|info|diff|add`, `plugin search|info` (catalog aliases), the artefact `create-*` commands, `project init|migrate`, and the console commands (`run-app`, `test-app`, `gradle`, `open`, `help`, plugin commands). With no arguments inside a project it opens the interactive console; outside a project it prints help.
-- The console's project commands are registered into the same Picocli tree at startup from the three sources in section 2.5, so completion and help are unified. Forge's `InteractiveShell` already fixes its completion set at startup (`grails-forge-cli/.../ForgeCli.groovy:103-106`); that stays.
-- Delete `DelegatingShellApplication.groovy`, the `grails-shell-cli` and `grails-forge-cli` start scripts (`grails-forge/grails-cli/build.gradle:166-192`), and the `-t` handling (9.0.x; through 8.x they stay and the new tree sits beside them).
-- Startup budget. The profile shell resolves `grails-bom` through Aether in a constructor even for `grails --help` outside a project (`grails-shell-cli/.../GrailsDependencyVersions.groovy:65-82`) and resolves the project classpath through the Tooling API before `help` inside one. Removing the Spring Boot CLI port (`run`, `S/boot`, `S/compiler`, `S/archive`, maven-resolver) and all profile resolution is the main speed win. The Forge CLI still boots a full Grails context per invocation (37 auto-configurations merged into the shadow jar); set a measured target such as 500 ms for `--help` and track it with the init-script timing recipe used for #16337.
+- Picocli root = Forge's `ForgeCommand`, named `grails`. Subcommands: `create-app`, `create-restapi`, `create-plugin`, `create-web-plugin`, `create-rest-api-plugin` (#14932), `feature list|search|info|diff|add`, `plugin search|info`, artefact commands, `project init|migrate`, and console commands. `plugin` searches all plugin metadata; `feature` searches usable generation features, so these are separate views over one index, not identical aliases. With no arguments inside a project the CLI opens the interactive console; outside it prints help.
+- One `CommandCatalog` supplies dispatch, help, completion and IDE metadata. Register built-ins without application classpath resolution; load extension descriptors lazily. Refresh the catalog and completion after `feature add`, project initialization or explicit dependency refresh rather than freezing them for an entire interactive session.
+- Delete `DelegatingShellApplication.groovy`, the shell/Forge alias start scripts, `-t/--type` dispatch and `GRAILS_PREFERRED_SHELL` on 9.0. The 8.1 distribution retains its existing entry points. A 9.0 CLI in an unmigrated 8.x project offers migration guidance rather than silently running the new generator against old metadata.
+- `create-app --features` uses Forge's additive semantics and rejects unknown names; `--exclude-features` suppresses optional defaults. Document this major-version change, including the replacement of `--profile` by `--preset`. Align dependency intent with #14944/#14933, but do not promise byte-identical profile and Forge output.
+- Startup budget: ordinary `--help`, `help --json` and migration preflight must not require Gradle, artifact downloads or a booted application. Load the Forge application context only when generation needs it. Measure cold and warm startup on documented reference machines; 500 ms for built-in help is a target to validate, not an existing guarantee. Dynamic catalog completeness is explicit (section 2.5).
 
+<a id="engine"></a>
 ### 2.2 Generation engine: compiled features plus declarative feature packs
 
-Forge keeps compiled `Feature` beans for framework-owned concerns: application types, build files, BOM switching (`GrailsBase`), `OneOfFeature` groups, options. It gains a `DeclarativeFeature` adapter that turns a descriptor plus a template directory into a `Feature` when the registry is built. Packs are loaded from three places:
+Forge keeps compiled `Feature` beans for framework-owned concerns: application types, build files, BOM switching and options. It gains a `DeclarativeFeature` adapter over a shared, identifier-based selection model. Construct a generation-scoped registry from built-ins and the resolved pack set; never mutate a global registry with a request's external packs. Packs are loaded from three places:
 
 1. built-in packs bundled in `grails-forge-core` resources (official plugins migrate from compiled classes to packs wherever the feature is "dependencies plus config plus files");
 2. packs fetched from plugin jars at generation time (third-party, section 2.3);
@@ -86,23 +94,28 @@ Descriptor, `META-INF/grails-forge/feature.yml`:
 
 ```
 format: 1
+kind: feature
 name: acme-audit
+templateApi: 1
+compatibility:
+  grails: '[9.0.0,10.0.0)'
+  forge: '[9.0.0,10.0.0)'
 title: Acme Audit Trail
 description: Adds the Acme audit plugin and its default configuration
 category: Logging                      # a Forge Category string
 documentation: https://acme.example/docs/grails
 applicationTypes: [web, rest-api]      # default: all
-requires: [gorm-hibernate7]            # auto-selected, like processSelectedFeatures
-conflicts: [gorm-mongodb]              # fails validatePreProcessing with a message
-oneOf: audit                           # optional exclusive group
+requires: [gorm-hibernate7, database-migration] # resolved before contribution/rendering
+conflicts: [gorm-mongodb]              # validated against the final selection
+oneOf: com.acme:audit                  # optional, namespaced exclusive group
 dependencies:
   - scope: implementation
     coordinates: com.acme:acme-audit-grails
-    version: ${pack.version}           # default; omit for BOM-managed coordinates
+    version: ${pack.version}           # explicit substitution; omit only when BOM-managed
   - scope: runtimeOnly
-    coordinates: com.acme:acme-audit-h2
+    coordinates: com.acme:acme-audit-h2 # version managed by acme-bom below
     when: { feature: h2 }              # conditional on another selected feature
-    excludes: [org.slf4j:slf4j-simple] # new: Dependency has no exclusions today
+    excludes: ['org.slf4j:slf4j-simple'] # new: Dependency has no exclusions today
 platforms:
   - coordinates: com.acme:acme-bom
     version: 2.3.0
@@ -145,27 +158,39 @@ Mapping onto what exists in `grails-forge-core`:
 
 | Descriptor key | Forge call | Notes |
 | --- | --- | --- |
-| `dependencies`, `platforms` | `GeneratorContext.addDependency` with `Dependency.builder()` scopes, `.pom(true)` for platforms (`build/dependencies/Dependency.groovy:187-266`, `GradleDependency.groovy:102-122`) | Add `excludes` to the model. Declarative features run at `FeaturePhase.DEFAULT`; anything after `BUILD` is silently dropped by the build-file snapshot (`feature/build/gradle/Gradle.groovy:73`). |
+| `dependencies`, `platforms` | Extend `GeneratorContext.addDependency` and the `Dependency`/Gradle models with exclusions and provenance-aware conflict checks | Collect contributions before the `BUILD` snapshot. Reject late contributions instead of silently dropping them. |
 | `buildPlugins` | `GradlePlugin.builder().id().version()` |  |
 | `build.properties` | `getBuildProperties().put` (`GeneratorContext.groovy:145`) | Snapshotted at `BUILD` like dependencies (`Gradle.groovy:80`). |
 | `build.extensions`, `build.blocks`, `build.imports`, `build.settings` | a new keyed contribution API on `GradleBuild`, replacing the single `renderExtensions()` slot (`GradleBuild.groovy:122-134`) and `renderSettingsExtensions()` | See "Build-file contributions". |
 | `configuration` | `getConfiguration()`, `getConfiguration(env)` (`GeneratorContext.groovy:152-188`) |  |
-| `files` | `addTemplate` with `GspTemplate` over a pack-scoped page locator, or `BinaryTemplate` for verbatim files | Destination tokens are the existing `{packageName}`, `{packagePath}`, `{className}`, `{naturalName}`, `{propertyName}`, `{name}` (`DefaultTemplateRenderer.groovy:44-62`). |
+| `files` | `addTemplate` with `GspTemplate` over a pack-scoped page locator, or a byte-preserving copy | Destination tokens include `{packageName}`, `{packagePath}`, `{className}`, `{naturalName}`, `{propertyName}`, `{name}`. Record text/binary kind and executable mode separately from whether a file is templated. |
 | `readme` | `addHelpTemplate` |  |
-| `requires`, `conflicts`, `oneOf` | `FeatureContext.addFeature`, a `FeatureValidator`, a synthetic `OneOfFeature` group |  |
+| `requires`, `conflicts`, `oneOf` | Identifier-based selection and group validation shared by compiled and declarative features | Existing class-based `isPresent` and `OneOfFeature` validation are insufficient. |
 | `artefacts` | new entries in the codegen command set, which is a static list today (`ForgeCli.CODE_GEN_COMMANDS`, `ForgeCli.groovy:45-57`) | Must become dynamic. |
 
-**Template language: GSP source, compiled by the CLI.** External packs are a CLI-only capability; start.grails.org hosts the framework's own features and never renders a third-party pack (section 2.7). That removes the reason to keep pack templates logic-less, so packs use the same language as Forge's own 62 templates: GSP, with `<%@ page trimLogicLines="true" expressionCodec="none" %>` and the same model (`project`, `features`, `options`). Bundled official packs are precompiled by the monorepo build as today. A third-party pack ships GSP *source*, and the CLI compiles it at generation time through `GroovyPagesTemplateEngine` with development mode on for the pack's directory (today `ForgePages` forces it off, `template/ForgePages.groovy:62-67`), caching the compiled classes under `~/.grails/forge/cache/<gav>/classes/<forge version>/`. Source packs are tied to GSP syntax, not to a Groovy or GSP binary version, so one pack serves every Grails line its plugin supports. Files without a `.gsp` suffix are copied as bytes. A pack therefore runs the plugin author's code at generation time; that is the same trust the user already extends to the plugin's Gradle plugin and runtime, and the CLI says so when it fetches a pack.
+**Feature identity and selection.** The adapter is not the entire engine change. Today `FeatureContext.isPresent(Class)` and `OneOfFeatureValidator` use class assignability, and `addFeature` immediately recurses into selection. The new shared contract is:
 
-What this buys: converting an official compiled feature into a pack is a file move plus a descriptor, not a template rewrite; plugin authors write the template language they already know; and the `features.contains('gorm-mongodb')` branches in today's templates carry over unchanged. What it costs: a few hundred milliseconds of Groovy compilation per template on first use; type errors in a statically compiled page (`<%@ model %>`) surface at generation time rather than at the author's build; and no static validation of a pack beyond its descriptor.
+- Framework feature IDs retain their existing names. External IDs are `<group>:<artifact>#<name>`; short names are accepted only when unambiguous. A pack cannot shadow a framework ID, and two versions of the same pack cannot coexist. Errors name the contributing artifacts. External requirements identify a canonical feature ID and an exact pack version or a unique catalog resolution, which is then locked.
+- Exclusive groups are stable string IDs, with framework-owned IDs for existing groups and namespaced IDs for external groups. Adapt compiled features to the same group registry before converting any to packs; do not generate Java classes to represent descriptor groups. Retain typed access only where a compiled feature genuinely provides a typed implementation.
+- Resolve explicit features and explicit option choices first, expand mandatory requirements with a visited set and cycle diagnostics, then choose optional defaults for unfilled groups. An explicit incompatible choice fails rather than being silently replaced. `--exclude-features` can suppress optional defaults but cannot remove a mandatory requirement. Preset defaults participate below explicit user choices.
+- Finish selection, including requirements introduced by defaults, to a bounded fixed point; then validate compatibility, conflicts and exclusive groups before any template executes. Evaluate contribution predicates and flags against this final set. Feature-dependent negative predicates are allowed for contributions, not for adding/removing requirements, to avoid oscillating selection.
+- Process each feature once per stage. Deterministic order is phase/order, then canonical ID; required collaborators must be resolved before contribution processing. Compiled hooks that add features must use this shared resolver rather than bypassing it. Test a cycle, a diamond dependency, excluded requirements and mixed compiled/pack groups.
 
-Mustache (jmustache, logic-less, no code execution) stays the fallback if a logic-less format is ever needed, for example if the hosted service were ever to render community packs; the descriptor's `format` version leaves room for a `templateEngine` field. An earlier revision of this plan recommended Mustache for exactly that hosted-safety reason; with the hosted service official-only, the trade favours GSP.
+**Template language and compatibility.** External packs use GSP source, compiled by the CLI in a pack-scoped engine; hosted Forge renders only bundled official templates. Keep `trimLogicLines="true"` and `expressionCodec="none"`. Introduce a versioned public pack model (`templateApi: 1`) exposing project, final feature IDs, options, flags and declared parameters. Existing templates that import internal Forge model classes must migrate to that API; source compilation alone does not make them version-independent.
+
+Descriptor format, template API, supported Forge versions and target Grails versions are separate compatibility checks. Runtime `grailsVersion` metadata is an additional filter, not a substitute for generator compatibility. Publish the range/comparator rules, including prereleases; snapshots require explicit selection and a compatible declaration. A pack is supported only on the combinations its author tests. No promise is made that one source pack works on every runtime line its plugin supports.
+
+Bundled official packs are precompiled with the matching Forge build. External source is compiled on first use and cached by artifact/source digest, exact Forge/GSP/Groovy versions, template API and Java compilation target. Local-directory content changes invalidate the cache. This is a separate source-capable engine/locator path: toggling `ForgePages` development mode does not itself supply file lookup, class isolation or persistent caching. Verbatim resources remain byte-preserving copies, with optional `executable: true` and explicit `binary: true`; text is UTF-8 unless declared binary.
+
+GSP avoids a wholesale language rewrite, but conversion still needs model-API adaptation and selection/output tests. Build-time descriptor validation and GSP check compilation catch structural and type errors; generation tests catch rendering behavior. First-use compilation cost must be measured. Pack code must render deterministically from declared inputs; replay comparison in section 2.6 detects drift but is not a sandbox.
+
+There is one template engine in v1. A future logic-less engine would require its own format/API decision and is not an automatic fallback for incompatible GSP packs.
 
 **Precedents.** Quarkus extensions declare `metadata.codestart` in `quarkus-extension.yaml`, ship the codestart in a `codestarts` classifier jar (`codestart.yml` plus Qute templates), and users select them with `quarkus create app -x group:artifact:version`. Spring Initializr keeps its dependency catalog declarative (`initializr.dependencies` with `compatibilityRange`, `bom`, `repository`) and reserves code (`ProjectContributor`, `BuildCustomizer`) for the service itself. Grails 3 profiles' `feature.yml` plus `skeleton/` is the same shape as this proposal; it lived in the wrong engine.
 
-**Conditional logic in packs.** Forge features routinely add code depending on which other features are selected. On this branch 22 of the 118 feature classes and 10 of the 47 GSP templates branch on other features, in three patterns, and each has a declarative home. The rule: logic lives in the descriptor as data that Forge evaluates, and templates stay logic-less.
+**Conditional logic in packs.** Selection and model contributions use descriptor predicates; GSP templates may branch on the resolved model. These are three distinct uses:
 
-1. *Auto-adding a collaborator* (`processSelectedFeatures`): Hibernate 7 adds H2 when no driver feature is selected (`database/GrailsDataHibernate7.groovy:64`), Geb adds Spock, Scaffolding adds GSP, Spring Security UI adds Spring Security. Most of the 22 classes do only this. It is the descriptor's `requires` list, evaluated during selection, before anything renders. The "add a default if nothing of this kind is present" variant needs a group form:
+1. *Auto-adding a collaborator*: Hibernate 7 requires a database driver, Geb requires Spock, Scaffolding requires GSP, and Spring Security UI requires Spring Security. Resolve these before rendering; a group requirement chooses its default only after explicit selections have been considered:
 
    ```
    requires:
@@ -176,10 +201,10 @@ Mustache (jmustache, logic-less, no code execution) stays the fallback if a logi
 
    ```
    dependencies:
-     - { scope: testImplementation, coordinates: org.testcontainers:testcontainers-spock, when: { feature: spock } }
-     - { scope: testImplementation, coordinates: org.testcontainers:testcontainers-mongodb, when: { anyOf: [gorm-mongodb, mongo-sync] } }
+      - { scope: testImplementation, coordinates: 'org.testcontainers:testcontainers-spock', when: { feature: spock } }
+      - { scope: testImplementation, coordinates: 'org.testcontainers:testcontainers-mongodb', when: { anyOf: [gorm-mongodb, mongo-sync] } }
    files:
-     - { from: MongoSpec.groovy.gsp, to: src/integration-test/groovy/{packagePath}/MongoSpec.groovy, when: { feature: gorm-mongodb } }
+     - { from: MongoSpec.groovy.gsp, to: 'src/integration-test/groovy/{packagePath}/MongoSpec.groovy', when: { feature: gorm-mongodb } }
    ```
 3. *Branching inside a file*: the security `user.gsp` emits a `collection 'users'` mapping for MongoDB and a `table 'users'` mapping for either Hibernate (`feature/security/template/user.gsp:41-50`). Pack templates are GSP, so this is written exactly as it is today, and selection finishes before rendering starts, so the `features` list a template sees is final:
 
@@ -202,18 +227,18 @@ Mustache (jmustache, logic-less, no code execution) stays the fallback if a logi
      sql: { anyOf: [gorm-hibernate5, gorm-hibernate7] }
    ```
 
-One predicate language serves `when`, `requires` and `flags`: `feature`, `anyOf`, `allOf`, `not`, `applicationType`, and `option` (for example `option: { data: hibernate7 }`). Predicates matter most for the parts a pack does not write as a template: the build file and `application.yml` are generated by Forge from the dependency and configuration models, so a conditional dependency or configuration key has to be declared, not templated. The render model is the one today's GSPs use (`project` with `name`, `className`, `propertyName`, `naturalName`, `packagePath`; `features`; `options`) plus the pack's `flags` and any `params` the pack declares (the user and role class names of an `s2-quickstart`-style pack).
+One predicate vocabulary serves contribution `when` and `flags`: `feature`, `anyOf`, `allOf`, `not`, `applicationType`, and `option` (for example `option: { data: hibernate7 }`). Requirements may be conditional on immutable inputs such as application type and explicit options, not on the absence of a feature still being resolved. Configuration supports both unconditional mappings and conditional entries with `when` and `values`; normalize both into the same configuration model. Declare parameter names, types, defaults and required status in the schema and reject unknown parameters before rendering. Parameters used for repeatable generation are non-secret values recorded in the lock.
 
-Two things in the inventory stay compiled: features that take over a slot another feature owns (`GrailsBase` choosing the BOM, the Gradle plugin picking `grails-web` versus `grails-plugin`, `buildGradle.gsp` branching per feature name) and features that reshape another feature's templates. A pack declares `conflicts` and `requires`; it does not rewrite someone else's output.
+Framework-owned decisions such as BOM and Gradle-plugin selection stay compiled, but contribute through the same build model as packs. Move feature-name branches out of the central build template into their owning contributors. Packs cannot replace another feature's templates implicitly; conflicting output paths are diagnosed before writing.
 
 **How the template decision changed.** Revisions 1 to 5 of this plan recommended Mustache, on the grounds that a pack had to be safe to render on start.grails.org. Once external packs became a CLI-only capability (section 2.7), the remaining arguments were weighed again:
 
-- *Precompiled GSP in the plugin jar* was rejected on its own merits: compiled pages bind to one Groovy and GSP version, so a pack built on Grails 8.0 is not guaranteed to load in the 8.1 CLI and will not load in a Groovy 6 CLI, and precompiling drags `grails-web-gsp` plus the servlet API into every plugin's build. Source packs compiled by the CLI avoid both.
-- *Code execution* is accepted in the CLI. A user who selects a plugin already runs that plugin's Gradle plugin at build time and its code at runtime; a pack adds nothing new to that trust, and the CLI names the pack and its checksum before first use.
-- *Reviewability and tooling* are weaker with GSP: a pack cannot be validated or previewed without executing it. `feature diff` and `--dry-run` still work, because rendering in memory is how Forge previews anyway.
+- *Precompiled external pages* bind to a Groovy/GSP binary stack. Shipping source avoids that artifact coupling, while the versioned model API and compatibility tests address source compatibility. Author-side check compilation still needs the compiler in an isolated tool process.
+- *Code execution* is accepted in the CLI, including during `feature diff` and `--dry-run`. This executes author code earlier than building the generated project. The CLI identifies the source artifact and checksum before first use; it does not describe packs as sandboxed.
+- *Reviewability and tooling*: descriptors can be inspected without executing templates. Check compilation and rendering execute compiler/template code; an in-memory output handler cannot prevent arbitrary GSP side effects. Dry run promises no application of the planned project changes, not no execution or no cache writes.
 - *Whitespace* is handled by the `trimLogicLines` page directive that already exists for Forge's templates.
 
-Mustache, Handlebars or Pebble remain available later through a `templateEngine` field if a logic-less format is wanted for a hosted use. Framework-owned features keep their precompiled GSPs regardless.
+The hosted-service exclusion is unchanged. Supporting another engine or community packs on the hosted service is outside this design.
 
 **Build-file contributions.** `build.gradle` is the file every pack wants to touch, and it is where the current design is weakest. Three mechanisms coexist today: the model (dependencies, plugins, repositories, buildscript, properties); one generic slot, `${gradleBuild.renderExtensions()}` after the dependencies block (`feature/build/gradle/templates/buildGradle.gsp:107`), fed by `GradlePlugin.extension(Writable)`; and eight branches hard-coded in the central template on feature names (`gradle-build-src`, `asciidoctor`, `jrebel`, `spock`, `geb-with-local-browsers`, `grails-compile-static`, `gsp`, `asset-pipeline-grails`, `buildGradle.gsp:40-122`) plus the BOM choice in `buildSrcBuildGradle.gsp:50-58`. The hard-coded branches are the "everyone edits the central file" problem in miniature, and a pack cannot use them at all. There is also a silent bug: `Dependency.Builder.extension(Writable)` is accepted and then dropped (`build/dependencies/Dependency.groovy:315,361-373`), so the `sourceSets` block `DatabaseMigrationPlugin` tries to add never reaches the build file (`feature/migration/DatabaseMigrationPlugin.groovy:72`).
 
@@ -221,32 +246,50 @@ The rule for packs: no pack ships a `build.gradle` template or a text patch. The
 
 | Channel | Renders | Merge rule |
 | --- | --- | --- |
-| `dependencies`, `platforms` | lines in `dependencies {}` | same group, artifact and scope collapse (existing `Dependency` equality); the same coordinate with two explicit versions is an error naming both packs |
+| `dependencies`, `platforms` | lines in `dependencies {}` | validate before deduplication; key by group, artifact, scope and dependency kind (ordinary/platform/enforced platform); conflicting versions or exclusion sets fail with provenance rather than silently losing a contribution |
 | `buildPlugins` (`id`, `version`, `apply`) | a `plugins {}` entry or an `apply plugin:` line | same id collapses; different versions error |
 | `build.repositories`, `build.buildscript` | `repositories {}`, `buildscript {}` | by URL or coordinate |
 | `build.properties` | `gradle.properties` | same key and value collapse; different values error |
 | `build.imports` | import lines at the top of the file | set |
-| `build.settings` | `settings.gradle` fragments, for example `pluginManagement` repositories | ordered |
+| `build.settings` | settings contributions at named structural locations, including `pluginManagement` repositories | merge repository entries by normalized URL; keep `pluginManagement` in Gradle's required leading position; arbitrary fragments are restricted to the end |
 | `build.extensions.<name>` | one `<name> { }` block per key with the bodies concatenated; `tasks.<task>` keys render `tasks.named('<task>') { }` | merged across packs and framework features, in feature order |
 | `build.blocks` | a free-form fragment at an anchor: `afterPlugins`, `afterDependencies`, `end` | ordered, never merged; the escape hatch for `sourceSets {}` or a custom task |
 
-Every fragment is a GSP with the pack's model, so it can branch on features. Ordering is deterministic: feature order, then feature name, then pack name. Today ties within a phase come from a `HashSet` walk (`FeatureContext.groovy:90`), so the same selection can render blocks in a different order between runs; the sort fixes that as a side effect.
+Every fragment is a GSP with the versioned pack model. Ordering follows the shared phase/order and canonical-ID ordering, then descriptor declaration order. Today `FeatureContext` returns a set and `GeneratorContext.applyFeatures` sorts only by order, so equal-order features need a deterministic tiebreaker. Existing `Dependency.equals` ignores versions and dependency kind; conflict detection must happen before insertion into the current set. Configuration mappings follow the same provenance rule: identical leaves collapse, conflicting leaves or scalar/map/list shapes fail; list replacement/concatenation is never inferred.
 
-The framework's own features move to the same channels in phase 1: the asset-pipeline feature contributes `assets {}`, compile-static contributes `grails {}`, Spock and Geb contribute `tasks.test`, asciidoctor and jrebel contribute their blocks, and `GrailsBase` contributes the BOM. The central template then owns structure only. That is the proof that the channels are sufficient, and it is what makes `feature add` tractable: the diff between the baseline build and the pack-applied build is a set of insertions inside existing blocks rather than a rewrite, which the three-way merge in section 2.6 applies cleanly as long as the user kept the block.
+The framework's own features move to these channels in step 1: asset-pipeline contributes `assets {}`, compile-static contributes `grails {}`, Spock and Geb contribute `tasks.test`, asciidoctor and jrebel contribute their blocks, and `GrailsBase` contributes the BOM. The central template owns structure only. Stable rendering reduces unrelated diffs; it does not guarantee that edits to a user's Gradle script merge cleanly merely because a block still exists.
 
-Limits: a pack cannot change the BOM selection, reorder the framework's plugins, change the Java toolchain, or remove another feature's lines; `conflicts` is the tool for incompatibility. The Gradle plugin's validation warns when a `build.blocks` fragment could have been a typed channel, so free-form blocks stay rare.
+The supported contribution API does not allow a pack to change framework BOM selection, reorder framework plugins, change the Java toolchain or delete another feature's contributions. Free-form Groovy fragments cannot enforce those semantic restrictions statically; they remain trusted author code and require generated-build tests. Prefer structured channels and provide targeted lint diagnostics for recognized patterns, not a promise to understand arbitrary Gradle code. Detect file-path collisions across all features, presets and framework outputs before rendering to the destination.
 
+<a id="metadata"></a>
 ### 2.3 Plugin metadata: catalog plus pack
 
 **Where a pack lives, and the Gradle plugin that publishes it.** Inside the plugin's main jar under `META-INF/grails-forge/`. Authoring and publishing are automated by the Grails Gradle plugins, the same way `grails-plugin-cli` automates `-cli` companions today: a plugin author keeps the pack in `src/main/forge/` (`feature.yml` plus `templates/`), and the `grails-plugin` Gradle plugin, when that directory exists, does the rest:
 
-- validates `feature.yml` against the descriptor schema at build time (unknown keys, bad predicates, destination paths that escape the project, references to unknown feature names from the bundled index);
-- compiles every `.gsp` in the pack with the same GSP compiler Forge uses, as a check task, so type errors in a `<%@ model %>` page fail the author's build instead of a user's `create-app`; the shipped artifact stays source;
-- packages the directory into `META-INF/grails-forge/` of the runtime jar and stamps a `Grails-Forge-Pack: <name>` manifest attribute, which the indexer and the CLI can read without opening the whole jar;
-- registers a `forgePackTest` task that generates a sample application for each supported application type with the pack applied, through forge-core in process, and runs `./gradlew classes` on it (opt-in, since it needs the local Maven publish chain the Forge tests already use);
+- validates `feature.yml` against the descriptor schema (unknown keys, predicates, compatibility ranges, parameter types, output paths and references). Validate framework references against the declared generator version; resolve external references from declared pack inputs or a test catalog, not just the bundled public index, so private packs remain authorable offline;
+- check-compiles GSP sources against the declared template API in an isolated tool JVM. Gradle's embedded Groovy must not load Forge's application Groovy/GSP stack. Compiler dependencies are task tooling, not dependencies of the plugin's runtime publication;
+- packages the directory into `META-INF/grails-forge/` of the main jar and stamps `Grails-Forge-Pack: <name>`. The manifest is a detection hint inside the jar, not a separate descriptor or a guarantee of a partial network download;
+- registers an opt-in `forgePackTest` task that invokes Forge in an isolated JVM, generates supported application-type/option fixtures, and builds them using their wrapper. Task inputs include generator coordinates, source digests, options and fixture repositories; configuration-cache reuse must work. A preset-only publication uses the same JAR layout without implying an application runtime dependency;
 - with `grails-publish` applied, needs nothing more: the pack travels with the plugin's existing publication.
 
-A `grails create-feature-pack` command scaffolds `src/main/forge/` in an existing plugin. The alternative layout, a `forge` classifier artifact as Quarkus uses, downloads less but adds a publication to sign and release; the fetcher prefers a `-forge.jar` classifier when present and falls back to the main jar, so the Gradle plugin can switch to it later without changing the format.
+V1 uses the main JAR only. It never probes for a `forge` classifier. Future classifier support must extend artifact identity and record the checksum of that exact classifier artifact. `grails create-feature-pack` scaffolding is deferred; the 9.0 authoring guide supplies a complete working source layout and fixture instead.
+
+**Presets.** A preset is a pack with `kind: preset`, using the same format, template API, compatibility checks, distribution and locking. It names one application type, supplies option and parameter defaults, requests features and may add files through the normal contribution model. For example:
+
+```yaml
+format: 1
+kind: preset
+name: acme-service
+templateApi: 1
+compatibility:
+  grails: '[9.0.0,10.0.0)'
+  forge: '[9.0.0,10.0.0)'
+applicationType: rest-api
+options: { data: hibernate7, servlet: tomcat, jdk: 21 }
+features: [views-json, database-migration]
+```
+
+V1 permits one preset per project and no preset inheritance. Explicit CLI options override preset defaults, which override framework defaults; an incompatible application-type command fails. Requested features and mandatory requirements follow section 2.2. A preset cannot overwrite an existing framework output or replace the build template; it uses the shared contribution channels and collision rules. Full custom-profile capabilities such as inherited skeleton replacement and multi-project skeleton layouts are not claimed as automatic equivalents. Document those migration gaps and provide a manual conversion path before removing profile support. Preset schema, authoring, a published synthetic company-preset fixture and migration coverage are step-2/step-3 delivery gates, not deferred work.
 
 **Catalog.** The catalog already exists. `apache/grails-plugins-metadata` is the data source of the plugin page: one YAML file per plugin at `grails-plugins/<group path>/<artifactId>.yml`, submitted by pull request and reviewed by the Grails team.
 
@@ -270,62 +313,88 @@ Every eight hours `index-plugins.groovy` reads each plugin's `maven-metadata.xml
 
 The plan extends this pipeline instead of adding a second catalog:
 
-1. **The indexer detects packs.** While it has a version's jar open it also looks for `META-INF/grails-forge/feature.yml` and records `forge: { name, applicationTypes }` plus the jar's `sha256` on that version entry. Same download, no extra cost. A plugin opts in by shipping the file; the YAML submission process does not change.
-2. **Forge reads the index.** forge-cli and forge-web consume `grails-plugins-index.json`: `labels` map to Forge categories through a small table, `desc` and `docs` fill description and documentation, `deprecated` hides an entry from `feature search` unless asked for, and `versions[].grailsVersion` (the `7.0.0 > *` range syntax from the plugin descriptor) filters candidates against the CLI's Grails version; the newest compatible non-snapshot version wins by default. The index for the matching release is bundled into `grails-forge-core` as the offline fallback and refreshed straight from the repository: `https://raw.githubusercontent.com/apache/grails-plugins-metadata/main/grails-plugins-index.json`. Whatever is merged to `main` is the current list; the indexer's pull requests land there every eight hours, so there is no separate publishing step and no mirror. The website already reads the same file, through the pre-ASF `grails/` organisation path that GitHub redirects; switching it to `apache/` is a one-line fix.
-3. **Official plugins need no second source.** The 29 `org.apache.grails` entries are already listed; the BOM stays the version authority for official coordinates inside generated builds, so those packs omit versions.
+1. **The indexer detects packs.** Read `META-INF/grails-forge/feature.yml` and record its format, kind, canonical feature ID, application types, template API and compatibility declarations, together with the main JAR's SHA-256 and exact artifact coordinates. Pack-only preset artifacts are indexed from their descriptor even without a runtime `grails-plugin.xml`. Extend the existing catalog schema with an explicit version, keeping ordinary plugin entries usable for `plugin search`.
+2. **The CLI reads the index.** `labels` map to categories, `desc` and `docs` supply display metadata, and deprecated entries are hidden unless requested. Filter against both target Grails and executing Forge compatibility; use the newest compatible released external pack only for a new, unlocked selection. Refresh from `https://raw.githubusercontent.com/apache/grails-plugins-metadata/main/grails-plugins-index.json`, with a release-pinned copy bundled for offline discovery. Record the index content digest used for resolution. `forge-web` neither refreshes this index nor exposes external plugin search. Existing locks are never re-resolved merely because the index changed.
+3. **Official versions remain BOM-aligned.** Bundled official features use the matching generator release. When selecting a separately distributed BOM-managed pack, resolve its exact artifact version from the target BOM's bundled version metadata, not from the catalog's newest entry. Omit the runtime dependency version in generated builds only when the chosen BOM actually manages it; still record the exact pack artifact and digest in the lock. Fail if the needed BOM version mapping is unavailable rather than silently choosing a newer pack.
 4. **Explicit coordinates remain the escape hatch** for a plugin that is not in the index: `grails create-app shop --features com.acme:acme-audit-grails:2.3.0`. Users can add private indexes and repositories in `~/.grails/forge.yml`.
 
 Weaknesses of the index that the plan has to live with or fix: `grailsVersion` is whatever the plugin descriptor says (grails-cache 8.0.0 reports `8.0.0-SNAPSHOT > *`), `docs` is missing on 134 entries, `labels` are free-form, there is no checksum today, and the older `sync-latest-version` action still refers to a `grails-plugins.json` file that no longer exists.
 
-**Fetching without a build.** The indexer already shows the pattern: `createArtifactUrl` builds the exact jar URL from `maven-repo`, `coords` and the version, and one zip entry is read from the download. The pack fetcher does the same with plain HTTPS GETs, no dependency graph: try `<repo>/<group path>/<artifact>/<version>/<artifact>-<version>-forge.jar`, then the main jar; read only the `META-INF/grails-forge/**` entries from the stream; cache under `~/.grails/forge/cache/<group>/<artifact>/<version>/`. Repositories: the entry's `maven-repo` (honouring per-version `coords` and `maven-repo` overrides), then Maven Central, then `GRAILS_REPO_URL` (the existing semicolon list, already validated by `GrailsRepositoryOverrides`), then `~/.grails/forge.yml` entries with credentials. Snapshots read `maven-metadata.xml` for the timestamped file. Proxies come from the JVM's proxy properties and `~/.m2/settings.xml`; a small dependency-free reader of that file avoids pulling Maven Resolver back into the CLI. `--offline` and `--refresh` flags; the catalog cache has a 24-hour TTL.
+**Fetching without a build.** Fetch the main JAR by exact Maven-layout URL without resolving its runtime dependency graph. Follow descriptor requirements as a pack graph, separately from Maven transitive dependencies. Hash the complete downloaded artifact before extracting only `META-INF/grails-forge/**`; never put the plugin's runtime JAR on the template classpath. A checksum mismatch is a failure, not a reason to try a different artifact.
 
-**Security model.** External packs exist only in the CLI. HTTPS only; sha256 verification against the index when it carries one; destination paths must be relative and must not escape the project (`..`, absolute, symlinks); entry size and count caps on the zip; existing files are never overwritten at `create-app` time; and because a GSP pack executes the plugin author's code at generation time, the CLI prints the pack's coordinates and checksum before first use, and `--offline` serves only cached packs. The hosted Forge (start.grails.org) never loads a pack from outside its own build: it serves the framework's features, some of which may be implemented as bundled packs, and never fetches coordinates on request. This belongs in `THREAT_MODEL.md`.
+Explicit repository mappings in `~/.grails/forge.yml` take precedence, then configured `GRAILS_REPO_URL` overrides, catalog repository overrides and Maven Central. Repository IDs, group/content filters and exclusive mappings prevent a private coordinate from being sent to an unrelated repository. Honor per-version catalog coordinates and repositories. Credentials stay in user configuration, are scoped to their repository and are not forwarded across origins. Repository access used to fetch a pack is distinct from repositories required by the generated build; emit only declared, credential-free build repository configuration.
 
+Use HTTPS for remote repositories; explicitly configured local `file:` repositories and loopback test servers support authoring fixtures. No catalog entry may enable those local exceptions. A small `settings.xml` reader supports documented proxy/server fields; do not imply full Maven mirror, profile or encrypted-password support. Unsupported required settings produce an actionable error. Do not reintroduce Maven Resolver.
+
+`--offline` makes no network requests and requires all locked artifacts or reproducible local inputs to be available. `--refresh` refreshes discovery metadata and retries retrieval of the same locked identity; it does not upgrade a lock. Explicitly requested snapshots resolve to a timestamped artifact and digest, both recorded. Cache artifacts by repository identity plus exact coordinates and content digest, with atomic writes and locking; GAV alone is insufficient for mutable snapshots or two repositories serving different bytes. Catalog metadata has a 24-hour TTL. Local-directory inputs are fingerprinted; shared automatic replay requires a project-relative checked-in source directory or a published artifact, not a machine-specific absolute path.
+
+**Trust and filesystem contract.** External packs are CLI-only trusted code. Catalog-backed packs require the indexed checksum; direct coordinates without one display their provenance and observed digest, which is then locked (integrity on subsequent use, not proof of authorship). Before extraction and generator writes, reject absolute/traversing paths, symlink escapes, duplicate normalized destinations and excessive entry count/expanded size. Apply equivalent checks after token substitution and to local directories. New-project generation never overwrites an existing file, including in-place generation. These guards protect the extraction/output mechanisms; arbitrary GSP code is not confined by them, and dry run executes that code. Hosted Forge never fetches or compiles an external pack on request. Document these precise guarantees and limitations in `THREAT_MODEL.md`.
+
+<a id="project-state"></a>
 ### 2.4 Project state: `.grails/`
 
 ```
 .grails/
-  project.yml   committed; replaces grails-forge-cli.yml and grails.profile
-  cache/        ignored; packs resolved for this project
-  run/          ignored; run-app pid, port and stopping markers (build/run-app.pid today)
-  history       ignored; console history (~/.grails_history is global today)
+  project.yml      committed; project intent, type, options and requested features
+  forge.lock.yml   committed; exact resolved generation inputs and baseline index digest
+  baseline/       committed; pristine generated outputs, never copied from user-edited files
+    index.yml     paths, content digests, text/binary kind and executable mode
+    files/        generated file tree, excluding .grails state itself
+  cache/          ignored; derived command metadata and compiled templates
+  transactions/   ignored; staged updates, recovery journals and backups
+  run/            ignored; lifecycle pid, port and stopping markers
+  history         ignored; interactive console history
 ```
 
 ```
 format: 1
-grailsVersion: 8.1.0
+grailsVersion: 9.0.0
 applicationType: web
+name: shop
 defaultPackage: com.acme.shop
 options: { jdk: 21, servlet: tomcat, data: hibernate7, reloading: devtools }
-features:
+generationState: tracked
+requestedFeatures:
   - name: gsp
   - name: grails-spring-security
   - name: acme-audit
     coordinates: com.acme:acme-audit-grails
     version: 2.3.0
-    applied: 2026-10-13
+excludedFeatures: []
+parameters: {}
 ```
 
-Why commit it: `feature add` must know the current feature set and options to compute a diff; artefact codegen is gated on it (today the gate is `grails-forge-cli.yml` in the current directory only, no parent walk, `ForgeCli.groovy:115-128`); IDEs can detect a Grails project and its type from it; CI can validate it. Precedents: Micronaut's `micronaut-cli.yml`, `.sdkmanrc`, `.mvn/`. Everything else under `.grails/` is per-machine and goes into the generated `.gitignore`.
+The manifest records user intent; the lock records the fully resolved selection, including defaults and requirements. Lock the exact generator release/build identity, target Grails/BOM metadata, template API, normalized options and output OS/line-ending policy, preset and pack artifacts/digests, non-secret parameters and template override digests. `grailsVersion` alone is not a generator identity, especially for snapshots. Do not include credentials, absolute user paths or runtime secrets in any committed generation state.
 
-Two keys stay in `application.yml` because runtime code reads them: `grails.codegen.defaultPackage` (`grails-testing-support-web/.../WebSetupSpecInterceptor.groovy:111`, `grails-console/.../GrailsApplicationScriptRunner.groovy:69`) and, through 8.x, `grails.profile`, because `GrailsApplicationPostProcessor` adds it as an active Spring profile with a `web` default; 9.0 removes that injection and Forge stops writing the key.
+The baseline stores actual rendered bytes and modes so a fresh clone has the same merge ancestor even when an artifact disappears or the author changes a template. It contains only generator-owned outputs; it is not a backup of arbitrary application files. The storage cost is intentional: some generated source and binary resources are duplicated in Git. The baseline index and lock make tampering, missing files and manual state drift detectable. Generation is deterministic (no current timestamps or ambient machine inputs in managed output); non-repeatable packs cannot participate in automatic `feature add`.
 
-`grails project migrate` creates `.grails/project.yml` for an existing app from `grails-forge-cli.yml` or legacy `grails-cli.yml` (its `profile:` key maps to a type exactly as `CodeGenConfig` does today), or from `grails.profile` plus a scan of `build.gradle` for known coordinates, and removes the `profile "..."` line from the build.
+The CLI validates the manifest/lock/baseline as a set. A manual change to generation inputs, the framework version or an override template does not silently update the baseline. V1 `feature add` requires the exact recorded generator identity; it directs the user to that CLI version on mismatch and does not automatically download and execute an old generator. Generator upgrades and changes to existing pack versions are separate migration/reconciliation operations, not side effects of adding a feature. All generated projects, including hosted Forge ZIPs, receive this state for their bundled features.
 
+Keep `grails.codegen.defaultPackage` in `application.yml` because runtime code reads it. In 9.0, `grails.profile` no longer drives runtime Spring-profile injection and new projects omit it; `.grails/project.yml` is tooling metadata, not runtime configuration. The 8.1 runtime and generator retain their existing keys and profile dependency.
+
+**Migration to 9.0.** `grails project migrate --to 9.0 --dry-run` performs file-only preflight and displays a migration plan; it must work even when the old `profile` declaration prevents the new Gradle plugin from configuring. Applying that plan uses the same staging, conflict and recovery mechanism as section 2.6. Supported inputs and limits are explicit:
+
+- Read `grails-forge-cli.yml` or legacy `grails-cli.yml`, known built-in profile names, declared framework version and recognizable build dependencies as evidence. A build-script scan is not evaluation of arbitrary Groovy and cannot establish a complete feature set. Report missing/ambiguous options, custom profile coordinates, convention-plugin indirection and multi-project ownership; require explicit mappings or manual edits instead of guessing.
+- Remove a recognized profile dependency and obsolete marker only for an explicit 9.0 migration after the replacement metadata is staged. Do not modify an application that remains on 8.1. Version bumps, unrelated dependency upgrades and custom skeleton conversion remain guided upgrade work, not implicit actions of this command.
+- Inventory the effective old Spring profile, including implicit `web`. Profile-conditional beans and configuration may depend on it. Produce guidance for deliberate Spring-native activation or removal; do not silently discard it or claim that adding `spring.profiles.include` is timing-equivalent to the old postprocessor. Fixtures must cover `@Profile`, profile-specific configuration and pre-existing explicit profiles. Ambiguous/dynamic activation needs a manual migration decision before completion.
+- Legacy metadata does not prove a pristine Forge baseline. Mark migrated projects `generationState: untracked`; lifecycle commands and codegen work, and feature diffs are advisory, but automatic `feature add` is unavailable. `project init` establishes a 9.0 generation baseline from explicitly chosen type/options/features/preset and a review of the full generated-versus-current diff. It does not pretend current edited files are pristine generator output. Adoption records its origin and establishes the inputs for future three-way merges without replacing application source.
+- Custom profile authors convert supported defaults, dependencies, configuration and added files into a preset plus feature packs, and commands into the command extension API. Unsupported inherited file replacement/multi-project layouts receive a documented manual recipe. Test both automatic built-in cases and refusal/diagnostics for unsupported cases.
+
+<a id="console"></a>
 ### 2.5 The console after profiles
 
-Command sources, in precedence order (first registration wins, as today):
+The catalog combines the following sources. Built-in names are reserved; extension collisions produce deterministic diagnostics with origin information instead of depending on classpath iteration order. Namespaced extension IDs allow explicit selection where short names collide. Retained script overrides require an explicit supported override declaration rather than silently shadowing a built-in.
 
-1. **Built-in lifecycle commands**, moved from the base profile's Groovy scripts into the console as Picocli commands over the existing Tooling API plumbing (`grails-shell-cli/.../gradle/GradleUtil.groovy`, `GradleInvoker`, `GradleAsyncInvoker`): `run-app`/`stop-app` (keep `--https`, `--port`, `--debug-jvm`, pid handling via `RunningApplicationProcess`), `test-app`, `compile`, `clean`, `assemble`/`war`/`package`, `console`, `shell`, `dependency-report`, `run-command`, `run-script`, `stats`, `bug-report`.
+1. **Built-in lifecycle commands**, moved from profile scripts into Picocli commands over the existing Tooling API services: `run-app`/`stop-app` (retain HTTPS/port/debug options and process handling), `test-app`, `compile`, `clean`, `assemble`/`war`/`package`, `console`, `shell`, `dependency-report`, `run-command`, `run-script`, `stats`, `bug-report`, and plugin-aware `publish-plugin`/`package-plugin` task adapters. Preserve test-app's unit/integration selection, filters and continuous/cancellation behavior rather than mapping it to `integrationTest` alone.
 2. **Gradle passthrough**: `grails gradle <args>` with completion from `ReadGradleTasks` (exists). Fix: arguments are passed as one string today (`GradleCommand.groovy:62-65`).
 3. **Plugin `ApplicationCommand`s** from `-cli` companions through `ApplicationContextCommandFactory` and `GradleTaskCommandAdapter` (exists, profile-free apart from the `ProfileCommand` interface). Fix the two known gaps: legacy Grails 7 commands are listed but have no named Gradle task (`GrailsCliGradlePlugin.groovy:411-414`), so route them to `runCommand`; app-local `grails-app/commands` are invisible because only `grailsCliClasspath` jars are scanned (`:450-480`).
-4. **Artefact codegen**, one implementation in Forge, called in-process: the five existing commands plus `create-unit-test`, `create-integration-test`, `create-functional-test`, `create-restful-controller`, `create-domain-resource`, `create-command`, `create-script`, and pack-provided artefacts. Template lookup order: `src/main/templates/<path>` in the app, then the pack, then Forge's built-in GSPs. Extend scaffolding's `install-templates` idea so users can copy Forge's artefact templates into `src/main/templates`.
-5. **Script commands** (`src/main/scripts/*.groovy` in the app, `META-INF/commands/*` in plugin jars, the `GroovyScriptCommand` DSL): unchanged in 8.x; in 9.0 the profile lookups go (`methodMissing` chaining through `profile.hasCommand`, `GroovyScriptCommand.groovy:170-184`, and the profile branch of `TemplateRendererImpl.groovy:241-266`) and the scripts stay, deprecated, until the major after 9.0. Six in-repo commands exist only as scripts and need conversion to `ApplicationCommand`s or pack artefacts in 9.0: geb `create-functional-test`, quartz `create-job`, `s2-create-acl-domains`, `s2ui-create-challenge-questions`, `s2ui-override`, and dbmigration's `dbm-create-changelog` / `dbm-changelog-to-groovy`, whose `-cli` jar depends on grails-shell-cli for `org.grails.cli.profile.ExecutionContext` (`grails-data-hibernate7/dbmigration/build.gradle:87-92`).
+4. **Artefact codegen**, one implementation in Forge: retain `create-controller`, `create-service`, `create-domain-class`, `create-taglib`, `create-interceptor`, `create-job` and `add-property`; add `create-unit-test`, `create-integration-test`, `create-functional-test`, `create-restful-controller`, `create-domain-resource`, `create-command` and `create-script`. Pack artefacts register dynamically from selected, locked packs. Template lookup is app `src/main/templates/<path>`, then the owning pack, then Forge's built-in template. An override is explicit and fingerprinted; it is not permission for unrelated packs to overwrite one another. Extend `install-templates` to copy these templates into the application.
+5. **Script commands** (`src/main/scripts/*.groovy`, `META-INF/commands/*`, `GroovyScriptCommand`): retain the documented, profile-free DSL in 9.0 with deprecation, and remove it no earlier than the next major. Replace command chaining through `profile.hasCommand` with catalog dispatch and profile-template lookup with the new lookup order. Re-home the necessary script API types so the removed `grails-shell-cli` artifact is not a transitive requirement. Scripts that directly use `Profile` or custom profile inheritance need source migration; do not promise binary compatibility for those internals. Convert the inventory's script-only commands: Geb `create-functional-test`, Quartz `create-job`, `s2-create-acl-domains`, `s2ui-create-challenge-questions`, `s2ui-override`, dbmigration `dbm-create-changelog` and `dbm-changelog-to-groovy`, plus `sql-tail` if its script implementation is present on the implementation branch. Track explicit names, not the earlier inconsistent command count.
 6. **Catalog services**: help, completion, abbreviation expansion (`rA` for `run-app`), "did you mean", and the legacy-command hint move from `AbstractProfile.groovy:361-499` into a profile-free `CommandCatalog`.
 
-Project detection walks up from the current directory to find `.grails/project.yml` or `grails-app` (today: current directory only, `GrailsCli.groovy:351-355`).
+Project detection walks upward to the nearest `.grails/project.yml`, legacy marker or `grails-app`, stopping at a filesystem/repository boundary. The manifest identifies the owning Gradle project in multi-project builds; never silently execute a sibling project's task. Legacy markers permit migration diagnostics, not automatic adoption of an invented baseline.
 
-**Command execution model.** Commands already live outside profiles today, and three of the ways are code. Profiles are not what commands depend on; they are what the shell's dispatcher depends on.
+**Historical command execution model.** These observations describe the reviewed pre-unification implementation. Profiles couple the dispatcher to generation metadata even when the command itself does not need a profile.
 
 | Where a command is defined today | Author | Runs where | Needs a profile? |
 | --- | --- | --- | --- |
@@ -338,27 +407,29 @@ Project detection walks up from the current directory to find `.grails/project.y
 
 The runtime half of this system is `grails-console`, which the Gradle plugin auto-provisions into `grailsCli` because every command task's main class comes from it. `GrailsApplicationContextCommandRunner` (per-command tasks and `runCommand`) boots the application through `DevelopmentGrailsApplication`, which swaps the context class to `DevelopmentWebApplicationContext`: a `GenericWebApplicationContext` over a `MockServletContext` pointed at `src/main/webapp`. The command gets the full context, plugins, GORM, data sources and `BootStrap`, unless it carries `skipBootstrap = true` (the `SkipBootstrap` trait, currently copied into scaffolding and spring-security). No Tomcat, no port. `GrailsApplicationScriptRunner` (`runScript`), `GrailsSwingConsole` (`console`) and `GrailsShell` (`shell`) boot the same way with console-flavoured contexts; the profile commands named `console` and `shell` only invoked those Gradle tasks.
 
-No command in the repository needs a running server: a search of every `src/cli` source set finds nothing that starts one or makes HTTP calls. `generate-open-api` builds its model from beans (`GrailsOpenApiGenerator`, `GroupedOpenApiContributor`); `dbm-*`, `schema-export`, `url-mappings-report`, `config-report`, `generate-*` and `s2-*` all work on the context. The server-bound operations are lifecycle: `run-app` is `bootRun` under the Tooling API, asynchronous in interactive mode, with port polling, the pid file the application writes through `grails.cli.pid.file`, and `--https` keystore generation; `stop-app` reads that pid; `test-app` runs `integrationTest`, where the test JVM starts the server itself.
+The inventoried `generate-open-api`, `dbm-*`, `schema-export`, `url-mappings-report`, `config-report`, `generate-*` and `s2-*` commands use an application context rather than an embedded server. `run-app` drives `bootRun` through the Tooling API, with asynchronous operation, readiness checks, PID handling and HTTPS setup; `stop-app` manages that process. `test-app` delegates to test tasks, whose JVM may start a server. Preserve these distinctions rather than introducing a second server-starting application-context runner.
 
-After profiles, every command maps to exactly one of five execution modes:
+**Target command extension contract.** Use one execution target per descriptor rather than two booleans with ambiguous combinations:
 
-| Mode | Runs where | Examples |
+| Target | Execution and available services | Examples / Gradle exposure |
 | --- | --- | --- |
-| Console-side, no application context | the `grails` JVM, with the console services; Forge in process for codegen | `create-*` artefacts, pack artefacts, `feature add`, `project migrate`, `sql-tail` |
-| Gradle task passthrough | Gradle, Tooling API | `gradle <args>`, `compile`, `clean`, `assemble`, `war` |
-| Context-bound command | Gradle `JavaExec` plus `GrailsApplicationContextCommandRunner`, full context, mock servlet, no server | `dbm-*`, `schema-export`, `url-mappings-report`, `generate-open-api` |
-| Server-bound lifecycle | Gradle, Tooling API, asynchronous | `run-app`, `stop-app`, `test-app` |
-| Interactive session | Gradle `JavaExec` into `grails-console` | `console`, `shell`, `run-script` |
+| `console` | CLI host, no project application context; terminal, cancellation, project metadata, `GradleRunner`, readiness and running-process services | lifecycle orchestration, `sql-tail`, Forge codegen (generator context loaded on demand), migration; no per-command Gradle task that could launch a nested build |
+| `standalone` | selected compatible command in the CLI, or an isolated plain `JavaExec`; project paths, declared configuration inputs, output and cancellation only | opt-in pure file-generation commands; may have a per-command task; no `GradleRunner` or implicit application boot |
+| `application` | Gradle `JavaExec` with `GrailsApplicationContextCommandRunner`, mock servlet and full application context | existing `ApplicationCommand` default, including `dbm-*`, schema and mappings reports; named task or `runCommand` |
+| `gradle` | Tooling API passthrough to a task, preserving argument tokens and cancellation | `gradle`, `compile`, `clean`, `assemble`, `war`, `test-app` |
+| `session` | dedicated application JVM with appropriate stdin/stdout handling | `console`, `shell`, `run-script`; script execution need not be interactive |
 
-What follows from the table:
+The new profile-free extension API belongs to the CLI contract layer; Tooling API and terminal implementations stay in the CLI host. Existing `ApplicationCommand.handle(ExecutionContext)` implementations remain `application` commands unless explicitly adapted to the new contract. Do not infer safe in-process execution merely from `SkipBootstrap`: it suppresses `BootStrap`, not the application context. An old companion without new metadata takes the context-bound compatibility path, never an implicit fast path.
 
-1. *Commands that need the application context keep the default.* `dbm-gorm-diff` opens the GORM metamodel through `withGormDatabase(applicationContext, dataSource)` (`grails-data-hibernate7/dbmigration/src/cli/.../DbmGormDiffCommand.groovy:50`), `schema-export` needs the `SessionFactory`, `url-mappings-report` needs the mappings holder. All of them are `ApplicationCommand`s run by `GrailsApplicationContextCommandRunner` with the full context, and nothing in this plan changes that path; the `requiresApplicationContext` flag in the next item defaults to `true`.
-2. *A home for fast, console-side plugin commands.* Profile and plugin scripts ran instantly in the shell JVM with the console's services; an `ApplicationCommand` always pays a Gradle invocation plus a full boot, even for pure file generation (`s2-quickstart`, `create-scaffold-*`, `install-templates`; `SkipBootstrap` only skips `BootStrap.groovy`). The answer is a `requiresApplicationContext = false` flag on the contract, and a **console services** API injected into such commands that carries what the script DSL offers today: project configuration (`navigateConfig`), `baseDir` and `buildDir`, console output with ANSI and terminal width, a cancellation listener, a `GradleRunner` (synchronous and asynchronous task invocation with cancellation, the existing `GradleInvoker` and `GradleAsyncInvoker`), `ServerInteraction` (wait for a port or a health endpoint) and `RunningApplication` (the pid and port files under `.grails/run/`, `stop()`). The console already builds the class loader and instantiates every command to list them (`ApplicationContextCommandRegistry`), so running one there costs nothing extra; Gradle runs the same command in a plain `JavaExec` without booting the application. App-local `grails-app/commands` become runnable from the console too. `sql-tail` is the reference case: on `feat/sql-tail-command` (PR #16631) it is a script in `grails-datamapping-core`'s `-cli` jar that reads `grails.gorm.sqlTail.file` from the project configuration, waits for the capture file the running application writes under `build/`, follows it until cancelled, and uses `flag`, `grailsConsole` and `addCancelledListener`. It converts one to one onto those services, and with `GradleRunner` it could start the application itself (`bootRun` with the capture property) instead of asking the user to.
-3. *A console command that needs the context part-way delegates rather than half-booting.* It calls `GradleRunner.runCommand('dbm-gorm-diff', args)` (the existing `runCommand` task and runner) or is split into a console-side command and a context-bound one. There is no mode that boots the context inside the console JVM: the console runs against the project's classpath through a class loader, not a Spring context, and that stays so.
-4. *Server-bound work goes through the services, not through a second context.* A command that needs the running application starts it the standard way (`GradleRunner.async('bootRun', ...)`, DevTools-aware, the same pid file as the Run button and `stop-app`), waits with `ServerInteraction`, works over HTTP, and stops it. Such a command declares `requiresConsole = true`: no per-command Gradle task is registered for it, because a Gradle task that launches a second build of the same project is not something to offer. A `requiresServer` mode that boots `GrailsApp` with an embedded container inside the runner stays off the table.
-5. *Lifecycle built-ins need a plugin extension point.* `run-app --sql-tail` exists on that branch only because the base profile's `run-app.groovy` was edited to add the flag and pass `-Dgrails.grails.gorm.sqlTail.enabled=true` to `bootRun` (`grails-profiles/base/commands/run-app.groovy:9,36-37`; the doubled prefix is the Gradle plugin's forwarding rule for `grails.*` system properties). A plugin cannot do that. The console's built-in `run-app` therefore accepts declared options: a `-cli` command or a pack declares `runAppOptions` (name, description, the system or Gradle property to set), `run-app` registers them, and `help` and completion show them. Pass-through `-D` and `-P` arguments remain for the undeclared case.
+The console services supply project/base/build paths, declared configuration access, terminal output, cancellation registration, synchronous/asynchronous `GradleRunner`, readiness checks and `RunningApplication`. Configuration access does not pretend to be a fully booted Spring environment: values requiring application evaluation go through an application command. A console command that needs a context delegates to `runCommand` instead of booting the project inside the host. A server-oriented command starts or attaches through lifecycle services, records ownership and stops only a process it owns; cancellation must not kill an unrelated pre-existing server.
 
-Housekeeping the inventory found: move `SkipBootstrap` into `grails-core-cli`; route legacy commands to `runCommand`; list app-local commands; keep the Tooling API connection open across console commands instead of reconnecting per call (`GradleUtil.groovy:54-76`).
+Use project-scoped, disposable extension loaders with shared CLI API types; restore the thread context classloader after execution and dispose loaders on project/classpath refresh. Isolate incompatible Groovy/application stacks in their appropriate worker JVM instead of merging them into the Forge application's classpath. Define and test linkage diagnostics and cleanup of listeners, threads and task handles. Keep a Tooling API connection per project session, close it on exit or refresh, and ensure a failing extension does not make built-in help unavailable. Runtime discovery currently instantiates commands (`ApplicationContextCommandRegistry`); that is a behavior to replace for metadata listing, not evidence of zero-cost execution.
+
+**Discovery and JSON catalog.** Extend build-produced companion metadata with schema version, canonical command ID, name/aliases, description, argument/option schema, completion kind, execution target, API compatibility and origin. Read descriptors without loading implementation classes. Generate app-local command metadata from compiled `grails-app/commands`; invalidate cached metadata when source or classpath changes. Initial `help --json` uses built-ins, locked pack descriptors and valid cached companion/app metadata without invoking Gradle. It reports `complete: false` plus diagnostics when discovery is unavailable. An explicit refresh may resolve dependencies or compile app-local commands; failures leave the built-ins usable and are reported structurally. JSON stdout contains one versioned document, with ordinary logs on stderr. Refresh interactive completion from the same catalog after successful mutations.
+
+**Lifecycle options.** A companion descriptor or selected pack may declare `runAppOptions`: name, type, description, default and the Gradle/system property mapping. Names are validated against built-ins and other providers; collisions fail with both origins. `run-app --sql-tail` is the reference use case. Translate values once through the existing property-forwarding rules and test the resulting application property; do not expose the doubled `grails.*` transport prefix as the public option contract. Help and completion use the declarations without instantiating commands. Pass-through `-D` and `-P` remain available.
+
+Housekeeping: consolidate `SkipBootstrap` in the CLI contract layer, route legacy commands to `runCommand`, and surface app-local commands. Test supported already-compiled companion artifacts in addition to recompiling fixtures; source compatibility alone does not establish binary compatibility across Groovy/Grails versions.
 
 **IDE integration.** The IntelliJ plugin is now `apache/grails-intellij-plugin` (donated by JetBrains, imported from `intellij-obsolete-plugins`), so its CLI coupling is work this plan schedules rather than a risk to confirm. What it does today, from the source:
 
@@ -371,58 +442,71 @@ Housekeeping the inventory found: move `SkipBootstrap` into `grails-core-cli`; r
 
 What changes on the Grails side so the plugin can follow:
 
-1. *A stable programmatic entry point.* The unified CLI keeps one main class and one artifact the IDE can resolve by coordinates for the project's Grails version, with `--plain-output` and `--non-interactive` honoured (the shell declares `--non-interactive` today and ignores it). Through 8.x the shell, its artifact and `org.grails.cli.GrailsCli` stay untouched, so the current plugin keeps working; 9.0 removes them, and the plugin release that supports the new entry point ships with 9.0.0. The plugin resolves the CLI artifact per project Grails version, so 8.x projects are unaffected by that release.
-2. *A machine-readable command catalog.* `grails help --json` (name, description, synonyms, arguments, flags, completer kind, execution mode) replaces the hard-coded list, so plugin `-cli` commands, pack artefacts and app-local commands appear in the IDE without a plugin release. The same catalog feeds shell completion, so it is not IDE-only work.
+1. *A stable programmatic entry point.* The proposed 9.0 contract is `org.apache.grails:grails-cli:<grailsVersion>` with a new `org.apache.grails.cli.GrailsCli` main class (distinct from the old `org.grails.cli.GrailsCli`). Keep the regular Maven artifact resolvable with its dependency metadata; the distribution may also supply its shaded artifact. The launcher supports the help-only fast path, `--plain-output`, `--non-interactive` and documented exit codes. The IntelliJ release selects the old shell contract for 8.1 and the new contract for 9.0. Test both project versions in that release; compatibility is not automatic merely because the artifact version varies.
+2. *A machine-readable command catalog.* Use the versioned catalog above instead of hard-coded names, including its completeness and diagnostics fields. Unsupported descriptors or unavailable app-local compilation do not disable the IDE's built-in run/help actions.
 3. *Project detection and type.* The plugin reads `.grails/project.yml` first (application type, default package, features), falling back to `grails-app`.
-4. *Run configuration.* `bootRun` directly, as the plugin's own plan says, or the CLI's `run-app` in non-interactive mode; either way the pid and port files move to `.grails/run/`.
-5. *Wizard.* Unchanged for official features, since the hosted API keeps serving them. External packs and `feature add` are CLI operations the IDE can surface by invoking the same entry point, which is why they need no web API.
+4. *Run configuration.* Use Gradle `bootRun` directly, as the plugin's plan proposes, while also testing CLI `run-app --non-interactive`. Both pass the same configured lifecycle-state location under `.grails/run/` on 9.0. Coordinate the PID writer, DevTools restart handling, port readiness and stop ownership; changing only the CLI's read path would break IDE launches. The 8.1 path remains `build/`.
+5. *Wizard.* Retain the hosted API workflow for official features, with compatibility tests for the 9.0 type/feature metadata and generated project state. External packs and `feature add` remain CLI operations the IDE may surface through the same launcher.
 
 Sequencing: the plugin release is lock-step with 9.0.0, which is why step 5 lists it.
 
+<a id="feature-add"></a>
 ### 2.6 `feature add` on an existing app
 
-1. Read `.grails/project.yml`.
-2. Generate two projects in memory with the same type, options and Grails version: A with the recorded features, B with the recorded features plus the requested ones. This is what the web `DiffController` does through `FeatureDiffer`.
-3. Turn the difference into a unified diff. New files are written directly. Hunks against existing files (`build.gradle`, `application.yml`, `settings.gradle`, `README.md`) are applied as a three-way merge with context (java-diff-utils or JGit's apply); a hunk that does not apply is reported with the rejected text, and `--dry-run` / `--diff` print the patch instead of applying it.
-4. Record the feature in `project.yml`.
+Existing `FeatureDiffer` is presentation infrastructure: it compares a default project with a requested selection, recreates baseline options without preserving GORM/servlet choices, and uses `MapOutputHandler`, which discards binary contents. Extend it for arbitrary typed output trees; do not treat applying a unified patch as a three-way merge implementation.
 
-This is deliberately additive. Removing a feature prints the inverse diff only. The approach is simpler than parsing Gradle scripts and more useful than Micronaut's `feature-diff`, which only prints the diff. `feature diff` also becomes a CLI command; today the diff exists only as a web endpoint.
+The transaction is:
 
+1. Read and validate the manifest, lock and committed baseline. Require `generationState: tracked`, matching generator identity and unchanged recorded inputs. A missing/corrupt baseline or stale lock fails before writing. Adding an already-selected identical feature is a no-op; requesting another version is an explicit upgrade request outside v1 `feature add`.
+2. Re-render the locked selection with all recorded options, parameters and overrides. Compare bytes and modes with the committed baseline **A**. Abort on nondeterminism or unavailable locked inputs; never silently substitute current defaults, another artifact or a new generator version. Resolve only the new requested feature and its requirements, preserving existing selections and locks, to generate proposed tree **B**.
+3. Compare **A**, current working-tree files **C**, and **B**. Use a true base/current/proposed text-merge engine (for example JGit's three-way merge APIs); use java-diff-utils for readable patch output. Explicitly test the library's conflict behavior. B does not contain the user's unrelated edits, so those edits must remain in C's merged result.
+4. Plan every path before applying anything. A new B path already present in C is a collision unless content and mode are identical and adoption is recorded. User deletions, file/directory changes, symlinks, overlapping edits and binary changes on both sides are conflicts. Binary content and executable modes use whole-value comparisons; never decode binary bytes as text. Preserve unchanged user line endings and honor the locked policy for generated additions.
+5. V1 is additive: reject implicit removal of an existing selected feature or generated path, and report the proposed diff instead. `--dry-run` and `--diff` render the plan without applying project changes. On any conflict return a nonzero status with structured path/reason diagnostics and rejected changes; do not write successful hunks or update the manifest. Rendering still executes trusted templates and may populate caches, as section 2.2 explains.
+6. For a conflict-free apply, acquire the project mutation lock, verify the recorded C preimages are still current, and stage all file changes plus the new manifest, lock and baseline. The new baseline is pristine **B**, not the merged user working tree. Use per-file atomic replacement plus a recovery journal/backups for the multi-file operation; ordinary filesystems do not provide an atomic project-wide rename. Recheck affected preimages before replacing them and roll back ordinary write failures only where content still matches what the transaction wrote. Detected external edits become recovery conflicts, not overwrite targets. The lock serializes CLI mutations; it cannot provide transaction isolation against arbitrary editors writing during the apply window. An interrupted transaction is recovered or explicitly resolved before another mutation; never report success for a partially installed feature.
+7. Complete the journal only after all project and generation-state files are installed, release resources, and refresh the command catalog. A second identical invocation makes no changes. The CLI performs no Git commit and does not require Git to implement the merge.
+
+`feature diff` supports comparing an arbitrary recorded selection with proposed additions. For an untracked migrated project it is advisory and clearly says that there is no verified ancestor for automatic application. Feature removal and pack/generator upgrades are deferred; do not advertise an executable inverse-diff removal command in v1.
+
+<a id="hosted"></a>
 ### 2.7 Hosted Forge and the UI
 
 - The hosted service hosts the framework's own features only. External packs, the plugin index and `feature add` are CLI capabilities; the web API and `apache/grails-forge-ui` gain no plugin search and load nothing from outside their build.
-- Official features that become bundled packs render exactly as compiled features do (precompiled GSP), so the API, the preview and diff endpoints and the version slots need no change. `FeatureDTO` may expose `documentation`, which today is only written into the README.
+- Official features converted to bundled packs retain their generated application output through golden tests; the ZIP additionally includes the 9.0 manifest, lock and baseline. Preview/diff presentation must explicitly handle that metadata and avoid recursively showing the baseline copy as application output. Keep existing routes and version slots; test response compatibility rather than claiming no API changes are necessary. `FeatureDTO` may expose `documentation` and stable string group IDs through a versioned/additive contract.
+- The hosted 8.1 slots retain their released behavior. The 9.0 UI/wizard exposes new official application types/options and the new generation semantics; it does not expose external presets, catalog resolution or `feature add`.
 
+<a id="gaps"></a>
 ## 3. What profiles offered and what replaces it
 
-| Capability | Today | After | Status |
+| Capability | Before unification | 9.0 target | Status |
 | --- | --- | --- | --- |
 | `create-app` with profiles | shell plus Aether, default path | Forge | replaced |
-| Company or third-party skeletons (custom profile jars, `--profile g:a:v`) | profile jar | **Preset packs**: a pack with `kind: preset` naming a type, option defaults, a feature list and extra files; `grails create-app --preset com.acme:acme-starter:1.0 shop` | replaced, new work |
+| Company or third-party skeletons (`--profile g:a:v`) | inheritable profile jar | `--preset g:a:v` for supported defaults/features/added files; inherited output replacement and multi-project skeletons require manual conversion | scoped replacement, removal gate |
 | `create-profile` and the seven profile-authoring commands | profile profile | Not in v1; `grails create-feature-pack <name>` scaffolds a pack skeleton later | dropped, small gap |
 | `list-profiles`, `profile-info`, `list-plugins`, `plugin-info` | shell; the last two scrape the legacy repository | `feature list`, `feature info`, `plugin search`, `plugin info`, backed by `grails-plugins-index.json` | replaced |
 | `--features` replaces defaults; unknown names warn | profiles | Forge semantics: additive, unknown names fail. Add `--exclude-features` so a default such as a Geb variant can be dropped | gap, new flag |
 | `rest-api-plugin` application type | profile only | Add to Forge (#14932) | planned gap |
-| Profile features with no Forge equivalent | `less-asset-pipeline`, `rx-mongodb`, rest-api `security` (`grails-spring-security-rest:7.0.0-SNAPSHOT`), `maven-publish` | less-asset-pipeline becomes a pack owned by the asset-pipeline plugin; rx-mongodb is dropped (legacy coordinates, RxJava 1/2 deprecated on 9.0.x); spring-security-rest ships a pack once it is on 8.x; publishing becomes the plugin type's default via grails-publish | mixed |
+| Profile features without direct Forge equivalents | `less-asset-pipeline`, `rx-mongodb`, rest-api `security`, `maven-publish` | asset-pipeline and Spring Security REST need 9.0-compatible packs or an explicitly documented unsupported case; legacy `rx-mongodb` generation is retired; publishing defaults use grails-publish | named parity/retirement decisions before cutover |
 | Lifecycle commands (run-app, test-app, war, ...) | base profile scripts | Console built-ins | replaced |
-| Artefact `create-*` with web and rest-api variants, test variants | profile YAML plus templates | Forge codegen; new templates for the eight missing commands | replaced, work |
-| rest-api `generate-all` / `generate-views` producing **gson** views | rest-api Groovy scripts | Scaffolding's `-cli` `generate-*` produce GSP only. Add gson scaffolding templates to grails-views-gson (`src/main/templates/scaffolding/*.gson`) and a `--views gson` option or a views-gson `-cli` command | real gap |
+| Plugin publication commands | `publish-plugin` → `publish`, `package-plugin` → `jar`, legacy `install` → `install` | Keep the first two as plugin-aware Gradle adapters; replace obsolete `install` with a migration hint to `grails gradle publishToMavenLocal` | explicit major-version change |
+| Artefact `create-*` with web/rest-api/test variants | profile YAML and templates | Forge commands enumerated in section 2.5, with type-specific templates and auxiliary outputs such as controller view directories | parity fixtures required |
+| rest-api scaffolding | `generate-all`, `generate-controller`, `generate-views`, `generate-unit-test`, `generate-functional-test` scripts, including gson output | Extend scaffolding/JSON views commands and templates to cover every named operation and view type; choose one canonical command per operation | removal gate, not just a views-template change |
 | `src/main/templates` override of artefact templates | shell lookup | Forge codegen honours it first | replaced |
-| App scripts and plugin script commands | shell | Unchanged in 8.x; profile-free and deprecated in 9.0; `ApplicationCommand` is the path | deprecated |
+| App scripts and plugin script commands | shell DSL, sometimes direct profile APIs | Profile-free documented DSL retained/deprecated; context-bound commands use `ApplicationCommand`, fast/orchestrating commands use the new extension API | supported subset and migration documented |
 | `~/.grails/settings.groovy` profile repositories and defaults | shell | `~/.grails/forge.yml` repositories and catalogs; proxies from JVM properties and `settings.xml` | replaced |
 | Post-create `instructions` | `profile.yml` (unused in-repo) | Pack `instructions` | replaced |
 | YAML `execute` / `gradle` command steps | profile YAML | Not needed: Gradle tasks and `ApplicationCommand`s | dropped |
 | Welcome page shows `grails.profile` | `index.gsp:141-144` | Show `info.app.*`; the type lives in `project.yml`, which the runtime does not read | adjust |
-| `grails.profile` as an active Spring profile | runtime, default `web` | Unchanged in 8.x, removed in 9.0 with an upgrade note | 9.0 removal |
-| IntelliJ Grails plugin (`apache/grails-intellij-plugin`) | launches `org.grails.cli.GrailsCli` from a resolved `grails-shell-cli` jar; hard-coded list of 34 shell commands; `run-app` run configuration through the same path; new-project wizard on the hosted Forge API | In-scope work, section 2.5 "IDE integration": stable CLI entry point and artifact, machine-readable command catalog, `.grails/project.yml` detection, `bootRun` run configuration, wizard unchanged for official features | replaced, coordinated release |
-| `profile` Gradle configuration in existing builds | default dependency, resolved by the tooling model | Unchanged in 8.x; removed in 9.0, where `project migrate` deletes the line and a declared `profile` dependency fails configuration with a pointer to the upgrade guide | 9.0 removal |
+| `grails.profile` as an active Spring profile | runtime, default `web` | Remove injection; migration explicitly addresses conditional beans/configuration and the implicit default | behavior change with upgrade fixtures |
+| IntelliJ Grails plugin | old shell artifact/main class and hard-coded commands | Version-selective launcher contract, JSON catalog, manifest detection, coordinated run-state paths and hosted wizard compatibility | coordinated 9.0 release |
+| `profile` Gradle configuration | default dependency and tooling-model input | Remove configuration/resolution; file-only migration and actionable legacy-declaration diagnostics | 9.0 removal |
 | Hibernate 7 BOM switch, servlet, JDK, exclusive groups, preview, diff, website | Forge only | Kept | gain |
 
+<a id="removal"></a>
 ## 4. Removal inventory
 
-Grouped by area; each item is a known dependency on profiles or the dispatcher.
+All removals are on 9.0.x after their replacement gates. This is the October 13 inventory, not a claim that its line numbers and counts remain current. Re-scan on the implementation branch and classify each reference as production dependency, compatibility adapter, migration fixture or historical documentation; migration tests must retain representative old inputs.
 
-**Forge** (`grails-forge/`): `feature/grailsProfiles/GrailsProfiles.groovy` (replace with a `ProjectManifest` feature that writes `.grails/project.yml` and `grails.codegen.defaultPackage`); `Scope.PROFILE`, `Phase.PROFILE`, `GradleConfiguration.PROFILE`; `CodeGenConfig` legacy `profile:` handling (moves to `project migrate`); the drift spec `GrailsGspSpec.groovy:326-350`, which asserts byte identity with `grails-profiles/web` skeleton files; `GrailsProfilesSpec`; `grails-forge-web/grails-app/conf/application.yml:18`; stale comments in `grails-cli/build.gradle:70` and `grails-cli-shadow/build.gradle:50`; the `.gitignore` DirectoryScanner workaround in `grails-forge/settings.gradle:88-93`.
+**Forge** (`grails-forge/`): `GrailsProfiles` is replaced by project-state production and the retained runtime default-package setting. Write the baseline only after application rendering, excluding generation state from its own snapshot. Remove `Scope.PROFILE`, `Phase.PROFILE`, `GradleConfiguration.PROFILE`; move legacy `CodeGenConfig` parsing into migration; replace tests coupled to profile skeletons with owned golden fixtures. Remove Forge's own profile configuration, obsolete dispatcher comments and profile-specific build workarounds after checking their remaining consumers.
 
 **Shell** (`grails-shell-cli/`): everything under `profile/repository/`, `Profile`, `AbstractProfile`, `ResourceProfile`, `FileSystemProfile`, `Feature`, `DefaultFeature`, `ProfileRepository*`, `ProfileRepoConfig`, `ProfileUtil`, the `Create*Command`, `ListProfilesCommand`, `ProfileInfoCommand`, `ArgumentCompletingCommand`, `io/GradleDependency`, their service-file entries, `GrailsCli` members `:87-89,129-133,195-201,260-271,307-311,324-332,386-394,518-534`; the Spring Boot CLI port and the maven-resolver dependencies (`grails-shell-cli/build.gradle:86-100`). Re-home `CompilerAutoConfiguration`, which the hibernate boot-plugins compile against (`grails-data-hibernate5/boot-plugin/build.gradle:50`). Rewrite rather than delete: `CommandRegistry.findCommands`, the four `CommandFactory` implementations, `GradleTaskCommandAdapter`, `HelpCommand`, `GroovyScriptCommand`, `TemplateRendererImpl`, `RenderStep`, `DefaultStepFactory`'s `ProfileCommand` gate (`:44-47`), `populateContextLoader` (keep the classpath part, drop `:571,582-584`).
 
@@ -430,152 +514,153 @@ Grouped by area; each item is a known dependency on profiles or the dispatcher.
 
 **Root build**: the seven `grails-profiles/*` modules (`settings.gradle:465-485`), `grails-spring-security/rest/testapp-profile` (convert its features to packs or test fixtures), `gradle/publish-root-config.gradle:172-191`, `build.gradle:76,163-165` (`profileProjects`, unused), `PublishPlugin.groovy:58,146-151,191-197`, `gradle/rat-root-config.gradle:73-76,161-166`, `settings.gradle:661-666` and `end-to-end/settings.gradle:132-137` (DirectoryScanner workaround), `grails-bom/base/build.gradle:78-94` and the `forcedGroupPrefixes` entries in all five BOMs, `etc/bin/verify-jar-artifacts.sh:208-236`, `etc/bin/reset-verify.sh:47`, `.github/dependency-graph/external-references.yml:42-48,197-203` (the purls are wrong today anyway), `RENAME.md:164-182`, `etc/bin/rename_gradle_artifacts.sh:305-347`, `INSTALL:98`.
 
-**In-repo consumers**: `profile "..."` in seven `grails-test-examples/*/build.gradle`; `grails.profile` in 109 `application.yml` files (harmless at runtime, remove for hygiene); `def profiles = ['web']` in plugin descriptors (dead: `DefaultGrailsPlugin.profiles` is never assigned, `DefaultGrailsPlugin.java:117,139-147`) and in Forge's `plugin.gsp:44-47`.
+**In-repo consumers**: profile dependencies in example builds; `grails.profile` keys in application configuration; plugin-descriptor `profiles` declarations and Forge's plugin template. Audit active-profile behavior before removing configuration keys: they are not harmless metadata while the runtime injection exists. Preserve representative legacy inputs in migration fixtures.
 
 **Docs** (`grails-doc/src/en/guide/`): the whole `profiles` chapter (`toc.yml:91-106`, twelve pages) is replaced by a "Feature packs and presets" chapter; `commandLine.adoc:20-71,112-122`, `interactiveMode.adoc:19-41`, `creatingCustomScripts.adoc`, `reusingGrailsScripts.adoc` and `gradleBuild.adoc` are deleted or rewritten; `creatingProject.adoc:19-37`, `creatingCustomCommands.adoc:21-69,219-272` (the `executionContext.environment` example at `:248` is wrong today), `gradleDependencies.adoc:27,61`, `gradleTasks.adoc`, `gradlePlugins.adoc:63-64`, `downloadingAndInstalling.adoc:24-93`, `creatingAnApplication.adoc`, `aHelloWorldExample.adoc`, `usingInteractiveMode.adoc`, `creatingArtefacts.adoc`, `generatingAnApplication.adoc`, `REST/restProfile.adoc`, `plugins/creatingAndInstallingPlugins.adoc:390-466`, `plugins/repositories.adoc:21-40`, `plugins/providingBasicArtefacts.adoc:21-68,127-141`; the 47 command reference pages (five are profile-only); `index.adoc:736` includes a path that does not exist. `GRAILS_PREFERRED_SHELL` and the wrapper environment variables are undocumented today and need a home in the new chapter.
 
+<a id="phases"></a>
 ## 5. Delivery
 
-Project policy: nothing is removed in a minor release. Every removal in this plan (the profile modules and Gradle plugins, the shell's `create-*`, `list-profiles` and `profile-info`, the dispatcher with `-t` and `GRAILS_PREFERRED_SHELL`, the Spring Boot CLI port, the `profile` Gradle configuration, the `grails.profile` active-profile injection, the alias start scripts, `org.grails.cli.GrailsCli`) therefore lands in `9.0.x`, together. What `8.1.x` can carry is additions, and replacements of an implementation that functions the same: the declarative engine, packs, the index reader, `.grails/`, `feature add`, the unified `grails` command tree added alongside the profile shell, and existing commands re-implemented on Forge or on the console where the result is equivalent for the user. Whether `8.1.x` carries that work or everything waits for `9.0.x` and ships at once is decision 6; the steps are the same either way, only the line moves.
+The release decision is settled: **all steps after the completed Grails-application conversion target 9.0.x**. Intermediate development commits may coexist with old code on that branch, but the release has one generator and one command tree. Do not backport these new contracts or removals to 8.1. Implementation may proceed incrementally; profile removal is gated by migration, command coverage and distribution/IDE readiness, not by a calendar estimate.
 
-0
+### Step 0 — completed conversion and implementation baseline
 
-#### Prerequisites
+PR #16551 merged on 2026-10-14 into 8.1.x, and the reviewed 9.0 branch contains the conversion. This is historical prerequisite work, not an outstanding merge. Before implementation, record the selected 9.0 commit, run the Forge build/tests there and refresh the inventory of old commands and profile consumers.
 
-8.1.x
+**Exit:** a reproducible 9.0 baseline and command/capability matrix; the 8.1 conversion remains the only part of this unification effort assigned to that line.
 
-Merge PR #16551 after resolving the conflict with the current `8.1.x` tip; merge `8.1.x` up to `9.0.x`.
+### Step 1 — selection, contribution and template contracts (9.0.x)
 
-**Exit:** Forge builds and tests green inside the composite build on both lines.
+Implement canonical feature/group IDs, deterministic selection, dependency closure/cycle/conflict rules and the versioned descriptor/template API. Add the pack adapter, source-capable scoped GSP engine/cache, local-directory mode, exclusions, provenance-aware contribution merging and dynamic codegen descriptors. Move central build-template branches into their owning features and fix the dropped `Dependency.extension` contribution. Convert a small proof set (Quartz, cache-ehcache, Asciidoctor, web-console), adapting their template models as required.
 
-1
+**Exit:** mixed compiled/pack selection passes the edge-case matrix; converted features retain golden application outputs; build templates contain structure rather than feature-name branches; source compilation and generated-build checks pass on the declared supported stack. Hosted rendering remains bundled-only.
 
-#### Declarative engine
+### Step 2 — pack/preset distribution and authoring (9.0.x)
 
-8.1.x, additive, Forge only
+Extend `grails-plugins-metadata` for versioned pack metadata, exact main-JAR checksums and pack-only presets. Implement CLI discovery, direct coordinates, repository routing, compatibility filtering and content-addressed caches. Add Grails Gradle authoring support with isolated check compilation/generation workers and configuration-cache tests. Publish synthetic plugin and company-preset fixtures into `build/local-maven` and exercise both catalog and direct-coordinate selection. Include the complete preset schema and precedence rules.
 
-`DeclarativeFeature`, descriptor schema and validator, `ForgePages` development-mode compilation for pack directories with a compiled-class cache, `Dependency.excludes`, dynamic codegen command registration, `--feature-pack-dir`. The keyed build-file contribution API (`extensions`, `blocks`, `imports`, `settings`) with deterministic ordering; the eight feature-name branches in `buildGradle.gsp` and the BOM choice in `buildSrcBuildGradle.gsp` move into the owning features; the dropped `Dependency.extension` bug fixed. Convert three to five simple compiled features (quartz, cache-ehcache, asciidoctor, web-console) to bundled packs as proof, with golden-output specs proving identical generation.
+**Exit:** fixtures generate/build online from local repositories and offline from locked inputs; the main-JAR digest matches what the index records; private mappings, timestamped snapshots, incompatible APIs and checksum mismatches behave as specified. No live public catalog is required for deterministic tests. No external pack reaches hosted Forge.
 
-**Exit:** packs render byte-identical output to the classes they replace; `buildGradle.gsp` contains no `features.contains` branch; hosted Forge unchanged.
+### Step 3 — project state, migration and feature transactions (9.0.x)
 
-2
+Implement manifest, lock and baseline writers/readers, typed byte-preserving output trees, `project init`, file-only `project migrate --to 9.0`, arbitrary-selection diffs and transactional `feature add`. Add `.gitignore` entries only for machine-local state. Existing markers are migration inputs; new 9.0 projects write only the new state. Exercise built-in 8.0/8.1 profile and Forge projects, explicit custom-preset mappings, untracked/adopted baselines and active-Spring-profile migration guidance.
 
-#### Catalog, fetch and authoring
+**Exit:** create → edit → add → build/run preserves user edits; conflicts leave project/state unchanged; repeated application is a no-op; binary/mode handling, interrupted recovery and fresh-clone replay pass. Missing ancestry and unsupported migration cases produce actionable diagnostics rather than guessed state.
 
-8.1.x, additive, plus grails-gradle and grails-plugins-metadata
+### Step 4 — command API, unified launcher and functional coverage (9.0.x)
 
-Extend `index-plugins.groovy` to detect `META-INF/grails-forge/feature.yml` (or the `Grails-Forge-Pack` manifest attribute) and record `forge` and `sha256` per version; an index reader in forge-core with the label-to-category table and `grailsVersion` compatibility filter; `feature list/search/info` and `plugin search/info`; the pack fetcher with cache, repositories, proxies, checksums, path guards and the first-use notice; `--features g:a:v`; the `src/main/forge/` support in the `grails-plugin` Gradle plugin (descriptor validation, GSP check compilation, packaging, manifest attribute, `forgePackTest`); a fixture plugin in `grails-gradle` `test-projects/` that uses it and is published to `build/local-maven` and consumed by test-core through a local index file.
+Implement execution targets, metadata-only discovery, profile-free `CommandCatalog`, lazy startup, lifecycle services, `runAppOptions`, command refresh and the stable launcher/JSON API. Adapt context-bound/legacy companions, add app-local discovery and supported script-DSL compatibility. Complete `rest-api-plugin`, the named artefact commands, all REST scaffolding operations and plugin publication adapters. Coordinate the IntelliJ 8.1/9.0 version switch and lifecycle state paths. Build a table for every old command: retained with tested behavior, intentionally changed with an upgrade note, or retired with a replacement hint.
 
-**Exit:** `grails create-app x --features <gav>` works offline from the cache and online from a local Maven repository; `plugin search cache` lists the real index entry; the fixture plugin's pack is built and validated by the Gradle plugin alone.
+**Exit:** every command in that table has coverage; context commands boot no server; console cancellation/process ownership and standalone execution are verified; built-in help survives broken application builds; supported precompiled companions work or receive explicit incompatibility diagnostics. CLI/IDE smoke tests cover both version contracts. Profile-versus-Forge generation semantics are documented major-version changes, not asserted equivalent output.
 
-3
+### Step 5 — cutover and removals (9.0.x)
 
-#### `.grails/` and `feature add`
+After steps 1–4 and their documentation are ready, remove profile modules/plugins, profile resolution and BOM constraints, old dispatcher/entry point/alias scripts and the Spring Boot CLI port. Re-home remaining supported services and script types before deleting their old artifact. Stop emitting `grails.profile`, the profile dependency and `grails-forge-cli.yml`; remove active-profile injection after its migration fixtures pass. Update release/distribution scripts, SDKMAN packaging and project wrapper entry points. Ship the coordinated IntelliJ support with 9.0.0.
 
-8.1.x, additive
+The removed `profile` configuration must not continue resolving artifacts. Supply an actionable migration diagnostic for old declarations, including direct Gradle usage; choose and test a rejection-only diagnostic mechanism during implementation rather than assuming Gradle's missing-method exception will contain the upgrade guide. That mechanism is not a supported dependency configuration.
 
-`project.yml` writer and reader, `.gitignore` entries, `project migrate`, `feature diff` CLI, `feature add` with dry run and three-way apply; codegen gating accepts `project.yml` and `grails-forge-cli.yml`; Forge keeps writing `grails-forge-cli.yml` on 8.x so the existing codegen commands are unchanged.
+**Exit:** no production build/BOM/distribution dependency on `org.apache.grails.profiles` or the retired shell artifact; migration fixtures and historical docs may still name them. A migrated 8.1 app builds/runs on 9.0, an unmigrated one receives guidance, and the 8.1 distribution retains its original behavior. Measured startup and release artifact verification pass.
 
-**Exit:** round trip in test-core: create, `feature add`, build, run.
+### Step 6 — documentation, website and hosted rollout (9.0.x; alongside each step)
 
-4
+Replace the 9.0 profiles chapter with "Feature packs and presets", rewrite command-line and command-reference pages, and put all additions/removals/semantic changes in `upgrading90x`. Document committed baseline storage, migration limits, trusted template execution, offline behavior and the descriptor/command APIs. Update plugin-authoring and metadata-repository guides, website index references, hosted preview/diff handling and the official-feature UI. No 8.1 pack instructions or `upgrading81x` unification additions are introduced.
 
-#### Unified command tree and equivalent replacements
+**Exit:** the 9.0 guide and executable examples build; official hosted generation matches the CLI's locked generation state; the 8.1 guide and hosted version slots continue to describe/support profiles. Documentation ships with each user-facing implementation step rather than waiting until the end.
 
-8.1.x, additions and same-behaviour replacements
+Deferred: pack-scaffolding convenience commands, classifier artifacts, additional template engines, automatic feature removal and generator/pack upgrades. The supported deprecated script DSL remains throughout 9.x and is eligible for removal in the next major. Size work after the selection, replay and command-API prototypes; steps 2–5 span multiple builds/repositories and are not "Forge-only" tasks.
 
-The `grails` launcher gains the Picocli tree (`feature`, `plugin`, `project`, `help --json`, the Forge create and codegen commands) alongside the profile shell; the dispatcher, `-t` and `GRAILS_PREFERRED_SHELL` keep working. Replacements allowed because they function the same: `create-app`, `create-plugin` and `create-web-plugin` implemented by Forge once the dependency drift between the two generators is closed (#14944, #14933), with `-t shell` still reaching the profile implementation; the shell's artefact `create-*` delegated to Forge codegen where the files produced are the same (the web `create-controller` also creates the views directory); lifecycle commands re-implemented as console built-ins behind the same names and flags while the profile scripts remain loadable. Profiles, `grails.profile` and the `profile` dependency are still emitted and resolved.
+<a id="decisions"></a>
+## 6. Decisions and implementation gates
 
-**Exit:** parity specs: for every replaced command, the same invocation produces the same files and effects on an 8.1 application before and after; the new commands work alongside.
+The release boundary is a confirmed maintainer decision. The other entries state the working design adopted in this revision; their proof obligations are explicit, not claims that the implementation already exists.
 
-5
-
-#### Console rework and removals
-
-9.0.x
-
-Profile-free `CommandCatalog`; built-in lifecycle commands; codegen delegated to Forge; script commands kept with the profile lookups removed and deprecated; dispatcher, `-t`, `GRAILS_PREFERRED_SHELL`, alias start scripts, the Spring Boot CLI port and `org.grails.cli.GrailsCli` removed; `grails-profiles/*`, the profile Gradle plugins, shell profile code, BOM constraints and release-script checks deleted; the `profile` Gradle configuration deleted (a declared `profile` dependency fails configuration with a pointer to the upgrade guide and `project migrate`); the `grails.profile` active-profile injection removed; Forge stops emitting `grails.profile`, the `profile` dependency and `grails-forge-cli.yml`; `rest-api-plugin` type, the eight missing artefact commands, gson scaffolding templates, the six script-only commands converted; a `grails-intellij-plugin` release supporting the 9.0 entry point ships with 9.0.0; startup measured.
-
-**Exit:** no `org.apache.grails.profiles` coordinate anywhere in the build; `grails` inside and outside a project needs no profile and no Aether; all shell specs rewritten against the catalog; a migrated 8.x application builds and runs; an unmigrated one fails with the pointer.
-
-6
-
-#### Docs, website, UI
-
-8.1.x for additions, 9.0.x for removals
-
-A "Feature packs and presets" chapter and `upgrading81x` notes with the additions; the "Command line" chapter rewrite, the profiles chapter removal, the command reference pages and `upgrading90x` notes with the removals; the website's index URL switched to the `apache/` organisation path; SDKMAN and distribution scripts; a `THREAT_MODEL.md` section; "ship a feature pack" in the `grails-plugins-metadata` README and the plugin authoring guide.
-
-**Exit:** the 8.1 guide documents packs next to profiles; the 9.0 guide builds without the profiles chapter.
-
-Deferred to the major after 9.0: removal of script commands (`src/main/scripts`, `META-INF/commands`, `GroovyScriptCommand`), which 9.0 keeps profile-free and deprecated.
-
-Rough sizing: steps 1 to 3 are each a few weeks of Forge-only work; step 5 is the largest single item because it rewrites the shell's dispatch and tests and carries every removal; step 6 is sustained documentation work that can run alongside the others.
-
-## 6. Open decisions
-
-| # | Decision | Recommendation |
+| # | Topic | Decision / gate |
 | --- | --- | --- |
-| 1 | Pack template language | GSP source, compiled by the CLI at generation time; bundled official packs precompiled. One language for Forge and for packs, and existing templates convert by moving. Mustache stays the fallback if a logic-less format is ever needed for a hosted use. |
-| 2 | Pack location and authoring | Main jar, `META-INF/grails-forge/`, produced by the `grails-plugin` Gradle plugin from `src/main/forge/` with validation, GSP check compilation and `forgePackTest`. Add a `forge` classifier later only if download size becomes a problem. |
-| 3 | Catalog source of truth | `apache/grails-plugins-metadata` as it is, with its indexer extended to flag feature packs and record checksums; Forge reads `grails-plugins-index.json` from the repository's `main` branch, with the release's copy bundled as the offline fallback. No second catalog, no mirror. |
-| 4 | Is `.grails/project.yml` committed? | Yes. Ignore `cache/`, `run/`, `history`. |
-| 5 | Script commands (`src/main/scripts`, `META-INF/commands`) | Unchanged in 8.x; profile-free and deprecated in 9.0 once the six script-only commands are converted; removed in the major after 9.0. |
-| 6 | Release lines | Settled by policy: every removal lands in 9.0.x together; nothing is removed in 8.1.x. Open: whether 8.1.x ships the additions and same-behaviour replacements of steps 1 to 4, or everything waits for 9.0.x. |
-| 7 | Third-party packs on start.grails.org | Settled 2026-10-13: none. The hosted service hosts the framework's own features; external packs are CLI-only. |
-| 8 | Fetcher implementation | Plain HTTPS plus a small `settings.xml` reader; do not reintroduce Maven Resolver. |
-| 9 | `grails.profile` as a Spring active profile | Unchanged in 8.x; removed in 9.0 with an upgrade note. |
-| 10 | Naming | "feature pack" for the per-plugin descriptor, "preset" for a type-level bundle, "catalog" for the index. |
-| 11 | Programmatic entry point for the IDE | One main class and one artifact resolvable by coordinates per Grails version, `--plain-output` and `--non-interactive` honoured, `grails help --json` as the command catalog; `org.grails.cli.GrailsCli` and the `grails-shell-cli` artifact stay untouched through 8.x and go in 9.0, with a plugin release that supports the new entry point shipping with 9.0.0 (the plugin resolves the CLI per project version, so 8.x projects are unaffected). |
-| 12 | Free-form build-file fragments | Allowed at three anchors (`afterPlugins`, `afterDependencies`, `end`) as an escape hatch; typed channels preferred, and the Gradle plugin warns when a fragment could have been one. No pack ships a `build.gradle` template or a text patch. |
+| 1 | Template language | GSP source for external packs; matching precompiled official packs. Versioned public model API and declared/tested generator compatibility; no logic-less fallback in v1. |
+| 2 | Pack publication | Main JAR only under `META-INF/grails-forge/`; validate/check-compile in isolated Gradle tool workers. Classifier support is deferred and would need separate artifact checksums. |
+| 3 | Catalog | Extend `apache/grails-plugins-metadata`; CLI-only external discovery, release-pinned offline copy, immutable locked resolutions. Ordinary plugin and usable-pack searches have different filters. |
+| 4 | Project state | Commit manifest, exact lock and rendered baseline; ignore only derived caches/run/history/transaction state. Accept duplicated generated content in exchange for a portable merge ancestor. |
+| 5 | Scripts | Keep the documented profile-free DSL deprecated through 9.x; convert inventoried commands and document direct-profile-API migration before removal. |
+| 6 | Release lines | **Confirmed:** 8.1 contains the Grails-app conversion and retains profiles; all unification additions, cutover and removals target 9.0.x. |
+| 7 | Hosted Forge | Official bundled features only. No external catalog fetch, pack execution, private repositories or `feature add` in the hosted API. |
+| 8 | Fetcher | Exact-artifact transport, scoped repositories, complete-artifact hashing, explicit local test exceptions and documented settings.xml subset; no Maven runtime dependency resolver. |
+| 9 | Runtime Spring profiles | Remove `grails.profile` injection on 9.0; test and document deliberate migration of conditional runtime behavior, including the implicit `web` profile. |
+| 10 | Presets | One preset, no inheritance in v1; same compatibility/contribution model, explicit precedence and named unsupported custom-profile cases. Delivery gate before profile removal. |
+| 11 | CLI/IDE API | `org.apache.grails:grails-cli` and new `org.apache.grails.cli.GrailsCli`; schema-versioned JSON catalog with completeness/diagnostics. Test the IDE against both old 8.1 and new 9.0 contracts. |
+| 12 | Build fragments | Typed contribution channels first; deterministic escape-hatch fragments at defined anchors. No arbitrary build-script semantic validation or guaranteed conflict-free merge is promised. |
+| 13 | Feature selection | Canonical feature/group IDs, explicit choice precedence, cycle detection and deterministic closure shared by compiled and declarative features. |
+| 14 | Feature application | Verify replay against the committed ancestor, true three-way merge, whole-operation conflict detection and journaled recovery. Update baseline to pristine proposed output, not user edits. |
+| 15 | Migration ancestry | Existing marker/build evidence creates an untracked manifest unless an exact ancestor is known. Explicit reviewed adoption establishes a new baseline; scanning Gradle cannot reconstruct one. |
+| 16 | Command execution | Explicit targets instead of `requiresApplicationContext`/`requiresConsole` combinations; context-bound compatibility default, scoped service capabilities and tested classloader/process cleanup. |
 
+Implementation spikes must settle the exact JSON/YAML schemas and supported version-comparison rules, prove source compilation/caching, demonstrate text/binary transaction recovery on supported OSes, and verify the proposed launcher publication and precompiled-companion compatibility. Record any resulting contract changes here before publishing the APIs. These gates do not reopen the 9.0 release assignment.
+
+<a id="testing"></a>
 ## 7. Testing and documentation
 
-- `grails-forge-core`: specs for descriptor parsing and validation, dependency and platform mapping, environment configuration merging, GSP source compilation from a pack directory with the class cache, verbatim copies, path-escape rejection, `requires`/`conflicts`/`oneOf` behaviour through `ContextFactory`, and golden-output comparisons for every converted feature using `CommandOutputFixture.generate`.
-- `grails-gradle`: functional tests for the `src/main/forge/` support (descriptor validation failures, GSP check compilation failures, packaging and manifest attribute, `forgePackTest`), on the fixture plugin.
-- `test-core`: TestKit builds of generated apps that include bundled packs; a fixture plugin in `test-projects/forge-feature-pack-plugin` published to `build/local-maven` and consumed both by coordinates and through a catalog file; `feature add` round trips.
-- Console: `CommandCatalog` precedence, synonyms, abbreviations and hints; interactive dispatch with the existing `TestTerminal`; the legacy-command and app-local-command fixes in `grails-gradle` functional tests.
-- End-to-end: generate, `feature add`, build, run, and `project migrate` on an 8.0-generated app.
-- Docs: a "Command line" chapter (install, create, options, console, Gradle tasks, custom commands via `-cli` companions) and a "Feature packs and presets" chapter (descriptor reference, catalog, authoring and testing a pack, publishing, security notes), plus `upgrading81x` entries for the additions and same-behaviour replacements and `upgrading90x` entries for every removed surface.
+Tests exercise public generator/CLI/build contracts, not private implementation helpers. In addition to the repository's affected-module checks, the implementation needs:
 
+- **Selection/schema:** unknown keys, namespaced IDs, ambiguous aliases, duplicate versions, cycles/diamonds, default/explicit/required/excluded precedence, mixed compiled/declarative groups, final predicates and deterministic order. Validate the descriptor examples against the implemented schema.
+- **Templates/contributions:** supported/unsupported template APIs and generator ranges, first-use/cache replay, modified local sources, deterministic bytes/modes, typed/static model failures, GSP rendering failures, dependency versions/exclusions/kind conflicts, configuration shape conflicts and normalized path collisions. Golden tests cover each converted official feature; generated Gradle builds cover free-form fragments.
+- **Transport/catalog:** main-JAR identity and digest, private/exclusive repository routing, scoped credentials/redirects, malformed metadata, timestamped snapshots, offline success/failure, refresh without unlock, failed/partial downloads, concurrent cache access and zip/local-path guards. Use local synthetic repositories/catalogs rather than depending on the live public index.
+- **Gradle authoring:** isolated compiler/generator classpaths, source-only packaging, preset-only publication, `forgePackTest`, supported application-type/option fixtures and configuration-cache reuse. Publish the fixtures through `build/local-maven` using the repository's normal test-publication chain.
+- **Project state/transactions:** fresh-clone replay, all options including non-default GORM/servlet, missing/changed inputs, user text edits and deletions, binary files, executable bits, CRLF/LF, new-file collisions, concurrent edits, failed writes and interrupted recovery. Assert that conflicts preserve every existing project/state file and that repeat application is a no-op. Rendered baseline state must not recursively include itself.
+- **Migration:** 8.0/8.1 Forge and built-in-profile fixtures, absent/legacy markers, custom preset mapping, dynamic/indirect Gradle declarations, multi-project roots and unsupported skeletons. Cover untracked/adopted state and active-profile behavior with conditional beans and configuration. Migration preflight works when Gradle configuration is broken.
+- **Commands:** reserved/duplicate names, aliases/abbreviations, legacy `runCommand` routing, app-local discovery, supported precompiled companions, stale/incomplete catalogs, clean JSON stdout, lazy help, non-interactive exits, classloader refresh and cancellation/process ownership. Test every retained/changed/retired command in the step-4 matrix, including REST scaffolding tests and plugin publication adapters.
+- **End-to-end/distribution:** generate → edit → feature add → build/run; migrate an 8.1 project to 9.0; script-DSL compatibility; CLI wrapper and SDKMAN artifact contents; IDE 8.1/9.0 runs and lifecycle state; Windows/macOS/Linux paths and permissions. Hosted tests prove that external packs are never resolved and that ZIP/preview/diff metadata handling is consistent.
+- **Documentation:** descriptor/template/command API references, authoring fixture, migration/adoption guide, trusted execution and offline semantics, complete command reference and `upgrading90x` additions/removals. The 8.1 guide continues to document profiles and its existing CLI behavior.
+
+<a id="appendix-a"></a>
 ## Appendix A: command tree
 
 ```
 grails
+  [--plain-output] [--non-interactive] [--offline] [--refresh]
   create-app | create-restapi | create-plugin | create-web-plugin | create-rest-api-plugin
       [--features a,b,g:a:v] [--exclude-features x] [--preset g:a:v]
-      [--data|--servlet|--jdk|--reloading] [--inplace] [--list-features]
-  feature   list | search <text> | info <name> | diff <name> | add <name|gav> [--dry-run|--diff]
-  plugin    search <text> | info <name>                      (catalog aliases)
-  project   init | migrate
+      [--data|--servlet|--jdk|--reloading] [--inplace] [--list-features] [--feature-pack-dir <path>]
+  feature   list | search <text> | info <id> | diff <id|gav> | add <id|gav> [--dry-run|--diff]
+  plugin    search <text> | info <name|coordinates>
+  project   init [--dry-run] | migrate --to 9.0 [--dry-run]
   create-controller | create-service | create-domain-class | create-taglib | create-interceptor
   create-unit-test | create-integration-test | create-functional-test | create-restful-controller
-  create-domain-resource | create-command | create-script | add-property | <pack artefacts>
+  create-domain-resource | create-command | create-script | create-job | add-property | <pack artefacts>
   run-app | stop-app | test-app | compile | clean | assemble | war | package | console | shell
   dependency-report | run-command | run-script | stats | bug-report | install-templates
-  gradle <args> | open <path> | help [command]
-  <every ApplicationCommand from -cli companions: dbm-*, schema-export, generate-*, s2-*, ...>
+  publish-plugin | package-plugin
+  gradle <args> | open <path> | help [command] [--json]
+  <discovered application/standalone/console commands: dbm-*, schema-export, generate-*, s2-*, ...>
 ```
 
+Commands are available only when their application type or selected feature supplies them. Offline mode controls CLI transport; an explicitly invoked Gradle task needs its corresponding offline argument forwarded too and cannot be promised network-free if its own code makes network calls. `--refresh` never changes locked pack versions. `project init` is baseline adoption, not a second application generator. Authoring scaffolding, automatic removal and upgrade commands are not part of this v1 tree.
+
+<a id="appendix-b"></a>
 ## Appendix B: facts the plan relies on
+
+The first group was checked against the local code baseline for revision 11. External repository counts/paths and the SQL-tail branch observations retain the original inventory date and must be refreshed by the corresponding implementation work.
 
 - Forge has no declarative mechanism; features are `@Component`s found by scanning `org.grails.forge` (`ForgeCoreConfiguration.groovy:35-50`), registered by `FeatureRegistry` (`feature/FeatureRegistry.groovy:43-64`).
 - The build file snapshots dependencies at `FeaturePhase.BUILD` (`GradleBuildCreator.groovy:34-74`); later additions are lost.
-- `Dependency` has no exclusions; versions come from the BOM, a literal, or a `pom.xml` lookup (`PomDependencyVersionResolver.groovy:103-119`).
+- `Dependency` has no exclusions; equality compares group/artifact/scope but not version or platform kind (`Dependency.groovy:152-169`). `Builder.extension` is dropped by `buildInternal` (`:361-372`). Versions come from bundled BOM metadata, literals or POM lookup.
+- `FeatureContext.isPresent` is class-based and `addFeature` immediately recurses (`FeatureContext.groovy:110-127`); `OneOfFeatureValidator` uses class assignability (`:33-48`). Neither provides a descriptor-ID dependency solver. `ContextFactory` already computes compiled defaults to a fixed point; the new resolver must preserve that intent while incorporating requirements/exclusions.
 - Codegen commands are a static list (`ForgeCli.groovy:45-57`) gated only by a marker file in the current directory (`:115-128`).
-- `FeatureDiffer` exists in core but is exposed only through the web `DiffController`.
+- `FeatureDiffer` is exposed through web `DiffController`; its baseline uses an empty feature selection and an `Options` constructor that restores default GORM/servlet (`FeatureDiffer.groovy:89-100`). `MapOutputHandler.write` stores null for binary outputs (`:40-47`), which the differ skips. This cannot supply the proposed byte-preserving historical merge ancestor unchanged.
 - Inside a project the shell dispatches everything through the profile (`GrailsCli.groovy:385`); the profile jars come from the Gradle `profile` configuration via the `GrailsClasspath` tooling model (`GrailsClasspathToolingModelBuilder.groovy:43-60`); Aether is used only outside a project.
-- The shell writes nothing into a project except under `build/`; no `.grails/` project directory exists anywhere in the repository.
+- The proposed committed `.grails/` generation-state contract does not exist in the reviewed generator; existing lifecycle PID state is under `build/`.
 - `grails.codegen.defaultPackage` has runtime readers; `grails.profile` becomes an active Spring profile with a `web` default.
-- `-cli` companions are discovered from the `Grails-Cli-Artifact` manifest attribute and `META-INF/grails-cli.factories` without loading classes (`GrailsCliGradlePlugin.groovy:203-307,451-476`); that is the model the pack fetcher follows.
+- Gradle discovers `-cli` names from manifests/factories without loading implementation classes (`GrailsCliGradlePlugin.groovy:451-479`). The runtime `ApplicationContextCommandRegistry` does load and instantiate commands (`:53-90`); metadata-only catalog discovery is new work. `ApplicationCommand` currently requires the context-oriented `handle(ExecutionContext)` contract, with no standalone/console flags.
 - The IntelliJ plugin (`apache/grails-intellij-plugin`, `main`, 2026-10-11) starts its own JVM with main class `org.grails.cli.GrailsCli` on the resolved `grails-shell-cli` artifact (`Grails3GradleCommandExecutor.java:54`, `GrailsModuleModelBuilderImpl.java:54-78`), hard-codes 34 shell command names (`Grails3CommandProvider.java:31-70`), runs `run-app` the same way (`GrailsRunConfiguration.java:70`), detects projects by `grails-app` (`GrailsApplicationManager.java:167`), and creates projects through the hosted Forge API (`GrailsForgeModuleBuilder.kt:67-221`).
 - `sql-tail` (branch `feat/sql-tail-command`, PR #16631 on 9.0.x) is a `GroovyScriptCommand` script in `grails-datamapping-core/src/cli/resources/META-INF/commands/sql-tail.groovy` that follows a capture file written by the running application and never boots it; `run-app --sql-tail` is a flag added to `grails-profiles/base/commands/run-app.groovy`. `DbmGormDiffCommand` is an `ApplicationCommand` that needs the booted context (`withGormDatabase(applicationContext, dataSource)`).
 - The plugin portal's data source is `apache/grails-plugins-metadata`: one YAML per plugin under `grails-plugins/<group path>/<artifactId>.yml` (`name`, `desc`, `coords`, `owner`, `vcs`, `docs`, `maven-repo`, `labels`, `licenses`, `versions`, optional `deprecated`), `index-plugins.groovy` run every eight hours by `.github/workflows/updateIndex.yml`, which downloads each new version's jar by exact URL and reads `META-INF/grails-plugin.xml`, and `grails-plugins-index.json` consumed by `apache/grails-static-website` (`buildSrc/.../PluginsTask.groovy:67`). 256 entries on 2026-10-13.
 
+<a id="changelog"></a>
 ## Change log
+
+Earlier entries describe earlier proposals, including release assignments superseded by revision 11.
 
 | Revision | Date | Change |
 | --- | --- | --- |
+| 11 | 2026-10-26 | Assign all unification work to 9.0; record the completed 8.1 Grails-app conversion and retention of profiles. Replace the transitional 8.1 phase with gated 9.0 delivery. Define identifier-based feature selection, versioned pack APIs, main-JAR identity, CLI-only catalog use, preset limits, committed lock/baseline state, replay and journaled three-way application, explicit migration/adoption limits and runtime-profile guidance. Replace ambiguous command flags with execution targets and metadata discovery; specify launcher/IDE contracts, lifecycle-state coordination and omitted command coverage. Reconcile GSP trust/dry-run statements, authoring isolation, hosted metadata handling, deferred scaffolding, tests and contents anchors. |
 | 10 | 2026-10-13 | Command execution model in 2.5 reworked around two real examples: the `dbm-*` commands keep the context-bound default (`DbmGormDiffCommand`), and `sql-tail` defines the console-side mode, which gets a console services API (configuration, build directory, terminal, cancellation, `GradleRunner`, `ServerInteraction`, `RunningApplication`). Server-bound work goes through those services with `requiresConsole`; part-way context needs delegate to `runCommand`; the built-in `run-app` accepts declared options so a plugin can add a flag such as `--sql-tail`. Appendix B updated. |
 | 9 | 2026-10-13 | Release policy applied: nothing is removed in a minor. Section 5 rewritten as "Delivery": steps 1 to 4 are additions and same-behaviour replacements that may ship in 8.1.x (open, decision 6); every removal, including the `profile` configuration, `grails.profile` injection, dispatcher, Spring Boot CLI port and `org.grails.cli.GrailsCli`, lands together in 9.0.x; the no-op configuration shim and the `GrailsCli` façade are gone. Section 1, 2.1, 2.4, 2.5, section 3 rows, decisions 5, 6, 9 and 11, and testing updated. |
 | 8 | 2026-10-13 | "Build-file contributions" in 2.2: typed, merged channels (`build.properties`, `extensions`, `blocks`, `imports`, `settings`) with merge rules and deterministic ordering; the central template's feature-name branches and the dropped `Dependency.extension` bug move into phase 1; descriptor example, mapping table and decision 12 updated. |
@@ -587,4 +672,4 @@ grails
 | 2 | 2026-10-13 | Section 2.3 rebuilt on `apache/grails-plugins-metadata` as the catalog: YAML schema, indexer behaviour, index statistics, pack detection in the indexer, no second catalog. Section 1, section 3, decision 3, phases 2 and 6, appendix B updated to match. |
 | 1 | 2026-10-13 | First draft: verdict, architecture, gap analysis, removal inventory, phases, decisions, testing, appendices. |
 
-Plan for apache/grails-core issue #16348, drafted against PR #16551. Related: #15301, #14081, #14944, #14932.
+Working design for apache/grails-core issue #16348. Originally drafted against PR #16551; implementation targets 9.0.x. Related: #15301, #14081, #14944, #14933, #14932.
