@@ -52,7 +52,7 @@ import spock.lang.Unroll
 class SharedJoinTableUniqueKeyBinderSpec extends HibernateGormDatastoreSpec {
 
     void setupSpec() {
-        manager.registerDomainClasses(SjtOwner, SjtSeparateOwner, SjtParent, SjtChild, SjtRole, SjtListOwner, SjtNote)
+        manager.registerDomainClasses(SjtOwner, SjtSeparateOwner, SjtParent, SjtChild, SjtRole, SjtListOwner, SjtNote, SjtSharedKeyOwner)
     }
 
     private Collection collectionOf(Class owner, String property) {
@@ -95,14 +95,20 @@ class SharedJoinTableUniqueKeyBinderSpec extends HibernateGormDatastoreSpec {
         denyRoles.key.updateable
     }
 
-    void "each association of a shared join table is restricted to the rows that have its element, so a bulk delete leaves the others"() {
+    void "each association of a shared join table with a shared key column is restricted to the rows that have its element"() {
         given:
-        Collection roles = collectionOf(SjtOwner, 'roles')
-        Collection denyRoles = collectionOf(SjtOwner, 'denyRoles')
+        Collection roles = collectionOf(SjtSharedKeyOwner, 'roles')
+        Collection denyRoles = collectionOf(SjtSharedKeyOwner, 'denyRoles')
 
         expect: 'Hibernate removes all the rows of a collection by its key and loads them by it, so the where limits both'
-        roles.where == 'sjt_role_id is not null'
-        denyRoles.where == 'sjt_role_id is not null'
+        roles.where == 'role_id is not null'
+        denyRoles.where == 'deny_role_id is not null'
+    }
+
+    void "a shared join table with separate key columns is not given where restrictions"() {
+        expect: 'each association has its own key column, so it already separates its rows without where restrictions'
+        collectionOf(SjtOwner, 'roles').where == null
+        collectionOf(SjtOwner, 'denyRoles').where == null
     }
 
     void "a join table of one association is not restricted"() {
@@ -114,7 +120,7 @@ class SharedJoinTableUniqueKeyBinderSpec extends HibernateGormDatastoreSpec {
 
     void "binding again does not repeat the restriction"() {
         given:
-        Collection roles = collectionOf(SjtOwner, 'roles')
+        Collection roles = collectionOf(SjtSharedKeyOwner, 'roles')
         SharedJoinTableUniqueKeyBinder binder = new SharedJoinTableUniqueKeyBinder(buildingContext(), new H2Dialect())
 
         when:
@@ -122,12 +128,12 @@ class SharedJoinTableUniqueKeyBinderSpec extends HibernateGormDatastoreSpec {
         binder.bind(roles)
 
         then:
-        roles.where == 'sjt_role_id is not null'
+        roles.where == 'role_id is not null'
     }
 
     void "a restriction the mapping already has is kept and extended"() {
         given:
-        Collection roles = collectionOf(SjtOwner, 'roles')
+        Collection roles = collectionOf(SjtSharedKeyOwner, 'roles')
         String before = roles.where
         roles.where = 'archived = 0'
         SharedJoinTableUniqueKeyBinder binder = new SharedJoinTableUniqueKeyBinder(buildingContext(), new H2Dialect())
@@ -136,7 +142,7 @@ class SharedJoinTableUniqueKeyBinderSpec extends HibernateGormDatastoreSpec {
         binder.bind(roles)
 
         then:
-        roles.where == '(archived = 0) and sjt_role_id is not null'
+        roles.where == '(archived = 0) and role_id is not null'
 
         cleanup:
         roles.where = before
@@ -438,6 +444,17 @@ class SjtOwner {
     Long id
     String name
     static hasMany = [roles: SjtRole, denyRoles: SjtRole]
+}
+
+@Entity
+class SjtSharedKeyOwner {
+    Long id
+    String name
+    static hasMany = [roles: SjtRole, denyRoles: SjtRole]
+    static mapping = {
+        roles joinTable: [name: 'sjt_shared_key_roles', key: 'owner_id', column: 'role_id']
+        denyRoles joinTable: [name: 'sjt_shared_key_roles', key: 'owner_id', column: 'deny_role_id']
+    }
 }
 
 @Entity

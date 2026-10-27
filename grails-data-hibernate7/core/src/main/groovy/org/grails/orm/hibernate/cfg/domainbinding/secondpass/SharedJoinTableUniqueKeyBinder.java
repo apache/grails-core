@@ -110,9 +110,11 @@ public class SharedJoinTableUniqueKeyBinder {
     /**
      * Hibernate removes all the rows of a collection with one statement on its key, and loads them with one. On a join
      * table several collections share, a key column two of them use would take the rows of the other collection
-     * along, so each collection of such a table is restricted to the rows that have a value in its own element
-     * columns. The collections that share the table are found among the bindings of the metadata; one whose element is
-     * not bound yet is restricted when its own pass runs, which finds the others bound.
+     * along, so each collection that shares a key column with another on that table is restricted to the rows that have
+     * a value in its own element columns. Sharing collections with separate key columns already select and delete
+     * only their own rows by key, so they need no where restriction. The collections that share the table are found
+     * among the bindings of the metadata; one whose element is not bound yet is restricted when its own pass runs,
+     * which finds the others bound.
      */
     private void restrictRowsToOwnCollection(Collection collection, Table table) {
         if (!hasColumnsOfOthers(collection, table)) {
@@ -129,6 +131,9 @@ public class SharedJoinTableUniqueKeyBinder {
         }
         Dialect dialect = metadataBuildingContext.getMetadataCollector().getDatabase().getDialect();
         for (Collection member : sharing) {
+            if (!sharesKeyColumnWithOther(member, sharing)) {
+                continue;
+            }
             List<String> present = new ArrayList<>();
             for (Column column : columnsOf(member)) {
                 present.add(column.getQuotedName(dialect) + " is not null");
@@ -144,6 +149,23 @@ public class SharedJoinTableUniqueKeyBinder {
                 member.setWhere("(" + where + ") and " + restriction);
             }
         }
+    }
+
+    private static boolean sharesKeyColumnWithOther(Collection collection, List<Collection> sharing) {
+        if (collection.getKey() == null) {
+            return false;
+        }
+        Set<Column> ownKeyColumns = new HashSet<>(collection.getKey().getColumns());
+        for (Collection other : sharing) {
+            if (other != collection && other.getKey() != null) {
+                for (Column otherKeyCol : other.getKey().getColumns()) {
+                    if (ownKeyColumns.contains(otherKeyCol)) {
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
     }
 
     /**
