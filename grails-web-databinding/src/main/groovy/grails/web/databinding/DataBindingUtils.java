@@ -42,7 +42,6 @@ import org.springframework.validation.BeanPropertyBindingResult;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.FieldError;
 import org.springframework.validation.ObjectError;
-import org.springframework.validation.Validator;
 
 import grails.core.GrailsApplication;
 import grails.databinding.CollectionDataBindingSource;
@@ -55,11 +54,13 @@ import grails.web.mime.MimeType;
 import grails.web.mime.MimeTypeResolver;
 import grails.web.mime.MimeTypeUtils;
 import org.grails.core.exceptions.GrailsConfigurationException;
+import org.grails.core.io.support.GrailsFactoriesLoader;
 import org.grails.datastore.mapping.model.MappingContext;
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.PersistentProperty;
 import org.grails.datastore.mapping.model.types.OneToOne;
 import org.grails.datastore.mapping.proxy.ProxyHandler;
+import org.grails.validation.discovery.ConstrainedDiscovery;
 import org.grails.web.databinding.BindingIncludeLists;
 import org.grails.web.databinding.DefaultASTDatabindingHelper;
 import org.grails.web.databinding.bindingsource.DataBindingSourceRegistry;
@@ -78,7 +79,6 @@ public class DataBindingUtils {
     private static final Logger LOG = LoggerFactory.getLogger(DataBindingUtils.class);
     public static final String DATA_BINDER_BEAN_NAME = "grailsWebDataBinder";
     private static final String BLANK = "";
-    private static final String CONSTRAINED_PROPERTIES = "constrainedProperties";
     private static final String CONSTRAINTS_MAP_PROPERTY = "constraintsMap";
     private static final String CONSTRAINTS_MAP_ACCESSOR = "getConstraintsMap";
     private static final String CONSTRAINTS_PROPERTY = "constraints";
@@ -181,13 +181,15 @@ public class DataBindingUtils {
     /**
      * The constraints of the persistent entity an object is an instance of, or a proxy of. The mapping context
      * evaluates them once, for the validator of the entity, and keeps them for as long as the entity is mapped,
-     * so binding reads them there rather than evaluating the {@code constraints} closure of the class again.
+     * so binding reads them there, through {@link ConstrainedDiscovery}, rather than evaluating the
+     * {@code constraints} closure of the class again.
      *
-     * @return the constraints, or {@code null} when the object is not a mapped entity or its validator does not
-     * expose its constraints
+     * @return the constraints, or {@code null} when the object is not a mapped entity or the validator of the
+     * entity does not hold its constraints
      */
     private static Map getEntityConstrainedProperties(final Object object, final GrailsApplication application) {
-        if (application == null) {
+        final ConstrainedDiscovery constrainedDiscovery = EntityConstraints.DISCOVERY;
+        if (application == null || constrainedDiscovery == null) {
             return null;
         }
         try {
@@ -197,23 +199,34 @@ public class DataBindingUtils {
             }
             final Class type = persistentClass(object, mappingContext);
             final PersistentEntity entity = mappingContext.getPersistentEntity(type.getName());
+            // The entity found by name can be another class's: getPersistentEntity cuts a name at the proxy marker
+            // _$$_, and a reloaded class has the name of the class it replaces.
             if (entity == null || entity.getJavaClass() != type) {
                 return null;
             }
-            final Validator validator = mappingContext.getEntityValidator(entity);
-            if (validator == null) {
-                return null;
-            }
-            final MetaClass metaClass = GroovySystem.getMetaClassRegistry().getMetaClass(validator.getClass());
-            final MetaProperty constrainedProperties = metaClass.hasProperty(validator, CONSTRAINED_PROPERTIES);
-            if (constrainedProperties == null) {
-                return null;
-            }
-            final Object value = constrainedProperties.getProperty(validator);
-            return value instanceof Map ? (Map) value : null;
+            // Discovery wraps each constraint the validator holds in a new delegate on every call. Binding 4
+            // properties of a domain class with 24 constraints took about 17 microseconds through it, against
+            // about 13 reading the map the validator holds directly and about 80 evaluating the closure again.
+            final Map constrainedProperties = constrainedDiscovery.findConstrainedProperties(entity);
+            // An entity whose validator does not hold its constraints, such as the one an entity annotated
+            // @Validated has, or that has no validator, is discovered to have none, so the constraints of its class
+            // are evaluated instead.
+            return constrainedProperties == null || constrainedProperties.isEmpty() ? null : constrainedProperties;
         } catch (GrailsConfigurationException e) {
             // GORM has not initialized, so there is no entity to read the constraints of
             return null;
+        }
+    }
+
+    /**
+     * Loads the {@link ConstrainedDiscovery} binding reads entity constraints with the first time it needs it,
+     * rather than on every bind.
+     */
+    private static final class EntityConstraints {
+
+        private static final ConstrainedDiscovery DISCOVERY = GrailsFactoriesLoader.loadFactory(ConstrainedDiscovery.class);
+
+        private EntityConstraints() {
         }
     }
 
