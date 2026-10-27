@@ -940,6 +940,15 @@ jobs:
           # Decided by the step above; see .github/actions/gradle-cache-policy.
           cache-read-only: ${{ steps.gradle-cache-policy.outputs.read-only }}
           develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY }}
+      # GRAILS-16218: armed before the build rather than after it, because a step after the
+      # build never runs while the build is hung - which is the state being investigated. It
+      # sleeps past the point where this job should have finished and then reports what every
+      # JVM is doing, twice, a minute apart.
+      - name: "🐕 Arm the hang watchdog"
+        run: |
+          chmod +x .github/scripts/hang-watchdog.sh
+          nohup .github/scripts/hang-watchdog.sh > "${RUNNER_TEMP}/hang-watchdog.log" 2>&1 &
+          echo "armed; output will be printed after the build"
       - name: "🏃 Run Functional Tests"
         env:
           GITHUB_MAVEN_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
@@ -951,6 +960,11 @@ jobs:
           -PgrailsIndy=${{ matrix.indy }}
           -PonlyNeo4jTests
           -PskipCodeStyle
+      # `always()` so that this is reached when the job is cancelled by the timeout above, which
+      # is exactly the run whose watchdog output is worth reading.
+      - name: "🐕 Hang watchdog output"
+        if: always()
+        run: cat "${RUNNER_TEMP}/hang-watchdog.log" || echo "no watchdog output"
   publishGradle:
     # always() with an explicit result check, see the concurrency comment at the top.
     if: >-
