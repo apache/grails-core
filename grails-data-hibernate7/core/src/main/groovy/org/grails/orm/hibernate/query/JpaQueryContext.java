@@ -34,7 +34,7 @@ import jakarta.persistence.criteria.Path;
  *
  * @since 8.0
  */
-public class JpaQueryContext implements Cloneable {
+public class JpaQueryContext implements Cloneable, QueryPathContext {
 
     private final AliasRegistry aliasRegistry;
     private final JoinTracker joinTracker;
@@ -110,6 +110,7 @@ public class JpaQueryContext implements Cloneable {
         this.parent = parent;
     }
 
+    @Override
     public From<?, ?> getRoot() {
         return joinTracker.getRoot();
     }
@@ -143,11 +144,13 @@ public class JpaQueryContext implements Cloneable {
     }
 
     /**
-     * Returns the selection recorded under an alias by {@link #registerSelectionAlias(String, Expression)}.
+     * Returns the selection recorded under an alias by {@link #registerSelectionAlias(String, Expression)}. Unlike
+     * {@link #getFullyQualifiedExpression(String)}, which resolves a property first, this asks for the alias alone.
      *
      * @param alias the alias of the selection
      * @return the selection, or {@code null} if no selection of this query has the alias
      */
+    @Override
     public Expression<?> getSelectionAlias(String alias) {
         return selectionAliases.get(alias);
     }
@@ -173,6 +176,7 @@ public class JpaQueryContext implements Cloneable {
         return expr;
     }
 
+    @Override
     public Expression<?> getFullyQualifiedExpression(String path) {
         if (parent != null) {
             if ("{alias}".equals(path)) {
@@ -185,6 +189,7 @@ public class JpaQueryContext implements Cloneable {
         return resolver.resolve(path);
     }
 
+    @Override
     public Path<?> getFullyQualifiedPath(String path) {
         if (parent != null) {
             if ("{alias}".equals(path)) {

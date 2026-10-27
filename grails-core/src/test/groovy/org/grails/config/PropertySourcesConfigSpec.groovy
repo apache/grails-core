@@ -116,4 +116,25 @@ class PropertySourcesConfigSpec extends Specification {
         then: 'the second value is not merged with the first value'
         cfg.foo.bar == ['two': '2']
     }
+
+    void 'a dotted key walks plain nested maps and skips empty segments'() {
+        given: "a plain map value that was put without flattened keys"
+        def config = new PropertySourcesConfig()
+        config.put('plain', [nested: [value: 'found']])
+
+        expect: "each segment of the key is resolved against the map it reaches"
+        config.getProperty('plain.nested.value') == 'found'
+        config.getProperty('plain.nested', Map) == [value: 'found']
+        config.getProperty('plain.missing.value') == null
+
+        and: "empty segments are ignored as they always were"
+        config.getProperty('plain..nested.value') == 'found'
+        config.getProperty('.plain.nested.value.') == 'found'
+        config.getProperty('...') == null
+
+        and: "a key that runs past a scalar answers with that scalar, as it always has"
+        // Grails 8 behaviour, pinned on purpose: apache/grails-core#16732 makes such a key absent on 9.0.x
+        config.getProperty('plain.nested.value.deeper') == 'found'
+        config.containsProperty('plain.nested.value.deeper')
+    }
 }

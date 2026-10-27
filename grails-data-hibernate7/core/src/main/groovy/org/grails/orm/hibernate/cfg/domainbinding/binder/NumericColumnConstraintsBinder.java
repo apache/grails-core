@@ -43,6 +43,18 @@ public class NumericColumnConstraintsBinder {
         this.dialect = dialect;
     }
 
+    /**
+     * Binds the scale and the precision of a numeric column: the scale of the column configuration, or of the
+     * property; the precision of the column configuration, or, for an exact type, the one that fits the bounds of
+     * the property and is at least the default decimal precision of the dialect.
+     *
+     * @param column the column
+     * @param cc the configuration of the column, or {@code null}
+     * @param constrainedProperty the constraints of the property, or {@code null} for a column of a property that
+     * spans several columns, whose constraints describe the whole value: the scale, the precision and the bounds
+     * then come from the column configuration and the dialect alone
+     * @param propertyType the type of the value the column holds
+     */
     public void bindNumericColumnConstraints(
             Column column, ColumnConfig cc, PropertyConfig constrainedProperty, Class<?> propertyType) {
         int scale = determineScale(cc, constrainedProperty);
@@ -54,8 +66,10 @@ public class NumericColumnConstraintsBinder {
         if (cc != null && cc.getPrecision() > -1) {
             column.setPrecision(cc.getPrecision());
         } else if (!isApproximateFloatingPoint(propertyType)) {
-            int minConstraintValueLength = getConstraintValueLength(constrainedProperty.getMin(), scale);
-            int maxConstraintValueLength = getConstraintValueLength(constrainedProperty.getMax(), scale);
+            int minConstraintValueLength = getConstraintValueLength(
+                    constrainedProperty == null ? null : constrainedProperty.getMin(), scale);
+            int maxConstraintValueLength = getConstraintValueLength(
+                    constrainedProperty == null ? null : constrainedProperty.getMax(), scale);
 
             int precision = minConstraintValueLength > 0 && maxConstraintValueLength > 0 ?
                     Math.max(minConstraintValueLength, maxConstraintValueLength) :

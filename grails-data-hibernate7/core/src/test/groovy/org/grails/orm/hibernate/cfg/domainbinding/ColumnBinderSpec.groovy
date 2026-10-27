@@ -518,6 +518,95 @@ class ColumnBinderSpec extends HibernateGormDatastoreSpec {
         then:
         !column.isUnique()
     }
+
+    def "a column bound without uniqueness is bound like any other but is not unique and gets no unique key"() {
+        given:
+        def columnNameFetcher = Mock(ColumnNameForPropertyAndPathFetcher)
+        def stringBinder = Mock(StringColumnConstraintsBinder)
+        def numericBinder = Mock(NumericColumnConstraintsBinder)
+        def keyCreator = Mock(CreateKeyForProps)
+        def indexBinder = Mock(IndexBinder)
+
+        def binder = new ColumnBinder(
+                columnNameFetcher,
+                stringBinder,
+                numericBinder,
+                keyCreator,
+                indexBinder
+        )
+
+        def entity = createPersistentEntity(entityClass)
+        def prop = entity.getPropertyByName(propertyName)
+        def column = new Column("test")
+        column.setUnique(true)
+        def table = new Table()
+        def cc = new ColumnConfig(comment: "cmt", defaultValue: "def", read: "r", write: "w")
+
+        columnNameFetcher.getColumnNameForPropertyAndPath(prop, "p", cc) >> "attr_col"
+
+        when:
+        binder.bindColumnWithoutUniqueness(prop, null, column, cc, "p", table, null, String)
+
+        then: "the column is named, configured and indexed as bindColumn does"
+        column.getName() == "attr_col"
+        column.getComment() == "cmt"
+        column.getDefaultValue() == "def"
+        column.getCustomRead() == "r"
+        column.getCustomWrite() == "w"
+        1 * indexBinder.bindIndex("attr_col", column, cc, table)
+
+        and: "neither the column nor a unique key carries the uniqueness of the property"
+        !column.isUnique()
+        0 * keyCreator._
+
+        where:
+        entityClass         | propertyName
+        CBUniqueEntity      | "uniqueProp"
+        CBUniqueGroupEntity | "groupedProp"
+        CBUniqueEntity      | "notUniqueProp"
+    }
+
+    def "a column bound without uniqueness is defined from the type it holds and its own configuration, not from its property"() {
+        given: "a String property, whose one column would take the string constraints of the property"
+        def columnNameFetcher = Mock(ColumnNameForPropertyAndPathFetcher)
+        def stringBinder = Mock(StringColumnConstraintsBinder)
+        def numericBinder = Mock(NumericColumnConstraintsBinder)
+        def keyCreator = Mock(CreateKeyForProps)
+        def indexBinder = Mock(IndexBinder)
+
+        def binder = new ColumnBinder(
+                columnNameFetcher,
+                stringBinder,
+                numericBinder,
+                keyCreator,
+                indexBinder
+        )
+
+        def entity = createPersistentEntity(CBUniqueEntity)
+        def prop = entity.getPropertyByName("uniqueProp")
+        def column = new Column("test")
+        def table = new Table()
+        def cc = new ColumnConfig(precision: 20)
+
+        columnNameFetcher.getColumnNameForPropertyAndPath(prop, "p", cc) >> "attr_col"
+
+        when:
+        binder.bindColumnWithoutUniqueness(prop, null, column, cc, "p", table, null, columnType)
+
+        then: "the constraints of the property are not applied to the column"
+        0 * stringBinder._
+
+        and: "a numeric column is bound from its configuration and the dialect, without the constraints of the property"
+        numericCalls * numericBinder.bindNumericColumnConstraints(column, cc, null, columnType)
+        0 * numericBinder._
+
+        where:
+        columnType | numericCalls
+        BigInteger | 1
+        BigDecimal | 1
+        String     | 0
+        long       | 0
+    }
 }
 
 @Entity

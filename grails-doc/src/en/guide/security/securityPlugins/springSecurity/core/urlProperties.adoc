@@ -193,5 +193,5 @@ The table shows configurable URL-related properties.
 
 |fii.observeOncePerRequest
 |`true`
-|If `false` allow checks to happen multiple times, for example when JSP forwards are being used and filter security is desired on each included fragment of the HTTP request
+|If `true`, a request is authorized once, on its first dispatch; later dispatches of the same request, such as the `ERROR` dispatch that renders its error page, are not authorized again. The skip applies to every dispatcher type the security filter chain is registered for, which is `REQUEST` and `ERROR` by default. If `false`, every dispatch is authorized, for example when JSP forwards are being used and filter security is desired on each included fragment of the HTTP request
 |====================

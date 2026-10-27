@@ -23,7 +23,6 @@ import java.lang.reflect.Modifier
 import java.util.regex.Pattern
 
 import groovy.transform.CompileStatic
-import groovy.transform.Memoized
 import groovy.transform.TypeChecked
 import org.codehaus.groovy.ast.ASTNode
 import org.codehaus.groovy.ast.AnnotatedNode
@@ -444,9 +443,30 @@ class AstUtils {
         }
         return pn
     }
-    @Memoized
+    /** The node metadata key the verdict of {@link #isDomainClass(ClassNode)} is kept under, on the node it describes. */
+    private static final String DOMAIN_CLASS_VERDICT = AstUtils.name + '.isDomainClass'
+
+    /**
+     * Whether a class node represents a domain class, as {@link #isDomainClassUncached(ClassNode)}
+     * decides, remembered on the node itself. The verdict is kept as node metadata of the node's
+     * {@link ClassNode#redirect() redirect}, so it lives exactly as long as the node: nothing outside
+     * the compilation holds on to it, and two same-named nodes from different compilations, such as
+     * test fixtures compiled from strings, each get their own answer. A JVM-wide cache keyed by the
+     * node pinned every node it had seen, and with it the node's module, its compile unit and the
+     * class loader of its compilation, for the life of the compiler process.
+     *
+     * @param classNode the class node to inspect
+     * @return whether the node represents a domain class
+     */
     static boolean isDomainClass(ClassNode classNode) {
-        return isDomainClassUncached(classNode)
+        if (classNode == null) return false
+        ClassNode node = classNode.redirect()
+        Boolean verdict = node.getNodeMetaData(DOMAIN_CLASS_VERDICT) as Boolean
+        if (verdict == null) {
+            verdict = isDomainClassUncached(classNode)
+            node.putNodeMetaData(DOMAIN_CLASS_VERDICT, verdict)
+        }
+        return verdict
     }
 
     /**

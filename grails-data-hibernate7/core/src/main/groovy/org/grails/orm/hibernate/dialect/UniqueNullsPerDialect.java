@@ -19,8 +19,6 @@
 
 package org.grails.orm.hibernate.dialect;
 
-import java.util.Arrays;
-
 import org.hibernate.dialect.DB2Dialect;
 import org.hibernate.dialect.DB2iDialect;
 import org.hibernate.dialect.DB2zDialect;
@@ -46,7 +44,7 @@ import org.grails.datastore.mapping.config.UniqueNulls;
  *
  * @since 9.0
  */
-public enum UniqueNullsPerDialect {
+public enum UniqueNullsPerDialect implements DialectKeyed<UniqueNullsPerDialect> {
 
     ORACLE(UniqueNulls.VALUE, OracleDialect.class),
 
@@ -62,19 +60,22 @@ public enum UniqueNullsPerDialect {
     DEFAULT(UniqueNulls.SKIP, Dialect.class);
 
     private final UniqueNulls uniqueNulls;
-    private final Class<? extends Dialect> dialectClass;
+    private final Class<? extends Dialect>[] dialectClasses;
 
-    UniqueNullsPerDialect(UniqueNulls uniqueNulls, Class<? extends Dialect> dialectClass) {
+    @SafeVarargs
+    UniqueNullsPerDialect(UniqueNulls uniqueNulls, Class<? extends Dialect>... dialectClasses) {
         this.uniqueNulls = uniqueNulls;
-        this.dialectClass = dialectClass;
+        this.dialectClasses = dialectClasses;
     }
 
     /** The reading that fits the dialect, {@link #DEFAULT} unless the dialect is listed. */
     public static UniqueNullsPerDialect forDialect(Dialect dialect) {
-        return Arrays.stream(values())
-                .filter(entry -> entry != DEFAULT && entry.dialectClass.isInstance(dialect))
-                .findFirst()
-                .orElse(DEFAULT);
+        return DialectKeyed.forDialect(UniqueNullsPerDialect.class, dialect);
+    }
+
+    @Override
+    public Class<? extends Dialect>[] dialectClasses() {
+        return dialectClasses.clone();
     }
 
     public UniqueNulls uniqueNulls() {

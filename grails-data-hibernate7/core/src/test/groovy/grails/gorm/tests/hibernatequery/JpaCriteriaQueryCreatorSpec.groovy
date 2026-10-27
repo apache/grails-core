@@ -29,8 +29,10 @@ import org.grails.datastore.mapping.query.Query
 import org.hibernate.query.criteria.JpaCriteriaQuery
 import org.grails.orm.hibernate.query.JpaCriteriaQueryCreator
 import org.grails.orm.hibernate.query.JpaQueryContext
+import org.grails.orm.hibernate.query.PredicateGenerator
 import org.grails.orm.hibernate.query.SqlGroupProjection
 import org.grails.orm.hibernate.query.SqlProjection
+import org.grails.orm.hibernate.query.SqlSyntax
 import org.springframework.core.convert.support.DefaultConversionService
 import grails.gorm.annotation.Entity
 import org.grails.datastore.gorm.GormEntity
@@ -130,6 +132,55 @@ class JpaCriteriaQueryCreatorSpec extends HibernateGormDatastoreSpec {
         query != null
     }
 
+    def "test createQuery orders by what the handler of a Query.Order subclass returns, in its place"() {
+        given:
+        var entity = getPersistentEntity(JpaCriteriaQueryCreatorSpecPerson)
+        var detachedCriteria = new DetachedCriteria(JpaCriteriaQueryCreatorSpecPerson)
+        detachedCriteria.order(new JpaCriteriaQueryCreatorSpecLengthOrder())
+        detachedCriteria.order(Query.Order.asc("firstName"))
+        JpaQueryContext seen = null
+        PredicateGenerator.registerOrderHandler(JpaCriteriaQueryCreatorSpecLengthOrder) { cq, root, cb, order, context ->
+            seen = context
+            cb.desc(cb.length(context.getFullyQualifiedPath('firstName') as jakarta.persistence.criteria.Expression<String>))
+        }
+        var creator = new JpaCriteriaQueryCreator(new Query.ProjectionList(), criteriaBuilder, entity, detachedCriteria, new DefaultConversionService())
+
+        when:
+        JpaCriteriaQuery<?> query = creator.createQuery()
+
+        then: "the handler's order comes first and the property order after it"
+        query.orderList.size() == 2
+        !query.orderList[0].ascending
+        query.orderList[1].ascending
+
+        and: "the handler was given the context of the query"
+        seen != null
+        seen.root.is(query.roots.first())
+
+        cleanup:
+        PredicateGenerator.clearCustomOrderHandlers()
+    }
+
+    def "test createQuery leaves out an order whose handler returns null"() {
+        given:
+        var entity = getPersistentEntity(JpaCriteriaQueryCreatorSpecPerson)
+        var detachedCriteria = new DetachedCriteria(JpaCriteriaQueryCreatorSpecPerson)
+        detachedCriteria.order(new JpaCriteriaQueryCreatorSpecLengthOrder())
+        detachedCriteria.order(Query.Order.asc("firstName"))
+        PredicateGenerator.registerOrderHandler(JpaCriteriaQueryCreatorSpecLengthOrder) { cq, root, cb, order, context -> null }
+        var creator = new JpaCriteriaQueryCreator(new Query.ProjectionList(), criteriaBuilder, entity, detachedCriteria, new DefaultConversionService())
+
+        when:
+        JpaCriteriaQuery<?> query = creator.createQuery()
+
+        then:
+        query.orderList.size() == 1
+        query.orderList[0].ascending
+
+        cleanup:
+        PredicateGenerator.clearCustomOrderHandlers()
+    }
+
     def "test createQuery with group by"() {
         given:
         var entity = getPersistentEntity(JpaCriteriaQueryCreatorSpecPerson)
@@ -179,7 +230,7 @@ class JpaCriteriaQueryCreatorSpec extends HibernateGormDatastoreSpec {
         var projections = new Query.ProjectionList()
         projections.add(new SqlGroupProjection('"full name"'))
         SqlProjection.of('upper(last_name) as "full name", count(*) as [total count]', ["full name", "total count"],
-                [String, Long]).each { projections.add(it) }
+                [String, Long], SqlSyntax.TRANSACT_SQL).each { projections.add(it) }
         var creator = new JpaCriteriaQueryCreator(projections, criteriaBuilder, entity, detachedCriteria, new DefaultConversionService())
 
         when:
@@ -215,7 +266,7 @@ class JpaCriteriaQueryCreatorSpec extends HibernateGormDatastoreSpec {
         groupBy      | groupedBy
         'FULLNAME'   | 'upper(last_name)'
         '`FULLNAME`' | 'upper(last_name)'
-        '[FULLNAME]' | 'upper(last_name)'
+        '[FULLNAME]' | '[FULLNAME]'
         '"fullName"' | 'upper(last_name)'
         '"FULLNAME"' | '"FULLNAME"'
     }
@@ -459,6 +510,14 @@ class JpaCriteriaQueryCreatorSpecPet implements GormEntity<JpaCriteriaQueryCreat
     Long id
     String name
     JpaCriteriaQueryCreatorSpecPerson owner
+}
+
+/** An order that a registered handler converts. */
+class JpaCriteriaQueryCreatorSpecLengthOrder extends Query.Order {
+
+    JpaCriteriaQueryCreatorSpecLengthOrder() {
+        super('firstName')
+    }
 }
 
 @Entity

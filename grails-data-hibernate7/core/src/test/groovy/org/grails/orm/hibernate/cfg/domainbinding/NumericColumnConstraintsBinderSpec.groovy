@@ -76,6 +76,29 @@ class NumericColumnConstraintsBinderSpec extends Specification {
         column.precision == new H2Dialect().getDefaultDecimalPrecision()
     }
 
+    def "should bind the scale and precision of the column config, or the dialect default precision, without a property config"() {
+        given: "a column of a property that spans several columns, whose constraints describe the whole value"
+        def h2Binder = new NumericColumnConstraintsBinder(new H2Dialect())
+        def cc = new ColumnConfig()
+        cc.scale = 3
+
+        when:
+        h2Binder.bindNumericColumnConstraints(column, cc, null, BigDecimal)
+
+        then:
+        column.scale == 3
+        column.precision == new H2Dialect().getDefaultDecimalPrecision()
+
+        when:
+        def configured = new Column("configured")
+        cc.precision = 12
+        h2Binder.bindNumericColumnConstraints(configured, cc, null, BigInteger)
+
+        then:
+        configured.precision == 12
+        configured.scale == 3
+    }
+
     def "should default decimal precision consistently across dialects without a per-dialect special case"() {
         given:
         def binderFor = new NumericColumnConstraintsBinder(dialect)
