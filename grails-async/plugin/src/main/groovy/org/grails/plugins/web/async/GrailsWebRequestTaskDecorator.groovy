@@ -20,6 +20,8 @@ package org.grails.plugins.web.async
 
 import groovy.transform.CompileStatic
 
+import jakarta.servlet.http.HttpServletRequest
+
 import org.springframework.core.task.TaskDecorator
 import org.springframework.web.context.request.RequestAttributes
 import org.springframework.web.context.request.RequestContextHolder
@@ -29,6 +31,10 @@ import org.grails.web.util.WebUtils
 
 /**
  * Propagates the current Grails web request through a Spring-managed task executor.
+ *
+ * <p>The task sees the request it was started during until that request completes, and a copy of the request
+ * taken as it completed from then on, so a task that outlives the request does not read a request the container
+ * has recycled.</p>
  *
  * @since 8.0
  */
@@ -45,10 +51,11 @@ class GrailsWebRequestTaskDecorator implements TaskDecorator {
             return task
         }
 
+        HttpServletRequest request = TaskRequest.of(captured)
         return () -> {
             RequestAttributes previous = RequestContextHolder.getRequestAttributes()
             GrailsWebRequest taskRequest = new GrailsWebRequest(
-                    captured.currentRequest,
+                    request,
                     captured.currentResponse,
                     captured.attributes)
             WebUtils.storeGrailsWebRequest(taskRequest)
