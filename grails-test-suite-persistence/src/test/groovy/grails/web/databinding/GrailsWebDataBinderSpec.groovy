@@ -18,6 +18,8 @@
  */
 package grails.web.databinding
 
+import java.util.concurrent.atomic.AtomicInteger
+
 import groovy.transform.CompileStatic
 import groovy.transform.Sortable
 
@@ -51,8 +53,9 @@ class GrailsWebDataBinderSpec extends Specification implements DataTest {
     void setupSpec() {
         mockDomains(
                 AssociationBindingAuthor, AssociationBindingBook, AssociationBindingPage, Author, BinderNullabilityEntity,
-                Child, CollectionContainer, DataBindingBook, Fidget, Foo, GeneratedBindingChild, GeneratedBindingParent,
-                Parent, Publication, Publisher, RawCollectionContainer, Team, Widget
+                Child, CollectionContainer, ConstraintsCountingWidget, DataBindingBook, Fidget, Foo, GeneratedBindingChild,
+                GeneratedBindingParent, Parent, Publication, Publisher, RawCollectionContainer, Team, UnbindableChildEntity,
+                UnbindableParentEntity, Widget
         )
     }
 
@@ -765,6 +768,49 @@ class GrailsWebDataBinderSpec extends Specification implements DataTest {
         then:
         widget.isBindable == 'Should Be Bound'
         widget.isNotBindable == null
+    }
+
+    @Issue('https://github.com/apache/grails-core/issues/16558')
+    void 'Test binding a domain instance reads the bindable constraints of its entity instead of evaluating them again'() {
+        given: 'an instance of the domain class has been bound once'
+        binder.bind(new ConstraintsCountingWidget(), new SimpleMapDataBindingSource([name: 'First']))
+        int evaluations = ConstraintsCountingWidget.CONSTRAINTS_EVALUATIONS.get()
+
+        when: 'more instances are bound through the binder, the binding utilities and the map constructor'
+        def boundByBinder = new ConstraintsCountingWidget()
+        binder.bind(boundByBinder, new SimpleMapDataBindingSource([name: 'Binder', secret: 'Binder']))
+        def boundByUtils = new ConstraintsCountingWidget()
+        DataBindingUtils.bindObjectToInstance(boundByUtils, [name: 'Utils', secret: 'Utils'])
+        def boundByConstructor = new ConstraintsCountingWidget(name: 'Constructor', secret: 'Constructor')
+
+        then: 'the property constrained bindable: false is not bound'
+        boundByBinder.name == 'Binder'
+        boundByBinder.secret == null
+        boundByUtils.name == 'Utils'
+        boundByUtils.secret == null
+        boundByConstructor.name == 'Constructor'
+        boundByConstructor.secret == null
+
+        and: 'the constraints closure of the class did not run again'
+        ConstraintsCountingWidget.CONSTRAINTS_EVALUATIONS.get() == evaluations
+    }
+
+    @Issue('https://github.com/apache/grails-core/issues/16558')
+    void 'Test binding a domain subclass does not bind the properties it or its superclass constrain bindable: false'() {
+        given:
+        def child = new UnbindableChildEntity()
+
+        when:
+        binder.bind(child, new SimpleMapDataBindingSource([
+            name: 'Bound',
+            parentSecret: 'Parent Secret',
+            childSecret: 'Child Secret'
+        ]))
+
+        then:
+        child.name == 'Bound'
+        child.parentSecret == null
+        child.childSecret == null
     }
 
     void 'Test binding to a collection of String'() {
@@ -2189,6 +2235,41 @@ class Author {
     static constraints = {
         widget(nullable: true)
         stringWithSpecialBinding(nullable: true)
+    }
+}
+
+@Entity
+class ConstraintsCountingWidget {
+
+    static final AtomicInteger CONSTRAINTS_EVALUATIONS = new AtomicInteger()
+
+    String name
+    String secret
+
+    static constraints = {
+        ConstraintsCountingWidget.CONSTRAINTS_EVALUATIONS.incrementAndGet()
+        secret(nullable: true, bindable: false)
+    }
+}
+
+@Entity
+class UnbindableParentEntity {
+
+    String name
+    String parentSecret
+
+    static constraints = {
+        parentSecret(nullable: true, bindable: false)
+    }
+}
+
+@Entity
+class UnbindableChildEntity extends UnbindableParentEntity {
+
+    String childSecret
+
+    static constraints = {
+        childSecret(nullable: true, bindable: false)
     }
 }
 

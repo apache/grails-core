@@ -18,10 +18,13 @@
  */
 package grails.web.databinding
 
+import spock.lang.Issue
 import spock.lang.Specification
 
 import org.springframework.context.ApplicationContext
 import org.springframework.context.support.StaticApplicationContext
+import org.springframework.validation.Errors
+import org.springframework.validation.Validator
 
 import grails.core.DefaultGrailsApplication
 import grails.core.GrailsApplication
@@ -139,6 +142,91 @@ class DataBindingUtilsSpec extends Specification {
         and: 'a subclass that is not a proxy still binds the properties its superclass whitelist leaves out'
         subclass.name == 'Grails'
         subclass.version == '8'
+    }
+
+    @Issue('https://github.com/apache/grails-core/issues/16558')
+    void 'test a mapped entity is bound with the constraints its validator holds'() {
+        given: 'an application whose mapping context validates an entity that constrains a property bindable: false'
+        def mappingContext = new KeyValueMappingContext('test')
+        def entity = mappingContext.addPersistentEntity(MappedEntity)
+        mappingContext.addEntityValidator(entity, new ConstrainedEntityValidator([
+                name  : new MetaConstrainedProperty(bindable: true),
+                secret: new MetaConstrainedProperty(bindable: false)
+        ]))
+        def application = new DefaultGrailsApplication()
+        application.mappingContext = mappingContext
+        Holders.setGrailsApplication(application)
+
+        and:
+        def target = new MappedEntity()
+
+        when:
+        DataBindingUtils.bindObjectToInstance(target, [name: 'Grails', secret: 'Hidden'])
+
+        then:
+        target.name == 'Grails'
+        target.secret == null
+    }
+
+    @Issue('https://github.com/apache/grails-core/issues/16558')
+    void 'test a proxy of a mapped entity is bound with the constraints of the entity it stands for'() {
+        given: 'an application whose datastore generates a proxy as a subclass of the entity it stands for'
+        def mappingContext = new KeyValueMappingContext('test')
+        mappingContext.proxyFactory = Stub(ProxyFactory) {
+            isProxy(_ as ProxyOfMappedEntity) >> true
+            getProxiedClass(_ as ProxyOfMappedEntity) >> MappedEntity
+        }
+        def entity = mappingContext.addPersistentEntity(MappedEntity)
+        mappingContext.addEntityValidator(entity, new ConstrainedEntityValidator([
+                secret: new MetaConstrainedProperty(bindable: false)
+        ]))
+        def application = new DefaultGrailsApplication()
+        application.mappingContext = mappingContext
+        Holders.setGrailsApplication(application)
+
+        and:
+        def proxy = new ProxyOfMappedEntity()
+
+        when:
+        DataBindingUtils.bindObjectToInstance(proxy, [name: 'Grails', secret: 'Hidden'])
+
+        then:
+        proxy.name == 'Grails'
+        proxy.secret == null
+    }
+
+    @Issue('https://github.com/apache/grails-core/issues/16558')
+    void 'test an entity whose validator does not expose its constraints is bound with the constraints its class declares'() {
+        given:
+        def mappingContext = new KeyValueMappingContext('test')
+        def entity = mappingContext.addPersistentEntity(ConstraintsMapEntity)
+        mappingContext.addEntityValidator(entity, new UnconstrainedEntityValidator())
+        def application = new DefaultGrailsApplication()
+        application.mappingContext = mappingContext
+        Holders.setGrailsApplication(application)
+
+        and:
+        def target = new ConstraintsMapEntity()
+
+        when:
+        DataBindingUtils.bindObjectToInstance(target, [name: 'Grails', secret: 'Hidden'])
+
+        then:
+        target.name == 'Grails'
+        target.secret == null
+    }
+
+    @Issue('https://github.com/apache/grails-core/issues/16558')
+    void 'test a constrained property that wraps another is read through the one it wraps'() {
+        given:
+        def command = new WrappedConstraintsCommand()
+
+        when:
+        DataBindingUtils.bindObjectToInstance(command, [name: 'Grails', secret: 'Hidden'])
+
+        then:
+        command.name == 'Grails'
+        command.secret == null
     }
 
     void 'test binding before GORM has initialized the mapping context'() {
@@ -343,6 +431,89 @@ class SubclassOfWhitelistedCommand extends WhitelistedCommand {
 
 // Stands for the subclass a datastore generates at runtime to proxy an instance of the class it extends.
 class ProxyOfWhitelistedCommand extends WhitelistedCommand {
+}
+
+class MappedEntity {
+
+    Long id
+    String name
+    String secret
+}
+
+// Stands for the subclass a datastore generates at runtime to proxy an instance of the entity it extends.
+class ProxyOfMappedEntity extends MappedEntity {
+}
+
+class ConstraintsMapEntity {
+
+    Long id
+    String name
+    String secret
+
+    static Map getConstraintsMap() {
+        [secret: new MetaConstrainedProperty(bindable: false)]
+    }
+}
+
+class WrappedConstraintsCommand {
+
+    String name
+    String secret
+
+    static Map getConstraintsMap() {
+        [secret: new WrappingConstrainedProperty(new MetaConstrainedProperty(bindable: false))]
+    }
+}
+
+// Holds its meta constraints, such as bindable, as a constrained property of GORM does.
+class MetaConstrainedProperty {
+
+    boolean bindable
+
+    Object getMetaConstraintValue(String name) {
+        name == 'bindable' ? bindable : null
+    }
+}
+
+// Wraps a constrained property, as the ones a validateable class holds do, without its accessors.
+class WrappingConstrainedProperty {
+
+    final Object property
+
+    WrappingConstrainedProperty(Object property) {
+        this.property = property
+    }
+}
+
+// Exposes the constraints of the entity it validates, as the validator GORM creates for an entity does.
+class ConstrainedEntityValidator implements Validator {
+
+    final Map constrainedProperties
+
+    ConstrainedEntityValidator(Map constrainedProperties) {
+        this.constrainedProperties = constrainedProperties
+    }
+
+    @Override
+    boolean supports(Class<?> clazz) {
+        true
+    }
+
+    @Override
+    void validate(Object target, Errors errors) {
+    }
+}
+
+class UnconstrainedEntityValidator implements Validator {
+
+    @Override
+    boolean supports(Class<?> clazz) {
+        true
+    }
+
+    @Override
+    void validate(Object target, Errors errors) {
+    }
 }
 
 class CountedCommand {

@@ -223,7 +223,7 @@ class GrailsWebDataBinder extends SimpleDataBinder {
             bindingIncludeList.set(whiteList)
             bindingTargetType.set(object.getClass())
             try {
-                super.doBind(object, source, filter, whiteList, addUnbindablePropertyNames(object, blackList), listenerWrapper, bindingResult)
+                super.doBind(object, source, filter, whiteList, addUnbindablePropertyNames(object, blackList, grailsApplication), listenerWrapper, bindingResult)
             } finally {
                 if (previousIncludeList != null) {
                     bindingIncludeList.set(previousIncludeList)
