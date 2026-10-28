@@ -23,6 +23,7 @@ import java.util.Collections;
 import java.util.List;
 
 import org.hibernate.MappingException;
+import org.hibernate.boot.spi.InFlightMetadataCollector;
 import org.hibernate.mapping.Column;
 import org.hibernate.mapping.Table;
 
@@ -37,17 +38,21 @@ public class CreateKeyForProps {
 
     private final ColumnNameForPropertyAndPathFetcher columnNameForPropertyAndPathFetcher;
     private final UniqueKeyForColumnsCreator uniqueKeyForColumnsCreator;
+    private final InFlightMetadataCollector metadataCollector;
 
-    public CreateKeyForProps(ColumnNameForPropertyAndPathFetcher columnNameForPropertyAndPathFetcher) {
-        this.columnNameForPropertyAndPathFetcher = columnNameForPropertyAndPathFetcher;
-        this.uniqueKeyForColumnsCreator = new UniqueKeyForColumnsCreator();
+    public CreateKeyForProps(
+            ColumnNameForPropertyAndPathFetcher columnNameForPropertyAndPathFetcher,
+            InFlightMetadataCollector metadataCollector) {
+        this(columnNameForPropertyAndPathFetcher, new UniqueKeyForColumnsCreator(), metadataCollector);
     }
 
     protected CreateKeyForProps(
             ColumnNameForPropertyAndPathFetcher columnNameForPropertyAndPathFetcher,
-            UniqueKeyForColumnsCreator uniqueKeyForColumnsCreator) {
+            UniqueKeyForColumnsCreator uniqueKeyForColumnsCreator,
+            InFlightMetadataCollector metadataCollector) {
         this.columnNameForPropertyAndPathFetcher = columnNameForPropertyAndPathFetcher;
         this.uniqueKeyForColumnsCreator = uniqueKeyForColumnsCreator;
+        this.metadataCollector = metadataCollector;
     }
 
     public void createKeyForProps(HibernatePersistentProperty grailsProp, String path, Table table, String columnName) {
@@ -61,29 +66,38 @@ public class CreateKeyForProps {
         PropertyConfig mappedForm = grailsProp.getMappedForm();
 
         if (mappedForm.isUnique() && mappedForm.isUniqueWithinGroup()) {
-
-            List<Column> keyList = new ArrayList<>();
-            keyList.add(new Column(columnName));
-            List<String> propertyNames = mappedForm.getUniquenessGroup();
-            GrailsHibernatePersistentEntity owner = grailsProp.getHibernateOwner();
-            for (String propertyName : propertyNames) {
-                HibernatePersistentProperty otherProp = owner.getHibernatePropertyByName(propertyName);
-                if (otherProp == null) {
-                    throw new MappingException(
-                            owner.getJavaClass().getName() + " references an unknown property " + propertyName);
-                }
-                List<ColumnConfig> columns = otherProp.getHibernateMappedForm().getColumns();
-                if (columns.isEmpty()) {
-                    columns = Collections.singletonList(null);
-                }
-                for (ColumnConfig column : columns) {
-                    String otherColumnName =
-                            columnNameForPropertyAndPathFetcher.getColumnNameForPropertyAndPath(otherProp, path, column);
-                    keyList.add(new Column(otherColumnName));
-                }
+            if (metadataCollector.isInSecondPass()) {
+                createKeyForGroup(grailsProp, path, table, columnName, mappedForm);
+            } else {
+                metadataCollector.addSecondPass(persistentClasses ->
+                        createKeyForGroup(grailsProp, path, table, columnName, mappedForm));
             }
-
-            uniqueKeyForColumnsCreator.createUniqueKeyForColumns(table, keyList);
         }
+    }
+
+    private void createKeyForGroup(
+            HibernatePersistentProperty grailsProp, String path, Table table, String columnName, PropertyConfig mappedForm) {
+        List<Column> keyList = new ArrayList<>();
+        keyList.add(new Column(columnName));
+        List<String> propertyNames = mappedForm.getUniquenessGroup();
+        GrailsHibernatePersistentEntity owner = grailsProp.getHibernateOwner();
+        for (String propertyName : propertyNames) {
+            HibernatePersistentProperty otherProp = owner.getHibernatePropertyByName(propertyName);
+            if (otherProp == null) {
+                throw new MappingException(
+                        owner.getJavaClass().getName() + " references an unknown property " + propertyName);
+            }
+            List<ColumnConfig> columns = otherProp.getHibernateMappedForm().getColumns();
+            if (columns.isEmpty()) {
+                columns = Collections.singletonList(null);
+            }
+            for (ColumnConfig column : columns) {
+                String otherColumnName =
+                        columnNameForPropertyAndPathFetcher.getColumnNameForPropertyAndPath(otherProp, path, column);
+                keyList.add(new Column(otherColumnName));
+            }
+        }
+
+        uniqueKeyForColumnsCreator.createUniqueKeyForColumns(table, keyList);
     }
 }

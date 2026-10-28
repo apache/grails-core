@@ -64,7 +64,7 @@ public class SimpleValueBinder {
         this(
                 metadataBuildingContext,
                 new ColumnConfigToColumnBinder(),
-                new ColumnBinder(namingStrategy, jdbcEnvironment.getDialect()),
+                new ColumnBinder(namingStrategy, jdbcEnvironment.getDialect(), metadataBuildingContext),
                 new BasicValueCreator(metadataBuildingContext, jdbcEnvironment, namingStrategy));
     }
 

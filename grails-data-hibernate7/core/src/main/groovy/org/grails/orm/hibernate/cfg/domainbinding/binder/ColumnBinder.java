@@ -18,6 +18,7 @@
  */
 package org.grails.orm.hibernate.cfg.domainbinding.binder;
 
+import org.hibernate.boot.spi.MetadataBuildingContext;
 import org.hibernate.dialect.Dialect;
 import org.hibernate.mapping.Column;
 import org.hibernate.mapping.Table;
@@ -65,14 +66,16 @@ public class ColumnBinder {
         this.indexBinder = indexBinder;
     }
 
-    public ColumnBinder(PersistentEntityNamingStrategy namingStrategy, Dialect dialect) {
+    public ColumnBinder(
+            PersistentEntityNamingStrategy namingStrategy, Dialect dialect, MetadataBuildingContext metadataBuildingContext) {
         this(
                 new ColumnNameForPropertyAndPathFetcher(
                         namingStrategy, new DefaultColumnNameFetcher(namingStrategy), new BackticksRemover()),
                 new StringColumnConstraintsBinder(),
                 new NumericColumnConstraintsBinder(dialect),
                 new CreateKeyForProps(new ColumnNameForPropertyAndPathFetcher(
-                        namingStrategy, new DefaultColumnNameFetcher(namingStrategy), new BackticksRemover())),
+                        namingStrategy, new DefaultColumnNameFetcher(namingStrategy), new BackticksRemover()),
+                        metadataBuildingContext.getMetadataCollector()),
                 new IndexBinder());
     }
 
