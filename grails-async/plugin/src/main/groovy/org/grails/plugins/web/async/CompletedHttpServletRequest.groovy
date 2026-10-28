@@ -18,16 +18,18 @@
  */
 package org.grails.plugins.web.async
 
+import java.nio.charset.Charset
+import java.nio.charset.StandardCharsets
 import java.security.Principal
-import java.time.ZonedDateTime
-import java.time.format.DateTimeFormatter
-import java.time.format.DateTimeParseException
+import java.text.ParseException
+import java.text.SimpleDateFormat
 import java.util.concurrent.ConcurrentHashMap
 
 import groovy.transform.CompileStatic
 
 import jakarta.servlet.AsyncContext
 import jakarta.servlet.DispatcherType
+import jakarta.servlet.ReadListener
 import jakarta.servlet.RequestDispatcher
 import jakarta.servlet.ServletConnection
 import jakarta.servlet.ServletContext
@@ -40,6 +42,7 @@ import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
 import jakarta.servlet.http.HttpSession
 import jakarta.servlet.http.HttpUpgradeHandler
+import jakarta.servlet.http.MappingMatch
 import jakarta.servlet.http.Part
 
 import org.springframework.util.LinkedCaseInsensitiveMap
@@ -48,17 +51,24 @@ import org.springframework.util.LinkedCaseInsensitiveMap
  * A copy of a request, taken as the request completed, which a task that outlives the request reads in its place.
  *
  * <p>The container recycles a request once it completes, so a task that read the request itself from then on
- * would fail. The copy holds the attributes, parameters, headers, locales and cookies of the request, its session
- * and what identifies it. Attributes a task sets stay with the copy. What only the live request can do, such as
- * reading the body, dispatching, processing asynchronously, creating a session or checking a role, is not
- * available.</p>
+ * would fail. The copy holds the attributes, parameters, headers, locales and cookies of the request, the part
+ * of its body nothing had read, its session and what identifies it. Attributes a task sets stay with the copy.
+ * What only the live request can do, such as dispatching, processing asynchronously, creating a session or
+ * checking a role, is not available.</p>
  *
  * @since 8.0.1
  */
 @CompileStatic
 class CompletedHttpServletRequest implements HttpServletRequest {
 
+    private static final byte[] NO_BODY = new byte[0]
+    private static final List<String> DATE_HEADER_FORMS = List.of(
+            'EEE, dd MMM yyyy HH:mm:ss zzz',
+            'EEEE, dd-MMM-yy HH:mm:ss zzz',
+            'EEE MMM dd HH:mm:ss yyyy')
+
     private final Map<String, Object> attributes = new ConcurrentHashMap<>()
+    private final byte[] body
     private final Map<String, String[]> parameters
     private final Map<String, List<String>> headers
     private final List<Locale> locales
@@ -112,6 +122,8 @@ class CompletedHttpServletRequest implements HttpServletRequest {
             parameters.put(parameter.key, copyValues(parameter.value))
         }
         this.parameters = Collections.unmodifiableMap(parameters)
+        // After the parameters: parsing them consumes a form body, on the live request too
+        this.body = copyBody(request)
         Map<String, List<String>> headers = new LinkedCaseInsensitiveMap<>(Locale.ENGLISH)
         for (String name : Collections.list(request.headerNames)) {
             headers.put(name, Collections.unmodifiableList(Collections.list(request.getHeaders(name))))
@@ -123,8 +135,9 @@ class CompletedHttpServletRequest implements HttpServletRequest {
         this.servletContext = request.servletContext
         this.userPrincipal = request.userPrincipal
         this.dispatcherType = request.dispatcherType
-        this.httpServletMapping = request.httpServletMapping
-        this.servletConnection = request.servletConnection
+        // Values only: the container's own objects can reference the request it recycles
+        this.httpServletMapping = copyMapping(request.httpServletMapping)
+        this.servletConnection = copyConnection(request.servletConnection)
         this.authType = request.authType
         this.characterEncoding = request.characterEncoding
         this.contentType = request.contentType
@@ -180,6 +193,51 @@ class CompletedHttpServletRequest implements HttpServletRequest {
             copies[i] = (Cookie) cookies[i].clone()
         }
         return copies
+    }
+
+    private static byte[] copyBody(HttpServletRequest request) {
+        try {
+            InputStream remaining = request.inputStream
+            return remaining == null ? NO_BODY : remaining.readAllBytes()
+        }
+        catch (IllegalStateException ignored) {
+            // The body was being read through getReader, so what remains of it is there
+            return copyBodyOfReader(request)
+        }
+        catch (IOException ignored) {
+            return NO_BODY
+        }
+    }
+
+    private static byte[] copyBodyOfReader(HttpServletRequest request) {
+        try {
+            BufferedReader reader = request.reader
+            return reader == null ? NO_BODY : reader.text.getBytes(charset(request.characterEncoding))
+        }
+        catch (IllegalStateException | IOException ignored) {
+            return NO_BODY
+        }
+    }
+
+    private static Charset charset(String encoding) {
+        if (encoding == null) {
+            // The servlet default when no encoding is specified
+            return StandardCharsets.ISO_8859_1
+        }
+        try {
+            return Charset.forName(encoding)
+        }
+        catch (IllegalArgumentException ignored) {
+            return StandardCharsets.ISO_8859_1
+        }
+    }
+
+    private static HttpServletMapping copyMapping(HttpServletMapping mapping) {
+        return mapping == null ? null : new CopiedHttpServletMapping(mapping)
+    }
+
+    private static ServletConnection copyConnection(ServletConnection connection) {
+        return connection == null ? null : new CopiedServletConnection(connection)
     }
 
     private static IllegalStateException unavailable(String operation) {
@@ -238,12 +296,12 @@ class CompletedHttpServletRequest implements HttpServletRequest {
 
     @Override
     ServletInputStream getInputStream() {
-        throw unavailable('getInputStream()')
+        return new CopiedServletInputStream(body)
     }
 
     @Override
     BufferedReader getReader() {
-        throw unavailable('getReader()')
+        return new BufferedReader(new InputStreamReader(new ByteArrayInputStream(body), charset(characterEncoding)))
     }
 
     @Override
@@ -403,12 +461,17 @@ class CompletedHttpServletRequest implements HttpServletRequest {
         if (value == null) {
             return -1L
         }
-        try {
-            return ZonedDateTime.parse(value, DateTimeFormatter.RFC_1123_DATE_TIME).toInstant().toEpochMilli()
+        for (String form : DATE_HEADER_FORMS) {
+            SimpleDateFormat parser = new SimpleDateFormat(form, Locale.US)
+            parser.timeZone = TimeZone.getTimeZone('GMT')
+            try {
+                return parser.parse(value).time
+            }
+            catch (ParseException ignored) {
+                // An HTTP date can be RFC 1123, RFC 850 or asctime, so every form is tried
+            }
         }
-        catch (DateTimeParseException e) {
-            throw new IllegalArgumentException("The header [$name] holds [$value], which is not a date".toString(), e)
-        }
+        throw new IllegalArgumentException("The header [$name] holds [$value], which is not a date".toString())
     }
 
     @Override
@@ -559,5 +622,114 @@ class CompletedHttpServletRequest implements HttpServletRequest {
     @Override
     <T extends HttpUpgradeHandler> T upgrade(Class<T> handlerClass) {
         throw unavailable('upgrade(Class)')
+    }
+
+    private static final class CopiedServletInputStream extends ServletInputStream {
+
+        private final ByteArrayInputStream body
+
+        private CopiedServletInputStream(byte[] body) {
+            this.body = new ByteArrayInputStream(body)
+        }
+
+        @Override
+        boolean isFinished() {
+            return body.available() == 0
+        }
+
+        @Override
+        boolean isReady() {
+            return true
+        }
+
+        @Override
+        void setReadListener(ReadListener readListener) {
+            throw unavailable('setReadListener(ReadListener)')
+        }
+
+        @Override
+        int read() {
+            return body.read()
+        }
+
+        @Override
+        int read(byte[] destination, int offset, int length) {
+            return body.read(destination, offset, length)
+        }
+
+        @Override
+        int available() {
+            return body.available()
+        }
+    }
+
+    private static final class CopiedHttpServletMapping implements HttpServletMapping {
+
+        private final String matchValue
+        private final String pattern
+        private final String servletName
+        private final MappingMatch mappingMatch
+
+        private CopiedHttpServletMapping(HttpServletMapping mapping) {
+            this.matchValue = mapping.matchValue
+            this.pattern = mapping.pattern
+            this.servletName = mapping.servletName
+            this.mappingMatch = mapping.mappingMatch
+        }
+
+        @Override
+        String getMatchValue() {
+            return matchValue
+        }
+
+        @Override
+        String getPattern() {
+            return pattern
+        }
+
+        @Override
+        String getServletName() {
+            return servletName
+        }
+
+        @Override
+        MappingMatch getMappingMatch() {
+            return mappingMatch
+        }
+    }
+
+    private static final class CopiedServletConnection implements ServletConnection {
+
+        private final String connectionId
+        private final String protocol
+        private final String protocolConnectionId
+        private final boolean secure
+
+        private CopiedServletConnection(ServletConnection connection) {
+            this.connectionId = connection.connectionId
+            this.protocol = connection.protocol
+            this.protocolConnectionId = connection.protocolConnectionId
+            this.secure = connection.secure
+        }
+
+        @Override
+        String getConnectionId() {
+            return connectionId
+        }
+
+        @Override
+        String getProtocol() {
+            return protocol
+        }
+
+        @Override
+        String getProtocolConnectionId() {
+            return protocolConnectionId
+        }
+
+        @Override
+        boolean isSecure() {
+            return secure
+        }
     }
 }

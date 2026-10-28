@@ -21,12 +21,14 @@ package org.grails.plugins.web.async
 import groovy.transform.CompileStatic
 
 import jakarta.servlet.http.HttpServletRequest
+import jakarta.servlet.http.HttpServletResponse
 
 import org.springframework.core.task.TaskDecorator
 import org.springframework.web.context.request.RequestAttributes
 import org.springframework.web.context.request.RequestContextHolder
 
 import org.grails.web.servlet.mvc.GrailsWebRequest
+import org.grails.web.util.GrailsApplicationAttributes
 import org.grails.web.util.WebUtils
 
 /**
@@ -52,12 +54,12 @@ class GrailsWebRequestTaskDecorator implements TaskDecorator {
         }
 
         HttpServletRequest request = TaskRequest.of(captured)
+        // Taken now, so the task does not hold the web request, whose request the container recycles
+        HttpServletResponse response = captured.currentResponse
+        GrailsApplicationAttributes attributes = captured.attributes
         return () -> {
             RequestAttributes previous = RequestContextHolder.getRequestAttributes()
-            GrailsWebRequest taskRequest = new GrailsWebRequest(
-                    request,
-                    captured.currentResponse,
-                    captured.attributes)
+            GrailsWebRequest taskRequest = new GrailsWebRequest(request, response, attributes)
             WebUtils.storeGrailsWebRequest(taskRequest)
             try {
                 task.run()

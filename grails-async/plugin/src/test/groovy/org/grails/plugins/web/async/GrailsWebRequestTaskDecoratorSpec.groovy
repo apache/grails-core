@@ -18,6 +18,7 @@
  */
 package org.grails.plugins.web.async
 
+import java.lang.ref.WeakReference
 import java.lang.reflect.InvocationTargetException
 import java.lang.reflect.Proxy
 import java.util.concurrent.CountDownLatch
@@ -29,8 +30,11 @@ import jakarta.servlet.http.HttpServletRequest
 import org.springframework.mock.web.MockHttpServletRequest
 import org.springframework.mock.web.MockHttpServletResponse
 import org.springframework.mock.web.MockHttpSession
+import org.springframework.mock.web.MockMultipartFile
+import org.springframework.mock.web.MockMultipartHttpServletRequest
 import org.springframework.mock.web.MockServletContext
 import org.springframework.web.context.request.RequestContextHolder
+import org.springframework.web.multipart.MultipartHttpServletRequest
 
 import grails.util.GrailsWebMockUtil
 import grails.web.mime.MimeType
@@ -39,6 +43,7 @@ import org.grails.web.mime.DefaultMimeTypeResolver
 import org.grails.web.servlet.mvc.GrailsWebRequest
 import spock.lang.Issue
 import spock.lang.Specification
+import spock.lang.Unroll
 
 class GrailsWebRequestTaskDecoratorSpec extends Specification {
 
@@ -266,11 +271,11 @@ class GrailsWebRequestTaskDecoratorSpec extends Specification {
         Runnable decorated = new GrailsWebRequestTaskDecorator().decorate {
             HttpServletRequest request = GrailsWebRequest.lookup().currentRequest
             [
-                    inputStream: { request.inputStream },
-                    session    : { request.getSession(true) },
-                    dispatcher : { request.getRequestDispatcher('/books') },
-                    async      : { request.startAsync() },
-                    role       : { request.isUserInRole('admin') }
+                    session   : { request.getSession(true) },
+                    dispatcher: { request.getRequestDispatcher('/books') },
+                    async     : { request.startAsync() },
+                    role      : { request.isUserInRole('admin') },
+                    parts     : { request.parts }
             ].each { String name, Closure operation ->
                 try {
                     operation.call()
@@ -288,8 +293,208 @@ class GrailsWebRequestTaskDecoratorSpec extends Specification {
         decorated.run()
 
         then:
-        failures.keySet() == ['inputStream', 'session', 'dispatcher', 'async', 'role'] as Set
+        failures.keySet() == ['session', 'dispatcher', 'async', 'role', 'parts'] as Set
         failures.values().every { it instanceof IllegalStateException && it.message.startsWith('The request has completed') }
+    }
+
+    @Issue('https://github.com/apache/grails-core/issues/15851')
+    void 'a task that outlives the request reads the body from the copy'() {
+        given:
+        MockHttpServletRequest live = request()
+        live.contentType = 'application/json'
+        live.characterEncoding = 'UTF-8'
+        live.content = '{"title":"Grails"}'.getBytes('UTF-8')
+        AtomicBoolean recycled = new AtomicBoolean()
+        GrailsWebRequest original = bind(recyclable(live, recycled))
+
+        and:
+        Map seen = [:]
+        Runnable decorated = new GrailsWebRequestTaskDecorator().decorate {
+            HttpServletRequest request = GrailsWebRequest.lookup().currentRequest
+            seen.streamed = request.inputStream.getText('UTF-8')
+            seen.read = request.reader.text
+        }
+        RequestContextHolder.resetRequestAttributes()
+
+        when:
+        original.requestCompleted()
+        recycled.set(true)
+        decorated.run()
+
+        then:
+        seen.streamed == '{"title":"Grails"}'
+        seen.read == '{"title":"Grails"}'
+    }
+
+    @Issue('https://github.com/apache/grails-core/issues/15851')
+    void 'the copy keeps what remains of a body the request was reading through getReader'() {
+        given:
+        MockHttpServletRequest live = request()
+        live.characterEncoding = 'UTF-8'
+        live.content = 'first line\nsecond line'.getBytes('UTF-8')
+        AtomicBoolean recycled = new AtomicBoolean()
+        GrailsWebRequest original = bind(recyclable(live, recycled))
+        live.reader.readLine()
+
+        and:
+        String remaining = null
+        Runnable decorated = new GrailsWebRequestTaskDecorator().decorate {
+            remaining = GrailsWebRequest.lookup().currentRequest.reader.text
+        }
+        RequestContextHolder.resetRequestAttributes()
+
+        when:
+        original.requestCompleted()
+        recycled.set(true)
+        decorated.run()
+
+        then:
+        remaining == 'second line'
+    }
+
+    @Issue('https://github.com/apache/grails-core/issues/15851')
+    void 'a multipart request stays multipart for a task until the request completes'() {
+        given:
+        MockMultipartHttpServletRequest live = new MockMultipartHttpServletRequest(new MockServletContext())
+        live.method = 'POST'
+        live.requestURI = '/books/save'
+        live.addFile(new MockMultipartFile('cover', 'cover.png', 'image/png', [1, 2, 3] as byte[]))
+        AtomicBoolean recycled = new AtomicBoolean()
+        GrailsWebRequest original = bind(recyclable(live, recycled))
+
+        and:
+        Map seen = [:]
+        Runnable during = new GrailsWebRequestTaskDecorator().decorate {
+            HttpServletRequest request = GrailsWebRequest.lookup().currentRequest
+            seen.multipart = request instanceof MultipartHttpServletRequest
+            seen.file = ((MultipartHttpServletRequest) request).getFile('cover')?.originalFilename
+        }
+        Runnable outliving = new GrailsWebRequestTaskDecorator().decorate {
+            HttpServletRequest request = GrailsWebRequest.lookup().currentRequest
+            try {
+                ((MultipartHttpServletRequest) request).getFile('cover')
+            }
+            catch (Throwable failure) {
+                seen.afterwards = failure
+            }
+        }
+        RequestContextHolder.resetRequestAttributes()
+
+        when: 'the request is still live'
+        during.run()
+
+        then: 'the task sees the multipart view a filter resolved before Grails'
+        seen.multipart
+        seen.file == 'cover.png'
+
+        when: 'the request completes before the next task'
+        original.requestCompleted()
+        recycled.set(true)
+        outliving.run()
+
+        then: 'the upload needed the live request'
+        seen.afterwards instanceof IllegalStateException
+        seen.afterwards.message.startsWith('The request has completed')
+        seen.afterwards.message.contains('getFile')
+    }
+
+    @Issue('https://github.com/apache/grails-core/issues/15851')
+    @Unroll
+    void 'the copy reads a date header in the #form form as the live request does'() {
+        given:
+        MockHttpServletRequest live = request()
+        live.addHeader('If-Modified-Since', value)
+        long expected = live.getDateHeader('If-Modified-Since')
+        AtomicBoolean recycled = new AtomicBoolean()
+        GrailsWebRequest original = bind(recyclable(live, recycled))
+
+        and:
+        Map seen = [:]
+        Runnable decorated = new GrailsWebRequestTaskDecorator().decorate {
+            seen.date = GrailsWebRequest.lookup().currentRequest.getDateHeader('If-Modified-Since')
+        }
+        RequestContextHolder.resetRequestAttributes()
+
+        when:
+        original.requestCompleted()
+        recycled.set(true)
+        decorated.run()
+
+        then:
+        expected > 0
+        seen.date == expected
+
+        where:
+        form       | value
+        'RFC 1123' | 'Sun, 06 Nov 1994 08:49:37 GMT'
+        'RFC 850'  | 'Sunday, 06-Nov-94 08:49:37 GMT'
+        'asctime'  | 'Sun Nov 06 08:49:37 1994'
+    }
+
+    @Issue('https://github.com/apache/grails-core/issues/15851')
+    void 'a date header that is not a date fails on the copy as on the live request'() {
+        given:
+        MockHttpServletRequest live = request()
+        live.addHeader('If-Modified-Since', 'yesterday')
+        AtomicBoolean recycled = new AtomicBoolean()
+        GrailsWebRequest original = bind(recyclable(live, recycled))
+
+        and:
+        Map seen = [:]
+        Runnable decorated = new GrailsWebRequestTaskDecorator().decorate {
+            try {
+                GrailsWebRequest.lookup().currentRequest.getDateHeader('If-Modified-Since')
+            }
+            catch (Throwable failure) {
+                seen.failure = failure
+            }
+        }
+        RequestContextHolder.resetRequestAttributes()
+
+        when:
+        original.requestCompleted()
+        recycled.set(true)
+        decorated.run()
+
+        then:
+        seen.failure instanceof IllegalArgumentException
+    }
+
+    @Issue('https://github.com/apache/grails-core/issues/15851')
+    void 'the request is released once the copy replaces it'() {
+        given:
+        MockHttpServletRequest live = request()
+        GrailsWebRequest original = bind(live)
+        WeakReference<MockHttpServletRequest> reference = new WeakReference<>(live)
+
+        and:
+        Map seen = [:]
+        Runnable decorated = new GrailsWebRequestTaskDecorator().decorate {
+            seen.title = GrailsWebRequest.lookup().currentRequest.getParameter('title')
+        }
+        RequestContextHolder.resetRequestAttributes()
+
+        when: 'the request completes and only the task still refers to it'
+        original.requestCompleted()
+        original = null
+        live = null
+
+        then: 'nothing holds the request any more'
+        collected(reference)
+
+        when:
+        decorated.run()
+
+        then: 'the task reads the copy'
+        seen.title == 'Grails'
+    }
+
+    private static boolean collected(WeakReference<?> reference) {
+        for (int attempt = 0; attempt < 100 && reference.get() != null; attempt++) {
+            System.gc()
+            Thread.sleep(10)
+        }
+        return reference.get() == null
     }
 
     private static MockHttpServletRequest request() {
@@ -310,8 +515,9 @@ class GrailsWebRequestTaskDecoratorSpec extends Specification {
 
     // Stands for the facade Tomcat gives the application, which fails once the request it stands for is recycled
     private static HttpServletRequest recyclable(MockHttpServletRequest request, AtomicBoolean recycled) {
+        Class[] interfaces = ([HttpServletRequest] + request.getClass().interfaces.toList()).unique() as Class[]
         return (HttpServletRequest) Proxy.newProxyInstance(GrailsWebRequestTaskDecoratorSpec.classLoader,
-                [HttpServletRequest] as Class[]) { proxy, method, args ->
+                interfaces) { proxy, method, args ->
             if (recycled.get()) {
                 throw new IllegalStateException('The request object has been recycled and is no longer associated with this facade')
             }

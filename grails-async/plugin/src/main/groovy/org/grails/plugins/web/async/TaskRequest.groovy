@@ -21,6 +21,7 @@ package org.grails.plugins.web.async
 import java.lang.reflect.InvocationHandler
 import java.lang.reflect.InvocationTargetException
 import java.lang.reflect.Method
+import java.lang.reflect.Modifier
 import java.lang.reflect.Proxy
 import java.util.concurrent.atomic.AtomicLong
 
@@ -37,10 +38,11 @@ import org.grails.web.servlet.mvc.GrailsWebRequest
 /**
  * The request a task started during a web request sees.
  *
- * <p>Until the request completes, it is that request, so a task the response waits for, such as one started with
- * {@code WebPromises}, renders through it. The container recycles the request once it completes, including any
- * asynchronous processing, so from then on it is a {@link CompletedHttpServletRequest copy} of the request taken
- * as it completed.</p>
+ * <p>Until the request completes, it is that request, with every public view the request offers, such as a
+ * multipart wrapper's, so a task the response waits for, such as one started with {@code WebPromises}, renders
+ * through it. The container recycles the request once it completes, including any asynchronous processing, so
+ * from then on it is a {@link CompletedHttpServletRequest copy} of the request taken as it completed, and the
+ * recycled request is released.</p>
  *
  * @since 8.0.1
  */
@@ -50,7 +52,7 @@ class TaskRequest implements InvocationHandler, AsyncListener {
     private static final String COMPLETION_CALLBACK = TaskRequest.name + '.COMPLETION.'
     private static final AtomicLong COMPLETION_CALLBACKS = new AtomicLong()
 
-    private final HttpServletRequest request
+    private volatile HttpServletRequest request
     private volatile HttpServletRequest target
 
     private TaskRequest(HttpServletRequest request) {
@@ -79,14 +81,38 @@ class TaskRequest implements InvocationHandler, AsyncListener {
         else {
             taskRequest.requestCompleted()
         }
-        return (HttpServletRequest) Proxy.newProxyInstance(TaskRequest.classLoader, [HttpServletRequest] as Class[], taskRequest)
+        ClassLoader loader = current.getClass().classLoader ?: TaskRequest.classLoader
+        return (HttpServletRequest) Proxy.newProxyInstance(loader, interfacesOf(current), taskRequest)
+    }
+
+    // Every public view of the request, such as a multipart wrapper's, so the task finds what a filter resolved
+    private static Class<?>[] interfacesOf(HttpServletRequest request) {
+        Set<Class<?>> interfaces = new LinkedHashSet<>()
+        interfaces.add(HttpServletRequest)
+        for (Class<?> type = request.getClass(); type != null; type = type.superclass) {
+            addInterfaces(type.interfaces, interfaces)
+        }
+        return interfaces.toArray(new Class<?>[0])
+    }
+
+    private static void addInterfaces(Class<?>[] candidates, Set<Class<?>> interfaces) {
+        for (Class<?> candidate : candidates) {
+            // A proxy class can only implement interfaces it can access
+            if (Modifier.isPublic(candidate.modifiers) && interfaces.add(candidate)) {
+                addInterfaces(candidate.interfaces, interfaces)
+            }
+        }
     }
 
     private void requestCompleted() {
-        if (request.isAsyncStarted()) {
+        HttpServletRequest live = request
+        if (live == null) {
+            return
+        }
+        if (live.isAsyncStarted()) {
             try {
                 // The response is still being produced, so a task it waits for may still be rendering it
-                request.asyncContext.addListener(this)
+                live.asyncContext.addListener(this)
                 return
             }
             catch (IllegalStateException ignored) {
@@ -97,8 +123,14 @@ class TaskRequest implements InvocationHandler, AsyncListener {
     }
 
     private void copy() {
+        HttpServletRequest live = request
+        if (live == null) {
+            return
+        }
         try {
-            target = CompletedHttpServletRequest.copyOf(request)
+            target = CompletedHttpServletRequest.copyOf(live)
+            // Released, so the recycled request is not held for the life of the task
+            request = null
         }
         catch (IllegalStateException ignored) {
             // The container has already recycled the request, so there is nothing left to copy
@@ -132,8 +164,14 @@ class TaskRequest implements InvocationHandler, AsyncListener {
         if (method.name == 'hashCode' && method.parameterCount == 0) {
             return System.identityHashCode(proxy)
         }
+        HttpServletRequest current = target
+        if (!method.declaringClass.isInstance(current)) {
+            // Only the live request offers the views beyond HttpServletRequest, such as a multipart wrapper's
+            throw new IllegalStateException('The request has completed, so a task that outlives it cannot call ' +
+                    "${method.declaringClass.simpleName}.${method.name}, which the copy of the request does not keep")
+        }
         try {
-            return method.invoke(target, args)
+            return method.invoke(current, args)
         }
         catch (InvocationTargetException e) {
             throw e.targetException
