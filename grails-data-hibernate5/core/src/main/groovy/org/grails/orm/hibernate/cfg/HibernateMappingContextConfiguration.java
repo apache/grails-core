@@ -19,6 +19,7 @@
 
 package org.grails.orm.hibernate.cfg;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -40,6 +41,7 @@ import org.hibernate.HibernateException;
 import org.hibernate.MappingException;
 import org.hibernate.SessionFactory;
 import org.hibernate.SessionFactoryObserver;
+import org.hibernate.boot.SessionFactoryBuilder;
 import org.hibernate.boot.registry.BootstrapServiceRegistry;
 import org.hibernate.boot.registry.BootstrapServiceRegistryBuilder;
 import org.hibernate.boot.registry.StandardServiceRegistry;
@@ -48,6 +50,9 @@ import org.hibernate.boot.registry.classloading.internal.ClassLoaderServiceImpl;
 import org.hibernate.boot.registry.classloading.spi.ClassLoaderService;
 import org.hibernate.boot.registry.selector.spi.StrategySelector;
 import org.hibernate.boot.spi.MetadataContributor;
+import org.hibernate.boot.spi.MetadataImplementor;
+import org.hibernate.boot.spi.SessionFactoryBuilderFactory;
+import org.hibernate.boot.spi.SessionFactoryBuilderImplementor;
 import org.hibernate.bytecode.spi.ProxyFactoryFactory;
 import org.hibernate.cfg.AvailableSettings;
 import org.hibernate.cfg.Configuration;
@@ -57,6 +62,7 @@ import org.hibernate.internal.util.config.ConfigurationHelper;
 import org.hibernate.property.access.spi.PropertyAccessStrategy;
 import org.hibernate.service.ServiceRegistry;
 import org.hibernate.service.spi.ServiceRegistryImplementor;
+import org.hibernate.service.spi.SessionFactoryServiceContributor;
 
 import org.springframework.beans.BeansException;
 import org.springframework.context.ApplicationContext;
@@ -72,6 +78,7 @@ import org.springframework.core.type.filter.AnnotationTypeFilter;
 import org.springframework.core.type.filter.TypeFilter;
 import org.springframework.util.ClassUtils;
 
+import org.apache.grails.data.hibernate5.core.querytail.QueryTailSessionFactoryObserver;
 import org.grails.datastore.gorm.GormEntity;
 import org.grails.datastore.gorm.jdbc.connections.DataSourceSettings;
 import org.grails.datastore.mapping.core.connections.ConnectionSource;
@@ -110,6 +117,7 @@ public class HibernateMappingContextConfiguration extends Configuration implemen
     private ResourcePatternResolver resourcePatternResolver = new PathMatchingResourcePatternResolver();
     private MetadataContributor metadataContributor;
     private Set<Class> additionalClasses = new HashSet<>();
+    private transient File queryTailFile;
 
     public void setHibernateMappingContext(HibernateMappingContext hibernateMappingContext) {
         this.hibernateMappingContext = hibernateMappingContext;
@@ -274,6 +282,9 @@ public class HibernateMappingContextConfiguration extends Configuration implemen
 
         addAnnotatedClasses(annotatedClasses.toArray(new Class[annotatedClasses.size()]));
 
+        ServiceRegistryClosingObserver closing = new ServiceRegistryClosingObserver();
+        QueryTailSessionFactoryObserver queryTail = queryTailFile != null ?
+                new QueryTailSessionFactoryObserver(dataSourceName, queryTailFile) : null;
         ClassLoaderService classLoaderService = new ClassLoaderServiceImpl(appClassLoader) {
             @Override
             public <S> Collection<S> loadJavaServices(Class<S> serviceContract) {
@@ -284,6 +295,21 @@ public class HibernateMappingContextConfiguration extends Configuration implemen
                     else {
                         return Collections.singletonList((S) domainBinder);
                     }
+                }
+                else if (SessionFactoryBuilderFactory.class.isAssignableFrom(serviceContract)) {
+                    // These observe the session factory being built, whatever observer the configuration holds.
+                    List<S> factories = new ArrayList<>(super.loadJavaServices(serviceContract));
+                    factories.add(serviceContract.cast(closing));
+                    if (queryTail != null) {
+                        factories.add(serviceContract.cast(queryTail.getSessionFactoryBuilderFactory()));
+                    }
+                    return factories;
+                }
+                else if (queryTail != null && SessionFactoryServiceContributor.class.isAssignableFrom(serviceContract)) {
+                    // The capture records the connections of the session factory, whatever provider hands them out.
+                    List<S> contributors = new ArrayList<>(super.loadJavaServices(serviceContract));
+                    contributors.add(serviceContract.cast(queryTail.getSessionFactoryServiceContributor()));
+                    return contributors;
                 }
                 else {
                     return super.loadJavaServices(serviceContract);
@@ -302,18 +328,6 @@ public class HibernateMappingContextConfiguration extends Configuration implemen
                 PropertyAccessStrategy.class, "traitProperty", TraitPropertyAccessStrategy.class
         );
 
-        setSessionFactoryObserver(new SessionFactoryObserver() {
-            private static final long serialVersionUID = 1;
-
-            public void sessionFactoryCreated(SessionFactory factory) {}
-
-            public void sessionFactoryClosed(SessionFactory factory) {
-                if (serviceRegistry != null) {
-                    ((ServiceRegistryImplementor) serviceRegistry).destroy();
-                }
-            }
-        });
-
         StandardServiceRegistryBuilder standardServiceRegistryBuilder = createStandardServiceRegistryBuilder(bootstrapServiceRegistry)
                                                                                     .applySettings(getProperties());
 
@@ -325,6 +339,7 @@ public class HibernateMappingContextConfiguration extends Configuration implemen
                 new GrailsBytecodeProvider().getProxyFactoryFactory());
 
         StandardServiceRegistry serviceRegistry = standardServiceRegistryBuilder.build();
+        closing.registry = serviceRegistry;
         ClassLoader previous = Thread.currentThread().getContextClassLoader();
         try {
             Thread.currentThread().setContextClassLoader(appClassLoader);
@@ -400,5 +415,51 @@ public class HibernateMappingContextConfiguration extends Configuration implemen
 
     public void setMetadataContributor(MetadataContributor metadataContributor) {
         this.metadataContributor = metadataContributor;
+    }
+
+    /**
+     * Sets the file query-tail capture records the statements of the session factories this
+     * configuration builds to. Each session factory is given an observer, and a capture, of its own,
+     * which records the statements run on the connections of its service registry. The observer is
+     * added to the session factory as Hibernate builds it, next to the observer the configuration
+     * holds, which is left as the application set it.
+     *
+     * @param queryTailFile the capture file, or null to record nothing
+     */
+    public void setQueryTailFile(File queryTailFile) {
+        this.queryTailFile = queryTailFile;
+    }
+
+    /**
+     * Destroys the service registry of a session factory once it has closed, so that a session factory
+     * closed while another of the configuration runs leaves the registry of the other alone. It is
+     * added to the session factory as Hibernate builds it, by the class loader service of its registry,
+     * so that it observes whatever observer the configuration holds, which it leaves as the application
+     * set it; Hibernate tells that one of the closing first.
+     */
+    private static class ServiceRegistryClosingObserver implements SessionFactoryObserver, SessionFactoryBuilderFactory {
+
+        private static final long serialVersionUID = 1;
+
+        /** The registry of the session factory, set once it is built. */
+        private transient StandardServiceRegistry registry;
+
+        @Override
+        public SessionFactoryBuilder getSessionFactoryBuilder(MetadataImplementor metadata, SessionFactoryBuilderImplementor defaultBuilder) {
+            defaultBuilder.addSessionFactoryObservers(this);
+            // none, so that Hibernate builds with its own builder, or that of another factory, which adds to it
+            return null;
+        }
+
+        @Override
+        public void sessionFactoryCreated(SessionFactory factory) {
+        }
+
+        @Override
+        public void sessionFactoryClosed(SessionFactory factory) {
+            if (registry != null) {
+                ((ServiceRegistryImplementor) registry).destroy();
+            }
+        }
     }
 }

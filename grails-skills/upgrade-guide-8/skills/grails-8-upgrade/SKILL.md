@@ -1,6 +1,6 @@
 ---
 name: grails-8-upgrade
-description: Guide for upgrading Grails applications from Grails 7.x to Grails 8, covering Java 21, Groovy 5 name resolution and static compilation, Spring Boot 4.1, Spring Framework 7, dependency management, Micronaut, Jackson 3, Hibernate 7, TagLibs, testing, content negotiation, asset pipeline wildcard paths, and validation behavior changes
+description: Guide for upgrading Grails applications from Grails 7.x to Grails 8, covering Java 21, Groovy 5 name resolution and static compilation, Spring Boot 4.1, Spring Framework 7, dependency management, Micronaut, Jackson 3, Hibernate 7, TagLibs, testing, content negotiation, asset pipeline wildcard paths, validation behavior changes, and, in Grails 8.1, the character encoding filter that now runs ahead of every other filter
 license: Apache-2.0
 ---
 
@@ -15,13 +15,14 @@ Licensed to the Apache Software Foundation (ASF) under one or more contributor l
 - Guide upgrades of Grails applications from Grails 7.x to Grails 8.
 - Turn the Grails 8 upgrade guide into a practical migration checklist.
 - Identify Groovy 5, Spring Boot 4.1, Spring Framework 7, Jackson 3, Gradle platform, Micronaut, Hibernate, TagLib, testing, validation, and content negotiation changes that can break an application.
+- Flag the Grails 8.1 change to the character encoding filter's order, which can change how requests are decoded and which charset asset responses declare.
 - Keep migration work focused on public application behavior, not internal Grails framework implementation details.
 
 ## When to Use Me
 
 Activate this skill when:
 
-- Updating an application to Grails 8.
+- Updating an application to Grails 8, or from Grails 8.0 to Grails 8.1.
 - Reviewing a Grails 8 upgrade branch or pull request.
 - Fixing tests, build failures, runtime failures, or behavior changes after moving from Grails 7.x to Grails 8.
 - Deciding whether an upgrade should remain on Hibernate 5 or opt in to Hibernate 7.
@@ -34,6 +35,7 @@ Use the published Grails documentation as the source of truth before changing an
 | URL | Use for |
 |-----|---------|
 | `https://grails.apache.org/docs/<version>/guide/upgrading.html#upgrading80x` | Main Grails 7 to Grails 8 upgrade guide |
+| `https://grails.apache.org/docs/<version>/guide/upgrading.html#upgrading81x` | Grails 8.0 to Grails 8.1 upgrade guide, for an application upgrading to 8.1 or later |
 | `https://github.com/spring-projects/spring-boot/wiki/Spring-Boot-4.0-Migration-Guide` | Boot module splits, Jackson, session, Batch, and test infrastructure changes; also review the target 4.1 release notes |
 | `https://grails.apache.org/docs/<version>/guide/introduction.html#whatsNew` | Grails 8 feature and platform overview |
 | `https://grails.apache.org/docs/<version>/guide/introduction.html#dependencyUpgrades` | Platform dependency baseline |
@@ -418,6 +420,7 @@ Also check for:
 - `StatelessSession` participating in second-level cache by default. Set `CacheMode.IGNORE` for intentional cache bypass.
 - DDL differences for character columns, Oracle floating and timestamp columns, SQL Server timestamp precision, and MySQL or MariaDB array columns.
 - Hibernate 6 intermediate changes: HQL join result typing, 1-based ordinal parameters, legacy Criteria API removal, boolean type mapping converters, and continued `jakarta.persistence` usage.
+- Custom `UserType` implementations must be rewritten for the Hibernate 7 contract (generic in the Java type, `getSqlType()`, position-based `nullSafeGet()` / `nullSafeSet()`). A type that spans several columns implements `CompositeUserType`; the columns of its `type` mapping are assigned to the embeddable's attributes in the alphabetical order of the attribute names, which is also the index `getPropertyValue()` and `instantiate()` use, where Hibernate 5 followed `getPropertyNames()`. Check the column-to-attribute assignment of every multi-column type when porting it.
 
 GORM behavior changes:
 
@@ -433,6 +436,11 @@ GORM behavior changes:
 - Nested transaction propagation was corrected in [Grails commit bd268672976](https://github.com/apache/grails-core/commit/bd268672976fff60853021dd659cd6d55482e631): `REQUIRED` joins an active transaction, while `REQUIRES_NEW` suspends it and uses a separate session, then restores the outer session. This also affects SimpleMap-backed domain/service unit tests. A thread-bound test session does not mean every service invocation shares one transaction or first-level cache; check the service annotations and explicit `withNewTransaction` calls before attributing changed fixture visibility to a regression.
 - Verify `ident()` and reload/proxy behavior for composite keys and renamed single-property identifiers. In the checked pre-release build, `ident()` read only the ordinary `id` property, returning null for a persisted composite-key domain and for a key mapped with `id name: 'code'`; Grails 7 used the mapped property or constructed a serializable identifier from the composite key fields. Consequently `load(entity.ident())` returned null before any proxy was created. Regression tests reproduced both cases on Hibernate 5 and Hibernate 7. Treat this as a framework regression to isolate and fix, rather than excluding composite-key domains from coverage or interpreting the null as a proxy-initialization change.
 - Initialization does not change a Hibernate base-class proxy into its concrete subtype. Before subclass/trait-only access, unwrap through the supported Hibernate API and retain the resulting instance; a cast alone is not unwrapping. A collection `find` still returns the original element even if its predicate unwrapped it; use `findResult` when the intended result is the unwrapped matching object. Equivalent warmed-call-site failures were reproduced on the old stack too, so distinguish a pre-existing proxy assumption from a new compiler regression.
+- Unidirectional `hasMany` join-table foreign-key column names under Hibernate 7 are derived from the physical table name of the associated domain class (e.g. `catalog_book_id` instead of `book_id`). Configure `joinTable: [name: '...', key: '...', column: '...']` explicitly to preserve an existing Grails 7 schema.
+- Two unidirectional `hasMany` associations to the same class share one join table by default (a key column each, one element column), and the table is now written. A set gets a unique key per association over its key column and the element; on Oracle and Db2 for Linux, UNIX and Windows it is one unique key over both key columns and the element. A list or a map stays keyed by its index and a bag has no key; their elements may repeat. A schema from an earlier Grails 8 release has only the first association's unique key: `dbCreate: 'update'` adds the second, and on Oracle and Db2 add a migration that replaces it with the wider key rather than expecting `update` to do it.
+- Removing an element from a unidirectional `hasMany` set or bag join table uses GORM's collection persister to delete only the specified row by owner key and element, matching Hibernate 5 behavior. An application that configures `hibernate.persister.resolver` keeps its own resolver and loses this behavior (causing `removeFrom` to delete every row of the owner).
+- GORM sets `hibernate.query.sqm.translator` to `RestrictedCollectionSqmTranslatorFactory` by default, which translates `is empty` / `is not empty` on an association that shares a join table and a key column as a size test, so the test does not see the other association's rows (#16748). An application that configures `hibernate.query.sqm.translator` itself keeps its translator and the Hibernate 7 behaviour; flag that setting, and `hibernate.persister.resolver` above, rather than treating a wrong `is empty` result as a query bug.
+- Collection criteria such as `isNotEmpty`, `isEmpty`, or `sizeEq` resolve properly to the parent collection property even when placed adjacent to an association block of the same name. Applications that reordered criteria or replaced `isEmpty('pets')` with a size projection to work around earlier 8.0 `ClassCastException` issues can retain standard criteria syntax.
 
 ### Validation Error Reset and Snapshot Regressions
 
@@ -576,6 +584,18 @@ Check plugin compatibility before treating a Grails 8 runtime failure as an appl
 - Preserve the holder's lifecycle as well as validation. A reusable token kept separately from the bounded per-form token map must survive that map becoming empty or evicting older URLs; adapt `isValid` and `isEmpty` consistently when those methods are used. Include recovery of a persisted holder whose map entry was already consumed by the old implementation.
 - Verify successive and concurrent requests using the same session token, rejection of missing/malformed/foreign tokens, single-use form tokens, and session serialization. A test of only the first successful POST misses this regression. For behavior-only changes to a serialized holder, preserve a verified compatible serialization UID; invalidate genuinely incompatible pre-upgrade sessions rather than assuming an old UID makes their serialized state compatible.
 
+## Grails 8.1: The Character Encoding Filter Runs First
+
+Grails 8.1 registers its character encoding filter at `Ordered.HIGHEST_PRECEDENCE`, ahead of every other filter, as Spring Boot does with its own. Grails 8.0 registered it at -180. Once a filter reads a request parameter, the container has decoded the body, as ISO-8859-1 unless an encoding was set by then, so a filter ordered ahead of the encoding filter that read a parameter garbled non-ASCII form input, for example `CafÃ©` for `Café`.
+
+Filters ordered between `Ordered.HIGHEST_PRECEDENCE + 1` and -181 now run after the encoding filter, with the request encoding set. Among them are Spring's `FormContentFilter` at -9900, asset-pipeline's filter at `GrailsFilters.ASSET_PIPELINE_FILTER` (-190) and a filter at `GrailsFilters.FIRST`.
+
+- `FormContentFilter` parses PUT, PATCH and DELETE forms. It decoded one sent without a charset as UTF-8, whatever `grails.filter.encoding` said; now it uses `grails.filter.encoding`, as a POST form already did. Nothing changes while `grails.filter.encoding` is UTF-8, the default.
+- In a packaged application (a WAR or an executable jar), asset-pipeline's filter declares the request encoding on every asset response, for example `text/css;charset=UTF-8`, and browsers use it instead of detecting the encoding of stylesheets and scripts. Assets served by asset-pipeline's development runtime still have no charset.
+- A filter among them that reads a request body sent without a charset through `getReader()` decodes it as `grails.filter.encoding` says instead of as ISO-8859-1.
+- With `grails.filter.forceEncoding: true`, a response such a filter writes without a charset gets the forced encoding, and a request encoding such a filter sets is no longer replaced by the forced one.
+- A filter registered at exactly `Ordered.HIGHEST_PRECEDENCE` through a `FilterRegistrationBean` still runs before the encoding filter. A filter that reads request parameters needs a later order. The CAS plugin registers its single sign-out filter at `Ordered.HIGHEST_PRECEDENCE + 1`.
+
 ## Verification Checklist
 
 Run verification through public application behavior, not only compilation.
@@ -586,6 +606,9 @@ Run verification through public application behavior, not only compilation.
 - Run database migration diffs before enabling Hibernate 7 schema update behavior in any environment with existing data.
 - Re-run affected integration tests after changing Spring Boot test annotations, mocked beans, content negotiation, or persistence behavior.
 - Remove temporary migration toggles once equivalent permanent changes are in place.
+- On Grails 8.1, check that packaged stylesheets and scripts with non-ASCII characters are in the charset their responses now declare: UTF-8, or the encoding `grails.filter.encoding` names.
+- On Grails 8.1, when `grails.filter.encoding` is not UTF-8, check that clients sending a PUT, PATCH or DELETE form without a charset encode it in that encoding.
+- On Grails 8.1, check that no application filter that reads request parameters is registered at `Ordered.HIGHEST_PRECEDENCE`.
 
 ## Common Fix Patterns
 
@@ -637,3 +660,4 @@ class BookServiceSpec extends Specification {
 - Do not use `javax.*` imports. Grails 8 continues the Jakarta baseline.
 - Do not override a managed version under a Grails-specific property name. Use the upstream (Spring Boot) property name; an override no BOM declares changes nothing and reports nothing.
 - Do not ignore plugin compatibility. Spring Boot 4 and Spring Framework 7 removals often surface first through plugins.
+- Do not register a filter that reads request parameters at exactly `Ordered.HIGHEST_PRECEDENCE` on Grails 8.1. A `FilterRegistrationBean` with that order runs before the character encoding filter, so form input arrives decoded as ISO-8859-1.

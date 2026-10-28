@@ -399,6 +399,99 @@ def results = Airport.withCriteria {
 the `flights` collection would be loaded eagerly via a join even though the fetch mode has not been explicitly set.
 
 
+==== Extending the Criteria Builder
+
+A plugin or an application can add its own criteria and orders to the Hibernate 7 criteria builder. A custom
+criterion is a `org.grails.datastore.mapping.query.Query.Criterion`, usually a `Query.PropertyCriterion` subclass,
+that a registered _criterion handler_ turns into a JPA `Predicate` when the query runs. A custom order is a
+`Query.Order` subclass that a registered _order handler_ turns into a JPA `Order`, which can order by any
+expression, not only by a property. Both are usually added to the builder through a Groovy extension module, so
+that they read like the built-in ones:
+
+[source,groovy]
+----
+class NumberLikeCriterion extends Query.PropertyCriterion {
+    NumberLikeCriterion(String property, String pattern) { super(property, pattern) }
+}
+
+class ByRandom extends Query.Order {
+    ByRandom() { super('random') }
+}
+
+@CompileStatic
+class MyCriteriaExtensions {
+    static AbstractDetachedCriteria numberLike(AbstractDetachedCriteria self, String property, String pattern) {
+        self.add(new NumberLikeCriterion(property, pattern))
+        self
+    }
+
+    static AbstractDetachedCriteria orderByRandom(AbstractDetachedCriteria self) {
+        self.order(new ByRandom())
+        self
+    }
+}
+----
+
+The handlers convert them. A criterion handler is given the query, its root, the Hibernate `CriteriaBuilder`, the
+criterion and the query's `QueryPathContext`. Through the context, `getFullyQualifiedPath` resolves a property path
+the way the built-in criteria do: `alias.property`, for an alias created with `createAlias`, or `association.property`
+becomes a path on the join GORM created for that association, so a custom criterion and a built-in one on the
+same association restrict the same row rather than each joining the association again. `getSelectionAlias` returns
+the expression a `sqlProjection` or `sqlGroupProjection` records under its column alias. An order handler that sorts
+by a column alias asks `getSelectionAlias` first and `getFullyQualifiedExpression` second, which orders by the
+projection when an alias and a property have the same name, as `order(alias)` does; a criterion handler asks
+`getFullyQualifiedExpression` alone, so a restriction on a property restricts the property, as in SQL, where a select
+alias is visible to the `order by` and not to the `where`. An order handler is given
+the query, its root, the criteria builder, the order and the context, and returns the JPA order, or `null` to leave
+the order out. A query whose result is a count leaves every order out by itself, so no handler runs for it:
+
+[source,groovy]
+----
+PredicateGenerator.registerCriterionHandler(NumberLikeCriterion) { query, root, cb, criterion, context ->
+    def c = criterion as NumberLikeCriterion
+    cb.like(cb.cast(context.getFullyQualifiedPath(c.property) as JpaExpression, String), c.value as String)
+}
+
+PredicateGenerator.registerOrderHandler(ByRandom) { query, root, cb, order, context ->
+    cb.asc(cb.function('random', Double))
+}
+----
+
+A closure with five parameters is registered as a handler that receives the context; a closure with four parameters
+is registered as a handler that does not, so both shapes work without `as`. Handlers are registered for the exact class of the criterion or order, and
+a registered handler wins over the built-in handling, so a handler for `Query.Like` replaces how `like` is built.
+
+A plugin registers its handlers without any code in the application by implementing
+`PredicateGenerator.CriterionHandlerProvider` or `PredicateGenerator.OrderHandlerProvider` and naming the class in
+`META-INF/services/org.grails.orm.hibernate.query.PredicateGenerator$CriterionHandlerProvider` or
+`META-INF/services/org.grails.orm.hibernate.query.PredicateGenerator$OrderHandlerProvider`. The providers are
+loaded when the first criteria query runs; a handler registered in code takes precedence over a provider's.
+
+[source,groovy]
+----
+class ByRandomOrderHandlerProvider implements PredicateGenerator.OrderHandlerProvider {
+
+    Class<? extends Query.Order> orderType() { ByRandom }
+
+    PredicateGenerator.OrderHandler orderHandler() {
+        { query, root, cb, order, context ->
+            cb.asc(cb.function('random', Double))
+        } as PredicateGenerator.OrderHandler
+    }
+}
+----
+
+With the extension module and the providers on the classpath, a query uses them like any other criterion or order:
+
+[source,groovy]
+----
+new DetachedCriteria(Book).build {
+    numberLike 'price', '4%'
+    orderByRandom()
+}.list()
+----
+
+
 ==== Method Reference
 
 

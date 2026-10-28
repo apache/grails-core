@@ -127,6 +127,12 @@ class GrailsGradlePlugin implements Plugin<Project> {
     private static final String CLI_PID_FILE_PROPERTY = 'grails.cli.pid.file'
     private static final String RUN_APP_PID_FILE_NAME = 'run-app.pid'
 
+    /** The Gradle property prefix of the query-tail capture settings handed to forked JVMs, {@code -Pgrails.gorm.queryTail.enabled}. */
+    private static final String QUERY_TAIL_PROPERTY_PREFIX = 'grails.gorm.queryTail.'
+
+    /** The switch that turns query-tail capture on, which a Gradle property given without a value sets. */
+    private static final String QUERY_TAIL_ENABLED = QUERY_TAIL_PROPERTY_PREFIX + 'enabled'
+
     /**
      * A {@code configurationScript} configured on a GroovyCompile task, keyed by compile task name
      * and captured when the task graph is ready, for the generator task to fold into the combined
@@ -1057,6 +1063,10 @@ ${importStatements}
             // path relative to the project, not its name, so that two instances of one checkout have one each
             task.jvmArgumentProviders.add(new GrailsProjectOutputDirProvider(BuildSettings.PROJECT_TARGET_DIR,
                     project.projectDir, project.layout.buildDirectory, task.systemProperties))
+            // query-tail capture settings given as Gradle properties reach every forked application and test
+            // JVM under their own names: ./gradlew bootRun -Pgrails.gorm.queryTail.enabled
+            task.jvmArgumentProviders.add(new GrailsPropertyArgumentProvider(
+                    project.providers.gradlePropertiesPrefixedBy(QUERY_TAIL_PROPERTY_PREFIX), [QUERY_TAIL_ENABLED]))
             task.systemProperty(Environment.KEY, defaultGrailsEnv)
             task.systemProperty(Environment.FULL_STACKTRACE, System.getProperty(Environment.FULL_STACKTRACE) ?: '')
             if (task.minHeapSize == null) {
@@ -1080,6 +1090,23 @@ ${importStatements}
 
         String grailsEnvSystemProperty = System.getProperty(Environment.KEY)
         tasks.withType(Test).configureEach(systemPropertyConfigurer.curry(grailsEnvSystemProperty ?: Environment.TEST.getName()))
+        // the test JVMs of one build capture to one query-tail run, however capture is enabled: a later one appends
+        // rather than truncates
+        Provider<GrailsQueryTailRun> queryTailRun = project.gradle.sharedServices.registerIfAbsent('grailsQueryTailRun', GrailsQueryTailRun) { }
+        Provider<Map<String, String>> queryTailSettings = project.providers.gradlePropertiesPrefixedBy(QUERY_TAIL_PROPERTY_PREFIX)
+        // a bare flag is passed as true; any other value is read as the application binds it
+        Provider<Boolean> queryTailCapturing = queryTailSettings.map { Map<String, String> settings ->
+            String enabled = settings.get(QUERY_TAIL_ENABLED)?.trim()?.toLowerCase(Locale.ROOT)
+            enabled != null && (enabled.isEmpty() || enabled in ['true', 'on', 'yes', '1'])
+        }
+        tasks.withType(Test).configureEach { Test task ->
+            task.usesService(queryTailRun)
+            task.jvmArgumentProviders.add(new GrailsQueryTailRunProvider(queryTailSettings, queryTailRun))
+            // what the tests capture is written only as they run, so a result taken from the build cache, or kept from
+            // an earlier build, would leave the capture without them
+            task.outputs.cacheIf('query-tail capture is not requested') { !queryTailCapturing.get() }
+            task.outputs.upToDateWhen { !queryTailCapturing.get() }
+        }
         tasks.withType(JavaExec).configureEach(systemPropertyConfigurer.curry(grailsEnvSystemProperty ?: Environment.DEVELOPMENT.getName()))
 
         configureToolchainForForkTasks(project)

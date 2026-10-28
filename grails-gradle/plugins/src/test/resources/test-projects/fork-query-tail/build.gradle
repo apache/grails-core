@@ -1,0 +1,39 @@
+plugins {
+    id 'org.apache.grails.gradle.grails-app'
+}
+
+tasks.register('inspectQueryTail') {
+    def queryTailArgs = providers.provider {
+        [
+                bootRun: tasks.named('bootRun', JavaExec).get().allJvmArgs.findAll { it.startsWith('-Dgrails.gorm.queryTail.') },
+                test: tasks.named('test', Test).get().allJvmArgs.findAll { it.startsWith('-Dgrails.gorm.queryTail.') }
+        ]
+    }
+    doLast {
+        queryTailArgs.get().each { String task, List<String> args ->
+            args.each { println "QUERY_TAIL_ARG ${task} ${it}" }
+        }
+    }
+}
+
+// what the test task's JVM is told when it runs: its argument providers asked as the task executes, as Gradle asks them
+tasks.register('inspectQueryTailRun') {
+    def testArguments = tasks.named('test', Test).get().jvmArgumentProviders
+    usesService(gradle.sharedServices.registrations.named('grailsQueryTailRun').get().service)
+    doLast {
+        testArguments.each { provider ->
+            provider.asArguments().findAll { it.startsWith('-Dgrails.gorm.queryTail.run=') }.each { println "QUERY_TAIL_RUN ${it}" }
+        }
+    }
+}
+
+// whether the test task may be taken from the build cache, or skipped as up to date, as Gradle decides as it runs it
+tasks.register('inspectQueryTailCaching') {
+    def caching = providers.provider {
+        def test = tasks.named('test', Test).get()
+        [cacheable: test.outputs.cacheIfSpecs.every { it.isSatisfiedBy(test) }, upToDate: test.outputs.upToDateSpec.isSatisfiedBy(test)]
+    }
+    doLast {
+        println "QUERY_TAIL_CACHING cacheable=${caching.get().cacheable} upToDate=${caching.get().upToDate}"
+    }
+}

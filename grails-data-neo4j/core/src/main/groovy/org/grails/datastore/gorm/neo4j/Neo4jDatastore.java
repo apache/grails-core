@@ -43,6 +43,8 @@ import org.springframework.context.support.StaticMessageSource;
 import org.springframework.core.env.PropertyResolver;
 
 import grails.neo4j.Relationship;
+import org.apache.grails.data.neo4j.core.querytail.QueryTailDriver;
+import org.apache.grails.datastore.core.querytail.QueryTailSettings;
 import org.grails.datastore.gorm.GormEnhancer;
 import org.grails.datastore.gorm.events.AutoTimestampEventListener;
 import org.grails.datastore.gorm.events.ConfigurableApplicationEventPublisher;
@@ -64,6 +66,7 @@ import org.grails.datastore.mapping.core.Datastore;
 import org.grails.datastore.mapping.core.DatastoreUtils;
 import org.grails.datastore.mapping.core.StatelessDatastore;
 import org.grails.datastore.mapping.core.connections.ConnectionSource;
+import org.grails.datastore.mapping.core.connections.ConnectionSourceSettings;
 import org.grails.datastore.mapping.core.connections.ConnectionSources;
 import org.grails.datastore.mapping.core.connections.ConnectionSourcesInitializer;
 import org.grails.datastore.mapping.core.connections.DefaultConnectionSource;
@@ -346,16 +349,24 @@ public class Neo4jDatastore extends AbstractDatastore implements Closeable, Stat
     }
 
     /**
-     * Creates the connection sources for an existing {@link Driver}
+     * Creates the connection sources for an existing {@link Driver}. Its settings are bound from {@code grails.neo4j}
+     * alone, but for its query-tail settings, which fall back to {@code grails.gorm.queryTail} as those of a driver
+     * GORM builds do, so that it records its statements for query-tail when the application enables capture.
      *
      * @param driver The {@link Driver}
      * @param configuration The configuration
      * @return The {@link ConnectionSources}
      */
     protected static ConnectionSources<Driver, Neo4jConnectionSourceSettings> createDefaultConnectionSources(Driver driver, PropertyResolver configuration) {
-        Neo4jConnectionSourceSettingsBuilder builder = new Neo4jConnectionSourceSettingsBuilder(configuration);
+        // Only query-tail, which grails.gorm sets for every datastore of the application; the GORM settings of
+        // another datastore, such as its multi-tenancy mode, are not this driver's, and are not even read.
+        ConnectionSourceSettings fallback = new ConnectionSourceSettings();
+        fallback.setQueryTail(QueryTailSettings.of(configuration));
+        Neo4jConnectionSourceSettingsBuilder builder = new Neo4jConnectionSourceSettingsBuilder(configuration,
+                org.grails.datastore.gorm.neo4j.config.Settings.PREFIX, fallback);
         Neo4jConnectionSourceSettings settings = builder.build();
-        ConnectionSource<Driver, Neo4jConnectionSourceSettings> defaultConnectionSource = new DefaultConnectionSource<>(ConnectionSource.DEFAULT, driver, settings);
+        ConnectionSource<Driver, Neo4jConnectionSourceSettings> defaultConnectionSource = new DefaultConnectionSource<>(ConnectionSource.DEFAULT,
+                QueryTailDriver.install(ConnectionSource.DEFAULT, settings.getQueryTail(), driver), settings);
         return new InMemoryConnectionSources<>(defaultConnectionSource, new Neo4jConnectionSourceFactory(), configuration);
     }
 

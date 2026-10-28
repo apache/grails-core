@@ -80,7 +80,11 @@ public class PropertySourcesConfig extends NavigableMapConfig {
         return propertySources;
     }
 
+    /**
+     * Reads the process environment again and merges the property sources again.
+     */
     public void refresh() {
+        refreshSystemEnvironment();
         initializeFromPropertySources(propertySources);
     }
 

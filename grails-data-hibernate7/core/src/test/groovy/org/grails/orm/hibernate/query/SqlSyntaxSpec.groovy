@@ -21,6 +21,8 @@ package org.grails.orm.hibernate.query
 import jakarta.persistence.criteria.CriteriaBuilder
 import org.hibernate.dialect.CockroachDialect
 import org.hibernate.dialect.DB2Dialect
+import org.hibernate.dialect.DB2zDialect
+import org.hibernate.dialect.DB2iDialect
 import org.hibernate.dialect.DatabaseVersion
 import org.hibernate.dialect.Dialect
 import org.hibernate.dialect.H2Dialect
@@ -52,6 +54,8 @@ class SqlSyntaxSpec extends Specification {
         new MariaDBDialect()                                 | SqlSyntax.MYSQL
         new OracleDialect()                                  | SqlSyntax.ORACLE
         new DB2Dialect()                                     | SqlSyntax.SQL
+        new DB2iDialect()                                    | SqlSyntax.DB2_NESTED_COMMENTS
+        new DB2zDialect()                                    | SqlSyntax.DB2_NESTED_COMMENTS
         new HANADialect()                                    | SqlSyntax.SQL
         new Dialect(DatabaseVersion.make(1)) { }             | SqlSyntax.SQL
         dialectName = dialect.class.simpleName

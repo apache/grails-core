@@ -138,6 +138,16 @@ xref:theWebLayer#springResponses[Returning Spring MVC Responses].
 
 See xref:upgrading#upgrading90x[Upgrading from Grails 8 to Grails 9], sections 4 to 11 and 13 to 16.
 
+==== Hibernate 7 Criteria Queries Can Be Extended
+
+A plugin or an application can add its own criteria and orders to the Hibernate 7 criteria builder. A criterion
+handler now receives the query context, through which it resolves a property path, whether through an alias created
+with `createAlias` or an association, to the join GORM created for it, so a custom criterion and a built-in one on
+the same association restrict the same row. A new order handler turns a `Query.Order` subclass into a JPA order by
+any expression, such as `random()` or a SQL formula, in its place among the query's orders. Both kinds of handler
+are registered in code, or by a plugin through `META-INF/services` providers that are loaded when the first query
+runs. See the section on extending the criteria builder in the GORM for Hibernate 7 guide.
+
 ==== Hibernate 7 Application Generation
 
 Grails Forge can now generate applications configured for Grails Data with Hibernate 7.
@@ -765,6 +775,22 @@ same view is a report of how long each stage of the start took, at `/__grails/st
 `grails.boot.StartupTask`, which the database migration plugin uses to show how many change sets are left to
 run. See <<startupProgress,Watching the Application Start>>.
 
+==== Finding Query-Heavy Pages with query-tail
+
+The new `query-tail` command shows the pages of a running application ranked by the statements they run per
+request, and for each page the statement that repeats most within one request, which is what an N+1 looks like.
+It covers every store GORM runs statements on: SQL through Hibernate 5 and 7, Cypher through Neo4j and commands
+through MongoDB. With the GORM GraphQL plugin, each GraphQL operation is a page of its own, such as
+`graphql/index (query BookList)`.
+Start the application with `grails run-app --query-tail` (or `./gradlew bootRun -Pgrails.gorm.queryTail.enabled`), then
+`grails query-tail` in a second terminal follows the capture and refreshes as requests are served. `--statements`
+ranks the statements, `--page=book/show` shows one page's, `--stream` prints each statement as it runs, and
+`--all --once` reports a whole run, including an integration test run. The command reads a capture file and does
+not boot the application. Capture is off unless the application is started with it, and an application started
+without it carries nothing that records. Statements are captured without their values: literals are recorded as `?`
+and comments are dropped, while the database runs each statement as written. See
+xref:conf#queryTail[Finding Query-Heavy Pages with query-tail].
+
 ==== Banner Colour, Container Version and Start Mark
 
 The startup banner is coloured, reports the servlet container it is running on, and says how the application was
@@ -822,6 +848,10 @@ cron expression, date or trigger names the argument that is missing, and calling
 scheduler does not know about explains why it is not registered — neither ends in a `NullPointerException`
 any more. See <<quartzLongRunningJobs,Long-Running Jobs>> for what a job that outlives its trigger's
 interval needs, and <<upgrading80x>> for the details.
+
+==== Faster Configuration Lookups
+
+`grailsApplication.config.getProperty` no longer probes the process environment on every call. The environment is read once, when the configuration is created, and its variable names are indexed, so a property that no variable can match is answered without touching `System.getenv`. A test that installs environment variables installs them before the application context is created, or calls `refresh()` on the configuration afterwards to have them seen; see xref:upgrading#upgrading81x[the upgrade guide].
 
 ==== Compiled Tag Resolution
 

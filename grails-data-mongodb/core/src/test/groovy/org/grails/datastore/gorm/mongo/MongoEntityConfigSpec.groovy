@@ -27,6 +27,7 @@ import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.grails.datastore.mapping.document.config.DocumentPersistentEntity
 import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.mongo.AbstractMongoSession
+import org.grails.datastore.mapping.mongo.MongoDatastore
 import org.grails.datastore.mapping.mongo.config.MongoAttribute
 import org.grails.datastore.mapping.mongo.config.MongoCollection
 import com.mongodb.WriteConcern
@@ -72,6 +73,7 @@ class MongoEntityConfigSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager>
         AbstractMongoSession ms = manager.session
         then:
         ms.getCollectionName(entity) == "mycollection"
+        MongoDatastore.getMappedCollectionName(entity) == "mycollection"
     }
 }
 

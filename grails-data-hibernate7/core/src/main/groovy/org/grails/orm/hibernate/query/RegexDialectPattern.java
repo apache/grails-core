@@ -18,6 +18,8 @@
  */
 package org.grails.orm.hibernate.query;
 
+import org.hibernate.dialect.DB2Dialect;
+import org.hibernate.dialect.DB2zDialect;
 import org.hibernate.dialect.Dialect;
 import org.hibernate.dialect.H2Dialect;
 import org.hibernate.dialect.MariaDBDialect;
@@ -37,6 +39,10 @@ public enum RegexDialectPattern implements DialectKeyed<RegexDialectPattern> {
     POSTGRES(PostgreSQLDialect.class, "?1 ~ ?2"),
     ORACLE(OracleDialect.class, "REGEXP_LIKE(?1, ?2)"),
     H2(H2Dialect.class, "REGEXP_LIKE(?1, ?2)"),
+    // Db2 for z/OS runs REGEXP_LIKE only through the Db2 Analytics Accelerator, so it falls back as other databases do
+    DB2_ZOS(DB2zDialect.class, "?1 LIKE ?2"),
+    // Db2 for Linux, UNIX and Windows (11.1 and later) and Db2 for IBM i
+    DB2(DB2Dialect.class, "REGEXP_LIKE(?1, ?2)"),
     // Default fallback
     DEFAULT(Dialect.class, "?1 LIKE ?2");
 

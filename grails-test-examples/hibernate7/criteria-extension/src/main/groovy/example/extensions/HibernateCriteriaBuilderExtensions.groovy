@@ -20,6 +20,7 @@
 package example.extensions
 
 import example.query.NumberLikeCriterion
+import example.query.PriceDistanceOrder
 import groovy.transform.CompileStatic
 import org.grails.datastore.gorm.query.criteria.AbstractDetachedCriteria
 
@@ -57,6 +58,21 @@ class HibernateCriteriaBuilderExtensions {
     static AbstractDetachedCriteria numberLike(
             AbstractDetachedCriteria self, String propertyName, Object propertyValue) {
         self.add(new NumberLikeCriterion(propertyName, propertyValue as String))
+        self
+    }
+
+    /**
+     * Orders the results by how far their price is from {@code target}, nearest first.
+     *
+     * <p>Adds a {@link PriceDistanceOrder}, which the registered
+     * {@code OrderHandler} converts to an order by {@code abs(price - target)} at query execution time.
+     *
+     * @param self   the detached criteria
+     * @param target the price to measure the distance from
+     * @return the criteria for chaining
+     */
+    static AbstractDetachedCriteria orderByPriceDistance(AbstractDetachedCriteria self, BigDecimal target) {
+        self.order(new PriceDistanceOrder(target))
         self
     }
 }

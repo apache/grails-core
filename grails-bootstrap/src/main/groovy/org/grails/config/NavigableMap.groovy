@@ -18,7 +18,6 @@
  */
 package org.grails.config
 
-import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
 import groovy.util.logging.Slf4j
@@ -89,7 +88,6 @@ class NavigableMap implements Map<String, Object>, Cloneable {
         delegateMap.containsValue(value)
     }
 
-    @CompileDynamic
     @Override
     Object get(Object key) {
         Object result = delegateMap.get(key)
@@ -155,7 +153,9 @@ class NavigableMap implements Map<String, Object>, Cloneable {
                     def pathParts = keyParts[0..-2]
                     Map actualTarget = targetMap.navigateSubMap(pathParts as List, true)
                     sourceKey = keyParts[-1]
-                    mergeMapEntry(rootMap, pathParts.join('.'), actualTarget, sourceKey, sourceValue, parseFlatKeys)
+                    // the flat key of the entry is its full path: that of the map holding the dotted key, then the key
+                    String nestedPath = path ? "${path}.${pathParts.join('.')}" : pathParts.join('.')
+                    mergeMapEntry(rootMap, nestedPath, actualTarget, sourceKey, sourceValue, parseFlatKeys)
                 } else {
                     mergeMapEntry(rootMap, path, targetMap, sourceKey, sourceValue, parseFlatKeys)
                 }
@@ -217,10 +217,12 @@ class NavigableMap implements Map<String, Object>, Cloneable {
                 }
                 targetMap.remove(sourceKey)
             } else {
-                if (path) {
-                    rootMap.put("${path}.${sourceKey}".toString(), newValue)
-                }
                 mergeMapEntry(targetMap, sourceKey, newValue)
+                if (path) {
+                    // the flat key holds the value the nested entry holds, as the hook stored it, so a placeholder in it
+                    // is resolved once, for both
+                    rootMap.put("${path}.${sourceKey}".toString(), targetMap.get(sourceKey))
+                }
             }
         }
     }
