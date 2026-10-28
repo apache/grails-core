@@ -143,6 +143,32 @@ class DataBindingUtilsSpec extends Specification {
     }
 
     @Issue('https://github.com/apache/grails-core/issues/16558')
+    void 'test a constrained property backed by a map keeps its bindable: false'() {
+        given:
+        def command = new MapConstraintsCommand()
+
+        when:
+        DataBindingUtils.bindObjectToInstance(command, [name: 'Grails', secret: 'Hidden'])
+
+        then:
+        command.name == 'Grails'
+        command.secret == null
+    }
+
+    @Issue('https://github.com/apache/grails-core/issues/16558')
+    void 'test a map-backed constrained property that wraps another is read through the one it wraps'() {
+        given:
+        def command = new MapWrappedConstraintsCommand()
+
+        when:
+        DataBindingUtils.bindObjectToInstance(command, [name: 'Grails', secret: 'Hidden'])
+
+        then:
+        command.name == 'Grails'
+        command.secret == null
+    }
+
+    @Issue('https://github.com/apache/grails-core/issues/16558')
     void 'test a constrained property that wraps another is read through the one it wraps'() {
         given:
         def command = new WrappedConstraintsCommand()
@@ -366,6 +392,26 @@ class WrappedConstraintsCommand {
 
     static Map getConstraintsMap() {
         [secret: new WrappingConstrainedProperty(new MetaConstrainedProperty(bindable: false))]
+    }
+}
+
+class MapConstraintsCommand {
+
+    String name
+    String secret
+
+    static Map getConstraintsMap() {
+        [secret: [metaConstraints: [bindable: false]]]
+    }
+}
+
+class MapWrappedConstraintsCommand {
+
+    String name
+    String secret
+
+    static Map getConstraintsMap() {
+        [secret: [property: new MetaConstrainedProperty(bindable: false)]]
     }
 }
 

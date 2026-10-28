@@ -356,11 +356,25 @@ public final class BindingIncludeLists {
      * The {@code bindable} constraint of a constrained property, read from the property itself, from its meta
      * constraints, or from the property it wraps.
      * <p>
-     * Each accessor is looked up before it is called. A wrapped property, such as the ones a validateable class
-     * holds, has neither of the first two, and throwing and catching a missing method or property exception for
-     * each of them made reading the constraint cost more than the rest of a bind.
+     * A constrained property backed by a map holds those as keys, which the metaclass lookups below do not see,
+     * so a map is read by key. For any other property, each accessor is looked up before it is called. A wrapped
+     * property, such as the ones a validateable class holds, has neither of the first two, and throwing and
+     * catching a missing method or property exception for each of them made reading the constraint cost more
+     * than the rest of a bind.
      */
     public static Object bindableConstraintValue(final Object constrainedProperty) {
+        if (constrainedProperty instanceof Map) {
+            final Map constrainedPropertyMap = (Map) constrainedProperty;
+            Object metaConstraints = constrainedPropertyMap.get(META_CONSTRAINTS_PROPERTY);
+            if (metaConstraints instanceof Map) {
+                return ((Map) metaConstraints).get(DefaultASTDatabindingHelper.BINDABLE_CONSTRAINT_NAME);
+            }
+            Object delegate = constrainedPropertyMap.get(WRAPPED_CONSTRAINED_PROPERTY);
+            if (delegate != null && delegate != constrainedProperty) {
+                return bindableConstraintValue(delegate);
+            }
+            return null;
+        }
         MetaClass metaClass = GroovySystem.getMetaClassRegistry().getMetaClass(constrainedProperty.getClass());
         try {
             MetaMethod metaConstraintValue = metaClass.getMetaMethod(META_CONSTRAINT_VALUE_ACCESSOR, META_CONSTRAINT_VALUE_ARGUMENT_TYPES);
