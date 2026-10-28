@@ -409,11 +409,13 @@ class GrailsWebRequestTaskDecoratorSpec extends Specification {
     }
 
     @Issue('https://github.com/apache/grails-core/issues/15851')
-    void 'a multipart request stays multipart for a task until the request completes'() {
+    void 'a multipart request stays multipart for a task, and once the request completes it has no uploads'() {
         given:
         MockMultipartHttpServletRequest live = new MockMultipartHttpServletRequest(new MockServletContext())
         live.method = 'POST'
         live.requestURI = '/books/save'
+        live.addParameter('title', 'Grails')
+        live.addHeader('Accept', 'application/json')
         live.addFile(new MockMultipartFile('cover', 'cover.png', 'image/png', [1, 2, 3] as byte[]))
         AtomicBoolean recycled = new AtomicBoolean()
         GrailsWebRequest original = bind(recyclable(live, recycled))
@@ -426,13 +428,19 @@ class GrailsWebRequestTaskDecoratorSpec extends Specification {
             seen.file = ((MultipartHttpServletRequest) request).getFile('cover')?.originalFilename
         }
         Runnable outliving = new GrailsWebRequestTaskDecorator().decorate {
-            HttpServletRequest request = GrailsWebRequest.lookup().currentRequest
-            try {
-                ((MultipartHttpServletRequest) request).getFile('cover')
-            }
-            catch (Throwable failure) {
-                seen.afterwards = failure
-            }
+            GrailsWebRequest webRequest = GrailsWebRequest.lookup()
+            MultipartHttpServletRequest request = (MultipartHttpServletRequest) webRequest.currentRequest
+            seen.params = webRequest.params
+            seen.afterwards = [
+                    file: request.getFile('cover'),
+                    files: request.getFiles('cover'),
+                    fileNames: request.fileNames.toList(),
+                    fileMap: request.fileMap,
+                    multiFileMap: request.multiFileMap,
+                    contentType: request.getMultipartContentType('cover'),
+                    partHeaders: request.getMultipartHeaders('cover'),
+                    method: request.requestMethod,
+                    accept: request.requestHeaders.getFirst('Accept')]
         }
         RequestContextHolder.resetRequestAttributes()
 
@@ -448,10 +456,126 @@ class GrailsWebRequestTaskDecoratorSpec extends Specification {
         recycled.set(true)
         outliving.run()
 
-        then: 'the upload needed the live request'
-        seen.afterwards instanceof IllegalStateException
-        seen.afterwards.message.startsWith('The request has completed')
-        seen.afterwards.message.contains('getFile')
+        then: 'the uploads went with the request, and params still has its parameters'
+        seen.params.title == 'Grails'
+        !seen.params.containsKey('cover')
+        seen.afterwards.file == null
+        seen.afterwards.files.isEmpty()
+        seen.afterwards.fileNames.isEmpty()
+        seen.afterwards.fileMap.isEmpty()
+        seen.afterwards.multiFileMap.isEmpty()
+        seen.afterwards.contentType == null
+        seen.afterwards.partHeaders == null
+
+        and: 'the request itself is described as it was'
+        seen.afterwards.method == HttpMethod.POST
+        seen.afterwards.accept == 'application/json'
+    }
+
+    @Issue('https://github.com/apache/grails-core/issues/15851')
+    void 'a task finds a multipart request inside an ordinary wrapper, as params does on the request itself'() {
+        given: 'a multipart request a filter resolved, inside the wrapper of a filter after it'
+        MockMultipartHttpServletRequest multipart = new MockMultipartHttpServletRequest(new MockServletContext())
+        multipart.method = 'POST'
+        multipart.requestURI = '/books/save'
+        multipart.addParameter('title', 'Grails')
+        MultipartFile cover = new MockMultipartFile('cover', 'cover.png', 'image/png', [1, 2, 3] as byte[])
+        multipart.addFile(cover)
+        GrailsWebRequest original = bind(new HttpServletRequestWrapper(multipart))
+
+        and:
+        Map seen = [:]
+        Runnable during = readingUpload(seen, 'during')
+        Runnable outliving = readingUpload(seen, 'afterwards')
+        RequestContextHolder.resetRequestAttributes()
+
+        when: 'the request is still live'
+        during.run()
+
+        then: 'params and the request find the upload inside the wrapper'
+        seen.during.title == 'Grails'
+        seen.during.cover.is(cover)
+        seen.during.file.is(cover)
+
+        when: 'the request completes before the next task'
+        original.requestCompleted()
+        outliving.run()
+
+        then: 'the upload went with the request, and params still has its parameters'
+        seen.afterwards.title == 'Grails'
+        seen.afterwards.cover == null
+        seen.afterwards.file == null
+    }
+
+    @Issue('https://github.com/apache/grails-core/issues/15851')
+    void 'the copy stands in for the multipart request the dispatcher resolved, without its uploads'() {
+        given: 'a multipart request the dispatcher resolved from the request and published on it, as Grails does'
+        MockHttpServletRequest live = request()
+        MultipartFile cover = new MockMultipartFile('cover', 'cover.png', 'image/png', [1, 2, 3] as byte[])
+        live.setAttribute(WebUtils.MULTIPART_HTTP_SERVLET_REQUEST_ATTRIBUTE,
+                new LazyMultipartHttpServletRequest(live, new AtomicBoolean(), cover))
+        GrailsWebRequest original = bind(live)
+
+        and:
+        Map seen = [:]
+        Runnable during = readingUpload(seen, 'during')
+        Runnable outliving = readingUpload(seen, 'afterwards')
+        RequestContextHolder.resetRequestAttributes()
+
+        when: 'the request is still live'
+        during.run()
+
+        then: 'params and the request find the upload through the attribute'
+        seen.during.title == 'Grails'
+        seen.during.cover.is(cover)
+        seen.during.file.is(cover)
+
+        when: 'the request completes before the next task'
+        original.requestCompleted()
+        outliving.run()
+
+        then: 'the multipart request, which wraps the request, is not kept, and the copy has no uploads in its place'
+        seen.afterwards.title == 'Grails'
+        seen.afterwards.cover == null
+        seen.afterwards.file == null
+    }
+
+    @Issue('https://github.com/apache/grails-core/issues/15851')
+    void 'a task starts for a request wrapping one with an interface the class loader of the request cannot see'() {
+        given: 'a request from a class loader of its own, inside a wrapper from the application class loader'
+        GroovyClassLoader isolated = new GroovyClassLoader(GrailsWebRequestTaskDecoratorSpec.classLoader)
+        Class<?> hidden = isolated.parseClass('interface IsolatedRequestView {}')
+        MockHttpServletRequest live = request()
+        HttpServletRequest inner = (HttpServletRequest) Proxy.newProxyInstance(isolated,
+                [HttpServletRequest, hidden] as Class[]) { proxy, method, args ->
+            try {
+                return method.invoke(live, args)
+            }
+            catch (InvocationTargetException e) {
+                throw e.targetException
+            }
+        }
+        GrailsWebRequest original = bind(new HttpServletRequestWrapper(inner))
+
+        and:
+        Map seen = [:]
+        Runnable decorated = new GrailsWebRequestTaskDecorator().decorate {
+            HttpServletRequest request = GrailsWebRequest.lookup().currentRequest
+            seen.title = request.getParameter('title')
+            seen.hidden = hidden.isInstance(request)
+        }
+        RequestContextHolder.resetRequestAttributes()
+
+        when:
+        decorated.run()
+
+        then: 'the task request leaves out the interface, which a proxy of that class loader cannot implement'
+        original.isActive()
+        seen.title == 'Grails'
+        !seen.hidden
+
+        cleanup:
+        isolated.close()
     }
 
     @Issue('https://github.com/apache/grails-core/issues/15851')
@@ -464,14 +588,10 @@ class GrailsWebRequestTaskDecoratorSpec extends Specification {
         and:
         Map seen = [:]
         Runnable decorated = new GrailsWebRequestTaskDecorator().decorate {
-            HttpServletRequest request = GrailsWebRequest.lookup().currentRequest
-            seen.title = request.getParameter('title')
-            try {
-                ((MultipartHttpServletRequest) request).getFile('cover')
-            }
-            catch (Throwable failure) {
-                seen.upload = failure
-            }
+            GrailsWebRequest webRequest = GrailsWebRequest.lookup()
+            seen.title = webRequest.currentRequest.getParameter('title')
+            seen.params = webRequest.params
+            seen.upload = ((MultipartHttpServletRequest) webRequest.currentRequest).getFile('cover')
         }
         RequestContextHolder.resetRequestAttributes()
 
@@ -482,10 +602,10 @@ class GrailsWebRequestTaskDecoratorSpec extends Specification {
 
         then: 'the copy holds the parameters of the request the wrapper wraps'
         seen.title == 'Grails'
+        seen.params.title == 'Grails'
 
-        and: 'the upload needed the live request'
-        seen.upload instanceof IllegalStateException
-        seen.upload.message.startsWith('The request has completed')
+        and: 'the upload went with the request'
+        seen.upload == null
     }
 
     @Issue('https://github.com/apache/grails-core/issues/15851')
@@ -552,10 +672,13 @@ class GrailsWebRequestTaskDecoratorSpec extends Specification {
 
     @Issue('https://github.com/apache/grails-core/issues/15851')
     void 'the request is released once the copy replaces it'() {
-        given: 'a request an attribute of which holds the request itself, as a filter may park it'
+        given: 'a request attributes of which hold the request itself, as a filter may park it, its response, and the multipart request the dispatcher resolved from it'
         MockHttpServletRequest live = request()
         live.setAttribute('itself', live)
+        live.setAttribute(WebUtils.MULTIPART_HTTP_SERVLET_REQUEST_ATTRIBUTE,
+                new LazyMultipartHttpServletRequest(live, new AtomicBoolean()))
         GrailsWebRequest original = bind(live)
+        live.setAttribute('response', original.currentResponse)
         WeakReference<MockHttpServletRequest> reference = new WeakReference<>(live)
 
         and:
@@ -564,6 +687,7 @@ class GrailsWebRequestTaskDecoratorSpec extends Specification {
             HttpServletRequest request = GrailsWebRequest.lookup().currentRequest
             seen.title = request.getParameter('title')
             seen.itself = request.getAttribute('itself')
+            seen.response = request.getAttribute('response')
         }
         RequestContextHolder.resetRequestAttributes()
 
@@ -581,6 +705,16 @@ class GrailsWebRequestTaskDecoratorSpec extends Specification {
         then: 'the task reads the copy, which left out what held the request'
         seen.title == 'Grails'
         seen.itself == null
+        seen.response == null
+    }
+
+    // A task reading an upload as an action does, through params and through the multipart request
+    private static Runnable readingUpload(Map seen, String stage) {
+        return new GrailsWebRequestTaskDecorator().decorate {
+            GrailsWebRequest webRequest = GrailsWebRequest.lookup()
+            seen[stage] = [title: webRequest.params.title, cover: webRequest.params.cover,
+                           file: WebUtils.resolveMultipartRequest(webRequest.currentRequest)?.getFile('cover')]
+        }
     }
 
     private static boolean collected(WeakReference<?> reference) {
@@ -614,10 +748,14 @@ class GrailsWebRequestTaskDecoratorSpec extends Specification {
             implements MultipartHttpServletRequest {
 
         private final AtomicBoolean consumed
+        private final MultiValueMap<String, MultipartFile> files = new LinkedMultiValueMap<>()
 
-        LazyMultipartHttpServletRequest(HttpServletRequest request, AtomicBoolean consumed) {
+        LazyMultipartHttpServletRequest(HttpServletRequest request, AtomicBoolean consumed, MultipartFile... uploads) {
             super(request)
             this.consumed = consumed
+            for (MultipartFile upload : uploads) {
+                files.add(upload.name, upload)
+            }
         }
 
         private void parse() {
@@ -667,32 +805,32 @@ class GrailsWebRequestTaskDecoratorSpec extends Specification {
 
         @Override
         Iterator<String> getFileNames() {
-            return Collections.emptyIterator()
+            return files.keySet().iterator()
         }
 
         @Override
         MultipartFile getFile(String name) {
-            return null
+            return files.getFirst(name)
         }
 
         @Override
         List<MultipartFile> getFiles(String name) {
-            return Collections.emptyList()
+            return files.get(name) ?: Collections.<MultipartFile>emptyList()
         }
 
         @Override
         Map<String, MultipartFile> getFileMap() {
-            return Collections.emptyMap()
+            return files.toSingleValueMap()
         }
 
         @Override
         MultiValueMap<String, MultipartFile> getMultiFileMap() {
-            return new LinkedMultiValueMap<String, MultipartFile>()
+            return files
         }
 
         @Override
         String getMultipartContentType(String paramOrFileName) {
-            return null
+            return files.getFirst(paramOrFileName)?.contentType
         }
     }
 

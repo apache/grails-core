@@ -28,6 +28,8 @@ import groovy.transform.CompileStatic
 
 import jakarta.servlet.AsyncEvent
 import jakarta.servlet.AsyncListener
+import jakarta.servlet.ServletRequest
+import jakarta.servlet.ServletRequestWrapper
 import jakarta.servlet.http.HttpServletRequest
 
 import org.springframework.web.context.request.RequestAttributes
@@ -37,12 +39,13 @@ import org.grails.web.servlet.mvc.GrailsWebRequest
 /**
  * The request a task started during a web request sees.
  *
- * <p>Until the request completes, it is that request, with every public view the request offers, such as a
- * multipart wrapper's, so a task the response waits for, such as one started with {@code WebPromises}, renders
- * through it. The container recycles the request once it completes, including any asynchronous processing, so
- * from then on it is a {@link CompletedHttpServletRequest copy} of the request taken as it completed, and the
- * recycled request is released. One copy is taken for the request, however many tasks it has, and each task
- * reads it through a view of its own, so each has the body to read.</p>
+ * <p>Until the request completes, it is that request, with every public view the request and the requests it
+ * wraps offer, such as a multipart wrapper's, so a task the response waits for, such as one started with
+ * {@code WebPromises}, renders through it. The container recycles the request once it completes, including any
+ * asynchronous processing, so from then on it is a {@link CompletedHttpServletRequest copy} of the request taken
+ * as it completed, and the recycled request is released. One copy is taken for the request, however many tasks
+ * it has, and each task reads it through a view of its own, so each has the body to read. A multipart request
+ * stays one, without the uploads, which go with the request.</p>
  *
  * @since 8.0.1
  */
@@ -77,7 +80,7 @@ class TaskRequest implements InvocationHandler {
             }
         }
         ClassLoader loader = current.getClass().classLoader ?: TaskRequest.classLoader
-        return (HttpServletRequest) Proxy.newProxyInstance(loader, interfacesOf(current),
+        return (HttpServletRequest) Proxy.newProxyInstance(loader, interfacesOf(current, loader),
                 new TaskRequest(stateOf(webRequest, current)))
     }
 
@@ -110,23 +113,49 @@ class TaskRequest implements InvocationHandler {
         }
     }
 
-    // Every public view of the request, such as a multipart wrapper's, so the task finds what a filter resolved
-    private static Class<?>[] interfacesOf(HttpServletRequest request) {
+    // Every public view of the request and of the requests it wraps, such as a multipart wrapper's, so the task
+    // finds what a filter resolved however the request is wrapped, as unwrapping the request finds it
+    private static Class<?>[] interfacesOf(HttpServletRequest request, ClassLoader loader) {
         Set<Class<?>> interfaces = new LinkedHashSet<>()
         interfaces.add(HttpServletRequest)
-        for (Class<?> type = request.getClass(); type != null; type = type.superclass) {
-            addInterfaces(type.interfaces, interfaces)
+        for (ServletRequest wrapped = request; wrapped != null; wrapped = unwrap(wrapped)) {
+            for (Class<?> type = wrapped.getClass(); type != null; type = type.superclass) {
+                addInterfaces(type.interfaces, loader, interfaces)
+            }
         }
         return interfaces.toArray(new Class<?>[0])
     }
 
-    private static void addInterfaces(Class<?>[] candidates, Set<Class<?>> interfaces) {
+    private static void addInterfaces(Class<?>[] candidates, ClassLoader loader, Set<Class<?>> interfaces) {
         for (Class<?> candidate : candidates) {
-            // A proxy class can only implement interfaces it can access
-            if (Modifier.isPublic(candidate.modifiers) && interfaces.add(candidate)) {
-                addInterfaces(candidate.interfaces, interfaces)
+            // A proxy class can only implement interfaces it can access, through the class loader that defines it
+            if (Modifier.isPublic(candidate.modifiers) && visibleFrom(loader, candidate) && interfaces.add(candidate)) {
+                addInterfaces(candidate.interfaces, loader, interfaces)
             }
         }
+    }
+
+    private static boolean visibleFrom(ClassLoader loader, Class<?> type) {
+        try {
+            return Class.forName(type.name, false, loader).is(type)
+        }
+        catch (ClassNotFoundException ignored) {
+            return false
+        }
+    }
+
+    // The request, or the first request it wraps that offers the method, such as a multipart request in a wrapper
+    private static ServletRequest offering(ServletRequest request, Class<?> type) {
+        for (ServletRequest candidate = request; candidate != null; candidate = unwrap(candidate)) {
+            if (type.isInstance(candidate)) {
+                return candidate
+            }
+        }
+        return null
+    }
+
+    private static ServletRequest unwrap(ServletRequest request) {
+        return request instanceof ServletRequestWrapper ? ((ServletRequestWrapper) request).request : null
     }
 
     @Override
@@ -141,13 +170,14 @@ class TaskRequest implements InvocationHandler {
         if (current == null) {
             current = view()
         }
-        if (!method.declaringClass.isInstance(current)) {
-            // Only the live request offers the views beyond HttpServletRequest, such as a multipart wrapper's
+        ServletRequest target = offering(current, method.declaringClass)
+        if (target == null) {
+            // Only the live request offers the views the copy does not keep, such as a custom wrapper's
             throw new IllegalStateException('The request has completed, so a task that outlives it cannot call ' +
                     "${method.declaringClass.simpleName}.${method.name}, which the copy of the request does not keep")
         }
         try {
-            return method.invoke(current, args)
+            return method.invoke(target, args)
         }
         catch (InvocationTargetException e) {
             throw e.targetException

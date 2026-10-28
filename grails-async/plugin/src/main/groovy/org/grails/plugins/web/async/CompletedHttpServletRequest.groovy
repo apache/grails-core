@@ -46,9 +46,14 @@ import jakarta.servlet.http.HttpUpgradeHandler
 import jakarta.servlet.http.MappingMatch
 import jakarta.servlet.http.Part
 
+import org.springframework.http.HttpHeaders
+import org.springframework.http.HttpMethod
 import org.springframework.util.LinkedCaseInsensitiveMap
-
-import org.grails.web.util.GrailsApplicationAttributes
+import org.springframework.util.LinkedMultiValueMap
+import org.springframework.util.MultiValueMap
+import org.springframework.web.context.request.RequestAttributes
+import org.springframework.web.multipart.MultipartFile
+import org.springframework.web.multipart.MultipartHttpServletRequest
 
 /**
  * A copy of a request, taken as the request completed, which a task that outlives the request reads in its place.
@@ -58,15 +63,20 @@ import org.grails.web.util.GrailsApplicationAttributes
  * of its own, so each has the part of the body nothing had read, served through one stream or reader whose
  * position persists, as the live request serves it. The copy holds the attributes, parameters, headers, locales
  * and cookies of the request, its session and what identifies it. Attributes a task sets stay with the copy,
- * shared by every view, as they are shared on the live request. The request itself and the web request of the
- * request thread are not carried over, so the copy holds nothing the container recycles. What only the live
- * request can do, such as dispatching, processing asynchronously, creating a session or checking a role, is not
- * available.</p>
+ * shared by every view, as they are shared on the live request. The request, its response and what holds
+ * either, such as the web request of the request thread, are not carried over, so the copy holds nothing the
+ * container recycles. What only the live request can do, such as dispatching, processing asynchronously, creating
+ * a session or checking a role, is not available.</p>
+ *
+ * <p>The uploads of a multipart request are deleted as the request ends, so the copy answers as a multipart
+ * request without uploads: through the request of a task when the request was a multipart request, and in place of
+ * a multipart request an attribute held, such as the one the dispatcher resolved. Reading params then finds the
+ * copied parameters and no uploads.</p>
  *
  * @since 8.0.1
  */
 @CompileStatic
-class CompletedHttpServletRequest implements HttpServletRequest {
+class CompletedHttpServletRequest implements MultipartHttpServletRequest {
 
     private static final byte[] NO_BODY = new byte[0]
     private static final List<String> DATE_HEADER_FORMS = List.of(
@@ -121,10 +131,13 @@ class CompletedHttpServletRequest implements HttpServletRequest {
 
     private CompletedHttpServletRequest(HttpServletRequest request) {
         this.attributes = new ConcurrentHashMap<>()
+        List<String> multipartRequests = new ArrayList<>()
         for (String name : Collections.list(request.attributeNames)) {
             Object value = request.getAttribute(name)
-            // Not the request itself nor the web request holding it, so the copy holds nothing the container recycles
-            if (value != null && !value.is(request) && GrailsApplicationAttributes.WEB_REQUEST != name) {
+            if (value instanceof MultipartHttpServletRequest) {
+                multipartRequests.add(name)
+            }
+            else if (value != null && !recycledWithRequest(value)) {
                 attributes.put(name, value)
             }
         }
@@ -175,6 +188,11 @@ class CompletedHttpServletRequest implements HttpServletRequest {
         this.requestedSessionIdFromURL = request.requestedSessionIdFromURL
         this.requestId = request.requestId
         this.protocolRequestId = request.protocolRequestId
+        // A multipart request, such as the one the dispatcher resolved, wraps the request, so the copy, which has
+        // no uploads either, takes its place
+        for (String name : multipartRequests) {
+            attributes.put(name, this)
+        }
     }
 
     // Field by field: the getters serve tasks, so some, such as getSession and getLocales, do not return the field
@@ -241,6 +259,11 @@ class CompletedHttpServletRequest implements HttpServletRequest {
      */
     CompletedHttpServletRequest newView() {
         return new CompletedHttpServletRequest(this)
+    }
+
+    // The request, its response and what holds either, such as the web request, are recycled with the request
+    private static boolean recycledWithRequest(Object value) {
+        return value instanceof ServletRequest || value instanceof ServletResponse || value instanceof RequestAttributes
     }
 
     private static String[] copyValues(String[] values) {
@@ -722,6 +745,55 @@ class CompletedHttpServletRequest implements HttpServletRequest {
     @Override
     <T extends HttpUpgradeHandler> T upgrade(Class<T> handlerClass) {
         throw unavailable('upgrade(Class)')
+    }
+
+    @Override
+    HttpMethod getRequestMethod() {
+        return method == null ? null : HttpMethod.valueOf(method)
+    }
+
+    @Override
+    HttpHeaders getRequestHeaders() {
+        HttpHeaders requestHeaders = new HttpHeaders()
+        for (Map.Entry<String, List<String>> header : headers.entrySet()) {
+            requestHeaders.addAll(header.key, header.value)
+        }
+        return requestHeaders
+    }
+
+    @Override
+    HttpHeaders getMultipartHeaders(String paramOrFileName) {
+        return null
+    }
+
+    @Override
+    Iterator<String> getFileNames() {
+        return Collections.emptyIterator()
+    }
+
+    @Override
+    MultipartFile getFile(String name) {
+        return null
+    }
+
+    @Override
+    List<MultipartFile> getFiles(String name) {
+        return Collections.emptyList()
+    }
+
+    @Override
+    Map<String, MultipartFile> getFileMap() {
+        return Collections.emptyMap()
+    }
+
+    @Override
+    MultiValueMap<String, MultipartFile> getMultiFileMap() {
+        return new LinkedMultiValueMap<String, MultipartFile>()
+    }
+
+    @Override
+    String getMultipartContentType(String paramOrFileName) {
+        return null
     }
 
     private static final class CopiedServletInputStream extends ServletInputStream {
