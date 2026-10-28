@@ -16,43 +16,45 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.orm.hibernate.cfg.domainbinding.binder;
+package org.grails.orm.hibernate.cfg.domainbinding.binder
 
-import jakarta.annotation.Nonnull;
+import groovy.transform.CompileStatic
+import jakarta.annotation.Nonnull
+import org.hibernate.mapping.Column
+import org.hibernate.mapping.Table
 
-import org.hibernate.mapping.Column;
-import org.hibernate.mapping.Table;
+import org.grails.orm.hibernate.cfg.ColumnConfig
 
-import org.grails.orm.hibernate.cfg.ColumnConfig;
+@CompileStatic
+class IndexBinder {
 
-import static java.lang.String.format;
-import static java.util.Optional.empty;
-import static java.util.Optional.of;
-import static java.util.Optional.ofNullable;
-
-public class IndexBinder {
-
-    public void bindIndex(@Nonnull String columnName, @Nonnull Column column, ColumnConfig cc, @Nonnull Table table) {
-        ofNullable(cc)
-                .map(ColumnConfig::getIndex)
-                .flatMap(indexObj -> {
-                    if (indexObj instanceof Boolean b) {
-                        return b ? of(format("%s_%s_idx", table.getName(), columnName)) : empty();
-                    }
-                    String indexStr = indexObj.toString();
-                    if ("true".equalsIgnoreCase(indexStr)) {
-                        return of(format("%s_%s_idx", table.getName(), columnName));
-                    }
-                    if ("false".equalsIgnoreCase(indexStr)) {
-                        return empty();
-                    }
-                    return of(indexStr);
-                })
-                .map(def -> def.split(","))
-                .ifPresent(indices -> {
-                    for (String index : indices) {
-                        table.getOrCreateIndex(index.trim()).addColumn(column);
-                    }
-                });
+    void bindIndex(@Nonnull String columnName, @Nonnull Column column, ColumnConfig cc, @Nonnull Table table) {
+        if (cc == null) {
+            return
+        }
+        Object indexObj = cc.getIndex()
+        if (indexObj == null) {
+            return
+        }
+        String indexDef
+        if (indexObj instanceof Boolean) {
+            if (!((Boolean) indexObj)) {
+                return
+            }
+            indexDef = String.format('%s_%s_idx', table.getName(), columnName)
+        } else {
+            String indexStr = indexObj.toString()
+            if ('true'.equalsIgnoreCase(indexStr)) {
+                indexDef = String.format('%s_%s_idx', table.getName(), columnName)
+            } else if ('false'.equalsIgnoreCase(indexStr)) {
+                return
+            } else {
+                indexDef = indexStr
+            }
+        }
+        String[] indices = indexDef.split(',')
+        for (String index : indices) {
+            table.getOrCreateIndex(index.trim()).addColumn(column)
+        }
     }
 }

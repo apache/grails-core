@@ -16,39 +16,36 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package com.example.timezone;
+package com.example.timezone
 
-import java.time.Instant;
-import java.time.LocalDateTime;
+import jakarta.persistence.Column
+import jakarta.persistence.Entity
+import jakarta.persistence.GeneratedValue
+import jakarta.persistence.GenerationType
+import jakarta.persistence.Id
+import java.time.Instant
+import java.time.LocalDateTime
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
+import groovy.transform.CompileStatic
 
-import lombok.Getter;
-import lombok.Setter;
-
-@Getter
-@Setter
 @Entity
-public class Item {
+@CompileStatic
+class Item {
 
     @Id
     @GeneratedValue(strategy = GenerationType.SEQUENCE)
-    private long id;
+    long id
 
     @Column
-    private Instant timestamp1;
+    Instant timestamp1
 
     @Column
-    private LocalDateTime timestamp2;
+    LocalDateTime timestamp2
 
-    @Column(columnDefinition = "timestamp")
-    private Instant timestamp3;
+    @Column(columnDefinition = 'timestamp')
+    Instant timestamp3
 
-    @Column(columnDefinition = "TIMESTAMP WITH TIME ZONE")
-    private LocalDateTime timestamp4;
+    @Column(columnDefinition = 'TIMESTAMP WITH TIME ZONE')
+    LocalDateTime timestamp4
 
 }

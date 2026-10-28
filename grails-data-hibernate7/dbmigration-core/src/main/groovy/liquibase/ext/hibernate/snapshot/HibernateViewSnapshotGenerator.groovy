@@ -1,26 +1,29 @@
-package liquibase.ext.hibernate.snapshot;
+package liquibase.ext.hibernate.snapshot
 
-import liquibase.exception.DatabaseException;
-import liquibase.snapshot.DatabaseSnapshot;
-import liquibase.snapshot.InvalidExampleException;
-import liquibase.snapshot.SnapshotGenerator;
-import liquibase.structure.DatabaseObject;
-import liquibase.structure.core.Schema;
-import liquibase.structure.core.View;
+import groovy.transform.CompileStatic
+import liquibase.exception.DatabaseException
+import liquibase.snapshot.DatabaseSnapshot
+import liquibase.snapshot.InvalidExampleException
+import liquibase.snapshot.SnapshotGenerator
+import liquibase.snapshot.jvm.ViewSnapshotGenerator
+import liquibase.structure.DatabaseObject
+import liquibase.structure.core.Schema
+import liquibase.structure.core.View
 
 /**
  * View snapshots are not supported from hibernate, but this class needs to be implemented in order to prevent the default ViewSnapshotGenerator from running.
  */
-public class HibernateViewSnapshotGenerator extends HibernateSnapshotGenerator {
+@CompileStatic
+class HibernateViewSnapshotGenerator extends HibernateSnapshotGenerator {
 
-    public HibernateViewSnapshotGenerator() {
-        super(View.class, new Class[] {Schema.class});
+    HibernateViewSnapshotGenerator() {
+        super(View, Schema)
     }
 
     @Override
     protected DatabaseObject snapshotObject(DatabaseObject example, DatabaseSnapshot snapshot)
             throws DatabaseException, InvalidExampleException {
-        throw new DatabaseException("No views in Hibernate mapping");
+        throw new DatabaseException('No views in Hibernate mapping')
     }
 
     @Override
@@ -30,7 +33,8 @@ public class HibernateViewSnapshotGenerator extends HibernateSnapshotGenerator {
     }
 
     @Override
-    public Class<? extends SnapshotGenerator>[] replaces() {
-        return new Class[] {liquibase.snapshot.jvm.ViewSnapshotGenerator.class};
+    Class<? extends SnapshotGenerator>[] replaces() {
+        return [ViewSnapshotGenerator] as Class<? extends SnapshotGenerator>[]
     }
+
 }

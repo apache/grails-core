@@ -16,26 +16,29 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.orm.hibernate.cfg.domainbinding.hibernate;
+package org.grails.orm.hibernate.cfg.domainbinding.hibernate
 
-import java.beans.PropertyDescriptor;
+import groovy.transform.CompileStatic
+import org.grails.datastore.mapping.model.MappingContext
+import org.grails.datastore.mapping.model.PersistentEntity
 
-import org.grails.datastore.mapping.model.MappingContext;
-import org.grails.datastore.mapping.model.PersistentEntity;
+import java.beans.PropertyDescriptor
 
 /** Hibernate persistent property representing a single-field identity */
-public class HibernateSimpleIdentityProperty extends HibernateIdentityProperty {
+@CompileStatic
+class HibernateSimpleIdentityProperty extends HibernateIdentityProperty {
 
-    public HibernateSimpleIdentityProperty(PersistentEntity entity, MappingContext context, PropertyDescriptor property) {
-        super(entity, context, property);
+    HibernateSimpleIdentityProperty(PersistentEntity entity, MappingContext context, PropertyDescriptor property) {
+        super(entity, context, property)
     }
 
-    public HibernateSimpleIdentityProperty(PersistentEntity entity, MappingContext context, String name, Class<?> type) {
-        super(entity, context, name, type);
+    HibernateSimpleIdentityProperty(PersistentEntity entity, MappingContext context, String name, Class<?> type) {
+        super(entity, context, name, type)
     }
 
     @Override
-    public String getGeneratorName() {
-        return ((HibernatePersistentEntity) getHibernateOwner()).getIdentityGeneratorName();
+    String getGeneratorName() {
+        return ((HibernatePersistentEntity) hibernateOwner).identityGeneratorName
     }
+
 }

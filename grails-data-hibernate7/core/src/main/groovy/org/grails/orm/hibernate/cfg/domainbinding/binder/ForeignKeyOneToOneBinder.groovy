@@ -16,16 +16,17 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.orm.hibernate.cfg.domainbinding.binder;
+package org.grails.orm.hibernate.cfg.domainbinding.binder
 
-import org.hibernate.MappingException;
-import org.hibernate.mapping.Column;
-import org.hibernate.mapping.ManyToOne;
+import groovy.transform.CompileStatic
+import org.hibernate.MappingException
+import org.hibernate.mapping.Column
+import org.hibernate.mapping.ManyToOne
 
-import org.grails.orm.hibernate.cfg.PropertyConfig;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateOneToOneProperty;
-import org.grails.orm.hibernate.cfg.domainbinding.util.SimpleValueColumnFetcher;
+import org.grails.orm.hibernate.cfg.PropertyConfig
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateOneToOneProperty
+import org.grails.orm.hibernate.cfg.domainbinding.util.SimpleValueColumnFetcher
 
 /**
  * Binds a {@link HibernateOneToOneProperty} whose foreign key resides on this side as a Hibernate
@@ -35,41 +36,44 @@ import org.grails.orm.hibernate.cfg.domainbinding.util.SimpleValueColumnFetcher;
  * association cannot be mapped as a Hibernate {@code OneToOne}, so it falls back to a ManyToOne
  * column with an alternate unique key.
  */
-public class ForeignKeyOneToOneBinder {
+@CompileStatic
+class ForeignKeyOneToOneBinder {
 
-    private final ManyToOneBinder manyToOneBinder;
-    private final SimpleValueColumnFetcher simpleValueColumnFetcher;
+    private final ManyToOneBinder manyToOneBinder
+    private final SimpleValueColumnFetcher simpleValueColumnFetcher
 
-    public ForeignKeyOneToOneBinder(
+    ForeignKeyOneToOneBinder(
             ManyToOneBinder manyToOneBinder, SimpleValueColumnFetcher simpleValueColumnFetcher) {
-        this.manyToOneBinder = manyToOneBinder;
-        this.simpleValueColumnFetcher = simpleValueColumnFetcher;
+        this.manyToOneBinder = manyToOneBinder
+        this.simpleValueColumnFetcher = simpleValueColumnFetcher
     }
 
     /**
      * Binds the one-to-one property as a {@link ManyToOne} value and applies unique-key constraints.
      */
-    public ManyToOne bind(HibernateOneToOneProperty property, String path) {
-        GrailsHibernatePersistentEntity refDomainClass = property.getHibernateAssociatedEntity();
-        ManyToOne manyToOne = manyToOneBinder.bindManyToOne(property, path);
-        if (refDomainClass.getHibernateCompositeIdentity().isEmpty()) {
-            bindUniqueKey(property, manyToOne);
+    ManyToOne bind(HibernateOneToOneProperty property, String path) {
+        GrailsHibernatePersistentEntity refDomainClass = property.hibernateAssociatedEntity
+        ManyToOne manyToOne = manyToOneBinder.bindManyToOne(property, path)
+        if (refDomainClass.hibernateCompositeIdentity.isEmpty()) {
+            bindUniqueKey(property, manyToOne)
         }
-        return manyToOne;
+        return manyToOne
     }
 
     private void bindUniqueKey(HibernateOneToOneProperty property, ManyToOne manyToOne) {
-        PropertyConfig config = property.getHibernateMappedForm();
-        manyToOne.setAlternateUniqueKey(true);
-        Column c = simpleValueColumnFetcher.getColumnForSimpleValue(manyToOne);
+        PropertyConfig config = property.hibernateMappedForm
+        manyToOne.alternateUniqueKey = true
+        Column c = simpleValueColumnFetcher.getColumnForSimpleValue(manyToOne)
         if (c == null) {
-            throw new MappingException("There is no column for property [" + property.getName() + "]");
+            throw new MappingException("There is no column for property [${property.name}]".toString())
         }
         if (!config.isUniqueWithinGroup()) {
-            c.setUnique(config.isUnique());
-        } else if (property.isBidirectional() &&
-                property.getHibernateInverseSide().isValidHibernateOneToOne()) {
-            c.setUnique(true);
+            c.unique = config.isUnique()
+        }
+        else if (property.isBidirectional() &&
+                property.hibernateInverseSide.isValidHibernateOneToOne()) {
+            c.unique = true
         }
     }
+
 }

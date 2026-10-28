@@ -16,42 +16,39 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.orm.hibernate.cfg.domainbinding.generator;
+package org.grails.orm.hibernate.cfg.domainbinding.generator
 
-import java.io.Serial;
-import java.util.Optional;
-import java.util.Properties;
+import groovy.transform.CompileStatic
+import org.hibernate.boot.model.relational.SqlStringGenerationContext
+import org.hibernate.boot.model.relational.internal.SqlStringGenerationContextImpl
+import org.hibernate.generator.GeneratorCreationContext
+import org.hibernate.id.IncrementGenerator
 
-import org.hibernate.boot.model.naming.Identifier;
-import org.hibernate.boot.model.relational.SqlStringGenerationContext;
-import org.hibernate.boot.model.relational.internal.SqlStringGenerationContextImpl;
-import org.hibernate.generator.GeneratorCreationContext;
-import org.hibernate.id.IncrementGenerator;
+import org.grails.orm.hibernate.cfg.HibernateSimpleIdentity
+import org.grails.orm.hibernate.cfg.Mapping
+import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
 
-import org.grails.orm.hibernate.cfg.HibernateSimpleIdentity;
-import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
-
-import static org.hibernate.id.PersistentIdentifierGenerator.CATALOG;
-import static org.hibernate.id.PersistentIdentifierGenerator.SCHEMA;
+import static org.hibernate.id.PersistentIdentifierGenerator.CATALOG
+import static org.hibernate.id.PersistentIdentifierGenerator.SCHEMA
 
 /**
  * Grails-aware increment ID generator. Builds the standard {@link IncrementGenerator} parameters
  * from GORM mapping metadata and delegates entirely to the parent class — no reflection required.
  */
-public class GrailsIncrementGenerator extends IncrementGenerator {
+@CompileStatic
+class GrailsIncrementGenerator extends IncrementGenerator {
 
-    @Serial
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 1L
 
-    public GrailsIncrementGenerator(
+    GrailsIncrementGenerator(
             GeneratorCreationContext context,
             HibernateSimpleIdentity mappedId,
             GrailsHibernatePersistentEntity domainClass,
             PersistentEntityNamingStrategy namingStrategy) {
 
-        configure(context, buildParams(context, mappedId, domainClass, namingStrategy));
-        initialize(buildSqlContext(context));
+        configure(context, buildParams(context, mappedId, domainClass, namingStrategy))
+        initialize(buildSqlContext(context))
     }
 
     protected Properties buildParams(
@@ -60,45 +57,47 @@ public class GrailsIncrementGenerator extends IncrementGenerator {
             GrailsHibernatePersistentEntity domainClass,
             PersistentEntityNamingStrategy namingStrategy) {
 
-        Properties params = new Properties();
-        Optional.ofNullable(mappedId).map(HibernateSimpleIdentity::getProperties).ifPresent(params::putAll);
+        Properties params = new Properties()
+        Properties mappedIdProps = mappedId?.properties
+        if (mappedIdProps != null) {
+            params.putAll(mappedIdProps)
+        }
 
-        params.put(TABLES, domainClass.getTableName(namingStrategy));
-        params.put(COLUMN, resolveColumnName(context, mappedId));
+        params.put(TABLES, domainClass.getTableName(namingStrategy))
+        params.put(COLUMN, resolveColumnName(context, mappedId))
 
-        Optional.ofNullable(domainClass.getHibernateMappedForm())
-                .map(org.grails.orm.hibernate.cfg.Mapping::getTable)
-                .ifPresent(table -> {
-                    if (table.getCatalog() != null) params.put(CATALOG, table.getCatalog());
-                    if (table.getSchema() != null) params.put(SCHEMA, table.getSchema());
-                });
+        Mapping mappedForm = domainClass.hibernateMappedForm
+        org.grails.orm.hibernate.cfg.Table table = mappedForm?.table
+        if (table != null) {
+            if (table.catalog != null) {
+                params.put(CATALOG, table.catalog)
+            }
+            if (table.schema != null) {
+                params.put(SCHEMA, table.schema)
+            }
+        }
 
-        return params;
+        return params
     }
 
     protected String resolveColumnName(GeneratorCreationContext context, HibernateSimpleIdentity mappedId) {
-        String propertyName = context.getProperty().getName();
-        if (propertyName != null && !propertyName.contains(".")) {
-            return propertyName;
+        String propertyName = context.property.name
+        if (propertyName != null && !propertyName.contains('.')) {
+            return propertyName
         }
-        return Optional.ofNullable(mappedId)
-                .map(HibernateSimpleIdentity::getName)
-                .filter(name -> !name.contains("."))
-                .orElse("id");
+        String mappedIdName = mappedId?.name
+        return (mappedIdName != null && !mappedIdName.contains('.')) ? mappedIdName : 'id'
     }
 
     protected SqlStringGenerationContext buildSqlContext(GeneratorCreationContext context) {
-        var database = context.getDatabase();
-        var physicalName = database.getDefaultNamespace().getPhysicalName();
+        def database = context.database
+        def physicalName = database.defaultNamespace.physicalName
 
         return SqlStringGenerationContextImpl.fromExplicit(
-                database.getJdbcEnvironment(),
+                database.jdbcEnvironment,
                 database,
-                Optional.ofNullable(physicalName.catalog())
-                        .map(Identifier::getCanonicalName)
-                        .orElse(null),
-                Optional.ofNullable(physicalName.schema())
-                        .map(Identifier::getCanonicalName)
-                        .orElse(null));
+                physicalName.catalog()?.canonicalName,
+                physicalName.schema()?.canonicalName)
     }
+
 }

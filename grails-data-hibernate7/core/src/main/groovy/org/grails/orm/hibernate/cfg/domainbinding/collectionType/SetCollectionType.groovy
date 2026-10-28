@@ -16,22 +16,23 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.orm.hibernate.cfg.domainbinding.collectionType;
+package org.grails.orm.hibernate.cfg.domainbinding.collectionType
 
-import java.util.Set;
+import groovy.transform.CompileStatic
+import org.hibernate.boot.spi.MetadataBuildingContext
+import org.hibernate.mapping.Collection
+import org.hibernate.mapping.PersistentClass
 
-import org.hibernate.boot.spi.MetadataBuildingContext;
-import org.hibernate.mapping.Collection;
-import org.hibernate.mapping.PersistentClass;
+@CompileStatic
+class SetCollectionType extends CollectionType {
 
-public class SetCollectionType extends CollectionType {
-
-    public SetCollectionType(MetadataBuildingContext buildingContext) {
-        super(Set.class, buildingContext);
+    SetCollectionType(MetadataBuildingContext buildingContext) {
+        super(Set, buildingContext)
     }
 
     @Override
-    public Collection createCollection(PersistentClass owner) {
-        return new org.hibernate.mapping.Set(buildingContext, owner);
+    Collection createCollection(PersistentClass owner) {
+        return new org.hibernate.mapping.Set(buildingContext, owner)
     }
+
 }

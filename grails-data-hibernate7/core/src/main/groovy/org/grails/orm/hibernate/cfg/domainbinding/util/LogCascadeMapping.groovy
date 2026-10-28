@@ -16,23 +16,24 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.orm.hibernate.cfg.domainbinding.util;
+package org.grails.orm.hibernate.cfg.domainbinding.util
 
-import org.slf4j.Logger;
+import groovy.transform.CompileStatic
+import org.slf4j.Logger
 
-import org.grails.datastore.mapping.model.types.Association;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateManyToManyProperty;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateManyToOneProperty;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateOneToManyProperty;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateOneToOneProperty;
+import org.grails.datastore.mapping.model.types.Association
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateManyToManyProperty
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateManyToOneProperty
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateOneToManyProperty
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateOneToOneProperty
 
-@SuppressWarnings("PMD.LoggerIsNotStaticFinal")
-public class LogCascadeMapping {
+@CompileStatic
+class LogCascadeMapping {
 
-    private final Logger log;
+    private final Logger log
 
-    public LogCascadeMapping(Logger log) {
-        this.log = log;
+    LogCascadeMapping(Logger log) {
+        this.log = log
     }
 
     /**
@@ -41,16 +42,16 @@ public class LogCascadeMapping {
      * @param association The association property.
      * @param cascadeStrategy The calculated cascade string.
      */
-    public void logCascadeMapping(Association<?> association, CascadeBehavior cascadeStrategy) {
-        if (log.isDebugEnabled()) {
-            String assType = getAssociationType(association);
+    void logCascadeMapping(Association<?> association, CascadeBehavior cascadeStrategy) {
+        if (log.debugEnabled) {
+            String assType = getAssociationType(association)
             log.debug(
-                    "Mapping cascade strategy for {} property {}.{} referencing type [{}] -> [CASCADE: {}]",
+                    'Mapping cascade strategy for {} property {}.{} referencing type [{}] -> [CASCADE: {}]',
                     assType,
-                    association.getOwner().getName(),
-                    association.getName(),
-                    association.getAssociatedEntity().getJavaClass().getName(),
-                    cascadeStrategy);
+                    association.owner.name,
+                    association.name,
+                    association.associatedEntity.javaClass.name,
+                    cascadeStrategy)
         }
     }
 
@@ -64,16 +65,21 @@ public class LogCascadeMapping {
     private String getAssociationType(Association<?> association) {
         // Use a standard if-else-if chain for compatibility with Java 17 and earlier.
         if (association instanceof HibernateManyToManyProperty) {
-            return "many-to-many";
-        } else if (association instanceof HibernateOneToManyProperty) {
-            return "one-to-many";
-        } else if (association instanceof HibernateOneToOneProperty) {
-            return "one-to-one";
-        } else if (association instanceof HibernateManyToOneProperty) {
-            return "many-to-one";
-        } else if (association.isEmbedded()) {
-            return "embedded";
+            return 'many-to-many'
         }
-        return "unknown";
+        else if (association instanceof HibernateOneToManyProperty) {
+            return 'one-to-many'
+        }
+        else if (association instanceof HibernateOneToOneProperty) {
+            return 'one-to-one'
+        }
+        else if (association instanceof HibernateManyToOneProperty) {
+            return 'many-to-one'
+        }
+        else if (association.isEmbedded()) {
+            return 'embedded'
+        }
+        return 'unknown'
     }
+
 }

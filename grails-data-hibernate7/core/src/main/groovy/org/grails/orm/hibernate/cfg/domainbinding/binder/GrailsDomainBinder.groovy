@@ -16,40 +16,45 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.orm.hibernate.cfg.domainbinding.binder;
+package org.grails.orm.hibernate.cfg.domainbinding.binder
 
-import org.hibernate.boot.ResourceStreamLocator;
-import org.hibernate.boot.internal.MetadataBuildingContextRootImpl;
-import org.hibernate.boot.model.TypeContributions;
-import org.hibernate.boot.model.TypeContributor;
-import org.hibernate.boot.spi.AdditionalMappingContributions;
-import org.hibernate.boot.spi.AdditionalMappingContributor;
-import org.hibernate.boot.spi.InFlightMetadataCollector;
-import org.hibernate.boot.spi.MetadataBuildingContext;
-import org.hibernate.engine.jdbc.env.spi.JdbcEnvironment;
-import org.hibernate.mapping.BasicValue;
-import org.hibernate.service.ServiceRegistry;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import java.util.function.BiFunction
 
-import org.grails.datastore.mapping.core.connections.ConnectionSource;
-import org.grails.orm.hibernate.cfg.HibernateMappingContext;
-import org.grails.orm.hibernate.cfg.MappingCacheHolder;
-import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
-import org.grails.orm.hibernate.cfg.domainbinding.collectionType.CollectionHolder;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentEntity;
-import org.grails.orm.hibernate.cfg.domainbinding.util.BackticksRemover;
-import org.grails.orm.hibernate.cfg.domainbinding.util.BasicValueCreator;
-import org.grails.orm.hibernate.cfg.domainbinding.util.ColumnNameForPropertyAndPathFetcher;
-import org.grails.orm.hibernate.cfg.domainbinding.util.DefaultColumnNameFetcher;
-import org.grails.orm.hibernate.cfg.domainbinding.util.GrailsPropertyResolver;
-import org.grails.orm.hibernate.cfg.domainbinding.util.MultiTenantFilterBinder;
-import org.grails.orm.hibernate.cfg.domainbinding.util.MultiTenantFilterDefinitionBinder;
-import org.grails.orm.hibernate.cfg.domainbinding.util.NamingStrategyProvider;
-import org.grails.orm.hibernate.cfg.domainbinding.util.NamingStrategyWrapper;
-import org.grails.orm.hibernate.cfg.domainbinding.util.PropertyFromValueCreator;
-import org.grails.orm.hibernate.cfg.domainbinding.util.SimpleValueColumnFetcher;
-import org.grails.orm.hibernate.cfg.domainbinding.util.TableForManyCalculator;
+import groovy.transform.CompileStatic
+import org.hibernate.boot.ResourceStreamLocator
+import org.hibernate.boot.internal.MetadataBuildingContextRootImpl
+import org.hibernate.boot.model.TypeContributions
+import org.hibernate.boot.model.TypeContributor
+import org.hibernate.boot.spi.AdditionalMappingContributions
+import org.hibernate.boot.spi.AdditionalMappingContributor
+import org.hibernate.boot.spi.InFlightMetadataCollector
+import org.hibernate.boot.spi.MetadataBuildingContext
+import org.hibernate.engine.jdbc.env.spi.JdbcEnvironment
+import org.hibernate.mapping.BasicValue
+import org.hibernate.mapping.Table
+import org.hibernate.service.ServiceRegistry
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
+
+import org.grails.datastore.mapping.core.connections.ConnectionSource
+import org.grails.orm.hibernate.cfg.HibernateMappingContext
+import org.grails.orm.hibernate.cfg.MappingCacheHolder
+import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy
+import org.grails.orm.hibernate.cfg.domainbinding.collectionType.CollectionHolder
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentEntity
+import org.grails.orm.hibernate.cfg.domainbinding.util.BackticksRemover
+import org.grails.orm.hibernate.cfg.domainbinding.util.BasicValueCreator
+import org.grails.orm.hibernate.cfg.domainbinding.util.ColumnNameForPropertyAndPathFetcher
+import org.grails.orm.hibernate.cfg.domainbinding.util.DefaultColumnNameFetcher
+import org.grails.orm.hibernate.cfg.domainbinding.util.ForeignKeyColumnCountCalculator
+import org.grails.orm.hibernate.cfg.domainbinding.util.GrailsPropertyResolver
+import org.grails.orm.hibernate.cfg.domainbinding.util.MultiTenantFilterBinder
+import org.grails.orm.hibernate.cfg.domainbinding.util.MultiTenantFilterDefinitionBinder
+import org.grails.orm.hibernate.cfg.domainbinding.util.NamingStrategyProvider
+import org.grails.orm.hibernate.cfg.domainbinding.util.NamingStrategyWrapper
+import org.grails.orm.hibernate.cfg.domainbinding.util.PropertyFromValueCreator
+import org.grails.orm.hibernate.cfg.domainbinding.util.SimpleValueColumnFetcher
+import org.grails.orm.hibernate.cfg.domainbinding.util.TableForManyCalculator
 
 /**
  * Handles the binding Grails domain classes and properties to the Hibernate runtime meta model.
@@ -57,111 +62,111 @@ import org.grails.orm.hibernate.cfg.domainbinding.util.TableForManyCalculator;
  *
  * @since 8.0
  */
-public class GrailsDomainBinder implements AdditionalMappingContributor, TypeContributor {
+@CompileStatic
+class GrailsDomainBinder implements AdditionalMappingContributor, TypeContributor {
 
-    public static final String FOREIGN_KEY_SUFFIX = "_id";
-    public static final String EMPTY_PATH = "";
-    public static final char UNDERSCORE = '_';
+    public static final String FOREIGN_KEY_SUFFIX = '_id'
+    public static final String EMPTY_PATH = ''
+    public static final char UNDERSCORE = '_'
 
-    public static final String ENUM_CLASS_PROP = "enumClass";
-    public static final Logger LOG = LoggerFactory.getLogger(GrailsDomainBinder.class);
+    public static final String ENUM_CLASS_PROP = 'enumClass'
+    public static final Logger LOG = LoggerFactory.getLogger(GrailsDomainBinder)
 
     /**
      * The name of the discriminator column of a table-per-hierarchy tree that does not map one.
      */
-    public static final String DEFAULT_DISCRIMINATOR_COLUMN_NAME = "class";
+    public static final String DEFAULT_DISCRIMINATOR_COLUMN_NAME = 'class'
 
-    private final String sessionFactoryName;
-    private final String dataSourceName;
-    private final HibernateMappingContext hibernateMappingContext;
-    private final NamingStrategyProvider namingStrategyProvider;
-    private final MappingCacheHolder mappingCacheHolder;
-    private PersistentEntityNamingStrategy namingStrategy;
-    private MetadataBuildingContext metadataBuildingContext;
+    private final String sessionFactoryName
+    private final String dataSourceName
+    private final HibernateMappingContext hibernateMappingContext
+    private final NamingStrategyProvider namingStrategyProvider
+    private final MappingCacheHolder mappingCacheHolder
+    private PersistentEntityNamingStrategy namingStrategy
+    private MetadataBuildingContext metadataBuildingContext
 
-    public GrailsDomainBinder(
+    GrailsDomainBinder(
             String dataSourceName, String sessionFactoryName, HibernateMappingContext hibernateMappingContext) {
         this(
                 dataSourceName,
                 sessionFactoryName,
                 hibernateMappingContext,
                 new NamingStrategyProvider(),
-                new MappingCacheHolder());
+                new MappingCacheHolder())
     }
 
-    public GrailsDomainBinder(
+    GrailsDomainBinder(
             String dataSourceName,
             String sessionFactoryName,
             HibernateMappingContext hibernateMappingContext,
             NamingStrategyProvider namingStrategyProvider,
             MappingCacheHolder mappingCacheHolder) {
-        this.sessionFactoryName = sessionFactoryName;
-        this.dataSourceName = dataSourceName;
-        this.hibernateMappingContext = hibernateMappingContext;
-        this.namingStrategyProvider = namingStrategyProvider;
-        this.mappingCacheHolder = mappingCacheHolder;
+        this.sessionFactoryName = sessionFactoryName
+        this.dataSourceName = dataSourceName
+        this.hibernateMappingContext = hibernateMappingContext
+        this.namingStrategyProvider = namingStrategyProvider
+        this.mappingCacheHolder = mappingCacheHolder
 
         // pre-build mappings
         for (HibernatePersistentEntity persistentEntity :
                 hibernateMappingContext.getHibernatePersistentEntities(dataSourceName)) {
-            mappingCacheHolder.cacheMapping(persistentEntity);
+            mappingCacheHolder.cacheMapping(persistentEntity)
         }
     }
 
-    public JdbcEnvironment getJdbcEnvironment() {
-        return metadataBuildingContext.getMetadataCollector().getDatabase().getJdbcEnvironment();
+    JdbcEnvironment getJdbcEnvironment() {
+        return metadataBuildingContext.metadataCollector.database.jdbcEnvironment
     }
 
     @Override
-    @SuppressWarnings("PMD.DataflowAnomalyAnalysis")
-    public void contribute(
+    void contribute(
             AdditionalMappingContributions contributions,
             InFlightMetadataCollector metadataCollector,
             ResourceStreamLocator resourceStreamLocator,
             MetadataBuildingContext buildingContext) {
         this.metadataBuildingContext = new MetadataBuildingContextRootImpl(
                 ConnectionSource.DEFAULT,
-                metadataCollector.getBootstrapContext(),
-                metadataCollector.getMetadataBuildingOptions(),
+                metadataCollector.bootstrapContext,
+                metadataCollector.metadataBuildingOptions,
                 metadataCollector,
-                null);
-        var collectionHolder = new CollectionHolder(metadataBuildingContext);
-        var backticksRemover = new BackticksRemover();
-        var namingStrategy = getNamingStrategy();
-        var jdbcEnvironment = getJdbcEnvironment();
-        var defaultColumnNameFetcher =
-                new DefaultColumnNameFetcher(namingStrategy, backticksRemover);
-        var columnNameForPropertyAndPathFetcher = new ColumnNameForPropertyAndPathFetcher(
-                namingStrategy, defaultColumnNameFetcher, backticksRemover, metadataBuildingContext);
-        var simpleValueBinder =
-                new SimpleValueBinder(metadataBuildingContext, namingStrategy, jdbcEnvironment);
-        var compositeUserTypeBinder =
-                new CompositeUserTypeBinder(metadataBuildingContext, namingStrategy, jdbcEnvironment);
-        var enumTypeBinder =
-                new EnumTypeBinder(metadataBuildingContext, columnNameForPropertyAndPathFetcher, namingStrategy);
-        var propertyFromValueCreator = new PropertyFromValueCreator();
-        var classBinder = new ClassBinder(metadataCollector);
-        var simpleValueColumnFetcher = new SimpleValueColumnFetcher();
-        var compositeIdentifierToManyToOneBinder =
+                null)
+        CollectionHolder collectionHolder = new CollectionHolder(metadataBuildingContext)
+        BackticksRemover backticksRemover = new BackticksRemover()
+        PersistentEntityNamingStrategy namingStrategy = getNamingStrategy()
+        JdbcEnvironment jdbcEnvironment = getJdbcEnvironment()
+        DefaultColumnNameFetcher defaultColumnNameFetcher =
+                new DefaultColumnNameFetcher(namingStrategy, backticksRemover)
+        ColumnNameForPropertyAndPathFetcher columnNameForPropertyAndPathFetcher = new ColumnNameForPropertyAndPathFetcher(
+                namingStrategy, defaultColumnNameFetcher, backticksRemover, metadataBuildingContext)
+        SimpleValueBinder simpleValueBinder =
+                new SimpleValueBinder(metadataBuildingContext, namingStrategy, jdbcEnvironment)
+        CompositeUserTypeBinder compositeUserTypeBinder =
+                new CompositeUserTypeBinder(metadataBuildingContext, namingStrategy, jdbcEnvironment)
+        EnumTypeBinder enumTypeBinder =
+                new EnumTypeBinder(metadataBuildingContext, columnNameForPropertyAndPathFetcher, namingStrategy)
+        PropertyFromValueCreator propertyFromValueCreator = new PropertyFromValueCreator()
+        ClassBinder classBinder = new ClassBinder(metadataCollector)
+        SimpleValueColumnFetcher simpleValueColumnFetcher = new SimpleValueColumnFetcher()
+        CompositeIdentifierToManyToOneBinder compositeIdentifierToManyToOneBinder =
                 new CompositeIdentifierToManyToOneBinder(
                         metadataCollector,
-                        new org.grails.orm.hibernate.cfg.domainbinding.util.ForeignKeyColumnCountCalculator(),
+                        new ForeignKeyColumnCountCalculator(),
                         namingStrategy,
                         defaultColumnNameFetcher,
                         backticksRemover,
-                        simpleValueBinder);
-        var oneToOneBinder = new OneToOneBinder(metadataBuildingContext, simpleValueBinder);
-        var manyToOneBinder = new ManyToOneBinder(
+                        simpleValueBinder)
+        OneToOneBinder oneToOneBinder = new OneToOneBinder(metadataBuildingContext, simpleValueBinder)
+        ManyToOneBinder manyToOneBinder = new ManyToOneBinder(
                 metadataBuildingContext,
                 namingStrategy,
                 simpleValueBinder,
                 new ManyToOneValuesBinder(),
-                compositeIdentifierToManyToOneBinder);
-        var foreignKeyOneToOneBinder =
-                new ForeignKeyOneToOneBinder(manyToOneBinder, simpleValueColumnFetcher);
+                compositeIdentifierToManyToOneBinder)
+        ForeignKeyOneToOneBinder foreignKeyOneToOneBinder =
+                new ForeignKeyOneToOneBinder(manyToOneBinder, simpleValueColumnFetcher)
 
-        var tableForManyCalculator = new TableForManyCalculator(namingStrategy, metadataCollector);
-        var collectionBinder = new CollectionBinder(
+        TableForManyCalculator tableForManyCalculator = new TableForManyCalculator(namingStrategy, metadataCollector)
+        CollectionBinder collectionBinder = new CollectionBinder(
                 metadataBuildingContext,
                 namingStrategy,
                 simpleValueBinder,
@@ -171,12 +176,12 @@ public class GrailsDomainBinder implements AdditionalMappingContributor, TypeCon
                 simpleValueColumnFetcher,
                 collectionHolder,
                 metadataCollector,
-                tableForManyCalculator);
-        var componentUpdater = new ComponentUpdater(propertyFromValueCreator);
-        var componentBinder =
-                new ComponentBinder(metadataBuildingContext, getMappingCacheHolder(), componentUpdater);
+                tableForManyCalculator)
+        ComponentUpdater componentUpdater = new ComponentUpdater(propertyFromValueCreator)
+        ComponentBinder componentBinder =
+                new ComponentBinder(metadataBuildingContext, mappingCacheHolder, componentUpdater)
 
-        var grailsPropertyBinder = new GrailsPropertyBinder(
+        GrailsPropertyBinder grailsPropertyBinder = new GrailsPropertyBinder(
                 enumTypeBinder,
                 componentBinder,
                 collectionBinder,
@@ -184,45 +189,46 @@ public class GrailsDomainBinder implements AdditionalMappingContributor, TypeCon
                 compositeUserTypeBinder,
                 oneToOneBinder,
                 manyToOneBinder,
-                foreignKeyOneToOneBinder);
-        componentBinder.setGrailsPropertyBinder(grailsPropertyBinder);
-        collectionBinder.setComponentBinder(componentBinder);
-        var compositeIdBinder =
-                new CompositeIdBinder(metadataBuildingContext, componentUpdater, grailsPropertyBinder);
-        var propertyBinder = new PropertyBinder();
-        var simpleIdBinder = new SimpleIdBinder(
+                foreignKeyOneToOneBinder)
+        componentBinder.setGrailsPropertyBinder(grailsPropertyBinder)
+        collectionBinder.setComponentBinder(componentBinder)
+        CompositeIdBinder compositeIdBinder =
+                new CompositeIdBinder(metadataBuildingContext, componentUpdater, grailsPropertyBinder)
+        PropertyBinder propertyBinder = new PropertyBinder()
+        SimpleIdBinder simpleIdBinder = new SimpleIdBinder(
                 metadataBuildingContext,
                 new BasicValueCreator(metadataBuildingContext, jdbcEnvironment, namingStrategy),
                 simpleValueBinder,
-                propertyBinder);
-        var identityBinder = new IdentityBinder(simpleIdBinder, compositeIdBinder);
-        var versionBinder =
-                new VersionBinder(metadataBuildingContext, simpleValueBinder, propertyBinder, BasicValue::new);
-        var naturalIdentifierBinder = new NaturalIdentifierBinder();
-        var classPropertiesBinder =
-                new ClassPropertiesBinder(grailsPropertyBinder, propertyFromValueCreator, naturalIdentifierBinder);
-        var multiTenantFilterBinder = new MultiTenantFilterBinder(
+                propertyBinder)
+        IdentityBinder identityBinder = new IdentityBinder(simpleIdBinder, compositeIdBinder)
+        VersionBinder versionBinder =
+                new VersionBinder(metadataBuildingContext, simpleValueBinder, propertyBinder,
+                        { MetadataBuildingContext ctx, Table table -> new BasicValue(ctx, table) } as BiFunction<MetadataBuildingContext, Table, BasicValue>)
+        NaturalIdentifierBinder naturalIdentifierBinder = new NaturalIdentifierBinder()
+        ClassPropertiesBinder classPropertiesBinder =
+                new ClassPropertiesBinder(grailsPropertyBinder, propertyFromValueCreator, naturalIdentifierBinder)
+        MultiTenantFilterBinder multiTenantFilterBinder = new MultiTenantFilterBinder(
                 new GrailsPropertyResolver(),
                 new MultiTenantFilterDefinitionBinder(),
                 metadataCollector,
-                defaultColumnNameFetcher);
-        var joinedSubClassBinder = new JoinedSubClassBinder(
+                defaultColumnNameFetcher)
+        JoinedSubClassBinder joinedSubClassBinder = new JoinedSubClassBinder(
                 metadataBuildingContext,
                 namingStrategy,
                 new SimpleValueColumnBinder(),
                 columnNameForPropertyAndPathFetcher,
                 classBinder,
-                metadataCollector);
-        var unionSubclassBinder =
-                new UnionSubclassBinder(metadataBuildingContext, namingStrategy, classBinder, metadataCollector);
-        var singleTableSubclassBinder =
-                new SingleTableSubclassBinder(classBinder, metadataBuildingContext);
+                metadataCollector)
+        UnionSubclassBinder unionSubclassBinder =
+                new UnionSubclassBinder(metadataBuildingContext, namingStrategy, classBinder, metadataCollector)
+        SingleTableSubclassBinder singleTableSubclassBinder =
+                new SingleTableSubclassBinder(classBinder, metadataBuildingContext)
 
-        var subclassMappingBinder = new SubclassMappingBinder(
-                joinedSubClassBinder, unionSubclassBinder, singleTableSubclassBinder, classPropertiesBinder);
-        var subClassBinder =
-                new SubClassBinder(subclassMappingBinder, multiTenantFilterBinder, dataSourceName);
-        var rootPersistentClassCommonValuesBinder =
+        SubclassMappingBinder subclassMappingBinder = new SubclassMappingBinder(
+                joinedSubClassBinder, unionSubclassBinder, singleTableSubclassBinder, classPropertiesBinder)
+        SubClassBinder subClassBinder =
+                new SubClassBinder(subclassMappingBinder, multiTenantFilterBinder, dataSourceName)
+        RootPersistentClassCommonValuesBinder rootPersistentClassCommonValuesBinder =
                 new RootPersistentClassCommonValuesBinder(
                         metadataBuildingContext,
                         getNamingStrategy(),
@@ -230,24 +236,27 @@ public class GrailsDomainBinder implements AdditionalMappingContributor, TypeCon
                         versionBinder,
                         classBinder,
                         classPropertiesBinder,
-                        metadataCollector);
-        var discriminatorPropertyBinder = new DiscriminatorPropertyBinder(
+                        metadataCollector)
+        DiscriminatorPropertyBinder discriminatorPropertyBinder = new DiscriminatorPropertyBinder(
                 metadataBuildingContext,
                 mappingCacheHolder,
                 new ConfiguredDiscriminatorBinder(new SimpleValueColumnBinder(), new ColumnConfigToColumnBinder()),
-                new DefaultDiscriminatorBinder(new SimpleValueColumnBinder()));
-        var rootBinder = new RootBinder(
+                new DefaultDiscriminatorBinder(new SimpleValueColumnBinder()))
+        RootBinder rootBinder = new RootBinder(
                 dataSourceName,
                 multiTenantFilterBinder,
                 subClassBinder,
                 rootPersistentClassCommonValuesBinder,
                 discriminatorPropertyBinder,
                 metadataCollector,
-                mappingCacheHolder);
+                mappingCacheHolder)
 
-        hibernateMappingContext.getHibernatePersistentEntities(dataSourceName).stream()
-                .filter(persistentEntity -> persistentEntity.forGrailsDomainMapping(dataSourceName))
-                .forEach(rootBinder::bindRoot);
+        for (HibernatePersistentEntity persistentEntity :
+                hibernateMappingContext.getHibernatePersistentEntities(dataSourceName)) {
+            if (persistentEntity.forGrailsDomainMapping(dataSourceName)) {
+                rootBinder.bindRoot(persistentEntity)
+            }
+        }
     }
 
     /**
@@ -257,43 +266,45 @@ public class GrailsDomainBinder implements AdditionalMappingContributor, TypeCon
      * @param datasourceName the datasource name
      * @param strategy the class, name, or instance
      * @throws ClassNotFoundException When the class was not found for specified strategy
-     * @throws InstantiationException When an error occurred instantiating the strategy
-     * @throws IllegalAccessException When an error occurred instantiating the strategy
+     * @throws IllegalAccessException When the strategy class cannot be accessed
+     * @throws InstantiationException When the strategy class cannot be instantiated
      */
-    public void configureNamingStrategy(final String datasourceName, final Object strategy)
+    void configureNamingStrategy(String datasourceName, Object strategy)
             throws ClassNotFoundException, InstantiationException, IllegalAccessException {
-        namingStrategyProvider.configureNamingStrategy(datasourceName, strategy);
+        namingStrategyProvider.configureNamingStrategy(datasourceName, strategy)
     }
 
-    public PersistentEntityNamingStrategy getNamingStrategy() {
+    PersistentEntityNamingStrategy getNamingStrategy() {
         if (namingStrategy == null) {
             namingStrategy = new NamingStrategyWrapper(
-                    namingStrategyProvider.getPhysicalNamingStrategy(sessionFactoryName), getJdbcEnvironment());
+                    namingStrategyProvider.getPhysicalNamingStrategy(sessionFactoryName), getJdbcEnvironment())
         }
-        return namingStrategy;
+        return namingStrategy
     }
 
-    public MetadataBuildingContext getMetadataBuildingContext() {
-        return metadataBuildingContext;
+    MetadataBuildingContext getMetadataBuildingContext() {
+        return metadataBuildingContext
     }
 
-    public MappingCacheHolder getMappingCacheHolder() {
-        return mappingCacheHolder;
-    }
-
-    @Override
-    public String getContributorName() {
-        return "GORM";
+    MappingCacheHolder getMappingCacheHolder() {
+        return mappingCacheHolder
     }
 
     @Override
-    public void contribute(TypeContributions typeContributions, ServiceRegistry serviceRegistry) {}
+    String getContributorName() {
+        return 'GORM'
+    }
+
+    @Override
+    void contribute(TypeContributions typeContributions, ServiceRegistry serviceRegistry) {
+    }
 
     /**
      * Manually triggers the contribution process. Useful for unit testing
      * where the full Hibernate bootstrap is not invoked.
      */
-    public void contribute(InFlightMetadataCollector metadataCollector) {
-        contribute(null, metadataCollector, null, getMetadataBuildingContext());
+    void contribute(InFlightMetadataCollector metadataCollector) {
+        contribute(null, metadataCollector, null, metadataBuildingContext)
     }
+
 }

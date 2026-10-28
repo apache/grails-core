@@ -1,72 +1,76 @@
-package liquibase.ext.hibernate.snapshot;
+package liquibase.ext.hibernate.snapshot
 
-import liquibase.exception.DatabaseException;
-import liquibase.snapshot.DatabaseSnapshot;
-import liquibase.snapshot.InvalidExampleException;
-import liquibase.snapshot.SnapshotGenerator;
-import liquibase.structure.DatabaseObject;
-import liquibase.structure.core.ForeignKey;
-import liquibase.structure.core.Table;
-import org.hibernate.mapping.Column;
+import groovy.transform.CompileStatic
+import liquibase.exception.DatabaseException
+import liquibase.snapshot.DatabaseSnapshot
+import liquibase.snapshot.InvalidExampleException
+import liquibase.snapshot.SnapshotGenerator
+import liquibase.snapshot.jvm.ForeignKeySnapshotGenerator
+import liquibase.structure.DatabaseObject
+import liquibase.structure.core.ForeignKey
+import liquibase.structure.core.Table
+import org.hibernate.mapping.Column
 
-public class HibernateForeignKeySnapshotGenerator extends HibernateSnapshotGenerator {
+@CompileStatic
+class HibernateForeignKeySnapshotGenerator extends HibernateSnapshotGenerator {
 
-    public HibernateForeignKeySnapshotGenerator() {
-        super(ForeignKey.class, new Class[] {Table.class});
+    HibernateForeignKeySnapshotGenerator() {
+        super(ForeignKey, Table)
     }
 
     @Override
     protected DatabaseObject snapshotObject(DatabaseObject example, DatabaseSnapshot snapshot)
             throws DatabaseException, InvalidExampleException {
-        return example;
+        return example
     }
 
     @Override
     protected void addTo(DatabaseObject foundObject, DatabaseSnapshot snapshot)
             throws DatabaseException, InvalidExampleException {
-        if (!snapshot.getSnapshotControl().shouldInclude(ForeignKey.class)) {
-            return;
+        if (!snapshot.getSnapshotControl().shouldInclude(ForeignKey)) {
+            return
         }
-        if (foundObject instanceof Table table) {
-            org.hibernate.mapping.Table hibernateTable = findHibernateTable(table, snapshot);
+        if (foundObject instanceof Table) {
+            Table table = (Table) foundObject
+            org.hibernate.mapping.Table hibernateTable = findHibernateTable(table, snapshot)
             if (hibernateTable == null) {
-                return;
+                return
             }
 
             for (org.hibernate.mapping.ForeignKey hibernateForeignKey : hibernateTable.getForeignKeyCollection()) {
                 if (hibernateForeignKey.isCreationEnabled()) {
-                    org.hibernate.mapping.Table hibernateReferencedTable = hibernateForeignKey.getReferencedTable();
+                    org.hibernate.mapping.Table hibernateReferencedTable = hibernateForeignKey.getReferencedTable()
 
-                    Table referencedTable = new Table().setName(hibernateReferencedTable.getName());
+                    Table referencedTable = new Table()
+                    referencedTable.setName(hibernateReferencedTable.getName())
                     referencedTable.setSchema(
-                            hibernateReferencedTable.getCatalog(), hibernateReferencedTable.getSchema());
+                            hibernateReferencedTable.getCatalog(), hibernateReferencedTable.getSchema())
 
-                    ForeignKey fk = new ForeignKey();
-                    fk.setName(hibernateForeignKey.getName());
-                    fk.setPrimaryKeyTable(referencedTable);
-                    fk.setForeignKeyTable(table);
+                    ForeignKey fk = new ForeignKey()
+                    fk.setName(hibernateForeignKey.getName())
+                    fk.setPrimaryKeyTable(referencedTable)
+                    fk.setForeignKeyTable(table)
                     for (Column column : hibernateForeignKey.getColumns()) {
-                        fk.addForeignKeyColumn(new liquibase.structure.core.Column(column.getName()));
+                        fk.addForeignKeyColumn(new liquibase.structure.core.Column(column.getName()))
                     }
                     for (Column column : hibernateForeignKey.getReferencedColumns()) {
-                        fk.addPrimaryKeyColumn(new liquibase.structure.core.Column(column.getName()));
+                        fk.addPrimaryKeyColumn(new liquibase.structure.core.Column(column.getName()))
                     }
                     if (fk.getPrimaryKeyColumns() == null ||
                             fk.getPrimaryKeyColumns().isEmpty()) {
                         if (hibernateReferencedTable.getPrimaryKey() != null) {
-                            for (Column column :
-                                    hibernateReferencedTable.getPrimaryKey().getColumns()) {
-                                fk.addPrimaryKeyColumn(new liquibase.structure.core.Column(column.getName()));
+                            for (Column column : hibernateReferencedTable.getPrimaryKey().getColumns()) {
+                                fk.addPrimaryKeyColumn(new liquibase.structure.core.Column(column.getName()))
                             }
                         }
                     }
 
-                    fk.setDeferrable(false);
-                    fk.setInitiallyDeferred(false);
+                    fk.setDeferrable(false)
+                    fk.setInitiallyDeferred(false)
 
-                    table.getOutgoingForeignKeys().add(fk);
+                    table.getOutgoingForeignKeys().add(fk)
                     if (table.getSchema() != null) {
-                        table.getSchema().addDatabaseObject(fk);
+                        table.getSchema().addDatabaseObject(fk)
                     }
                 }
             }
@@ -74,7 +78,8 @@ public class HibernateForeignKeySnapshotGenerator extends HibernateSnapshotGener
     }
 
     @Override
-    public Class<? extends SnapshotGenerator>[] replaces() {
-        return new Class[] {liquibase.snapshot.jvm.ForeignKeySnapshotGenerator.class};
+    Class<? extends SnapshotGenerator>[] replaces() {
+        return [ForeignKeySnapshotGenerator] as Class<? extends SnapshotGenerator>[]
     }
+
 }

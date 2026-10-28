@@ -16,35 +16,37 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package liquibase.ext.hibernate.diff;
+package liquibase.ext.hibernate.diff
 
-import liquibase.change.Change;
-import liquibase.database.Database;
-import liquibase.diff.ObjectDifferences;
-import liquibase.diff.output.DiffOutputControl;
-import liquibase.diff.output.changelog.ChangeGeneratorChain;
-import liquibase.ext.hibernate.database.HibernateDatabase;
-import liquibase.structure.DatabaseObject;
-import liquibase.structure.core.UniqueConstraint;
+import groovy.transform.CompileStatic
+import liquibase.change.Change
+import liquibase.database.Database
+import liquibase.diff.ObjectDifferences
+import liquibase.diff.output.DiffOutputControl
+import liquibase.diff.output.changelog.ChangeGeneratorChain
+import liquibase.diff.output.changelog.core.ChangedUniqueConstraintChangeGenerator
+import liquibase.ext.hibernate.database.HibernateDatabase
+import liquibase.structure.DatabaseObject
+import liquibase.structure.core.UniqueConstraint
 
 /**
  * Unique attribute for unique constraints backing index can have different values dependending on the database implementation,
  * so we suppress all unique constraint changes based on unique constraints.
  *
  */
-public class HibernateChangedUniqueConstraintChangeGenerator
-        extends liquibase.diff.output.changelog.core.ChangedUniqueConstraintChangeGenerator {
+@CompileStatic
+class HibernateChangedUniqueConstraintChangeGenerator extends ChangedUniqueConstraintChangeGenerator {
 
     @Override
-    public int getPriority(Class<? extends DatabaseObject> objectType, Database database) {
-        if (UniqueConstraint.class.isAssignableFrom(objectType)) {
-            return PRIORITY_ADDITIONAL;
+    int getPriority(Class<? extends DatabaseObject> objectType, Database database) {
+        if (UniqueConstraint.isAssignableFrom(objectType)) {
+            return PRIORITY_ADDITIONAL
         }
-        return PRIORITY_NONE;
+        return PRIORITY_NONE
     }
 
     @Override
-    public Change[] fixChanged(
+    Change[] fixChanged(
             DatabaseObject changedObject,
             ObjectDifferences differences,
             DiffOutputControl control,
@@ -52,12 +54,13 @@ public class HibernateChangedUniqueConstraintChangeGenerator
             Database comparisonDatabase,
             ChangeGeneratorChain chain) {
         if (referenceDatabase instanceof HibernateDatabase || comparisonDatabase instanceof HibernateDatabase) {
-            differences.removeDifference("unique");
-            differences.removeDifference("using");
+            differences.removeDifference('unique')
+            differences.removeDifference('using')
             if (!differences.hasDifferences()) {
-                return new Change[0];
+                return new Change[0]
             }
         }
-        return super.fixChanged(changedObject, differences, control, referenceDatabase, comparisonDatabase, chain);
+        return super.fixChanged(changedObject, differences, control, referenceDatabase, comparisonDatabase, chain)
     }
+
 }

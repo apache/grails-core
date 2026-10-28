@@ -16,28 +16,32 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.orm.hibernate.query;
+package org.grails.orm.hibernate.query
 
-import java.util.List;
-import java.util.function.Function;
+import java.util.function.Function
 
-import org.grails.datastore.gorm.query.criteria.DetachedAssociationCriteria;
-import org.grails.datastore.mapping.query.Query;
+import groovy.transform.CompileStatic
 
-@SuppressWarnings({"unchecked", "rawtypes"})
-public class DetachedAssociationFunction implements Function<Query.Criterion, List<DetachedAssociationCriteria<?>>> {
+import org.grails.datastore.gorm.query.criteria.DetachedAssociationCriteria
+import org.grails.datastore.mapping.query.Query
+
+@CompileStatic
+@SuppressWarnings(['unchecked', 'rawtypes'])
+class DetachedAssociationFunction implements Function<Query.Criterion, List<DetachedAssociationCriteria<?>>> {
 
     @Override
-    public List<DetachedAssociationCriteria<?>> apply(Query.Criterion o) {
+    List<DetachedAssociationCriteria<?>> apply(Query.Criterion o) {
         if (o instanceof DetachedAssociationCriteria) {
-            return List.of((DetachedAssociationCriteria<?>) o);
-        } else if (o instanceof Query.Junction junction) {
-            java.util.List<DetachedAssociationCriteria<?>> result = new java.util.ArrayList<>();
-            for (Query.Criterion criterion : junction.getCriteria()) {
-                result.addAll(apply(criterion));
+            return List.of((DetachedAssociationCriteria<?>) o)
+        } else if (o instanceof Query.Junction) {
+            Query.Junction junction = (Query.Junction) o
+            List<DetachedAssociationCriteria<?>> result = new ArrayList<>()
+            for (Query.Criterion criterion : junction.criteria) {
+                result.addAll(apply(criterion))
             }
-            return result;
+            return result
         }
-        return List.of();
+        return List.of()
     }
+
 }

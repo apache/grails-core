@@ -16,32 +16,35 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.orm.hibernate.query;
+package org.grails.orm.hibernate.query
 
-import org.hibernate.boot.model.FunctionContributions;
-import org.hibernate.boot.model.FunctionContributor;
-import org.hibernate.dialect.Dialect;
-import org.hibernate.type.StandardBasicTypes;
+import groovy.transform.CompileStatic
+import org.hibernate.boot.model.FunctionContributions
+import org.hibernate.boot.model.FunctionContributor
+import org.hibernate.dialect.Dialect
+import org.hibernate.type.StandardBasicTypes
 
-public class GrailsRLikeFunctionContributor implements FunctionContributor {
+@CompileStatic
+class GrailsRLikeFunctionContributor implements FunctionContributor {
 
-    public static final String RLIKE = "rlike";
+    public static final String RLIKE = 'rlike'
 
     @Override
-    public void contributeFunctions(FunctionContributions functionContributions) {
-        Dialect dialect = functionContributions.getDialect();
+    void contributeFunctions(FunctionContributions functionContributions) {
+        Dialect dialect = functionContributions.dialect
 
         // Use the Enum to resolve the pattern
-        String pattern = RegexDialectPattern.findPatternForDialect(dialect);
+        String pattern = RegexDialectPattern.findPatternForDialect(dialect)
 
         functionContributions
-                .getFunctionRegistry()
+                .functionRegistry
                 .registerPattern(
                         RLIKE,
                         pattern,
                         functionContributions
-                                .getTypeConfiguration()
-                                .getBasicTypeRegistry()
-                                .resolve(StandardBasicTypes.BOOLEAN));
+                                .typeConfiguration
+                                .basicTypeRegistry
+                                .resolve(StandardBasicTypes.BOOLEAN))
     }
+
 }

@@ -16,20 +16,21 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.orm.hibernate.cfg.domainbinding.secondpass;
+package org.grails.orm.hibernate.cfg.domainbinding.secondpass
 
-import org.hibernate.mapping.Collection;
-import org.hibernate.mapping.Column;
-import org.hibernate.mapping.DependantValue;
-import org.hibernate.mapping.PersistentClass;
-import org.hibernate.mapping.SimpleValue;
-import org.hibernate.mapping.Value;
+import groovy.transform.CompileStatic
+import org.hibernate.mapping.Collection
+import org.hibernate.mapping.Column
+import org.hibernate.mapping.DependantValue
+import org.hibernate.mapping.PersistentClass
+import org.hibernate.mapping.SimpleValue
+import org.hibernate.mapping.Value
 
-import org.grails.orm.hibernate.cfg.domainbinding.binder.CompositeIdentifierToManyToOneBinder;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToOneProperty;
-import org.grails.orm.hibernate.cfg.domainbinding.util.GrailsPropertyResolver;
+import org.grails.orm.hibernate.cfg.domainbinding.binder.CompositeIdentifierToManyToOneBinder
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToOneProperty
+import org.grails.orm.hibernate.cfg.domainbinding.util.GrailsPropertyResolver
 
 /**
  * Links bidirectional one-to-many associations by copying columns. The foreign key of the
@@ -50,43 +51,43 @@ import org.grails.orm.hibernate.cfg.domainbinding.util.GrailsPropertyResolver;
  * and, for one that is not, maps its columns through the identifier component's original property
  * order, which is this already-aligned order applied yet again.
  */
-public class BidirectionalOneToManyLinker {
+@CompileStatic
+class BidirectionalOneToManyLinker {
 
-    private final GrailsPropertyResolver grailsPropertyResolver;
-    private final CompositeIdentifierToManyToOneBinder compositeIdentifierToManyToOneBinder;
+    private final GrailsPropertyResolver grailsPropertyResolver
+    private final CompositeIdentifierToManyToOneBinder compositeIdentifierToManyToOneBinder
 
     /** Creates a new {@link BidirectionalOneToManyLinker} instance. */
-    public BidirectionalOneToManyLinker(
+    BidirectionalOneToManyLinker(
             GrailsPropertyResolver grailsPropertyResolver,
             CompositeIdentifierToManyToOneBinder compositeIdentifierToManyToOneBinder) {
-        this.grailsPropertyResolver = grailsPropertyResolver;
-        this.compositeIdentifierToManyToOneBinder = compositeIdentifierToManyToOneBinder;
+        this.grailsPropertyResolver = grailsPropertyResolver
+        this.compositeIdentifierToManyToOneBinder = compositeIdentifierToManyToOneBinder
     }
 
     /** Link. */
-    public void link(
+    void link(
             Collection collection,
             PersistentClass associatedClass,
             DependantValue key,
             HibernatePersistentProperty otherSide) {
-        collection.setInverse(true);
-        key.disableForeignKey();
+        collection.inverse = true
+        key.disableForeignKey()
 
-        Value toOneValue =
-                grailsPropertyResolver.getProperty(associatedClass, otherSide.getName()).getValue();
-        alignToOneSide(otherSide, toOneValue);
-        for (Column column : toOneValue.getColumns()) {
-            Column mappingColumn = new Column();
-            mappingColumn.setName(column.getName());
-            mappingColumn.setLength(column.getLength());
-            mappingColumn.setNullable(otherSide.isNullable());
-            mappingColumn.setSqlType(column.getSqlType());
+        Value toOneValue = grailsPropertyResolver.getProperty(associatedClass, otherSide.name).value
+        alignToOneSide(otherSide, toOneValue)
+        for (Column column : toOneValue.columns) {
+            Column mappingColumn = new Column()
+            mappingColumn.name = column.name
+            mappingColumn.length = column.length
+            mappingColumn.nullable = otherSide.isNullable()
+            mappingColumn.sqlType = column.sqlType
 
-            mappingColumn.setValue(key);
-            key.addColumn(mappingColumn);
-            key.getTable().addColumn(mappingColumn);
+            mappingColumn.value = key
+            key.addColumn(mappingColumn)
+            key.table.addColumn(mappingColumn)
         }
-        key.setSorted(true);
+        key.sorted = true
     }
 
     /**
@@ -95,11 +96,13 @@ public class BidirectionalOneToManyLinker {
      * side is aligned already.
      */
     private void alignToOneSide(HibernatePersistentProperty otherSide, Value toOneValue) {
-        if (otherSide instanceof HibernateToOneProperty toOne && toOneValue instanceof SimpleValue value) {
-            GrailsHibernatePersistentEntity owner = toOne.getHibernateAssociatedEntity();
-            owner.getHibernateCompositeIdentity()
-                    .ifPresent(compositeId -> compositeIdentifierToManyToOneBinder.alignWithReferencedIdentifier(
-                            otherSide, value, compositeId, owner));
+        if (otherSide instanceof HibernateToOneProperty && toOneValue instanceof SimpleValue) {
+            HibernateToOneProperty toOne = (HibernateToOneProperty) otherSide
+            SimpleValue value = (SimpleValue) toOneValue
+            GrailsHibernatePersistentEntity owner = toOne.hibernateAssociatedEntity
+            owner.hibernateCompositeIdentity.ifPresent { compositeId ->
+                compositeIdentifierToManyToOneBinder.alignWithReferencedIdentifier(otherSide, value, compositeId, owner)
+            }
         }
     }
 }

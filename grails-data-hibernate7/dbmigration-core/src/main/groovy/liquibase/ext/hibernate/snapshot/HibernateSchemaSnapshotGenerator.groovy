@@ -1,29 +1,33 @@
-package liquibase.ext.hibernate.snapshot;
+package liquibase.ext.hibernate.snapshot
 
-import liquibase.exception.DatabaseException;
-import liquibase.snapshot.DatabaseSnapshot;
-import liquibase.snapshot.InvalidExampleException;
-import liquibase.snapshot.SnapshotGenerator;
-import liquibase.structure.DatabaseObject;
-import liquibase.structure.core.Catalog;
-import liquibase.structure.core.Schema;
+import groovy.transform.CompileStatic
+import liquibase.exception.DatabaseException
+import liquibase.snapshot.DatabaseSnapshot
+import liquibase.snapshot.InvalidExampleException
+import liquibase.snapshot.SnapshotGenerator
+import liquibase.snapshot.jvm.SchemaSnapshotGenerator
+import liquibase.structure.DatabaseObject
+import liquibase.structure.core.Catalog
+import liquibase.structure.core.Schema
 
 /**
  * Hibernate doesn't really support Schemas, so just return the passed example back as if it had all the info it needed.
  */
-public class HibernateSchemaSnapshotGenerator extends HibernateSnapshotGenerator {
+@CompileStatic
+class HibernateSchemaSnapshotGenerator extends HibernateSnapshotGenerator {
 
-    public HibernateSchemaSnapshotGenerator() {
-        super(Schema.class, new Class[] {Catalog.class});
+    HibernateSchemaSnapshotGenerator() {
+        super(Schema, Catalog)
     }
 
     @Override
     protected DatabaseObject snapshotObject(DatabaseObject example, DatabaseSnapshot snapshot)
             throws DatabaseException, InvalidExampleException {
-        return new Schema(
-                        snapshot.getDatabase().getDefaultCatalogName(),
-                        snapshot.getDatabase().getDefaultSchemaName())
-                .setDefault(true);
+        Schema schema = new Schema(
+                snapshot.getDatabase().getDefaultCatalogName(),
+                snapshot.getDatabase().getDefaultSchemaName())
+        schema.setDefault(true)
+        return schema
     }
 
     @Override
@@ -33,7 +37,8 @@ public class HibernateSchemaSnapshotGenerator extends HibernateSnapshotGenerator
     }
 
     @Override
-    public Class<? extends SnapshotGenerator>[] replaces() {
-        return new Class[] {liquibase.snapshot.jvm.SchemaSnapshotGenerator.class};
+    Class<? extends SnapshotGenerator>[] replaces() {
+        return [SchemaSnapshotGenerator] as Class<? extends SnapshotGenerator>[]
     }
+
 }

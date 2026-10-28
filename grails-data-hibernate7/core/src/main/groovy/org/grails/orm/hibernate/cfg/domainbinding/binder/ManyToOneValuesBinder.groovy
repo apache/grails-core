@@ -16,37 +16,36 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.orm.hibernate.cfg.domainbinding.binder;
+package org.grails.orm.hibernate.cfg.domainbinding.binder
 
-import java.util.Optional;
+import groovy.transform.CompileStatic
+import org.hibernate.FetchMode
+import org.hibernate.mapping.ManyToOne
 
-import org.hibernate.FetchMode;
-import org.hibernate.mapping.ManyToOne;
+import org.grails.orm.hibernate.cfg.PropertyConfig
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateAssociation
 
-import org.grails.orm.hibernate.cfg.PropertyConfig;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateAssociation;
+@CompileStatic
+class ManyToOneValuesBinder {
 
-public class ManyToOneValuesBinder {
+    void bindManyToOneValues(HibernateAssociation property, ManyToOne manyToOne) {
+        PropertyConfig config = property.hibernateMappedForm
 
-    public ManyToOneValuesBinder() {}
-
-    public void bindManyToOneValues(HibernateAssociation property, ManyToOne manyToOne) {
-        PropertyConfig config = property.getHibernateMappedForm();
-
-        var fetchMode = Optional.ofNullable(config.getFetchMode()).orElse(FetchMode.DEFAULT);
-        boolean lazy = property.isLazy();
+        FetchMode fetchMode = config.fetchMode != null ? config.fetchMode : FetchMode.DEFAULT
+        boolean lazy = property.isLazy()
         // Hibernate resolves DEFAULT to a JOIN for an associated entity it cannot proxy, and then
         // logs HHH000510 for a lazy association. SELECT is the fetch mode that matches lazy loading.
         if (lazy && fetchMode == FetchMode.DEFAULT) {
-            fetchMode = FetchMode.SELECT;
+            fetchMode = FetchMode.SELECT
         }
-        manyToOne.setFetchMode(fetchMode);
+        manyToOne.fetchMode = fetchMode
 
-        manyToOne.setLazy(lazy);
+        manyToOne.lazy = lazy
 
-        manyToOne.setIgnoreNotFound(config.getIgnoreNotFound());
+        manyToOne.ignoreNotFound = config.ignoreNotFound
 
         // set referenced entity
-        manyToOne.setReferencedEntityName(property.getAssociatedEntity().getName());
+        manyToOne.referencedEntityName = property.associatedEntity.name
     }
+
 }

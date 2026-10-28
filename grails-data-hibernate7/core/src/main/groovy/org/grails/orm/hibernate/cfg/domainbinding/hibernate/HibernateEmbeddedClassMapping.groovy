@@ -16,27 +16,29 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.orm.hibernate.cfg.domainbinding.hibernate;
+package org.grails.orm.hibernate.cfg.domainbinding.hibernate
 
-import org.grails.datastore.mapping.model.IdentityMapping;
-import org.grails.datastore.mapping.model.MappingContext;
-import org.grails.datastore.mapping.model.PersistentEntity;
+import groovy.transform.CompileStatic
+import org.grails.datastore.mapping.model.IdentityMapping
+import org.grails.datastore.mapping.model.MappingContext
+import org.grails.datastore.mapping.model.PersistentEntity
 
 /**
  * A {@link org.grails.datastore.mapping.model.ClassMapping} implementation for embedded entities in
  * Hibernate
  *
- * @author Graeme Rocher
  * @since 5.0
  */
-public class HibernateEmbeddedClassMapping extends HibernateClassMapping {
+@CompileStatic
+class HibernateEmbeddedClassMapping extends HibernateClassMapping {
 
-    public HibernateEmbeddedClassMapping(PersistentEntity entity, MappingContext context) {
-        super(entity, context);
+    HibernateEmbeddedClassMapping(PersistentEntity entity, MappingContext context) {
+        super(entity, context)
     }
 
     @Override
-    public IdentityMapping<?> getIdentifier() {
-        return null;
+    IdentityMapping<?> getIdentifier() {
+        return null
     }
+
 }

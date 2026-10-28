@@ -16,16 +16,17 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.orm.hibernate.multitenancy;
+package org.grails.orm.hibernate.multitenancy
 
-import org.hibernate.event.spi.InitializeCollectionEvent;
-import org.hibernate.event.spi.InitializeCollectionEventListener;
-import org.hibernate.persister.collection.CollectionPersister;
-import org.hibernate.type.EntityType;
-import org.hibernate.type.Type;
+import groovy.transform.CompileStatic
+import org.hibernate.event.spi.InitializeCollectionEvent
+import org.hibernate.event.spi.InitializeCollectionEventListener
+import org.hibernate.persister.collection.CollectionPersister
+import org.hibernate.type.EntityType
+import org.hibernate.type.Type
 
-import org.grails.datastore.mapping.model.PersistentEntity;
-import org.grails.orm.hibernate.HibernateDatastore;
+import org.grails.datastore.mapping.model.PersistentEntity
+import org.grails.orm.hibernate.HibernateDatastore
 
 /**
  * Sets the tenant filter for the current tenant before Hibernate initializes a collection of a multi-tenant entity,
@@ -35,27 +36,29 @@ import org.grails.orm.hibernate.HibernateDatastore;
  *
  * @since 8.0.1
  */
-public class MultiTenantCollectionEventListener implements InitializeCollectionEventListener {
+@CompileStatic
+class MultiTenantCollectionEventListener implements InitializeCollectionEventListener {
 
-    private final HibernateDatastore datastore;
+    private final HibernateDatastore datastore
 
-    public MultiTenantCollectionEventListener(HibernateDatastore datastore) {
-        this.datastore = datastore;
+    MultiTenantCollectionEventListener(HibernateDatastore datastore) {
+        this.datastore = datastore
     }
 
     @Override
-    public void onInitializeCollection(InitializeCollectionEvent event) {
-        CollectionPersister persister = event.getCollectionPersister();
+    void onInitializeCollection(InitializeCollectionEvent event) {
+        CollectionPersister persister = event.getCollectionPersister()
         if (persister == null) {
-            return;
+            return
         }
-        Type elementType = persister.getElementType();
+        Type elementType = persister.getElementType()
         if (elementType.isEntityType()) {
             PersistentEntity entity = datastore.getMappingContext()
-                    .getPersistentEntity(((EntityType) elementType).getAssociatedEntityName());
+                    .getPersistentEntity(((EntityType) elementType).getAssociatedEntityName())
             if (entity != null && entity.isMultiTenant()) {
-                datastore.enableMultiTenancyFilter(event.getSession());
+                datastore.enableMultiTenancyFilter(event.getSession())
             }
         }
     }
+
 }

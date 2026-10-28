@@ -16,30 +16,32 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.orm.hibernate.cfg.domainbinding.secondpass;
+package org.grails.orm.hibernate.cfg.domainbinding.secondpass
 
-import org.hibernate.boot.spi.MetadataBuildingContext;
-import org.hibernate.mapping.Collection;
-import org.hibernate.mapping.ManyToOne;
+import groovy.transform.CompileStatic
+import org.hibernate.boot.spi.MetadataBuildingContext
+import org.hibernate.mapping.Collection
+import org.hibernate.mapping.ManyToOne
 
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty
 
 /** Creates and binds a {@link ManyToOne} element for unidirectional to-many join-table associations. */
-public class UnidirectionalOneToManyInverseValuesBinder {
+@CompileStatic
+class UnidirectionalOneToManyInverseValuesBinder {
 
-    private final MetadataBuildingContext metadataBuildingContext;
+    private final MetadataBuildingContext metadataBuildingContext
 
-    public UnidirectionalOneToManyInverseValuesBinder(MetadataBuildingContext metadataBuildingContext) {
-        this.metadataBuildingContext = metadataBuildingContext;
+    UnidirectionalOneToManyInverseValuesBinder(MetadataBuildingContext metadataBuildingContext) {
+        this.metadataBuildingContext = metadataBuildingContext
     }
 
-    public ManyToOne bind(HibernateToManyProperty property) {
-        Collection collection = property.getCollection();
-        ManyToOne manyToOne = new ManyToOne(metadataBuildingContext, collection.getCollectionTable());
-        manyToOne.setIgnoreNotFound(property.getIgnoreNotFound());
-        manyToOne.setLazy(property.isLazy());
-        manyToOne.setReferencedEntityName(
-                property.getHibernateAssociatedEntity().getName());
-        return manyToOne;
+    ManyToOne bind(HibernateToManyProperty property) {
+        Collection collection = property.collection
+        ManyToOne manyToOne = new ManyToOne(metadataBuildingContext, collection.collectionTable)
+        manyToOne.ignoreNotFound = property.ignoreNotFound
+        manyToOne.lazy = property.isLazy()
+        manyToOne.referencedEntityName = property.hibernateAssociatedEntity.name
+        return manyToOne
     }
+
 }

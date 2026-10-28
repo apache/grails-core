@@ -16,63 +16,67 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.orm.hibernate.cfg.domainbinding.binder;
+package org.grails.orm.hibernate.cfg.domainbinding.binder
 
-import jakarta.annotation.Nonnull;
+import groovy.transform.CompileStatic
+import jakarta.annotation.Nonnull
+import org.hibernate.MappingException
+import org.hibernate.boot.spi.MetadataBuildingContext
+import org.hibernate.mapping.Component
+import org.hibernate.mapping.RootClass
+import org.hibernate.mapping.Value
+import org.jspecify.annotations.NonNull
 
-import org.hibernate.MappingException;
-import org.hibernate.boot.spi.MetadataBuildingContext;
-import org.hibernate.mapping.Component;
-import org.hibernate.mapping.RootClass;
-import org.jspecify.annotations.NonNull;
+import org.grails.orm.hibernate.cfg.GrailsHibernateUtil
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateCompositeIdentityProperty
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentEntity
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty
 
-import org.grails.orm.hibernate.cfg.GrailsHibernateUtil;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateCompositeIdentityProperty;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentEntity;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty;
+@CompileStatic
+class CompositeIdBinder {
 
-@SuppressWarnings("PMD.DataflowAnomalyAnalysis")
-public class CompositeIdBinder {
+    private final MetadataBuildingContext metadataBuildingContext
+    private final ComponentUpdater componentUpdater
+    private final GrailsPropertyBinder grailsPropertyBinder
 
-    private final MetadataBuildingContext metadataBuildingContext;
-    private final ComponentUpdater componentUpdater;
-    private final GrailsPropertyBinder grailsPropertyBinder;
-
-    public CompositeIdBinder(
+    CompositeIdBinder(
             MetadataBuildingContext metadataBuildingContext,
             ComponentUpdater componentUpdater,
             GrailsPropertyBinder grailsPropertyBinder) {
-        this.metadataBuildingContext = metadataBuildingContext;
-        this.componentUpdater = componentUpdater;
-        this.grailsPropertyBinder = grailsPropertyBinder;
+        this.metadataBuildingContext = metadataBuildingContext
+        this.componentUpdater = componentUpdater
+        this.grailsPropertyBinder = grailsPropertyBinder
     }
 
-    public void bindCompositeId(@Nonnull HibernatePersistentEntity domainClass) {
-        if (domainClass.getIdentityProperty() instanceof HibernateCompositeIdentityProperty compositeIdentityProperty) {
-            Component id = getComponent(domainClass);
+    void bindCompositeId(@Nonnull HibernatePersistentEntity domainClass) {
+        if (domainClass.getIdentityProperty() instanceof HibernateCompositeIdentityProperty) {
+            HibernateCompositeIdentityProperty compositeIdentityProperty =
+                    (HibernateCompositeIdentityProperty) domainClass.getIdentityProperty()
+            Component id = getComponent(domainClass)
 
-            for (HibernatePersistentProperty property : compositeIdentityProperty.getParts()) {
-                var value = grailsPropertyBinder.bindProperty(property, null, "");
-                componentUpdater.updateComponent(id, null, property, value);
+            for (HibernatePersistentProperty property in compositeIdentityProperty.getParts()) {
+                Value value = grailsPropertyBinder.bindProperty(property, null, '')
+                componentUpdater.updateComponent(id, null, property, value)
             }
-            return;
+            return
         }
-        throw new MappingException("Invalid composite id binding for entity [" + domainClass.getName() + "]");
+        throw new MappingException('Invalid composite id binding for entity [' + domainClass.getName() + ']')
     }
 
-    private @NonNull Component getComponent(@NonNull HibernatePersistentEntity domainClass) {
-        RootClass rootClass = domainClass.getRootClass();
-        Component id = new Component(metadataBuildingContext, rootClass);
-        id.setNullValue("undefined");
-        rootClass.setIdentifier(id);
-        rootClass.setEmbeddedIdentifier(true);
-        id.setComponentClassName(domainClass.getName());
-        id.setKey(true);
-        id.setEmbedded(true);
+    @NonNull
+    private Component getComponent(@NonNull HibernatePersistentEntity domainClass) {
+        RootClass rootClass = domainClass.getRootClass()
+        Component id = new Component(metadataBuildingContext, rootClass)
+        id.setNullValue('undefined')
+        rootClass.setIdentifier(id)
+        rootClass.setEmbeddedIdentifier(true)
+        id.setComponentClassName(domainClass.getName())
+        id.setKey(true)
+        id.setEmbedded(true)
 
-        String path = GrailsHibernateUtil.qualify(rootClass.getEntityName(), "id");
+        String path = GrailsHibernateUtil.qualify(rootClass.getEntityName(), 'id')
 
-        id.setRoleName(path);
-        return id;
+        id.setRoleName(path)
+        return id
     }
 }

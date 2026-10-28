@@ -16,35 +16,38 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.orm.hibernate.cfg.domainbinding.secondpass;
+package org.grails.orm.hibernate.cfg.domainbinding.secondpass
 
-import org.hibernate.mapping.Collection;
-import org.hibernate.mapping.ManyToOne;
+import groovy.transform.CompileStatic
+import org.hibernate.mapping.Collection
+import org.hibernate.mapping.ManyToOne
 
-import org.grails.orm.hibernate.cfg.domainbinding.binder.CollectionForPropertyConfigBinder;
-import org.grails.orm.hibernate.cfg.domainbinding.binder.ManyToOneBinder;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateManyToManyProperty;
+import org.grails.orm.hibernate.cfg.domainbinding.binder.CollectionForPropertyConfigBinder
+import org.grails.orm.hibernate.cfg.domainbinding.binder.ManyToOneBinder
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateManyToManyProperty
 
-import static org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBinder.EMPTY_PATH;
+import static org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBinder.EMPTY_PATH
 
 /** Binds the element of a bidirectional many-to-many association. */
-public class ManyToOneElementBinder {
+@CompileStatic
+class ManyToOneElementBinder {
 
-    private final ManyToOneBinder manyToOneBinder;
-    private final CollectionForPropertyConfigBinder collectionForPropertyConfigBinder;
+    private final ManyToOneBinder manyToOneBinder
+    private final CollectionForPropertyConfigBinder collectionForPropertyConfigBinder
 
     /** Creates a new {@link ManyToOneElementBinder} instance. */
-    public ManyToOneElementBinder(
+    ManyToOneElementBinder(
             ManyToOneBinder manyToOneBinder, CollectionForPropertyConfigBinder collectionForPropertyConfigBinder) {
-        this.manyToOneBinder = manyToOneBinder;
-        this.collectionForPropertyConfigBinder = collectionForPropertyConfigBinder;
+        this.manyToOneBinder = manyToOneBinder
+        this.collectionForPropertyConfigBinder = collectionForPropertyConfigBinder
     }
 
     /** Binds the ManyToOne element for a bidirectional many-to-many collection. */
-    public void bind(HibernateManyToManyProperty property) {
-        ManyToOne element = manyToOneBinder.bindManyToOne(property, EMPTY_PATH);
-        Collection collection = property.getCollection();
-        collection.setElement(element);
-        collectionForPropertyConfigBinder.bindCollectionForPropertyConfig(property);
+    void bind(HibernateManyToManyProperty property) {
+        ManyToOne element = manyToOneBinder.bindManyToOne(property, EMPTY_PATH)
+        Collection collection = property.collection
+        collection.element = element
+        collectionForPropertyConfigBinder.bindCollectionForPropertyConfig(property)
     }
+
 }

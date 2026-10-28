@@ -16,21 +16,23 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.orm.hibernate.cfg.domainbinding.binder;
+package org.grails.orm.hibernate.cfg.domainbinding.binder
 
-import org.hibernate.mapping.RootClass;
-import org.hibernate.mapping.SimpleValue;
+import groovy.transform.CompileStatic
+import org.hibernate.mapping.RootClass
+import org.hibernate.mapping.SimpleValue
 
-import static org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBinder.DEFAULT_DISCRIMINATOR_COLUMN_NAME;
+import static org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBinder.DEFAULT_DISCRIMINATOR_COLUMN_NAME
 
-public class DefaultDiscriminatorBinder {
+@CompileStatic
+class DefaultDiscriminatorBinder {
 
-    private static final String STRING_TYPE = "string";
+    private static final String STRING_TYPE = 'string'
 
-    private final SimpleValueColumnBinder simpleValueColumnBinder;
+    private final SimpleValueColumnBinder simpleValueColumnBinder
 
-    public DefaultDiscriminatorBinder(SimpleValueColumnBinder simpleValueColumnBinder) {
-        this.simpleValueColumnBinder = simpleValueColumnBinder;
+    DefaultDiscriminatorBinder(SimpleValueColumnBinder simpleValueColumnBinder) {
+        this.simpleValueColumnBinder = simpleValueColumnBinder
     }
 
     /**
@@ -39,11 +41,12 @@ public class DefaultDiscriminatorBinder {
      * @param entity The root class entity
      * @param discriminator The discriminator value to configure
      */
-    public void bindDefaultDiscriminator(RootClass entity, SimpleValue discriminator) {
+    void bindDefaultDiscriminator(RootClass entity, SimpleValue discriminator) {
         // Use class name as discriminator value
-        entity.setDiscriminatorValue(entity.getClassName());
+        entity.discriminatorValue = entity.className
 
         // Bind with default column configuration
-        simpleValueColumnBinder.bindSimpleValue(discriminator, STRING_TYPE, DEFAULT_DISCRIMINATOR_COLUMN_NAME, false);
+        simpleValueColumnBinder.bindSimpleValue(discriminator, STRING_TYPE, DEFAULT_DISCRIMINATOR_COLUMN_NAME, false)
     }
+
 }

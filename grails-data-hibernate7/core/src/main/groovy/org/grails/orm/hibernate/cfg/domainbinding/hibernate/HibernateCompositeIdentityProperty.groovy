@@ -16,36 +16,38 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.orm.hibernate.cfg.domainbinding.hibernate;
+package org.grails.orm.hibernate.cfg.domainbinding.hibernate
 
-import java.beans.PropertyDescriptor;
+import groovy.transform.CompileStatic
+import org.grails.datastore.mapping.model.MappingContext
+import org.grails.datastore.mapping.model.PersistentEntity
 
-import org.grails.datastore.mapping.model.MappingContext;
-import org.grails.datastore.mapping.model.PersistentEntity;
+import java.beans.PropertyDescriptor
 
 /** Hibernate persistent property representing a composite (multi-field) identity */
-public class HibernateCompositeIdentityProperty extends HibernateIdentityProperty {
+@CompileStatic
+class HibernateCompositeIdentityProperty extends HibernateIdentityProperty {
 
-    private final HibernatePersistentProperty[] parts;
+    private final HibernatePersistentProperty[] parts
 
-    public HibernateCompositeIdentityProperty(PersistentEntity entity, MappingContext context, PropertyDescriptor property) {
-        super(entity, context, property);
-        this.parts = new HibernatePersistentProperty[0];
+    HibernateCompositeIdentityProperty(PersistentEntity entity, MappingContext context, PropertyDescriptor property) {
+        super(entity, context, property)
+        this.parts = new HibernatePersistentProperty[0]
     }
 
-    public HibernateCompositeIdentityProperty(PersistentEntity entity, MappingContext context, String name, Class<?> type) {
-        super(entity, context, name, type);
-        this.parts = new HibernatePersistentProperty[0];
+    HibernateCompositeIdentityProperty(PersistentEntity entity, MappingContext context, String name, Class<?> type) {
+        super(entity, context, name, type)
+        this.parts = new HibernatePersistentProperty[0]
     }
 
-    public HibernateCompositeIdentityProperty(PersistentEntity entity, MappingContext context, String name, Class<?> type,
+    HibernateCompositeIdentityProperty(PersistentEntity entity, MappingContext context, String name, Class<?> type,
             HibernatePersistentProperty[] parts) {
-        super(entity, context, name, type);
-        this.parts = parts != null ? parts : new HibernatePersistentProperty[0];
+        super(entity, context, name, type)
+        this.parts = parts != null ? parts : new HibernatePersistentProperty[0]
     }
 
-    public HibernatePersistentProperty[] getParts() {
-        return parts;
+    HibernatePersistentProperty[] getParts() {
+        return parts
     }
 }
 

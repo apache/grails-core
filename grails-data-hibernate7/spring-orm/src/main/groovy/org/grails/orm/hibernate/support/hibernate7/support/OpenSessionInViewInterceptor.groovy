@@ -13,30 +13,29 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.grails.orm.hibernate.support.hibernate7.support
 
-package org.grails.orm.hibernate.support.hibernate7.support;
+import groovy.transform.CompileStatic
+import org.apache.commons.logging.Log
+import org.apache.commons.logging.LogFactory
+import org.hibernate.FlushMode
+import org.hibernate.HibernateException
+import org.hibernate.Session
+import org.hibernate.SessionFactory
+import org.jspecify.annotations.Nullable
+import org.springframework.dao.DataAccessException
+import org.springframework.dao.DataAccessResourceFailureException
+import org.springframework.transaction.support.TransactionSynchronizationManager
+import org.springframework.ui.ModelMap
+import org.springframework.util.Assert
+import org.springframework.web.context.request.AsyncWebRequestInterceptor
+import org.springframework.web.context.request.WebRequest
+import org.springframework.web.context.request.async.CallableProcessingInterceptor
+import org.springframework.web.context.request.async.WebAsyncManager
+import org.springframework.web.context.request.async.WebAsyncUtils
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.hibernate.FlushMode;
-import org.hibernate.HibernateException;
-import org.hibernate.Session;
-import org.hibernate.SessionFactory;
-import org.jspecify.annotations.Nullable;
-
-import org.springframework.dao.DataAccessException;
-import org.springframework.dao.DataAccessResourceFailureException;
-import org.springframework.transaction.support.TransactionSynchronizationManager;
-import org.springframework.ui.ModelMap;
-import org.springframework.util.Assert;
-import org.springframework.web.context.request.AsyncWebRequestInterceptor;
-import org.springframework.web.context.request.WebRequest;
-import org.springframework.web.context.request.async.CallableProcessingInterceptor;
-import org.springframework.web.context.request.async.WebAsyncManager;
-import org.springframework.web.context.request.async.WebAsyncUtils;
-
-import org.grails.orm.hibernate.support.hibernate7.SessionFactoryUtils;
-import org.grails.orm.hibernate.support.hibernate7.SessionHolder;
+import org.grails.orm.hibernate.support.hibernate7.SessionFactoryUtils
+import org.grails.orm.hibernate.support.hibernate7.SessionHolder
 
 /**
  * Spring web request interceptor that binds a Hibernate {@code Session} to the
@@ -69,7 +68,8 @@ import org.grails.orm.hibernate.support.hibernate7.SessionHolder;
  * @see TransactionSynchronizationManager
  * @see SessionFactory#getCurrentSession()
  */
-public class OpenSessionInViewInterceptor implements AsyncWebRequestInterceptor {
+@CompileStatic
+class OpenSessionInViewInterceptor implements AsyncWebRequestInterceptor {
 
     /**
      * Suffix that gets appended to the {@code SessionFactory}
@@ -77,32 +77,32 @@ public class OpenSessionInViewInterceptor implements AsyncWebRequestInterceptor 
      * session handling" request attribute.
      * @see #getParticipateAttributeName
      */
-    public static final String PARTICIPATE_SUFFIX = ".PARTICIPATE";
+    public static final String PARTICIPATE_SUFFIX = '.PARTICIPATE'
 
-    protected final Log logger = LogFactory.getLog(getClass());
+    protected final Log logger = LogFactory.getLog(getClass())
 
     @Nullable
-    private SessionFactory sessionFactory;
+    private SessionFactory sessionFactory
 
     /**
      * Set the Hibernate SessionFactory that should be used to create Hibernate Sessions.
      */
-    public void setSessionFactory(@Nullable SessionFactory sessionFactory) {
-        this.sessionFactory = sessionFactory;
+    void setSessionFactory(@Nullable SessionFactory sessionFactory) {
+        this.sessionFactory = sessionFactory
     }
 
     /**
      * Return the Hibernate SessionFactory that should be used to create Hibernate Sessions.
      */
     @Nullable
-    public SessionFactory getSessionFactory() {
-        return this.sessionFactory;
+    SessionFactory getSessionFactory() {
+        return this.sessionFactory
     }
 
     private SessionFactory obtainSessionFactory() {
-        SessionFactory sf = getSessionFactory();
-        Assert.state(sf != null, "No SessionFactory set");
-        return sf;
+        SessionFactory sf = getSessionFactory()
+        Assert.state(sf != null, 'No SessionFactory set')
+        return sf
     }
 
     /**
@@ -110,34 +110,34 @@ public class OpenSessionInViewInterceptor implements AsyncWebRequestInterceptor 
      * {@link TransactionSynchronizationManager}.
      */
     @Override
-    public void preHandle(WebRequest request) throws DataAccessException {
-        String key = getParticipateAttributeName();
-        WebAsyncManager asyncManager = WebAsyncUtils.getAsyncManager(request);
+    void preHandle(WebRequest request) throws DataAccessException {
+        String key = getParticipateAttributeName()
+        WebAsyncManager asyncManager = WebAsyncUtils.getAsyncManager(request)
         if (asyncManager.hasConcurrentResult() && applySessionBindingInterceptor(asyncManager, key)) {
-            return;
+            return
         }
 
         if (TransactionSynchronizationManager.hasResource(obtainSessionFactory())) {
             // Do not modify the Session: just mark the request accordingly.
-            Integer count = (Integer) request.getAttribute(key, WebRequest.SCOPE_REQUEST);
-            int newCount = (count != null ? count + 1 : 1);
-            request.setAttribute(getParticipateAttributeName(), newCount, WebRequest.SCOPE_REQUEST);
-        }
-        else {
-            logger.debug("Opening Hibernate Session in OpenSessionInViewInterceptor");
-            Session session = openSession();
-            SessionHolder sessionHolder = new SessionHolder(session);
-            TransactionSynchronizationManager.bindResource(obtainSessionFactory(), sessionHolder);
+            Integer count = (Integer) request.getAttribute(key, WebRequest.SCOPE_REQUEST)
+            int newCount = (count != null ? count + 1 : 1)
+            request.setAttribute(getParticipateAttributeName(), newCount, WebRequest.SCOPE_REQUEST)
+        } else {
+            logger.debug('Opening Hibernate Session in OpenSessionInViewInterceptor')
+            Session session = openSession()
+            SessionHolder sessionHolder = new SessionHolder(session)
+            TransactionSynchronizationManager.bindResource(obtainSessionFactory(), sessionHolder)
 
             AsyncRequestInterceptor asyncRequestInterceptor =
-                    new AsyncRequestInterceptor(obtainSessionFactory(), sessionHolder);
-            asyncManager.registerCallableInterceptor(key, asyncRequestInterceptor);
-            asyncManager.registerDeferredResultInterceptor(key, asyncRequestInterceptor);
+                    new AsyncRequestInterceptor(obtainSessionFactory(), sessionHolder)
+            asyncManager.registerCallableInterceptor(key, asyncRequestInterceptor)
+            asyncManager.registerDeferredResultInterceptor(key, asyncRequestInterceptor)
         }
     }
 
     @Override
-    public void postHandle(WebRequest request, @Nullable ModelMap model) {
+    void postHandle(WebRequest request, @Nullable ModelMap model) {
+        // no-op
     }
 
     /**
@@ -145,35 +145,34 @@ public class OpenSessionInViewInterceptor implements AsyncWebRequestInterceptor 
      * @see TransactionSynchronizationManager
      */
     @Override
-    public void afterCompletion(WebRequest request, @Nullable Exception ex) throws DataAccessException {
+    void afterCompletion(WebRequest request, @Nullable Exception ex) throws DataAccessException {
         if (!decrementParticipateCount(request)) {
             SessionHolder sessionHolder =
-                    (SessionHolder) TransactionSynchronizationManager.unbindResource(obtainSessionFactory());
-            logger.debug("Closing Hibernate Session in OpenSessionInViewInterceptor");
-            SessionFactoryUtils.closeSession(sessionHolder.getSession());
+                    (SessionHolder) TransactionSynchronizationManager.unbindResource(obtainSessionFactory())
+            logger.debug('Closing Hibernate Session in OpenSessionInViewInterceptor')
+            SessionFactoryUtils.closeSession(sessionHolder.getSession())
         }
     }
 
     private boolean decrementParticipateCount(WebRequest request) {
-        String participateAttributeName = getParticipateAttributeName();
-        Integer count = (Integer) request.getAttribute(participateAttributeName, WebRequest.SCOPE_REQUEST);
+        String participateAttributeName = getParticipateAttributeName()
+        Integer count = (Integer) request.getAttribute(participateAttributeName, WebRequest.SCOPE_REQUEST)
         if (count == null) {
-            return false;
+            return false
         }
         // Do not modify the Session: just clear the marker.
         if (count > 1) {
-            request.setAttribute(participateAttributeName, count - 1, WebRequest.SCOPE_REQUEST);
+            request.setAttribute(participateAttributeName, count - 1, WebRequest.SCOPE_REQUEST)
+        } else {
+            request.removeAttribute(participateAttributeName, WebRequest.SCOPE_REQUEST)
         }
-        else {
-            request.removeAttribute(participateAttributeName, WebRequest.SCOPE_REQUEST);
-        }
-        return true;
+        return true
     }
 
     @Override
-    public void afterConcurrentHandlingStarted(WebRequest request) {
+    void afterConcurrentHandlingStarted(WebRequest request) {
         if (!decrementParticipateCount(request)) {
-            TransactionSynchronizationManager.unbindResource(obtainSessionFactory());
+            TransactionSynchronizationManager.unbindResource(obtainSessionFactory())
         }
     }
 
@@ -187,12 +186,11 @@ public class OpenSessionInViewInterceptor implements AsyncWebRequestInterceptor 
      */
     protected Session openSession() throws DataAccessResourceFailureException {
         try {
-            Session session = obtainSessionFactory().openSession();
-            session.setHibernateFlushMode(FlushMode.MANUAL);
-            return session;
-        }
-        catch (HibernateException ex) {
-            throw new DataAccessResourceFailureException("Could not open Hibernate Session", ex);
+            Session session = obtainSessionFactory().openSession()
+            session.setHibernateFlushMode(FlushMode.MANUAL)
+            return session
+        } catch (HibernateException ex) {
+            throw new DataAccessResourceFailureException('Could not open Hibernate Session', ex)
         }
     }
 
@@ -203,16 +201,16 @@ public class OpenSessionInViewInterceptor implements AsyncWebRequestInterceptor 
      * of the {@code SessionFactory} instance and appends {@link #PARTICIPATE_SUFFIX}.
      */
     protected String getParticipateAttributeName() {
-        return obtainSessionFactory().toString() + PARTICIPATE_SUFFIX;
+        return obtainSessionFactory().toString() + PARTICIPATE_SUFFIX
     }
 
     private boolean applySessionBindingInterceptor(WebAsyncManager asyncManager, String key) {
-        CallableProcessingInterceptor cpi = asyncManager.getCallableInterceptor(key);
+        CallableProcessingInterceptor cpi = asyncManager.getCallableInterceptor(key)
         if (cpi == null) {
-            return false;
+            return false
         }
-        ((AsyncRequestInterceptor) cpi).bindSession();
-        return true;
+        ((AsyncRequestInterceptor) cpi).bindSession()
+        return true
     }
 
 }

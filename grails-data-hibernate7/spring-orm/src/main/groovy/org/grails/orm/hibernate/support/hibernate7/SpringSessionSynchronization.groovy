@@ -13,18 +13,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.grails.orm.hibernate.support.hibernate7
 
-package org.grails.orm.hibernate.support.hibernate7;
-
-import org.hibernate.FlushMode;
-import org.hibernate.Session;
-import org.hibernate.SessionFactory;
-import org.hibernate.engine.spi.SessionImplementor;
-
-import org.springframework.core.Ordered;
-import org.springframework.dao.DataAccessException;
-import org.springframework.transaction.support.TransactionSynchronization;
-import org.springframework.transaction.support.TransactionSynchronizationManager;
+import groovy.transform.CompileStatic
+import org.hibernate.FlushMode
+import org.hibernate.Session
+import org.hibernate.SessionFactory
+import org.hibernate.engine.spi.SessionImplementor
+import org.springframework.core.Ordered
+import org.springframework.dao.DataAccessException
+import org.springframework.transaction.support.TransactionSynchronization
+import org.springframework.transaction.support.TransactionSynchronizationManager
 
 /**
  * Callback for resource cleanup at the end of a Spring-managed transaction
@@ -33,111 +32,111 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
  * @author Juergen Hoeller
  * @since 4.2
  */
-public class SpringSessionSynchronization implements TransactionSynchronization, Ordered {
+@CompileStatic
+class SpringSessionSynchronization implements TransactionSynchronization, Ordered {
 
-    private final SessionHolder sessionHolder;
+    private final SessionHolder sessionHolder
 
-    private final SessionFactory sessionFactory;
+    private final SessionFactory sessionFactory
 
-    private final boolean newSession;
+    private final boolean newSession
 
-    private boolean holderActive = true;
+    private boolean holderActive = true
 
-    public SpringSessionSynchronization(SessionHolder sessionHolder, SessionFactory sessionFactory) {
-        this(sessionHolder, sessionFactory, false);
+    SpringSessionSynchronization(SessionHolder sessionHolder, SessionFactory sessionFactory) {
+        this(sessionHolder, sessionFactory, false)
     }
 
-    public SpringSessionSynchronization(SessionHolder sessionHolder, SessionFactory sessionFactory, boolean newSession) {
-        this.sessionHolder = sessionHolder;
-        this.sessionFactory = sessionFactory;
-        this.newSession = newSession;
+    SpringSessionSynchronization(SessionHolder sessionHolder, SessionFactory sessionFactory, boolean newSession) {
+        this.sessionHolder = sessionHolder
+        this.sessionFactory = sessionFactory
+        this.newSession = newSession
     }
 
     private Session getCurrentSession() {
-        return this.sessionHolder.getSession();
+        return this.sessionHolder.getSession()
     }
 
     @Override
-    public int getOrder() {
-        return SessionFactoryUtils.SESSION_SYNCHRONIZATION_ORDER;
+    int getOrder() {
+        return SessionFactoryUtils.SESSION_SYNCHRONIZATION_ORDER
     }
 
     @Override
-    public void suspend() {
+    void suspend() {
         if (this.holderActive) {
-            TransactionSynchronizationManager.unbindResource(this.sessionFactory);
+            TransactionSynchronizationManager.unbindResource(this.sessionFactory)
             // Eagerly disconnect the Session here, to make release mode "on_close" work on JBoss.
-            Session session = getCurrentSession();
-            if (session instanceof SessionImplementor sessionImpl) {
-                sessionImpl.getJdbcCoordinator().getLogicalConnection().manualDisconnect();
+            Session session = getCurrentSession()
+            if (session instanceof SessionImplementor) {
+                ((SessionImplementor) session).getJdbcCoordinator().getLogicalConnection().manualDisconnect()
             }
         }
     }
 
     @Override
-    public void resume() {
+    void resume() {
         if (this.holderActive) {
-            TransactionSynchronizationManager.bindResource(this.sessionFactory, this.sessionHolder);
+            TransactionSynchronizationManager.bindResource(this.sessionFactory, this.sessionHolder)
         }
     }
 
     @Override
-    public void flush() {
-        SessionFactoryUtils.flush(getCurrentSession(), false);
+    void flush() {
+        SessionFactoryUtils.flush(getCurrentSession(), false)
     }
 
     @Override
-    public void beforeCommit(boolean readOnly) throws DataAccessException {
+    void beforeCommit(boolean readOnly) throws DataAccessException {
         if (!readOnly) {
-            Session session = getCurrentSession();
+            Session session = getCurrentSession()
             // Read-write transaction -> flush the Hibernate Session.
             // Further check: only flush when not FlushMode.MANUAL.
-            if (!FlushMode.MANUAL.equals(session.getHibernateFlushMode())) {
-                SessionFactoryUtils.flush(getCurrentSession(), true);
+            if (session.getHibernateFlushMode() != FlushMode.MANUAL) {
+                SessionFactoryUtils.flush(getCurrentSession(), true)
             }
         }
     }
 
     @Override
-    public void beforeCompletion() {
+    void beforeCompletion() {
         try {
-            Session session = this.sessionHolder.getSession();
+            Session session = this.sessionHolder.getSession()
             if (this.sessionHolder.getPreviousFlushMode() != null) {
                 // In case of pre-bound Session, restore previous flush mode.
-                session.setHibernateFlushMode(this.sessionHolder.getPreviousFlushMode());
+                session.setHibernateFlushMode(this.sessionHolder.getPreviousFlushMode())
             }
             // Eagerly disconnect the Session here, to make release mode "on_close" work nicely.
-            if (session instanceof SessionImplementor sessionImpl) {
-                sessionImpl.getJdbcCoordinator().getLogicalConnection().manualDisconnect();
+            if (session instanceof SessionImplementor) {
+                ((SessionImplementor) session).getJdbcCoordinator().getLogicalConnection().manualDisconnect()
             }
-        }
-        finally {
+        } finally {
             // Unbind at this point if it's a new Session...
             if (this.newSession) {
-                TransactionSynchronizationManager.unbindResource(this.sessionFactory);
-                this.holderActive = false;
+                TransactionSynchronizationManager.unbindResource(this.sessionFactory)
+                this.holderActive = false
             }
         }
     }
 
     @Override
-    public void afterCommit() {
+    void afterCommit() {
+        // no-op
     }
 
     @Override
-    public void afterCompletion(int status) {
+    void afterCompletion(int status) {
         try {
             if (status != STATUS_COMMITTED) {
                 // Clear all pending inserts/updates/deletes in the Session.
                 // Necessary for pre-bound Sessions, to avoid inconsistent state.
-                this.sessionHolder.getSession().clear();
+                this.sessionHolder.getSession().clear()
             }
-        }
-        finally {
-            this.sessionHolder.setSynchronizedWithTransaction(false);
+        } finally {
+            this.sessionHolder.setSynchronizedWithTransaction(false)
             // Call close() at this point if it's a new Session...
             if (this.newSession) {
-                SessionFactoryUtils.closeSession(this.sessionHolder.getSession());
+                SessionFactoryUtils.closeSession(this.sessionHolder.getSession())
             }
         }
     }

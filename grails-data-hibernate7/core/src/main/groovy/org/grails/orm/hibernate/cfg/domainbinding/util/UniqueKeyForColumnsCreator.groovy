@@ -16,42 +16,42 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.orm.hibernate.cfg.domainbinding.util;
+package org.grails.orm.hibernate.cfg.domainbinding.util
 
-import java.util.Collections;
-import java.util.List;
+import groovy.transform.CompileStatic
+import org.hibernate.mapping.Column
+import org.hibernate.mapping.Table
+import org.hibernate.mapping.UniqueKey
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 
-import org.hibernate.mapping.Column;
-import org.hibernate.mapping.Table;
-import org.hibernate.mapping.UniqueKey;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+@CompileStatic
+class UniqueKeyForColumnsCreator {
 
-public class UniqueKeyForColumnsCreator {
+    private static final Logger LOG = LoggerFactory.getLogger(UniqueKeyForColumnsCreator)
+    private final UniqueNameGenerator uniqueNameGenerator
 
-    private static final Logger LOG = LoggerFactory.getLogger(UniqueKeyForColumnsCreator.class);
-    private final UniqueNameGenerator uniqueNameGenerator;
-
-    public UniqueKeyForColumnsCreator() {
-        uniqueNameGenerator = new UniqueNameGenerator();
+    UniqueKeyForColumnsCreator() {
+        uniqueNameGenerator = new UniqueNameGenerator()
     }
 
     protected UniqueKeyForColumnsCreator(UniqueNameGenerator uniqueNameGenerator) {
-        this.uniqueNameGenerator = uniqueNameGenerator;
+        this.uniqueNameGenerator = uniqueNameGenerator
     }
 
-    public void createUniqueKeyForColumns(Table table, List<Column> columns) {
-        Collections.reverse(columns);
+    void createUniqueKeyForColumns(Table table, List<Column> columns) {
+        Collections.reverse(columns)
 
-        UniqueKey uk = new UniqueKey(table);
+        UniqueKey uk = new UniqueKey(table)
         for (Column column : columns) {
-            uk.addColumn(column);
+            uk.addColumn(column)
         }
 
-        if (LOG.isDebugEnabled()) {
-            LOG.debug("create unique key for {} columns = {}", table.getName(), columns);
+        if (LOG.debugEnabled) {
+            LOG.debug('create unique key for {} columns = {}', table.name, columns)
         }
-        uniqueNameGenerator.setGeneratedUniqueName(uk);
-        table.addUniqueKey(uk);
+        uniqueNameGenerator.setGeneratedUniqueName(uk)
+        table.addUniqueKey(uk)
     }
+
 }

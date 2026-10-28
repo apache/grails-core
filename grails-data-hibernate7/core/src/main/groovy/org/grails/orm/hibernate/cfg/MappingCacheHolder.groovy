@@ -16,19 +16,17 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.orm.hibernate.cfg;
+package org.grails.orm.hibernate.cfg
 
-import java.util.HashMap;
-import java.util.Map;
+import groovy.transform.CompileStatic
 
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
 
 /** Holder for the GORM mapping cache. */
-public class MappingCacheHolder {
+@CompileStatic
+class MappingCacheHolder {
 
-    private final Map<Class<?>, Mapping> MAPPING_CACHE = new HashMap<>();
-
-    public MappingCacheHolder() {}
+    private final Map<Class<?>, Mapping> mappingCache = new HashMap<>()
 
     /**
      * Obtains a mapping object for the given domain class nam
@@ -36,8 +34,8 @@ public class MappingCacheHolder {
      * @param theClass The domain class in question
      * @return A Mapping object or null
      */
-    public Mapping getMapping(Class<?> theClass) {
-        return theClass == null ? null : MAPPING_CACHE.get(theClass);
+    Mapping getMapping(Class<?> theClass) {
+        return theClass == null ? null : mappingCache.get(theClass)
     }
 
     /**
@@ -45,9 +43,9 @@ public class MappingCacheHolder {
      *
      * @param entity The domain class in question
      */
-    public void cacheMapping(GrailsHibernatePersistentEntity entity) {
+    void cacheMapping(GrailsHibernatePersistentEntity entity) {
         if (entity != null) {
-            MAPPING_CACHE.put(entity.getJavaClass(), entity.getHibernateMappedForm());
+            mappingCache.put(entity.getJavaClass(), entity.getHibernateMappedForm())
         }
     }
 
@@ -57,19 +55,24 @@ public class MappingCacheHolder {
      * @param theClass The domain class
      * @param mapping The mapping
      */
-    public void cacheMapping(Class<?> theClass, Mapping mapping) {
+    void cacheMapping(Class<?> theClass, Mapping mapping) {
         if (theClass != null && mapping != null) {
-            MAPPING_CACHE.put(theClass, mapping);
+            mappingCache.put(theClass, mapping)
         }
     }
 
-    public void clear() {
-        MAPPING_CACHE.clear();
+    void clear() {
+        mappingCache.clear()
     }
 
-    @SuppressWarnings("PMD.DataflowAnomalyAnalysis")
-    public void clear(Class<?> theClass) {
-        String className = theClass.getName();
-        MAPPING_CACHE.entrySet().removeIf(entry -> className.equals(entry.getKey().getName()));
+    void clear(Class<?> theClass) {
+        String className = theClass.getName()
+        Iterator<Class<?>> keys = mappingCache.keySet().iterator()
+        while (keys.hasNext()) {
+            if (className == keys.next().name) {
+                keys.remove()
+            }
+        }
     }
+
 }

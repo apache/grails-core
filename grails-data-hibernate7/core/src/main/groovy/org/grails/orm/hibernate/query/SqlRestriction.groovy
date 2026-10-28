@@ -16,13 +16,12 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.orm.hibernate.query;
+package org.grails.orm.hibernate.query
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
+import groovy.transform.CompileStatic
+import groovy.transform.RecordOptions
 
-import org.grails.datastore.mapping.query.Query;
+import org.grails.datastore.mapping.query.Query
 
 /**
  * Criterion that restricts the results with a native SQL condition, created by {@code sqlRestriction} in a
@@ -40,23 +39,26 @@ import org.grails.datastore.mapping.query.Query;
  * @param values the values of the {@code ?} placeholders, in order
  * @since 8.0.0
  */
-public record SqlRestriction(String sql, List<?> values) implements Query.Criterion {
+// CodeNarc reads the components of an annotated record as fields and reports their indentation
+@SuppressWarnings('Indentation')
+@CompileStatic
+@RecordOptions(getAt = false, toList = false, toMap = false, size = false)
+record SqlRestriction(String sql, List<?> values) implements Query.Criterion {
 
-    public SqlRestriction {
+    SqlRestriction(String sql, List<?> values) {
         if (sql == null) {
-            throw new IllegalArgumentException("The SQL of a sqlRestriction must not be null");
+            throw new IllegalArgumentException('The SQL of a sqlRestriction must not be null')
         }
-        if (values == null) {
-            values = List.of();
-        }
-        List<Object> copy = new ArrayList<>(values.size());
-        for (Object value : values) {
+        List<?> given = values == null ? List.of() : values
+        List<Object> copy = new ArrayList<>(given.size())
+        for (Object value : given) {
             if (value == null) {
-                throw new IllegalArgumentException("The values of a sqlRestriction must not be null: " + sql);
+                throw new IllegalArgumentException("The values of a sqlRestriction must not be null: ${sql}".toString())
             }
-            copy.add(value instanceof CharSequence ? value.toString() : value);
+            copy.add(value instanceof CharSequence ? value.toString() : value)
         }
-        values = Collections.unmodifiableList(copy);
+        this.sql = sql
+        this.values = Collections.unmodifiableList(copy)
     }
 
     /**
@@ -70,13 +72,13 @@ public record SqlRestriction(String sql, List<?> values) implements Query.Criter
      * @throws IllegalArgumentException if the SQL is {@code null}, a value is {@code null}, or the number of
      *     placeholders differs from the number of values
      */
-    public static SqlRestriction of(String sql, List<?> values, SqlSyntax syntax) {
-        SqlRestriction restriction = new SqlRestriction(sql, values);
-        int placeholders = SqlText.of(sql, syntax).plainIndexes('?').size();
+    static SqlRestriction of(String sql, List<?> values, SqlSyntax syntax) {
+        SqlRestriction restriction = new SqlRestriction(sql, values)
+        int placeholders = SqlText.of(sql, syntax).plainIndexes('?' as char).size()
         if (placeholders != restriction.values().size()) {
-            throw new IllegalArgumentException("The SQL of a sqlRestriction has " + placeholders +
-                    " ? placeholders but " + restriction.values().size() + " values: " + sql);
+            throw new IllegalArgumentException("The SQL of a sqlRestriction has ${placeholders} ? placeholders but ${restriction.values().size()} values: ${sql}".toString())
         }
-        return restriction;
+        return restriction
     }
+
 }

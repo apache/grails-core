@@ -1,27 +1,25 @@
-package com.example.ejb3.auction;
+package com.example.ejb3.auction
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.SequenceGenerator;
+import jakarta.persistence.Column
+import jakarta.persistence.Entity
+import jakarta.persistence.GeneratedValue
+import jakarta.persistence.GenerationType
+import jakarta.persistence.Id
+import jakarta.persistence.SequenceGenerator
 
-import lombok.Getter;
-import lombok.Setter;
-import org.hibernate.envers.Audited;
+import groovy.transform.CompileStatic
+import org.hibernate.envers.Audited
 
 @Audited
 @Entity
-@Getter
-@Setter
-public class AuditedItem {
+@CompileStatic
+class AuditedItem {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "AUDITED_ITEM_SEQ")
-    @SequenceGenerator(name = "AUDITED_ITEM_SEQ", sequenceName = "AUDITED_ITEM_SEQ")
-    private long id;
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = 'AUDITED_ITEM_SEQ')
+    @SequenceGenerator(name = 'AUDITED_ITEM_SEQ', sequenceName = 'AUDITED_ITEM_SEQ')
+    long id
     @Column(unique = true)
-    private String name;
+    String name
 
 }

@@ -16,74 +16,78 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.orm.hibernate.cfg.domainbinding.secondpass;
+package org.grails.orm.hibernate.cfg.domainbinding.secondpass
 
-import jakarta.annotation.Nonnull;
+import groovy.transform.CompileStatic
+import jakarta.annotation.Nonnull
+import org.hibernate.mapping.Collection
+import org.hibernate.mapping.SimpleValue
 
-import org.hibernate.mapping.Collection;
-import org.hibernate.mapping.SimpleValue;
+import org.grails.orm.hibernate.cfg.HibernateCompositeIdentity
+import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy
+import org.grails.orm.hibernate.cfg.domainbinding.binder.CollectionForPropertyConfigBinder
+import org.grails.orm.hibernate.cfg.domainbinding.binder.CompositeIdentifierToManyToOneBinder
+import org.grails.orm.hibernate.cfg.domainbinding.binder.SimpleValueColumnBinder
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateBasicProperty
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty
 
-import org.grails.orm.hibernate.cfg.HibernateCompositeIdentity;
-import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
-import org.grails.orm.hibernate.cfg.domainbinding.binder.CollectionForPropertyConfigBinder;
-import org.grails.orm.hibernate.cfg.domainbinding.binder.CompositeIdentifierToManyToOneBinder;
-import org.grails.orm.hibernate.cfg.domainbinding.binder.SimpleValueColumnBinder;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateBasicProperty;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty;
-
-import static org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBinder.EMPTY_PATH;
+import static org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBinder.EMPTY_PATH
 
 /** Binds a collection with a join table. */
-@SuppressWarnings("PMD.DataflowAnomalyAnalysis")
-public class CollectionWithJoinTableBinder {
+@CompileStatic
+class CollectionWithJoinTableBinder {
 
-    private final PersistentEntityNamingStrategy namingStrategy;
-    private final UnidirectionalOneToManyInverseValuesBinder unidirectionalOneToManyInverseValuesBinder;
-    private final CompositeIdentifierToManyToOneBinder compositeIdentifierToManyToOneBinder;
-    private final CollectionForPropertyConfigBinder collectionForPropertyConfigBinder;
-    private final SimpleValueColumnBinder simpleValueColumnBinder;
-    private final BasicCollectionElementBinder basicCollectionElementBinder;
+    private final PersistentEntityNamingStrategy namingStrategy
+    private final UnidirectionalOneToManyInverseValuesBinder unidirectionalOneToManyInverseValuesBinder
+    private final CompositeIdentifierToManyToOneBinder compositeIdentifierToManyToOneBinder
+    private final CollectionForPropertyConfigBinder collectionForPropertyConfigBinder
+    private final SimpleValueColumnBinder simpleValueColumnBinder
+    private final BasicCollectionElementBinder basicCollectionElementBinder
 
     /** Creates a new {@link CollectionWithJoinTableBinder} instance. */
-    public CollectionWithJoinTableBinder(
+    CollectionWithJoinTableBinder(
             PersistentEntityNamingStrategy namingStrategy,
             UnidirectionalOneToManyInverseValuesBinder unidirectionalOneToManyInverseValuesBinder,
             CompositeIdentifierToManyToOneBinder compositeIdentifierToManyToOneBinder,
             CollectionForPropertyConfigBinder collectionForPropertyConfigBinder,
             SimpleValueColumnBinder simpleValueColumnBinder,
             BasicCollectionElementBinder basicCollectionElementBinder) {
-        this.namingStrategy = namingStrategy;
-        this.unidirectionalOneToManyInverseValuesBinder = unidirectionalOneToManyInverseValuesBinder;
-        this.compositeIdentifierToManyToOneBinder = compositeIdentifierToManyToOneBinder;
-        this.collectionForPropertyConfigBinder = collectionForPropertyConfigBinder;
-        this.simpleValueColumnBinder = simpleValueColumnBinder;
-        this.basicCollectionElementBinder = basicCollectionElementBinder;
+        this.namingStrategy = namingStrategy
+        this.unidirectionalOneToManyInverseValuesBinder = unidirectionalOneToManyInverseValuesBinder
+        this.compositeIdentifierToManyToOneBinder = compositeIdentifierToManyToOneBinder
+        this.collectionForPropertyConfigBinder = collectionForPropertyConfigBinder
+        this.simpleValueColumnBinder = simpleValueColumnBinder
+        this.basicCollectionElementBinder = basicCollectionElementBinder
     }
 
     /** Bind collection with join table. */
-    public void bindCollectionWithJoinTable(@Nonnull HibernateToManyProperty property) {
-        Collection collection = property.getCollection();
-        collection.setInverse(false);
-        SimpleValue element;
-        if (property instanceof HibernateBasicProperty basic) {
-            element = basicCollectionElementBinder.bind(basic);
-        } else {
-            element = unidirectionalOneToManyInverseValuesBinder.bind(property);
-            final var domainClass = property.getHibernateAssociatedEntity();
+    void bindCollectionWithJoinTable(@Nonnull HibernateToManyProperty property) {
+        Collection collection = property.collection
+        collection.inverse = false
+        SimpleValue element
+        if (property instanceof HibernateBasicProperty) {
+            element = basicCollectionElementBinder.bind((HibernateBasicProperty) property)
+        }
+        else {
+            element = unidirectionalOneToManyInverseValuesBinder.bind(property)
+            final GrailsHibernatePersistentEntity domainClass = property.hibernateAssociatedEntity
             if (domainClass != null) {
-                if (domainClass.getHibernateCompositeIdentity().isPresent()) {
-                    HibernateCompositeIdentity ci =
-                            domainClass.getHibernateCompositeIdentity().get();
+                Optional<HibernateCompositeIdentity> compositeIdentity = domainClass.hibernateCompositeIdentity
+                if (compositeIdentity.isPresent()) {
+                    HibernateCompositeIdentity ci = compositeIdentity.get()
                     compositeIdentifierToManyToOneBinder.bindCompositeIdentifierToManyToOne(
-                            property, element, ci, domainClass, EMPTY_PATH);
-                } else {
+                            property, element, ci, domainClass, EMPTY_PATH)
+                }
+                else {
                     simpleValueColumnBinder.bindSimpleValue(
-                            element, "long", property.resolveJoinTableForeignKeyColumnName(namingStrategy), true);
+                            element, 'long', property.resolveJoinTableForeignKeyColumnName(namingStrategy), true)
                 }
             }
         }
 
-        collection.setElement(element);
-        collectionForPropertyConfigBinder.bindCollectionForPropertyConfig(property);
+        collection.element = element
+        collectionForPropertyConfigBinder.bindCollectionForPropertyConfig(property)
     }
+
 }

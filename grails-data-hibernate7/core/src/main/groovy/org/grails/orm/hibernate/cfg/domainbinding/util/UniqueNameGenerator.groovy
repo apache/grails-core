@@ -16,48 +16,48 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.orm.hibernate.cfg.domainbinding.util;
+package org.grails.orm.hibernate.cfg.domainbinding.util
 
-import java.math.BigInteger;
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
-import java.util.ArrayList;
-import java.util.List;
+import groovy.transform.CompileStatic
+import io.micrometer.common.util.StringUtils
+import jakarta.validation.constraints.NotNull
+import org.hibernate.MappingException
+import org.hibernate.mapping.Column
+import org.hibernate.mapping.UniqueKey
 
-import jakarta.validation.constraints.NotNull;
+import java.nio.charset.StandardCharsets
+import java.security.MessageDigest
+import java.security.NoSuchAlgorithmException
 
-import io.micrometer.common.util.StringUtils;
-import org.hibernate.MappingException;
-import org.hibernate.mapping.Column;
-import org.hibernate.mapping.UniqueKey;
+@CompileStatic
+class UniqueNameGenerator {
 
-public class UniqueNameGenerator {
+    private static final int MAX_LENGTH = 30
 
-    private static final int MAX_LENGTH = 30;
-
-    public void setGeneratedUniqueName(@NotNull UniqueKey uk) {
+    void setGeneratedUniqueName(@NotNull UniqueKey uk) {
         if (uk.getTable() == null) {
             throw new MappingException(
-                    String.format("Unique Key %s does not have a table associated with it", uk.getName()));
+                    String.format('Unique Key %s does not have a table associated with it', uk.getName()))
         }
 
         try {
-            var fields = new ArrayList<>(List.of(uk.getTable().getName()));
-            uk.getColumns().stream()
-                    .map(Column::getName)
-                    .filter(StringUtils::isNotBlank)
-                    .forEach(fields::add);
-            var ukString = String.join("_", fields);
-            MessageDigest md = MessageDigest.getInstance("MD5");
-            md.update(ukString.getBytes(StandardCharsets.UTF_8));
-            String name = "UK" + new BigInteger(1, md.digest()).toString(16);
-            if (name.length() > MAX_LENGTH) {
-                name = name.substring(0, MAX_LENGTH);
+            List<String> fields = [uk.getTable().getName()]
+            for (Column column : uk.getColumns()) {
+                String columnName = column.getName()
+                if (StringUtils.isNotBlank(columnName)) {
+                    fields.add(columnName)
+                }
             }
-            uk.setName(name);
+            String ukString = String.join('_', fields)
+            MessageDigest md = MessageDigest.getInstance('MD5')
+            md.update(ukString.getBytes(StandardCharsets.UTF_8))
+            String name = 'UK' + new BigInteger(1, md.digest()).toString(16)
+            if (name.length() > MAX_LENGTH) {
+                name = name.substring(0, MAX_LENGTH)
+            }
+            uk.setName(name)
         } catch (NoSuchAlgorithmException e) {
-            throw new RuntimeException(e);
+            throw new RuntimeException(e)
         }
     }
 }

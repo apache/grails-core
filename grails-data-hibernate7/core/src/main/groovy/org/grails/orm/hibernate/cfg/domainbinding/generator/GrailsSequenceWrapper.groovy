@@ -16,22 +16,24 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.orm.hibernate.cfg.domainbinding.generator;
+package org.grails.orm.hibernate.cfg.domainbinding.generator
 
-import org.hibernate.engine.jdbc.env.spi.JdbcEnvironment;
-import org.hibernate.generator.Generator;
-import org.hibernate.generator.GeneratorCreationContext;
+import groovy.transform.CompileStatic
+import org.hibernate.engine.jdbc.env.spi.JdbcEnvironment
+import org.hibernate.generator.Generator
+import org.hibernate.generator.GeneratorCreationContext
 
-import org.grails.orm.hibernate.cfg.HibernateSimpleIdentity;
-import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
+import org.grails.orm.hibernate.cfg.HibernateSimpleIdentity
+import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
 
-import static org.grails.orm.hibernate.cfg.domainbinding.generator.GrailsSequenceGeneratorEnum.NATIVE;
-import static org.grails.orm.hibernate.cfg.domainbinding.generator.GrailsSequenceGeneratorEnum.fromName;
+import static org.grails.orm.hibernate.cfg.domainbinding.generator.GrailsSequenceGeneratorEnum.NATIVE
+import static org.grails.orm.hibernate.cfg.domainbinding.generator.GrailsSequenceGeneratorEnum.fromName
 
-public class GrailsSequenceWrapper {
+@CompileStatic
+class GrailsSequenceWrapper {
 
-    public Generator getGenerator(
+    Generator getGenerator(
             String name,
             GeneratorCreationContext context,
             HibernateSimpleIdentity mappedId,
@@ -39,6 +41,7 @@ public class GrailsSequenceWrapper {
             JdbcEnvironment jdbcEnvironment,
             PersistentEntityNamingStrategy namingStrategy) {
         return GrailsSequenceGeneratorEnum.getGenerator(
-                fromName(name).orElse(NATIVE), context, mappedId, domainClass, jdbcEnvironment, namingStrategy);
+                fromName(name).orElse(NATIVE), context, mappedId, domainClass, jdbcEnvironment, namingStrategy)
     }
+
 }

@@ -13,50 +13,51 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.grails.orm.hibernate.query;
+package org.grails.orm.hibernate.query
 
-import java.util.HashMap;
-import java.util.Map;
-
-import jakarta.persistence.criteria.From;
+import groovy.transform.CompileStatic
+import jakarta.persistence.criteria.From
 
 /**
  * Tracks physical JPA Joins and Roots to ensure consistency and avoid duplicate joins.
  *
  * @since 8.0
  */
-public class JoinTracker {
-    private final Map<String, From<?, ?>> joinsByPath = new HashMap<>();
-    private From<?, ?> root;
-    private final JoinTracker parent;
+@CompileStatic
+class JoinTracker {
 
-    public JoinTracker(From<?, ?> root) {
-        this.root = root;
-        this.parent = null;
+    private final Map<String, From<?, ?>> joinsByPath = [:]
+    private From<?, ?> root
+    private final JoinTracker parent
+
+    JoinTracker(From<?, ?> root) {
+        this.root = root
+        this.parent = null
     }
 
-    public JoinTracker(JoinTracker parent, From<?, ?> root) {
-        this.root = root;
-        this.parent = parent;
+    JoinTracker(JoinTracker parent, From<?, ?> root) {
+        this.root = root
+        this.parent = parent
     }
 
-    public void addJoin(String path, From<?, ?> from) {
-        joinsByPath.put(path, from);
+    void addJoin(String path, From<?, ?> from) {
+        joinsByPath.put(path, from)
     }
 
-    public From<?, ?> getJoin(String path) {
-        From<?, ?> join = joinsByPath.get(path);
+    From<?, ?> getJoin(String path) {
+        From<?, ?> join = joinsByPath.get(path)
         if (join == null && parent != null) {
-            return parent.getJoin(path);
+            return parent.getJoin(path)
         }
-        return join;
+        return join
     }
 
-    public From<?, ?> getRoot() {
-        return root;
+    From<?, ?> getRoot() {
+        return root
     }
 
-    public void setRoot(From<?, ?> root) {
-        this.root = root;
+    void setRoot(From<?, ?> root) {
+        this.root = root
     }
+
 }

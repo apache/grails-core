@@ -16,59 +16,62 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.orm.hibernate.cfg.domainbinding.secondpass;
+package org.grails.orm.hibernate.cfg.domainbinding.secondpass
 
-import java.util.Collections;
+import groovy.transform.CompileStatic
+import org.hibernate.FetchMode
+import org.hibernate.mapping.Collection
 
-import org.hibernate.FetchMode;
-import org.hibernate.mapping.Collection;
-
-import org.grails.datastore.mapping.model.config.GormProperties;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyEntityProperty;
-import org.grails.orm.hibernate.cfg.domainbinding.util.DefaultColumnNameFetcher;
+import org.grails.datastore.mapping.model.config.GormProperties
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyEntityProperty
+import org.grails.orm.hibernate.cfg.domainbinding.util.DefaultColumnNameFetcher
 
 /** Applies multi-tenant filters to a collection based on the associated entity's tenancy. */
-public class ToManyEntityMultiTenantFilterBinder {
+@CompileStatic
+class ToManyEntityMultiTenantFilterBinder {
 
-    private final DefaultColumnNameFetcher defaultColumnNameFetcher;
+    private final DefaultColumnNameFetcher defaultColumnNameFetcher
 
     /** Creates a new {@link ToManyEntityMultiTenantFilterBinder} instance. */
-    public ToManyEntityMultiTenantFilterBinder(DefaultColumnNameFetcher defaultColumnNameFetcher) {
-        this.defaultColumnNameFetcher = defaultColumnNameFetcher;
+    ToManyEntityMultiTenantFilterBinder(DefaultColumnNameFetcher defaultColumnNameFetcher) {
+        this.defaultColumnNameFetcher = defaultColumnNameFetcher
     }
 
     /** Applies the multi-tenant filter to the collection if the associated entity is multi-tenant. */
-    public void bind(HibernateToManyEntityProperty entityProperty) {
-        var referenced = entityProperty.getHibernateAssociatedEntity();
+    void bind(HibernateToManyEntityProperty entityProperty) {
+        GrailsHibernatePersistentEntity referenced = entityProperty.hibernateAssociatedEntity
         if (referenced == null) {
-            return;
+            return
         }
         if (referenced.isMultiTenant()) {
-            String filterCondition = referenced.getMultiTenantFilterCondition(defaultColumnNameFetcher);
+            String filterCondition = referenced.getMultiTenantFilterCondition(defaultColumnNameFetcher)
             if (filterCondition != null) {
-                Collection collection = entityProperty.getCollection();
+                Collection collection = entityProperty.collection
                 if (entityProperty.isManyToMany() || entityProperty.isUnidirectionalOneToMany()) {
                     collection.addManyToManyFilter(
                             GormProperties.TENANT_IDENTITY,
                             filterCondition,
                             true,
                             Collections.emptyMap(),
-                            Collections.emptyMap());
-                } else {
+                            Collections.emptyMap())
+                }
+                else {
                     collection.addFilter(
                             GormProperties.TENANT_IDENTITY,
                             filterCondition,
                             true,
                             Collections.emptyMap(),
-                            Collections.emptyMap());
+                            Collections.emptyMap())
                 }
-                if (collection.getFetchMode() == FetchMode.JOIN) {
+                if (collection.fetchMode == FetchMode.JOIN) {
                     // Hibernate does not apply the tenant filter to a collection that it fetches by join with an
                     // instance loaded by id, so the collection is loaded eagerly with a select of its own instead
-                    collection.setFetchMode(FetchMode.SELECT);
-                    collection.setLazy(false);
+                    collection.fetchMode = FetchMode.SELECT
+                    collection.lazy = false
                 }
             }
         }
     }
+
 }

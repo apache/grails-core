@@ -16,41 +16,40 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.orm.hibernate.cfg.domainbinding.binder;
+package org.grails.orm.hibernate.cfg.domainbinding.binder
 
-import java.util.Properties;
+import groovy.transform.CompileStatic
+import jakarta.annotation.Nonnull
+import org.hibernate.boot.spi.MetadataBuildingContext
+import org.hibernate.mapping.BasicValue
+import org.hibernate.mapping.Column
+import org.hibernate.mapping.Table
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 
-import jakarta.annotation.Nonnull;
+import org.grails.orm.hibernate.cfg.ColumnConfig
+import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy
+import org.grails.orm.hibernate.cfg.PropertyConfig
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEnumProperty
+import org.grails.orm.hibernate.cfg.domainbinding.util.ColumnNameForPropertyAndPathFetcher
+import org.grails.orm.hibernate.cfg.domainbinding.util.CreateKeyForProps
+import org.grails.orm.hibernate.cfg.domainbinding.util.GrailsEnumType
 
-import org.hibernate.boot.spi.MetadataBuildingContext;
-import org.hibernate.mapping.BasicValue;
-import org.hibernate.mapping.Column;
-import org.hibernate.mapping.Table;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import static org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBinder.ENUM_CLASS_PROP
 
-import org.grails.orm.hibernate.cfg.ColumnConfig;
-import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
-import org.grails.orm.hibernate.cfg.PropertyConfig;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEnumProperty;
-import org.grails.orm.hibernate.cfg.domainbinding.util.ColumnNameForPropertyAndPathFetcher;
-import org.grails.orm.hibernate.cfg.domainbinding.util.CreateKeyForProps;
-import org.grails.orm.hibernate.cfg.domainbinding.util.GrailsEnumType;
+@CompileStatic
+class EnumTypeBinder {
 
-import static org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBinder.ENUM_CLASS_PROP;
+    private static final Logger LOG = LoggerFactory.getLogger(EnumTypeBinder)
 
-public class EnumTypeBinder {
+    private final MetadataBuildingContext metadataBuildingContext
+    private final ColumnNameForPropertyAndPathFetcher columnNameForPropertyAndPathFetcher
+    private final IndexBinder indexBinder
+    private final ColumnConfigToColumnBinder columnConfigToColumnBinder
+    private final PersistentEntityNamingStrategy namingStrategy
+    private final CreateKeyForProps createKeyForProps
 
-    private static final Logger LOG = LoggerFactory.getLogger(EnumTypeBinder.class);
-
-    private final MetadataBuildingContext metadataBuildingContext;
-    private final ColumnNameForPropertyAndPathFetcher columnNameForPropertyAndPathFetcher;
-    private final IndexBinder indexBinder;
-    private final ColumnConfigToColumnBinder columnConfigToColumnBinder;
-    private final PersistentEntityNamingStrategy namingStrategy;
-    private final CreateKeyForProps createKeyForProps;
-
-    public EnumTypeBinder(
+    EnumTypeBinder(
             MetadataBuildingContext metadataBuildingContext,
             ColumnNameForPropertyAndPathFetcher columnNameForPropertyAndPathFetcher,
             PersistentEntityNamingStrategy namingStrategy) {
@@ -59,7 +58,7 @@ public class EnumTypeBinder {
                 columnNameForPropertyAndPathFetcher,
                 new IndexBinder(),
                 new ColumnConfigToColumnBinder(),
-                namingStrategy);
+                namingStrategy)
     }
 
     protected EnumTypeBinder(
@@ -74,7 +73,7 @@ public class EnumTypeBinder {
                 indexBinder,
                 columnConfigToColumnBinder,
                 namingStrategy,
-                new CreateKeyForProps(columnNameForPropertyAndPathFetcher));
+                new CreateKeyForProps(columnNameForPropertyAndPathFetcher))
     }
 
     protected EnumTypeBinder(
@@ -84,52 +83,52 @@ public class EnumTypeBinder {
             ColumnConfigToColumnBinder columnConfigToColumnBinder,
             PersistentEntityNamingStrategy namingStrategy,
             CreateKeyForProps createKeyForProps) {
-        this.metadataBuildingContext = metadataBuildingContext;
-        this.columnNameForPropertyAndPathFetcher = columnNameForPropertyAndPathFetcher;
-        this.indexBinder = indexBinder;
-        this.columnConfigToColumnBinder = columnConfigToColumnBinder;
-        this.namingStrategy = namingStrategy;
-        this.createKeyForProps = createKeyForProps;
+        this.metadataBuildingContext = metadataBuildingContext
+        this.columnNameForPropertyAndPathFetcher = columnNameForPropertyAndPathFetcher
+        this.indexBinder = indexBinder
+        this.columnConfigToColumnBinder = columnConfigToColumnBinder
+        this.namingStrategy = namingStrategy
+        this.createKeyForProps = createKeyForProps
     }
 
-    public BasicValue bindEnumType(@Nonnull HibernateEnumProperty property, String path) {
-        String columnName = property.resolveEnumColumnName(namingStrategy, columnNameForPropertyAndPathFetcher, path);
-        BasicValue simpleValue = new BasicValue(metadataBuildingContext, property.getTable());
-        Class<?> propertyType = property.getEnumType();
-        PropertyConfig pc = property.getHibernateMappedForm();
-        String typeName = property.getTypeName(propertyType);
+    BasicValue bindEnumType(@Nonnull HibernateEnumProperty property, String path) {
+        String columnName = property.resolveEnumColumnName(namingStrategy, columnNameForPropertyAndPathFetcher, path)
+        BasicValue simpleValue = new BasicValue(metadataBuildingContext, property.table)
+        Class<?> propertyType = property.enumType
+        PropertyConfig pc = property.hibernateMappedForm
+        String typeName = property.getTypeName(propertyType)
         if (typeName != null) {
-            simpleValue.setTypeName(typeName);
+            simpleValue.typeName = typeName
         } else {
-            GrailsEnumType.fromString(pc.getEnumType()).configure(simpleValue, propertyType);
+            GrailsEnumType.fromString(pc.enumType).configure(simpleValue, propertyType)
         }
-        Properties enumProperties = new Properties();
-        enumProperties.put(ENUM_CLASS_PROP, propertyType.getName());
-        simpleValue.setTypeParameters(enumProperties);
+        Properties enumProperties = new Properties()
+        enumProperties.put(ENUM_CLASS_PROP, propertyType.name)
+        simpleValue.setTypeParameters(enumProperties)
 
-        Column column = new Column();
-        if (property.getHibernateOwner().isTablePerHierarchySubclass() && LOG.isDebugEnabled()) {
-            LOG.debug("[GrailsDomainBinder] Sub class property [{}] for column name [{}] forced to nullable",
-                    property.getName(), columnName);
+        Column column = new Column()
+        if (property.hibernateOwner.isTablePerHierarchySubclass() && LOG.isDebugEnabled()) {
+            LOG.debug('[GrailsDomainBinder] Sub class property [{}] for column name [{}] forced to nullable',
+                    property.name, columnName)
         }
-        column.setNullable(property.isEnumColumnNullable());
-        column.setValue(simpleValue);
-        column.setName(columnName);
-        Table t = simpleValue.getTable();
-        t.addColumn(column);
-        simpleValue.addColumn(column);
-        createKeyForProps.createKeyForProps(property, path, t, columnName);
+        column.nullable = property.isEnumColumnNullable()
+        column.value = simpleValue
+        column.name = columnName
+        Table t = simpleValue.table
+        t.addColumn(column)
+        simpleValue.addColumn(column)
+        createKeyForProps.createKeyForProps(property, path, t, columnName)
 
-        if (!pc.getColumns().isEmpty()) {
-            ColumnConfig columnConfig = pc.getColumns().get(0);
-            column.setComment(columnConfig.getComment());
-            column.setDefaultValue(columnConfig.getDefaultValue());
-            column.setCustomRead(columnConfig.getRead());
-            column.setCustomWrite(columnConfig.getWrite());
-            indexBinder.bindIndex(columnName, column, columnConfig, t);
-            columnConfigToColumnBinder.bindColumnConfigToColumn(column, columnConfig, pc);
+        if (!pc.columns.isEmpty()) {
+            ColumnConfig columnConfig = pc.columns.get(0)
+            column.comment = columnConfig.comment
+            column.defaultValue = columnConfig.defaultValue
+            column.customRead = columnConfig.read
+            column.customWrite = columnConfig.write
+            indexBinder.bindIndex(columnName, column, columnConfig, t)
+            columnConfigToColumnBinder.bindColumnConfigToColumn(column, columnConfig, pc)
         }
-        return simpleValue;
+        return simpleValue
     }
 
 }

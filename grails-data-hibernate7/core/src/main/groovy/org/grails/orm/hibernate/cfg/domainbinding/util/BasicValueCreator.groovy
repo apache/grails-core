@@ -16,40 +16,39 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.orm.hibernate.cfg.domainbinding.util;
+package org.grails.orm.hibernate.cfg.domainbinding.util
 
-import java.util.Optional;
+import groovy.transform.CompileStatic
+import org.hibernate.boot.spi.MetadataBuildingContext
+import org.hibernate.engine.jdbc.env.spi.JdbcEnvironment
+import org.hibernate.generator.Generator
+import org.hibernate.generator.GeneratorCreationContext
+import org.hibernate.mapping.BasicValue
 
-import org.hibernate.boot.spi.MetadataBuildingContext;
-import org.hibernate.engine.jdbc.env.spi.JdbcEnvironment;
-import org.hibernate.generator.Generator;
-import org.hibernate.generator.GeneratorCreationContext;
-import org.hibernate.mapping.BasicValue;
-
-import org.grails.orm.hibernate.cfg.HibernateSimpleIdentity;
-import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
-import org.grails.orm.hibernate.cfg.domainbinding.generator.GrailsSequenceWrapper;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty;
+import org.grails.orm.hibernate.cfg.HibernateSimpleIdentity
+import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy
+import org.grails.orm.hibernate.cfg.domainbinding.generator.GrailsSequenceWrapper
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty
 
 /** The basic value creator class. */
-@SuppressWarnings("PMD.DataflowAnomalyAnalysis")
-public class BasicValueCreator {
+@CompileStatic
+class BasicValueCreator {
 
-    private final MetadataBuildingContext metadataBuildingContext;
-    private final JdbcEnvironment jdbcEnvironment;
-    private final PersistentEntityNamingStrategy namingStrategy;
-    private final GrailsSequenceWrapper grailsSequenceWrapper;
+    private final MetadataBuildingContext metadataBuildingContext
+    private final JdbcEnvironment jdbcEnvironment
+    private final PersistentEntityNamingStrategy namingStrategy
+    private final GrailsSequenceWrapper grailsSequenceWrapper
 
     /** Creates a new {@link BasicValueCreator} instance. */
-    public BasicValueCreator(
+    BasicValueCreator(
             MetadataBuildingContext metadataBuildingContext,
             JdbcEnvironment jdbcEnvironment,
             PersistentEntityNamingStrategy namingStrategy) {
-        this.metadataBuildingContext = metadataBuildingContext;
-        this.jdbcEnvironment = jdbcEnvironment;
-        this.namingStrategy = namingStrategy;
-        this.grailsSequenceWrapper = new GrailsSequenceWrapper();
+        this.metadataBuildingContext = metadataBuildingContext
+        this.jdbcEnvironment = jdbcEnvironment
+        this.namingStrategy = namingStrategy
+        this.grailsSequenceWrapper = new GrailsSequenceWrapper()
     }
 
     /** Creates a new {@link BasicValueCreator} instance. */
@@ -58,22 +57,26 @@ public class BasicValueCreator {
             JdbcEnvironment jdbcEnvironment,
             PersistentEntityNamingStrategy namingStrategy,
             GrailsSequenceWrapper grailsSequenceWrapper) {
-        this.metadataBuildingContext = metadataBuildingContext;
-        this.jdbcEnvironment = jdbcEnvironment;
-        this.namingStrategy = namingStrategy;
-        this.grailsSequenceWrapper = grailsSequenceWrapper;
+        this.metadataBuildingContext = metadataBuildingContext
+        this.jdbcEnvironment = jdbcEnvironment
+        this.namingStrategy = namingStrategy
+        this.grailsSequenceWrapper = grailsSequenceWrapper
     }
 
     /** Creates and configures a {@link BasicValue} for the given persistent property. */
-    public BasicValue bindBasicValue(HibernatePersistentProperty property) {
-        BasicValue basicValue = new BasicValue(metadataBuildingContext, property.getTable());
-        Optional.ofNullable(property.getGeneratorName()).ifPresent(generator ->
-                basicValue.setCustomIdGeneratorCreator(context -> createGenerator(
+    BasicValue bindBasicValue(HibernatePersistentProperty property) {
+        BasicValue basicValue = new BasicValue(metadataBuildingContext, property.table)
+        String generatorName = property.generatorName
+        if (generatorName != null) {
+            basicValue.setCustomIdGeneratorCreator({ context ->
+                createGenerator(
                         property,
-                        property.getHibernateOwner(),
+                        property.hibernateOwner,
                         new GeneratorCreationContextWrapper(context, basicValue),
-                        generator)));
-        return basicValue;
+                        generatorName)
+            })
+        }
+        return basicValue
     }
 
     private Generator createGenerator(
@@ -81,11 +84,13 @@ public class BasicValueCreator {
             GrailsHibernatePersistentEntity domainClass,
             GeneratorCreationContext context,
             String generatorName) {
-        HibernateSimpleIdentity mappedId = domainClass.getHibernateIdentity() instanceof HibernateSimpleIdentity id ? id : null;
+        HibernateSimpleIdentity mappedId = domainClass.hibernateIdentity instanceof HibernateSimpleIdentity ?
+                (HibernateSimpleIdentity) domainClass.hibernateIdentity : null
         if (mappedId == null) {
-            mappedId = property.buildPropertyIdentity().orElse(null);
+            mappedId = property.buildPropertyIdentity().orElse(null)
         }
         return grailsSequenceWrapper.getGenerator(
-                generatorName, context, mappedId, domainClass, jdbcEnvironment, namingStrategy);
+                generatorName, context, mappedId, domainClass, jdbcEnvironment, namingStrategy)
     }
+
 }

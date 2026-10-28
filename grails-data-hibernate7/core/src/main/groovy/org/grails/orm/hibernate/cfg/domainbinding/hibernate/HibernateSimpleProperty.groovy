@@ -16,19 +16,22 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.orm.hibernate.cfg.domainbinding.hibernate;
+package org.grails.orm.hibernate.cfg.domainbinding.hibernate
 
-import java.beans.PropertyDescriptor;
+import groovy.transform.CompileStatic
+import org.grails.datastore.mapping.model.MappingContext
+import org.grails.datastore.mapping.model.PersistentEntity
+import org.grails.datastore.mapping.model.types.mapping.SimpleWithMapping
+import org.grails.orm.hibernate.cfg.PropertyConfig
 
-import org.grails.datastore.mapping.model.MappingContext;
-import org.grails.datastore.mapping.model.PersistentEntity;
-import org.grails.datastore.mapping.model.types.mapping.SimpleWithMapping;
-import org.grails.orm.hibernate.cfg.PropertyConfig;
+import java.beans.PropertyDescriptor
 
 /** Hibernate implementation of {@link org.grails.datastore.mapping.model.types.Simple} */
-public class HibernateSimpleProperty extends SimpleWithMapping<PropertyConfig> implements HibernatePersistentProperty {
+@CompileStatic
+class HibernateSimpleProperty extends SimpleWithMapping<PropertyConfig> implements HibernatePersistentProperty {
 
-    public HibernateSimpleProperty(PersistentEntity entity, MappingContext context, PropertyDescriptor property) {
-        super(entity, context, property);
+    HibernateSimpleProperty(PersistentEntity entity, MappingContext context, PropertyDescriptor property) {
+        super(entity, context, property)
     }
+
 }

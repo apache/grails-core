@@ -13,13 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.grails.orm.hibernate.support.hibernate7
 
-package org.grails.orm.hibernate.support.hibernate7;
-
-import org.hibernate.Session;
-import org.jspecify.annotations.Nullable;
-
-import org.springframework.transaction.support.TransactionSynchronization;
+import groovy.transform.CompileStatic
+import org.hibernate.Session
+import org.jspecify.annotations.Nullable
+import org.springframework.transaction.support.TransactionSynchronization
 
 /**
  * Simple synchronization adapter that propagates a {@code flush()} call
@@ -28,27 +27,30 @@ import org.springframework.transaction.support.TransactionSynchronization;
  * @author Juergen Hoeller
  * @since 4.2
  */
-public class SpringFlushSynchronization implements TransactionSynchronization {
+@CompileStatic
+class SpringFlushSynchronization implements TransactionSynchronization {
 
-    private final Session session;
+    private final Session session
 
-    public SpringFlushSynchronization(Session session) {
-        this.session = session;
+    SpringFlushSynchronization(Session session) {
+        this.session = session
     }
 
     @Override
-    public void flush() {
-        SessionFactoryUtils.flush(this.session, false);
+    void flush() {
+        SessionFactoryUtils.flush(this.session, false)
     }
 
     @Override
-    public boolean equals(@Nullable Object other) {
-        return (this == other || (other instanceof SpringFlushSynchronization that && this.session == that.session));
+    boolean equals(@Nullable Object other) {
+        // Reference identity on both counts, as in the original.
+        return this.is(other) ||
+                (other instanceof SpringFlushSynchronization && this.session.is(((SpringFlushSynchronization) other).@session))
     }
 
     @Override
-    public int hashCode() {
-        return this.session.hashCode();
+    int hashCode() {
+        return this.session.hashCode()
     }
 
 }

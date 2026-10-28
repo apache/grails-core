@@ -16,69 +16,74 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.orm.hibernate.cfg.domainbinding.secondpass;
+package org.grails.orm.hibernate.cfg.domainbinding.secondpass
 
-import jakarta.annotation.Nonnull;
+import groovy.transform.CompileStatic
+import jakarta.annotation.Nonnull
+import org.hibernate.boot.spi.MetadataBuildingContext
+import org.hibernate.mapping.BasicValue
+import org.hibernate.mapping.Collection
+import org.hibernate.mapping.Column
 
-import org.hibernate.boot.spi.MetadataBuildingContext;
-import org.hibernate.mapping.BasicValue;
-import org.hibernate.mapping.Collection;
-import org.hibernate.mapping.Column;
+import org.grails.orm.hibernate.cfg.ColumnConfig
+import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy
+import org.grails.orm.hibernate.cfg.PropertyConfig
+import org.grails.orm.hibernate.cfg.domainbinding.binder.ColumnConfigToColumnBinder
+import org.grails.orm.hibernate.cfg.domainbinding.binder.EnumTypeBinder
+import org.grails.orm.hibernate.cfg.domainbinding.binder.SimpleValueColumnBinder
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateBasicProperty
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEnumProperty
+import org.grails.orm.hibernate.cfg.domainbinding.util.SimpleValueColumnFetcher
 
-import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
-import org.grails.orm.hibernate.cfg.PropertyConfig;
-import org.grails.orm.hibernate.cfg.domainbinding.binder.ColumnConfigToColumnBinder;
-import org.grails.orm.hibernate.cfg.domainbinding.binder.EnumTypeBinder;
-import org.grails.orm.hibernate.cfg.domainbinding.binder.SimpleValueColumnBinder;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateBasicProperty;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEnumProperty;
-import org.grails.orm.hibernate.cfg.domainbinding.util.SimpleValueColumnFetcher;
-
-import static org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBinder.EMPTY_PATH;
+import static org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBinder.EMPTY_PATH
 
 /** Binds the element value for a basic (scalar or enum) collection. */
-public class BasicCollectionElementBinder {
+@CompileStatic
+class BasicCollectionElementBinder {
 
-    private final MetadataBuildingContext metadataBuildingContext;
-    private final PersistentEntityNamingStrategy namingStrategy;
-    private final EnumTypeBinder enumTypeBinder;
-    private final SimpleValueColumnBinder simpleValueColumnBinder;
-    private final SimpleValueColumnFetcher simpleValueColumnFetcher;
-    private final ColumnConfigToColumnBinder columnConfigToColumnBinder;
+    private final MetadataBuildingContext metadataBuildingContext
+    private final PersistentEntityNamingStrategy namingStrategy
+    private final EnumTypeBinder enumTypeBinder
+    private final SimpleValueColumnBinder simpleValueColumnBinder
+    private final SimpleValueColumnFetcher simpleValueColumnFetcher
+    private final ColumnConfigToColumnBinder columnConfigToColumnBinder
 
     /** Creates a new {@link BasicCollectionElementBinder} instance. */
-    public BasicCollectionElementBinder(
+    BasicCollectionElementBinder(
             MetadataBuildingContext metadataBuildingContext,
             PersistentEntityNamingStrategy namingStrategy,
             EnumTypeBinder enumTypeBinder,
             SimpleValueColumnBinder simpleValueColumnBinder,
             SimpleValueColumnFetcher simpleValueColumnFetcher,
             ColumnConfigToColumnBinder columnConfigToColumnBinder) {
-        this.metadataBuildingContext = metadataBuildingContext;
-        this.namingStrategy = namingStrategy;
-        this.enumTypeBinder = enumTypeBinder;
-        this.simpleValueColumnBinder = simpleValueColumnBinder;
-        this.simpleValueColumnFetcher = simpleValueColumnFetcher;
-        this.columnConfigToColumnBinder = columnConfigToColumnBinder;
+        this.metadataBuildingContext = metadataBuildingContext
+        this.namingStrategy = namingStrategy
+        this.enumTypeBinder = enumTypeBinder
+        this.simpleValueColumnBinder = simpleValueColumnBinder
+        this.simpleValueColumnFetcher = simpleValueColumnFetcher
+        this.columnConfigToColumnBinder = columnConfigToColumnBinder
     }
 
     /** Creates and binds a {@link BasicValue} element for the given basic collection property. */
-    public BasicValue bind(@Nonnull HibernateBasicProperty property) {
-        if (property instanceof HibernateEnumProperty hibernateEnumProperty) {
-            return enumTypeBinder.bindEnumType(hibernateEnumProperty, EMPTY_PATH);
-        } else {
-            String columnName = property.joinTableColumName(namingStrategy);
-            final Class<?> referencedType = property.getComponentType();
-            String typeName = property.getTypeName(referencedType);
-            Collection collection = property.getCollection();
+    BasicValue bind(@Nonnull HibernateBasicProperty property) {
+        if (property instanceof HibernateEnumProperty) {
+            return enumTypeBinder.bindEnumType((HibernateEnumProperty) property, EMPTY_PATH)
+        }
+        else {
+            String columnName = property.joinTableColumName(namingStrategy)
+            final Class<?> referencedType = property.componentType
+            String typeName = property.getTypeName(referencedType)
+            Collection collection = property.collection
             BasicValue element = simpleValueColumnBinder.bindSimpleValue(
-                    metadataBuildingContext, collection.getCollectionTable(), typeName, columnName, true);
-            property.getColumnConfigOptional().ifPresent(columnConfig -> {
-                Column column = simpleValueColumnFetcher.getColumnForSimpleValue(element);
-                final PropertyConfig mappedForm = property.getHibernateMappedForm();
-                columnConfigToColumnBinder.bindColumnConfigToColumn(column, columnConfig, mappedForm);
-            });
-            return element;
+                    metadataBuildingContext, collection.collectionTable, typeName, columnName, true)
+            Optional<ColumnConfig> columnConfigOptional = property.columnConfigOptional
+            if (columnConfigOptional.isPresent()) {
+                Column column = simpleValueColumnFetcher.getColumnForSimpleValue(element)
+                final PropertyConfig mappedForm = property.hibernateMappedForm
+                columnConfigToColumnBinder.bindColumnConfigToColumn(column, columnConfigOptional.get(), mappedForm)
+            }
+            return element
         }
     }
+
 }

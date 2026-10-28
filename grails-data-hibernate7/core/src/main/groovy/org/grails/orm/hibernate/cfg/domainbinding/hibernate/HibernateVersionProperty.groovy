@@ -16,12 +16,13 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.orm.hibernate.cfg.domainbinding.hibernate;
+package org.grails.orm.hibernate.cfg.domainbinding.hibernate
 
-import java.beans.PropertyDescriptor;
+import groovy.transform.CompileStatic
+import org.grails.datastore.mapping.model.MappingContext
+import org.grails.datastore.mapping.model.PersistentEntity
 
-import org.grails.datastore.mapping.model.MappingContext;
-import org.grails.datastore.mapping.model.PersistentEntity;
+import java.beans.PropertyDescriptor
 
 /**
  * Specialisation of {@link HibernateSimpleProperty} used for the optimistic-locking
@@ -30,9 +31,11 @@ import org.grails.datastore.mapping.model.PersistentEntity;
  * version slot from ordinary simple properties and apply version-specific defaults
  * (integer type, {@code undefined} null-value, etc.).
  */
-public class HibernateVersionProperty extends HibernateSimpleProperty {
+@CompileStatic
+class HibernateVersionProperty extends HibernateSimpleProperty {
 
-    public HibernateVersionProperty(PersistentEntity entity, MappingContext context, PropertyDescriptor property) {
-        super(entity, context, property);
+    HibernateVersionProperty(PersistentEntity entity, MappingContext context, PropertyDescriptor property) {
+        super(entity, context, property)
     }
+
 }

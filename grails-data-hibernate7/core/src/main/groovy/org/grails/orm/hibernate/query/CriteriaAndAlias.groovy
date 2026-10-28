@@ -16,19 +16,24 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.orm.hibernate.query;
+package org.grails.orm.hibernate.query
 
-import jakarta.persistence.criteria.CriteriaQuery;
+import groovy.transform.CompileStatic
+import groovy.transform.PackageScope
+import jakarta.persistence.criteria.CriteriaQuery
 
+@CompileStatic
+@PackageScope
 class CriteriaAndAlias {
 
-    protected CriteriaQuery<?> criteria;
-    protected String alias;
-    protected String associationPath;
+    protected CriteriaQuery<?> criteria
+    protected String alias
+    protected String associationPath
 
-    public CriteriaAndAlias(CriteriaQuery<?> criteria, String alias, String associationPath) {
-        this.criteria = criteria;
-        this.alias = alias;
-        this.associationPath = associationPath;
+    CriteriaAndAlias(CriteriaQuery<?> criteria, String alias, String associationPath) {
+        this.criteria = criteria
+        this.alias = alias
+        this.associationPath = associationPath
     }
+
 }

@@ -16,36 +16,39 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.orm.hibernate.query;
+package org.grails.orm.hibernate.query
 
-import java.util.Arrays;
-import java.util.function.Predicate;
+import java.util.function.Predicate
 
-import org.grails.datastore.mapping.query.Query;
+import groovy.transform.CompileStatic
+import groovy.transform.PackageScope
 
-public class ProjectionPredicate implements Predicate<Query.Projection> {
+import org.grails.datastore.mapping.query.Query
+
+@CompileStatic
+class ProjectionPredicate implements Predicate<Query.Projection> {
 
     private final Predicate<Query.Projection> idProjectionPredicate =
-            projection -> projection instanceof Query.IdProjection;
+            { Query.Projection projection -> projection instanceof Query.IdProjection } as Predicate<Query.Projection>
     private final Predicate<Query.Projection> distinctProjectionPredicate =
-            projection -> projection instanceof Query.DistinctProjection;
+            { Query.Projection projection -> projection instanceof Query.DistinctProjection } as Predicate<Query.Projection>
     private final Predicate<Query.Projection> countProjectionPredicate =
-            projection -> projection instanceof Query.CountProjection;
+            { Query.Projection projection -> projection instanceof Query.CountProjection } as Predicate<Query.Projection>
     private final Predicate<Query.Projection> countDistinctProjection =
-            projection -> projection instanceof Query.CountDistinctProjection;
+            { Query.Projection projection -> projection instanceof Query.CountDistinctProjection } as Predicate<Query.Projection>
     private final Predicate<Query.Projection> maxProjectionPredicate =
-            projection -> projection instanceof Query.MaxProjection;
+            { Query.Projection projection -> projection instanceof Query.MaxProjection } as Predicate<Query.Projection>
     private final Predicate<Query.Projection> minProjectionPredicate =
-            projection -> projection instanceof Query.MinProjection;
+            { Query.Projection projection -> projection instanceof Query.MinProjection } as Predicate<Query.Projection>
     private final Predicate<Query.Projection> sumProjectionPredicate =
-            projection -> projection instanceof Query.SumProjection;
+            { Query.Projection projection -> projection instanceof Query.SumProjection } as Predicate<Query.Projection>
     private final Predicate<Query.Projection> avgProjectionPredicate =
-            projection -> projection instanceof Query.AvgProjection;
+            { Query.Projection projection -> projection instanceof Query.AvgProjection } as Predicate<Query.Projection>
     private final Predicate<Query.Projection> propertyProjectionPredicate =
-            projection -> projection instanceof Query.PropertyProjection;
+            { Query.Projection projection -> projection instanceof Query.PropertyProjection } as Predicate<Query.Projection>
 
-    @SuppressWarnings("unchecked")
-    Predicate<Query.Projection>[] projectionPredicates = new Predicate[] {
+    @SuppressWarnings('unchecked')
+    @PackageScope Predicate<Query.Projection>[] projectionPredicates = [
         idProjectionPredicate,
         propertyProjectionPredicate,
         countProjectionPredicate,
@@ -55,15 +58,20 @@ public class ProjectionPredicate implements Predicate<Query.Projection> {
         sumProjectionPredicate,
         avgProjectionPredicate,
         distinctProjectionPredicate
-    };
+    ] as Predicate[]
 
     @SafeVarargs
     private static <T> Predicate<T> combinePredicates(Predicate<T>... predicates) {
-        return Arrays.stream(predicates).reduce(Predicate::or).orElse(x -> true);
+        Predicate<T> result = null
+        for (Predicate<T> predicate : predicates) {
+            result = result == null ? predicate : result.or(predicate)
+        }
+        return result != null ? result : ({ T x -> true } as Predicate<T>)
     }
 
     @Override
-    public boolean test(Query.Projection projection) {
-        return combinePredicates(projectionPredicates).test(projection);
+    boolean test(Query.Projection projection) {
+        return combinePredicates(projectionPredicates).test(projection)
     }
+
 }

@@ -16,11 +16,13 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.orm.hibernate.cfg.domainbinding.hibernate;
+package org.grails.orm.hibernate.cfg.domainbinding.hibernate
 
-import org.hibernate.type.StandardBasicTypes;
+import groovy.transform.CompileStatic
+import org.hibernate.type.StandardBasicTypes
 
-public interface HibernateToManyCollectionProperty extends HibernateToManyProperty {
+@CompileStatic
+interface HibernateToManyCollectionProperty extends HibernateToManyProperty {
 
     /**
      * Resolves the Hibernate type name for the map/collection element.
@@ -28,14 +30,15 @@ public interface HibernateToManyCollectionProperty extends HibernateToManyProper
      * the property type name, and ultimately defaulting to {@code "string"}.
      */
     default String getElementTypeName() {
-        Class<?> componentType = getComponentType();
-        String typeName = componentType != null ? getTypeName(componentType) : null;
+        Class<?> componentType = getComponentType()
+        String typeName = componentType != null ? getTypeName(componentType) : null
         if (typeName == null) {
-            typeName = getTypeName();
+            typeName = getTypeName()
         }
-        if (typeName == null || typeName.equals(Object.class.getName())) {
-            typeName = StandardBasicTypes.STRING.getName();
+        if (typeName == null || typeName == Object.name) {
+            typeName = StandardBasicTypes.STRING.name
         }
-        return typeName;
+        return typeName
     }
+
 }

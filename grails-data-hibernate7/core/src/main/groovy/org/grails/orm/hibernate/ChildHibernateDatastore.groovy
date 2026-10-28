@@ -16,60 +16,63 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.orm.hibernate;
+package org.grails.orm.hibernate
 
-import org.hibernate.SessionFactory;
+import groovy.transform.CompileStatic
+import org.hibernate.SessionFactory
 
-import org.grails.datastore.gorm.events.ConfigurableApplicationEventPublisher;
-import org.grails.datastore.mapping.core.connections.ConnectionSource;
-import org.grails.datastore.mapping.core.connections.ConnectionSources;
-import org.grails.orm.hibernate.cfg.HibernateMappingContext;
-import org.grails.orm.hibernate.cfg.Settings;
-import org.grails.orm.hibernate.connections.HibernateConnectionSourceSettings;
+import org.grails.datastore.gorm.events.ConfigurableApplicationEventPublisher
+import org.grails.datastore.mapping.core.connections.ConnectionSource
+import org.grails.datastore.mapping.core.connections.ConnectionSources
+import org.grails.datastore.mapping.core.exceptions.ConfigurationException
+import org.grails.orm.hibernate.cfg.HibernateMappingContext
+import org.grails.orm.hibernate.cfg.Settings
+import org.grails.orm.hibernate.connections.HibernateConnectionSourceSettings
 
 /**
  * A datastore for a specific connection in a multiple data source setup.
  */
-public class ChildHibernateDatastore extends HibernateDatastore {
+@CompileStatic
+class ChildHibernateDatastore extends HibernateDatastore {
 
-    private final HibernateDatastore parent;
+    private final HibernateDatastore parent
 
-    public ChildHibernateDatastore(
+    ChildHibernateDatastore(
             HibernateDatastore parent,
             ConnectionSources<SessionFactory, HibernateConnectionSourceSettings> connectionSources,
             HibernateMappingContext mappingContext,
             ConfigurableApplicationEventPublisher eventPublisher) {
         super(connectionSources, mappingContext, eventPublisher,
-            connectionSources.getDefaultConnectionSource().getSource());
-        this.parent = parent;
+            connectionSources.defaultConnectionSource.source)
+        this.parent = parent
     }
 
     @Override
     protected HibernateGormEnhancer initialize() {
-        return null;
+        return null
     }
 
     @Override
-    public void destroy() {
+    void destroy() {
         if (!this.destroyed) {
             // Only mark as destroyed, don't close shared resources
-            this.destroyed = true;
+            this.destroyed = true
         }
     }
 
     @Override
-    public HibernateDatastore getDatastoreForConnection(String connectionName) {
-        if (Settings.SETTING_DATASOURCE.equals(connectionName) ||
-                ConnectionSource.DEFAULT.equals(connectionName)) {
-            return parent;
+    HibernateDatastore getDatastoreForConnection(String connectionName) {
+        if (Settings.SETTING_DATASOURCE == connectionName ||
+                ConnectionSource.DEFAULT == connectionName) {
+            return parent
         } else {
-            HibernateDatastore hibernateDatastore = parent.datastoresByConnectionSource.get(connectionName);
+            HibernateDatastore hibernateDatastore = parent.datastoresByConnectionSource.get(connectionName)
             if (hibernateDatastore == null) {
-                throw new org.grails.datastore.mapping.core.exceptions.ConfigurationException(
-                        "DataSource not found for name [" + connectionName +
-                                "] in configuration. Please check your multiple data sources configuration and try again.");
+                throw new ConfigurationException(
+                        "DataSource not found for name [${connectionName}] in configuration. Please check your multiple data sources configuration and try again.".toString())
             }
-            return hibernateDatastore;
+            return hibernateDatastore
         }
     }
+
 }

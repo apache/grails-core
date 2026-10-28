@@ -16,19 +16,21 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.orm.hibernate;
+package org.grails.orm.hibernate
 
-import java.util.Map;
+import groovy.transform.CompileStatic
 
-public class HibernateEventListeners {
+@CompileStatic
+class HibernateEventListeners {
 
-    private Map<String, Object> listenerMap;
+    private Map<String, Object> listenerMap
 
-    public Map<String, Object> getListenerMap() {
-        return listenerMap;
+    Map<String, Object> getListenerMap() {
+        return listenerMap
     }
 
-    public void setListenerMap(Map<String, Object> listenerMap) {
-        this.listenerMap = listenerMap;
+    void setListenerMap(Map<String, Object> listenerMap) {
+        this.listenerMap = listenerMap
     }
+
 }

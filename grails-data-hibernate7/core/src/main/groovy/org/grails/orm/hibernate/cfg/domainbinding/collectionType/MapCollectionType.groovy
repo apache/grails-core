@@ -16,22 +16,23 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.orm.hibernate.cfg.domainbinding.collectionType;
+package org.grails.orm.hibernate.cfg.domainbinding.collectionType
 
-import java.util.Map;
+import groovy.transform.CompileStatic
+import org.hibernate.boot.spi.MetadataBuildingContext
+import org.hibernate.mapping.Collection
+import org.hibernate.mapping.PersistentClass
 
-import org.hibernate.boot.spi.MetadataBuildingContext;
-import org.hibernate.mapping.Collection;
-import org.hibernate.mapping.PersistentClass;
+@CompileStatic
+class MapCollectionType extends CollectionType {
 
-public class MapCollectionType extends CollectionType {
-
-    public MapCollectionType(MetadataBuildingContext buildingContext) {
-        super(Map.class, buildingContext);
+    MapCollectionType(MetadataBuildingContext buildingContext) {
+        super(Map, buildingContext)
     }
 
     @Override
-    public Collection createCollection(PersistentClass owner) {
-        return new org.hibernate.mapping.Map(buildingContext, owner);
+    Collection createCollection(PersistentClass owner) {
+        return new org.hibernate.mapping.Map(buildingContext, owner)
     }
+
 }

@@ -1,25 +1,30 @@
-package liquibase.ext.hibernate.snapshot;
+package liquibase.ext.hibernate.snapshot
 
-import liquibase.exception.DatabaseException;
-import liquibase.snapshot.DatabaseSnapshot;
-import liquibase.snapshot.InvalidExampleException;
-import liquibase.snapshot.SnapshotGenerator;
-import liquibase.structure.DatabaseObject;
-import liquibase.structure.core.Catalog;
+import groovy.transform.CompileStatic
+import liquibase.exception.DatabaseException
+import liquibase.snapshot.DatabaseSnapshot
+import liquibase.snapshot.InvalidExampleException
+import liquibase.snapshot.SnapshotGenerator
+import liquibase.snapshot.jvm.CatalogSnapshotGenerator
+import liquibase.structure.DatabaseObject
+import liquibase.structure.core.Catalog
 
 /**
  * Hibernate doesn't really support Catalogs, so just return the passed example back as if it had all the info it needed.
  */
-public class HibernateCatalogSnapshotGenerator extends HibernateSnapshotGenerator {
+@CompileStatic
+class HibernateCatalogSnapshotGenerator extends HibernateSnapshotGenerator {
 
-    public HibernateCatalogSnapshotGenerator() {
-        super(Catalog.class);
+    HibernateCatalogSnapshotGenerator() {
+        super(Catalog)
     }
 
     @Override
     protected DatabaseObject snapshotObject(DatabaseObject example, DatabaseSnapshot snapshot)
             throws DatabaseException, InvalidExampleException {
-        return new Catalog(snapshot.getDatabase().getDefaultCatalogName()).setDefault(true);
+        Catalog catalog = new Catalog(snapshot.getDatabase().getDefaultCatalogName())
+        catalog.setDefault(true)
+        return catalog
     }
 
     @Override
@@ -29,7 +34,8 @@ public class HibernateCatalogSnapshotGenerator extends HibernateSnapshotGenerato
     }
 
     @Override
-    public Class<? extends SnapshotGenerator>[] replaces() {
-        return new Class[] {liquibase.snapshot.jvm.CatalogSnapshotGenerator.class};
+    Class<? extends SnapshotGenerator>[] replaces() {
+        return [CatalogSnapshotGenerator] as Class<? extends SnapshotGenerator>[]
     }
+
 }

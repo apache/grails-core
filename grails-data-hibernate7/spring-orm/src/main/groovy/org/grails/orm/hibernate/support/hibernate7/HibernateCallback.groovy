@@ -13,12 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.grails.orm.hibernate.support.hibernate7
 
-package org.grails.orm.hibernate.support.hibernate7;
-
-import org.hibernate.HibernateException;
-import org.hibernate.Session;
-import org.jspecify.annotations.Nullable;
+import org.hibernate.HibernateException
+import org.hibernate.Session
+import org.jspecify.annotations.Nullable
 
 /**
  * Callback interface for Hibernate code. To be used with {@link HibernateTemplate}'s
@@ -33,7 +32,7 @@ import org.jspecify.annotations.Nullable;
  * @see HibernateTransactionManager
  */
 @FunctionalInterface
-public interface HibernateCallback<T> {
+interface HibernateCallback<T> {
 
     /**
      * Gets called by {@code HibernateTemplate.execute} with an active
@@ -49,6 +48,6 @@ public interface HibernateCallback<T> {
      * @see HibernateTemplate#execute
      */
     @Nullable
-    T doInHibernate(Session session) throws HibernateException;
+    T doInHibernate(Session session) throws HibernateException
 
 }

@@ -16,9 +16,11 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.orm.hibernate.query;
+package org.grails.orm.hibernate.query
 
-import org.grails.datastore.gorm.finders.DynamicFinder;
+import groovy.transform.CompileStatic
+
+import org.grails.datastore.gorm.finders.DynamicFinder
 
 /**
  * Typed enum of all query argument keys and Hibernate config property keys used in the
@@ -32,8 +34,8 @@ import org.grails.datastore.gorm.finders.DynamicFinder;
  *
  * @since 8.0
  */
-@SuppressWarnings("PMD.AvoidFieldNameMatchingMethodName")
-public enum HibernateQueryArgument {
+@CompileStatic
+enum HibernateQueryArgument {
 
     // ── pagination & execution ────────────────────────────────────────────────
     MAX(DynamicFinder.ARGUMENT_MAX),
@@ -52,75 +54,76 @@ public enum HibernateQueryArgument {
     IGNORE_CASE(DynamicFinder.ARGUMENT_IGNORE_CASE),
     ORDER_DESC(DynamicFinder.ORDER_DESC),
     ORDER_ASC(DynamicFinder.ORDER_ASC),
-    EAGER("eager"),
-    JOIN("join"),
+    EAGER('eager'),
+    JOIN('join'),
 
     // ── HQL keywords ──────────────────────────────────────────────────────────
     // The reader of an HQL query uses HqlKeyword; these entries stay for anything that referenced them.
     /** @deprecated since 8.0.1, the HQL keywords live in {@code HqlKeyword}; this entry is unused and goes in 9.0 */
-    @Deprecated(since = "8.0.1", forRemoval = true)
-    HQL_SELECT("select"),
+    @Deprecated(since = '8.0.1', forRemoval = true)
+    HQL_SELECT('select'),
     /** @deprecated since 8.0.1, the HQL keywords live in {@code HqlKeyword}; this entry is unused and goes in 9.0 */
-    @Deprecated(since = "8.0.1", forRemoval = true)
-    HQL_FROM("from"),
+    @Deprecated(since = '8.0.1', forRemoval = true)
+    HQL_FROM('from'),
     /** @deprecated since 8.0.1, the HQL keywords live in {@code HqlKeyword}; this entry is unused and goes in 9.0 */
-    @Deprecated(since = "8.0.1", forRemoval = true)
-    HQL_WHERE("where"),
+    @Deprecated(since = '8.0.1', forRemoval = true)
+    HQL_WHERE('where'),
     /** @deprecated since 8.0.1, the HQL keywords live in {@code HqlKeyword}; this entry is unused and goes in 9.0 */
-    @Deprecated(since = "8.0.1", forRemoval = true)
-    HQL_JOIN("join"),
+    @Deprecated(since = '8.0.1', forRemoval = true)
+    HQL_JOIN('join'),
     /** @deprecated since 8.0.1, the HQL keywords live in {@code HqlKeyword}; this entry is unused and goes in 9.0 */
-    @Deprecated(since = "8.0.1", forRemoval = true)
-    HQL_LEFT("left"),
+    @Deprecated(since = '8.0.1', forRemoval = true)
+    HQL_LEFT('left'),
     /** @deprecated since 8.0.1, the HQL keywords live in {@code HqlKeyword}; this entry is unused and goes in 9.0 */
-    @Deprecated(since = "8.0.1", forRemoval = true)
-    HQL_RIGHT("right"),
+    @Deprecated(since = '8.0.1', forRemoval = true)
+    HQL_RIGHT('right'),
     /** @deprecated since 8.0.1, the HQL keywords live in {@code HqlKeyword}; this entry is unused and goes in 9.0 */
-    @Deprecated(since = "8.0.1", forRemoval = true)
-    HQL_INNER("inner"),
+    @Deprecated(since = '8.0.1', forRemoval = true)
+    HQL_INNER('inner'),
     /** @deprecated since 8.0.1, the HQL keywords live in {@code HqlKeyword}; this entry is unused and goes in 9.0 */
-    @Deprecated(since = "8.0.1", forRemoval = true)
-    HQL_OUTER("outer"),
+    @Deprecated(since = '8.0.1', forRemoval = true)
+    HQL_OUTER('outer'),
     /** @deprecated since 8.0.1, the HQL keywords live in {@code HqlKeyword}; this entry is unused and goes in 9.0 */
-    @Deprecated(since = "8.0.1", forRemoval = true)
-    HQL_GROUP("group"),
+    @Deprecated(since = '8.0.1', forRemoval = true)
+    HQL_GROUP('group'),
     /** @deprecated since 8.0.1, the HQL keywords live in {@code HqlKeyword}; this entry is unused and goes in 9.0 */
-    @Deprecated(since = "8.0.1", forRemoval = true)
-    HQL_ORDER("order"),
+    @Deprecated(since = '8.0.1', forRemoval = true)
+    HQL_ORDER('order'),
     /** @deprecated since 8.0.1, the HQL keywords live in {@code HqlKeyword}; this entry is unused and goes in 9.0 */
-    @Deprecated(since = "8.0.1", forRemoval = true)
-    HQL_HAVING("having"),
+    @Deprecated(since = '8.0.1', forRemoval = true)
+    HQL_HAVING('having'),
     /** @deprecated since 8.0.1, the HQL keywords live in {@code HqlKeyword}; this entry is unused and goes in 9.0 */
-    @Deprecated(since = "8.0.1", forRemoval = true)
-    HQL_DISTINCT("distinct"),
+    @Deprecated(since = '8.0.1', forRemoval = true)
+    HQL_DISTINCT('distinct'),
     /** @deprecated since 8.0.1, the HQL keywords live in {@code HqlKeyword}; this entry is unused and goes in 9.0 */
-    @Deprecated(since = "8.0.1", forRemoval = true)
-    HQL_ALL("all"),
+    @Deprecated(since = '8.0.1', forRemoval = true)
+    HQL_ALL('all'),
     /** @deprecated since 8.0.1, the HQL keywords live in {@code HqlKeyword}; this entry is unused and goes in 9.0 */
-    @Deprecated(since = "8.0.1", forRemoval = true)
-    HQL_AS("as"),
+    @Deprecated(since = '8.0.1', forRemoval = true)
+    HQL_AS('as'),
     /** @deprecated since 8.0.1, the HQL keywords live in {@code HqlKeyword}; this entry is unused and goes in 9.0 */
-    @Deprecated(since = "8.0.1", forRemoval = true)
-    HQL_NEW("new"),
+    @Deprecated(since = '8.0.1', forRemoval = true)
+    HQL_NEW('new'),
 
     // ── Hibernate config properties ───────────────────────────────────────────
-    CONFIG_CACHE_QUERIES("grails.hibernate.cache.queries"),
-    CONFIG_OSIV_READONLY("grails.hibernate.osiv.readonly"),
-    CONFIG_PASS_READONLY("grails.hibernate.pass.readonly");
+    CONFIG_CACHE_QUERIES('grails.hibernate.cache.queries'),
+    CONFIG_OSIV_READONLY('grails.hibernate.osiv.readonly'),
+    CONFIG_PASS_READONLY('grails.hibernate.pass.readonly')
 
-    private final String value;
+    private final String value
 
     HibernateQueryArgument(String value) {
-        this.value = value;
+        this.value = value
     }
 
     /** Returns the string key used for map lookups and config property resolution. */
-    public String value() {
-        return value;
+    String value() {
+        return value
     }
 
     @Override
-    public String toString() {
-        return value;
+    String toString() {
+        return value
     }
+
 }

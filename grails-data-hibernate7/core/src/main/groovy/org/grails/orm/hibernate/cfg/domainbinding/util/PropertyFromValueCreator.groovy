@@ -16,41 +16,43 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.orm.hibernate.cfg.domainbinding.util;
+package org.grails.orm.hibernate.cfg.domainbinding.util
 
-import org.hibernate.mapping.ManyToOne;
-import org.hibernate.mapping.Property;
-import org.hibernate.mapping.Value;
+import groovy.transform.CompileStatic
+import org.hibernate.mapping.ManyToOne
+import org.hibernate.mapping.Property
+import org.hibernate.mapping.Value
 
-import org.grails.orm.hibernate.cfg.domainbinding.binder.PropertyBinder;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEnumProperty;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToOneProperty;
+import org.grails.orm.hibernate.cfg.domainbinding.binder.PropertyBinder
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEnumProperty
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToOneProperty
 
-public class PropertyFromValueCreator {
+@CompileStatic
+class PropertyFromValueCreator {
 
-    private final PropertyBinder propertyBinder;
+    private final PropertyBinder propertyBinder
 
-    public PropertyFromValueCreator() {
-        this.propertyBinder = new PropertyBinder();
+    PropertyFromValueCreator() {
+        this.propertyBinder = new PropertyBinder()
     }
 
     protected PropertyFromValueCreator(PropertyBinder propertyBinder) {
-        this.propertyBinder = propertyBinder;
+        this.propertyBinder = propertyBinder
     }
 
-    public Property createProperty(Value value, HibernatePersistentProperty grailsProperty) {
+    Property createProperty(Value value, HibernatePersistentProperty grailsProperty) {
         // set type
         if (!(grailsProperty instanceof HibernateEnumProperty)) {
-            value.setTypeUsingReflection(grailsProperty.getOwnerClassName(), grailsProperty.getName());
+            value.setTypeUsingReflection(grailsProperty.ownerClassName, grailsProperty.name)
         }
 
-        if (value.getTable() != null && !referencesCompositeIdentifier(value, grailsProperty)) {
-            value.createForeignKey();
+        if (value.table != null && !referencesCompositeIdentifier(value, grailsProperty)) {
+            value.createForeignKey()
         }
 
-        return propertyBinder.bindProperty(grailsProperty, value);
+        return propertyBinder.bindProperty(grailsProperty, value)
     }
 
     /**
@@ -59,10 +61,11 @@ public class PropertyFromValueCreator {
      * is bound. Hibernate's own foreign key would pair the columns by position instead.
      */
     private static boolean referencesCompositeIdentifier(Value value, HibernatePersistentProperty grailsProperty) {
-        if (!(value instanceof ManyToOne) || !(grailsProperty instanceof HibernateToOneProperty toOne)) {
-            return false;
+        if (!(value instanceof ManyToOne) || !(grailsProperty instanceof HibernateToOneProperty)) {
+            return false
         }
-        GrailsHibernatePersistentEntity associatedEntity = toOne.getHibernateAssociatedEntity();
-        return associatedEntity != null && associatedEntity.getHibernateCompositeIdentity().isPresent();
+        GrailsHibernatePersistentEntity associatedEntity = ((HibernateToOneProperty) grailsProperty).hibernateAssociatedEntity
+        return associatedEntity != null && associatedEntity.hibernateCompositeIdentity.isPresent()
     }
+
 }

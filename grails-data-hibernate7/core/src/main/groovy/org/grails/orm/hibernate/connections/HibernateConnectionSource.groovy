@@ -16,44 +16,42 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.orm.hibernate.connections;
+package org.grails.orm.hibernate.connections
 
-import java.io.IOException;
+import groovy.transform.CompileStatic
+import org.hibernate.SessionFactory
 
-import javax.sql.DataSource;
+import org.grails.datastore.gorm.jdbc.connections.DataSourceSettings
+import org.grails.datastore.mapping.core.connections.ConnectionSource
+import org.grails.datastore.mapping.core.connections.DefaultConnectionSource
 
-import org.hibernate.SessionFactory;
-
-import org.grails.datastore.gorm.jdbc.connections.DataSourceSettings;
-import org.grails.datastore.mapping.core.connections.ConnectionSource;
-import org.grails.datastore.mapping.core.connections.DefaultConnectionSource;
+import javax.sql.DataSource
 
 /**
  * Implements the {@link org.grails.datastore.mapping.core.connections.ConnectionSource} interface
  * for Hibernate
  *
- * @author Graeme Rocher
  * @since 6.0
  */
-public class HibernateConnectionSource
+@CompileStatic
+class HibernateConnectionSource
         extends DefaultConnectionSource<SessionFactory, HibernateConnectionSourceSettings> {
 
-    protected final ConnectionSource<DataSource, DataSourceSettings> dataSource;
+    protected final ConnectionSource<DataSource, DataSourceSettings> dataSource
 
-    public HibernateConnectionSource(
+    HibernateConnectionSource(
             String name,
             SessionFactory sessionFactory,
             ConnectionSource<DataSource, DataSourceSettings> dataSourceConnectionSource,
             HibernateConnectionSourceSettings settings) {
-        super(name, sessionFactory, settings);
-        this.dataSource = dataSourceConnectionSource;
+        super(name, sessionFactory, settings)
+        this.dataSource = dataSourceConnectionSource
     }
 
     @Override
-    public void close() throws IOException {
-        super.close();
-        try (SessionFactory sf = getSource();
-                ConnectionSource<DataSource, DataSourceSettings> ds = this.dataSource) {
+    void close() throws IOException {
+        super.close()
+        try (SessionFactory sf = getSource(); ConnectionSource<DataSource, DataSourceSettings> ds = this.dataSource) {
             // closed by try-with-resources
         }
     }
@@ -61,7 +59,8 @@ public class HibernateConnectionSource
     /**
      * @return The underlying SQL {@link DataSource}
      */
-    public DataSource getDataSource() {
-        return dataSource.getSource();
+    DataSource getDataSource() {
+        return dataSource.getSource()
     }
+
 }

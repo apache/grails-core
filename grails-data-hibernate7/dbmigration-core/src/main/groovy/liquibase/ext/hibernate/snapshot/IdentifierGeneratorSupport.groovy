@@ -1,18 +1,42 @@
-package liquibase.ext.hibernate.snapshot;
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+package liquibase.ext.hibernate.snapshot
 
-import liquibase.Scope;
-import org.hibernate.boot.model.naming.Identifier;
-import org.hibernate.boot.model.relational.QualifiedName;
-import org.hibernate.boot.model.relational.SqlStringGenerationContext;
-import org.hibernate.boot.model.relational.internal.SqlStringGenerationContextImpl;
-import org.hibernate.generator.Generator;
-import org.hibernate.id.NativeGenerator;
-import org.hibernate.mapping.GeneratorSettings;
-import org.hibernate.mapping.SimpleValue;
+import groovy.transform.CompileStatic
+import groovy.transform.PackageScope
+import groovy.transform.RecordOptions
+import groovy.transform.TupleConstructor
+import liquibase.Scope
+import org.hibernate.boot.model.naming.Identifier
+import org.hibernate.boot.model.relational.QualifiedName
+import org.hibernate.boot.model.relational.SqlStringGenerationContext
+import org.hibernate.boot.model.relational.internal.SqlStringGenerationContextImpl
+import org.hibernate.generator.Generator
+import org.hibernate.id.NativeGenerator
+import org.hibernate.mapping.GeneratorSettings
+import org.hibernate.mapping.SimpleValue
 
 /**
  * Shared helpers for the snapshot generators that inspect identifier generators.
  */
+@CompileStatic
+@PackageScope
 final class IdentifierGeneratorSupport {
 
     private IdentifierGeneratorSupport() {
@@ -22,25 +46,29 @@ final class IdentifierGeneratorSupport {
      * Uses the configured creator when available, otherwise checks explicit annotation or mapping intent.
      */
     static boolean hasGenerationIntent(SimpleValue simpleValue) {
-        var creator = simpleValue.getCustomIdGeneratorCreator();
+        def creator = simpleValue.getCustomIdGeneratorCreator()
         if (creator != null) {
-            return !creator.isAssigned();
+            return !creator.isAssigned()
         }
-        var memberDetails = simpleValue.getMemberDetails();
+        def memberDetails = simpleValue.getMemberDetails()
         return memberDetails == null ||
-                memberDetails.hasDirectAnnotationUsage(jakarta.persistence.GeneratedValue.class) ||
-                memberDetails.hasDirectAnnotationUsage(org.hibernate.annotations.NativeGenerator.class);
+                memberDetails.hasDirectAnnotationUsage(jakarta.persistence.GeneratedValue) ||
+                memberDetails.hasDirectAnnotationUsage(org.hibernate.annotations.NativeGenerator)
     }
 
     static SequenceKey sequenceKey(QualifiedName name) {
         return new SequenceKey(canonicalName(name.getCatalogName()), canonicalName(name.getSchemaName()),
-                canonicalName(name.getObjectName()));
+                canonicalName(name.getObjectName()))
     }
 
     private static String canonicalName(Identifier identifier) {
-        return identifier == null ? null : identifier.getCanonicalName();
+        return identifier == null ? null : identifier.getCanonicalName()
     }
 
+    // CodeNarc reads the components of an annotated nested record as fields and reports their indentation
+    @SuppressWarnings('Indentation')
+    @RecordOptions(getAt = false, toList = false, toMap = false, size = false)
+    @TupleConstructor(defaults = false, namedVariant = false)
     record SequenceKey(String catalog, String schema, String name) {
     }
 
@@ -51,35 +79,36 @@ final class IdentifierGeneratorSupport {
      */
     static Generator nativeDelegate(NativeGenerator nativeGen) {
         try {
-            var field = NativeGenerator.class.getDeclaredField("dialectNativeGenerator");
-            field.setAccessible(true);
-            return (Generator) field.get(nativeGen);
+            def field = NativeGenerator.getDeclaredField('dialectNativeGenerator')
+            field.setAccessible(true)
+            return (Generator) field.get(nativeGen)
         } catch (ReflectiveOperationException | RuntimeException e) {
-            Scope.getCurrentScope().getLog(IdentifierGeneratorSupport.class)
-                    .fine("Could not access NativeGenerator delegate", e);
-            return null;
+            Scope.getCurrentScope().getLog(IdentifierGeneratorSupport)
+                    .fine('Could not access NativeGenerator delegate', e)
+            return null
         }
     }
 
     static GeneratorSettings createGeneratorSettings(SimpleValue simpleValue) {
-        var buildingContext = simpleValue.getBuildingContext();
+        def buildingContext = simpleValue.getBuildingContext()
         return new GeneratorSettings() {
             @Override
-            public String getDefaultCatalog() {
-                return null;
+            String getDefaultCatalog() {
+                return null
             }
 
             @Override
-            public String getDefaultSchema() {
-                return null;
+            String getDefaultSchema() {
+                return null
             }
 
             @Override
-            public SqlStringGenerationContext getSqlStringGenerationContext() {
-                var db = buildingContext.getMetadataCollector().getDatabase();
+            SqlStringGenerationContext getSqlStringGenerationContext() {
+                def db = buildingContext.getMetadataCollector().getDatabase()
                 return SqlStringGenerationContextImpl.fromExplicit(
-                        db.getJdbcEnvironment(), db, getDefaultCatalog(), getDefaultSchema());
+                        db.getJdbcEnvironment(), db, getDefaultCatalog(), getDefaultSchema())
             }
-        };
+        }
     }
+
 }

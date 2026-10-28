@@ -16,9 +16,12 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.hibernate.proxy;
+package org.hibernate.proxy
 
-public final class HibernateProxyHelper {
+import groovy.transform.CompileStatic
+
+@CompileStatic
+final class HibernateProxyHelper {
 
     private HibernateProxyHelper() {
         // cant instantiate
@@ -28,12 +31,14 @@ public final class HibernateProxyHelper {
      * Get the class of an instance or the underlying class of a proxy (without initializing the
      * proxy!). It is almost always better to use the entity name!
      */
-    public static Class getClassWithoutInitializingProxy(Object object) {
-        if (object instanceof HibernateProxy proxy) {
-            LazyInitializer li = proxy.getHibernateLazyInitializer();
-            return li.getPersistentClass();
-        } else {
-            return object.getClass();
+    static Class getClassWithoutInitializingProxy(Object object) {
+        if (object instanceof HibernateProxy) {
+            LazyInitializer li = object.getHibernateLazyInitializer()
+            return li.getPersistentClass()
+        }
+        else {
+            return object.getClass()
         }
     }
+
 }

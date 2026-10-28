@@ -16,24 +16,27 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.orm.hibernate.cfg.domainbinding.hibernate;
+package org.grails.orm.hibernate.cfg.domainbinding.hibernate
 
-import java.beans.PropertyDescriptor;
+import groovy.transform.CompileStatic
+import org.grails.datastore.mapping.engine.types.CustomTypeMarshaller
+import org.grails.datastore.mapping.model.MappingContext
+import org.grails.datastore.mapping.model.PersistentEntity
+import org.grails.datastore.mapping.model.types.mapping.CustomWithMapping
+import org.grails.orm.hibernate.cfg.PropertyConfig
 
-import org.grails.datastore.mapping.engine.types.CustomTypeMarshaller;
-import org.grails.datastore.mapping.model.MappingContext;
-import org.grails.datastore.mapping.model.PersistentEntity;
-import org.grails.datastore.mapping.model.types.mapping.CustomWithMapping;
-import org.grails.orm.hibernate.cfg.PropertyConfig;
+import java.beans.PropertyDescriptor
 
 /** Hibernate implementation of {@link org.grails.datastore.mapping.model.types.Custom} */
-public class HibernateCustomProperty extends CustomWithMapping<PropertyConfig> implements HibernatePersistentProperty {
+@CompileStatic
+class HibernateCustomProperty extends CustomWithMapping<PropertyConfig> implements HibernatePersistentProperty {
 
-    public HibernateCustomProperty(
+    HibernateCustomProperty(
             PersistentEntity entity,
             MappingContext context,
             PropertyDescriptor property,
             CustomTypeMarshaller<?, ?, ?> customTypeMarshaller) {
-        super(entity, context, property, customTypeMarshaller);
+        super(entity, context, property, customTypeMarshaller)
     }
+
 }

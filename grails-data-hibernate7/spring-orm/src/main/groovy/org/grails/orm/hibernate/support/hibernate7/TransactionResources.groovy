@@ -16,40 +16,38 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.grails.orm.hibernate.support.hibernate7;
+package org.grails.orm.hibernate.support.hibernate7
 
-import java.util.List;
-
-import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronization
 
 /**
  * Abstraction over {@link org.springframework.transaction.support.TransactionSynchronizationManager}
  * static methods, allowing tests to supply a controllable implementation without
  * requiring an actual Spring transaction to be active.
  */
-public interface TransactionResources {
+interface TransactionResources {
 
-    Object getResource(Object key);
+    Object getResource(Object key)
 
-    void bindResource(Object key, Object value);
+    void bindResource(Object key, Object value)
 
-    void unbindResource(Object key);
+    void unbindResource(Object key)
 
-    Object unbindResourceIfPossible(Object key);
+    Object unbindResourceIfPossible(Object key)
 
-    boolean hasResource(Object key);
+    boolean hasResource(Object key)
 
-    boolean isSynchronizationActive();
+    boolean isSynchronizationActive()
 
-    List<TransactionSynchronization> getSynchronizations();
+    List<TransactionSynchronization> getSynchronizations()
 
-    void clearSynchronization();
+    void clearSynchronization()
 
-    void initSynchronization();
+    void initSynchronization()
 
-    void registerSynchronization(TransactionSynchronization synchronization);
+    void registerSynchronization(TransactionSynchronization synchronization)
 
-    boolean isActualTransactionActive();
+    boolean isActualTransactionActive()
 
-    boolean isCurrentTransactionReadOnly();
+    boolean isCurrentTransactionReadOnly()
 }

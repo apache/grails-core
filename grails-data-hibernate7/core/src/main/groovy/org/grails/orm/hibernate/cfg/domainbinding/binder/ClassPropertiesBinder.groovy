@@ -16,62 +16,64 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.orm.hibernate.cfg.domainbinding.binder;
+package org.grails.orm.hibernate.cfg.domainbinding.binder
 
-import org.hibernate.MappingException;
-import org.hibernate.mapping.PersistentClass;
-import org.hibernate.mapping.Table;
-import org.hibernate.mapping.Value;
-import org.jspecify.annotations.NonNull;
+import groovy.transform.CompileStatic
+import org.hibernate.MappingException
+import org.hibernate.mapping.PersistentClass
+import org.hibernate.mapping.Table
+import org.hibernate.mapping.Value
+import org.jspecify.annotations.NonNull
 
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentEntity;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty;
-import org.grails.orm.hibernate.cfg.domainbinding.util.PropertyFromValueCreator;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentEntity
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty
+import org.grails.orm.hibernate.cfg.domainbinding.util.PropertyFromValueCreator
 
 /**
  * Binds the properties of a Grails domain class to the Hibernate meta-model.
  *
  * @since 8.0
  */
-@SuppressWarnings("PMD.DataflowAnomalyAnalysis")
-public class ClassPropertiesBinder {
+@CompileStatic
+class ClassPropertiesBinder {
 
-    private final GrailsPropertyBinder grailsPropertyBinder;
-    private final PropertyFromValueCreator propertyFromValueCreator;
-    private final NaturalIdentifierBinder naturalIdentifierBinder;
+    private final GrailsPropertyBinder grailsPropertyBinder
+    private final PropertyFromValueCreator propertyFromValueCreator
+    private final NaturalIdentifierBinder naturalIdentifierBinder
 
-    public ClassPropertiesBinder(
+    ClassPropertiesBinder(
             GrailsPropertyBinder grailsPropertyBinder,
             PropertyFromValueCreator propertyFromValueCreator,
             NaturalIdentifierBinder naturalIdentifierBinder) {
-        this.grailsPropertyBinder = grailsPropertyBinder;
-        this.propertyFromValueCreator = propertyFromValueCreator;
-        this.naturalIdentifierBinder = naturalIdentifierBinder;
+        this.grailsPropertyBinder = grailsPropertyBinder
+        this.propertyFromValueCreator = propertyFromValueCreator
+        this.naturalIdentifierBinder = naturalIdentifierBinder
     }
 
-    public ClassPropertiesBinder(
+    ClassPropertiesBinder(
             GrailsPropertyBinder grailsPropertyBinder, PropertyFromValueCreator propertyFromValueCreator) {
-        this(grailsPropertyBinder, propertyFromValueCreator, new NaturalIdentifierBinder());
+        this(grailsPropertyBinder, propertyFromValueCreator, new NaturalIdentifierBinder())
     }
 
-    public void bindClassProperties(HibernatePersistentEntity hibernatePersistentEntity) {
-        PersistentClass persistentClass = hibernatePersistentEntity.getPersistentClass();
-        getTable(persistentClass).setComment(hibernatePersistentEntity.getComment());
+    void bindClassProperties(HibernatePersistentEntity hibernatePersistentEntity) {
+        PersistentClass persistentClass = hibernatePersistentEntity.persistentClass
+        getTable(persistentClass).comment = hibernatePersistentEntity.comment
         for (HibernatePersistentProperty currentGrailsProp :
-                hibernatePersistentEntity.getPersistentPropertiesToBind()) {
-            Value value = grailsPropertyBinder.bindProperty(currentGrailsProp, null, GrailsDomainBinder.EMPTY_PATH);
-            persistentClass.addProperty(propertyFromValueCreator.createProperty(value, currentGrailsProp));
+                hibernatePersistentEntity.persistentPropertiesToBind) {
+            Value value = grailsPropertyBinder.bindProperty(currentGrailsProp, null, GrailsDomainBinder.EMPTY_PATH)
+            persistentClass.addProperty(propertyFromValueCreator.createProperty(value, currentGrailsProp))
         }
 
-        naturalIdentifierBinder.bindNaturalIdentifier(hibernatePersistentEntity, persistentClass);
+        naturalIdentifierBinder.bindNaturalIdentifier(hibernatePersistentEntity, persistentClass)
     }
 
     @NonNull
     private Table getTable(PersistentClass persistentClass) {
-        if (persistentClass.getTable() == null) {
-            throw new MappingException("Persistent class [" + persistentClass.getEntityName() +
-                    "] does not have a table associated with it");
+        if (persistentClass.table == null) {
+            throw new MappingException(
+                    "Persistent class [${persistentClass.entityName}] does not have a table associated with it".toString())
         }
-        return persistentClass.getTable();
+        return persistentClass.table
     }
+
 }

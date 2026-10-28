@@ -16,7 +16,11 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.orm.hibernate.query;
+package org.grails.orm.hibernate.query
+
+import groovy.transform.CompileStatic
+import groovy.transform.TupleConstructor
+import groovy.transform.RecordOptions
 
 /**
  * Represents a property path combined with a scalar arithmetic operand,
@@ -26,9 +30,13 @@ package org.grails.orm.hibernate.query;
  * appropriate JPA {@code CriteriaBuilder} arithmetic expression
  * ({@code cb.prod}, {@code cb.sum}, {@code cb.diff}, {@code cb.quot}).
  */
-public record PropertyArithmetic(String propertyName, Operator operator, Number operand) {
+@CompileStatic
+@SuppressWarnings(['ClassStartsWithBlankLine', 'Indentation'])
+@RecordOptions(getAt = false, toList = false, toMap = false, size = false)
+@TupleConstructor(defaults = false, namedVariant = false)
+record PropertyArithmetic(String propertyName, Operator operator, Number operand) {
 
-    public enum Operator {
+    enum Operator {
         MULTIPLY, ADD, SUBTRACT, DIVIDE
     }
 

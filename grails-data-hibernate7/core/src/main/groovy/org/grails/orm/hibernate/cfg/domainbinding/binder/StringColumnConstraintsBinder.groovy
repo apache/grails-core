@@ -16,17 +16,16 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.orm.hibernate.cfg.domainbinding.binder;
+package org.grails.orm.hibernate.cfg.domainbinding.binder
 
-import java.util.Objects;
-import java.util.Optional;
+import groovy.transform.CompileStatic
+import org.hibernate.Length
+import org.hibernate.mapping.Column
 
-import org.hibernate.Length;
-import org.hibernate.mapping.Column;
+import org.grails.datastore.mapping.config.Property
 
-import org.grails.datastore.mapping.config.Property;
-
-public class StringColumnConstraintsBinder {
+@CompileStatic
+class StringColumnConstraintsBinder {
 
     /**
      * Binds a String/byte[] column's length from the property's {@code maxSize}/{@code inList}
@@ -39,33 +38,43 @@ public class StringColumnConstraintsBinder {
      * @param mappedForm the property's constraints (maxSize/inList)
      * @param typeName the resolved Hibernate type name, or {@code null} if not relevant
      */
-    public void bindStringColumnConstraints(Column column, Property mappedForm, String typeName) {
-        Integer number = Optional.ofNullable(mappedForm.getMaxSize())
-                .map(Number::intValue)
-                .orElse(getMax(mappedForm).orElse(0));
+    void bindStringColumnConstraints(Column column, Property mappedForm, String typeName) {
+        Number maxSize = mappedForm.maxSize
+        Integer number = maxSize != null ? maxSize.intValue() : getMax(mappedForm).orElse(0)
         if (number > 0) {
-            column.setLength(number);
-        } else if (isUnboundedTextType(typeName)) {
-            column.setLength(Length.LONG32);
+            column.length = number
+        }
+        else if (isUnboundedTextType(typeName)) {
+            column.length = Length.LONG32
         }
     }
 
     private static boolean isUnboundedTextType(String typeName) {
-        return "text".equalsIgnoreCase(typeName);
+        return 'text'.equalsIgnoreCase(typeName)
     }
 
     private Optional<Integer> getMax(Property mappedForm) {
-        return Optional.ofNullable(mappedForm.getInList()).flatMap(list -> list.stream()
-                .map(this::parseInt)
-                .filter(Objects::nonNull)
-                .reduce(Integer::max));
+        List<String> inList = mappedForm.inList
+        if (inList == null) {
+            return Optional.empty()
+        }
+        Integer max = null
+        for (String value : inList) {
+            Integer parsed = parseInt(value)
+            if (parsed != null && (max == null || parsed > max)) {
+                max = parsed
+            }
+        }
+        return Optional.ofNullable(max)
     }
 
     private Integer parseInt(String value) {
         try {
-            return Integer.parseInt(value);
-        } catch (NumberFormatException e) {
-            return null;
+            return Integer.parseInt(value)
+        }
+        catch (NumberFormatException e) {
+            return null
         }
     }
+
 }

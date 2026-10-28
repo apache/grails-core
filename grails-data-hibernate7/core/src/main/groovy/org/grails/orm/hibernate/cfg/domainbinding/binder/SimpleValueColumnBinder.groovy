@@ -16,21 +16,18 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.orm.hibernate.cfg.domainbinding.binder;
+package org.grails.orm.hibernate.cfg.domainbinding.binder
 
-import java.util.Optional;
+import groovy.transform.CompileStatic
+import org.hibernate.MappingException
+import org.hibernate.boot.spi.MetadataBuildingContext
+import org.hibernate.mapping.BasicValue
+import org.hibernate.mapping.Column
+import org.hibernate.mapping.SimpleValue
+import org.hibernate.mapping.Table
 
-import org.hibernate.MappingException;
-import org.hibernate.boot.spi.MetadataBuildingContext;
-import org.hibernate.mapping.BasicValue;
-import org.hibernate.mapping.Column;
-import org.hibernate.mapping.SimpleValue;
-import org.hibernate.mapping.Table;
-
-public class SimpleValueColumnBinder {
-
-    /** Public constructor. */
-    public SimpleValueColumnBinder() {}
+@CompileStatic
+class SimpleValueColumnBinder {
 
     /**
      * Creates a {@link BasicValue}, binds it, and returns it.
@@ -41,15 +38,15 @@ public class SimpleValueColumnBinder {
      * @param columnName The column name
      * @param nullable Whether it is nullable
      */
-    public BasicValue bindSimpleValue(
+    BasicValue bindSimpleValue(
             MetadataBuildingContext metadataBuildingContext,
             Table table,
             String type,
             String columnName,
             boolean nullable) {
-        BasicValue basicValue = new BasicValue(metadataBuildingContext, table);
-        bindSimpleValue(basicValue, type, columnName, nullable);
-        return basicValue;
+        BasicValue basicValue = new BasicValue(metadataBuildingContext, table)
+        bindSimpleValue(basicValue, type, columnName, nullable)
+        return basicValue
     }
 
     /**
@@ -60,20 +57,18 @@ public class SimpleValueColumnBinder {
      * @param columnName The property name
      * @param nullable Whether it is nullable
      */
-    public void bindSimpleValue(SimpleValue simpleValue, String type, String columnName, boolean nullable) {
-        Optional.ofNullable(simpleValue.getTable())
-                .ifPresentOrElse(
-                        table -> {
-                            var column = new Column();
-                            column.setNullable(nullable);
-                            column.setValue(simpleValue);
-                            column.setName(columnName);
-                            table.addColumn(column);
-                            simpleValue.addColumn(column);
-                            simpleValue.setTypeName(type);
-                        },
-                        () -> {
-                            throw new MappingException("SimpleValue must have a table");
-                        });
+    void bindSimpleValue(SimpleValue simpleValue, String type, String columnName, boolean nullable) {
+        Table table = simpleValue.table
+        if (table == null) {
+            throw new MappingException('SimpleValue must have a table')
+        }
+        Column column = new Column()
+        column.nullable = nullable
+        column.value = simpleValue
+        column.name = columnName
+        table.addColumn(column)
+        simpleValue.addColumn(column)
+        simpleValue.typeName = type
     }
+
 }

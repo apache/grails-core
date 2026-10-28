@@ -16,37 +16,39 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.orm.hibernate.cfg.domainbinding.collectionType;
+package org.grails.orm.hibernate.cfg.domainbinding.collectionType
 
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.SortedSet;
+import groovy.transform.CompileStatic
+import groovy.transform.TupleConstructor
+import groovy.transform.RecordOptions
+import org.hibernate.boot.spi.MetadataBuildingContext
 
-import org.hibernate.boot.spi.MetadataBuildingContext;
-
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty
 
 /** Collection holder. */
-public record CollectionHolder(Map<Class<?>, CollectionType> map) {
+@CompileStatic
+@SuppressWarnings(['ClassStartsWithBlankLine', 'Indentation'])
+@RecordOptions(getAt = false, toList = false, toMap = false, size = false)
+@TupleConstructor(defaults = false, namedVariant = false)
+record CollectionHolder(Map<Class<?>, CollectionType> map) {
 
     /** Creates a new {@link CollectionHolder} instance. */
-    public CollectionHolder(MetadataBuildingContext buildingContext) {
+    CollectionHolder(MetadataBuildingContext buildingContext) {
         this(Map.ofEntries(
-                Map.entry(Set.class, new SetCollectionType(buildingContext)),
-                Map.entry(SortedSet.class, new SetCollectionType(buildingContext)),
-                Map.entry(List.class, new ListCollectionType(buildingContext)),
-                Map.entry(Collection.class, new BagCollectionType(buildingContext)),
-                Map.entry(Map.class, new MapCollectionType(buildingContext))));
+                Map.entry(Set, new SetCollectionType(buildingContext)),
+                Map.entry(SortedSet, new SetCollectionType(buildingContext)),
+                Map.entry(List, new ListCollectionType(buildingContext)),
+                Map.entry(Collection, new BagCollectionType(buildingContext)),
+                Map.entry(Map, new MapCollectionType(buildingContext))))
     }
 
     /** Get. */
-    public CollectionType get(Class<?> collectionClass) {
-        return map.get(collectionClass);
+    CollectionType get(Class<?> collectionClass) {
+        return map.get(collectionClass)
     }
 
-    public org.hibernate.mapping.Collection create(HibernateToManyProperty property) {
-        return map.get(property.getType()).create(property, property.getPersistentClass());
+    org.hibernate.mapping.Collection create(HibernateToManyProperty property) {
+        return map.get(property.type).create(property, property.persistentClass)
     }
+
 }

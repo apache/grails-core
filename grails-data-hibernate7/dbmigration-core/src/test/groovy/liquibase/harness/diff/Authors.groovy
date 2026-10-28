@@ -1,73 +1,78 @@
-package liquibase.harness.diff;
+package liquibase.harness.diff
 
-import java.sql.Timestamp;
-import java.sql.Date;
+import java.sql.Date
+import java.sql.Timestamp
 
-public class Authors {
-    int id;
-    String firstName;
-    String lastName;
-    String email;
-    Date birthdate;
-    Timestamp added;
+import groovy.transform.CompileStatic
+
+@CompileStatic
+class Authors {
+
+    int id
+    String firstName
+    String lastName
+    String email
+    Date birthdate
+    Timestamp added
 
     public Authors() {
     }
 
     public Authors(int id, String firstName, String lastName, String email, Date birthdate, Timestamp added) {
-        this.id = id;
-        this.firstName = firstName;
-        this.lastName = lastName;
-        this.email = email;
-        this.birthdate = birthdate;
-        this.added = added;
+        this.id = id
+        this.firstName = firstName
+        this.lastName = lastName
+        this.email = email
+        this.birthdate = birthdate
+        this.added = added
     }
 
     public int getId() {
-        return id;
+        return id
     }
 
     public void setId(int id) {
-        this.id = id;
+        this.id = id
     }
 
     public String getFirstName() {
-        return firstName;
+        return firstName
     }
 
     public void setFirstName(String firstName) {
-        this.firstName = firstName;
+        this.firstName = firstName
     }
 
     public String getLastName() {
-        return lastName;
+        return lastName
     }
 
     public void setLastName(String lastName) {
-        this.lastName = lastName;
+        this.lastName = lastName
     }
 
     public String getEmail() {
-        return email;
+        return email
     }
 
     public void setEmail(String email) {
-        this.email = email;
+        this.email = email
     }
 
     public Date getBirthdate() {
-        return birthdate;
+        return birthdate
     }
 
     public void setBirthdate(Date birthdate) {
-        this.birthdate = birthdate;
+        this.birthdate = birthdate
     }
 
     public Timestamp getAdded() {
-        return added;
+        return added
     }
 
     public void setAdded(Timestamp added) {
-        this.added = added;
+        this.added = added
     }
+
 }

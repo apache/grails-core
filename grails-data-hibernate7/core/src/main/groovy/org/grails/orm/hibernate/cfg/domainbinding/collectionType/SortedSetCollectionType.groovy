@@ -16,22 +16,23 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.orm.hibernate.cfg.domainbinding.collectionType;
+package org.grails.orm.hibernate.cfg.domainbinding.collectionType
 
-import java.util.SortedSet;
+import groovy.transform.CompileStatic
+import org.hibernate.boot.spi.MetadataBuildingContext
+import org.hibernate.mapping.Collection
+import org.hibernate.mapping.PersistentClass
 
-import org.hibernate.boot.spi.MetadataBuildingContext;
-import org.hibernate.mapping.Collection;
-import org.hibernate.mapping.PersistentClass;
+@CompileStatic
+class SortedSetCollectionType extends CollectionType {
 
-public class SortedSetCollectionType extends CollectionType {
-
-    public SortedSetCollectionType(MetadataBuildingContext buildingContext) {
-        super(SortedSet.class, buildingContext);
+    SortedSetCollectionType(MetadataBuildingContext buildingContext) {
+        super(SortedSet, buildingContext)
     }
 
     @Override
-    public Collection createCollection(PersistentClass owner) {
-        return new org.hibernate.mapping.Set(buildingContext, owner);
+    Collection createCollection(PersistentClass owner) {
+        return new org.hibernate.mapping.Set(buildingContext, owner)
     }
+
 }

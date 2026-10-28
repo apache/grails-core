@@ -16,67 +16,62 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.orm.hibernate.cfg.domainbinding.generator;
+package org.grails.orm.hibernate.cfg.domainbinding.generator
 
-import java.io.Serial;
-import java.util.Optional;
-import java.util.Properties;
+import groovy.transform.CompileStatic
+import org.hibernate.boot.model.relational.SqlStringGenerationContext
+import org.hibernate.boot.model.relational.internal.SqlStringGenerationContextImpl
+import org.hibernate.engine.jdbc.env.spi.JdbcEnvironment
+import org.hibernate.generator.GeneratorCreationContext
+import org.hibernate.id.enhanced.TableGenerator
 
-import org.hibernate.boot.model.relational.SqlStringGenerationContext;
-import org.hibernate.boot.model.relational.internal.SqlStringGenerationContextImpl;
-import org.hibernate.engine.jdbc.env.spi.JdbcEnvironment;
-import org.hibernate.generator.GeneratorCreationContext;
-import org.hibernate.id.enhanced.TableGenerator;
+import org.grails.orm.hibernate.cfg.HibernateSimpleIdentity
 
-import org.grails.orm.hibernate.cfg.HibernateSimpleIdentity;
+@CompileStatic
+class GrailsTableGenerator extends TableGenerator {
 
-public class GrailsTableGenerator extends TableGenerator {
+    private static final long serialVersionUID = 1L
 
-    @Serial
-    private static final long serialVersionUID = 1L;
+    private static final String DEFAULT_ENTITY_NAME = 'default'
 
-    private static final String DEFAULT_ENTITY_NAME = "default";
-
-    public GrailsTableGenerator(GeneratorCreationContext context, HibernateSimpleIdentity mappedId, JdbcEnvironment jdbcEnvironment) {
-        Properties generatorProps =
-                Optional.ofNullable(mappedId).map(HibernateSimpleIdentity::getProperties).orElse(new Properties());
+    GrailsTableGenerator(GeneratorCreationContext context, HibernateSimpleIdentity mappedId, JdbcEnvironment jdbcEnvironment) {
+        Properties generatorProps = mappedId?.properties ?: new Properties()
 
         if (!generatorProps.containsKey(SEGMENT_VALUE_PARAM)) {
-            String propertyName = context.getProperty().getName();
+            String propertyName = context.property.name
 
             // Use the name we just ensured exists in BasicValueCreator
-            String entityName =
-                    (mappedId != null && mappedId.getName() != null) ? mappedId.getName() : DEFAULT_ENTITY_NAME;
+            String entityName = (mappedId != null && mappedId.name != null) ? mappedId.name : DEFAULT_ENTITY_NAME
 
-            generatorProps.put(SEGMENT_VALUE_PARAM, entityName + "." + propertyName);
+            generatorProps.put(SEGMENT_VALUE_PARAM, entityName + '.' + propertyName)
         }
 
         // Standard Pooled-lo defaults
         if (!generatorProps.containsKey(INCREMENT_PARAM)) {
-            generatorProps.put(INCREMENT_PARAM, "50");
+            generatorProps.put(INCREMENT_PARAM, '50')
         }
         if (!generatorProps.containsKey(OPT_PARAM)) {
-            generatorProps.put(OPT_PARAM, "pooled-lo");
+            generatorProps.put(OPT_PARAM, 'pooled-lo')
         }
 
         // Fixes the "SQL to format should not be null" error
-        this.configure(context, generatorProps);
-        var database = context.getDatabase();
+        this.configure(context, generatorProps)
+        def database = context.database
 
-        this.registerExportables(database);
+        this.registerExportables(database)
         // Get the Name record from the physical name
-        var physicalName = database.getDefaultNamespace().getPhysicalName();
+        def physicalName = database.defaultNamespace.physicalName
 
         // Use the record component accessors (catalog() and schema())
         // instead of the deprecated getCatalog()/getSchema()
-        String catalog =
-                (physicalName.catalog() != null) ? physicalName.catalog().getCanonicalName() : null;
+        String catalog = physicalName.catalog() != null ? physicalName.catalog().canonicalName : null
 
-        String schema = (physicalName.schema() != null) ? physicalName.schema().getCanonicalName() : null;
+        String schema = physicalName.schema() != null ? physicalName.schema().canonicalName : null
 
         // Build the context and initialize templates
         SqlStringGenerationContext context1 =
-                SqlStringGenerationContextImpl.fromExplicit(jdbcEnvironment, database, catalog, schema);
-        this.initialize(context1);
+                SqlStringGenerationContextImpl.fromExplicit(jdbcEnvironment, database, catalog, schema)
+        this.initialize(context1)
     }
+
 }

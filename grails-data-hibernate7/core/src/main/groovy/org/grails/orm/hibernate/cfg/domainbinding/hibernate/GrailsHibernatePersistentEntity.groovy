@@ -16,195 +16,188 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.orm.hibernate.cfg.domainbinding.hibernate;
+package org.grails.orm.hibernate.cfg.domainbinding.hibernate
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.Set;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
+import groovy.transform.CompileStatic
+import jakarta.annotation.Nonnull
+import org.hibernate.FetchMode
+import org.hibernate.boot.spi.InFlightMetadataCollector
+import org.hibernate.mapping.Column
+import org.hibernate.mapping.Component
+import org.hibernate.mapping.KeyValue
+import org.hibernate.mapping.PersistentClass
+import org.hibernate.mapping.Property
+import org.hibernate.mapping.SimpleValue
 
-import jakarta.annotation.Nonnull;
+import org.grails.datastore.mapping.model.PersistentEntity
+import org.grails.datastore.mapping.model.PersistentProperty
+import org.grails.datastore.mapping.model.config.GormProperties
+import org.grails.orm.hibernate.cfg.DiscriminatorConfig
+import org.grails.orm.hibernate.cfg.HibernateCompositeIdentity
+import org.grails.orm.hibernate.cfg.HibernateSimpleIdentity
+import org.grails.orm.hibernate.cfg.Mapping
+import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy
+import org.grails.orm.hibernate.cfg.PropertyConfig
+import org.grails.orm.hibernate.cfg.domainbinding.util.ConfigureDerivedPropertiesConsumer
+import org.grails.orm.hibernate.cfg.domainbinding.util.DefaultColumnNameFetcher
+import org.grails.orm.hibernate.cfg.domainbinding.util.NamespaceNameExtractor
 
-import org.hibernate.FetchMode;
-import org.hibernate.boot.spi.InFlightMetadataCollector;
-import org.hibernate.mapping.Column;
-import org.hibernate.mapping.Component;
-import org.hibernate.mapping.KeyValue;
-import org.hibernate.mapping.PersistentClass;
-import org.hibernate.mapping.Property;
-import org.hibernate.mapping.SimpleValue;
-
-import org.grails.datastore.mapping.model.PersistentEntity;
-import org.grails.datastore.mapping.model.PersistentProperty;
-import org.grails.datastore.mapping.model.config.GormProperties;
-import org.grails.orm.hibernate.cfg.DiscriminatorConfig;
-import org.grails.orm.hibernate.cfg.HibernateCompositeIdentity;
-import org.grails.orm.hibernate.cfg.HibernateSimpleIdentity;
-import org.grails.orm.hibernate.cfg.Mapping;
-import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
-import org.grails.orm.hibernate.cfg.domainbinding.util.ConfigureDerivedPropertiesConsumer;
-import org.grails.orm.hibernate.cfg.domainbinding.util.DefaultColumnNameFetcher;
-import org.grails.orm.hibernate.cfg.domainbinding.util.NamespaceNameExtractor;
-
-import static org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBinder.DEFAULT_DISCRIMINATOR_COLUMN_NAME;
+import static org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBinder.DEFAULT_DISCRIMINATOR_COLUMN_NAME
 
 /** Common interface for Hibernate persistent entities */
-public interface GrailsHibernatePersistentEntity extends PersistentEntity {
+@CompileStatic
+interface GrailsHibernatePersistentEntity extends PersistentEntity {
 
     private static String resolveDiscriminatorValue(DiscriminatorConfig discriminatorConfig) {
         return discriminatorConfig.getColumn() != null ?
                 discriminatorConfig.getColumn().getName() :
-                discriminatorConfig.getFormula();
+                discriminatorConfig.getFormula()
     }
 
     @Override
-    Mapping getMappedForm();
+    Mapping getMappedForm()
 
     @Nonnull
     default GrailsHibernatePersistentEntity getHibernateRootEntity() {
-        return (GrailsHibernatePersistentEntity) getRootEntity();
+        return (GrailsHibernatePersistentEntity) getRootEntity()
     }
 
     default GrailsHibernatePersistentEntity getStrategyOwner() {
-        List<HibernatePersistentProperty> props = getHibernatePersistentProperties();
-        return (props != null && !props.isEmpty()) ? props.get(0).getHibernateOwner() : this;
+        List<HibernatePersistentProperty> props = getHibernatePersistentProperties()
+        return (props != null && !props.isEmpty()) ? props.get(0).getHibernateOwner() : this
     }
 
     default Mapping getStrategyMapping() {
-        return getStrategyOwner().getMappedForm();
+        return getStrategyOwner().getMappedForm()
     }
 
     default Mapping getRootMapping() {
-        return getHibernateRootEntity().getMappedForm();
+        return getHibernateRootEntity().getMappedForm()
     }
 
     default boolean isTablePerHierarchy() {
-        Mapping mapping = getStrategyMapping();
-        return mapping == null || mapping.isTablePerHierarchy();
+        Mapping mapping = getStrategyMapping()
+        return mapping == null || mapping.isTablePerHierarchy()
     }
 
     default boolean isJoinedSubclass() {
-        Mapping mapping = getStrategyMapping();
-        return mapping != null && mapping.isJoinedSubclass();
+        Mapping mapping = getStrategyMapping()
+        return mapping != null && mapping.isJoinedSubclass()
     }
 
     default boolean isUnionSubclass() {
-        Mapping mapping = getStrategyMapping();
-        return mapping != null && mapping.isUnionSubclass();
+        Mapping mapping = getStrategyMapping()
+        return mapping != null && mapping.isUnionSubclass()
     }
 
     default boolean isTableAbstract() {
-        return isUnionSubclass() && isAbstract();
+        return isUnionSubclass() && isAbstract()
     }
 
     default boolean isTablePerHierarchySubclass() {
-        return !this.isRoot() && isTablePerHierarchy();
+        return !this.isRoot() && isTablePerHierarchy()
     }
 
     default Set<String> buildDiscriminatorSet() {
-        String quote = Optional.ofNullable(getRootMapping())
-                .filter(m -> m.getDatasources() != null)
-                .map(Mapping::getDiscriminator)
-                .filter(config -> config.getType() != null && !config.getType().equals("string"))
-                .map(config -> "")
-                .orElse("'");
+        Mapping rootMapping = getRootMapping()
+        DiscriminatorConfig discriminatorConfig = rootMapping?.getDatasources() != null ? rootMapping.getDiscriminator() : null
+        String quote = (discriminatorConfig?.getType() != null && !discriminatorConfig.getType().equals('string')) ? '' : "'"
 
-        String quotedDiscriminator = quote + getDiscriminatorValue() + quote;
+        String quotedDiscriminator = quote + getDiscriminatorValue() + quote
 
-        return Stream.concat(
-                        Stream.of(quotedDiscriminator),
-                        getChildEntities().stream()
-                                .map(GrailsHibernatePersistentEntity::buildDiscriminatorSet)
-                                .flatMap(Collection::stream))
-                .collect(Collectors.toSet());
+        Set<String> result = new LinkedHashSet<>()
+        result.add(quotedDiscriminator)
+        for (GrailsHibernatePersistentEntity child : getChildEntities()) {
+            result.addAll(child.buildDiscriminatorSet())
+        }
+        return result
     }
 
     default HibernatePropertyIdentity getHibernateIdentity() {
-        return Optional.ofNullable(getMappedForm())
-                .map(Mapping::getIdentity)
-                .or(this::resolveCompositeIdentity)
-                .orElseGet(this::getDefaultIdentity);
+        Mapping mappedForm = getMappedForm()
+        HibernatePropertyIdentity fromMapping = mappedForm?.getIdentity()
+        if (fromMapping != null) {
+            return fromMapping
+        }
+        HibernatePropertyIdentity composite = resolveCompositeIdentity()
+        if (composite != null) {
+            return composite
+        }
+        return getDefaultIdentity()
     }
 
-    private Optional<HibernatePropertyIdentity> resolveCompositeIdentity() {
-        return Optional.ofNullable(getCompositeIdentity())
-                .filter(compositeId -> compositeId.length > 1)
-                .map(compositeId -> {
-                    HibernateCompositeIdentity ci = new HibernateCompositeIdentity();
-                    ci.setPropertyNames(java.util.Arrays.stream(compositeId)
-                            .map(PersistentProperty::getName)
-                            .toArray(String[]::new));
-                    return ci;
-                });
+    private HibernatePropertyIdentity resolveCompositeIdentity() {
+        HibernatePersistentProperty[] compositeId = getCompositeIdentity()
+        if (compositeId == null || compositeId.length <= 1) {
+            return null
+        }
+        HibernateCompositeIdentity ci = new HibernateCompositeIdentity()
+        ci.setPropertyNames(compositeId.collect { PersistentProperty<?> p -> p.getName() } as String[])
+        return ci
     }
 
     private @Nonnull HibernateSimpleIdentity getDefaultIdentity() {
-        HibernateSimpleIdentity identity = new HibernateSimpleIdentity();
-        identity.setName(Optional.ofNullable(getIdentity())
-                .map(PersistentProperty::getName)
-                .orElseGet(this::getName));
-        return identity;
+        HibernateSimpleIdentity defaultIdentity = new HibernateSimpleIdentity()
+        PersistentProperty<?> existingIdentity = getIdentity()
+        String existingIdentityName = existingIdentity?.getName()
+        defaultIdentity.setName(existingIdentityName != null ? existingIdentityName : getName())
+        return defaultIdentity
     }
 
     @Override
-    HibernatePersistentProperty getIdentity();
+    HibernatePersistentProperty getIdentity()
 
     @Override
-    HibernatePersistentProperty[] getCompositeIdentity();
+    HibernatePersistentProperty[] getCompositeIdentity()
 
     default Optional<HibernateCompositeIdentity> getHibernateCompositeIdentity() {
-        return Optional.ofNullable(getMappedForm())
-                .filter(Mapping::hasCompositeIdentifier)
-                .map(Mapping::getIdentity)
-                .filter(HibernateCompositeIdentity.class::isInstance)
-                .map(HibernateCompositeIdentity.class::cast);
+        Mapping mappedForm = getMappedForm()
+        if (mappedForm == null || !mappedForm.hasCompositeIdentifier()) {
+            return Optional.empty()
+        }
+        HibernatePropertyIdentity identity = mappedForm.getIdentity()
+        return identity instanceof HibernateCompositeIdentity ?
+                Optional.of((HibernateCompositeIdentity) identity) : Optional.empty()
     }
 
     default String getDiscriminatorValue() {
-        return Optional.ofNullable(getMappedForm())
-                .map(Mapping::getDiscriminator)
-                .map(DiscriminatorConfig::getValue)
-                .orElse(getJavaClass().getName());
+        String value = getMappedForm()?.getDiscriminator()?.getValue()
+        return value != null ? value : getJavaClass().getName()
     }
 
-    String getDataSourceName();
+    String getDataSourceName()
 
-    void setDataSourceName(String dataSourceName);
+    void setDataSourceName(String dataSourceName)
 
-    boolean forGrailsDomainMapping(String dataSourceName);
+    boolean forGrailsDomainMapping(String dataSourceName)
 
-    boolean usesConnectionSource(String dataSourceName);
+    boolean usesConnectionSource(String dataSourceName)
 
-    boolean isAbstract();
+    boolean isAbstract()
 
     default List<HibernatePersistentProperty> getPersistentPropertiesToBind() {
-        List<HibernatePersistentProperty> properties = getHibernatePersistentProperties();
+        List<HibernatePersistentProperty> properties = getHibernatePersistentProperties()
         if (properties == null) {
-            return java.util.Collections.emptyList();
+            return Collections.emptyList()
         }
-        return properties.stream()
-                .filter(Objects::nonNull)
-                .filter(p -> p.getMappedForm() != null)
-                .filter(p -> !p.isIdentityProperty())
-                .filter(p -> !GormProperties.VERSION.equals(p.getName()))
-                .filter(p -> !p.isInherited())
-                .toList();
+        return properties.findAll { HibernatePersistentProperty p ->
+            p != null &&
+                    p.getMappedForm() != null &&
+                    !p.isIdentityProperty() &&
+                    !GormProperties.VERSION.equals(p.getName()) &&
+                    !p.isInherited()
+        }
     }
 
     @Override
-    HibernatePersistentProperty getVersion();
+    HibernatePersistentProperty getVersion()
 
     /**
      * Returns the persistent property with the given name cast to {@link HibernatePersistentProperty},
      * or {@code null} if no such property exists.
      */
     default HibernatePersistentProperty getHibernatePropertyByName(String name) {
-        return (HibernatePersistentProperty) getPropertyByName(name);
+        return (HibernatePersistentProperty) getPropertyByName(name)
     }
 
     /**
@@ -215,19 +208,21 @@ public interface GrailsHibernatePersistentEntity extends PersistentEntity {
      * @return The property or null
      */
     default HibernatePersistentProperty getHibernatePropertyByPath(String path) {
-        if (path == null) return null;
-        if (path.contains(".")) {
-            String[] parts = path.split("\\.", 2);
-            HibernatePersistentProperty prop = getHibernatePropertyByName(parts[0]);
+        if (path == null) {
+            return null
+        }
+        if (path.contains('.')) {
+            String[] parts = path.split('\\.', 2)
+            HibernatePersistentProperty prop = getHibernatePropertyByName(parts[0])
             if (prop != null) {
-                GrailsHibernatePersistentEntity associated = prop.getHibernateAssociatedEntity();
+                GrailsHibernatePersistentEntity associated = prop.getHibernateAssociatedEntity()
                 if (associated != null) {
-                    return associated.getHibernatePropertyByPath(parts[1]);
+                    return associated.getHibernatePropertyByPath(parts[1])
                 }
             }
-            return null;
+            return null
         }
-        return getHibernatePropertyByName(path);
+        return getHibernatePropertyByName(path)
     }
 
     /**
@@ -235,14 +230,16 @@ public interface GrailsHibernatePersistentEntity extends PersistentEntity {
      * @return The parent property if it exists
      */
     default Optional<HibernatePersistentProperty> getHibernateParentProperty(Class<?> parentType) {
-        List<HibernatePersistentProperty> properties = getHibernatePersistentProperties();
+        List<HibernatePersistentProperty> properties = getHibernatePersistentProperties()
         if (properties == null) {
-            return Optional.empty();
+            return Optional.empty()
         }
-        return properties.stream()
-                .filter(Objects::nonNull)
-                .filter(p -> p.getType().equals(parentType))
-                .findFirst();
+        for (HibernatePersistentProperty p : properties) {
+            if (p != null && p.getType().equals(parentType)) {
+                return Optional.of(p)
+            }
+        }
+        return Optional.empty()
     }
 
     /**
@@ -250,65 +247,68 @@ public interface GrailsHibernatePersistentEntity extends PersistentEntity {
      * @return The properties that should be bound to the Hibernate meta model
      */
     default List<HibernatePersistentProperty> getHibernatePersistentProperties(Class<?> parentType) {
-        List<HibernatePersistentProperty> properties = getHibernatePersistentProperties();
+        List<HibernatePersistentProperty> properties = getHibernatePersistentProperties()
         if (properties == null) {
-            return java.util.Collections.emptyList();
+            return Collections.emptyList()
         }
-        return properties.stream()
-                .filter(Objects::nonNull)
-                .filter(p -> p.getMappedForm() != null)
-                .filter(p -> !p.equals(getIdentity()))
-                .filter(p -> !GormProperties.VERSION.equals(p.getName()))
-                .filter(p -> !p.getType().equals(parentType))
-                .toList();
+        return properties.findAll { HibernatePersistentProperty p ->
+            p != null &&
+                    p.getMappedForm() != null &&
+                    !p.equals(getIdentity()) &&
+                    !GormProperties.VERSION.equals(p.getName()) &&
+                    !p.getType().equals(parentType)
+        }
     }
 
     default List<HibernatePersistentEntity> getChildEntities() {
-        return getChildEntities(getDataSourceName());
+        return getChildEntities(getDataSourceName())
     }
 
     default List<HibernatePersistentEntity> getChildEntities(String dataSourceName) {
-        return getMappingContext().getDirectChildEntities(this).stream()
-                .filter(HibernatePersistentEntity.class::isInstance)
-                .map(HibernatePersistentEntity.class::cast)
-                .filter(persistentEntity -> persistentEntity.usesConnectionSource(dataSourceName))
-                .filter(sub -> sub.getJavaClass().getSuperclass().equals(this.getJavaClass()))
-                .toList();
+        List<HibernatePersistentEntity> result = []
+        for (PersistentEntity entity : getMappingContext().getDirectChildEntities(this)) {
+            if (entity instanceof HibernatePersistentEntity) {
+                HibernatePersistentEntity persistentEntity = (HibernatePersistentEntity) entity
+                if (persistentEntity.usesConnectionSource(dataSourceName) &&
+                        persistentEntity.getJavaClass().getSuperclass().equals(this.getJavaClass())) {
+                    result.add(persistentEntity)
+                }
+            }
+        }
+        return Collections.unmodifiableList(result)
     }
 
     default boolean isComponentPropertyNullable(PersistentProperty<?> embeddedProperty) {
-        if (embeddedProperty == null) return false;
-        final Mapping mapping = getMappedForm();
-        return !isRoot() && (mapping == null || mapping.isTablePerHierarchy()) || embeddedProperty.isNullable();
+        if (embeddedProperty == null) {
+            return false
+        }
+        final Mapping mapping = getMappedForm()
+        return !isRoot() && (mapping == null || mapping.isTablePerHierarchy()) || embeddedProperty.isNullable()
     }
 
     default void configureDerivedProperties() {
-        getHibernatePersistentProperties().forEach(new ConfigureDerivedPropertiesConsumer(getMappedForm()));
+        getHibernatePersistentProperties().forEach(new ConfigureDerivedPropertiesConsumer(getMappedForm()))
     }
 
     default HibernatePersistentProperty getHibernateTenantId() {
-        return (HibernatePersistentProperty) getTenantId();
+        return (HibernatePersistentProperty) getTenantId()
     }
 
     default String getMultiTenantFilterCondition(DefaultColumnNameFetcher fetcher) {
-        return Optional.ofNullable(getHibernateTenantId())
-                .map(fetcher::getDefaultColumnName)
-                .map(defaultColumnName -> ":tenantId = " + defaultColumnName)
-                .orElse(null);
+        HibernatePersistentProperty tenantId = getHibernateTenantId()
+        return tenantId != null ? ':tenantId = ' + fetcher.getDefaultColumnName(tenantId) : null
     }
 
     default String getSchema(@Nonnull InFlightMetadataCollector mappings) {
-        return Optional.ofNullable(getMappedForm())
-                .map(Mapping::getTable)
-                .map(org.grails.orm.hibernate.cfg.Table::getSchema)
-                .orElse(NamespaceNameExtractor.getSchemaName(mappings));
+        org.grails.orm.hibernate.cfg.Table table = getMappedForm()?.getTable()
+        String schema = table?.getSchema()
+        return schema != null ? schema : NamespaceNameExtractor.getSchemaName(mappings)
     }
 
     default String getCatalog(@Nonnull InFlightMetadataCollector mappings) {
-        return Optional.ofNullable(getMappedForm())
-                .map(Mapping::getTable)
-                .map(org.grails.orm.hibernate.cfg.Table::getCatalog)
-                .orElse(NamespaceNameExtractor.getCatalogName(mappings));
+        org.grails.orm.hibernate.cfg.Table table = getMappedForm()?.getTable()
+        String catalog = table?.getCatalog()
+        return catalog != null ? catalog : NamespaceNameExtractor.getCatalogName(mappings)
     }
 
     /**
@@ -318,40 +318,48 @@ public interface GrailsHibernatePersistentEntity extends PersistentEntity {
      * @return The table name
      */
     default String getTableName(PersistentEntityNamingStrategy persistentEntityNamingStrategy) {
-        return Optional.ofNullable(getMappedForm())
-                .map(Mapping::getTableName)
-                .or(() -> Optional.ofNullable(getRootMapping())
-                        .filter(Mapping::isTablePerHierarchy)
-                        .map(Mapping::getTableName))
-                .orElseGet(() -> persistentEntityNamingStrategy.resolveTableName(this));
+        String tableName = getMappedForm()?.getTableName()
+        if (tableName != null) {
+            return tableName
+        }
+        Mapping rootMapping = getRootMapping()
+        if (rootMapping != null && rootMapping.isTablePerHierarchy()) {
+            String rootTableName = rootMapping.getTableName()
+            if (rootTableName != null) {
+                return rootTableName
+            }
+        }
+        return persistentEntityNamingStrategy.resolveTableName(this)
     }
 
     default String getDiscriminatorColumnName() {
-        return Optional.ofNullable(getRootMapping())
-                .map(Mapping::getDiscriminator)
-                .map(GrailsHibernatePersistentEntity::resolveDiscriminatorValue)
-                .orElse(DEFAULT_DISCRIMINATOR_COLUMN_NAME);
+        DiscriminatorConfig discriminatorConfig = getRootMapping()?.getDiscriminator()
+        String column = discriminatorConfig != null ? resolveDiscriminatorValue(discriminatorConfig) : null
+        return column != null ? column : DEFAULT_DISCRIMINATOR_COLUMN_NAME
     }
 
     default List<HibernatePersistentProperty> getHibernatePersistentProperties() {
-        return getPersistentProperties().stream()
-                .filter(HibernatePersistentProperty.class::isInstance)
-                .map(HibernatePersistentProperty.class::cast)
-                .map(HibernatePersistentProperty::validateProperty)
-                .toList();
+        List<HibernatePersistentProperty> result = []
+        for (PersistentProperty<?> p : getPersistentProperties()) {
+            if (p instanceof HibernatePersistentProperty) {
+                HibernatePersistentProperty hp = (HibernatePersistentProperty) p
+                result.add(hp.validateProperty())
+            }
+        }
+        return Collections.unmodifiableList(result)
     }
 
     default String getComment() {
-        return Optional.ofNullable(getMappedForm()).map(Mapping::getComment).orElse(null);
+        return getMappedForm()?.getComment()
     }
 
     default Mapping getHibernateMappedForm() {
-        return getMappedForm();
+        return getMappedForm()
     }
 
-    PersistentClass getPersistentClass();
+    PersistentClass getPersistentClass()
 
-    void setPersistentClass(PersistentClass persistentClass);
+    void setPersistentClass(PersistentClass persistentClass)
 
     /**
      * Determines if the given property should be lazy.
@@ -361,17 +369,20 @@ public interface GrailsHibernatePersistentEntity extends PersistentEntity {
      */
     default boolean isLazy(HibernatePersistentProperty property) {
         if (GormProperties.VERSION.equals(property.getName())) {
-            return false;
+            return false
         }
 
-        return Optional.ofNullable(property.getMappedForm())
-                .map(config -> {
-                    if (property instanceof HibernateAssociation && FetchMode.JOIN.equals(config.getFetchMode())) {
-                        return false;
-                    }
-                    return config.getLazy();
-                })
-                .orElseGet(() -> property instanceof HibernateAssociation);
+        PropertyConfig config = property.getMappedForm()
+        if (config != null) {
+            if (property instanceof HibernateAssociation && FetchMode.JOIN.equals(config.getFetchMode())) {
+                return false
+            }
+            Boolean lazy = config.getLazy()
+            if (lazy != null) {
+                return lazy
+            }
+        }
+        return property instanceof HibernateAssociation
     }
 
     /**
@@ -385,16 +396,16 @@ public interface GrailsHibernatePersistentEntity extends PersistentEntity {
      * @param value the foreign-key {@link SimpleValue} whose columns should be aligned
      */
     default void sortOrIndexForeignKeyColumns(SimpleValue value) {
-        PersistentClass pc = getPersistentClass();
-        KeyValue identifier = pc != null ? pc.getIdentifier() : null;
-        Component component = identifier instanceof Component c ? c : null;
-        int[] originalOrder = component != null ? component.sortProperties() : null;
+        PersistentClass pc = getPersistentClass()
+        KeyValue identifier = pc != null ? pc.getIdentifier() : null
+        Component component = identifier instanceof Component ? (Component) identifier : null
+        int[] originalOrder = component != null ? component.sortProperties() : null
         if (originalOrder != null) {
-            value.sortColumns(toColumnPermutation(originalOrder, partColumnSpans(component, originalOrder)));
+            value.sortColumns(toColumnPermutation(originalOrder, partColumnSpans(component, originalOrder)))
         } else {
-            List<Column> cols = value.getColumns();
+            List<Column> cols = value.getColumns()
             for (int i = 0; i < cols.size(); i++) {
-                cols.get(i).setTypeIndex(i);
+                cols.get(i).setTypeIndex(i)
             }
         }
     }
@@ -412,33 +423,36 @@ public interface GrailsHibernatePersistentEntity extends PersistentEntity {
      *         this entity has no persistent class or identifier
      */
     default List<Column> getReferencedIdentifierColumns(String[] propertyNames) {
-        PersistentClass pc = getPersistentClass();
-        KeyValue identifier = pc != null ? pc.getIdentifier() : null;
+        PersistentClass pc = getPersistentClass()
+        KeyValue identifier = pc != null ? pc.getIdentifier() : null
         if (identifier == null) {
-            return List.of();
+            return []
         }
-        if (!(identifier instanceof Component component)) {
-            return identifier.getColumns();
+        if (!(identifier instanceof Component)) {
+            return identifier.getColumns()
         }
-        int[] originalOrder = component.sortProperties();
-        List<Column> referencedColumns = Arrays.stream(propertyNames)
-                .flatMap(name -> component.getProperty(name).getValue().getColumns().stream())
-                .collect(Collectors.toCollection(ArrayList::new));
+        Component component = (Component) identifier
+        int[] originalOrder = component.sortProperties()
+        List<Column> referencedColumns = []
+        for (String name : propertyNames) {
+            referencedColumns.addAll(component.getProperty(name).getValue().getColumns())
+        }
         if (originalOrder == null) {
-            return referencedColumns;
+            return referencedColumns
         }
-        int[] spans = Arrays.stream(propertyNames)
-                .mapToInt(name -> component.getProperty(name).getValue().getColumnSpan())
-                .toArray();
-        return sortedByPermutation(referencedColumns, toColumnPermutation(originalOrder, spans));
+        int[] spans = new int[propertyNames.length]
+        for (int i = 0; i < spans.length; i++) {
+            spans[i] = component.getProperty(propertyNames[i]).getValue().getColumnSpan()
+        }
+        return sortedByPermutation(referencedColumns, toColumnPermutation(originalOrder, spans))
     }
 
     private static List<Column> sortedByPermutation(List<Column> columns, int[] permutation) {
-        List<Column> result = new ArrayList<>(columns);
+        List<Column> result = new ArrayList<>(columns)
         for (int i = 0; i < permutation.length; i++) {
-            result.set(permutation[i], columns.get(i));
+            result.set(permutation[i], columns.get(i))
         }
-        return result;
+        return result
     }
 
     /**
@@ -446,12 +460,12 @@ public interface GrailsHibernatePersistentEntity extends PersistentEntity {
      * {@code propertyPermutation[i]} is the position of declared part {@code i} in the sorted property list.
      */
     private static int[] partColumnSpans(Component component, int[] propertyPermutation) {
-        List<Property> sorted = component.getProperties();
-        int[] spans = new int[propertyPermutation.length];
+        List<Property> sorted = component.getProperties()
+        int[] spans = new int[propertyPermutation.length]
         for (int i = 0; i < spans.length; i++) {
-            spans[i] = sorted.get(propertyPermutation[i]).getValue().getColumnSpan();
+            spans[i] = sorted.get(propertyPermutation[i]).getValue().getColumnSpan()
         }
-        return spans;
+        return spans
     }
 
     /**
@@ -461,24 +475,24 @@ public interface GrailsHibernatePersistentEntity extends PersistentEntity {
      * {@code c}. With one column per part the result equals {@code propertyPermutation}.
      */
     private static int[] toColumnPermutation(int[] propertyPermutation, int[] spans) {
-        int[] sortedStart = new int[propertyPermutation.length];
-        int[] declaredAtSortedPosition = new int[propertyPermutation.length];
+        int[] sortedStart = new int[propertyPermutation.length]
+        int[] declaredAtSortedPosition = new int[propertyPermutation.length]
         for (int i = 0; i < propertyPermutation.length; i++) {
-            declaredAtSortedPosition[propertyPermutation[i]] = i;
+            declaredAtSortedPosition[propertyPermutation[i]] = i
         }
-        int offset = 0;
-        for (int position : declaredAtSortedPosition) {
-            sortedStart[position] = offset;
-            offset += spans[position];
+        int offset = 0
+        for (int position in declaredAtSortedPosition) {
+            sortedStart[position] = offset
+            offset += spans[position]
         }
-        int[] result = new int[offset];
-        int declaredStart = 0;
+        int[] result = new int[offset]
+        int declaredStart = 0
         for (int i = 0; i < spans.length; i++) {
             for (int k = 0; k < spans[i]; k++) {
-                result[declaredStart + k] = sortedStart[i] + k;
+                result[declaredStart + k] = sortedStart[i] + k
             }
-            declaredStart += spans[i];
+            declaredStart += spans[i]
         }
-        return result;
+        return result
     }
 }

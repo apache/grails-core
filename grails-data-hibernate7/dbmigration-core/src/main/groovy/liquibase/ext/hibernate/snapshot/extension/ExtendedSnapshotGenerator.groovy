@@ -1,8 +1,12 @@
-package liquibase.ext.hibernate.snapshot.extension;
+package liquibase.ext.hibernate.snapshot.extension
 
-public interface ExtendedSnapshotGenerator<T, U> {
+import groovy.transform.CompileStatic
 
-    U snapshot(T object);
+@CompileStatic
+interface ExtendedSnapshotGenerator<T, U> {
 
-    boolean supports(T object);
+    U snapshot(T object)
+
+    boolean supports(T object)
+
 }

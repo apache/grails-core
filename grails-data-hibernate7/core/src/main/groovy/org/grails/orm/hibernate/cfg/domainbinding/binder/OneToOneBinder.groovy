@@ -16,43 +16,45 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.orm.hibernate.cfg.domainbinding.binder;
+package org.grails.orm.hibernate.cfg.domainbinding.binder
 
-import org.hibernate.boot.spi.MetadataBuildingContext;
-import org.hibernate.mapping.OneToOne;
-import org.hibernate.mapping.PersistentClass;
-import org.hibernate.mapping.Table;
+import groovy.transform.CompileStatic
+import org.hibernate.boot.spi.MetadataBuildingContext
+import org.hibernate.mapping.OneToOne
+import org.hibernate.mapping.PersistentClass
+import org.hibernate.mapping.Table
 
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateOneToOneProperty;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateOneToOneProperty
 
-public class OneToOneBinder {
+@CompileStatic
+class OneToOneBinder {
 
-    private final MetadataBuildingContext metadataBuildingContext;
-    private final SimpleValueBinder simpleValueBinder;
+    private final MetadataBuildingContext metadataBuildingContext
+    private final SimpleValueBinder simpleValueBinder
 
-    public OneToOneBinder(MetadataBuildingContext metadataBuildingContext, SimpleValueBinder simpleValueBinder) {
-        this.metadataBuildingContext = metadataBuildingContext;
-        this.simpleValueBinder = simpleValueBinder;
+    OneToOneBinder(MetadataBuildingContext metadataBuildingContext, SimpleValueBinder simpleValueBinder) {
+        this.metadataBuildingContext = metadataBuildingContext
+        this.simpleValueBinder = simpleValueBinder
     }
 
-    public OneToOne bindOneToOne(final HibernateOneToOneProperty property, String path) {
-        Table table = property.getTable();
-        PersistentClass owner = property.getHibernateOwner().getPersistentClass();
-        OneToOne oneToOne = new OneToOne(metadataBuildingContext, table, owner);
+    OneToOne bindOneToOne(final HibernateOneToOneProperty property, String path) {
+        Table table = property.getTable()
+        PersistentClass owner = property.getHibernateOwner().getPersistentClass()
+        OneToOne oneToOne = new OneToOne(metadataBuildingContext, table, owner)
 
-        oneToOne.setConstrained(property.isHibernateConstrained());
-        oneToOne.setForeignKeyType(property.getHibernateForeignKeyDirection());
-        oneToOne.setAlternateUniqueKey(true);
-        oneToOne.setFetchMode(property.getHibernateFetchMode());
-        oneToOne.setReferencedEntityName(property.getHibernateReferencedEntityName());
-        oneToOne.setPropertyName(property.getName());
-        oneToOne.setReferenceToPrimaryKey(false);
+        oneToOne.setConstrained(property.isHibernateConstrained())
+        oneToOne.setForeignKeyType(property.getHibernateForeignKeyDirection())
+        oneToOne.setAlternateUniqueKey(true)
+        oneToOne.setFetchMode(property.getHibernateFetchMode())
+        oneToOne.setReferencedEntityName(property.getHibernateReferencedEntityName())
+        oneToOne.setPropertyName(property.getName())
+        oneToOne.setReferenceToPrimaryKey(false)
 
         if (property.needsSimpleValueBinding()) {
-            simpleValueBinder.bindSimpleValue(property, null, oneToOne, path);
+            simpleValueBinder.bindSimpleValue(property, null, oneToOne, path)
         } else {
-            oneToOne.setReferencedPropertyName(property.getHibernateReferencedPropertyName());
+            oneToOne.setReferencedPropertyName(property.getHibernateReferencedPropertyName())
         }
-        return oneToOne;
+        return oneToOne
     }
 }

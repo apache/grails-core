@@ -16,14 +16,14 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.orm.hibernate;
+package org.grails.orm.hibernate
 
-import java.lang.reflect.InvocationHandler;
-import java.lang.reflect.Method;
-import java.util.Objects;
+import java.lang.reflect.InvocationHandler
+import java.lang.reflect.Method
 
-import org.hibernate.Session;
-import org.hibernate.query.Query;
+import groovy.transform.CompileStatic
+import org.hibernate.Session
+import org.hibernate.query.Query
 
 /**
  * Invocation handler that suppresses close calls on Hibernate Sessions. Also prepares returned
@@ -31,49 +31,48 @@ import org.hibernate.query.Query;
  *
  * @see org.hibernate.Session#close
  */
-public class CloseSuppressingInvocationHandler implements InvocationHandler {
+@CompileStatic
+class CloseSuppressingInvocationHandler implements InvocationHandler {
 
-    protected final Session target;
-    protected final GrailsHibernateTemplate template;
+    protected final Session target
+    protected final GrailsHibernateTemplate template
 
-    public CloseSuppressingInvocationHandler(Session target, GrailsHibernateTemplate template) {
-        this.target = target;
-        this.template = template;
+    CloseSuppressingInvocationHandler(Session target, GrailsHibernateTemplate template) {
+        this.target = target
+        this.template = template
     }
 
     @Override
-    public Object invoke(Object proxy, Method method, Object[] args) throws Exception {
+    Object invoke(Object proxy, Method method, Object[] args) throws Exception {
         // Invocation on Session interface coming in...
 
-        switch (method.getName()) {
-            case "equals" -> {
+        switch (method.name) {
+            case 'equals':
                 // Only consider equal when proxies are identical.
-                return Objects.equals(proxy, args[0]);
-            }
-            case "hashCode" -> {
+                return Objects.equals(proxy, args[0])
+            case 'hashCode':
                 // Use hashCode of Session proxy.
-                return System.identityHashCode(proxy);
-            }
-            case "close" -> {
+                return System.identityHashCode(proxy)
+            case 'close':
                 // Handle close method: suppress, not valid.
-                return null;
-            }
-            default -> {
+                return null
+            default:
                 // do nothing
-            }
+                break
         }
 
-        Object retVal = method.invoke(target, args);
+        Object retVal = method.invoke(target, args)
 
         // If return value is a Query or Criteria, apply transaction timeout.
         // Applies to createQuery, getNamedQuery, createCriteria.
-        if (retVal instanceof org.hibernate.query.Query<?> query) {
-            template.prepareQuery(query);
+        if (retVal instanceof Query) {
+            template.prepareQuery((Query) retVal)
         }
-        if (retVal instanceof Query<?> query) {
-            template.prepareCriteria(query);
+        if (retVal instanceof Query) {
+            template.prepareCriteria((Query) retVal)
         }
 
-        return retVal;
+        return retVal
     }
+
 }

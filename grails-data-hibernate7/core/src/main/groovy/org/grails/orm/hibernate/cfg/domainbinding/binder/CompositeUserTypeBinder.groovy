@@ -16,39 +16,37 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.orm.hibernate.cfg.domainbinding.binder;
+package org.grails.orm.hibernate.cfg.domainbinding.binder
 
-import java.lang.reflect.Type;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Properties;
+import java.lang.reflect.Type
 
-import org.hibernate.boot.spi.MetadataBuildingContext;
-import org.hibernate.engine.jdbc.env.spi.JdbcEnvironment;
-import org.hibernate.mapping.BasicValue;
-import org.hibernate.mapping.Column;
-import org.hibernate.mapping.Component;
-import org.hibernate.mapping.PersistentClass;
-import org.hibernate.mapping.Property;
-import org.hibernate.mapping.Table;
-import org.hibernate.property.access.internal.PropertyAccessStrategyCompositeUserTypeImpl;
-import org.hibernate.property.access.spi.PropertyAccessStrategy;
-import org.hibernate.usertype.CompositeUserType;
-import org.jspecify.annotations.NonNull;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import groovy.transform.CompileStatic
+import org.hibernate.boot.spi.MetadataBuildingContext
+import org.hibernate.engine.jdbc.env.spi.JdbcEnvironment
+import org.hibernate.mapping.BasicValue
+import org.hibernate.mapping.Column
+import org.hibernate.mapping.Component
+import org.hibernate.mapping.PersistentClass
+import org.hibernate.mapping.Property
+import org.hibernate.mapping.Table
+import org.hibernate.property.access.internal.PropertyAccessStrategyCompositeUserTypeImpl
+import org.hibernate.property.access.spi.PropertyAccessStrategy
+import org.hibernate.usertype.CompositeUserType
+import org.jspecify.annotations.NonNull
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 
-import org.grails.orm.hibernate.cfg.ColumnConfig;
-import org.grails.orm.hibernate.cfg.GrailsHibernateUtil;
-import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
-import org.grails.orm.hibernate.cfg.PropertyConfig;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty;
-import org.grails.orm.hibernate.cfg.domainbinding.util.BackticksRemover;
-import org.grails.orm.hibernate.cfg.domainbinding.util.ColumnNameForPropertyAndPathFetcher;
-import org.grails.orm.hibernate.cfg.domainbinding.util.CompositeUserTypeColumns;
-import org.grails.orm.hibernate.cfg.domainbinding.util.CompositeUserTypeColumns.Attribute;
-import org.grails.orm.hibernate.cfg.domainbinding.util.CreateKeyForProps;
-import org.grails.orm.hibernate.cfg.domainbinding.util.DefaultColumnNameFetcher;
+import org.grails.orm.hibernate.cfg.ColumnConfig
+import org.grails.orm.hibernate.cfg.GrailsHibernateUtil
+import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy
+import org.grails.orm.hibernate.cfg.PropertyConfig
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty
+import org.grails.orm.hibernate.cfg.domainbinding.util.BackticksRemover
+import org.grails.orm.hibernate.cfg.domainbinding.util.ColumnNameForPropertyAndPathFetcher
+import org.grails.orm.hibernate.cfg.domainbinding.util.CompositeUserTypeColumns
+import org.grails.orm.hibernate.cfg.domainbinding.util.CompositeUserTypeColumns.Attribute
+import org.grails.orm.hibernate.cfg.domainbinding.util.CreateKeyForProps
+import org.grails.orm.hibernate.cfg.domainbinding.util.DefaultColumnNameFetcher
 
 /**
  * Binds a property mapped with a Hibernate {@link CompositeUserType} as a {@link Component}.
@@ -73,18 +71,18 @@ import org.grails.orm.hibernate.cfg.domainbinding.util.DefaultColumnNameFetcher;
  *
  * @since 8.0.1
  */
-@SuppressWarnings("PMD.DataflowAnomalyAnalysis")
-public class CompositeUserTypeBinder {
+@CompileStatic
+class CompositeUserTypeBinder {
 
-    private static final Logger LOG = LoggerFactory.getLogger(CompositeUserTypeBinder.class);
+    private static final Logger LOG = LoggerFactory.getLogger(CompositeUserTypeBinder)
 
-    private final MetadataBuildingContext metadataBuildingContext;
-    private final ColumnConfigToColumnBinder columnConfigToColumnBinder;
-    private final ColumnBinder columnBinder;
-    private final CreateKeyForProps createKeyForProps;
-    private final CompositeUserTypeColumns compositeUserTypeColumns;
+    private final MetadataBuildingContext metadataBuildingContext
+    private final ColumnConfigToColumnBinder columnConfigToColumnBinder
+    private final ColumnBinder columnBinder
+    private final CreateKeyForProps createKeyForProps
+    private final CompositeUserTypeColumns compositeUserTypeColumns
 
-    public CompositeUserTypeBinder(
+    CompositeUserTypeBinder(
             MetadataBuildingContext metadataBuildingContext,
             PersistentEntityNamingStrategy namingStrategy,
             JdbcEnvironment jdbcEnvironment) {
@@ -95,7 +93,7 @@ public class CompositeUserTypeBinder {
                 new CreateKeyForProps(new ColumnNameForPropertyAndPathFetcher(
                         namingStrategy, new DefaultColumnNameFetcher(namingStrategy), new BackticksRemover(),
                         metadataBuildingContext)),
-                new CompositeUserTypeColumns(namingStrategy, new BackticksRemover(), metadataBuildingContext));
+                new CompositeUserTypeColumns(namingStrategy, new BackticksRemover(), metadataBuildingContext))
     }
 
     protected CompositeUserTypeBinder(
@@ -104,11 +102,11 @@ public class CompositeUserTypeBinder {
             ColumnBinder columnBinder,
             CreateKeyForProps createKeyForProps,
             CompositeUserTypeColumns compositeUserTypeColumns) {
-        this.metadataBuildingContext = metadataBuildingContext;
-        this.columnConfigToColumnBinder = columnConfigToColumnBinder;
-        this.columnBinder = columnBinder;
-        this.createKeyForProps = createKeyForProps;
-        this.compositeUserTypeColumns = compositeUserTypeColumns;
+        this.metadataBuildingContext = metadataBuildingContext
+        this.columnConfigToColumnBinder = columnConfigToColumnBinder
+        this.columnBinder = columnBinder
+        this.createKeyForProps = createKeyForProps
+        this.compositeUserTypeColumns = compositeUserTypeColumns
     }
 
     /**
@@ -121,73 +119,74 @@ public class CompositeUserTypeBinder {
      * @throws org.hibernate.MappingException when the property is not mapped with a composite user type, or maps
      * more columns than its embeddable class has attributes
      */
-    public Component bindCompositeUserType(
+    Component bindCompositeUserType(
             @NonNull HibernatePersistentProperty property,
             HibernatePersistentProperty parentProperty,
             String path) {
-        PersistentClass owner = property.getPersistentClass();
-        CompositeUserType<?> userType = compositeUserTypeColumns.userTypeOf(property);
-        Class<? extends CompositeUserType<?>> userTypeClass = property.getCompositeUserType();
-        Class<?> embeddable = userType.embeddable();
-        PropertyConfig propertyConfig = property.getHibernateMappedForm();
-        Table table = property.getTable();
+        PersistentClass owner = property.getPersistentClass()
+        CompositeUserType<?> userType = compositeUserTypeColumns.userTypeOf(property)
+        Class<? extends CompositeUserType<?>> userTypeClass = property.getCompositeUserType()
+        Class<?> embeddable = userType.embeddable()
+        PropertyConfig propertyConfig = property.getHibernateMappedForm()
+        Table table = property.getTable()
 
-        Component component = new Component(metadataBuildingContext, owner);
+        Component component = new Component(metadataBuildingContext, owner)
         component.setRoleName(GrailsHibernateUtil.qualify(
-                property.getHibernateOwner().getJavaClass().getName(), property.getNameForPropertyAndPath(path)));
-        component.setTypeName(userTypeClass.getName());
+                property.getHibernateOwner().getJavaClass().getName(), property.getNameForPropertyAndPath(path)))
+        component.setTypeName(userTypeClass.getName())
         // The component describes the value class, as Hibernate's own binding of a composite type does: the
         // embeddable class only supplies the attributes, so whole-value queries and parameters see the value class.
-        component.setComponentClassName(userType.returnedClass().getName());
+        component.setComponentClassName(userType.returnedClass().getName())
 
-        Properties typeParams = propertyConfig.getTypeParams();
+        Properties typeParams = propertyConfig.getTypeParams()
         if (typeParams != null && !typeParams.isEmpty()) {
-            LOG.warn("Property [{}] of class [{}] sets typeParams, which Hibernate does not pass to the composite " +
-                    "user type [{}]", property.getName(), owner.getClassName(), userTypeClass.getName());
+            LOG.warn('Property [{}] of class [{}] sets typeParams, which Hibernate does not pass to the composite ' +
+                    'user type [{}]', property.getName(), owner.getClassName(), userTypeClass.getName())
         }
 
-        List<Attribute> attributes = CompositeUserTypeColumns.attributesOf(embeddable);
-        List<ColumnConfig> columnConfigs = compositeUserTypeColumns.columnConfigsOf(property, path, embeddable, attributes);
+        List<Attribute> attributes = CompositeUserTypeColumns.attributesOf(embeddable)
+        List<ColumnConfig> columnConfigs =
+                compositeUserTypeColumns.columnConfigsOf(property, path, embeddable, attributes)
 
-        List<String> attributeNames = new ArrayList<>(attributes.size());
-        List<Type> attributeTypes = new ArrayList<>(attributes.size());
-        List<Column> columns = new ArrayList<>(attributes.size());
+        List<String> attributeNames = new ArrayList<>(attributes.size())
+        List<Type> attributeTypes = new ArrayList<>(attributes.size())
+        List<Column> columns = new ArrayList<>(attributes.size())
         PropertyAccessStrategy accessStrategy =
-                new PropertyAccessStrategyCompositeUserTypeImpl(userType, attributeNames, attributeTypes);
+                new PropertyAccessStrategyCompositeUserTypeImpl(userType, attributeNames, attributeTypes)
         for (int i = 0; i < attributes.size(); i++) {
-            Attribute attribute = attributes.get(i);
-            ColumnConfig columnConfig = columnConfigs.get(i);
+            Attribute attribute = attributes.get(i)
+            ColumnConfig columnConfig = columnConfigs.get(i)
 
-            BasicValue value = new BasicValue(metadataBuildingContext, table);
-            value.setTypeUsingReflection(embeddable.getName(), attribute.name());
+            BasicValue value = new BasicValue(metadataBuildingContext, table)
+            value.setTypeUsingReflection(embeddable.getName(), attribute.name())
 
-            Column column = new Column();
-            columnConfigToColumnBinder.bindColumnConfigToColumn(column, columnConfig, propertyConfig);
+            Column column = new Column()
+            columnConfigToColumnBinder.bindColumnConfigToColumn(column, columnConfig, propertyConfig)
             // The column holds the attribute, so its constraints come from its own configuration and the type of
             // the attribute, not from the constraints of the property, which describe the whole value
             columnBinder.bindColumnWithoutUniqueness(property, parentProperty, column, columnConfig, path, table,
-                    userTypeClass.getName(), attribute.rawType());
+                    userTypeClass.getName(), attribute.rawType())
             if (table != null) {
-                table.addColumn(column);
+                table.addColumn(column)
             }
-            value.addColumn(column);
-            columns.add(column);
+            value.addColumn(column)
+            columns.add(column)
 
-            Property attributeProperty = new Property();
-            attributeProperty.setName(attribute.name());
-            attributeProperty.setValue(value);
-            attributeProperty.setOptional(column.isNullable());
-            attributeProperty.setPropertyAccessStrategy(accessStrategy);
-            component.addProperty(attributeProperty);
+            Property attributeProperty = new Property()
+            attributeProperty.setName(attribute.name())
+            attributeProperty.setValue(value)
+            attributeProperty.setOptional(column.isNullable())
+            attributeProperty.setPropertyAccessStrategy(accessStrategy)
+            component.addProperty(attributeProperty)
 
-            attributeNames.add(attribute.name());
-            attributeTypes.add(attribute.type());
+            attributeNames.add(attribute.name())
+            attributeTypes.add(attribute.type())
         }
         if (table != null) {
             // The bound columns themselves, so that the key keeps their quoting and case
-            createKeyForProps.createKeyForColumns(property, path, table, columns);
+            createKeyForProps.createKeyForColumns(property, path, table, columns)
         }
-        component.sortProperties();
-        return component;
+        component.sortProperties()
+        return component
     }
 }

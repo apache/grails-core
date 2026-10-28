@@ -16,113 +16,114 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.orm.hibernate.query;
+package org.grails.orm.hibernate.query
 
-import java.util.Collection;
-import java.util.List;
-
-import jakarta.persistence.LockModeType;
-
-import org.hibernate.query.QueryFlushMode;
+import groovy.transform.CompileStatic
+import groovy.transform.PackageScope
+import jakarta.persistence.LockModeType
+import org.hibernate.query.QueryFlushMode
 
 /** {@link HqlQueryDelegate} for HQL SELECT queries backed by {@link org.hibernate.query.Query}. */
+@CompileStatic
+@PackageScope
 final class SelectQueryDelegate implements HqlQueryDelegate {
 
-    private final transient org.hibernate.query.Query<?> query;
+    private final transient org.hibernate.query.Query<?> query
 
-    SelectQueryDelegate(org.hibernate.query.Query<?> query) {
-        this.query = query;
+    @PackageScope SelectQueryDelegate(org.hibernate.query.Query<?> query) {
+        this.query = query
     }
 
     @Override
-    public void setTimeout(int timeout) {
-        query.setTimeout(timeout);
+    void setTimeout(int timeout) {
+        query.setTimeout(timeout)
     }
 
     @Override
-    public void setQueryFlushMode(QueryFlushMode mode) {
-        query.setQueryFlushMode(mode);
+    void setQueryFlushMode(QueryFlushMode mode) {
+        query.setQueryFlushMode(mode)
     }
 
     @Override
-    public void setParameter(String name, Object value) {
-        query.setParameter(name, value);
+    void setParameter(String name, Object value) {
+        query.setParameter(name, value)
     }
 
     @Override
-    public <T> void setParameter(String name, T value, Class<T> type) {
-        query.setParameter(name, value, type);
+    <T> void setParameter(String name, T value, Class<T> type) {
+        query.setParameter(name, value, type)
     }
 
     @Override
-    public void setParameter(int position, Object value) {
-        query.setParameter(position, value);
+    void setParameter(int position, Object value) {
+        query.setParameter(position, value)
     }
 
     @Override
-    public <T> void setParameter(int position, T value, Class<T> type) {
-        query.setParameter(position, value, type);
+    <T> void setParameter(int position, T value, Class<T> type) {
+        query.setParameter(position, value, type)
     }
 
     @Override
-    public void setHint(String hintName, Object value) {
-        query.setHint(hintName, value);
+    void setHint(String hintName, Object value) {
+        query.setHint(hintName, value)
     }
 
     @Override
-    public void setMaxResults(int n) {
-        query.setMaxResults(n);
+    void setMaxResults(int n) {
+        query.setMaxResults(n)
     }
 
     @Override
-    public void setFirstResult(int n) {
-        query.setFirstResult(n);
+    void setFirstResult(int n) {
+        query.setFirstResult(n)
     }
 
     @Override
-    public void setCacheable(boolean b) {
-        query.setCacheable(b);
+    void setCacheable(boolean b) {
+        query.setCacheable(b)
     }
 
     @Override
-    public void setFetchSize(int n) {
-        query.setFetchSize(n);
+    void setFetchSize(int n) {
+        query.setFetchSize(n)
     }
 
     @Override
-    public void setReadOnly(boolean b) {
-        query.setReadOnly(b);
+    void setReadOnly(boolean b) {
+        query.setReadOnly(b)
     }
 
     @Override
-    public void setLockMode(LockModeType lockModeType) {
-        query.setLockMode(lockModeType);
+    void setLockMode(LockModeType lockModeType) {
+        query.setLockMode(lockModeType)
     }
 
     @Override
-    public void setParameterList(String name, Collection<?> values) {
-        query.setParameterList(name, values);
+    void setParameterList(String name, Collection<?> values) {
+        query.setParameterList(name, values)
     }
 
     @Override
-    public void setParameterList(String name, Object[] values) {
-        query.setParameterList(name, values);
+    void setParameterList(String name, Object[] values) {
+        query.setParameterList(name, values)
     }
 
     @Override
-    @SuppressWarnings("rawtypes")
-    public List list() {
-        return query.list();
+    @SuppressWarnings('rawtypes')
+    List list() {
+        return query.list()
     }
 
     @Override
-    public int executeUpdate() {
+    int executeUpdate() {
         throw new UnsupportedOperationException(
-                "SELECT query cannot be used for executeUpdate(); use a MutationQuery instead");
+                'SELECT query cannot be used for executeUpdate(); use a MutationQuery instead')
     }
 
     @Override
-    public org.hibernate.query.Query<?> selectQuery() {
-        return query;
+    org.hibernate.query.Query<?> selectQuery() {
+        return query
     }
+
 }

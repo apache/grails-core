@@ -16,38 +16,42 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.orm.hibernate.cfg.domainbinding.secondpass;
+package org.grails.orm.hibernate.cfg.domainbinding.secondpass
 
-import org.hibernate.boot.spi.MetadataBuildingContext;
-import org.hibernate.mapping.Collection;
-import org.hibernate.mapping.DependantValue;
-import org.hibernate.mapping.KeyValue;
+import groovy.transform.CompileStatic
+import org.hibernate.boot.spi.MetadataBuildingContext
+import org.hibernate.mapping.Collection
+import org.hibernate.mapping.DependantValue
+import org.hibernate.mapping.KeyValue
 
 /** Creates primary key value for collection. */
-public class PrimaryKeyValueCreator {
+@CompileStatic
+class PrimaryKeyValueCreator {
 
-    private final MetadataBuildingContext metadataBuildingContext;
+    private final MetadataBuildingContext metadataBuildingContext
 
-    public PrimaryKeyValueCreator(MetadataBuildingContext metadataBuildingContext) {
-        this.metadataBuildingContext = metadataBuildingContext;
+    PrimaryKeyValueCreator(MetadataBuildingContext metadataBuildingContext) {
+        this.metadataBuildingContext = metadataBuildingContext
     }
 
-    public DependantValue createPrimaryKeyValue(Collection collection) {
-        KeyValue keyValue;
-        String propertyRef = collection.getReferencedPropertyName();
+    DependantValue createPrimaryKeyValue(Collection collection) {
+        KeyValue keyValue
+        String propertyRef = collection.referencedPropertyName
         // this is to support mapping by a property
         if (propertyRef == null) {
-            keyValue = collection.getOwner().getIdentifier();
-        } else {
-            keyValue = (KeyValue) collection.getOwner().getProperty(propertyRef).getValue();
+            keyValue = collection.owner.identifier
+        }
+        else {
+            keyValue = (KeyValue) collection.owner.getProperty(propertyRef).value
         }
 
-        DependantValue key = new DependantValue(metadataBuildingContext, collection.getCollectionTable(), keyValue);
-        key.setTypeName(null);
-        key.setNullable(true);
-        key.setUpdateable(true);
+        DependantValue key = new DependantValue(metadataBuildingContext, collection.collectionTable, keyValue)
+        key.typeName = null
+        key.nullable = true
+        key.updateable = true
 
-        key.setSorted(collection.isSorted());
-        return key;
+        key.sorted = collection.isSorted()
+        return key
     }
+
 }

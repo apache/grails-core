@@ -16,43 +16,46 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.orm.hibernate.cfg.domainbinding.secondpass;
+package org.grails.orm.hibernate.cfg.domainbinding.secondpass
 
-import java.util.Optional;
+import groovy.transform.CompileStatic
+import org.hibernate.mapping.DependantValue
 
-import org.hibernate.mapping.DependantValue;
+import org.grails.orm.hibernate.cfg.HibernateCompositeIdentity
+import org.grails.orm.hibernate.cfg.domainbinding.binder.CompositeIdentifierToManyToOneBinder
+import org.grails.orm.hibernate.cfg.domainbinding.binder.SimpleValueBinder
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty
 
-import org.grails.orm.hibernate.cfg.HibernateCompositeIdentity;
-import org.grails.orm.hibernate.cfg.domainbinding.binder.CompositeIdentifierToManyToOneBinder;
-import org.grails.orm.hibernate.cfg.domainbinding.binder.SimpleValueBinder;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty;
-
-import static org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBinder.EMPTY_PATH;
+import static org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBinder.EMPTY_PATH
 
 /** Binds a dependent key value for collection associations. */
-public class DependentKeyValueBinder {
+@CompileStatic
+class DependentKeyValueBinder {
 
-    private final SimpleValueBinder simpleValueBinder;
-    private final CompositeIdentifierToManyToOneBinder compositeIdentifierToManyToOneBinder;
+    private final SimpleValueBinder simpleValueBinder
+    private final CompositeIdentifierToManyToOneBinder compositeIdentifierToManyToOneBinder
 
-    public DependentKeyValueBinder(
+    DependentKeyValueBinder(
             SimpleValueBinder simpleValueBinder,
             CompositeIdentifierToManyToOneBinder compositeIdentifierToManyToOneBinder) {
-        this.simpleValueBinder = simpleValueBinder;
-        this.compositeIdentifierToManyToOneBinder = compositeIdentifierToManyToOneBinder;
+        this.simpleValueBinder = simpleValueBinder
+        this.compositeIdentifierToManyToOneBinder = compositeIdentifierToManyToOneBinder
     }
 
-    public void bind(HibernateToManyProperty property, DependantValue key) {
-        GrailsHibernatePersistentEntity refDomainClass = property.getHibernateOwner();
+    void bind(HibernateToManyProperty property, DependantValue key) {
+        GrailsHibernatePersistentEntity refDomainClass = property.hibernateOwner
 
         Optional<HibernateCompositeIdentity> compositeIdentity = property.supportsJoinColumnMapping() ?
-                refDomainClass.getHibernateCompositeIdentity() :
-                Optional.empty();
+                refDomainClass.hibernateCompositeIdentity :
+                Optional.empty()
 
         compositeIdentity.ifPresentOrElse(
-                ci -> compositeIdentifierToManyToOneBinder.bindCompositeIdentifierToManyToOne(
-                        property, key, ci, refDomainClass, EMPTY_PATH),
-                () -> simpleValueBinder.bindSimpleValue(property, null, key, EMPTY_PATH));
+                { HibernateCompositeIdentity ci ->
+                    compositeIdentifierToManyToOneBinder.bindCompositeIdentifierToManyToOne(
+                            property, key, ci, refDomainClass, EMPTY_PATH)
+                },
+                { -> simpleValueBinder.bindSimpleValue(property, null, key, EMPTY_PATH) })
     }
+
 }

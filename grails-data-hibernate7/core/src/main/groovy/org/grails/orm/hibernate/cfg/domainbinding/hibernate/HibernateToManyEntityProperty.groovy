@@ -16,24 +16,27 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.orm.hibernate.cfg.domainbinding.hibernate;
+package org.grails.orm.hibernate.cfg.domainbinding.hibernate
 
-import org.hibernate.MappingException;
-import org.hibernate.mapping.PersistentClass;
+import groovy.transform.CompileStatic
+import org.hibernate.MappingException
+import org.hibernate.mapping.PersistentClass
 
 /**
  * Marker interface for Hibernate Collections
  */
-public interface HibernateToManyEntityProperty extends HibernateToManyProperty {
+@CompileStatic
+interface HibernateToManyEntityProperty extends HibernateToManyProperty {
 
     @Override
-    HibernatePersistentEntity getHibernateAssociatedEntity();
+    HibernatePersistentEntity getHibernateAssociatedEntity()
 
     default PersistentClass getAssociatedClass() {
-        PersistentClass associatedClass = getHibernateAssociatedEntity().getPersistentClass();
+        PersistentClass associatedClass = getHibernateAssociatedEntity().persistentClass
         if (associatedClass == null) {
-            throw new MappingException("Association [" + getName() + "] has no associated class");
+            throw new MappingException("Association [${name}] has no associated class")
         }
-        return associatedClass;
+        return associatedClass
     }
+
 }

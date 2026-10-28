@@ -16,34 +16,39 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.orm.hibernate.cfg.domainbinding.util;
+package org.grails.orm.hibernate.cfg.domainbinding.util
 
-import org.grails.datastore.mapping.model.PersistentProperty;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToOneProperty;
+import groovy.transform.CompileStatic
+
+import org.grails.datastore.mapping.model.PersistentProperty
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToOneProperty
 
 // each property may consist of one or many columns (due to composite ids) so in order to get the
 // number of columns required for a column key we have to perform the calculation here
-@SuppressWarnings("PMD.DataflowAnomalyAnalysis")
-public class ForeignKeyColumnCountCalculator {
+@CompileStatic
+class ForeignKeyColumnCountCalculator {
 
-    public int calculateForeignKeyColumnCount(GrailsHibernatePersistentEntity refDomainClass, String... propertyNames) {
-        int expectedForeignKeyColumnLength = 0;
+    int calculateForeignKeyColumnCount(GrailsHibernatePersistentEntity refDomainClass, String... propertyNames) {
+        int expectedForeignKeyColumnLength = 0
         for (String propertyName : propertyNames) {
-            HibernatePersistentProperty referencedProperty = refDomainClass.getHibernatePropertyByName(propertyName);
-            if (referencedProperty instanceof HibernateToOneProperty toOne) {
+            HibernatePersistentProperty referencedProperty = refDomainClass.getHibernatePropertyByName(propertyName)
+            if (referencedProperty instanceof HibernateToOneProperty) {
                 PersistentProperty<?>[] compositeIdentity =
-                        toOne.getAssociatedEntity().getCompositeIdentity();
+                        ((HibernateToOneProperty) referencedProperty).associatedEntity.compositeIdentity
                 if (compositeIdentity != null) {
-                    expectedForeignKeyColumnLength += compositeIdentity.length;
-                } else {
-                    expectedForeignKeyColumnLength++;
+                    expectedForeignKeyColumnLength += compositeIdentity.length
                 }
-            } else {
-                expectedForeignKeyColumnLength++;
+                else {
+                    expectedForeignKeyColumnLength++
+                }
+            }
+            else {
+                expectedForeignKeyColumnLength++
             }
         }
-        return expectedForeignKeyColumnLength;
+        return expectedForeignKeyColumnLength
     }
+
 }

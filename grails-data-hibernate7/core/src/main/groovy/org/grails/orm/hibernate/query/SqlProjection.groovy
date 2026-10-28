@@ -16,15 +16,13 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.orm.hibernate.query;
+package org.grails.orm.hibernate.query
 
-import java.util.ArrayList;
-import java.util.List;
+import groovy.transform.CompileStatic
+import org.hibernate.type.BasicTypeReference
+import org.hibernate.type.Type
 
-import org.hibernate.type.BasicTypeReference;
-import org.hibernate.type.Type;
-
-import org.grails.datastore.mapping.query.Query;
+import org.grails.datastore.mapping.query.Query
 
 /**
  * Projection that selects the value of a native SQL expression, created by {@code sqlProjection} or
@@ -37,12 +35,13 @@ import org.grails.datastore.mapping.query.Query;
  *
  * @since 8.0.1
  */
-public class SqlProjection extends Query.Projection {
+@CompileStatic
+class SqlProjection extends Query.Projection {
 
-    private final String sql;
-    private final String columnAlias;
-    private final Object declaredType;
-    private final Class<?> type;
+    private final String sql
+    private final String columnAlias
+    private final Object declaredType
+    private final Class<?> type
 
     /**
      * @param sql the SQL expression of the projected column, without its column alias
@@ -51,35 +50,35 @@ public class SqlProjection extends Query.Projection {
      *     {@code org.hibernate.type.Type}, a Java class or {@code null} for a value of any type
      * @throws IllegalArgumentException if the SQL is empty or the type is none of these
      */
-    public SqlProjection(String sql, String columnAlias, Object type) {
+    SqlProjection(String sql, String columnAlias, Object type) {
         if (sql == null || sql.isBlank()) {
-            throw new IllegalArgumentException("The SQL of a sqlProjection must not be empty");
+            throw new IllegalArgumentException('The SQL of a sqlProjection must not be empty')
         }
-        this.sql = sql;
-        this.columnAlias = columnAlias;
-        this.declaredType = type;
-        this.type = javaType(type);
+        this.sql = sql
+        this.columnAlias = columnAlias
+        this.declaredType = type
+        this.type = javaType(type)
     }
 
     /**
      * Returns the SQL expression of the projected column, without its column alias.
      */
-    public String getSql() {
-        return sql;
+    String getSql() {
+        return sql
     }
 
     /**
      * Returns the alias of the projected column, which names it in an {@code order} of the criteria query.
      */
-    public String getColumnAlias() {
-        return columnAlias;
+    String getColumnAlias() {
+        return columnAlias
     }
 
     /**
      * Returns the Java type of the projected value.
      */
-    public Class<?> getType() {
-        return type;
+    Class<?> getType() {
+        return type
     }
 
     /**
@@ -87,8 +86,8 @@ public class SqlProjection extends Query.Projection {
      * constant or an {@code org.hibernate.type.Type}, which also tell how the value is read, a Java class or
      * {@code null}.
      */
-    public Object getDeclaredType() {
-        return declaredType;
+    Object getDeclaredType() {
+        return declaredType
     }
 
     /**
@@ -105,25 +104,24 @@ public class SqlProjection extends Query.Projection {
      * @return the projection of each column
      * @throws IllegalArgumentException if the number of columns, aliases and types differ
      */
-    public static List<SqlProjection> of(String sql, List<String> columnAliases, List<?> types, SqlSyntax syntax) {
+    static List<SqlProjection> of(String sql, List<String> columnAliases, List<?> types, SqlSyntax syntax) {
         if (sql == null || sql.isBlank()) {
-            throw new IllegalArgumentException("The SQL of a sqlProjection must not be empty");
+            throw new IllegalArgumentException('The SQL of a sqlProjection must not be empty')
         }
         if (columnAliases == null || types == null || columnAliases.size() != types.size()) {
-            throw new IllegalArgumentException("A sqlProjection needs as many types as column aliases: " + sql);
+            throw new IllegalArgumentException("A sqlProjection needs as many types as column aliases: ${sql}".toString())
         }
-        List<String> columns = SqlText.of(sql, syntax).splitTopLevel(',');
+        List<String> columns = SqlText.of(sql, syntax).splitTopLevel(',' as char)
         if (columns.size() != columnAliases.size()) {
-            throw new IllegalArgumentException("The SQL of a sqlProjection selects " + columns.size() +
-                    " columns but " + columnAliases.size() + " column aliases were given: " + sql);
+            throw new IllegalArgumentException("The SQL of a sqlProjection selects ${columns.size()} columns but ${columnAliases.size()} column aliases were given: ${sql}".toString())
         }
-        List<SqlProjection> projections = new ArrayList<>(columns.size());
+        List<SqlProjection> projections = new ArrayList<>(columns.size())
         for (int i = 0; i < columns.size(); i++) {
-            String alias = columnAliases.get(i);
-            String column = alias == null ? columns.get(i) : SqlText.of(columns.get(i), syntax).withoutTrailingAlias(alias);
-            projections.add(new SqlProjection(column, alias, types.get(i)));
+            String alias = columnAliases.get(i)
+            String column = alias == null ? columns.get(i) : SqlText.of(columns.get(i), syntax).withoutTrailingAlias(alias)
+            projections.add(new SqlProjection(column, alias, types.get(i)))
         }
-        return projections;
+        return projections
     }
 
     /**
@@ -132,18 +130,17 @@ public class SqlProjection extends Query.Projection {
      */
     static Class<?> javaType(Object type) {
         if (type == null) {
-            return Object.class;
+            return Object
         }
-        if (type instanceof Class<?> javaClass) {
-            return javaClass;
+        if (type instanceof Class<?>) {
+            return (Class<?>) type
         }
-        if (type instanceof BasicTypeReference<?> reference) {
-            return reference.getJavaType();
+        if (type instanceof BasicTypeReference<?>) {
+            return ((BasicTypeReference<?>) type).javaType
         }
-        if (type instanceof Type hibernateType) {
-            return hibernateType.getReturnedClass();
+        if (type instanceof Type) {
+            return ((Type) type).returnedClass
         }
-        throw new IllegalArgumentException("The type of a sqlProjection must be a StandardBasicTypes constant, " +
-                "an org.hibernate.type.Type or a class, not " + type.getClass().getName());
+        throw new IllegalArgumentException("The type of a sqlProjection must be a StandardBasicTypes constant, an org.hibernate.type.Type or a class, not ${type.class.name}".toString())
     }
 }

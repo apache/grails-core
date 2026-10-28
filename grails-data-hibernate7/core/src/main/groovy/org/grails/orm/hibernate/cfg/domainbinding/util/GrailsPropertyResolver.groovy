@@ -16,15 +16,17 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.orm.hibernate.cfg.domainbinding.util;
+package org.grails.orm.hibernate.cfg.domainbinding.util
 
-import org.hibernate.MappingException;
-import org.hibernate.mapping.Component;
-import org.hibernate.mapping.PersistentClass;
-import org.hibernate.mapping.Property;
+import groovy.transform.CompileStatic
+import org.hibernate.MappingException
+import org.hibernate.mapping.Component
+import org.hibernate.mapping.PersistentClass
+import org.hibernate.mapping.Property
 
 /** Utility class for resolving Grails properties from PersistentClass. */
-public class GrailsPropertyResolver {
+@CompileStatic
+class GrailsPropertyResolver {
 
     /**
      * Retrieves a property from a PersistentClass, with a fallback for composite primary keys.
@@ -34,15 +36,17 @@ public class GrailsPropertyResolver {
      * @return The resolved Property.
      * @throws MappingException if the property cannot be found.
      */
-    public Property getProperty(PersistentClass associatedClass, String propertyName) throws MappingException {
+    Property getProperty(PersistentClass associatedClass, String propertyName) throws MappingException {
         try {
-            return associatedClass.getProperty(propertyName);
-        } catch (MappingException e) {
+            return associatedClass.getProperty(propertyName)
+        }
+        catch (MappingException e) {
             // maybe it's squirreled away in a composite primary key
-            if (associatedClass.getKey() instanceof Component) {
-                return ((Component) associatedClass.getKey()).getProperty(propertyName);
+            if (associatedClass.key instanceof Component) {
+                return ((Component) associatedClass.key).getProperty(propertyName)
             }
-            throw e;
+            throw e
         }
     }
+
 }

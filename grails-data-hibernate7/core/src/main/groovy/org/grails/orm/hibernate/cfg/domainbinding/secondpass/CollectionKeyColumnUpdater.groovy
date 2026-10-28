@@ -16,13 +16,13 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.orm.hibernate.cfg.domainbinding.secondpass;
+package org.grails.orm.hibernate.cfg.domainbinding.secondpass
 
-import java.util.Objects;
+import groovy.transform.CompileStatic
+import org.hibernate.mapping.Column
+import org.hibernate.mapping.DependantValue
 
-import org.hibernate.mapping.DependantValue;
-
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty
 
 /**
  * Makes the columns of a collection key nullable and the key updatable.
@@ -34,20 +34,25 @@ import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyPrope
  * {@code failOnError}. When two of them share a join table, the uniqueness of its rows is the business of
  * {@link SharedJoinTableUniqueKeyBinder}.</p>
  */
-public class CollectionKeyColumnUpdater {
+@CompileStatic
+class CollectionKeyColumnUpdater {
 
-    private final CollectionKeyBinder collectionKeyBinder;
+    private final CollectionKeyBinder collectionKeyBinder
 
     /** Creates a new {@link CollectionKeyColumnUpdater} instance. */
-    public CollectionKeyColumnUpdater(CollectionKeyBinder collectionKeyBinder) {
-        this.collectionKeyBinder = collectionKeyBinder;
+    CollectionKeyColumnUpdater(CollectionKeyBinder collectionKeyBinder) {
+        this.collectionKeyBinder = collectionKeyBinder
     }
 
     /** Creates the key, sets it on the collection, and makes its columns nullable and the key updatable. */
-    public void bind(HibernateToManyProperty property) {
-        DependantValue key = collectionKeyBinder.bind(property);
-        key.getColumns().stream().filter(Objects::nonNull).forEach(column -> column.setNullable(true));
-        key.setUpdateable(true);
+    void bind(HibernateToManyProperty property) {
+        DependantValue key = collectionKeyBinder.bind(property)
+        for (Column column : key.columns) {
+            if (column != null) {
+                column.nullable = true
+            }
+        }
+        key.updateable = true
     }
 
 }

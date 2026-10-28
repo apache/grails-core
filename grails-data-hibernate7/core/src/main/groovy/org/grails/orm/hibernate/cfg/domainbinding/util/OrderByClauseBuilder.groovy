@@ -16,110 +16,119 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.orm.hibernate.cfg.domainbinding.util;
+package org.grails.orm.hibernate.cfg.domainbinding.util
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Locale;
-import java.util.stream.Collectors;
+import groovy.transform.CompileStatic
+import groovy.transform.PackageScope
+import org.hibernate.boot.model.internal.BinderHelper
+import org.hibernate.mapping.PersistentClass
+import org.hibernate.mapping.Property
+import org.hibernate.mapping.SingleTableSubclass
+import org.hibernate.mapping.Selectable
 
-import org.hibernate.boot.model.internal.BinderHelper;
-import org.hibernate.mapping.PersistentClass;
-import org.hibernate.mapping.Property;
-import org.hibernate.mapping.SingleTableSubclass;
-
-import org.grails.datastore.mapping.model.DatastoreConfigurationException;
+import org.grails.datastore.mapping.model.DatastoreConfigurationException
 
 /** Utility class to build SQL order by clauses from HQL-style order by strings. */
-@SuppressWarnings("PMD.DataflowAnomalyAnalysis")
-public class OrderByClauseBuilder {
+@CompileStatic
+class OrderByClauseBuilder {
 
-    public String buildOrderByClause(
+    String buildOrderByClause(
             String hqlOrderBy, PersistentClass associatedClass, String role, String defaultOrder) {
         if (hqlOrderBy == null) {
-            return null;
+            return null
         }
 
         if (hqlOrderBy.isEmpty()) {
-            return associatedClass.getIdentifier().getSelectables().stream()
-                    .map(selectable -> selectable.getText() + " asc")
-                    .collect(Collectors.joining(", "));
+            List<String> parts = []
+            for (Selectable selectable : associatedClass.identifier.selectables) {
+                parts.add(selectable.text + ' asc')
+            }
+            return parts.join(', ')
         }
 
-        List<SortEntry> entries = parseSortEntries(hqlOrderBy, role, defaultOrder);
+        List<SortEntry> entries = parseSortEntries(hqlOrderBy, role, defaultOrder)
 
-        return entries.stream()
-                .map(entry -> buildPropertyOrderBy(entry, associatedClass))
-                .collect(Collectors.joining(", "));
+        List<String> parts = []
+        for (SortEntry entry : entries) {
+            parts.add(buildPropertyOrderBy(entry, associatedClass))
+        }
+        return parts.join(', ')
     }
 
     private List<SortEntry> parseSortEntries(String hqlOrderBy, String role, String defaultOrder) {
-        String[] tokens = hqlOrderBy.split("[ ,]+");
-        List<SortEntry> entries = new ArrayList<>();
-        SortEntry currentEntry = null;
+        String[] tokens = hqlOrderBy.split('[ ,]+')
+        List<SortEntry> entries = new ArrayList<>()
+        SortEntry currentEntry = null
 
         for (String token : tokens) {
-            if (token.isEmpty()) continue;
+            if (token.isEmpty()) {
+                continue
+            }
 
             if (isDirectionToken(token)) {
                 if (currentEntry == null || currentEntry.direction != null) {
                     throw new DatastoreConfigurationException(
-                            "Error while parsing sort clause: " + hqlOrderBy + " (" + role + ")");
+                            "Error while parsing sort clause: ${hqlOrderBy} (${role})".toString())
                 }
-                currentEntry.direction = token.toLowerCase(Locale.ROOT);
-            } else {
+                currentEntry.@direction = token.toLowerCase(Locale.ROOT)
+            }
+            else {
                 if (currentEntry != null && currentEntry.direction == null) {
-                    currentEntry.direction = "asc";
+                    currentEntry.@direction = 'asc'
                 }
-                currentEntry = new SortEntry(token);
-                entries.add(currentEntry);
+                currentEntry = new SortEntry(token)
+                entries.add(currentEntry)
             }
         }
 
         if (currentEntry != null && currentEntry.direction == null) {
-            currentEntry.direction = defaultOrder;
+            currentEntry.@direction = defaultOrder
         }
 
-        return entries;
+        return entries
     }
 
     private String buildPropertyOrderBy(SortEntry entry, PersistentClass associatedClass) {
-        Property p = BinderHelper.findPropertyByName(associatedClass, entry.property);
+        Property p = BinderHelper.findPropertyByName(associatedClass, entry.property)
         if (p == null) {
             throw new DatastoreConfigurationException(
-                    "property from sort clause not found: " + associatedClass.getEntityName() + "." + entry.property);
+                    "property from sort clause not found: ${associatedClass.entityName}.${entry.property}".toString())
         }
 
-        String tablePrefix = getTablePrefix(p, associatedClass);
-        String direction = entry.direction;
+        String tablePrefix = getTablePrefix(p, associatedClass)
+        String direction = entry.direction
 
-        return p.getSelectables().stream()
-                .map(selectable -> tablePrefix + selectable.getText() + " " + direction)
-                .collect(Collectors.joining(", "));
+        List<String> parts = []
+        for (Selectable selectable : p.selectables) {
+            parts.add(tablePrefix + selectable.text + ' ' + direction)
+        }
+        return parts.join(', ')
     }
 
     private String getTablePrefix(Property p, PersistentClass associatedClass) {
-        PersistentClass pc = p.getPersistentClass();
+        PersistentClass pc = p.persistentClass
         if (pc == null ||
-                pc.equals(associatedClass) ||
+                pc == associatedClass ||
                 (associatedClass instanceof SingleTableSubclass &&
-                        pc.getMappedClass().isAssignableFrom(associatedClass.getMappedClass()))) {
-            return "";
+                        pc.mappedClass.isAssignableFrom(associatedClass.mappedClass))) {
+            return ''
         }
-        return pc.getTable().getQuotedName() + ".";
+        return pc.table.quotedName + '.'
     }
 
     private boolean isDirectionToken(String token) {
-        return "asc".equalsIgnoreCase(token) || "desc".equalsIgnoreCase(token);
+        return 'asc'.equalsIgnoreCase(token) || 'desc'.equalsIgnoreCase(token)
     }
 
     private static class SortEntry {
 
-        final String property;
-        String direction;
+        @PackageScope final String property
+        @PackageScope String direction
 
         SortEntry(String property) {
-            this.property = property;
+            this.property = property
         }
+
     }
+
 }

@@ -16,36 +16,37 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.orm.hibernate.cfg.domainbinding.binder;
+package org.grails.orm.hibernate.cfg.domainbinding.binder
 
-import java.util.stream.Stream;
+import java.util.stream.Stream
 
-import org.hibernate.boot.spi.InFlightMetadataCollector;
-import org.hibernate.mapping.RootClass;
-import org.hibernate.mapping.Subclass;
-import org.jspecify.annotations.NonNull;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import groovy.transform.CompileStatic
+import org.hibernate.boot.spi.InFlightMetadataCollector
+import org.hibernate.mapping.RootClass
+import org.hibernate.mapping.Subclass
+import org.jspecify.annotations.NonNull
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 
-import org.grails.orm.hibernate.cfg.MappingCacheHolder;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentEntity;
-import org.grails.orm.hibernate.cfg.domainbinding.util.MultiTenantFilterBinder;
+import org.grails.orm.hibernate.cfg.MappingCacheHolder
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentEntity
+import org.grails.orm.hibernate.cfg.domainbinding.util.MultiTenantFilterBinder
 
 /** Binder for root classes. */
-@SuppressWarnings("PMD.DataflowAnomalyAnalysis")
-public class RootBinder {
+@CompileStatic
+class RootBinder {
 
-    private static final Logger LOG = LoggerFactory.getLogger(RootBinder.class);
+    private static final Logger LOG = LoggerFactory.getLogger(RootBinder)
 
-    private final String dataSourceName;
-    private final MultiTenantFilterBinder multiTenantFilterBinder;
-    private final SubClassBinder subClassBinder;
-    private final RootPersistentClassCommonValuesBinder rootPersistentClassCommonValuesBinder;
-    private final DiscriminatorPropertyBinder discriminatorPropertyBinder;
-    private final InFlightMetadataCollector mappings;
-    private final MappingCacheHolder mappingCacheHolder;
+    private final String dataSourceName
+    private final MultiTenantFilterBinder multiTenantFilterBinder
+    private final SubClassBinder subClassBinder
+    private final RootPersistentClassCommonValuesBinder rootPersistentClassCommonValuesBinder
+    private final DiscriminatorPropertyBinder discriminatorPropertyBinder
+    private final InFlightMetadataCollector mappings
+    private final MappingCacheHolder mappingCacheHolder
 
-    public RootBinder(
+    RootBinder(
             String dataSourceName,
             MultiTenantFilterBinder multiTenantFilterBinder,
             SubClassBinder subClassBinder,
@@ -53,13 +54,13 @@ public class RootBinder {
             DiscriminatorPropertyBinder discriminatorPropertyBinder,
             InFlightMetadataCollector mappings,
             MappingCacheHolder mappingCacheHolder) {
-        this.dataSourceName = dataSourceName;
-        this.multiTenantFilterBinder = multiTenantFilterBinder;
-        this.subClassBinder = subClassBinder;
-        this.rootPersistentClassCommonValuesBinder = rootPersistentClassCommonValuesBinder;
-        this.discriminatorPropertyBinder = discriminatorPropertyBinder;
-        this.mappings = mappings;
-        this.mappingCacheHolder = mappingCacheHolder;
+        this.dataSourceName = dataSourceName
+        this.multiTenantFilterBinder = multiTenantFilterBinder
+        this.subClassBinder = subClassBinder
+        this.rootPersistentClassCommonValuesBinder = rootPersistentClassCommonValuesBinder
+        this.discriminatorPropertyBinder = discriminatorPropertyBinder
+        this.mappings = mappings
+        this.mappingCacheHolder = mappingCacheHolder
     }
 
     /**
@@ -68,38 +69,40 @@ public class RootBinder {
      *
      * @param entity The Grails domain class
      */
-    public void bindRoot(@NonNull HibernatePersistentEntity entity) {
-        if (mappings.getEntityBinding(entity.getName()) != null) {
+    void bindRoot(@NonNull HibernatePersistentEntity entity) {
+        if (mappings.getEntityBinding(entity.name) != null) {
             if (LOG.isWarnEnabled()) {
-                LOG.warn("[RootBinder] Class [{}] is already mapped, skipping.. ", entity.getName());
+                LOG.warn('[RootBinder] Class [{}] is already mapped, skipping.. ', entity.name)
             }
-            return;
+            return
         }
 
-        var children = entity.getChildEntities(dataSourceName);
-        RootClass root = rootPersistentClassCommonValuesBinder.bindRoot(entity);
+        Collection<HibernatePersistentEntity> children = entity.getChildEntities(dataSourceName)
+        RootClass root = rootPersistentClassCommonValuesBinder.bindRoot(entity)
 
         if (!children.isEmpty() && entity.isTablePerHierarchy()) {
-            discriminatorPropertyBinder.bindDiscriminatorProperty(root);
+            discriminatorPropertyBinder.bindDiscriminatorProperty(root)
         }
 
         // bind the sub classes
-        children.stream().flatMap(sub -> getSubclassStream(sub, root)).forEach(this::addSubclass);
+        children.stream().flatMap(sub -> getSubclassStream(sub, root)).forEach(subClass -> addSubclass(subClass))
 
-        multiTenantFilterBinder.bind(entity, root);
+        multiTenantFilterBinder.bind(entity, root)
 
-        mappings.addEntityBinding(root);
+        mappings.addEntityBinding(root)
     }
 
     private void addSubclass(Subclass subClass) {
         // Hibernate resolves a class's subclasses through its direct superclass, so a nested subclass
         // must be added to its own parent rather than to the root of the hierarchy
-        subClass.getSuperclass().addSubclass(subClass);
-        mappings.addEntityBinding(subClass);
+        subClass.superclass.addSubclass(subClass)
+        mappings.addEntityBinding(subClass)
     }
 
-    private @NonNull Stream<Subclass> getSubclassStream(HibernatePersistentEntity entity, RootClass root) {
-        mappingCacheHolder.cacheMapping(entity);
-        return subClassBinder.bindSubClass(entity, root).stream();
+    @NonNull
+    private Stream<Subclass> getSubclassStream(HibernatePersistentEntity entity, RootClass root) {
+        mappingCacheHolder.cacheMapping(entity)
+        return subClassBinder.bindSubClass(entity, root).stream()
     }
+
 }

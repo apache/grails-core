@@ -16,32 +16,35 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.orm.hibernate.cfg.domainbinding.util;
+package org.grails.orm.hibernate.cfg.domainbinding.util
 
-import java.util.Objects;
-import java.util.concurrent.ConcurrentHashMap;
+import java.lang.reflect.InvocationTargetException
 
-import org.hibernate.boot.model.naming.PhysicalNamingStrategy;
-import org.hibernate.boot.model.naming.PhysicalNamingStrategySnakeCaseImpl;
+import groovy.transform.CompileStatic
+import org.hibernate.boot.model.naming.PhysicalNamingStrategy
+import org.hibernate.boot.model.naming.PhysicalNamingStrategySnakeCaseImpl
 
-import org.grails.datastore.mapping.core.connections.ConnectionSource;
+import org.grails.datastore.mapping.core.connections.ConnectionSource
 
-public class NamingStrategyProvider {
+import java.util.concurrent.ConcurrentHashMap
 
-    private final ConcurrentHashMap<String, PhysicalNamingStrategy> physicalProviderMap;
+@CompileStatic
+class NamingStrategyProvider {
 
-    public NamingStrategyProvider() {
-        physicalProviderMap = new ConcurrentHashMap<>();
-        physicalProviderMap.put(ConnectionSource.DEFAULT, new PhysicalNamingStrategySnakeCaseImpl());
+    private final ConcurrentHashMap<String, PhysicalNamingStrategy> physicalProviderMap
+
+    NamingStrategyProvider() {
+        physicalProviderMap = new ConcurrentHashMap<>()
+        physicalProviderMap.put(ConnectionSource.DEFAULT, new PhysicalNamingStrategySnakeCaseImpl())
     }
 
     private static String getKey(String sessionFactoryBeanName) {
-        if (Objects.isNull(sessionFactoryBeanName) || sessionFactoryBeanName.isBlank()) {
-            return ConnectionSource.DEFAULT;
+        if (sessionFactoryBeanName == null || sessionFactoryBeanName.isBlank()) {
+            return ConnectionSource.DEFAULT
         }
-        return "sessionFactory".equals(sessionFactoryBeanName) ?
+        return 'sessionFactory' == sessionFactoryBeanName ?
                 ConnectionSource.DEFAULT :
-                sessionFactoryBeanName.substring("sessionFactory_".length());
+                sessionFactoryBeanName.substring('sessionFactory_'.length())
     }
 
     /**
@@ -53,44 +56,59 @@ public class NamingStrategyProvider {
      * @throws IllegalAccessException when the strategy class cannot be accessed
      * @throws InstantiationException when the strategy class cannot be instantiated
      */
-    public void configureNamingStrategy(final String datasourceName, final Object strategy)
+    void configureNamingStrategy(final String datasourceName, final Object strategy)
             throws ClassNotFoundException, InstantiationException, IllegalAccessException {
 
         if (strategy == null) {
-            throw new IllegalArgumentException("Naming strategy cannot be null");
+            throw new IllegalArgumentException('Naming strategy cannot be null')
         }
 
-        var strategyClass = getStrategyClass(strategy);
-        var strategyInstance = getStrategyInstance(strategy, strategyClass);
+        Class<?> strategyClass = getStrategyClass(strategy)
+        Object strategyInstance = getStrategyInstance(strategy, strategyClass)
 
-        if (strategyInstance instanceof PhysicalNamingStrategy physicalStrategy) {
-            physicalProviderMap.put(datasourceName, physicalStrategy);
-        } else {
-            physicalProviderMap.put(datasourceName, new PhysicalNamingStrategySnakeCaseImpl());
+        if (strategyInstance instanceof PhysicalNamingStrategy) {
+            physicalProviderMap.put(datasourceName, (PhysicalNamingStrategy) strategyInstance)
+        }
+        else {
+            physicalProviderMap.put(datasourceName, new PhysicalNamingStrategySnakeCaseImpl())
         }
     }
 
     private Class<?> getStrategyClass(Object strategy) throws ClassNotFoundException {
         if (strategy instanceof Class<?>) {
-            return (Class<?>) strategy;
+            return (Class<?>) strategy
         }
         if (strategy instanceof CharSequence) {
-            return Thread.currentThread().getContextClassLoader().loadClass(strategy.toString());
+            return Thread.currentThread().contextClassLoader.loadClass(strategy.toString())
         }
-        return strategy.getClass();
+        return strategy.class
     }
 
+    /**
+     * Instantiates the strategy the way {@code Class.newInstance()} did: a class without a no-arg constructor is an
+     * {@link InstantiationException}, and an exception thrown by the constructor reaches the caller itself, not
+     * wrapped in an {@link java.lang.reflect.InvocationTargetException}.
+     */
     private Object getStrategyInstance(Object strategy, Class<?> strategyClass)
             throws InstantiationException, IllegalAccessException {
         if (strategy instanceof PhysicalNamingStrategy) {
-            return strategy;
+            return strategy
         }
-        return strategyClass.newInstance();
+        try {
+            return strategyClass.getDeclaredConstructor().newInstance()
+        }
+        catch (NoSuchMethodException e) {
+            throw (InstantiationException) new InstantiationException(strategyClass.name).initCause(e)
+        }
+        catch (InvocationTargetException e) {
+            throw e.cause ?: e
+        }
     }
 
-    public PhysicalNamingStrategy getPhysicalNamingStrategy(String sessionFactoryBeanName) {
-        String key = getKey(sessionFactoryBeanName);
-        physicalProviderMap.putIfAbsent(key, new PhysicalNamingStrategySnakeCaseImpl());
-        return physicalProviderMap.get(key);
+    PhysicalNamingStrategy getPhysicalNamingStrategy(String sessionFactoryBeanName) {
+        String key = getKey(sessionFactoryBeanName)
+        physicalProviderMap.putIfAbsent(key, new PhysicalNamingStrategySnakeCaseImpl())
+        return physicalProviderMap.get(key)
     }
+
 }

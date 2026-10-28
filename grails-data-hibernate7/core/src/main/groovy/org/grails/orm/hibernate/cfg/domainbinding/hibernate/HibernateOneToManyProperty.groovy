@@ -16,64 +16,65 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.orm.hibernate.cfg.domainbinding.hibernate;
+package org.grails.orm.hibernate.cfg.domainbinding.hibernate
 
-import java.beans.PropertyDescriptor;
-import java.util.Map;
+import groovy.transform.CompileStatic
+import org.hibernate.MappingException
+import org.hibernate.mapping.Collection
 
-import org.hibernate.MappingException;
-import org.hibernate.mapping.Collection;
+import org.grails.datastore.mapping.model.MappingContext
+import org.grails.datastore.mapping.model.PersistentEntity
+import org.grails.datastore.mapping.model.types.mapping.OneToManyWithMapping
+import org.grails.orm.hibernate.cfg.PropertyConfig
 
-import org.grails.datastore.mapping.model.MappingContext;
-import org.grails.datastore.mapping.model.PersistentEntity;
-import org.grails.datastore.mapping.model.types.mapping.OneToManyWithMapping;
-import org.grails.orm.hibernate.cfg.PropertyConfig;
+import java.beans.PropertyDescriptor
 
 /** Hibernate implementation of {@link org.grails.datastore.mapping.model.types.OneToMany} */
-public class HibernateOneToManyProperty extends OneToManyWithMapping<PropertyConfig>
+@CompileStatic
+class HibernateOneToManyProperty extends OneToManyWithMapping<PropertyConfig>
         implements HibernateToManyEntityProperty {
 
-    private Collection collection;
+    private Collection collection
 
-    public HibernateOneToManyProperty(PersistentEntity entity, MappingContext context, PropertyDescriptor property) {
-        super(entity, context, property);
+    HibernateOneToManyProperty(PersistentEntity entity, MappingContext context, PropertyDescriptor property) {
+        super(entity, context, property)
     }
 
     @Override
-    public HibernatePersistentEntity getHibernateAssociatedEntity() {
-        return (HibernatePersistentEntity) super.getAssociatedEntity();
+    HibernatePersistentEntity getHibernateAssociatedEntity() {
+        return (HibernatePersistentEntity) super.getAssociatedEntity()
     }
 
     @Override
-    public String getReferencedEntityName() {
-        return getHibernateAssociatedEntity().getName();
+    String getReferencedEntityName() {
+        return getHibernateAssociatedEntity().getName()
     }
 
     @Override
-    public Collection getHibernateCollection() {
-        return collection;
+    Collection getHibernateCollection() {
+        return collection
     }
 
     @Override
-    public void setHibernateCollection(Collection collection) {
-        this.collection = collection;
+    void setHibernateCollection(Collection collection) {
+        this.collection = collection
     }
 
     @Override
-    public boolean isLazy() {
-        return getHibernateOwner().isLazy(this);
+    boolean isLazy() {
+        return getHibernateOwner().isLazy(this)
     }
 
     @Override
-    public HibernatePersistentProperty validateProperty() {
+    HibernatePersistentProperty validateProperty() {
         if (hasSort() && !isBidirectional()) {
-            throw new MappingException("Default sort for associations [" + getHibernateOwner().getName() + "->" + getName() + "] are not supported with unidirectional one to many relationships.");
+            throw new MappingException('Default sort for associations [' + getHibernateOwner().getName() + '->' + getName() + '] are not supported with unidirectional one to many relationships.')
         }
-        return this;
+        return this
     }
 
     @Override
-    public boolean shouldBindWithForeignKey() {
-        return (isBidirectional() || !isUnidirectionalOneToMany()) && !Map.class.isAssignableFrom(getType());
+    boolean shouldBindWithForeignKey() {
+        return (isBidirectional() || !isUnidirectionalOneToMany()) && !Map.isAssignableFrom(getType())
     }
 }

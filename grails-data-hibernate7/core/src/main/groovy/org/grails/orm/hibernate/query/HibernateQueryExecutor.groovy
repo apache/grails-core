@@ -16,25 +16,27 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.orm.hibernate.query;
+package org.grails.orm.hibernate.query
 
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import groovy.transform.CompileStatic
+import groovy.transform.TupleConstructor
+import groovy.transform.RecordOptions
+import jakarta.persistence.LockModeType
+import jakarta.persistence.Parameter
+import jakarta.persistence.Tuple
+import jakarta.persistence.criteria.ParameterExpression
+import org.hibernate.Session
+import org.hibernate.query.Query
+import org.hibernate.query.QueryFlushMode
+import org.hibernate.query.criteria.JpaCriteriaQuery
 
-import jakarta.persistence.LockModeType;
-import jakarta.persistence.Parameter;
-import jakarta.persistence.criteria.ParameterExpression;
+import org.grails.datastore.mapping.proxy.ProxyHandler
 
-import org.hibernate.NonUniqueResultException;
-import org.hibernate.Session;
-import org.hibernate.query.Query;
-import org.hibernate.query.QueryFlushMode;
-import org.hibernate.query.criteria.JpaCriteriaQuery;
-
-import org.grails.datastore.mapping.proxy.ProxyHandler;
-
-public record HibernateQueryExecutor(
+@CompileStatic
+@SuppressWarnings(['ClassStartsWithBlankLine', 'Indentation'])
+@RecordOptions(getAt = false, toList = false, toMap = false, size = false)
+@TupleConstructor(defaults = false, namedVariant = false)
+record HibernateQueryExecutor(
         Integer offset,
         Integer maxResults,
         LockModeType lockResult,
@@ -45,41 +47,60 @@ public record HibernateQueryExecutor(
         Boolean readOnly,
         ProxyHandler proxyHandler) {
 
-    public List list(Session session, JpaCriteriaQuery jpaCq, Map<ParameterExpression<?>, Object> parameterValues) {
-        return configureQuery(session, jpaCq, parameterValues).getResultList();
+    List list(Session session, JpaCriteriaQuery jpaCq, Map<ParameterExpression<?>, Object> parameterValues) {
+        return configureQuery(session, jpaCq, parameterValues).resultList
     }
 
-    public Object scroll(Session session, JpaCriteriaQuery jpaCq, Map<ParameterExpression<?>, Object> parameterValues) {
-        return configureQuery(session, jpaCq, parameterValues).scroll();
+    Object scroll(Session session, JpaCriteriaQuery jpaCq, Map<ParameterExpression<?>, Object> parameterValues) {
+        return configureQuery(session, jpaCq, parameterValues).scroll()
     }
 
-    public Object singleResult(Session session, JpaCriteriaQuery jpaCq, Map<ParameterExpression<?>, Object> parameterValues) {
-        var query = configureQuery(session, jpaCq, parameterValues);
+    Object singleResult(Session session, JpaCriteriaQuery jpaCq, Map<ParameterExpression<?>, Object> parameterValues) {
+        Query query = configureQuery(session, jpaCq, parameterValues)
         try {
-            Object singleResult = query.getSingleResult();
-            return proxyHandler.unwrap(singleResult);
-        } catch (NonUniqueResultException | jakarta.persistence.NonUniqueResultException e) {
-            return proxyHandler.unwrap(query.getResultList().get(0));
+            Object singleResult = query.singleResult
+            return proxyHandler.unwrap(singleResult)
+        } catch (org.hibernate.NonUniqueResultException | jakarta.persistence.NonUniqueResultException e) {
+            return proxyHandler.unwrap(query.resultList.get(0))
         } catch (jakarta.persistence.NoResultException e) {
-            return null;
+            return null
         }
     }
 
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings('unchecked')
     private Query configureQuery(Session session, JpaCriteriaQuery jpaCq, Map<ParameterExpression<?>, Object> parameterValues) {
-        var query = session.createQuery(jpaCq);
-        parameterValues.forEach((parameter, value) -> query.setParameter((Parameter<Object>) parameter, value));
-        if (jakarta.persistence.Tuple.class.equals(jpaCq.getResultType())) {
-            query.setTupleTransformer((payload, aliases) -> payload);
+        Query query = session.createQuery(jpaCq)
+        parameterValues.each { ParameterExpression<?> parameter, Object value ->
+            query.setParameter((Parameter<Object>) parameter, value)
         }
-        Optional.ofNullable(offset).filter(v -> v > 0).ifPresent(query::setFirstResult);
-        Optional.ofNullable(queryCache).ifPresent(qc -> query.setHint("org.hibernate.cacheable", qc));
-        Optional.ofNullable(maxResults).filter(v -> v > 0).ifPresent(query::setMaxResults);
-        Optional.ofNullable(lockResult).ifPresent(query::setLockMode);
-        Optional.ofNullable(fetchSize).filter(v -> v > 0).ifPresent(query::setFetchSize);
-        Optional.ofNullable(timeout).filter(v -> v > 0).ifPresent(query::setTimeout);
-        Optional.ofNullable(flushMode).ifPresent(query::setQueryFlushMode);
-        Optional.ofNullable(readOnly).ifPresent(query::setReadOnly);
-        return query;
+        if (Tuple.equals(jpaCq.resultType)) {
+            query.setTupleTransformer({ payload, aliases -> payload })
+        }
+        if (offset != null && offset > 0) {
+            query.setFirstResult(offset)
+        }
+        if (queryCache != null) {
+            query.setHint('org.hibernate.cacheable', queryCache)
+        }
+        if (maxResults != null && maxResults > 0) {
+            query.setMaxResults(maxResults)
+        }
+        if (lockResult != null) {
+            query.setLockMode(lockResult)
+        }
+        if (fetchSize != null && fetchSize > 0) {
+            query.setFetchSize(fetchSize)
+        }
+        if (timeout != null && timeout > 0) {
+            query.setTimeout(timeout)
+        }
+        if (flushMode != null) {
+            query.setQueryFlushMode(flushMode)
+        }
+        if (readOnly != null) {
+            query.setReadOnly(readOnly)
+        }
+        return query
     }
+
 }

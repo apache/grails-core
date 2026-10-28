@@ -16,36 +16,38 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.orm.hibernate.cfg.domainbinding.hibernate;
+package org.grails.orm.hibernate.cfg.domainbinding.hibernate
 
-import java.beans.PropertyDescriptor;
+import groovy.transform.CompileStatic
+import org.grails.datastore.mapping.model.MappingContext
+import org.grails.datastore.mapping.model.PersistentEntity
+import org.grails.datastore.mapping.model.types.mapping.ManyToOneWithMapping
+import org.grails.orm.hibernate.cfg.PropertyConfig
 
-import org.grails.datastore.mapping.model.MappingContext;
-import org.grails.datastore.mapping.model.PersistentEntity;
-import org.grails.datastore.mapping.model.types.mapping.ManyToOneWithMapping;
-import org.grails.orm.hibernate.cfg.PropertyConfig;
+import java.beans.PropertyDescriptor
 
 /** Hibernate implementation of {@link org.grails.datastore.mapping.model.types.ManyToOne} */
-public class HibernateManyToOneProperty extends ManyToOneWithMapping<PropertyConfig> implements HibernateToOneProperty {
+@CompileStatic
+class HibernateManyToOneProperty extends ManyToOneWithMapping<PropertyConfig> implements HibernateToOneProperty {
 
-    public HibernateManyToOneProperty(PersistentEntity entity, MappingContext context, PropertyDescriptor property) {
-        super(entity, context, property);
+    HibernateManyToOneProperty(PersistentEntity entity, MappingContext context, PropertyDescriptor property) {
+        super(entity, context, property)
     }
 
     @Override
-    public GrailsHibernatePersistentEntity getHibernateAssociatedEntity() {
-        return (GrailsHibernatePersistentEntity) super.getAssociatedEntity();
+    GrailsHibernatePersistentEntity getHibernateAssociatedEntity() {
+        return (GrailsHibernatePersistentEntity) super.getAssociatedEntity()
     }
 
     @Override
-    public String getReferencedEntityName() {
-        return getHibernateAssociatedEntity().getName();
+    String getReferencedEntityName() {
+        return hibernateAssociatedEntity.name
     }
 
     @Override
-    public boolean isValidHibernateManyToOne() {
-
-        validateAssociation();
-        return true;
+    boolean isValidHibernateManyToOne() {
+        validateAssociation()
+        return true
     }
+
 }

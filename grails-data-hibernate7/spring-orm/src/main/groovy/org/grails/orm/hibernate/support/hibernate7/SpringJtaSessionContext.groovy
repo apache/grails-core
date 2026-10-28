@@ -13,15 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.grails.orm.hibernate.support.hibernate7
 
-package org.grails.orm.hibernate.support.hibernate7;
-
-import org.hibernate.FlushMode;
-import org.hibernate.Session;
-import org.hibernate.context.internal.JTASessionContext;
-import org.hibernate.engine.spi.SessionFactoryImplementor;
-
-import org.springframework.transaction.support.TransactionSynchronizationManager;
+import groovy.transform.CompileStatic
+import org.hibernate.FlushMode
+import org.hibernate.Session
+import org.hibernate.context.internal.JTASessionContext
+import org.hibernate.engine.spi.SessionFactoryImplementor
+import org.springframework.transaction.support.TransactionSynchronizationManager
 
 /**
  * Spring-specific subclass of Hibernate's JTASessionContext,
@@ -30,20 +29,21 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
  * @author Juergen Hoeller
  * @since 4.2
  */
-@SuppressWarnings("serial")
-public class SpringJtaSessionContext extends JTASessionContext {
+@CompileStatic
+@SuppressWarnings('serial')
+class SpringJtaSessionContext extends JTASessionContext {
 
-    public SpringJtaSessionContext(SessionFactoryImplementor factory) {
-        super(factory);
+    SpringJtaSessionContext(SessionFactoryImplementor factory) {
+        super(factory)
     }
 
     @Override
     protected Session buildOrObtainSession() {
-        Session session = super.buildOrObtainSession();
+        Session session = super.buildOrObtainSession()
         if (TransactionSynchronizationManager.isCurrentTransactionReadOnly()) {
-            session.setHibernateFlushMode(FlushMode.MANUAL);
+            session.setHibernateFlushMode(FlushMode.MANUAL)
         }
-        return session;
+        return session
     }
 
 }

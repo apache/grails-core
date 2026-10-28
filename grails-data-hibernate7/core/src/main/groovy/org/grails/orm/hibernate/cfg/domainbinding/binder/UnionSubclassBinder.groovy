@@ -16,45 +16,46 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.orm.hibernate.cfg.domainbinding.binder;
+package org.grails.orm.hibernate.cfg.domainbinding.binder
 
-import jakarta.annotation.Nonnull;
+import groovy.transform.CompileStatic
+import jakarta.annotation.Nonnull
+import org.hibernate.MappingException
+import org.hibernate.boot.spi.InFlightMetadataCollector
+import org.hibernate.boot.spi.MetadataBuildingContext
+import org.hibernate.mapping.PersistentClass
+import org.hibernate.mapping.Table
+import org.hibernate.mapping.UnionSubclass
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 
-import org.hibernate.MappingException;
-import org.hibernate.boot.spi.InFlightMetadataCollector;
-import org.hibernate.boot.spi.MetadataBuildingContext;
-import org.hibernate.mapping.PersistentClass;
-import org.hibernate.mapping.Table;
-import org.hibernate.mapping.UnionSubclass;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
+import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
 
 /**
  * Binds a union sub-class mapping using table-per-concrete-class
  *
  * @since 8.0
  */
-public class UnionSubclassBinder {
+@CompileStatic
+class UnionSubclassBinder {
 
-    private static final Logger LOG = LoggerFactory.getLogger(UnionSubclassBinder.class);
+    private static final Logger LOG = LoggerFactory.getLogger(UnionSubclassBinder)
 
-    private final MetadataBuildingContext metadataBuildingContext;
-    private final PersistentEntityNamingStrategy namingStrategy;
-    private final ClassBinder classBinder;
-    private final InFlightMetadataCollector mappings;
+    private final MetadataBuildingContext metadataBuildingContext
+    private final PersistentEntityNamingStrategy namingStrategy
+    private final ClassBinder classBinder
+    private final InFlightMetadataCollector mappings
 
-    public UnionSubclassBinder(
+    UnionSubclassBinder(
             MetadataBuildingContext metadataBuildingContext,
             PersistentEntityNamingStrategy namingStrategy,
             ClassBinder classBinder,
             InFlightMetadataCollector mappings) {
-        this.metadataBuildingContext = metadataBuildingContext;
-        this.namingStrategy = namingStrategy;
-        this.classBinder = classBinder;
-        this.mappings = mappings;
+        this.metadataBuildingContext = metadataBuildingContext
+        this.namingStrategy = namingStrategy
+        this.classBinder = classBinder
+        this.mappings = mappings
     }
 
     /**
@@ -64,15 +65,15 @@ public class UnionSubclassBinder {
      * @param parent The Hibernate Parent PersistentClass object
      * @return The created UnionSubclass
      */
-    public UnionSubclass bindUnionSubclass(@Nonnull GrailsHibernatePersistentEntity subClass, PersistentClass parent)
+    UnionSubclass bindUnionSubclass(@Nonnull GrailsHibernatePersistentEntity subClass, PersistentClass parent)
             throws MappingException {
-        UnionSubclass unionSubclass = new UnionSubclass(parent, metadataBuildingContext);
-        classBinder.bindClass(subClass, unionSubclass);
+        UnionSubclass unionSubclass = new UnionSubclass(parent, metadataBuildingContext)
+        classBinder.bindClass(subClass, unionSubclass)
 
-        String schema = subClass.getSchema(mappings);
-        String catalog = subClass.getCatalog(mappings);
+        String schema = subClass.getSchema(mappings)
+        String catalog = subClass.getCatalog(mappings)
 
-        Table denormalizedSuperTable = unionSubclass.getSuperclass().getTable();
+        Table denormalizedSuperTable = unionSubclass.superclass.table
         Table mytable = mappings.addDenormalizedTable(
                 schema,
                 catalog,
@@ -80,13 +81,14 @@ public class UnionSubclassBinder {
                 Boolean.TRUE.equals(unionSubclass.isAbstract()),
                 null,
                 denormalizedSuperTable,
-                metadataBuildingContext);
-        unionSubclass.setTable(mytable);
-        unionSubclass.setClassName(subClass.getName());
+                metadataBuildingContext)
+        unionSubclass.table = mytable
+        unionSubclass.className = subClass.name
 
         if (LOG.isInfoEnabled()) {
-            LOG.info("Mapping union-subclass: {} -> {}", unionSubclass.getEntityName(), unionSubclass.getTable().getName());
+            LOG.info('Mapping union-subclass: {} -> {}', unionSubclass.entityName, unionSubclass.table.name)
         }
-        return unionSubclass;
+        return unionSubclass
     }
+
 }

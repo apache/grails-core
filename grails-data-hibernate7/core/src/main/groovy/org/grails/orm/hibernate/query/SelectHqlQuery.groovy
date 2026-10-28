@@ -16,95 +16,102 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.orm.hibernate.query;
+package org.grails.orm.hibernate.query
 
-import java.io.Serializable;
-import java.util.List;
+import groovy.transform.CompileStatic
 
-import org.grails.datastore.mapping.query.Query;
-import org.grails.orm.hibernate.GrailsHibernateTemplate;
-import org.grails.orm.hibernate.HibernateSession;
-import org.grails.orm.hibernate.IHibernateTemplate;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
+import org.grails.datastore.mapping.query.Query
+import org.grails.orm.hibernate.GrailsHibernateTemplate
+import org.grails.orm.hibernate.HibernateSession
+import org.grails.orm.hibernate.IHibernateTemplate
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
 
-public class SelectHqlQuery extends Query implements HqlQueryMethods, Serializable {
-    protected final transient HqlQueryContext queryContext;
-    protected final transient HqlQueryDelegate delegate;
+@CompileStatic
+class SelectHqlQuery extends Query implements HqlQueryMethods, Serializable {
+
+    protected final transient HqlQueryContext queryContext
+    // Read as this.@delegate: a bare `delegate` inside a closure resolves to Closure.getDelegate(), not this field.
+    protected final transient HqlQueryDelegate delegate
 
     protected SelectHqlQuery(HibernateSession session, GrailsHibernatePersistentEntity entity, HqlQueryContext queryContext, HqlQueryDelegate delegate) {
-        super(session, entity);
-        this.queryContext = queryContext;
-        this.delegate = delegate;
+        super(session, entity)
+        this.queryContext = queryContext
+        this.@delegate = delegate
     }
 
     @Override
-    public List<?> list() {
-        GrailsHibernateTemplate template = (GrailsHibernateTemplate) getHibernateTemplate();
-        return template.execute(__ -> {
-            applyQuerySettings(delegate);
-            return delegate.list();
-        });
+    List<?> list() {
+        GrailsHibernateTemplate template = (GrailsHibernateTemplate) hibernateTemplate
+        return template.execute({ Object __ ->
+            applyQuerySettings(this.@delegate)
+            return this.@delegate.list()
+        })
     }
 
     @Override
-    public Object singleResult() {
-        GrailsHibernateTemplate template = (GrailsHibernateTemplate) getHibernateTemplate();
-        return template.execute(__ -> {
-            applyQuerySettings(delegate);
-            List<?> results = delegate.list();
-            return results.isEmpty() ? null : results.getFirst();
-        });
+    Object singleResult() {
+        GrailsHibernateTemplate template = (GrailsHibernateTemplate) hibernateTemplate
+        return template.execute({ Object __ ->
+            applyQuerySettings(this.@delegate)
+            List<?> results = this.@delegate.list()
+            return results.isEmpty() ? null : results.first
+        })
     }
 
     protected void applyQuerySettings(HqlQueryDelegate d) {
-        if (max != null && max > -1) {
-            d.setMaxResults(max);
+        Integer m = this.@max
+        if (m != null && m > -1) {
+            d.setMaxResults(m)
         }
-        if (offset != null && offset > -1) {
-            d.setFirstResult(offset);
+        Integer o = this.@offset
+        if (o != null && o > -1) {
+            d.setFirstResult(o)
         }
-        populateQuerySettings(d, queryContext.querySettings());
-        populateHints(d, queryContext.hints());
-        HqlQueryMethods.populateParameters(d, queryContext);
+        populateQuerySettings(d, queryContext.querySettings())
+        populateHints(d, queryContext.hints())
+        HqlQueryMethods.populateParameters(d, queryContext)
     }
 
-    public int executeUpdate() {
-        throw new UnsupportedOperationException("SELECT query cannot be used for executeUpdate(); use a MutationHqlQuery instead");
+    int executeUpdate() {
+        throw new UnsupportedOperationException('SELECT query cannot be used for executeUpdate(); use a MutationHqlQuery instead')
     }
 
     protected IHibernateTemplate getHibernateTemplate() {
-        HibernateSession hibernateSession = (HibernateSession) getSession();
-        return (IHibernateTemplate) hibernateSession.getNativeInterface();
+        HibernateSession hibernateSession = (HibernateSession) session
+        return (IHibernateTemplate) hibernateSession.nativeInterface
     }
 
     @Override
     protected List executeQuery(org.grails.datastore.mapping.model.PersistentEntity entity, Junction criteria) {
-        return list();
+        return list()
     }
 
-    public void setReadOnly(Boolean ignoredReadOnly) {
+    void setReadOnly(Boolean ignoredReadOnly) {
         // Compatibility method
     }
 
-    public org.hibernate.query.Query<?> selectQuery() {
-        return delegate.selectQuery();
+    org.hibernate.query.Query<?> selectQuery() {
+        return this.@delegate.selectQuery()
     }
 
     @Override
-    public Integer getMax() {
-        if (max != null && max > -1) {
-            return max;
+    Integer getMax() {
+        Integer m = this.@max
+        if (m != null && m > -1) {
+            return m
         }
-        Object m = queryContext.querySettings().get(HibernateQueryArgument.MAX.value());
-        return m == null ? -1 : HqlQueryMethods.toInteger(m);
+        Object value = queryContext.querySettings().get(HibernateQueryArgument.MAX.value())
+        return value == null ? -1 : HqlQueryMethods.toInteger(value)
     }
 
     @Override
-    public Integer getOffset() {
-        if (offset != null && offset > -1) {
-            return offset;
+    Integer getOffset() {
+        Integer o = this.@offset
+        if (o != null && o > -1) {
+            return o
         }
-        Object o = queryContext.querySettings().get(HibernateQueryArgument.OFFSET.value());
-        return o == null ? 0 : HqlQueryMethods.toInteger(o);
+        Object value = queryContext.querySettings().get(HibernateQueryArgument.OFFSET.value())
+        return value == null ? 0 : HqlQueryMethods.toInteger(value)
     }
+
 }

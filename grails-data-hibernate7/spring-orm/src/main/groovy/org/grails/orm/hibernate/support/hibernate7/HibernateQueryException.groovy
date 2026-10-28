@@ -13,13 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.grails.orm.hibernate.support.hibernate7
 
-package org.grails.orm.hibernate.support.hibernate7;
-
-import org.hibernate.QueryException;
-import org.jspecify.annotations.Nullable;
-
-import org.springframework.dao.InvalidDataAccessResourceUsageException;
+import groovy.transform.CompileStatic
+import org.hibernate.QueryException
+import org.jspecify.annotations.Nullable
+import org.springframework.dao.InvalidDataAccessResourceUsageException
 
 /**
  * Hibernate-specific subclass of InvalidDataAccessResourceUsageException,
@@ -29,20 +28,21 @@ import org.springframework.dao.InvalidDataAccessResourceUsageException;
  * @since 4.2
  * @see SessionFactoryUtils#convertHibernateAccessException
  */
-@SuppressWarnings("serial")
-public class HibernateQueryException extends InvalidDataAccessResourceUsageException {
+@CompileStatic
+@SuppressWarnings('serial')
+class HibernateQueryException extends InvalidDataAccessResourceUsageException {
 
-    public HibernateQueryException(QueryException ex) {
-        super(ex.getMessage(), ex);
+    HibernateQueryException(QueryException ex) {
+        super(ex.getMessage(), ex)
     }
 
     /**
      * Return the HQL query string that was invalid.
      */
     @Nullable
-    public String getQueryString() {
-        QueryException cause = (QueryException) getCause();
-        return (cause != null ? cause.getQueryString() : null);
+    String getQueryString() {
+        QueryException cause = (QueryException) getCause()
+        return (cause != null ? cause.getQueryString() : null)
     }
 
 }
