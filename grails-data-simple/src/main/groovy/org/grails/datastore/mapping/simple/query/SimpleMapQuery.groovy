@@ -18,11 +18,14 @@
  */
 package org.grails.datastore.mapping.simple.query
 
+import java.util.function.Supplier
 import java.util.regex.Pattern
 
 import org.springframework.dao.InvalidDataAccessResourceUsageException
 import org.springframework.util.Assert
 
+import org.apache.grails.data.simple.querytail.SimpleMapQueryTail
+import org.apache.grails.data.simple.querytail.SimpleMapStatements
 import org.grails.datastore.mapping.engine.types.CustomTypeMarshaller
 import org.grails.datastore.mapping.keyvalue.mapping.config.KeyValue
 import org.grails.datastore.mapping.model.PersistentEntity
@@ -36,6 +39,7 @@ import org.grails.datastore.mapping.query.Query
 import org.grails.datastore.mapping.query.Restrictions
 import org.grails.datastore.mapping.query.api.QueryableCriteria
 import org.grails.datastore.mapping.query.criteria.FunctionCallingCriterion
+import org.grails.datastore.mapping.simple.SimpleMapDatastore
 import org.grails.datastore.mapping.simple.SimpleMapSession
 import org.grails.datastore.mapping.simple.engine.SimpleMapEntityPersister
 
@@ -58,7 +62,25 @@ class SimpleMapQuery extends Query {
         this.entityPersister = entityPersister
     }
 
+    /**
+     * Runs the query, which query-tail records as one statement when capture is enabled: the entries it reads
+     * to find, sort and load its rows are part of it.
+     */
     protected List executeQuery(PersistentEntity entity, Query.Junction criteria) {
+        SimpleMapQueryTail queryTail = ((SimpleMapDatastore) session.datastore).queryTail
+        if (queryTail == null) {
+            return runQuery(entity, criteria)
+        }
+        queryTail.enterQuery({ SimpleMapStatements.select(entity, family, this, criteria) } as Supplier<String>)
+        try {
+            return runQuery(entity, criteria)
+        }
+        finally {
+            SimpleMapQueryTail.exit()
+        }
+    }
+
+    private List runQuery(PersistentEntity entity, Query.Junction criteria) {
         def results = []
         def entityMap = [:]
         if (criteria.isEmpty()) {

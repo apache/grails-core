@@ -116,20 +116,20 @@ class CollectionKeyColumnUpdaterSpec extends HibernateGormDatastoreSpec {
         column.isNullable()
     }
 
-    def "bind sets updateable false when unidirectional collections share a join table"() {
-        given:
+    def "bind keeps the key updateable when unidirectional collections share a join table"() {
+        given: "a key Hibernate would write no rows for, the rule of issue 10811 that Hibernate 7 turns into silent data loss"
         def property = propertyFor(CKCUSharedTableOwner, "createUsers")
         def column = new Column("test_col")
         def key = new DependantValue(getGrailsDomainBinder().getMetadataBuildingContext(), null, null)
         key.addColumn(column)
-        key.setUpdateable(true)
+        key.setUpdateable(false)
 
         when:
         updater.bind(property)
 
         then:
         1 * collectionKeyBinder.bind(property) >> key
-        !key.isUpdateable()
+        key.isUpdateable()
         column.isNullable()
     }
 
@@ -156,7 +156,7 @@ class CollectionKeyColumnUpdaterSpec extends HibernateGormDatastoreSpec {
         'a user type'    | 'labels'
     }
 
-    void "bind keeps the key updateable and does not ask a column-bound sibling for its collection"() {
+    void "bind keeps the key updateable next to a column-bound sibling"() {
         given: "an entity collection whose owner also has a serializable and a user-type to-many"
         def property = propertyFor(CKCUColumnBoundOwner, "items")
         def column = new Column("test_col")

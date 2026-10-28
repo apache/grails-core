@@ -51,3 +51,41 @@ The new `trimLogicLines` setting is opt-in. See link:#pageDirectives[Page Direct
 ==== 3. Forge Project Generation
 
 Default projects consistently include Mockito with Spock. When both Grails Data for MongoDB and the synchronous MongoDB driver are selected, Grails Data owns the MongoDB URLs: development and test use embedded databases, while production uses the configured external server.
+
+==== 4. Environment Variables Are Read Once Per Configuration
+
+`getProperty` on `grailsApplication.config` resolves a property against the process environment before it consults the configuration, so that a variable such as `GRAILS_SERVERURL` overrides `grails.serverURL`. Grails 8.0 probed `System.getenv` with up to eight spellings of the key on every lookup. Grails 8.1 reads the environment once, when the configuration is created, and indexes the variable names, so a lookup that no variable can match is answered without touching the environment.
+
+===== Required Actions
+
+For applications **no changes are required**: the environment of a running JVM cannot change, so every lookup has the same answer as before.
+
+A test that installs environment variables reflectively, with a library such as System Stubs or JUnit Pioneer, installs them before the application context is created, through the `environment` of the Gradle test task or an extension that runs before the context starts, so the configuration reads them when it is built. That is the supported approach: the configuration then behaves exactly as it does for a running application.
+
+A test that can only install them after the application has started asks the configuration to read the environment again:
+
+[source,groovy]
+----
+grailsApplication.config.refresh()
+----
+
+`refresh()` is a method of the configuration implementation rather than of the `Config` interface, so it is a call for dynamically compiled test code and may change with the implementation. It reads the environment again and merges the property sources again, which replaces a value the test set on the configuration directly wherever a property source defines the same key. Call it again once the variables are removed: the configuration keeps the environment it last read.
+
+Two smaller differences: variable names are upper-cased with `Locale.ROOT`, as Spring does, so a key containing `i` matches its upper-cased variable under a Turkish default locale too; and `getProperty(null)` returns the default value instead of throwing a `NullPointerException`.
+
+==== 5. The Character Encoding Filter Runs First
+
+Grails 8.1 registers its character encoding filter at `Ordered.HIGHEST_PRECEDENCE`, the order Spring Boot gives its own, instead of at -180. Once a filter reads a request parameter, the servlet container has decoded the request body, as ISO-8859-1 unless an encoding was set by then, so a filter ordered ahead of the encoding filter that read a parameter garbled non-ASCII form input for the rest of the request, for example `CafÃ©` for `Café`.
+
+Every filter ordered between `Ordered.HIGHEST_PRECEDENCE + 1` and -181 now runs after the encoding filter instead of before it, and sees the request encoding set. That includes Spring's `FormContentFilter` at -9900, asset-pipeline's filter at `GrailsFilters.ASSET_PIPELINE_FILTER` (-190), a filter at `GrailsFilters.FIRST`, and filters registered at `Ordered.HIGHEST_PRECEDENCE + n`:
+
+* `FormContentFilter`, which every application has unless `spring.mvc.formcontent.filter.enabled` is false, parses the form of a PUT, PATCH or DELETE request. It decoded a form sent without a charset as UTF-8, whatever `grails.filter.encoding` said; now it decodes it as `grails.filter.encoding` says, as a POST form already was. With the default encoding, UTF-8, nothing changes.
+* In a packaged application (a WAR or an executable jar), asset-pipeline copies the request's encoding to the precompiled assets it serves, so every asset response now declares a charset, for example `text/css;charset=UTF-8`, whether or not `grails.filter.forceEncoding` is set. Browsers use it for stylesheets and scripts instead of detecting their encoding. Assets served by asset-pipeline's development runtime still have no charset.
+* A filter that reads a request body sent without a charset through `getReader()` now decodes it as UTF-8, or as `grails.filter.encoding` says, instead of as ISO-8859-1.
+* With `grails.filter.forceEncoding: true`, a response such a filter writes without a charset is now encoded with the forced encoding instead of ISO-8859-1, and a request encoding such a filter sets is no longer replaced by the forced one.
+
+A filter registered at exactly `Ordered.HIGHEST_PRECEDENCE` through a `FilterRegistrationBean` still runs before the encoding filter. The CAS plugin's single sign-out filter, which reads a parameter of every POST, was registered that way; it is now registered right after the encoding filter, at `Ordered.HIGHEST_PRECEDENCE + 1`.
+
+===== Required Actions
+
+For most applications **no changes are required**. Check that packaged stylesheets and scripts with non-ASCII characters are in the charset their responses now declare: UTF-8, or the encoding `grails.filter.encoding` names. When `grails.filter.encoding` is not UTF-8, check that clients sending a PUT, PATCH or DELETE form without a charset encode it in that encoding, as a POST form already had to be. A filter that has to run before the encoding filter can be registered at `Ordered.HIGHEST_PRECEDENCE` through a `FilterRegistrationBean`; a filter that reads request parameters needs a later order than that.

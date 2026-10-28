@@ -274,30 +274,41 @@ public class JpaCriteriaQueryCreator<T> {
     private void assignOrderBy(CriteriaQuery<?> cq, JpaQueryContext context) {
         if (isCountOnly()) {
             // a count returns one row whatever the order, and an ORDER BY on a column that is not aggregated fails
-            // on H2 and most other databases, so a count query leaves the criteria's orders out
+            // on H2 and most other databases, so a count query leaves the criteria's orders out, handled ones too
             return;
         }
         List<Query.Order> orders = detachedCriteria.getOrders();
         if (!orders.isEmpty()) {
-            var jpaOrders = orders.stream()
-                    .map(order -> {
-                        var propertyName = order.getProperty();
-                        SqlProjection sqlProjection = findSqlProjection(propertyName, false);
-                        Expression<?> expression = sqlProjection != null ?
-                                context.getSelectionAlias(sqlProjection.getColumnAlias()) :
-                                context.getFullyQualifiedExpression(propertyName);
-                        if (order.isIgnoreCase() && expression.getJavaType().equals(String.class)) {
-                            return order.getDirection().equals(Query.Order.Direction.ASC) ?
-                                    criteriaBuilder.asc(criteriaBuilder.lower((Expression<String>) expression)) :
-                                    criteriaBuilder.desc(criteriaBuilder.lower((Expression<String>) expression));
-                        } else {
-                            return order.getDirection().equals(Query.Order.Direction.ASC) ?
-                                    criteriaBuilder.asc(expression) :
-                                    criteriaBuilder.desc(expression);
-                        }
-                    })
-                    .toArray(jakarta.persistence.criteria.Order[]::new);
-            cq.orderBy(jpaOrders);
+            List<jakarta.persistence.criteria.Order> jpaOrders = new ArrayList<>();
+            for (Query.Order order : orders) {
+                PredicateGenerator.OrderHandler customHandler = PredicateGenerator.orderHandler(order.getClass());
+                if (customHandler != null) {
+                    // the handler of a Query.Order subclass builds its JPA order, or leaves the order out
+                    jakarta.persistence.criteria.Order customOrder =
+                            customHandler.handle(cq, context.getRoot(), criteriaBuilder, order, context);
+                    if (customOrder != null) {
+                        jpaOrders.add(customOrder);
+                    }
+                    continue;
+                }
+                String propertyName = order.getProperty();
+                SqlProjection sqlProjection = findSqlProjection(propertyName, false);
+                Expression<?> expression = sqlProjection != null ?
+                        context.getSelectionAlias(sqlProjection.getColumnAlias()) :
+                        context.getFullyQualifiedExpression(propertyName);
+                jakarta.persistence.criteria.Order jpaOrder;
+                if (order.isIgnoreCase() && expression.getJavaType().equals(String.class)) {
+                    jpaOrder = order.getDirection().equals(Query.Order.Direction.ASC) ?
+                            criteriaBuilder.asc(criteriaBuilder.lower((Expression<String>) expression)) :
+                            criteriaBuilder.desc(criteriaBuilder.lower((Expression<String>) expression));
+                } else {
+                    jpaOrder = order.getDirection().equals(Query.Order.Direction.ASC) ?
+                            criteriaBuilder.asc(expression) :
+                            criteriaBuilder.desc(expression);
+                }
+                jpaOrders.add(jpaOrder);
+            }
+            cq.orderBy(jpaOrders.toArray(new jakarta.persistence.criteria.Order[0]));
         }
     }
 

@@ -21,8 +21,6 @@ package org.grails.gradle.plugin.core
 import groovy.transform.CompileStatic
 
 import org.gradle.api.provider.Provider
-import org.gradle.api.tasks.Input
-import org.gradle.process.CommandLineArgumentProvider
 
 /**
  * Hands the startup progress settings a developer keeps as Gradle properties to the application
@@ -34,30 +32,20 @@ import org.gradle.process.CommandLineArgumentProvider
  * ./gradlew bootRun -Pgrails.startup.progress.openBrowser
  * </pre>
  *
- * <p>A property given without a value, as above, is {@code true}.</p>
+ * <p>A switch given without a value, as above, is {@code true}; any other setting given without one,
+ * such as the browser command, is empty.</p>
  *
  * @since 8.1
  */
 @CompileStatic
-class GrailsStartupProgressProvider implements CommandLineArgumentProvider {
+class GrailsStartupProgressProvider extends GrailsPropertyArgumentProvider {
 
     static final String PREFIX = 'grails.startup.progress.'
 
-    private final Provider<Map<String, String>> settings
+    /** The settings that are switches. */
+    static final List<String> SWITCHES = ['enabled', 'showDetails', 'openBrowser', 'endpoint.enabled'].collect { PREFIX + it }
 
     GrailsStartupProgressProvider(Provider<Map<String, String>> settings) {
-        this.settings = settings
-    }
-
-    @Input
-    Map<String, String> getSettings() {
-        settings.getOrElse([:])
-    }
-
-    @Override
-    Iterable<String> asArguments() {
-        getSettings().collect { String name, String value ->
-            "-D${name}=${value ?: 'true'}".toString()
-        }
+        super(settings, SWITCHES)
     }
 }

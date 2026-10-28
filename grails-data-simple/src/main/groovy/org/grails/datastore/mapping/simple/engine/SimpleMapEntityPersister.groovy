@@ -18,8 +18,12 @@
  */
 package org.grails.datastore.mapping.simple.engine
 
+import java.util.function.Supplier
+
 import org.springframework.context.ApplicationEventPublisher
 
+import org.apache.grails.data.simple.querytail.SimpleMapQueryTail
+import org.apache.grails.data.simple.querytail.SimpleMapStatements
 import org.grails.datastore.mapping.config.Property
 import org.grails.datastore.mapping.core.IdentityGenerationException
 import org.grails.datastore.mapping.core.OptimisticLockingException
@@ -86,6 +90,7 @@ class SimpleMapEntityPersister extends AbstractKeyValueEntityPersister<Map, Obje
     }
 
     protected void deleteEntry(String family, key, entry) {
+        simpleMapDatastore.queryTail?.write({ SimpleMapStatements.delete(persistentEntity, family) } as Supplier<String>)
         datastore[family].remove(key)
         def parent = persistentEntity.parentEntity
         while (parent != null) {
@@ -257,6 +262,7 @@ class SimpleMapEntityPersister extends AbstractKeyValueEntityPersister<Map, Obje
     }
 
     protected Map retrieveEntry(PersistentEntity persistentEntity, String family, Serializable key) {
+        simpleMapDatastore.queryTail?.read({ SimpleMapStatements.lookup(persistentEntity, family) } as Supplier<String>)
         Map entry = datastore[family].get(key)
         if (entry != null) {
             // returning a copy is important here so that updates are applied to the copy and not the original
@@ -310,6 +316,7 @@ class SimpleMapEntityPersister extends AbstractKeyValueEntityPersister<Map, Obje
     }
 
     protected storeEntry(PersistentEntity persistentEntity, EntityAccess entityAccess, storeId, Map nativeEntry) {
+        simpleMapDatastore.queryTail?.write({ SimpleMapStatements.insert(family) } as Supplier<String>)
         if (!persistentEntity.root) {
             nativeEntry.discriminator = persistentEntity.discriminator
         }
@@ -341,6 +348,7 @@ class SimpleMapEntityPersister extends AbstractKeyValueEntityPersister<Map, Obje
 
     protected void updateEntry(PersistentEntity persistentEntity, EntityAccess entityAccess, key, Map entry) {
         def family = getFamily(persistentEntity, persistentEntity.getMapping())
+        simpleMapDatastore.queryTail?.write({ SimpleMapStatements.update(persistentEntity, family) } as Supplier<String>)
         def existing = datastore[family].get(key)
 
         if (isVersioned(entityAccess)) {
@@ -380,5 +388,67 @@ class SimpleMapEntityPersister extends AbstractKeyValueEntityPersister<Map, Obje
         keys?.each {
             deleteEntry(family, it, null)
         }
+    }
+
+    /**
+     * Persists an entity; an entry it reads to do so, as one it updates, is part of the write.
+     */
+    @Override
+    protected Serializable persistEntity(PersistentEntity persistentEntity, Object obj, boolean isInsert) {
+        if (simpleMapDatastore.queryTail == null) {
+            return super.persistEntity(persistentEntity, obj, isInsert)
+        }
+        SimpleMapQueryTail.enter()
+        try {
+            return super.persistEntity(persistentEntity, obj, isInsert)
+        }
+        finally {
+            SimpleMapQueryTail.exit()
+        }
+    }
+
+    /**
+     * Loads an entity from its entry; an association it loads as it does is part of the read that found the entry.
+     */
+    @Override
+    protected void refreshObjectStateFromNativeEntry(PersistentEntity persistentEntity, Object obj, Serializable nativeKey,
+                                                     Map nativeEntry, boolean isEmbedded) {
+        if (simpleMapDatastore.queryTail == null) {
+            super.refreshObjectStateFromNativeEntry(persistentEntity, obj, nativeKey, nativeEntry, isEmbedded)
+            return
+        }
+        SimpleMapQueryTail.enter()
+        try {
+            super.refreshObjectStateFromNativeEntry(persistentEntity, obj, nativeKey, nativeEntry, isEmbedded)
+        }
+        finally {
+            SimpleMapQueryTail.exit()
+        }
+    }
+
+    /**
+     * Reads entities by their keys together, which query-tail records as one read.
+     */
+    @Override
+    protected List<Object> retrieveAllEntities(PersistentEntity persistentEntity, Iterable<Serializable> keys) {
+        SimpleMapQueryTail queryTail = simpleMapDatastore.queryTail
+        if (queryTail == null) {
+            return super.retrieveAllEntities(persistentEntity, keys)
+        }
+        queryTail.enterBatch({ SimpleMapStatements.lookupAll(persistentEntity, family) } as Supplier<String>)
+        try {
+            return super.retrieveAllEntities(persistentEntity, keys)
+        }
+        finally {
+            SimpleMapQueryTail.exit()
+        }
+    }
+
+    /**
+     * Reads entities by their keys together, which query-tail records as one read.
+     */
+    @Override
+    protected List<Object> retrieveAllEntities(PersistentEntity persistentEntity, Serializable[] keys) {
+        retrieveAllEntities(persistentEntity, Arrays.asList(keys) as Iterable<Serializable>)
     }
 }
