@@ -13,45 +13,40 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.grails.orm.hibernate.support.hibernate7
 
-package org.grails.orm.hibernate.support.hibernate7;
+import javax.sql.DataSource
 
-import java.io.File;
-import java.io.IOException;
-import java.util.Properties;
-
-import javax.sql.DataSource;
-
-import org.hibernate.Interceptor;
-import org.hibernate.SessionFactory;
-import org.hibernate.boot.MetadataSources;
-import org.hibernate.boot.model.naming.ImplicitNamingStrategy;
-import org.hibernate.boot.model.naming.PhysicalNamingStrategy;
-import org.hibernate.boot.registry.BootstrapServiceRegistryBuilder;
-import org.hibernate.cache.spi.RegionFactory;
-import org.hibernate.cfg.Configuration;
-import org.hibernate.context.spi.CurrentTenantIdentifierResolver;
-import org.hibernate.engine.jdbc.connections.spi.MultiTenantConnectionProvider;
-import org.hibernate.integrator.spi.Integrator;
-import org.jspecify.annotations.Nullable;
-
-import org.springframework.beans.factory.BeanFactory;
-import org.springframework.beans.factory.BeanFactoryAware;
-import org.springframework.beans.factory.DisposableBean;
-import org.springframework.beans.factory.FactoryBean;
-import org.springframework.beans.factory.InitializingBean;
-import org.springframework.beans.factory.SmartInitializingSingleton;
-import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
-import org.springframework.context.ResourceLoaderAware;
-import org.springframework.core.InfrastructureProxy;
-import org.springframework.core.io.ClassPathResource;
-import org.springframework.core.io.Resource;
-import org.springframework.core.io.ResourceLoader;
-import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
-import org.springframework.core.io.support.ResourcePatternResolver;
-import org.springframework.core.io.support.ResourcePatternUtils;
-import org.springframework.core.task.AsyncTaskExecutor;
-import org.springframework.core.type.filter.TypeFilter;
+import groovy.transform.CompileStatic
+import org.hibernate.Interceptor
+import org.hibernate.SessionFactory
+import org.hibernate.boot.MetadataSources
+import org.hibernate.boot.model.naming.ImplicitNamingStrategy
+import org.hibernate.boot.model.naming.PhysicalNamingStrategy
+import org.hibernate.boot.registry.BootstrapServiceRegistryBuilder
+import org.hibernate.cache.spi.RegionFactory
+import org.hibernate.cfg.Configuration
+import org.hibernate.context.spi.CurrentTenantIdentifierResolver
+import org.hibernate.engine.jdbc.connections.spi.MultiTenantConnectionProvider
+import org.hibernate.integrator.spi.Integrator
+import org.jspecify.annotations.Nullable
+import org.springframework.beans.factory.BeanFactory
+import org.springframework.beans.factory.BeanFactoryAware
+import org.springframework.beans.factory.DisposableBean
+import org.springframework.beans.factory.FactoryBean
+import org.springframework.beans.factory.InitializingBean
+import org.springframework.beans.factory.SmartInitializingSingleton
+import org.springframework.beans.factory.config.ConfigurableListableBeanFactory
+import org.springframework.context.ResourceLoaderAware
+import org.springframework.core.InfrastructureProxy
+import org.springframework.core.io.ClassPathResource
+import org.springframework.core.io.Resource
+import org.springframework.core.io.ResourceLoader
+import org.springframework.core.io.support.PathMatchingResourcePatternResolver
+import org.springframework.core.io.support.ResourcePatternResolver
+import org.springframework.core.io.support.ResourcePatternUtils
+import org.springframework.core.task.AsyncTaskExecutor
+import org.springframework.core.type.filter.TypeFilter
 
 /**
  * {@link FactoryBean} that creates a Hibernate {@link SessionFactory}. This is the usual
@@ -75,89 +70,90 @@ import org.springframework.core.type.filter.TypeFilter;
  * @see LocalSessionFactoryBuilder
  * @see org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean
  */
-public class LocalSessionFactoryBean extends HibernateExceptionTranslator
+@CompileStatic
+class LocalSessionFactoryBean extends HibernateExceptionTranslator
         implements FactoryBean<SessionFactory>, ResourceLoaderAware, BeanFactoryAware,
         InitializingBean, SmartInitializingSingleton, DisposableBean {
 
     @Nullable
-    private DataSource dataSource;
+    private DataSource dataSource
 
     @Nullable
-    private Resource[] configLocations;
+    private Resource[] configLocations
 
     @Nullable
-    private String[] mappingResources;
+    private String[] mappingResources
 
     @Nullable
-    private Resource[] mappingLocations;
+    private Resource[] mappingLocations
 
     @Nullable
-    private Resource[] cacheableMappingLocations;
+    private Resource[] cacheableMappingLocations
 
     @Nullable
-    private Resource[] mappingJarLocations;
+    private Resource[] mappingJarLocations
 
     @Nullable
-    private Resource[] mappingDirectoryLocations;
+    private Resource[] mappingDirectoryLocations
 
     @Nullable
-    private Interceptor entityInterceptor;
+    private Interceptor entityInterceptor
 
     @Nullable
-    private ImplicitNamingStrategy implicitNamingStrategy;
+    private ImplicitNamingStrategy implicitNamingStrategy
 
     @Nullable
-    private PhysicalNamingStrategy physicalNamingStrategy;
+    private PhysicalNamingStrategy physicalNamingStrategy
 
     @Nullable
-    private Object jtaTransactionManager;
+    private Object jtaTransactionManager
 
     @Nullable
-    private RegionFactory cacheRegionFactory;
+    private RegionFactory cacheRegionFactory
 
     @Nullable
-    private MultiTenantConnectionProvider multiTenantConnectionProvider;
+    private MultiTenantConnectionProvider multiTenantConnectionProvider
 
     @Nullable
-    private CurrentTenantIdentifierResolver currentTenantIdentifierResolver;
+    private CurrentTenantIdentifierResolver currentTenantIdentifierResolver
 
     @Nullable
-    private Properties hibernateProperties;
+    private Properties hibernateProperties
 
     @Nullable
-    private TypeFilter[] entityTypeFilters;
+    private TypeFilter[] entityTypeFilters
 
     @Nullable
-    private Class<?>[] annotatedClasses;
+    private Class<?>[] annotatedClasses
 
     @Nullable
-    private String[] annotatedPackages;
+    private String[] annotatedPackages
 
     @Nullable
-    private String[] packagesToScan;
+    private String[] packagesToScan
 
     @Nullable
-    private AsyncTaskExecutor bootstrapExecutor;
+    private AsyncTaskExecutor bootstrapExecutor
 
     @Nullable
-    private Integrator[] hibernateIntegrators;
+    private Integrator[] hibernateIntegrators
 
-    private boolean metadataSourcesAccessed = false;
-
-    @Nullable
-    private MetadataSources metadataSources;
+    private boolean metadataSourcesAccessed = false
 
     @Nullable
-    private ResourcePatternResolver resourcePatternResolver;
+    private MetadataSources metadataSources
 
     @Nullable
-    private ConfigurableListableBeanFactory beanFactory;
+    private ResourcePatternResolver resourcePatternResolver
 
     @Nullable
-    private Configuration configuration;
+    private ConfigurableListableBeanFactory beanFactory
 
     @Nullable
-    private SessionFactory sessionFactory;
+    private Configuration configuration
+
+    @Nullable
+    private SessionFactory sessionFactory
 
     /**
      * Set the DataSource to be used by the SessionFactory.
@@ -165,8 +161,8 @@ public class LocalSessionFactoryBean extends HibernateExceptionTranslator
      * <p>If this is set, the Hibernate settings should not define
      * a connection provider to avoid meaningless double configuration.
      */
-    public void setDataSource(DataSource dataSource) {
-        this.dataSource = dataSource;
+    void setDataSource(DataSource dataSource) {
+        this.dataSource = dataSource
     }
 
     /**
@@ -176,8 +172,8 @@ public class LocalSessionFactoryBean extends HibernateExceptionTranslator
      * resources are specified locally via this bean.
      * @see Configuration#configure(java.net.URL)
      */
-    public void setConfigLocation(Resource configLocation) {
-        this.configLocations = new Resource[] {configLocation};
+    void setConfigLocation(Resource configLocation) {
+        this.configLocations = [configLocation] as Resource[]
     }
 
     /**
@@ -187,8 +183,8 @@ public class LocalSessionFactoryBean extends HibernateExceptionTranslator
      * resources are specified locally via this bean.
      * @see Configuration#configure(java.net.URL)
      */
-    public void setConfigLocations(Resource... configLocations) {
-        this.configLocations = configLocations;
+    void setConfigLocations(Resource... configLocations) {
+        this.configLocations = configLocations
     }
 
     /**
@@ -201,8 +197,8 @@ public class LocalSessionFactoryBean extends HibernateExceptionTranslator
      * @see #setMappingLocations
      * @see Configuration#addResource
      */
-    public void setMappingResources(String... mappingResources) {
-        this.mappingResources = mappingResources;
+    void setMappingResources(String... mappingResources) {
+        this.mappingResources = mappingResources
     }
 
     /**
@@ -214,8 +210,8 @@ public class LocalSessionFactoryBean extends HibernateExceptionTranslator
      * or to specify all mappings locally.
      * @see Configuration#addInputStream
      */
-    public void setMappingLocations(Resource... mappingLocations) {
-        this.mappingLocations = mappingLocations;
+    void setMappingLocations(Resource... mappingLocations) {
+        this.mappingLocations = mappingLocations
     }
 
     /**
@@ -227,8 +223,8 @@ public class LocalSessionFactoryBean extends HibernateExceptionTranslator
      * or to specify all mappings locally.
      * @see Configuration#addCacheableFile(File)
      */
-    public void setCacheableMappingLocations(Resource... cacheableMappingLocations) {
-        this.cacheableMappingLocations = cacheableMappingLocations;
+    void setCacheableMappingLocations(Resource... cacheableMappingLocations) {
+        this.cacheableMappingLocations = cacheableMappingLocations
     }
 
     /**
@@ -238,8 +234,8 @@ public class LocalSessionFactoryBean extends HibernateExceptionTranslator
      * or to specify all mappings locally.
      * @see Configuration#addJar(File)
      */
-    public void setMappingJarLocations(Resource... mappingJarLocations) {
-        this.mappingJarLocations = mappingJarLocations;
+    void setMappingJarLocations(Resource... mappingJarLocations) {
+        this.mappingJarLocations = mappingJarLocations
     }
 
     /**
@@ -249,8 +245,8 @@ public class LocalSessionFactoryBean extends HibernateExceptionTranslator
      * or to specify all mappings locally.
      * @see Configuration#addDirectory(File)
      */
-    public void setMappingDirectoryLocations(Resource... mappingDirectoryLocations) {
-        this.mappingDirectoryLocations = mappingDirectoryLocations;
+    void setMappingDirectoryLocations(Resource... mappingDirectoryLocations) {
+        this.mappingDirectoryLocations = mappingDirectoryLocations
     }
 
     /**
@@ -259,24 +255,24 @@ public class LocalSessionFactoryBean extends HibernateExceptionTranslator
      * Will get applied to any new Session created by this factory.
      * @see Configuration#setInterceptor
      */
-    public void setEntityInterceptor(Interceptor entityInterceptor) {
-        this.entityInterceptor = entityInterceptor;
+    void setEntityInterceptor(Interceptor entityInterceptor) {
+        this.entityInterceptor = entityInterceptor
     }
 
     /**
      * Set a Hibernate 5 {@link ImplicitNamingStrategy} for the SessionFactory.
      * @see Configuration#setImplicitNamingStrategy
      */
-    public void setImplicitNamingStrategy(ImplicitNamingStrategy implicitNamingStrategy) {
-        this.implicitNamingStrategy = implicitNamingStrategy;
+    void setImplicitNamingStrategy(ImplicitNamingStrategy implicitNamingStrategy) {
+        this.implicitNamingStrategy = implicitNamingStrategy
     }
 
     /**
      * Set a Hibernate 5 {@link PhysicalNamingStrategy} for the SessionFactory.
      * @see Configuration#setPhysicalNamingStrategy
      */
-    public void setPhysicalNamingStrategy(PhysicalNamingStrategy physicalNamingStrategy) {
-        this.physicalNamingStrategy = physicalNamingStrategy;
+    void setPhysicalNamingStrategy(PhysicalNamingStrategy physicalNamingStrategy) {
+        this.physicalNamingStrategy = physicalNamingStrategy
     }
 
     /**
@@ -285,8 +281,8 @@ public class LocalSessionFactoryBean extends HibernateExceptionTranslator
      * if any. Implicitly sets up {@code JtaPlatform}.
      * @see LocalSessionFactoryBuilder#setJtaTransactionManager
      */
-    public void setJtaTransactionManager(Object jtaTransactionManager) {
-        this.jtaTransactionManager = jtaTransactionManager;
+    void setJtaTransactionManager(Object jtaTransactionManager) {
+        this.jtaTransactionManager = jtaTransactionManager
     }
 
     /**
@@ -297,8 +293,8 @@ public class LocalSessionFactoryBean extends HibernateExceptionTranslator
      * @since 5.1
      * @see LocalSessionFactoryBuilder#setCacheRegionFactory
      */
-    public void setCacheRegionFactory(RegionFactory cacheRegionFactory) {
-        this.cacheRegionFactory = cacheRegionFactory;
+    void setCacheRegionFactory(RegionFactory cacheRegionFactory) {
+        this.cacheRegionFactory = cacheRegionFactory
     }
 
     /**
@@ -306,16 +302,16 @@ public class LocalSessionFactoryBean extends HibernateExceptionTranslator
      * @since 4.3
      * @see LocalSessionFactoryBuilder#setMultiTenantConnectionProvider
      */
-    public void setMultiTenantConnectionProvider(MultiTenantConnectionProvider multiTenantConnectionProvider) {
-        this.multiTenantConnectionProvider = multiTenantConnectionProvider;
+    void setMultiTenantConnectionProvider(MultiTenantConnectionProvider multiTenantConnectionProvider) {
+        this.multiTenantConnectionProvider = multiTenantConnectionProvider
     }
 
     /**
      * Set a {@link CurrentTenantIdentifierResolver} to be passed on to the SessionFactory.
      * @see LocalSessionFactoryBuilder#setCurrentTenantIdentifierResolver
      */
-    public void setCurrentTenantIdentifierResolver(CurrentTenantIdentifierResolver currentTenantIdentifierResolver) {
-        this.currentTenantIdentifierResolver = currentTenantIdentifierResolver;
+    void setCurrentTenantIdentifierResolver(CurrentTenantIdentifierResolver currentTenantIdentifierResolver) {
+        this.currentTenantIdentifierResolver = currentTenantIdentifierResolver
     }
 
     /**
@@ -325,19 +321,19 @@ public class LocalSessionFactoryBean extends HibernateExceptionTranslator
      * provider settings and use a Spring-set DataSource instead.
      * @see #setDataSource
      */
-    public void setHibernateProperties(Properties hibernateProperties) {
-        this.hibernateProperties = hibernateProperties;
+    void setHibernateProperties(Properties hibernateProperties) {
+        this.hibernateProperties = hibernateProperties
     }
 
     /**
      * Return the Hibernate properties, if any. Mainly available for
      * configuration through property paths that specify individual keys.
      */
-    public Properties getHibernateProperties() {
+    Properties getHibernateProperties() {
         if (this.hibernateProperties == null) {
-            this.hibernateProperties = new Properties();
+            this.hibernateProperties = new Properties()
         }
-        return this.hibernateProperties;
+        return this.hibernateProperties
     }
 
     /**
@@ -347,16 +343,16 @@ public class LocalSessionFactoryBean extends HibernateExceptionTranslator
      * or {@code @jakarta.persistence.MappedSuperclass}.
      * @see #setPackagesToScan
      */
-    public void setEntityTypeFilters(TypeFilter... entityTypeFilters) {
-        this.entityTypeFilters = entityTypeFilters;
+    void setEntityTypeFilters(TypeFilter... entityTypeFilters) {
+        this.entityTypeFilters = entityTypeFilters
     }
 
     /**
      * Specify annotated entity classes to register with this Hibernate SessionFactory.
      * @see Configuration#addAnnotatedClass(Class)
      */
-    public void setAnnotatedClasses(Class<?>... annotatedClasses) {
-        this.annotatedClasses = annotatedClasses;
+    void setAnnotatedClasses(Class<?>... annotatedClasses) {
+        this.annotatedClasses = annotatedClasses
     }
 
     /**
@@ -364,8 +360,8 @@ public class LocalSessionFactoryBean extends HibernateExceptionTranslator
      * annotation metadata will be read.
      * @see Configuration#addPackage(String)
      */
-    public void setAnnotatedPackages(String... annotatedPackages) {
-        this.annotatedPackages = annotatedPackages;
+    void setAnnotatedPackages(String... annotatedPackages) {
+        this.annotatedPackages = annotatedPackages
     }
 
     /**
@@ -373,8 +369,8 @@ public class LocalSessionFactoryBean extends HibernateExceptionTranslator
      * classpath. This is analogous to Spring's component-scan feature
      * ({@link org.springframework.context.annotation.ClassPathBeanDefinitionScanner}).
      */
-    public void setPackagesToScan(String... packagesToScan) {
-        this.packagesToScan = packagesToScan;
+    void setPackagesToScan(String... packagesToScan) {
+        this.packagesToScan = packagesToScan
     }
 
     /**
@@ -392,8 +388,8 @@ public class LocalSessionFactoryBean extends HibernateExceptionTranslator
      * @since 4.3
      * @see LocalSessionFactoryBuilder#buildSessionFactory(AsyncTaskExecutor)
      */
-    public void setBootstrapExecutor(AsyncTaskExecutor bootstrapExecutor) {
-        this.bootstrapExecutor = bootstrapExecutor;
+    void setBootstrapExecutor(AsyncTaskExecutor bootstrapExecutor) {
+        this.bootstrapExecutor = bootstrapExecutor
     }
 
     /**
@@ -405,8 +401,8 @@ public class LocalSessionFactoryBean extends HibernateExceptionTranslator
      * @see #setMetadataSources
      * @see BootstrapServiceRegistryBuilder#applyIntegrator
      */
-    public void setHibernateIntegrators(Integrator... hibernateIntegrators) {
-        this.hibernateIntegrators = hibernateIntegrators;
+    void setHibernateIntegrators(Integrator... hibernateIntegrators) {
+        this.hibernateIntegrators = hibernateIntegrators
     }
 
     /**
@@ -417,9 +413,9 @@ public class LocalSessionFactoryBean extends HibernateExceptionTranslator
      * @see MetadataSources#MetadataSources(ServiceRegistry)
      * @see BootstrapServiceRegistryBuilder#build()
      */
-    public void setMetadataSources(MetadataSources metadataSources) {
-        this.metadataSourcesAccessed = true;
-        this.metadataSources = metadataSources;
+    void setMetadataSources(MetadataSources metadataSources) {
+        this.metadataSourcesAccessed = true
+        this.metadataSources = metadataSources
     }
 
     /**
@@ -430,21 +426,21 @@ public class LocalSessionFactoryBean extends HibernateExceptionTranslator
      * @since 4.3
      * @see LocalSessionFactoryBuilder#LocalSessionFactoryBuilder(DataSource, ResourceLoader, MetadataSources)
      */
-    public MetadataSources getMetadataSources() {
-        this.metadataSourcesAccessed = true;
+    MetadataSources getMetadataSources() {
+        this.metadataSourcesAccessed = true
         if (this.metadataSources == null) {
-            BootstrapServiceRegistryBuilder builder = new BootstrapServiceRegistryBuilder();
+            BootstrapServiceRegistryBuilder builder = new BootstrapServiceRegistryBuilder()
             if (this.resourcePatternResolver != null) {
-                builder = builder.applyClassLoader(this.resourcePatternResolver.getClassLoader());
+                builder = builder.applyClassLoader(this.resourcePatternResolver.getClassLoader())
             }
             if (this.hibernateIntegrators != null) {
                 for (Integrator integrator : this.hibernateIntegrators) {
-                    builder = builder.applyIntegrator(integrator);
+                    builder = builder.applyIntegrator(integrator)
                 }
             }
-            this.metadataSources = new MetadataSources(builder.build());
+            this.metadataSources = new MetadataSources(builder.build())
         }
-        return this.metadataSources;
+        return this.metadataSources
     }
 
     /**
@@ -452,8 +448,8 @@ public class LocalSessionFactoryBean extends HibernateExceptionTranslator
      * @param resourceLoader the ResourceLoader to use (never {@code null})
      */
     @Override
-    public void setResourceLoader(ResourceLoader resourceLoader) {
-        this.resourcePatternResolver = ResourcePatternUtils.getResourcePatternResolver(resourceLoader);
+    void setResourceLoader(ResourceLoader resourceLoader) {
+        this.resourcePatternResolver = ResourcePatternUtils.getResourcePatternResolver(resourceLoader)
     }
 
     /**
@@ -461,11 +457,11 @@ public class LocalSessionFactoryBean extends HibernateExceptionTranslator
      * @return the ResourceLoader to use (never {@code null})
      * @since 4.3
      */
-    public ResourceLoader getResourceLoader() {
+    ResourceLoader getResourceLoader() {
         if (this.resourcePatternResolver == null) {
-            this.resourcePatternResolver = new PathMatchingResourcePatternResolver();
+            this.resourcePatternResolver = new PathMatchingResourcePatternResolver()
         }
-        return this.resourcePatternResolver;
+        return this.resourcePatternResolver
     }
 
     /**
@@ -477,132 +473,132 @@ public class LocalSessionFactoryBean extends HibernateExceptionTranslator
      * @see LocalSessionFactoryBuilder#setBeanContainer
      */
     @Override
-    public void setBeanFactory(BeanFactory beanFactory) {
-        if (beanFactory instanceof ConfigurableListableBeanFactory clbf) {
-            this.beanFactory = clbf;
+    void setBeanFactory(BeanFactory beanFactory) {
+        if (beanFactory instanceof ConfigurableListableBeanFactory) {
+            this.beanFactory = (ConfigurableListableBeanFactory) beanFactory
         }
     }
 
     @Override
-    public void afterPropertiesSet() throws IOException {
+    void afterPropertiesSet() throws IOException {
         if (this.metadataSources != null && !this.metadataSourcesAccessed) {
             // Repeated initialization with no user-customized MetadataSources -> clear it.
-            this.metadataSources = null;
+            this.metadataSources = null
         }
 
         LocalSessionFactoryBuilder sfb = new LocalSessionFactoryBuilder(
-                this.dataSource, getResourceLoader(), getMetadataSources());
+                this.dataSource, getResourceLoader(), getMetadataSources())
 
         if (this.configLocations != null) {
             for (Resource resource : this.configLocations) {
                 // Load Hibernate configuration from given location.
-                sfb.configure(resource.getURL());
+                sfb.configure(resource.getURL())
             }
         }
 
         if (this.mappingResources != null) {
             // Register given Hibernate mapping definitions, contained in resource files.
             for (String mapping : this.mappingResources) {
-                Resource mr = new ClassPathResource(mapping.trim(), getResourceLoader().getClassLoader());
-                sfb.addInputStream(mr.getInputStream());
+                Resource mr = new ClassPathResource(mapping.trim(), getResourceLoader().getClassLoader())
+                sfb.addInputStream(mr.getInputStream())
             }
         }
 
         if (this.mappingLocations != null) {
             // Register given Hibernate mapping definitions, contained in resource files.
             for (Resource resource : this.mappingLocations) {
-                sfb.addInputStream(resource.getInputStream());
+                sfb.addInputStream(resource.getInputStream())
             }
         }
 
         if (this.cacheableMappingLocations != null) {
             // Register given cacheable Hibernate mapping definitions, read from the file system.
             for (Resource resource : this.cacheableMappingLocations) {
-                sfb.addCacheableFile(resource.getFile());
+                sfb.addCacheableFile(resource.getFile())
             }
         }
 
         if (this.mappingJarLocations != null) {
             // Register given Hibernate mapping definitions, contained in jar files.
             for (Resource resource : this.mappingJarLocations) {
-                sfb.addJar(resource.getFile());
+                sfb.addJar(resource.getFile())
             }
         }
 
         if (this.mappingDirectoryLocations != null) {
             // Register all Hibernate mapping definitions in the given directories.
             for (Resource resource : this.mappingDirectoryLocations) {
-                File file = resource.getFile();
+                File file = resource.getFile()
                 if (!file.isDirectory()) {
                     throw new IllegalArgumentException(
-                            "Mapping directory location [" + resource + "] does not denote a directory");
+                            'Mapping directory location [' + resource + '] does not denote a directory')
                 }
-                sfb.addDirectory(file);
+                sfb.addDirectory(file)
             }
         }
 
         if (this.entityInterceptor != null) {
-            sfb.setInterceptor(this.entityInterceptor);
+            sfb.setInterceptor(this.entityInterceptor)
         }
 
         if (this.implicitNamingStrategy != null) {
-            sfb.setImplicitNamingStrategy(this.implicitNamingStrategy);
+            sfb.setImplicitNamingStrategy(this.implicitNamingStrategy)
         }
 
         if (this.physicalNamingStrategy != null) {
-            sfb.setPhysicalNamingStrategy(this.physicalNamingStrategy);
+            sfb.setPhysicalNamingStrategy(this.physicalNamingStrategy)
         }
 
         if (this.jtaTransactionManager != null) {
-            sfb.setJtaTransactionManager(this.jtaTransactionManager);
+            sfb.setJtaTransactionManager(this.jtaTransactionManager)
         }
 
         if (this.beanFactory != null) {
-            sfb.setBeanContainer(this.beanFactory);
+            sfb.setBeanContainer(this.beanFactory)
         }
 
         if (this.cacheRegionFactory != null) {
-            sfb.setCacheRegionFactory(this.cacheRegionFactory);
+            sfb.setCacheRegionFactory(this.cacheRegionFactory)
         }
 
         if (this.multiTenantConnectionProvider != null) {
-            sfb.setMultiTenantConnectionProvider(this.multiTenantConnectionProvider);
+            sfb.setMultiTenantConnectionProvider(this.multiTenantConnectionProvider)
         }
 
         if (this.currentTenantIdentifierResolver != null) {
-            sfb.setCurrentTenantIdentifierResolver(this.currentTenantIdentifierResolver);
+            sfb.setCurrentTenantIdentifierResolver(this.currentTenantIdentifierResolver)
         }
 
         if (this.hibernateProperties != null) {
-            sfb.addProperties(this.hibernateProperties);
+            sfb.addProperties(this.hibernateProperties)
         }
 
         if (this.entityTypeFilters != null) {
-            sfb.setEntityTypeFilters(this.entityTypeFilters);
+            sfb.setEntityTypeFilters(this.entityTypeFilters)
         }
 
         if (this.annotatedClasses != null) {
-            sfb.addAnnotatedClasses(this.annotatedClasses);
+            sfb.addAnnotatedClasses(this.annotatedClasses)
         }
 
         if (this.annotatedPackages != null) {
-            sfb.addPackages(this.annotatedPackages);
+            sfb.addPackages(this.annotatedPackages)
         }
 
         if (this.packagesToScan != null) {
-            sfb.scanPackages(this.packagesToScan);
+            sfb.scanPackages(this.packagesToScan)
         }
 
         // Build SessionFactory instance.
-        this.configuration = sfb;
-        this.sessionFactory = buildSessionFactory(sfb);
+        this.configuration = sfb
+        this.sessionFactory = buildSessionFactory(sfb)
     }
 
     @Override
-    public void afterSingletonsInstantiated() {
+    void afterSingletonsInstantiated() {
         // Enforce completion of asynchronous Hibernate initialization before context refresh completion.
-        if (this.sessionFactory instanceof InfrastructureProxy proxy) {
-            proxy.getWrappedObject();
+        if (this.sessionFactory instanceof InfrastructureProxy) {
+            ((InfrastructureProxy) this.sessionFactory).getWrappedObject()
         }
     }
 
@@ -619,7 +615,7 @@ public class LocalSessionFactoryBean extends HibernateExceptionTranslator
      */
     protected SessionFactory buildSessionFactory(LocalSessionFactoryBuilder sfb) {
         return (this.bootstrapExecutor != null ? sfb.buildSessionFactory(this.bootstrapExecutor) :
-                sfb.buildSessionFactory());
+                sfb.buildSessionFactory())
     }
 
     /**
@@ -627,33 +623,33 @@ public class LocalSessionFactoryBean extends HibernateExceptionTranslator
      * Allows for access to configuration metadata stored there (rarely needed).
      * @throws IllegalStateException if the Configuration object has not been initialized yet
      */
-    public final Configuration getConfiguration() {
+    final Configuration getConfiguration() {
         if (this.configuration == null) {
-            throw new IllegalStateException("Configuration not initialized yet");
+            throw new IllegalStateException('Configuration not initialized yet')
         }
-        return this.configuration;
+        return this.configuration
     }
 
-    @Override
     @Nullable
-    public SessionFactory getObject() {
-        return this.sessionFactory;
+    @Override
+    SessionFactory getObject() {
+        return this.sessionFactory
     }
 
     @Override
-    public Class<?> getObjectType() {
-        return (this.sessionFactory != null ? this.sessionFactory.getClass() : SessionFactory.class);
+    Class<?> getObjectType() {
+        return (this.sessionFactory != null ? this.sessionFactory.getClass() : SessionFactory)
     }
 
     @Override
-    public boolean isSingleton() {
-        return true;
+    boolean isSingleton() {
+        return true
     }
 
     @Override
-    public void destroy() {
+    void destroy() {
         if (this.sessionFactory != null) {
-            this.sessionFactory.close();
+            this.sessionFactory.close()
         }
     }
 

@@ -16,28 +16,30 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.orm.hibernate.cfg.domainbinding.binder;
+package org.grails.orm.hibernate.cfg.domainbinding.binder
 
-import org.hibernate.boot.spi.InFlightMetadataCollector;
-import org.hibernate.mapping.PersistentClass;
-import org.jspecify.annotations.NonNull;
+import groovy.transform.CompileStatic
+import org.hibernate.boot.spi.InFlightMetadataCollector
+import org.hibernate.mapping.PersistentClass
+import org.jspecify.annotations.NonNull
 
-import org.grails.orm.hibernate.cfg.Mapping;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
+import org.grails.orm.hibernate.cfg.Mapping
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
 
-import static org.grails.orm.hibernate.cfg.GrailsHibernateUtil.unqualify;
+import static org.grails.orm.hibernate.cfg.GrailsHibernateUtil.unqualify
 
 /**
  * Binds a Grails domain class to the Hibernate persistent class model.
  *
  * @since 8.0
  */
-public class ClassBinder {
+@CompileStatic
+class ClassBinder {
 
-    private final InFlightMetadataCollector collector;
+    private final InFlightMetadataCollector collector
 
-    public ClassBinder(@NonNull InFlightMetadataCollector collector) {
-        this.collector = collector;
+    ClassBinder(@NonNull InFlightMetadataCollector collector) {
+        this.collector = collector
     }
 
     /**
@@ -47,36 +49,36 @@ public class ClassBinder {
      * @param persistentEntity The Grails domain class
      * @param persistentClass The persistent class
      */
-    public void bindClass(@NonNull GrailsHibernatePersistentEntity persistentEntity, PersistentClass persistentClass) {
-        persistentClass.setLazy(true);
-        var entityName = persistentEntity.getName();
-        persistentClass.setEntityName(entityName);
-        persistentClass.setJpaEntityName(entityName);
-        persistentClass.setProxyInterfaceName(entityName);
-        persistentClass.setClassName(entityName);
-        persistentClass.setAbstract(persistentEntity.isAbstract());
+    void bindClass(@NonNull GrailsHibernatePersistentEntity persistentEntity, PersistentClass persistentClass) {
+        persistentClass.setLazy(true)
+        String entityName = persistentEntity.getName()
+        persistentClass.setEntityName(entityName)
+        persistentClass.setJpaEntityName(entityName)
+        persistentClass.setProxyInterfaceName(entityName)
+        persistentClass.setClassName(entityName)
+        persistentClass.setAbstract(persistentEntity.isAbstract())
 
-        Mapping mappedForm = persistentEntity.getHibernateMappedForm();
-        boolean autoImport;
+        Mapping mappedForm = persistentEntity.getHibernateMappedForm()
+        boolean autoImport
         if (mappedForm != null) {
-            autoImport = mappedForm.isAutoImport();
-            persistentClass.setDynamicInsert(mappedForm.isDynamicInsert());
-            persistentClass.setDynamicUpdate(mappedForm.isDynamicUpdate());
-            persistentClass.setBatchSize(mappedForm.getBatchSize() != null ? mappedForm.getBatchSize() : 0);
+            autoImport = mappedForm.isAutoImport()
+            persistentClass.setDynamicInsert(mappedForm.isDynamicInsert())
+            persistentClass.setDynamicUpdate(mappedForm.isDynamicUpdate())
+            persistentClass.setBatchSize(mappedForm.getBatchSize() != null ? mappedForm.getBatchSize() : 0)
         } else {
             autoImport =
-                    collector.getMetadataBuildingOptions().getMappingDefaults().isAutoImportEnabled();
-            persistentClass.setDynamicInsert(false);
-            persistentClass.setDynamicUpdate(false);
-            persistentClass.setBatchSize(0);
+                    collector.getMetadataBuildingOptions().getMappingDefaults().isAutoImportEnabled()
+            persistentClass.setDynamicInsert(false)
+            persistentClass.setDynamicUpdate(false)
+            persistentClass.setBatchSize(0)
         }
-        persistentClass.setSelectBeforeUpdate(false);
-        persistentEntity.setPersistentClass(persistentClass);
+        persistentClass.setSelectBeforeUpdate(false)
+        persistentEntity.setPersistentClass(persistentClass)
 
         if (autoImport) {
-            String unqualified = unqualify(entityName);
-            persistentClass.setJpaEntityName(unqualified);
-            collector.addImport(unqualified, entityName);
+            String unqualified = unqualify(entityName)
+            persistentClass.setJpaEntityName(unqualified)
+            collector.addImport(unqualified, entityName)
         }
     }
 }

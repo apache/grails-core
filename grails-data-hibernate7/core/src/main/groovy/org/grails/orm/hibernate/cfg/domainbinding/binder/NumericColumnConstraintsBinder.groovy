@@ -16,31 +16,28 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.orm.hibernate.cfg.domainbinding.binder;
+package org.grails.orm.hibernate.cfg.domainbinding.binder
 
-import java.math.BigDecimal;
-import java.util.Optional;
+import groovy.transform.CompileStatic
+import org.codehaus.groovy.runtime.DefaultGroovyMethods
+import org.hibernate.dialect.Dialect
+import org.hibernate.dialect.H2Dialect
+import org.hibernate.mapping.Column
 
-import org.codehaus.groovy.runtime.DefaultGroovyMethods;
+import org.grails.orm.hibernate.cfg.ColumnConfig
+import org.grails.orm.hibernate.cfg.PropertyConfig
 
-import org.hibernate.dialect.Dialect;
-import org.hibernate.dialect.H2Dialect;
-import org.hibernate.mapping.Column;
+@CompileStatic
+class NumericColumnConstraintsBinder {
 
-import org.grails.orm.hibernate.cfg.ColumnConfig;
-import org.grails.orm.hibernate.cfg.PropertyConfig;
+    private final Dialect dialect
 
-@SuppressWarnings("PMD.DataflowAnomalyAnalysis")
-public class NumericColumnConstraintsBinder {
-
-    private final Dialect dialect;
-
-    public NumericColumnConstraintsBinder() {
-        this(new H2Dialect());
+    NumericColumnConstraintsBinder() {
+        this(new H2Dialect())
     }
 
-    public NumericColumnConstraintsBinder(Dialect dialect) {
-        this.dialect = dialect;
+    NumericColumnConstraintsBinder(Dialect dialect) {
+        this.dialect = dialect
     }
 
     /**
@@ -55,28 +52,26 @@ public class NumericColumnConstraintsBinder {
      * then come from the column configuration and the dialect alone
      * @param propertyType the type of the value the column holds
      */
-    public void bindNumericColumnConstraints(
+    void bindNumericColumnConstraints(
             Column column, ColumnConfig cc, PropertyConfig constrainedProperty, Class<?> propertyType) {
-        int scale = determineScale(cc, constrainedProperty);
+        int scale = determineScale(cc, constrainedProperty)
         if (scale > -1) {
-            column.setScale(scale);
+            column.scale = scale
         } else {
-            scale = org.hibernate.engine.jdbc.Size.DEFAULT_SCALE; // Ensure scale is non-negative for calculations
+            scale = org.hibernate.engine.jdbc.Size.DEFAULT_SCALE // Ensure scale is non-negative for calculations
         }
-        if (cc != null && cc.getPrecision() > -1) {
-            column.setPrecision(cc.getPrecision());
+        if (cc != null && cc.precision > -1) {
+            column.precision = cc.precision
         } else if (!isApproximateFloatingPoint(propertyType)) {
-            int minConstraintValueLength = getConstraintValueLength(
-                    constrainedProperty == null ? null : constrainedProperty.getMin(), scale);
-            int maxConstraintValueLength = getConstraintValueLength(
-                    constrainedProperty == null ? null : constrainedProperty.getMax(), scale);
+            int minConstraintValueLength = getConstraintValueLength(constrainedProperty?.min, scale)
+            int maxConstraintValueLength = getConstraintValueLength(constrainedProperty?.max, scale)
 
             int precision = minConstraintValueLength > 0 && maxConstraintValueLength > 0 ?
                     Math.max(minConstraintValueLength, maxConstraintValueLength) :
-                    DefaultGroovyMethods.max(new Integer[] {
-                        dialect.getDefaultDecimalPrecision(), minConstraintValueLength, maxConstraintValueLength
-                    });
-            column.setPrecision(precision);
+                    DefaultGroovyMethods.max([
+                        dialect.defaultDecimalPrecision, minConstraintValueLength, maxConstraintValueLength
+                    ] as Integer[])
+            column.precision = precision
         }
         // else: leave Float/Double precision unset. Hibernate renders FLOAT/DOUBLE DDL as
         // float(precision) where precision is a *bit* count (IEEE-754), converted internally
@@ -90,31 +85,34 @@ public class NumericColumnConstraintsBinder {
     }
 
     private boolean isApproximateFloatingPoint(Class<?> propertyType) {
-        return Float.class.equals(propertyType) ||
+        return Float.equals(propertyType) ||
                 float.class.equals(propertyType) ||
-                Double.class.equals(propertyType) ||
-                double.class.equals(propertyType);
+                Double.equals(propertyType) ||
+                double.class.equals(propertyType)
     }
 
     private int getConstraintValueLength(Comparable<?> min, int scale) {
-        return min instanceof Number number ?
-                Math.max(countDigits(number), countDigits((number).longValue()) + scale) :
-                0;
+        if (min instanceof Number) {
+            Number number = (Number) min
+            return Math.max(countDigits(number), countDigits(number.longValue()) + scale)
+        }
+        return 0
     }
 
     private int countDigits(Number number) {
         return Optional.ofNullable(number)
-                .map(n -> new BigDecimal(n.toString()).precision())
-                .orElse(0);
+                .map { n -> new BigDecimal(n.toString()).precision() }
+                .orElse(0)
     }
 
     private int determineScale(ColumnConfig cc, PropertyConfig constrainedProperty) {
-        if (cc != null && cc.getScale() > -1) {
-            return cc.getScale();
+        if (cc != null && cc.scale > -1) {
+            return cc.scale
         }
-        if (constrainedProperty != null && constrainedProperty.getScale() > -1) {
-            return constrainedProperty.getScale();
+        if (constrainedProperty != null && constrainedProperty.scale > -1) {
+            return constrainedProperty.scale
         }
-        return -1;
+        return -1
     }
+
 }

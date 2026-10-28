@@ -16,157 +16,146 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.orm.hibernate.cfg;
+package org.grails.orm.hibernate.cfg
 
-import java.io.IOException;
-import java.io.Serial;
-import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Properties;
-import java.util.Set;
+import groovy.transform.CompileStatic
+import groovy.transform.PackageScope
+import jakarta.annotation.Nullable
+import jakarta.persistence.Embeddable
+import jakarta.persistence.Entity
+import jakarta.persistence.MappedSuperclass
+import org.hibernate.HibernateException
+import org.hibernate.MappingException
+import org.hibernate.SessionFactory
+import org.hibernate.boot.registry.BootstrapServiceRegistry
+import org.hibernate.boot.registry.BootstrapServiceRegistryBuilder
+import org.hibernate.boot.registry.StandardServiceRegistry
+import org.hibernate.boot.registry.StandardServiceRegistryBuilder
+import org.hibernate.boot.registry.classloading.internal.ClassLoaderServiceImpl
+import org.hibernate.boot.registry.classloading.spi.ClassLoaderService
+import org.hibernate.boot.spi.AdditionalMappingContributor
+import org.hibernate.bytecode.spi.BytecodeProvider
+import org.hibernate.cfg.AvailableSettings
+import org.hibernate.cfg.BytecodeSettings
+import org.hibernate.cfg.Configuration
+import org.hibernate.cfg.Environment
+import org.hibernate.cfg.JdbcSettings
+import org.hibernate.context.spi.CurrentSessionContext
+import org.hibernate.internal.util.config.ConfigurationHelper
+import org.hibernate.service.ServiceRegistry
+import org.springframework.beans.BeansException
+import org.springframework.context.ApplicationContext
+import org.springframework.context.ApplicationContextAware
+import org.springframework.core.io.Resource
+import org.springframework.core.io.support.PathMatchingResourcePatternResolver
+import org.springframework.core.io.support.ResourcePatternResolver
+import org.springframework.core.io.support.ResourcePatternUtils
+import org.springframework.core.type.classreading.CachingMetadataReaderFactory
+import org.springframework.core.type.classreading.MetadataReader
+import org.springframework.core.type.classreading.MetadataReaderFactory
+import org.springframework.core.type.filter.AnnotationTypeFilter
+import org.springframework.core.type.filter.TypeFilter
+import org.springframework.util.ClassUtils
 
-import javax.sql.DataSource;
+import org.grails.datastore.gorm.GormEntity
+import org.grails.datastore.gorm.jdbc.connections.DataSourceSettings
+import org.grails.datastore.mapping.core.connections.ConnectionSource
+import org.grails.datastore.mapping.model.PersistentEntity
+import org.grails.datastore.mapping.reflect.DevToolsClassLoaders
+import org.grails.orm.hibernate.EventListenerIntegrator
+import org.grails.orm.hibernate.GrailsSessionContext
+import org.grails.orm.hibernate.HibernateEventListeners
+import org.grails.orm.hibernate.MetadataIntegrator
+import org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBinder
+import org.grails.orm.hibernate.cfg.domainbinding.util.NamingStrategyProvider
+import org.grails.orm.hibernate.proxy.GrailsBytecodeProvider
 
-import jakarta.annotation.Nullable;
-import jakarta.persistence.Embeddable;
-import jakarta.persistence.Entity;
-import jakarta.persistence.MappedSuperclass;
-
-import org.hibernate.HibernateException;
-import org.hibernate.MappingException;
-import org.hibernate.SessionFactory;
-import org.hibernate.boot.registry.BootstrapServiceRegistry;
-import org.hibernate.boot.registry.BootstrapServiceRegistryBuilder;
-import org.hibernate.boot.registry.StandardServiceRegistry;
-import org.hibernate.boot.registry.StandardServiceRegistryBuilder;
-import org.hibernate.boot.registry.classloading.internal.ClassLoaderServiceImpl;
-import org.hibernate.boot.registry.classloading.spi.ClassLoaderService;
-import org.hibernate.boot.spi.AdditionalMappingContributor;
-import org.hibernate.cfg.AvailableSettings;
-import org.hibernate.cfg.BytecodeSettings;
-import org.hibernate.cfg.Configuration;
-import org.hibernate.cfg.Environment;
-import org.hibernate.cfg.JdbcSettings;
-import org.hibernate.context.spi.CurrentSessionContext;
-import org.hibernate.internal.util.config.ConfigurationHelper;
-import org.hibernate.service.ServiceRegistry;
-
-import org.springframework.beans.BeansException;
-import org.springframework.context.ApplicationContext;
-import org.springframework.context.ApplicationContextAware;
-import org.springframework.core.io.Resource;
-import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
-import org.springframework.core.io.support.ResourcePatternResolver;
-import org.springframework.core.io.support.ResourcePatternUtils;
-import org.springframework.core.type.classreading.CachingMetadataReaderFactory;
-import org.springframework.core.type.classreading.MetadataReader;
-import org.springframework.core.type.classreading.MetadataReaderFactory;
-import org.springframework.core.type.filter.AnnotationTypeFilter;
-import org.springframework.core.type.filter.TypeFilter;
-import org.springframework.util.ClassUtils;
-
-import org.grails.datastore.gorm.GormEntity;
-import org.grails.datastore.gorm.jdbc.connections.DataSourceSettings;
-import org.grails.datastore.mapping.core.connections.ConnectionSource;
-import org.grails.datastore.mapping.model.PersistentEntity;
-import org.grails.datastore.mapping.reflect.DevToolsClassLoaders;
-import org.grails.orm.hibernate.EventListenerIntegrator;
-import org.grails.orm.hibernate.GrailsSessionContext;
-import org.grails.orm.hibernate.HibernateEventListeners;
-import org.grails.orm.hibernate.MetadataIntegrator;
-import org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBinder;
-import org.grails.orm.hibernate.cfg.domainbinding.util.NamingStrategyProvider;
-import org.grails.orm.hibernate.proxy.GrailsBytecodeProvider;
+import javax.sql.DataSource
 
 /**
  * A Configuration that uses a MappingContext to configure Hibernate
  *
  * @since 5.0
  */
-@SuppressWarnings({"rawtypes", "PMD.UseProperClassLoader", "PMD.DataflowAnomalyAnalysis", "PMD.CloseResource"})
-public class HibernateMappingContextConfiguration extends Configuration
+@SuppressWarnings('rawtypes')
+@CompileStatic
+class HibernateMappingContextConfiguration extends Configuration
         implements ApplicationContextAware, Serializable {
 
-    @Serial
-    private static final long serialVersionUID = -7115087342689305517L;
+    private static final long serialVersionUID = -7115087342689305517L
 
-    private static final String RESOURCE_PATTERN = "/**/*.class";
+    private static final String RESOURCE_PATTERN = '/**/*.class'
 
-    private static final TypeFilter[] ENTITY_TYPE_FILTERS = new TypeFilter[] {
-        new AnnotationTypeFilter(Entity.class, false),
-        new AnnotationTypeFilter(Embeddable.class, false),
-        new AnnotationTypeFilter(MappedSuperclass.class, false)
-    };
-    private static final String FALSE_LITERAL = "false";
-    private final Class<? extends CurrentSessionContext> currentSessionContext = GrailsSessionContext.class;
-    //    private MetadataContributor metadataContributor;
-    private final Set<Class> additionalClasses = new HashSet<>();
-    protected String sessionFactoryBeanName = "sessionFactory";
-    protected String dataSourceName = ConnectionSource.DEFAULT;
-    protected transient HibernateMappingContext hibernateMappingContext;
-    private transient HibernateEventListeners hibernateEventListeners;
-    private Map<String, Object> eventListeners;
-    private transient ServiceRegistry serviceRegistry;
-    private transient ResourcePatternResolver resourcePatternResolver = new PathMatchingResourcePatternResolver();
-    private transient NamingStrategyProvider namingStrategyProvider = new NamingStrategyProvider();
-    protected GrailsBytecodeProvider bytecodeProvider;
+    private static final TypeFilter[] ENTITY_TYPE_FILTERS = [
+        new AnnotationTypeFilter(Entity, false),
+        new AnnotationTypeFilter(Embeddable, false),
+        new AnnotationTypeFilter(MappedSuperclass, false),
+    ] as TypeFilter[]
+    private static final String FALSE_LITERAL = 'false'
+    private final Class<? extends CurrentSessionContext> currentSessionContext = GrailsSessionContext
+    private final Set<Class> additionalClasses = new HashSet<>()
+    protected String sessionFactoryBeanName = 'sessionFactory'
+    protected String dataSourceName = ConnectionSource.DEFAULT
+    protected transient HibernateMappingContext hibernateMappingContext
+    private transient HibernateEventListeners hibernateEventListeners
+    private Map<String, Object> eventListeners
+    private transient ServiceRegistry serviceRegistry
+    private transient ResourcePatternResolver resourcePatternResolver = new PathMatchingResourcePatternResolver()
+    private transient NamingStrategyProvider namingStrategyProvider = new NamingStrategyProvider()
+    protected GrailsBytecodeProvider bytecodeProvider
 
-    public void setBytecodeProvider(GrailsBytecodeProvider bytecodeProvider) {
-        this.bytecodeProvider = bytecodeProvider;
+    void setBytecodeProvider(GrailsBytecodeProvider bytecodeProvider) {
+        this.bytecodeProvider = bytecodeProvider
     }
 
-    public NamingStrategyProvider getNamingStrategyProvider() {
-        return namingStrategyProvider;
+    NamingStrategyProvider getNamingStrategyProvider() {
+        return namingStrategyProvider
     }
 
-    public void setNamingStrategyProvider(NamingStrategyProvider namingStrategyProvider) {
-        this.namingStrategyProvider = namingStrategyProvider;
+    void setNamingStrategyProvider(NamingStrategyProvider namingStrategyProvider) {
+        this.namingStrategyProvider = namingStrategyProvider
     }
 
-    public MappingCacheHolder getMappingCacheHolder() {
-        return hibernateMappingContext != null ? hibernateMappingContext.getMappingCacheHolder() : null;
+    MappingCacheHolder getMappingCacheHolder() {
+        return hibernateMappingContext != null ? hibernateMappingContext.mappingCacheHolder : null
     }
 
-    public void setHibernateMappingContext(HibernateMappingContext hibernateMappingContext) {
-        this.hibernateMappingContext = hibernateMappingContext;
+    void setHibernateMappingContext(HibernateMappingContext hibernateMappingContext) {
+        this.hibernateMappingContext = hibernateMappingContext
     }
 
     @Override
-    public void setApplicationContext(@Nullable ApplicationContext applicationContext) throws BeansException {
-        resourcePatternResolver = ResourcePatternUtils.getResourcePatternResolver(applicationContext);
-        String dsName = ConnectionSource.DEFAULT.equals(dataSourceName) ? "dataSource" : "dataSource_" + dataSourceName;
-        Properties properties = getProperties();
+    void setApplicationContext(@Nullable ApplicationContext applicationContext) throws BeansException {
+        resourcePatternResolver = ResourcePatternUtils.getResourcePatternResolver(applicationContext)
+        String dsName = ConnectionSource.DEFAULT.equals(dataSourceName) ? 'dataSource' : "dataSource_${dataSourceName}"
+        Properties properties = getProperties()
 
         if (applicationContext != null) {
             if (!properties.containsKey(JdbcSettings.JAKARTA_NON_JTA_DATASOURCE) && applicationContext.containsBean(dsName)) {
-                properties.put(JdbcSettings.JAKARTA_NON_JTA_DATASOURCE, applicationContext.getBean(dsName));
+                properties.put(JdbcSettings.JAKARTA_NON_JTA_DATASOURCE, applicationContext.getBean(dsName))
             }
-            properties.put(Environment.CURRENT_SESSION_CONTEXT_CLASS, currentSessionContext.getName());
+            properties.put(Environment.CURRENT_SESSION_CONTEXT_CLASS, currentSessionContext.name)
             properties.put(
-                    "hibernate.enhancer.bytecodeprovider.instance",
-                getGrailsBytecodeProvider());
-            properties.put("hibernate.bytecode.allow_enhancement_as_proxy", FALSE_LITERAL);
-            properties.put("hibernate.bytecode.enhancement_metadata_cache", FALSE_LITERAL);
-            properties.put("hibernate.enhancer.enableLazyInitialization", FALSE_LITERAL);
-            properties.put("hibernate.enhancer.enableDirtyTracking", FALSE_LITERAL);
-            properties.put("hibernate.enhancer.enableAssociationManagement", FALSE_LITERAL);
-            ClassLoader applicationClassLoader = applicationContext.getClassLoader();
+                    'hibernate.enhancer.bytecodeprovider.instance',
+                    grailsBytecodeProvider)
+            properties.put('hibernate.bytecode.allow_enhancement_as_proxy', FALSE_LITERAL)
+            properties.put('hibernate.bytecode.enhancement_metadata_cache', FALSE_LITERAL)
+            properties.put('hibernate.enhancer.enableLazyInitialization', FALSE_LITERAL)
+            properties.put('hibernate.enhancer.enableDirtyTracking', FALSE_LITERAL)
+            properties.put('hibernate.enhancer.enableAssociationManagement', FALSE_LITERAL)
+            ClassLoader applicationClassLoader = applicationContext.classLoader
             // Keep CLASSLOADERS absent when the context loader is null and DevTools restart is not
             // active so buildSessionFactory can fall back to this class's loader.
             if (applicationClassLoader != null ||
-                    DevToolsClassLoaders.isRestartClassLoaderOrDescendant(Thread.currentThread().getContextClassLoader())) {
+                    DevToolsClassLoaders.isRestartClassLoaderOrDescendant(Thread.currentThread().contextClassLoader)) {
                 properties.put(AvailableSettings.CLASSLOADERS,
-                        DevToolsClassLoaders.preferRestartClassLoader(applicationClassLoader));
+                        DevToolsClassLoaders.preferRestartClassLoader(applicationClassLoader))
             }
         }
     }
 
     protected GrailsBytecodeProvider getGrailsBytecodeProvider() {
-        return bytecodeProvider != null ? bytecodeProvider : new GrailsBytecodeProvider();
+        return bytecodeProvider != null ? bytecodeProvider : new GrailsBytecodeProvider()
     }
 
     /**
@@ -174,14 +163,14 @@ public class HibernateMappingContextConfiguration extends Configuration
      *
      * @param connectionSource The data source to use
      */
-    public void setDataSourceConnectionSource(ConnectionSource<DataSource, DataSourceSettings> connectionSource) {
-        this.dataSourceName = connectionSource.getName();
-        DataSource source = connectionSource.getSource();
-        getProperties().put(JdbcSettings.JAKARTA_NON_JTA_DATASOURCE, source);
-        getProperties().put(Environment.CURRENT_SESSION_CONTEXT_CLASS, GrailsSessionContext.class.getName());
-        setBytecodeProvider(getGrailsBytecodeProvider());
-        getProperties().put(AvailableSettings.CLASSLOADERS,
-                DevToolsClassLoaders.preferRestartClassLoader(connectionSource.getClass().getClassLoader()));
+    void setDataSourceConnectionSource(ConnectionSource<DataSource, DataSourceSettings> connectionSource) {
+        this.dataSourceName = connectionSource.name
+        DataSource source = connectionSource.source
+        properties.put(JdbcSettings.JAKARTA_NON_JTA_DATASOURCE, source)
+        properties.put(Environment.CURRENT_SESSION_CONTEXT_CLASS, GrailsSessionContext.name)
+        setBytecodeProvider(grailsBytecodeProvider)
+        properties.put(AvailableSettings.CLASSLOADERS,
+                DevToolsClassLoaders.preferRestartClassLoader(connectionSource.class.classLoader))
     }
 
     /**
@@ -192,25 +181,25 @@ public class HibernateMappingContextConfiguration extends Configuration
      * @see #scanPackages
      */
     @Override
-    public Configuration addAnnotatedClasses(Class... annotatedClasses) {
+    Configuration addAnnotatedClasses(Class... annotatedClasses) {
         for (Class<?> annotatedClass : annotatedClasses) {
-            addAnnotatedClass(annotatedClass);
+            addAnnotatedClass(annotatedClass)
         }
-        return this;
+        return this
     }
 
     @Override
-    public Configuration addAnnotatedClass(Class annotatedClass) {
-        additionalClasses.add(annotatedClass);
-        return super.addAnnotatedClass(annotatedClass);
+    Configuration addAnnotatedClass(Class annotatedClass) {
+        additionalClasses.add(annotatedClass)
+        return super.addAnnotatedClass(annotatedClass)
     }
 
     @Override
-    public HibernateMappingContextConfiguration addPackages(String... annotatedPackages) {
+    HibernateMappingContextConfiguration addPackages(String... annotatedPackages) {
         for (String annotatedPackage : annotatedPackages) {
-            addPackage(annotatedPackage);
+            addPackage(annotatedPackage)
         }
-        return this;
+        return this
     }
 
     /**
@@ -220,32 +209,34 @@ public class HibernateMappingContextConfiguration extends Configuration
      * @param packagesToScan one or more Java package names
      * @throws HibernateException if scanning fails for any reason
      */
-    public void scanPackages(String... packagesToScan) throws HibernateException {
+    void scanPackages(String... packagesToScan) throws HibernateException {
         try {
-            MetadataReaderFactory readerFactory = new CachingMetadataReaderFactory(resourcePatternResolver);
+            MetadataReaderFactory readerFactory = new CachingMetadataReaderFactory(resourcePatternResolver)
             for (String pkg : packagesToScan) {
                 String pattern = ResourcePatternResolver.CLASSPATH_ALL_URL_PREFIX +
                         ClassUtils.convertClassNameToResourcePath(pkg) +
-                        RESOURCE_PATTERN;
-                Resource[] resources = resourcePatternResolver.getResources(pattern);
+                        RESOURCE_PATTERN
+                Resource[] resources = resourcePatternResolver.getResources(pattern)
                 for (Resource resource : resources) {
-                    if (resource.isReadable()) {
-                        MetadataReader reader = readerFactory.getMetadataReader(resource);
-                        String className = reader.getClassMetadata().getClassName();
+                    if (resource.readable) {
+                        MetadataReader reader = readerFactory.getMetadataReader(resource)
+                        String className = reader.classMetadata.className
                         if (matchesFilter(reader, readerFactory)) {
-                            ClassLoader classLoader = resourcePatternResolver.getClassLoader();
+                            ClassLoader classLoader = resourcePatternResolver.classLoader
                             Class<?> loadedClass = classLoader != null ?
                                     classLoader.loadClass(className) :
-                                    ClassUtils.forName(className, null);
-                            addAnnotatedClasses(loadedClass);
+                                    ClassUtils.forName(className, null)
+                            addAnnotatedClasses(loadedClass)
                         }
                     }
                 }
             }
-        } catch (IOException ex) {
-            throw new MappingException("Failed to scan classpath for unlisted classes", ex);
-        } catch (ClassNotFoundException ex) {
-            throw new MappingException("Failed to load annotated classes from classpath", ex);
+        }
+        catch (IOException ex) {
+            throw new MappingException('Failed to scan classpath for unlisted classes', ex)
+        }
+        catch (ClassNotFoundException ex) {
+            throw new MappingException('Failed to load annotated classes from classpath', ex)
         }
     }
 
@@ -256,128 +247,128 @@ public class HibernateMappingContextConfiguration extends Configuration
     protected boolean matchesFilter(MetadataReader reader, MetadataReaderFactory readerFactory) throws IOException {
         for (TypeFilter filter : ENTITY_TYPE_FILTERS) {
             if (filter.match(reader, readerFactory)) {
-                return true;
+                return true
             }
         }
-        return false;
+        return false
     }
 
-    public void setSessionFactoryBeanName(String name) {
-        sessionFactoryBeanName = name;
+    void setSessionFactoryBeanName(String name) {
+        sessionFactoryBeanName = name
     }
 
-    public void setDataSourceName(String name) {
-        dataSourceName = name;
+    void setDataSourceName(String name) {
+        dataSourceName = name
     }
 
     /* (non-Javadoc)
      * @see org.hibernate.cfg.Configuration#buildSessionFactory()
      */
     @Override
-    public SessionFactory buildSessionFactory() throws HibernateException {
+    SessionFactory buildSessionFactory() throws HibernateException {
         // 1. FORCE the custom bytecode provider instance right before bootstrap
         // This bypasses the ServiceLoader and ensures your GrailsBytecodeProvider is used.
-        GrailsBytecodeProvider bytecodeProvider = getGrailsBytecodeProvider();
-        getProperties()
-                .put(
-                        BytecodeSettings.BYTECODE_PROVIDER_INSTANCE,
-                        bytecodeProvider);
+        GrailsBytecodeProvider bytecodeProvider = grailsBytecodeProvider
+        properties.put(
+                BytecodeSettings.BYTECODE_PROVIDER_INSTANCE,
+                bytecodeProvider)
 
         // set the class loader to load Groovy classes
 
         // work around for HHH-2624
-        SessionFactory sessionFactory;
+        SessionFactory sessionFactory
 
-        ClassLoader appClassLoader = resolveSessionFactoryClassLoader();
+        ClassLoader appClassLoader = resolveSessionFactoryClassLoader()
 
-        ConfigurationHelper.resolvePlaceHolders(getProperties());
+        ConfigurationHelper.resolvePlaceHolders(properties)
 
         final GrailsDomainBinder domainBinder = new GrailsDomainBinder(
                 dataSourceName,
                 sessionFactoryBeanName,
                 hibernateMappingContext,
                 namingStrategyProvider,
-                hibernateMappingContext.getMappingCacheHolder());
+                hibernateMappingContext.mappingCacheHolder)
 
-        List<Class> annotatedClasses = new ArrayList<>();
-        for (PersistentEntity persistentEntity : hibernateMappingContext.getPersistentEntities()) {
-            Class<?> javaClass = persistentEntity.getJavaClass();
-            if (javaClass.isAnnotationPresent(Entity.class)) {
-                annotatedClasses.add(javaClass);
+        List<Class> annotatedClasses = new ArrayList<>()
+        for (PersistentEntity persistentEntity : hibernateMappingContext.persistentEntities) {
+            Class<?> javaClass = persistentEntity.javaClass
+            if (javaClass.isAnnotationPresent(Entity)) {
+                annotatedClasses.add(javaClass)
             }
         }
 
         if (!additionalClasses.isEmpty()) {
             for (Class additionalClass : additionalClasses) {
-                if (GormEntity.class.isAssignableFrom(additionalClass)) {
-                    hibernateMappingContext.addPersistentEntity(additionalClass);
+                if (GormEntity.isAssignableFrom(additionalClass)) {
+                    hibernateMappingContext.addPersistentEntity(additionalClass)
                 }
             }
         }
 
-        addAnnotatedClasses(annotatedClasses.toArray(new Class[0]));
+        addAnnotatedClasses(annotatedClasses.toArray(new Class[0]))
 
         ClassLoaderService classLoaderService = new ClassLoaderServiceImpl(appClassLoader) {
             @Override
-            public <S> Collection<S> loadJavaServices(Class<S> serviceContract) {
+            <S> Collection<S> loadJavaServices(Class<S> serviceContract) {
                 // Ensure Grails contributes mappings for GORM entities even if they lack JPA @Entity
-                if (AdditionalMappingContributor.class.isAssignableFrom(serviceContract)) {
+                if (AdditionalMappingContributor.isAssignableFrom(serviceContract)) {
                     // Include the GrailsDomainBinder first, then any other contributors
                     // discovered by the parent classloader (e.g., Envers AdditionalMappingContributorImpl).
                     // Without this, Envers' AdditionalMappingContributor would be excluded,
                     // preventing EnversService from being initialized before EnversIntegrator runs.
-                    Collection<S> parentContributors = super.loadJavaServices(serviceContract);
-                    @SuppressWarnings("unchecked")
-                    S grailsBinder = (S) domainBinder;
-                    List<S> allContributors = new ArrayList<>(parentContributors.size() + 1);
-                    allContributors.add(grailsBinder);
-                    allContributors.addAll(parentContributors);
-                    return allContributors;
+                    Collection<S> parentContributors = super.loadJavaServices(serviceContract)
+                    S grailsBinder = (S) domainBinder
+                    List<S> allContributors = new ArrayList<>(parentContributors.size() + 1)
+                    allContributors.add(grailsBinder)
+                    allContributors.addAll(parentContributors)
+                    return allContributors
                 }
-                return super.loadJavaServices(serviceContract);
+                return super.loadJavaServices(serviceContract)
             }
-        };
+        }
         EventListenerIntegrator eventListenerIntegrator =
-                new EventListenerIntegrator(hibernateEventListeners, eventListeners);
+                new EventListenerIntegrator(hibernateEventListeners, eventListeners)
         BootstrapServiceRegistry bootstrapServiceRegistry = createBootstrapServiceRegistryBuilder()
                 .applyIntegrator(eventListenerIntegrator)
                 .applyIntegrator(new MetadataIntegrator())
                 .applyClassLoaderService(classLoaderService)
-                .build();
+                .build()
 
         StandardServiceRegistryBuilder standardServiceRegistryBuilder =
-                createStandardServiceRegistryBuilder(bootstrapServiceRegistry).applySettings((Map) getProperties());
+                createStandardServiceRegistryBuilder(bootstrapServiceRegistry).applySettings((Map) properties)
 
-        Object dataSource = getProperties().get(JdbcSettings.JAKARTA_NON_JTA_DATASOURCE);
+        Object dataSource = properties.get(JdbcSettings.JAKARTA_NON_JTA_DATASOURCE)
         if (dataSource instanceof DataSource) {
-            standardServiceRegistryBuilder.applySetting(JdbcSettings.JAKARTA_NON_JTA_DATASOURCE, dataSource);
+            standardServiceRegistryBuilder.applySetting(JdbcSettings.JAKARTA_NON_JTA_DATASOURCE, dataSource)
         }
 
-        standardServiceRegistryBuilder.addService(org.hibernate.bytecode.spi.BytecodeProvider.class, bytecodeProvider);
+        standardServiceRegistryBuilder.addService(BytecodeProvider, bytecodeProvider)
 
-        StandardServiceRegistry ssr = standardServiceRegistryBuilder.build();
-        ClassLoader previous = Thread.currentThread().getContextClassLoader();
+        StandardServiceRegistry ssr = standardServiceRegistryBuilder.build()
+        ClassLoader previous = Thread.currentThread().contextClassLoader
         try {
-            Thread.currentThread().setContextClassLoader(appClassLoader);
-            sessionFactory = super.buildSessionFactory(ssr);
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        } finally {
-            Thread.currentThread().setContextClassLoader(previous);
+            Thread.currentThread().contextClassLoader = appClassLoader
+            sessionFactory = super.buildSessionFactory(ssr)
         }
-        this.serviceRegistry = ssr;
+        catch (Exception e) {
+            throw new RuntimeException(e)
+        }
+        finally {
+            Thread.currentThread().contextClassLoader = previous
+        }
+        this.serviceRegistry = ssr
 
-        return sessionFactory;
+        return sessionFactory
     }
 
-    ClassLoader resolveSessionFactoryClassLoader() {
-        Object classLoaderObject = getProperties().get(AvailableSettings.CLASSLOADERS);
+    @PackageScope ClassLoader resolveSessionFactoryClassLoader() {
+        Object classLoaderObject = properties.get(AvailableSettings.CLASSLOADERS)
         ClassLoader storedClassLoader = classLoaderObject instanceof ClassLoader ?
-                (ClassLoader) classLoaderObject : getClass().getClassLoader();
+                (ClassLoader) classLoaderObject : getClass().classLoader
         // addProperties() or a custom configClass may have replaced CLASSLOADERS after the
         // setters ran. GrailsDomainBinder binds entities by class name and Hibernate resolves
         // them through this loader, so it has to see the restarted application classes.
-        return DevToolsClassLoaders.preferRestartClassLoader(storedClassLoader);
+        return DevToolsClassLoaders.preferRestartClassLoader(storedClassLoader)
     }
 
     /**
@@ -386,7 +377,7 @@ public class HibernateMappingContextConfiguration extends Configuration
      * @return The {@link BootstrapServiceRegistryBuilder}
      */
     protected BootstrapServiceRegistryBuilder createBootstrapServiceRegistryBuilder() {
-        return new BootstrapServiceRegistryBuilder();
+        return new BootstrapServiceRegistryBuilder()
     }
 
     /**
@@ -398,7 +389,7 @@ public class HibernateMappingContextConfiguration extends Configuration
      */
     protected StandardServiceRegistryBuilder createStandardServiceRegistryBuilder(
             BootstrapServiceRegistry bootstrapServiceRegistry) {
-        return new StandardServiceRegistryBuilder(bootstrapServiceRegistry);
+        return new StandardServiceRegistryBuilder(bootstrapServiceRegistry)
     }
 
     /**
@@ -406,8 +397,8 @@ public class HibernateMappingContextConfiguration extends Configuration
      *
      * @param listeners the listeners
      */
-    public void setEventListeners(Map<String, Object> listeners) {
-        eventListeners = listeners;
+    void setEventListeners(Map<String, Object> listeners) {
+        eventListeners = listeners
     }
 
     /**
@@ -415,11 +406,12 @@ public class HibernateMappingContextConfiguration extends Configuration
      *
      * @param listeners the listeners
      */
-    public void setHibernateEventListeners(HibernateEventListeners listeners) {
-        hibernateEventListeners = listeners;
+    void setHibernateEventListeners(HibernateEventListeners listeners) {
+        hibernateEventListeners = listeners
     }
 
-    public ServiceRegistry getServiceRegistry() {
-        return serviceRegistry;
+    ServiceRegistry getServiceRegistry() {
+        return serviceRegistry
     }
+
 }

@@ -16,21 +16,28 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.orm.hibernate.query;
+package org.grails.orm.hibernate.query
 
-import jakarta.persistence.criteria.JoinType;
+import groovy.transform.CompileStatic
+import groovy.transform.TupleConstructor
+import groovy.transform.RecordOptions
+import jakarta.persistence.criteria.JoinType
 
-import org.grails.datastore.mapping.query.Query;
+import org.grails.datastore.mapping.query.Query
 
 /**
  * A internal criterion used to represent an alias for a basic collection join.
- *
- * @author walterduquedeestrada
  */
-public record HibernateAlias(String path, String alias, JoinType joinType)
+@CompileStatic
+@SuppressWarnings(['ClassStartsWithBlankLine', 'Indentation'])
+@RecordOptions(getAt = false, toList = false, toMap = false, size = false)
+@TupleConstructor(defaults = false, namedVariant = false)
+record HibernateAlias(String path, String alias, JoinType joinType)
         implements Query.Criterion, Query.QueryElement {
 
-    public HibernateAlias(String path, String alias) {
-        this(path, alias, JoinType.INNER);
+    /** Creates an alias that joins with {@link JoinType#INNER}. */
+    HibernateAlias(String path, String alias) {
+        this(path, alias, JoinType.INNER)
     }
+
 }

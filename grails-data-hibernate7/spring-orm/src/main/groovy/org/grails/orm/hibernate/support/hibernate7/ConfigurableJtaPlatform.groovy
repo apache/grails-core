@@ -13,23 +13,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.grails.orm.hibernate.support.hibernate7
 
-package org.grails.orm.hibernate.support.hibernate7;
-
-import jakarta.transaction.Status;
-import jakarta.transaction.Synchronization;
-import jakarta.transaction.SystemException;
-import jakarta.transaction.Transaction;
-import jakarta.transaction.TransactionManager;
-import jakarta.transaction.TransactionSynchronizationRegistry;
-import jakarta.transaction.UserTransaction;
-
-import org.hibernate.TransactionException;
-import org.hibernate.engine.transaction.jta.platform.spi.JtaPlatform;
-import org.jspecify.annotations.Nullable;
-
-import org.springframework.transaction.jta.UserTransactionAdapter;
-import org.springframework.util.Assert;
+import groovy.transform.CompileStatic
+import groovy.transform.PackageScope
+import jakarta.transaction.Status
+import jakarta.transaction.Synchronization
+import jakarta.transaction.SystemException
+import jakarta.transaction.Transaction
+import jakarta.transaction.TransactionManager
+import jakarta.transaction.TransactionSynchronizationRegistry
+import jakarta.transaction.UserTransaction
+import org.hibernate.TransactionException
+import org.hibernate.engine.transaction.jta.platform.spi.JtaPlatform
+import org.jspecify.annotations.Nullable
+import org.springframework.transaction.jta.UserTransactionAdapter
+import org.springframework.util.Assert
 
 /**
  * Implementation of Hibernate 5's JtaPlatform SPI, exposing passed-in {@link TransactionManager},
@@ -38,15 +37,17 @@ import org.springframework.util.Assert;
  * @author Juergen Hoeller
  * @since 4.2
  */
-@SuppressWarnings("serial")
+@CompileStatic
+@PackageScope
+@SuppressWarnings('serial')
 class ConfigurableJtaPlatform implements JtaPlatform {
 
-    private final TransactionManager transactionManager;
+    private final TransactionManager transactionManager
 
-    private final UserTransaction userTransaction;
+    private final UserTransaction userTransaction
 
     @Nullable
-    private final TransactionSynchronizationRegistry transactionSynchronizationRegistry;
+    private final TransactionSynchronizationRegistry transactionSynchronizationRegistry
 
     /**
      * Create a new ConfigurableJtaPlatform instance with the given
@@ -55,57 +56,54 @@ class ConfigurableJtaPlatform implements JtaPlatform {
      * @param ut the JTA UserTransaction reference (optional)
      * @param tsr the JTA 1.1 TransactionSynchronizationRegistry (optional)
      */
-    public ConfigurableJtaPlatform(TransactionManager tm, @Nullable UserTransaction ut,
-            @Nullable TransactionSynchronizationRegistry tsr) {
-        Assert.notNull(tm, "TransactionManager reference must not be null");
-        this.transactionManager = tm;
-        this.userTransaction = (ut != null ? ut : new UserTransactionAdapter(tm));
-        this.transactionSynchronizationRegistry = tsr;
+    ConfigurableJtaPlatform(TransactionManager tm, @Nullable UserTransaction ut,
+                            @Nullable TransactionSynchronizationRegistry tsr) {
+        Assert.notNull(tm, 'TransactionManager reference must not be null')
+        this.transactionManager = tm
+        this.userTransaction = (ut != null ? ut : new UserTransactionAdapter(tm))
+        this.transactionSynchronizationRegistry = tsr
     }
 
     @Override
-    public TransactionManager retrieveTransactionManager() {
-        return this.transactionManager;
+    TransactionManager retrieveTransactionManager() {
+        return this.transactionManager
     }
 
     @Override
-    public UserTransaction retrieveUserTransaction() {
-        return this.userTransaction;
+    UserTransaction retrieveUserTransaction() {
+        return this.userTransaction
     }
 
     @Override
-    public Object getTransactionIdentifier(Transaction transaction) {
-        return transaction;
+    Object getTransactionIdentifier(Transaction transaction) {
+        return transaction
     }
 
     @Override
-    public boolean canRegisterSynchronization() {
+    boolean canRegisterSynchronization() {
         try {
-            return (this.transactionManager.getStatus() == Status.STATUS_ACTIVE);
-        }
-        catch (SystemException ex) {
-            throw new TransactionException("Could not determine JTA transaction status", ex);
+            return (this.transactionManager.getStatus() == Status.STATUS_ACTIVE)
+        } catch (SystemException ex) {
+            throw new TransactionException('Could not determine JTA transaction status', ex)
         }
     }
 
     @Override
-    public void registerSynchronization(Synchronization synchronization) {
+    void registerSynchronization(Synchronization synchronization) {
         if (this.transactionSynchronizationRegistry != null) {
-            this.transactionSynchronizationRegistry.registerInterposedSynchronization(synchronization);
-        }
-        else {
+            this.transactionSynchronizationRegistry.registerInterposedSynchronization(synchronization)
+        } else {
             try {
-                this.transactionManager.getTransaction().registerSynchronization(synchronization);
-            }
-            catch (Exception ex) {
-                throw new TransactionException("Could not access JTA Transaction to register synchronization", ex);
+                this.transactionManager.getTransaction().registerSynchronization(synchronization)
+            } catch (Exception ex) {
+                throw new TransactionException('Could not access JTA Transaction to register synchronization', ex)
             }
         }
     }
 
     @Override
-    public int getCurrentStatus() throws SystemException {
-        return this.transactionManager.getStatus();
+    int getCurrentStatus() throws SystemException {
+        return this.transactionManager.getStatus()
     }
 
 }

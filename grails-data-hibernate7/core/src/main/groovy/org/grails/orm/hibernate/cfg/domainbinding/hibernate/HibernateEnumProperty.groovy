@@ -16,10 +16,11 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.orm.hibernate.cfg.domainbinding.hibernate;
+package org.grails.orm.hibernate.cfg.domainbinding.hibernate
 
-import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
-import org.grails.orm.hibernate.cfg.domainbinding.util.ColumnNameForPropertyAndPathFetcher;
+import groovy.transform.CompileStatic
+import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy
+import org.grails.orm.hibernate.cfg.domainbinding.util.ColumnNameForPropertyAndPathFetcher
 
 /**
  * Contract for Hibernate persistent properties that bind an enum value — either the property's
@@ -39,11 +40,12 @@ import org.grails.orm.hibernate.cfg.domainbinding.util.ColumnNameForPropertyAndP
  * name so {@link org.grails.orm.hibernate.cfg.domainbinding.binder.EnumTypeBinder} can bind any
  * of them through a single code path.
  */
-public interface HibernateEnumProperty extends HibernatePersistentProperty {
+@CompileStatic
+interface HibernateEnumProperty extends HibernatePersistentProperty {
 
     /** The enum class to bind: the property's own type, or a basic collection's element type. */
     default Class<?> getEnumType() {
-        return getType();
+        return type
     }
 
     /** Resolves the column name to bind the enum value under. */
@@ -51,7 +53,7 @@ public interface HibernateEnumProperty extends HibernatePersistentProperty {
             PersistentEntityNamingStrategy namingStrategy,
             ColumnNameForPropertyAndPathFetcher columnNameForPropertyAndPathFetcher,
             String path) {
-        return columnNameForPropertyAndPathFetcher.getColumnNameForPropertyAndPath(this, path, null);
+        return columnNameForPropertyAndPathFetcher.getColumnNameForPropertyAndPath(this, path, null)
     }
 
     /**
@@ -59,7 +61,7 @@ public interface HibernateEnumProperty extends HibernatePersistentProperty {
      * strategy must be nullable; otherwise this follows the property's own nullable constraint.
      */
     default boolean isEnumColumnNullable() {
-        return getHibernateOwner().isTablePerHierarchySubclass() || isNullable();
+        return hibernateOwner.tablePerHierarchySubclass || nullable
     }
 
     /**
@@ -69,6 +71,7 @@ public interface HibernateEnumProperty extends HibernatePersistentProperty {
      * to-many collection path (whose element is bound later, from within the collection binder).
      */
     default boolean isCollectionElement() {
-        return false;
+        return false
     }
+
 }

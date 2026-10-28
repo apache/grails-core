@@ -16,25 +16,25 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.orm.hibernate.proxy;
+package org.grails.orm.hibernate.proxy
 
-import java.io.Serializable;
+import groovy.transform.CompileStatic
+import groovy.transform.RecordOptions
+import groovy.transform.TupleConstructor
+import org.codehaus.groovy.runtime.HandleMetaClass
+import org.codehaus.groovy.runtime.InvokerHelper
 
-import groovy.lang.GroovyObject;
-import groovy.lang.MetaClass;
-import org.codehaus.groovy.runtime.HandleMetaClass;
-import org.codehaus.groovy.runtime.InvokerHelper;
-
-import org.grails.datastore.gorm.proxy.ProxyInstanceMetaClass;
+import org.grails.datastore.gorm.proxy.ProxyInstanceMetaClass
 
 /**
  * Pure logic for Groovy proxy interception and handling, decoupled from Hibernate.
  *
  * @since 8.0
  */
-public class GroovyProxyInterceptorLogic {
+@CompileStatic
+class GroovyProxyInterceptorLogic {
 
-    public static final Object INVOKE_IMPLEMENTATION = new Object();
+    public static final Object INVOKE_IMPLEMENTATION = new Object()
 
     /**
      * Setting that controls {@code toString()} on an uninitialized proxy. When {@code false}
@@ -42,96 +42,101 @@ public class GroovyProxyInterceptorLogic {
      * and delegates to the entity's own implementation. When {@code true}, the proxy answers
      * {@code entityName:id} without initializing.
      */
-    public static final String PROPERTY_LAZY_TO_STRING = "hibernate.grails.proxy.lazy_to_string";
+    public static final String PROPERTY_LAZY_TO_STRING = 'hibernate.grails.proxy.lazy_to_string'
 
-    private static final String GET_META_CLASS = "getMetaClass";
-    private static final String SET_META_CLASS = "setMetaClass";
-    private static final String META_CLASS_PROPERTY = "metaClass";
-    private static final String GET_PROPERTY = "getProperty";
-    private static final String ID_PROPERTY = "id";
-    private static final String IDENT_METHOD = "ident";
-    private static final String IS_DIRTY = "isDirty";
-    private static final String HAS_CHANGED = "hasChanged";
-    private static final String TO_STRING = "toString";
+    private static final String GET_META_CLASS = 'getMetaClass'
+    private static final String SET_META_CLASS = 'setMetaClass'
+    private static final String META_CLASS_PROPERTY = 'metaClass'
+    private static final String GET_PROPERTY = 'getProperty'
+    private static final String ID_PROPERTY = 'id'
+    private static final String IDENT_METHOD = 'ident'
+    private static final String IS_DIRTY = 'isDirty'
+    private static final String HAS_CHANGED = 'hasChanged'
+    private static final String TO_STRING = 'toString'
 
-    public static Object handleUninitialized(InterceptorState state, String methodName, Object... args) {
-        if ((GET_META_CLASS.equals(methodName) || methodName.endsWith("getStaticMetaClass")) &&
+    static Object handleUninitialized(InterceptorState state, String methodName, Object... args) {
+        if ((GET_META_CLASS == methodName || methodName.endsWith('getStaticMetaClass')) &&
                 (args == null || args.length == 0)) {
-            return InvokerHelper.getMetaClass(state.persistentClass());
+            return InvokerHelper.getMetaClass(state.persistentClass())
         }
-        if (GET_PROPERTY.equals(methodName) && args.length == 1) {
-            if (ID_PROPERTY.equals(args[0])) {
-                return state.identifier();
+        if (GET_PROPERTY == methodName && args.length == 1) {
+            if (ID_PROPERTY == args[0]) {
+                return state.identifier()
             }
-            if (META_CLASS_PROPERTY.equals(args[0])) {
-                return InvokerHelper.getMetaClass(state.persistentClass());
+            if (META_CLASS_PROPERTY == args[0]) {
+                return InvokerHelper.getMetaClass(state.persistentClass())
             }
         }
-        if (IDENT_METHOD.equals(methodName) && (args == null || args.length == 0)) {
-            return state.identifier();
+        if (IDENT_METHOD == methodName && (args == null || args.length == 0)) {
+            return state.identifier()
         }
-        if ((IS_DIRTY.equals(methodName) || HAS_CHANGED.equals(methodName)) && (args == null || args.length == 0)) {
-            return false;
+        if ((IS_DIRTY == methodName || HAS_CHANGED == methodName) && (args == null || args.length == 0)) {
+            return false
         }
-        if (state.lazyToString() && TO_STRING.equals(methodName) && (args == null || args.length == 0)) {
-            return state.entityName() + ":" + state.identifier();
+        if (state.lazyToString() && TO_STRING == methodName && (args == null || args.length == 0)) {
+            return state.entityName() + ':' + state.identifier()
         }
-        return INVOKE_IMPLEMENTATION;
+        return INVOKE_IMPLEMENTATION
     }
 
-    public static boolean isGroovyMethod(String methodName) {
-        return "getMetaClass".equals(methodName) ||
-                "setMetaClass".equals(methodName) ||
-                "getProperty".equals(methodName) ||
-                "setProperty".equals(methodName) ||
-                "invokeMethod".equals(methodName);
+    static boolean isGroovyMethod(String methodName) {
+        return 'getMetaClass' == methodName ||
+                'setMetaClass' == methodName ||
+                'getProperty' == methodName ||
+                'setProperty' == methodName ||
+                'invokeMethod' == methodName
     }
 
-    public static ProxyInstanceMetaClass getProxyInstanceMetaClass(Object o) {
-        if (o instanceof GroovyObject go) {
-            MetaClass mc = go.getMetaClass();
-            if (mc instanceof HandleMetaClass hmc) {
-                mc = hmc.getAdaptee();
+    static ProxyInstanceMetaClass getProxyInstanceMetaClass(Object o) {
+        if (o instanceof GroovyObject) {
+            MetaClass mc = o.getMetaClass()
+            if (mc instanceof HandleMetaClass) {
+                mc = ((HandleMetaClass) mc).getAdaptee()
             }
-            if (mc instanceof ProxyInstanceMetaClass pmc) {
-                return pmc;
+            if (mc instanceof ProxyInstanceMetaClass) {
+                return (ProxyInstanceMetaClass) mc
             }
         }
-        return null;
+        return null
     }
 
-    public static Object unwrap(Object object) {
-        ProxyInstanceMetaClass proxyMc = getProxyInstanceMetaClass(object);
+    static Object unwrap(Object object) {
+        ProxyInstanceMetaClass proxyMc = getProxyInstanceMetaClass(object)
         if (proxyMc != null) {
-            return proxyMc.getProxyTarget();
+            return proxyMc.getProxyTarget()
         }
-        return null;
+        return null
     }
 
-    public static Serializable getIdentifier(Object o) {
-        ProxyInstanceMetaClass proxyMc = getProxyInstanceMetaClass(o);
+    static Serializable getIdentifier(Object o) {
+        ProxyInstanceMetaClass proxyMc = getProxyInstanceMetaClass(o)
         if (proxyMc != null) {
-            return proxyMc.getKey();
+            return proxyMc.getKey()
         }
-        return null;
+        return null
     }
 
     /**
      * Check if a Groovy proxy is initialized.
      * @return {@code true} if initialized, {@code false} if not initialized, or {@code null} if the object is not a Groovy proxy
      */
-    public static Boolean isInitialized(Object o) {
-        ProxyInstanceMetaClass proxyMc = getProxyInstanceMetaClass(o);
+    static Boolean isInitialized(Object o) {
+        ProxyInstanceMetaClass proxyMc = getProxyInstanceMetaClass(o)
         if (proxyMc != null) {
-            return proxyMc.isProxyInitiated();
+            return proxyMc.isProxyInitiated()
         }
-        return null;
+        return null
     }
 
-    public record InterceptorState(String entityName, Class<?> persistentClass, Object identifier, boolean lazyToString) {
+    // CodeNarc reads the components of an annotated nested record as fields and reports their indentation
+    @SuppressWarnings('Indentation')
+    @RecordOptions(getAt = false, toList = false, toMap = false, size = false)
+    @TupleConstructor(defaults = false, namedVariant = false)
+    record InterceptorState(String entityName, Class<?> persistentClass, Object identifier, boolean lazyToString) {
 
-        public InterceptorState(String entityName, Class<?> persistentClass, Object identifier) {
-            this(entityName, persistentClass, identifier, false);
+        InterceptorState(String entityName, Class<?> persistentClass, Object identifier) {
+            this(entityName, persistentClass, identifier, false)
         }
     }
+
 }

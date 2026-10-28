@@ -16,26 +16,30 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.orm.hibernate.cfg.domainbinding.binder;
+package org.grails.orm.hibernate.cfg.domainbinding.binder
 
-import java.util.Optional;
+import groovy.transform.CompileStatic
+import org.hibernate.mapping.Collection
+import org.jspecify.annotations.NonNull
 
-import org.hibernate.mapping.Collection;
-import org.jspecify.annotations.NonNull;
-
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty
 
 /**
  * Binds collection-level lazy and extra-lazy settings from the property config.
  *
  * @since 8.0
  */
-public class CollectionForPropertyConfigBinder {
+@CompileStatic
+class CollectionForPropertyConfigBinder {
 
     /** Bind collection for property config. */
-    public void bindCollectionForPropertyConfig(@NonNull HibernateToManyProperty property) {
-        Collection collection = property.getCollection();
-        collection.setLazy(property.isLazy());
-        Optional.ofNullable(property.getLazy()).ifPresent(collection::setExtraLazy);
+    void bindCollectionForPropertyConfig(@NonNull HibernateToManyProperty property) {
+        Collection collection = property.collection
+        collection.lazy = property.isLazy()
+        Boolean extraLazy = property.getLazy()
+        if (extraLazy != null) {
+            collection.extraLazy = extraLazy
+        }
     }
+
 }

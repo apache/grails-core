@@ -16,36 +16,45 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.orm.hibernate.cfg.domainbinding.binder;
+package org.grails.orm.hibernate.cfg.domainbinding.binder
 
-import java.util.Optional;
+import groovy.transform.CompileStatic
+import org.hibernate.mapping.PersistentClass
+import org.hibernate.mapping.UniqueKey
 
-import org.hibernate.mapping.PersistentClass;
+import org.grails.orm.hibernate.cfg.NaturalId
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePropertyIdentity
+import org.grails.orm.hibernate.cfg.domainbinding.util.UniqueNameGenerator
 
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePropertyIdentity;
-import org.grails.orm.hibernate.cfg.domainbinding.util.UniqueNameGenerator;
+@CompileStatic
+class NaturalIdentifierBinder {
 
-public class NaturalIdentifierBinder {
+    private final UniqueNameGenerator uniqueNameGenerator
 
-    private final UniqueNameGenerator uniqueNameGenerator;
-
-    public NaturalIdentifierBinder(UniqueNameGenerator uniqueNameGenerator) {
-        this.uniqueNameGenerator = uniqueNameGenerator;
+    NaturalIdentifierBinder(UniqueNameGenerator uniqueNameGenerator) {
+        this.uniqueNameGenerator = uniqueNameGenerator
     }
 
-    public NaturalIdentifierBinder() {
-        this(new UniqueNameGenerator());
+    NaturalIdentifierBinder() {
+        this(new UniqueNameGenerator())
     }
 
-    public void bindNaturalIdentifier(
+    void bindNaturalIdentifier(
             GrailsHibernatePersistentEntity persistentEntity, PersistentClass persistentClass) {
-        Optional.ofNullable(persistentEntity.getHibernateMappedForm().getIdentity())
-                .map(HibernatePropertyIdentity::getNatural)
-                .flatMap(naturalId -> naturalId.createUniqueKey(persistentClass))
-                .ifPresent(uk -> {
-                    uniqueNameGenerator.setGeneratedUniqueName(uk);
-                    persistentClass.getTable().addUniqueKey(uk);
-                });
+        HibernatePropertyIdentity identity = persistentEntity.getHibernateMappedForm().getIdentity()
+        if (identity == null) {
+            return
+        }
+        NaturalId natural = identity.getNatural()
+        if (natural == null) {
+            return
+        }
+        Optional<UniqueKey> uniqueKey = natural.createUniqueKey(persistentClass)
+        if (uniqueKey.isPresent()) {
+            UniqueKey uk = uniqueKey.get()
+            uniqueNameGenerator.setGeneratedUniqueName(uk)
+            persistentClass.getTable().addUniqueKey(uk)
+        }
     }
 }

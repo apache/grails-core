@@ -16,78 +16,75 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.orm.hibernate.cfg.domainbinding.hibernate;
+package org.grails.orm.hibernate.cfg.domainbinding.hibernate
 
-import java.util.LinkedHashMap;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Properties;
+import groovy.transform.CompileStatic
+import org.hibernate.mapping.DependantValue
+import org.hibernate.mapping.PersistentClass
+import org.hibernate.mapping.Property
+import org.hibernate.mapping.SimpleValue
+import org.hibernate.mapping.Table
+import org.hibernate.mapping.ToOne
+import org.hibernate.usertype.CompositeUserType
+import org.hibernate.usertype.UserCollectionType
+import org.jspecify.annotations.Nullable
 
-import org.hibernate.mapping.DependantValue;
-import org.hibernate.mapping.PersistentClass;
-import org.hibernate.mapping.Property;
-import org.hibernate.mapping.SimpleValue;
-import org.hibernate.mapping.Table;
-import org.hibernate.mapping.ToOne;
-import org.hibernate.usertype.CompositeUserType;
-import org.hibernate.usertype.UserCollectionType;
-import org.jspecify.annotations.Nullable;
+import org.grails.datastore.mapping.model.PersistentProperty
+import org.grails.datastore.mapping.model.types.Association
+import org.grails.datastore.mapping.model.types.Embedded
+import org.grails.orm.hibernate.cfg.ColumnConfig
+import org.grails.orm.hibernate.cfg.HibernateSimpleIdentity
+import org.grails.orm.hibernate.cfg.Mapping
+import org.grails.orm.hibernate.cfg.PropertyConfig
 
-import org.grails.datastore.mapping.model.PersistentProperty;
-import org.grails.datastore.mapping.model.types.Association;
-import org.grails.datastore.mapping.model.types.Embedded;
-import org.grails.orm.hibernate.cfg.ColumnConfig;
-import org.grails.orm.hibernate.cfg.HibernateSimpleIdentity;
-import org.grails.orm.hibernate.cfg.Mapping;
-import org.grails.orm.hibernate.cfg.PropertyConfig;
-
-import static java.util.Optional.ofNullable;
-import static org.grails.orm.hibernate.cfg.GrailsHibernateUtil.isNotEmpty;
-import static org.grails.orm.hibernate.cfg.GrailsHibernateUtil.qualify;
+import static org.grails.orm.hibernate.cfg.GrailsHibernateUtil.isNotEmpty
+import static org.grails.orm.hibernate.cfg.GrailsHibernateUtil.qualify
 
 /** Interface for Hibernate persistent properties */
-public interface HibernatePersistentProperty extends PersistentProperty<PropertyConfig> {
+@CompileStatic
+interface HibernatePersistentProperty extends PersistentProperty<PropertyConfig> {
 
-    private static @Nullable String getMappingName(Class<?> propertyClass, Mapping mapping) {
-        return ofNullable(mapping)
-                .map(__ -> __.getTypeName(propertyClass))
-                .orElseGet(() -> getClassName(propertyClass));
+    @Nullable
+    private static String getMappingName(Class<?> propertyClass, Mapping mapping) {
+        // Falls back to the class name both when there is no mapping at all and when the
+        // mapping has no custom user type registered for this class (the normal case).
+        String mappedName = mapping != null ? mapping.getTypeName(propertyClass) : null
+        return mappedName != null ? mappedName : getClassName(propertyClass)
     }
 
-    private static @Nullable String getClassName(Class<?> propertyClass) {
-        return ofNullable(propertyClass)
-                .filter(__ -> !__.isEnum())
-                .map(Class::getName)
-                .orElse(null);
+    @Nullable
+    private static String getClassName(Class<?> propertyClass) {
+        return propertyClass != null && !propertyClass.isEnum() ? propertyClass.getName() : null
     }
 
-    private static @Nullable Class<?> classForName(String className) {
+    @Nullable
+    private static Class<?> classForName(String className) {
         try {
-            return Class.forName(className, true, Thread.currentThread().getContextClassLoader());
+            return Class.forName(className, true, Thread.currentThread().getContextClassLoader())
         } catch (ClassNotFoundException ignored) {
-            return null;
+            return null
         }
     }
 
     default boolean isBidirectionalManyToOneWithListMapping(Property prop) {
-        return false;
+        return false
     }
 
     default HibernateAssociation getHibernateInverseSide() {
-        return this instanceof Association<?> association ? (HibernateAssociation) association.getInverseSide() : null;
+        return this instanceof Association ? (HibernateAssociation) ((Association) this).getInverseSide() : null
     }
 
     default GrailsHibernatePersistentEntity getHibernateAssociatedEntity() {
-        return this instanceof Association<?> association ?
-                (GrailsHibernatePersistentEntity) association.getAssociatedEntity() :
-                null;
+        return this instanceof Association ?
+                (GrailsHibernatePersistentEntity) ((Association) this).getAssociatedEntity() :
+                null
     }
 
     /**
      * @return The type name
      */
     default String getTypeName() {
-        return getTypeName(getType());
+        return getTypeName(getType())
     }
 
     /**
@@ -95,7 +92,7 @@ public interface HibernatePersistentProperty extends PersistentProperty<Property
      * @return The type name
      */
     default String getTypeName(Class<?> propertyType) {
-        return getTypeName(propertyType, getMappedForm(), getHibernateOwner().getMappedForm());
+        return getTypeName(propertyType, getMappedForm(), getHibernateOwner().getMappedForm())
     }
 
     /**
@@ -104,7 +101,7 @@ public interface HibernatePersistentProperty extends PersistentProperty<Property
      * @return The type name
      */
     default String getTypeName(PropertyConfig config, Mapping mapping) {
-        return getTypeName(getType(), config, mapping);
+        return getTypeName(getType(), config, mapping)
     }
 
     /**
@@ -114,23 +111,26 @@ public interface HibernatePersistentProperty extends PersistentProperty<Property
      * @return The type name
      */
     default String getTypeName(Class<?> propertyType, PropertyConfig config, Mapping mapping) {
-        return ofNullable(config)
-                .map(PropertyConfig::getTypeName)
-                .orElseGet(() -> getMappingName(propertyType, mapping));
+        // Falls through to the mapping-derived name both when there is no config and when the
+        // config carries no explicit type name (the normal case for an unmapped property such as id).
+        String configuredName = config != null ? config.getTypeName() : null
+        return configuredName != null ? configuredName : getMappingName(propertyType, mapping)
     }
 
     default GrailsHibernatePersistentEntity getHibernateOwner() {
-        return (GrailsHibernatePersistentEntity) getOwner();
+        return (GrailsHibernatePersistentEntity) getOwner()
     }
 
     default Class<?> getUserType() {
-        PropertyConfig config = getMappedForm();
-        if (config == null) return null;
-        Object typeObj = config.getType();
-        if (typeObj instanceof Class<?> userType) {
-            return userType;
+        PropertyConfig config = getMappedForm()
+        if (config == null) {
+            return null
         }
-        return typeObj == null ? null : classForName(typeObj.toString());
+        Object typeObj = config.getType()
+        if (typeObj instanceof Class) {
+            return (Class<?>) typeObj
+        }
+        return typeObj == null ? null : classForName(typeObj.toString())
     }
 
     /**
@@ -143,69 +143,74 @@ public interface HibernatePersistentProperty extends PersistentProperty<Property
      *
      * @return The composite user type, or {@code null} when the property is not mapped with one
      */
-    @SuppressWarnings("unchecked")
-    default @Nullable Class<? extends CompositeUserType<?>> getCompositeUserType() {
-        PropertyConfig config = getMappedForm();
-        Class<?> userType = config != null && config.getType() != null ? getUserType() : getRegisteredUserType();
-        return userType != null && CompositeUserType.class.isAssignableFrom(userType) ?
+    @Nullable
+    @SuppressWarnings('unchecked')
+    default Class<? extends CompositeUserType<?>> getCompositeUserType() {
+        PropertyConfig config = getMappedForm()
+        Class<?> userType = config != null && config.getType() != null ? getUserType() : getRegisteredUserType()
+        return userType != null && CompositeUserType.isAssignableFrom(userType) ?
                 (Class<? extends CompositeUserType<?>>) userType :
-                null;
+                null
     }
 
     /**
      * @return The {@code user-type} registered for the class of the property in the mapping of its owner,
      * or {@code null} when there is none
      */
-    private @Nullable Class<?> getRegisteredUserType() {
-        Mapping mapping = getHibernateOwner() == null ? null : getHibernateOwner().getMappedForm();
-        String typeName = mapping == null ? null : mapping.getTypeName(getType());
-        return typeName == null ? null : classForName(typeName);
+    @Nullable
+    private Class<?> getRegisteredUserType() {
+        Mapping mapping = getHibernateOwner() == null ? null : getHibernateOwner().getMappedForm()
+        String typeName = mapping == null ? null : mapping.getTypeName(getType())
+        return typeName == null ? null : classForName(typeName)
     }
 
     default boolean isUserButNotCollectionType() {
-        return getUserType() != null && !UserCollectionType.class.isAssignableFrom(getUserType());
+        return getUserType() != null && !UserCollectionType.isAssignableFrom(getUserType())
     }
 
     default boolean isEnumType() {
-        return Optional.ofNullable(getType()).map(Class::isEnum).orElse(false);
+        Class<?> propertyType = getType()
+        return propertyType != null && propertyType.isEnum()
     }
 
     /**
      * @return Whether this property is an enum property.
      */
     default boolean isEnum() {
-        return this instanceof HibernateEnumProperty;
+        return this instanceof HibernateEnumProperty
     }
 
     default boolean isValidHibernateOneToOne() {
-        return false;
+        return false
     }
 
     default boolean isValidHibernateManyToOne() {
-        return false;
+        return false
     }
 
     default boolean isEmbedded() {
-        return this instanceof Embedded;
+        return this instanceof Embedded
     }
 
-    default void validateAssociation() {}
+    default void validateAssociation() {
+        // no validation by default; association subtypes override
+    }
 
     default boolean isSerializableType() {
-        return "serializable".equals(getTypeName());
+        return 'serializable' == getTypeName()
     }
 
     @Override
     default boolean isLazyAble() {
         return this instanceof HibernateAssociation ||
-                !(this instanceof Embedded) && !this.equals(this.getOwner().getIdentity());
+                !(this instanceof Embedded) && !this.equals(this.getOwner().getIdentity())
     }
 
     /**
      * @return The mapped form
      */
     default PropertyConfig getHibernateMappedForm() {
-        return getMappedForm();
+        return getMappedForm()
     }
 
     /**
@@ -213,31 +218,32 @@ public interface HibernatePersistentProperty extends PersistentProperty<Property
      * @return True if it should be lazy
      */
     default boolean isLazy() {
-        return getHibernateOwner().isLazy(this);
+        return getHibernateOwner().isLazy(this)
     }
 
     /**
      * @return true if the property has a join key mapping
      */
     default boolean isJoinKeyMapped() {
-        return getMappedForm() != null && getMappedForm().hasJoinKeyMapping() && supportsJoinColumnMapping();
+        return getMappedForm() != null && getMappedForm().hasJoinKeyMapping() && supportsJoinColumnMapping()
     }
 
     default String getMappedColumnName() {
-        return Optional.ofNullable(getMappedForm())
-                .map(PropertyConfig::getColumn)
-                .orElse(null);
+        PropertyConfig mappedForm = getMappedForm()
+        return mappedForm != null ? mappedForm.getColumn() : null
     }
 
     default String getColumnName(ColumnConfig cc) {
-        return Optional.of(this)
-                .filter(HibernatePersistentProperty::isJoinKeyMapped)
-                .map(p -> {
-                    java.util.List<ColumnConfig> keys = p.getMappedForm().getJoinTable().getKeys();
-                    return keys == null || keys.isEmpty() ? null : keys.get(0).getName();
-                })
-                .orElseGet(
-                        () -> Optional.ofNullable(cc).map(ColumnConfig::getName).orElseGet(this::getMappedColumnName));
+        // Each step falls through to the next when it yields null.
+        if (isJoinKeyMapped()) {
+            List<ColumnConfig> keys = getMappedForm().getJoinTable().getKeys()
+            String keyName = keys == null || keys.isEmpty() ? null : keys.get(0).getName()
+            if (keyName != null) {
+                return keyName
+            }
+        }
+        String configuredName = cc != null ? cc.getName() : null
+        return configuredName != null ? configuredName : getMappedColumnName()
     }
 
     /**
@@ -245,20 +251,20 @@ public interface HibernatePersistentProperty extends PersistentProperty<Property
      * @return The type name
      */
     default String getTypeName(SimpleValue simpleValue) {
-        return getTypeProperty(simpleValue).getTypeName();
+        return getTypeProperty(simpleValue).getTypeName()
     }
 
     /**
      * @param simpleValue The Hibernate simple value
      * @return The type parameters
      */
-    default java.util.Properties getTypeParameters(SimpleValue simpleValue) {
+    default Properties getTypeParameters(SimpleValue simpleValue) {
         if (getTypeName(simpleValue) != null) {
-            return Optional.ofNullable(getTypeProperty(simpleValue).getMappedForm())
-                    .map(PropertyConfig::getTypeParams)
-                    .orElse(new java.util.Properties());
+            PropertyConfig typeMappedForm = getTypeProperty(simpleValue).getMappedForm()
+            Properties typeParams = typeMappedForm != null ? typeMappedForm.getTypeParams() : null
+            return typeParams != null ? typeParams : new Properties()
         }
-        return new java.util.Properties();
+        return new Properties()
     }
 
     /**
@@ -267,17 +273,18 @@ public interface HibernatePersistentProperty extends PersistentProperty<Property
      */
     default HibernatePersistentProperty getTypeProperty(SimpleValue simpleValue) {
         if (simpleValue instanceof DependantValue) {
-            return Optional.ofNullable(getHibernateOwner().getIdentity()).orElse(this);
+            HibernatePersistentProperty identity = getHibernateOwner().getIdentity()
+            return identity != null ? identity : this
         }
-        return this;
+        return this
     }
 
     default Table getTable() {
-        return getPersistentClass().getTable();
+        return getPersistentClass().getTable()
     }
 
     default PersistentClass getPersistentClass() {
-        return getHibernateOwner().getPersistentClass();
+        return getHibernateOwner().getPersistentClass()
     }
 
     /**
@@ -286,19 +293,21 @@ public interface HibernatePersistentProperty extends PersistentProperty<Property
      *
      * @return The generator name, or {@code null} if none is configured
      */
-    default @Nullable String getGeneratorName() {
-        return Optional.ofNullable(getHibernateMappedForm()).map(PropertyConfig::getGenerator).orElse(null);
+    @Nullable
+    default String getGeneratorName() {
+        PropertyConfig mappedForm = getHibernateMappedForm()
+        return mappedForm != null ? mappedForm.getGenerator() : null
     }
 
     default HibernatePersistentProperty validateProperty() {
-        return this;
+        return this
     }
 
     default String getNameForPropertyAndPath(String path) {
         if (isNotEmpty(path)) {
-            return qualify(path, getName());
+            return qualify(path, getName())
         }
-        return getName();
+        return getName()
     }
 
     /**
@@ -311,18 +320,20 @@ public interface HibernatePersistentProperty extends PersistentProperty<Property
      *         carries no generator type parameters
      */
     default Optional<HibernateSimpleIdentity> buildPropertyIdentity() {
-        PropertyConfig mappedForm = getHibernateMappedForm();
-        Properties typeParams = mappedForm != null ? mappedForm.getTypeParams() : null;
+        PropertyConfig mappedForm = getHibernateMappedForm()
+        Properties typeParams = mappedForm != null ? mappedForm.getTypeParams() : null
         if (typeParams == null || typeParams.isEmpty()) {
-            return Optional.empty();
+            return Optional.<HibernateSimpleIdentity>empty()
         }
-        Map<String, String> params = new LinkedHashMap<>();
-        typeParams.forEach((key, value) -> params.put(key.toString(), value.toString()));
-        HibernateSimpleIdentity identity = new HibernateSimpleIdentity();
-        identity.setName(getName());
-        identity.setType(getType());
-        identity.setParams(params);
-        return Optional.of(identity);
+        Map<String, String> params = new LinkedHashMap<>()
+        for (Map.Entry<Object, Object> entry : typeParams.entrySet()) {
+            params.put(entry.getKey().toString(), entry.getValue().toString())
+        }
+        HibernateSimpleIdentity identity = new HibernateSimpleIdentity()
+        identity.setName(getName())
+        identity.setType(getType())
+        identity.setParams(params)
+        return Optional.of(identity)
     }
 
     /**
@@ -337,10 +348,11 @@ public interface HibernatePersistentProperty extends PersistentProperty<Property
      * @param value the Hibernate {@link SimpleValue} produced for this property
      */
     default void markValueSorted(SimpleValue value) {
-        if (value instanceof ToOne toOne) {
-            toOne.setSorted(true);
-        } else if (value instanceof DependantValue dv) {
-            dv.setSorted(true);
+        if (value instanceof ToOne) {
+            ((ToOne) value).setSorted(true)
+        } else if (value instanceof DependantValue) {
+            ((DependantValue) value).setSorted(true)
         }
     }
+
 }

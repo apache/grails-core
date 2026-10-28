@@ -16,40 +16,41 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.orm.hibernate.cfg.domainbinding.binder;
+package org.grails.orm.hibernate.cfg.domainbinding.binder
 
-import jakarta.annotation.Nonnull;
+import groovy.transform.CompileStatic
+import jakarta.annotation.Nonnull
+import org.hibernate.MappingException
+import org.hibernate.mapping.Table
+import org.hibernate.mapping.Value
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 
-import org.hibernate.MappingException;
-import org.hibernate.mapping.Table;
-import org.hibernate.mapping.Value;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateCustomProperty
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEmbeddedProperty
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEnumProperty
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateManyToOneProperty
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateOneToOneProperty
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateSimpleProperty
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateTenantIdProperty
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty
 
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateCustomProperty;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEmbeddedProperty;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEnumProperty;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateManyToOneProperty;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateOneToOneProperty;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateSimpleProperty;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateTenantIdProperty;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty;
+@CompileStatic
+class GrailsPropertyBinder {
 
-public class GrailsPropertyBinder {
+    private static final Logger LOG = LoggerFactory.getLogger(GrailsPropertyBinder)
 
-    private static final Logger LOG = LoggerFactory.getLogger(GrailsPropertyBinder.class);
+    private final EnumTypeBinder enumTypeBinder
+    private final ComponentBinder componentBinder
+    private final CollectionBinder collectionBinder
+    private final SimpleValueBinder simpleValueBinder
+    private final CompositeUserTypeBinder compositeUserTypeBinder
+    private final OneToOneBinder oneToOneBinder
+    private final ManyToOneBinder manyToOneBinder
+    private final ForeignKeyOneToOneBinder foreignKeyOneToOneBinder
 
-    private final EnumTypeBinder enumTypeBinder;
-    private final ComponentBinder componentBinder;
-    private final CollectionBinder collectionBinder;
-    private final SimpleValueBinder simpleValueBinder;
-    private final CompositeUserTypeBinder compositeUserTypeBinder;
-    private final OneToOneBinder oneToOneBinder;
-    private final ManyToOneBinder manyToOneBinder;
-    private final ForeignKeyOneToOneBinder foreignKeyOneToOneBinder;
-
-    public GrailsPropertyBinder(
+    GrailsPropertyBinder(
             EnumTypeBinder enumTypeBinder,
             ComponentBinder componentBinder,
             CollectionBinder collectionBinder,
@@ -58,14 +59,14 @@ public class GrailsPropertyBinder {
             OneToOneBinder oneToOneBinder,
             ManyToOneBinder manyToOneBinder,
             ForeignKeyOneToOneBinder foreignKeyOneToOneBinder) {
-        this.enumTypeBinder = enumTypeBinder;
-        this.componentBinder = componentBinder;
-        this.collectionBinder = collectionBinder;
-        this.simpleValueBinder = simpleValueBinder;
-        this.compositeUserTypeBinder = compositeUserTypeBinder;
-        this.oneToOneBinder = oneToOneBinder;
-        this.manyToOneBinder = manyToOneBinder;
-        this.foreignKeyOneToOneBinder = foreignKeyOneToOneBinder;
+        this.enumTypeBinder = enumTypeBinder
+        this.componentBinder = componentBinder
+        this.collectionBinder = collectionBinder
+        this.simpleValueBinder = simpleValueBinder
+        this.compositeUserTypeBinder = compositeUserTypeBinder
+        this.oneToOneBinder = oneToOneBinder
+        this.manyToOneBinder = manyToOneBinder
+        this.foreignKeyOneToOneBinder = foreignKeyOneToOneBinder
     }
 
     /**
@@ -75,8 +76,8 @@ public class GrailsPropertyBinder {
      *
      * @deprecated use the constructor that takes a {@link CompositeUserTypeBinder}
      */
-    @Deprecated(since = "8.0.1")
-    public GrailsPropertyBinder(
+    @Deprecated(since = '8.0.1')
+    GrailsPropertyBinder(
             EnumTypeBinder enumTypeBinder,
             ComponentBinder componentBinder,
             CollectionBinder collectionBinder,
@@ -92,71 +93,70 @@ public class GrailsPropertyBinder {
                 null,
                 oneToOneBinder,
                 manyToOneBinder,
-                foreignKeyOneToOneBinder);
+                foreignKeyOneToOneBinder)
     }
 
-    public Value bindProperty(
+    Value bindProperty(
             @Nonnull HibernatePersistentProperty currentGrailsProp,
             HibernatePersistentProperty parentProperty,
             String path) {
-        Table table = currentGrailsProp.getTable();
+        Table table = currentGrailsProp.table
         if (LOG.isDebugEnabled()) {
-            LOG.debug("[GrailsPropertyBinder] Binding persistent property [{}]", currentGrailsProp.getName());
+            LOG.debug('[GrailsPropertyBinder] Binding persistent property [{}]', currentGrailsProp.name)
         }
 
-        Value value;
+        Value value
 
-        if (currentGrailsProp.getCompositeUserType() != null) {
+        if (currentGrailsProp.compositeUserType != null) {
             // A composite user type spans one column per attribute of its embeddable class, so it is a
             // component of that type rather than a basic value: Hibernate resolves the type of a basic value
             // as a BasicType or a UserType only. This comes before the enum branch, since an enum property
             // mapped with a composite user type is such a component too, not an enum column.
-            value = bindCompositeUserType(currentGrailsProp, parentProperty, path);
-        } else if (currentGrailsProp instanceof HibernateEnumProperty hibernateEnumProperty &&
-                !hibernateEnumProperty.isCollectionElement()) {
+            value = bindCompositeUserType(currentGrailsProp, parentProperty, path)
+        } else if (currentGrailsProp instanceof HibernateEnumProperty &&
+                !((HibernateEnumProperty) currentGrailsProp).isCollectionElement()) {
             // A hasMany-of-enum property is also a HibernateEnumProperty, but it must still go
             // through collectionBinder.bindCollection() below so its join table gets created;
             // EnumTypeBinder only binds its element column, from BasicCollectionElementBinder.
-            value = enumTypeBinder.bindEnumType(hibernateEnumProperty, path);
+            value = enumTypeBinder.bindEnumType((HibernateEnumProperty) currentGrailsProp, path)
         } else if (currentGrailsProp.isUserButNotCollectionType()) {
-            value = simpleValueBinder.bindBasicValue(currentGrailsProp, parentProperty, path);
-        } else if (currentGrailsProp instanceof HibernateOneToOneProperty oneToOne &&
-                oneToOne.isValidHibernateOneToOne()) {
-            value = oneToOneBinder.bindOneToOne(oneToOne, path);
-        } else if (currentGrailsProp instanceof HibernateOneToOneProperty oneToOne) {
-            value = foreignKeyOneToOneBinder.bind(oneToOne, path);
-        } else if (currentGrailsProp instanceof HibernateManyToOneProperty manyToOne) {
-            value = manyToOneBinder.bindManyToOne(manyToOne, table, path);
+            value = simpleValueBinder.bindBasicValue(currentGrailsProp, parentProperty, path)
+        } else if (currentGrailsProp instanceof HibernateOneToOneProperty &&
+                ((HibernateOneToOneProperty) currentGrailsProp).isValidHibernateOneToOne()) {
+            value = oneToOneBinder.bindOneToOne((HibernateOneToOneProperty) currentGrailsProp, path)
+        } else if (currentGrailsProp instanceof HibernateOneToOneProperty) {
+            value = foreignKeyOneToOneBinder.bind((HibernateOneToOneProperty) currentGrailsProp, path)
+        } else if (currentGrailsProp instanceof HibernateManyToOneProperty) {
+            value = manyToOneBinder.bindManyToOne((HibernateManyToOneProperty) currentGrailsProp, table, path)
         } else if (HibernateToManyProperty.isBoundAsCollection(currentGrailsProp)) {
-            value = collectionBinder.bindCollection((HibernateToManyProperty) currentGrailsProp, path);
-        } else if (currentGrailsProp instanceof HibernateEmbeddedProperty embedded) {
-            value = componentBinder.bindComponent(embedded, path);
-        } else if (currentGrailsProp instanceof HibernateSimpleProperty simple) {
-            value = simpleValueBinder.bindBasicValue(simple, parentProperty, path);
-        } else if (currentGrailsProp instanceof HibernateCustomProperty custom) {
-            value = simpleValueBinder.bindBasicValue(custom, parentProperty, path);
-        } else if (currentGrailsProp instanceof HibernateTenantIdProperty tenantId) {
-            value = simpleValueBinder.bindBasicValue(tenantId, parentProperty, path);
-        } else if (currentGrailsProp instanceof HibernateToManyProperty toMany &&
+            value = collectionBinder.bindCollection((HibernateToManyProperty) currentGrailsProp, path)
+        } else if (currentGrailsProp instanceof HibernateEmbeddedProperty) {
+            value = componentBinder.bindComponent((HibernateEmbeddedProperty) currentGrailsProp, path)
+        } else if (currentGrailsProp instanceof HibernateSimpleProperty) {
+            value = simpleValueBinder.bindBasicValue((HibernateSimpleProperty) currentGrailsProp, parentProperty, path)
+        } else if (currentGrailsProp instanceof HibernateCustomProperty) {
+            value = simpleValueBinder.bindBasicValue((HibernateCustomProperty) currentGrailsProp, parentProperty, path)
+        } else if (currentGrailsProp instanceof HibernateTenantIdProperty) {
+            value = simpleValueBinder.bindBasicValue((HibernateTenantIdProperty) currentGrailsProp, parentProperty, path)
+        } else if (currentGrailsProp instanceof HibernateToManyProperty &&
                 currentGrailsProp.isSerializableType()) {
-            value = simpleValueBinder.bindBasicValue(toMany, parentProperty, path);
+            value = simpleValueBinder.bindBasicValue((HibernateToManyProperty) currentGrailsProp, parentProperty, path)
         } else {
             throw new RuntimeException(
-                    "Unsupported property type: " + currentGrailsProp.getClass().getName());
+                    "Unsupported property type: ${currentGrailsProp.class.name}".toString())
         }
 
-        return value;
+        return value
     }
 
     private Value bindCompositeUserType(
             HibernatePersistentProperty property, HibernatePersistentProperty parentProperty, String path) {
         if (compositeUserTypeBinder == null) {
-            throw new MappingException("Property [" + property.getName() + "] of class [" +
-                    property.getOwner().getName() + "] is mapped with the composite user type [" +
-                    property.getCompositeUserType().getName() + "], which a " +
-                    GrailsPropertyBinder.class.getSimpleName() + " created without a " +
-                    CompositeUserTypeBinder.class.getSimpleName() + " cannot bind");
+            throw new MappingException(("Property [${property.name}] of class [${property.owner.name}] is mapped " +
+                    "with the composite user type [${property.compositeUserType.name}], which a " +
+                    "${GrailsPropertyBinder.simpleName} created without a ${CompositeUserTypeBinder.simpleName} " +
+                    'cannot bind').toString())
         }
-        return compositeUserTypeBinder.bindCompositeUserType(property, parentProperty, path);
+        return compositeUserTypeBinder.bindCompositeUserType(property, parentProperty, path)
     }
 }

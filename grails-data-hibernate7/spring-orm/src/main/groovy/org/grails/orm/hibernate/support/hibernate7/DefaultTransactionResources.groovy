@@ -16,77 +16,78 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.grails.orm.hibernate.support.hibernate7;
+package org.grails.orm.hibernate.support.hibernate7
 
-import java.util.List;
-
-import org.springframework.transaction.support.TransactionSynchronization;
-import org.springframework.transaction.support.TransactionSynchronizationManager;
+import groovy.transform.CompileStatic
+import org.springframework.transaction.support.TransactionSynchronization
+import org.springframework.transaction.support.TransactionSynchronizationManager
 
 /**
  * Production implementation of {@link TransactionResources} that delegates every
  * call to the corresponding static method on
  * {@link org.springframework.transaction.support.TransactionSynchronizationManager}.
  */
-public class DefaultTransactionResources implements TransactionResources {
+@CompileStatic
+class DefaultTransactionResources implements TransactionResources {
 
     @Override
-    public Object getResource(Object key) {
-        return TransactionSynchronizationManager.getResource(key);
+    Object getResource(Object key) {
+        return TransactionSynchronizationManager.getResource(key)
     }
 
     @Override
-    public void bindResource(Object key, Object value) {
-        TransactionSynchronizationManager.bindResource(key, value);
+    void bindResource(Object key, Object value) {
+        TransactionSynchronizationManager.bindResource(key, value)
     }
 
     @Override
-    public void unbindResource(Object key) {
-        TransactionSynchronizationManager.unbindResource(key);
+    void unbindResource(Object key) {
+        TransactionSynchronizationManager.unbindResource(key)
     }
 
     @Override
-    public Object unbindResourceIfPossible(Object key) {
-        return TransactionSynchronizationManager.unbindResourceIfPossible(key);
+    Object unbindResourceIfPossible(Object key) {
+        return TransactionSynchronizationManager.unbindResourceIfPossible(key)
     }
 
     @Override
-    public boolean hasResource(Object key) {
-        return TransactionSynchronizationManager.hasResource(key);
+    boolean hasResource(Object key) {
+        return TransactionSynchronizationManager.hasResource(key)
     }
 
     @Override
-    public boolean isSynchronizationActive() {
-        return TransactionSynchronizationManager.isSynchronizationActive();
+    boolean isSynchronizationActive() {
+        return TransactionSynchronizationManager.isSynchronizationActive()
     }
 
     @Override
-    public List<TransactionSynchronization> getSynchronizations() {
-        return TransactionSynchronizationManager.getSynchronizations();
+    List<TransactionSynchronization> getSynchronizations() {
+        return TransactionSynchronizationManager.getSynchronizations()
     }
 
     @Override
-    public void clearSynchronization() {
-        TransactionSynchronizationManager.clearSynchronization();
+    void clearSynchronization() {
+        TransactionSynchronizationManager.clearSynchronization()
     }
 
     @Override
-    public void initSynchronization() {
-        TransactionSynchronizationManager.initSynchronization();
+    void initSynchronization() {
+        TransactionSynchronizationManager.initSynchronization()
     }
 
     @Override
-    public void registerSynchronization(TransactionSynchronization synchronization) {
-        TransactionSynchronizationManager.registerSynchronization(synchronization);
+    void registerSynchronization(TransactionSynchronization synchronization) {
+        TransactionSynchronizationManager.registerSynchronization(synchronization)
     }
 
     @Override
-    public boolean isActualTransactionActive() {
-        return TransactionSynchronizationManager.isActualTransactionActive();
+    boolean isActualTransactionActive() {
+        return TransactionSynchronizationManager.isActualTransactionActive()
     }
 
     @Override
-    public boolean isCurrentTransactionReadOnly() {
-        return TransactionSynchronizationManager.isCurrentTransactionReadOnly();
+    boolean isCurrentTransactionReadOnly() {
+        return TransactionSynchronizationManager.isCurrentTransactionReadOnly()
     }
+
 }

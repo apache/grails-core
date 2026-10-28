@@ -16,16 +16,17 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.orm.hibernate.cfg.domainbinding.util;
+package org.grails.orm.hibernate.cfg.domainbinding.util
 
-import org.hibernate.mapping.Column;
-import org.hibernate.mapping.SimpleValue;
+import groovy.transform.CompileStatic
+import org.hibernate.mapping.Column
+import org.hibernate.mapping.SimpleValue
 
-public class SimpleValueColumnFetcher {
+@CompileStatic
+class SimpleValueColumnFetcher {
 
-    public Column getColumnForSimpleValue(SimpleValue element) {
-        return element.getColumns().isEmpty() ?
-                null :
-                element.getColumns().iterator().next();
+    Column getColumnForSimpleValue(SimpleValue element) {
+        return element.columns.isEmpty() ? null : element.columns.iterator().next()
     }
+
 }

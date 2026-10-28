@@ -16,38 +16,41 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.orm.hibernate.cfg.domainbinding.secondpass;
+package org.grails.orm.hibernate.cfg.domainbinding.secondpass
 
-import org.hibernate.mapping.Collection;
-import org.hibernate.mapping.ManyToOne;
+import groovy.transform.CompileStatic
+import org.hibernate.mapping.Collection
+import org.hibernate.mapping.ManyToOne
 
-import org.grails.orm.hibernate.cfg.domainbinding.binder.CollectionForPropertyConfigBinder;
-import org.grails.orm.hibernate.cfg.domainbinding.binder.ManyToOneBinder;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateManyToOneProperty;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty;
+import org.grails.orm.hibernate.cfg.domainbinding.binder.CollectionForPropertyConfigBinder
+import org.grails.orm.hibernate.cfg.domainbinding.binder.ManyToOneBinder
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateManyToOneProperty
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty
 
-import static org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBinder.EMPTY_PATH;
+import static org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBinder.EMPTY_PATH
 
 /** Binds the element of a bidirectional one-to-many Map association. */
-public class BidirectionalMapElementBinder {
+@CompileStatic
+class BidirectionalMapElementBinder {
 
-    private final ManyToOneBinder manyToOneBinder;
-    private final CollectionForPropertyConfigBinder collectionForPropertyConfigBinder;
+    private final ManyToOneBinder manyToOneBinder
+    private final CollectionForPropertyConfigBinder collectionForPropertyConfigBinder
 
     /** Creates a new {@link BidirectionalMapElementBinder} instance. */
-    public BidirectionalMapElementBinder(
+    BidirectionalMapElementBinder(
             ManyToOneBinder manyToOneBinder, CollectionForPropertyConfigBinder collectionForPropertyConfigBinder) {
-        this.manyToOneBinder = manyToOneBinder;
-        this.collectionForPropertyConfigBinder = collectionForPropertyConfigBinder;
+        this.manyToOneBinder = manyToOneBinder
+        this.collectionForPropertyConfigBinder = collectionForPropertyConfigBinder
     }
 
     /** Binds the ManyToOne element for a bidirectional Map collection. */
-    public void bind(HibernateToManyProperty property) {
-        Collection collection = property.getCollection();
-        HibernateManyToOneProperty otherSide = (HibernateManyToOneProperty) property.getHibernateInverseSide();
-        ManyToOne element = manyToOneBinder.bindManyToOne(otherSide, collection.getCollectionTable(), EMPTY_PATH);
-        element.setReferencedEntityName(otherSide.getOwner().getName());
-        collection.setElement(element);
-        collectionForPropertyConfigBinder.bindCollectionForPropertyConfig(property);
+    void bind(HibernateToManyProperty property) {
+        Collection collection = property.collection
+        HibernateManyToOneProperty otherSide = (HibernateManyToOneProperty) property.hibernateInverseSide
+        ManyToOne element = manyToOneBinder.bindManyToOne(otherSide, collection.collectionTable, EMPTY_PATH)
+        element.referencedEntityName = otherSide.owner.name
+        collection.element = element
+        collectionForPropertyConfigBinder.bindCollectionForPropertyConfig(property)
     }
+
 }

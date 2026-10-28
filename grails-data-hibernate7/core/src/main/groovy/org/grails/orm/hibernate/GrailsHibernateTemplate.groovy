@@ -16,60 +16,53 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.orm.hibernate;
+package org.grails.orm.hibernate
 
-import java.io.Serializable;
-import java.lang.reflect.Proxy;
-import java.sql.Connection;
-import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-import java.util.Objects;
+import java.lang.reflect.Proxy
+import java.sql.Connection
+import java.sql.SQLException
 
-import javax.sql.DataSource;
+import javax.sql.DataSource
 
-import groovy.lang.Closure;
-import org.codehaus.groovy.runtime.DefaultGroovyMethods;
+import groovy.transform.CompileStatic
+import groovy.transform.PackageScope
+import jakarta.persistence.PersistenceException
+import jakarta.persistence.criteria.CriteriaBuilder
+import jakarta.persistence.criteria.CriteriaQuery
+import org.hibernate.FlushMode
+import org.hibernate.HibernateException
+import org.hibernate.JDBCException
+import org.hibernate.LockMode
+import org.hibernate.Session
+import org.hibernate.SessionFactory
+import org.hibernate.engine.jdbc.connections.spi.ConnectionProvider
+import org.hibernate.engine.spi.SessionFactoryImplementor
+import org.hibernate.engine.spi.SessionImplementor
+import org.hibernate.event.spi.EventSource
+import org.hibernate.exception.GenericJDBCException
+import org.hibernate.query.Query
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 
-import jakarta.persistence.PersistenceException;
-import jakarta.persistence.criteria.CriteriaBuilder;
-import jakarta.persistence.criteria.CriteriaQuery;
+import org.springframework.dao.DataAccessException
+import org.springframework.dao.DataAccessResourceFailureException
+import org.springframework.dao.InvalidDataAccessApiUsageException
+import org.springframework.jdbc.datasource.ConnectionHolder
+import org.springframework.jdbc.datasource.DataSourceUtils
+import org.springframework.jdbc.datasource.TransactionAwareDataSourceProxy
+import org.springframework.jdbc.support.SQLErrorCodeSQLExceptionTranslator
+import org.springframework.jdbc.support.SQLExceptionTranslator
+import org.springframework.transaction.support.TransactionSynchronization
+import org.springframework.util.Assert
 
-import org.hibernate.FlushMode;
-import org.hibernate.HibernateException;
-import org.hibernate.JDBCException;
-import org.hibernate.LockMode;
-import org.hibernate.Session;
-import org.hibernate.SessionFactory;
-import org.hibernate.engine.jdbc.connections.spi.ConnectionProvider;
-import org.hibernate.engine.spi.SessionFactoryImplementor;
-import org.hibernate.engine.spi.SessionImplementor;
-import org.hibernate.event.spi.EventSource;
-import org.hibernate.exception.GenericJDBCException;
-import org.hibernate.query.Query;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.grails.datastore.gorm.jdbc.MultiTenantDataSource
+import org.grails.orm.hibernate.support.hibernate7.DefaultTransactionResources
+import org.grails.orm.hibernate.support.hibernate7.SessionFactoryUtils
+import org.grails.orm.hibernate.support.hibernate7.SessionHolder
+import org.grails.orm.hibernate.support.hibernate7.TransactionResources
 
-import org.springframework.dao.DataAccessException;
-import org.springframework.dao.DataAccessResourceFailureException;
-import org.springframework.dao.InvalidDataAccessApiUsageException;
-import org.springframework.jdbc.datasource.ConnectionHolder;
-import org.springframework.jdbc.datasource.DataSourceUtils;
-import org.springframework.jdbc.datasource.TransactionAwareDataSourceProxy;
-import org.springframework.jdbc.support.SQLErrorCodeSQLExceptionTranslator;
-import org.springframework.jdbc.support.SQLExceptionTranslator;
-import org.springframework.transaction.support.TransactionSynchronization;
-import org.springframework.util.Assert;
-
-import org.grails.orm.hibernate.support.hibernate7.DefaultTransactionResources;
-import org.grails.orm.hibernate.support.hibernate7.SessionFactoryUtils;
-import org.grails.orm.hibernate.support.hibernate7.SessionHolder;
-import org.grails.orm.hibernate.support.hibernate7.TransactionResources;
-
-@SuppressWarnings({"PMD.CloseResource", "PMD.DataflowAnomalyAnalysis", "PMD.CompareObjectsWithEquals", "PMD.EmptyIfStmt"
-})
-public class GrailsHibernateTemplate implements IHibernateTemplate {
+@CompileStatic
+class GrailsHibernateTemplate implements IHibernateTemplate {
 
     /**
      * Never flush is a good strategy for read-only units of work.
@@ -81,7 +74,7 @@ public class GrailsHibernateTemplate implements IHibernateTemplate {
      *
      * @see #setFlushMode
      */
-    public static final int FLUSH_NEVER = 0;
+    public static final int FLUSH_NEVER = 0
     /**
      * Automatic flushing is the default mode for a Hibernate Session. A session will get flushed on
      * transaction commit, and on certain find operations that might involve already modified
@@ -93,7 +86,7 @@ public class GrailsHibernateTemplate implements IHibernateTemplate {
      *
      * @see #setFlushMode
      */
-    public static final int FLUSH_AUTO = 1;
+    public static final int FLUSH_AUTO = 1
     /**
      * Eager flushing leads to immediate synchronization with the database, even if in a transaction.
      * This causes inconsistencies to show up and throw a respective exception immediately, and JDBC
@@ -113,7 +106,7 @@ public class GrailsHibernateTemplate implements IHibernateTemplate {
      *
      * @see #setFlushMode
      */
-    public static final int FLUSH_EAGER = 2;
+    public static final int FLUSH_EAGER = 2
     /**
      * Flushing at commit only is intended for units of work where no intermediate flushing is
      * desired, not even for find operations that might involve already modified instances.
@@ -124,7 +117,7 @@ public class GrailsHibernateTemplate implements IHibernateTemplate {
      *
      * @see #setFlushMode
      */
-    public static final int FLUSH_COMMIT = 3;
+    public static final int FLUSH_COMMIT = 3
     /**
      * Flushing before every query statement is rarely necessary. It is only available for special
      * needs.
@@ -134,111 +127,113 @@ public class GrailsHibernateTemplate implements IHibernateTemplate {
      *
      * @see #setFlushMode
      */
-    public static final int FLUSH_ALWAYS = 4;
+    public static final int FLUSH_ALWAYS = 4
 
-    private static final Logger LOG = LoggerFactory.getLogger(GrailsHibernateTemplate.class);
-    protected boolean exposeNativeSession = true;
-    protected boolean cacheQueries = false;
-    protected SessionFactory sessionFactory;
-    protected DataSource dataSource = null;
-    protected SQLExceptionTranslator jdbcExceptionTranslator;
-    protected int flushMode = FLUSH_AUTO;
-    private boolean osivReadOnly;
-    private boolean passReadOnlyToHibernate = false;
-    private boolean applyFlushModeOnlyToNonExistingTransactions = false;
-    protected TransactionResources txResources = new DefaultTransactionResources();
+    private static final Logger LOG = LoggerFactory.getLogger(GrailsHibernateTemplate)
+    protected boolean exposeNativeSession = true
+    protected boolean cacheQueries = false
+    protected SessionFactory sessionFactory
+    protected DataSource dataSource = null
+    protected SQLExceptionTranslator jdbcExceptionTranslator
+    protected int flushMode = FLUSH_AUTO
+    private boolean osivReadOnly
+    private boolean passReadOnlyToHibernate = false
+    private boolean applyFlushModeOnlyToNonExistingTransactions = false
+    protected TransactionResources txResources = new DefaultTransactionResources()
 
     protected GrailsHibernateTemplate() {
         // for testing
     }
 
-    public GrailsHibernateTemplate(SessionFactory sessionFactory) {
-        Assert.notNull(sessionFactory, "Property 'sessionFactory' is required");
-        this.sessionFactory = sessionFactory;
+    GrailsHibernateTemplate(SessionFactory sessionFactory) {
+        Assert.notNull(sessionFactory, "Property 'sessionFactory' is required")
+        this.sessionFactory = sessionFactory
 
         ConnectionProvider connectionProvider = ((SessionFactoryImplementor) sessionFactory)
-                .getServiceRegistry()
-                .getService(ConnectionProvider.class);
-        this.dataSource = connectionProvider != null ? connectionProvider.unwrap(DataSource.class) : null;
+                .serviceRegistry
+                .getService(ConnectionProvider)
+        this.dataSource = connectionProvider != null ? connectionProvider.unwrap(DataSource) : null
         if (this.dataSource != null) {
             if (this.dataSource instanceof TransactionAwareDataSourceProxy) {
-                DataSource target = ((TransactionAwareDataSourceProxy) this.dataSource).getTargetDataSource();
+                DataSource target = ((TransactionAwareDataSourceProxy) this.dataSource).targetDataSource
                 if (target != null) {
-                    this.dataSource = target;
+                    this.dataSource = target
                 }
             }
-            jdbcExceptionTranslator = new SQLErrorCodeSQLExceptionTranslator(this.dataSource);
+            jdbcExceptionTranslator = new SQLErrorCodeSQLExceptionTranslator(this.dataSource)
         } else {
             // must be in unit test mode, setup default translator
             SQLErrorCodeSQLExceptionTranslator sqlErrorCodeSQLExceptionTranslator =
-                    new SQLErrorCodeSQLExceptionTranslator();
-            sqlErrorCodeSQLExceptionTranslator.setDatabaseProductName("H2");
-            jdbcExceptionTranslator = sqlErrorCodeSQLExceptionTranslator;
+                    new SQLErrorCodeSQLExceptionTranslator()
+            sqlErrorCodeSQLExceptionTranslator.databaseProductName = 'H2'
+            jdbcExceptionTranslator = sqlErrorCodeSQLExceptionTranslator
         }
     }
 
-    public GrailsHibernateTemplate(SessionFactory sessionFactory, HibernateDatastore datastore) {
-        this(sessionFactory);
+    GrailsHibernateTemplate(SessionFactory sessionFactory, HibernateDatastore datastore) {
+        this(sessionFactory)
         if (datastore != null) {
-            cacheQueries = datastore.isCacheQueries();
-            this.osivReadOnly = datastore.isOsivReadOnly();
-            this.passReadOnlyToHibernate = datastore.isPassReadOnlyToHibernate();
-            this.flushMode = hibernateFlushModeToConstant(datastore.getDefaultFlushMode());
+            cacheQueries = datastore.isCacheQueries()
+            this.osivReadOnly = datastore.isOsivReadOnly()
+            this.passReadOnlyToHibernate = datastore.isPassReadOnlyToHibernate()
+            this.flushMode = hibernateFlushModeToConstant(datastore.defaultFlushMode)
         }
     }
 
-    public GrailsHibernateTemplate(SessionFactory sessionFactory, HibernateDatastore datastore, int defaultFlushMode) {
-        this(sessionFactory);
+    GrailsHibernateTemplate(SessionFactory sessionFactory, HibernateDatastore datastore, int defaultFlushMode) {
+        this(sessionFactory)
         if (datastore != null) {
-            cacheQueries = datastore.isCacheQueries();
-            this.osivReadOnly = datastore.isOsivReadOnly();
-            this.passReadOnlyToHibernate = datastore.isPassReadOnlyToHibernate();
+            cacheQueries = datastore.isCacheQueries()
+            this.osivReadOnly = datastore.isOsivReadOnly()
+            this.passReadOnlyToHibernate = datastore.isPassReadOnlyToHibernate()
         }
-        this.flushMode = defaultFlushMode;
+        this.flushMode = defaultFlushMode
     }
 
     /** Maps a Hibernate {@link FlushMode} to one of the {@code FLUSH_*} constants of this class. */
+    @PackageScope
     static int hibernateFlushModeToConstant(FlushMode mode) {
-        return switch (mode) {
-            case MANUAL -> FLUSH_NEVER;
-            case COMMIT -> FLUSH_COMMIT;
-            case ALWAYS -> FLUSH_ALWAYS;
-            default -> FLUSH_AUTO;
-        };
+        switch (mode) {
+            case FlushMode.MANUAL:
+                return FLUSH_NEVER
+            case FlushMode.COMMIT:
+                return FLUSH_COMMIT
+            case FlushMode.ALWAYS:
+                return FLUSH_ALWAYS
+            default:
+                return FLUSH_AUTO
+        }
     }
 
     @Override
-    public <T> T execute(Closure<T> callable) {
-        @SuppressWarnings("unchecked")
-        HibernateCallback<T> hibernateCallback =
-                (HibernateCallback<T>) DefaultGroovyMethods.asType(callable, HibernateCallback.class);
-        return execute(hibernateCallback);
+    <T> T execute(Closure<T> callable) {
+        HibernateCallback<T> hibernateCallback = (HibernateCallback<T>) callable.asType(HibernateCallback)
+        return execute(hibernateCallback)
     }
 
-    @SuppressWarnings("PMD.DataflowAnomalyAnalysis")
     @Override
-    public <T> T executeWithNewSession(final Closure<T> callable) {
-        SessionHolder sessionHolder = (SessionHolder) txResources.getResource(sessionFactory);
-        SessionHolder previousHolder = sessionHolder;
+    <T> T executeWithNewSession(Closure<T> callable) {
+        SessionHolder sessionHolder = (SessionHolder) txResources.getResource(sessionFactory)
+        SessionHolder previousHolder = sessionHolder
         ConnectionHolder previousConnectionHolder =
-                (ConnectionHolder) txResources.getResource(dataSource);
-        Session newSession = null;
-        boolean previousActiveSynchronization = txResources.isSynchronizationActive();
+                (ConnectionHolder) txResources.getResource(dataSource)
+        Session newSession = null
+        boolean previousActiveSynchronization = txResources.isSynchronizationActive()
         List<TransactionSynchronization> transactionSynchronizations =
-                previousActiveSynchronization ? txResources.getSynchronizations() : null;
+                previousActiveSynchronization ? txResources.synchronizations : null
         try {
             // if there are any previous synchronizations active we need to clear them and restore them
             // later (see finally block)
             if (previousActiveSynchronization) {
-                txResources.clearSynchronization();
+                txResources.clearSynchronization()
                 // init a new synchronization to ensure that any opened database connections are closed by
                 // the synchronization
-                txResources.initSynchronization();
+                txResources.initSynchronization()
             }
 
             // if there are already bound holders, unbind them so they can be restored later
             if (sessionHolder != null) {
-                txResources.unbindResource(sessionFactory);
+                txResources.unbindResource(sessionFactory)
             }
             // Unbind any pre-existing connection holder independently of the session holder: a
             // DataSource binding can exist without a matching SessionFactory binding when, for
@@ -247,135 +242,133 @@ public class GrailsHibernateTemplate implements IHibernateTemplate {
             // parent-transaction synchronisation is already active.  Leaving it bound causes
             // HibernateTransactionManager.doBegin to throw "Already value bound" at line 565.
             if (previousConnectionHolder != null) {
-                txResources.unbindResource(dataSource);
+                txResources.unbindResource(dataSource)
             }
 
             // create and bind a new session holder for the new session
-            newSession = sessionFactory.openSession();
-            applyFlushMode(newSession, false);
-            sessionHolder = new SessionHolder(newSession);
-            txResources.bindResource(sessionFactory, sessionHolder);
+            newSession = sessionFactory.openSession()
+            applyFlushMode(newSession, false)
+            sessionHolder = new SessionHolder(newSession)
+            txResources.bindResource(sessionFactory, sessionHolder)
 
-            return callable.call(newSession);
+            return callable.call(newSession)
         } finally {
             try {
                 // if an active synchronization was registered during the life time of the new session clear
                 // it
                 if (txResources.isSynchronizationActive()) {
-                    txResources.clearSynchronization();
+                    txResources.clearSynchronization()
                 }
                 // If there is a synchronization active then leave it to the synchronization to close the
                 // session
                 // Clear any bound sessions and connections
-                txResources.unbindResource(sessionFactory);
+                txResources.unbindResource(sessionFactory)
                 ConnectionHolder connectionHolder =
-                        (ConnectionHolder) txResources.unbindResourceIfPossible(dataSource);
+                        (ConnectionHolder) txResources.unbindResourceIfPossible(dataSource)
                 // if there is a connection holder and it holds an open connection close it
                 try {
                     if (connectionHolder != null &&
-                            !(dataSource instanceof org.grails.datastore.gorm.jdbc.MultiTenantDataSource) &&
-                            !connectionHolder.getConnection().isClosed()) {
-                        Connection conn = connectionHolder.getConnection();
-                        DataSourceUtils.releaseConnection(conn, dataSource);
+                            !(dataSource instanceof MultiTenantDataSource) &&
+                            !connectionHolder.connection.isClosed()) {
+                        Connection conn = connectionHolder.connection
+                        DataSourceUtils.releaseConnection(conn, dataSource)
                     }
                 } catch (SQLException e) {
                     // ignore, connection closed already?
                     if (LOG.isDebugEnabled()) {
                         LOG.debug(
-                                "Could not close opened JDBC connection. Did the application close the connection manually?: " +
-                                        e.getMessage());
+                                "Could not close opened JDBC connection. Did the application close the connection manually?: ${e.message}".toString())
                     }
                 }
 
                 if (newSession != null) {
-                    SessionFactoryUtils.closeSession(newSession);
+                    SessionFactoryUtils.closeSession(newSession)
                 }
             } finally {
                 // if there were previously active synchronizations then register those again
                 if (previousActiveSynchronization) {
-                    txResources.initSynchronization();
+                    txResources.initSynchronization()
                     for (TransactionSynchronization transactionSynchronization : transactionSynchronizations) {
-                        txResources.registerSynchronization(transactionSynchronization);
+                        txResources.registerSynchronization(transactionSynchronization)
                     }
                 }
 
                 // now restore any previous state
                 if (previousHolder != null) {
-                    txResources.bindResource(sessionFactory, previousHolder);
+                    txResources.bindResource(sessionFactory, previousHolder)
                 }
                 // Restore the connection holder independently of the session holder so that
                 // the parent-transaction's ConnectionSynchronization (re-registered above) can
                 // still release it when the outer transaction completes.
                 if (previousConnectionHolder != null) {
-                    txResources.bindResource(dataSource, previousConnectionHolder);
+                    txResources.bindResource(dataSource, previousConnectionHolder)
                 }
             }
         }
     }
 
     @Override
-    public <T1> T1 executeWithExistingOrCreateNewSession(SessionFactory sessionFactory, Closure<T1> callable) {
-        SessionHolder sessionHolder = (SessionHolder) txResources.getResource(sessionFactory);
+    <T1> T1 executeWithExistingOrCreateNewSession(SessionFactory sessionFactory, Closure<T1> callable) {
+        SessionHolder sessionHolder = (SessionHolder) txResources.getResource(sessionFactory)
         if (sessionHolder == null) {
-            return executeWithNewSession(callable);
+            return executeWithNewSession(callable)
         } else {
-            return callable.call(sessionHolder.getSession());
+            return callable.call(sessionHolder.session)
         }
     }
 
     @Override
-    public SessionFactory getSessionFactory() {
-        return sessionFactory;
+    SessionFactory getSessionFactory() {
+        return sessionFactory
     }
 
     @Override
-    public void applySettings(org.hibernate.query.Query<?> query) {
+    void applySettings(org.hibernate.query.Query<?> query) {
         if (exposeNativeSession) {
-            prepareQuery(query);
+            prepareQuery(query)
         }
     }
 
-    public boolean isCacheQueries() {
-        return cacheQueries;
+    boolean isCacheQueries() {
+        return cacheQueries
     }
 
-    public void setCacheQueries(boolean cacheQueries) {
-        this.cacheQueries = cacheQueries;
+    void setCacheQueries(boolean cacheQueries) {
+        this.cacheQueries = cacheQueries
     }
 
-    @SuppressWarnings("PMD.PreserveStackTrace")
-    public <T> T execute(HibernateCallback<T> action) throws DataAccessException {
-        return doExecute(action, false);
+    <T> T execute(HibernateCallback<T> action) throws DataAccessException {
+        return doExecute(action, false)
     }
 
-    public List<?> executeFind(HibernateCallback<?> action) throws DataAccessException {
-        Object result = doExecute(action, false);
+    List<?> executeFind(HibernateCallback<?> action) throws DataAccessException {
+        Object result = doExecute(action, false)
         if (result != null && !(result instanceof List)) {
             throw new InvalidDataAccessApiUsageException(
-                    "Result object returned from HibernateCallback isn't a List: [" + result + "]");
+                    "Result object returned from HibernateCallback isn't a List: [${result}]".toString())
         }
-        return (List<?>) result;
+        return (List<?>) result
     }
 
     protected boolean shouldPassReadOnlyToHibernate() {
         if ((passReadOnlyToHibernate || osivReadOnly) &&
                 txResources.hasResource(getSessionFactory())) {
             if (txResources.isActualTransactionActive()) {
-                return passReadOnlyToHibernate && txResources.isCurrentTransactionReadOnly();
+                return passReadOnlyToHibernate && txResources.isCurrentTransactionReadOnly()
             } else {
-                return osivReadOnly;
+                return osivReadOnly
             }
         } else {
-            return false;
+            return false
         }
     }
 
-    public boolean isOsivReadOnly() {
-        return osivReadOnly;
+    boolean isOsivReadOnly() {
+        return osivReadOnly
     }
 
-    public void setOsivReadOnly(boolean osivReadOnly) {
-        this.osivReadOnly = osivReadOnly;
+    void setOsivReadOnly(boolean osivReadOnly) {
+        this.osivReadOnly = osivReadOnly
     }
 
     /**
@@ -387,60 +380,59 @@ public class GrailsHibernateTemplate implements IHibernateTemplate {
      * @return a result object returned by the action, or <code>null</code>
      * @throws org.springframework.dao.DataAccessException in case of Hibernate errors
      */
-    @SuppressWarnings("PMD.PreserveStackTrace")
     protected <T> T doExecute(HibernateCallback<T> action, boolean enforceNativeSession) throws DataAccessException {
 
-        Assert.notNull(action, "Callback object must not be null");
+        Assert.notNull(action, 'Callback object must not be null')
 
-        Session session = getSession();
-        boolean existingTransaction = isSessionTransactional(session);
+        Session session = getSession()
+        boolean existingTransaction = isSessionTransactional(session)
         if (existingTransaction) {
-            LOG.debug("Found thread-bound Session for HibernateTemplate");
+            LOG.debug('Found thread-bound Session for HibernateTemplate')
         }
 
-        FlushMode previousFlushMode = null;
+        FlushMode previousFlushMode = null
         try {
-            previousFlushMode = applyFlushMode(session, existingTransaction);
+            previousFlushMode = applyFlushMode(session, existingTransaction)
             if (shouldPassReadOnlyToHibernate()) {
-                session.setDefaultReadOnly(true);
+                session.defaultReadOnly = true
             }
             Session sessionToExpose =
-                    (enforceNativeSession || exposeNativeSession ? session : createSessionProxy(session));
-            T result = action.doInHibernate(sessionToExpose);
-            flushIfNecessary(session, existingTransaction);
-            return result;
+                    (enforceNativeSession || exposeNativeSession ? session : createSessionProxy(session))
+            T result = action.doInHibernate(sessionToExpose)
+            flushIfNecessary(session, existingTransaction)
+            return result
         } catch (HibernateException ex) {
-            throw convertHibernateAccessException(ex);
+            throw convertHibernateAccessException(ex)
         } catch (PersistenceException ex) {
-            if (ex.getCause() instanceof HibernateException hibernateException) {
-                throw SessionFactoryUtils.convertHibernateAccessException(hibernateException);
+            if (ex.cause instanceof HibernateException) {
+                throw SessionFactoryUtils.convertHibernateAccessException((HibernateException) ex.cause)
             }
-            throw ex;
+            throw ex
         } catch (SQLException ex) {
             throw Objects.requireNonNull(
-                    jdbcExceptionTranslator.translate("Hibernate-related JDBC operation", null, ex));
+                    jdbcExceptionTranslator.translate('Hibernate-related JDBC operation', null, ex))
         } finally {
             if (existingTransaction) {
-                LOG.debug("Not closing pre-bound Hibernate Session after HibernateTemplate");
+                LOG.debug('Not closing pre-bound Hibernate Session after HibernateTemplate')
                 if (previousFlushMode != null) {
-                    session.setHibernateFlushMode(previousFlushMode);
+                    session.setHibernateFlushMode(previousFlushMode)
                 }
             } else {
-                SessionFactoryUtils.closeSession(session);
+                SessionFactoryUtils.closeSession(session)
             }
         }
     }
 
     protected boolean isSessionTransactional(Session session) {
-        SessionHolder sessionHolder = (SessionHolder) txResources.getResource(sessionFactory);
-        return sessionHolder != null && sessionHolder.getSession() == session;
+        SessionHolder sessionHolder = (SessionHolder) txResources.getResource(sessionFactory)
+        return sessionHolder != null && sessionHolder.session.is(session)
     }
 
-    public Session getSession() {
+    Session getSession() {
         try {
-            return sessionFactory.getCurrentSession();
+            return sessionFactory.currentSession
         } catch (HibernateException ex) {
-            throw new DataAccessResourceFailureException("Could not obtain current Hibernate Session", ex);
+            throw new DataAccessResourceFailureException('Could not obtain current Hibernate Session', ex)
         }
     }
 
@@ -455,113 +447,113 @@ public class GrailsHibernateTemplate implements IHibernateTemplate {
      * @see #prepareCriteria
      */
     protected Session createSessionProxy(Session session) {
-        Class<?>[] sessionIfcs;
-        Class<?> mainIfc = Session.class;
+        Class<?>[] sessionIfcs
+        Class<?> mainIfc = Session
         if (session instanceof EventSource) {
-            sessionIfcs = new Class[] {mainIfc, EventSource.class};
+            sessionIfcs = [mainIfc, EventSource] as Class[]
         } else if (session instanceof SessionImplementor) {
-            sessionIfcs = new Class[] {mainIfc, SessionImplementor.class};
+            sessionIfcs = [mainIfc, SessionImplementor] as Class[]
         } else {
-            sessionIfcs = new Class[] {mainIfc};
+            sessionIfcs = [mainIfc] as Class[]
         }
         return (Session) Proxy.newProxyInstance(
-                Thread.currentThread().getContextClassLoader(),
+                Thread.currentThread().contextClassLoader,
                 sessionIfcs,
-                new CloseSuppressingInvocationHandler(session, this));
+                new CloseSuppressingInvocationHandler(session, this))
     }
 
     @Override
-    public <T> T get(final Class<T> entityClass, final Serializable id) throws DataAccessException {
-        return doExecute(session -> session.find(entityClass, id), true);
+    <T> T get(Class<T> entityClass, Serializable id) throws DataAccessException {
+        return doExecute({ Session session -> session.find(entityClass, id) }, true)
     }
 
     @Override
-    public <T> T get(final Class<T> entityClass, final Serializable id, final LockMode mode) {
-        return lock(entityClass, id, mode);
+    <T> T get(Class<T> entityClass, Serializable id, LockMode mode) {
+        return lock(entityClass, id, mode)
     }
 
     @Override
-    public void remove(final Object entity) throws DataAccessException {
+    void remove(Object entity) throws DataAccessException {
         doExecute(
-                session -> {
-                    session.remove(entity);
-                    return null;
+                { Session session ->
+                    session.remove(entity)
+                    return null
                 },
-                true);
+                true)
     }
 
     @Override
-    public <T> T load(final Class<T> entityClass, final Serializable id) throws DataAccessException {
-        return doExecute(session -> session.getReference(entityClass, id), true);
+    <T> T load(Class<T> entityClass, Serializable id) throws DataAccessException {
+        return doExecute({ Session session -> session.getReference(entityClass, id) }, true)
     }
 
-    public <T> T lock(final Class<T> entityClass, final Serializable id, final LockMode lockMode)
+    <T> T lock(Class<T> entityClass, Serializable id, LockMode lockMode)
             throws DataAccessException {
-        return doExecute(session -> session.find(entityClass, id, lockMode), true);
+        return doExecute({ Session session -> session.find(entityClass, id, lockMode) }, true)
     }
 
-    public <T> List<T> loadAll(final Class<T> entityClass) throws DataAccessException {
+    <T> List<T> loadAll(Class<T> entityClass) throws DataAccessException {
         return doExecute(
-                session -> {
-                    final CriteriaBuilder criteriaBuilder = session.getCriteriaBuilder();
-                    final CriteriaQuery<T> query = criteriaBuilder.createQuery(entityClass);
-                    query.from(entityClass);
-                    final Query<T> jpaQuery = session.createQuery(query);
-                    prepareCriteria(jpaQuery);
-                    return jpaQuery.getResultList();
+                { Session session ->
+                    CriteriaBuilder criteriaBuilder = session.criteriaBuilder
+                    CriteriaQuery<T> query = criteriaBuilder.createQuery(entityClass)
+                    query.from(entityClass)
+                    Query<T> jpaQuery = session.createQuery(query)
+                    prepareCriteria(jpaQuery)
+                    return jpaQuery.resultList
                 },
-                true);
+                true)
     }
 
     @Override
-    public boolean contains(final Object entity) throws DataAccessException {
-        return doExecute(session -> session.contains(entity), true);
+    boolean contains(Object entity) throws DataAccessException {
+        return doExecute({ Session session -> session.contains(entity) }, true)
     }
 
     @Override
-    public void evict(final Object entity) throws DataAccessException {
+    void evict(Object entity) throws DataAccessException {
         doExecute(
-                session -> {
-                    session.evict(entity);
-                    return null;
+                { Session session ->
+                    session.evict(entity)
+                    return null
                 },
-                true);
+                true)
     }
 
     @Override
-    public void lock(final Object entity, final LockMode lockMode) throws DataAccessException {
+    void lock(Object entity, LockMode lockMode) throws DataAccessException {
         doExecute(
-                session -> {
-                    session.lock(entity, lockMode);
-                    return null;
+                { Session session ->
+                    session.lock(entity, lockMode)
+                    return null
                 },
-                true);
+                true)
     }
 
     @Override
-    public void refresh(final Object entity) throws DataAccessException {
-        refresh(entity, null);
+    void refresh(Object entity) throws DataAccessException {
+        refresh(entity, null)
     }
 
-    public void refresh(final Object entity, final LockMode lockMode) throws DataAccessException {
+    void refresh(Object entity, LockMode lockMode) throws DataAccessException {
         doExecute(
-                session -> {
+                { Session session ->
                     if (lockMode == null) {
-                        session.refresh(entity);
+                        session.refresh(entity)
                     } else {
-                        session.refresh(entity, lockMode);
+                        session.refresh(entity, lockMode)
                     }
-                    return null;
+                    return null
                 },
-                true);
+                true)
     }
 
-    public boolean isExposeNativeSession() {
-        return exposeNativeSession;
+    boolean isExposeNativeSession() {
+        return exposeNativeSession
     }
 
-    public void setExposeNativeSession(boolean exposeNativeSession) {
-        this.exposeNativeSession = exposeNativeSession;
+    void setExposeNativeSession(boolean exposeNativeSession) {
+        this.exposeNativeSession = exposeNativeSession
     }
 
     /**
@@ -569,20 +561,20 @@ public class GrailsHibernateTemplate implements IHibernateTemplate {
      *
      * @param query the Query object to prepare
      */
-    void prepareQuery(org.hibernate.query.Query<?> query) {
-        internalQuery(query);
+    protected void prepareQuery(org.hibernate.query.Query<?> query) {
+        internalQuery(query)
     }
 
     private void internalQuery(Query<?> query) {
         if (cacheQueries) {
-            query.setCacheable(true);
+            query.cacheable = true
         }
         if (shouldPassReadOnlyToHibernate()) {
-            query.setReadOnly(true);
+            query.readOnly = true
         }
-        SessionHolder sessionHolder = (SessionHolder) txResources.getResource(sessionFactory);
+        SessionHolder sessionHolder = (SessionHolder) txResources.getResource(sessionFactory)
         if (sessionHolder != null && sessionHolder.hasTimeout()) {
-            query.setTimeout(sessionHolder.getTimeToLiveInSeconds());
+            query.setTimeout(sessionHolder.timeToLiveInSeconds)
         }
     }
 
@@ -591,14 +583,14 @@ public class GrailsHibernateTemplate implements IHibernateTemplate {
      *
      * @param jpaQuery the Query object to prepare
      */
-    <T> void prepareCriteria(Query<T> jpaQuery) {
-        internalQuery(jpaQuery);
+    protected <T> void prepareCriteria(Query<T> jpaQuery) {
+        internalQuery(jpaQuery)
     }
 
     /** Return if a flush should be forced after executing the callback code. */
     @Override
-    public int getFlushMode() {
-        return flushMode;
+    int getFlushMode() {
+        return flushMode
     }
 
     /**
@@ -607,8 +599,8 @@ public class GrailsHibernateTemplate implements IHibernateTemplate {
      * @see #FLUSH_AUTO
      */
     @Override
-    public void setFlushMode(int flushMode) {
-        this.flushMode = flushMode;
+    void setFlushMode(int flushMode) {
+        this.flushMode = flushMode
     }
 
     /**
@@ -622,149 +614,151 @@ public class GrailsHibernateTemplate implements IHibernateTemplate {
      */
     protected FlushMode applyFlushMode(Session session, boolean existingTransaction) {
         if (isApplyFlushModeOnlyToNonExistingTransactions() && existingTransaction) {
-            return null;
+            return null
         }
 
         if (getFlushMode() == FLUSH_NEVER) {
             if (existingTransaction) {
-                FlushMode previousFlushMode = session.getHibernateFlushMode();
+                FlushMode previousFlushMode = session.hibernateFlushMode
                 if (!previousFlushMode.lessThan(FlushMode.COMMIT)) {
-                    session.setHibernateFlushMode(FlushMode.MANUAL);
-                    return previousFlushMode;
+                    session.setHibernateFlushMode(FlushMode.MANUAL)
+                    return previousFlushMode
                 }
             } else {
-                session.setHibernateFlushMode(FlushMode.MANUAL);
+                session.setHibernateFlushMode(FlushMode.MANUAL)
             }
         } else if (getFlushMode() == FLUSH_EAGER) {
             //noinspection StatementWithEmptyBody
             if (existingTransaction) {
-                FlushMode previousFlushMode = session.getHibernateFlushMode();
-                if (!previousFlushMode.equals(FlushMode.AUTO)) {
-                    session.setHibernateFlushMode(FlushMode.AUTO);
-                    return previousFlushMode;
+                FlushMode previousFlushMode = session.hibernateFlushMode
+                if (previousFlushMode != FlushMode.AUTO) {
+                    session.setHibernateFlushMode(FlushMode.AUTO)
+                    return previousFlushMode
                 }
             } else {
                 // rely on default FlushMode.AUTO
             }
         } else if (getFlushMode() == FLUSH_COMMIT) {
             if (existingTransaction) {
-                FlushMode previousFlushMode = session.getHibernateFlushMode();
-                if (previousFlushMode.equals(FlushMode.AUTO) || previousFlushMode.equals(FlushMode.ALWAYS)) {
-                    session.setHibernateFlushMode(FlushMode.COMMIT);
-                    return previousFlushMode;
+                FlushMode previousFlushMode = session.hibernateFlushMode
+                if (previousFlushMode == FlushMode.AUTO || previousFlushMode == FlushMode.ALWAYS) {
+                    session.setHibernateFlushMode(FlushMode.COMMIT)
+                    return previousFlushMode
                 }
             } else {
-                session.setHibernateFlushMode(FlushMode.COMMIT);
+                session.setHibernateFlushMode(FlushMode.COMMIT)
             }
         } else if (getFlushMode() == FLUSH_ALWAYS) {
             if (existingTransaction) {
-                FlushMode previousFlushMode = session.getHibernateFlushMode();
-                if (!previousFlushMode.equals(FlushMode.ALWAYS)) {
-                    session.setHibernateFlushMode(FlushMode.ALWAYS);
-                    return previousFlushMode;
+                FlushMode previousFlushMode = session.hibernateFlushMode
+                if (previousFlushMode != FlushMode.ALWAYS) {
+                    session.setHibernateFlushMode(FlushMode.ALWAYS)
+                    return previousFlushMode
                 }
             } else {
-                session.setHibernateFlushMode(FlushMode.ALWAYS);
+                session.setHibernateFlushMode(FlushMode.ALWAYS)
             }
         }
-        return null;
+        return null
     }
 
     protected void flushIfNecessary(Session session, boolean existingTransaction) throws HibernateException {
         if (getFlushMode() == FLUSH_EAGER || (!existingTransaction && getFlushMode() != FLUSH_NEVER)) {
-            LOG.debug("Eagerly flushing Hibernate session");
-            session.flush();
+            LOG.debug('Eagerly flushing Hibernate session')
+            session.flush()
         }
     }
 
-    @SuppressWarnings("ConstantConditions")
+    @SuppressWarnings('ConstantConditions')
     protected DataAccessException convertHibernateAccessException(HibernateException ex) {
         if (ex instanceof JDBCException) {
-            return convertJdbcAccessException((JDBCException) ex, jdbcExceptionTranslator);
+            return convertJdbcAccessException((JDBCException) ex, jdbcExceptionTranslator)
         }
-        if (GenericJDBCException.class.equals(ex.getClass())) {
-            return convertJdbcAccessException((GenericJDBCException) ex, jdbcExceptionTranslator);
+        if (GenericJDBCException == ex.class) {
+            return convertJdbcAccessException((GenericJDBCException) ex, jdbcExceptionTranslator)
         }
-        return SessionFactoryUtils.convertHibernateAccessException(ex);
+        return SessionFactoryUtils.convertHibernateAccessException(ex)
     }
 
-    @SuppressWarnings("SqlDialectInspection")
+    @SuppressWarnings('SqlDialectInspection')
     protected DataAccessException convertJdbcAccessException(JDBCException ex, SQLExceptionTranslator translator) {
-        String msg = ex.getMessage();
-        String sql = ex.getSQL();
-        SQLException sqlException = ex.getSQLException();
-        return translator.translate("Hibernate operation: " + msg, sql, sqlException);
+        String msg = ex.message
+        String sql = ex.getSQL()
+        SQLException sqlException = ex.getSQLException()
+        return translator.translate("Hibernate operation: ${msg}".toString(), sql, sqlException)
     }
 
     @Override
-    public void persist(final Object entity) throws DataAccessException {
+    void persist(Object entity) throws DataAccessException {
         doExecute(
-                session -> {
-                    session.persist(entity);
-                    return null;
+                { Session session ->
+                    session.persist(entity)
+                    return null
                 },
-                true);
+                true)
     }
 
     @Override
-    public Object merge(final Object entity) throws DataAccessException {
-        return doExecute(session -> session.merge(entity), true);
+    Object merge(Object entity) throws DataAccessException {
+        return doExecute({ Session session -> session.merge(entity) }, true)
     }
 
     @Override
-    public void flush() throws DataAccessException {
+    void flush() throws DataAccessException {
         doExecute(
-                session -> {
-                    session.flush();
-                    return null;
+                { Session session ->
+                    session.flush()
+                    return null
                 },
-                true);
+                true)
     }
 
     @Override
-    public void clear() throws DataAccessException {
+    void clear() throws DataAccessException {
         doExecute(
-                session -> {
-                    session.clear();
-                    return null;
+                { Session session ->
+                    session.clear()
+                    return null
                 },
-                true);
+                true)
     }
 
     @Override
-    public void deleteAll(final Collection<?> objects) {
-        execute((HibernateCallback<Void>) session -> {
+    void deleteAll(Collection<?> objects) {
+        execute({ Session session ->
             for (Object entity : getIterableAsCollection(objects)) {
-                session.remove(entity);
+                session.remove(entity)
             }
-            return null;
-        });
+            return null
+        } as HibernateCallback<Void>)
     }
 
-    @SuppressWarnings({"rawtypes", "unchecked"})
+    @SuppressWarnings(['rawtypes', 'unchecked'])
     protected Collection getIterableAsCollection(Iterable objects) {
-        Collection list;
+        Collection list
         if (objects instanceof Collection) {
-            list = (Collection) objects;
+            list = (Collection) objects
         } else {
-            list = new ArrayList();
+            list = []
             for (Object object : objects) {
-                list.add(object);
+                list.add(object)
             }
         }
-        return list;
+        return list
     }
 
-    public boolean isApplyFlushModeOnlyToNonExistingTransactions() {
-        return applyFlushModeOnlyToNonExistingTransactions;
+    boolean isApplyFlushModeOnlyToNonExistingTransactions() {
+        return applyFlushModeOnlyToNonExistingTransactions
     }
 
-    public void setApplyFlushModeOnlyToNonExistingTransactions(boolean applyFlushModeOnlyToNonExistingTransactions) {
-        this.applyFlushModeOnlyToNonExistingTransactions = applyFlushModeOnlyToNonExistingTransactions;
+    void setApplyFlushModeOnlyToNonExistingTransactions(boolean applyFlushModeOnlyToNonExistingTransactions) {
+        this.applyFlushModeOnlyToNonExistingTransactions = applyFlushModeOnlyToNonExistingTransactions
     }
 
-    public interface HibernateCallback<T> {
+    interface HibernateCallback<T> {
 
-        T doInHibernate(Session session) throws HibernateException, SQLException;
+        T doInHibernate(Session session) throws HibernateException, SQLException
+
     }
+
 }

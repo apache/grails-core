@@ -13,19 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.grails.orm.hibernate.support.hibernate7
 
-package org.grails.orm.hibernate.support.hibernate7;
-
-import java.io.Serializable;
-import java.util.Collection;
-import java.util.List;
-
-import org.hibernate.Filter;
-import org.hibernate.LockMode;
-import org.hibernate.ReplicationMode;
-import org.jspecify.annotations.Nullable;
-
-import org.springframework.dao.DataAccessException;
+import groovy.transform.CompileStatic
+import org.hibernate.Filter
+import org.hibernate.LockMode
+import org.hibernate.ReplicationMode
+import org.jspecify.annotations.Nullable
+import org.springframework.dao.DataAccessException
 
 /**
  * Interface that specifies a common set of Hibernate operations as well as
@@ -59,7 +54,8 @@ import org.springframework.dao.DataAccessException;
  * @see org.hibernate.Session
  * @see HibernateTransactionManager
  */
-public interface HibernateOperations {
+@CompileStatic
+interface HibernateOperations {
 
     /**
      * Execute the action specified by the given action object within a
@@ -81,8 +77,7 @@ public interface HibernateOperations {
      * @see org.hibernate.Session
      */
     @Nullable
-    <T> T execute(HibernateCallback<T> action) throws DataAccessException;
-
+    def <T> T execute(HibernateCallback<T> action) throws DataAccessException
 
     //-------------------------------------------------------------------------
     // Convenience methods for loading individual objects
@@ -103,7 +98,7 @@ public interface HibernateOperations {
      * @see org.hibernate.Session#get(Class, Object)
      */
     @Nullable
-    <T> T get(Class<T> entityClass, Serializable id) throws DataAccessException;
+    def <T> T get(Class<T> entityClass, Serializable id) throws DataAccessException
 
     /**
      * Return the persistent instance of the given entity class
@@ -122,7 +117,7 @@ public interface HibernateOperations {
      * @see org.hibernate.Session#get(Class, Object, org.hibernate.LockOptions)
      */
     @Nullable
-    <T> T get(Class<T> entityClass, Serializable id, LockMode lockMode) throws DataAccessException;
+    def <T> T get(Class<T> entityClass, Serializable id, LockMode lockMode) throws DataAccessException
 
     /**
      * Return the persistent instance of the given entity class
@@ -138,7 +133,7 @@ public interface HibernateOperations {
      * @see org.hibernate.Session#get(String, Object)
      */
     @Nullable
-    Object get(String entityName, Serializable id) throws DataAccessException;
+    Object get(String entityName, Serializable id) throws DataAccessException
 
     /**
      * Return the persistent instance of the given entity class
@@ -156,7 +151,7 @@ public interface HibernateOperations {
      * @see org.hibernate.Session#get(String, Object, org.hibernate.LockOptions)
      */
     @Nullable
-    Object get(String entityName, Serializable id, LockMode lockMode) throws DataAccessException;
+    Object get(String entityName, Serializable id, LockMode lockMode) throws DataAccessException
 
     /**
      * Return the persistent instance of the given entity class
@@ -173,7 +168,7 @@ public interface HibernateOperations {
      * @throws DataAccessException in case of Hibernate errors
      * @see org.hibernate.Session#getReference(Class, Object)
      */
-    <T> T load(Class<T> entityClass, Serializable id) throws DataAccessException;
+    def <T> T load(Class<T> entityClass, Serializable id) throws DataAccessException
 
     /**
      * Return the persistent instance of the given entity class
@@ -192,7 +187,7 @@ public interface HibernateOperations {
      * @throws DataAccessException in case of Hibernate errors
      * @see org.hibernate.Session#get(Class, Object, org.hibernate.LockOptions)
      */
-    <T> T load(Class<T> entityClass, Serializable id, LockMode lockMode) throws DataAccessException;
+    def <T> T load(Class<T> entityClass, Serializable id, LockMode lockMode) throws DataAccessException
 
     /**
      * Return the persistent instance of the given entity class
@@ -208,7 +203,7 @@ public interface HibernateOperations {
      * @throws DataAccessException in case of Hibernate errors
      * @see org.hibernate.Session#getReference(String, Object)
      */
-    Object load(String entityName, Serializable id) throws DataAccessException;
+    Object load(String entityName, Serializable id) throws DataAccessException
 
     /**
      * Return the persistent instance of the given entity class
@@ -226,7 +221,7 @@ public interface HibernateOperations {
      * @throws DataAccessException in case of Hibernate errors
      * @see org.hibernate.Session#get(String, Object, org.hibernate.LockOptions)
      */
-    Object load(String entityName, Serializable id, LockMode lockMode) throws DataAccessException;
+    Object load(String entityName, Serializable id, LockMode lockMode) throws DataAccessException
 
     /**
      * Load the persistent instance with the given identifier
@@ -241,7 +236,7 @@ public interface HibernateOperations {
      * @throws DataAccessException in case of Hibernate errors
      * @see org.hibernate.Session#getIdentifier(Object)
      */
-    void load(Object entity, Serializable id) throws DataAccessException;
+    void load(Object entity, Serializable id) throws DataAccessException
 
     /**
      * Re-read the state of the given persistent instance.
@@ -249,7 +244,7 @@ public interface HibernateOperations {
      * @throws DataAccessException in case of Hibernate errors
      * @see org.hibernate.Session#refresh(Object)
      */
-    void refresh(Object entity) throws DataAccessException;
+    void refresh(Object entity) throws DataAccessException
 
     /**
      * Re-read the state of the given persistent instance.
@@ -259,7 +254,7 @@ public interface HibernateOperations {
      * @throws DataAccessException in case of Hibernate errors
      * @see org.hibernate.Session#refresh(Object, org.hibernate.LockOptions)
      */
-    void refresh(Object entity, LockMode lockMode) throws DataAccessException;
+    void refresh(Object entity, LockMode lockMode) throws DataAccessException
 
     /**
      * Check whether the given object is in the Session cache.
@@ -268,7 +263,7 @@ public interface HibernateOperations {
      * @throws DataAccessException if there is a Hibernate error
      * @see org.hibernate.Session#contains(Object)
      */
-    boolean contains(Object entity) throws DataAccessException;
+    boolean contains(Object entity) throws DataAccessException
 
     /**
      * Remove the given object from the {@link org.hibernate.Session} cache.
@@ -276,7 +271,7 @@ public interface HibernateOperations {
      * @throws DataAccessException in case of Hibernate errors
      * @see org.hibernate.Session#evict(Object)
      */
-    void evict(Object entity) throws DataAccessException;
+    void evict(Object entity) throws DataAccessException
 
     /**
      * Force initialization of a Hibernate proxy or persistent collection.
@@ -285,7 +280,7 @@ public interface HibernateOperations {
      * because it is not associated with an active Session
      * @see org.hibernate.Hibernate#initialize(Object)
      */
-    void initialize(Object proxy) throws DataAccessException;
+    void initialize(Object proxy) throws DataAccessException
 
     /**
      * Return an enabled Hibernate {@link Filter} for the given filter name.
@@ -296,8 +291,7 @@ public interface HibernateOperations {
      * @throws IllegalStateException if we are not running within a
      * transactional Session (in which case this operation does not make sense)
      */
-    Filter enableFilter(String filterName) throws IllegalStateException;
-
+    Filter enableFilter(String filterName) throws IllegalStateException
 
     //-------------------------------------------------------------------------
     // Convenience methods for storing individual objects
@@ -312,8 +306,7 @@ public interface HibernateOperations {
      * @throws DataAccessException in case of Hibernate errors
      * @see org.hibernate.Session#lock(Object, LockMode)
      */
-    @SuppressWarnings("checkstyle:EmptyLineSeparator")
-    void lock(Object entity, LockMode lockMode) throws DataAccessException;
+    void lock(Object entity, LockMode lockMode) throws DataAccessException
 
     /**
      * Obtain the specified lock level upon the given object, implicitly
@@ -325,7 +318,7 @@ public interface HibernateOperations {
      * @throws DataAccessException in case of Hibernate errors
      * @see org.hibernate.Session#lock(Object, LockMode)
      */
-    void lock(String entityName, Object entity, LockMode lockMode) throws DataAccessException;
+    void lock(String entityName, Object entity, LockMode lockMode) throws DataAccessException
 
     /**
      * Persist the given transient instance.
@@ -334,7 +327,7 @@ public interface HibernateOperations {
      * @throws DataAccessException in case of Hibernate errors
      * @see org.hibernate.Session#persist(Object)
      */
-    Serializable save(Object entity) throws DataAccessException;
+    Serializable save(Object entity) throws DataAccessException
 
     /**
      * Persist the given transient instance.
@@ -344,7 +337,7 @@ public interface HibernateOperations {
      * @throws DataAccessException in case of Hibernate errors
      * @see org.hibernate.Session#persist(String, Object)
      */
-    Serializable save(String entityName, Object entity) throws DataAccessException;
+    Serializable save(String entityName, Object entity) throws DataAccessException
 
     /**
      * Update the given persistent instance,
@@ -353,7 +346,7 @@ public interface HibernateOperations {
      * @throws DataAccessException in case of Hibernate errors
      * @see org.hibernate.Session#merge(Object)
      */
-    void update(Object entity) throws DataAccessException;
+    void update(Object entity) throws DataAccessException
 
     /**
      * Update the given persistent instance,
@@ -366,7 +359,7 @@ public interface HibernateOperations {
      * @throws DataAccessException in case of Hibernate errors
      * @see org.hibernate.Session#merge(Object)
      */
-    void update(Object entity, LockMode lockMode) throws DataAccessException;
+    void update(Object entity, LockMode lockMode) throws DataAccessException
 
     /**
      * Update the given persistent instance,
@@ -376,7 +369,7 @@ public interface HibernateOperations {
      * @throws DataAccessException in case of Hibernate errors
      * @see org.hibernate.Session#merge(String, Object)
      */
-    void update(String entityName, Object entity) throws DataAccessException;
+    void update(String entityName, Object entity) throws DataAccessException
 
     /**
      * Update the given persistent instance,
@@ -390,7 +383,7 @@ public interface HibernateOperations {
      * @throws DataAccessException in case of Hibernate errors
      * @see org.hibernate.Session#merge(String, Object)
      */
-    void update(String entityName, Object entity, LockMode lockMode) throws DataAccessException;
+    void update(String entityName, Object entity, LockMode lockMode) throws DataAccessException
 
     /**
      * Save or update the given persistent instance,
@@ -402,7 +395,7 @@ public interface HibernateOperations {
      * @see org.hibernate.Session#persist(Object)
      * @see org.hibernate.Session#merge(Object)
      */
-    void saveOrUpdate(Object entity) throws DataAccessException;
+    void saveOrUpdate(Object entity) throws DataAccessException
 
     /**
      * Save or update the given persistent instance,
@@ -415,7 +408,7 @@ public interface HibernateOperations {
      * @see org.hibernate.Session#persist(String, Object)
      * @see org.hibernate.Session#merge(String, Object)
      */
-    void saveOrUpdate(String entityName, Object entity) throws DataAccessException;
+    void saveOrUpdate(String entityName, Object entity) throws DataAccessException
 
     /**
      * Persist the state of the given detached instance according to the
@@ -425,7 +418,7 @@ public interface HibernateOperations {
      * @throws DataAccessException in case of Hibernate errors
      * @see org.hibernate.Session#replicate(Object, ReplicationMode)
      */
-    void replicate(Object entity, ReplicationMode replicationMode) throws DataAccessException;
+    void replicate(Object entity, ReplicationMode replicationMode) throws DataAccessException
 
     /**
      * Persist the state of the given detached instance according to the
@@ -436,7 +429,7 @@ public interface HibernateOperations {
      * @throws DataAccessException in case of Hibernate errors
      * @see org.hibernate.Session#replicate(String, Object, ReplicationMode)
      */
-    void replicate(String entityName, Object entity, ReplicationMode replicationMode) throws DataAccessException;
+    void replicate(String entityName, Object entity, ReplicationMode replicationMode) throws DataAccessException
 
     /**
      * Persist the given transient instance. Follows JSR-220 semantics.
@@ -447,7 +440,7 @@ public interface HibernateOperations {
      * @see org.hibernate.Session#persist(Object)
      * @see #save
      */
-    void persist(Object entity) throws DataAccessException;
+    void persist(Object entity) throws DataAccessException
 
     /**
      * Persist the given transient instance. Follows JSR-220 semantics.
@@ -459,7 +452,7 @@ public interface HibernateOperations {
      * @see org.hibernate.Session#persist(String, Object)
      * @see #save
      */
-    void persist(String entityName, Object entity) throws DataAccessException;
+    void persist(String entityName, Object entity) throws DataAccessException
 
     /**
      * Copy the state of the given object onto the persistent object
@@ -479,7 +472,7 @@ public interface HibernateOperations {
      * @see org.hibernate.Session#merge(Object)
      * @see #saveOrUpdate
      */
-    <T> T merge(T entity) throws DataAccessException;
+    def <T> T merge(T entity) throws DataAccessException
 
     /**
      * Copy the state of the given object onto the persistent object
@@ -500,7 +493,7 @@ public interface HibernateOperations {
      * @see org.hibernate.Session#merge(String, Object)
      * @see #saveOrUpdate
      */
-    <T> T merge(String entityName, T entity) throws DataAccessException;
+    def <T> T merge(String entityName, T entity) throws DataAccessException
 
     /**
      * Delete the given persistent instance.
@@ -508,7 +501,7 @@ public interface HibernateOperations {
      * @throws DataAccessException in case of Hibernate errors
      * @see org.hibernate.Session#remove(Object)
      */
-    void delete(Object entity) throws DataAccessException;
+    void delete(Object entity) throws DataAccessException
 
     /**
      * Delete the given persistent instance.
@@ -520,7 +513,7 @@ public interface HibernateOperations {
      * @throws DataAccessException in case of Hibernate errors
      * @see org.hibernate.Session#remove(Object)
      */
-    void delete(Object entity, LockMode lockMode) throws DataAccessException;
+    void delete(Object entity, LockMode lockMode) throws DataAccessException
 
     /**
      * Delete the given persistent instance.
@@ -529,7 +522,7 @@ public interface HibernateOperations {
      * @throws DataAccessException in case of Hibernate errors
      * @see org.hibernate.Session#remove(Object)
      */
-    void delete(String entityName, Object entity) throws DataAccessException;
+    void delete(String entityName, Object entity) throws DataAccessException
 
     /**
      * Delete the given persistent instance.
@@ -542,7 +535,7 @@ public interface HibernateOperations {
      * @throws DataAccessException in case of Hibernate errors
      * @see org.hibernate.Session#remove(Object)
      */
-    void delete(String entityName, Object entity, LockMode lockMode) throws DataAccessException;
+    void delete(String entityName, Object entity, LockMode lockMode) throws DataAccessException
 
     /**
      * Delete all given persistent instances.
@@ -552,7 +545,7 @@ public interface HibernateOperations {
      * @throws DataAccessException in case of Hibernate errors
      * @see org.hibernate.Session#remove(Object)
      */
-    void deleteAll(Collection<?> entities) throws DataAccessException;
+    void deleteAll(Collection<?> entities) throws DataAccessException
 
     /**
      * Flush all pending saves, updates and deletes to the database.
@@ -563,7 +556,7 @@ public interface HibernateOperations {
      * @throws DataAccessException in case of Hibernate errors
      * @see org.hibernate.Session#flush()
      */
-    void flush() throws DataAccessException;
+    void flush() throws DataAccessException
 
     /**
      * Remove all objects from the {@link org.hibernate.Session} cache, and
@@ -571,8 +564,7 @@ public interface HibernateOperations {
      * @throws DataAccessException in case of Hibernate errors
      * @see org.hibernate.Session#clear()
      */
-    void clear() throws DataAccessException;
-
+    void clear() throws DataAccessException
 
     //-------------------------------------------------------------------------
     // Convenience finder methods for HQL strings
@@ -590,7 +582,7 @@ public interface HibernateOperations {
      * lambda code block passed to the general {@link #execute} method
      */
     @Deprecated
-    List<?> find(String queryString, Object... values) throws DataAccessException;
+    List<?> find(String queryString, Object... values) throws DataAccessException
 
     /**
      * Execute an HQL query, binding one value to a ":" named parameter
@@ -605,7 +597,7 @@ public interface HibernateOperations {
      * lambda code block passed to the general {@link #execute} method
      */
     @Deprecated
-    List<?> findByNamedParam(String queryString, String paramName, Object value) throws DataAccessException;
+    List<?> findByNamedParam(String queryString, String paramName, Object value) throws DataAccessException
 
     /**
      * Execute an HQL query, binding a number of values to ":" named
@@ -620,7 +612,7 @@ public interface HibernateOperations {
      * lambda code block passed to the general {@link #execute} method
      */
     @Deprecated
-    List<?> findByNamedParam(String queryString, String[] paramNames, Object[] values) throws DataAccessException;
+    List<?> findByNamedParam(String queryString, String[] paramNames, Object[] values) throws DataAccessException
 
     /**
      * Execute an HQL query, binding the properties of the given bean to
@@ -635,8 +627,7 @@ public interface HibernateOperations {
      * lambda code block passed to the general {@link #execute} method
      */
     @Deprecated
-    List<?> findByValueBean(String queryString, Object valueBean) throws DataAccessException;
-
+    List<?> findByValueBean(String queryString, Object valueBean) throws DataAccessException
 
     //-------------------------------------------------------------------------
     // Convenience finder methods for named queries
@@ -655,7 +646,7 @@ public interface HibernateOperations {
      * lambda code block passed to the general {@link #execute} method
      */
     @Deprecated
-    List<?> findByNamedQuery(String queryName, Object... values) throws DataAccessException;
+    List<?> findByNamedQuery(String queryName, Object... values) throws DataAccessException
 
     /**
      * Execute a named query, binding one value to a ":" named parameter
@@ -672,7 +663,7 @@ public interface HibernateOperations {
      */
     @Deprecated
     List<?> findByNamedQueryAndNamedParam(String queryName, String paramName, Object value)
-            throws DataAccessException;
+            throws DataAccessException
 
     /**
      * Execute a named query, binding a number of values to ":" named
@@ -689,7 +680,7 @@ public interface HibernateOperations {
      */
     @Deprecated
     List<?> findByNamedQueryAndNamedParam(String queryName, String[] paramNames, Object[] values)
-            throws DataAccessException;
+            throws DataAccessException
 
     /**
      * Execute a named query, binding the properties of the given bean to
@@ -705,8 +696,7 @@ public interface HibernateOperations {
      * lambda code block passed to the general {@link #execute} method
      */
     @Deprecated
-    List<?> findByNamedQueryAndValueBean(String queryName, Object valueBean) throws DataAccessException;
-
+    List<?> findByNamedQueryAndValueBean(String queryName, Object valueBean) throws DataAccessException
 
     //-------------------------------------------------------------------------
     // Convenience query methods for iteration and bulk updates/deletes
@@ -725,6 +715,6 @@ public interface HibernateOperations {
      * lambda code block passed to the general {@link #execute} method
      */
     @Deprecated
-    int bulkUpdate(String queryString, Object... values) throws DataAccessException;
+    int bulkUpdate(String queryString, Object... values) throws DataAccessException
 
 }

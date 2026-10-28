@@ -16,20 +16,20 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.orm.hibernate.cfg.domainbinding.secondpass;
+package org.grails.orm.hibernate.cfg.domainbinding.secondpass
 
-import jakarta.annotation.Nonnull;
+import groovy.transform.CompileStatic
+import jakarta.annotation.Nonnull
+import org.hibernate.mapping.Collection
+import org.hibernate.mapping.Component
 
-import org.hibernate.mapping.Collection;
-import org.hibernate.mapping.Component;
-
-import org.grails.orm.hibernate.cfg.domainbinding.binder.ComponentBinder;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEmbeddedCollectionProperty;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateManyToManyProperty;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateOneToManyProperty;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyCollectionProperty;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyEntityProperty;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty;
+import org.grails.orm.hibernate.cfg.domainbinding.binder.ComponentBinder
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEmbeddedCollectionProperty
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateManyToManyProperty
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateOneToManyProperty
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyCollectionProperty
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyEntityProperty
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty
 
 /**
  * Refactored from CollectionBinder to handle collection second pass binding.
@@ -38,19 +38,19 @@ import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyPrope
 // post-construction, mirroring the GrailsPropertyBinder ↔ ComponentBinder circular dependency. A future
 // major release can introduce a shared binding context or factory that all binders receive at construction
 // time, eliminating the need for post-construction wiring.
-@SuppressWarnings("PMD.DataflowAnomalyAnalysis")
-public class CollectionSecondPassBinder {
+@CompileStatic
+class CollectionSecondPassBinder {
 
-    private final HibernateToManyEntityOrderByBinder hibernateToManyEntityOrderByBinder;
-    private final ToManyEntityMultiTenantFilterBinder hibernateToManyEntityMultiTenantFilterBinder;
-    private final CollectionKeyColumnUpdater collectionKeyColumnUpdater;
-    private final BidirectionalMapElementBinder bidirectionalMapElementBinder;
-    private final ManyToOneElementBinder manyToManyElementBinder;
-    private final UnidirectionalOneToManyBinder unidirectionalOneToManyBinder;
-    private final CollectionWithJoinTableBinder collectionWithJoinTableBinder;
-    private ComponentBinder componentBinder;
+    private final HibernateToManyEntityOrderByBinder hibernateToManyEntityOrderByBinder
+    private final ToManyEntityMultiTenantFilterBinder hibernateToManyEntityMultiTenantFilterBinder
+    private final CollectionKeyColumnUpdater collectionKeyColumnUpdater
+    private final BidirectionalMapElementBinder bidirectionalMapElementBinder
+    private final ManyToOneElementBinder manyToManyElementBinder
+    private final UnidirectionalOneToManyBinder unidirectionalOneToManyBinder
+    private final CollectionWithJoinTableBinder collectionWithJoinTableBinder
+    private ComponentBinder componentBinder
 
-    public CollectionSecondPassBinder(
+    CollectionSecondPassBinder(
             CollectionKeyColumnUpdater collectionKeyColumnUpdater,
             UnidirectionalOneToManyBinder unidirectionalOneToManyBinder,
             CollectionWithJoinTableBinder collectionWithJoinTableBinder,
@@ -58,43 +58,48 @@ public class CollectionSecondPassBinder {
             ManyToOneElementBinder manyToManyElementBinder,
             HibernateToManyEntityOrderByBinder hibernateToManyEntityOrderByBinder,
             ToManyEntityMultiTenantFilterBinder hibernateToManyEntityMultiTenantFilterBinder) {
-        this.collectionKeyColumnUpdater = collectionKeyColumnUpdater;
-        this.unidirectionalOneToManyBinder = unidirectionalOneToManyBinder;
-        this.collectionWithJoinTableBinder = collectionWithJoinTableBinder;
-        this.bidirectionalMapElementBinder = bidirectionalMapElementBinder;
-        this.manyToManyElementBinder = manyToManyElementBinder;
-        this.hibernateToManyEntityOrderByBinder = hibernateToManyEntityOrderByBinder;
-        this.hibernateToManyEntityMultiTenantFilterBinder = hibernateToManyEntityMultiTenantFilterBinder;
+        this.collectionKeyColumnUpdater = collectionKeyColumnUpdater
+        this.unidirectionalOneToManyBinder = unidirectionalOneToManyBinder
+        this.collectionWithJoinTableBinder = collectionWithJoinTableBinder
+        this.bidirectionalMapElementBinder = bidirectionalMapElementBinder
+        this.manyToManyElementBinder = manyToManyElementBinder
+        this.hibernateToManyEntityOrderByBinder = hibernateToManyEntityOrderByBinder
+        this.hibernateToManyEntityMultiTenantFilterBinder = hibernateToManyEntityMultiTenantFilterBinder
     }
 
-    public void setComponentBinder(ComponentBinder componentBinder) {
-        this.componentBinder = componentBinder;
+    void setComponentBinder(ComponentBinder componentBinder) {
+        this.componentBinder = componentBinder
     }
 
-    public void bindCollectionSecondPass(@Nonnull HibernateToManyProperty property) {
+    void bindCollectionSecondPass(@Nonnull HibernateToManyProperty property) {
 
-        if (property instanceof HibernateEmbeddedCollectionProperty embeddedCollectionProperty &&
-                componentBinder != null) {
-            Component component = componentBinder.bindEmbeddedCollectionComponent(embeddedCollectionProperty);
-            embeddedCollectionProperty.getCollection().setElement(component);
-        } else if (property instanceof HibernateToManyEntityProperty entityProperty) {
-            hibernateToManyEntityOrderByBinder.bind(entityProperty);
+        if (property instanceof HibernateEmbeddedCollectionProperty && componentBinder != null) {
+            HibernateEmbeddedCollectionProperty embeddedCollectionProperty = (HibernateEmbeddedCollectionProperty) property
+            Component component = componentBinder.bindEmbeddedCollectionComponent(embeddedCollectionProperty)
+            embeddedCollectionProperty.collection.element = component
+        }
+        else if (property instanceof HibernateToManyEntityProperty) {
+            HibernateToManyEntityProperty entityProperty = (HibernateToManyEntityProperty) property
+            hibernateToManyEntityOrderByBinder.bind(entityProperty)
             if (entityProperty.isManyToMany() && entityProperty.isBidirectional()) {
-                manyToManyElementBinder.bind((HibernateManyToManyProperty) entityProperty);
-            } else if (entityProperty.isBidirectionalToManyMap() && entityProperty.isBidirectional()) {
-                bidirectionalMapElementBinder.bind(entityProperty);
-            } else if (entityProperty.isOneToMany() && entityProperty.isUnidirectionalOneToMany()) {
-                unidirectionalOneToManyBinder.bind((HibernateOneToManyProperty) entityProperty);
+                manyToManyElementBinder.bind((HibernateManyToManyProperty) entityProperty)
             }
-            hibernateToManyEntityMultiTenantFilterBinder.bind(entityProperty);
-        } else if (property instanceof HibernateToManyCollectionProperty collectionProperty &&
-                collectionProperty.supportsJoinColumnMapping()) {
-            collectionWithJoinTableBinder.bindCollectionWithJoinTable(collectionProperty);
+            else if (entityProperty.isBidirectionalToManyMap() && entityProperty.isBidirectional()) {
+                bidirectionalMapElementBinder.bind(entityProperty)
+            }
+            else if (entityProperty.isOneToMany() && entityProperty.isUnidirectionalOneToMany()) {
+                unidirectionalOneToManyBinder.bind((HibernateOneToManyProperty) entityProperty)
+            }
+            hibernateToManyEntityMultiTenantFilterBinder.bind(entityProperty)
+        }
+        else if (property instanceof HibernateToManyCollectionProperty && ((HibernateToManyCollectionProperty) property).supportsJoinColumnMapping()) {
+            collectionWithJoinTableBinder.bindCollectionWithJoinTable((HibernateToManyCollectionProperty) property)
         }
 
-        collectionKeyColumnUpdater.bind(property);
-        Collection collection = property.getCollection();
-        collection.setSorted(property.isSorted());
-        collection.setCacheConcurrencyStrategy(property.getCacheUsage());
+        collectionKeyColumnUpdater.bind(property)
+        Collection collection = property.collection
+        collection.sorted = property.isSorted()
+        collection.cacheConcurrencyStrategy = property.cacheUsage
     }
+
 }

@@ -16,13 +16,16 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.orm.hibernate.cfg.domainbinding.secondpass;
+package org.grails.orm.hibernate.cfg.domainbinding.secondpass
 
-import org.hibernate.mapping.Collection;
+import groovy.transform.CompileStatic
+import org.hibernate.mapping.Collection
 
-public interface GrailsSecondPass {
+@CompileStatic
+interface GrailsSecondPass {
 
     default void createCollectionKeys(Collection collection) {
-        collection.createAllKeys();
+        collection.createAllKeys()
     }
+
 }

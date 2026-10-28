@@ -16,49 +16,54 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.orm.hibernate.support;
+package org.grails.orm.hibernate.support
 
-import java.lang.ref.SoftReference;
+import groovy.transform.CompileStatic
+import groovy.transform.PackageScope
+
+import java.lang.ref.SoftReference
 
 /**
  * SoftReference key to be used with ConcurrentHashMap.
- *
- * @author Lari Hotari
  */
-public class SoftKey<T> extends SoftReference<T> {
+@CompileStatic
+class SoftKey<T> extends SoftReference<T> {
 
-    final int hash;
+    @PackageScope final int hash
 
-    public SoftKey(T referent) {
-        super(referent);
-        hash = referent.hashCode();
+    SoftKey(T referent) {
+        super(referent)
+        hash = referent.hashCode()
     }
 
     @Override
-    public int hashCode() {
-        return hash;
+    int hashCode() {
+        return hash
     }
 
     @Override
-    public boolean equals(Object obj) {
-        if (this == obj) {
-            return true;
+    boolean equals(Object obj) {
+        if (this.is(obj)) {
+            return true
         }
         if (obj == null) {
-            return false;
+            return false
         }
         if (getClass() != obj.getClass()) {
-            return false;
+            return false
         }
-        @SuppressWarnings("unchecked")
-        SoftKey<T> other = (SoftKey<T>) obj;
+        SoftKey<T> other = (SoftKey<T>) obj
         if (hash != other.hash) {
-            return false;
+            return false
         }
-        T referent = get();
-        T otherReferent = other.get();
+        T referent = get()
+        T otherReferent = other.get()
         if (referent == null) {
-            return otherReferent == null;
-        } else return referent.equals(otherReferent);
+            return otherReferent == null
+        }
+        else {
+            return referent.equals(otherReferent)
+        }
     }
+
 }

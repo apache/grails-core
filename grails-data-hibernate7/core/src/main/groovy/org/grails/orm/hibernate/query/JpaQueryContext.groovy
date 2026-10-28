@@ -13,18 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.grails.orm.hibernate.query;
+package org.grails.orm.hibernate.query
 
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-
-import jakarta.persistence.criteria.Expression;
-import jakarta.persistence.criteria.From;
-import jakarta.persistence.criteria.ParameterExpression;
-import jakarta.persistence.criteria.Path;
+import groovy.transform.CompileStatic
+import jakarta.persistence.criteria.Expression
+import jakarta.persistence.criteria.From
+import jakarta.persistence.criteria.ParameterExpression
+import jakarta.persistence.criteria.Path
 
 /**
  * Orchestrator for JPA query translation state (Aliases, Joins, Expressions).
@@ -34,100 +29,101 @@ import jakarta.persistence.criteria.Path;
  *
  * @since 8.0
  */
-public class JpaQueryContext implements Cloneable {
+@CompileStatic
+class JpaQueryContext implements Cloneable {
 
-    private final AliasRegistry aliasRegistry;
-    private final JoinTracker joinTracker;
-    private final ExpressionResolver resolver;
-    private final Map<ParameterExpression<?>, Object> parameterValues = new LinkedHashMap<>();
-    private final Map<String, Expression<?>> selectionAliases = new HashMap<>();
-    private JpaQueryContext parent;
+    private final AliasRegistry aliasRegistry
+    private final JoinTracker joinTracker
+    private final ExpressionResolver resolver
+    private final Map<ParameterExpression<?>, Object> parameterValues = new LinkedHashMap<>()
+    private final Map<String, Expression<?>> selectionAliases = new HashMap<>()
+    private JpaQueryContext parent
 
-    public JpaQueryContext() {
-        this(null, null, null);
+    JpaQueryContext() {
+        this((JpaQueryContext) null, (List<HibernateAlias>) null, (From<?, ?>) null)
     }
 
-    public JpaQueryContext(From<?, ?> root) {
-        this(null, null, root);
+    JpaQueryContext(From<?, ?> root) {
+        this((JpaQueryContext) null, (List<HibernateAlias>) null, root)
     }
 
-    public JpaQueryContext(List<HibernateAlias> aliases, From<?, ?> root) {
-        this(null, aliases, root);
+    JpaQueryContext(List<HibernateAlias> aliases, From<?, ?> root) {
+        this((JpaQueryContext) null, aliases, root)
     }
 
-    public JpaQueryContext(JpaQueryContext parent, From<?, ?> root) {
-        this(parent, null, root);
+    JpaQueryContext(JpaQueryContext parent, From<?, ?> root) {
+        this(parent, (List<HibernateAlias>) null, root)
     }
 
-    public static JpaQueryContext forRoot(From<?, ?> root) {
-        return new JpaQueryContext(null, null, root);
+    static JpaQueryContext forRoot(From<?, ?> root) {
+        return new JpaQueryContext((JpaQueryContext) null, (List<HibernateAlias>) null, root)
     }
 
-    public static JpaQueryContext forRoot(List<HibernateAlias> aliases, From<?, ?> root) {
-        return new JpaQueryContext(null, aliases, root);
+    static JpaQueryContext forRoot(List<HibernateAlias> aliases, From<?, ?> root) {
+        return new JpaQueryContext((JpaQueryContext) null, aliases, root)
     }
 
-    public static JpaQueryContext forSubquery(JpaQueryContext parent, From<?, ?> root) {
-        return new JpaQueryContext(parent, null, root);
+    static JpaQueryContext forSubquery(JpaQueryContext parent, From<?, ?> root) {
+        return new JpaQueryContext(parent, (List<HibernateAlias>) null, root)
     }
 
-    public static JpaQueryContext forSubquery(JpaQueryContext parent, List<HibernateAlias> aliases, From<?, ?> root) {
-        return new JpaQueryContext(parent, aliases, root);
+    static JpaQueryContext forSubquery(JpaQueryContext parent, List<HibernateAlias> aliases, From<?, ?> root) {
+        return new JpaQueryContext(parent, aliases, root)
     }
 
     /**
      * Internal constructor for subqueries and base initialization.
      */
-    public JpaQueryContext(JpaQueryContext parent, List<HibernateAlias> aliases, From<?, ?> root) {
-        this.parent = parent;
-        this.joinTracker = new JoinTracker(parent != null ? parent.getJoinTracker() : null, root);
-        this.aliasRegistry = new AliasRegistry(parent != null ? parent.getAliasRegistry() : null);
-        this.resolver = new ExpressionResolver(aliasRegistry, joinTracker);
+    JpaQueryContext(JpaQueryContext parent, List<HibernateAlias> aliases, From<?, ?> root) {
+        this.parent = parent
+        this.joinTracker = new JoinTracker(parent != null ? parent.joinTracker : null, root)
+        this.aliasRegistry = new AliasRegistry(parent != null ? parent.aliasRegistry : null)
+        this.resolver = new ExpressionResolver(aliasRegistry, joinTracker)
         if (aliases != null) {
             for (HibernateAlias alias : aliases) {
-                aliasRegistry.define(alias.alias(), alias);
+                aliasRegistry.define(alias.alias(), alias)
             }
         }
         if (root != null) {
-            this.joinTracker.addJoin("root", root);
+            this.joinTracker.addJoin('root', root)
         }
     }
 
     protected JoinTracker getJoinTracker() {
-        return joinTracker;
+        return joinTracker
     }
 
     protected AliasRegistry getAliasRegistry() {
-        return aliasRegistry;
+        return aliasRegistry
     }
 
-    public void setRoot(From<?, ?> root) {
-        this.joinTracker.setRoot(root);
-        this.joinTracker.addJoin("root", root);
+    void setRoot(From<?, ?> root) {
+        this.joinTracker.setRoot(root)
+        this.joinTracker.addJoin('root', root)
     }
 
-    public void setParent(JpaQueryContext parent) {
-        this.parent = parent;
+    void setParent(JpaQueryContext parent) {
+        this.parent = parent
     }
 
-    public From<?, ?> getRoot() {
-        return joinTracker.getRoot();
+    From<?, ?> getRoot() {
+        return joinTracker.root
     }
 
-    public void addFrom(String path, From<?, ?> from) {
-        joinTracker.addJoin(path, from);
+    void addFrom(String path, From<?, ?> from) {
+        joinTracker.addJoin(path, from)
     }
 
-    public From<?, ?> getFrom(String path) {
-        return joinTracker.getJoin(path);
+    From<?, ?> getFrom(String path) {
+        return joinTracker.getJoin(path)
     }
 
-    public void registerAlias(String alias, Expression<?> expression) {
-        aliasRegistry.realize(alias, expression);
+    void registerAlias(String alias, Expression<?> expression) {
+        aliasRegistry.realize(alias, expression)
     }
 
-    public void registerAlias(String alias, HibernateAlias definition) {
-        aliasRegistry.define(alias, definition);
+    void registerAlias(String alias, HibernateAlias definition) {
+        aliasRegistry.define(alias, definition)
     }
 
     /**
@@ -138,8 +134,8 @@ public class JpaQueryContext implements Cloneable {
      * @param alias the alias of the selection
      * @param selection the selection
      */
-    public void registerSelectionAlias(String alias, Expression<?> selection) {
-        selectionAliases.put(alias, selection);
+    void registerSelectionAlias(String alias, Expression<?> selection) {
+        selectionAliases.put(alias, selection)
     }
 
     /**
@@ -148,54 +144,54 @@ public class JpaQueryContext implements Cloneable {
      * @param alias the alias of the selection
      * @return the selection, or {@code null} if no selection of this query has the alias
      */
-    public Expression<?> getSelectionAlias(String alias) {
-        return selectionAliases.get(alias);
+    Expression<?> getSelectionAlias(String alias) {
+        return selectionAliases.get(alias)
     }
 
-    public void registerAliasFromPath(String path) {
+    void registerAliasFromPath(String path) {
         if (path != null && path.contains(grails.orm.HibernateCriteriaBuilder.ALIAS_SEPARATOR)) {
-            String alias = path.split(grails.orm.HibernateCriteriaBuilder.ALIAS_SEPARATOR)[0];
+            String alias = path.split(grails.orm.HibernateCriteriaBuilder.ALIAS_SEPARATOR)[0]
             if (!aliasRegistry.isDefined(alias) && !aliasRegistry.hasRealized(alias)) {
-                aliasRegistry.define(alias, null); // Mark as known
+                aliasRegistry.define(alias, null) // Mark as known
             }
         }
     }
 
-    public boolean hasAlias(String alias) {
-        return aliasRegistry.isDefined(alias) || aliasRegistry.hasRealized(alias) || (parent != null && parent.hasAlias(alias));
+    boolean hasAlias(String alias) {
+        return aliasRegistry.isDefined(alias) || aliasRegistry.hasRealized(alias) || (parent != null && parent.hasAlias(alias))
     }
 
-    public Expression<?> getAliasedExpression(String alias) {
-        Expression<?> expr = aliasRegistry.getRealized(alias);
+    Expression<?> getAliasedExpression(String alias) {
+        Expression<?> expr = aliasRegistry.getRealized(alias)
         if (expr == null && parent != null) {
-            return parent.getAliasedExpression(alias);
+            return parent.getAliasedExpression(alias)
         }
-        return expr;
+        return expr
     }
 
-    public Expression<?> getFullyQualifiedExpression(String path) {
+    Expression<?> getFullyQualifiedExpression(String path) {
         if (parent != null) {
-            if ("{alias}".equals(path)) {
-                return parent.getRoot();
+            if ('{alias}' == path) {
+                return parent.root
             }
-            if (path != null && path.startsWith("{alias}.")) {
-                return parent.getFullyQualifiedExpression("root." + path.substring(8));
+            if (path != null && path.startsWith('{alias}.')) {
+                return parent.getFullyQualifiedExpression("root.${path.substring(8)}".toString())
             }
         }
-        return resolver.resolve(path);
+        return resolver.resolve(path)
     }
 
-    public Path<?> getFullyQualifiedPath(String path) {
+    Path<?> getFullyQualifiedPath(String path) {
         if (parent != null) {
-            if ("{alias}".equals(path)) {
-                return parent.getRoot();
+            if ('{alias}' == path) {
+                return parent.root
             }
-            if (path != null && path.startsWith("{alias}.")) {
-                return parent.getFullyQualifiedPath("root." + path.substring(8));
+            if (path != null && path.startsWith('{alias}.')) {
+                return parent.getFullyQualifiedPath("root.${path.substring(8)}".toString())
             }
         }
-        Expression<?> resolved = resolver.resolve(path);
-        return resolved instanceof Path<?> path1 ? path1 : null;
+        Expression<?> resolved = resolver.resolve(path)
+        return (resolved instanceof Path) ? (Path) resolved : null
     }
 
     /**
@@ -205,11 +201,11 @@ public class JpaQueryContext implements Cloneable {
      * @param parameter the parameter used in the criteria query
      * @param value the value to bind to the parameter
      */
-    public void bindParameter(ParameterExpression<?> parameter, Object value) {
+    void bindParameter(ParameterExpression<?> parameter, Object value) {
         if (parent != null) {
-            parent.bindParameter(parameter, value);
+            parent.bindParameter(parameter, value)
         } else {
-            parameterValues.put(parameter, value);
+            parameterValues.put(parameter, value)
         }
     }
 
@@ -218,16 +214,17 @@ public class JpaQueryContext implements Cloneable {
      *
      * @return the value of each parameter
      */
-    public Map<ParameterExpression<?>, Object> getParameterValues() {
-        return parent != null ? parent.getParameterValues() : Collections.unmodifiableMap(parameterValues);
+    Map<ParameterExpression<?>, Object> getParameterValues() {
+        return parent != null ? parent.getParameterValues() : Collections.unmodifiableMap(parameterValues)
     }
 
     @Override
-    public JpaQueryContext clone() {
+    JpaQueryContext clone() {
         try {
-            return (JpaQueryContext) super.clone();
+            return (JpaQueryContext) super.clone()
         } catch (CloneNotSupportedException e) {
-            throw new AssertionError();
+            throw new AssertionError()
         }
     }
+
 }

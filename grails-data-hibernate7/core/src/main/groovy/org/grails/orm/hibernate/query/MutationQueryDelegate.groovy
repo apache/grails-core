@@ -16,13 +16,12 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.orm.hibernate.query;
+package org.grails.orm.hibernate.query
 
-import java.util.Collection;
-import java.util.List;
-
-import org.hibernate.query.MutationQuery;
-import org.hibernate.query.QueryFlushMode;
+import groovy.transform.CompileStatic
+import groovy.transform.PackageScope
+import org.hibernate.query.MutationQuery
+import org.hibernate.query.QueryFlushMode
 
 /**
  * {@link HqlQueryDelegate} for HQL UPDATE/DELETE queries backed by
@@ -32,74 +31,77 @@ import org.hibernate.query.QueryFlushMode;
  * {@link MutationQuery} does not support them. {@link #setParameterList} falls back to
  * {@link #setParameter} with the collection value as best-effort support for IN clauses.
  */
+@CompileStatic
+@PackageScope
 final class MutationQueryDelegate implements HqlQueryDelegate {
 
-    private final transient MutationQuery mutationQuery;
+    private final transient MutationQuery mutationQuery
 
-    MutationQueryDelegate(MutationQuery mutationQuery) {
-        this.mutationQuery = mutationQuery;
+    @PackageScope MutationQueryDelegate(MutationQuery mutationQuery) {
+        this.mutationQuery = mutationQuery
     }
 
     @Override
-    public void setTimeout(int timeout) {
-        mutationQuery.setTimeout(timeout);
+    void setTimeout(int timeout) {
+        mutationQuery.setTimeout(timeout)
     }
 
     @Override
-    public void setQueryFlushMode(QueryFlushMode mode) {
-        mutationQuery.setQueryFlushMode(mode);
+    void setQueryFlushMode(QueryFlushMode mode) {
+        mutationQuery.setQueryFlushMode(mode)
     }
 
     @Override
-    public void setParameter(String name, Object value) {
-        mutationQuery.setParameter(name, value);
+    void setParameter(String name, Object value) {
+        mutationQuery.setParameter(name, value)
     }
 
     @Override
-    public <T> void setParameter(String name, T value, Class<T> type) {
-        mutationQuery.setParameter(name, value, type);
+    <T> void setParameter(String name, T value, Class<T> type) {
+        mutationQuery.setParameter(name, value, type)
     }
 
     @Override
-    public void setParameter(int position, Object value) {
-        mutationQuery.setParameter(position, value);
+    void setParameter(int position, Object value) {
+        mutationQuery.setParameter(position, value)
     }
 
     @Override
-    public <T> void setParameter(int position, T value, Class<T> type) {
-        mutationQuery.setParameter(position, value, type);
+    <T> void setParameter(int position, T value, Class<T> type) {
+        mutationQuery.setParameter(position, value, type)
     }
 
     @Override
-    public void setHint(String hintName, Object value) {
-        mutationQuery.setHint(hintName, value);
+    void setHint(String hintName, Object value) {
+        mutationQuery.setHint(hintName, value)
     }
 
     @Override
-    public void setParameterList(String name, Collection<?> values) {
+    void setParameterList(String name, Collection<?> values) {
         // MutationQuery has no setParameterList; pass collection directly as parameter value
-        mutationQuery.setParameter(name, values);
+        mutationQuery.setParameter(name, values)
     }
 
     @Override
-    public void setParameterList(String name, Object[] values) {
-        mutationQuery.setParameter(name, values);
+    void setParameterList(String name, Object[] values) {
+        mutationQuery.setParameter(name, values)
     }
 
     @Override
-    @SuppressWarnings("rawtypes")
-    public List list() {
+    @SuppressWarnings('rawtypes')
+    List list() {
         throw new UnsupportedOperationException(
-                "Mutation query (UPDATE/DELETE) cannot be used for list(); use executeUpdate() instead");
+                'Mutation query (UPDATE/DELETE) cannot be used for list(); use executeUpdate() instead')
     }
 
     @Override
-    public int executeUpdate() {
-        return mutationQuery.executeUpdate();
+    int executeUpdate() {
+        return mutationQuery.executeUpdate()
     }
 
     @Override
-    public org.hibernate.query.Query<?> selectQuery() {
-        return null;
+    org.hibernate.query.Query<?> selectQuery() {
+        return null
     }
+
 }

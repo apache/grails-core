@@ -16,54 +16,52 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.orm.hibernate.cfg.domainbinding.util;
+package org.grails.orm.hibernate.cfg.domainbinding.util
 
-import java.util.ArrayList;
-import java.util.List;
+import groovy.transform.CompileStatic
+import org.hibernate.MappingException
+import org.hibernate.mapping.Column
+import org.hibernate.mapping.Table
 
-import org.hibernate.MappingException;
-import org.hibernate.mapping.Column;
-import org.hibernate.mapping.Table;
+import org.grails.orm.hibernate.cfg.PropertyConfig
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty
 
-import org.grails.orm.hibernate.cfg.PropertyConfig;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty;
+@CompileStatic
+class CreateKeyForProps {
 
-@SuppressWarnings("PMD.DataflowAnomalyAnalysis")
-public class CreateKeyForProps {
+    private final ColumnNameForPropertyAndPathFetcher columnNameForPropertyAndPathFetcher
+    private final UniqueKeyForColumnsCreator uniqueKeyForColumnsCreator
 
-    private final ColumnNameForPropertyAndPathFetcher columnNameForPropertyAndPathFetcher;
-    private final UniqueKeyForColumnsCreator uniqueKeyForColumnsCreator;
-
-    public CreateKeyForProps(ColumnNameForPropertyAndPathFetcher columnNameForPropertyAndPathFetcher) {
-        this.columnNameForPropertyAndPathFetcher = columnNameForPropertyAndPathFetcher;
-        this.uniqueKeyForColumnsCreator = new UniqueKeyForColumnsCreator();
+    CreateKeyForProps(ColumnNameForPropertyAndPathFetcher columnNameForPropertyAndPathFetcher) {
+        this.columnNameForPropertyAndPathFetcher = columnNameForPropertyAndPathFetcher
+        this.uniqueKeyForColumnsCreator = new UniqueKeyForColumnsCreator()
     }
 
     protected CreateKeyForProps(
             ColumnNameForPropertyAndPathFetcher columnNameForPropertyAndPathFetcher,
             UniqueKeyForColumnsCreator uniqueKeyForColumnsCreator) {
-        this.columnNameForPropertyAndPathFetcher = columnNameForPropertyAndPathFetcher;
-        this.uniqueKeyForColumnsCreator = uniqueKeyForColumnsCreator;
+        this.columnNameForPropertyAndPathFetcher = columnNameForPropertyAndPathFetcher
+        this.uniqueKeyForColumnsCreator = uniqueKeyForColumnsCreator
     }
 
-    public void createKeyForProps(HibernatePersistentProperty grailsProp, String path, Table table, String columnName) {
+    void createKeyForProps(HibernatePersistentProperty grailsProp, String path, Table table, String columnName) {
         if (HibernateToManyProperty.isBoundAsCollection(grailsProp)) {
             // The column of a bound collection lives in the collection table, which does not hold the columns
             // of the other properties of the group, so a unique group has no key to create there. A to-many
             // mapped with a user type or as serializable is a plain column of the owner table, so it keeps its
             // key. The condition is the one GrailsPropertyBinder routes by.
-            return;
+            return
         }
-        PropertyConfig mappedForm = grailsProp.getMappedForm();
+        PropertyConfig mappedForm = grailsProp.mappedForm
 
         if (mappedForm.isUnique() && mappedForm.isUniqueWithinGroup()) {
 
-            List<Column> keyList = new ArrayList<>();
-            keyList.add(new Column(columnName));
-            addGroupColumns(grailsProp, mappedForm, path, keyList);
-            uniqueKeyForColumnsCreator.createUniqueKeyForColumns(table, keyList);
+            List<Column> keyList = new ArrayList<>()
+            keyList.add(new Column(columnName))
+            addGroupColumns(grailsProp, mappedForm, path, keyList)
+            uniqueKeyForColumnsCreator.createUniqueKeyForColumns(table, keyList)
         }
     }
 
@@ -79,17 +77,17 @@ public class CreateKeyForProps {
      * @param table the table that holds the columns
      * @param columns the bound columns of the property
      */
-    public void createKeyForColumns(
+    void createKeyForColumns(
             HibernatePersistentProperty grailsProp, String path, Table table, List<Column> columns) {
-        PropertyConfig mappedForm = grailsProp.getMappedForm();
+        PropertyConfig mappedForm = grailsProp.mappedForm
         if (!mappedForm.isUnique() || columns.isEmpty()) {
-            return;
+            return
         }
-        List<Column> keyList = new ArrayList<>(columns);
+        List<Column> keyList = new ArrayList<>(columns)
         if (mappedForm.isUniqueWithinGroup()) {
-            addGroupColumns(grailsProp, mappedForm, path, keyList);
+            addGroupColumns(grailsProp, mappedForm, path, keyList)
         }
-        uniqueKeyForColumnsCreator.createUniqueKeyForColumns(table, keyList);
+        uniqueKeyForColumnsCreator.createUniqueKeyForColumns(table, keyList)
     }
 
     /**
@@ -98,16 +96,16 @@ public class CreateKeyForProps {
      */
     private void addGroupColumns(
             HibernatePersistentProperty grailsProp, PropertyConfig mappedForm, String path, List<Column> keyList) {
-        GrailsHibernatePersistentEntity owner = grailsProp.getHibernateOwner();
-        for (String propertyName : mappedForm.getUniquenessGroup()) {
-            HibernatePersistentProperty otherProp = owner.getHibernatePropertyByName(propertyName);
+        GrailsHibernatePersistentEntity owner = grailsProp.hibernateOwner
+        for (String propertyName : mappedForm.uniquenessGroup) {
+            HibernatePersistentProperty otherProp = owner.getHibernatePropertyByName(propertyName)
             if (otherProp == null) {
                 throw new MappingException(
-                        owner.getJavaClass().getName() + " references an unknown property " + propertyName);
+                        "${owner.javaClass.name} references an unknown property ${propertyName}".toString())
             }
             for (String otherColumnName :
                     columnNameForPropertyAndPathFetcher.getColumnNamesForPropertyAndPath(otherProp, path)) {
-                keyList.add(new Column(otherColumnName));
+                keyList.add(new Column(otherColumnName))
             }
         }
     }

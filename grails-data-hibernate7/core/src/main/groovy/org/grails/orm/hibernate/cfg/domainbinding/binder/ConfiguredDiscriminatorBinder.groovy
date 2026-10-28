@@ -16,29 +16,31 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.orm.hibernate.cfg.domainbinding.binder;
+package org.grails.orm.hibernate.cfg.domainbinding.binder
 
-import org.hibernate.mapping.Column;
-import org.hibernate.mapping.Formula;
-import org.hibernate.mapping.RootClass;
-import org.hibernate.mapping.SimpleValue;
+import groovy.transform.CompileStatic
+import org.hibernate.mapping.Column
+import org.hibernate.mapping.Formula
+import org.hibernate.mapping.RootClass
+import org.hibernate.mapping.SimpleValue
 
-import org.grails.orm.hibernate.cfg.ColumnConfig;
-import org.grails.orm.hibernate.cfg.DiscriminatorConfig;
+import org.grails.orm.hibernate.cfg.ColumnConfig
+import org.grails.orm.hibernate.cfg.DiscriminatorConfig
 
-import static org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBinder.DEFAULT_DISCRIMINATOR_COLUMN_NAME;
+import static org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBinder.DEFAULT_DISCRIMINATOR_COLUMN_NAME
 
-public class ConfiguredDiscriminatorBinder {
+@CompileStatic
+class ConfiguredDiscriminatorBinder {
 
-    private static final String STRING_TYPE = "string";
+    private static final String STRING_TYPE = 'string'
 
-    private final SimpleValueColumnBinder simpleValueColumnBinder;
-    private final ColumnConfigToColumnBinder columnConfigToColumnBinder;
+    private final SimpleValueColumnBinder simpleValueColumnBinder
+    private final ColumnConfigToColumnBinder columnConfigToColumnBinder
 
-    public ConfiguredDiscriminatorBinder(
+    ConfiguredDiscriminatorBinder(
             SimpleValueColumnBinder simpleValueColumnBinder, ColumnConfigToColumnBinder columnConfigToColumnBinder) {
-        this.simpleValueColumnBinder = simpleValueColumnBinder;
-        this.columnConfigToColumnBinder = columnConfigToColumnBinder;
+        this.simpleValueColumnBinder = simpleValueColumnBinder
+        this.columnConfigToColumnBinder = columnConfigToColumnBinder
     }
 
     /**
@@ -48,56 +50,57 @@ public class ConfiguredDiscriminatorBinder {
      * @param discriminator The discriminator value to configure
      * @param config The discriminator configuration
      */
-    public void bindConfiguredDiscriminator(RootClass entity, SimpleValue discriminator, DiscriminatorConfig config) {
+    void bindConfiguredDiscriminator(RootClass entity, SimpleValue discriminator, DiscriminatorConfig config) {
         // A configuration that maps only the column or formula keeps the class name as the value
-        entity.setDiscriminatorValue(config.getValue() != null ? config.getValue() : entity.getClassName());
+        entity.discriminatorValue = config.value != null ? config.value : entity.className
 
         // Configure insertable if specified
-        if (config.getInsertable() != null) {
-            entity.setDiscriminatorInsertable(config.getInsertable());
+        if (config.insertable != null) {
+            entity.setDiscriminatorInsertable(config.insertable)
         }
 
         // Resolve type name
-        String typeName = resolveTypeName(config.getType());
+        String typeName = resolveTypeName(config.type)
 
         // Bind based on configuration type
-        if (config.getFormula() != null) {
-            bindDiscriminatorWithFormula(discriminator, typeName, config.getFormula());
+        if (config.formula != null) {
+            bindDiscriminatorWithFormula(discriminator, typeName, config.formula)
         } else {
-            bindDiscriminatorWithColumn(discriminator, typeName, config.getColumn());
+            bindDiscriminatorWithColumn(discriminator, typeName, config.column)
         }
     }
 
     private String resolveTypeName(Object type) {
         if (type == null) {
-            return STRING_TYPE;
+            return STRING_TYPE
         }
 
-        return (type instanceof Class) ? ((Class<?>) type).getName() : type.toString();
+        return (type instanceof Class) ? ((Class<?>) type).name : type.toString()
     }
 
     private void bindDiscriminatorWithFormula(SimpleValue discriminator, String typeName, String formula) {
-        discriminator.setTypeName(typeName);
-        Formula f = new Formula();
-        f.setFormula(formula);
-        discriminator.addFormula(f);
+        discriminator.typeName = typeName
+        Formula f = new Formula()
+        f.formula = formula
+        discriminator.addFormula(f)
     }
 
     private void bindDiscriminatorWithColumn(SimpleValue discriminator, String typeName, ColumnConfig columnConfig) {
-        simpleValueColumnBinder.bindSimpleValue(discriminator, typeName, DEFAULT_DISCRIMINATOR_COLUMN_NAME, false);
+        simpleValueColumnBinder.bindSimpleValue(discriminator, typeName, DEFAULT_DISCRIMINATOR_COLUMN_NAME, false)
 
         if (columnConfig != null) {
-            configureDiscriminatorColumn(discriminator, columnConfig);
+            configureDiscriminatorColumn(discriminator, columnConfig)
         }
     }
 
     private void configureDiscriminatorColumn(SimpleValue discriminator, ColumnConfig columnConfig) {
-        Column column = discriminator.getColumns().iterator().next();
+        Column column = discriminator.columns.iterator().next()
 
-        if (columnConfig.getName() != null) {
-            column.setName(columnConfig.getName());
+        if (columnConfig.name != null) {
+            column.name = columnConfig.name
         }
 
-        columnConfigToColumnBinder.bindColumnConfigToColumn(column, columnConfig, null);
+        columnConfigToColumnBinder.bindColumnConfigToColumn(column, columnConfig, null)
     }
+
 }

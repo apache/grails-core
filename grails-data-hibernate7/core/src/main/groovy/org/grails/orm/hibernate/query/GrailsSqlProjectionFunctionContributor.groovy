@@ -16,22 +16,25 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.orm.hibernate.query;
+package org.grails.orm.hibernate.query
 
-import org.hibernate.boot.model.FunctionContributions;
-import org.hibernate.boot.model.FunctionContributor;
+import groovy.transform.CompileStatic
+import org.hibernate.boot.model.FunctionContributions
+import org.hibernate.boot.model.FunctionContributor
 
 /**
  * Registers the {@link GrailsSqlProjectionFunction}.
  *
  * @since 8.0.1
  */
-public class GrailsSqlProjectionFunctionContributor implements FunctionContributor {
+@CompileStatic
+class GrailsSqlProjectionFunctionContributor implements FunctionContributor {
 
     @Override
-    public void contributeFunctions(FunctionContributions functionContributions) {
-        functionContributions.getFunctionRegistry().register(
+    void contributeFunctions(FunctionContributions functionContributions) {
+        functionContributions.functionRegistry.register(
                 GrailsSqlProjectionFunction.NAME,
-                new GrailsSqlProjectionFunction());
+                new GrailsSqlProjectionFunction())
     }
+
 }

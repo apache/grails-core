@@ -13,129 +13,137 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.grails.orm.hibernate.query;
+package org.grails.orm.hibernate.query
 
-import jakarta.persistence.criteria.Expression;
-import jakarta.persistence.criteria.From;
-import jakarta.persistence.criteria.Path;
+import groovy.transform.CompileStatic
+import jakarta.persistence.criteria.Expression
+import jakarta.persistence.criteria.From
+import jakarta.persistence.criteria.Path
 
 /**
  * Resolves string paths and aliases into JPA Expressions and Paths.
  *
  * @since 8.0
  */
-public class ExpressionResolver {
-    private final AliasRegistry aliasRegistry;
-    private final JoinTracker joinTracker;
+@CompileStatic
+class ExpressionResolver {
 
-    public ExpressionResolver(AliasRegistry aliasRegistry, JoinTracker joinTracker) {
-        this.aliasRegistry = aliasRegistry;
-        this.joinTracker = joinTracker;
+    private final AliasRegistry aliasRegistry
+    private final JoinTracker joinTracker
+
+    ExpressionResolver(AliasRegistry aliasRegistry, JoinTracker joinTracker) {
+        this.aliasRegistry = aliasRegistry
+        this.joinTracker = joinTracker
     }
 
-    public Expression<?> resolve(String path) {
-        if (path == null) return null;
+    Expression<?> resolve(String path) {
+        if (path == null) {
+            return null
+        }
 
-        if (path.equals("{alias}") || path.equals("root")) {
-            return joinTracker.getRoot();
+        if (path == '{alias}' || path == 'root') {
+            return joinTracker.root
         }
-        if (path.startsWith("{alias}.")) {
-            return getPath(joinTracker.getRoot(), path.substring(8));
+        if (path.startsWith('{alias}.')) {
+            return getPath(joinTracker.root, path.substring(8))
         }
-        
-        String cleanPath = path;
-        if (cleanPath.startsWith("root.")) {
-            cleanPath = cleanPath.substring(5);
+
+        String cleanPath = path
+        if (cleanPath.startsWith('root.')) {
+            cleanPath = cleanPath.substring(5)
         }
 
         // 1. Check for materialized aliases (Materialized Selects/Joins)
         if (aliasRegistry.hasRealized(cleanPath)) {
-            return aliasRegistry.getRealized(cleanPath);
+            return aliasRegistry.getRealized(cleanPath)
         }
 
         // 2. Handle defined but unrealized aliases
         if (aliasRegistry.isDefined(cleanPath)) {
-            return resolveFromAlias(cleanPath, null);
+            return resolveFromAlias(cleanPath, null)
         }
 
         // 3. Handle alias:property
         if (cleanPath.contains(grails.orm.HibernateCriteriaBuilder.ALIAS_SEPARATOR)) {
-            String[] parts = cleanPath.split(grails.orm.HibernateCriteriaBuilder.ALIAS_SEPARATOR);
-            Expression<?> resolved = resolveFromAlias(parts[0], parts[1]);
+            String[] parts = cleanPath.split(grails.orm.HibernateCriteriaBuilder.ALIAS_SEPARATOR)
+            Expression<?> resolved = resolveFromAlias(parts[0], parts[1])
             if (resolved == null) {
-                resolved = getPath(joinTracker.getRoot(), parts[1]);
+                resolved = getPath(joinTracker.root, parts[1])
                 if (resolved != null) {
-                    resolved.alias(parts[0]);
-                    aliasRegistry.realize(parts[0], resolved);
+                    resolved.alias(parts[0])
+                    aliasRegistry.realize(parts[0], resolved)
                 }
             }
-            return resolved;
+            return resolved
         }
 
         // 4. Handle alias.property
-        if (cleanPath.contains(".")) {
-            int dotIdx = cleanPath.indexOf(".");
-            String aliasCandidate = cleanPath.substring(0, dotIdx);
+        if (cleanPath.contains('.')) {
+            int dotIdx = cleanPath.indexOf('.')
+            String aliasCandidate = cleanPath.substring(0, dotIdx)
             if (aliasRegistry.isDefined(aliasCandidate)) {
-                return resolveFromAlias(aliasCandidate, cleanPath.substring(dotIdx + 1));
+                return resolveFromAlias(aliasCandidate, cleanPath.substring(dotIdx + 1))
             }
         }
 
         // 5. Check Join Tracker (Already joined paths)
-        From<?, ?> joined = joinTracker.getJoin(cleanPath);
+        From<?, ?> joined = joinTracker.getJoin(cleanPath)
         if (joined != null) {
-            return joined;
+            return joined
         }
 
         // 6. Fallback to Root path resolution
-        return getPath(joinTracker.getRoot(), cleanPath);
+        return getPath(joinTracker.root, cleanPath)
     }
 
     private Expression<?> resolveFromAlias(String alias, String subPath) {
         // 1. Check if already realized in THIS or PARENT registry
-        Expression<?> aliased = aliasRegistry.getRealized(alias);
+        Expression<?> aliased = aliasRegistry.getRealized(alias)
         if (aliased != null) {
-            if (subPath != null && aliased instanceof From<?, ?> from) {
-                return getPath(from, subPath);
+            if (subPath != null && aliased instanceof From<?, ?>) {
+                return getPath((From<?, ?>) aliased, subPath)
             }
-            return aliased; // It's a non-From expression (projection alias) or subPath is null
+            return aliased // It's a non-From expression (projection alias) or subPath is null
         }
 
         // 2. Check if already joined in THIS or PARENT JoinTracker (correlated joins)
-        aliased = joinTracker.getJoin(alias);
+        aliased = joinTracker.getJoin(alias)
         if (aliased != null) {
-            aliasRegistry.realize(alias, aliased);
-            return subPath != null ? getPath((From<?, ?>) aliased, subPath) : aliased;
+            aliasRegistry.realize(alias, aliased)
+            return subPath != null ? getPath((From<?, ?>) aliased, subPath) : aliased
         }
 
         // 3. If defined but not joined, materialize it on the CURRENT root
         if (aliasRegistry.isDefined(alias)) {
-            HibernateAlias def = aliasRegistry.getDefinition(alias);
-            if (def != null && def.path() != null) {
-                aliased = joinTracker.getRoot().join(def.path(), def.joinType());
-                aliasRegistry.realize(alias, aliased);
-                joinTracker.addJoin(alias, (From<?, ?>) aliased);
-                return subPath != null ? getPath((From<?, ?>) aliased, subPath) : aliased;
+            HibernateAlias definition = aliasRegistry.getDefinition(alias)
+            if (definition != null && definition.path() != null) {
+                aliased = joinTracker.root.join(definition.path(), definition.joinType())
+                aliasRegistry.realize(alias, aliased)
+                joinTracker.addJoin(alias, (From<?, ?>) aliased)
+                return subPath != null ? getPath((From<?, ?>) aliased, subPath) : aliased
             }
         }
 
-        return null;
+        return null
     }
 
     private Path<?> getPath(From<?, ?> from, String path) {
-        if (from == null || path == null) return null;
+        if (from == null || path == null) {
+            return null
+        }
         try {
-            if (path.contains(".")) {
-                String[] parts = path.split("\\.");
-                Path<?> p = from;
+            if (path.contains('.')) {
+                String[] parts = path.split('\\.')
+                Path<?> p = from
                 for (String part : parts) {
-                    p = p.get(part);
+                    p = p.get(part)
                 }
-                return p;
+                return p
             }
-            return from.get(path);
+            return from.get(path)
         } catch (Exception e) {
-            return null;
+            return null
         }
     }
+
 }

@@ -16,9 +16,11 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.orm.hibernate.query;
+package org.grails.orm.hibernate.query
 
-import org.grails.datastore.gorm.finders.DynamicFinder;
+import groovy.transform.CompileStatic
+
+import org.grails.datastore.gorm.finders.DynamicFinder
 
 /**
  * Typed enum of all query argument keys and Hibernate config property keys used in the
@@ -32,8 +34,8 @@ import org.grails.datastore.gorm.finders.DynamicFinder;
  *
  * @since 8.0
  */
-@SuppressWarnings("PMD.AvoidFieldNameMatchingMethodName")
-public enum HibernateQueryArgument {
+@CompileStatic
+enum HibernateQueryArgument {
 
     // ── pagination & execution ────────────────────────────────────────────────
     MAX(DynamicFinder.ARGUMENT_MAX),
@@ -52,44 +54,45 @@ public enum HibernateQueryArgument {
     IGNORE_CASE(DynamicFinder.ARGUMENT_IGNORE_CASE),
     ORDER_DESC(DynamicFinder.ORDER_DESC),
     ORDER_ASC(DynamicFinder.ORDER_ASC),
-    EAGER("eager"),
-    JOIN("join"),
+    EAGER('eager'),
+    JOIN('join'),
 
     // ── HQL keywords ──────────────────────────────────────────────────────────
-    HQL_SELECT("select"),
-    HQL_FROM("from"),
-    HQL_WHERE("where"),
-    HQL_JOIN("join"),
-    HQL_LEFT("left"),
-    HQL_RIGHT("right"),
-    HQL_INNER("inner"),
-    HQL_OUTER("outer"),
-    HQL_GROUP("group"),
-    HQL_ORDER("order"),
-    HQL_HAVING("having"),
-    HQL_DISTINCT("distinct"),
-    HQL_ALL("all"),
-    HQL_AS("as"),
-    HQL_NEW("new"),
+    HQL_SELECT('select'),
+    HQL_FROM('from'),
+    HQL_WHERE('where'),
+    HQL_JOIN('join'),
+    HQL_LEFT('left'),
+    HQL_RIGHT('right'),
+    HQL_INNER('inner'),
+    HQL_OUTER('outer'),
+    HQL_GROUP('group'),
+    HQL_ORDER('order'),
+    HQL_HAVING('having'),
+    HQL_DISTINCT('distinct'),
+    HQL_ALL('all'),
+    HQL_AS('as'),
+    HQL_NEW('new'),
 
     // ── Hibernate config properties ───────────────────────────────────────────
-    CONFIG_CACHE_QUERIES("grails.hibernate.cache.queries"),
-    CONFIG_OSIV_READONLY("grails.hibernate.osiv.readonly"),
-    CONFIG_PASS_READONLY("grails.hibernate.pass.readonly");
+    CONFIG_CACHE_QUERIES('grails.hibernate.cache.queries'),
+    CONFIG_OSIV_READONLY('grails.hibernate.osiv.readonly'),
+    CONFIG_PASS_READONLY('grails.hibernate.pass.readonly')
 
-    private final String value;
+    private final String value
 
     HibernateQueryArgument(String value) {
-        this.value = value;
+        this.value = value
     }
 
     /** Returns the string key used for map lookups and config property resolution. */
-    public String value() {
-        return value;
+    String value() {
+        return value
     }
 
     @Override
-    public String toString() {
-        return value;
+    String toString() {
+        return value
     }
+
 }

@@ -16,51 +16,48 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.orm.hibernate.cfg.domainbinding.secondpass;
+package org.grails.orm.hibernate.cfg.domainbinding.secondpass
 
-import java.io.Serial;
-import java.util.Map;
+import groovy.transform.CompileStatic
+import org.hibernate.MappingException
+import org.hibernate.boot.spi.SecondPass
 
-import org.hibernate.MappingException;
-
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty
 
 /**
  * Second pass class for grails relationships. This is required as all persistent classes need to be
  * loaded in the first pass and then relationships established in the second pass compile
- *
- * @author Graeme
  */
-@SuppressWarnings("PMD.NonSerializableClass")
-public class SetSecondPass implements org.hibernate.boot.spi.SecondPass, GrailsSecondPass, java.io.Serializable {
+@CompileStatic
+class SetSecondPass implements SecondPass, GrailsSecondPass, Serializable {
 
-    @Serial
-    private static final long serialVersionUID = -5540526942092611348L;
+    private static final long serialVersionUID = -5540526942092611348L
 
-    protected final HibernateToManyProperty property;
-    private final org.hibernate.mapping.Collection collection;
-    private final CollectionSecondPassBinder collectionSecondPassBinder;
+    protected final HibernateToManyProperty property
+    private final org.hibernate.mapping.Collection collection
+    private final CollectionSecondPassBinder collectionSecondPassBinder
 
-    public SetSecondPass(CollectionSecondPassBinder collectionSecondPassBinder, HibernateToManyProperty property) {
-        this(collectionSecondPassBinder, property, null);
+    SetSecondPass(CollectionSecondPassBinder collectionSecondPassBinder, HibernateToManyProperty property) {
+        this(collectionSecondPassBinder, property, null)
     }
 
     /**
      * @param collection the collection this pass binds. The same property can be bound more than once, for instance
      * when its owner is an entity that is also embedded in another, and each binding has its own collection.
      */
-    public SetSecondPass(CollectionSecondPassBinder collectionSecondPassBinder, HibernateToManyProperty property, org.hibernate.mapping.Collection collection) {
-        this.collectionSecondPassBinder = collectionSecondPassBinder;
-        this.property = property;
-        this.collection = collection;
+    SetSecondPass(CollectionSecondPassBinder collectionSecondPassBinder, HibernateToManyProperty property, org.hibernate.mapping.Collection collection) {
+        this.collectionSecondPassBinder = collectionSecondPassBinder
+        this.property = property
+        this.collection = collection
     }
 
     @Override
-    public void doSecondPass(Map persistentClasses) throws MappingException {
+    void doSecondPass(Map persistentClasses) throws MappingException {
         if (collection != null) {
-            property.setHibernateCollection(collection);
+            property.setHibernateCollection(collection)
         }
-        collectionSecondPassBinder.bindCollectionSecondPass(property);
-        createCollectionKeys(property.getCollection());
+        collectionSecondPassBinder.bindCollectionSecondPass(property)
+        createCollectionKeys(property.getCollection())
     }
+
 }

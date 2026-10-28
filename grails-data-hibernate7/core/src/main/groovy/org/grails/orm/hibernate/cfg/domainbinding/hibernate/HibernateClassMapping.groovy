@@ -16,37 +16,39 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.orm.hibernate.cfg.domainbinding.hibernate;
+package org.grails.orm.hibernate.cfg.domainbinding.hibernate
 
-import org.grails.datastore.mapping.model.AbstractClassMapping;
-import org.grails.datastore.mapping.model.MappingContext;
-import org.grails.datastore.mapping.model.PersistentEntity;
-import org.grails.orm.hibernate.cfg.Mapping;
-import org.grails.orm.hibernate.cfg.PropertyConfig;
-import org.grails.orm.hibernate.cfg.domainbinding.util.CascadeBehavior;
+import groovy.transform.CompileStatic
+import org.grails.datastore.mapping.model.AbstractClassMapping
+import org.grails.datastore.mapping.model.MappingContext
+import org.grails.datastore.mapping.model.PersistentEntity
+import org.grails.orm.hibernate.cfg.Mapping
+import org.grails.orm.hibernate.cfg.PropertyConfig
+import org.grails.orm.hibernate.cfg.domainbinding.util.CascadeBehavior
 
 /**
  * A {@link org.grails.datastore.mapping.model.ClassMapping} implementation for Hibernate
  *
- * @author Graeme Rocher
  * @since 5.0
  */
-public class HibernateClassMapping extends AbstractClassMapping<Mapping> {
+@CompileStatic
+class HibernateClassMapping extends AbstractClassMapping<Mapping> {
 
-    private final Mapping mappedForm;
+    private final Mapping mappedForm
 
-    public HibernateClassMapping(PersistentEntity entity, MappingContext context) {
-        super(entity, context);
-        this.mappedForm = (Mapping) context.getMappingFactory().createMappedForm(entity);
-        for (PropertyConfig propConf : mappedForm.getPropertyConfigs().values()) {
-            if (propConf != null && propConf.getCascade() != null) {
-                propConf.setExplicitSaveUpdateCascade(CascadeBehavior.isSaveUpdate(propConf.getCascade()));
+    HibernateClassMapping(PersistentEntity entity, MappingContext context) {
+        super(entity, context)
+        this.mappedForm = (Mapping) context.mappingFactory.createMappedForm(entity)
+        for (PropertyConfig propConf : mappedForm.propertyConfigs.values()) {
+            if (propConf != null && propConf.cascade != null) {
+                propConf.explicitSaveUpdateCascade = CascadeBehavior.isSaveUpdate(propConf.cascade)
             }
         }
     }
 
     @Override
-    public Mapping getMappedForm() {
-        return mappedForm;
+    Mapping getMappedForm() {
+        return mappedForm
     }
+
 }

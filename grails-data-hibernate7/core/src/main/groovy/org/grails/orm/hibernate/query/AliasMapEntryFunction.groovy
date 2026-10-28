@@ -16,20 +16,23 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.orm.hibernate.query;
+package org.grails.orm.hibernate.query
 
-import java.util.Map;
-import java.util.function.Function;
+import java.util.function.Function
 
-import org.grails.datastore.gorm.query.criteria.DetachedAssociationCriteria;
+import groovy.transform.CompileStatic
+
+import org.grails.datastore.gorm.query.criteria.DetachedAssociationCriteria
 
 /** Maps detached association criteria by association path for alias registration. */
-public class AliasMapEntryFunction
+@CompileStatic
+class AliasMapEntryFunction
         implements Function<DetachedAssociationCriteria<?>, Map.Entry<String, DetachedAssociationCriteria<?>>> {
 
     @Override
-    public Map.Entry<String, DetachedAssociationCriteria<?>> apply(
+    Map.Entry<String, DetachedAssociationCriteria<?>> apply(
             DetachedAssociationCriteria<?> detachedAssociationCriteria) {
-        return Map.entry(detachedAssociationCriteria.getAssociationPath(), detachedAssociationCriteria);
+        return Map.entry(detachedAssociationCriteria.associationPath, detachedAssociationCriteria)
     }
+
 }

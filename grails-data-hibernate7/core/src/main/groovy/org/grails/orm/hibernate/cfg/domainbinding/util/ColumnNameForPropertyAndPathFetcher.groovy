@@ -16,26 +16,24 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.orm.hibernate.cfg.domainbinding.util;
+package org.grails.orm.hibernate.cfg.domainbinding.util
 
-import java.util.Collections;
-import java.util.List;
-import java.util.Optional;
+import groovy.transform.CompileStatic
+import org.hibernate.boot.spi.MetadataBuildingContext
 
-import org.hibernate.boot.spi.MetadataBuildingContext;
+import org.grails.orm.hibernate.cfg.ColumnConfig
+import org.grails.orm.hibernate.cfg.GrailsHibernateUtil
+import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty
 
-import org.grails.orm.hibernate.cfg.ColumnConfig;
-import org.grails.orm.hibernate.cfg.GrailsHibernateUtil;
-import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty;
+@CompileStatic
+class ColumnNameForPropertyAndPathFetcher {
 
-public class ColumnNameForPropertyAndPathFetcher {
-
-    private static final String UNDERSCORE = "_";
-    private final PersistentEntityNamingStrategy namingStrategy;
-    private final DefaultColumnNameFetcher defaultColumnNameFetcher;
-    private final BackticksRemover backticksRemover;
-    private final CompositeUserTypeColumns compositeUserTypeColumns;
+    private static final String UNDERSCORE = '_'
+    private final PersistentEntityNamingStrategy namingStrategy
+    private final DefaultColumnNameFetcher defaultColumnNameFetcher
+    private final BackticksRemover backticksRemover
+    private final CompositeUserTypeColumns compositeUserTypeColumns
 
     /**
      * Creates a fetcher that instantiates a composite user type through its default constructor when it names
@@ -47,11 +45,11 @@ public class ColumnNameForPropertyAndPathFetcher {
      * @see #ColumnNameForPropertyAndPathFetcher(PersistentEntityNamingStrategy, DefaultColumnNameFetcher,
      * BackticksRemover, MetadataBuildingContext)
      */
-    public ColumnNameForPropertyAndPathFetcher(
+    ColumnNameForPropertyAndPathFetcher(
             PersistentEntityNamingStrategy namingStrategy,
             DefaultColumnNameFetcher defaultColumnNameFetcher,
             BackticksRemover backticksRemover) {
-        this(namingStrategy, defaultColumnNameFetcher, backticksRemover, (MetadataBuildingContext) null);
+        this(namingStrategy, defaultColumnNameFetcher, backticksRemover, (MetadataBuildingContext) null)
     }
 
     /**
@@ -66,13 +64,13 @@ public class ColumnNameForPropertyAndPathFetcher {
      * user type through its default constructor
      * @since 8.0.1
      */
-    public ColumnNameForPropertyAndPathFetcher(
+    ColumnNameForPropertyAndPathFetcher(
             PersistentEntityNamingStrategy namingStrategy,
             DefaultColumnNameFetcher defaultColumnNameFetcher,
             BackticksRemover backticksRemover,
             MetadataBuildingContext metadataBuildingContext) {
         this(namingStrategy, defaultColumnNameFetcher, backticksRemover,
-                new CompositeUserTypeColumns(namingStrategy, backticksRemover, metadataBuildingContext));
+                new CompositeUserTypeColumns(namingStrategy, backticksRemover, metadataBuildingContext))
     }
 
     protected ColumnNameForPropertyAndPathFetcher(
@@ -80,23 +78,25 @@ public class ColumnNameForPropertyAndPathFetcher {
             DefaultColumnNameFetcher defaultColumnNameFetcher,
             BackticksRemover backticksRemover,
             CompositeUserTypeColumns compositeUserTypeColumns) {
-        this.namingStrategy = namingStrategy;
-        this.defaultColumnNameFetcher = defaultColumnNameFetcher;
-        this.backticksRemover = backticksRemover;
-        this.compositeUserTypeColumns = compositeUserTypeColumns;
+        this.namingStrategy = namingStrategy
+        this.defaultColumnNameFetcher = defaultColumnNameFetcher
+        this.backticksRemover = backticksRemover
+        this.compositeUserTypeColumns = compositeUserTypeColumns
     }
 
-    public String getColumnNameForPropertyAndPath(
+    String getColumnNameForPropertyAndPath(
             HibernatePersistentProperty grailsProp, String path, ColumnConfig cc) {
-        return Optional.ofNullable(grailsProp.getColumnName(cc)).orElseGet(() -> {
-            String suffix = defaultColumnNameFetcher.getDefaultColumnName(grailsProp);
-            return Optional.ofNullable(path)
-                    .filter(GrailsHibernateUtil::isNotEmpty)
-                    .map(p -> backticksRemover.apply(namingStrategy.resolveColumnName(p)) +
-                            UNDERSCORE +
-                            backticksRemover.apply(suffix))
-                    .orElse(suffix);
-        });
+        String columnName = grailsProp.getColumnName(cc)
+        if (columnName != null) {
+            return columnName
+        }
+        String suffix = defaultColumnNameFetcher.getDefaultColumnName(grailsProp)
+        if (path != null && GrailsHibernateUtil.isNotEmpty(path)) {
+            return backticksRemover.apply(namingStrategy.resolveColumnName(path)) +
+                    UNDERSCORE +
+                    backticksRemover.apply(suffix)
+        }
+        return suffix
     }
 
     /**
@@ -110,10 +110,10 @@ public class ColumnNameForPropertyAndPathFetcher {
      * @return the column names, in column order
      * @since 8.0.1
      */
-    public List<String> getColumnNamesForPropertyAndPath(HibernatePersistentProperty grailsProp, String path) {
-        if (grailsProp.getCompositeUserType() != null) {
-            return compositeUserTypeColumns.columnNamesOf(grailsProp, path);
+    List<String> getColumnNamesForPropertyAndPath(HibernatePersistentProperty grailsProp, String path) {
+        if (grailsProp.compositeUserType != null) {
+            return compositeUserTypeColumns.columnNamesOf(grailsProp, path)
         }
-        return Collections.singletonList(getColumnNameForPropertyAndPath(grailsProp, path, null));
+        return Collections.singletonList(getColumnNameForPropertyAndPath(grailsProp, path, null))
     }
 }

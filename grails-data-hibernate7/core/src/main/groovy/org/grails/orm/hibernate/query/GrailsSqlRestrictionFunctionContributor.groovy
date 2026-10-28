@@ -16,22 +16,25 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.orm.hibernate.query;
+package org.grails.orm.hibernate.query
 
-import org.hibernate.boot.model.FunctionContributions;
-import org.hibernate.boot.model.FunctionContributor;
+import groovy.transform.CompileStatic
+import org.hibernate.boot.model.FunctionContributions
+import org.hibernate.boot.model.FunctionContributor
 
 /**
  * Registers the {@link GrailsSqlRestrictionFunction}.
  *
  * @since 8.0.0
  */
-public class GrailsSqlRestrictionFunctionContributor implements FunctionContributor {
+@CompileStatic
+class GrailsSqlRestrictionFunctionContributor implements FunctionContributor {
 
     @Override
-    public void contributeFunctions(FunctionContributions functionContributions) {
-        functionContributions.getFunctionRegistry().register(
+    void contributeFunctions(FunctionContributions functionContributions) {
+        functionContributions.functionRegistry.register(
                 GrailsSqlRestrictionFunction.NAME,
-                new GrailsSqlRestrictionFunction(functionContributions.getTypeConfiguration()));
+                new GrailsSqlRestrictionFunction(functionContributions.typeConfiguration))
     }
+
 }

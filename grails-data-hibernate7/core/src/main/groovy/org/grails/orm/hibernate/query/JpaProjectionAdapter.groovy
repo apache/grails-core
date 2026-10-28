@@ -13,85 +13,96 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.grails.orm.hibernate.query;
+package org.grails.orm.hibernate.query
 
-import java.util.ArrayList;
-import java.util.List;
+import groovy.transform.CompileStatic
+import jakarta.persistence.Tuple
+import jakarta.persistence.criteria.CriteriaQuery
+import jakarta.persistence.criteria.Expression
+import jakarta.persistence.criteria.Selection
+import jakarta.persistence.criteria.Subquery
+import org.hibernate.query.criteria.HibernateCriteriaBuilder
 
-import jakarta.persistence.Tuple;
-import jakarta.persistence.criteria.CriteriaQuery;
-import jakarta.persistence.criteria.Selection;
-import jakarta.persistence.criteria.Subquery;
-
-import org.hibernate.query.criteria.HibernateCriteriaBuilder;
-
-import org.grails.datastore.mapping.query.Query;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
+import org.grails.datastore.mapping.query.Query
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
 
 /**
  * Adapts Grails datastore projections to JPA Selections.
  *
  * @since 8.0
  */
-public class JpaProjectionAdapter {
+@CompileStatic
+class JpaProjectionAdapter {
 
-    private final HibernateCriteriaBuilder criteriaBuilder;
-    private final JpaQueryContext context;
-    private final JpaProjectionTranslator translator;
+    private final HibernateCriteriaBuilder criteriaBuilder
+    private final JpaQueryContext context
+    private final JpaProjectionTranslator translator
 
-    public JpaProjectionAdapter(HibernateCriteriaBuilder criteriaBuilder, JpaQueryContext context) {
-        this(criteriaBuilder, context, null);
+    JpaProjectionAdapter(HibernateCriteriaBuilder criteriaBuilder, JpaQueryContext context) {
+        this(criteriaBuilder, context, null)
     }
 
     /**
      * @param entity the queried entity, whose table alias replaces {@code {alias}} in a SQL projection
      */
-    public JpaProjectionAdapter(
+    JpaProjectionAdapter(
             HibernateCriteriaBuilder criteriaBuilder, JpaQueryContext context, GrailsHibernatePersistentEntity entity) {
-        this.criteriaBuilder = criteriaBuilder;
-        this.context = context;
-        this.translator = new JpaProjectionTranslator(criteriaBuilder, context, entity);
+        this.criteriaBuilder = criteriaBuilder
+        this.context = context
+        this.translator = new JpaProjectionTranslator(criteriaBuilder, context, entity)
     }
 
-    public void adapt(Query.ProjectionList projectionList, jakarta.persistence.criteria.AbstractQuery<?> query) {
-        List<Query.Projection> projections = projectionList.getProjectionList();
-        if (projections.stream().anyMatch(p -> p instanceof Query.DistinctProjection || p instanceof Query.DistinctPropertyProjection)) {
-            query.distinct(true);
+    void adapt(Query.ProjectionList projectionList, jakarta.persistence.criteria.AbstractQuery<?> query) {
+        List<Query.Projection> projections = projectionList.projectionList
+        boolean distinct = false
+        for (Query.Projection p : projections) {
+            if (p instanceof Query.DistinctProjection || p instanceof Query.DistinctPropertyProjection) {
+                distinct = true
+                break
+            }
+        }
+        if (distinct) {
+            query.distinct(true)
         }
 
-        List<Selection<?>> selections = new ArrayList<>();
-        int i = 0;
+        List<Selection<?>> selections = []
+        int i = 0
         for (Query.Projection p : projections) {
-            Selection<?> selection = translator.translate(p);
+            Selection<?> selection = translator.translate(p)
             if (selection != null) {
-                if (query instanceof Subquery && selection.getAlias() == null) {
-                    selection.alias("col_" + (i++));
+                if (query instanceof Subquery && selection.alias == null) {
+                    selection.alias("col_${i++}".toString())
                 }
-                selections.add(selection);
+                selections.add(selection)
             }
         }
 
         if (!selections.isEmpty()) {
-            if (query instanceof Subquery subquery) {
+            if (query instanceof Subquery) {
+                Subquery subquery = (Subquery) query
                 // JPA Subquery must return a single Expression, not a Tuple
-                subquery.select((jakarta.persistence.criteria.Expression) selections.get(0));
-            } else if (query instanceof CriteriaQuery criteriaQuery) {
-                if (criteriaQuery.getResultType().equals(Tuple.class) && selections.size() > 1) {
-                    criteriaQuery.select(criteriaBuilder.tuple(selections.toArray(new Selection<?>[0])));
+                subquery.select((Expression) selections.get(0))
+            } else if (query instanceof CriteriaQuery) {
+                CriteriaQuery criteriaQuery = (CriteriaQuery) query
+                if (criteriaQuery.resultType.equals(Tuple) && selections.size() > 1) {
+                    criteriaQuery.select(criteriaBuilder.tuple(selections.toArray(new Selection<?>[0])))
                 } else {
-                    criteriaQuery.select((Selection) selections.get(0));
+                    criteriaQuery.select((Selection) selections.get(0))
                 }
             }
         } else {
-            Selection<?> selection = (Selection<?>) context.getRoot();
-            if (query instanceof Subquery subquery) {
-                if (selection.getAlias() == null) {
-                    selection.alias("root_alias");
+            Selection<?> selection = (Selection<?>) context.root
+            if (query instanceof Subquery) {
+                Subquery subquery = (Subquery) query
+                if (selection.alias == null) {
+                    selection.alias('root_alias')
                 }
-                subquery.select((jakarta.persistence.criteria.Expression) selection);
-            } else if (query instanceof CriteriaQuery criteriaQuery) {
-                criteriaQuery.select((Selection) selection);
+                subquery.select((Expression) selection)
+            } else if (query instanceof CriteriaQuery) {
+                CriteriaQuery criteriaQuery = (CriteriaQuery) query
+                criteriaQuery.select((Selection) selection)
             }
         }
     }
+
 }

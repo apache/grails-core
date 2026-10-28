@@ -16,21 +16,20 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.orm.hibernate.proxy;
+package org.grails.orm.hibernate.proxy
 
-import groovy.lang.GroovyObject;
-import groovy.lang.MetaClass;
+import groovy.transform.CompileStatic
 
-import net.bytebuddy.TypeCache;
-import net.bytebuddy.dynamic.scaffold.subclass.ConstructorStrategy;
-import net.bytebuddy.implementation.MethodDelegation;
-import org.hibernate.HibernateException;
-import org.hibernate.bytecode.internal.bytebuddy.ByteBuddyState;
-import org.hibernate.proxy.ProxyConfiguration;
-import org.hibernate.proxy.pojo.bytebuddy.ByteBuddyProxyHelper;
+import net.bytebuddy.TypeCache
+import net.bytebuddy.dynamic.scaffold.subclass.ConstructorStrategy
+import net.bytebuddy.implementation.MethodDelegation
+import org.hibernate.HibernateException
+import org.hibernate.bytecode.internal.bytebuddy.ByteBuddyState
+import org.hibernate.proxy.ProxyConfiguration
+import org.hibernate.proxy.pojo.bytebuddy.ByteBuddyProxyHelper
 
-import static net.bytebuddy.matcher.ElementMatchers.named;
-import static net.bytebuddy.matcher.ElementMatchers.returns;
+import static net.bytebuddy.matcher.ElementMatchers.named
+import static net.bytebuddy.matcher.ElementMatchers.returns
 
 /**
  * Builds the proxy class Hibernate instantiates for an entity.
@@ -46,14 +45,15 @@ import static net.bytebuddy.matcher.ElementMatchers.returns;
  *
  * @since 8.0.1
  */
-public final class GroovyProxyClassBuilder {
+@CompileStatic
+final class GroovyProxyClassBuilder {
 
-    private final ByteBuddyProxyHelper proxyHelper;
-    private final ByteBuddyState byteBuddyState;
+    private final ByteBuddyProxyHelper proxyHelper
+    private final ByteBuddyState byteBuddyState
 
-    public GroovyProxyClassBuilder(ByteBuddyProxyHelper proxyHelper, ByteBuddyState byteBuddyState) {
-        this.proxyHelper = proxyHelper;
-        this.byteBuddyState = byteBuddyState;
+    GroovyProxyClassBuilder(ByteBuddyProxyHelper proxyHelper, ByteBuddyState byteBuddyState) {
+        this.proxyHelper = proxyHelper
+        this.byteBuddyState = byteBuddyState
     }
 
     /**
@@ -63,31 +63,36 @@ public final class GroovyProxyClassBuilder {
      * @return the proxy class, which implements {@link ProxyConfiguration} so an interceptor can be assigned
      * @throws HibernateException when the proxy class cannot be generated or cannot take an interceptor
      */
-    public Class<?> build(String entityName, Class<?> persistentClass, Class<?>[] interfaces) throws HibernateException {
-        final Class<?> hibernateProxyClass = proxyHelper.buildProxy(persistentClass, interfaces);
-        final boolean groovyEntity = GroovyObject.class.isAssignableFrom(persistentClass);
-        final Class<?> proxyClass = groovyEntity ? wrap(entityName, persistentClass, hibernateProxyClass) : hibernateProxyClass;
-        if (!ProxyConfiguration.class.isAssignableFrom(proxyClass)) {
-            throw new HibernateException("Generated proxy class for " + entityName +
-                    " does not implement ProxyConfiguration, so no interceptor can be installed: " + proxyClass.getName());
+    Class<?> build(String entityName, Class<?> persistentClass, Class<?>[] interfaces) throws HibernateException {
+        final Class<?> hibernateProxyClass = proxyHelper.buildProxy(persistentClass, interfaces)
+        final boolean groovyEntity = GroovyObject.isAssignableFrom(persistentClass)
+        final Class<?> proxyClass = groovyEntity ? wrap(entityName, persistentClass, hibernateProxyClass) : hibernateProxyClass
+        if (!ProxyConfiguration.isAssignableFrom(proxyClass)) {
+            throw new HibernateException('Generated proxy class for ' + entityName +
+                    ' does not implement ProxyConfiguration, so no interceptor can be installed: ' + proxyClass.getName())
         }
-        return proxyClass;
+        return proxyClass
     }
 
     private Class<?> wrap(String entityName, Class<?> persistentClass, Class<?> hibernateProxyClass) {
         try {
             return byteBuddyState.loadProxy(
                     persistentClass,
-                    new TypeCache.SimpleKey(hibernateProxyClass, GroovyProxyMetaClassDispatcher.class),
-                    byteBuddy -> byteBuddy
+                    new TypeCache.SimpleKey(hibernateProxyClass, GroovyProxyMetaClassDispatcher),
+                    { byteBuddy ->
+                        byteBuddy
                             .subclass(hibernateProxyClass, ConstructorStrategy.Default.IMITATE_SUPER_CLASS_OPENING)
                             // declared again so Class#getInterfaces() still shows HibernateProxy on the wrapper
                             .implement(hibernateProxyClass.getInterfaces())
-                            .method(named("getMetaClass").and(returns(MetaClass.class)))
-                            .intercept(MethodDelegation.to(new GroovyProxyMetaClassDispatcher(persistentClass))));
+                            .method(named('getMetaClass').and(returns(MetaClass)))
+                            // only intercept(..) may bind: the dispatcher is a Groovy class, so it declares getMetaClass()
+                            // too, and ByteBuddy's name-equality resolver would pick that over intercept(..)
+                            .intercept(MethodDelegation.withDefaultConfiguration().filter(named('intercept'))
+                                    .to(new GroovyProxyMetaClassDispatcher(persistentClass)))
+                    })
         }
         catch (RuntimeException e) {
-            throw new HibernateException("Unable to generate Groovy proxy for " + entityName, e);
+            throw new HibernateException('Unable to generate Groovy proxy for ' + entityName, e)
         }
     }
 }

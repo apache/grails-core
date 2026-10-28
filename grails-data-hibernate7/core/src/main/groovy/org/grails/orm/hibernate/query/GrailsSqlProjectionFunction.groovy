@@ -16,24 +16,25 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.orm.hibernate.query;
+package org.grails.orm.hibernate.query
 
-import java.util.List;
-import java.util.function.Supplier;
+import java.util.function.Supplier
 
-import org.hibernate.metamodel.mapping.BasicValuedMapping;
-import org.hibernate.metamodel.model.domain.ReturnableType;
-import org.hibernate.query.sqm.function.AbstractSqmSelfRenderingFunctionDescriptor;
-import org.hibernate.query.sqm.produce.function.FunctionReturnTypeResolver;
-import org.hibernate.query.sqm.produce.function.StandardArgumentsValidators;
-import org.hibernate.query.sqm.sql.SqmToSqlAstConverter;
-import org.hibernate.query.sqm.tree.SqmTypedNode;
-import org.hibernate.sql.ast.SqlAstTranslator;
-import org.hibernate.sql.ast.spi.SqlAppender;
-import org.hibernate.sql.ast.tree.SqlAstNode;
-import org.hibernate.sql.ast.tree.expression.Literal;
-import org.hibernate.type.JavaObjectType;
-import org.hibernate.type.spi.TypeConfiguration;
+import groovy.transform.CompileStatic
+import org.hibernate.metamodel.mapping.BasicValuedMapping
+import org.hibernate.metamodel.model.domain.ReturnableType
+import org.hibernate.query.sqm.function.AbstractSqmSelfRenderingFunctionDescriptor
+import org.hibernate.query.sqm.produce.function.FunctionArgumentTypeResolver
+import org.hibernate.query.sqm.produce.function.FunctionReturnTypeResolver
+import org.hibernate.query.sqm.produce.function.StandardArgumentsValidators
+import org.hibernate.query.sqm.sql.SqmToSqlAstConverter
+import org.hibernate.query.sqm.tree.SqmTypedNode
+import org.hibernate.sql.ast.SqlAstTranslator
+import org.hibernate.sql.ast.spi.SqlAppender
+import org.hibernate.sql.ast.tree.SqlAstNode
+import org.hibernate.sql.ast.tree.expression.Literal
+import org.hibernate.type.JavaObjectType
+import org.hibernate.type.spi.TypeConfiguration
 
 /**
  * Renders the SQL of a {@link SqlProjection} or a {@link SqlGroupProjection} as is. The arguments are the SQL as a
@@ -42,58 +43,65 @@ import org.hibernate.type.spi.TypeConfiguration;
  *
  * @since 8.0.1
  */
-public class GrailsSqlProjectionFunction extends AbstractSqmSelfRenderingFunctionDescriptor {
+@CompileStatic
+class GrailsSqlProjectionFunction extends AbstractSqmSelfRenderingFunctionDescriptor {
 
-    public static final String NAME = "grails_sql_projection";
+    public static final String NAME = 'grails_sql_projection'
 
-    public GrailsSqlProjectionFunction() {
-        super(NAME, StandardArgumentsValidators.between(1, 2), new ImpliedTypeResolver(), null);
+    GrailsSqlProjectionFunction() {
+        super(NAME, StandardArgumentsValidators.between(1, 2), new ImpliedTypeResolver(), (FunctionArgumentTypeResolver) null)
     }
 
     @Override
-    public void render(
+    void render(
             SqlAppender sqlAppender,
             List<? extends SqlAstNode> arguments,
             ReturnableType<?> returnType,
             SqlAstTranslator<?> walker) {
-        if (!(arguments.get(0) instanceof Literal literal) || !(literal.getLiteralValue() instanceof String sql)) {
-            throw new IllegalArgumentException("The first argument of " + NAME + " must be the SQL as a literal");
+        SqlAstNode first = arguments.get(0)
+        if (!(first instanceof Literal) || !(((Literal) first).literalValue instanceof String)) {
+            throw new IllegalArgumentException("The first argument of ${NAME} must be the SQL as a literal".toString())
         }
+        String sql = (String) ((Literal) first).literalValue
         if (sql.contains(GrailsSqlRestrictionFunction.ALIAS_PLACEHOLDER)) {
             if (arguments.size() < 2) {
-                throw new IllegalArgumentException("The SQL projection uses {alias} but no column of the queried entity was given: " + sql);
+                throw new IllegalArgumentException(
+                        "The SQL projection uses {alias} but no column of the queried entity was given: ${sql}".toString())
             }
             sql = sql.replace(GrailsSqlRestrictionFunction.ALIAS_PLACEHOLDER,
-                    GrailsSqlRestrictionFunction.tableAlias(arguments.get(1)));
+                    GrailsSqlRestrictionFunction.tableAlias(arguments.get(1)))
         }
-        sqlAppender.appendSql(sql);
+        sqlAppender.appendSql(sql)
         if (SqlRestriction.endsInLineComment(sql)) {
-            sqlAppender.appendSql('\n');
+            sqlAppender.appendSql('\n' as char)
         }
     }
 
     @Override
-    public String getArgumentListSignature() {
-        return "";
+    String getArgumentListSignature() {
+        return ''
     }
 
+    @CompileStatic
     private static final class ImpliedTypeResolver implements FunctionReturnTypeResolver {
 
         @Override
-        public ReturnableType<?> resolveFunctionReturnType(
+        ReturnableType<?> resolveFunctionReturnType(
                 ReturnableType<?> impliedType,
                 SqmToSqlAstConverter converter,
                 List<? extends SqmTypedNode<?>> arguments,
                 TypeConfiguration typeConfiguration) {
-            return impliedType != null ? impliedType : typeConfiguration.getBasicTypeForJavaType(Object.class);
+            return impliedType != null ? impliedType : typeConfiguration.getBasicTypeForJavaType(Object)
         }
 
         @Override
-        public BasicValuedMapping resolveFunctionReturnType(
+        BasicValuedMapping resolveFunctionReturnType(
                 Supplier<BasicValuedMapping> impliedTypeAccess,
                 List<? extends SqlAstNode> arguments) {
-            BasicValuedMapping impliedType = impliedTypeAccess.get();
-            return impliedType != null ? impliedType : JavaObjectType.INSTANCE;
+            BasicValuedMapping impliedType = impliedTypeAccess.get()
+            return impliedType != null ? impliedType : JavaObjectType.INSTANCE
         }
+
     }
+
 }

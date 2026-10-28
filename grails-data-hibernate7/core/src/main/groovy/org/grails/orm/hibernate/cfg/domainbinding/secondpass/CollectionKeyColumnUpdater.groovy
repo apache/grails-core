@@ -16,43 +16,47 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.orm.hibernate.cfg.domainbinding.secondpass;
+package org.grails.orm.hibernate.cfg.domainbinding.secondpass
 
-import java.util.Objects;
+import groovy.transform.CompileStatic
+import org.hibernate.mapping.Column
+import org.hibernate.mapping.DependantValue
 
-import org.hibernate.mapping.DependantValue;
-
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyCollectionProperty;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyCollectionProperty
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty
 
 /** Forces columns to be nullable and checks if the key is updatable. */
-public class CollectionKeyColumnUpdater {
+@CompileStatic
+class CollectionKeyColumnUpdater {
 
-    private final CollectionKeyBinder collectionKeyBinder;
+    private final CollectionKeyBinder collectionKeyBinder
 
     /** Creates a new {@link CollectionKeyColumnUpdater} instance. */
-    public CollectionKeyColumnUpdater(CollectionKeyBinder collectionKeyBinder) {
-        this.collectionKeyBinder = collectionKeyBinder;
+    CollectionKeyColumnUpdater(CollectionKeyBinder collectionKeyBinder) {
+        this.collectionKeyBinder = collectionKeyBinder
     }
 
     /** Creates the key, sets it on the collection, and updates its columns. */
-    public void bind(HibernateToManyProperty property) {
-        DependantValue key = collectionKeyBinder.bind(property);
-        key.getColumns().stream().filter(Objects::nonNull).forEach(column -> column.setNullable(true));
-        long unidirectionalCount = property.getHibernateOwner()
-                .getPersistentPropertiesToBind()
-                .stream()
-                .filter(HibernateToManyProperty.class::isInstance)
-                .map(HibernateToManyProperty.class::cast)
-                .filter(p -> !p.isBidirectional())
-                .count();
+    void bind(HibernateToManyProperty property) {
+        DependantValue key = collectionKeyBinder.bind(property)
+        for (Column column : key.columns) {
+            if (column != null) {
+                column.nullable = true
+            }
+        }
+        long unidirectionalCount = 0
+        for (def p : property.hibernateOwner.persistentPropertiesToBind) {
+            if (p instanceof HibernateToManyProperty && !((HibernateToManyProperty) p).isBidirectional()) {
+                unidirectionalCount++
+            }
+        }
 
         // Collections of basic values or enums (HibernateToManyCollectionProperty) always keep an updatable key: they
         // have no inverse side, and Hibernate writes no rows for a collection whose key is not updatable.
         // For entity collections (HibernateToManyEntityProperty) the key is non-updatable when the owner has two or
         // more unidirectional to-many properties (counting every unidirectional HibernateToManyProperty of the owner),
         // the existing rule for issue 10811.
-        key.setUpdateable(property instanceof HibernateToManyCollectionProperty || unidirectionalCount <= 1);
+        key.updateable = property instanceof HibernateToManyCollectionProperty || unidirectionalCount <= 1
     }
 
 }

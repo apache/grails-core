@@ -16,55 +16,56 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.orm.hibernate.cfg.domainbinding.collectionType;
+package org.grails.orm.hibernate.cfg.domainbinding.collectionType
 
-import org.hibernate.MappingException;
-import org.hibernate.boot.spi.MetadataBuildingContext;
-import org.hibernate.mapping.Collection;
-import org.hibernate.mapping.PersistentClass;
+import groovy.transform.CompileStatic
+import org.hibernate.MappingException
+import org.hibernate.boot.spi.MetadataBuildingContext
+import org.hibernate.mapping.Collection
+import org.hibernate.mapping.PersistentClass
 
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty
 
 /**
  * A Collection type, for the moment only Set is supported
- *
- * @author Graeme
  */
-public abstract class CollectionType {
+@CompileStatic
+abstract class CollectionType {
 
     /** The clazz. */
-    protected final Class<?> clazz;
+    protected final Class<?> clazz
 
     /** The building context. */
-    protected final MetadataBuildingContext buildingContext;
+    protected final MetadataBuildingContext buildingContext
 
     /** Creates a new {@link CollectionType} instance. */
     protected CollectionType(Class<?> clazz, MetadataBuildingContext buildingContext) {
-        this.clazz = clazz;
-        this.buildingContext = buildingContext;
+        this.clazz = clazz
+        this.buildingContext = buildingContext
     }
 
     /** Create collection. */
-    public abstract Collection createCollection(PersistentClass owner);
+    abstract Collection createCollection(PersistentClass owner)
 
     /** Create. */
-    public Collection create(HibernateToManyProperty property, PersistentClass owner) throws MappingException {
-        Collection coll = createCollection(owner);
-        coll.setCollectionTable(owner.getTable());
-        String typeName = getTypeName(property);
-        if (typeName != null && !clazz.getName().equals(typeName)) {
-            coll.setTypeName(typeName);
+    Collection create(HibernateToManyProperty property, PersistentClass owner) throws MappingException {
+        Collection coll = createCollection(owner)
+        coll.setCollectionTable(owner.table)
+        String typeName = getTypeName(property)
+        if (typeName != null && clazz.name != typeName) {
+            coll.setTypeName(typeName)
         }
-        return coll;
+        return coll
     }
 
     @Override
-    public String toString() {
-        return clazz.getName();
+    String toString() {
+        return clazz.name
     }
 
     /** Gets the type name. */
-    public String getTypeName(HibernateToManyProperty property) {
-        return property.getTypeName();
+    String getTypeName(HibernateToManyProperty property) {
+        return property.typeName
     }
+
 }

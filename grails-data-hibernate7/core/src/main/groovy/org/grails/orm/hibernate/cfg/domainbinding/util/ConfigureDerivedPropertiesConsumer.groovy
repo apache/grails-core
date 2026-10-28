@@ -16,27 +16,31 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.orm.hibernate.cfg.domainbinding.util;
+package org.grails.orm.hibernate.cfg.domainbinding.util
 
-import java.util.Objects;
-import java.util.function.Consumer;
+import groovy.transform.CompileStatic
 
-import org.grails.orm.hibernate.cfg.Mapping;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty;
+import java.util.function.Consumer
 
-import static java.util.Optional.ofNullable;
+import org.grails.orm.hibernate.cfg.Mapping
+import org.grails.orm.hibernate.cfg.PropertyConfig
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty
 
-public class ConfigureDerivedPropertiesConsumer implements Consumer<HibernatePersistentProperty> {
+@CompileStatic
+class ConfigureDerivedPropertiesConsumer implements Consumer<HibernatePersistentProperty> {
 
-    private final Mapping m;
+    private final Mapping m
 
-    public ConfigureDerivedPropertiesConsumer(Mapping m) {
-        this.m = m;
+    ConfigureDerivedPropertiesConsumer(Mapping m) {
+        this.m = m
     }
 
     @Override
-    public void accept(HibernatePersistentProperty persistentProperty) {
-        ofNullable(m.getPropertyConfig(persistentProperty.getName()))
-                .ifPresent(propertyConfig -> propertyConfig.setDerived(Objects.nonNull(propertyConfig.getFormula())));
+    void accept(HibernatePersistentProperty persistentProperty) {
+        PropertyConfig propertyConfig = m.getPropertyConfig(persistentProperty.name)
+        if (propertyConfig != null) {
+            propertyConfig.derived = propertyConfig.formula != null
+        }
     }
+
 }

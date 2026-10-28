@@ -16,50 +16,52 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.orm.hibernate.cfg.domainbinding.hibernate;
+package org.grails.orm.hibernate.cfg.domainbinding.hibernate
 
-import java.beans.PropertyDescriptor;
+import groovy.transform.CompileStatic
+import org.hibernate.mapping.Collection
+import org.hibernate.mapping.Table
 
-import org.hibernate.mapping.Collection;
-import org.hibernate.mapping.Table;
+import org.grails.datastore.mapping.model.MappingContext
+import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy
+import org.grails.orm.hibernate.cfg.domainbinding.util.ColumnNameForPropertyAndPathFetcher
 
-import org.grails.datastore.mapping.model.MappingContext;
-import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
-import org.grails.orm.hibernate.cfg.domainbinding.util.ColumnNameForPropertyAndPathFetcher;
+import java.beans.PropertyDescriptor
 
 /**
  * Hibernate basic collection element property whose element type is an enum. Created by {@link
  * HibernateMappingFactory#createBasicCollection} when the collection's element type is an enum.
  */
-public class HibernateBasicEnumProperty extends HibernateBasicProperty implements HibernateEnumProperty {
+@CompileStatic
+class HibernateBasicEnumProperty extends HibernateBasicProperty implements HibernateEnumProperty {
 
-    public HibernateBasicEnumProperty(
+    HibernateBasicEnumProperty(
             GrailsHibernatePersistentEntity entity, MappingContext context, PropertyDescriptor property) {
-        super(entity, context, property);
+        super(entity, context, property)
     }
 
     @Override
-    public Class<?> getEnumType() {
-        return getComponentType();
+    Class<?> getEnumType() {
+        return componentType
     }
 
     @Override
-    public String resolveEnumColumnName(
+    String resolveEnumColumnName(
             PersistentEntityNamingStrategy namingStrategy,
             ColumnNameForPropertyAndPathFetcher columnNameForPropertyAndPathFetcher,
             String path) {
-        return joinTableColumName(namingStrategy);
+        return joinTableColumName(namingStrategy)
     }
 
     /** A hasMany element column is always nullable, matching the non-enum sibling binding path. */
     @Override
-    public boolean isEnumColumnNullable() {
-        return true;
+    boolean isEnumColumnNullable() {
+        return true
     }
 
     @Override
-    public boolean isCollectionElement() {
-        return true;
+    boolean isCollectionElement() {
+        return true
     }
 
     /**
@@ -72,9 +74,10 @@ public class HibernateBasicEnumProperty extends HibernateBasicProperty implement
      * table directly.
      */
     @Override
-    public Table getTable() {
-        Collection collection = getHibernateCollection();
-        Table collectionTable = collection != null ? collection.getCollectionTable() : null;
-        return collectionTable != null ? collectionTable : getPersistentClass().getTable();
+    Table getTable() {
+        Collection collection = hibernateCollection
+        Table collectionTable = collection != null ? collection.collectionTable : null
+        return collectionTable != null ? collectionTable : persistentClass.table
     }
+
 }

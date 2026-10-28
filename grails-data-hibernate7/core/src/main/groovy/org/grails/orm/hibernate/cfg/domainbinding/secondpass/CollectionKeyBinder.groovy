@@ -16,77 +16,87 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.orm.hibernate.cfg.domainbinding.secondpass;
+package org.grails.orm.hibernate.cfg.domainbinding.secondpass
 
-import java.util.Map;
+import groovy.transform.CompileStatic
+import org.hibernate.mapping.Collection
+import org.hibernate.mapping.DependantValue
+import org.hibernate.mapping.PersistentClass
 
-import org.hibernate.mapping.Collection;
-import org.hibernate.mapping.DependantValue;
-import org.hibernate.mapping.PersistentClass;
-
-import org.grails.datastore.mapping.model.types.EmbeddedCollection;
-import org.grails.datastore.mapping.model.types.ToOne;
-import org.grails.orm.hibernate.cfg.domainbinding.binder.SimpleValueColumnBinder;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateManyToManyProperty;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty;
+import org.grails.datastore.mapping.model.types.EmbeddedCollection
+import org.grails.datastore.mapping.model.types.ToOne
+import org.grails.orm.hibernate.cfg.JoinTable
+import org.grails.orm.hibernate.cfg.PropertyConfig
+import org.grails.orm.hibernate.cfg.domainbinding.binder.SimpleValueColumnBinder
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateAssociation
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateManyToManyProperty
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty
 
 /** Binds the collection key value for a to-many association. */
-public class CollectionKeyBinder {
+@CompileStatic
+class CollectionKeyBinder {
 
-    private final BidirectionalOneToManyLinker bidirectionalOneToManyLinker;
-    private final DependentKeyValueBinder dependentKeyValueBinder;
-    private final SimpleValueColumnBinder simpleValueColumnBinder;
-    private final PrimaryKeyValueCreator primaryKeyValueCreator;
+    private final BidirectionalOneToManyLinker bidirectionalOneToManyLinker
+    private final DependentKeyValueBinder dependentKeyValueBinder
+    private final SimpleValueColumnBinder simpleValueColumnBinder
+    private final PrimaryKeyValueCreator primaryKeyValueCreator
 
     /** Creates a new {@link CollectionKeyBinder} instance. */
-    public CollectionKeyBinder(
+    CollectionKeyBinder(
             BidirectionalOneToManyLinker bidirectionalOneToManyLinker,
             DependentKeyValueBinder dependentKeyValueBinder,
             SimpleValueColumnBinder simpleValueColumnBinder,
             PrimaryKeyValueCreator primaryKeyValueCreator) {
-        this.bidirectionalOneToManyLinker = bidirectionalOneToManyLinker;
-        this.dependentKeyValueBinder = dependentKeyValueBinder;
-        this.simpleValueColumnBinder = simpleValueColumnBinder;
-        this.primaryKeyValueCreator = primaryKeyValueCreator;
+        this.bidirectionalOneToManyLinker = bidirectionalOneToManyLinker
+        this.dependentKeyValueBinder = dependentKeyValueBinder
+        this.simpleValueColumnBinder = simpleValueColumnBinder
+        this.primaryKeyValueCreator = primaryKeyValueCreator
     }
 
     /** Creates the {@link DependantValue} key, sets it on the collection, and binds it. */
-    public DependantValue bind(HibernateToManyProperty property) {
-        Collection collection = property.getCollection();
-        DependantValue key = primaryKeyValueCreator.createPrimaryKeyValue(collection);
-        collection.setKey(key);
+    DependantValue bind(HibernateToManyProperty property) {
+        Collection collection = property.collection
+        DependantValue key = primaryKeyValueCreator.createPrimaryKeyValue(collection)
+        collection.key = key
         if (property.isBidirectional()) {
-            var inverseSide = property.getHibernateInverseSide();
+            HibernateAssociation inverseSide = property.hibernateInverseSide
             if (inverseSide instanceof ToOne && property.shouldBindWithForeignKey()) {
-                PersistentClass associatedClass = inverseSide.getHibernateOwner().getPersistentClass();
-                bidirectionalOneToManyLinker.link(collection, associatedClass, key, inverseSide);
-            } else if (inverseSide instanceof HibernateManyToManyProperty ||
-                    Map.class.isAssignableFrom(property.getType())) {
-                dependentKeyValueBinder.bind(property, key);
+                PersistentClass associatedClass = inverseSide.hibernateOwner.persistentClass
+                bidirectionalOneToManyLinker.link(collection, associatedClass, key, inverseSide)
             }
-        } else {
-            if (property.getHibernateMappedForm().hasJoinKeyMapping()) {
-                var joinTable = property.getHibernateMappedForm().getJoinTable();
-                var keys = joinTable.getKeys();
-                if (keys != null && keys.size() > 1) {
-                    // Composite key: delegate to DependentKeyValueBinder
-                    dependentKeyValueBinder.bind(property, key);
-                } else {
-                    // Single key: use SimpleValueColumnBinder
-                    simpleValueColumnBinder.bindSimpleValue(
-                        key,
-                        "long",
-                        joinTable.getKeys() != null && !joinTable.getKeys().isEmpty() ? joinTable.getKeys().get(0).getName() : null,
-                        true);
-                }
-            } else if (property instanceof EmbeddedCollection) {
-                // For embedded (value-type) collections the DependantValue already wraps the owner PK;
-                // do not override the type name with the element class name.
-                key.setTypeName(null);
-            } else {
-                dependentKeyValueBinder.bind(property, key);
+            else if (inverseSide instanceof HibernateManyToManyProperty ||
+                    Map.isAssignableFrom(property.type)) {
+                dependentKeyValueBinder.bind(property, key)
             }
         }
-        return key;
+        else {
+            PropertyConfig mappedForm = property.hibernateMappedForm
+            if (mappedForm.hasJoinKeyMapping()) {
+                JoinTable joinTable = mappedForm.joinTable
+                def keys = joinTable.keys
+                if (keys != null && keys.size() > 1) {
+                    // Composite key: delegate to DependentKeyValueBinder
+                    dependentKeyValueBinder.bind(property, key)
+                }
+                else {
+                    // Single key: use SimpleValueColumnBinder
+                    simpleValueColumnBinder.bindSimpleValue(
+                            key,
+                            'long',
+                            (joinTable.keys != null && !joinTable.keys.isEmpty()) ? joinTable.keys.get(0).name : null,
+                            true)
+                }
+            }
+            else if (property instanceof EmbeddedCollection) {
+                // For embedded (value-type) collections the DependantValue already wraps the owner PK;
+                // do not override the type name with the element class name.
+                key.typeName = null
+            }
+            else {
+                dependentKeyValueBinder.bind(property, key)
+            }
+        }
+        return key
     }
+
 }

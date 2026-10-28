@@ -16,9 +16,11 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.orm.hibernate.query;
+package org.grails.orm.hibernate.query
 
-import org.grails.datastore.mapping.query.Query;
+import groovy.transform.CompileStatic
+
+import org.grails.datastore.mapping.query.Query
 
 /**
  * Criterion matching a property that equals a value when both are compared in lower case. It is created by
@@ -27,9 +29,11 @@ import org.grails.datastore.mapping.query.Query;
  *
  * @since 8.0.0
  */
-public class EqualsIgnoreCase extends Query.PropertyCriterion {
+@CompileStatic
+class EqualsIgnoreCase extends Query.PropertyCriterion {
 
-    public EqualsIgnoreCase(String name, Object value) {
-        super(name, value);
+    EqualsIgnoreCase(String name, Object value) {
+        super(name, value)
     }
+
 }

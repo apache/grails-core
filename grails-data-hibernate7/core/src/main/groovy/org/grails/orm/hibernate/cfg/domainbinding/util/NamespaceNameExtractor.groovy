@@ -16,35 +16,31 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.orm.hibernate.cfg.domainbinding.util;
+package org.grails.orm.hibernate.cfg.domainbinding.util
 
-import java.util.Optional;
-import java.util.function.Function;
+import groovy.transform.CompileStatic
+import jakarta.annotation.Nonnull
+import org.hibernate.boot.model.naming.Identifier
+import org.hibernate.boot.model.relational.Database
+import org.hibernate.boot.model.relational.Namespace
+import org.hibernate.boot.spi.InFlightMetadataCollector
 
-import jakarta.annotation.Nonnull;
+@CompileStatic
+class NamespaceNameExtractor {
 
-import org.hibernate.boot.model.naming.Identifier;
-import org.hibernate.boot.model.relational.Database;
-import org.hibernate.boot.model.relational.Namespace;
-import org.hibernate.boot.spi.InFlightMetadataCollector;
-
-public class NamespaceNameExtractor {
-
-    public static String getCatalogName(@Nonnull InFlightMetadataCollector mappings) {
-        return getNamespaceName(mappings, Namespace.Name::catalog);
+    static String getCatalogName(@Nonnull InFlightMetadataCollector mappings) {
+        return getNamespaceName(mappings) { Namespace.Name name -> name.catalog() }
     }
 
-    public static String getSchemaName(@Nonnull InFlightMetadataCollector mappings) {
-        return getNamespaceName(mappings, Namespace.Name::schema);
+    static String getSchemaName(@Nonnull InFlightMetadataCollector mappings) {
+        return getNamespaceName(mappings) { Namespace.Name name -> name.schema() }
     }
 
     private static String getNamespaceName(
-            @Nonnull InFlightMetadataCollector mappings, Function<Namespace.Name, Identifier> function) {
-        return Optional.ofNullable(mappings.getDatabase())
-                .map(Database::getDefaultNamespace)
-                .map(Namespace::getName)
-                .map(function)
-                .map(Identifier::getCanonicalName)
-                .orElse(null);
+            @Nonnull InFlightMetadataCollector mappings, Closure<Identifier> function) {
+        Database database = mappings.getDatabase()
+        Namespace.Name name = database?.getDefaultNamespace()?.getName()
+        Identifier identifier = name != null ? function.call(name) : null
+        return identifier?.getCanonicalName()
     }
 }

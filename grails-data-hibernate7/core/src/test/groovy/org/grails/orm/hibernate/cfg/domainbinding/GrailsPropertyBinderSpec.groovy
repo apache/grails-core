@@ -157,17 +157,17 @@ class GrailsPropertyBinderSpec extends HibernateGormDatastoreSpec {
         )
     }
 
-    void "Test bind simple property"() {
+    void 'Test bind simple property'() {
         given:
         def binder = getGrailsDomainBinder()
         def propertyBinder = getBinders(binder).propertyBinder
         def persistentEntity = getPersistentEntity(PropertyBinderSpecSimpleBook) as GrailsHibernatePersistentEntity
         def rootClass = new RootClass(binder.getMetadataBuildingContext())
-        rootClass.setTable(new Table("SIMPLE_BOOK"))
+        rootClass.setTable(new Table('SIMPLE_BOOK'))
         persistentEntity.setPersistentClass(rootClass)
 
         when:
-        def titleProp = persistentEntity.getPropertyByName("title") as HibernatePersistentProperty
+        def titleProp = persistentEntity.getPropertyByName('title') as HibernatePersistentProperty
         Value value = propertyBinder.bindProperty(titleProp, null, EMPTY_PATH)
 
         then:
@@ -175,17 +175,17 @@ class GrailsPropertyBinderSpec extends HibernateGormDatastoreSpec {
         ((BasicValue)value).typeName == String.name
     }
 
-    void "Test bind enum property"() {
+    void 'Test bind enum property'() {
         given:
         def binder = getGrailsDomainBinder()
         def propertyBinder = getBinders(binder).propertyBinder
         def persistentEntity = getPersistentEntity(PropertyBinderSpecEnumBook) as GrailsHibernatePersistentEntity
         def rootClass = new RootClass(binder.getMetadataBuildingContext())
-        rootClass.setTable(new Table("ENUM_BOOK"))
+        rootClass.setTable(new Table('ENUM_BOOK'))
         persistentEntity.setPersistentClass(rootClass)
 
         when:
-        def statusProp = persistentEntity.getPropertyByName("status") as HibernatePersistentProperty
+        def statusProp = persistentEntity.getPropertyByName('status') as HibernatePersistentProperty
         Value value = propertyBinder.bindProperty(statusProp, null, EMPTY_PATH)
 
         then:
@@ -193,40 +193,40 @@ class GrailsPropertyBinderSpec extends HibernateGormDatastoreSpec {
         ((BasicValue)value).enumerationStyle == jakarta.persistence.EnumType.STRING
     }
 
-    void "Test bind hasMany of enum falls through to the collection binder"() {
+    void 'Test bind hasMany of enum falls through to the collection binder'() {
         given:
         def binder = getGrailsDomainBinder()
         def propertyBinder = getBinders(binder).propertyBinder
         def persistentEntity = getPersistentEntity(PropertyBinderSpecEnumCollection) as GrailsHibernatePersistentEntity
         def rootClass = new RootClass(binder.getMetadataBuildingContext())
-        rootClass.setTable(new Table("ENUM_COLLECTION"))
+        rootClass.setTable(new Table('ENUM_COLLECTION'))
         persistentEntity.setPersistentClass(rootClass)
 
         when:
-        def statusesProp = persistentEntity.getPropertyByName("statuses") as HibernatePersistentProperty
+        def statusesProp = persistentEntity.getPropertyByName('statuses') as HibernatePersistentProperty
 
-        then: "the property is a HibernateEnumProperty, but flagged as a collection element"
+        then: 'the property is a HibernateEnumProperty, but flagged as a collection element'
         statusesProp instanceof HibernateBasicEnumProperty
         ((HibernateEnumProperty) statusesProp).isCollectionElement()
 
         when:
         Value value = propertyBinder.bindProperty(statusesProp, null, EMPTY_PATH)
 
-        then: "it is bound as a collection with a join table, not as a scalar enum BasicValue"
+        then: 'it is bound as a collection with a join table, not as a scalar enum BasicValue'
         value instanceof org.hibernate.mapping.Set
     }
 
-    void "Test bind many-to-one"() {
+    void 'Test bind many-to-one'() {
         given:
         def binder = getGrailsDomainBinder()
         def propertyBinder = getBinders(binder).propertyBinder
         def persistentEntity = getPersistentEntity(PropertyBinderSpecPet) as GrailsHibernatePersistentEntity
         def rootClass = new RootClass(binder.getMetadataBuildingContext())
-        rootClass.setTable(new Table("PET"))
+        rootClass.setTable(new Table('PET'))
         persistentEntity.setPersistentClass(rootClass)
 
         when:
-        def ownerProp = persistentEntity.getPropertyByName("owner") as HibernatePersistentProperty
+        def ownerProp = persistentEntity.getPropertyByName('owner') as HibernatePersistentProperty
         Value value = propertyBinder.bindProperty(ownerProp, null, EMPTY_PATH)
 
         then:
@@ -234,34 +234,34 @@ class GrailsPropertyBinderSpec extends HibernateGormDatastoreSpec {
         ((ManyToOne)value).referencedEntityName == PropertyBinderSpecAuthor.name
     }
 
-    void "Test bind to-many collection"() {
+    void 'Test bind to-many collection'() {
         given:
         def binder = getGrailsDomainBinder()
         def propertyBinder = getBinders(binder).propertyBinder
         def persistentEntity = getPersistentEntity(PropertyBinderSpecAuthor) as GrailsHibernatePersistentEntity
         def rootClass = new RootClass(binder.getMetadataBuildingContext())
-        rootClass.setTable(new Table("AUTHOR"))
+        rootClass.setTable(new Table('AUTHOR'))
         persistentEntity.setPersistentClass(rootClass)
 
         when:
-        def petsProp = persistentEntity.getPropertyByName("pets") as HibernatePersistentProperty
+        def petsProp = persistentEntity.getPropertyByName('pets') as HibernatePersistentProperty
         Value value = propertyBinder.bindProperty(petsProp, null, EMPTY_PATH)
 
         then:
         value instanceof org.hibernate.mapping.Set
     }
 
-    void "Test bind embedded property"() {
+    void 'Test bind embedded property'() {
         given:
         def binder = getGrailsDomainBinder()
         def propertyBinder = getBinders(binder).propertyBinder
         def persistentEntity = getPersistentEntity(PropertyBinderSpecEmployee) as GrailsHibernatePersistentEntity
         def rootClass = new RootClass(binder.getMetadataBuildingContext())
-        rootClass.setTable(new Table("EMPLOYEE"))
+        rootClass.setTable(new Table('EMPLOYEE'))
         persistentEntity.setPersistentClass(rootClass)
 
         when:
-        def addressProp = persistentEntity.getPropertyByName("address") as HibernatePersistentProperty
+        def addressProp = persistentEntity.getPropertyByName('address') as HibernatePersistentProperty
         Value value = propertyBinder.bindProperty(addressProp, null, EMPTY_PATH)
 
         then:
@@ -269,83 +269,83 @@ class GrailsPropertyBinderSpec extends HibernateGormDatastoreSpec {
         ((Component)value).componentClassName == PropertyBinderSpecAddress.name
     }
 
-    void "Test bind serializable collection type"() {
+    void 'Test bind serializable collection type'() {
         given:
         def binder = getGrailsDomainBinder()
         def propertyBinder = getBinders(binder).propertyBinder
         def persistentEntity = getPersistentEntity(PropertyBinderSpecSerializableEntity) as GrailsHibernatePersistentEntity
         def rootClass = new RootClass(binder.getMetadataBuildingContext())
-        rootClass.setTable(new Table("SERIALIZABLE_ENTITY"))
+        rootClass.setTable(new Table('SERIALIZABLE_ENTITY'))
         persistentEntity.setPersistentClass(rootClass)
 
         when:
-        def tagsProp = persistentEntity.getPropertyByName("tags") as HibernatePersistentProperty
+        def tagsProp = persistentEntity.getPropertyByName('tags') as HibernatePersistentProperty
         Value value = propertyBinder.bindProperty(tagsProp, null, EMPTY_PATH)
 
         then:
         value instanceof BasicValue
-        ((BasicValue)value).typeName == "serializable"
+        ((BasicValue)value).typeName == 'serializable'
     }
 
-    void "Test bind custom property type"() {
+    void 'Test bind custom property type'() {
         given:
         def binder = getGrailsDomainBinder()
         def propertyBinder = getBinders(binder).propertyBinder
         def persistentEntity = getPersistentEntity(PropertyBinderSpecCustomEntity) as GrailsHibernatePersistentEntity
         def rootClass = new RootClass(binder.getMetadataBuildingContext())
-        rootClass.setTable(new Table("CUSTOM_ENTITY"))
+        rootClass.setTable(new Table('CUSTOM_ENTITY'))
         persistentEntity.setPersistentClass(rootClass)
 
         when:
-        def dataProp = persistentEntity.getPropertyByName("data") as HibernatePersistentProperty
+        def dataProp = persistentEntity.getPropertyByName('data') as HibernatePersistentProperty
         Value value = propertyBinder.bindProperty(dataProp, null, EMPTY_PATH)
 
-        then: "the type: mapping DSL routes this through isUserButNotCollectionType(), as a plain HibernateSimpleProperty"
+        then: 'the type: mapping DSL routes this through isUserButNotCollectionType(), as a plain HibernateSimpleProperty'
         !(dataProp instanceof HibernateCustomProperty)
         dataProp.isUserButNotCollectionType()
         value instanceof BasicValue
     }
 
-    void "Test bind composite user type property"() {
+    void 'Test bind composite user type property'() {
         given:
         def binder = getGrailsDomainBinder()
         def propertyBinder = getBinders(binder).propertyBinder
         def persistentEntity = getPersistentEntity(PropertyBinderSpecCompositeUserTypeEntity) as GrailsHibernatePersistentEntity
         def rootClass = new RootClass(binder.getMetadataBuildingContext())
-        rootClass.setTable(new Table("COMPOSITE_USER_TYPE_ENTITY"))
+        rootClass.setTable(new Table('COMPOSITE_USER_TYPE_ENTITY'))
         persistentEntity.setPersistentClass(rootClass)
 
         when:
-        def priceProp = persistentEntity.getPropertyByName("price") as HibernatePersistentProperty
+        def priceProp = persistentEntity.getPropertyByName('price') as HibernatePersistentProperty
         Value value = propertyBinder.bindProperty(priceProp, null, EMPTY_PATH)
 
-        then: "a type: mapping naming a CompositeUserType is bound as a component of that type, not as a basic value"
+        then: 'a type: mapping naming a CompositeUserType is bound as a component of that type, not as a basic value'
         priceProp.getCompositeUserType() == CompositeMoneyType
         priceProp.isUserButNotCollectionType()
         value instanceof Component
         (value as Component).typeName == CompositeMoneyType.name
         (value as Component).componentClassName == CompositeMoney.name
 
-        and: "the component has one property per attribute of the embeddable class, in alphabetical order"
+        and: 'the component has one property per attribute of the embeddable class, in alphabetical order'
         (value as Component).properties*.name == ['amount', 'currency']
         (value as Component).properties.collect { it.value.columns.first().name } == ['price_value', 'price_currency']
         rootClass.table.columns*.name == ['price_value', 'price_currency']
     }
 
-    void "Test bind enum property mapped with a composite user type"() {
+    void 'Test bind enum property mapped with a composite user type'() {
         given:
         def binder = getGrailsDomainBinder()
         def propertyBinder = getBinders(binder).propertyBinder
         def persistentEntity = getPersistentEntity(PropertyBinderSpecCompositeEnumEntity) as GrailsHibernatePersistentEntity
         def rootClass = new RootClass(binder.getMetadataBuildingContext())
-        rootClass.setTable(new Table("COMPOSITE_ENUM_ENTITY"))
+        rootClass.setTable(new Table('COMPOSITE_ENUM_ENTITY'))
         persistentEntity.setPersistentClass(rootClass)
 
         when:
-        def tierProp = persistentEntity.getPropertyByName("tier") as HibernatePersistentProperty
+        def tierProp = persistentEntity.getPropertyByName('tier') as HibernatePersistentProperty
         Value value = propertyBinder.bindProperty(tierProp, null, EMPTY_PATH)
 
-        then: "the enum property is bound as a component of its composite user type, not as an enum column"
+        then: 'the enum property is bound as a component of its composite user type, not as an enum column'
         tierProp instanceof HibernateEnumProperty
         tierProp.getCompositeUserType() == CompositeTierType
         value instanceof Component
@@ -355,27 +355,27 @@ class GrailsPropertyBinderSpec extends HibernateGormDatastoreSpec {
         rootClass.table.columns*.name == ['tier_code', 'tier_rank']
     }
 
-    void "Test a property binder created without a composite user type binder binds other properties and rejects a composite user type"() {
+    void 'Test a property binder created without a composite user type binder binds other properties and rejects a composite user type'() {
         given:
         def binder = getGrailsDomainBinder()
         def propertyBinder = getBinders(binder).legacyPropertyBinder
         def persistentEntity = getPersistentEntity(PropertyBinderSpecCompositeUserTypeEntity) as GrailsHibernatePersistentEntity
         def rootClass = new RootClass(binder.getMetadataBuildingContext())
-        rootClass.setTable(new Table("COMPOSITE_USER_TYPE_ENTITY"))
+        rootClass.setTable(new Table('COMPOSITE_USER_TYPE_ENTITY'))
         persistentEntity.setPersistentClass(rootClass)
 
-        when: "a simple property is bound"
-        def nameProp = persistentEntity.getPropertyByName("name") as HibernatePersistentProperty
+        when: 'a simple property is bound'
+        def nameProp = persistentEntity.getPropertyByName('name') as HibernatePersistentProperty
         Value value = propertyBinder.bindProperty(nameProp, null, EMPTY_PATH)
 
         then:
         value instanceof BasicValue
 
-        when: "a property mapped with a composite user type is bound"
-        def priceProp = persistentEntity.getPropertyByName("price") as HibernatePersistentProperty
+        when: 'a property mapped with a composite user type is bound'
+        def priceProp = persistentEntity.getPropertyByName('price') as HibernatePersistentProperty
         propertyBinder.bindProperty(priceProp, null, EMPTY_PATH)
 
-        then: "the binder explains that it cannot bind it"
+        then: 'the binder explains that it cannot bind it'
         MappingException e = thrown()
         e.message.contains('price')
         e.message.contains(PropertyBinderSpecCompositeUserTypeEntity.name)
@@ -383,18 +383,18 @@ class GrailsPropertyBinderSpec extends HibernateGormDatastoreSpec {
         e.message.contains(CompositeUserTypeBinder.simpleName)
     }
 
-    void "Test bind a genuine HibernateCustomProperty (GORM-detected custom type marshaller, no type: mapping)"() {
-        given: "a HibernateCustomProperty built the way HibernateMappingFactory#createCustom does: no type: " +
-                "mapping is set, so isUserButNotCollectionType() is false and the instanceof HibernateCustomProperty " +
-                "branch is the only one that can match"
+    void 'Test bind a genuine HibernateCustomProperty (GORM-detected custom type marshaller, no type: mapping)'() {
+        given: 'a HibernateCustomProperty built the way HibernateMappingFactory#createCustom does: no type: ' +
+                'mapping is set, so isUserButNotCollectionType() is false and the instanceof HibernateCustomProperty ' +
+                'branch is the only one that can match'
         def binder = getGrailsDomainBinder()
         def propertyBinder = getBinders(binder).propertyBinder
         def persistentEntity = getPersistentEntity(PropertyBinderSpecSimpleBook) as GrailsHibernatePersistentEntity
         def rootClass = new RootClass(binder.getMetadataBuildingContext())
-        rootClass.setTable(new Table("SIMPLE_BOOK"))
+        rootClass.setTable(new Table('SIMPLE_BOOK'))
         persistentEntity.setPersistentClass(rootClass)
 
-        def propertyDescriptor = new PropertyDescriptor("title", PropertyBinderSpecSimpleBook)
+        def propertyDescriptor = new PropertyDescriptor('title', PropertyBinderSpecSimpleBook)
         def marshaller = Mock(CustomTypeMarshaller)
         def customProp = new HibernateCustomProperty(persistentEntity, getMappingContext(), propertyDescriptor, marshaller)
         customProp.setMapping(new PropertyMapping<PropertyConfig>() {
@@ -402,7 +402,7 @@ class GrailsPropertyBinderSpec extends HibernateGormDatastoreSpec {
             PropertyConfig getMappedForm() { new PropertyConfig() }
         })
 
-        expect: "no type: mapping means the isUserButNotCollectionType() branch cannot intercept it"
+        expect: 'no type: mapping means the isUserButNotCollectionType() branch cannot intercept it'
         !customProp.isUserButNotCollectionType()
 
         when:
@@ -412,17 +412,17 @@ class GrailsPropertyBinderSpec extends HibernateGormDatastoreSpec {
         value instanceof BasicValue
     }
 
-    void "Test bind collection with custom UserType"() {
+    void 'Test bind collection with custom UserType'() {
         given:
         def binder = getGrailsDomainBinder()
         def propertyBinder = getBinders(binder).propertyBinder
         def persistentEntity = getPersistentEntity(PropertyBinderSpecCustomUserTypeCollection) as GrailsHibernatePersistentEntity
         def rootClass = new RootClass(binder.getMetadataBuildingContext())
-        rootClass.setTable(new Table("CUSTOM_COLLECTION"))
+        rootClass.setTable(new Table('CUSTOM_COLLECTION'))
         persistentEntity.setPersistentClass(rootClass)
 
         when:
-        def categoriesProp = persistentEntity.getPropertyByName("categories") as HibernatePersistentProperty
+        def categoriesProp = persistentEntity.getPropertyByName('categories') as HibernatePersistentProperty
         Value value = propertyBinder.bindProperty(categoriesProp, null, EMPTY_PATH)
 
         then:
@@ -430,51 +430,51 @@ class GrailsPropertyBinderSpec extends HibernateGormDatastoreSpec {
         !(value instanceof org.hibernate.mapping.Collection)
     }
 
-    void "Test bind valid hasOne property (HibernateOneToOneProperty.isValidHibernateOneToOne = true)"() {
+    void 'Test bind valid hasOne property (HibernateOneToOneProperty.isValidHibernateOneToOne = true)'() {
         given:
         def binder = getGrailsDomainBinder()
         def propertyBinder = getBinders(binder).propertyBinder
         def persistentEntity = getPersistentEntity(PropertyBinderSpecHasOneOwner) as GrailsHibernatePersistentEntity
         def rootClass = new RootClass(binder.getMetadataBuildingContext())
-        rootClass.setTable(new Table("HAS_ONE_OWNER"))
+        rootClass.setTable(new Table('HAS_ONE_OWNER'))
         persistentEntity.setPersistentClass(rootClass)
 
         when:
-        def profileProp = persistentEntity.getPropertyByName("profile") as HibernatePersistentProperty
+        def profileProp = persistentEntity.getPropertyByName('profile') as HibernatePersistentProperty
         Value value = propertyBinder.bindProperty(profileProp, null, EMPTY_PATH)
 
         then:
         value instanceof OneToOne
     }
 
-    void "Test bind FK one-to-one property (HibernateOneToOneProperty.isValidHibernateOneToOne = false)"() {
+    void 'Test bind FK one-to-one property (HibernateOneToOneProperty.isValidHibernateOneToOne = false)'() {
         given:
         def binder = getGrailsDomainBinder()
         def propertyBinder = getBinders(binder).propertyBinder
         def persistentEntity = getPersistentEntity(PropertyBinderSpecFKOwner) as GrailsHibernatePersistentEntity
         def rootClass = new RootClass(binder.getMetadataBuildingContext())
-        rootClass.setTable(new Table("FK_OWNER"))
+        rootClass.setTable(new Table('FK_OWNER'))
         persistentEntity.setPersistentClass(rootClass)
 
         when:
-        def childProp = persistentEntity.getPropertyByName("child") as HibernatePersistentProperty
+        def childProp = persistentEntity.getPropertyByName('child') as HibernatePersistentProperty
         Value value = propertyBinder.bindProperty(childProp, null, EMPTY_PATH)
 
         then:
         value instanceof ManyToOne
     }
 
-    void "Test bind tenantId property"() {
+    void 'Test bind tenantId property'() {
         given:
         def binder = getGrailsDomainBinder()
         def propertyBinder = getBinders(binder).propertyBinder
         def persistentEntity = getPersistentEntity(PropertyBinderSpecTenantEntity) as GrailsHibernatePersistentEntity
         def rootClass = new RootClass(binder.getMetadataBuildingContext())
-        rootClass.setTable(new Table("TENANT_ENTITY"))
+        rootClass.setTable(new Table('TENANT_ENTITY'))
         persistentEntity.setPersistentClass(rootClass)
 
         when:
-        def tenantIdProp = persistentEntity.getPropertyByName("tenantId") as HibernatePersistentProperty
+        def tenantIdProp = persistentEntity.getPropertyByName('tenantId') as HibernatePersistentProperty
         Value value = propertyBinder.bindProperty(tenantIdProp, null, EMPTY_PATH)
 
         then:
@@ -482,20 +482,20 @@ class GrailsPropertyBinderSpec extends HibernateGormDatastoreSpec {
         value instanceof SimpleValue
     }
 
-    void "Test unsupported property type"() {
+    void 'Test unsupported property type'() {
         given:
         def binder = getGrailsDomainBinder()
         def propertyBinder = getBinders(binder).propertyBinder
         HibernatePersistentProperty mockProp = Mock(HibernatePersistentProperty)
-        mockProp.getName() >> "unsupported"
-        mockProp.getTable() >> new Table("MOCK")
+        mockProp.getName() >> 'unsupported'
+        mockProp.getTable() >> new Table('MOCK')
 
         when:
         propertyBinder.bindProperty(mockProp, null, EMPTY_PATH)
 
         then:
         RuntimeException e = thrown()
-        e.message.contains "Unsupported property type"
+        e.message.contains 'Unsupported property type'
     }
 }
 

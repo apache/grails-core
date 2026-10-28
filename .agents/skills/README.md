@@ -19,7 +19,7 @@ App-facing skills, useful when building or upgrading Grails applications, are al
 
 The jars use the [SkillsJars](https://www.skillsjars.com/) layout, holding the skill directory at `META-INF/skills/apache/grails-core/<skill>/`, so SkillsJars tooling extracts them the same way it would a SkillsJars catalog jar of this repository. They are released, signed, and voted on with the rest of Grails, and the Grails BOM manages their versions, so an application declares them without a version. Applications extract them with the SkillsJars Gradle plugin, as the Agent Skills section of the user guide describes.
 
-The `gradle-developer`, `groovy-developer`, `hibernate-developer`, `java-developer`, `mono-repo-integration`, `test-fixer`, and `violation-fixer` skills are intentionally not published because they are for Grails framework development. Contributors already receive them from this repository when working on Grails core.
+The `gradle-developer`, `groovy-developer`, `hibernate-developer`, `java-developer`, `java-to-groovy-conversion`, `mono-repo-integration`, `test-fixer`, and `violation-fixer` skills are intentionally not published because they are for Grails framework development. Contributors already receive them from this repository when working on Grails core.
 
 To publish another skill:
 

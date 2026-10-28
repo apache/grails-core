@@ -13,15 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.grails.orm.hibernate.support.hibernate7
 
-package org.grails.orm.hibernate.support.hibernate7;
+import java.sql.SQLException
 
-import java.sql.SQLException;
-
-import org.hibernate.JDBCException;
-import org.jspecify.annotations.Nullable;
-
-import org.springframework.dao.UncategorizedDataAccessException;
+import groovy.transform.CompileStatic
+import org.hibernate.JDBCException
+import org.jspecify.annotations.Nullable
+import org.springframework.dao.UncategorizedDataAccessException
 
 /**
  * Hibernate-specific subclass of UncategorizedDataAccessException,
@@ -31,29 +30,28 @@ import org.springframework.dao.UncategorizedDataAccessException;
  * @since 4.2
  * @see SessionFactoryUtils#convertHibernateAccessException
  */
-@SuppressWarnings("serial")
-public class HibernateJdbcException extends UncategorizedDataAccessException {
+@CompileStatic
+@SuppressWarnings('serial')
+class HibernateJdbcException extends UncategorizedDataAccessException {
 
-    public HibernateJdbcException(JDBCException ex) {
-        super("JDBC exception on Hibernate data access: SQLException for SQL [" + ex.getSQL() + "]; SQL state [" +
-                ex.getSQLState() + "]; error code [" + ex.getErrorCode() + "]; " + ex.getMessage(), ex);
+    HibernateJdbcException(JDBCException ex) {
+        super('JDBC exception on Hibernate data access: SQLException for SQL [' + ex.getSQL() + ']; SQL state [' +
+                ex.getSQLState() + ']; error code [' + ex.getErrorCode() + ']; ' + ex.getMessage(), ex)
     }
 
     /**
      * Return the underlying SQLException.
      */
-    @SuppressWarnings("NullAway")
-    public SQLException getSQLException() {
-        return ((JDBCException) getCause()).getSQLException();
+    SQLException getSQLException() {
+        return ((JDBCException) getCause()).getSQLException()
     }
 
     /**
      * Return the SQL that led to the problem.
      */
     @Nullable
-    @SuppressWarnings("NullAway")
-    public String getSql() {
-        return ((JDBCException) getCause()).getSQL();
+    String getSql() {
+        return ((JDBCException) getCause()).getSQL()
     }
 
 }

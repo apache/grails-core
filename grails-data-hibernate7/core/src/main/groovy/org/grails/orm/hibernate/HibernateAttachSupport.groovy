@@ -16,20 +16,24 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.orm.hibernate;
+package org.grails.orm.hibernate
 
-import org.hibernate.LockMode;
-import org.hibernate.Session;
-import org.hibernate.TransientObjectException;
-import org.hibernate.engine.internal.ForeignKeys;
-import org.hibernate.engine.internal.Versioning;
-import org.hibernate.engine.spi.EntityKey;
-import org.hibernate.engine.spi.PersistenceContext;
-import org.hibernate.engine.spi.SessionImplementor;
-import org.hibernate.engine.spi.Status;
-import org.hibernate.persister.entity.EntityPersister;
-import org.hibernate.type.TypeHelper;
+import groovy.transform.CompileStatic
+import groovy.transform.PackageScope
+import org.hibernate.LockMode
+import org.hibernate.Session
+import org.hibernate.TransientObjectException
+import org.hibernate.engine.internal.ForeignKeys
+import org.hibernate.engine.internal.Versioning
+import org.hibernate.engine.spi.EntityKey
+import org.hibernate.engine.spi.PersistenceContext
+import org.hibernate.engine.spi.SessionImplementor
+import org.hibernate.engine.spi.Status
+import org.hibernate.persister.entity.EntityPersister
+import org.hibernate.type.TypeHelper
 
+@CompileStatic
+@PackageScope
 final class HibernateAttachSupport {
 
     private HibernateAttachSupport() {
@@ -37,33 +41,33 @@ final class HibernateAttachSupport {
 
     static void attach(Object entity, Session session) {
         if (session.contains(entity)) {
-            return;
+            return
         }
 
-        SessionImplementor sessionImplementor = (SessionImplementor) session;
-        PersistenceContext persistenceContext = sessionImplementor.getPersistenceContextInternal();
-        Object target = persistenceContext.unproxyAndReassociate(entity);
+        SessionImplementor sessionImplementor = (SessionImplementor) session
+        PersistenceContext persistenceContext = sessionImplementor.persistenceContextInternal
+        Object target = persistenceContext.unproxyAndReassociate(entity)
         if (persistenceContext.getEntry(target) != null) {
-            return;
+            return
         }
 
-        EntityPersister persister = sessionImplementor.getEntityPersister(null, target);
-        Object identifier = persister.getIdentifier(target, sessionImplementor);
-        if (!ForeignKeys.isNotTransient(persister.getEntityName(), target, Boolean.FALSE, sessionImplementor)) {
-            throw new TransientObjectException("cannot attach an unsaved transient instance: " + persister.getEntityName());
+        EntityPersister persister = sessionImplementor.getEntityPersister(null, target)
+        Object identifier = persister.getIdentifier(target, sessionImplementor)
+        if (!ForeignKeys.isNotTransient(persister.entityName, target, Boolean.FALSE, sessionImplementor)) {
+            throw new TransientObjectException("cannot attach an unsaved transient instance: ${persister.entityName}".toString())
         }
 
-        EntityKey entityKey = sessionImplementor.generateEntityKey(identifier, persister);
-        persistenceContext.checkUniqueness(entityKey, target);
+        EntityKey entityKey = sessionImplementor.generateEntityKey(identifier, persister)
+        persistenceContext.checkUniqueness(entityKey, target)
 
-        Object[] loadedState = persister.getPropertyValues(target);
+        Object[] loadedState = persister.getPropertyValues(target)
         TypeHelper.deepCopy(
                 loadedState,
-                persister.getPropertyTypes(),
-                persister.getPropertyUpdateability(),
+                persister.propertyTypes,
+                persister.propertyUpdateability,
                 loadedState,
-                sessionImplementor);
-        Object version = Versioning.getVersion(loadedState, persister);
+                sessionImplementor)
+        Object version = Versioning.getVersion(loadedState, persister)
 
         persistenceContext.addEntity(
                 target,
@@ -74,7 +78,8 @@ final class HibernateAttachSupport {
                 LockMode.NONE,
                 true,
                 persister,
-                false);
-        persister.afterReassociate(target, sessionImplementor);
+                false)
+        persister.afterReassociate(target, sessionImplementor)
     }
+
 }

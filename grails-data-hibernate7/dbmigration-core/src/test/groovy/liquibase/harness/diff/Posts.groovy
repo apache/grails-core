@@ -1,72 +1,77 @@
-package liquibase.harness.diff;
+package liquibase.harness.diff
 
-import java.sql.Date;
+import java.sql.Date
 
-public class Posts {
-    int id;
-    int authorId;
-    String title;
-    String description;
-    String content;
-    Date insertedDate;
+import groovy.transform.CompileStatic
+
+@CompileStatic
+class Posts {
+
+    int id
+    int authorId
+    String title
+    String description
+    String content
+    Date insertedDate
 
     public Posts() {
     }
 
     public Posts(int id, int authorId, String title, String description, String content, Date insertedDate) {
-        this.id = id;
-        this.authorId = authorId;
-        this.title = title;
-        this.description = description;
-        this.content = content;
-        this.insertedDate = insertedDate;
+        this.id = id
+        this.authorId = authorId
+        this.title = title
+        this.description = description
+        this.content = content
+        this.insertedDate = insertedDate
     }
 
     public int getId() {
-        return id;
+        return id
     }
 
     public void setId(int id) {
-        this.id = id;
+        this.id = id
     }
 
     public int getAuthorId() {
-        return authorId;
+        return authorId
     }
 
     public void setAuthorId(int authorId) {
-        this.authorId = authorId;
+        this.authorId = authorId
     }
 
     public String getTitle() {
-        return title;
+        return title
     }
 
     public void setTitle(String title) {
-        this.title = title;
+        this.title = title
     }
 
     public String getDescription() {
-        return description;
+        return description
     }
 
     public void setDescription(String description) {
-        this.description = description;
+        this.description = description
     }
 
     public String getContent() {
-        return content;
+        return content
     }
 
     public void setContent(String content) {
-        this.content = content;
+        this.content = content
     }
 
     public Date getInsertedDate() {
-        return insertedDate;
+        return insertedDate
     }
 
     public void setInsertedDate(Date insertedDate) {
-        this.insertedDate = insertedDate;
+        this.insertedDate = insertedDate
     }
+
 }

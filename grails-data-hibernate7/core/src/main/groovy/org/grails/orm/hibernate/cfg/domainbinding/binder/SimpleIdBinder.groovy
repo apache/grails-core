@@ -16,65 +16,67 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.orm.hibernate.cfg.domainbinding.binder;
+package org.grails.orm.hibernate.cfg.domainbinding.binder
 
-import jakarta.annotation.Nonnull;
+import groovy.transform.CompileStatic
+import jakarta.annotation.Nonnull
+import org.hibernate.MappingException
+import org.hibernate.boot.spi.MetadataBuildingContext
+import org.hibernate.mapping.BasicValue
+import org.hibernate.mapping.Property
+import org.hibernate.mapping.RootClass
 
-import org.hibernate.MappingException;
-import org.hibernate.boot.spi.MetadataBuildingContext;
-import org.hibernate.mapping.BasicValue;
-import org.hibernate.mapping.Property;
-import org.hibernate.mapping.RootClass;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentEntity
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateSimpleIdentityProperty
+import org.grails.orm.hibernate.cfg.domainbinding.util.BasicValueCreator
 
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentEntity;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateSimpleIdentityProperty;
-import org.grails.orm.hibernate.cfg.domainbinding.util.BasicValueCreator;
-
-import static org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBinder.EMPTY_PATH;
+import static org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBinder.EMPTY_PATH
 
 /** The simple id binder class. */
-@SuppressWarnings("PMD.DataflowAnomalyAnalysis")
-public class SimpleIdBinder {
+@CompileStatic
+class SimpleIdBinder {
 
-    private final MetadataBuildingContext metadataBuildingContext;
-    private final BasicValueCreator basicValueCreator;
-    private final SimpleValueBinder simpleValueBinder;
-    private final PropertyBinder propertyBinder;
+    private final MetadataBuildingContext metadataBuildingContext
+    private final BasicValueCreator basicValueCreator
+    private final SimpleValueBinder simpleValueBinder
+    private final PropertyBinder propertyBinder
 
-    public SimpleIdBinder(
+    SimpleIdBinder(
             MetadataBuildingContext metadataBuildingContext,
             BasicValueCreator basicValueCreator,
             SimpleValueBinder simpleValueBinder,
             PropertyBinder propertyBinder) {
-        this.metadataBuildingContext = metadataBuildingContext;
-        this.basicValueCreator = basicValueCreator;
-        this.simpleValueBinder = simpleValueBinder;
-        this.propertyBinder = propertyBinder;
+        this.metadataBuildingContext = metadataBuildingContext
+        this.basicValueCreator = basicValueCreator
+        this.simpleValueBinder = simpleValueBinder
+        this.propertyBinder = propertyBinder
     }
 
-    public MetadataBuildingContext getMetadataBuildingContext() {
-        return metadataBuildingContext;
+    MetadataBuildingContext getMetadataBuildingContext() {
+        return metadataBuildingContext
     }
 
-    public void bindSimpleId(@Nonnull HibernatePersistentEntity persistentEntity) {
-        if (persistentEntity.getIdentityProperty() instanceof HibernateSimpleIdentityProperty simpleIdentityProperty) {
-            RootClass rootClass = persistentEntity.getRootClass();
-            BasicValue id = basicValueCreator.bindBasicValue(simpleIdentityProperty);
-            Property idProperty = new Property();
-            idProperty.setName(simpleIdentityProperty.getName());
-            idProperty.setValue(id);
-            rootClass.setDeclaredIdentifierProperty(idProperty);
-            rootClass.setIdentifier(id);
+    void bindSimpleId(@Nonnull HibernatePersistentEntity persistentEntity) {
+        if (persistentEntity.getIdentityProperty() instanceof HibernateSimpleIdentityProperty) {
+            HibernateSimpleIdentityProperty simpleIdentityProperty =
+                    (HibernateSimpleIdentityProperty) persistentEntity.getIdentityProperty()
+            RootClass rootClass = persistentEntity.getRootClass()
+            BasicValue id = basicValueCreator.bindBasicValue(simpleIdentityProperty)
+            Property idProperty = new Property()
+            idProperty.setName(simpleIdentityProperty.getName())
+            idProperty.setValue(id)
+            rootClass.setDeclaredIdentifierProperty(idProperty)
+            rootClass.setIdentifier(id)
             // set type
-            simpleValueBinder.bindSimpleValue(simpleIdentityProperty, null, id, EMPTY_PATH);
+            simpleValueBinder.bindSimpleValue(simpleIdentityProperty, null, id, EMPTY_PATH)
 
             // bind property
-            Property prop = propertyBinder.bindProperty(simpleIdentityProperty, id);
+            Property prop = propertyBinder.bindProperty(simpleIdentityProperty, id)
             // set identifier property
-            rootClass.setIdentifierProperty(prop);
+            rootClass.setIdentifierProperty(prop)
 
-            return;
+            return
         }
-        throw new MappingException("Invalid simple id binding for entity [" + persistentEntity.getName() + "]");
+        throw new MappingException('Invalid simple id binding for entity [' + persistentEntity.getName() + ']')
     }
 }

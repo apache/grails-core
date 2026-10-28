@@ -16,26 +16,29 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.orm.hibernate.cfg.domainbinding.hibernate;
+package org.grails.orm.hibernate.cfg.domainbinding.hibernate
 
-import java.beans.PropertyDescriptor;
+import groovy.transform.CompileStatic
+import org.grails.datastore.mapping.engine.types.CustomTypeMarshaller
+import org.grails.datastore.mapping.model.MappingContext
+import org.grails.datastore.mapping.model.PersistentEntity
 
-import org.grails.datastore.mapping.engine.types.CustomTypeMarshaller;
-import org.grails.datastore.mapping.model.MappingContext;
-import org.grails.datastore.mapping.model.PersistentEntity;
+import java.beans.PropertyDescriptor
 
 /**
  * Hibernate custom property whose Java type is an enum backed by a registered {@link
  * CustomTypeMarshaller}. Created by {@link HibernateMappingFactory#createCustom} when {@code
  * pd.propertyType.isEnum()} is true and a matching marshaller is found.
  */
-public class HibernateCustomEnumProperty extends HibernateCustomProperty implements HibernateEnumProperty {
+@CompileStatic
+class HibernateCustomEnumProperty extends HibernateCustomProperty implements HibernateEnumProperty {
 
-    public HibernateCustomEnumProperty(
+    HibernateCustomEnumProperty(
             PersistentEntity entity,
             MappingContext context,
             PropertyDescriptor property,
             CustomTypeMarshaller<?, ?, ?> customTypeMarshaller) {
-        super(entity, context, property, customTypeMarshaller);
+        super(entity, context, property, customTypeMarshaller)
     }
+
 }

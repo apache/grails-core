@@ -16,11 +16,10 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.orm.hibernate.cfg.domainbinding.hibernate;
+package org.grails.orm.hibernate.cfg.domainbinding.hibernate
 
 /**
  * Marker interface for Hibernate to-one associations ({@link HibernateManyToOneProperty} and {@link
  * HibernateOneToOneProperty}). Parallel to {@link HibernateToManyProperty}.
  */
-public interface HibernateToOneProperty extends HibernateAssociation {}
-
+interface HibernateToOneProperty extends HibernateAssociation {}

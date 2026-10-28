@@ -16,74 +16,76 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.orm.hibernate.cfg.domainbinding.util;
+package org.grails.orm.hibernate.cfg.domainbinding.util
 
-import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateAssociation;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateManyToManyProperty;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateOneToManyProperty;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty;
+import groovy.transform.CompileStatic
 
-@SuppressWarnings("PMD.DataflowAnomalyAnalysis")
-public class DefaultColumnNameFetcher {
+import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateAssociation
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateManyToManyProperty
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateOneToManyProperty
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty
 
-    private static final String FOREIGN_KEY_SUFFIX = "_id";
-    private static final String UNDERSCORE = "_";
+@CompileStatic
+class DefaultColumnNameFetcher {
 
-    private final PersistentEntityNamingStrategy namingStrategyWrapper;
-    private final BackticksRemover backticksRemover;
+    private static final String FOREIGN_KEY_SUFFIX = '_id'
+    private static final String UNDERSCORE = '_'
 
-    public DefaultColumnNameFetcher(PersistentEntityNamingStrategy namingStrategyWrapper) {
-        this.namingStrategyWrapper = namingStrategyWrapper;
-        this.backticksRemover = new BackticksRemover();
+    private final PersistentEntityNamingStrategy namingStrategyWrapper
+    private final BackticksRemover backticksRemover
+
+    DefaultColumnNameFetcher(PersistentEntityNamingStrategy namingStrategyWrapper) {
+        this.namingStrategyWrapper = namingStrategyWrapper
+        this.backticksRemover = new BackticksRemover()
     }
 
-    public DefaultColumnNameFetcher(
+    DefaultColumnNameFetcher(
             PersistentEntityNamingStrategy namingStrategyWrapper, BackticksRemover backticksRemover) {
-        this.namingStrategyWrapper = namingStrategyWrapper;
-        this.backticksRemover = backticksRemover;
+        this.namingStrategyWrapper = namingStrategyWrapper
+        this.backticksRemover = backticksRemover
     }
 
-    public String getDefaultColumnName(HibernatePersistentProperty property) {
+    String getDefaultColumnName(HibernatePersistentProperty property) {
 
-        String columnName = namingStrategyWrapper.resolveColumnName(property.getName());
-        if (property instanceof HibernateAssociation association) {
-            boolean isBasic = property instanceof HibernateToManyProperty toMany && toMany.isBasic();
-            if (isBasic && (property.getMappedForm()).getType() != null) {
-                return columnName;
+        String columnName = namingStrategyWrapper.resolveColumnName(property.name)
+        if (property instanceof HibernateAssociation) {
+            HibernateAssociation association = (HibernateAssociation) property
+            boolean isBasic = property instanceof HibernateToManyProperty && ((HibernateToManyProperty) property).isBasic()
+            if (isBasic && property.mappedForm.type != null) {
+                return columnName
             }
 
             if (isBasic) {
-                return namingStrategyWrapper.resolveForeignKeyForPropertyDomainClass(property);
+                return namingStrategyWrapper.resolveForeignKeyForPropertyDomainClass(property)
             }
 
             if (property instanceof HibernateManyToManyProperty) {
-                return namingStrategyWrapper.resolveForeignKeyForPropertyDomainClass(property);
+                return namingStrategyWrapper.resolveForeignKeyForPropertyDomainClass(property)
             }
 
             if (!association.isBidirectional() && association instanceof HibernateOneToManyProperty) {
                 String prefix = namingStrategyWrapper.resolveTableName(
-                        property.getOwner().getRootEntity().getJavaClass().getSimpleName());
+                        property.owner.rootEntity.javaClass.simpleName)
                 return backticksRemover.apply(prefix) +
                         UNDERSCORE +
                         backticksRemover.apply(columnName) +
-                        FOREIGN_KEY_SUFFIX;
+                        FOREIGN_KEY_SUFFIX
             }
 
             if (property.isInherited() && property.isBidirectionalManyToOne()) {
-                return namingStrategyWrapper.resolveColumnName(property.getOwner()
-                                .getRootEntity()
-                                .getJavaClass()
-                                .getSimpleName()) +
+                return namingStrategyWrapper.resolveColumnName(
+                        property.owner.rootEntity.javaClass.simpleName) +
                         '_' +
                         columnName +
-                        FOREIGN_KEY_SUFFIX;
+                        FOREIGN_KEY_SUFFIX
             }
 
-            return columnName + FOREIGN_KEY_SUFFIX;
+            return columnName + FOREIGN_KEY_SUFFIX
         }
 
-        return columnName;
+        return columnName
     }
+
 }

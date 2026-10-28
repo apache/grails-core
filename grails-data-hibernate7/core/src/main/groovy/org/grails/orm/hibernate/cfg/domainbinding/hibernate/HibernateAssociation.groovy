@@ -16,18 +16,17 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.orm.hibernate.cfg.domainbinding.hibernate;
+package org.grails.orm.hibernate.cfg.domainbinding.hibernate
 
-import java.util.List;
+import groovy.transform.CompileStatic
+import org.hibernate.MappingException
+import org.hibernate.mapping.ManyToOne
+import org.hibernate.mapping.Property
 
-import org.hibernate.MappingException;
-import org.hibernate.mapping.ManyToOne;
-import org.hibernate.mapping.Property;
-
-import org.grails.datastore.mapping.model.PersistentEntity;
-import org.grails.datastore.mapping.model.PersistentProperty;
-import org.grails.orm.hibernate.cfg.Mapping;
-import org.grails.orm.hibernate.cfg.PropertyConfig;
+import org.grails.datastore.mapping.model.PersistentEntity
+import org.grails.datastore.mapping.model.PersistentProperty
+import org.grails.orm.hibernate.cfg.Mapping
+import org.grails.orm.hibernate.cfg.PropertyConfig
 
 /**
  * Common interface for all Hibernate association properties (both ToOne and ToMany). Extends {@link
@@ -39,28 +38,29 @@ import org.grails.orm.hibernate.cfg.PropertyConfig;
  * @see HibernateToOneProperty
  * @see HibernateToManyProperty
  */
-public interface HibernateAssociation extends HibernatePersistentProperty {
+@CompileStatic
+interface HibernateAssociation extends HibernatePersistentProperty {
 
     // --- Association contract (satisfied by the class hierarchy of all implementors) ---
 
-    PersistentProperty<?> getInverseSide();
+    PersistentProperty<?> getInverseSide()
 
-    PersistentEntity getAssociatedEntity();
+    PersistentEntity getAssociatedEntity()
 
-    boolean isBidirectional();
+    boolean isBidirectional()
 
-    boolean isOwningSide();
+    boolean isOwningSide()
 
-    boolean isCircular();
+    boolean isCircular()
 
-    boolean isBidirectionalToManyMap();
+    boolean isBidirectionalToManyMap()
 
     /**
      * Returns the nullable value for the FK column when this property is an association without a
      * user type. The default is {@code true}; subtypes override for their specific semantics.
      */
     default boolean isAssociationColumnNullable() {
-        return true;
+        return true
     }
 
     // --- Hibernate-typed overrides, removing instanceof guards ---
@@ -68,33 +68,33 @@ public interface HibernateAssociation extends HibernatePersistentProperty {
     /** Returns the inverse side as a {@link HibernateAssociation}, eliminating cast at call sites. */
     @Override
     default HibernateAssociation getHibernateInverseSide() {
-        return (HibernateAssociation) getInverseSide();
+        return (HibernateAssociation) inverseSide
     }
 
     @Override
     default GrailsHibernatePersistentEntity getHibernateAssociatedEntity() {
-        return (GrailsHibernatePersistentEntity) getAssociatedEntity();
+        return (GrailsHibernatePersistentEntity) associatedEntity
     }
 
     default String getReferencedEntityName() {
-        return getHibernateAssociatedEntity().getName();
+        return hibernateAssociatedEntity.name
     }
 
     @Override
     default void validateAssociation() {
-        if (getUserType() != null) {
+        if (userType != null) {
             throw new MappingException(
-                    "Cannot bind association property [" + getName() + "] of type [" + getType() + "] to a user type");
+                    "Cannot bind association property [${name}] of type [${type}] to a user type")
         }
     }
 
     @Override
     default boolean isBidirectionalManyToOneWithListMapping(Property prop) {
-        return isBidirectional() &&
-                getInverseSide() != null &&
-                List.class.isAssignableFrom(getType()) &&
+        return bidirectional &&
+                inverseSide != null &&
+                List.isAssignableFrom(type) &&
                 prop != null &&
-                prop.getValue() instanceof ManyToOne;
+                prop.value instanceof ManyToOne
     }
 
     /**
@@ -105,9 +105,10 @@ public interface HibernateAssociation extends HibernatePersistentProperty {
      */
     @Override
     default String getTypeName(Class<?> propertyType, PropertyConfig config, Mapping mapping) {
-        if (propertyType == getType() && getHibernateAssociatedEntity() != null) {
-            return null;
+        if (propertyType == type && hibernateAssociatedEntity != null) {
+            return null
         }
-        return HibernatePersistentProperty.super.getTypeName(propertyType, config, mapping);
+        return HibernatePersistentProperty.super.getTypeName(propertyType, config, mapping)
     }
+
 }

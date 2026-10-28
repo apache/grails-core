@@ -16,24 +16,27 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.orm.hibernate.cfg;
+package org.grails.orm.hibernate.cfg
 
-import org.hibernate.boot.registry.selector.spi.NamedStrategyContributions;
-import org.hibernate.boot.registry.selector.spi.NamedStrategyContributor;
-import org.hibernate.property.access.spi.PropertyAccessStrategy;
+import groovy.transform.CompileStatic
+import org.hibernate.boot.registry.selector.spi.NamedStrategyContributions
+import org.hibernate.boot.registry.selector.spi.NamedStrategyContributor
+import org.hibernate.property.access.spi.PropertyAccessStrategy
 
-import org.grails.orm.hibernate.access.TraitPropertyAccessStrategy;
+import org.grails.orm.hibernate.access.TraitPropertyAccessStrategy
 
-public class GrailsNamedStrategyContributor implements NamedStrategyContributor {
+@CompileStatic
+class GrailsNamedStrategyContributor implements NamedStrategyContributor {
 
     @Override
-    public void contributeStrategyImplementations(NamedStrategyContributions contributions) {
+    void contributeStrategyImplementations(NamedStrategyContributions contributions) {
         contributions.contributeStrategyImplementor(
-                PropertyAccessStrategy.class, TraitPropertyAccessStrategy.class, "traitProperty");
+                PropertyAccessStrategy, TraitPropertyAccessStrategy, 'traitProperty')
     }
 
     @Override
-    public void clearStrategyImplementations(NamedStrategyContributions contributions) {
-        contributions.removeStrategyImplementor(PropertyAccessStrategy.class, TraitPropertyAccessStrategy.class);
+    void clearStrategyImplementations(NamedStrategyContributions contributions) {
+        contributions.removeStrategyImplementor(PropertyAccessStrategy, TraitPropertyAccessStrategy)
     }
+
 }

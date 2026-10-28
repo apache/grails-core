@@ -13,19 +13,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.grails.orm.hibernate.support.hibernate7
 
-package org.grails.orm.hibernate.support.hibernate7;
-
-import jakarta.persistence.PersistenceException;
-
-import org.hibernate.HibernateException;
-import org.hibernate.JDBCException;
-import org.jspecify.annotations.Nullable;
-
-import org.springframework.dao.DataAccessException;
-import org.springframework.dao.support.PersistenceExceptionTranslator;
-import org.springframework.jdbc.support.SQLExceptionTranslator;
-import org.springframework.orm.jpa.EntityManagerFactoryUtils;
+import groovy.transform.CompileStatic
+import jakarta.persistence.PersistenceException
+import org.hibernate.HibernateException
+import org.hibernate.JDBCException
+import org.jspecify.annotations.Nullable
+import org.springframework.dao.DataAccessException
+import org.springframework.dao.support.PersistenceExceptionTranslator
+import org.springframework.jdbc.support.SQLExceptionTranslator
+import org.springframework.orm.jpa.EntityManagerFactoryUtils
 
 /**
  * {@link PersistenceExceptionTranslator} capable of translating {@link HibernateException}
@@ -44,10 +42,11 @@ import org.springframework.orm.jpa.EntityManagerFactoryUtils;
  * @see SessionFactoryUtils#convertHibernateAccessException(HibernateException)
  * @see EntityManagerFactoryUtils#convertJpaAccessExceptionIfPossible(RuntimeException)
  */
-public class HibernateExceptionTranslator implements PersistenceExceptionTranslator {
+@CompileStatic
+class HibernateExceptionTranslator implements PersistenceExceptionTranslator {
 
     @Nullable
-    private SQLExceptionTranslator jdbcExceptionTranslator;
+    private SQLExceptionTranslator jdbcExceptionTranslator
 
     /**
      * Set the JDBC exception translator for Hibernate exception translation purposes.
@@ -60,23 +59,23 @@ public class HibernateExceptionTranslator implements PersistenceExceptionTransla
      * @see org.springframework.jdbc.support.SQLErrorCodeSQLExceptionTranslator
      * @see org.springframework.jdbc.support.SQLStateSQLExceptionTranslator
      */
-    public void setJdbcExceptionTranslator(SQLExceptionTranslator jdbcExceptionTranslator) {
-        this.jdbcExceptionTranslator = jdbcExceptionTranslator;
+    void setJdbcExceptionTranslator(SQLExceptionTranslator jdbcExceptionTranslator) {
+        this.jdbcExceptionTranslator = jdbcExceptionTranslator
     }
 
-    @Override
     @Nullable
-    public DataAccessException translateExceptionIfPossible(RuntimeException ex) {
-        if (ex instanceof HibernateException hibernateEx) {
-            return convertHibernateAccessException(hibernateEx);
+    @Override
+    DataAccessException translateExceptionIfPossible(RuntimeException ex) {
+        if (ex instanceof HibernateException) {
+            return convertHibernateAccessException((HibernateException) ex)
         }
         if (ex instanceof PersistenceException) {
-            if (ex.getCause() instanceof HibernateException hibernateEx) {
-                return convertHibernateAccessException(hibernateEx);
+            if (ex.getCause() instanceof HibernateException) {
+                return convertHibernateAccessException((HibernateException) ex.getCause())
             }
-            return EntityManagerFactoryUtils.convertJpaAccessExceptionIfPossible(ex);
+            return EntityManagerFactoryUtils.convertJpaAccessExceptionIfPossible(ex)
         }
-        return null;
+        return null
     }
 
     /**
@@ -89,14 +88,15 @@ public class HibernateExceptionTranslator implements PersistenceExceptionTransla
      * @see SessionFactoryUtils#convertHibernateAccessException
      */
     protected DataAccessException convertHibernateAccessException(HibernateException ex) {
-        if (this.jdbcExceptionTranslator != null && ex instanceof JDBCException jdbcEx) {
+        if (this.jdbcExceptionTranslator != null && ex instanceof JDBCException) {
+            JDBCException jdbcEx = (JDBCException) ex
             DataAccessException dae = this.jdbcExceptionTranslator.translate(
-                    "Hibernate operation: " + jdbcEx.getMessage(), jdbcEx.getSQL(), jdbcEx.getSQLException());
+                    'Hibernate operation: ' + jdbcEx.getMessage(), jdbcEx.getSQL(), jdbcEx.getSQLException())
             if (dae != null) {
-                return dae;
+                return dae
             }
         }
-        return SessionFactoryUtils.convertHibernateAccessException(ex);
+        return SessionFactoryUtils.convertHibernateAccessException(ex)
     }
 
 }

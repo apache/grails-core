@@ -16,85 +16,89 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.orm.hibernate.cfg.domainbinding.hibernate;
+package org.grails.orm.hibernate.cfg.domainbinding.hibernate
 
-import org.hibernate.mapping.PersistentClass;
+import groovy.transform.CompileStatic
+import org.hibernate.mapping.PersistentClass
 
-import org.grails.datastore.mapping.core.connections.ConnectionSourcesSupport;
-import org.grails.datastore.mapping.model.ClassMapping;
-import org.grails.datastore.mapping.model.EmbeddedPersistentEntity;
-import org.grails.datastore.mapping.model.MappingContext;
-import org.grails.orm.hibernate.cfg.Mapping;
+import org.grails.datastore.mapping.core.connections.ConnectionSourcesSupport
+import org.grails.datastore.mapping.model.ClassMapping
+import org.grails.datastore.mapping.model.EmbeddedPersistentEntity
+import org.grails.datastore.mapping.model.MappingContext
+import org.grails.orm.hibernate.cfg.Mapping
 
-public class HibernateEmbeddedPersistentEntity extends EmbeddedPersistentEntity<Mapping>
+@CompileStatic
+class HibernateEmbeddedPersistentEntity extends EmbeddedPersistentEntity<Mapping>
         implements GrailsHibernatePersistentEntity {
 
-    private final ClassMapping<Mapping> classMapping;
-    private String dataSourceName;
-    private PersistentClass persistentClass;
+    private final ClassMapping<Mapping> classMapping
+    private String dataSourceName
+    private PersistentClass persistentClass
 
-    public HibernateEmbeddedPersistentEntity(Class<?> type, MappingContext ctx) {
-        super(type, ctx);
-        this.classMapping = new HibernateEmbeddedClassMapping(this, ctx);
+    HibernateEmbeddedPersistentEntity(Class<?> type, MappingContext ctx) {
+        super(type, ctx)
+        this.classMapping = new HibernateEmbeddedClassMapping(this, ctx)
     }
 
     @Override
-    public Mapping getMappedForm() {
-        return classMapping.getMappedForm();
+    Mapping getMappedForm() {
+        return classMapping.getMappedForm()
     }
 
     @Override
-    public String getDataSourceName() {
-        return dataSourceName;
+    String getDataSourceName() {
+        return dataSourceName
     }
 
     @Override
-    public void setDataSourceName(String dataSourceName) {
-        this.dataSourceName = dataSourceName;
+    void setDataSourceName(String dataSourceName) {
+        this.dataSourceName = dataSourceName
     }
 
     @Override
-    public HibernatePersistentProperty getIdentity() {
-        return super.getIdentity() instanceof HibernatePersistentProperty ghpp ? ghpp : null;
+    HibernatePersistentProperty getIdentity() {
+        def identity = super.getIdentity()
+        return identity instanceof HibernatePersistentProperty ? (HibernatePersistentProperty) identity : null
     }
 
     @Override
-    public HibernatePersistentProperty[] getCompositeIdentity() {
-        return new HibernatePersistentProperty[0];
+    HibernatePersistentProperty[] getCompositeIdentity() {
+        return new HibernatePersistentProperty[0]
     }
 
     @Override
-    public HibernatePersistentProperty getVersion() {
-        return super.getVersion() instanceof HibernatePersistentProperty ghpp ? ghpp : null;
+    HibernatePersistentProperty getVersion() {
+        def version = super.getVersion()
+        return version instanceof HibernatePersistentProperty ? (HibernatePersistentProperty) version : null
     }
 
     @Override
-    public boolean forGrailsDomainMapping(String dataSourceName) {
-        return false;
+    boolean forGrailsDomainMapping(String dataSourceName) {
+        return false
     }
 
     @Override
-    public boolean usesConnectionSource(String dataSourceName) {
-        return ConnectionSourcesSupport.usesConnectionSource(this, dataSourceName);
+    boolean usesConnectionSource(String dataSourceName) {
+        return ConnectionSourcesSupport.usesConnectionSource(this, dataSourceName)
     }
 
     @Override
-    public boolean isAbstract() {
-        return false;
+    boolean isAbstract() {
+        return false
     }
 
     @Override
-    public ClassMapping<Mapping> getMapping() {
-        return classMapping;
+    ClassMapping<Mapping> getMapping() {
+        return classMapping
     }
 
     @Override
-    public PersistentClass getPersistentClass() {
-        return persistentClass;
+    PersistentClass getPersistentClass() {
+        return persistentClass
     }
 
     @Override
-    public void setPersistentClass(PersistentClass persistentClass) {
-        this.persistentClass = persistentClass;
+    void setPersistentClass(PersistentClass persistentClass) {
+        this.persistentClass = persistentClass
     }
 }

@@ -16,12 +16,12 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.orm.hibernate.query;
+package org.grails.orm.hibernate.query
 
-import java.util.List;
+import groovy.transform.CompileStatic
 
-import org.grails.datastore.gorm.query.criteria.AbstractDetachedCriteria;
-import org.grails.datastore.mapping.query.api.Criteria;
+import org.grails.datastore.gorm.query.criteria.AbstractDetachedCriteria
+import org.grails.datastore.mapping.query.api.Criteria
 
 /**
  * Groovy extension methods that add {@code sqlRestriction} to detached criteria, registered in
@@ -32,7 +32,8 @@ import org.grails.datastore.mapping.query.api.Criteria;
  *
  * @since 8.0.0
  */
-public final class HibernateDetachedCriteriaExtension {
+@CompileStatic
+final class HibernateDetachedCriteriaExtension {
 
     private HibernateDetachedCriteriaExtension() {
     }
@@ -45,8 +46,8 @@ public final class HibernateDetachedCriteriaExtension {
      * @param sqlRestriction the SQL condition
      * @return the detached criteria
      */
-    public static Criteria sqlRestriction(AbstractDetachedCriteria<?> self, String sqlRestriction) {
-        return sqlRestriction(self, sqlRestriction, List.of());
+    static Criteria sqlRestriction(AbstractDetachedCriteria<?> self, String sqlRestriction) {
+        return HibernateDetachedCriteriaExtension.sqlRestriction(self, sqlRestriction, List.of())
     }
 
     /**
@@ -60,8 +61,9 @@ public final class HibernateDetachedCriteriaExtension {
      * @throws IllegalArgumentException if the number of {@code ?} placeholders differs from the number of values,
      *     or a value is {@code null}
      */
-    public static Criteria sqlRestriction(AbstractDetachedCriteria<?> self, String sqlRestriction, List<?> values) {
-        self.add(new SqlRestriction(sqlRestriction, values));
-        return self;
+    static Criteria sqlRestriction(AbstractDetachedCriteria<?> self, String sqlRestriction, List<?> values) {
+        self.add(new SqlRestriction(sqlRestriction, values))
+        return self
     }
+
 }

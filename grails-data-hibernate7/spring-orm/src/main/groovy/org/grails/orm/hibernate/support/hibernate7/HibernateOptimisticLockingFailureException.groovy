@@ -13,14 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.grails.orm.hibernate.support.hibernate7
 
-package org.grails.orm.hibernate.support.hibernate7;
-
-import org.hibernate.StaleObjectStateException;
-import org.hibernate.StaleStateException;
-import org.hibernate.dialect.lock.OptimisticEntityLockException;
-
-import org.springframework.orm.ObjectOptimisticLockingFailureException;
+import groovy.transform.CompileStatic
+import org.hibernate.StaleObjectStateException
+import org.hibernate.StaleStateException
+import org.hibernate.dialect.lock.OptimisticEntityLockException
+import org.springframework.orm.ObjectOptimisticLockingFailureException
 
 /**
  * Hibernate-specific subclass of ObjectOptimisticLockingFailureException.
@@ -31,19 +30,20 @@ import org.springframework.orm.ObjectOptimisticLockingFailureException;
  * @since 4.2
  * @see SessionFactoryUtils#convertHibernateAccessException
  */
-@SuppressWarnings("serial")
-public class HibernateOptimisticLockingFailureException extends ObjectOptimisticLockingFailureException {
+@CompileStatic
+@SuppressWarnings('serial')
+class HibernateOptimisticLockingFailureException extends ObjectOptimisticLockingFailureException {
 
-    public HibernateOptimisticLockingFailureException(StaleObjectStateException ex) {
-        super(ex.getEntityName(), HibernateObjectRetrievalFailureException.getIdentifier(ex), ex.getMessage(), ex);
+    HibernateOptimisticLockingFailureException(StaleObjectStateException ex) {
+        super(ex.getEntityName(), HibernateObjectRetrievalFailureException.getIdentifier(ex), ex.getMessage(), ex)
     }
 
-    public HibernateOptimisticLockingFailureException(StaleStateException ex) {
-        super(ex.getMessage(), ex);
+    HibernateOptimisticLockingFailureException(StaleStateException ex) {
+        super(ex.getMessage(), ex)
     }
 
-    public HibernateOptimisticLockingFailureException(OptimisticEntityLockException ex) {
-        super(ex.getMessage(), ex);
+    HibernateOptimisticLockingFailureException(OptimisticEntityLockException ex) {
+        super(ex.getMessage(), ex)
     }
 
 }

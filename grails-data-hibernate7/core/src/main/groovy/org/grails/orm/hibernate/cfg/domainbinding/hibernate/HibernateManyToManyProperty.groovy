@@ -16,58 +16,61 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.orm.hibernate.cfg.domainbinding.hibernate;
+package org.grails.orm.hibernate.cfg.domainbinding.hibernate
 
-import java.beans.PropertyDescriptor;
+import groovy.transform.CompileStatic
+import org.hibernate.mapping.Collection
 
-import org.hibernate.mapping.Collection;
+import org.grails.datastore.mapping.model.MappingContext
+import org.grails.datastore.mapping.model.PersistentEntity
+import org.grails.datastore.mapping.model.types.mapping.ManyToManyWithMapping
+import org.grails.orm.hibernate.cfg.PropertyConfig
 
-import org.grails.datastore.mapping.model.MappingContext;
-import org.grails.datastore.mapping.model.PersistentEntity;
-import org.grails.datastore.mapping.model.types.mapping.ManyToManyWithMapping;
-import org.grails.orm.hibernate.cfg.PropertyConfig;
+import java.beans.PropertyDescriptor
 
 /** Hibernate implementation of {@link org.grails.datastore.mapping.model.types.ManyToMany} */
-public class HibernateManyToManyProperty extends ManyToManyWithMapping<PropertyConfig>
+@CompileStatic
+class HibernateManyToManyProperty extends ManyToManyWithMapping<PropertyConfig>
         implements HibernateToManyEntityProperty {
 
-    private Collection collection;
+    private Collection collection
 
-    public HibernateManyToManyProperty(PersistentEntity entity, MappingContext context, PropertyDescriptor property) {
-        super(entity, context, property);
+    HibernateManyToManyProperty(PersistentEntity entity, MappingContext context, PropertyDescriptor property) {
+        super(entity, context, property)
     }
 
     @Override
-    public HibernatePersistentEntity getHibernateAssociatedEntity() {
-        return (HibernatePersistentEntity) super.getAssociatedEntity();
+    HibernatePersistentEntity getHibernateAssociatedEntity() {
+        return (HibernatePersistentEntity) super.getAssociatedEntity()
     }
 
     @Override
-    public String getReferencedEntityName() {
-        return getHibernateAssociatedEntity().getName();
+    String getReferencedEntityName() {
+        return hibernateAssociatedEntity.name
     }
 
     @Override
-    public Collection getHibernateCollection() {
-        return collection;
+    Collection getHibernateCollection() {
+        return collection
     }
 
     @Override
-    public void setHibernateCollection(Collection collection) {
-        this.collection = collection;
+    void setHibernateCollection(Collection collection) {
+        this.collection = collection
     }
 
     @Override
-    public void validateOwningSide() {
-        HibernateToManyEntityProperty.super.validateOwningSide();
-        if (!isOwningSide()) {
-            throw new org.hibernate.MappingException("Invalid association [" + this +
-                    "]. List collection types only supported on the owning side of a many-to-many relationship.");
+    void validateOwningSide() {
+        HibernateToManyEntityProperty.super.validateOwningSide()
+        if (!owningSide) {
+            throw new org.hibernate.MappingException("Invalid association [${this}]. " +
+                    'List collection types only supported on the owning side of a many-to-many relationship.')
         }
     }
 
     @Override
-    public boolean isLazy() {
-        return getHibernateOwner().isLazy(this);
+    boolean isLazy() {
+        return hibernateOwner.isLazy(this)
     }
+
 }

@@ -13,16 +13,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.grails.orm.hibernate.support.hibernate7
 
-package org.grails.orm.hibernate.support.hibernate7;
-
-import org.hibernate.HibernateException;
-import org.hibernate.UnresolvableObjectException;
-import org.hibernate.WrongClassException;
-import org.jspecify.annotations.Nullable;
-
-import org.springframework.orm.ObjectRetrievalFailureException;
-import org.springframework.util.ReflectionUtils;
+import groovy.transform.CompileStatic
+import groovy.transform.PackageScope
+import org.hibernate.HibernateException
+import org.hibernate.UnresolvableObjectException
+import org.hibernate.WrongClassException
+import org.jspecify.annotations.Nullable
+import org.springframework.orm.ObjectRetrievalFailureException
+import org.springframework.util.ReflectionUtils
 
 /**
  * Hibernate-specific subclass of ObjectRetrievalFailureException.
@@ -32,26 +32,27 @@ import org.springframework.util.ReflectionUtils;
  * @since 4.2
  * @see SessionFactoryUtils#convertHibernateAccessException
  */
-@SuppressWarnings("serial")
-public class HibernateObjectRetrievalFailureException extends ObjectRetrievalFailureException {
+@CompileStatic
+@SuppressWarnings('serial')
+class HibernateObjectRetrievalFailureException extends ObjectRetrievalFailureException {
 
-    public HibernateObjectRetrievalFailureException(UnresolvableObjectException ex) {
-        super(ex.getEntityName(), getIdentifier(ex), ex.getMessage(), ex);
+    HibernateObjectRetrievalFailureException(UnresolvableObjectException ex) {
+        super(ex.getEntityName(), getIdentifier(ex), ex.getMessage(), ex)
     }
 
-    public HibernateObjectRetrievalFailureException(WrongClassException ex) {
-        super(ex.getEntityName(), getIdentifier(ex), ex.getMessage(), ex);
+    HibernateObjectRetrievalFailureException(WrongClassException ex) {
+        super(ex.getEntityName(), getIdentifier(ex), ex.getMessage(), ex)
     }
 
     @Nullable
+    @PackageScope
     static Object getIdentifier(HibernateException hibEx) {
         try {
             // getIdentifier declares Serializable return value on 5.x but Object on 6.x
             // -> not binary compatible, let's invoke it reflectively for the time being
-            return ReflectionUtils.invokeMethod(hibEx.getClass().getMethod("getIdentifier"), hibEx);
-        }
-        catch (NoSuchMethodException ex) {
-            return null;
+            return ReflectionUtils.invokeMethod(hibEx.getClass().getMethod('getIdentifier'), hibEx)
+        } catch (NoSuchMethodException ex) {
+            return null
         }
     }
 

@@ -16,64 +16,58 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.orm.hibernate.cfg.domainbinding.binder;
+package org.grails.orm.hibernate.cfg.domainbinding.binder
 
-import java.util.Arrays;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Optional;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
-import java.util.stream.Stream;
+import groovy.transform.CompileStatic
+import org.hibernate.boot.spi.InFlightMetadataCollector
+import org.hibernate.boot.spi.MetadataBuildingContext
+import org.hibernate.engine.jdbc.env.spi.JdbcEnvironment
+import org.hibernate.mapping.Column
+import org.hibernate.mapping.Component
+import org.hibernate.mapping.PersistentClass
+import org.hibernate.mapping.Property
+import org.hibernate.mapping.SimpleValue
+import org.hibernate.mapping.ToOne
 
-import org.hibernate.boot.spi.InFlightMetadataCollector;
-import org.hibernate.boot.spi.MetadataBuildingContext;
-import org.hibernate.engine.jdbc.env.spi.JdbcEnvironment;
-import org.hibernate.mapping.Column;
-import org.hibernate.mapping.Component;
-import org.hibernate.mapping.PersistentClass;
-import org.hibernate.mapping.SimpleValue;
-import org.hibernate.mapping.ToOne;
+import org.grails.orm.hibernate.cfg.ColumnConfig
+import org.grails.orm.hibernate.cfg.HibernateCompositeIdentity
+import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToOneProperty
+import org.grails.orm.hibernate.cfg.domainbinding.secondpass.CompositeForeignKeySecondPass
+import org.grails.orm.hibernate.cfg.domainbinding.util.BackticksRemover
+import org.grails.orm.hibernate.cfg.domainbinding.util.DefaultColumnNameFetcher
+import org.grails.orm.hibernate.cfg.domainbinding.util.ForeignKeyColumnCountCalculator
 
-import org.grails.orm.hibernate.cfg.ColumnConfig;
-import org.grails.orm.hibernate.cfg.HibernateCompositeIdentity;
-import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToOneProperty;
-import org.grails.orm.hibernate.cfg.domainbinding.secondpass.CompositeForeignKeySecondPass;
-import org.grails.orm.hibernate.cfg.domainbinding.util.BackticksRemover;
-import org.grails.orm.hibernate.cfg.domainbinding.util.DefaultColumnNameFetcher;
-import org.grails.orm.hibernate.cfg.domainbinding.util.ForeignKeyColumnCountCalculator;
+import static org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBinder.UNDERSCORE
 
-import static org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBinder.UNDERSCORE;
+@CompileStatic
+class CompositeIdentifierToManyToOneBinder {
 
-@SuppressWarnings("PMD.DataflowAnomalyAnalysis")
-public class CompositeIdentifierToManyToOneBinder {
+    private final InFlightMetadataCollector metadataCollector
+    private final ForeignKeyColumnCountCalculator foreignKeyColumnCountCalculator
+    private final PersistentEntityNamingStrategy namingStrategy
+    private final DefaultColumnNameFetcher defaultColumnNameFetcher
+    private final BackticksRemover backticksRemover
+    private final SimpleValueBinder simpleValueBinder
 
-    private final InFlightMetadataCollector metadataCollector;
-    private final ForeignKeyColumnCountCalculator foreignKeyColumnCountCalculator;
-    private final PersistentEntityNamingStrategy namingStrategy;
-    private final DefaultColumnNameFetcher defaultColumnNameFetcher;
-    private final BackticksRemover backticksRemover;
-    private final SimpleValueBinder simpleValueBinder;
-
-    public CompositeIdentifierToManyToOneBinder(
+    CompositeIdentifierToManyToOneBinder(
             InFlightMetadataCollector metadataCollector,
             ForeignKeyColumnCountCalculator foreignKeyColumnCountCalculator,
             PersistentEntityNamingStrategy namingStrategy,
             DefaultColumnNameFetcher defaultColumnNameFetcher,
             BackticksRemover backticksRemover,
             SimpleValueBinder simpleValueBinder) {
-        this.metadataCollector = metadataCollector;
-        this.foreignKeyColumnCountCalculator = foreignKeyColumnCountCalculator;
-        this.namingStrategy = namingStrategy;
-        this.defaultColumnNameFetcher = defaultColumnNameFetcher;
-        this.backticksRemover = backticksRemover;
-        this.simpleValueBinder = simpleValueBinder;
+        this.metadataCollector = metadataCollector
+        this.foreignKeyColumnCountCalculator = foreignKeyColumnCountCalculator
+        this.namingStrategy = namingStrategy
+        this.defaultColumnNameFetcher = defaultColumnNameFetcher
+        this.backticksRemover = backticksRemover
+        this.simpleValueBinder = simpleValueBinder
     }
 
-    public CompositeIdentifierToManyToOneBinder(
+    CompositeIdentifierToManyToOneBinder(
             MetadataBuildingContext metadataBuildingContext,
             PersistentEntityNamingStrategy namingStrategy,
             JdbcEnvironment jdbcEnvironment) {
@@ -83,43 +77,46 @@ public class CompositeIdentifierToManyToOneBinder {
                 namingStrategy,
                 new DefaultColumnNameFetcher(namingStrategy),
                 new BackticksRemover(),
-                new SimpleValueBinder(metadataBuildingContext, namingStrategy, jdbcEnvironment));
+                new SimpleValueBinder(metadataBuildingContext, namingStrategy, jdbcEnvironment))
     }
 
-    public void bindCompositeIdentifierToManyToOne(
+    void bindCompositeIdentifierToManyToOne(
             HibernatePersistentProperty property,
             SimpleValue value,
             HibernateCompositeIdentity compositeId,
             GrailsHibernatePersistentEntity refDomainClass,
             String path) {
-        String[] propertyNames = compositeId.getPropertyNames();
-        List<ColumnConfig> columns = property.getHibernateMappedForm().getColumns();
-        int existingCount = columns.size();
+        String[] propertyNames = compositeId.getPropertyNames()
+        List<ColumnConfig> columns = property.getHibernateMappedForm().getColumns()
+        int existingCount = columns.size()
         if (existingCount !=
                 foreignKeyColumnCountCalculator.calculateForeignKeyColumnCount(refDomainClass, propertyNames)) {
-            String prefix = refDomainClass.getTableName(namingStrategy);
-            IntStream.range(0, propertyNames.length)
-                    .boxed()
-                    .flatMap(idx -> {
-                        ColumnConfig cc = idx < existingCount ? columns.get(idx) : new ColumnConfig();
-                        if (cc.getName() != null) {
-                            return Stream.empty();
-                        }
-                        String propertyName = propertyNames[idx];
-                        HibernatePersistentProperty ref = refDomainClass.getHibernatePropertyByName(propertyName);
-                        return tryExpandNestedComposite(prefix, propertyName, ref)
-                                .orElseGet(() -> singleColumn(prefix, propertyName, ref, cc));
-                    })
-                    .forEach(columns::add);
+            String prefix = refDomainClass.getTableName(namingStrategy)
+            List<ColumnConfig> generated = []
+            for (int idx = 0; idx < propertyNames.length; idx++) {
+                ColumnConfig cc = idx < existingCount ? columns.get(idx) : new ColumnConfig()
+                if (cc.getName() != null) {
+                    continue
+                }
+                String propertyName = propertyNames[idx]
+                HibernatePersistentProperty ref = refDomainClass.getHibernatePropertyByName(propertyName)
+                List<ColumnConfig> nested = tryExpandNestedComposite(prefix, propertyName, ref)
+                if (nested != null) {
+                    generated.addAll(nested)
+                } else {
+                    generated.add(singleColumn(prefix, propertyName, ref, cc))
+                }
+            }
+            columns.addAll(generated)
         }
-        simpleValueBinder.bindSimpleValue(property, null, value, path);
+        simpleValueBinder.bindSimpleValue(property, null, value, path)
         if (metadataCollector.isInSecondPass() || isIdentifierBound(refDomainClass)) {
-            alignWithReferencedIdentifier(property, value, compositeId, refDomainClass);
+            alignWithReferencedIdentifier(property, value, compositeId, refDomainClass)
         } else {
             // The referenced identifier is bound later in this pass. Hibernate sorts a to-one against
             // the identifier it references lazily, from its second passes, so do the same.
             metadataCollector.addSecondPass(
-                    new CompositeForeignKeySecondPass(this, property, value, compositeId, refDomainClass));
+                    new CompositeForeignKeySecondPass(this, property, value, compositeId, refDomainClass))
         }
     }
 
@@ -135,26 +132,26 @@ public class CompositeIdentifierToManyToOneBinder {
      * @param compositeId the composite identity of the referenced entity
      * @param refDomainClass the referenced entity
      */
-    public void alignWithReferencedIdentifier(
+    void alignWithReferencedIdentifier(
             HibernatePersistentProperty property,
             SimpleValue value,
             HibernateCompositeIdentity compositeId,
             GrailsHibernatePersistentEntity refDomainClass) {
-        if (value instanceof ToOne toOne && toOne.isSorted()) {
-            return;
+        if (value instanceof ToOne && ((ToOne) value).isSorted()) {
+            return
         }
         for (IdentifierPart part : compositeIdentifierParts(refDomainClass)) {
-            alignWithReferencedIdentifier(part.property(), part.value(), part.compositeId(), part.entity());
+            alignWithReferencedIdentifier(part.property, part.value, part.compositeId, part.entity)
         }
-        refDomainClass.sortOrIndexForeignKeyColumns(value);
-        List<Column> referencedColumns = refDomainClass.getReferencedIdentifierColumns(compositeId.getPropertyNames());
+        refDomainClass.sortOrIndexForeignKeyColumns(value)
+        List<Column> referencedColumns = refDomainClass.getReferencedIdentifierColumns(compositeId.getPropertyNames())
         if (referencedColumns.isEmpty()) {
             // no identifier columns to pair with, so Hibernate's own foreign key pairs the columns by position
-            value.createForeignKey();
+            value.createForeignKey()
         } else if (value.createForeignKeyOfEntity(refDomainClass.getName(), referencedColumns) != null) {
-            value.disableForeignKey();
+            value.disableForeignKey()
         }
-        property.markValueSorted(value);
+        property.markValueSorted(value)
     }
 
     /**
@@ -162,9 +159,15 @@ public class CompositeIdentifierToManyToOneBinder {
      * parts reference, so that a key referencing it can be aligned with it now.
      */
     private boolean isIdentifierBound(GrailsHibernatePersistentEntity entity) {
-        return entity.getPersistentClass() != null &&
-                compositeIdentifierParts(entity).stream()
-                        .allMatch(part -> part.value().isSorted() || isIdentifierBound(part.entity()));
+        if (entity.getPersistentClass() == null) {
+            return false
+        }
+        for (IdentifierPart part : compositeIdentifierParts(entity)) {
+            if (!part.value.isSorted() && !isIdentifierBound(part.entity)) {
+                return false
+            }
+        }
+        return true
     }
 
     /**
@@ -172,70 +175,100 @@ public class CompositeIdentifierToManyToOneBinder {
      * themselves, each with the Hibernate value it is bound to. Empty while {@code entity} is unbound.
      */
     private static List<IdentifierPart> compositeIdentifierParts(GrailsHibernatePersistentEntity entity) {
-        PersistentClass pc = entity.getPersistentClass();
-        if (pc == null || !(pc.getIdentifier() instanceof Component component)) {
-            return List.of();
+        PersistentClass pc = entity.getPersistentClass()
+        if (pc == null || !(pc.getIdentifier() instanceof Component)) {
+            return []
         }
-        return component.getProperties().stream()
-                .filter(part -> part.getValue() instanceof ToOne)
-                .flatMap(part -> identifierPart(entity, part.getName(), (ToOne) part.getValue()).stream())
-                .toList();
+        List<IdentifierPart> parts = []
+        for (Property part : ((Component) pc.getIdentifier()).getProperties()) {
+            if (part.getValue() instanceof ToOne) {
+                IdentifierPart identifierPart = identifierPart(entity, part.getName(), (ToOne) part.getValue())
+                if (identifierPart != null) {
+                    parts.add(identifierPart)
+                }
+            }
+        }
+        return parts
     }
 
-    private static Optional<IdentifierPart> identifierPart(
+    private static IdentifierPart identifierPart(
             GrailsHibernatePersistentEntity entity, String name, ToOne value) {
-        if (!(entity.getHibernatePropertyByName(name) instanceof HibernateToOneProperty property)) {
-            return Optional.empty();
+        HibernatePersistentProperty property = entity.getHibernatePropertyByName(name)
+        if (!(property instanceof HibernateToOneProperty)) {
+            return null
         }
-        GrailsHibernatePersistentEntity associated = property.getHibernateAssociatedEntity();
-        return associated.getHibernateCompositeIdentity()
-                .map(compositeId -> new IdentifierPart(property, value, compositeId, associated));
+        GrailsHibernatePersistentEntity associated = ((HibernateToOneProperty) property).getHibernateAssociatedEntity()
+        HibernateCompositeIdentity associatedCompositeId = associated.getHibernateCompositeIdentity().orElse(null)
+        return associatedCompositeId != null
+                ? new IdentifierPart((HibernateToOneProperty) property, value, associatedCompositeId, associated)
+                : null
     }
 
-    private record IdentifierPart(
-            HibernateToOneProperty property,
-            ToOne value,
-            HibernateCompositeIdentity compositeId,
-            GrailsHibernatePersistentEntity entity) {}
+    private static class IdentifierPart {
+
+        final HibernateToOneProperty property
+        final ToOne value
+        final HibernateCompositeIdentity compositeId
+        final GrailsHibernatePersistentEntity entity
+
+        IdentifierPart(
+                HibernateToOneProperty property,
+                ToOne value,
+                HibernateCompositeIdentity compositeId,
+                GrailsHibernatePersistentEntity entity) {
+            this.property = property
+            this.value = value
+            this.compositeId = compositeId
+            this.entity = entity
+        }
+
+    }
 
     /**
-     * If {@code ref} is a to-one whose associated entity has a composite identity, returns a stream
-     * of one named {@link ColumnConfig} per composite-identity property. Returns empty otherwise.
+     * If {@code ref} is a to-one whose associated entity has a composite identity, returns a list
+     * of one named {@link ColumnConfig} per composite-identity property. Returns {@code null} otherwise.
      */
-    private Optional<Stream<ColumnConfig>> tryExpandNestedComposite(
+    private List<ColumnConfig> tryExpandNestedComposite(
             String prefix, String propertyName, HibernatePersistentProperty ref) {
-        if (!(ref instanceof HibernateToOneProperty toOne)) {
-            return Optional.empty();
+        if (!(ref instanceof HibernateToOneProperty)) {
+            return null
         }
+        HibernateToOneProperty toOne = (HibernateToOneProperty) ref
         HibernatePersistentProperty[] nestedComposite =
-                toOne.getHibernateAssociatedEntity().getCompositeIdentity();
+                toOne.getHibernateAssociatedEntity().getCompositeIdentity()
         if (nestedComposite == null) {
-            return Optional.empty();
+            return null
         }
+        List<ColumnConfig> result = []
         // Hibernate sorts the properties of a composite identifier by name, and the columns this key
         // references follow that order, so the foreign key columns are named in the same order
-        return Optional.of(Arrays.stream(nestedComposite)
-                .sorted(Comparator.comparing(HibernatePersistentProperty::getName))
-                .map(cip -> namedColumn(join(
-                        prefix,
-                        namingStrategy.resolveColumnName(propertyName),
-                        defaultColumnNameFetcher.getDefaultColumnName(cip)))));
+        for (HibernatePersistentProperty cip : nestedComposite.toList().sort { HibernatePersistentProperty p -> p.name }) {
+            result.add(namedColumn(join(
+                    prefix,
+                    namingStrategy.resolveColumnName(propertyName),
+                    defaultColumnNameFetcher.getDefaultColumnName(cip))))
+        }
+        return result
     }
 
-    private Stream<ColumnConfig> singleColumn(
+    private ColumnConfig singleColumn(
             String prefix, String propertyName, HibernatePersistentProperty ref, ColumnConfig cc) {
-        String suffix = ref != null ? defaultColumnNameFetcher.getDefaultColumnName(ref) : propertyName;
-        cc.setName(join(prefix, suffix));
-        return Stream.of(cc);
+        String suffix = ref != null ? defaultColumnNameFetcher.getDefaultColumnName(ref) : propertyName
+        cc.setName(join(prefix, suffix))
+        return cc
     }
 
     private ColumnConfig namedColumn(String name) {
-        ColumnConfig cc = new ColumnConfig();
-        cc.setName(name);
-        return cc;
+        ColumnConfig cc = new ColumnConfig()
+        cc.setName(name)
+        return cc
     }
 
     private String join(String... parts) {
-        return Arrays.stream(parts).map(backticksRemover).collect(Collectors.joining(String.valueOf(UNDERSCORE)));
+        List<String> cleaned = []
+        for (String part : parts) {
+            cleaned.add(backticksRemover.apply(part))
+        }
+        return cleaned.join(UNDERSCORE.toString())
     }
 }

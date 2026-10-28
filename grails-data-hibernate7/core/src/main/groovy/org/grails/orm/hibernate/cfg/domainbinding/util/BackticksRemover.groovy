@@ -16,10 +16,11 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.orm.hibernate.cfg.domainbinding.util;
+package org.grails.orm.hibernate.cfg.domainbinding.util
 
-import java.util.Optional;
-import java.util.function.Function;
+import groovy.transform.CompileStatic
+
+import java.util.function.Function
 
 /**
  * Removes matching leading and trailing backticks from mapping names.
@@ -28,16 +29,21 @@ import java.util.function.Function;
  *
  * @since 8.0
  */
-public class BackticksRemover implements Function<String, String> {
+@CompileStatic
+class BackticksRemover implements Function<String, String> {
 
-    public static final String BACKTICK = "`";
+    public static final String BACKTICK = '`'
 
     @Override
-    public String apply(String string) {
-        return Optional.ofNullable(string)
-                .map(String::trim)
-                .filter(s -> s.length() >= 2 && s.startsWith(BACKTICK) && s.endsWith(BACKTICK))
-                .map(s -> s.substring(1, s.length() - 1))
-                .orElse(string);
+    String apply(String string) {
+        if (string == null) {
+            return string
+        }
+        String trimmed = string.trim()
+        if (trimmed.length() >= 2 && trimmed.startsWith(BACKTICK) && trimmed.endsWith(BACKTICK)) {
+            return trimmed.substring(1, trimmed.length() - 1)
+        }
+        return string
     }
+
 }

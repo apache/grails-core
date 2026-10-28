@@ -16,72 +16,75 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.orm.hibernate.cfg.domainbinding.secondpass;
+package org.grails.orm.hibernate.cfg.domainbinding.secondpass
 
-import jakarta.annotation.Nonnull;
+import groovy.transform.CompileStatic
+import jakarta.annotation.Nonnull
+import org.hibernate.boot.spi.InFlightMetadataCollector
+import org.hibernate.mapping.Backref
+import org.hibernate.mapping.Collection
+import org.hibernate.mapping.ManyToOne
+import org.hibernate.mapping.OneToMany
+import org.hibernate.mapping.Value
 
-import org.hibernate.boot.spi.InFlightMetadataCollector;
-import org.hibernate.mapping.Backref;
-import org.hibernate.mapping.Collection;
-import org.hibernate.mapping.ManyToOne;
-import org.hibernate.mapping.OneToMany;
-import org.hibernate.mapping.Value;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateOneToManyProperty
+import org.grails.orm.hibernate.cfg.domainbinding.util.BackticksRemover
 
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateOneToManyProperty;
-import org.grails.orm.hibernate.cfg.domainbinding.util.BackticksRemover;
-
-import static org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBinder.UNDERSCORE;
+import static org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBinder.UNDERSCORE
 
 /** Binds unidirectional one-to-many associations. */
-public class UnidirectionalOneToManyBinder {
+@CompileStatic
+class UnidirectionalOneToManyBinder {
 
-    private final CollectionWithJoinTableBinder collectionWithJoinTableBinder;
-    private final BackticksRemover backticksRemover = new BackticksRemover();
-    private final InFlightMetadataCollector mappings;
+    private final CollectionWithJoinTableBinder collectionWithJoinTableBinder
+    private final BackticksRemover backticksRemover = new BackticksRemover()
+    private final InFlightMetadataCollector mappings
 
-    public UnidirectionalOneToManyBinder(
+    UnidirectionalOneToManyBinder(
             CollectionWithJoinTableBinder collectionWithJoinTableBinder, InFlightMetadataCollector mappings) {
-        this.collectionWithJoinTableBinder = collectionWithJoinTableBinder;
-        this.mappings = mappings;
+        this.collectionWithJoinTableBinder = collectionWithJoinTableBinder
+        this.mappings = mappings
     }
 
-    public void bind(@Nonnull HibernateOneToManyProperty property) {
-        Collection collection = property.getCollection();
+    void bind(@Nonnull HibernateOneToManyProperty property) {
+        Collection collection = property.collection
         if (!property.shouldBindWithForeignKey()) {
-            collectionWithJoinTableBinder.bindCollectionWithJoinTable(property);
-        } else {
-            bindUnidirectionalOneToMany(property, collection);
+            collectionWithJoinTableBinder.bindCollectionWithJoinTable(property)
+        }
+        else {
+            bindUnidirectionalOneToMany(property, collection)
         }
     }
 
     private void bindUnidirectionalOneToMany(
             @Nonnull HibernateOneToManyProperty property, @Nonnull Collection collection) {
-        Value element = collection.getElement();
-        element.createForeignKey();
+        Value element = collection.element
+        element.createForeignKey()
 
-        String entityName = (element instanceof ManyToOne manyToOne) ?
-                manyToOne.getReferencedEntityName() :
-                ((OneToMany) element).getReferencedEntityName();
+        String entityName = (element instanceof ManyToOne) ?
+                ((ManyToOne) element).referencedEntityName :
+                ((OneToMany) element).referencedEntityName
 
-        collection.setInverse(false);
+        collection.inverse = false
 
-        mappings.getEntityBinding(entityName).addProperty(createBackref(property, collection));
+        mappings.getEntityBinding(entityName).addProperty(createBackref(property, collection))
     }
 
     private Backref createBackref(HibernateOneToManyProperty property, Collection collection) {
-        GrailsHibernatePersistentEntity owner = (GrailsHibernatePersistentEntity) property.getOwner();
-        Backref backref = new Backref();
-        backref.setEntityName(owner.getName());
-        backref.setName(UNDERSCORE + backticksRemover.apply(owner.getJavaClass().getSimpleName()) +
+        GrailsHibernatePersistentEntity owner = (GrailsHibernatePersistentEntity) property.owner
+        Backref backref = new Backref()
+        backref.entityName = owner.name
+        backref.name = UNDERSCORE.toString() + backticksRemover.apply(owner.javaClass.simpleName) +
                 UNDERSCORE +
-                backticksRemover.apply(property.getName()) +
-                "Backref");
-        backref.setUpdatable(false);
-        backref.setInsertable(true);
-        backref.setCollectionRole(collection.getRole());
-        backref.setValue(collection.getKey());
-        backref.setOptional(true);
-        return backref;
+                backticksRemover.apply(property.name) +
+                'Backref'
+        backref.updatable = false
+        backref.insertable = true
+        backref.collectionRole = collection.role
+        backref.value = collection.key
+        backref.optional = true
+        return backref
     }
+
 }

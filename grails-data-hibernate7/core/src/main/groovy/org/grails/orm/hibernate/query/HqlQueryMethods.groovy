@@ -16,18 +16,15 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.orm.hibernate.query;
+package org.grails.orm.hibernate.query
 
-import java.lang.reflect.Array;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.lang.reflect.Array
 
-import jakarta.persistence.LockModeType;
+import groovy.transform.CompileStatic
+import jakarta.persistence.LockModeType
 
-public interface HqlQueryMethods {
+@CompileStatic
+interface HqlQueryMethods {
 
     Set<String> INTERNAL_SETTINGS = Set.of(
         HibernateQueryArgument.FLUSH_MODE.value(),
@@ -38,95 +35,107 @@ public interface HqlQueryMethods {
         HibernateQueryArgument.MAX.value(),
         HibernateQueryArgument.OFFSET.value(),
         HibernateQueryArgument.LOCK.value()
-    );
+    )
 
     default void populateQuerySettings(HqlQueryDelegate d, Map<String, Object> args) {
-        if (args == null || args.isEmpty()) return;
+        if (args == null || args.isEmpty()) {
+            return
+        }
         if (args.containsKey(HibernateQueryArgument.FLUSH_MODE.value())) {
-            d.setQueryFlushMode(GrailsQueryFlushMode.mapToHibernateQueryFlushMode(args.get(HibernateQueryArgument.FLUSH_MODE.value())));
+            d.setQueryFlushMode(GrailsQueryFlushMode.mapToHibernateQueryFlushMode(args.get(HibernateQueryArgument.FLUSH_MODE.value())))
         }
         if (args.containsKey(HibernateQueryArgument.MAX.value())) {
-            d.setMaxResults(toInteger(args.get(HibernateQueryArgument.MAX.value())));
+            d.setMaxResults(toInteger(args.get(HibernateQueryArgument.MAX.value())))
         }
         if (args.containsKey(HibernateQueryArgument.OFFSET.value())) {
-            d.setFirstResult(toInteger(args.get(HibernateQueryArgument.OFFSET.value())));
+            d.setFirstResult(toInteger(args.get(HibernateQueryArgument.OFFSET.value())))
         }
         if (args.containsKey(HibernateQueryArgument.FETCH_SIZE.value())) {
-            d.setFetchSize(toInteger(args.get(HibernateQueryArgument.FETCH_SIZE.value())));
+            d.setFetchSize(toInteger(args.get(HibernateQueryArgument.FETCH_SIZE.value())))
         }
         if (args.containsKey(HibernateQueryArgument.TIMEOUT.value())) {
-            d.setTimeout(toInteger(args.get(HibernateQueryArgument.TIMEOUT.value())));
+            d.setTimeout(toInteger(args.get(HibernateQueryArgument.TIMEOUT.value())))
         }
         if (args.containsKey(HibernateQueryArgument.READ_ONLY.value())) {
-            d.setReadOnly(toBoolean(args.get(HibernateQueryArgument.READ_ONLY.value())));
+            d.setReadOnly(toBoolean(args.get(HibernateQueryArgument.READ_ONLY.value())))
         }
         if (toBoolean(args.get(HibernateQueryArgument.LOCK.value()))) {
-            d.setLockMode(LockModeType.PESSIMISTIC_WRITE);
-            d.setCacheable(false);
+            d.setLockMode(LockModeType.PESSIMISTIC_WRITE)
+            d.setCacheable(false)
         } else if (args.containsKey(HibernateQueryArgument.CACHE.value())) {
-            d.setCacheable(toBoolean(args.get(HibernateQueryArgument.CACHE.value())));
+            d.setCacheable(toBoolean(args.get(HibernateQueryArgument.CACHE.value())))
         }
     }
 
     static int toInteger(Object value) {
-        if (value instanceof Number number) {
-            return number.intValue();
+        if (value instanceof Number) {
+            return ((Number) value).intValue()
         }
-        return Integer.parseInt(value.toString());
+        return Integer.parseInt(value.toString())
     }
 
     static boolean toBoolean(Object value) {
-        if (value instanceof Boolean bool) {
-            return bool;
+        if (value instanceof Boolean) {
+            return (Boolean) value
         }
-        return value != null && Boolean.parseBoolean(value.toString());
+        return value != null && Boolean.parseBoolean(value.toString())
     }
 
     default void populateHints(HqlQueryDelegate d, Map<String, Object> hints) {
-        if (hints == null || hints.isEmpty()) return;
-        hints.forEach(d::setHint);
+        if (hints == null || hints.isEmpty()) {
+            return
+        }
+        for (Map.Entry<String, Object> entry : hints.entrySet()) {
+            d.setHint(entry.key, entry.value)
+        }
     }
 
     static void populateParameters(HqlQueryDelegate d, HqlQueryContext queryContext) {
         if (queryContext.namedParams() != null && !queryContext.namedParams().isEmpty()) {
-            queryContext.namedParams().forEach((key, value) -> {
-                if (INTERNAL_SETTINGS.contains(key)) return;
-                Object val = convertValue(value);
-                if (val instanceof Collection) {
-                    d.setParameterList(key, (Collection<?>) val);
-                } else if (val != null && val.getClass().isArray()) {
-                    d.setParameterList(key, (Object[]) val);
-                } else {
-                    d.setParameter(key, val);
+            for (Map.Entry<String, Object> entry : queryContext.namedParams().entrySet()) {
+                if (INTERNAL_SETTINGS.contains(entry.key)) {
+                    continue
                 }
-            });
+                Object val = convertValue(entry.value)
+                if (val instanceof Collection) {
+                    d.setParameterList(entry.key, (Collection<?>) val)
+                } else if (val != null && val.class.isArray()) {
+                    d.setParameterList(entry.key, (Object[]) val)
+                } else {
+                    d.setParameter(entry.key, val)
+                }
+            }
         } else if (queryContext.positionalParams() != null && !queryContext.positionalParams().isEmpty()) {
             for (int i = 0; i < queryContext.positionalParams().size(); i++) {
-                Object val = convertValue(queryContext.positionalParams().get(i));
-                d.setParameter(i + 1, val);
+                Object val = convertValue(queryContext.positionalParams().get(i))
+                d.setParameter(i + 1, val)
             }
         }
     }
 
     static Object convertValue(Object value) {
         if (value instanceof CharSequence) {
-            return value.toString();
+            return value.toString()
         }
-        if (value instanceof Collection<?> coll) {
-            List<Object> newList = new ArrayList<>(coll.size());
+        if (value instanceof Collection<?>) {
+            Collection<?> coll = (Collection<?>) value
+            List<Object> newList = new ArrayList<>(coll.size())
             for (Object o : coll) {
-                newList.add(convertValue(o));
+                newList.add(convertValue(o))
             }
-            return newList;
+            return newList
         }
-        if (value != null && value.getClass().isArray()) {
-            int length = Array.getLength(value);
-            Object newArray = Array.newInstance(value.getClass().getComponentType() == CharSequence.class || CharSequence.class.isAssignableFrom(value.getClass().getComponentType()) ? String.class : value.getClass().getComponentType(), length);
+        if (value != null && value.class.isArray()) {
+            int length = Array.getLength(value)
+            Class<?> componentType = value.class.componentType
+            Class<?> targetType = (componentType == CharSequence || CharSequence.isAssignableFrom(componentType)) ? String : componentType
+            Object newArray = Array.newInstance(targetType, length)
             for (int i = 0; i < length; i++) {
-                Array.set(newArray, i, convertValue(Array.get(value, i)));
+                Array.set(newArray, i, convertValue(Array.get(value, i)))
             }
-            return newArray;
+            return newArray
         }
-        return value;
+        return value
     }
+
 }

@@ -1,11 +1,10 @@
-package com.example.pojo.auction;
+package com.example.pojo.auction
 
-import lombok.Getter;
-import lombok.Setter;
+import groovy.transform.CompileStatic
 
-public class Persistent {
-    @Setter
-    @Getter
-    private Long id;
+@CompileStatic
+class Persistent {
+
+    Long id
 
 }

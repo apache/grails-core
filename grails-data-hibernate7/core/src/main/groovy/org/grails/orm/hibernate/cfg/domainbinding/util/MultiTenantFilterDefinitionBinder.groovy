@@ -16,24 +16,22 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.orm.hibernate.cfg.domainbinding.util;
+package org.grails.orm.hibernate.cfg.domainbinding.util
 
-import java.util.Collections;
-import java.util.Optional;
-
-import jakarta.annotation.Nonnull;
-
-import org.hibernate.engine.spi.FilterDefinition;
-import org.hibernate.mapping.BasicValue;
-import org.hibernate.mapping.Property;
-import org.hibernate.metamodel.mapping.JdbcMapping;
+import groovy.transform.CompileStatic
+import jakarta.annotation.Nonnull
+import org.hibernate.engine.spi.FilterDefinition
+import org.hibernate.mapping.BasicValue
+import org.hibernate.mapping.Property
+import org.hibernate.metamodel.mapping.JdbcMapping
 
 /**
  * Utility class for binding multi-tenant filter definitions to the Hibernate meta model.
  *
  * @since 8.0
  */
-public class MultiTenantFilterDefinitionBinder {
+@CompileStatic
+class MultiTenantFilterDefinitionBinder {
 
     /**
      * Creates a global filter definition for the given filter name.
@@ -43,14 +41,16 @@ public class MultiTenantFilterDefinitionBinder {
      * @return The FilterDefinition Optional
      */
     @Nonnull
-    public Optional<FilterDefinition> create(@Nonnull String filterName, @Nonnull Property property) {
-        if (property.getValue() instanceof BasicValue basicValue) {
-            JdbcMapping jdbcMapping = basicValue.resolve().getJdbcMapping();
+    Optional<FilterDefinition> create(@Nonnull String filterName, @Nonnull Property property) {
+        if (property.value instanceof BasicValue) {
+            BasicValue basicValue = (BasicValue) property.value
+            JdbcMapping jdbcMapping = basicValue.resolve().jdbcMapping
             return Optional.of(new FilterDefinition(
                     filterName,
                     null, // No default condition; let classes specify their own
-                    Collections.singletonMap(filterName, jdbcMapping)));
+                    Collections.singletonMap(filterName, jdbcMapping)))
         }
-        return Optional.empty();
+        return Optional.empty()
     }
+
 }

@@ -16,39 +16,41 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.orm.hibernate;
+package org.grails.orm.hibernate
 
-import org.hibernate.FlushMode;
+import groovy.transform.CompileStatic
+import org.hibernate.FlushMode
+import org.hibernate.Session
 
-import org.grails.orm.hibernate.GrailsHibernateTemplate.HibernateCallback;
+import org.grails.orm.hibernate.GrailsHibernateTemplate.HibernateCallback
 
 /**
  * Workaround for VerifyErrors in Groovy when using a HibernateCallback.
- *
- * @author Burt Beckwith
  */
-public class InstanceApiHelper {
+@CompileStatic
+class InstanceApiHelper {
 
-    protected GrailsHibernateTemplate hibernateTemplate;
+    protected GrailsHibernateTemplate hibernateTemplate
 
-    public InstanceApiHelper(final GrailsHibernateTemplate hibernateTemplate) {
-        this.hibernateTemplate = hibernateTemplate;
+    InstanceApiHelper(GrailsHibernateTemplate hibernateTemplate) {
+        this.hibernateTemplate = hibernateTemplate
     }
 
-    public void remove(final Object obj, final boolean flush) {
-        hibernateTemplate.execute((HibernateCallback<Void>) session -> {
-            session.remove(obj);
+    void remove(Object obj, boolean flush) {
+        hibernateTemplate.execute({ Session session ->
+            session.remove(obj)
             if (flush) {
-                session.flush();
+                session.flush()
             }
-            return null;
-        });
+            return null
+        } as HibernateCallback<Void>)
     }
 
-    public void setFlushModeManual() {
-        hibernateTemplate.execute((HibernateCallback<Void>) session -> {
-            session.setHibernateFlushMode(FlushMode.MANUAL);
-            return null;
-        });
+    void setFlushModeManual() {
+        hibernateTemplate.execute({ Session session ->
+            session.setHibernateFlushMode(FlushMode.MANUAL)
+            return null
+        } as HibernateCallback<Void>)
     }
+
 }

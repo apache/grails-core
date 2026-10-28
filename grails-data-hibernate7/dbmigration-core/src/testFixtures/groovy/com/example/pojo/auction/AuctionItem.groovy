@@ -1,24 +1,20 @@
-package com.example.pojo.auction;
+package com.example.pojo.auction
 
-import java.util.Date;
-import java.util.List;
+import groovy.transform.CompileStatic
 
-import lombok.Getter;
-import lombok.Setter;
+@CompileStatic
+class AuctionItem extends Persistent {
 
-@Getter
-@Setter
-public class AuctionItem extends Persistent {
-    private String description;
-    private String shortDescription;
-    private List bids;
-    private Bid successfulBid;
-    private User seller;
-    private Date ends;
-    private int condition;
+    String description
+    String shortDescription
+    List bids
+    Bid successfulBid
+    User seller
+    Date ends
+    int condition
 
-    public String toString() {
-        return shortDescription + " (" + description + ": " + condition + "/10)";
+    String toString() {
+        return shortDescription + ' (' + description + ': ' + condition + '/10)'
     }
 
 }

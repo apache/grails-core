@@ -16,40 +16,47 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.orm.hibernate.query;
+package org.grails.orm.hibernate.query
 
-import org.hibernate.Session;
-import org.hibernate.SessionFactory;
+import groovy.transform.CompileStatic
+import org.hibernate.Session
+import org.hibernate.SessionFactory
+import org.hibernate.query.MutationQuery
+import org.hibernate.query.Query as HibernateHqlQuery
 
-import org.grails.datastore.mapping.query.Query;
-import org.grails.orm.hibernate.HibernateDatastore;
-import org.grails.orm.hibernate.HibernateSession;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
+import org.grails.datastore.mapping.query.Query
+import org.grails.orm.hibernate.HibernateDatastore
+import org.grails.orm.hibernate.HibernateSession
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
 
 /**
  * Bridges the Query API with the Hibernate HQL for SELECT queries.
  *
- * @author Graeme Rocher
  * @since 1.0
  */
-public class HibernateHqlQueryCreator {
+@CompileStatic
+class HibernateHqlQueryCreator {
 
-    public static Query createHqlQuery(
+    static Query createHqlQuery(
             HibernateDatastore datastore,
             SessionFactory sessionFactory,
             org.grails.datastore.mapping.model.PersistentEntity entity,
             HqlQueryContext ctx) {
-        Session session = sessionFactory.getCurrentSession();
-        HibernateSession hibernateSession = new HibernateSession(datastore, sessionFactory);
-        String hqlStr = ctx.hql();
+        Session session = sessionFactory.currentSession
+        HibernateSession hibernateSession = new HibernateSession(datastore, sessionFactory)
+        String hqlStr = ctx.hql()
         if (ctx.isUpdate()) {
-            var mq = session.createMutationQuery(hqlStr);
-            return new MutationHqlQuery(hibernateSession, (GrailsHibernatePersistentEntity) entity, ctx, new MutationQueryDelegate(mq));
+            MutationQuery mq = session.createMutationQuery(hqlStr)
+            return new MutationHqlQuery(hibernateSession, (GrailsHibernatePersistentEntity) entity, ctx, new MutationQueryDelegate(mq))
         } else {
-            var q = ctx.isNative() ?
-                session.createNativeQuery(hqlStr, ctx.targetClass()) :
-                session.createQuery(hqlStr, ctx.targetClass());
-            return new SelectHqlQuery(hibernateSession, (GrailsHibernatePersistentEntity) entity, ctx, new SelectQueryDelegate(q));
+            HibernateHqlQuery q
+            if (ctx.isNative()) {
+                q = (HibernateHqlQuery) session.createNativeQuery(hqlStr, ctx.targetClass())
+            } else {
+                q = (HibernateHqlQuery) session.createQuery(hqlStr, ctx.targetClass())
+            }
+            return new SelectHqlQuery(hibernateSession, (GrailsHibernatePersistentEntity) entity, ctx, new SelectQueryDelegate(q))
         }
     }
+
 }

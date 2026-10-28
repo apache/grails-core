@@ -16,12 +16,11 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.orm.hibernate.query;
+package org.grails.orm.hibernate.query
 
-import java.util.ArrayList;
-import java.util.List;
+import groovy.transform.CompileStatic
 
-import org.grails.datastore.mapping.query.Query;
+import org.grails.datastore.mapping.query.Query
 
 /**
  * Native SQL expression the results are grouped by, created by the group by clause of a {@code sqlGroupProjection}
@@ -30,36 +29,38 @@ import org.grails.datastore.mapping.query.Query;
  *
  * @since 8.0.1
  */
-public class SqlGroupProjection extends Query.Projection {
+@CompileStatic
+class SqlGroupProjection extends Query.Projection {
 
-    private final String sql;
+    private final String sql
 
-    public SqlGroupProjection(String sql) {
+    SqlGroupProjection(String sql) {
         if (sql == null || sql.isBlank()) {
-            throw new IllegalArgumentException("The group by clause of a sqlGroupProjection must not be empty");
+            throw new IllegalArgumentException('The group by clause of a sqlGroupProjection must not be empty')
         }
-        this.sql = sql;
+        this.sql = sql
     }
 
     /**
      * Returns the SQL expression the results are grouped by.
      */
-    public String getSql() {
-        return sql;
+    String getSql() {
+        return sql
     }
 
     /**
      * Splits the group by clause of a {@code sqlGroupProjection}, a single expression or a comma separated list of
      * them, into one projection per expression.
      */
-    public static List<SqlGroupProjection> of(String groupBy) {
+    static List<SqlGroupProjection> of(String groupBy) {
         if (groupBy == null || groupBy.isBlank()) {
-            throw new IllegalArgumentException("The group by clause of a sqlGroupProjection must not be empty");
+            throw new IllegalArgumentException('The group by clause of a sqlGroupProjection must not be empty')
         }
-        List<SqlGroupProjection> projections = new ArrayList<>();
+        List<SqlGroupProjection> projections = []
         for (String expression : SqlProjection.splitColumns(groupBy)) {
-            projections.add(new SqlGroupProjection(expression));
+            projections.add(new SqlGroupProjection(expression))
         }
-        return projections;
+        return projections
     }
+
 }

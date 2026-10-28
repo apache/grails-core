@@ -16,15 +16,16 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.orm.hibernate.query;
+package org.grails.orm.hibernate.query
 
-import java.util.List;
+import groovy.transform.CompileStatic
+import groovy.transform.PackageScope
 
-import org.grails.datastore.mapping.model.types.Association;
-import org.grails.datastore.mapping.query.AssociationQuery;
-import org.grails.datastore.mapping.query.Query;
-import org.grails.orm.hibernate.HibernateSession;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
+import org.grails.datastore.mapping.model.types.Association
+import org.grails.datastore.mapping.query.AssociationQuery
+import org.grails.datastore.mapping.query.Query
+import org.grails.orm.hibernate.HibernateSession
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
 
 /**
  * A thin wrapper over {@link HibernateQuery} that collects criteria for a single association scope.
@@ -41,55 +42,57 @@ import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersi
  * @see PredicateGenerator
  * @see HibernateQuery#createQuery(String)
  */
-public class HibernateAssociationQuery extends AssociationQuery {
+@CompileStatic
+class HibernateAssociationQuery extends AssociationQuery {
 
-    final String alias;
+    @PackageScope final String alias
 
     /** Dotted property path used for the JPA join (e.g. {@code "pets"} or {@code "owner.address"}) */
-    final String associationPath;
+    @PackageScope final String associationPath
 
     /** Criteria collector — a real HibernateQuery scoped to the associated entity */
-    private final HibernateQuery innerQuery;
+    private final HibernateQuery innerQuery
 
-    public HibernateAssociationQuery(
+    HibernateAssociationQuery(
             HibernateSession session,
             GrailsHibernatePersistentEntity associatedEntity,
             Association association,
             String associationPath,
             String alias) {
-        super(session, associatedEntity, association);
-        this.alias = alias;
-        this.associationPath = associationPath;
-        this.innerQuery = new HibernateQuery(session, associatedEntity);
+        super(session, associatedEntity, association)
+        this.alias = alias
+        this.associationPath = associationPath
+        this.innerQuery = new HibernateQuery(session, associatedEntity)
     }
 
     /** Returns the criteria collected inside the association closure. */
-    public List<Query.Criterion> getAssociationCriteria() {
-        return innerQuery.getAllCriteria();
+    List<Query.Criterion> getAssociationCriteria() {
+        return innerQuery.allCriteria
     }
 
     @Override
-    public GrailsHibernatePersistentEntity getEntity() {
-        return (GrailsHibernatePersistentEntity) super.getEntity();
+    GrailsHibernatePersistentEntity getEntity() {
+        return (GrailsHibernatePersistentEntity) super.entity
     }
 
     @Override
-    public void add(Query.Criterion criterion) {
-        innerQuery.add(criterion);
+    void add(Query.Criterion criterion) {
+        innerQuery.add(criterion)
     }
 
     @Override
-    public void add(Query.Junction currentJunction, Query.Criterion criterion) {
-        innerQuery.add(currentJunction, criterion);
+    void add(Query.Junction currentJunction, Query.Criterion criterion) {
+        innerQuery.add(currentJunction, criterion)
     }
 
     @Override
-    public Query.Junction disjunction() {
-        return innerQuery.disjunction();
+    Query.Junction disjunction() {
+        return innerQuery.disjunction()
     }
 
     @Override
-    public Query.Junction negation() {
-        return innerQuery.negation();
+    Query.Junction negation() {
+        return innerQuery.negation()
     }
+
 }

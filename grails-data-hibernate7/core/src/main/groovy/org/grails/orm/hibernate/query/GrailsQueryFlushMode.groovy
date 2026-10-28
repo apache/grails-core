@@ -16,35 +16,35 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.orm.hibernate.query;
+package org.grails.orm.hibernate.query
 
-import java.util.Locale;
-
-import jakarta.persistence.FlushModeType;
-
-import org.hibernate.FlushMode;
-import org.hibernate.query.QueryFlushMode;
+import groovy.transform.CompileStatic
+import jakarta.persistence.FlushModeType
+import org.hibernate.FlushMode
+import org.hibernate.query.QueryFlushMode
 
 /**
  * An enum that maps traditional GORM/Hibernate flush modes to Hibernate 7 {@link QueryFlushMode}.
  *
  * @since 8.0
  */
-public enum GrailsQueryFlushMode {
+@CompileStatic
+enum GrailsQueryFlushMode {
+
     AUTO(QueryFlushMode.DEFAULT),
     COMMIT(QueryFlushMode.NO_FLUSH),
     MANUAL(QueryFlushMode.NO_FLUSH),
     ALWAYS(QueryFlushMode.FLUSH),
-    DEFAULT(QueryFlushMode.DEFAULT);
+    DEFAULT(QueryFlushMode.DEFAULT)
 
-    private final QueryFlushMode queryFlushMode;
+    private final QueryFlushMode queryFlushMode
 
     GrailsQueryFlushMode(QueryFlushMode queryFlushMode) {
-        this.queryFlushMode = queryFlushMode;
+        this.queryFlushMode = queryFlushMode
     }
 
-    public QueryFlushMode getQueryFlushMode() {
-        return queryFlushMode;
+    QueryFlushMode getQueryFlushMode() {
+        return queryFlushMode
     }
 
     /**
@@ -53,47 +53,48 @@ public enum GrailsQueryFlushMode {
      * @param object The object to map
      * @return The mapped {@link QueryFlushMode}
      */
-    public static QueryFlushMode mapToHibernateQueryFlushMode(Object object) {
+    static QueryFlushMode mapToHibernateQueryFlushMode(Object object) {
         if (object == null) {
-            return QueryFlushMode.DEFAULT;
+            return QueryFlushMode.DEFAULT
         }
         if (object instanceof QueryFlushMode) {
-            return (QueryFlushMode) object;
+            return (QueryFlushMode) object
         }
         if (object instanceof GrailsQueryFlushMode) {
-            return ((GrailsQueryFlushMode) object).getQueryFlushMode();
+            return ((GrailsQueryFlushMode) object).queryFlushMode
         }
         if (object instanceof FlushMode) {
-            FlushMode fm = (FlushMode) object;
+            FlushMode fm = (FlushMode) object
             switch (fm) {
-                case ALWAYS:
-                    return QueryFlushMode.FLUSH;
-                case MANUAL:
-                case COMMIT:
-                    return QueryFlushMode.NO_FLUSH;
+                case FlushMode.ALWAYS:
+                    return QueryFlushMode.FLUSH
+                case FlushMode.MANUAL:
+                case FlushMode.COMMIT:
+                    return QueryFlushMode.NO_FLUSH
                 default:
-                    return QueryFlushMode.DEFAULT;
+                    return QueryFlushMode.DEFAULT
             }
         }
         if (object instanceof FlushModeType) {
-            FlushModeType fmt = (FlushModeType) object;
+            FlushModeType fmt = (FlushModeType) object
             switch (fmt) {
-                case COMMIT:
-                    return QueryFlushMode.NO_FLUSH;
+                case FlushModeType.COMMIT:
+                    return QueryFlushMode.NO_FLUSH
                 default:
-                    return QueryFlushMode.DEFAULT;
+                    return QueryFlushMode.DEFAULT
             }
         }
 
-        String s = object.toString().toUpperCase(Locale.ROOT);
+        String s = object.toString().toUpperCase(Locale.ROOT)
         try {
-            return GrailsQueryFlushMode.valueOf(s).getQueryFlushMode();
+            return GrailsQueryFlushMode.valueOf(s).queryFlushMode
         } catch (IllegalArgumentException e) {
             try {
-                return QueryFlushMode.valueOf(s);
+                return QueryFlushMode.valueOf(s)
             } catch (IllegalArgumentException e2) {
-                return QueryFlushMode.DEFAULT;
+                return QueryFlushMode.DEFAULT
             }
         }
     }
+
 }

@@ -16,68 +16,71 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.orm.hibernate.cfg.domainbinding.util;
+package org.grails.orm.hibernate.cfg.domainbinding.util
 
-import jakarta.persistence.EnumType;
+import groovy.transform.CompileStatic
+import jakarta.persistence.EnumType
+import org.hibernate.MappingException
+import org.hibernate.mapping.BasicValue
 
-import org.hibernate.MappingException;
-import org.hibernate.mapping.BasicValue;
+import org.grails.orm.hibernate.cfg.IdentityEnumType
 
-import org.grails.orm.hibernate.cfg.IdentityEnumType;
+@CompileStatic
+enum GrailsEnumType {
 
-public enum GrailsEnumType {
-    DEFAULT("default") {
+    DEFAULT('default') {
         @Override
-        public void configure(BasicValue simpleValue, Class<?> propertyType) {
-            STRING.configure(simpleValue, propertyType);
+        void configure(BasicValue simpleValue, Class<?> propertyType) {
+            STRING.configure(simpleValue, propertyType)
         }
     },
     // Hibernate 7 native string enum mapping: store by Enum.name() as VARCHAR.
-    STRING("string") {
+    STRING('string') {
         @Override
-        public void configure(BasicValue simpleValue, Class<?> propertyType) {
-            simpleValue.setImplicitJavaTypeAccess(tc -> propertyType);
-            simpleValue.setEnumerationStyle(EnumType.STRING);
+        void configure(BasicValue simpleValue, Class<?> propertyType) {
+            simpleValue.setImplicitJavaTypeAccess({ tc -> propertyType })
+            simpleValue.enumerationStyle = EnumType.STRING
         }
     },
     // Hibernate 7 native ordinal enum mapping: store by Enum.ordinal() as INTEGER.
-    ORDINAL("ordinal") {
+    ORDINAL('ordinal') {
         @Override
-        public void configure(BasicValue simpleValue, Class<?> propertyType) {
-            simpleValue.setImplicitJavaTypeAccess(tc -> propertyType);
-            simpleValue.setEnumerationStyle(EnumType.ORDINAL);
+        void configure(BasicValue simpleValue, Class<?> propertyType) {
+            simpleValue.setImplicitJavaTypeAccess({ tc -> propertyType })
+            simpleValue.enumerationStyle = EnumType.ORDINAL
         }
     },
-    IDENTITY("identity") {
+    IDENTITY('identity') {
         @Override
-        public void configure(BasicValue simpleValue, Class<?> propertyType) {
-            simpleValue.setTypeName(IdentityEnumType.class.getName());
+        void configure(BasicValue simpleValue, Class<?> propertyType) {
+            simpleValue.typeName = IdentityEnumType.name
         }
-    };
-
-    private final String type;
-
-    GrailsEnumType(String type) {
-        this.type = type;
     }
 
-    public static GrailsEnumType fromString(String value) {
+    private final String type
+
+    GrailsEnumType(String type) {
+        this.type = type
+    }
+
+    static GrailsEnumType fromString(String value) {
         if (value == null || DEFAULT.type.equalsIgnoreCase(value)) {
-            return DEFAULT;
+            return DEFAULT
         }
         for (GrailsEnumType candidate : values()) {
             if (candidate.type.equalsIgnoreCase(value)) {
-                return candidate;
+                return candidate
             }
         }
         throw new MappingException(
-                "Invalid enum type [" + value + "]. Valid values are: default, string, ordinal, identity.");
+                "Invalid enum type [${value}]. Valid values are: default, string, ordinal, identity.".toString())
     }
 
-    public String getType() {
-        return type;
+    String getType() {
+        return type
     }
 
     /** Configures the given {@link BasicValue} to store {@code propertyType} per this enum type. */
-    public abstract void configure(BasicValue simpleValue, Class<?> propertyType);
+    abstract void configure(BasicValue simpleValue, Class<?> propertyType)
+
 }

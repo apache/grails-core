@@ -16,13 +16,11 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.orm.hibernate.query;
+package org.grails.orm.hibernate.query
 
-import java.io.Serializable;
-import java.util.Collection;
-import java.util.List;
-
-import org.hibernate.query.QueryFlushMode;
+import groovy.transform.CompileStatic
+import jakarta.persistence.LockModeType
+import org.hibernate.query.QueryFlushMode
 
 /**
  * Abstracts over Hibernate's {@link org.hibernate.query.Query} (SELECT) and
@@ -37,23 +35,24 @@ import org.hibernate.query.QueryFlushMode;
  * in {@link SelectQueryDelegate} and vice-versa for {@link #list()} in
  * {@link MutationQueryDelegate}.
  */
-public interface HqlQueryDelegate extends Serializable {
+@CompileStatic
+interface HqlQueryDelegate extends Serializable {
 
     // ── common ────────────────────────────────────────────────────────────────
 
-    void setTimeout(int timeout);
+    void setTimeout(int timeout)
 
-    void setQueryFlushMode(QueryFlushMode mode);
+    void setQueryFlushMode(QueryFlushMode mode)
 
-    void setParameter(String name, Object value);
+    void setParameter(String name, Object value)
 
-    <T> void setParameter(String name, T value, Class<T> type);
+    <T> void setParameter(String name, T value, Class<T> type)
 
-    void setParameter(int position, Object value);
+    void setParameter(int position, Object value)
 
-    <T> void setParameter(int position, T value, Class<T> type);
+    <T> void setParameter(int position, T value, Class<T> type)
 
-    void setHint(String hintName, Object value);
+    void setHint(String hintName, Object value)
 
     // ── select-only (no-ops for mutation queries) ─────────────────────────────
 
@@ -67,7 +66,7 @@ public interface HqlQueryDelegate extends Serializable {
 
     default void setReadOnly(boolean b) {}
 
-    default void setLockMode(jakarta.persistence.LockModeType lockModeType) {}
+    default void setLockMode(LockModeType lockModeType) {}
 
     /** Sets a named collection parameter. For mutation queries, falls back to {@link #setParameter}. */
     default void setParameterList(String name, Collection<?> values) {}
@@ -78,15 +77,16 @@ public interface HqlQueryDelegate extends Serializable {
     // ── execution ─────────────────────────────────────────────────────────────
 
     /** Returns all results. Throws {@link UnsupportedOperationException} for mutation queries. */
-    @SuppressWarnings("rawtypes")
-    List list();
+    @SuppressWarnings('rawtypes')
+    List list()
 
     /** Executes an UPDATE/DELETE. Throws {@link UnsupportedOperationException} for SELECT queries. */
-    int executeUpdate();
+    int executeUpdate()
 
     /**
      * Returns the underlying {@link org.hibernate.query.Query} for SELECT queries, or {@code null}
      * for mutation queries (used by {@link org.grails.orm.hibernate.GrailsHibernateTemplate#applySettings}).
      */
-    org.hibernate.query.Query<?> selectQuery();
+    org.hibernate.query.Query<?> selectQuery()
+
 }

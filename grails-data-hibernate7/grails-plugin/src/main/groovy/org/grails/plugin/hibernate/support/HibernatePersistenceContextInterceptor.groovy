@@ -17,247 +17,256 @@
  *  under the License.
  */
 
-package org.grails.plugin.hibernate.support;
+package org.grails.plugin.hibernate.support
 
-import java.sql.Connection;
-import java.util.Deque;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.concurrent.ConcurrentLinkedDeque;
+import java.sql.Connection
+import java.util.concurrent.ConcurrentLinkedDeque
 
-import org.hibernate.FlushMode;
-import org.hibernate.Session;
-import org.hibernate.SessionFactory;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import groovy.transform.CompileStatic
+import org.hibernate.FlushMode
+import org.hibernate.Session
+import org.hibernate.SessionFactory
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 
-import org.springframework.transaction.support.TransactionSynchronizationManager;
+import org.springframework.transaction.support.TransactionSynchronizationManager
 
-import grails.persistence.support.PersistenceContextInterceptor;
-import grails.validation.DeferredBindingActions;
-import org.grails.core.lifecycle.ShutdownOperations;
-import org.grails.datastore.mapping.core.connections.ConnectionSource;
-import org.grails.orm.hibernate.HibernateDatastore;
-import org.grails.orm.hibernate.support.HibernateRuntimeUtils;
-import org.grails.orm.hibernate.support.hibernate7.SessionFactoryUtils;
-import org.grails.orm.hibernate.support.hibernate7.SessionHolder;
+import grails.persistence.support.PersistenceContextInterceptor
+import grails.validation.DeferredBindingActions
+import org.grails.core.lifecycle.ShutdownOperations
+import org.grails.datastore.mapping.core.connections.ConnectionSource
+import org.grails.orm.hibernate.HibernateDatastore
+import org.grails.orm.hibernate.support.HibernateRuntimeUtils
+import org.grails.orm.hibernate.support.hibernate7.SessionFactoryUtils
+import org.grails.orm.hibernate.support.hibernate7.SessionHolder
 
 /**
- * @author Graeme Rocher
  * @since 0.4
  */
-public class HibernatePersistenceContextInterceptor
+@CompileStatic
+class HibernatePersistenceContextInterceptor
         implements PersistenceContextInterceptor, SessionFactoryAwarePersistenceContextInterceptor {
 
-    private static final Logger LOG = LoggerFactory.getLogger(HibernatePersistenceContextInterceptor.class);
-    private HibernateDatastore hibernateDatastore;
+    private static final Logger LOG = LoggerFactory.getLogger(HibernatePersistenceContextInterceptor)
+    private HibernateDatastore hibernateDatastore
 
-    private static ThreadLocal<Map<String, Boolean>> participate = ThreadLocal.withInitial(HashMap::new);
+    private static ThreadLocal<Map<String, Boolean>> participate = ThreadLocal.withInitial({ -> (Map<String, Boolean>) new HashMap<String, Boolean>() })
 
-    private static ThreadLocal<Map<String, Integer>> nestingCount = ThreadLocal.withInitial(HashMap::new);
+    private static ThreadLocal<Map<String, Integer>> nestingCount = ThreadLocal.withInitial({ -> (Map<String, Integer>) new HashMap<String, Integer>() })
 
-    private String dataSourceName;
+    private String dataSourceName
 
     static {
-        ShutdownOperations.addOperation(() -> {
-            participate.remove();
-            nestingCount.remove();
-        });
+        ShutdownOperations.addOperation({ ->
+            participate.remove()
+            nestingCount.remove()
+        })
     }
 
-    private Deque<Connection> disconnected = new ConcurrentLinkedDeque<>();
-    private final boolean transactionRequired;
+    private Deque<Connection> disconnected = new ConcurrentLinkedDeque<>()
+    private final boolean transactionRequired
 
-    public HibernatePersistenceContextInterceptor() {
-        this(ConnectionSource.DEFAULT);
+    HibernatePersistenceContextInterceptor() {
+        this(ConnectionSource.DEFAULT)
     }
 
     /**
      * @param dataSourceName a name of dataSource
      */
-    public HibernatePersistenceContextInterceptor(String dataSourceName) {
-        this.dataSourceName = dataSourceName;
-        this.transactionRequired = true;
+    HibernatePersistenceContextInterceptor(String dataSourceName) {
+        this.dataSourceName = dataSourceName
+        this.transactionRequired = true
     }
 
     /* (non-Javadoc)
      * @see org.apache.groovy.grails.support.PersistenceContextInterceptor#destroy()
      */
-    public void destroy() {
-        DeferredBindingActions.clear();
+    void destroy() {
+        DeferredBindingActions.clear()
         if (!disconnected.isEmpty()) {
-            disconnected.pop();
+            disconnected.pop()
         }
         if (getSessionFactory() == null || decNestingCount() > 0 || getParticipate()) {
-            return;
+            return
         }
 
         // single session mode
-        SessionHolder holder = (SessionHolder) TransactionSynchronizationManager.unbindResource(getSessionFactory());
-        LOG.debug("Closing single Hibernate session in GrailsDispatcherServlet");
+        SessionHolder holder = (SessionHolder) TransactionSynchronizationManager.unbindResource(getSessionFactory())
+        LOG.debug('Closing single Hibernate session in GrailsDispatcherServlet')
         try {
-            disconnected.clear();
-            SessionFactoryUtils.closeSession(holder.getSession());
+            disconnected.clear()
+            SessionFactoryUtils.closeSession(holder.session)
         } catch (RuntimeException ex) {
-            LOG.error("Unexpected exception on closing Hibernate Session", ex);
+            LOG.error('Unexpected exception on closing Hibernate Session', ex)
         }
     }
 
-    public void disconnect() {
-        throw new UnsupportedOperationException("disconnect is not supported by Hibernate 7");
+    void disconnect() {
+        throw new UnsupportedOperationException('disconnect is not supported by Hibernate 7')
     }
 
-    public void reconnect() {
-        throw new UnsupportedOperationException("reconnect is not supported by Hibernate 7");
+    void reconnect() {
+        throw new UnsupportedOperationException('reconnect is not supported by Hibernate 7')
     }
 
-    public void flush() {
-        if (getSessionFactory() == null) return;
+    void flush() {
+        if (getSessionFactory() == null) {
+            return
+        }
         if (!getParticipate()) {
-            Session session = getSession();
+            Session session = getSession()
             if (!transactionRequired) {
-                session.flush();
+                session.flush()
             } else if (TransactionSynchronizationManager.isSynchronizationActive()) {
-                session.flush();
+                session.flush()
             } else {
                 // No active Spring transaction synchronization. This happens when the interceptor
                 // opened the session itself - for example around a non-transactional BootStrap.
                 // Flush and commit the owned session's pending changes in a short transaction so
                 // they are persisted rather than discarded when the session is closed in destroy().
-                org.hibernate.Transaction transaction = session.getTransaction();
-                boolean ownTransaction = transaction == null || !transaction.isActive();
+                org.hibernate.Transaction transaction = session.transaction
+                boolean ownTransaction = transaction == null || !transaction.isActive()
                 if (ownTransaction) {
-                    transaction = session.beginTransaction();
+                    transaction = session.beginTransaction()
                 }
                 try {
-                    session.flush();
+                    session.flush()
                     if (ownTransaction) {
-                        transaction.commit();
+                        transaction.commit()
                     }
                 } catch (RuntimeException ex) {
                     if (ownTransaction && transaction.isActive()) {
-                        transaction.rollback();
+                        transaction.rollback()
                     }
-                    throw ex;
+                    throw ex
                 }
             }
         }
     }
 
-    public void clear() {
-        if (getSessionFactory() == null) return;
-        getSession().clear();
+    void clear() {
+        if (getSessionFactory() == null) {
+            return
+        }
+        getSession().clear()
     }
 
-    public void setReadOnly() {
-        if (getSessionFactory() == null) return;
-        getSession().setHibernateFlushMode(FlushMode.MANUAL);
+    void setReadOnly() {
+        if (getSessionFactory() == null) {
+            return
+        }
+        getSession().setHibernateFlushMode(FlushMode.MANUAL)
     }
 
-    public void setReadWrite() {
-        if (getSessionFactory() == null) return;
-        getSession().setHibernateFlushMode(FlushMode.AUTO);
+    void setReadWrite() {
+        if (getSessionFactory() == null) {
+            return
+        }
+        getSession().setHibernateFlushMode(FlushMode.AUTO)
     }
 
-    public boolean isOpen() {
-        if (getSessionFactory() == null) return false;
+    boolean isOpen() {
+        if (getSessionFactory() == null) {
+            return false
+        }
         try {
-            return getSession(false).isOpen();
+            return getSession(false).isOpen()
         } catch (Exception e) {
-            return false;
+            return false
         }
     }
 
     /* (non-Javadoc)
      * @see org.apache.groovy.grails.support.PersistenceContextInterceptor#init()
      */
-    public void init() {
+    void init() {
         if (incNestingCount() > 1) {
-            return;
+            return
         }
-        SessionFactory sf = getSessionFactory();
+        SessionFactory sf = getSessionFactory()
         if (sf == null) {
-            return;
+            return
         }
         if (TransactionSynchronizationManager.hasResource(sf)) {
             // Do not modify the Session: just set the participate flag.
-            setParticipate(true);
+            setParticipate(true)
         } else {
-            setParticipate(false);
-            LOG.debug("Opening single Hibernate session in HibernatePersistenceContextInterceptor");
-            Session session = getSession();
-            HibernateRuntimeUtils.enableDynamicFilterEnablerIfPresent(sf, session);
-            TransactionSynchronizationManager.bindResource(sf, new SessionHolder(session));
+            setParticipate(false)
+            LOG.debug('Opening single Hibernate session in HibernatePersistenceContextInterceptor')
+            Session session = getSession()
+            HibernateRuntimeUtils.enableDynamicFilterEnablerIfPresent(sf, session)
+            TransactionSynchronizationManager.bindResource(sf, new SessionHolder(session))
         }
     }
 
     private Session getSession() {
-        return getSession(true);
+        return getSession(true)
     }
 
     private Session getSession(boolean allowCreate) {
 
-        Object value = TransactionSynchronizationManager.getResource(getSessionFactory());
+        Object value = TransactionSynchronizationManager.getResource(getSessionFactory())
         if (value instanceof Session) {
-            return (Session) value;
+            return (Session) value
         }
 
         if (value instanceof SessionHolder) {
-            SessionHolder sessionHolder = (SessionHolder) value;
-            return sessionHolder.getSession();
+            SessionHolder sessionHolder = (SessionHolder) value
+            return sessionHolder.session
         }
 
         if (allowCreate && hibernateDatastore != null) {
-            return hibernateDatastore.openSession();
+            return hibernateDatastore.openSession()
         }
 
         throw new IllegalStateException(
-                "No Hibernate Session bound to thread, and configuration does not allow creation of non-transactional one here");
+                'No Hibernate Session bound to thread, and configuration does not allow creation of non-transactional one here')
     }
 
     /**
      * @return the sessionFactory
      */
-    public SessionFactory getSessionFactory() {
-        return hibernateDatastore.getSessionFactory();
+    SessionFactory getSessionFactory() {
+        return hibernateDatastore.sessionFactory
     }
 
-    public void setHibernateDatastore(HibernateDatastore hibernateDatastore) {
-        this.hibernateDatastore = hibernateDatastore;
+    void setHibernateDatastore(HibernateDatastore hibernateDatastore) {
+        this.hibernateDatastore = hibernateDatastore
     }
 
     @Override
-    public void setSessionFactory(SessionFactory sessionFactory) {
+    void setSessionFactory(SessionFactory sessionFactory) {
         // ignore
     }
 
     private int incNestingCount() {
-        Map<String, Integer> map = nestingCount.get();
-        Integer current = map.get(dataSourceName);
-        int value = (current != null) ? current + 1 : 1;
-        map.put(dataSourceName, value);
-        return value;
+        Map<String, Integer> map = nestingCount.get()
+        Integer current = map.get(dataSourceName)
+        int value = (current != null) ? current + 1 : 1
+        map.put(dataSourceName, value)
+        return value
     }
 
     private int decNestingCount() {
-        Map<String, Integer> map = nestingCount.get();
-        Integer current = map.get(dataSourceName);
-        int value = (current != null) ? current - 1 : 0;
+        Map<String, Integer> map = nestingCount.get()
+        Integer current = map.get(dataSourceName)
+        int value = (current != null) ? current - 1 : 0
         if (value < 0) {
-            value = 0;
+            value = 0
         }
-        map.put(dataSourceName, value);
-        return value;
+        map.put(dataSourceName, value)
+        return value
     }
 
     private void setParticipate(boolean flag) {
-        Map<String, Boolean> map = participate.get();
-        map.put(dataSourceName, flag);
+        Map<String, Boolean> map = participate.get()
+        map.put(dataSourceName, flag)
     }
 
     private boolean getParticipate() {
-        Map<String, Boolean> map = participate.get();
-        Boolean ret = map.get(dataSourceName);
-        return (ret != null) ? ret : false;
+        Map<String, Boolean> map = participate.get()
+        Boolean ret = map.get(dataSourceName)
+        return (ret != null) ? ret : false
     }
+
 }
