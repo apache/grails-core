@@ -572,6 +572,7 @@ include(
         'grails-test-examples-hyphenated',
         'grails-test-examples-issue-11102',
         'grails-test-examples-issue-15228',
+        'grails-test-examples-issue-15819',
         'grails-test-examples-issue-10279',
         'grails-test-examples-issue-698-domain-save-npe',
         'grails-test-examples-issue-views-182',
@@ -633,6 +634,7 @@ project(':grails-test-examples-plugins-loadsecond').projectDir = file('grails-te
 project(':grails-test-examples-plugins-loadafter').projectDir = file('grails-test-examples/plugins/loadafter')
 project(':grails-test-examples-plugins-issue11005').projectDir = file('grails-test-examples/plugins/issue11005')
 project(':grails-test-examples-issue-15228').projectDir = file('grails-test-examples/issue-15228')
+project(':grails-test-examples-issue-15819').projectDir = file('grails-test-examples/issue-15819')
 project(':grails-test-examples-issue-10279').projectDir = file('grails-test-examples/issue-10279')
 project(':grails-test-examples-plugins-exploded').projectDir = file('grails-test-examples/plugins/exploded')
 project(':grails-test-examples-cache').projectDir = file('grails-test-examples/cache')
