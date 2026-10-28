@@ -26,14 +26,21 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 
 import jakarta.servlet.http.HttpServletRequest
+import jakarta.servlet.http.HttpServletRequestWrapper
 
+import org.springframework.http.HttpHeaders
+import org.springframework.http.HttpMethod
 import org.springframework.mock.web.MockHttpServletRequest
 import org.springframework.mock.web.MockHttpServletResponse
 import org.springframework.mock.web.MockHttpSession
 import org.springframework.mock.web.MockMultipartFile
 import org.springframework.mock.web.MockMultipartHttpServletRequest
 import org.springframework.mock.web.MockServletContext
+import org.springframework.util.LinkedMultiValueMap
+import org.springframework.util.MultiValueMap
 import org.springframework.web.context.request.RequestContextHolder
+import org.springframework.web.multipart.MultipartException
+import org.springframework.web.multipart.MultipartFile
 import org.springframework.web.multipart.MultipartHttpServletRequest
 
 import grails.util.GrailsWebMockUtil
@@ -41,6 +48,7 @@ import grails.web.mime.MimeType
 import grails.web.mime.MimeTypeUtils
 import org.grails.web.mime.DefaultMimeTypeResolver
 import org.grails.web.servlet.mvc.GrailsWebRequest
+import org.grails.web.util.WebUtils
 import spock.lang.Issue
 import spock.lang.Specification
 import spock.lang.Unroll
@@ -228,34 +236,40 @@ class GrailsWebRequestTaskDecoratorSpec extends Specification {
     }
 
     @Issue('https://github.com/apache/grails-core/issues/15851')
-    void 'a task started from a task sees the request that task sees'() {
+    void 'a task started from a task reads the request through a view of its own'() {
         given:
         MockHttpServletRequest live = request()
+        live.characterEncoding = 'UTF-8'
+        live.content = '{"title":"Grails"}'.getBytes('UTF-8')
         AtomicBoolean recycled = new AtomicBoolean()
         GrailsWebRequest original = bind(recyclable(live, recycled))
 
-        and:
+        and: 'a task that reads the body and starts another task'
         GrailsWebRequestTaskDecorator decorator = new GrailsWebRequestTaskDecorator()
         Map seen = [:]
         Runnable nested
         Runnable decorated = decorator.decorate {
-            seen.outer = GrailsWebRequest.lookup().currentRequest
+            HttpServletRequest request = GrailsWebRequest.lookup().currentRequest
+            request.setAttribute('outer', 'ran')
+            seen.outer = request.inputStream.getText('UTF-8')
             nested = decorator.decorate {
-                seen.inner = GrailsWebRequest.lookup().currentRequest
-                seen.title = seen.inner.getParameter('title')
+                HttpServletRequest inner = GrailsWebRequest.lookup().currentRequest
+                seen.shared = inner.getAttribute('outer')
+                seen.inner = inner.inputStream.getText('UTF-8')
             }
         }
         RequestContextHolder.resetRequestAttributes()
 
-        when:
-        decorated.run()
+        when: 'both run after the request completed'
         original.requestCompleted()
         recycled.set(true)
+        decorated.run()
         nested.run()
 
-        then:
-        seen.inner.is(seen.outer)
-        seen.title == 'Grails'
+        then: 'each read the whole body, from the one copy whose attributes they share'
+        seen.outer == '{"title":"Grails"}'
+        seen.inner == '{"title":"Grails"}'
+        seen.shared == 'ran'
     }
 
     @Issue('https://github.com/apache/grails-core/issues/15851')
@@ -298,10 +312,40 @@ class GrailsWebRequestTaskDecoratorSpec extends Specification {
     }
 
     @Issue('https://github.com/apache/grails-core/issues/15851')
-    void 'a task that outlives the request reads the body from the copy'() {
+    void 'every task of the request reads the whole unread body from the one copy'() {
         given:
         MockHttpServletRequest live = request()
         live.contentType = 'application/json'
+        live.characterEncoding = 'UTF-8'
+        live.content = '{"title":"Grails"}'.getBytes('UTF-8')
+        AtomicBoolean recycled = new AtomicBoolean()
+        GrailsWebRequest original = bind(recyclable(live, recycled))
+
+        and: 'two tasks submitted during the request'
+        Map seen = [:]
+        Runnable first = new GrailsWebRequestTaskDecorator().decorate {
+            seen.streamed = GrailsWebRequest.lookup().currentRequest.inputStream.getText('UTF-8')
+        }
+        Runnable second = new GrailsWebRequestTaskDecorator().decorate {
+            seen.read = GrailsWebRequest.lookup().currentRequest.reader.text
+        }
+        RequestContextHolder.resetRequestAttributes()
+
+        when:
+        original.requestCompleted()
+        recycled.set(true)
+        first.run()
+        second.run()
+
+        then: 'each read the whole body, through a stream or a reader of its own'
+        seen.streamed == '{"title":"Grails"}'
+        seen.read == '{"title":"Grails"}'
+    }
+
+    @Issue('https://github.com/apache/grails-core/issues/15851')
+    void 'a task reads the copied body through one stream whose position persists, as on the live request'() {
+        given:
+        MockHttpServletRequest live = request()
         live.characterEncoding = 'UTF-8'
         live.content = '{"title":"Grails"}'.getBytes('UTF-8')
         AtomicBoolean recycled = new AtomicBoolean()
@@ -311,8 +355,16 @@ class GrailsWebRequestTaskDecoratorSpec extends Specification {
         Map seen = [:]
         Runnable decorated = new GrailsWebRequestTaskDecorator().decorate {
             HttpServletRequest request = GrailsWebRequest.lookup().currentRequest
-            seen.streamed = request.inputStream.getText('UTF-8')
-            seen.read = request.reader.text
+            InputStream stream = request.inputStream
+            seen.first = ((char) stream.read()).toString()
+            seen.same = request.inputStream.is(stream)
+            seen.rest = request.inputStream.getText('UTF-8')
+            try {
+                request.reader
+            }
+            catch (Throwable failure) {
+                seen.reading = failure
+            }
         }
         RequestContextHolder.resetRequestAttributes()
 
@@ -321,9 +373,13 @@ class GrailsWebRequestTaskDecoratorSpec extends Specification {
         recycled.set(true)
         decorated.run()
 
-        then:
-        seen.streamed == '{"title":"Grails"}'
-        seen.read == '{"title":"Grails"}'
+        then: 'the stream is one, and a later read continues where the last ended'
+        seen.first == '{'
+        seen.same
+        seen.rest == '"title":"Grails"}'
+
+        and: 'the reader is unavailable once the stream is in use, as on the live request'
+        seen.reading instanceof IllegalStateException
     }
 
     @Issue('https://github.com/apache/grails-core/issues/15851')
@@ -399,6 +455,40 @@ class GrailsWebRequestTaskDecoratorSpec extends Specification {
     }
 
     @Issue('https://github.com/apache/grails-core/issues/15851')
+    void 'the copy keeps the parameters of a multipart request that can no longer parse them as it completes'() {
+        given: 'a lazily resolved multipart request whose body is gone by the time it completes'
+        MockHttpServletRequest live = request()
+        AtomicBoolean consumed = new AtomicBoolean()
+        GrailsWebRequest original = bind(new LazyMultipartHttpServletRequest(live, consumed))
+
+        and:
+        Map seen = [:]
+        Runnable decorated = new GrailsWebRequestTaskDecorator().decorate {
+            HttpServletRequest request = GrailsWebRequest.lookup().currentRequest
+            seen.title = request.getParameter('title')
+            try {
+                ((MultipartHttpServletRequest) request).getFile('cover')
+            }
+            catch (Throwable failure) {
+                seen.upload = failure
+            }
+        }
+        RequestContextHolder.resetRequestAttributes()
+
+        when: 'parsing the parameters fails as the request completes, as it does once the body is consumed'
+        consumed.set(true)
+        original.requestCompleted()
+        decorated.run()
+
+        then: 'the copy holds the parameters of the request the wrapper wraps'
+        seen.title == 'Grails'
+
+        and: 'the upload needed the live request'
+        seen.upload instanceof IllegalStateException
+        seen.upload.message.startsWith('The request has completed')
+    }
+
+    @Issue('https://github.com/apache/grails-core/issues/15851')
     @Unroll
     void 'the copy reads a date header in the #form form as the live request does'() {
         given:
@@ -462,15 +552,18 @@ class GrailsWebRequestTaskDecoratorSpec extends Specification {
 
     @Issue('https://github.com/apache/grails-core/issues/15851')
     void 'the request is released once the copy replaces it'() {
-        given:
+        given: 'a request an attribute of which holds the request itself, as a filter may park it'
         MockHttpServletRequest live = request()
+        live.setAttribute('itself', live)
         GrailsWebRequest original = bind(live)
         WeakReference<MockHttpServletRequest> reference = new WeakReference<>(live)
 
         and:
         Map seen = [:]
         Runnable decorated = new GrailsWebRequestTaskDecorator().decorate {
-            seen.title = GrailsWebRequest.lookup().currentRequest.getParameter('title')
+            HttpServletRequest request = GrailsWebRequest.lookup().currentRequest
+            seen.title = request.getParameter('title')
+            seen.itself = request.getAttribute('itself')
         }
         RequestContextHolder.resetRequestAttributes()
 
@@ -479,14 +572,15 @@ class GrailsWebRequestTaskDecoratorSpec extends Specification {
         original = null
         live = null
 
-        then: 'nothing holds the request any more'
+        then: 'nothing holds the request any more, not even through its copied attributes'
         collected(reference)
 
         when:
         decorated.run()
 
-        then: 'the task reads the copy'
+        then: 'the task reads the copy, which left out what held the request'
         seen.title == 'Grails'
+        seen.itself == null
     }
 
     private static boolean collected(WeakReference<?> reference) {
@@ -509,8 +603,97 @@ class GrailsWebRequestTaskDecoratorSpec extends Specification {
 
     private static GrailsWebRequest bind(HttpServletRequest request) {
         GrailsWebRequest webRequest = new GrailsWebRequest(request, new MockHttpServletResponse(), request.servletContext)
-        RequestContextHolder.setRequestAttributes(webRequest)
+        // As the web request filter binds it, which also parks the web request in a request attribute
+        WebUtils.storeGrailsWebRequest(webRequest)
         return webRequest
+    }
+
+    // Stands for a lazily resolving multipart wrapper, which parses the body for its parameters when they are
+    // first read and can no longer do so once the body is consumed, as the request completes
+    private static class LazyMultipartHttpServletRequest extends HttpServletRequestWrapper
+            implements MultipartHttpServletRequest {
+
+        private final AtomicBoolean consumed
+
+        LazyMultipartHttpServletRequest(HttpServletRequest request, AtomicBoolean consumed) {
+            super(request)
+            this.consumed = consumed
+        }
+
+        private void parse() {
+            if (consumed.get()) {
+                throw new MultipartException('The multipart body was consumed before it was parsed')
+            }
+        }
+
+        @Override
+        String getParameter(String name) {
+            parse()
+            return super.getParameter(name)
+        }
+
+        @Override
+        Enumeration<String> getParameterNames() {
+            parse()
+            return super.getParameterNames()
+        }
+
+        @Override
+        String[] getParameterValues(String name) {
+            parse()
+            return super.getParameterValues(name)
+        }
+
+        @Override
+        Map<String, String[]> getParameterMap() {
+            parse()
+            return super.getParameterMap()
+        }
+
+        @Override
+        HttpMethod getRequestMethod() {
+            return HttpMethod.valueOf(method)
+        }
+
+        @Override
+        HttpHeaders getRequestHeaders() {
+            return new HttpHeaders()
+        }
+
+        @Override
+        HttpHeaders getMultipartHeaders(String paramOrFileName) {
+            return null
+        }
+
+        @Override
+        Iterator<String> getFileNames() {
+            return Collections.emptyIterator()
+        }
+
+        @Override
+        MultipartFile getFile(String name) {
+            return null
+        }
+
+        @Override
+        List<MultipartFile> getFiles(String name) {
+            return Collections.emptyList()
+        }
+
+        @Override
+        Map<String, MultipartFile> getFileMap() {
+            return Collections.emptyMap()
+        }
+
+        @Override
+        MultiValueMap<String, MultipartFile> getMultiFileMap() {
+            return new LinkedMultiValueMap<String, MultipartFile>()
+        }
+
+        @Override
+        String getMultipartContentType(String paramOrFileName) {
+            return null
+        }
     }
 
     // Stands for the facade Tomcat gives the application, which fails once the request it stands for is recycled

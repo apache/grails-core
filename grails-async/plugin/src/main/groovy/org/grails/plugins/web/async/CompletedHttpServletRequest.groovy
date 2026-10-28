@@ -35,6 +35,7 @@ import jakarta.servlet.ServletConnection
 import jakarta.servlet.ServletContext
 import jakarta.servlet.ServletInputStream
 import jakarta.servlet.ServletRequest
+import jakarta.servlet.ServletRequestWrapper
 import jakarta.servlet.ServletResponse
 import jakarta.servlet.http.Cookie
 import jakarta.servlet.http.HttpServletMapping
@@ -47,14 +48,20 @@ import jakarta.servlet.http.Part
 
 import org.springframework.util.LinkedCaseInsensitiveMap
 
+import org.grails.web.util.GrailsApplicationAttributes
+
 /**
  * A copy of a request, taken as the request completed, which a task that outlives the request reads in its place.
  *
  * <p>The container recycles a request once it completes, so a task that read the request itself from then on
- * would fail. The copy holds the attributes, parameters, headers, locales and cookies of the request, the part
- * of its body nothing had read, its session and what identifies it. Attributes a task sets stay with the copy.
- * What only the live request can do, such as dispatching, processing asynchronously, creating a session or
- * checking a role, is not available.</p>
+ * would fail. One copy is taken as the request completes, and each task reads it through a {@link #newView view}
+ * of its own, so each has the part of the body nothing had read, served through one stream or reader whose
+ * position persists, as the live request serves it. The copy holds the attributes, parameters, headers, locales
+ * and cookies of the request, its session and what identifies it. Attributes a task sets stay with the copy,
+ * shared by every view, as they are shared on the live request. The request itself and the web request of the
+ * request thread are not carried over, so the copy holds nothing the container recycles. What only the live
+ * request can do, such as dispatching, processing asynchronously, creating a session or checking a role, is not
+ * available.</p>
  *
  * @since 8.0.1
  */
@@ -67,7 +74,7 @@ class CompletedHttpServletRequest implements HttpServletRequest {
             'EEEE, dd-MMM-yy HH:mm:ss zzz',
             'EEE MMM dd HH:mm:ss yyyy')
 
-    private final Map<String, Object> attributes = new ConcurrentHashMap<>()
+    private final Map<String, Object> attributes
     private final byte[] body
     private final Map<String, String[]> parameters
     private final Map<String, List<String>> headers
@@ -109,19 +116,19 @@ class CompletedHttpServletRequest implements HttpServletRequest {
     private final String requestId
     private final String protocolRequestId
     private volatile String characterEncoding
+    private ServletInputStream inputStream
+    private BufferedReader reader
 
     private CompletedHttpServletRequest(HttpServletRequest request) {
+        this.attributes = new ConcurrentHashMap<>()
         for (String name : Collections.list(request.attributeNames)) {
             Object value = request.getAttribute(name)
-            if (value != null) {
+            // Not the request itself nor the web request holding it, so the copy holds nothing the container recycles
+            if (value != null && !value.is(request) && GrailsApplicationAttributes.WEB_REQUEST != name) {
                 attributes.put(name, value)
             }
         }
-        Map<String, String[]> parameters = new LinkedHashMap<>()
-        for (Map.Entry<String, String[]> parameter : request.parameterMap.entrySet()) {
-            parameters.put(parameter.key, copyValues(parameter.value))
-        }
-        this.parameters = Collections.unmodifiableMap(parameters)
+        this.parameters = Collections.unmodifiableMap(copyParameters(request))
         // After the parameters: parsing them consumes a form body, on the live request too
         this.body = copyBody(request)
         Map<String, List<String>> headers = new LinkedCaseInsensitiveMap<>(Locale.ENGLISH)
@@ -170,6 +177,52 @@ class CompletedHttpServletRequest implements HttpServletRequest {
         this.protocolRequestId = request.protocolRequestId
     }
 
+    // Field by field: the getters serve tasks, so some, such as getSession and getLocales, do not return the field
+    private CompletedHttpServletRequest(CompletedHttpServletRequest copy) {
+        this.attributes = copy.@attributes
+        this.body = copy.@body
+        this.parameters = copy.@parameters
+        this.headers = copy.@headers
+        this.locales = copy.@locales
+        this.cookies = copy.@cookies
+        this.session = copy.@session
+        this.servletContext = copy.@servletContext
+        this.userPrincipal = copy.@userPrincipal
+        this.dispatcherType = copy.@dispatcherType
+        this.httpServletMapping = copy.@httpServletMapping
+        this.servletConnection = copy.@servletConnection
+        this.authType = copy.@authType
+        this.characterEncoding = copy.@characterEncoding
+        this.contentType = copy.@contentType
+        this.contentLength = copy.@contentLength
+        this.method = copy.@method
+        this.requestURI = copy.@requestURI
+        this.requestURL = copy.@requestURL
+        this.queryString = copy.@queryString
+        this.contextPath = copy.@contextPath
+        this.servletPath = copy.@servletPath
+        this.pathInfo = copy.@pathInfo
+        this.pathTranslated = copy.@pathTranslated
+        this.protocol = copy.@protocol
+        this.scheme = copy.@scheme
+        this.serverName = copy.@serverName
+        this.serverPort = copy.@serverPort
+        this.secure = copy.@secure
+        this.remoteAddr = copy.@remoteAddr
+        this.remoteHost = copy.@remoteHost
+        this.remotePort = copy.@remotePort
+        this.localName = copy.@localName
+        this.localAddr = copy.@localAddr
+        this.localPort = copy.@localPort
+        this.remoteUser = copy.@remoteUser
+        this.requestedSessionId = copy.@requestedSessionId
+        this.requestedSessionIdValid = copy.@requestedSessionIdValid
+        this.requestedSessionIdFromCookie = copy.@requestedSessionIdFromCookie
+        this.requestedSessionIdFromURL = copy.@requestedSessionIdFromURL
+        this.requestId = copy.@requestId
+        this.protocolRequestId = copy.@protocolRequestId
+    }
+
     /**
      * Copies a request that is completing. It has to be called before the container recycles the request.
      *
@@ -180,8 +233,41 @@ class CompletedHttpServletRequest implements HttpServletRequest {
         return new CompletedHttpServletRequest(request)
     }
 
+    /**
+     * A view of the copy for one task. Every view shares the copied request, including the attributes, and reads
+     * the one copied body through a stream or reader of its own, so what one task reads is still there for the next.
+     *
+     * @return the view
+     */
+    CompletedHttpServletRequest newView() {
+        return new CompletedHttpServletRequest(this)
+    }
+
     private static String[] copyValues(String[] values) {
         return values == null ? null : Arrays.copyOf(values, values.length)
+    }
+
+    private static Map<String, String[]> copyParameters(HttpServletRequest request) {
+        ServletRequest source = request
+        while (true) {
+            try {
+                Map<String, String[]> parameters = new LinkedHashMap<>()
+                for (Map.Entry<String, String[]> parameter : source.parameterMap.entrySet()) {
+                    parameters.put(parameter.key, copyValues(parameter.value))
+                }
+                return parameters
+            }
+            catch (RuntimeException failure) {
+                if (source instanceof ServletRequestWrapper) {
+                    // A multipart wrapper resolving lazily parses the body for its parameters, which a request
+                    // that is completing no longer offers, so the parameters come from the request it wraps
+                    source = ((ServletRequestWrapper) source).request
+                }
+                else {
+                    throw failure
+                }
+            }
+        }
     }
 
     private static Cookie[] copyCookies(Cookie[] cookies) {
@@ -295,13 +381,27 @@ class CompletedHttpServletRequest implements HttpServletRequest {
     }
 
     @Override
-    ServletInputStream getInputStream() {
-        return new CopiedServletInputStream(body)
+    synchronized ServletInputStream getInputStream() {
+        if (reader != null) {
+            throw new IllegalStateException(
+                    'getReader() has already been called, so the body is not available as a stream, as on the live request')
+        }
+        if (inputStream == null) {
+            inputStream = new CopiedServletInputStream(body)
+        }
+        return inputStream
     }
 
     @Override
-    BufferedReader getReader() {
-        return new BufferedReader(new InputStreamReader(new ByteArrayInputStream(body), charset(characterEncoding)))
+    synchronized BufferedReader getReader() {
+        if (inputStream != null) {
+            throw new IllegalStateException(
+                    'getInputStream() has already been called, so the body is not available as a reader, as on the live request')
+        }
+        if (reader == null) {
+            reader = new BufferedReader(new InputStreamReader(new ByteArrayInputStream(body), charset(characterEncoding)))
+        }
+        return reader
     }
 
     @Override
