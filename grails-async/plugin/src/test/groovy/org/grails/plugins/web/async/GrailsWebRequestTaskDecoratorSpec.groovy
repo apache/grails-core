@@ -25,6 +25,7 @@ import java.security.Principal
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicReference
 
 import jakarta.servlet.DispatcherType
 import jakarta.servlet.FilterChain
@@ -50,6 +51,7 @@ import org.springframework.web.context.request.RequestContextHolder
 import org.springframework.web.multipart.MultipartException
 import org.springframework.web.multipart.MultipartFile
 import org.springframework.web.multipart.MultipartHttpServletRequest
+import org.springframework.web.util.ContentCachingRequestWrapper
 
 import grails.util.GrailsWebMockUtil
 import grails.web.mime.MimeType
@@ -1410,6 +1412,417 @@ class GrailsWebRequestTaskDecoratorSpec extends Specification {
         failures.every { it.is(failure) }
     }
 
+    @Issue('https://github.com/apache/grails-core/issues/15851')
+    void 'a task marks and resets the body reader while the request is live, and across its completion'() {
+        given:
+        MockHttpServletRequest live = request()
+        live.characterEncoding = 'UTF-8'
+        live.content = 'first line\nsecond line'.getBytes('UTF-8')
+        AtomicBoolean recycled = new AtomicBoolean()
+        GrailsWebRequest original = bind(recyclable(live, recycled))
+
+        and: 'a task that reads a prefix and resets, then marks again, and resets once the request has completed'
+        CountDownLatch started = new CountDownLatch(1)
+        CountDownLatch completed = new CountDownLatch(1)
+        Map seen = [:]
+        Runnable decorated = new GrailsWebRequestTaskDecorator().decorate {
+            BufferedReader reader = GrailsWebRequest.lookup().currentRequest.reader
+            seen.markable = reader.markSupported()
+            reader.mark(100)
+            seen.prefix = readCharacters(reader, 5)
+            reader.reset()
+            seen.first = reader.readLine()
+            reader.mark(100)
+            seen.secondPrefix = readCharacters(reader, 3)
+            started.countDown()
+            completed.await(10, TimeUnit.SECONDS)
+            reader.reset()
+            seen.second = reader.readLine()
+        }
+        RequestContextHolder.resetRequestAttributes()
+
+        when:
+        Thread task = Thread.start { decorated.run() }
+        started.await(10, TimeUnit.SECONDS)
+        original.requestCompleted()
+        recycled.set(true)
+        completed.countDown()
+        task.join(10000)
+
+        then:
+        seen == [markable: true, prefix: 'first', first: 'first line', secondPrefix: 'sec', second: 'second line']
+    }
+
+    @Issue('https://github.com/apache/grails-core/issues/15851')
+    void 'a task marks and resets the body stream when the live stream supports it, across the completion of the request'() {
+        given:
+        StreamingRequest live = new StreamingRequest()
+        live.markableBody = new MarkableBody('abcdef'.getBytes('UTF-8'))
+        AtomicBoolean recycled = new AtomicBoolean()
+        GrailsWebRequest original = bind(recyclable(live, recycled))
+
+        and:
+        CountDownLatch started = new CountDownLatch(1)
+        CountDownLatch completed = new CountDownLatch(1)
+        Map seen = [:]
+        Runnable decorated = new GrailsWebRequestTaskDecorator().decorate {
+            InputStream stream = GrailsWebRequest.lookup().currentRequest.inputStream
+            seen.markable = stream.markSupported()
+            stream.mark(10)
+            seen.prefix = new String(stream.readNBytes(2), 'UTF-8')
+            started.countDown()
+            completed.await(10, TimeUnit.SECONDS)
+            stream.reset()
+            seen.rest = stream.getText('UTF-8')
+        }
+        RequestContextHolder.resetRequestAttributes()
+
+        when:
+        Thread task = Thread.start { decorated.run() }
+        started.await(10, TimeUnit.SECONDS)
+        original.requestCompleted()
+        recycled.set(true)
+        completed.countDown()
+        task.join(10000)
+
+        then:
+        seen == [markable: true, prefix: 'ab', rest: 'abcdef']
+    }
+
+    @Issue('https://github.com/apache/grails-core/issues/15851')
+    void 'an attribute a task sets while the request is being copied is in the copy'() {
+        given: 'a request whose copy reads the body while a task sets an attribute'
+        StreamingRequest live = new StreamingRequest()
+        CountDownLatch copying = new CountDownLatch(1)
+        AtomicReference<Thread> setter = new AtomicReference<>()
+        live.pausingBody = new PausingBody(copying, setter)
+        AtomicBoolean recycled = new AtomicBoolean()
+        GrailsWebRequest original = bind(recyclable(live, recycled))
+
+        and:
+        Runnable setting = new GrailsWebRequestTaskDecorator().decorate {
+            copying.await(10, TimeUnit.SECONDS)
+            GrailsWebRequest.lookup().currentRequest.setAttribute('late', 'set during the copy')
+        }
+        Map seen = [:]
+        Runnable reading = new GrailsWebRequestTaskDecorator().decorate {
+            seen.late = GrailsWebRequest.lookup().currentRequest.getAttribute('late')
+        }
+        RequestContextHolder.resetRequestAttributes()
+
+        when: 'the task sets the attribute once the copy has taken the attributes and is reading the body'
+        Thread task = Thread.start { setting.run() }
+        setter.set(task)
+        original.requestCompleted()
+        recycled.set(true)
+        task.join(10000)
+        reading.run()
+
+        then:
+        seen.late == 'set during the copy'
+    }
+
+    @Issue('https://github.com/apache/grails-core/issues/15851')
+    @Unroll
+    void 'the copy keeps what a reader that read ahead holds, when #reader read the first line of the body'() {
+        given: 'a request whose reader reads ahead while its stream stays available, as ContentCachingRequestWrapper does'
+        MockHttpServletRequest live = request()
+        live.characterEncoding = 'UTF-8'
+        live.content = 'first line\nsecond line'.getBytes('UTF-8')
+        AtomicBoolean recycled = new AtomicBoolean()
+        ContentCachingRequestWrapper caching = new ContentCachingRequestWrapper(recyclable(live, recycled), 1024)
+        GrailsWebRequest original = bind(caching)
+
+        and:
+        CountDownLatch started = new CountDownLatch(1)
+        CountDownLatch completed = new CountDownLatch(1)
+        Map seen = [:]
+        Runnable decorated = new GrailsWebRequestTaskDecorator().decorate {
+            HttpServletRequest request = GrailsWebRequest.lookup().currentRequest
+            BufferedReader body = byTask ? request.reader : null
+            if (byTask) {
+                seen.first = body.readLine()
+            }
+            started.countDown()
+            completed.await(10, TimeUnit.SECONDS)
+            seen.rest = (body ?: request.reader).text
+        }
+        RequestContextHolder.resetRequestAttributes()
+
+        when:
+        if (!byTask) {
+            seen.first = caching.reader.readLine()
+        }
+        Thread task = Thread.start { decorated.run() }
+        started.await(10, TimeUnit.SECONDS)
+        original.requestCompleted()
+        recycled.set(true)
+        completed.countDown()
+        task.join(10000)
+
+        then:
+        seen == [first: 'first line', rest: 'second line']
+
+        where:
+        reader        | byTask
+        'a task'      | true
+        'the request' | false
+    }
+
+    @Issue('https://github.com/apache/grails-core/issues/15851')
+    void 'the body reader of a task keeps a line ended by a carriage return and its line feed within a mark, as BufferedReader does'() {
+        given:
+        MockHttpServletRequest live = request()
+        live.characterEncoding = 'UTF-8'
+        live.content = 'abcd\r\nxy'.getBytes('UTF-8')
+        bind(live)
+
+        and:
+        Map seen = [:]
+        Runnable decorated = new GrailsWebRequestTaskDecorator().decorate {
+            BufferedReader reader = GrailsWebRequest.lookup().currentRequest.reader
+            reader.mark(5)
+            seen.line = reader.readLine()
+            reader.reset()
+            seen.again = reader.readLine()
+            seen.next = reader.readLine()
+            reader.mark(Integer.MAX_VALUE)
+            reader.reset()
+            reader.mark(Integer.MAX_VALUE)
+            seen.last = reader.readLine()
+            reader.reset()
+            seen.lastAgain = reader.readLine()
+        }
+        RequestContextHolder.resetRequestAttributes()
+
+        when:
+        decorated.run()
+
+        then:
+        seen == [line: 'abcd', again: 'abcd', next: 'xy', last: null, lastAgain: null]
+    }
+
+    @Issue('https://github.com/apache/grails-core/issues/15851')
+    void 'a line ended by a carriage return is read without waiting for what follows, as BufferedReader reads it'() {
+        given: 'a body of which only a line ended by a carriage return has arrived'
+        StreamingRequest live = new StreamingRequest()
+        CountDownLatch more = new CountDownLatch(1)
+        live.pausingBody = new TricklingBody('cmd1\r'.getBytes('UTF-8'), more)
+        bind(live)
+
+        and: 'a task reading the line with a mark set'
+        Map seen = [:]
+        CountDownLatch read = new CountDownLatch(1)
+        Runnable decorated = new GrailsWebRequestTaskDecorator().decorate {
+            BufferedReader reader = GrailsWebRequest.lookup().currentRequest.reader
+            reader.mark(100)
+            seen.line = reader.readLine()
+            read.countDown()
+        }
+        RequestContextHolder.resetRequestAttributes()
+
+        when:
+        Thread task = Thread.start { decorated.run() }
+
+        then: 'the line is read before anything else arrives'
+        read.await(5, TimeUnit.SECONDS)
+        seen.line == 'cmd1'
+
+        cleanup:
+        more.countDown()
+        task?.join(10000)
+    }
+
+    @Issue('https://github.com/apache/grails-core/issues/15851')
+    void 'the copy reads the rest of the body from the reader a task took, though the request hands out a new reader each time'() {
+        given:
+        MockHttpServletRequest live = request()
+        live.characterEncoding = 'UTF-8'
+        live.content = 'first line\nsecond line'.getBytes('UTF-8')
+        AtomicBoolean recycled = new AtomicBoolean()
+        GrailsWebRequest original = bind(new NewReaderEachTime(recyclable(live, recycled)))
+
+        and:
+        CountDownLatch started = new CountDownLatch(1)
+        CountDownLatch completed = new CountDownLatch(1)
+        Map seen = [:]
+        Runnable decorated = new GrailsWebRequestTaskDecorator().decorate {
+            BufferedReader reader = GrailsWebRequest.lookup().currentRequest.reader
+            seen.first = reader.readLine()
+            started.countDown()
+            completed.await(10, TimeUnit.SECONDS)
+            seen.rest = reader.text
+        }
+        RequestContextHolder.resetRequestAttributes()
+
+        when:
+        Thread task = Thread.start { decorated.run() }
+        started.await(10, TimeUnit.SECONDS)
+        original.requestCompleted()
+        recycled.set(true)
+        completed.countDown()
+        task.join(10000)
+
+        then:
+        seen == [first: 'first line', rest: 'second line']
+    }
+
+    @Issue('https://github.com/apache/grails-core/issues/15851')
+    void 'a body a wrapper fails to read as the request completes fails a task reading it, and the rest of the request is copied'() {
+        given: 'a wrapper that rejects a body longer than it caches, as a subclass of ContentCachingRequestWrapper does'
+        IllegalArgumentException rejected = new IllegalArgumentException('The body is too long')
+        MockHttpServletRequest live = request()
+        live.content = 'a body longer than the wrapper caches'.getBytes('UTF-8')
+        AtomicBoolean recycled = new AtomicBoolean()
+        GrailsWebRequest original = bind(new RejectingRequestWrapper(recyclable(live, recycled), 5, rejected))
+
+        and:
+        Map seen = [:]
+        Runnable decorated = new GrailsWebRequestTaskDecorator().decorate {
+            HttpServletRequest request = GrailsWebRequest.lookup().currentRequest
+            seen.accept = request.getHeader('Accept')
+            try {
+                request.inputStream.read()
+            }
+            catch (Throwable failure) {
+                seen.failure = failure
+            }
+        }
+        RequestContextHolder.resetRequestAttributes()
+
+        when:
+        original.requestCompleted()
+        recycled.set(true)
+        decorated.run()
+
+        then:
+        seen.accept == 'application/json'
+        seen.failure.is(rejected)
+    }
+
+    @Issue('https://github.com/apache/grails-core/issues/15851')
+    void 'the copy keeps the rest of a body a task reads through a reader in the encoding that reader decodes'() {
+        given: 'a request without an encoding, in a wrapper that decodes the body as UTF-8'
+        MockHttpServletRequest live = request()
+        live.content = 'h\u00e9llo\n\u20acuro'.getBytes('UTF-8')
+        AtomicBoolean recycled = new AtomicBoolean()
+        HttpServletRequest facade = recyclable(live, recycled)
+        GrailsWebRequest original = bind(facade)
+        Runnable onRequest = new GrailsWebRequestTaskDecorator().decorate { }
+        GrailsWebRequest decoding = bind(new Utf8Request(facade))
+
+        and:
+        CountDownLatch started = new CountDownLatch(1)
+        CountDownLatch completed = new CountDownLatch(1)
+        Map seen = [:]
+        Runnable decorated = new GrailsWebRequestTaskDecorator().decorate {
+            BufferedReader reader = GrailsWebRequest.lookup().currentRequest.reader
+            seen.first = reader.readLine()
+            started.countDown()
+            completed.await(10, TimeUnit.SECONDS)
+            seen.rest = reader.text
+        }
+        RequestContextHolder.resetRequestAttributes()
+
+        when:
+        Thread task = Thread.start { decorated.run() }
+        started.await(10, TimeUnit.SECONDS)
+        decoding.requestCompleted()
+        original.requestCompleted()
+        recycled.set(true)
+        completed.countDown()
+        task.join(10000)
+        onRequest.run()
+
+        then:
+        seen == [first: 'h\u00e9llo', rest: '\u20acuro']
+    }
+
+    @Issue('https://github.com/apache/grails-core/issues/15851')
+    void 'a body whose rest cannot be read as the request completes fails a read from the copy, as on the request, not ending early'() {
+        given: 'a request whose client aborts the upload once the copy reads the rest'
+        IOException aborted = new IOException('The client aborted the upload')
+        StreamingRequest live = new StreamingRequest()
+        live.pausingBody = new AbortingBody(aborted)
+        AtomicBoolean recycled = new AtomicBoolean()
+        GrailsWebRequest original = bind(recyclable(live, recycled))
+
+        and:
+        Map seen = [:]
+        Runnable decorated = new GrailsWebRequestTaskDecorator().decorate {
+            HttpServletRequest request = GrailsWebRequest.lookup().currentRequest
+            seen.accept = request.getHeader('Accept')
+            InputStream body = request.inputStream
+            try {
+                body.read()
+            }
+            catch (Throwable failure) {
+                seen.failure = failure
+            }
+        }
+        RequestContextHolder.resetRequestAttributes()
+
+        when:
+        original.requestCompleted()
+        recycled.set(true)
+        decorated.run()
+
+        then:
+        seen.accept == 'application/json'
+        seen.failure.is(aborted)
+    }
+
+    @Issue('https://github.com/apache/grails-core/issues/15851')
+    void 'a body reader a task closed stays closed once the request has completed'() {
+        given:
+        MockHttpServletRequest live = request()
+        live.content = 'first line\nsecond line'.getBytes('UTF-8')
+        AtomicBoolean recycled = new AtomicBoolean()
+        GrailsWebRequest original = bind(recyclable(live, recycled))
+
+        and:
+        CountDownLatch started = new CountDownLatch(1)
+        CountDownLatch completed = new CountDownLatch(1)
+        Map seen = [:]
+        Runnable decorated = new GrailsWebRequestTaskDecorator().decorate {
+            BufferedReader reader = GrailsWebRequest.lookup().currentRequest.reader
+            reader.close()
+            started.countDown()
+            completed.await(10, TimeUnit.SECONDS)
+            try {
+                reader.readLine()
+            }
+            catch (IOException failure) {
+                seen.failure = failure.message
+            }
+        }
+        RequestContextHolder.resetRequestAttributes()
+
+        when:
+        Thread task = Thread.start { decorated.run() }
+        started.await(10, TimeUnit.SECONDS)
+        original.requestCompleted()
+        recycled.set(true)
+        completed.countDown()
+        task.join(10000)
+
+        then:
+        seen.failure == 'Stream closed'
+    }
+
+    private static String readCharacters(Reader reader, int count) {
+        char[] read = new char[count]
+        int total = 0
+        while (total < count) {
+            int last = reader.read(read, total, count - total)
+            if (last == -1) {
+                break
+            }
+            total += last
+        }
+        return new String(read, 0, total)
+    }
+
     // A task reading how its request was dispatched, and a parameter only a forward adds
     private static Runnable readingForward(List<Map> seen) {
         return new GrailsWebRequestTaskDecorator().decorate {
@@ -1786,10 +2199,231 @@ class GrailsWebRequestTaskDecoratorSpec extends Specification {
         }
     }
 
+    // Stands for a body whose stream supports a mark
+    private static class MarkableBody extends ServletInputStream {
+
+        private final ByteArrayInputStream content
+
+        MarkableBody(byte[] content) {
+            this.content = new ByteArrayInputStream(content)
+        }
+
+        @Override
+        int read() {
+            return content.read()
+        }
+
+        @Override
+        boolean markSupported() {
+            return true
+        }
+
+        @Override
+        void mark(int readLimit) {
+            content.mark(readLimit)
+        }
+
+        @Override
+        void reset() {
+            content.reset()
+        }
+
+        @Override
+        boolean isFinished() {
+            return content.available() == 0
+        }
+
+        @Override
+        boolean isReady() {
+            return true
+        }
+
+        @Override
+        void setReadListener(ReadListener readListener) {
+            throw new UnsupportedOperationException()
+        }
+    }
+
+    // Stands for a body of which only the start has arrived, and the rest arrives once it is let through
+    private static class TricklingBody extends ServletInputStream {
+
+        private final ByteArrayInputStream arrived
+        private final CountDownLatch more
+
+        TricklingBody(byte[] arrived, CountDownLatch more) {
+            this.arrived = new ByteArrayInputStream(arrived)
+            this.more = more
+        }
+
+        @Override
+        int read() {
+            int read = arrived.read()
+            if (read == -1) {
+                more.await(10, TimeUnit.SECONDS)
+            }
+            return read
+        }
+
+        @Override
+        int read(byte[] destination, int offset, int length) {
+            if (arrived.available() == 0) {
+                more.await(10, TimeUnit.SECONDS)
+                return -1
+            }
+            return arrived.read(destination, offset, length)
+        }
+
+        @Override
+        int available() {
+            return arrived.available()
+        }
+
+        @Override
+        boolean isFinished() {
+            return false
+        }
+
+        @Override
+        boolean isReady() {
+            return true
+        }
+
+        @Override
+        void setReadListener(ReadListener readListener) {
+            throw new UnsupportedOperationException()
+        }
+    }
+
+    // Stands for a body whose client aborts the upload as the rest of it is read
+    private static class AbortingBody extends ServletInputStream {
+
+        private final IOException aborted
+
+        AbortingBody(IOException aborted) {
+            this.aborted = aborted
+        }
+
+        @Override
+        int read() {
+            throw aborted
+        }
+
+        @Override
+        boolean isFinished() {
+            return false
+        }
+
+        @Override
+        boolean isReady() {
+            return true
+        }
+
+        @Override
+        void setReadListener(ReadListener readListener) {
+            throw new UnsupportedOperationException()
+        }
+    }
+
+    // Stands for a wrapper that decodes the body as UTF-8, whatever the request says
+    private static class Utf8Request extends HttpServletRequestWrapper {
+
+        private BufferedReader decoded
+
+        Utf8Request(HttpServletRequest request) {
+            super(request)
+        }
+
+        @Override
+        String getCharacterEncoding() {
+            return 'UTF-8'
+        }
+
+        @Override
+        BufferedReader getReader() {
+            if (decoded == null) {
+                decoded = new BufferedReader(new InputStreamReader(getInputStream(), 'UTF-8'))
+            }
+            return decoded
+        }
+    }
+
+    // Stands for a wrapper caching the body that hands out a new reader of its stream each time it is asked
+    private static class NewReaderEachTime extends HttpServletRequestWrapper {
+
+        NewReaderEachTime(HttpServletRequest request) {
+            super(request)
+        }
+
+        @Override
+        BufferedReader getReader() {
+            return new BufferedReader(new InputStreamReader(getInputStream(), 'UTF-8'))
+        }
+    }
+
+    // Stands for a subclass of ContentCachingRequestWrapper that rejects a body longer than it caches
+    private static class RejectingRequestWrapper extends ContentCachingRequestWrapper {
+
+        private final RuntimeException rejection
+
+        RejectingRequestWrapper(HttpServletRequest request, int limit, RuntimeException rejection) {
+            super(request, limit)
+            this.rejection = rejection
+        }
+
+        @Override
+        protected void handleContentOverflow(int contentCacheLimit) {
+            throw rejection
+        }
+    }
+
+    // Stands for a body the copy reads only once the task setting an attribute is calling the request
+    private static class PausingBody extends ServletInputStream {
+
+        private final CountDownLatch copying
+        private final AtomicReference<Thread> setter
+
+        PausingBody(CountDownLatch copying, AtomicReference<Thread> setter) {
+            this.copying = copying
+            this.setter = setter
+        }
+
+        @Override
+        int read() {
+            copying.countDown()
+            long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(10)
+            while (System.nanoTime() < deadline && !calling(setter.get())) {
+                Thread.sleep(5)
+            }
+            return -1
+        }
+
+        // Waiting for the copy to end, or done setting the attribute, as the old code let it
+        private static boolean calling(Thread thread) {
+            return thread != null && (thread.state in [Thread.State.WAITING, Thread.State.BLOCKED, Thread.State.TERMINATED])
+        }
+
+        @Override
+        boolean isFinished() {
+            return false
+        }
+
+        @Override
+        boolean isReady() {
+            return true
+        }
+
+        @Override
+        void setReadListener(ReadListener readListener) {
+            throw new UnsupportedOperationException()
+        }
+    }
+
     // Stands for a request whose body arrives as it is read, through a stream or a reader
     private static class StreamingRequest extends MockHttpServletRequest {
 
         ArrivingBody body
+        ServletInputStream markableBody
+        ServletInputStream pausingBody
         private BufferedReader bodyReader
 
         StreamingRequest() {
@@ -1799,6 +2433,9 @@ class GrailsWebRequestTaskDecoratorSpec extends Specification {
 
         @Override
         ServletInputStream getInputStream() {
+            if (markableBody != null || pausingBody != null) {
+                return markableBody ?: pausingBody
+            }
             if (body == null) {
                 return super.getInputStream()
             }
@@ -1810,11 +2447,12 @@ class GrailsWebRequestTaskDecoratorSpec extends Specification {
 
         @Override
         BufferedReader getReader() {
-            if (body == null) {
+            InputStream source = markableBody ?: pausingBody ?: body
+            if (source == null) {
                 return super.getReader()
             }
             if (bodyReader == null) {
-                bodyReader = new BufferedReader(new InputStreamReader(body, 'UTF-8'))
+                bodyReader = new BufferedReader(new InputStreamReader(source, 'UTF-8'))
             }
             return bodyReader
         }

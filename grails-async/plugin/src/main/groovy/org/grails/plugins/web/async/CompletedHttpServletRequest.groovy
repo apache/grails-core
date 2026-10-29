@@ -119,6 +119,8 @@ class CompletedHttpServletRequest implements MultipartHttpServletRequest {
     private final Map<String, Object> ownAttributes
     // Null when the body was longer than the copy keeps
     private final byte[] body
+    // What reading the rest of the body failed with, which a read past what was copied throws, as on the request
+    private final Exception bodyFailure
     private final Map<String, String[]> parameters
     private final RuntimeException parameterFailure
     private final Map<String, List<String>> headers
@@ -164,13 +166,14 @@ class CompletedHttpServletRequest implements MultipartHttpServletRequest {
     private BufferedReader reader
 
     private CompletedHttpServletRequest(HttpServletRequest request, Map<String, Object> attributes,
-            Map<String, Object> ownAttributes, CopiedParameters parameters, byte[] body, DispatchView view,
+            Map<String, Object> ownAttributes, CopiedParameters parameters, CopiedBody body, DispatchView view,
             Identity identity) {
         this.attributes = attributes
         this.ownAttributes = ownAttributes
         this.parameters = parameters.values
         this.parameterFailure = parameters.failure
-        this.body = body
+        this.body = body.bytes
+        this.bodyFailure = body.failure
         Map<String, List<String>> headers = new LinkedCaseInsensitiveMap<>(Locale.ENGLISH)
         for (String name : Collections.list(request.headerNames)) {
             headers.put(name, Collections.unmodifiableList(Collections.list(request.getHeaders(name))))
@@ -226,6 +229,7 @@ class CompletedHttpServletRequest implements MultipartHttpServletRequest {
         this.attributes = copy.@attributes
         this.ownAttributes = copy.@ownAttributes
         this.body = copy.@body
+        this.bodyFailure = copy.@bodyFailure
         this.parameters = copy.@parameters
         this.parameterFailure = copy.@parameterFailure
         this.headers = copy.@headers
@@ -280,11 +284,13 @@ class CompletedHttpServletRequest implements MultipartHttpServletRequest {
      * @param views how each request was dispatched when a task was given it
      * @param identities who made the request, as the filters processing it told, for each request, or {@code null}
      *        entries when the request itself still tells
+     * @param takenBody the live stream or reader a task took to read the body, which the rest of the body is read
+     *        from, or {@code null}
      * @return the copies, in the order of the requests, with {@code null} for a request after the first that could
      *         not be copied
      */
     static List<CompletedHttpServletRequest> copyOf(List<HttpServletRequest> requests, List<DispatchView> views,
-            List<Identity> identities) {
+            List<Identity> identities, TakenBody takenBody) {
         Map<String, Object> underlying = attributesOf(TaskRequest.underlying(requests.get(0)))
         // The requests to copy: those given, then each multipart request an attribute holds, such as the one the
         // dispatcher resolved, which wraps the request, so its copy, which has no uploads either, takes its place
@@ -307,7 +313,15 @@ class CompletedHttpServletRequest implements MultipartHttpServletRequest {
         for (int i = 0; i < copied.size(); i++) {
             parameters.add(viewOf(views, i)?.parameters ?: copyParameters(copied.get(i)))
         }
-        byte[] body = copyBody(requests.get(0))
+        CopiedBody body
+        try {
+            body = new CopiedBody(copyBody(requests.get(0), takenBody), null)
+        }
+        catch (IOException | RuntimeException unreadable) {
+            // Reading the body failed, as when the client aborts an upload or a wrapper rejects a body too long for
+            // it, so a task reading it gets the failure, and the rest of the request is copied
+            body = new CopiedBody(NO_BODY, unreadable)
+        }
         Map<String, Object> attributes = new ConcurrentHashMap<>()
         List<Map<String, Object>> ownAttributes = new ArrayList<>()
         List<CompletedHttpServletRequest> copies = new ArrayList<>()
@@ -334,7 +348,7 @@ class CompletedHttpServletRequest implements MultipartHttpServletRequest {
 
     // A request that can no longer be read leaves its own tasks without a copy, not the tasks of the other requests
     private static CompletedHttpServletRequest copyAlongside(HttpServletRequest request, Map<String, Object> attributes,
-            Map<String, Object> ownAttributes, CopiedParameters parameters, byte[] body, DispatchView view,
+            Map<String, Object> ownAttributes, CopiedParameters parameters, CopiedBody body, DispatchView view,
             Identity identity) {
         try {
             return new CompletedHttpServletRequest(request, attributes, ownAttributes, parameters, body, view, identity)
@@ -492,49 +506,66 @@ class CompletedHttpServletRequest implements MultipartHttpServletRequest {
     }
 
     // What remains of the body, or null when it is longer than the copy keeps
-    private static byte[] copyBody(HttpServletRequest request) {
+    private static byte[] copyBody(HttpServletRequest request, TakenBody takenBody) throws IOException {
         if (WebUtils.isMultipartContentType(request)) {
             // Its uploads go with the request and its text fields are in the parameters, so a multipart body the
             // request did not read, such as one rejected for its size, is left unread
             return NO_BODY
         }
         try {
+            // From where the stream or reader a task reads stands: a reader can hold what it read ahead of what it
+            // served, and a wrapper can hand out a new stream or reader each time it is asked
+            if (takenBody?.source instanceof Reader) {
+                // Encoded as the reader decoded it, which the request the task took it from told
+                return readText((Reader) takenBody.source, takenBody.encoding)
+            }
+            if (takenBody?.source instanceof InputStream) {
+                return readBytes((InputStream) takenBody.source)
+            }
             InputStream remaining = request.inputStream
             if (remaining == null) {
-                return NO_BODY
+                return copyBodyOfReader(request)
             }
-            byte[] read = remaining.readNBytes(BODY_LIMIT + 1)
-            return read.length > BODY_LIMIT ? null : read
+            byte[] read = readBytes(remaining)
+            // A stream with nothing left can be what a reader of the request emptied reading ahead, as the reader
+            // of ContentCachingRequestWrapper does, while the stream stays available, so what it holds is the rest
+            return read != null && read.length == 0 ? copyBodyOfReader(request) : read
         }
         catch (IllegalStateException ignored) {
             // The body was being read through getReader, so what remains of it is there
             return copyBodyOfReader(request)
         }
-        catch (IOException ignored) {
-            return NO_BODY
-        }
     }
 
-    private static byte[] copyBodyOfReader(HttpServletRequest request) {
+    private static byte[] copyBodyOfReader(HttpServletRequest request) throws IOException {
+        BufferedReader reader
         try {
-            BufferedReader reader = request.reader
-            if (reader == null) {
-                return NO_BODY
-            }
-            StringBuilder text = new StringBuilder()
-            char[] chunk = new char[READ_CHUNK]
-            for (int read = reader.read(chunk); read != -1; read = reader.read(chunk)) {
-                text.append(chunk, 0, read)
-                if (text.length() > BODY_LIMIT) {
-                    return null
-                }
-            }
-            byte[] body = text.toString().getBytes(charset(request.characterEncoding))
-            return body.length > BODY_LIMIT ? null : body
+            reader = request.reader
         }
-        catch (IllegalStateException | IOException ignored) {
+        catch (IllegalStateException ignored) {
+            // The body is being read through the stream, which has nothing left
             return NO_BODY
         }
+        return reader == null ? NO_BODY : readText(reader, request.characterEncoding)
+    }
+
+    // Null when there is more than the copy keeps
+    private static byte[] readBytes(InputStream remaining) throws IOException {
+        byte[] read = remaining.readNBytes(BODY_LIMIT + 1)
+        return read.length > BODY_LIMIT ? null : read
+    }
+
+    private static byte[] readText(Reader reader, String encoding) throws IOException {
+        StringBuilder text = new StringBuilder()
+        char[] chunk = new char[READ_CHUNK]
+        for (int read = reader.read(chunk); read != -1; read = reader.read(chunk)) {
+            text.append(chunk, 0, read)
+            if (text.length() > BODY_LIMIT) {
+                return null
+            }
+        }
+        byte[] body = text.toString().getBytes(charset(encoding))
+        return body.length > BODY_LIMIT ? null : body
     }
 
     private static Charset charset(String encoding) {
@@ -643,7 +674,7 @@ class CompletedHttpServletRequest implements MultipartHttpServletRequest {
                     'getReader() has already been called, so the body is not available as a stream, as on the live request')
         }
         if (inputStream == null) {
-            inputStream = new CopiedServletInputStream(body)
+            inputStream = new CopiedServletInputStream(body, bodyFailure)
         }
         return inputStream
     }
@@ -656,7 +687,8 @@ class CompletedHttpServletRequest implements MultipartHttpServletRequest {
                     'getInputStream() has already been called, so the body is not available as a reader, as on the live request')
         }
         if (reader == null) {
-            reader = new BufferedReader(new InputStreamReader(new ByteArrayInputStream(body), charset(characterEncoding)))
+            reader = new BufferedReader(new InputStreamReader(new CopiedServletInputStream(body, bodyFailure),
+                    charset(characterEncoding)))
         }
         return reader
     }
@@ -1062,6 +1094,40 @@ class CompletedHttpServletRequest implements MultipartHttpServletRequest {
         }
     }
 
+    // What remained of the body, or the failure reading it
+    @PackageScope
+    static final class CopiedBody {
+
+        @PackageScope
+        final byte[] bytes
+
+        @PackageScope
+        final Exception failure
+
+        @PackageScope
+        CopiedBody(byte[] bytes, Exception failure) {
+            this.bytes = bytes
+            this.failure = failure
+        }
+    }
+
+    // The live stream or reader a task took to read the body, and the encoding the reader decodes with
+    @PackageScope
+    static final class TakenBody {
+
+        @PackageScope
+        final Object source
+
+        @PackageScope
+        final String encoding
+
+        @PackageScope
+        TakenBody(Object source, String encoding) {
+            this.source = source
+            this.encoding = encoding
+        }
+    }
+
     // Who made a request, which a security filter answers only on the thread processing the request, and only
     // until it ends
     @PackageScope
@@ -1087,9 +1153,18 @@ class CompletedHttpServletRequest implements MultipartHttpServletRequest {
     private static final class CopiedServletInputStream extends ServletInputStream {
 
         private final ByteArrayInputStream body
+        private final Exception failure
 
-        private CopiedServletInputStream(byte[] body) {
+        private CopiedServletInputStream(byte[] body, Exception failure) {
             this.body = new ByteArrayInputStream(body)
+            this.failure = failure
+        }
+
+        // Past what was copied, the read fails as reading the rest of the body on the request failed
+        private void checkFailure() {
+            if (failure != null && body.available() == 0) {
+                throw failure
+            }
         }
 
         @Override
@@ -1109,11 +1184,15 @@ class CompletedHttpServletRequest implements MultipartHttpServletRequest {
 
         @Override
         int read() {
+            checkFailure()
             return body.read()
         }
 
         @Override
         int read(byte[] destination, int offset, int length) {
+            if (length > 0) {
+                checkFailure()
+            }
             return body.read(destination, offset, length)
         }
 

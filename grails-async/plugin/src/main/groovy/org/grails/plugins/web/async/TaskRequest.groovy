@@ -23,6 +23,8 @@ import java.lang.reflect.InvocationTargetException
 import java.lang.reflect.Method
 import java.lang.reflect.Modifier
 import java.lang.reflect.Proxy
+import java.util.concurrent.atomic.AtomicReference
+import java.util.concurrent.locks.ReentrantReadWriteLock
 
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
@@ -55,7 +57,9 @@ import org.grails.web.servlet.mvc.GrailsWebRequest
  * <p>A task keeps how its request was dispatched when it started: its path, the forward and include attributes and,
  * for a forward or an include, its parameters, though a container that gave the forward the very wrapper the
  * request had, with its own wrapper inserted underneath, restores that wrapper as the forward returns. A task that
- * is reading the body when the request completes reads on from its view of the copy, where it stopped.</p>
+ * is reading the body when the request completes reads on from its view of the copy, where it stopped, and a mark
+ * it set still holds. A task's calls to the live request and the copy do not interleave, so what a task sets while
+ * the copy is taken is in it.</p>
  *
  * <p>A request completes when the dispatch the container started for it ends, as {@link TaskRequestFilter} tells,
  * after any forward or include within it, though each of those completes the web request it bound or reused as it
@@ -260,19 +264,31 @@ class TaskRequest implements InvocationHandler {
         if (method.parameterCount == 0 && method.name == 'getReader') {
             return reader()
         }
-        HttpServletRequest current = given.live
-        if (current == null) {
-            current = view()
-        }
-        else if (given.view != null) {
-            // How the request was dispatched when the task was given it, which the container restores after a
-            // forward or an include
-            Object answer = given.view.answer(method, args, current)
-            if (!answer.is(DispatchView.UNANSWERED)) {
-                return answer
+        // A call to the live request and the copy of the requests do not interleave: what a task sets on the live
+        // request is in the copy, and once the copy is taken, the task's calls go to it
+        given.lockLive()
+        try {
+            HttpServletRequest live = given.live
+            if (live != null) {
+                if (given.view != null) {
+                    // How the request was dispatched when the task was given it, which the container restores
+                    // after a forward or an include
+                    Object answer = given.view.answer(method, args, live)
+                    if (!answer.is(DispatchView.UNANSWERED)) {
+                        return answer
+                    }
+                }
+                return call(live, method, args)
             }
         }
-        ServletRequest target = offering(current, method.declaringClass)
+        finally {
+            given.unlockLive()
+        }
+        return call(view(), method, args)
+    }
+
+    private static Object call(HttpServletRequest request, Method method, Object[] args) throws Throwable {
+        ServletRequest target = offering(request, method.declaringClass)
         if (target == null) {
             // Only the live request offers the views the copy does not keep, such as a custom wrapper's
             throw new IllegalStateException('The request has completed, so a task that outlives it cannot call ' +
@@ -301,12 +317,19 @@ class TaskRequest implements InvocationHandler {
             if (bodyReader != null) {
                 throw new IllegalStateException('getReader() has already been called, so the body is not available as a stream')
             }
-            synchronized (given.bodyLock) {
+            given.lockLive()
+            try {
                 HttpServletRequest live = given.live
                 if (live == null) {
                     return view().inputStream
                 }
-                body = new TaskInputStream(given, this, live.inputStream)
+                ServletInputStream stream = live.inputStream
+                body = new TaskInputStream(given, this, stream)
+                // The copy takes the rest of the body from the stream the task reads, wherever it stands
+                given.takenBody.compareAndSet(null, new CompletedHttpServletRequest.TakenBody(stream, null))
+            }
+            finally {
+                given.unlockLive()
             }
         }
         return body
@@ -317,12 +340,20 @@ class TaskRequest implements InvocationHandler {
             if (body != null) {
                 throw new IllegalStateException('getInputStream() has already been called, so the body is not available as a reader')
             }
-            synchronized (given.bodyLock) {
+            given.lockLive()
+            try {
                 HttpServletRequest live = given.live
                 if (live == null) {
                     return view().reader
                 }
-                bodyReader = new TaskReader(given, this, live.reader)
+                BufferedReader liveReader = live.reader
+                bodyReader = new TaskReader(given, this, liveReader)
+                // The reader may read ahead of what it serves, so the copy takes the rest of the body through it
+                given.takenBody.compareAndSet(null,
+                        new CompletedHttpServletRequest.TakenBody(liveReader, live.characterEncoding))
+            }
+            finally {
+                given.unlockLive()
             }
         }
         return bodyReader
@@ -332,9 +363,11 @@ class TaskRequest implements InvocationHandler {
     private static final class RequestState implements AsyncListener {
 
         private final List<GivenRequest> given = new ArrayList<>()
-        // Held while a task reads the live body and while the requests are copied, so a read and the copy of the
-        // body do not interleave
-        private final Object body = new Object()
+        // Read while tasks call the live request, which they can do at once, and written while the requests are
+        // copied, so a call and the copy do not interleave
+        private final ReentrantReadWriteLock copyLock = new ReentrantReadWriteLock()
+        // The live stream or reader the first task to read the body took, which the copy reads the rest from
+        private final AtomicReference<CompletedHttpServletRequest.TakenBody> takenBody = new AtomicReference<>()
         private boolean completed
 
         // The request a task was given, shared by the tasks given the same request dispatched the same way, or null
@@ -348,7 +381,7 @@ class TaskRequest implements InvocationHandler {
                     return existing
                 }
             }
-            GivenRequest added = new GivenRequest(request, view, body)
+            GivenRequest added = new GivenRequest(request, view, copyLock, takenBody)
             given.add(added)
             return added
         }
@@ -404,11 +437,19 @@ class TaskRequest implements InvocationHandler {
                 views.add(request.view)
                 identities.add(outsideDispatch ? request.identity : null)
             }
-            // A task reading the live body finishes its read first, and goes on from the copy
-            synchronized (body) {
+            // A task's call to the live request, such as a read of the body, finishes first, and the task goes on
+            // with the copy
+            // A thread calling the live request from a task, which the container can call back on, cannot take the
+            // write lock, so it copies as it is
+            boolean exclusive = copyLock.readHoldCount == 0
+            if (exclusive) {
+                copyLock.writeLock().lock()
+            }
+            try {
                 try {
                     underlying(requests.get(0)).removeAttribute(STATE)
-                    List<CompletedHttpServletRequest> copies = CompletedHttpServletRequest.copyOf(requests, views, identities)
+                    List<CompletedHttpServletRequest> copies = CompletedHttpServletRequest.copyOf(requests, views, identities,
+                            takenBody.get())
                     for (int i = 0; i < copies.size(); i++) {
                         given.get(i).copy = copies.get(i)
                     }
@@ -421,6 +462,11 @@ class TaskRequest implements InvocationHandler {
                     for (GivenRequest request : given) {
                         request.live = null
                     }
+                }
+            }
+            finally {
+                if (exclusive) {
+                    copyLock.writeLock().unlock()
                 }
             }
         }
@@ -452,7 +498,10 @@ class TaskRequest implements InvocationHandler {
         final DispatchView view
 
         @PackageScope
-        final Object bodyLock
+        final ReentrantReadWriteLock copyLock
+
+        @PackageScope
+        final AtomicReference<CompletedHttpServletRequest.TakenBody> takenBody
 
         @PackageScope
         volatile HttpServletRequest live
@@ -464,10 +513,23 @@ class TaskRequest implements InvocationHandler {
         volatile CompletedHttpServletRequest.Identity identity
 
         @PackageScope
-        GivenRequest(HttpServletRequest live, DispatchView view, Object bodyLock) {
+        GivenRequest(HttpServletRequest live, DispatchView view, ReentrantReadWriteLock copyLock,
+                AtomicReference<CompletedHttpServletRequest.TakenBody> takenBody) {
             this.live = live
             this.view = view
-            this.bodyLock = bodyLock
+            this.copyLock = copyLock
+            this.takenBody = takenBody
+        }
+
+        // Held while a task calls the live request: tasks can call it at once, and the copy waits for them
+        @PackageScope
+        void lockLive() {
+            copyLock.readLock().lock()
+        }
+
+        @PackageScope
+        void unlockLive() {
+            copyLock.readLock().unlock()
         }
 
         @PackageScope
@@ -482,99 +544,205 @@ class TaskRequest implements InvocationHandler {
     }
 
     // The body stream of a task: the live request's until the request is copied, then the task's view of the copy,
-    // which holds what the live stream had not served yet
+    // which holds what the live stream had not served yet. When the live stream supports a mark, the task's stream
+    // keeps its own, so a reset serves again what was read since, across the copy too
     private static final class TaskInputStream extends ServletInputStream {
+
+        private static final int COPIED = -2
 
         private final GivenRequest given
         private final TaskRequest task
         private final ServletInputStream live
+        private final boolean markable
+        private boolean closed
+        // What was read since the mark, or null without a valid mark, what a reset serves again, and where
+        private ByteArrayOutputStream marked
+        private byte[] history
+        private int position
+        private long markLimit
 
         private TaskInputStream(GivenRequest given, TaskRequest task, ServletInputStream live) {
             this.given = given
             this.task = task
             this.live = live
+            this.markable = live.markSupported()
         }
 
         @Override
-        int read() throws IOException {
-            synchronized (given.bodyLock) {
-                if (given.live != null) {
-                    return live.read()
-                }
+        synchronized int read() throws IOException {
+            checkOpen()
+            if (replaying()) {
+                return history[position++] & 0xFF
             }
-            return copied().read()
+            byte[] single = new byte[1]
+            return readAnew(single, 0, 1) == -1 ? -1 : single[0] & 0xFF
         }
 
         @Override
-        int read(byte[] destination, int offset, int length) throws IOException {
-            synchronized (given.bodyLock) {
-                if (given.live != null) {
-                    return live.read(destination, offset, length)
-                }
+        synchronized int read(byte[] destination, int offset, int length) throws IOException {
+            Objects.checkFromIndexSize(offset, length, destination.length)
+            checkOpen()
+            if (length == 0) {
+                return 0
             }
-            return copied().read(destination, offset, length)
-        }
-
-        @Override
-        long skip(long count) throws IOException {
-            synchronized (given.bodyLock) {
-                if (given.live != null) {
-                    return live.skip(count)
-                }
+            if (replaying()) {
+                int served = Math.min(length, history.length - position)
+                System.arraycopy(history, position, destination, offset, served)
+                position += served
+                return served
             }
-            return copied().skip(count)
+            return readAnew(destination, offset, length)
         }
 
         @Override
-        int available() throws IOException {
-            synchronized (given.bodyLock) {
+        synchronized int available() throws IOException {
+            if (replaying()) {
+                return history.length - position
+            }
+            given.lockLive()
+            try {
                 if (given.live != null) {
                     return live.available()
                 }
+            }
+            finally {
+                given.unlockLive()
             }
             return copied().available()
         }
 
         @Override
-        void close() throws IOException {
-            synchronized (given.bodyLock) {
-                if (given.live != null) {
-                    live.close()
-                    return
-                }
-            }
-            copied().close()
+        boolean markSupported() {
+            return markable
         }
 
         @Override
-        boolean isFinished() {
-            synchronized (given.bodyLock) {
+        synchronized void mark(int readLimit) {
+            if (!markable) {
+                return
+            }
+            // What a reset still had to serve again is the start of what the new mark covers
+            byte[] remaining = replaying() ? Arrays.copyOfRange(history, position, history.length) : new byte[0]
+            marked = new ByteArrayOutputStream()
+            marked.write(remaining, 0, remaining.length)
+            history = remaining
+            position = 0
+            markLimit = (long) readLimit + remaining.length
+        }
+
+        @Override
+        synchronized void reset() throws IOException {
+            if (!markable) {
+                throw new IOException('mark/reset not supported')
+            }
+            if (marked == null) {
+                throw new IOException('The stream was not marked, or more was read since the mark than it allowed')
+            }
+            history = marked.toByteArray()
+            position = 0
+        }
+
+        @Override
+        synchronized void close() throws IOException {
+            closed = true
+            marked = null
+            history = null
+            // Outside the lock: the container can call back on this thread, and the copy needs the lock
+            if (liveNow()) {
+                live.close()
+            }
+            else {
+                copied().close()
+            }
+        }
+
+        @Override
+        synchronized boolean isFinished() {
+            if (replaying()) {
+                return false
+            }
+            given.lockLive()
+            try {
                 if (given.live != null) {
                     return live.isFinished()
                 }
+            }
+            finally {
+                given.unlockLive()
             }
             return task.view().inputStream.isFinished()
         }
 
         @Override
-        boolean isReady() {
-            synchronized (given.bodyLock) {
+        synchronized boolean isReady() {
+            if (replaying()) {
+                return true
+            }
+            given.lockLive()
+            try {
                 if (given.live != null) {
                     return live.isReady()
                 }
+            }
+            finally {
+                given.unlockLive()
             }
             return task.view().inputStream.isReady()
         }
 
         @Override
         void setReadListener(ReadListener readListener) {
-            synchronized (given.bodyLock) {
+            // Outside the lock: the container can call the listener on this thread, which can complete the request
+            if (liveNow()) {
+                live.setReadListener(readListener)
+            }
+            else {
+                task.view().inputStream.setReadListener(readListener)
+            }
+        }
+
+        private boolean liveNow() {
+            given.lockLive()
+            try {
+                return given.live != null
+            }
+            finally {
+                given.unlockLive()
+            }
+        }
+
+        private boolean replaying() {
+            return history != null && position < history.length
+        }
+
+        private void checkOpen() throws IOException {
+            if (closed) {
+                throw new IOException('Stream closed')
+            }
+        }
+
+        // Past what a reset serves again: the live stream, or the copy once it is taken, and what the mark covers
+        private int readAnew(byte[] destination, int offset, int length) throws IOException {
+            int count = COPIED
+            given.lockLive()
+            try {
                 if (given.live != null) {
-                    live.setReadListener(readListener)
-                    return
+                    count = live.read(destination, offset, length)
                 }
             }
-            task.view().inputStream.setReadListener(readListener)
+            finally {
+                given.unlockLive()
+            }
+            if (count == COPIED) {
+                count = copied().read(destination, offset, length)
+            }
+            if (count > 0 && marked != null) {
+                marked.write(destination, offset, count)
+                if (marked.size() > markLimit) {
+                    marked = null
+                }
+            }
+            return count
         }
 
         private ServletInputStream copied() throws IOException {
@@ -588,12 +756,26 @@ class TaskRequest implements InvocationHandler {
     }
 
     // The body reader of a task: the live request's until the request is copied, then the task's view of the copy,
-    // which holds what the live reader had not served yet
+    // which holds what the live reader had not served yet. It keeps its own mark, as the reader of a request
+    // supports one, so a reset serves again what was read since, across the copy too
     private static final class TaskReader extends BufferedReader {
+
+        private static final int COPIED = -2
+        private static final int LINE_FEED = 10
+        private static final int CARRIAGE_RETURN = 13
 
         private final GivenRequest given
         private final TaskRequest task
         private final BufferedReader live
+        // What was read since the mark, or null without a valid mark, and where a reset serves it again from
+        private StringBuilder marked
+        private int position
+        private long markLimit
+        // A line ended with a carriage return, so a line feed right after it belongs to that line, as in
+        // BufferedReader; kept with the mark, so a reset restores it
+        private boolean skipLineFeed
+        private boolean markedSkipLineFeed
+        private boolean closed
 
         private TaskReader(GivenRequest given, TaskRequest task, BufferedReader live) {
             super(Reader.nullReader())
@@ -603,79 +785,202 @@ class TaskRequest implements InvocationHandler {
         }
 
         @Override
-        int read() throws IOException {
-            synchronized (given.bodyLock) {
-                if (given.live != null) {
-                    return live.read()
+        synchronized int read() throws IOException {
+            int character = readOne()
+            if (skipLineFeed) {
+                skipLineFeed = false
+                if (character == LINE_FEED) {
+                    character = readOne()
                 }
             }
-            return copied().read()
+            return character
         }
 
         @Override
-        int read(char[] destination, int offset, int length) throws IOException {
-            synchronized (given.bodyLock) {
-                if (given.live != null) {
-                    return live.read(destination, offset, length)
-                }
+        synchronized int read(char[] destination, int offset, int length) throws IOException {
+            Objects.checkFromIndexSize(offset, length, destination.length)
+            if (length == 0) {
+                return 0
             }
-            return copied().read(destination, offset, length)
+            if (skipLineFeed || replaying()) {
+                // What is already at hand, without waiting for more, after the line feed a line may end with
+                int first = read()
+                if (first == -1) {
+                    return -1
+                }
+                destination[offset] = (char) first
+                int served = 1
+                while (served < length && replaying()) {
+                    destination[offset + served++] = marked.charAt(position++)
+                }
+                return served
+            }
+            int count = readFromSource(destination, offset, length)
+            for (int i = 0; i < count; i++) {
+                remember((int) destination[offset + i])
+            }
+            return count
         }
 
         @Override
-        String readLine() throws IOException {
-            synchronized (given.bodyLock) {
-                if (given.live != null) {
-                    return live.readLine()
-                }
+        synchronized String readLine() throws IOException {
+            if (closed) {
+                throw new IOException('Stream closed')
             }
-            return copied().readLine()
+            if (marked == null && !skipLineFeed) {
+                // Nothing to serve again or to remember, so the line is the source's own
+                given.lockLive()
+                try {
+                    if (given.live != null) {
+                        return live.readLine()
+                    }
+                }
+                finally {
+                    given.unlockLive()
+                }
+                return copied().readLine()
+            }
+            StringBuilder line = null
+            for (int character = read(); character != -1; character = read()) {
+                if (line == null) {
+                    line = new StringBuilder()
+                }
+                if (character == LINE_FEED) {
+                    return line.toString()
+                }
+                if (character == CARRIAGE_RETURN) {
+                    skipLineFeed = true
+                    return line.toString()
+                }
+                line.append((char) character)
+            }
+            return line?.toString()
         }
 
         @Override
-        long skip(long count) throws IOException {
-            synchronized (given.bodyLock) {
-                if (given.live != null) {
-                    return live.skip(count)
-                }
+        synchronized long skip(long count) throws IOException {
+            if (count < 0) {
+                throw new IllegalArgumentException('skip value is negative')
             }
-            return copied().skip(count)
+            long skipped = 0
+            while (skipped < count && read() != -1) {
+                skipped++
+            }
+            return skipped
         }
 
         @Override
-        boolean ready() throws IOException {
-            synchronized (given.bodyLock) {
+        synchronized boolean ready() throws IOException {
+            if (replaying()) {
+                return true
+            }
+            given.lockLive()
+            try {
                 if (given.live != null) {
                     return live.ready()
                 }
+            }
+            finally {
+                given.unlockLive()
             }
             return copied().ready()
         }
 
         @Override
         boolean markSupported() {
-            return false
+            return true
         }
 
         @Override
-        void mark(int readAheadLimit) throws IOException {
-            throw new IOException('mark() is not supported')
+        synchronized void mark(int readAheadLimit) {
+            if (readAheadLimit < 0) {
+                throw new IllegalArgumentException('Read-ahead limit < 0')
+            }
+            // What a reset still had to serve again is the start of what the new mark covers
+            StringBuilder covered = new StringBuilder()
+            if (replaying()) {
+                covered.append(marked, position, marked.length())
+            }
+            marked = covered
+            position = 0
+            markLimit = (long) readAheadLimit + covered.length()
+            markedSkipLineFeed = skipLineFeed
         }
 
         @Override
-        void reset() throws IOException {
-            throw new IOException('reset() is not supported')
+        synchronized void reset() throws IOException {
+            if (marked == null) {
+                throw new IOException('Stream not marked, or more was read since the mark than it allowed')
+            }
+            position = 0
+            skipLineFeed = markedSkipLineFeed
         }
 
         @Override
-        void close() throws IOException {
-            synchronized (given.bodyLock) {
+        synchronized void close() throws IOException {
+            closed = true
+            marked = null
+            boolean liveNow
+            given.lockLive()
+            try {
+                liveNow = given.live != null
+            }
+            finally {
+                given.unlockLive()
+            }
+            // Outside the lock, which the copy needs
+            if (liveNow) {
+                live.close()
+            }
+            else {
+                copied().close()
+            }
+        }
+
+        private boolean replaying() {
+            return marked != null && position < marked.length()
+        }
+
+        // The next character: served again after a reset, or read anew and remembered for the mark
+        private int readOne() throws IOException {
+            if (closed) {
+                throw new IOException('Stream closed')
+            }
+            if (replaying()) {
+                return (int) marked.charAt(position++)
+            }
+            char[] single = new char[1]
+            int character = readFromSource(single, 0, 1) == -1 ? -1 : (int) single[0]
+            remember(character)
+            return character
+        }
+
+        private void remember(int character) {
+            if (marked == null || character == -1) {
+                return
+            }
+            marked.append((char) character)
+            position++
+            if (marked.length() > markLimit) {
+                marked = null
+                position = 0
+            }
+        }
+
+        private int readFromSource(char[] destination, int offset, int length) throws IOException {
+            if (closed) {
+                throw new IOException('Stream closed')
+            }
+            given.lockLive()
+            try {
                 if (given.live != null) {
-                    live.close()
-                    return
+                    return live.read(destination, offset, length)
                 }
             }
-            copied().close()
+            finally {
+                given.unlockLive()
+            }
+            return copied().read(destination, offset, length)
         }
 
         private BufferedReader copied() throws IOException {
