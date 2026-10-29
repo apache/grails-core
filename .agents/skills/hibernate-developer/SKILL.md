@@ -1,6 +1,6 @@
 ---
 name: hibernate-developer
-description: Guide for working in the grails-data-hibernate7 module, especially Hibernate 7 domain binding, mapping migration, generators, and integration tests. Use this when changing code or tests under grails-data-hibernate7.
+description: Guide for working in the grails-data-hibernate7 module, covering Hibernate 7 domain binding, transaction and session lifecycle management, criteria and SQM subquery correlation, dialect-specific semantics, and integration testing. Use this when changing code or tests under grails-data-hibernate7.
 license: Apache-2.0
 ---
 <!--
@@ -13,6 +13,9 @@ Licensed to the Apache Software Foundation (ASF) under one or more contributor l
 
 - Provide repository-specific guidance for the `grails-data-hibernate7` project.
 - Guide changes around `GrailsDomainBinder`, `GrailsPropertyBinder`, `IdentityBinder`, `VersionBinder`, collection binders, and related utilities.
+- Guide transaction and session lifecycle management across `GrailsHibernateTemplate`, `executeWithNewSession`, and Spring transaction synchronization.
+- Guide criteria translation, Hibernate 7 SQM AST construction, alias scoping, and subquery correlation.
+- Enforce dialect-specific SQL semantics (Oracle, Db2, PostgreSQL, MySQL) and database engine constraints.
 - Keep changes aligned with the testing constraints used by the Hibernate 7 modules in this repository.
 - Help with migration work inside this framework module (e.g., porting domain-binding behaviour from H5 to H7, updating binder internals, fixing H7 regressions). Does not cover user-facing application migration guides; those belong in `grails-doc`.
 
@@ -83,6 +86,51 @@ Keep these module-specific expectations in mind:
 - Property creation and addition should stay centralized through callers using `PropertyFromValueCreator` where applicable.
 - Utility classes in `domainbinding.util` should prefer Hibernate-aware GORM types internally, but public signatures may still need base interfaces when Spock mocks require them.
 - `GrailsIncrementGenerator` still contains reflection-based Hibernate 7 compatibility workarounds; avoid broad refactors unless the change explicitly addresses that area.
+
+## Transaction and Session Lifecycle Management
+
+Framework code touching `GrailsHibernateTemplate`, `executeWithNewSession`, or session binding operates at the collision point of Spring's transaction synchronization, Hibernate's logical connection lifecycle, and the JDBC connection pool. Follow these non-negotiable rules:
+
+- **Never disconnect active write-bearing transactions**: Disconnecting an outer session in `beforeCompletion` drops uncommitted entity dirty checks and pending flushes. The outer transaction reports commit success, but rows are silently lost. Only disconnect an outer session if it is an idle or read-only `PROPAGATION_SUPPORTS` context that owns no active transaction.
+- **Prevent pool starvation on non-lazy data sources**: Calling connection probes (such as `con.getAutoCommit()` or `con.getMetaData()`) on a datasource that is *not* wrapped in `LazyConnectionDataSourceProxy` immediately checks out a physical connection from the pool. If the outer session is idle and the pool is small, this starves the pool and deadlocks inner sessions.
+- **Save and restore connection holders and synchronizations symmetrically**: In `executeWithNewSession`, capture the previous `ConnectionHolder` and Spring `TransactionSynchronization` list before rebinding, and strictly restore them in a `finally` block.
+- **Coordinate with `SESSION_SYNCHRONIZATION_ORDER`**: When registering synchronizations with Spring's `TransactionSynchronizationManager`, ensure the logical connection disconnects before Spring's `ConnectionSynchronization` closes the physical connection, without interfering with active flushes.
+
+## Criteria, SQM AST, and Subquery Correlation
+
+Hibernate 7 compiles Criteria into an internal Semantic Query Model (SQM) AST. When working with DetachedCriteria, subqueries, and criteria builders:
+
+- **Lexical alias scoping**: Materialize nested aliases strictly on the association scope that declares them. Never fall back to implicit parent aliases or materialize them onto the query root.
+- **Sibling association block isolation**: Sibling association blocks querying the same association name must maintain independent joins rather than collapsing into a shared join that leaks predicates between blocks.
+- **Subquery correlation over inherited joins**: When correlating a subquery to an outer query through nested or inherited joins, ensure the outer join path remains accessible to the subquery predicates without dropping the comparison or creating redundant inner joins.
+
+## Dialect Matrix and Database Engine Differences
+
+Do not assume H2 or default SQL semantics apply across all supported database engines:
+
+- **Unique index null semantics**:
+  - **Single property `unique: true, nullable: true`**: A `null` value is always exempt from uniqueness checks across all datastores and in-memory test environments. Never execute a uniqueness query when the target value is `null`.
+  - **Oracle B-Tree index**: Oracle omits index entries where *every* column of the unique index is `null`. Multiple all-null rows are accepted by the database. If even one column in a composite unique key is non-null, Oracle indexes it and enforces uniqueness.
+  - **IBM Db2**: In Hibernate 7, `DB2Dialect` appends `exclude null keys` for LUW, while `DB2iDialect` and `DB2zDialect` render `create unique where not null index`. Do not force GORM `value` comparisons on all-null rows that the database dialect omits.
+  - **NoSQL / Neo4j**: A null unique association represents the non-existence of a relationship. Never match null unique associations against nodes that have existing relationships.
+- **Shared join tables**:
+  - Sets receive unique keys per association, lists and maps are indexed, and bags have no key.
+  - Calling `clear()` or bulk-deleting one association on a shared join table with separate key columns must leave the rows of the other association intact.
+
+## Mandatory Invariant Verification Protocol
+
+Before submitting changes in Hibernate, transaction, or GORM layers, you must evaluate and document the **Invariant Matrix**:
+
+1. **Transaction Matrix**:
+   - `PROPAGATION_REQUIRED`: uncommitted writes flushed on commit, no premature disconnect.
+   - `PROPAGATION_REQUIRES_NEW`: inner transaction isolated from outer transaction.
+   - `PROPAGATION_SUPPORTS` (read-only): outer session remains usable after inner block without connection leaks.
+   - Direct `DataSource` vs `LazyConnectionDataSourceProxy`: verify no eager physical connection checkout when session is idle.
+2. **Adversarial Audit Questions**:
+   - *Does this disconnect an active transaction that has uncommitted dirty entities?*
+   - *Does this allocate a pooled connection if the session never executes a query?*
+   - *What does the physical database index do when composite keys are all-null vs partially-null?*
+   - *What happens when two sibling closures in a criteria query join the same property name?*
 
 ## Testing Rules
 
