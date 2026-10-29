@@ -1,6 +1,6 @@
 ---
 name: hibernate-developer
-description: Guide for working in the grails-data-hibernate7 module, covering Hibernate 7 domain binding, transaction and session lifecycle management, criteria and SQM subquery correlation, dialect-specific semantics, and integration testing. Use this when changing code or tests under grails-data-hibernate7.
+description: Guide for working in the grails-data-hibernate7 module on the 8.0.x line, covering Hibernate 7 domain binding, transaction and session lifecycle management, criteria and SQM subquery correlation, dialect-specific semantics, and integration testing. Use this when changing code or tests under grails-data-hibernate7.
 license: Apache-2.0
 ---
 <!--
@@ -11,7 +11,7 @@ Licensed to the Apache Software Foundation (ASF) under one or more contributor l
 
 ## What I Do
 
-- Provide repository-specific guidance for the `grails-data-hibernate7` project.
+- Provide repository-specific guidance for the `grails-data-hibernate7` project on the 8.0.x line.
 - Guide changes around `GrailsDomainBinder`, `GrailsPropertyBinder`, `IdentityBinder`, `VersionBinder`, collection binders, and related utilities.
 - Guide transaction and session lifecycle management across `GrailsHibernateTemplate`, `executeWithNewSession`, and Spring transaction synchronization.
 - Guide criteria translation, Hibernate 7 SQM AST construction, alias scoping, and subquery correlation.
@@ -31,7 +31,7 @@ Activate this skill when working on the Hibernate 7 module, especially for:
 
 ## Module Context
 
-This skill is for the Grails framework's Hibernate 7 integration module, not for a Grails application. Prefer guidance from this skill over generic Grails app patterns when working in `grails-data-hibernate7`.
+This skill is for the Grails framework's Hibernate 7 integration module on the 8.0.x line (where 8.1.x is the Spring Boot 4.1 line), not for a Grails application. Prefer guidance from this skill over generic Grails app patterns when working in `grails-data-hibernate7`.
 
 `GrailsDomainBinder` is the main entry point for binding Grails domain classes to Hibernate metadata. Changes often ripple through:
 
@@ -114,7 +114,7 @@ Do not assume H2 or default SQL semantics apply across all supported database en
   - **IBM Db2**: In Hibernate 7, `DB2Dialect` appends `exclude null keys` for LUW, while `DB2iDialect` and `DB2zDialect` render `create unique where not null index`. Do not force GORM `value` comparisons on all-null rows that the database dialect omits.
   - **NoSQL / Neo4j**: A null unique association represents the non-existence of a relationship. Never match null unique associations against nodes that have existing relationships.
 - **Shared join tables**:
-  - Sets receive unique keys per association, lists and maps are indexed, and bags have no key.
+  - Sets on a dialect that compares nulls, Oracle and Db2 LUW, share one unique key across the associations. A separate key per association rejects two valid rows that are null in one association's columns and equal in the element. Dialects that treat nulls as distinct keep a separate key per association. Lists and maps stay indexed, and bags stay without a key.
   - Calling `clear()` or bulk-deleting one association on a shared join table with separate key columns must leave the rows of the other association intact.
 
 ## Mandatory Invariant Verification Protocol
@@ -129,7 +129,7 @@ Before submitting changes in Hibernate, transaction, or GORM layers, you must ev
 2. **Adversarial Audit Questions**:
    - *Does this disconnect an active transaction that has uncommitted dirty entities?*
    - *Does this allocate a pooled connection if the session never executes a query?*
-   - *What does the physical database index do when composite keys are all-null vs partially-null?*
+   - *What does the physical database index do when composite keys are all-null vs partially-null, and do sets on shared join tables use one combined key or a key per association?*
    - *What happens when two sibling closures in a criteria query join the same property name?*
 
 ## Testing Rules
