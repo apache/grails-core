@@ -106,6 +106,8 @@ In Hibernate 7, an entity alias declared inside an association block creates its
 
 In a Hibernate 7 detached subquery, a plain association path uses the subquery's own root when its entity has that association. Otherwise, it can reference an existing enclosing query join for correlation. An explicitly named outer alias can also be used to correlate the queries.
 
+The enclosing join may also come from an association block in an outer detached query. For example, after `favorite { isNotNull('label') }`, an `exists` subquery over an entity without a `favorite` association can correlate using `eqProperty('favorite.label', 'label')`. Put the association block before the `exists` restriction.
+
 For Hibernate 7-specific rules on alias/path precedence, collection aliases, counts, and subquery scoping, see link:{hibernate7GuideFromRef}index.html#criteriaAssociationAliases[Association Aliases] in the GORM for Hibernate 7 guide.
 
 ==== Method reference

@@ -149,7 +149,8 @@ final class QueryAliasRegistrar {
             HibernateAlias inherited = registry.getDefinition(alias);
             boolean inheritedPath = !registry.isOwnDefined(alias) && inherited != null && !inherited.explicit();
             if ((!context.hasAlias(alias) || inheritedPath) &&
-                    detachedCriteria.getPersistentEntity().getPropertyByName(alias) instanceof Association) {
+                    (detachedCriteria.getPersistentEntity().getPropertyByName(alias) instanceof Association ||
+                            context.getFrom(alias) != null)) {
                 context.registerAlias(alias, new HibernateAlias(alias, alias, JoinType.INNER, false));
             }
         }

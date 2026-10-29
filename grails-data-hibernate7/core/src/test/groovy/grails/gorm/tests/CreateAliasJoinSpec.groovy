@@ -1070,6 +1070,56 @@ class CreateAliasJoinSpec extends HibernateGormDatastoreSpec {
         true          | true
     }
 
+    void 'detached subqueries correlate through an enclosing association block with reversed operands #reverseOperands nested junction #nestedJunction and query #queryType'() {
+        given:
+        def first = new CreateAliasLike(label: 'first').save(failOnError: true)
+        def second = new CreateAliasLike(label: 'second').save(failOnError: true)
+        new CreateAliasTeam(name: 'A', favorite: first).save(failOnError: true)
+        new CreateAliasTeam(name: 'B', favorite: second).save(flush: true, failOnError: true)
+        String leftProperty = reverseOperands ? 'label' : 'favorite.label'
+        String rightProperty = reverseOperands ? 'favorite.label' : 'label'
+        def matchingFavorite = new DetachedCriteria(CreateAliasLike).build {
+            eq('label', 'second')
+            if (nestedJunction) {
+                and {
+                    or {
+                        eqProperty(leftProperty, rightProperty)
+                    }
+                }
+            } else {
+                eqProperty(leftProperty, rightProperty)
+            }
+        }.id()
+        def criteria = new DetachedCriteria(CreateAliasTeam).build {
+            favorite { isNotNull('label') }
+            exists(matchingFavorite)
+        }
+
+        when:
+        def result
+        if (queryType == 'count') {
+            result = criteria.count()
+        } else if (queryType == 'paginated') {
+            result = criteria.list(max: 1, sort: 'name')
+        } else {
+            result = criteria.list()
+        }
+
+        then:
+        if (queryType == 'count') {
+            assert result == 1
+        } else {
+            assert result*.name == ['B']
+            if (queryType == 'paginated') {
+                assert result.totalCount == 1
+            }
+        }
+        sqlCapture.statements.last().findAll(/(?i)\bjoin create_alias_like\b/).size() == 1
+
+        where:
+        [reverseOperands, nestedJunction, queryType] << [[false, true], [false, true], ['list', 'count', 'paginated']].combinations()
+    }
+
     void 'exists subqueries can deliberately reference an outer association alias with reversed operands #reverseOperands'() {
         given:
         def first = new CreateAliasLike(label: 'first').save(failOnError: true)
