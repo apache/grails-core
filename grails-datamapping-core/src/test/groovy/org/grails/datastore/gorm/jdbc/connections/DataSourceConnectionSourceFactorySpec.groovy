@@ -123,6 +123,87 @@ class DataSourceConnectionSourceFactorySpec extends Specification {
         connectionSource?.close()
     }
 
+    void "create keeps a higher precedence scalar over a lower flattened descendant"() {
+        given:
+        def factory = new DataSourceConnectionSourceFactory()
+        def environment = new StandardEnvironment()
+        environment.propertySources.addFirst(new MapPropertySource('low', [
+                'dataSource.url': 'jdbc:h2:mem:factoryScalarPrecedenceTest',
+                'dataSource.type': HikariDataSource.name,
+                'dataSource.properties.dataSourceProperties.foo.x': 'low',
+                'dataSource.properties.foo.x': 'low',
+                'dataSource.properties.maximumPoolSize.nested': '${unresolvedLowerPoolSize}'
+        ]))
+        environment.propertySources.addFirst(new MapPropertySource('high', [
+                'dataSource.properties.dataSourceProperties.foo': 'bar',
+                'dataSource.properties.foo': 'bar',
+                'dataSource.properties.maximumPoolSize': 50
+        ]))
+
+        when:
+        def connectionSource = factory.create(ConnectionSource.DEFAULT, environment)
+
+        then:
+        connectionSource.settings.properties == [maximumPoolSize: 50, dataSourceProperties: [foo: 'bar'], foo: 'bar']
+        def dataSource = unwrap(connectionSource.source)
+        dataSource.maximumPoolSize == 50
+        dataSource.dataSourceProperties.getProperty('foo') == 'bar'
+        !dataSource.dataSourceProperties.containsKey('foo.x')
+
+        cleanup:
+        connectionSource?.close()
+    }
+
+    void "create merges a lower direct map behind higher flattened pool properties"() {
+        given:
+        def factory = new DataSourceConnectionSourceFactory()
+        def environment = new StandardEnvironment()
+        def lowerProperties = [maximumPoolSize: 20, minimumIdle: 2]
+        environment.propertySources.addFirst(new MapPropertySource('low', [
+                'dataSource.url': 'jdbc:h2:mem:factoryDirectMapPrecedenceTest',
+                'dataSource.type': HikariDataSource.name,
+                'dataSource.properties': lowerProperties
+        ]))
+        environment.propertySources.addFirst(new MapPropertySource('high', [
+                'dataSource.properties.maximumPoolSize': 50
+        ]))
+
+        when:
+        def connectionSource = factory.create(ConnectionSource.DEFAULT, environment)
+
+        then:
+        connectionSource.settings.properties == [maximumPoolSize: 50, minimumIdle: 2]
+        def dataSource = unwrap(connectionSource.source)
+        dataSource.maximumPoolSize == 50
+        dataSource.minimumIdle == 2
+        lowerProperties == [maximumPoolSize: 20, minimumIdle: 2]
+
+        cleanup:
+        connectionSource?.close()
+    }
+
+    void "create collects indexed pool properties into a list in numeric order"() {
+        given:
+        def factory = new DataSourceConnectionSourceFactory()
+        def environment = new StandardEnvironment()
+        environment.propertySources.addFirst(new MapPropertySource('application', [
+                'dataSource.url': 'jdbc:h2:mem:factoryIndexedPropertiesTest',
+                'dataSource.type': ListDataSource.name,
+                'dataSource.properties.connectionInitSqls[1]': 'SET B=2',
+                'dataSource.properties.connectionInitSqls[0]': 'SET A=1'
+        ]))
+
+        when:
+        def connectionSource = factory.create(ConnectionSource.DEFAULT, environment)
+
+        then:
+        connectionSource.settings.properties == [connectionInitSqls: ['SET A=1', 'SET B=2']]
+        unwrap(connectionSource.source).connectionInitSqls == ['SET A=1', 'SET B=2']
+
+        cleanup:
+        connectionSource?.close()
+    }
+
     void "create still binds an existing nested properties map from DatastoreUtils"() {
         given:
         def factory = new DataSourceConnectionSourceFactory()
@@ -304,6 +385,62 @@ class DataSourceConnectionSourceFactorySpec extends Specification {
         connectionSource?.close()
     }
 
+    void "create keeps a higher precedence dotted map key over a lower flattened JDBC property"() {
+        given:
+        def factory = new DataSourceConnectionSourceFactory()
+        def environment = new StandardEnvironment()
+        environment.propertySources.addLast(new MapPropertySource('low', [
+                'dataSource.url': 'jdbc:h2:mem:factoryLiteralKeyPrecedenceTest',
+                'dataSource.type': HikariDataSource.name,
+                'dataSource.properties.dataSourceProperties.oracle.jdbc.sendBooleanAsNativeBoolean': false
+        ]))
+        environment.propertySources.addFirst(new MapPropertySource('high', [
+                'dataSource.properties.dataSourceProperties': ['oracle.jdbc.sendBooleanAsNativeBoolean': 'true']
+        ]))
+
+        when:
+        def connectionSource = factory.create(ConnectionSource.DEFAULT, environment)
+
+        then:
+        connectionSource.settings.properties.dataSourceProperties == ['oracle.jdbc.sendBooleanAsNativeBoolean': 'true']
+        def dataSource = unwrap(connectionSource.source)
+        dataSource instanceof HikariDataSource
+        dataSource.dataSourceProperties.getProperty('oracle.jdbc.sendBooleanAsNativeBoolean') == 'true'
+        !dataSource.dataSourceProperties.containsKey('oracle')
+
+        cleanup:
+        connectionSource?.close()
+    }
+
+    void "create keeps a higher literal JDBC key over a lower nested map"() {
+        given:
+        def factory = new DataSourceConnectionSourceFactory()
+        def environment = new StandardEnvironment()
+        environment.propertySources.addLast(new MapPropertySource('low', [
+                'dataSource.url': 'jdbc:h2:mem:factoryNestedMapPrecedenceTest',
+                'dataSource.type': HikariDataSource.name,
+                'dataSource.properties.dataSourceProperties.oracle': [jdbc: [sendBooleanAsNativeBoolean: false], pool: 'kept']
+        ]))
+        environment.propertySources.addFirst(new MapPropertySource('high', [
+                'dataSource.properties.dataSourceProperties': ['oracle.jdbc.sendBooleanAsNativeBoolean': 'true']
+        ]))
+
+        when:
+        def connectionSource = factory.create(ConnectionSource.DEFAULT, environment)
+
+        then:
+        connectionSource.settings.properties.dataSourceProperties['oracle.jdbc.sendBooleanAsNativeBoolean'] == 'true'
+        connectionSource.settings.properties.dataSourceProperties.oracle.pool == 'kept'
+        connectionSource.settings.properties.dataSourceProperties.oracle.jdbc == null
+        def dataSource = unwrap(connectionSource.source)
+        dataSource instanceof HikariDataSource
+        dataSource.dataSourceProperties.getProperty('oracle.jdbc.sendBooleanAsNativeBoolean') == 'true'
+        dataSource.dataSourceProperties.getProperty('oracle.pool') == 'kept'
+
+        cleanup:
+        connectionSource?.close()
+    }
+
     void "create rejects a non-map properties value when no flattened properties exist"() {
         given:
         def factory = new DataSourceConnectionSourceFactory()
@@ -408,6 +545,11 @@ class DataSourceConnectionSourceFactorySpec extends Specification {
         factory.connectionSourcesConfigurationKey == 'dataSources'
     }
 
+    static class ListDataSource extends HikariDataSource {
+
+        List<String> connectionInitSqls
+    }
+
     private static DataSource unwrap(DataSource dataSource) {
         DataSource current = dataSource
         while (current instanceof TransactionAwareDataSourceProxy || current instanceof LazyConnectionDataSourceProxy) {
@@ -418,3 +560,4 @@ class DataSourceConnectionSourceFactorySpec extends Specification {
         return current
     }
 }
+
