@@ -21,6 +21,8 @@ package grails.gorm.tests
 import grails.gorm.annotation.Entity
 import grails.gorm.hibernate.HibernateEntity
 import groovy.transform.EqualsAndHashCode
+import org.grails.orm.hibernate.CompositeMoney
+import org.grails.orm.hibernate.CompositeMoneyType
 import org.springframework.dao.DataIntegrityViolationException
 import spock.lang.Issue
 
@@ -29,7 +31,7 @@ class EnumUniqueGroupAssociationSpec extends HibernateGormDatastoreSpec {
 
     void setupSpec() {
         manager.registerDomainClasses(EnumUniqueCompositeParent, EnumUniqueCompositeChild,
-                StringUniqueCompositeChild, DeclaredFirstUniqueCompositeChild)
+                StringUniqueCompositeChild, DeclaredFirstUniqueCompositeChild, DeclaredFirstCompositeAmountChild)
     }
 
     void "an enum unique group includes every mapped column of a composite parent"() {
@@ -103,6 +105,44 @@ class EnumUniqueGroupAssociationSpec extends HibernateGormDatastoreSpec {
         DeclaredFirstUniqueCompositeChild.count() == 3
     }
 
+    void "a declared-first composite user type group includes every implicit composite-association column"() {
+        given:
+        def table = datastore.metadata.getEntityBinding(DeclaredFirstCompositeAmountChild.name).table
+
+        expect:
+        table.uniqueKeys.values().collect { it.columns*.name.toSet() } ==
+                [['amount_amount', 'amount_currency', 'enum_unique_composite_parent_code',
+                  'enum_unique_composite_parent_revision'] as Set]
+    }
+
+    void "a declared-first composite user type group accepts parents differing in either identifier column"() {
+        when:
+        [['a', 1], ['a', 2], ['b', 1]].each { code, revision ->
+            def parent = new EnumUniqueCompositeParent(code: code, revision: revision).save(failOnError: true)
+            new DeclaredFirstCompositeAmountChild(parent: parent, amount: new CompositeMoney(amount: 10, currency: 'EUR'))
+                    .save(failOnError: true)
+        }
+        manager.session.flush()
+        manager.session.clear()
+
+        then:
+        DeclaredFirstCompositeAmountChild.count() == 3
+    }
+
+    void "a duplicate declared-first composite value for the same parent violates the unique key"() {
+        given:
+        def parent = new EnumUniqueCompositeParent(code: 'duplicate', revision: 1).save(failOnError: true)
+        new DeclaredFirstCompositeAmountChild(parent: parent, amount: new CompositeMoney(amount: 10, currency: 'EUR'))
+                .save(flush: true, failOnError: true)
+
+        when:
+        new DeclaredFirstCompositeAmountChild(parent: parent, amount: new CompositeMoney(amount: 10, currency: 'EUR'))
+                .save(flush: true, validate: false)
+
+        then:
+        thrown(DataIntegrityViolationException)
+    }
+
     void "a duplicate declared-first #property for the same composite parent violates the unique key"() {
         given:
         def parent = new EnumUniqueCompositeParent(code: 'duplicate', revision: 1).save(failOnError: true)
@@ -174,5 +214,15 @@ class DeclaredFirstUniqueCompositeChild implements HibernateEntity<DeclaredFirst
     static mapping = {
         code unique: 'parent'
         kind unique: 'parent'
+    }
+}
+
+@Entity
+class DeclaredFirstCompositeAmountChild implements HibernateEntity<DeclaredFirstCompositeAmountChild> {
+    CompositeMoney amount
+    EnumUniqueCompositeParent parent
+
+    static mapping = {
+        amount type: CompositeMoneyType, unique: 'parent'
     }
 }

@@ -173,8 +173,9 @@ class GroovyPagePluginFunctionalSpec extends GradleSpecification {
         // The generator the task runs comes from grails-scaffolding, and the page compiler from
         // grails-web-gsp, which this build cannot depend on; the tests' stand-ins record what they
         // are handed instead.
-        ['generator': 'org/apache/grails/scaffolding/ScaffoldedPagesGenerator.class',
-         'compiler' : 'org/grails/web/pages/GroovyPageForkedCompiler.class'].each { String dir, String standIn ->
+        [['generator', 'org/apache/grails/scaffolding/ScaffoldedPagesGenerator.class'],
+         ['compiler', 'org/grails/web/pages/GroovyPageForkedCompiler.class'],
+         ['compiler', 'org/grails/gradle/plugin/views/RecordingForkedCompiler.class']].each { String dir, String standIn ->
             File standInClass = new File(projectDir, "${dir}/${standIn}")
             standInClass.parentFile.mkdirs()
             standInClass.bytes = getClass().classLoader.getResource(standIn).bytes
@@ -310,8 +311,9 @@ class GroovyPagePluginFunctionalSpec extends GradleSpecification {
                 runtimeOnly files('widget-plugin.jar')
             }
         """)
-        ['generator': 'org/apache/grails/scaffolding/ScaffoldedPagesGenerator.class',
-         'compiler' : 'org/grails/web/pages/GroovyPageForkedCompiler.class'].each { String dir, String standIn ->
+        [['generator', 'org/apache/grails/scaffolding/ScaffoldedPagesGenerator.class'],
+         ['compiler', 'org/grails/web/pages/GroovyPageForkedCompiler.class'],
+         ['compiler', 'org/grails/gradle/plugin/views/RecordingForkedCompiler.class']].each { String dir, String standIn ->
             File standInClass = new File(projectDir, "${dir}/${standIn}")
             standInClass.parentFile.mkdirs()
             standInClass.bytes = getClass().classLoader.getResource(standIn).bytes
@@ -365,8 +367,9 @@ class GroovyPagePluginFunctionalSpec extends GradleSpecification {
                 runtimeOnly files('gadget-plugin.jar')
             }
         """)
-        ['generator': 'org/apache/grails/scaffolding/ScaffoldedPagesGenerator.class',
-         'compiler' : 'org/grails/web/pages/GroovyPageForkedCompiler.class'].each { String dir, String standIn ->
+        [['generator', 'org/apache/grails/scaffolding/ScaffoldedPagesGenerator.class'],
+         ['compiler', 'org/grails/web/pages/GroovyPageForkedCompiler.class'],
+         ['compiler', 'org/grails/gradle/plugin/views/RecordingForkedCompiler.class']].each { String dir, String standIn ->
             File standInClass = new File(projectDir, "${dir}/${standIn}")
             standInClass.parentFile.mkdirs()
             standInClass.bytes = getClass().classLoader.getResource(standIn).bytes

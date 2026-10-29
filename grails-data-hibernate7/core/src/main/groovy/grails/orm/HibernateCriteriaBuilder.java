@@ -58,6 +58,7 @@ import org.grails.orm.hibernate.query.HibernateQuery;
 import org.grails.orm.hibernate.query.SqlGroupProjection;
 import org.grails.orm.hibernate.query.SqlProjection;
 import org.grails.orm.hibernate.query.SqlRestriction;
+import org.grails.orm.hibernate.query.SqlSyntax;
 import org.grails.orm.hibernate.support.hibernate7.SessionHolder;
 
 /**
@@ -1183,7 +1184,7 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
      * @throws IllegalArgumentException if the numbers of projected values, column aliases and types differ
      */
     public ProjectionList sqlProjection(String sql, List<String> columnAliases, List<?> types) {
-        for (SqlProjection projection : closingSessionOnError(() -> SqlProjection.of(sql, columnAliases, types))) {
+        for (SqlProjection projection : closingSessionOnError(() -> SqlProjection.of(sql, columnAliases, types, sqlSyntax()))) {
             hibernateQuery.projections().add(projection);
         }
         return this;
@@ -1203,8 +1204,8 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
      *     group by clause is empty
      */
     public ProjectionList sqlGroupProjection(String sql, String groupBy, List<String> columnAliases, List<?> types) {
-        List<SqlProjection> projections = closingSessionOnError(() -> SqlProjection.of(sql, columnAliases, types));
-        for (SqlGroupProjection groupProjection : closingSessionOnError(() -> SqlGroupProjection.of(groupBy))) {
+        List<SqlProjection> projections = closingSessionOnError(() -> SqlProjection.of(sql, columnAliases, types, sqlSyntax()));
+        for (SqlGroupProjection groupProjection : closingSessionOnError(() -> SqlGroupProjection.of(groupBy, sqlSyntax()))) {
             hibernateQuery.projections().add(groupProjection);
         }
         for (SqlProjection projection : projections) {
@@ -1248,8 +1249,13 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
      *     or a value is {@code null}
      */
     public org.grails.datastore.mapping.query.api.Criteria sqlRestriction(String sqlRestriction, List<?> values) {
-        hibernateQuery.add(new SqlRestriction(sqlRestriction, values));
+        hibernateQuery.add(closingSessionOnError(() -> SqlRestriction.of(sqlRestriction, values, sqlSyntax())));
         return this;
+    }
+
+    /** The syntax of the native SQL of the database the session factory connects to, in which the DSL's SQL is read. */
+    private SqlSyntax sqlSyntax() {
+        return SqlSyntax.forSessionFactory(sessionFactory);
     }
 
     /**

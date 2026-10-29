@@ -136,7 +136,7 @@ Below is a node reference for each criterion method:
 |*ne*|Where a property does not equal a particular value| `ne("branch", "London")`
 |*neProperty*|Where one property does not equal another| `neProperty("lastTx", "firstTx")`
 |*order*|Order the results by a particular property| `order("holderLastName", "desc")`
-|*rlike*|Similar to like, but uses a regex. Only supported on Oracle and MySQL.| `rlike("holderFirstName", /Steph.+/)`
+|*rlike*|Similar to like, but uses a regex. Supported on MySQL, MariaDB, PostgreSQL, Oracle, H2 and Db2 for Linux, UNIX and Windows and for IBM i; with Hibernate 7 it falls back to like on other databases.| `rlike("holderFirstName", /Steph.+/)`
 |*sizeEq*|Where a collection property's size equals a particular value| `sizeEq("transactions", 10)`
 |*sizeGt*|Where a collection property's size is greater than a particular value| `sizeGt("transactions", 10)`
 |*sizeGe*|Where a collection property's size is greater than or equal to a particular value| `sizeGe("transactions", 10)`

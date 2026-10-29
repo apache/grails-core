@@ -389,6 +389,28 @@ class HibernateCriteriaBuilderDirectSpec extends HibernateGormDatastoreSpec {
         cleanup:
         PredicateGenerator.clearCustomCriterionHandlers()
     }
+
+    void "a count query leaves the criteria's orders out"() {
+        expect: "a count with an order counts every row instead of failing on the order by"
+        new DetachedCriteria(CriteriaTestEntity).build { order('amount', 'desc') }.count() == 4L
+        new DetachedCriteria(CriteriaTestEntity).build {
+            gt('amount', 15)
+            order('name')
+        }.count() == 3L
+
+        and: "a row count projection with an order returns the count"
+        c.list {
+            projections { rowCount() }
+            order('amount')
+        } == [4L]
+
+        and: "the builder's count with an order counts every row"
+        new HibernateCriteriaBuilder(CriteriaTestEntity, manager.hibernateDatastore.sessionFactory, manager.hibernateDatastore)
+                .count { order('amount', 'desc') } == 4L
+
+        and: "the order still applies to the list"
+        new DetachedCriteria(CriteriaTestEntity).build { order('amount', 'desc') }.list()*.name == ['D', 'C', 'B', 'A']
+    }
 }
 
 @Entity

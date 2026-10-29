@@ -19,7 +19,6 @@
 package org.grails.orm.hibernate.cfg.domainbinding.util;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 import org.hibernate.MappingException;
@@ -27,7 +26,6 @@ import org.hibernate.boot.spi.InFlightMetadataCollector;
 import org.hibernate.mapping.Column;
 import org.hibernate.mapping.Table;
 
-import org.grails.orm.hibernate.cfg.ColumnConfig;
 import org.grails.orm.hibernate.cfg.PropertyConfig;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty;
@@ -40,10 +38,20 @@ public class CreateKeyForProps {
     private final UniqueKeyForColumnsCreator uniqueKeyForColumnsCreator;
     private final InFlightMetadataCollector metadataCollector;
 
+    public CreateKeyForProps(ColumnNameForPropertyAndPathFetcher columnNameForPropertyAndPathFetcher) {
+        this(columnNameForPropertyAndPathFetcher, new UniqueKeyForColumnsCreator(), null);
+    }
+
     public CreateKeyForProps(
             ColumnNameForPropertyAndPathFetcher columnNameForPropertyAndPathFetcher,
             InFlightMetadataCollector metadataCollector) {
         this(columnNameForPropertyAndPathFetcher, new UniqueKeyForColumnsCreator(), metadataCollector);
+    }
+
+    protected CreateKeyForProps(
+            ColumnNameForPropertyAndPathFetcher columnNameForPropertyAndPathFetcher,
+            UniqueKeyForColumnsCreator uniqueKeyForColumnsCreator) {
+        this(columnNameForPropertyAndPathFetcher, uniqueKeyForColumnsCreator, null);
     }
 
     protected CreateKeyForProps(
@@ -66,38 +74,67 @@ public class CreateKeyForProps {
         PropertyConfig mappedForm = grailsProp.getMappedForm();
 
         if (mappedForm.isUnique() && mappedForm.isUniqueWithinGroup()) {
-            if (metadataCollector.isInSecondPass()) {
-                createKeyForGroup(grailsProp, path, table, columnName, mappedForm);
-            } else {
-                metadataCollector.addSecondPass(persistentClasses ->
-                        createKeyForGroup(grailsProp, path, table, columnName, mappedForm));
-            }
+            createKeyWhenReady(() -> createKeyForGroup(grailsProp, path, table,
+                    List.of(new Column(columnName)), mappedForm));
+        }
+    }
+
+    /**
+     * Creates the unique key of a property that spans several columns, such as one mapped with a composite user
+     * type, when the property is unique: one key across all of its columns and, when it is unique within a group,
+     * the columns of the other properties of the group. None of the columns is unique on its own, since two
+     * different values of the property can share the value of one of them, so a property that is unique on its
+     * own needs the key as well. The key holds the bound columns themselves, so it keeps their quoting and case.
+     *
+     * @param grailsProp the property
+     * @param path the path of the property within its entity
+     * @param table the table that holds the columns
+     * @param columns the bound columns of the property
+     */
+    public void createKeyForColumns(
+            HibernatePersistentProperty grailsProp, String path, Table table, List<Column> columns) {
+        PropertyConfig mappedForm = grailsProp.getMappedForm();
+        if (!mappedForm.isUnique() || columns.isEmpty()) {
+            return;
+        }
+        createKeyWhenReady(() -> createKeyForGroup(grailsProp, path, table, columns, mappedForm));
+    }
+
+    private void createKeyWhenReady(Runnable createKey) {
+        if (metadataCollector == null || metadataCollector.isInSecondPass()) {
+            createKey.run();
+        } else {
+            metadataCollector.addSecondPass(persistentClasses -> createKey.run());
         }
     }
 
     private void createKeyForGroup(
-            HibernatePersistentProperty grailsProp, String path, Table table, String columnName, PropertyConfig mappedForm) {
-        List<Column> keyList = new ArrayList<>();
-        keyList.add(new Column(columnName));
-        List<String> propertyNames = mappedForm.getUniquenessGroup();
+            HibernatePersistentProperty grailsProp, String path, Table table, List<Column> columns,
+            PropertyConfig mappedForm) {
+        List<Column> keyList = new ArrayList<>(columns);
+        if (mappedForm.isUniqueWithinGroup()) {
+            addGroupColumns(grailsProp, mappedForm, path, keyList);
+        }
+        uniqueKeyForColumnsCreator.createUniqueKeyForColumns(table, keyList);
+    }
+
+    /**
+     * Adds the columns of the other properties of the uniqueness group of the property. A property of the group
+     * that spans several columns, such as one mapped with a composite user type, contributes all of them.
+     */
+    private void addGroupColumns(
+            HibernatePersistentProperty grailsProp, PropertyConfig mappedForm, String path, List<Column> keyList) {
         GrailsHibernatePersistentEntity owner = grailsProp.getHibernateOwner();
-        for (String propertyName : propertyNames) {
+        for (String propertyName : mappedForm.getUniquenessGroup()) {
             HibernatePersistentProperty otherProp = owner.getHibernatePropertyByName(propertyName);
             if (otherProp == null) {
                 throw new MappingException(
                         owner.getJavaClass().getName() + " references an unknown property " + propertyName);
             }
-            List<ColumnConfig> columns = otherProp.getHibernateMappedForm().getColumns();
-            if (columns.isEmpty()) {
-                columns = Collections.singletonList(null);
-            }
-            for (ColumnConfig column : columns) {
-                String otherColumnName =
-                        columnNameForPropertyAndPathFetcher.getColumnNameForPropertyAndPath(otherProp, path, column);
+            for (String otherColumnName :
+                    columnNameForPropertyAndPathFetcher.getColumnNamesForPropertyAndPath(otherProp, path)) {
                 keyList.add(new Column(otherColumnName));
             }
         }
-
-        uniqueKeyForColumnsCreator.createUniqueKeyForColumns(table, keyList);
     }
 }

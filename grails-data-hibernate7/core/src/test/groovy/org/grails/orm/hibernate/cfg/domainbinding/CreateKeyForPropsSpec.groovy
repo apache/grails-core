@@ -19,57 +19,136 @@
 
 package org.grails.orm.hibernate.cfg.domainbinding
 
-import org.grails.orm.hibernate.cfg.ColumnConfig
-import org.grails.orm.hibernate.cfg.PropertyConfig
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty
 import org.hibernate.MappingException
 import org.hibernate.boot.spi.InFlightMetadataCollector
 import org.hibernate.boot.spi.SecondPass
+import org.hibernate.mapping.Column
 import org.hibernate.mapping.Table
 import spock.lang.Specification
 
+import org.grails.orm.hibernate.cfg.PropertyConfig
 import org.grails.orm.hibernate.cfg.domainbinding.util.ColumnNameForPropertyAndPathFetcher
 import org.grails.orm.hibernate.cfg.domainbinding.util.CreateKeyForProps
 import org.grails.orm.hibernate.cfg.domainbinding.util.UniqueKeyForColumnsCreator
 
 class CreateKeyForPropsSpec extends Specification {
 
-    InFlightMetadataCollector metadataCollector = Stub() {
-        isInSecondPass() >> true
+    def "resolves group columns in the second pass for #entryPoint"() {
+        given:
+        def collector = Mock(InFlightMetadataCollector)
+        def columnNameFetcher = Mock(ColumnNameForPropertyAndPathFetcher)
+        def uniqueKeyCreator = Mock(UniqueKeyForColumnsCreator)
+        def subject = new CreateKeyForProps(columnNameFetcher, uniqueKeyCreator, collector)
+        def owner = Stub(GrailsHibernatePersistentEntity)
+        def parent = Stub(HibernatePersistentProperty)
+        def grailsProp = Stub(HibernatePersistentProperty) {
+            getMappedForm() >> new PropertyConfig(unique: ['parent'])
+            getHibernateOwner() >> owner
+        }
+        owner.getHibernatePropertyByName('parent') >> parent
+        def table = new Table(name: 'child')
+        def columns = [new Column('`Amount`'), new Column('currency')]
+        SecondPass secondPass
+
+        when:
+        if (entryPoint == 'columns') {
+            subject.createKeyForColumns(grailsProp, null, table, columns)
+        } else {
+            subject.createKeyForProps(grailsProp, null, table, 'child_state')
+        }
+
+        then: 'no member is resolved before the association columns have been bound'
+        1 * collector.addSecondPass(_) >> { SecondPass pass -> secondPass = pass }
+        0 * columnNameFetcher._
+        0 * uniqueKeyCreator._
+
+        when:
+        secondPass.doSecondPass([:])
+
+        then:
+        1 * columnNameFetcher.getColumnNamesForPropertyAndPath(parent, null) >> ['parent_code', 'parent_revision']
+        1 * uniqueKeyCreator.createUniqueKeyForColumns(table, { List<Column> key ->
+            key*.name == expected && (entryPoint != 'columns' || key[0].is(columns[0]) && key[1].is(columns[1]))
+        })
+
+        where:
+        entryPoint | expected
+        'props'    | ['child_state', 'parent_code', 'parent_revision']
+        'columns'  | ['Amount', 'currency', 'parent_code', 'parent_revision']
+    }
+
+    def "creates a key immediately for #entryPoint with #collectorState collector"() {
+        given:
+        def columnNameFetcher = Stub(ColumnNameForPropertyAndPathFetcher)
+        def collector = collectorState == 'absent' ? null : Mock(InFlightMetadataCollector) {
+            isInSecondPass() >> true
+        }
+        def subject = collector == null ? new CreateKeyForProps(columnNameFetcher) :
+                new CreateKeyForProps(columnNameFetcher, collector)
+        def parent = Stub(HibernatePersistentProperty)
+        def owner = Stub(GrailsHibernatePersistentEntity) {
+            getHibernatePropertyByName('parent') >> parent
+        }
+        def grailsProp = Stub(HibernatePersistentProperty) {
+            getMappedForm() >> new PropertyConfig(unique: ['parent'])
+            getHibernateOwner() >> owner
+        }
+        columnNameFetcher.getColumnNamesForPropertyAndPath(parent, null) >> ['parent_code', 'parent_revision']
+        def table = new Table(name: 'child')
+
+        when:
+        if (entryPoint == 'columns') {
+            subject.createKeyForColumns(grailsProp, null, table, [new Column('amount'), new Column('currency')])
+        } else {
+            subject.createKeyForProps(grailsProp, null, table, 'child_state')
+        }
+
+        then:
+        table.uniqueKeys.values().collect { it.columns*.name.toSet() } == [expected as Set]
+        if (collector != null) {
+            0 * collector.addSecondPass(_)
+        }
+
+        where:
+        entryPoint | collectorState | expected
+        'props'    | 'absent'       | ['child_state', 'parent_code', 'parent_revision']
+        'columns'  | 'absent'       | ['amount', 'currency', 'parent_code', 'parent_revision']
+        'props'    | 'second-pass'  | ['child_state', 'parent_code', 'parent_revision']
+        'columns'  | 'second-pass'  | ['amount', 'currency', 'parent_code', 'parent_revision']
     }
 
     def "creates unique key when property is unique within group"() {
         given:
         def columnNameFetcher = Mock(ColumnNameForPropertyAndPathFetcher)
         def uniqueKeyCreator = Mock(UniqueKeyForColumnsCreator)
-        def subject = new CreateKeyForProps(columnNameFetcher, uniqueKeyCreator, metadataCollector)
+        def subject = new CreateKeyForProps(columnNameFetcher, uniqueKeyCreator)
 
         def owner = Mock(GrailsHibernatePersistentEntity)
         def grailsProp = Mock(HibernatePersistentProperty) {
             getHibernateOwner() >> owner
         }
 
-        def mappedForm = Mock(PropertyConfig) {
+        def mappedForm = Mock(org.grails.orm.hibernate.cfg.PropertyConfig) {
             isUnique() >> true
             isUniqueWithinGroup() >> true
             getUniquenessGroup() >> ["p1", "p2"]
         }
         grailsProp.getMappedForm() >> mappedForm
 
-        def otherProp1 = Mock(HibernatePersistentProperty) {
-            getHibernateMappedForm() >> new PropertyConfig()
-        }
-        def otherProp2 = Mock(HibernatePersistentProperty) {
-            getHibernateMappedForm() >> new PropertyConfig()
-        }
+        def otherProp1 = Mock(HibernatePersistentProperty)
+        def otherProp2 = Mock(HibernatePersistentProperty)
         owner.getHibernatePropertyByName("p1") >> otherProp1
         owner.getHibernatePropertyByName("p2") >> otherProp2
 
         String path = "some_path"
         def table = new Table("t")
         String baseColumnName = "base_col"
+
+        columnNameFetcher.getColumnNamesForPropertyAndPath(otherProp1, path) >> ["col1"]
+        columnNameFetcher.getColumnNamesForPropertyAndPath(otherProp2, path) >> ["col2"]
 
         when:
         subject.createKeyForProps(grailsProp, path, table, baseColumnName)
@@ -78,121 +157,41 @@ class CreateKeyForPropsSpec extends Specification {
         1 * grailsProp.getMappedForm() >> mappedForm
         1 * grailsProp.getHibernateOwner() >> owner
         1 * mappedForm.isUnique() >> true
-        1 * mappedForm.isUniqueWithinGroup() >> true
+        2 * mappedForm.isUniqueWithinGroup() >> true
         1 * mappedForm.getUniquenessGroup() >> ["p1", "p2"]
         1 * owner.getHibernatePropertyByName("p1") >> otherProp1
         1 * owner.getHibernatePropertyByName("p2") >> otherProp2
-        1 * columnNameFetcher.getColumnNameForPropertyAndPath(otherProp1, path, null) >> "col1"
-        1 * columnNameFetcher.getColumnNameForPropertyAndPath(otherProp2, path, null) >> "col2"
+        1 * columnNameFetcher.getColumnNamesForPropertyAndPath(otherProp1, path) >> ["col1"]
+        1 * columnNameFetcher.getColumnNamesForPropertyAndPath(otherProp2, path) >> ["col2"]
         1 * uniqueKeyCreator.createUniqueKeyForColumns(table, { List cols -> cols*.name == ["base_col", "col1", "col2"] })
     }
 
-    def "expands every configured column of a unique group member in config order"() {
+    def "a group property that spans several columns contributes all of them to the key"() {
         given:
         def columnNameFetcher = Mock(ColumnNameForPropertyAndPathFetcher)
         def uniqueKeyCreator = Mock(UniqueKeyForColumnsCreator)
-        def subject = new CreateKeyForProps(columnNameFetcher, uniqueKeyCreator, metadataCollector)
+        def subject = new CreateKeyForProps(columnNameFetcher, uniqueKeyCreator)
         def owner = Mock(GrailsHibernatePersistentEntity)
-        def mappedForm = new PropertyConfig(unique: ['parent'])
+        def compositeProp = Mock(HibernatePersistentProperty)
+        def mappedForm = Mock(org.grails.orm.hibernate.cfg.PropertyConfig) {
+            isUnique() >> true
+            isUniqueWithinGroup() >> true
+            getUniquenessGroup() >> ["amount"]
+        }
         def grailsProp = Mock(HibernatePersistentProperty) {
             getMappedForm() >> mappedForm
             getHibernateOwner() >> owner
         }
-        def firstColumn = new ColumnConfig(name: 'parent_code')
-        def secondColumn = new ColumnConfig(name: 'parent_revision')
-        def parent = Mock(HibernatePersistentProperty) {
-            getHibernateMappedForm() >> new PropertyConfig(columns: [firstColumn, secondColumn])
-        }
-        owner.getHibernatePropertyByName('parent') >> parent
-        def table = new Table('child')
+        owner.getHibernatePropertyByName("amount") >> compositeProp
+        columnNameFetcher.getColumnNamesForPropertyAndPath(compositeProp, "") >> ["amount_amount", "`Currency`"]
+        def table = new Table("t")
 
         when:
-        subject.createKeyForProps(grailsProp, 'child_path', table, 'child_state')
+        subject.createKeyForProps(grailsProp, "", table, "reference")
 
-        then:
-        1 * columnNameFetcher.getColumnNameForPropertyAndPath(parent, 'child_path', firstColumn) >> 'parent_code'
-        1 * columnNameFetcher.getColumnNameForPropertyAndPath(parent, 'child_path', secondColumn) >> 'parent_revision'
-        0 * columnNameFetcher._
-        1 * uniqueKeyCreator.createUniqueKeyForColumns(table, { List columns ->
-            columns*.name == ['child_state', 'parent_code', 'parent_revision']
-        })
-    }
-
-    def "keeps group order when configured columns are followed by an implicit column"() {
-        given:
-        def columnNameFetcher = Mock(ColumnNameForPropertyAndPathFetcher)
-        def uniqueKeyCreator = Mock(UniqueKeyForColumnsCreator)
-        def subject = new CreateKeyForProps(columnNameFetcher, uniqueKeyCreator, metadataCollector)
-        def owner = Mock(GrailsHibernatePersistentEntity)
-        def mappedForm = new PropertyConfig(unique: ['parent', 'kind'])
-        def grailsProp = Mock(HibernatePersistentProperty) {
-            getMappedForm() >> mappedForm
-            getHibernateOwner() >> owner
-        }
-        def firstColumn = new ColumnConfig(name: 'parent_code')
-        def secondColumn = new ColumnConfig(name: 'parent_revision')
-        def parent = Mock(HibernatePersistentProperty) {
-            getHibernateMappedForm() >> new PropertyConfig(columns: [firstColumn, secondColumn])
-        }
-        def kind = Mock(HibernatePersistentProperty) {
-            getHibernateMappedForm() >> new PropertyConfig()
-        }
-        owner.getHibernatePropertyByName('parent') >> parent
-        owner.getHibernatePropertyByName('kind') >> kind
-        def table = new Table('child')
-
-        when:
-        subject.createKeyForProps(grailsProp, null, table, 'child_state')
-
-        then:
-        1 * columnNameFetcher.getColumnNameForPropertyAndPath(parent, null, firstColumn) >> 'parent_code'
-        1 * columnNameFetcher.getColumnNameForPropertyAndPath(parent, null, secondColumn) >> 'parent_revision'
-        1 * columnNameFetcher.getColumnNameForPropertyAndPath(kind, null, null) >> 'kind'
-        0 * columnNameFetcher._
-        1 * uniqueKeyCreator.createUniqueKeyForColumns(table, { List columns ->
-            columns*.name == ['child_state', 'parent_code', 'parent_revision', 'kind']
-        })
-    }
-
-    def "resolves group columns in the second pass after association columns have been populated"() {
-        given:
-        def collector = Mock(InFlightMetadataCollector)
-        def columnNameFetcher = Mock(ColumnNameForPropertyAndPathFetcher)
-        def uniqueKeyCreator = Mock(UniqueKeyForColumnsCreator)
-        def subject = new CreateKeyForProps(columnNameFetcher, uniqueKeyCreator, collector)
-        def owner = Mock(GrailsHibernatePersistentEntity)
-        def mappedForm = new PropertyConfig(unique: ['parent'])
-        def grailsProp = Mock(HibernatePersistentProperty) {
-            getMappedForm() >> mappedForm
-            getHibernateOwner() >> owner
-        }
-        def parentConfig = new PropertyConfig()
-        def firstColumn = new ColumnConfig(name: 'parent_code')
-        def secondColumn = new ColumnConfig(name: 'parent_revision')
-        def parent = Mock(HibernatePersistentProperty) {
-            getHibernateMappedForm() >> parentConfig
-        }
-        owner.getHibernatePropertyByName('parent') >> parent
-        def table = new Table('child')
-        SecondPass secondPass
-
-        when:
-        subject.createKeyForProps(grailsProp, null, table, 'child_state')
-
-        then:
-        1 * collector.addSecondPass(_) >> { SecondPass pass -> secondPass = pass }
-        0 * columnNameFetcher._
-        0 * uniqueKeyCreator._
-
-        when:
-        parentConfig.columns.addAll([firstColumn, secondColumn])
-        secondPass.doSecondPass([:])
-
-        then:
-        1 * columnNameFetcher.getColumnNameForPropertyAndPath(parent, null, { it.name == 'parent_code' }) >> 'parent_code'
-        1 * columnNameFetcher.getColumnNameForPropertyAndPath(parent, null, { it.name == 'parent_revision' }) >> 'parent_revision'
-        1 * uniqueKeyCreator.createUniqueKeyForColumns(table, { List columns ->
-            columns*.name == ['child_state', 'parent_code', 'parent_revision']
+        then: "the key spans the column of the property and every column of the group property, quoted as named"
+        1 * uniqueKeyCreator.createUniqueKeyForColumns(table, { List<Column> cols ->
+            cols*.name == ["reference", "amount_amount", "Currency"] && cols*.quoted == [false, false, true]
         })
     }
 
@@ -200,12 +199,12 @@ class CreateKeyForPropsSpec extends Specification {
         given:
         def columnNameFetcher = Mock(ColumnNameForPropertyAndPathFetcher)
         def uniqueKeyCreator = Mock(UniqueKeyForColumnsCreator)
-        def subject = new CreateKeyForProps(columnNameFetcher, uniqueKeyCreator, metadataCollector)
+        def subject = new CreateKeyForProps(columnNameFetcher, uniqueKeyCreator)
 
         def owner = Mock(GrailsHibernatePersistentEntity)
         def grailsProp = Mock(HibernatePersistentProperty) { getHibernateOwner() >> owner }
 
-        def mappedForm = Mock(PropertyConfig) {
+        def mappedForm = Mock(org.grails.orm.hibernate.cfg.PropertyConfig) {
             isUnique() >> false
             isUniqueWithinGroup() >> true
             getUniquenessGroup() >> ["p1"]
@@ -227,13 +226,13 @@ class CreateKeyForPropsSpec extends Specification {
         given:
         def columnNameFetcher = Mock(ColumnNameForPropertyAndPathFetcher)
         def uniqueKeyCreator = Mock(UniqueKeyForColumnsCreator)
-        def subject = new CreateKeyForProps(columnNameFetcher, uniqueKeyCreator, metadataCollector)
+        def subject = new CreateKeyForProps(columnNameFetcher, uniqueKeyCreator)
 
         def owner = Mock(GrailsHibernatePersistentEntity)
         def grailsProp = Mock(HibernatePersistentProperty) { getHibernateOwner() >> owner }
         owner.getJavaClass() >> CreateKeyForPropsSpec
 
-        def mappedForm = Mock(PropertyConfig) {
+        def mappedForm = Mock(org.grails.orm.hibernate.cfg.PropertyConfig) {
             isUnique() >> true
             isUniqueWithinGroup() >> true
             getUniquenessGroup() >> ["missingProp"]
@@ -250,7 +249,7 @@ class CreateKeyForPropsSpec extends Specification {
         1 * grailsProp.getMappedForm() >> mappedForm
         1 * grailsProp.getHibernateOwner() >> owner
         1 * mappedForm.isUnique() >> true
-        1 * mappedForm.isUniqueWithinGroup() >> true
+        2 * mappedForm.isUniqueWithinGroup() >> true
         1 * mappedForm.getUniquenessGroup() >> ["missingProp"]
         1 * owner.getJavaClass() >> CreateKeyForPropsSpec
         1 * owner.getHibernatePropertyByName("missingProp")
@@ -262,7 +261,7 @@ class CreateKeyForPropsSpec extends Specification {
         given:
         def columnNameFetcher = Mock(ColumnNameForPropertyAndPathFetcher)
         def uniqueKeyCreator = Mock(UniqueKeyForColumnsCreator)
-        def subject = new CreateKeyForProps(columnNameFetcher, uniqueKeyCreator, metadataCollector)
+        def subject = new CreateKeyForProps(columnNameFetcher, uniqueKeyCreator)
         def collectionProp = Mock(HibernateToManyProperty) {
             isSerializableType() >> false
             isUserButNotCollectionType() >> false
@@ -281,12 +280,10 @@ class CreateKeyForPropsSpec extends Specification {
         given:
         def columnNameFetcher = Mock(ColumnNameForPropertyAndPathFetcher)
         def uniqueKeyCreator = Mock(UniqueKeyForColumnsCreator)
-        def subject = new CreateKeyForProps(columnNameFetcher, uniqueKeyCreator, metadataCollector)
+        def subject = new CreateKeyForProps(columnNameFetcher, uniqueKeyCreator)
         def owner = Mock(GrailsHibernatePersistentEntity)
-        def otherProp = Mock(HibernatePersistentProperty) {
-            getHibernateMappedForm() >> new PropertyConfig()
-        }
-        def mappedForm = Mock(PropertyConfig) {
+        def otherProp = Mock(HibernatePersistentProperty)
+        def mappedForm = Mock(org.grails.orm.hibernate.cfg.PropertyConfig) {
             isUnique() >> true
             isUniqueWithinGroup() >> true
             getUniquenessGroup() >> ["x"]
@@ -297,7 +294,7 @@ class CreateKeyForPropsSpec extends Specification {
             getHibernateOwner() >> owner
         }
         owner.getHibernatePropertyByName("x") >> otherProp
-        columnNameFetcher.getColumnNameForPropertyAndPath(otherProp, "", null) >> "x_col"
+        columnNameFetcher.getColumnNamesForPropertyAndPath(otherProp, "") >> ["x_col"]
         def table = new Table("owner")
 
         when:
@@ -307,16 +304,157 @@ class CreateKeyForPropsSpec extends Specification {
         1 * uniqueKeyCreator.createUniqueKeyForColumns(table, { List cols -> cols*.name == ["tags", "x_col"] })
     }
 
+    def "creates one key across all the columns of a unique property that spans several columns"() {
+        given:
+        def columnNameFetcher = Mock(ColumnNameForPropertyAndPathFetcher)
+        def uniqueKeyCreator = Mock(UniqueKeyForColumnsCreator)
+        def subject = new CreateKeyForProps(columnNameFetcher, uniqueKeyCreator)
+        def mappedForm = Mock(org.grails.orm.hibernate.cfg.PropertyConfig) {
+            isUnique() >> true
+            isUniqueWithinGroup() >> false
+        }
+        def grailsProp = Mock(HibernatePersistentProperty) {
+            getMappedForm() >> mappedForm
+        }
+        def table = new Table("t")
+        def amount = new Column("`Amount`")
+        def currency = new Column("amount_currency")
+
+        when:
+        subject.createKeyForColumns(grailsProp, "", table, [amount, currency])
+
+        then: "the key holds the bound columns themselves, so it keeps their quoting"
+        1 * uniqueKeyCreator.createUniqueKeyForColumns(table, { List<Column> cols ->
+            cols.size() == 2 && cols[0].is(amount) && cols[1].is(currency) && cols[0].quoted
+        })
+        0 * columnNameFetcher._
+        0 * grailsProp.getHibernateOwner()
+    }
+
+    def "creates one key across all the columns of a property and the columns of its uniqueness group"() {
+        given:
+        def columnNameFetcher = Mock(ColumnNameForPropertyAndPathFetcher)
+        def uniqueKeyCreator = Mock(UniqueKeyForColumnsCreator)
+        def subject = new CreateKeyForProps(columnNameFetcher, uniqueKeyCreator)
+        def owner = Mock(GrailsHibernatePersistentEntity)
+        def otherProp = Mock(HibernatePersistentProperty)
+        def mappedForm = Mock(org.grails.orm.hibernate.cfg.PropertyConfig) {
+            isUnique() >> true
+            isUniqueWithinGroup() >> true
+            getUniquenessGroup() >> ["reference"]
+        }
+        def grailsProp = Mock(HibernatePersistentProperty) {
+            getMappedForm() >> mappedForm
+            getHibernateOwner() >> owner
+        }
+        owner.getHibernatePropertyByName("reference") >> otherProp
+        columnNameFetcher.getColumnNamesForPropertyAndPath(otherProp, "") >> ["reference"]
+        def table = new Table("t")
+        def columns = [new Column("amount_amount"), new Column("amount_currency")]
+
+        when:
+        subject.createKeyForColumns(grailsProp, "", table, columns)
+
+        then:
+        1 * uniqueKeyCreator.createUniqueKeyForColumns(table, { List<Column> cols ->
+            cols*.name == ["amount_amount", "amount_currency", "reference"] && cols[0].is(columns[0]) && cols[1].is(columns[1])
+        })
+
+        and: "the columns of the property are left as they were"
+        columns*.name == ["amount_amount", "amount_currency"]
+    }
+
+    def "a group property of a property that spans several columns contributes all of its own columns"() {
+        given:
+        def columnNameFetcher = Mock(ColumnNameForPropertyAndPathFetcher)
+        def uniqueKeyCreator = Mock(UniqueKeyForColumnsCreator)
+        def subject = new CreateKeyForProps(columnNameFetcher, uniqueKeyCreator)
+        def owner = Mock(GrailsHibernatePersistentEntity)
+        def feeProp = Mock(HibernatePersistentProperty)
+        def mappedForm = Mock(org.grails.orm.hibernate.cfg.PropertyConfig) {
+            isUnique() >> true
+            isUniqueWithinGroup() >> true
+            getUniquenessGroup() >> ["fee"]
+        }
+        def grailsProp = Mock(HibernatePersistentProperty) {
+            getMappedForm() >> mappedForm
+            getHibernateOwner() >> owner
+        }
+        owner.getHibernatePropertyByName("fee") >> feeProp
+        columnNameFetcher.getColumnNamesForPropertyAndPath(feeProp, "") >> ["fee_value", "fee_currency"]
+        def table = new Table("t")
+
+        when:
+        subject.createKeyForColumns(grailsProp, "", table, [new Column("amount_amount"), new Column("amount_currency")])
+
+        then:
+        1 * uniqueKeyCreator.createUniqueKeyForColumns(table, { List<Column> cols ->
+            cols*.name == ["amount_amount", "amount_currency", "fee_value", "fee_currency"]
+        })
+    }
+
+    def "creates no key for a property that spans several columns when it is not unique, or has no columns"() {
+        given:
+        def columnNameFetcher = Mock(ColumnNameForPropertyAndPathFetcher)
+        def uniqueKeyCreator = Mock(UniqueKeyForColumnsCreator)
+        def subject = new CreateKeyForProps(columnNameFetcher, uniqueKeyCreator)
+        def mappedForm = Mock(org.grails.orm.hibernate.cfg.PropertyConfig) {
+            isUnique() >> unique
+            isUniqueWithinGroup() >> false
+        }
+        def grailsProp = Mock(HibernatePersistentProperty) {
+            getMappedForm() >> mappedForm
+        }
+
+        when:
+        subject.createKeyForColumns(grailsProp, "", new Table("t"), columns)
+
+        then:
+        0 * uniqueKeyCreator._
+        0 * columnNameFetcher._
+
+        where:
+        unique | columns
+        false  | [new Column("amount_amount"), new Column("amount_currency")]
+        true   | []
+    }
+
+    def "throws when the uniqueness group of a property that spans several columns references an unknown property"() {
+        given:
+        def columnNameFetcher = Mock(ColumnNameForPropertyAndPathFetcher)
+        def uniqueKeyCreator = Mock(UniqueKeyForColumnsCreator)
+        def subject = new CreateKeyForProps(columnNameFetcher, uniqueKeyCreator)
+        def owner = Mock(GrailsHibernatePersistentEntity) {
+            getJavaClass() >> CreateKeyForPropsSpec
+            getHibernatePropertyByName("missingProp") >> null
+        }
+        def mappedForm = Mock(org.grails.orm.hibernate.cfg.PropertyConfig) {
+            isUnique() >> true
+            isUniqueWithinGroup() >> true
+            getUniquenessGroup() >> ["missingProp"]
+        }
+        def grailsProp = Mock(HibernatePersistentProperty) {
+            getMappedForm() >> mappedForm
+            getHibernateOwner() >> owner
+        }
+
+        when:
+        subject.createKeyForColumns(grailsProp, "", new Table("t"), [new Column("amount_amount"), new Column("amount_currency")])
+
+        then:
+        MappingException e = thrown()
+        e.message.contains("missingProp")
+        0 * uniqueKeyCreator._
+    }
+
     def "creates the key for a to-many property mapped with a user type, whose column is on the owner table"() {
         given:
         def columnNameFetcher = Mock(ColumnNameForPropertyAndPathFetcher)
         def uniqueKeyCreator = Mock(UniqueKeyForColumnsCreator)
-        def subject = new CreateKeyForProps(columnNameFetcher, uniqueKeyCreator, metadataCollector)
+        def subject = new CreateKeyForProps(columnNameFetcher, uniqueKeyCreator)
         def owner = Mock(GrailsHibernatePersistentEntity)
-        def otherProp = Mock(HibernatePersistentProperty) {
-            getHibernateMappedForm() >> new PropertyConfig()
-        }
-        def mappedForm = Mock(PropertyConfig) {
+        def otherProp = Mock(HibernatePersistentProperty)
+        def mappedForm = Mock(org.grails.orm.hibernate.cfg.PropertyConfig) {
             isUnique() >> true
             isUniqueWithinGroup() >> true
             getUniquenessGroup() >> ["x"]
@@ -328,7 +466,7 @@ class CreateKeyForPropsSpec extends Specification {
             getHibernateOwner() >> owner
         }
         owner.getHibernatePropertyByName("x") >> otherProp
-        columnNameFetcher.getColumnNameForPropertyAndPath(otherProp, "", null) >> "x_col"
+        columnNameFetcher.getColumnNamesForPropertyAndPath(otherProp, "") >> ["x_col"]
         def table = new Table("owner")
 
         when:

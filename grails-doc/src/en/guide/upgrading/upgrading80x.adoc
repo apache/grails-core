@@ -497,6 +497,7 @@ implementation 'org.apache.grails:grails-undertow'
 
 The existing `server.undertow.*` configuration properties continue to work.
 Note that `server.undertow.max-http-post-size` now defaults to 2MB, matching Undertow's hardened default (CVE-2024-3884, CVE-2024-4027); set it to `-1` to restore the previous unlimited behavior.
+As Spring Boot's Tomcat and Jetty servers do, Undertow deletes the temporary directories it creates under `java.io.tmpdir` when the application stops: one for uploaded files and, when the application has no document root, one for the document root. Uploaded files left in them are deleted with them.
 The Grails Forge generator offers Undertow as a selectable servlet implementation again (for example, `--servlet=undertow` on the API/CLI, or the `grails-undertow` feature).
 
 ==== 12. HandlerAdapter.getLastModified Removed
@@ -1448,6 +1449,24 @@ class SportsCar extends Car {
     }
 }
 ----
+
+===== 26.11 Custom User Types
+
+Hibernate 7 changed the `org.hibernate.usertype.UserType` contract. The interface is generic in the Java type, `sqlTypes()` became `getSqlType()`, and `nullSafeGet()` and `nullSafeSet()` take a column position and a `WrapperOptions` in place of the column names and the session. A `UserType` written for Hibernate 5 does not compile against Hibernate 7 and must be rewritten.
+
+A type that spans several columns no longer implements `UserType` with several `sqlTypes()`. It implements `org.hibernate.usertype.CompositeUserType`, whose `embeddable()` method names a class whose persistent attributes describe the columns. GORM binds such a property as a component: the columns of its `type` mapping are assigned to the attributes in the alphabetical order of their names, which is also the index that `getPropertyValue()` and `instantiate()` use, and a column that is not listed is named after the property and the attribute. In Hibernate 5, the columns followed the order of `getPropertyNames()` instead, so check the column order of every multi-column mapping when you port a `CompositeUserType`. The GORM guide describes the mapping under _Custom Hibernate Types_.
+
+===== 26.12 Several Unidirectional hasMany Associations on One Owner
+
+Under Hibernate 7, an owner with two or more unidirectional `hasMany` associations wrote no rows to their join tables: an element added to any of them was lost at flush (issue https://github.com/apache/grails-core/issues/16665[#16665]). This is fixed when each association has a join table of its own, which is the default for associations to different classes (`item_roles` and `item_tags` for `static hasMany = [roles: Role, tags: Tag]`) and also the case when two associations to the same class map different tables with `joinTable`. Each such join table is written, as under Hibernate 5.
+
+Two unidirectional associations to the same class share one join table by default, named after the owner and the element class, with a key column per association (`item_role` with `item_roles_id` and `item_deny_roles_id` for `static hasMany = [roles: Role, denyRoles: Role]`). Such a shared table is now written as well: each association keeps its rows unique by its own key column and the element. Two lists or two maps sharing a join table are written too (issue https://github.com/apache/grails-core/issues/16700[#16700]): each keeps its rows unique by its own key and index columns, since a position or a map key is taken once while an element may repeat, and the table has no primary key, because the one Hibernate makes over one list's key and index columns rejects every row of the other list. A schema created by an earlier Grails 8 release has that primary key and `NOT NULL` owner-key and index columns, which `dbCreate` of `update` does not change: drop the primary key and make the owner-key and index columns nullable with a migration. On most databases that is a unique key per association; on Oracle and on Db2 for Linux, UNIX and Windows, which compare the non-null columns of a partially null row in a unique key, it is one unique key over the key columns of both associations and the element. A schema created by an earlier Grails 8 release has the single unique key Hibernate made for the first association: `dbCreate` of `update` adds the second one, and on Oracle and Db2 for Linux, UNIX and Windows a migration has to replace that key with the wider one. Each collection on a shared join table isolates its rows during reads, element removals, and bulk deletes: for lists and maps sharing the same foreign-key and element columns, queries and deletions are restricted by each list's distinct index column so neither collection interferes with the other. A bag has no key; its elements may repeat.
+
+Removing one element of a unidirectional `hasMany` set or bag, with `removeFrom*` or by binding a smaller set of ids, deleted every join table row of the owner, so the association lost all its elements (issue https://github.com/apache/grails-core/issues/16691[#16691]). Hibernate 7 deletes such a row by the owner's key and only those element columns that are not nullable, and the element column of a GORM join table is nullable. GORM now gives a set or a bag of entities in a join table a collection persister that deletes the row by the owner and the element, as Hibernate 5 did; the schema does not change. An application that configures a persister class resolver of its own with `hibernate.persister.resolver` keeps it, and with it the Hibernate 7 behaviour. Likewise, GORM configures `hibernate.query.sqm.translator` to `RestrictedCollectionSqmTranslatorFactory` by default so that `is empty` on associations that share a key column (issue https://github.com/apache/grails-core/issues/16748[#16748]) translates to a count query; an application that configures an SQM query translator factory of its own keeps it, and with it the standard Hibernate 7 behaviour.
+
+===== 26.13 Collection Criteria Next to Association Blocks
+
+Under Hibernate 7, calling a collection criterion such as `isNotEmpty('pets')`, `isEmpty('pets')`, or `sizeEq('pets', n)` next to an association block for the same collection (`pets { ... }`) threw a `ClassCastException` because the path resolved to the join rather than the collection attribute (issue https://github.com/apache/grails-core/issues/16633[#16633]). Collection criteria now resolve to the collection property on the parent whether they appear before or after an association block of the same name.
 
 ==== 27. GORM Properties Are Nullable by Default
 
@@ -4864,5 +4883,5 @@ With `DISCRIMINATOR` multi-tenancy, GORM for MongoDB, GORM for Neo4j and GORM's 
 
 * The id of another tenant's instance is treated like an id that does not exist: `get` and `read` return `null`, `exists` returns `false`, `getAll` returns `null` in its place, and the proxy returned by `load` or `proxy` throws when it is initialized.
 * Without a current tenant, these methods throw `TenantNotFoundException`, as a query does. `getAll` without ids still returns an empty list.
-* Inside `Tenants.withoutId { }` a lookup by id is still not restricted to a tenant, and neither is a proxy returned by `load` or `proxy` that is initialized there. As the previous note says, only `withoutId` lifts the restriction: a tenant id of `default` restricts a lookup by id to that tenant as it restricts a query.
+* Inside `Tenants.withoutId { }` lookups by id work as before. With GORM for MongoDB and GORM's in-memory datastore they are not restricted to a tenant, and neither is a proxy returned by `load` or `proxy` that is initialized there. As the previous note says, only `withoutId` lifts the restriction: a tenant id of `default` restricts a lookup by id to that tenant as it restricts a query.
 * A lookup by id still finds an instance that the session holds for the current tenant, including one that has been saved but not flushed, and it does not flush the session.
