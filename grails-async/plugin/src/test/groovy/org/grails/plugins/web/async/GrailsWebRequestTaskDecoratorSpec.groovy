@@ -21,6 +21,7 @@ package org.grails.plugins.web.async
 import java.lang.ref.WeakReference
 import java.lang.reflect.InvocationTargetException
 import java.lang.reflect.Proxy
+import java.security.Principal
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
@@ -1257,6 +1258,168 @@ class GrailsWebRequestTaskDecoratorSpec extends Specification {
         seen.body == CompletedHttpServletRequest.BODY_LIMIT
     }
 
+    @Issue('https://github.com/apache/grails-core/issues/15851')
+    void 'a task started during a forward of a wrapped request keeps the forward once the container restored the wrapper'() {
+        given: 'a request a filter wrapped, which every dispatch of the request is given'
+        MockHttpServletRequest live = request()
+        AtomicBoolean recycled = new AtomicBoolean()
+        HttpServletRequestWrapper wrapped = new HttpServletRequestWrapper(recyclable(live, recycled))
+
+        and: 'processing that forwards it, as Tomcat does: inserting its own wrapper underneath, then removing it'
+        Map<String, List<Map>> seen = [request: [], forward: []]
+        Runnable onRequest = null
+        Runnable onForward = null
+        FilterChain processing = { ServletRequest request, ServletResponse response ->
+            GrailsWebRequest outer = bind(wrapped)
+            onRequest = readingForward(seen.request)
+            ForwardedRequest forwarded = new ForwardedRequest((HttpServletRequest) wrapped.request, '/books/show')
+            forwarded.addField('page', '2')
+            wrapped.request = forwarded
+            GrailsWebRequest forward = bind(wrapped)
+            onForward = readingForward(seen.forward)
+            forward.requestCompleted()
+            wrapped.request = forwarded.request
+            WebUtils.storeGrailsWebRequest(outer)
+            onForward.run()
+            onRequest.run()
+            outer.requestCompleted()
+        } as FilterChain
+
+        when: 'the request is processed, and recycled before the tasks run again'
+        new TaskRequestFilter().doFilter(wrapped, new MockHttpServletResponse(), processing)
+        recycled.set(true)
+        RequestContextHolder.resetRequestAttributes()
+        onForward.run()
+        onRequest.run()
+
+        then: 'the task started during the forward keeps the forward, its parameters too, once it has returned'
+        seen.forward == [[uri: '/books/show', forward: true, forwardURI: '/books/save', page: '2']] * 2
+
+        and: 'the task started before it keeps the request'
+        seen.request == [[uri: '/books/save', forward: false, forwardURI: '/books/save', page: null]] * 2
+    }
+
+    @Issue('https://github.com/apache/grails-core/issues/15851')
+    void 'a request processed asynchronously keeps who made it, though the thread completing it does not know'() {
+        given: 'a request whose user only the thread processing it knows, as with a security filter'
+        ThreadLocal<Principal> signedIn = new ThreadLocal<>()
+        MockHttpServletRequest live = request()
+        live.asyncSupported = true
+        AtomicBoolean recycled = new AtomicBoolean()
+        AuthenticatedRequest authenticated = new AuthenticatedRequest(recyclable(live, recycled), signedIn)
+
+        and: 'processing that starts the asynchronous processing and a task'
+        Map seen = [:]
+        Runnable decorated = null
+        FilterChain processing = { ServletRequest request, ServletResponse response ->
+            GrailsWebRequest outer = bind(authenticated)
+            request.startAsync()
+            decorated = new GrailsWebRequestTaskDecorator().decorate {
+                HttpServletRequest current = GrailsWebRequest.lookup().currentRequest
+                seen.user = [principal: current.userPrincipal?.name, remoteUser: current.remoteUser, authType: current.authType]
+            }
+            outer.requestCompleted()
+        } as FilterChain
+
+        when: 'the security filter around the dispatch signs the user in and out, and the processing completes after it'
+        signedIn.set([getName: { 'alice' }] as Principal)
+        try {
+            new TaskRequestFilter().doFilter(authenticated, new MockHttpServletResponse(), processing)
+        }
+        finally {
+            signedIn.remove()
+        }
+        live.asyncContext.complete()
+        recycled.set(true)
+        RequestContextHolder.resetRequestAttributes()
+        decorated.run()
+
+        then:
+        seen.user == [principal: 'alice', remoteUser: 'alice', authType: 'FORM']
+    }
+
+    @Issue('https://github.com/apache/grails-core/issues/15851')
+    @Unroll
+    void 'a task reading the body through #source when the request completes reads on where it stopped'() {
+        given:
+        MockHttpServletRequest live = request()
+        live.characterEncoding = 'UTF-8'
+        live.content = content.getBytes('UTF-8')
+        AtomicBoolean recycled = new AtomicBoolean()
+        GrailsWebRequest original = bind(recyclable(live, recycled))
+
+        and: 'a task that reads the start of the body, and the rest through the same stream or reader once the request has completed'
+        CountDownLatch started = new CountDownLatch(1)
+        CountDownLatch completed = new CountDownLatch(1)
+        Map seen = [:]
+        Runnable decorated = new GrailsWebRequestTaskDecorator().decorate {
+            Object body = open.call(GrailsWebRequest.lookup().currentRequest)
+            seen.start = start.call(body)
+            started.countDown()
+            completed.await(10, TimeUnit.SECONDS)
+            seen.rest = rest.call(body)
+        }
+        RequestContextHolder.resetRequestAttributes()
+
+        when:
+        Thread task = Thread.start { decorated.run() }
+        started.await(10, TimeUnit.SECONDS)
+        original.requestCompleted()
+        recycled.set(true)
+        completed.countDown()
+        task.join(10000)
+
+        then:
+        seen.start == first
+        seen.rest == remaining
+
+        where:
+        source       | content                   | first        | remaining     | open                                    | start                                         | rest
+        'the stream' | 'abcdef'                  | 'a'          | 'bcdef'       | { HttpServletRequest r -> r.inputStream } | { InputStream s -> ((char) s.read()).toString() } | { InputStream s -> s.getText('UTF-8') }
+        'a reader'   | 'first line\nsecond line' | 'first line' | 'second line' | { HttpServletRequest r -> r.reader }      | { BufferedReader s -> s.readLine() }              | { BufferedReader s -> s.text }
+    }
+
+    @Issue('https://github.com/apache/grails-core/issues/15851')
+    void 'a wrapper whose parameters cannot be read fails the same once the request completes, as on the live request'() {
+        given: 'an ordinary wrapper that fails to read its parameters, around a request that has them'
+        IllegalArgumentException failure = new IllegalArgumentException('The parameters are malformed')
+        MockHttpServletRequest live = request()
+        AtomicBoolean recycled = new AtomicBoolean()
+        GrailsWebRequest original = bind(new FailingParametersRequest(recyclable(live, recycled), failure))
+
+        and:
+        List<Throwable> failures = []
+        Runnable decorated = new GrailsWebRequestTaskDecorator().decorate {
+            try {
+                GrailsWebRequest.lookup().currentRequest.getParameter('title')
+            }
+            catch (Throwable thrown) {
+                failures << thrown
+            }
+        }
+        RequestContextHolder.resetRequestAttributes()
+
+        when: 'the task reads the parameters while the request is live, and once it has completed'
+        decorated.run()
+        original.requestCompleted()
+        recycled.set(true)
+        decorated.run()
+
+        then: 'both reads fail as the wrapper does, rather than reading the parameters of the request it wraps'
+        failures.size() == 2
+        failures.every { it.is(failure) }
+    }
+
+    // A task reading how its request was dispatched, and a parameter only a forward adds
+    private static Runnable readingForward(List<Map> seen) {
+        return new GrailsWebRequestTaskDecorator().decorate {
+            GrailsWebRequest webRequest = GrailsWebRequest.lookup()
+            HttpServletRequest request = webRequest.currentRequest
+            seen << [uri: request.requestURI, forward: WebUtils.isForward(request), forwardURI: WebUtils.getForwardURI(request),
+                     page: webRequest.params.page]
+        }
+    }
+
     // A task reading what changes on the request after a forward, and creating the session, which only the live
     // request can do
     private static Runnable readingLate(List<Map> seen) {
@@ -1513,6 +1676,64 @@ class GrailsWebRequestTaskDecoratorSpec extends Specification {
 
         private static boolean dispatchAttribute(String name) {
             return name.startsWith('jakarta.servlet.forward.') || name.startsWith('jakarta.servlet.include.')
+        }
+    }
+
+    // Stands for a request whose user only the thread processing it knows, as Spring Security's wrapper reads it
+    // from the security context of the thread
+    private static class AuthenticatedRequest extends HttpServletRequestWrapper {
+
+        private final ThreadLocal<Principal> signedIn
+
+        AuthenticatedRequest(HttpServletRequest request, ThreadLocal<Principal> signedIn) {
+            super(request)
+            this.signedIn = signedIn
+        }
+
+        @Override
+        Principal getUserPrincipal() {
+            return signedIn.get()
+        }
+
+        @Override
+        String getRemoteUser() {
+            return signedIn.get()?.name
+        }
+
+        @Override
+        String getAuthType() {
+            return signedIn.get() == null ? null : 'FORM'
+        }
+    }
+
+    // Stands for an ordinary wrapper that cannot read its parameters, which fails every read of them
+    private static class FailingParametersRequest extends HttpServletRequestWrapper {
+
+        private final RuntimeException failure
+
+        FailingParametersRequest(HttpServletRequest request, RuntimeException failure) {
+            super(request)
+            this.failure = failure
+        }
+
+        @Override
+        String getParameter(String name) {
+            throw failure
+        }
+
+        @Override
+        Enumeration<String> getParameterNames() {
+            throw failure
+        }
+
+        @Override
+        String[] getParameterValues(String name) {
+            throw failure
+        }
+
+        @Override
+        Map<String, String[]> getParameterMap() {
+            throw failure
         }
     }
 

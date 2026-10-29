@@ -27,21 +27,28 @@ import jakarta.servlet.FilterChain
 import jakarta.servlet.ServletException
 import jakarta.servlet.ServletRequest
 import jakarta.servlet.ServletResponse
+import jakarta.servlet.http.HttpServletRequest
+import jakarta.servlet.http.HttpServletRequestWrapper
 
 /**
- * The outermost filter, which tells when a request leaves the application, once every other filter has ended.
+ * The outermost filter, which tells when a request leaves the application, once every other filter has ended. It
+ * wraps a request that asks for it, as an application filter does, so a forward is given that wrapper with the
+ * container's own wrapper underneath.
  */
 @CompileStatic
 class RequestCompletedFilter implements Filter {
 
     static final String COMPLETED = RequestCompletedFilter.name + '.COMPLETED'
+    static final String WRAPPED = 'X-Wrapped'
 
     @Override
     void doFilter(ServletRequest request, ServletResponse response, FilterChain chain) throws IOException, ServletException {
         CountDownLatch completed = new CountDownLatch(1)
         request.setAttribute(COMPLETED, completed)
+        HttpServletRequest http = (HttpServletRequest) request
+        ServletRequest processed = http.getHeader(WRAPPED) ? new HttpServletRequestWrapper(http) : request
         try {
-            chain.doFilter(request, response)
+            chain.doFilter(processed, response)
         }
         finally {
             completed.countDown()

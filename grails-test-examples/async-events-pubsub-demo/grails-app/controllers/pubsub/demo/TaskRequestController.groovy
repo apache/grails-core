@@ -28,13 +28,13 @@ class TaskRequestController {
     TaskRequestService taskRequestService
 
     def forwarding() {
-        taskRequestService.readOnceCompleted('request')
+        taskRequestService.readOnceCompleted("${params.run}-request")
         forward(action: 'forwarded')
         request.setAttribute('late', 'set after the forward')
     }
 
     def forwarded() {
-        taskRequestService.readOnceCompleted('forward')
+        taskRequestService.readOnceCompleted("${params.run}-forward")
         render 'forwarded'
     }
 
@@ -44,7 +44,7 @@ class TaskRequestController {
     }
 
     def forwardedOnly() {
-        taskRequestService.readOnceCompleted('forwardOnly')
+        taskRequestService.readOnceCompleted("${params.run}-forwardOnly")
         render 'forwarded'
     }
 

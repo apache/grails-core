@@ -26,6 +26,7 @@ import java.text.SimpleDateFormat
 import java.util.concurrent.ConcurrentHashMap
 
 import groovy.transform.CompileStatic
+import groovy.transform.PackageScope
 
 import jakarta.servlet.AsyncContext
 import jakarta.servlet.DispatcherType
@@ -70,6 +71,12 @@ import org.grails.web.util.WebUtils
  * What only the live request can do, such as dispatching, processing asynchronously, creating a session or checking
  * a role, is not available.</p>
  *
+ * <p>A copy keeps how its request was dispatched when its task was given it, its path, forward and include
+ * attributes and, for a forward or an include, its parameters, though the container restores a request it wrapped
+ * for a forward as the forward returns. A copy taken as asynchronous processing completes, outside the filters,
+ * keeps who made the request as its last dispatch told, since a security filter clears that as the dispatch
+ * ends.</p>
+ *
  * <p>The copies share the attributes of the request the container created and the body, as the requests share
  * them, so attributes a task sets stay with the copies, shared by every task. What a request keeps itself, such as
  * the forward attributes of the request a forward dispatched, stays with its own copy, as do the attributes it
@@ -77,7 +84,8 @@ import org.grails.web.util.WebUtils
  *
  * <p>The parameters are those of the request. A multipart body the container could not parse leaves the copy
  * without parameters, as params has none, and any other failure to read them is thrown to a task that reads them,
- * as the live request throws it.</p>
+ * as the live request throws it. Only a multipart request resolving lazily that can no longer parse the body as the
+ * request completes gives way to the request it wraps.</p>
  *
  * <p>The uploads of a multipart request are deleted as the request ends, so the copy answers as a multipart
  * request without uploads when the request was a multipart request, and a copy of a multipart request an attribute
@@ -156,7 +164,8 @@ class CompletedHttpServletRequest implements MultipartHttpServletRequest {
     private BufferedReader reader
 
     private CompletedHttpServletRequest(HttpServletRequest request, Map<String, Object> attributes,
-            Map<String, Object> ownAttributes, CopiedParameters parameters, byte[] body) {
+            Map<String, Object> ownAttributes, CopiedParameters parameters, byte[] body, DispatchView view,
+            Identity identity) {
         this.attributes = attributes
         this.ownAttributes = ownAttributes
         this.parameters = parameters.values
@@ -171,23 +180,27 @@ class CompletedHttpServletRequest implements MultipartHttpServletRequest {
         this.cookies = copyCookies(request.cookies)
         this.session = request.getSession(false)
         this.servletContext = request.servletContext
-        this.userPrincipal = request.userPrincipal
-        this.dispatcherType = request.dispatcherType
-        // Values only: the container's own objects can reference the request it recycles
-        this.httpServletMapping = copyMapping(request.httpServletMapping)
+        // As the request was dispatched when the task was given it, though the container restores a request it
+        // wrapped for a forward as the forward returns
+        DispatchView dispatch = view ?: new DispatchView(request)
+        // Who made the request, as the filters processing it told, though a security filter clears it
+        Identity user = identity ?: new Identity(request)
+        this.userPrincipal = user.userPrincipal
+        this.dispatcherType = dispatch.dispatcherType
+        this.httpServletMapping = dispatch.httpServletMapping
         this.servletConnection = copyConnection(request.servletConnection)
-        this.authType = request.authType
+        this.authType = user.authType
         this.characterEncoding = request.characterEncoding
         this.contentType = request.contentType
         this.contentLength = request.contentLengthLong
         this.method = request.method
-        this.requestURI = request.requestURI
-        this.requestURL = request.requestURL?.toString()
-        this.queryString = request.queryString
-        this.contextPath = request.contextPath
-        this.servletPath = request.servletPath
-        this.pathInfo = request.pathInfo
-        this.pathTranslated = request.pathTranslated
+        this.requestURI = dispatch.requestURI
+        this.requestURL = dispatch.requestURL
+        this.queryString = dispatch.queryString
+        this.contextPath = dispatch.contextPath
+        this.servletPath = dispatch.servletPath
+        this.pathInfo = dispatch.pathInfo
+        this.pathTranslated = dispatch.pathTranslated
         this.protocol = request.protocol
         this.scheme = request.scheme
         this.serverName = request.serverName
@@ -199,7 +212,7 @@ class CompletedHttpServletRequest implements MultipartHttpServletRequest {
         this.localName = request.localName
         this.localAddr = request.localAddr
         this.localPort = request.localPort
-        this.remoteUser = request.remoteUser
+        this.remoteUser = user.remoteUser
         this.requestedSessionId = request.requestedSessionId
         this.requestedSessionIdValid = request.requestedSessionIdValid
         this.requestedSessionIdFromCookie = request.requestedSessionIdFromCookie
@@ -264,10 +277,14 @@ class CompletedHttpServletRequest implements MultipartHttpServletRequest {
      *
      * @param requests the requests, each the request the container created or a wrapper of it, the first being the
      *        one whose body the copies share
+     * @param views how each request was dispatched when a task was given it
+     * @param identities who made the request, as the filters processing it told, for each request, or {@code null}
+     *        entries when the request itself still tells
      * @return the copies, in the order of the requests, with {@code null} for a request after the first that could
      *         not be copied
      */
-    static List<CompletedHttpServletRequest> copyOf(List<HttpServletRequest> requests) {
+    static List<CompletedHttpServletRequest> copyOf(List<HttpServletRequest> requests, List<DispatchView> views,
+            List<Identity> identities) {
         Map<String, Object> underlying = attributesOf(TaskRequest.underlying(requests.get(0)))
         // The requests to copy: those given, then each multipart request an attribute holds, such as the one the
         // dispatcher resolved, which wraps the request, so its copy, which has no uploads either, takes its place
@@ -281,14 +298,14 @@ class CompletedHttpServletRequest implements MultipartHttpServletRequest {
         addMultipartRequests(underlying, copied, multipartRequests)
         List<Map<String, Object>> shownOtherwise = new ArrayList<>()
         for (int i = 0; i < copied.size(); i++) {
-            Map<String, Object> shown = differences(attributesOf(copied.get(i)), underlying)
+            Map<String, Object> shown = differences(attributesOf(copied.get(i)), underlying, viewOf(views, i))
             shownOtherwise.add(shown)
             addMultipartRequests(shown, copied, multipartRequests)
         }
         // Every parameter map before the body: parsing the parameters consumes a form body, on the live request too
         List<CopiedParameters> parameters = new ArrayList<>()
-        for (HttpServletRequest request : copied) {
-            parameters.add(copyParameters(request))
+        for (int i = 0; i < copied.size(); i++) {
+            parameters.add(viewOf(views, i)?.parameters ?: copyParameters(copied.get(i)))
         }
         byte[] body = copyBody(requests.get(0))
         Map<String, Object> attributes = new ConcurrentHashMap<>()
@@ -297,8 +314,11 @@ class CompletedHttpServletRequest implements MultipartHttpServletRequest {
         for (int i = 0; i < copied.size(); i++) {
             Map<String, Object> own = new ConcurrentHashMap<>()
             ownAttributes.add(own)
-            copies.add(i == 0 ? new CompletedHttpServletRequest(copied.get(0), attributes, own, parameters.get(0), body) :
-                    copyAlongside(copied.get(i), attributes, own, parameters.get(i), body))
+            Identity identity = i < identities.size() ? identities.get(i) : null
+            copies.add(i == 0 ?
+                    new CompletedHttpServletRequest(copied.get(0), attributes, own, parameters.get(0), body,
+                            viewOf(views, 0), identity) :
+                    copyAlongside(copied.get(i), attributes, own, parameters.get(i), body, viewOf(views, i), identity))
         }
         putAttributes(underlying, attributes, multipartRequests, copies, false)
         for (int i = 0; i < copied.size(); i++) {
@@ -307,11 +327,17 @@ class CompletedHttpServletRequest implements MultipartHttpServletRequest {
         return new ArrayList<>(copies.subList(0, requests.size()))
     }
 
+    // A multipart request an attribute holds was not given to a task, so it has no view
+    private static DispatchView viewOf(List<DispatchView> views, int index) {
+        return index < views.size() ? views.get(index) : null
+    }
+
     // A request that can no longer be read leaves its own tasks without a copy, not the tasks of the other requests
     private static CompletedHttpServletRequest copyAlongside(HttpServletRequest request, Map<String, Object> attributes,
-            Map<String, Object> ownAttributes, CopiedParameters parameters, byte[] body) {
+            Map<String, Object> ownAttributes, CopiedParameters parameters, byte[] body, DispatchView view,
+            Identity identity) {
         try {
-            return new CompletedHttpServletRequest(request, attributes, ownAttributes, parameters, body)
+            return new CompletedHttpServletRequest(request, attributes, ownAttributes, parameters, body, view, identity)
         }
         catch (RuntimeException ignored) {
             return null
@@ -330,16 +356,28 @@ class CompletedHttpServletRequest implements MultipartHttpServletRequest {
     }
 
     // What a request shows otherwise than the request the container created, such as the forward attributes a
-    // forward's request keeps itself: its own values, and the names it hides
-    private static Map<String, Object> differences(Map<String, Object> shown, Map<String, Object> underlying) {
+    // forward's request keeps itself: its own values, and the names it hides. The forward and include attributes
+    // are those it showed when a task was given it, as the container restores a request it wrapped for a forward
+    private static Map<String, Object> differences(Map<String, Object> shown, Map<String, Object> underlying,
+            DispatchView view) {
         Map<String, Object> differences = new LinkedHashMap<>()
+        Map<String, Object> dispatched = view == null ? shown : view.attributes
         for (Map.Entry<String, Object> attribute : shown.entrySet()) {
-            if (!Objects.equals(attribute.value, underlying.get(attribute.key))) {
+            if (!(view != null && DispatchView.dispatchAttribute(attribute.key)) &&
+                    !Objects.equals(attribute.value, underlying.get(attribute.key))) {
                 differences.put(attribute.key, attribute.value)
             }
         }
+        if (view != null) {
+            for (Map.Entry<String, Object> attribute : dispatched.entrySet()) {
+                if (!Objects.equals(attribute.value, underlying.get(attribute.key))) {
+                    differences.put(attribute.key, attribute.value)
+                }
+            }
+        }
         for (String name : underlying.keySet()) {
-            if (!shown.containsKey(name)) {
+            boolean shownByView = view != null && DispatchView.dispatchAttribute(name)
+            if (!(shownByView ? dispatched : shown).containsKey(name)) {
                 differences.put(name, HIDDEN)
             }
         }
@@ -396,10 +434,16 @@ class CompletedHttpServletRequest implements MultipartHttpServletRequest {
         return values == null ? null : Arrays.copyOf(values, values.length)
     }
 
-    // The parameters of the request, as WebUtils.readParameterMap reads them: a multipart body the container cannot
-    // parse leaves the request without parameters, and any other failure reaches the task that reads them, as on
-    // the request
-    private static CopiedParameters copyParameters(HttpServletRequest request) {
+    /**
+     * The parameters of a request, as WebUtils.readParameterMap reads them: a multipart body the container cannot
+     * parse leaves the request without parameters, and any other failure reaches the task that reads them, as on
+     * the request.
+     *
+     * @param request the request
+     * @return its parameters, or the failure reading them
+     */
+    @PackageScope
+    static CopiedParameters copyParameters(HttpServletRequest request) {
         try {
             Map<String, String[]> parameters = new LinkedHashMap<>()
             for (Map.Entry<String, String[]> parameter : ownParameters(request).entrySet()) {
@@ -414,7 +458,8 @@ class CompletedHttpServletRequest implements MultipartHttpServletRequest {
     }
 
     // The parameters of the request or, when a multipart wrapper resolving lazily can no longer parse the body for
-    // them as the request completes, of the request it wraps
+    // them as the request completes, of the request it wraps. Any other wrapper that fails keeps its failure, as it
+    // fails on the live request
     private static Map<String, String[]> ownParameters(HttpServletRequest request) {
         RuntimeException failure = null
         for (ServletRequest source = request; source != null; source = wrapped(source)) {
@@ -423,6 +468,9 @@ class CompletedHttpServletRequest implements MultipartHttpServletRequest {
             }
             catch (RuntimeException unreadable) {
                 failure = failure ?: unreadable
+                if (!(source instanceof MultipartHttpServletRequest)) {
+                    throw failure
+                }
             }
         }
         throw failure
@@ -502,7 +550,8 @@ class CompletedHttpServletRequest implements MultipartHttpServletRequest {
         }
     }
 
-    private static HttpServletMapping copyMapping(HttpServletMapping mapping) {
+    @PackageScope
+    static HttpServletMapping copyMapping(HttpServletMapping mapping) {
         return mapping == null ? null : new CopiedHttpServletMapping(mapping)
     }
 
@@ -997,14 +1046,41 @@ class CompletedHttpServletRequest implements MultipartHttpServletRequest {
     }
 
     // The parameters of a request, or the failure that kept the request from reading them
-    private static final class CopiedParameters {
+    @PackageScope
+    static final class CopiedParameters {
 
+        @PackageScope
         final Map<String, String[]> values
+
+        @PackageScope
         final RuntimeException failure
 
-        private CopiedParameters(Map<String, String[]> values, RuntimeException failure) {
+        @PackageScope
+        CopiedParameters(Map<String, String[]> values, RuntimeException failure) {
             this.values = values
             this.failure = failure
+        }
+    }
+
+    // Who made a request, which a security filter answers only on the thread processing the request, and only
+    // until it ends
+    @PackageScope
+    static final class Identity {
+
+        @PackageScope
+        final Principal userPrincipal
+
+        @PackageScope
+        final String remoteUser
+
+        @PackageScope
+        final String authType
+
+        @PackageScope
+        Identity(HttpServletRequest request) {
+            this.userPrincipal = request.userPrincipal
+            this.remoteUser = request.remoteUser
+            this.authType = request.authType
         }
     }
 

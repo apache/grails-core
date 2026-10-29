@@ -36,14 +36,14 @@ class TaskRequestService {
 
     final Map<String, Map<String, Object>> seen = new ConcurrentHashMap<>()
 
-    void readOnceCompleted(String name) {
+    void readOnceCompleted(CharSequence name) {
         HttpServletRequest live = GrailsWebRequest.lookup().currentRequest
         CountDownLatch completed = (CountDownLatch) live.getAttribute(RequestCompletedFilter.COMPLETED)
         Promises.task {
             completed.await(10, TimeUnit.SECONDS)
             HttpServletRequest request = GrailsWebRequest.lookup().currentRequest
-            seen[name] = [late: request.getAttribute('late'), forward: WebUtils.isForward(request),
-                          forwardURI: WebUtils.getForwardURI(request), uri: request.requestURI]
+            seen[name.toString()] = [late: request.getAttribute('late'), forward: WebUtils.isForward(request),
+                                     forwardURI: WebUtils.getForwardURI(request), uri: request.requestURI]
         }
     }
 }
