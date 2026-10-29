@@ -30,9 +30,9 @@ class HqlSelectResultTypeSpec extends HibernateGormDatastoreSpec {
     void setup() {
         HqlResultTypeAuthor austen = new HqlResultTypeAuthor(name: 'Austen').save(failOnError: true)
         HqlResultTypeAuthor tolkien = new HqlResultTypeAuthor(name: 'Tolkien').save(failOnError: true)
-        new HqlResultTypeBook(title: 'Emma', author: austen).save(failOnError: true)
-        new HqlResultTypeBook(title: 'Persuasion', author: austen).save(failOnError: true)
-        new HqlResultTypeBook(title: 'The Hobbit', author: tolkien).save(failOnError: true, flush: true)
+        new HqlResultTypeBook(title: 'Emma', pages: 100, author: austen).save(failOnError: true)
+        new HqlResultTypeBook(title: 'Persuasion', pages: 200, author: austen).save(failOnError: true)
+        new HqlResultTypeBook(title: 'The Hobbit', pages: 300, author: tolkien).save(failOnError: true, flush: true)
     }
 
     void 'executeQuery returns the entities of a joined alias in the select clause'() {
@@ -74,17 +74,19 @@ class HqlSelectResultTypeSpec extends HibernateGormDatastoreSpec {
 
     void 'executeQuery infers scalar results from a parenthesized root query: #hql'() {
         expect:
-        HqlResultTypeBook.executeQuery(hql).sort() == ['Emma', 'Persuasion', 'The Hobbit']
+        List results = HqlResultTypeBook.executeQuery(hql)
+        results.sort() == expected
+        results.every { resultType.isInstance(it) }
 
         where:
-        hql << [
-                '(select b.title from HqlResultTypeBook b)',
-                '((select b.title from HqlResultTypeBook b))',
-                '( select b.title from HqlResultTypeBook b )',
-                "(select b.title from HqlResultTypeBook b where b.title <> ')')",
-                '(/* ignore ) and ( */ select b.title from HqlResultTypeBook b)',
-                '(select b.title from HqlResultTypeBook b where b.author.id in (select a.id from HqlResultTypeAuthor a))'
-        ]
+        hql                                                                                                                   | expected                                                | resultType
+        '(select b.title from HqlResultTypeBook b)'                                                                            | ['Emma', 'Persuasion', 'The Hobbit']                      | String
+        '((select b.title from HqlResultTypeBook b))'                                                                          | ['Emma', 'Persuasion', 'The Hobbit']                      | String
+        '( select b.title from HqlResultTypeBook b )'                                                                          | ['Emma', 'Persuasion', 'The Hobbit']                      | String
+        "(select b.title from HqlResultTypeBook b where b.title <> ')')"                                                       | ['Emma', 'Persuasion', 'The Hobbit']                      | String
+        '(/* ignore ) and ( */ select b.title from HqlResultTypeBook b)'                                                       | ['Emma', 'Persuasion', 'The Hobbit']                      | String
+        '(select b.title from HqlResultTypeBook b where b.author.id in (select a.id from HqlResultTypeAuthor a))'               | ['Emma', 'Persuasion', 'The Hobbit']                      | String
+        '(select b.title from HqlResultTypeBook b) union (select a.name from HqlResultTypeAuthor a)'                             | ['Austen', 'Emma', 'Persuasion', 'The Hobbit', 'Tolkien']  | String
     }
 
     void 'parenthesized root queries retain entity aggregate and tuple results'() {
@@ -106,5 +108,7 @@ class HqlResultTypeAuthor {
 class HqlResultTypeBook implements HibernateEntity<HqlResultTypeBook> {
 
     String title
+    int pages
     HqlResultTypeAuthor author
 }
+
