@@ -18,17 +18,22 @@
  */
 package org.grails.plugins.datasource
 
+import java.nio.file.Files
+import java.nio.file.Path
+
 import javax.sql.DataSource
 
 import com.zaxxer.hikari.HikariDataSource
 
 import org.springframework.core.env.StandardEnvironment
 import org.springframework.core.io.ByteArrayResource
+import org.springframework.core.io.FileSystemResource
 import org.springframework.jdbc.datasource.LazyConnectionDataSourceProxy
 import org.springframework.jdbc.datasource.TransactionAwareDataSourceProxy
 
 import grails.util.Environment
 import org.grails.config.yaml.YamlPropertySourceLoader
+import org.grails.core.cfg.GroovyConfigPropertySourceLoader
 import org.grails.datastore.gorm.jdbc.connections.DataSourceConnectionSourceFactory
 import org.grails.datastore.mapping.core.connections.ConnectionSource
 
@@ -129,6 +134,64 @@ environments:
 
         cleanup:
         connectionSource?.close()
+    }
+
+    void "application.yml binds a list under dataSource properties"() {
+        given:
+        def yaml = """\
+dataSource:
+    url: jdbc:h2:mem:yamlListPropertiesTest
+    type: ${ListDataSource.name}
+    properties:
+        connectionInitSqls:
+            - SET A=1
+            - SET B=2
+"""
+        def loaded = new YamlPropertySourceLoader().load(
+                'application.yml', new ByteArrayResource(yaml.getBytes('UTF-8')))
+        def environment = new StandardEnvironment()
+        environment.propertySources.addFirst(loaded.first())
+
+        when:
+        def connectionSource = new DataSourceConnectionSourceFactory().create(ConnectionSource.DEFAULT, environment)
+
+        then:
+        connectionSource.settings.properties.connectionInitSqls == ['SET A=1', 'SET B=2']
+        unwrap(connectionSource.source).connectionInitSqls == ['SET A=1', 'SET B=2']
+
+        cleanup:
+        connectionSource?.close()
+    }
+
+    void "application.groovy dotted properties configure the connection pool"() {
+        given:
+        def directory = Files.createTempDirectory(Path.of('build'), 'datasource-groovy-').toFile()
+        def application = new File(directory, 'application.groovy')
+        application.setText('''\
+dataSource.url = 'jdbc:h2:mem:groovyDottedPropertiesTest'
+dataSource.type = 'com.zaxxer.hikari.HikariDataSource'
+dataSource.properties.maximumPoolSize = 100
+''', 'UTF-8')
+        def loaded = new GroovyConfigPropertySourceLoader().load(
+                'application.groovy', new FileSystemResource(application))
+        def environment = new StandardEnvironment()
+        environment.propertySources.addFirst(loaded.first())
+
+        when:
+        def connectionSource = new DataSourceConnectionSourceFactory().create(ConnectionSource.DEFAULT, environment)
+
+        then:
+        connectionSource.settings.properties.maximumPoolSize == 100
+        unwrap(connectionSource.source).maximumPoolSize == 100
+
+        cleanup:
+        connectionSource?.close()
+        directory?.deleteDir()
+    }
+
+    static class ListDataSource extends HikariDataSource {
+
+        List<String> connectionInitSqls
     }
 
     private static createFromApplicationYaml() {
