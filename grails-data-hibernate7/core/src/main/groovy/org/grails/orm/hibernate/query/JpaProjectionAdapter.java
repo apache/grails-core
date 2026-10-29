@@ -64,7 +64,10 @@ public class JpaProjectionAdapter {
         for (Query.Projection p : projections) {
             Selection<?> selection = translator.translate(p);
             if (selection != null) {
-                if (query instanceof Subquery && selection.getAlias() == null) {
+                if (query instanceof Subquery && (selection.getAlias() == null || p instanceof SqlProjection)) {
+                    // the column alias of a SQL projection may hold characters, such as a space, that the derived
+                    // table a count selects over cannot carry unquoted in its column list, and nothing reads a
+                    // subquery's selection by that alias, so a generated alias replaces it
                     selection.alias("col_" + (i++));
                 }
                 selections.add(selection);

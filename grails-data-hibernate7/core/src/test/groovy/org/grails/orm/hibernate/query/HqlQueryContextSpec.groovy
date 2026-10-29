@@ -113,17 +113,32 @@ class HqlQueryContextSpec extends Specification {
         "select new map(title as title) from Book"              | Object
     }
 
+    void "prepare defaults a blank query of every kind to from Entity, and passes a native query or an update on untrimmed"() {
+        expect:
+        HqlQueryContext.prepare(bookEntity, text, [:], null, [:], [:], isNative, isUpdate).hql() == expected
+
+        where:
+        text           | isNative | isUpdate || expected
+        '   '          | false    | false    || 'from ' + HqlQueryContextSpecBook.name
+        '   '          | true     | false    || 'from ' + HqlQueryContextSpecBook.name
+        '   '          | false    | true     || 'from ' + HqlQueryContextSpecBook.name
+        ' select 1 '   | true     | false    || ' select 1 '
+        ' delete Book ' | false   | true     || ' delete Book '
+    }
+
     void "prepare targets the entity for a native query whatever its select clause"() {
         when:
         def ctx = HqlQueryContext.prepare(bookEntity, sql, [:], null, [:], [:], true, false)
 
-        then:
+        then: "and the SQL is not read as HQL: it runs as written, whatever its literals lowercase to"
         ctx.targetClass() == HqlQueryContextSpecBook
+        ctx.hql() == sql
 
         where:
         sql << ['select * from hql_query_context_spec_book order by title',
                 'select b.* from hql_query_context_spec_book b',
-                'select * from hql_query_context_spec_book b where b.title = :title']
+                'select * from hql_query_context_spec_book b where b.title = :title',
+                "select b.*, 'İİ' from hql_query_context_spec_book b"]
     }
 
     @Unroll
@@ -159,6 +174,7 @@ class HqlQueryContextSpec extends Specification {
         "SELECT DISTINCT title FROM Book"                       | "select distinct e.title from Book e"                     | Object
         '(select b.title from Book b)'                          | '(select b.title from Book b)'                           | Object
         '(select b.title from Book b) union (select a.name from Author a)' | '(select b.title from Book b) union (select a.name from Author a)' | Object
+        "(select b.title from Book b) union select 'extra' from Book" | "(select b.title from Book b) union select 'extra' from Book" | Object
     }
 
     @Unroll
@@ -212,6 +228,9 @@ class HqlQueryContextSpec extends Specification {
         "func(a, b), c"                     | 1
         "'a, b', c"                         | 1
         "\"a, b\", c"                       | 1
+        "`a, b`, c"                         | 1
+        "a /* , */, b"                      | 1
+        "a -- ,\n, b"                       | 2 // HQL has no line comments: the double minus is a subtraction
         "a"                                 | 0
     }
 

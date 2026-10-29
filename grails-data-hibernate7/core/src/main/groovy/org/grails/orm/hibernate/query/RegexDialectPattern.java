@@ -18,8 +18,8 @@
  */
 package org.grails.orm.hibernate.query;
 
-import java.util.Arrays;
-
+import org.hibernate.dialect.DB2Dialect;
+import org.hibernate.dialect.DB2zDialect;
 import org.hibernate.dialect.Dialect;
 import org.hibernate.dialect.H2Dialect;
 import org.hibernate.dialect.MariaDBDialect;
@@ -27,33 +27,42 @@ import org.hibernate.dialect.MySQLDialect;
 import org.hibernate.dialect.OracleDialect;
 import org.hibernate.dialect.PostgreSQLDialect;
 
-public enum RegexDialectPattern {
+import org.grails.orm.hibernate.dialect.DialectKeyed;
+
+/**
+ * The SQL that matches a value against a regular expression on each database, chosen for the dialect the way
+ * every {@link DialectKeyed} enum is.
+ */
+public enum RegexDialectPattern implements DialectKeyed<RegexDialectPattern> {
     MYSQL(MySQLDialect.class, "?1 RLIKE ?2"),
     MARIADB(MariaDBDialect.class, "?1 REGEXP ?2"),
     POSTGRES(PostgreSQLDialect.class, "?1 ~ ?2"),
     ORACLE(OracleDialect.class, "REGEXP_LIKE(?1, ?2)"),
     H2(H2Dialect.class, "REGEXP_LIKE(?1, ?2)"),
+    // Db2 for z/OS runs REGEXP_LIKE only through the Db2 Analytics Accelerator, so it falls back as other databases do
+    DB2_ZOS(DB2zDialect.class, "?1 LIKE ?2"),
+    // Db2 for Linux, UNIX and Windows (11.1 and later) and Db2 for IBM i
+    DB2(DB2Dialect.class, "REGEXP_LIKE(?1, ?2)"),
     // Default fallback
     DEFAULT(Dialect.class, "?1 LIKE ?2");
 
-    private final Class<? extends Dialect> dialectClass;
+    private final Class<? extends Dialect>[] dialectClasses;
     private final String sqlPattern;
 
+    @SuppressWarnings("unchecked")
     RegexDialectPattern(Class<? extends Dialect> dialectClass, String sqlPattern) {
-        this.dialectClass = dialectClass;
+        this.dialectClasses = new Class[] { dialectClass };
         this.sqlPattern = sqlPattern;
     }
 
-    /**
-     * Resolves the pattern by checking if the runtime dialect is an instance of the supported dialect
-     * class.
-     */
+    /** Returns the pattern of the database the runtime dialect is for, {@link #DEFAULT}'s unless its dialect is listed. */
     public static String findPatternForDialect(Dialect runtimeDialect) {
-        return Arrays.stream(values())
-                .filter(p -> p != DEFAULT && p.dialectClass.isInstance(runtimeDialect))
-                .findFirst()
-                .map(RegexDialectPattern::getSqlPattern)
-                .orElse(DEFAULT.sqlPattern);
+        return DialectKeyed.forDialect(RegexDialectPattern.class, runtimeDialect).getSqlPattern();
+    }
+
+    @Override
+    public Class<? extends Dialect>[] dialectClasses() {
+        return dialectClasses.clone();
     }
 
     public String getSqlPattern() {

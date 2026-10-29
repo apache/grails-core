@@ -18,12 +18,17 @@
  */
 package grails.boot.config
 
+import jakarta.annotation.PostConstruct
+import jakarta.annotation.PreDestroy
+
 import org.springframework.aot.AotDetector
 import org.springframework.beans.factory.support.BeanDefinitionRegistry
 import org.springframework.beans.factory.support.DefaultListableBeanFactory
 import org.springframework.beans.factory.support.RootBeanDefinition
 import org.springframework.context.annotation.AnnotationConfigUtils
 import spock.lang.Specification
+
+import org.apache.grails.core.aot.GeneratedBeanDefinitions
 
 /**
  * Covers the processors that read the injection annotations being restored when running on
@@ -64,6 +69,16 @@ class GrailsApplicationPostProcessorAnnotationConfigSpec extends Specification {
             registry.containsBeanDefinition(AnnotationConfigUtils.COMMON_ANNOTATION_PROCESSOR_BEAN_NAME)
     }
 
+    void 'the injection processors are created without reflection'() {
+        when:
+            withGeneratedArtifacts(true) { register() }
+
+        then: 'they are registered while running on generated artifacts, which includes a native image'
+            [AnnotationConfigUtils.AUTOWIRED_ANNOTATION_PROCESSOR_BEAN_NAME, AnnotationConfigUtils.COMMON_ANNOTATION_PROCESSOR_BEAN_NAME].every {
+                ((RootBeanDefinition) registry.getBeanDefinition(it)).instanceSupplier != null
+            }
+    }
+
     void 'the processor that reads configuration classes is not'() {
         when:
             withGeneratedArtifacts(true) { register() }
@@ -94,5 +109,74 @@ class GrailsApplicationPostProcessorAnnotationConfigSpec extends Specification {
         then:
             registry.getBeanDefinition(
                     AnnotationConfigUtils.AUTOWIRED_ANNOTATION_PROCESSOR_BEAN_NAME).is(existing)
+    }
+
+    void 'the lifecycle methods the generated code recorded from annotations are left to the common processor'() {
+        given: 'a generated definition recording an annotated method and one named by the definition itself, ' +
+                'and holding an inner generated bean that records the same'
+            RootBeanDefinition generated = generatedDefinition()
+            RootBeanDefinition inner = generatedDefinition()
+            generated.propertyValues.add('nested', [inner])
+            registry.registerBeanDefinition('generated', generated)
+
+        and: 'one declared any other way, recording the same'
+            RootBeanDefinition declared = new RootBeanDefinition(LifecycleFixture).tap {
+                initMethodNames = ['initialize', 'start'] as String[]
+                destroyMethodNames = ['shutdown', 'stop'] as String[]
+            }
+            registry.registerBeanDefinition('declared', declared)
+
+        when:
+            withGeneratedArtifacts(true) { register() }
+
+        then: 'the processor calls the annotated methods for every instance, and the container the others'
+            generated.initMethodNames == ['start']
+            generated.destroyMethodNames == ['stop']
+            inner.initMethodNames == ['start']
+            inner.destroyMethodNames == ['stop']
+
+        and:
+            declared.initMethodNames == ['initialize', 'start']
+            declared.destroyMethodNames == ['shutdown', 'stop']
+    }
+
+    void 'the lifecycle methods are left where they are without generated artifacts'() {
+        given:
+            RootBeanDefinition generated = generatedDefinition()
+            registry.registerBeanDefinition('generated', generated)
+
+        when:
+            withGeneratedArtifacts(false) { register() }
+
+        then:
+            generated.initMethodNames == ['initialize', 'start']
+            generated.destroyMethodNames == ['shutdown', 'stop']
+    }
+
+    /** A definition as the generated code contributes one for a {@link LifecycleFixture}. */
+    private static RootBeanDefinition generatedDefinition() {
+        new RootBeanDefinition(LifecycleFixture).tap {
+            initMethodNames = ['initialize', 'start'] as String[]
+            destroyMethodNames = ['shutdown', 'stop'] as String[]
+            instanceSupplier = { new LifecycleFixture() }
+            GeneratedBeanDefinitions.markGenerated(it, LifecycleFixture.name)
+        }
+    }
+
+    static class LifecycleFixture {
+
+        @PostConstruct
+        void initialize() {
+        }
+
+        void start() {
+        }
+
+        @PreDestroy
+        void shutdown() {
+        }
+
+        void stop() {
+        }
     }
 }

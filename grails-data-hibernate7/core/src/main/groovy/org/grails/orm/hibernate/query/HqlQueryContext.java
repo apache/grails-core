@@ -29,7 +29,6 @@ import java.util.stream.Collectors;
 
 import groovy.lang.GString;
 
-import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 
 import org.hibernate.jpa.AvailableHints;
@@ -116,8 +115,10 @@ public record HqlQueryContext(
         String resolved = positionalParamsCopy.isEmpty() ?
                 resolveHql(queryCharseq, namedParamsCopy) :
                 resolveHql(queryCharseq, isNative, positionalParamsCopy);
-        // the result type of a native query or an update is not read from its select, so it is run as written
-        var hql = Optional.ofNullable(isNative || isUpdate ? resolved : normalizeNonAliasedSelect(resolved))
+        // native SQL is not HQL and is never read as such; an HQL query is read once, and its normalized form and
+        // its result type come from that reading, except an update, which runs as written
+        HqlText reading = isNative ? null : HqlText.of(resolved);
+        var hql = Optional.ofNullable(isNative || isUpdate ? resolved : reading.normalized())
             .filter(s -> !s.trim().isEmpty())
             .orElseGet(() -> "from %s".formatted(entity.getName()));
 
@@ -126,7 +127,7 @@ public record HqlQueryContext(
 
         // a native query always returns entities, as Hibernate 5 did by adding the entity to every native query
         Class<?> targetClass = targetClassOverride != null ? targetClassOverride :
-                isNative ? entity.getJavaClass() : getTarget(hql, entity.getJavaClass());
+                isNative ? entity.getJavaClass() : reading.target(entity.getJavaClass());
 
         return new HqlQueryContext(
             hql,
@@ -156,58 +157,27 @@ public record HqlQueryContext(
         return normalizeMultiLineQueryString(raw);
     }
 
-    /**
-     * Returns the result target class for a query: the entity class when there is no explicit SELECT
-     * or the SELECT is the root alias, {@code Object.class} for any other single projection, such as a
-     * property, a joined alias or a function, or {@code Object[].class} for multiple projections.
-     */
+    // ─── Projection analysis ─────────────────────────────────────────────────
+    // The query is read once, by HqlText; these entry points read a text of their own for the callers that have one.
+
     static Class<?> getTarget(CharSequence hql, Class<?> clazz) {
-        return new HqlText(hql).getTarget(clazz);
+        return HqlText.of(hql).target(clazz);
     }
 
-    static @Nullable String getSingleProjectionClause(CharSequence hql) {
-        return new HqlText(hql).getSingleProjectionClause();
-    }
-
-    static @Nonnull String extractSelectClause(String s, int selectIdx, int fromIdx) {
-        return HqlText.extractSelectClause(s, selectIdx, fromIdx);
-    }
-
-    /**
-     * Returns the number of top-level projections in the SELECT clause: 0 if no explicit SELECT, 1
-     * for a single projection (including DISTINCT x or NEW map(…)), 2 for two or more comma-separated
-     * top-level projections.
-     *
-     * <p>Commas inside parentheses or string literals are ignored.
-     */
     static int countHqlProjections(CharSequence hql) {
-        return new HqlText(hql).countHqlProjections();
+        return HqlText.of(hql).projectionCount();
     }
 
     static int getCommas(String sel) {
-        return HqlText.getCommas(sel);
+        return SqlText.hql(sel).countTopLevel(',');
     }
 
-    /**
-     * Injects a synthetic alias {@code "e"} into unaliased SELECT queries so that projection
-     * detection works uniformly. The FROM remainder is left intact. Only the SELECT and FROM of the
-     * query itself are read, not those of a subquery, and what precedes the SELECT, such as a comment
-     * or the {@code with} clause of a common table expression, is kept.
-     *
-     * <p>Examples: {@code "select name from Person"} → {@code "select e.name from Person e"}<br>
-     * {@code "select Person from Person"} → {@code "select e from Person e"}
-     */
     static @Nullable String normalizeNonAliasedSelect(String hql) {
-        return HqlText.normalizeNonAliasedSelect(hql);
+        return hql == null ? null : HqlText.of(hql).normalized();
     }
 
-    private static boolean isHasAlias(String s, int cur, int tokenEnd) {
-        return HqlText.isHasAlias(s, cur, tokenEnd);
-    }
-
-    /** The alias of the entity named first after FROM, or {@code null} if it has none. */
-    static @Nullable String getRootAlias(@Nullable String hql) {
-        return new HqlText(hql).getRootAlias();
+    static boolean isHasAlias(String s, int cur, int tokenEnd) {
+        return HqlText.isClauseAlias(s, cur, tokenEnd);
     }
 
     private static String normalizeMultiLineQueryString(String query) {

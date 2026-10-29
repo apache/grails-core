@@ -57,8 +57,10 @@ public final class HibernateDetachedCriteriaExtension {
      * @param sqlRestriction the SQL condition
      * @param values the values of the {@code ?} placeholders, in order, none of them {@code null}
      * @return the detached criteria
-     * @throws IllegalArgumentException if the number of {@code ?} placeholders differs from the number of values,
-     *     or a value is {@code null}
+     * @throws IllegalArgumentException if the SQL or a value is {@code null}. A number of {@code ?} placeholders that
+     *     differs from the number of values is not reported here, since a detached criteria does not know the
+     *     database, and so the syntax its SQL is read in, until it is executed on a connection; the query then fails
+     *     with an exception whose cause is an {@code IllegalArgumentException}
      */
     public static Criteria sqlRestriction(AbstractDetachedCriteria<?> self, String sqlRestriction, List<?> values) {
         self.add(new SqlRestriction(sqlRestriction, values));
