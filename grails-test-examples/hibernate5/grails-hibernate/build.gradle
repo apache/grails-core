@@ -70,6 +70,7 @@ dependencies {
     testImplementation 'org.apache.grails:grails-testing-support-web'
 
     integrationTestImplementation testFixtures('org.apache.grails:grails-geb')
+    integrationTestImplementation project(':grails-testing-support-http-client')
 }
 
 apply {
