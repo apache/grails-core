@@ -36,7 +36,9 @@ import jakarta.validation.Valid
 import jakarta.validation.Validation
 import jakarta.validation.Validator
 import jakarta.validation.constraints.Digits
+import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.NotNull
+import jakarta.validation.constraints.Null
 
 /**
  * Created by graemerocher on 30/12/2016.
@@ -106,6 +108,40 @@ class GormValidatorAdapterSpec extends Specification {
         error.arguments == expected.arguments
         error.defaultMessage == expected.defaultMessage
     }
+
+    void 'only the violations of the reported groups are reported'() {
+        given: 'a validation in ExtendedGroup, which extends BaseGroup, reporting ExtendedGroup alone'
+        def adapter = new GormValidatorAdapter(Validation.buildDefaultValidatorFactory().validator)
+        def stamp = new Stamp(retired: 'yes', note: '')
+        def errors = new BeanPropertyBindingResult(stamp, 'stamp')
+
+        when:
+        adapter.validate(stamp, errors, false, [ExtendedGroup] as Class<?>[], [ExtendedGroup] as Set<Class<?>>)
+
+        then: 'the violation of BaseGroup, which the provider validates with ExtendedGroup, is left out'
+        errors.fieldErrors*.field == ['note']
+        errors.getFieldError('note').code == 'NotBlank'
+
+        when: 'every violation is reported'
+        errors = new BeanPropertyBindingResult(stamp, 'stamp')
+        adapter.validate(stamp, errors, false, [ExtendedGroup] as Class<?>[], null)
+
+        then:
+        errors.fieldErrors*.field.sort() == ['note', 'retired']
+    }
+}
+
+interface BaseGroup {}
+
+interface ExtendedGroup extends BaseGroup {}
+
+class Stamp {
+
+    @Null(groups = BaseGroup)
+    String retired
+
+    @NotBlank(groups = ExtendedGroup)
+    String note
 }
 
 class Product implements GormValidateable {

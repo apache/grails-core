@@ -43,8 +43,9 @@ import org.grails.datastore.mapping.reflect.EntityReflector
  * A Validator that validates a {@link org.grails.datastore.mapping.model.PersistentEntity} against known constraints.
  * <p>
  * As a {@link SmartValidator}, it validates an object with validation hints, which it passes to the validator of
- * each object validation cascades to, see {@link #getAssociationValidationHints}. An associated object is validated
- * once with each distinct set of hints it is reached with.
+ * each object validation cascades to, see {@link #getAssociationValidationHints}. An associated instance is
+ * validated once with each distinct set of hints it is reached with, whatever it compares equal to: a cycle of
+ * associations ends at an instance already reached, and two instances are both validated.
  *
  * @author Graeme Rocher
  * @since 6.0
@@ -64,9 +65,9 @@ class PersistentEntityValidator implements CascadingValidator, ConstrainedEntity
     protected static final Object[] NO_VALIDATION_HINTS = new Object[0]
 
     /**
-     * The validation hints of the object whose associations validation is cascading to
+     * The cascade in progress on the thread: the hints of the object whose associations validation is cascading to
      */
-    private static final ThreadLocal<Object[]> CASCADE_HINTS = new ThreadLocal<>()
+    private static final ThreadLocal<Cascade> CASCADE = new ThreadLocal<>()
 
     final PersistentEntity entity
     final EntityReflector entityReflector
@@ -115,7 +116,8 @@ class PersistentEntityValidator implements CascadingValidator, ConstrainedEntity
     }
 
     /**
-     * Validates the object with the given validation hints, cascading to its associations when asked to.
+     * Validates the object with the given validation hints, cascading to its associations when asked to. A proxy
+     * of the entity is validated as the instance it stands for.
      *
      * @param obj The object to validate
      * @param errors The errors to report the violations to
@@ -124,51 +126,24 @@ class PersistentEntityValidator implements CascadingValidator, ConstrainedEntity
      * @since 8.0.1
      */
     protected void validate(Object obj, Errors errors, boolean cascade, Object[] hints) {
-        if (obj == null || !targetClass.isInstance(obj)) {
+        Object target = unwrap(obj)
+        if (target == null || !targetClass.isInstance(target)) {
             throw new IllegalArgumentException("Argument [$obj] is not an instance of [$targetClass] which this validator is configured for")
         }
 
-        Map<String, ConstrainedProperty> constrainedProperties = getValidatedConstrainedProperties(hints)
-        Set<String> constrainedPropertyNames = new HashSet<>(constrainedProperties.keySet())
-
         def validatedObjects = new HashSet()
-        validatedObjects.add(new ValidatedObject(obj, hints))
+        validatedObjects.add(new ValidatedObject(target, hints))
 
         // a validation started while another one cascades, such as by a custom validator, starts with its own hints
-        Object[] enclosingHints = CASCADE_HINTS.get()
-        CASCADE_HINTS.set(hints)
+        Cascade enclosing = CASCADE.get()
+        CASCADE.set(new Cascade(hints, hints, null))
         try {
-            for (PersistentProperty pp in entity.persistentProperties) {
-                def propertyName = pp.name
-
-                ConstrainedProperty constrainedProperty = constrainedProperties.get(propertyName)
-
-                if (constrainedProperty != null) {
-                    validatePropertyWithConstraint(obj, propertyName, entityReflector, errors, constrainedProperty, pp)
-                }
-
-                if (pp instanceof Association) {
-                    Association association = (Association) pp
-                    if (cascade) {
-                        cascadeToAssociativeProperty(obj, errors, entityReflector, association, validatedObjects)
-                    }
-                }
-
-                constrainedPropertyNames.remove(propertyName)
-            }
+            validateConstraints(target, entity, errors, entityReflector, getValidatedConstrainedProperties(hints), null, true)
+            validateAssociationsAndBeyond(target, errors, cascade, hints, validatedObjects)
         }
         finally {
-            restoreCascadeHints(enclosingHints)
+            restoreCascade(enclosing)
         }
-
-        for (String remainingProperty in constrainedPropertyNames) {
-            ConstrainedProperty constrainedProperty = constrainedProperties.get(remainingProperty)
-            if (remainingProperty != null) {
-                validatePropertyWithConstraint(obj, remainingProperty, entityReflector, errors, constrainedProperty, null)
-            }
-        }
-
-        validateBeyondConstraints(obj, errors, hints)
     }
 
     /**
@@ -202,6 +177,63 @@ class PersistentEntityValidator implements CascadingValidator, ConstrainedEntity
     }
 
     /**
+     * Validates the object beyond its constraints, once they are: cascades validation to its associations when
+     * asked to, with {@link #cascadeToAssociations}, then validates its rules beyond the constraints with
+     * {@link #validateBeyondConstraints}. Called for the object being validated by {@link #validate}, and for each
+     * associated object validation cascades to by the validator of its entity, with the nested path of the errors
+     * set to the association. A subclass validating in steps, such as the groups of a Bean Validation group
+     * sequence, overrides it to cascade and validate step by step.
+     *
+     * @param obj The object to validate
+     * @param errors The errors to report the violations to
+     * @param cascade Whether to cascade to the associations of the object
+     * @param hints The validation hints the object is validated with, {@link #NO_VALIDATION_HINTS} for the object
+     * {@link #validate} is called with, see {@link #getAssociationValidationHints}
+     * @param validatedObjects The objects this validation has reached, to pass on to the cascade
+     * @since 8.0.1
+     */
+    protected void validateAssociationsAndBeyond(Object obj, Errors errors, boolean cascade, Object[] hints, Set validatedObjects) {
+        if (cascade) {
+            cascadeToAssociations(obj, entity, errors, entityReflector, hints, validatedObjects)
+        }
+        validateBeyondConstraints(obj, errors, hints)
+    }
+
+    /**
+     * Cascades validation to the associations of the object, with the given validation hints as the hints of the
+     * object, which {@link #getAssociationValidationHints} converts for each association. The inverse side of the
+     * association the object was reached through is left out.
+     *
+     * @param obj The object whose associations to cascade to
+     * @param objEntity The entity of the object
+     * @param errors The errors to report the violations to
+     * @param reflector The reflector of the entity
+     * @param hints The validation hints the object is validated with
+     * @param validatedObjects The objects this validation has reached
+     * @since 8.0.1
+     */
+    protected void cascadeToAssociations(Object obj, PersistentEntity objEntity, Errors errors, EntityReflector reflector, Object[] hints, Set validatedObjects) {
+        Cascade current = CASCADE.get()
+        Association reachedThrough = current?.association
+        CASCADE.set(new Cascade(hints, current == null ? hints : current.allHints, reachedThrough))
+        try {
+            for (PersistentProperty pp in objEntity.persistentProperties) {
+                if (!(pp instanceof Association)) {
+                    continue
+                }
+                // Don't continue cascade if the the other side is equal to avoid stack overflow
+                if (reachedThrough != null && reachedThrough.isBidirectional() && pp == reachedThrough.inverseSide) {
+                    continue
+                }
+                cascadeToAssociativeProperty(obj, errors, reflector, (Association) pp, validatedObjects)
+            }
+        }
+        finally {
+            restoreCascade(current)
+        }
+    }
+
+    /**
      * The validation hints, such as Bean Validation groups, to validate an object associated through an association
      * of the entity of this validator with, given the hints the object owning the association is validated with.
      * The validator of the associated entity receives them in {@link #getValidatedConstrainedProperties} and
@@ -218,12 +250,48 @@ class PersistentEntityValidator implements CascadingValidator, ConstrainedEntity
         return NO_VALIDATION_HINTS
     }
 
-    private static void restoreCascadeHints(Object[] hints) {
-        if (hints == null) {
-            CASCADE_HINTS.remove()
+    private static void restoreCascade(Cascade cascade) {
+        if (cascade == null) {
+            CASCADE.remove()
         }
         else {
-            CASCADE_HINTS.set(hints)
+            CASCADE.set(cascade)
+        }
+    }
+
+    private Object unwrap(Object obj) {
+        if (obj != null && proxyHandler != null && proxyHandler.isProxy(obj)) {
+            return proxyHandler.unwrap(obj)
+        }
+        return obj
+    }
+
+    /**
+     * Validates the constraints of the object, the persistent properties of its entity first, in their order.
+     *
+     * @param includeTransient Whether to validate the constrained properties that are not persistent properties
+     */
+    private static void validateConstraints(Object obj, PersistentEntity objEntity, Errors errors, EntityReflector reflector,
+            Map<String, ConstrainedProperty> constrainedProperties, Association reachedThrough, boolean includeTransient) {
+        Set<String> constrainedPropertyNames = new HashSet<>(constrainedProperties.keySet())
+        for (PersistentProperty pp in objEntity.persistentProperties) {
+            String propertyName = pp.name
+            if (reachedThrough != null && reachedThrough.isEmbedded() && EMBEDDED_EXCLUDES.contains(propertyName)) {
+                continue
+            }
+            ConstrainedProperty constrainedProperty = constrainedProperties.get(propertyName)
+            if (constrainedProperty != null) {
+                validatePropertyWithConstraint(obj, propertyName, reflector, errors, constrainedProperty, pp)
+            }
+            constrainedPropertyNames.remove(propertyName)
+        }
+        if (includeTransient) {
+            for (String remainingProperty in constrainedPropertyNames) {
+                ConstrainedProperty constrainedProperty = constrainedProperties.get(remainingProperty)
+                if (remainingProperty != null) {
+                    validatePropertyWithConstraint(obj, remainingProperty, reflector, errors, constrainedProperty, null)
+                }
+            }
         }
     }
 
@@ -310,7 +378,10 @@ class PersistentEntityValidator implements CascadingValidator, ConstrainedEntity
     }
 
     /**
-     * Cascades validation to a one-to-one or many-to-one property.
+     * Cascades validation to a one-to-one or many-to-one property. The associated object is validated with the
+     * hints the validator of the owning entity gives for the association: its constraints once, with the hints
+     * given for all the hints of the owner, and, once for each distinct hints it is reached with, its associations
+     * and its rules beyond the constraints, through {@link #validateAssociationsAndBeyond} of its own validator.
      *
      * @param errors The Errors instance
      * @param bean The original BeanWrapper
@@ -326,12 +397,17 @@ class PersistentEntityValidator implements CascadingValidator, ConstrainedEntity
         }
 
         // the hints decide what the object is validated with, so it is validated once with each distinct set of them
-        Object[] hints = CASCADE_HINTS.get()
+        Cascade cascade = CASCADE.get()
+        Object[] ownerHints = cascade == null ? NO_VALIDATION_HINTS : cascade.hints
+        Object[] ownerAllHints = cascade == null ? NO_VALIDATION_HINTS : cascade.allHints
         Object[] associatedHints = NO_VALIDATION_HINTS
+        Object[] associatedAllHints = NO_VALIDATION_HINTS
         PersistentEntity owner = association.owner
         def ownerValidator = owner.is(entity) ? this : owner.mappingContext.getEntityValidator(owner)
         if (ownerValidator instanceof PersistentEntityValidator) {
-            associatedHints = ((PersistentEntityValidator) ownerValidator).getAssociationValidationHints(association, hints ?: NO_VALIDATION_HINTS)
+            PersistentEntityValidator hinting = (PersistentEntityValidator) ownerValidator
+            associatedHints = hinting.getAssociationValidationHints(association, ownerHints)
+            associatedAllHints = ownerAllHints.is(ownerHints) ? associatedHints : hinting.getAssociationValidationHints(association, ownerAllHints)
         }
 
         if (!validatedObjects.add(new ValidatedObject(associatedObject, associatedHints))) {
@@ -351,68 +427,37 @@ class PersistentEntityValidator implements CascadingValidator, ConstrainedEntity
         MappingContext mappingContext = associatedEntity.getMappingContext()
         EntityReflector associatedReflector = mappingContext.getEntityReflector(associatedEntity)
 
-        Association otherSide = null
-        if (association.isBidirectional()) {
-            otherSide = association.getInverseSide()
-        }
-
         PersistentEntityValidator associatedValidator = null
         Map<String, ConstrainedProperty> associatedConstrainedProperties = Collections.<String, ConstrainedProperty>emptyMap()
 
         def validator = mappingContext.getEntityValidator(associatedEntity)
         if (validator instanceof PersistentEntityValidator) {
             associatedValidator = (PersistentEntityValidator) validator
-            associatedConstrainedProperties = associatedValidator.getValidatedConstrainedProperties(associatedHints)
+            associatedConstrainedProperties = associatedValidator.getValidatedConstrainedProperties(associatedAllHints)
         }
 
-        // Invoke any beforeValidate callbacks on the associated object before validating
-        validateHelper.invokeBeforeValidate(associatedObject, associatedConstrainedProperties.keySet() as List<String>)
-
-        List<PersistentProperty> associatedPersistentProperties = associatedEntity.getPersistentProperties()
         String nestedPath = errors.getNestedPath()
         try {
             errors.setNestedPath(buildNestedPath(nestedPath, propertyName, indexOrKey))
-            CASCADE_HINTS.set(associatedHints)
+            CASCADE.set(new Cascade(associatedHints, associatedAllHints, association))
 
-            for (PersistentProperty associatedPersistentProperty : associatedPersistentProperties) {
-                if (association.isEmbedded() && EMBEDDED_EXCLUDES.contains(associatedPersistentProperty.getName())) {
-                    continue
-                }
-
-                String associatedPropertyName = associatedPersistentProperty.getName()
-                if (associatedConstrainedProperties.containsKey(associatedPropertyName)) {
-                    ConstrainedProperty associatedConstrainedProperty = associatedConstrainedProperties.get(associatedPropertyName)
-                    validatePropertyWithConstraint(associatedObject, errors.getNestedPath() + associatedPropertyName, associatedReflector, errors, associatedConstrainedProperty, associatedPersistentProperty)
-                }
-
-                // Don't continue cascade if the the other side is equal to avoid stack overflow
-                if (associatedPersistentProperty == otherSide) {
-                    continue
-                }
-
-                if (associatedPersistentProperty instanceof Association) {
-                    if (association.isBidirectional() && associatedPersistentProperty == association.inverseSide) {
-                        // If this property is the inverse side of the currently processed association then
-                        // we don't want to process it
-                        continue
-                    }
-
-                    cascadeToAssociativeProperty(
-                        associatedObject,
-                        errors,
-                        associatedReflector,
-                        (Association) associatedPersistentProperty,
-                        validatedObjects)
-                }
+            // the constraints do not depend on the hints of a step, so they are validated once for all of them
+            if (validatedObjects.add(new ValidatedConstraints(associatedObject, associatedAllHints))) {
+                // Invoke any beforeValidate callbacks on the associated object before validating
+                validateHelper.invokeBeforeValidate(associatedObject, associatedConstrainedProperties.keySet() as List<String>)
+                validateConstraints(associatedObject, associatedEntity, errors, associatedReflector, associatedConstrainedProperties, association, false)
             }
 
             if (associatedValidator != null) {
-                associatedValidator.validateBeyondConstraints(associatedObject, errors, associatedHints)
+                associatedValidator.validateAssociationsAndBeyond(associatedObject, errors, true, associatedHints, validatedObjects)
+            }
+            else {
+                cascadeToAssociations(associatedObject, associatedEntity, errors, associatedReflector, associatedHints, validatedObjects)
             }
         }
         finally {
             errors.setNestedPath(nestedPath)
-            restoreCascadeHints(hints)
+            restoreCascade(cascade)
         }
     }
 
@@ -433,7 +478,7 @@ class PersistentEntityValidator implements CascadingValidator, ConstrainedEntity
         return nestedPath + componentName + "['" + indexOrKey + "']"
     }
 
-    private void validatePropertyWithConstraint(Object obj, String propertyName, EntityReflector reflector, Errors errors, ConstrainedProperty constrainedProperty, PersistentProperty persistentProperty) {
+    private static void validatePropertyWithConstraint(Object obj, String propertyName, EntityReflector reflector, Errors errors, ConstrainedProperty constrainedProperty, PersistentProperty persistentProperty) {
 
         int i = propertyName.lastIndexOf('.')
         String constrainedPropertyName
@@ -455,15 +500,48 @@ class PersistentEntityValidator implements CascadingValidator, ConstrainedEntity
             }
         }
     }
+
+    /**
+     * @return Whether the class is the class of the entity or a subclass of it, such as the class of a proxy
+     */
     @Override
     boolean supports(Class<?> clazz) {
-        return targetClass.is(clazz)
+        return targetClass.isAssignableFrom(clazz)
     }
 
     /**
-     * An object validation has reached, with the validation hints it was validated with. Two objects that are
-     * equal reached with the same hints are the same validated object, so a cycle of associations ends, while an
-     * object reached again with other hints is validated again with them.
+     * The validation hints of an object whose associations validation is cascading to
+     */
+    private static final class Cascade {
+
+        /**
+         * The hints the object is validated with in the current step
+         */
+        final Object[] hints
+
+        /**
+         * The hints the object is validated with in all its steps, the same as {@link #hints} for a validator
+         * validating in one step
+         */
+        final Object[] allHints
+
+        /**
+         * The association the object was reached through, null for the object validation was started with
+         */
+        final Association association
+
+        Cascade(Object[] hints, Object[] allHints, Association association) {
+            this.hints = hints
+            this.allHints = allHints
+            this.association = association
+        }
+    }
+
+    /**
+     * An instance validation has reached, with the validation hints it was validated with. The same instance reached
+     * with the same hints is the same validated object, so a cycle of associations ends, while an instance reached
+     * again with other hints is validated again with them, and another instance is validated whatever it compares
+     * equal to.
      */
     private static final class ValidatedObject {
 
@@ -481,12 +559,40 @@ class PersistentEntityValidator implements CascadingValidator, ConstrainedEntity
                 return false
             }
             ValidatedObject that = (ValidatedObject) other
-            return object == that.object && hints == that.hints
+            return object.is(that.object) && hints == that.hints
         }
 
         @Override
         int hashCode() {
-            return 31 * object.hashCode() + hints.hashCode()
+            return 31 * System.identityHashCode(object) + hints.hashCode()
+        }
+    }
+
+    /**
+     * An instance whose constraints validation has validated, with the hints it was validated with in all its steps
+     */
+    private static final class ValidatedConstraints {
+
+        private final Object object
+        private final List<Object> hints
+
+        ValidatedConstraints(Object object, Object[] hints) {
+            this.object = object
+            this.hints = Arrays.asList(hints)
+        }
+
+        @Override
+        boolean equals(Object other) {
+            if (!(other instanceof ValidatedConstraints)) {
+                return false
+            }
+            ValidatedConstraints that = (ValidatedConstraints) other
+            return object.is(that.object) && hints == that.hints
+        }
+
+        @Override
+        int hashCode() {
+            return 31 * System.identityHashCode(object) + hints.hashCode()
         }
     }
 }

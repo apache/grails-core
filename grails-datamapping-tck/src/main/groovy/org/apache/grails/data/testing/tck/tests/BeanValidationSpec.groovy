@@ -25,11 +25,17 @@ import grails.gorm.validation.ConstrainedEntity
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.apache.grails.data.testing.tck.domains.BeanValidatedArticle
 import org.apache.grails.data.testing.tck.domains.BeanValidatedAttachment
+import org.apache.grails.data.testing.tck.domains.BeanValidatedBasket
+import org.apache.grails.data.testing.tck.domains.BeanValidatedBasketLine
+import org.apache.grails.data.testing.tck.domains.BeanValidatedBulletin
+import org.apache.grails.data.testing.tck.domains.BeanValidatedChapter
 import org.apache.grails.data.testing.tck.domains.BeanValidatedDossier
 import org.apache.grails.data.testing.tck.domains.BeanValidatedInvoice
 import org.apache.grails.data.testing.tck.domains.BeanValidatedInvoiceLine
 import org.apache.grails.data.testing.tck.domains.BeanValidatedIssue
+import org.apache.grails.data.testing.tck.domains.BeanValidatedManuscript
 import org.apache.grails.data.testing.tck.domains.BeanValidatedNotice
+import org.apache.grails.data.testing.tck.domains.BeanValidatedOrder
 import org.apache.grails.data.testing.tck.domains.BeanValidatedPair
 import org.apache.grails.data.testing.tck.domains.BeanValidatedPairing
 import org.apache.grails.data.testing.tck.domains.BeanValidatedParcel
@@ -37,8 +43,11 @@ import org.apache.grails.data.testing.tck.domains.BeanValidatedPost
 import org.apache.grails.data.testing.tck.domains.BeanValidatedRecall
 import org.apache.grails.data.testing.tck.domains.BeanValidatedReview
 import org.apache.grails.data.testing.tck.domains.BeanValidatedSection
+import org.apache.grails.data.testing.tck.domains.BeanValidatedShelf
+import org.apache.grails.data.testing.tck.domains.BeanValidatedShelfBook
 import org.apache.grails.data.testing.tck.domains.BeanValidatedShipment
 import org.apache.grails.data.testing.tck.domains.BeanValidatedTeaser
+import org.apache.grails.data.testing.tck.support.BeanValidatedOrderDetails
 
 /**
  * A domain class annotated with Bean Validation constraints is validated against its annotations and its
@@ -51,7 +60,8 @@ class BeanValidationSpec extends GrailsDataTckSpec {
         manager.registerDomainClasses(BeanValidatedInvoice, BeanValidatedInvoiceLine, BeanValidatedShipment, BeanValidatedParcel,
                 BeanValidatedReview, BeanValidatedPair, BeanValidatedPairing, BeanValidatedArticle, BeanValidatedPost, BeanValidatedTeaser,
                 BeanValidatedNotice, BeanValidatedRecall, BeanValidatedDossier, BeanValidatedAttachment, BeanValidatedIssue,
-                BeanValidatedSection)
+                BeanValidatedSection, BeanValidatedBasket, BeanValidatedBasketLine, BeanValidatedOrder, BeanValidatedShelf,
+                BeanValidatedShelfBook, BeanValidatedBulletin, BeanValidatedManuscript, BeanValidatedChapter)
     }
 
     void 'the annotations and the constraints block are validated, each violation once'() {
@@ -257,5 +267,116 @@ class BeanValidationSpec extends GrailsDataTckSpec {
         then:
         issue.validate()
         issue.save(flush: true) != null
+    }
+
+    void 'two associated instances that compare equal are both validated'() {
+        given: 'a basket with two lines of the same name, which compare equal'
+        def basket = new BeanValidatedBasket(name: 'basket')
+        basket.addToLines(new BeanValidatedBasketLine(name: 'same', code: 'A1'))
+        basket.addToLines(new BeanValidatedBasketLine(name: 'same', code: null))
+
+        expect:
+        basket.lines[0] == basket.lines[1]
+        !basket.lines[0].is(basket.lines[1])
+
+        and: 'the second line is validated as well as the first'
+        !basket.validate()
+        basket.errors.errorCount == 1
+        basket.errors.getFieldError('lines[1].code').code == 'nullable'
+        basket.save() == null
+    }
+
+    void 'a property marked @Valid that is not a persistent association is validated by Bean Validation'() {
+        given: 'an order whose transient details violate an annotation'
+        def order = new BeanValidatedOrder(reference: 'ORD-1', details: new BeanValidatedOrderDetails(note: ''))
+
+        expect:
+        !order.validate()
+        order.errors.errorCount == 1
+        order.errors.getFieldError('details.note').code == 'NotBlank'
+        order.save() == null
+
+        and: 'deepValidate: false leaves the associations out, not the details, which are part of the instance'
+        !order.validate(deepValidate: false)
+        order.errors.getFieldError('details.note').code == 'NotBlank'
+
+        when: 'the details are valid'
+        order.details.note = 'rush'
+
+        then:
+        order.validate()
+        order.save(flush: true) != null
+    }
+
+    void 'an association marked @Valid of a domain class without constraint annotations is validated in the group its @ConvertGroup converts to'() {
+        given: 'a shelf whose book violates an annotation of each group'
+        def shelf = new BeanValidatedShelf(name: 'shelf', book: new BeanValidatedShelfBook(title: '', isbn: null))
+
+        expect: 'the book is validated in PublishChecks, not in its default group'
+        !shelf.validate()
+        shelf.errors.errorCount == 1
+        shelf.errors.getFieldError('book.title').code == 'NotBlank'
+        shelf.save() == null
+
+        when: 'the book is valid for publishing, and for the default group Hibernate validates on its own when it persists'
+        shelf.book.title = 'Groups'
+        shelf.book.isbn = '1234567890123'
+
+        then:
+        shelf.validate()
+        shelf.save(flush: true) != null
+    }
+
+    void 'a subclass declaring no annotation of its own is validated with the annotations it inherits'() {
+        given:
+        def bulletin = new BeanValidatedBulletin(tag: 'toolong')
+        def entity = BeanValidatedBulletin.gormPersistentEntity
+        def constraints = ((ConstrainedEntity) entity.mappingContext.getEntityValidator(entity)).constrainedProperties
+
+        expect: 'the annotations of the superclass are validated in its sequence, so they alone report the null and the length'
+        !bulletin.validate()
+        bulletin.errors.errorCount == 2
+        bulletin.errors.getFieldError('headline').code == 'NotNull'
+        bulletin.errors.getFieldError('tag').code == 'Size'
+        bulletin.save() == null
+
+        and: 'the constraints describe the inherited annotations'
+        !constraints.headline.nullable
+        constraints.tag.maxSize == 5
+
+        when: 'the instance is valid'
+        bulletin = new BeanValidatedBulletin(headline: 'Bulletin', tag: 'ok')
+
+        then:
+        bulletin.validate()
+        bulletin.save(flush: true) != null
+    }
+
+    void 'a group sequence an association converts to stops at the first group with a violation of the associated instance or of its own associations'() {
+        given: 'a chapter valid for publishing but not for archiving, whose attachment converts PublishChecks to ArchiveChecks and violates it'
+        def attachment = new BeanValidatedAttachment(label: 'Cover', tag: '')
+        def manuscript = new BeanValidatedManuscript(title: 'Sequence',
+                chapter: new BeanValidatedChapter(heading: 'Head', tag: '', attachment: attachment))
+
+        expect: 'the violation of the attachment, found in PublishChecks, stops the sequence before ArchiveChecks'
+        !manuscript.validate()
+        manuscript.errors.errorCount == 1
+        manuscript.errors.getFieldError('chapter.attachment.tag').code == 'NotBlank'
+        manuscript.save() == null
+
+        when: 'the attachment is valid'
+        attachment.tag = 'kept'
+
+        then: 'the sequence goes on to ArchiveChecks'
+        !manuscript.validate()
+        manuscript.errors.errorCount == 1
+        manuscript.errors.getFieldError('chapter.tag').code == 'NotBlank'
+
+        when: 'the chapter is valid for archiving'
+        manuscript.chapter.tag = 'kept'
+
+        then:
+        manuscript.validate()
+        manuscript.save(flush: true) != null
     }
 }

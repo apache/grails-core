@@ -21,6 +21,7 @@ package grails.gorm.validation
 import org.grails.datastore.gorm.validation.constraints.eval.ConstraintsEvaluator
 import org.grails.datastore.gorm.validation.constraints.registry.DefaultConstraintRegistry
 import org.grails.datastore.gorm.validation.constraints.registry.DefaultValidatorRegistry
+import org.grails.datastore.mapping.core.Session
 import org.grails.datastore.mapping.core.connections.ConnectionSourceSettings
 import org.grails.datastore.mapping.dirty.checking.DirtyCheckable
 import org.grails.datastore.mapping.keyvalue.mapping.config.GormKeyValueMappingFactory
@@ -34,6 +35,7 @@ import org.grails.datastore.mapping.validation.ValidatorRegistry
 import org.springframework.context.MessageSource
 import org.springframework.context.support.StaticMessageSource
 import org.springframework.validation.Errors
+import org.springframework.validation.ValidationUtils
 import org.springframework.validation.Validator
 import spock.lang.Issue
 import spock.lang.Shared
@@ -336,6 +338,62 @@ class PersistentEntityValidatorSpec extends Specification {
         deskValidator.beyondHints == [[]]
         lampValidator.beyondHints as Set == [['left'], ['right'], ['lamps']] as Set
     }
+
+    def "two associated instances that compare equal are both validated"() {
+        given: "a basket with two lines of the same name, which compare equal, as a Comparable with a hash code of a business key does"
+        MappingContext mappingContext = new KeyValueMappingContext("test")
+        mappingContext.mappingFactory = new GormKeyValueMappingFactory("test")
+        mappingContext.syntaxStrategy = new GormMappingConfigurationStrategy(mappingContext.mappingFactory)
+        PersistentEntity basketEntity = mappingContext.addPersistentEntity(ComparedBasket)
+        mappingContext.addPersistentEntity(ComparedBasketLine)
+        ValidatorRegistry registry = new DefaultValidatorRegistry(mappingContext, new ConnectionSourceSettings())
+        mappingContext.validatorRegistry = registry
+        ComparedBasket basket = new ComparedBasket(name: 'basket')
+        basket.lines = [new ComparedBasketLine(name: 'same', code: 'A1'), new ComparedBasketLine(name: 'same', code: null)]
+        Errors errors = new ValidationErrors(basket)
+
+        expect:
+        basket.lines[0] == basket.lines[1]
+        basket.lines[0].equals(basket.lines[1])
+        basket.lines[0].hashCode() == basket.lines[1].hashCode()
+        !basket.lines[0].is(basket.lines[1])
+
+        when:
+        registry.getValidator(basketEntity).validate(basket, errors)
+
+        then: "the second line is validated as well as the first"
+        errors.errorCount == 1
+        errors.getFieldError('lines[1].code').code == 'nullable'
+    }
+
+    def "a proxy of the entity is supported and validated as the instance it stands for"() {
+        given:
+        MappingContext mappingContext = new KeyValueMappingContext("test")
+        mappingContext.mappingFactory = new GormKeyValueMappingFactory("test")
+        mappingContext.syntaxStrategy = new GormMappingConfigurationStrategy(mappingContext.mappingFactory)
+        PersistentEntity authorEntity = mappingContext.addPersistentEntity(ProxiedAuthor)
+        Validator validator = new DefaultValidatorRegistry(mappingContext, new ConnectionSourceSettings()).getValidator(authorEntity)
+        ProxiedAuthor author = new ProxiedAuthor(id: 1L)
+        Session session = Mock(Session) {
+            getMappingContext() >> mappingContext
+            retrieve(_, _) >> author
+        }
+        ProxiedAuthor proxy = mappingContext.proxyFactory.createProxy(session, ProxiedAuthor, 1L)
+        Errors errors = new ValidationErrors(proxy)
+
+        expect: "the class of the proxy, a subclass of the entity, is supported, as a DataBinder and ValidationUtils require"
+        proxy.getClass() != ProxiedAuthor
+        validator.supports(proxy.getClass())
+        validator.supports(ProxiedAuthor)
+        !validator.supports(Author)
+
+        when:
+        ValidationUtils.invokeValidator(validator, proxy, errors)
+
+        then: "the instance the proxy stands for is validated"
+        errors.errorCount == 1
+        errors.getFieldError('name').code == 'nullable'
+    }
 }
 
 /**
@@ -482,6 +540,51 @@ class HintedDesk {
 class HintedLamp {
     String name
     static belongsTo = [HintedDesk]
+}
+
+@Entity
+class ProxiedAuthor {
+    Long id
+    String name
+
+    static constraints = {
+        name(nullable: false)
+    }
+}
+
+@Entity
+class ComparedBasket {
+    String name
+    List<ComparedBasketLine> lines
+    static hasMany = [lines: ComparedBasketLine]
+}
+
+/**
+ * A line equal to any other line of the same name, as an entity with a business key is, and sorted by it
+ */
+@Entity
+class ComparedBasketLine implements Comparable<ComparedBasketLine> {
+    String name
+    String code
+    static belongsTo = [basket: ComparedBasket]
+    static constraints = {
+        code nullable: false
+    }
+
+    @Override
+    int compareTo(ComparedBasketLine other) {
+        name <=> other.name
+    }
+
+    @Override
+    boolean equals(Object other) {
+        other instanceof ComparedBasketLine && name == ((ComparedBasketLine) other).name
+    }
+
+    @Override
+    int hashCode() {
+        Objects.hashCode(name)
+    }
 }
 
 @Entity

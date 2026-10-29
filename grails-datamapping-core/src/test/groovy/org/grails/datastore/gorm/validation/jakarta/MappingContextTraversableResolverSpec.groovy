@@ -140,7 +140,7 @@ class MappingContextTraversableResolverSpec extends Specification {
         !resolver.isCascadable(book, node, Book, path, ElementType.TYPE)
     }
 
-    void "test isCascadeable returns false when CASCADE_VALIDATION is explicitly disabled"() {
+    void "test isCascadeable returns false for a persistent association when CASCADE_VALIDATION is explicitly disabled"() {
         given: "the owning-side scenario that would otherwise cascade"
         MappingContext mappingContext = new KeyValueMappingContext("test")
         mappingContext.addPersistentEntities(Book, Author)
@@ -163,6 +163,30 @@ class MappingContextTraversableResolverSpec extends Specification {
 
         then: "cascading is short-circuited regardless of the owning-side/association state"
         !resolver.isCascadable(author, node, Author, path, ElementType.TYPE)
+
+        cleanup:
+        GormValidatorAdapter.CASCADE_VALIDATION.remove()
+    }
+
+    void "test isCascadeable returns true for a property that is not a persistent association when CASCADE_VALIDATION is explicitly disabled"() {
+        given: "a transient property of an entity, and a property of an object that is no entity"
+        MappingContext mappingContext = new KeyValueMappingContext("test")
+        mappingContext.addPersistentEntities(Book, Author)
+        mappingContext.initialize()
+        MappingContextTraversableResolver resolver = new MappingContextTraversableResolver(mappingContext)
+        Book book = new Book(title: "The Stand", blurb: new Blurb(text: "A novel"))
+        Path.Node transientNode = Mock(Path.Node)
+        transientNode.getName() >> "blurb"
+        Path.Node otherNode = Mock(Path.Node)
+        otherNode.getName() >> "text"
+        Path path = Mock(Path)
+
+        when:
+        GormValidatorAdapter.CASCADE_VALIDATION.set(Boolean.FALSE)
+
+        then: "the GORM validator does not cascade to them, so Bean Validation does"
+        resolver.isCascadable(book, transientNode, Book, path, ElementType.FIELD)
+        resolver.isCascadable(book.blurb, otherNode, Book, path, ElementType.FIELD)
 
         cleanup:
         GormValidatorAdapter.CASCADE_VALIDATION.remove()
@@ -195,8 +219,14 @@ class MappingContextTraversableResolverSpec extends Specification {
 class Book {
     String title
     Author author
+    Blurb blurb
 
     static belongsTo = [author:Author]
+    static transients = ['blurb']
+}
+
+class Blurb {
+    String text
 }
 
 @Entity

@@ -34,7 +34,10 @@ import org.grails.datastore.mapping.proxy.ProxyHandler
 import org.grails.datastore.mapping.reflect.ClassPropertyFetcher
 
 /**
- * A {@link TraversableResolver} that uses the {@link MappingContext} to establish whether validation can cascade
+ * A {@link TraversableResolver} that uses the {@link MappingContext} to establish whether validation can cascade.
+ * While the GORM validator cascades to the persistent associations of an entity
+ * ({@link GormValidatorAdapter#CASCADE_VALIDATION} is {@code false}), Bean Validation cascades only through the
+ * properties marked {@code @Valid} that are not persistent associations, such as a transient property.
  *
  * @author Graeme Rocher
  * @since 6.1
@@ -74,11 +77,12 @@ class MappingContextTraversableResolver implements TraversableResolver {
 
     @Override
     boolean isCascadable(Object traversableObject, Path.Node traversableProperty, Class<?> rootBeanType, Path pathToTraversableObject, ElementType elementType) {
-        if (GormValidatorAdapter.CASCADE_VALIDATION.get() == Boolean.FALSE) {
-            return false
-        }
         Class type = proxyHandler.getProxiedClass(traversableObject)
         PersistentEntity entity = mappingContext.getPersistentEntity(type.name)
+        if (GormValidatorAdapter.CASCADE_VALIDATION.get() == Boolean.FALSE) {
+            // the GORM validator cascades to the persistent associations, Bean Validation to every other @Valid property
+            return !(entity?.getPropertyByName(traversableProperty.name) instanceof Association)
+        }
         if (entity != null) {
             PersistentEntity currentEntity = entity
             for (Path.Node n in pathToTraversableObject) {

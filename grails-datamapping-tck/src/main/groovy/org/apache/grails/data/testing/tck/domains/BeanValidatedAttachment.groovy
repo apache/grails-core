@@ -28,7 +28,7 @@ import org.apache.grails.data.testing.tck.support.PublishChecks
 
 /**
  * An attachment with an annotation in each of two groups, shared by the associations of a
- * {@link BeanValidatedDossier} and reached through a {@link BeanValidatedSection}.
+ * {@link BeanValidatedDossier} and reached through a {@link BeanValidatedSection} or a {@link BeanValidatedChapter}.
  */
 @Entity
 class BeanValidatedAttachment implements Serializable {
@@ -42,5 +42,5 @@ class BeanValidatedAttachment implements Serializable {
     @NotBlank(groups = ArchiveChecks)
     String tag
 
-    static belongsTo = [BeanValidatedDossier, BeanValidatedSection]
+    static belongsTo = [BeanValidatedDossier, BeanValidatedSection, BeanValidatedChapter]
 }

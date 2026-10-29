@@ -37,7 +37,6 @@ import org.springframework.context.ApplicationContext
 import org.springframework.context.MessageSource
 import org.springframework.context.support.StaticMessageSource
 import org.springframework.validation.Validator
-import org.springframework.validation.annotation.Validated
 import org.springframework.validation.beanvalidation.MessageSourceResourceBundleLocator
 import org.springframework.validation.beanvalidation.SpringConstraintValidatorFactory
 
@@ -127,12 +126,11 @@ class JakartaValidatorRegistry extends DefaultValidatorRegistry implements Valid
 
     @Override
     Validator getValidator(PersistentEntity entity) {
-        if (!isBeanValidated(entity)) {
-            return super.getValidator(entity)
-        }
         Validator validator = validatorMap.get(entity)
         if (validator == null) {
-            validator = createEntityValidator(entity, messageSource, constraintsEvaluator, constraintRegistry, validatorFactory)
+            validator = isBeanValidated(entity)
+                    ? createEntityValidator(entity, messageSource, constraintsEvaluator, constraintRegistry, validatorFactory)
+                    : super.getValidator(entity)
             validatorMap.put(entity, validator)
         }
         return validator
@@ -140,12 +138,24 @@ class JakartaValidatorRegistry extends DefaultValidatorRegistry implements Valid
 
     /**
      * @param entity The entity
-     * @return Whether the entity is validated with Bean Validation, i.e. it is annotated with {@link Validated} (GORM
-     * adds the annotation to any entity carrying Bean Validation constraint annotations)
+     * @return Whether the entity is validated with Bean Validation, see {@link #isBeanValidated(PersistentEntity, jakarta.validation.Validator)}
      * @since 8.0.1
      */
-    static boolean isBeanValidated(PersistentEntity entity) {
-        return isAvailable() && entity.javaClass.getAnnotation(Validated) != null
+    boolean isBeanValidated(PersistentEntity entity) {
+        return isBeanValidated(entity, validatorFactory.getValidator())
+    }
+
+    /**
+     * Whether an entity is validated with Bean Validation: as the provider sees it, its class declares or inherits a
+     * constraint annotation on a property or a getter, a class level constraint, or a property marked {@code @Valid}.
+     *
+     * @param entity The entity
+     * @param validator The Bean Validation validator
+     * @return Whether the entity is validated with Bean Validation
+     * @since 8.0.1
+     */
+    static boolean isBeanValidated(PersistentEntity entity, jakarta.validation.Validator validator) {
+        return validator.getConstraintsForClass(entity.javaClass).isBeanConstrained()
     }
 
     /**

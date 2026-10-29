@@ -47,6 +47,8 @@ import jakarta.validation.constraints.Pattern
 import jakarta.validation.constraints.Positive
 import jakarta.validation.constraints.Size
 
+import org.hibernate.validator.constraints.CompositionType
+import org.hibernate.validator.constraints.ConstraintComposition
 import org.hibernate.validator.constraints.CreditCardNumber
 import org.hibernate.validator.constraints.Length
 import org.hibernate.validator.constraints.Range
@@ -314,6 +316,32 @@ class JakartaConstraintsTranslatorSpec extends Specification {
         !merged.shortCode.nullable
     }
 
+    void "the constraints composing an OR or ALL_FALSE composition do not each apply, so they are not described"() {
+        given:
+        JakartaConstraintsTranslator composed = translatorFor(ComposedProduct)
+        Map<String, ConstrainedProperty> merged = composed.translate([:], registry)
+
+        expect: "the provider accepts a short and a long code, and rejects one in between"
+        validator.validate(new ComposedProduct(code: 'ab', tag: 'long enough')).empty
+        validator.validate(new ComposedProduct(code: 'abcdefghijkl', tag: 'long enough')).empty
+        validator.validate(new ComposedProduct(code: 'abcde', tag: 'long enough'))*.propertyPath*.toString() == ['code']
+
+        and: "so neither bound is described, as the schema would otherwise reject a code the provider accepts"
+        merged.code.minSize == null
+        merged.code.maxSize == null
+
+        and: "a null and a long note are accepted, so the @Null composing the note's constraint does not decide its nullability"
+        validator.validate(new ComposedProduct(code: 'ab', tag: 'long enough')).empty
+        validator.validate(new ComposedProduct(code: 'ab', tag: 'long enough', note: 'long enough')).empty
+        validator.validate(new ComposedProduct(code: 'ab', tag: 'long enough', note: 'ab'))*.propertyPath*.toString() == ['note']
+        !composed.nullabilityConstrainedProperties.contains('note')
+        merged.note.minSize == null
+
+        and: "an ALL_FALSE composition rejects what its constraint accepts, so the bound is not described either"
+        validator.validate(new ComposedProduct(code: 'ab', tag: 'abc'))*.propertyPath*.toString() == ['tag']
+        merged.tag.maxSize == null
+    }
+
     void "a class without constraints gets its constraints back untouched"() {
         given:
         Map<String, ConstrainedProperty> original = [:]
@@ -430,6 +458,54 @@ class RoundedProduct {
     @DecimalMin(value = '1.5', inclusive = false) @DecimalMax(value = '4.5', inclusive = false) Integer exclusive
     @DecimalMin('-1.5') @DecimalMax('-0.5') Long negative
     @DecimalMin('2') @DecimalMax('4.0') Long whole
+}
+
+@SuppressWarnings('unused')
+class ComposedProduct {
+    @ShortOrLong String code
+    @NotShort String tag
+    @NullOrLong String note
+}
+
+@ConstraintComposition(CompositionType.OR)
+@Size(max = 3)
+@Size(min = 10)
+@ReportAsSingleViolation
+@Constraint(validatedBy = [])
+@Documented
+@Target([ElementType.FIELD, ElementType.METHOD])
+@Retention(RetentionPolicy.RUNTIME)
+@interface ShortOrLong {
+    String message() default 'must be short or long'
+    Class<?>[] groups() default []
+    Class<? extends Payload>[] payload() default []
+}
+
+@ConstraintComposition(CompositionType.OR)
+@Null
+@Size(min = 10)
+@ReportAsSingleViolation
+@Constraint(validatedBy = [])
+@Documented
+@Target([ElementType.FIELD, ElementType.METHOD])
+@Retention(RetentionPolicy.RUNTIME)
+@interface NullOrLong {
+    String message() default 'must be null or long'
+    Class<?>[] groups() default []
+    Class<? extends Payload>[] payload() default []
+}
+
+@ConstraintComposition(CompositionType.ALL_FALSE)
+@Size(max = 3)
+@ReportAsSingleViolation
+@Constraint(validatedBy = [])
+@Documented
+@Target([ElementType.FIELD, ElementType.METHOD])
+@Retention(RetentionPolicy.RUNTIME)
+@interface NotShort {
+    String message() default 'must not be short'
+    Class<?>[] groups() default []
+    Class<? extends Payload>[] payload() default []
 }
 
 @NotBlank

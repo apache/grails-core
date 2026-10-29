@@ -30,7 +30,7 @@ import grails.gorm.validation.ConstrainedEntity
 class BeanValidationSpec extends Specification implements DataTest {
 
     Class[] getDomainClassesToMock() {
-        [BeanValidationRecord, BeanValidationParent, BeanValidationChild, BeanValidationGroupedRecord]
+        [BeanValidationRecord, BeanValidationParent, BeanValidationChild, BeanValidationGroupedRecord, BeanValidationShelf, BeanValidationShelfBook]
     }
 
     void 'the annotations and the constraints block are validated, each violation once'() {
@@ -95,5 +95,16 @@ class BeanValidationSpec extends Specification implements DataTest {
 
         and: 'the constraints say what is enforced'
         !constraints.author.nullable
+    }
+
+    void 'an association marked @Valid of a domain class without constraint annotations is validated in the group its @ConvertGroup converts to'() {
+        given: 'a shelf whose book violates an annotation of each group'
+        def shelf = new BeanValidationShelf(name: 'shelf', book: new BeanValidationShelfBook(title: '', isbn: null))
+
+        expect: 'the book is validated in PublishChecks, not in its default group'
+        !shelf.validate()
+        shelf.errors.errorCount == 1
+        shelf.errors.getFieldError('book.title').code == 'NotBlank'
+        shelf.save() == null
     }
 }

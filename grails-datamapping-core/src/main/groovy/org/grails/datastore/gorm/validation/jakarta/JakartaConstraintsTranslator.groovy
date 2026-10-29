@@ -73,7 +73,9 @@ import org.grails.datastore.mapping.reflect.ClassPropertyFetcher
  * overrides applied, and only the constraints of the default group are described, as {@code validate()} validates no
  * other group. A constraint on a getter without a backing field, such as a cross field {@code @AssertTrue}, is
  * validated but not described, unless the {@code constraints} block constrains the property. Annotations without
- * a GORM equivalent (such as {@code @Past}, {@code @Digits} or custom constraints) are left out.
+ * a GORM equivalent (such as {@code @Past}, {@code @Digits} or custom constraints) are left out, and so are the
+ * constraints composing a constraint composed with Hibernate Validator's {@code @ConstraintComposition} other than
+ * {@code AND}, as they do not each apply.
  *
  * @since 8.0.1
  */
@@ -83,10 +85,21 @@ class JakartaConstraintsTranslator {
 
     private static final Set<Class<?>> DEFAULT_GROUP = Collections.<Class<?>> singleton(Default)
 
+    private static final String CONSTRAINT_COMPOSITION = 'org.hibernate.validator.constraints.ConstraintComposition'
+
     /**
      * The descriptor of the class
      */
     final BeanDescriptor beanDescriptor
+
+    /**
+     * The groups the default group of the class stands for, as the provider validates it: the {@link Default}
+     * group and, when a class of the hierarchy redefines the default group with a {@link GroupSequence}, the
+     * groups of the sequence of the first one from the class up to do so
+     *
+     * @see #validatedGroupsOf
+     */
+    final Set<Class<?>> defaultGroups
 
     /**
      * The constraints of the default group by property name, the properties without any left out
@@ -104,8 +117,11 @@ class JakartaConstraintsTranslator {
      */
     JakartaConstraintsTranslator(Validator validator, Class<?> beanClass) {
         this.beanDescriptor = validator.getConstraintsForClass(beanClass)
-        this.declaredConstraints = findDeclaredConstraints(validator, beanClass)
-        this.constraintDescriptors = Collections.unmodifiableMap(findValidatedConstraints(DEFAULT_GROUP))
+        List<Class<?>> hierarchy = hierarchyOf(beanClass)
+        int redefining = hierarchy.findIndexOf { Class<?> type -> !type.isInterface() && type.getAnnotation(GroupSequence) != null }
+        this.defaultGroups = redefining < 0 ? DEFAULT_GROUP : sequencedDefaultGroupsOf(hierarchy.get(redefining))
+        this.declaredConstraints = findDeclaredConstraints(validator, hierarchy, redefining, defaultGroups)
+        this.constraintDescriptors = Collections.unmodifiableMap(findValidatedConstraints(DEFAULT_GROUP, Collections.<Class<?>> emptySet()))
     }
 
     /**
@@ -121,10 +137,8 @@ class JakartaConstraintsTranslator {
      * default group with a {@link GroupSequence} applies its sequence to its own constraints and to the ones of its
      * superclasses, whereas the classes below it validate theirs in the {@link Default} group only.
      */
-    private static Map<String, List<DeclaredConstraint>> findDeclaredConstraints(Validator validator, Class<?> beanClass) {
-        List<Class<?>> hierarchy = hierarchyOf(beanClass)
-        int redefining = hierarchy.findIndexOf { Class<?> type -> !type.isInterface() && type.getAnnotation(GroupSequence) != null }
-        Set<Class<?>> sequenced = redefining < 0 ? DEFAULT_GROUP : sequencedDefaultGroupsOf(hierarchy.get(redefining))
+    private static Map<String, List<DeclaredConstraint>> findDeclaredConstraints(Validator validator, List<Class<?>> hierarchy, int redefining,
+            Set<Class<?>> sequenced) {
         Map<String, List<DeclaredConstraint>> result = new TreeMap<>()
         for (int i = 0; i < hierarchy.size(); i++) {
             Set<Class<?>> defaultGroups = redefining >= 0 && i >= redefining ? sequenced : DEFAULT_GROUP
@@ -189,6 +203,41 @@ class JakartaConstraintsTranslator {
     }
 
     /**
+     * @param group A group
+     * @return Whether the group is a group sequence
+     */
+    static boolean isGroupSequence(Class<?> group) {
+        return group.isInterface() && group.getAnnotation(GroupSequence) != null
+    }
+
+    /**
+     * The groups of a group sequence in their order, a nested sequence expanded in place, without the groups they
+     * extend, which the provider validates with each of them.
+     *
+     * @param sequence The group sequence
+     * @return Its groups, each once
+     */
+    static List<Class<?>> sequenceGroupsOf(Class<?> sequence) {
+        List<Class<?>> groups = new ArrayList<>()
+        addSequenceGroups(sequence, groups, new HashSet<Class<?>>())
+        return Collections.unmodifiableList(groups)
+    }
+
+    private static void addSequenceGroups(Class<?> sequence, List<Class<?>> groups, Set<Class<?>> visitedSequences) {
+        if (!visitedSequences.add(sequence)) {
+            return
+        }
+        for (Class<?> group in sequence.getAnnotation(GroupSequence).value()) {
+            if (isGroupSequence(group)) {
+                addSequenceGroups(group, groups, visitedSequences)
+            }
+            else if (!groups.contains(group)) {
+                groups.add(group)
+            }
+        }
+    }
+
+    /**
      * Adds the groups validated when the given ones are, as the provider validates them: a group brings the groups
      * it extends, and a sequence its own groups.
      */
@@ -215,10 +264,14 @@ class JakartaConstraintsTranslator {
     /**
      * The constraints validated when the given groups are, by property name, ordered so that the description is the
      * same on every run when two of them describe the same GORM constraint, as the provider reports them as a set.
+     *
+     * @param groups The groups validated
+     * @param excludedGroups The groups validated with them, as groups they extend, whose constraints are not reported
      */
-    private Map<String, List<ConstraintDescriptor<?>>> findValidatedConstraints(Collection<Class<?>> groups) {
+    private Map<String, List<ConstraintDescriptor<?>>> findValidatedConstraints(Collection<Class<?>> groups, Set<Class<?>> excludedGroups) {
         Set<Class<?>> requested = new HashSet<>()
         addSequencedGroups(groups.toArray(new Class<?>[0]), requested, new HashSet<Class<?>>())
+        requested.removeAll(excludedGroups)
         Map<String, List<ConstraintDescriptor<?>>> result = new LinkedHashMap<>()
         declaredConstraints.each { String propertyName, List<DeclaredConstraint> declared ->
             List<ConstraintDescriptor<?>> validated = new ArrayList<>()
@@ -254,14 +307,27 @@ class JakartaConstraintsTranslator {
      * @return The property names
      */
     Set<String> findNullabilityConstrainedProperties(Class<?>... groups) {
-        if (isDefaultGroup(groups)) {
-            return nullabilityConstrainedProperties
-        }
-        return nullabilityConstrainedPropertiesOf(findValidatedConstraints(Arrays.asList(groups)))
+        return findNullabilityConstrainedProperties(Arrays.asList(groups), Collections.<Class<?>> emptySet())
     }
 
-    private static boolean isDefaultGroup(Class<?>[] groups) {
-        return groups.length == 0 || (groups.length == 1 && groups[0] == Default)
+    /**
+     * The properties whose nullability a constraint validated in the given groups declares, the constraints of the
+     * excluded groups left out.
+     *
+     * @param groups The groups, the default group when there are none
+     * @param excludedGroups The groups validated with them, as groups they extend, whose constraints are not reported
+     * @return The property names
+     * @see JakartaPersistentEntityValidator.ExcludedGroups
+     */
+    Set<String> findNullabilityConstrainedProperties(Collection<Class<?>> groups, Set<Class<?>> excludedGroups) {
+        if (isDefaultGroup(groups) && excludedGroups.isEmpty()) {
+            return nullabilityConstrainedProperties
+        }
+        return nullabilityConstrainedPropertiesOf(findValidatedConstraints(groups ?: DEFAULT_GROUP, excludedGroups))
+    }
+
+    private static boolean isDefaultGroup(Collection<Class<?>> groups) {
+        return groups.isEmpty() || (groups.size() == 1 && groups.first() == Default)
     }
 
     private static Set<String> nullabilityConstrainedPropertiesOf(Map<String, List<ConstraintDescriptor<?>>> descriptorsByProperty) {
@@ -279,7 +345,23 @@ class JakartaConstraintsTranslator {
         if (annotation instanceof NotNull || annotation instanceof NotBlank || annotation instanceof NotEmpty || annotation instanceof Null) {
             return true
         }
-        return descriptor.composingConstraints.any { ConstraintDescriptor<?> composing -> constrainsNullability(composing) }
+        return isConjunction(descriptor) && descriptor.composingConstraints.any { ConstraintDescriptor<?> composing -> constrainsNullability(composing) }
+    }
+
+    /**
+     * Whether each constraint composing the constraint applies, as in a constraint composed without Hibernate
+     * Validator's {@code @ConstraintComposition} or with its {@code AND} type. The constraints composing an
+     * {@code OR} or {@code ALL_FALSE} composition describe nothing on their own, so they are left out. Matched by
+     * name, as the other Hibernate Validator specific annotations are.
+     */
+    private static boolean isConjunction(ConstraintDescriptor<?> descriptor) {
+        Annotation composition = descriptor.annotation.annotationType().annotations.find { Annotation candidate ->
+            candidate.annotationType().name == CONSTRAINT_COMPOSITION
+        }
+        if (composition == null) {
+            return true
+        }
+        return String.valueOf(composition.annotationType().getMethod('value').invoke(composition)) == 'AND'
     }
 
     /**
@@ -291,7 +373,20 @@ class JakartaConstraintsTranslator {
      * @param groups The groups the class is validated in, the default group when there are none
      */
     void delegateNullabilityToBeanValidation(Map<String, ConstrainedProperty> constraints, Class<?>... groups) {
-        for (String propertyName in findNullabilityConstrainedProperties(groups)) {
+        delegateNullabilityToBeanValidation(constraints, Arrays.asList(groups), Collections.<Class<?>> emptySet())
+    }
+
+    /**
+     * Leaves the nullability of the properties Bean Validation checks for null in the given groups to it, as
+     * {@link #delegateNullabilityToBeanValidation(Map, Class[])}, the constraints of the excluded groups left out.
+     *
+     * @param constraints The evaluated GORM constraints of the class
+     * @param groups The groups the class is validated in, the default group when there are none
+     * @param excludedGroups The groups validated with them, as groups they extend, whose constraints are not reported
+     * @see JakartaPersistentEntityValidator.ExcludedGroups
+     */
+    void delegateNullabilityToBeanValidation(Map<String, ConstrainedProperty> constraints, Collection<Class<?>> groups, Set<Class<?>> excludedGroups) {
+        for (String propertyName in findNullabilityConstrainedProperties(groups, excludedGroups)) {
             ConstrainedProperty constrained = constraints.get(propertyName)
             if (constrained != null && constrained.hasAppliedConstraint(ConstrainedProperty.NULLABLE_CONSTRAINT)) {
                 constrained.applyConstraint(ConstrainedProperty.NULLABLE_CONSTRAINT, true)
@@ -374,7 +469,8 @@ class JakartaConstraintsTranslator {
     /**
      * Applies the GORM constraints describing the constraint. Bounds tighten the ones already applied rather than
      * replace them. A composed constraint without an equivalent of its own is described through the constraints
-     * composing it, with the attributes it overrides applied.
+     * composing it, with the attributes it overrides applied, unless they do not each apply, as in an {@code OR}
+     * composition.
      *
      * @param constrained The constrained property to describe the constraint on
      * @param descriptor The constraint
@@ -471,7 +567,7 @@ class JakartaConstraintsTranslator {
                 applyIfSupported(constrained, ConstrainedProperty.IN_LIST_CONSTRAINT, [Boolean.FALSE])
                 break
             default:
-                if (!applyHibernateValidatorConstraint(constrained, descriptor)) {
+                if (!applyHibernateValidatorConstraint(constrained, descriptor) && isConjunction(descriptor)) {
                     for (ConstraintDescriptor<?> composing in descriptor.composingConstraints) {
                         applyConstraint(constrained, composing)
                     }

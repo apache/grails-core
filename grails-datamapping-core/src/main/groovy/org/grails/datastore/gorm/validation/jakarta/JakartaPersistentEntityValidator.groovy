@@ -42,21 +42,24 @@ import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.model.types.Association
 
 /**
- * Validates a persistent entity annotated with Jakarta Bean Validation constraints: its GORM constraints (the
+ * Validates a persistent entity constrained with Jakarta Bean Validation annotations: its GORM constraints (the
  * {@code constraints} block and the defaults) as a {@link PersistentEntityValidator}, then its annotations with the
  * Bean Validation provider, whose violations are reported as field errors with Spring's Bean Validation message
  * codes (such as {@code NotNull.member.name}, {@code NotNull.name} and {@code NotNull}).
  * <p>
  * The GORM {@code nullable} constraint is left to Bean Validation for a property whose nullability an annotation
  * of the validated groups declares ({@code @NotNull}, {@code @NotBlank}, {@code @NotEmpty} or {@code @Null}), so a
- * null value is reported once. Bean Validation does not cascade: the GORM validator cascades to the associations
- * as it does for any entity, and validates an annotated associated entity both ways through
- * {@link #validateBeyondConstraints}. An object is validated in the default group, or in the groups given as
- * validation hints to {@link #validate(Object, Errors, Object...)}, and an object associated through a property
- * marked {@code @Valid} in the groups of the object owning it, converted as the {@code @ConvertGroup} annotations
- * of the property declare, as Bean Validation cascades, see {@link #getAssociationValidationHints}. Any other
- * associated object is validated in the default group, as it is on its own. An associated object reached through
- * two associations is validated once in each distinct list of groups.
+ * null value is reported once. The GORM validator cascades to the persistent associations as it does for any
+ * entity, and validates an annotated associated entity both ways through {@link #validateBeyondConstraints};
+ * Bean Validation cascades only through the other properties marked {@code @Valid}, such as a transient one. An
+ * object is validated in the default group, or in the groups given as validation hints to
+ * {@link #validate(Object, Errors, Object...)}, and an object associated through a property marked {@code @Valid}
+ * in the groups of the object owning it, converted as the {@code @ConvertGroup} annotations of the property
+ * declare, as Bean Validation cascades, see {@link #getAssociationValidationHints}. Any other associated object is
+ * validated in the default group, as it is on its own. An associated object reached through two associations is
+ * validated once in each distinct list of groups. A group sequence is validated group by group, each group over
+ * the object and the objects it cascades to, and stops at the first group with a violation among them, see
+ * {@link #validateAssociationsAndBeyond}.
  * <p>
  * {@link #getConstrainedProperties()} describes the annotations as GORM constraints next to the ones of the block,
  * see {@link JakartaConstraintsTranslator}.
@@ -66,6 +69,8 @@ import org.grails.datastore.mapping.model.types.Association
 @CompileStatic
 class JakartaPersistentEntityValidator extends PersistentEntityValidator {
 
+    private static final List<Class<?>> DEFAULT_GROUP_LIST = Collections.<Class<?>> singletonList(Default)
+
     /**
      * The validator for the Bean Validation annotations of the entity
      */
@@ -74,7 +79,7 @@ class JakartaPersistentEntityValidator extends PersistentEntityValidator {
     private final JakartaConstraintsTranslator translator
     private final ConstraintsEvaluator constraintsEvaluator
     private final Map<String, ConstrainedProperty> describedConstrainedProperties
-    private final Map<List<Class<?>>, Map<String, ConstrainedProperty>> validatedConstrainedPropertiesByGroups = new ConcurrentHashMap<>()
+    private final Map<List<Object>, Map<String, ConstrainedProperty>> validatedConstrainedPropertiesByGroups = new ConcurrentHashMap<>()
 
     /**
      * @param entity The entity
@@ -113,23 +118,84 @@ class JakartaPersistentEntityValidator extends PersistentEntityValidator {
     @Override
     protected Map<String, ConstrainedProperty> getValidatedConstrainedProperties(Object[] hints) {
         List<Class<?>> groups = groupsOf(hints)
-        if (groups.isEmpty()) {
+        Set<Class<?>> excluded = excludedGroupsOf(hints)
+        if (groups.isEmpty() && excluded.isEmpty()) {
             return super.getValidatedConstrainedProperties(hints)
         }
-        return validatedConstrainedPropertiesByGroups.computeIfAbsent(groups, { List<Class<?>> key ->
+        List<Object> key = [groups, excluded] as List<Object>
+        return validatedConstrainedPropertiesByGroups.computeIfAbsent(key, { List<Object> k ->
             Map<String, ConstrainedProperty> evaluated = constraintsEvaluator.evaluate(targetClass)
-            translator.delegateNullabilityToBeanValidation(evaluated, key.toArray(new Class<?>[0]))
+            translator.delegateNullabilityToBeanValidation(evaluated, groups ?: DEFAULT_GROUP_LIST, excluded)
             return Collections.unmodifiableMap(evaluated)
-        } as Function<List<Class<?>>, Map<String, ConstrainedProperty>>)
+        } as Function<List<Object>, Map<String, ConstrainedProperty>>)
     }
 
     /**
-     * Validates the Bean Validation annotations of the object in the groups it is validated in, without cascading,
-     * as the GORM validator cascades.
+     * Validates the object in the groups among its hints as Bean Validation validates an object in them: in the
+     * groups that are not group sequences together, cascading to the associations with them, then in each group
+     * sequence group by group, cascading with each group, and stopping at the first group with a violation of the
+     * object or of an object it cascades to. The constraints of the block of the object are validated before, once,
+     * with all the groups, and the ones of an associated object when it is first reached, so a violation of them
+     * stops a sequence as a violation of the group it is reached in does.
+     */
+    @Override
+    protected void validateAssociationsAndBeyond(Object obj, Errors errors, boolean cascade, Object[] hints, Set validatedObjects) {
+        List<Class<?>> groups = groupsOf(hints) ?: DEFAULT_GROUP_LIST
+        Set<Class<?>> excluded = excludedGroupsOf(hints)
+        List<Class<?>> singleGroups = groups.findAll { Class<?> group -> !JakartaConstraintsTranslator.isGroupSequence(group) }
+        if (singleGroups) {
+            validateInGroups(obj, errors, cascade, singleGroups, excluded, validatedObjects)
+        }
+        for (Class<?> sequence in groups) {
+            if (!JakartaConstraintsTranslator.isGroupSequence(sequence)) {
+                continue
+            }
+            for (Class<?> group in JakartaConstraintsTranslator.sequenceGroupsOf(sequence)) {
+                int errorCount = errors.errorCount
+                validateInGroups(obj, errors, cascade, Collections.<Class<?>> singletonList(group), excluded, validatedObjects)
+                if (errors.errorCount > errorCount) {
+                    break
+                }
+            }
+        }
+    }
+
+    private void validateInGroups(Object obj, Errors errors, boolean cascade, List<Class<?>> groups, Set<Class<?>> excluded, Set validatedObjects) {
+        Object[] stepHints = hintsOf(groups, excluded)
+        if (cascade) {
+            cascadeToAssociations(obj, entity, errors, entityReflector, stepHints, validatedObjects)
+        }
+        validateBeyondConstraints(obj, errors, stepHints)
+    }
+
+    /**
+     * Validates the Bean Validation annotations of the object in the groups among its hints, cascading only through
+     * the properties marked {@code @Valid} that are not persistent associations, as the GORM validator cascades to
+     * those. The violations of the groups the object is not validated in, see {@link ExcludedGroups}, are left out.
      */
     @Override
     protected void validateBeyondConstraints(Object obj, Errors errors, Object[] hints) {
-        beanValidator.validate(obj, errors, false, groupsOf(hints).toArray(new Class<?>[0]))
+        List<Class<?>> groups = groupsOf(hints)
+        Set<Class<?>> excluded = excludedGroupsOf(hints)
+        Set<Class<?>> reported = excluded.isEmpty() ? null : reportedGroupsOf(groups ?: DEFAULT_GROUP_LIST, excluded)
+        beanValidator.validate(obj, errors, false, groups.toArray(new Class<?>[0]), reported)
+    }
+
+    /**
+     * The groups whose constraints a validation of the entity in the given groups reports: the groups the provider
+     * validates with them, without the excluded ones, and, for the default group, the groups the entity redefines
+     * it with.
+     */
+    private Set<Class<?>> reportedGroupsOf(List<Class<?>> groups, Set<Class<?>> excluded) {
+        Set<Class<?>> reported = new LinkedHashSet<>()
+        for (Class<?> group in groups) {
+            reported.addAll(JakartaConstraintsTranslator.validatedGroupsOf(group))
+        }
+        reported.removeAll(excluded)
+        if (reported.contains(Default)) {
+            reported.addAll(translator.defaultGroups)
+        }
+        return reported
     }
 
     /**
@@ -137,11 +203,13 @@ class JakartaPersistentEntityValidator extends PersistentEntityValidator {
      * object owning it, converted as the {@code @ConvertGroup} annotations of the property declare. An object
      * associated through any other property is validated in the default group, as it is on its own.
      * <p>
-     * A conversion applies to the groups the provider validates when a group of the owner is validated: the group
-     * and the groups it extends, and, for a group sequence, its groups in their order. A group none of whose groups
-     * is converted stays as it is, so a sequence keeps stopping at the first of its groups with a violation. The
-     * groups a sequence converts to are validated in its order, each of them, as the provider validates the groups
-     * a conversion produces.
+     * As Bean Validation cascades, a conversion applies to each group the provider validates when the owner is
+     * validated in the groups of its hints: a group and the groups it extends, and, for a group sequence, its groups
+     * in their order, each with the groups it extends. A group a conversion converts is validated as the group it
+     * converts to, together with the groups that one extends or sequences. A group no conversion converts is
+     * validated alone, without the groups it extends, which the owner validates, and converts, for themselves: when
+     * one of them is converted, the provider validates the associated object in it nonetheless, so the hints exclude
+     * it, see {@link ExcludedGroups}.
      */
     @Override
     protected Object[] getAssociationValidationHints(Association association, Object[] hints) {
@@ -153,21 +221,37 @@ class JakartaPersistentEntityValidator extends PersistentEntityValidator {
         for (GroupConversionDescriptor conversion in cascaded.groupConversions) {
             conversions.put(conversion.from, conversion.to)
         }
-        List<Class<?>> groups = groupsOf(hints) ?: Collections.<Class<?>> singletonList(Default)
         List<Class<?>> converted = new ArrayList<>()
-        for (Class<?> group in groups) {
-            List<Class<?>> validated = JakartaConstraintsTranslator.validatedGroupsOf(group)
-            List<Class<?>> convertedGroups = validated.collect { Class<?> validatedGroup -> conversions.get(validatedGroup) ?: validatedGroup }
-            if (convertedGroups == validated) {
-                addGroup(converted, group)
+        Set<Class<?>> validated = new HashSet<>()
+        Set<Class<?>> expanded = new HashSet<>()
+        for (Class<?> group in validationOrderOf(hints)) {
+            Class<?> target = conversions.get(group)
+            if (target != null) {
+                addGroup(converted, target)
+                validated.addAll(JakartaConstraintsTranslator.validatedGroupsOf(target))
             }
             else {
-                for (Class<?> convertedGroup in convertedGroups) {
-                    addGroup(converted, convertedGroup)
-                }
+                addGroup(converted, group)
+                validated.add(group)
+                expanded.addAll(JakartaConstraintsTranslator.validatedGroupsOf(group))
             }
         }
-        return converted == [Default] ? NO_VALIDATION_HINTS : converted.toArray()
+        expanded.removeAll(validated)
+        return hintsOf(converted, expanded)
+    }
+
+    /**
+     * The groups the provider validates an object with the given hints in, in its order: the groups among the
+     * hints, each with the groups it extends, a group sequence as its groups in their order, without the excluded
+     * groups.
+     */
+    private static List<Class<?>> validationOrderOf(Object[] hints) {
+        Set<Class<?>> order = new LinkedHashSet<>()
+        for (Class<?> group in (groupsOf(hints) ?: DEFAULT_GROUP_LIST)) {
+            order.addAll(JakartaConstraintsTranslator.validatedGroupsOf(group))
+        }
+        order.removeAll(excludedGroupsOf(hints))
+        return new ArrayList<>(order)
     }
 
     private static void addGroup(List<Class<?>> groups, Class<?> group) {
@@ -185,6 +269,18 @@ class JakartaPersistentEntityValidator extends PersistentEntityValidator {
     }
 
     /**
+     * @return The hints for the groups, the default group alone being no hints
+     */
+    private static Object[] hintsOf(List<Class<?>> groups, Set<Class<?>> excluded) {
+        if (excluded.isEmpty()) {
+            return groups == DEFAULT_GROUP_LIST ? NO_VALIDATION_HINTS : groups.toArray()
+        }
+        List<Object> hints = new ArrayList<Object>(groups)
+        hints.add(new ExcludedGroups(excluded))
+        return hints.toArray()
+    }
+
+    /**
      * @return The Bean Validation groups among the validation hints, none for the default group
      */
     private static List<Class<?>> groupsOf(Object[] hints) {
@@ -194,6 +290,55 @@ class JakartaPersistentEntityValidator extends PersistentEntityValidator {
                 groups.add((Class<?>) hint)
             }
         }
-        return groups == [Default] ? Collections.<Class<?>> emptyList() : groups
+        return groups == DEFAULT_GROUP_LIST ? Collections.<Class<?>> emptyList() : groups
+    }
+
+    /**
+     * @return The groups the validation hints exclude, none when they exclude no group
+     */
+    private static Set<Class<?>> excludedGroupsOf(Object[] hints) {
+        for (Object hint in hints) {
+            if (hint instanceof ExcludedGroups) {
+                return ((ExcludedGroups) hint).groups
+            }
+        }
+        return Collections.<Class<?>> emptySet()
+    }
+
+    /**
+     * A validation hint excluding groups from a validation: the provider validates a group together with the
+     * groups it extends, whereas Bean Validation cascading validates an associated object in a group of its owner
+     * no conversion converts alone, and in the groups it extends only as the owner validates them, each converted
+     * or not by itself. The groups a group extends that are converted are excluded from the validation of the
+     * associated object in the unconverted group: their violations are not reported, and their annotations do not
+     * relax the {@code nullable} constraint of the block.
+     *
+     * @since 8.0.1
+     */
+    static final class ExcludedGroups {
+
+        /**
+         * The excluded groups
+         */
+        final Set<Class<?>> groups
+
+        ExcludedGroups(Collection<Class<?>> groups) {
+            this.groups = Collections.unmodifiableSet(new LinkedHashSet<Class<?>>(groups))
+        }
+
+        @Override
+        boolean equals(Object other) {
+            return other instanceof ExcludedGroups && groups == ((ExcludedGroups) other).groups
+        }
+
+        @Override
+        int hashCode() {
+            return groups.hashCode()
+        }
+
+        @Override
+        String toString() {
+            return "excluding ${groups*.simpleName}"
+        }
     }
 }
