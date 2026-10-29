@@ -309,9 +309,10 @@ After all artifacts are uploaded, verified, and tested, we can vote on the relea
 The release vote is conducted on the [Grails dev mailing list](https://lists.apache.org/list.html?dev@grails.apache.org). Only votes from members of the Apache Grails PMC are binding, but the community is welcome to participate to express their support.
 
 The vote runs for a minimum of 72 hours.  
-The vote email is automatically generated as part of the release process — see the `upload` job in the `Release`
-workflow for details. If the candidate is staged on ATR, discard that generated `dist/dev` vote email
-and start the sole vote from ATR so there is only one thread, covering the ATR artifacts.
+The vote email is automatically generated as part of the release process - see the `upload` job in the `Release`
+workflow for details. With `ATR_ENABLED=true`, that job skips `dist/dev` staging and its vote email. If the candidate
+is staged on ATR manually instead, discard any generated `dist/dev` vote email and start the sole vote from ATR
+so there is only one thread, covering the ATR artifacts.
 
 ## 5. Releasing
 
@@ -326,22 +327,22 @@ Confirm the Grails PMC votes passed with a +1 from at least 3 PMC members. The `
 
 ### Release the Staged Jar files
 
-After the PMC vote has passed and the protected `release` environment is approved, prefer the opt-in
-`Release - Promote Nexus Staging` workflow. Run it from Actions with the version without `v`; leave
-`staging_description` empty to use `grails-core:<version>`. This is manually dispatched after the vote, following the
-[Apache Polaris TLP precedent](https://github.com/apache/polaris/blob/7866ce5c009d64e4c1454b47bca3df9873c6c0b2/.github/workflows/release-4-publish-release.yml).
-
-The following remain fallbacks:
+After the PMC vote has passed and the protected `release` environment is approved, use the Nexus UI or run the
+script locally as your ASF user:
 
 1. On https://repository.apache.org/#stagingRepositories, release the staged artifacts by opening the `grails-core` staging repository and
     clicking the `Release` button. It took almost 2 hours for the initial ASF release to publish these jars to Maven
     Central.
 2. Run `.github/scripts/releaseJarFiles.sh grails-core:<version> <ASF_USER>`. The script prompts for a password unless
-    `NEXUS_PASS` is already set, which is how the protected workflow supplies its secret.
+    `GRAILS_NEXUS_PASSWORD` is already set.
+
+`Release - Promote Nexus Staging (experimental)` remains available, but the existing stage-deployer account's
+permission to promote has not been verified. Its ability to drop staging repositories does not prove it can promote them;
+keep using the Nexus UI or local script until that permission is confirmed.
 
 ### Move the distributions from `dev` to `release`
 
-If this candidate was staged on ATR, skip this `dist/dev` move. Beta ATR commits the voted artifacts directly to `svn:dist:release` when the release is published. Set the Grails project's download path suffix to `core/{{VERSION}}` so the tree is `dist/release/grails/core/<version>/`, which is where the source, binary, wrapper, and documentation distributions belong. Do not run `releaseDistributions.sh` for an ATR candidate, and do not move anything out of `dist/atr`. See [Apache Trusted Releases (ATR)](#apache-trusted-releases-atr).
+If this candidate was staged on ATR, skip this `dist/dev` move. Beta ATR commits the voted artifacts directly to `svn:dist:release` when the release is published. Set the Grails project's download path suffix to `core/{{VERSION}}` so the tree is `dist/release/grails/core/<version>/`, which is where the source, binary, wrapper, and documentation distributions belong. Do not run `releaseDistributions.sh` for an ATR candidate, and do not move anything out of `dist/atr`. The release manager still removes the previous `dist/release` folder by hand; ATR must not auto-archive it. See [Apache Trusted Releases (ATR)](#apache-trusted-releases-atr).
 
 Otherwise, on dist.apache.org, the staged source distribution, binary distributions, and documentation distribution must be moved from `https://dist.apache.org/repos/dist/dev/grails/` to `https://dist.apache.org/repos/dist/release/grails/`. [ASF GitHub Actions policy](https://infra.apache.org/github-actions-policy.html) forbids automated services from pushing official release data without prior Infrastructure authorization, so this `svn move` stays manual. Either move the tree via your SVN client or use the checked-in script as your user.
 
@@ -450,7 +451,7 @@ automated release infrastructure to sign artifacts, while the vote remains a com
 | Signing in GitHub Actions | [Apache release policy](https://www.apache.org/legal/release-policy.html) requires release artifacts to be signed by the Release Manager or automated release infrastructure. ATR [Trusted Publishing](https://releases.apache.org/docs/trusted-publishing) accepts those signatures when the committee is eligible for CI builds. |
 | Publish the voted distributions to `dist/release` | Beta ATR commits the approved artifacts to `svn:dist:release` itself. The workflow calls ATR. It does not write SVN. See [Promoting to release](https://releases.apache.org/docs/promoting-to-release). |
 | Documentation and website content | [GitHub Actions policy](https://infra.apache.org/github-actions-policy.html) permits work on website content and other non-released data. Grails already deploys documentation from GitHub Actions. |
-| Promote closed Nexus staging after a passed vote | `Release - Promote Nexus Staging` is `workflow_dispatch` plus the protected `release` environment. It follows the [Apache Polaris TLP promotion workflow](https://github.com/apache/polaris/blob/7866ce5c009d64e4c1454b47bca3df9873c6c0b2/.github/workflows/release-4-publish-release.yml) and uses the existing `NEXUS_STAGE_DEPLOYER_USER` / `NEXUS_STAGE_DEPLOYER_PW` secrets used to drop staging. |
+| Promote closed Nexus staging after a passed vote | `Release - Promote Nexus Staging (experimental)` is `workflow_dispatch` plus the protected `release` environment. It uses the existing `NEXUS_STAGE_DEPLOYER_USER` / `NEXUS_STAGE_DEPLOYER_PW` secrets used to drop staging, but that account's promotion permission is unverified. Keep using the Nexus UI or local script. |
 | Skip `dist/dev` only when using ATR | ATR candidates may skip the traditional staging location as described in [Staging and voting](https://releases.apache.org/docs/staging-and-voting). The `dist/dev` plus Nexus path remains Grails' official default until the PMC opts in to ATR. |
 
 The following must remain manual:
@@ -478,7 +479,7 @@ The workflows pin `apache/tooling-actions` to `dcba9f4ed2956f7a30113c3067e766eed
 | Send the `[VOTE]` email | none (start the vote in the [ATR UI](https://releases.apache.org/) or with `atr vote start`) | — |
 | Send the `[RESULT][VOTE]` email | `release-on-atr` with `resolve: true` | `Release - ATR Resolve Vote (experimental)` |
 | Publish the voted zips to `dist/release` | ATR, when automatic publication was selected at vote start, or the Publish button | not a GitHub Actions SVN write |
-| Promote Nexus staging to Maven Central | none | `Release - Promote Nexus Staging`, then `Release - ATR Record Distribution (experimental)` with `platform=MAVEN` |
+| Promote Nexus staging to Maven Central | none | Nexus UI or `.github/scripts/releaseJarFiles.sh`, then `Release - ATR Record Distribution (experimental)` with `platform=MAVEN` |
 | Send the `[ANNOUNCE]` email | `release-on-atr` with `announce: true` | `Release - ATR Announce (experimental)` once, to `announce@apache.org` |
 | ASF Reporter, Forge, SDKMAN!, website, blog | none | unchanged |
 
@@ -492,7 +493,7 @@ The workflows pin `apache/tooling-actions` to `dcba9f4ed2956f7a30113c3067e766eed
     * Vote: `.github/workflows/release-atr-resolve.yml`
     * Finish: `.github/workflows/release-atr-announce.yml` and `.github/workflows/release-atr-record.yml`
 
-4. The committee page must show CI builds enabled. That requires a signing key whose primary UID contains `Automated Release Signing` and whose email is `private@grails.apache.org`. The release workflow imports `GRAILS_GPG_KEY` and signs with `GPG_KEY_ID`. Confirm that selected key matches this UID before the workflows will be accepted. If it does not, ask Infrastructure for a key that does. Voters still compare an independent rebuild on trusted hardware with the uploaded artifacts.
+4. The committee page must show CI builds enabled. That requires a signing key whose primary UID contains `Automated Release Signing` and whose email is `private@grails.apache.org`. The Infra-issued RSA 4096 key in `KEYS`, `Apache Grails Automated Release Signing <private@grails.apache.org>`, fingerprint `08E2 CEC4 7E38 FE41 5F08 0AB6 2ADE CADC 1177 5306`, already satisfies this requirement. The release workflow imports this key from `GRAILS_GPG_KEY` and signs with it using `GPG_KEY_ID`. Voters still compare an independent rebuild on trusted hardware with the uploaded artifacts.
 5. Optional repository variables, after that setup:
 
     * `ATR_ENABLED=true`
@@ -500,19 +501,23 @@ The workflows pin `apache/tooling-actions` to `dcba9f4ed2956f7a30113c3067e766eed
     * `ATR_HOST=releases.apache.org` (optional; this is the default)
     * `ATR_SSH_PORT=2222` (optional; this is the default)
 
-Do not enable auto-archive of the prior release until the PMC confirms it archives only the previous release on the same line. Grails keeps more than one release line current.
+Do not enable ATR auto-archive of the prior release. On the ATR path, the release manager still removes the previous `dist/release` folder by hand so other current release lines are preserved.
 
 ### Using ATR alongside a Grails release
 
 Keep the current `Release` workflow as the source of signed artifacts. After the `source` job has uploaded the zips to the GitHub Release:
 
 1. **Compose.** Run `Release - ATR Upload (experimental)`, or rely on `atr_upload` when `ATR_ENABLED=true`. This rsyncs `sources/apache-grails-<version>-src.zip` and, under `distribution/`, the binary zip, the wrapper zip, and the documentation zip, each with `.asc` and `.sha512`. The upload declares the release tag commit. ATR then checks that the source zip is a subset of that commit: omitted files are allowed, and files that are not in the git tree are not, except `PKG-INFO` when `pyproject.toml` is present. This zip adds `CHECKSUMS`, `PUBLISHED_ARTIFACTS`, `BUILD_DATE`, and `GIT_TAGS` under `grails/`. That records a concern from `atr.tasks.checks.compare.source_trees`. Starting the vote requires acknowledging that concern. A project ignore can mark the same checker as an exception, but a broad ignore also hides unexpected extra files, so acknowledge the concern until ATR can allow those specific added paths. Do not treat `dist/dev` as the files under vote when ATR is the staging location. See [Staging and voting](https://releases.apache.org/docs/staging-and-voting).
-2. **Vote.** Start the vote on ATR. There is no Tooling GitHub Action for this. Select automatic publication to the SVN distribution area. The download path comes from the project suffix `core/{{VERSION}}`, which the current `release-on-atr` action does not override. Discard the `dist/dev` `[VOTE]` email printed by the `upload` job. Keep the 72-hour PMC vote. The GitHub `release` environment approval is still the gate for later jobs.
+2. **Vote.** Start the vote on ATR. There is no Tooling GitHub Action for this. Select automatic publication to the SVN distribution area. The download path comes from the project suffix `core/{{VERSION}}`, which the current `release-on-atr` action does not override. Discard any `dist/dev` `[VOTE]` email if the `upload` job printed one; it skips that email when `ATR_ENABLED=true`. Keep the 72-hour PMC vote. The GitHub `release` environment approval is still the gate for later jobs.
 3. **Resolve.** After the vote passes, run `Release - ATR Resolve Vote (experimental)` with `passed`. That replaces sending the `[RESULT][VOTE]` email by hand. `cancelled` is also a valid resolution.
 4. **Publish.** If automatic publication was selected, ATR has committed the voted artifacts to `dist/release/grails/core/<version>/`. Otherwise press Publish on the finish page. Do not run `releaseDistributions.sh` and do not move `dist/atr`.
-5. **Maven Central.** Run `Release - Promote Nexus Staging` with the version, or use the Nexus UI or `.github/scripts/releaseJarFiles.sh`. Once Maven Central is live, run `Release - ATR Record Distribution (experimental)` with `platform=MAVEN`, `distribution_owner_namespace=org.apache.grails`, and `distribution_package=grails-bom`. If the project tagging spec names Maven, ATR will not announce until that record exists.
+5. **Maven Central.** Use the Nexus UI or `.github/scripts/releaseJarFiles.sh` as your ASF user. The promotion workflow remains experimental until the stage-deployer account's promotion permission is verified. Once Maven Central is live, run `Release - ATR Record Distribution (experimental)` with `platform=MAVEN`, `distribution_owner_namespace=org.apache.grails`, and `distribution_package=grails-bom`. If the project tagging spec names Maven, ATR will not announce until that record exists.
 6. **Public destinations named by the announcement.** Publish the voted documentation zip, release the version to SDKMAN!, and update plus publish the static website so [https://grails.apache.org/download.html](https://grails.apache.org/download.html) lists this version. The generated announcement links to that page. Confirm the page shows the new version before announcing.
-7. **Announce.** Run `Release - ATR Announce (experimental)` once, to `announce@apache.org`. Leave `announce_body` empty to render `.github/vote_templates/announce.txt` with `previous_version` (milestone wording is included only for `M` / `RC` versions). One successful announce must not be repeated for another list. If ATR rejects the call because the artifacts are not on the download mirrors yet, check the ATR finish page and retry that same announce. Do not retry an ambiguous failure. Then send the same body from your `@apache.org` address to `dev@grails.apache.org`, `users@grails.apache.org`, and `dev@groovy.apache.org`.
+7. **Announce.** Run `Release - ATR Announce (experimental)` once; it always sends to `announce@apache.org`. Leave `announce_body` empty to render `.github/vote_templates/announce.txt` (milestone wording is included only for `M` / `RC` versions). One successful announce must not be repeated for another list. If ATR rejects the call because the artifacts are not on the download mirrors yet, check the ATR finish page and retry that same announce. Do not retry an ambiguous failure. Then send the same body from your `@apache.org` address to `dev@grails.apache.org`, `users@grails.apache.org`, and `dev@groovy.apache.org`.
+
+To verify an ATR candidate, set `GRAILS_DISTRIBUTION_BASE_URL` when running `verify.sh` or `download-release-artifacts.sh`, or supply `distribution_base_url` to `Release - Verify Troubleshooting`, to the ATR candidate directory for that version containing `sources/` and `distribution/`, not a GitHub release URL. Leave it empty to keep the default `https://dist.apache.org/repos/dist/dev/grails/core/<version>`; GitHub release asset downloads remain unchanged.
+
+`previous_version` defaults to the nearest prior release tag reachable from the checked-out release tag's parent, with its leading `v` stripped. Set `previous_version` explicitly to override the lookup; if no prior tag is found, the placeholder check fails unless a fully rendered `announce_body` is supplied.
 
 ASF Reporter, Forge deploys, the close-release PR, and the blog post remain as in section 5. They are not links in the announcement.
 

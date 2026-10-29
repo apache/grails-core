@@ -13,12 +13,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# Experimental: the Grails stage-deployer account's promotion permission is unverified.
 # Apache Polaris, a TLP, promotes a closed staging repository after its vote:
 # https://github.com/apache/polaris/blob/7866ce5c009d64e4c1454b47bca3df9873c6c0b2/.github/workflows/release-4-publish-release.yml
 # Grails already uses the same NEXUS_STAGE_DEPLOYER_* secrets in
 # release-drop-staging.yml. This workflow never writes dist.apache.org/release:
 # https://infra.apache.org/github-actions-policy.html
-name: "Release - Promote Nexus Staging"
+name: "Release - Promote Nexus Staging (experimental)"
 on:
   workflow_dispatch:
     inputs:
@@ -68,11 +69,11 @@ jobs:
       - name: "🚀 Promote Nexus staging repository"
         env:
           NEXUS_USER: ${{ secrets.NEXUS_STAGE_DEPLOYER_USER }}
-          NEXUS_PASS: ${{ secrets.NEXUS_STAGE_DEPLOYER_PW }}
+          GRAILS_NEXUS_PASSWORD: ${{ secrets.NEXUS_STAGE_DEPLOYER_PW }}
           STAGING_DESCRIPTION: ${{ env.STAGING_DESCRIPTION }}
         run: |
           set -euo pipefail
-          if [ -z "${NEXUS_USER}" ] || [ -z "${NEXUS_PASS}" ]; then
+          if [ -z "${NEXUS_USER}" ] || [ -z "${GRAILS_NEXUS_PASSWORD}" ]; then
             echo "::error::NEXUS_STAGE_DEPLOYER_USER and NEXUS_STAGE_DEPLOYER_PW must be configured."
             exit 1
           fi

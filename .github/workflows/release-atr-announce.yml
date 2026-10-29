@@ -16,7 +16,7 @@
 # Experimental Apache Trusted Releases (ATR) announce step.
 # Sends ONE announcement through ATR. The first successful announce promotes
 # the candidate from preview to released, so this workflow must not be rerun
-# for additional mailing lists. The recipient is restricted to announce@apache.org.
+# for additional mailing lists. The recipient is always announce@apache.org.
 # ATR documentation and the official workflow example:
 # https://tooling.apache.org/
 # https://github.com/apache/tooling-asf-example/blob/main/.github/workflows/announce-release-on-atr.yaml
@@ -36,14 +36,10 @@ on:
         required: true
         type: string
       previous_version:
-        description: 'Previous released version without the v prefix, used in the compare URL'
-        required: true
+        description: 'Optional previous version without v for the compare URL; defaults to the nearest prior release tag'
+        required: false
         type: string
-      announce_email_to:
-        description: 'Must be announce@apache.org. Do not rerun this workflow for other lists.'
-        required: true
-        type: string
-        default: announce@apache.org
+        default: ''
       announce_body:
         description: 'Optional fully-rendered announcement body. Leave empty to render .github/vote_templates/announce.txt'
         required: false
@@ -73,21 +69,17 @@ jobs:
       contents: read
     steps:
       - name: "📝 Establish tag and recipient"
-        env:
-          ANNOUNCE_EMAIL_TO_INPUT: ${{ inputs.announce_email_to }}
         run: |
           set -euo pipefail
-          if [ "${ANNOUNCE_EMAIL_TO_INPUT}" != "announce@apache.org" ]; then
-            echo "::error::ATR announcements must be sent to announce@apache.org. Send project-list follow-ups manually."
-            exit 1
-          fi
           echo "TAG=v${VERSION}" >> "$GITHUB_ENV"
-          echo "ANNOUNCE_EMAIL_TO=${ANNOUNCE_EMAIL_TO_INPUT}" >> "$GITHUB_ENV"
+          echo "ANNOUNCE_EMAIL_TO=announce@apache.org" >> "$GITHUB_ENV"
       - name: "📥 Checkout repository"
         uses: actions/checkout@v7.0.1
         with:
           ref: v${{ inputs.version }}
           persist-credentials: false
+          fetch-depth: 0
+          fetch-tags: true
       - name: "🛠️ Install envsubst"
         run: sudo apt-get update -y && sudo apt-get install -y gettext-base
       - name: "📝 Build announcement body"
@@ -97,6 +89,10 @@ jobs:
           PREVIOUS_VERSION: ${{ inputs.previous_version }}
         run: |
           set -euo pipefail
+          if [ -z "${PREVIOUS_VERSION}" ]; then
+            previous_tag="$(git describe --tags --abbrev=0 --match 'v[0-9]*' "${TAG}^" 2>/dev/null || true)"
+            PREVIOUS_VERSION="${previous_tag#v}"
+          fi
           if [ -n "${ANNOUNCE_BODY_OVERRIDE}" ]; then
             body="${ANNOUNCE_BODY_OVERRIDE}"
           else
@@ -106,7 +102,9 @@ jobs:
             else
               body="$(printf '%s\n' "${body}" | sed '/<IF MILESTONE>/,/<\/IF MILESTONE>/d')"
             fi
-            body="${body//<PREVIOUS_VERSION>/${PREVIOUS_VERSION}}"
+            if [ -n "${PREVIOUS_VERSION}" ]; then
+              body="${body//<PREVIOUS_VERSION>/${PREVIOUS_VERSION}}"
+            fi
           fi
           if grep -q -e '<IF MILESTONE>' -e '</IF MILESTONE>' -e '<PREVIOUS_VERSION>' <<<"${body}"; then
             echo "::error::Announcement body still contains template placeholders. Pass a fully rendered announce_body or a previous_version."
@@ -135,3 +133,4 @@ jobs:
           echo "  users@grails.apache.org"
           echo "  dev@groovy.apache.org"
           echo "::endgroup::"
+

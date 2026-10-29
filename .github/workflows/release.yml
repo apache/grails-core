@@ -452,6 +452,7 @@ jobs:
       - name: "🛠️ Install tools"
         run: sudo apt-get install -y subversion subversion-tools tree gettext-base
       - name: "👀 Ensure dev/${{ env.SVN_PROJECT }} folder exists"
+        if: ${{ vars.ATR_ENABLED != 'true' }}
         run: |
           set -e
           if svn ls https://dist.apache.org/repos/dist/dev/${SVN_PROJECT} --username "${SVN_USERNAME}" --password "${SVN_PASSWORD}" --non-interactive; then
@@ -463,6 +464,7 @@ jobs:
               -m "Create '${SVN_PROJECT}' dev folder"
           fi
       - name: "👀 Ensure dev/${{ env.SVN_PROJECT }}/${{ env.SVN_FOLDER }} folder exists"
+        if: ${{ vars.ATR_ENABLED != 'true' }}
         run: |
           set -e
           if svn ls https://dist.apache.org/repos/dist/dev/${SVN_PROJECT}/${SVN_FOLDER} --username "${SVN_USERNAME}" --password "${SVN_PASSWORD}" --non-interactive; then
@@ -474,9 +476,11 @@ jobs:
               -m "Create '${SVN_PROJECT}/${SVN_FOLDER}' dev folder"
           fi
       - name: "📥 Checkout dev repo"
+        if: ${{ vars.ATR_ENABLED != 'true' }}
         run: |
           svn checkout --username "${SVN_USERNAME}" --password "${SVN_PASSWORD}" --non-interactive "https://dist.apache.org/repos/dist/dev/${SVN_PROJECT}/${SVN_FOLDER}" dev-repo
       - name: "🗑️ Remove existing dev version"
+        if: ${{ vars.ATR_ENABLED != 'true' }}
         run: |
           cd dev-repo
           if [ -d "${VERSION}" ]; then
@@ -486,6 +490,7 @@ jobs:
             echo "No existing dev version ${VERSION} to remove"
           fi
       - name: "📥 Fetch source distributions"
+        if: ${{ vars.ATR_ENABLED != 'true' }}
         run: |
           cd dev-repo
           mkdir -p ${VERSION}/sources          
@@ -496,6 +501,7 @@ jobs:
           echo "Downloaded the following files:"
           ls -l
       - name: "📥 Fetch binary distributions"
+        if: ${{ vars.ATR_ENABLED != 'true' }}
         run: |
           cd dev-repo
           mkdir -p ${VERSION}/distribution          
@@ -512,6 +518,7 @@ jobs:
           echo "Downloaded the following files:"
           ls -l
       - name: "🚀 Upload distributions"
+        if: ${{ vars.ATR_ENABLED != 'true' }}
         run: |
           cd dev-repo
           echo "Adding the following files to SVN:"
@@ -520,10 +527,12 @@ jobs:
           svn commit -m "Upload ${PROJECT_NAME} distribution files for ${VERSION}" --username "${SVN_USERNAME}" --password "${SVN_PASSWORD}" --non-interactive
           pwd
       - name: "💾 Store Distribution SVN revision in a file"
+        if: ${{ vars.ATR_ENABLED != 'true' }}
         run: |
           cd dev-repo
           svn info ${VERSION} > DIST_SVN_REVISION.txt
       - name: "📤 Upload Distribution SVN revision"
+        if: ${{ vars.ATR_ENABLED != 'true' }}
         uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
         with:
           tag_name: ${{ env.TAG }}
@@ -546,6 +555,7 @@ jobs:
           echo "Found sha: $sha"
           echo "SHA=${sha}" >> "$GITHUB_ENV"
       - name: "📧 Print Grails Vote Email"
+        if: ${{ vars.ATR_ENABLED != 'true' }}
         run: |
           export DIST_SVN_REVISION=$(awk '/Last Changed Rev:/ {print $4}' dev-repo/DIST_SVN_REVISION.txt)
           export DOCS_ZIP_SIZE=$(numfmt --to=si --suffix=B "$(stat -c %s "dev-repo/${VERSION}/distribution/${DIST_NAME}-${VERSION}-docs.zip")")
@@ -572,14 +582,14 @@ jobs:
       - name: "📧 Optional ATR vote (experimental)"
         run: |
           echo "::group::Apache Trusted Releases (opt-in)"
-          echo "To stage this candidate on ATR as well as dist/dev, either set repository"
-          echo "variable ATR_ENABLED=true (the atr_upload job then runs automatically) or"
+          echo "With ATR_ENABLED=true, this candidate is staged on ATR instead of dist/dev."
+          echo "The atr_upload job then runs automatically. Otherwise, to opt in for this candidate,"
           echo "run workflow 'Release - ATR Upload (experimental)' with version ${VERSION}."
           echo "ATR has no GitHub Action for starting a vote. After upload, start it from"
           echo "the ATR UI (https://releases.apache.org/) or the ATR client."
           echo "The download path suffix is the project setting core/{{VERSION}}."
           echo "Select automatic publication to the SVN distribution area when the vote starts."
-          echo "If you are voting on ATR, discard the printed dist/dev [VOTE] email above;"
+          echo "If a dist/dev [VOTE] email was printed above, discard it when voting on ATR;"
           echo "do not start a second PMC vote against dist/dev."
           echo "See RELEASE.md section 'Apache Trusted Releases (ATR)'."
           echo "::endgroup::"
@@ -724,9 +734,9 @@ jobs:
       - name: "🚀 MANUAL - Release JAR files"
         run: |
           echo "::group::Manual Jar Promotion"
-          echo "Prefer Actions → Release - Promote Nexus Staging with version ${VERSION}"
-          echo "(environment: release). Local fallback:"
+          echo "Release the staged artifacts in the Nexus UI, or run locally:"
           echo "  .github/scripts/releaseJarFiles.sh ${REPO_NAME}:${VERSION} <ASF_USER>"
+          echo "Release - Promote Nexus Staging (experimental) remains unverified for the stage-deployer account."
           echo "::endgroup::"
       - name: "🚀 MANUAL - Promote distribution artifacts"
         # Beta ATR publishes to svn:dist:release itself: https://releases.apache.org/docs/promoting-to-release
