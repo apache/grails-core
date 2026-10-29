@@ -503,6 +503,12 @@ The workflows pin `apache/tooling-actions` to `dcba9f4ed2956f7a30113c3067e766eed
 
 Do not enable ATR auto-archive of the prior release. On the ATR path, the release manager still removes the previous `dist/release` folder by hand so other current release lines are preserved.
 
+After publishing the new release, list the folders with `svn ls https://dist.apache.org/repos/dist/release/grails/core/` and select only the superseded release to remove. Keep the new version and the current releases on other lines. Use the same removal command as `.github/scripts/releaseDistributions.sh` with `SVN_FOLDER=core`, replacing `<folder>` with the selected folder name (without the trailing slash), as your ASF user:
+
+```bash
+svn rm -m "Remove previous release <folder>" https://dist.apache.org/repos/dist/release/grails/core/<folder>
+```
+
 ### Using ATR alongside a Grails release
 
 Keep the current `Release` workflow as the source of signed artifacts. After the `source` job has uploaded the zips to the GitHub Release:
@@ -515,7 +521,11 @@ Keep the current `Release` workflow as the source of signed artifacts. After the
 6. **Public destinations named by the announcement.** Publish the voted documentation zip, release the version to SDKMAN!, and update plus publish the static website so [https://grails.apache.org/download.html](https://grails.apache.org/download.html) lists this version. The generated announcement links to that page. Confirm the page shows the new version before announcing.
 7. **Announce.** Run `Release - ATR Announce (experimental)` once; it always sends to `announce@apache.org`. Leave `announce_body` empty to render `.github/vote_templates/announce.txt` (milestone wording is included only for `M` / `RC` versions). One successful announce must not be repeated for another list. If ATR rejects the call because the artifacts are not on the download mirrors yet, check the ATR finish page and retry that same announce. Do not retry an ambiguous failure. Then send the same body from your `@apache.org` address to `dev@grails.apache.org`, `users@grails.apache.org`, and `dev@groovy.apache.org`.
 
-To verify an ATR candidate, set `GRAILS_DISTRIBUTION_BASE_URL` when running `verify.sh` or `download-release-artifacts.sh`, or supply `distribution_base_url` to `Release - Verify Troubleshooting`, to the ATR candidate directory for that version containing `sources/` and `distribution/`, not a GitHub release URL. Leave it empty to keep the default `https://dist.apache.org/repos/dist/dev/grails/core/<version>`; GitHub release asset downloads remain unchanged.
+To find the verification base URL for an ATR candidate, open that candidate's page on the configured ATR host. The page provides a `curl` download one-liner and a list of file URLs at `/download/urls/<project>/<version>`. Read the actual source and binary file URLs from that list, and take the common directory prefix immediately before `sources/` and `distribution/`. Do not use the candidate page, the URL-list endpoint itself, or a GitHub release URL as the base.
+
+Confirm from the listed URLs that both subfolders are exposed under that common prefix exactly as `atr_upload` uploads them. `etc/bin/download-release-artifacts.sh` appends `/sources/<filename>` for the source artifacts and `/distribution/<filename>` for the binary, wrapper, and documentation artifacts, including their signatures and checksums. Do not assume ATR preserves that layout: if the listed URLs do not expose both subfolders under one base, this override cannot consume them as-is; do not guess a download URL pattern.
+
+Set `GRAILS_DISTRIBUTION_BASE_URL` to that confirmed directory prefix when running `verify.sh` or `download-release-artifacts.sh`, or supply it as `distribution_base_url` to `Release - Verify Troubleshooting`. `verify.sh` passes the variable through to the download script. When the variable is unset or empty, the default remains `https://dist.apache.org/repos/dist/dev/grails/core/<version>`; GitHub release asset downloads remain unchanged.
 
 `previous_version` defaults to the nearest prior release tag reachable from the checked-out release tag's parent, with its leading `v` stripped. Set `previous_version` explicitly to override the lookup; if no prior tag is found, the placeholder check fails unless a fully rendered `announce_body` is supplied.
 
