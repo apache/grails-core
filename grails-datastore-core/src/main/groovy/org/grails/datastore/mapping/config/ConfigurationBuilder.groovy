@@ -37,6 +37,7 @@ import org.springframework.util.PlaceholderResolutionException
 import org.springframework.core.env.EnumerablePropertySource
 import org.springframework.core.env.PropertyResolver
 import org.springframework.core.env.PropertySource
+import org.springframework.core.env.StandardEnvironment
 import org.springframework.util.ClassUtils
 import org.springframework.util.ReflectionUtils
 
@@ -448,6 +449,15 @@ abstract class ConfigurationBuilder<B, C> {
             String prefix = propertyPath + '.'
             Map<String, Object> result = new LinkedHashMap<>()
             for (PropertySource<?> propertySource : environment.propertySources) {
+                // StandardEnvironment also exposes JVM system properties. They are not
+                // prepared configuration. A lower configuration map still has to merge.
+                if (environment instanceof DatastoreEnvironment) {
+                    String sourceName = propertySource.getName()
+                    if (sourceName == StandardEnvironment.SYSTEM_PROPERTIES_PROPERTY_SOURCE_NAME ||
+                            sourceName == StandardEnvironment.SYSTEM_ENVIRONMENT_PROPERTY_SOURCE_NAME) {
+                        continue
+                    }
+                }
                 Object sourceValue = propertySource.getProperty(propertyPath)
                 Map<String, Object> sourceMap = new LinkedHashMap<>()
                 if (sourceValue instanceof Map && !((Map) sourceValue).isEmpty()) {
