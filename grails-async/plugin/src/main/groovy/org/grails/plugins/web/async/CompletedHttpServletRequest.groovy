@@ -65,34 +65,51 @@ import org.grails.web.util.WebUtils
  * and the request of a forward, and each task reads the copy of its request through a {@link #newView view} of its
  * own, so each has the part of the body nothing had read, served through one stream or reader whose position
  * persists, as the live request serves it. A copy holds the attributes, parameters, headers, locales and cookies of
- * its request, the session and what identifies the request. The copies share the attributes and the body, as the
- * requests share them, so attributes a task sets stay with the copies, shared by every task. The request, its
- * response and what holds either, such as the web request of the request thread, are not carried over, so the copy
- * holds nothing the container recycles. What only the live request can do, such as dispatching, processing
- * asynchronously, creating a session or checking a role, is not available.</p>
+ * its request, the session and what identifies the request. The request, its response and what holds either, such
+ * as the web request of the request thread, are not carried over, so the copy holds nothing the container recycles.
+ * What only the live request can do, such as dispatching, processing asynchronously, creating a session or checking
+ * a role, is not available.</p>
  *
- * <p>The parameters are those params reads: the text fields of a multipart request an attribute holds, such as the
- * one the dispatcher resolved, are added, and the request's own value is kept for a name both have. A multipart
- * body the container could not parse leaves the copy without parameters, as params has none, and any other failure
- * to read them is thrown to a task that reads them, as the live request throws it.</p>
+ * <p>The copies share the attributes of the request the container created and the body, as the requests share
+ * them, so attributes a task sets stay with the copies, shared by every task. What a request keeps itself, such as
+ * the forward attributes of the request a forward dispatched, stays with its own copy, as do the attributes it
+ * hides, and setting or removing one of them changes that copy only, as on the request.</p>
+ *
+ * <p>The parameters are those of the request. A multipart body the container could not parse leaves the copy
+ * without parameters, as params has none, and any other failure to read them is thrown to a task that reads them,
+ * as the live request throws it.</p>
  *
  * <p>The uploads of a multipart request are deleted as the request ends, so the copy answers as a multipart
- * request without uploads: through the request of a task when the request was a multipart request, and in place of
- * a multipart request an attribute held, such as the one the dispatcher resolved. Reading params then finds the
- * copied parameters and no uploads.</p>
+ * request without uploads when the request was a multipart request, and a copy of a multipart request an attribute
+ * held, such as the one the dispatcher resolved, takes its place, with its parameters, such as the text fields only
+ * it has. Reading params then finds the parameters it found on the live request and no uploads.</p>
+ *
+ * <p>The body is kept up to {@value #BODY_LIMIT} bytes. Reading a longer one from the copy throws, so the copy is
+ * not what holds an upload that was never read in memory. The body of a multipart request is not kept: its uploads
+ * go with the request, and its text fields are in the parameters.</p>
  *
  * @since 8.0.1
  */
 @CompileStatic
 class CompletedHttpServletRequest implements MultipartHttpServletRequest {
 
+    /**
+     * The longest body, in bytes, a copy keeps: what remains of a longer one is not read.
+     */
+    static final int BODY_LIMIT = 2 * 1024 * 1024
+
     private static final byte[] NO_BODY = new byte[0]
+    private static final int READ_CHUNK = 8192
+    // An attribute the request of a copy hides, though the request the container created has it
+    private static final Object HIDDEN = new Object()
     private static final List<String> DATE_HEADER_FORMS = List.of(
             'EEE, dd MMM yyyy HH:mm:ss zzz',
             'EEEE, dd-MMM-yy HH:mm:ss zzz',
             'EEE MMM dd HH:mm:ss yyyy')
 
     private final Map<String, Object> attributes
+    private final Map<String, Object> ownAttributes
+    // Null when the body was longer than the copy keeps
     private final byte[] body
     private final Map<String, String[]> parameters
     private final RuntimeException parameterFailure
@@ -139,8 +156,9 @@ class CompletedHttpServletRequest implements MultipartHttpServletRequest {
     private BufferedReader reader
 
     private CompletedHttpServletRequest(HttpServletRequest request, Map<String, Object> attributes,
-            CopiedParameters parameters, byte[] body) {
+            Map<String, Object> ownAttributes, CopiedParameters parameters, byte[] body) {
         this.attributes = attributes
+        this.ownAttributes = ownAttributes
         this.parameters = parameters.values
         this.parameterFailure = parameters.failure
         this.body = body
@@ -193,6 +211,7 @@ class CompletedHttpServletRequest implements MultipartHttpServletRequest {
     // Field by field: the getters serve tasks, so some, such as getSession and getLocales, do not return the field
     private CompletedHttpServletRequest(CompletedHttpServletRequest copy) {
         this.attributes = copy.@attributes
+        this.ownAttributes = copy.@ownAttributes
         this.body = copy.@body
         this.parameters = copy.@parameters
         this.parameterFailure = copy.@parameterFailure
@@ -240,53 +259,121 @@ class CompletedHttpServletRequest implements MultipartHttpServletRequest {
     /**
      * Copies the requests the tasks of a request that is completing were given: the request, and any other request
      * a later task was given, such as the request of a forward. It has to be called before the container recycles
-     * the request. Each copy holds what its request shows, and the copies share the attributes and the body, as the
-     * requests share them.
+     * the request. Each copy holds what its request shows, and the copies share the attributes of the request the
+     * container created and the body, as the requests share them.
      *
-     * @param requests the requests, the first being the one whose attributes and body the copies share
+     * @param requests the requests, each the request the container created or a wrapper of it, the first being the
+     *        one whose body the copies share
      * @return the copies, in the order of the requests, with {@code null} for a request after the first that could
      *         not be copied
      */
     static List<CompletedHttpServletRequest> copyOf(List<HttpServletRequest> requests) {
-        HttpServletRequest first = requests.get(0)
-        Map<String, Object> attributes = new ConcurrentHashMap<>()
-        Map<String, MultipartHttpServletRequest> multipartRequests = new LinkedHashMap<>()
-        for (String name : Collections.list(first.attributeNames)) {
-            Object value = first.getAttribute(name)
-            if (value instanceof MultipartHttpServletRequest) {
-                multipartRequests.put(name, (MultipartHttpServletRequest) value)
+        Map<String, Object> underlying = attributesOf(TaskRequest.underlying(requests.get(0)))
+        // The requests to copy: those given, then each multipart request an attribute holds, such as the one the
+        // dispatcher resolved, which wraps the request, so its copy, which has no uploads either, takes its place
+        List<HttpServletRequest> copied = new ArrayList<>(requests)
+        Map<Object, Integer> multipartRequests = new IdentityHashMap<>()
+        for (int i = 0; i < requests.size(); i++) {
+            if (requests.get(i) instanceof MultipartHttpServletRequest) {
+                multipartRequests.putIfAbsent(requests.get(i), i)
             }
-            else if (value != null && !recycledWithRequest(value)) {
-                attributes.put(name, value)
-            }
+        }
+        addMultipartRequests(underlying, copied, multipartRequests)
+        List<Map<String, Object>> shownOtherwise = new ArrayList<>()
+        for (int i = 0; i < copied.size(); i++) {
+            Map<String, Object> shown = differences(attributesOf(copied.get(i)), underlying)
+            shownOtherwise.add(shown)
+            addMultipartRequests(shown, copied, multipartRequests)
         }
         // Every parameter map before the body: parsing the parameters consumes a form body, on the live request too
         List<CopiedParameters> parameters = new ArrayList<>()
-        for (HttpServletRequest request : requests) {
-            parameters.add(copyParameters(request, multipartRequests.values()))
+        for (HttpServletRequest request : copied) {
+            parameters.add(copyParameters(request))
         }
-        byte[] body = copyBody(first)
+        byte[] body = copyBody(requests.get(0))
+        Map<String, Object> attributes = new ConcurrentHashMap<>()
+        List<Map<String, Object>> ownAttributes = new ArrayList<>()
         List<CompletedHttpServletRequest> copies = new ArrayList<>()
-        copies.add(new CompletedHttpServletRequest(first, attributes, parameters.get(0), body))
-        for (int i = 1; i < requests.size(); i++) {
-            copies.add(copyAlongside(requests.get(i), attributes, parameters.get(i), body))
+        for (int i = 0; i < copied.size(); i++) {
+            Map<String, Object> own = new ConcurrentHashMap<>()
+            ownAttributes.add(own)
+            copies.add(i == 0 ? new CompletedHttpServletRequest(copied.get(0), attributes, own, parameters.get(0), body) :
+                    copyAlongside(copied.get(i), attributes, own, parameters.get(i), body))
         }
-        // A multipart request, such as the one the dispatcher resolved, wraps the request, so the copy, which has
-        // no uploads either, takes its place
-        for (String name : multipartRequests.keySet()) {
-            attributes.put(name, copies.get(0))
+        putAttributes(underlying, attributes, multipartRequests, copies, false)
+        for (int i = 0; i < copied.size(); i++) {
+            putAttributes(shownOtherwise.get(i), ownAttributes.get(i), multipartRequests, copies, true)
         }
-        return copies
+        return new ArrayList<>(copies.subList(0, requests.size()))
     }
 
     // A request that can no longer be read leaves its own tasks without a copy, not the tasks of the other requests
     private static CompletedHttpServletRequest copyAlongside(HttpServletRequest request, Map<String, Object> attributes,
-            CopiedParameters parameters, byte[] body) {
+            Map<String, Object> ownAttributes, CopiedParameters parameters, byte[] body) {
         try {
-            return new CompletedHttpServletRequest(request, attributes, parameters, body)
+            return new CompletedHttpServletRequest(request, attributes, ownAttributes, parameters, body)
         }
         catch (RuntimeException ignored) {
             return null
+        }
+    }
+
+    private static Map<String, Object> attributesOf(ServletRequest request) {
+        Map<String, Object> attributes = new LinkedHashMap<>()
+        for (String name : Collections.list(request.attributeNames)) {
+            Object value = request.getAttribute(name)
+            if (value != null) {
+                attributes.put(name, value)
+            }
+        }
+        return attributes
+    }
+
+    // What a request shows otherwise than the request the container created, such as the forward attributes a
+    // forward's request keeps itself: its own values, and the names it hides
+    private static Map<String, Object> differences(Map<String, Object> shown, Map<String, Object> underlying) {
+        Map<String, Object> differences = new LinkedHashMap<>()
+        for (Map.Entry<String, Object> attribute : shown.entrySet()) {
+            if (!Objects.equals(attribute.value, underlying.get(attribute.key))) {
+                differences.put(attribute.key, attribute.value)
+            }
+        }
+        for (String name : underlying.keySet()) {
+            if (!shown.containsKey(name)) {
+                differences.put(name, HIDDEN)
+            }
+        }
+        return differences
+    }
+
+    private static void addMultipartRequests(Map<String, Object> attributes, List<HttpServletRequest> copied,
+            Map<Object, Integer> multipartRequests) {
+        for (Object value : attributes.values()) {
+            if (value instanceof MultipartHttpServletRequest && !multipartRequests.containsKey(value)) {
+                multipartRequests.put(value, copied.size())
+                copied.add((HttpServletRequest) value)
+            }
+        }
+    }
+
+    // The attributes as the copies keep them: a multipart request is replaced by its copy, and what is recycled with
+    // the request is left out, so a request that showed it itself hides it
+    private static void putAttributes(Map<String, Object> attributes, Map<String, Object> kept,
+            Map<Object, Integer> multipartRequests, List<CompletedHttpServletRequest> copies, boolean own) {
+        for (Map.Entry<String, Object> attribute : attributes.entrySet()) {
+            Object value = attribute.value
+            if (value instanceof MultipartHttpServletRequest) {
+                value = copies.get(multipartRequests.get(value))
+            }
+            else if (recycledWithRequest(value)) {
+                value = null
+            }
+            if (value != null) {
+                kept.put(attribute.key, value)
+            }
+            else if (own) {
+                kept.put(attribute.key, HIDDEN)
+            }
         }
     }
 
@@ -309,31 +396,21 @@ class CompletedHttpServletRequest implements MultipartHttpServletRequest {
         return values == null ? null : Arrays.copyOf(values, values.length)
     }
 
-    // The parameters as params reads them: those of the request, then the text fields of a multipart request an
-    // attribute holds, which the request need not have, keeping the request's own value for a name both have
-    private static CopiedParameters copyParameters(HttpServletRequest request,
-            Collection<MultipartHttpServletRequest> multipartRequests) {
-        Map<String, String[]> parameters = new LinkedHashMap<>()
-        RuntimeException failure = null
+    // The parameters of the request, as WebUtils.readParameterMap reads them: a multipart body the container cannot
+    // parse leaves the request without parameters, and any other failure reaches the task that reads them, as on
+    // the request
+    private static CopiedParameters copyParameters(HttpServletRequest request) {
         try {
-            putParameters(ownParameters(request), parameters)
+            Map<String, String[]> parameters = new LinkedHashMap<>()
+            for (Map.Entry<String, String[]> parameter : ownParameters(request).entrySet()) {
+                parameters.put(parameter.key, copyValues(parameter.value))
+            }
+            return new CopiedParameters(Collections.unmodifiableMap(parameters), null)
         }
         catch (RuntimeException unreadable) {
-            // As WebUtils.readParameterMap reads them: a multipart body the container cannot parse leaves the
-            // request without parameters, and any other failure reaches the task that reads them, as on the request
-            if (!WebUtils.isMultipartContentType(request)) {
-                failure = unreadable
-            }
+            return new CopiedParameters(Collections.<String, String[]> emptyMap(),
+                    WebUtils.isMultipartContentType(request) ? null : unreadable)
         }
-        for (MultipartHttpServletRequest multipartRequest : multipartRequests) {
-            try {
-                putParameters(multipartRequest.parameterMap, parameters)
-            }
-            catch (RuntimeException ignored) {
-                // A multipart request that cannot parse its body adds no text fields, as it adds none to params
-            }
-        }
-        return new CopiedParameters(Collections.unmodifiableMap(parameters), failure)
     }
 
     // The parameters of the request or, when a multipart wrapper resolving lazily can no longer parse the body for
@@ -355,12 +432,6 @@ class CompletedHttpServletRequest implements MultipartHttpServletRequest {
         return request instanceof ServletRequestWrapper ? ((ServletRequestWrapper) request).request : null
     }
 
-    private static void putParameters(Map<String, String[]> source, Map<String, String[]> parameters) {
-        for (Map.Entry<String, String[]> parameter : source.entrySet()) {
-            parameters.putIfAbsent(parameter.key, copyValues(parameter.value))
-        }
-    }
-
     private static Cookie[] copyCookies(Cookie[] cookies) {
         if (cookies == null) {
             return null
@@ -372,10 +443,20 @@ class CompletedHttpServletRequest implements MultipartHttpServletRequest {
         return copies
     }
 
+    // What remains of the body, or null when it is longer than the copy keeps
     private static byte[] copyBody(HttpServletRequest request) {
+        if (WebUtils.isMultipartContentType(request)) {
+            // Its uploads go with the request and its text fields are in the parameters, so a multipart body the
+            // request did not read, such as one rejected for its size, is left unread
+            return NO_BODY
+        }
         try {
             InputStream remaining = request.inputStream
-            return remaining == null ? NO_BODY : remaining.readAllBytes()
+            if (remaining == null) {
+                return NO_BODY
+            }
+            byte[] read = remaining.readNBytes(BODY_LIMIT + 1)
+            return read.length > BODY_LIMIT ? null : read
         }
         catch (IllegalStateException ignored) {
             // The body was being read through getReader, so what remains of it is there
@@ -389,7 +470,19 @@ class CompletedHttpServletRequest implements MultipartHttpServletRequest {
     private static byte[] copyBodyOfReader(HttpServletRequest request) {
         try {
             BufferedReader reader = request.reader
-            return reader == null ? NO_BODY : reader.text.getBytes(charset(request.characterEncoding))
+            if (reader == null) {
+                return NO_BODY
+            }
+            StringBuilder text = new StringBuilder()
+            char[] chunk = new char[READ_CHUNK]
+            for (int read = reader.read(chunk); read != -1; read = reader.read(chunk)) {
+                text.append(chunk, 0, read)
+                if (text.length() > BODY_LIMIT) {
+                    return null
+                }
+            }
+            byte[] body = text.toString().getBytes(charset(request.characterEncoding))
+            return body.length > BODY_LIMIT ? null : body
         }
         catch (IllegalStateException | IOException ignored) {
             return NO_BODY
@@ -423,17 +516,34 @@ class CompletedHttpServletRequest implements MultipartHttpServletRequest {
 
     @Override
     Object getAttribute(String name) {
+        Object own = ownAttributes.get(name)
+        if (own != null) {
+            return own.is(HIDDEN) ? null : own
+        }
         return attributes.get(name)
     }
 
     @Override
     Enumeration<String> getAttributeNames() {
-        return Collections.enumeration(new ArrayList<String>(attributes.keySet()))
+        Set<String> names = new LinkedHashSet<>(attributes.keySet())
+        for (Map.Entry<String, Object> own : ownAttributes.entrySet()) {
+            if (own.value.is(HIDDEN)) {
+                names.remove(own.key)
+            }
+            else {
+                names.add(own.key)
+            }
+        }
+        return Collections.enumeration(names)
     }
 
     @Override
     void setAttribute(String name, Object value) {
-        if (value == null) {
+        if (ownAttributes.containsKey(name)) {
+            // The request kept it itself, as a forward's request keeps the forward attributes
+            ownAttributes.put(name, value == null ? HIDDEN : value)
+        }
+        else if (value == null) {
             attributes.remove(name)
         }
         else {
@@ -443,7 +553,12 @@ class CompletedHttpServletRequest implements MultipartHttpServletRequest {
 
     @Override
     void removeAttribute(String name) {
-        attributes.remove(name)
+        if (ownAttributes.containsKey(name)) {
+            ownAttributes.put(name, HIDDEN)
+        }
+        else {
+            attributes.remove(name)
+        }
     }
 
     @Override
@@ -473,6 +588,7 @@ class CompletedHttpServletRequest implements MultipartHttpServletRequest {
 
     @Override
     synchronized ServletInputStream getInputStream() {
+        checkBodyKept()
         if (reader != null) {
             throw new IllegalStateException(
                     'getReader() has already been called, so the body is not available as a stream, as on the live request')
@@ -485,6 +601,7 @@ class CompletedHttpServletRequest implements MultipartHttpServletRequest {
 
     @Override
     synchronized BufferedReader getReader() {
+        checkBodyKept()
         if (inputStream != null) {
             throw new IllegalStateException(
                     'getInputStream() has already been called, so the body is not available as a reader, as on the live request')
@@ -493,6 +610,13 @@ class CompletedHttpServletRequest implements MultipartHttpServletRequest {
             reader = new BufferedReader(new InputStreamReader(new ByteArrayInputStream(body), charset(characterEncoding)))
         }
         return reader
+    }
+
+    private void checkBodyKept() {
+        if (body == null) {
+            throw new IllegalStateException('The request has completed, and the part of its body nothing had read ' +
+                    "was longer than the $BODY_LIMIT bytes its copy keeps, so a task that outlives it cannot read the body")
+        }
     }
 
     @Override

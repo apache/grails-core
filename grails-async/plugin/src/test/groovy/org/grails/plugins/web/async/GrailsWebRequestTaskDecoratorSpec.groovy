@@ -25,6 +25,13 @@ import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 
+import jakarta.servlet.DispatcherType
+import jakarta.servlet.FilterChain
+import jakarta.servlet.ReadListener
+import jakarta.servlet.RequestDispatcher
+import jakarta.servlet.ServletInputStream
+import jakarta.servlet.ServletRequest
+import jakarta.servlet.ServletResponse
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletRequestWrapper
 
@@ -893,6 +900,402 @@ class GrailsWebRequestTaskDecoratorSpec extends Specification {
         seen.response == null
     }
 
+    @Issue('https://github.com/apache/grails-core/issues/15851')
+    void 'a task started during a forward reads the live request until the request that forwarded has been processed'() {
+        given: 'a request the container recycles once it completes, without a session yet'
+        MockHttpServletRequest live = request()
+        live.session = null
+        AtomicBoolean recycled = new AtomicBoolean()
+        HttpServletRequest facade = recyclable(live, recycled)
+
+        and: 'processing that forwards, as an action does, and goes on once the forward returns'
+        List<Map> seen = []
+        Runnable decorated = null
+        FilterChain processing = { ServletRequest request, ServletResponse response ->
+            GrailsWebRequest outer = bind((HttpServletRequest) request)
+            // The forward binds a web request of its own to the request the container dispatches, and completes it
+            GrailsWebRequest forward = bind(new ForwardedRequest((HttpServletRequest) request, '/books/show'))
+            decorated = readingLate(seen)
+            forward.requestCompleted()
+            WebUtils.storeGrailsWebRequest(outer)
+            decorated.run()
+            request.setAttribute('late', 'set after the forward')
+            outer.requestCompleted()
+        } as FilterChain
+
+        when: 'the request is processed, and recycled before the task runs again'
+        new TaskRequestFilter().doFilter(facade, new MockHttpServletResponse(), processing)
+        recycled.set(true)
+        RequestContextHolder.resetRequestAttributes()
+        decorated.run()
+
+        then: 'once the forward had returned, the task still read the live request, so it could create the session'
+        seen[0] == [late: null, session: true, uri: '/books/show']
+        live.session != null
+
+        and: 'the copy holds what the request had once it had been processed'
+        seen[1] == [late: 'set after the forward', session: true, uri: '/books/show']
+    }
+
+    @Issue('https://github.com/apache/grails-core/issues/15851')
+    void 'a task started before a forward that completes the web request it reused reads the live request until the request has been processed'() {
+        given:
+        MockHttpServletRequest live = request()
+        live.session = null
+        AtomicBoolean recycled = new AtomicBoolean()
+        HttpServletRequest facade = recyclable(live, recycled)
+
+        and: 'processing that forwards through a request dispatcher, as a view of a forward does'
+        List<Map> seen = []
+        Runnable decorated = null
+        FilterChain processing = { ServletRequest request, ServletResponse response ->
+            GrailsWebRequest outer = bind((HttpServletRequest) request)
+            decorated = readingLate(seen)
+            // The dispatcher servlet the forward reaches reuses the active web request, and completes it as it returns
+            outer.requestCompleted()
+            decorated.run()
+            request.setAttribute('late', 'set after the forward')
+        } as FilterChain
+
+        when:
+        new TaskRequestFilter().doFilter(facade, new MockHttpServletResponse(), processing)
+        recycled.set(true)
+        RequestContextHolder.resetRequestAttributes()
+        decorated.run()
+
+        then:
+        seen[0] == [late: null, session: true, uri: '/books/save']
+        seen[1] == [late: 'set after the forward', session: true, uri: '/books/save']
+    }
+
+    @Issue('https://github.com/apache/grails-core/issues/15851')
+    void 'a dispatch within one the filter already marks, such as an error page some containers dispatch, does not end its processing'() {
+        given:
+        MockHttpServletRequest live = request()
+        live.session = null
+        AtomicBoolean recycled = new AtomicBoolean()
+        HttpServletRequest facade = recyclable(live, recycled)
+
+        and:
+        List<Map> seen = []
+        Runnable decorated = null
+        FilterChain processing = { ServletRequest request, ServletResponse response ->
+            GrailsWebRequest outer = bind((HttpServletRequest) request)
+            decorated = readingLate(seen)
+            new TaskRequestFilter().doFilter(request, response, { ServletRequest dispatched, ServletResponse rendered -> } as FilterChain)
+            decorated.run()
+            request.setAttribute('late', 'set after the error page')
+            outer.requestCompleted()
+        } as FilterChain
+
+        when:
+        new TaskRequestFilter().doFilter(facade, new MockHttpServletResponse(), processing)
+        recycled.set(true)
+        RequestContextHolder.resetRequestAttributes()
+        decorated.run()
+
+        then:
+        seen[0] == [late: null, session: true, uri: '/books/save']
+        seen[1] == [late: 'set after the error page', session: true, uri: '/books/save']
+    }
+
+    @Issue('https://github.com/apache/grails-core/issues/15851')
+    void 'a request the filter marks that is processed asynchronously is copied once the asynchronous processing completes'() {
+        given:
+        MockHttpServletRequest live = request()
+        live.asyncSupported = true
+        AtomicBoolean recycled = new AtomicBoolean()
+        HttpServletRequest facade = recyclable(live, recycled)
+
+        and: 'processing that starts the asynchronous processing and a task the response waits for'
+        Map seen = [:]
+        Runnable rendering = null
+        Runnable outliving = null
+        FilterChain processing = { ServletRequest request, ServletResponse response ->
+            GrailsWebRequest outer = bind((HttpServletRequest) request)
+            request.startAsync()
+            rendering = new GrailsWebRequestTaskDecorator().decorate {
+                GrailsWebRequest.lookup().currentRequest.setAttribute('rendered', 'by the task')
+            }
+            outliving = new GrailsWebRequestTaskDecorator().decorate {
+                seen.rendered = GrailsWebRequest.lookup().currentRequest.getAttribute('rendered')
+            }
+            outer.requestCompleted()
+        } as FilterChain
+
+        when: 'the dispatch ends, and the task the response waits for runs'
+        new TaskRequestFilter().doFilter(facade, new MockHttpServletResponse(), processing)
+        RequestContextHolder.resetRequestAttributes()
+        rendering.run()
+
+        then: 'the task rendered through the live request'
+        live.getAttribute('rendered') == 'by the task'
+
+        when: 'the asynchronous processing completes and the request is recycled'
+        live.asyncContext.complete()
+        recycled.set(true)
+        outliving.run()
+
+        then:
+        seen.rendered == 'by the task'
+    }
+
+    @Issue('https://github.com/apache/grails-core/issues/15851')
+    @Unroll
+    void 'each copy keeps the forward attributes its own request shows, when the task given the #first was started first'() {
+        given: 'a request, and a forward of it, which keeps the forward attributes itself'
+        MockHttpServletRequest live = request()
+        AtomicBoolean recycled = new AtomicBoolean()
+        HttpServletRequest facade = recyclable(live, recycled)
+        GrailsWebRequest original = bind(facade)
+        GrailsWebRequest forward = bind(new ForwardedRequest(facade, '/books/show'))
+
+        and: 'a task given each, in that order'
+        Map<String, GrailsWebRequest> webRequests = [request: original, forward: forward]
+        Map seen = [:]
+        Map<String, Runnable> tasks = [:]
+        for (String name : order) {
+            WebUtils.storeGrailsWebRequest(webRequests[name])
+            tasks[name] = readingDispatch(seen, name)
+        }
+        RequestContextHolder.resetRequestAttributes()
+
+        when: 'the request completes and is recycled before the tasks run'
+        forward.requestCompleted()
+        original.requestCompleted()
+        recycled.set(true)
+        tasks.forward.run()
+        tasks.request.run()
+
+        then: 'the copy of the forward is a forward from the request, and the copy of the request is not'
+        seen.forward == [forward: true, forwardURI: '/books/save', uri: '/books/show', shared: null]
+        seen.request == [forward: false, forwardURI: '/books/save', uri: '/books/save', shared: 'set by the forward task']
+
+        where:
+        first     | order
+        'request' | ['request', 'forward']
+        'forward' | ['forward', 'request']
+    }
+
+    @Issue('https://github.com/apache/grails-core/issues/15851')
+    void 'a task changes an attribute a forward keeps itself on the copy of the forward only, as on the live request'() {
+        given: 'a request holding an include attribute, and a forward of it, which answers the dispatch attributes itself'
+        MockHttpServletRequest live = request()
+        AtomicBoolean recycled = new AtomicBoolean()
+        HttpServletRequest facade = recyclable(live, recycled)
+        facade.setAttribute(RequestDispatcher.INCLUDE_REQUEST_URI, '/books/sidebar')
+        GrailsWebRequest original = bind(facade)
+
+        and:
+        Map seen = [:]
+        Runnable onRequest = readingAttributes(seen, 'request')
+        GrailsWebRequest forward = bind(new ForwardedRequest(facade, '/books/show'))
+        Runnable changing = new GrailsWebRequestTaskDecorator().decorate {
+            HttpServletRequest request = GrailsWebRequest.lookup().currentRequest
+            request.setAttribute(RequestDispatcher.FORWARD_REQUEST_URI, '/books/list')
+            request.removeAttribute(RequestDispatcher.FORWARD_SERVLET_PATH)
+            request.setAttribute('model', 'authors')
+        }
+        Runnable onForward = readingAttributes(seen, 'forward')
+        RequestContextHolder.resetRequestAttributes()
+
+        when: 'the request completes and is recycled, and a task changes attributes of the copy of the forward'
+        forward.requestCompleted()
+        original.requestCompleted()
+        recycled.set(true)
+        changing.run()
+        onRequest.run()
+        onForward.run()
+
+        then: 'the forward attributes changed on the copy of the forward only, and the shared attribute on both'
+        seen.forward == [forwardURI: '/books/list', servletPath: null, include: null, model: 'authors',
+                         names: [RequestDispatcher.FORWARD_REQUEST_URI]]
+        seen.request == [forwardURI: null, servletPath: null, include: '/books/sidebar', model: 'authors',
+                         names: [RequestDispatcher.INCLUDE_REQUEST_URI]]
+    }
+
+    @Issue('https://github.com/apache/grails-core/issues/15851')
+    @Unroll
+    void 'params of each copy reads what it read on the live request, when the task given the #first was started first'() {
+        given: 'a multipart request the dispatcher resolved and published, and a forward that adds a parameter'
+        MockHttpServletRequest live = request()
+        AtomicBoolean recycled = new AtomicBoolean()
+        HttpServletRequest facade = recyclable(live, recycled)
+        LazyMultipartHttpServletRequest multipart = new LazyMultipartHttpServletRequest(facade, new AtomicBoolean())
+        multipart.addField('summary', 'A web framework')
+        facade.setAttribute(WebUtils.MULTIPART_HTTP_SERVLET_REQUEST_ATTRIBUTE, multipart)
+        GrailsWebRequest original = bind(facade)
+        ForwardedRequest forwarded = new ForwardedRequest(facade, '/books/show')
+        forwarded.addField('page', '2')
+        GrailsWebRequest forward = bind(forwarded)
+
+        and: 'a task given each, in that order'
+        Map<String, GrailsWebRequest> webRequests = [request: original, forward: forward]
+        Map seen = [:]
+        Map<String, Runnable> tasks = [:]
+        for (String name : order) {
+            WebUtils.storeGrailsWebRequest(webRequests[name])
+            tasks[name] = readingParams(seen, name)
+        }
+        RequestContextHolder.resetRequestAttributes()
+
+        when: 'both run while the request is live'
+        tasks.values()*.run()
+        Map during = new LinkedHashMap(seen)
+
+        and: 'again once the request has completed and been recycled'
+        forward.requestCompleted()
+        original.requestCompleted()
+        recycled.set(true)
+        tasks.values()*.run()
+
+        then: 'params added the text field of the multipart request to each, and the parameter of the forward to its own'
+        during.request == [title: 'Grails', summary: 'A web framework', page: null]
+        during.forward == [title: 'Grails', summary: 'A web framework', page: '2']
+        seen == during
+
+        where:
+        first     | order
+        'request' | ['request', 'forward']
+        'forward' | ['forward', 'request']
+    }
+
+    @Issue('https://github.com/apache/grails-core/issues/15851')
+    void 'the body of a multipart request is not copied, so an upload rejected for its size is not read'() {
+        given: 'a multipart request whose body the container refused to parse for its size'
+        UnparsableRequest live = new UnparsableRequest(new IllegalStateException('The upload exceeds the maximum size'))
+        live.contentType = 'multipart/form-data; boundary=grails'
+        live.body = new ArrivingBody(16 * 1024 * 1024)
+        AtomicBoolean recycled = new AtomicBoolean()
+        GrailsWebRequest original = bind(recyclable(live, recycled))
+
+        and:
+        Map seen = [:]
+        Runnable decorated = new GrailsWebRequestTaskDecorator().decorate {
+            seen.body = GrailsWebRequest.lookup().currentRequest.inputStream.bytes.length
+        }
+        RequestContextHolder.resetRequestAttributes()
+
+        when:
+        original.requestCompleted()
+        recycled.set(true)
+        decorated.run()
+
+        then: 'nothing of the upload was read, and the copy has no body'
+        live.body.consumed == 0
+        seen.body == 0
+    }
+
+    @Issue('https://github.com/apache/grails-core/issues/15851')
+    @Unroll
+    void 'a body longer than the copy keeps is not read whole, and reading it from the copy fails, when the request was reading it through #source'() {
+        given: 'a request with a long body nothing read, or that was being read through a reader'
+        StreamingRequest live = new StreamingRequest()
+        live.contentType = 'application/octet-stream'
+        live.body = new ArrivingBody(16 * 1024 * 1024)
+        if (reading) {
+            live.reader.read()
+        }
+        AtomicBoolean recycled = new AtomicBoolean()
+        GrailsWebRequest original = bind(recyclable(live, recycled))
+
+        and:
+        Map<String, Throwable> failures = [:]
+        Runnable decorated = new GrailsWebRequestTaskDecorator().decorate {
+            HttpServletRequest request = GrailsWebRequest.lookup().currentRequest
+            [stream: { request.inputStream }, reader: { request.reader }].each { String name, Closure operation ->
+                try {
+                    operation.call()
+                }
+                catch (Throwable failure) {
+                    failures[name] = failure
+                }
+            }
+        }
+        RequestContextHolder.resetRequestAttributes()
+
+        when:
+        original.requestCompleted()
+        recycled.set(true)
+        decorated.run()
+
+        then: 'what was read of the body is about what the copy keeps'
+        live.body.consumed < 4 * 1024 * 1024
+
+        and: 'the copy has no body to read'
+        failures.keySet() == ['stream', 'reader'] as Set
+        failures.values().every { it instanceof IllegalStateException && it.message.startsWith('The request has completed') }
+
+        where:
+        source       | reading
+        'the stream' | false
+        'a reader'   | true
+    }
+
+    @Issue('https://github.com/apache/grails-core/issues/15851')
+    void 'a body as long as the copy keeps is copied whole'() {
+        given:
+        StreamingRequest live = new StreamingRequest()
+        live.contentType = 'application/octet-stream'
+        live.body = new ArrivingBody(CompletedHttpServletRequest.BODY_LIMIT)
+        AtomicBoolean recycled = new AtomicBoolean()
+        GrailsWebRequest original = bind(recyclable(live, recycled))
+
+        and:
+        Map seen = [:]
+        Runnable decorated = new GrailsWebRequestTaskDecorator().decorate {
+            seen.body = GrailsWebRequest.lookup().currentRequest.inputStream.bytes.length
+        }
+        RequestContextHolder.resetRequestAttributes()
+
+        when:
+        original.requestCompleted()
+        recycled.set(true)
+        decorated.run()
+
+        then:
+        seen.body == CompletedHttpServletRequest.BODY_LIMIT
+    }
+
+    // A task reading what changes on the request after a forward, and creating the session, which only the live
+    // request can do
+    private static Runnable readingLate(List<Map> seen) {
+        return new GrailsWebRequestTaskDecorator().decorate {
+            HttpServletRequest request = GrailsWebRequest.lookup().currentRequest
+            seen << [late: request.getAttribute('late'), session: request.getSession(true) != null, uri: request.requestURI]
+        }
+    }
+
+    // A task reading how its request was dispatched, as WebUtils tells it, and setting an attribute every task shares
+    private static Runnable readingDispatch(Map seen, String name) {
+        return new GrailsWebRequestTaskDecorator().decorate {
+            HttpServletRequest request = GrailsWebRequest.lookup().currentRequest
+            seen[name] = [forward: WebUtils.isForward(request), forwardURI: WebUtils.getForwardURI(request),
+                          uri: request.requestURI, shared: request.getAttribute('shared')]
+            request.setAttribute('shared', "set by the $name task".toString())
+        }
+    }
+
+    private static Runnable readingAttributes(Map seen, String name) {
+        return new GrailsWebRequestTaskDecorator().decorate {
+            HttpServletRequest request = GrailsWebRequest.lookup().currentRequest
+            seen[name] = [forwardURI: request.getAttribute(RequestDispatcher.FORWARD_REQUEST_URI),
+                          servletPath: request.getAttribute(RequestDispatcher.FORWARD_SERVLET_PATH),
+                          include: request.getAttribute(RequestDispatcher.INCLUDE_REQUEST_URI),
+                          model: request.getAttribute('model'),
+                          names: Collections.list(request.attributeNames).findAll { String attribute ->
+                              attribute.startsWith('jakarta.servlet.')
+                          }.sort()]
+        }
+    }
+
+    private static Runnable readingParams(Map seen, String name) {
+        return new GrailsWebRequestTaskDecorator().decorate {
+            GrailsParameterMap params = GrailsWebRequest.lookup().params
+            seen[name] = [title: params.title, summary: params.summary, page: params.page]
+        }
+    }
+
     // A task reading an upload as an action does, through params and through the multipart request
     private static Runnable readingUpload(Map seen, String stage) {
         return new GrailsWebRequestTaskDecorator().decorate {
@@ -1044,15 +1447,165 @@ class GrailsWebRequestTaskDecoratorSpec extends Specification {
         }
     }
 
+    // Stands for the request a container dispatches for a forward, such as Tomcat's, which answers the dispatch
+    // attributes itself, and whose parameters can have those of the query string of the forward
+    private static class ForwardedRequest extends FieldsRequestWrapper {
+
+        private final String uri
+        private final Map<String, Object> dispatchAttributes = new LinkedHashMap<>()
+
+        ForwardedRequest(HttpServletRequest request, String uri) {
+            super(request)
+            this.uri = uri
+            dispatchAttributes.put(RequestDispatcher.FORWARD_REQUEST_URI, request.requestURI)
+            dispatchAttributes.put(RequestDispatcher.FORWARD_SERVLET_PATH, request.requestURI)
+        }
+
+        @Override
+        Object getAttribute(String name) {
+            return dispatchAttribute(name) ? dispatchAttributes.get(name) : super.getAttribute(name)
+        }
+
+        @Override
+        Enumeration<String> getAttributeNames() {
+            Set<String> names = new LinkedHashSet<>()
+            for (String name : Collections.list(super.getAttributeNames())) {
+                if (!dispatchAttribute(name)) {
+                    names.add(name)
+                }
+            }
+            names.addAll(dispatchAttributes.keySet())
+            return Collections.enumeration(names)
+        }
+
+        @Override
+        void setAttribute(String name, Object value) {
+            if (!dispatchAttribute(name)) {
+                super.setAttribute(name, value)
+            }
+            else if (value == null) {
+                dispatchAttributes.remove(name)
+            }
+            else {
+                dispatchAttributes.put(name, value)
+            }
+        }
+
+        @Override
+        void removeAttribute(String name) {
+            if (dispatchAttribute(name)) {
+                dispatchAttributes.remove(name)
+            }
+            else {
+                super.removeAttribute(name)
+            }
+        }
+
+        @Override
+        String getRequestURI() {
+            return uri
+        }
+
+        @Override
+        DispatcherType getDispatcherType() {
+            return DispatcherType.FORWARD
+        }
+
+        private static boolean dispatchAttribute(String name) {
+            return name.startsWith('jakarta.servlet.forward.') || name.startsWith('jakarta.servlet.include.')
+        }
+    }
+
+    // Stands for a body that arrives as it is read, counting what was read of it
+    private static class ArrivingBody extends ServletInputStream {
+
+        private final long length
+        long consumed
+
+        ArrivingBody(long length) {
+            this.length = length
+        }
+
+        @Override
+        int read() {
+            if (consumed >= length) {
+                return -1
+            }
+            consumed++
+            return 120
+        }
+
+        @Override
+        int read(byte[] destination, int offset, int count) {
+            if (count == 0) {
+                return 0
+            }
+            if (consumed >= length) {
+                return -1
+            }
+            int filled = (int) Math.min((long) count, length - consumed)
+            Arrays.fill(destination, offset, offset + filled, (byte) 120)
+            consumed += filled
+            return filled
+        }
+
+        @Override
+        boolean isFinished() {
+            return consumed >= length
+        }
+
+        @Override
+        boolean isReady() {
+            return true
+        }
+
+        @Override
+        void setReadListener(ReadListener readListener) {
+            throw new UnsupportedOperationException()
+        }
+    }
+
+    // Stands for a request whose body arrives as it is read, through a stream or a reader
+    private static class StreamingRequest extends MockHttpServletRequest {
+
+        ArrivingBody body
+        private BufferedReader bodyReader
+
+        StreamingRequest() {
+            super(new MockServletContext(), 'POST', '/books/save')
+            addHeader('Accept', 'application/json')
+        }
+
+        @Override
+        ServletInputStream getInputStream() {
+            if (body == null) {
+                return super.getInputStream()
+            }
+            if (bodyReader != null) {
+                throw new IllegalStateException('getReader() has already been called for this request')
+            }
+            return body
+        }
+
+        @Override
+        BufferedReader getReader() {
+            if (body == null) {
+                return super.getReader()
+            }
+            if (bodyReader == null) {
+                bodyReader = new BufferedReader(new InputStreamReader(body, 'UTF-8'))
+            }
+            return bodyReader
+        }
+    }
+
     // Stands for a request whose parameters the container cannot parse, which fails every read of them
-    private static class UnparsableRequest extends MockHttpServletRequest {
+    private static class UnparsableRequest extends StreamingRequest {
 
         private final RuntimeException failure
 
         UnparsableRequest(RuntimeException failure) {
-            super(new MockServletContext(), 'POST', '/books/save')
             this.failure = failure
-            addHeader('Accept', 'application/json')
         }
 
         @Override

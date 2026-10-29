@@ -50,12 +50,18 @@ import org.grails.web.servlet.mvc.GrailsWebRequest
  * through a view of its own, so each has the body to read. A multipart request stays one, without the uploads,
  * which go with the request.</p>
  *
+ * <p>A request completes when the dispatch the container started for it ends, as {@link TaskRequestFilter} tells,
+ * after any forward or include within it, though each of those completes the web request it bound or reused as it
+ * returns. Without the filter, such as in a unit test, the request completes with the web request the first of its
+ * tasks was started during.</p>
+ *
  * @since 8.0.1
  */
 @CompileStatic
 class TaskRequest implements InvocationHandler {
 
     private static final String STATE = TaskRequest.name + '.STATE'
+    private static final String PROCESSING = TaskRequest.name + '.PROCESSING'
     private static final String COMPLETION_CALLBACK = TaskRequest.name + '.COMPLETION'
 
     private final GivenRequest given
@@ -87,19 +93,58 @@ class TaskRequest implements InvocationHandler {
                 new TaskRequest(givenOf(webRequest, current)))
     }
 
+    /**
+     * Marks the request while the dispatch the container started for it is processed, unless an enclosing dispatch
+     * already marked it.
+     *
+     * @param request the request of the dispatch
+     * @return whether the request was marked, so the dispatch has to call {@link #processed} as it ends
+     */
+    @PackageScope
+    static boolean processing(ServletRequest request) {
+        ServletRequest underlying = underlying(request)
+        if (underlying.getAttribute(PROCESSING) != null) {
+            return false
+        }
+        underlying.setAttribute(PROCESSING, Boolean.TRUE)
+        return true
+    }
+
+    /**
+     * Ends the processing {@link #processing} marked: the requests the tasks of the request were given are copied,
+     * or, while the request is processed asynchronously, as that processing completes.
+     *
+     * @param request the request of the dispatch
+     */
+    @PackageScope
+    static void processed(ServletRequest request) {
+        ServletRequest underlying = underlying(request)
+        underlying.removeAttribute(PROCESSING)
+        Object state = underlying.getAttribute(STATE)
+        if (state instanceof RequestState) {
+            ((RequestState) state).requestCompleted()
+        }
+    }
+
     // One state for the request, however many tasks it has and whichever request each was given, so completing it
     // copies every request its tasks were given at once
     private static GivenRequest givenOf(GrailsWebRequest webRequest, HttpServletRequest current) {
-        // A request a forward dispatched or a filter wrapped shares the attributes of the request it wraps, so its
-        // tasks find the state of the request, unless the request has completed
-        GivenRequest given = boundTo(current)?.give(current)
+        // The state lives on the request the container created, which every wrapper of it, such as the request a
+        // forward dispatched, shows, so the tasks of the request find it, unless the request has completed
+        ServletRequest underlying = underlying(current)
+        GivenRequest given = boundTo(underlying)?.give(current)
         if (given != null) {
             return given
         }
         RequestState state = new RequestState()
         given = state.give(current)
-        if (webRequest.isActive()) {
-            current.setAttribute(STATE, state)
+        if (marked(underlying)) {
+            // Copied as the dispatch the container started ends, though a forward or an include within it binds a
+            // web request of its own, or reuses this one, and completes it as it returns
+            underlying.setAttribute(STATE, state)
+        }
+        else if (webRequest.isActive()) {
+            underlying.setAttribute(STATE, state)
             webRequest.registerDestructionCallback(COMPLETION_CALLBACK, state::requestCompleted,
                     RequestAttributes.SCOPE_REQUEST)
         }
@@ -109,15 +154,39 @@ class TaskRequest implements InvocationHandler {
         return given
     }
 
-    private static RequestState boundTo(HttpServletRequest current) {
+    private static RequestState boundTo(ServletRequest underlying) {
         try {
-            Object state = current.getAttribute(STATE)
+            Object state = underlying.getAttribute(STATE)
             return state instanceof RequestState ? (RequestState) state : null
         }
         catch (IllegalStateException ignored) {
             // The container has already recycled the request
             return null
         }
+    }
+
+    private static boolean marked(ServletRequest underlying) {
+        try {
+            return underlying.getAttribute(PROCESSING) != null
+        }
+        catch (IllegalStateException ignored) {
+            return false
+        }
+    }
+
+    /**
+     * The request the container created, which the given request is or wraps.
+     *
+     * @param request a request
+     * @return the innermost request of its wrappers
+     */
+    @PackageScope
+    static ServletRequest underlying(ServletRequest request) {
+        ServletRequest underlying = request
+        for (ServletRequest wrapped = unwrap(request); wrapped != null; wrapped = unwrap(wrapped)) {
+            underlying = wrapped
+        }
+        return underlying
     }
 
     // Every public view of the request and of the requests it wraps, such as a multipart wrapper's, so the task
@@ -255,7 +324,7 @@ class TaskRequest implements InvocationHandler {
                 requests.add(request.live)
             }
             try {
-                requests.get(0).removeAttribute(STATE)
+                underlying(requests.get(0)).removeAttribute(STATE)
                 List<CompletedHttpServletRequest> copies = CompletedHttpServletRequest.copyOf(requests)
                 for (int i = 0; i < copies.size(); i++) {
                     given.get(i).copy = copies.get(i)
