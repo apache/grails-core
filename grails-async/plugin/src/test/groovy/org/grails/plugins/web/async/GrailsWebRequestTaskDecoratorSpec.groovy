@@ -45,6 +45,7 @@ import org.springframework.web.multipart.MultipartHttpServletRequest
 
 import grails.util.GrailsWebMockUtil
 import grails.web.mime.MimeType
+import grails.web.servlet.mvc.GrailsParameterMap
 import grails.web.mime.MimeTypeUtils
 import org.grails.web.mime.DefaultMimeTypeResolver
 import org.grails.web.servlet.mvc.GrailsWebRequest
@@ -270,6 +271,52 @@ class GrailsWebRequestTaskDecoratorSpec extends Specification {
         seen.outer == '{"title":"Grails"}'
         seen.inner == '{"title":"Grails"}'
         seen.shared == 'ran'
+    }
+
+    @Issue('https://github.com/apache/grails-core/issues/15851')
+    void 'each task sees the request it was given, though an earlier task of the request was given the request it wraps'() {
+        given: 'a request the web request filter bound'
+        MockHttpServletRequest live = request()
+        AtomicBoolean recycled = new AtomicBoolean()
+        HttpServletRequest facade = recyclable(live, recycled)
+        GrailsWebRequest original = bind(facade)
+
+        and: 'a task started then'
+        List<Map> first = []
+        Runnable started = new GrailsWebRequestTaskDecorator().decorate {
+            GrailsWebRequest webRequest = GrailsWebRequest.lookup()
+            first << [summary: webRequest.params.summary, marked: webRequest.currentRequest.getAttribute('marked')]
+        }
+
+        and: 'a task started later, while a web request is bound to a wrapper of the request, as a forward binds one'
+        FieldsRequestWrapper wrapper = new FieldsRequestWrapper(facade)
+        wrapper.addField('summary', 'A web framework')
+        bind(wrapper)
+        List<Map> later = []
+        Runnable startedLater = new GrailsWebRequestTaskDecorator().decorate {
+            GrailsWebRequest webRequest = GrailsWebRequest.lookup()
+            later << [summary: webRequest.params.summary]
+            webRequest.currentRequest.setAttribute('marked', "run ${later.size()}".toString())
+        }
+        RequestContextHolder.resetRequestAttributes()
+
+        when: 'both run while the request is live'
+        startedLater.run()
+        started.run()
+
+        then: 'each sees the request it was given, and what one sets reaches the other'
+        later == [[summary: 'A web framework']]
+        first == [[summary: null, marked: 'run 1']]
+
+        when: 'the request completes and is recycled, and both run again'
+        original.requestCompleted()
+        recycled.set(true)
+        startedLater.run()
+        started.run()
+
+        then: 'each sees the copy of the request it was given, and the copies share the attributes'
+        later[1] == [summary: 'A web framework']
+        first[1] == [summary: null, marked: 'run 2']
     }
 
     @Issue('https://github.com/apache/grails-core/issues/15851')
@@ -541,6 +588,74 @@ class GrailsWebRequestTaskDecoratorSpec extends Specification {
     }
 
     @Issue('https://github.com/apache/grails-core/issues/15851')
+    void 'the copy keeps the text fields only the multipart request the dispatcher resolved has, with the request value of a field both have'() {
+        given: 'a multipart request the dispatcher resolved and published, with text fields the request does not have'
+        MockHttpServletRequest live = request()
+        AtomicBoolean recycled = new AtomicBoolean()
+        HttpServletRequest facade = recyclable(live, recycled)
+        LazyMultipartHttpServletRequest multipart = new LazyMultipartHttpServletRequest(facade, new AtomicBoolean())
+        multipart.addField('summary', 'A web framework')
+        multipart.addField('title', 'Overridden')
+        facade.setAttribute(WebUtils.MULTIPART_HTTP_SERVLET_REQUEST_ATTRIBUTE, multipart)
+        GrailsWebRequest original = bind(facade)
+
+        and:
+        Map seen = [:]
+        Runnable during = readingFields(seen, 'during')
+        Runnable outliving = readingFields(seen, 'afterwards')
+        RequestContextHolder.resetRequestAttributes()
+
+        when: 'the request is still live'
+        during.run()
+
+        then: 'params adds the text fields of the multipart request, keeping the value of the request'
+        seen.during == [title: 'Grails', summary: 'A web framework']
+
+        when: 'the request completes and is recycled before the next task'
+        original.requestCompleted()
+        recycled.set(true)
+        outliving.run()
+
+        then: 'the copy has what params had'
+        seen.afterwards == [title: 'Grails', summary: 'A web framework']
+    }
+
+    @Issue('https://github.com/apache/grails-core/issues/15851')
+    void 'Groovy code calls the request of a task through its interfaces, though the request is written in Groovy'() {
+        given: 'a request in a wrapper written in Groovy, as the requests of Grails unit tests are'
+        MockHttpServletRequest live = request()
+        AtomicBoolean recycled = new AtomicBoolean()
+        FieldsRequestWrapper wrapper = new FieldsRequestWrapper(recyclable(live, recycled))
+        wrapper.addField('summary', 'A web framework')
+        GrailsWebRequest original = bind(wrapper)
+
+        and: 'a task calling the request dynamically, as Groovy code does'
+        List<Map> seen = []
+        Runnable decorated = new GrailsWebRequestTaskDecorator().decorate {
+            def request = GrailsWebRequest.lookup().currentRequest
+            Map read = [groovyObject: request instanceof GroovyObject, summary: request.getParameter('summary'),
+                        uri: request.requestURI]
+            try {
+                request.addField('title', 'Changed')
+            }
+            catch (MissingMethodException ignored) {
+                read.addField = 'missing'
+            }
+            seen << read
+        }
+        RequestContextHolder.resetRequestAttributes()
+
+        when: 'the task runs while the request is live, and again once it has completed'
+        decorated.run()
+        original.requestCompleted()
+        recycled.set(true)
+        decorated.run()
+
+        then: 'the interfaces answer, and a method only the class of the request has is missing, as on any request'
+        seen == [[groovyObject: false, summary: 'A web framework', uri: '/books/save', addField: 'missing']] * 2
+    }
+
+    @Issue('https://github.com/apache/grails-core/issues/15851')
     void 'a task starts for a request wrapping one with an interface the class loader of the request cannot see'() {
         given: 'a request from a class loader of its own, inside a wrapper from the application class loader'
         GroovyClassLoader isolated = new GroovyClassLoader(GrailsWebRequestTaskDecoratorSpec.classLoader)
@@ -606,6 +721,76 @@ class GrailsWebRequestTaskDecoratorSpec extends Specification {
 
         and: 'the upload went with the request'
         seen.upload == null
+    }
+
+    @Issue('https://github.com/apache/grails-core/issues/15851')
+    void 'a multipart request the container cannot parse is copied without parameters, as params reads it'() {
+        given: 'a multipart request whose body the container refused to parse, as when an upload breaks a limit'
+        UnparsableRequest live = new UnparsableRequest(new IllegalStateException('The upload exceeds the maximum size'))
+        live.contentType = 'multipart/form-data; boundary=grails'
+        boolean noLiveParams = new GrailsParameterMap(live).isEmpty()
+        AtomicBoolean recycled = new AtomicBoolean()
+        GrailsWebRequest original = bind(recyclable(live, recycled))
+
+        and:
+        Map seen = [:]
+        Runnable decorated = new GrailsWebRequestTaskDecorator().decorate {
+            GrailsWebRequest webRequest = GrailsWebRequest.lookup()
+            seen.accept = webRequest.currentRequest.getHeader('Accept')
+            seen.params = webRequest.params
+            seen.title = webRequest.currentRequest.getParameter('title')
+        }
+        RequestContextHolder.resetRequestAttributes()
+
+        when:
+        original.requestCompleted()
+        recycled.set(true)
+        decorated.run()
+
+        then: 'the rest of the request is copied'
+        seen.accept == 'application/json'
+
+        and: 'it has no parameters, as params has none on the live request'
+        noLiveParams
+        seen.params.isEmpty()
+        seen.title == null
+    }
+
+    @Issue('https://github.com/apache/grails-core/issues/15851')
+    void 'a request whose parameters cannot be read is still copied, and reading them fails as on the live request'() {
+        given:
+        IllegalArgumentException failure = new IllegalArgumentException('The parameters are malformed')
+        UnparsableRequest live = new UnparsableRequest(failure)
+        live.contentType = 'application/x-www-form-urlencoded'
+        AtomicBoolean recycled = new AtomicBoolean()
+        GrailsWebRequest original = bind(recyclable(live, recycled))
+
+        and:
+        Map seen = [:]
+        Runnable decorated = new GrailsWebRequestTaskDecorator().decorate {
+            HttpServletRequest request = GrailsWebRequest.lookup().currentRequest
+            seen.accept = request.getHeader('Accept')
+            seen.uri = request.requestURI
+            try {
+                request.getParameter('title')
+            }
+            catch (Throwable thrown) {
+                seen.failure = thrown
+            }
+        }
+        RequestContextHolder.resetRequestAttributes()
+
+        when:
+        original.requestCompleted()
+        recycled.set(true)
+        decorated.run()
+
+        then: 'the rest of the request is copied'
+        seen.accept == 'application/json'
+        seen.uri == '/books/save'
+
+        and: 'reading the parameters fails as it did on the live request'
+        seen.failure.is(failure)
     }
 
     @Issue('https://github.com/apache/grails-core/issues/15851')
@@ -717,6 +902,14 @@ class GrailsWebRequestTaskDecoratorSpec extends Specification {
         }
     }
 
+    // A task reading the fields of a form as an action does, through params
+    private static Runnable readingFields(Map seen, String stage) {
+        return new GrailsWebRequestTaskDecorator().decorate {
+            GrailsWebRequest webRequest = GrailsWebRequest.lookup()
+            seen[stage] = [title: webRequest.params.title, summary: webRequest.params.summary]
+        }
+    }
+
     private static boolean collected(WeakReference<?> reference) {
         for (int attempt = 0; attempt < 100 && reference.get() != null; attempt++) {
             System.gc()
@@ -742,9 +935,48 @@ class GrailsWebRequestTaskDecoratorSpec extends Specification {
         return webRequest
     }
 
+    // Stands for a wrapper whose parameters have fields the request it wraps does not have, such as the wrapper of
+    // FormContentFilter, or a multipart request, which reads the text fields of the body; a field wins over the
+    // request's value, as it does on a multipart request
+    private static class FieldsRequestWrapper extends HttpServletRequestWrapper {
+
+        private final Map<String, String[]> fields = new LinkedHashMap<>()
+
+        FieldsRequestWrapper(HttpServletRequest request) {
+            super(request)
+        }
+
+        void addField(String name, String value) {
+            fields.put(name, [value] as String[])
+        }
+
+        @Override
+        String getParameter(String name) {
+            String[] values = getParameterMap().get(name)
+            return values ? values[0] : null
+        }
+
+        @Override
+        Enumeration<String> getParameterNames() {
+            return Collections.enumeration(getParameterMap().keySet())
+        }
+
+        @Override
+        String[] getParameterValues(String name) {
+            return getParameterMap().get(name)
+        }
+
+        @Override
+        Map<String, String[]> getParameterMap() {
+            Map<String, String[]> parameters = new LinkedHashMap<>(super.getParameterMap())
+            parameters.putAll(fields)
+            return parameters
+        }
+    }
+
     // Stands for a lazily resolving multipart wrapper, which parses the body for its parameters when they are
     // first read and can no longer do so once the body is consumed, as the request completes
-    private static class LazyMultipartHttpServletRequest extends HttpServletRequestWrapper
+    private static class LazyMultipartHttpServletRequest extends FieldsRequestWrapper
             implements MultipartHttpServletRequest {
 
         private final AtomicBoolean consumed
@@ -758,33 +990,11 @@ class GrailsWebRequestTaskDecoratorSpec extends Specification {
             }
         }
 
-        private void parse() {
+        @Override
+        Map<String, String[]> getParameterMap() {
             if (consumed.get()) {
                 throw new MultipartException('The multipart body was consumed before it was parsed')
             }
-        }
-
-        @Override
-        String getParameter(String name) {
-            parse()
-            return super.getParameter(name)
-        }
-
-        @Override
-        Enumeration<String> getParameterNames() {
-            parse()
-            return super.getParameterNames()
-        }
-
-        @Override
-        String[] getParameterValues(String name) {
-            parse()
-            return super.getParameterValues(name)
-        }
-
-        @Override
-        Map<String, String[]> getParameterMap() {
-            parse()
             return super.getParameterMap()
         }
 
@@ -831,6 +1041,38 @@ class GrailsWebRequestTaskDecoratorSpec extends Specification {
         @Override
         String getMultipartContentType(String paramOrFileName) {
             return files.getFirst(paramOrFileName)?.contentType
+        }
+    }
+
+    // Stands for a request whose parameters the container cannot parse, which fails every read of them
+    private static class UnparsableRequest extends MockHttpServletRequest {
+
+        private final RuntimeException failure
+
+        UnparsableRequest(RuntimeException failure) {
+            super(new MockServletContext(), 'POST', '/books/save')
+            this.failure = failure
+            addHeader('Accept', 'application/json')
+        }
+
+        @Override
+        String getParameter(String name) {
+            throw failure
+        }
+
+        @Override
+        Enumeration<String> getParameterNames() {
+            throw failure
+        }
+
+        @Override
+        String[] getParameterValues(String name) {
+            throw failure
+        }
+
+        @Override
+        Map<String, String[]> getParameterMap() {
+            throw failure
         }
     }
 

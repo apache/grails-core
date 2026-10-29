@@ -25,6 +25,7 @@ import java.lang.reflect.Modifier
 import java.lang.reflect.Proxy
 
 import groovy.transform.CompileStatic
+import groovy.transform.PackageScope
 
 import jakarta.servlet.AsyncEvent
 import jakarta.servlet.AsyncListener
@@ -39,13 +40,15 @@ import org.grails.web.servlet.mvc.GrailsWebRequest
 /**
  * The request a task started during a web request sees.
  *
- * <p>Until the request completes, it is that request, with every public view the request and the requests it
- * wraps offer, such as a multipart wrapper's, so a task the response waits for, such as one started with
- * {@code WebPromises}, renders through it. The container recycles the request once it completes, including any
- * asynchronous processing, so from then on it is a {@link CompletedHttpServletRequest copy} of the request taken
- * as it completed, and the recycled request is released. One copy is taken for the request, however many tasks
- * it has, and each task reads it through a view of its own, so each has the body to read. A multipart request
- * stays one, without the uploads, which go with the request.</p>
+ * <p>Until the request completes, it is the request the task was given, with every public view that request and
+ * the requests it wraps offer, such as a multipart wrapper's, so a task the response waits for, such as one started
+ * with {@code WebPromises}, renders through it. Tasks of one request can be given different requests, such as the
+ * request and the request of a forward, and each task keeps its own. The container recycles the request once it
+ * completes, including any asynchronous processing, so from then on each task sees a
+ * {@link CompletedHttpServletRequest copy} of its request taken as the request completed, and the recycled request
+ * is released. The copies are taken once for the request, however many tasks it has, and each task reads its copy
+ * through a view of its own, so each has the body to read. A multipart request stays one, without the uploads,
+ * which go with the request.</p>
  *
  * @since 8.0.1
  */
@@ -55,11 +58,11 @@ class TaskRequest implements InvocationHandler {
     private static final String STATE = TaskRequest.name + '.STATE'
     private static final String COMPLETION_CALLBACK = TaskRequest.name + '.COMPLETION'
 
-    private final RequestState state
+    private final GivenRequest given
     private CompletedHttpServletRequest view
 
-    private TaskRequest(RequestState state) {
-        this.state = state
+    private TaskRequest(GivenRequest given) {
+        this.given = given
     }
 
     /**
@@ -74,23 +77,27 @@ class TaskRequest implements InvocationHandler {
         if (Proxy.isProxyClass(current.getClass())) {
             InvocationHandler handler = Proxy.getInvocationHandler(current)
             if (handler instanceof TaskRequest) {
-                // A task started from a task reads the same request through a view of its own
+                // A task started from a task reads the request that task was given through a view of its own
                 return (HttpServletRequest) Proxy.newProxyInstance(current.getClass().classLoader,
-                        current.getClass().interfaces, new TaskRequest(((TaskRequest) handler).state))
+                        current.getClass().interfaces, new TaskRequest(((TaskRequest) handler).given))
             }
         }
         ClassLoader loader = current.getClass().classLoader ?: TaskRequest.classLoader
         return (HttpServletRequest) Proxy.newProxyInstance(loader, interfacesOf(current, loader),
-                new TaskRequest(stateOf(webRequest, current)))
+                new TaskRequest(givenOf(webRequest, current)))
     }
 
-    // One state for the request, however many tasks it has, so completing it takes the one copy they all read
-    private static RequestState stateOf(GrailsWebRequest webRequest, HttpServletRequest current) {
-        RequestState existing = boundTo(current)
-        if (existing != null) {
-            return existing
+    // One state for the request, however many tasks it has and whichever request each was given, so completing it
+    // copies every request its tasks were given at once
+    private static GivenRequest givenOf(GrailsWebRequest webRequest, HttpServletRequest current) {
+        // A request a forward dispatched or a filter wrapped shares the attributes of the request it wraps, so its
+        // tasks find the state of the request, unless the request has completed
+        GivenRequest given = boundTo(current)?.give(current)
+        if (given != null) {
+            return given
         }
-        RequestState state = new RequestState(current)
+        RequestState state = new RequestState()
+        given = state.give(current)
         if (webRequest.isActive()) {
             current.setAttribute(STATE, state)
             webRequest.registerDestructionCallback(COMPLETION_CALLBACK, state::requestCompleted,
@@ -99,7 +106,7 @@ class TaskRequest implements InvocationHandler {
         else {
             state.requestCompleted()
         }
-        return state
+        return given
     }
 
     private static RequestState boundTo(HttpServletRequest current) {
@@ -128,8 +135,11 @@ class TaskRequest implements InvocationHandler {
 
     private static void addInterfaces(Class<?>[] candidates, ClassLoader loader, Set<Class<?>> interfaces) {
         for (Class<?> candidate : candidates) {
-            // A proxy class can only implement interfaces it can access, through the class loader that defines it
-            if (Modifier.isPublic(candidate.modifiers) && visibleFrom(loader, candidate) && interfaces.add(candidate)) {
+            // A proxy class can only implement interfaces it can access, through the class loader that defines it.
+            // Nor is it a Groovy object, so Groovy calls it through these interfaces, not through the meta class of
+            // the request's class, whose methods it does not have
+            if (Modifier.isPublic(candidate.modifiers) && !GroovyObject.isAssignableFrom(candidate) &&
+                    visibleFrom(loader, candidate) && interfaces.add(candidate)) {
                 addInterfaces(candidate.interfaces, loader, interfaces)
             }
         }
@@ -166,7 +176,7 @@ class TaskRequest implements InvocationHandler {
         if (method.name == 'hashCode' && method.parameterCount == 0) {
             return System.identityHashCode(proxy)
         }
-        HttpServletRequest current = state.live
+        HttpServletRequest current = given.live
         if (current == null) {
             current = view()
         }
@@ -186,22 +196,39 @@ class TaskRequest implements InvocationHandler {
 
     private synchronized HttpServletRequest view() {
         if (view == null) {
-            view = state.copyView()
+            view = given.copyView()
         }
         return view
     }
 
+    // What the tasks of one request share: its completion, which copies every request they were given at once
     private static final class RequestState implements AsyncListener {
 
-        private volatile HttpServletRequest live
-        private volatile CompletedHttpServletRequest copy
+        private final List<GivenRequest> given = new ArrayList<>()
+        private boolean completed
 
-        private RequestState(HttpServletRequest live) {
-            this.live = live
+        // The request a task was given, shared by the tasks given the same request, or null once the request has
+        // completed
+        private synchronized GivenRequest give(HttpServletRequest request) {
+            if (completed) {
+                return null
+            }
+            for (GivenRequest existing : given) {
+                if (existing.live.is(request)) {
+                    return existing
+                }
+            }
+            GivenRequest added = new GivenRequest(request)
+            given.add(added)
+            return added
+        }
+
+        private synchronized HttpServletRequest first() {
+            return completed ? null : given.get(0).live
         }
 
         private void requestCompleted() {
-            HttpServletRequest current = live
+            HttpServletRequest current = first()
             if (current == null) {
                 return
             }
@@ -215,39 +242,39 @@ class TaskRequest implements InvocationHandler {
             catch (IllegalStateException ignored) {
                 // Too late to be told when the asynchronous processing completes, so the request is copied now
             }
-            copyRequest()
+            copyRequests()
         }
 
-        private void copyRequest() {
-            HttpServletRequest current = live
-            if (current == null) {
+        private synchronized void copyRequests() {
+            if (completed) {
                 return
             }
+            completed = true
+            List<HttpServletRequest> requests = new ArrayList<>()
+            for (GivenRequest request : given) {
+                requests.add(request.live)
+            }
             try {
-                current.removeAttribute(STATE)
-                copy = CompletedHttpServletRequest.copyOf(current)
+                requests.get(0).removeAttribute(STATE)
+                List<CompletedHttpServletRequest> copies = CompletedHttpServletRequest.copyOf(requests)
+                for (int i = 0; i < copies.size(); i++) {
+                    given.get(i).copy = copies.get(i)
+                }
             }
             catch (RuntimeException ignored) {
                 // The container has already recycled the request, so there is nothing left to copy
             }
             finally {
-                // Released whether or not the copy was taken, so no task holds the recycled request
-                live = null
+                // Released whether or not the copies were taken, so no task holds the recycled request
+                for (GivenRequest request : given) {
+                    request.live = null
+                }
             }
-        }
-
-        private CompletedHttpServletRequest copyView() {
-            CompletedHttpServletRequest completed = copy
-            if (completed == null) {
-                throw new IllegalStateException(
-                        'The request has completed, and it was recycled before it could be copied, so a task that outlives it cannot read it')
-            }
-            return completed.newView()
         }
 
         @Override
         void onComplete(AsyncEvent event) {
-            copyRequest()
+            copyRequests()
         }
 
         @Override
@@ -262,6 +289,31 @@ class TaskRequest implements InvocationHandler {
         void onStartAsync(AsyncEvent event) {
             // Starting another asynchronous cycle removes the listeners of the one before
             event.asyncContext.addListener(this)
+        }
+    }
+
+    // A request tasks were given: the request itself until the request completes, then the copy of it
+    private static final class GivenRequest {
+
+        @PackageScope
+        volatile HttpServletRequest live
+
+        @PackageScope
+        volatile CompletedHttpServletRequest copy
+
+        @PackageScope
+        GivenRequest(HttpServletRequest live) {
+            this.live = live
+        }
+
+        @PackageScope
+        CompletedHttpServletRequest copyView() {
+            CompletedHttpServletRequest completed = copy
+            if (completed == null) {
+                throw new IllegalStateException(
+                        'The request has completed, and it was recycled before it could be copied, so a task that outlives it cannot read it')
+            }
+            return completed.newView()
         }
     }
 }
