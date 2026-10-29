@@ -46,25 +46,27 @@ import org.grails.datastore.mapping.config.UniqueNulls;
  */
 public enum UniqueNullsPerDialect implements DialectKeyed<UniqueNullsPerDialect> {
 
-    ORACLE(UniqueNulls.VALUE, OracleDialect.class),
+    ORACLE(UniqueNulls.VALUE, true, OracleDialect.class),
 
     // Db2 for IBM i and z/OS: `create unique where not null index`, under which nulls are not equal; their dialects
     // extend the one for Linux, UNIX and Windows, so they come first
-    DB2_IBM_I(UniqueNulls.SKIP, DB2iDialect.class),
+    DB2_IBM_I(UniqueNulls.SKIP, false, DB2iDialect.class),
 
-    DB2_ZOS(UniqueNulls.SKIP, DB2zDialect.class),
+    DB2_ZOS(UniqueNulls.SKIP, false, DB2zDialect.class),
 
     // Db2 for Linux, UNIX and Windows: `exclude null keys` leaves out only a key that is null in every column
-    DB2(UniqueNulls.VALUE, DB2Dialect.class),
+    DB2(UniqueNulls.VALUE, true, DB2Dialect.class),
 
-    DEFAULT(UniqueNulls.SKIP, Dialect.class);
+    DEFAULT(UniqueNulls.SKIP, false, Dialect.class);
 
     private final UniqueNulls uniqueNulls;
+    private final boolean entirelyNullKeyExempt;
     private final Class<? extends Dialect>[] dialectClasses;
 
     @SafeVarargs
-    UniqueNullsPerDialect(UniqueNulls uniqueNulls, Class<? extends Dialect>... dialectClasses) {
+    UniqueNullsPerDialect(UniqueNulls uniqueNulls, boolean entirelyNullKeyExempt, Class<? extends Dialect>... dialectClasses) {
         this.uniqueNulls = uniqueNulls;
+        this.entirelyNullKeyExempt = entirelyNullKeyExempt;
         this.dialectClasses = dialectClasses;
     }
 
@@ -80,5 +82,9 @@ public enum UniqueNullsPerDialect implements DialectKeyed<UniqueNullsPerDialect>
 
     public UniqueNulls uniqueNulls() {
         return uniqueNulls;
+    }
+
+    public boolean isEntirelyNullKeyExempt() {
+        return entirelyNullKeyExempt;
     }
 }

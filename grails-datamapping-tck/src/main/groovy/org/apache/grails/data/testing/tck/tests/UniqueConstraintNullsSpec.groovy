@@ -82,6 +82,7 @@ class UniqueConstraintNullsSpec extends GrailsDataTckSpec {
     void 'a constraint without a reading follows the database for the probe (#language, #country)'() {
         given:
         UniqueNulls databaseReading = manager.session.datastore.databaseUniqueNulls
+        boolean entirelyNullExempt = manager.session.datastore.entirelyNullKeyExempt
         [['en', 'US'], ['en', null], [null, 'US'], [null, null]].each { String l, String c ->
             UniqueNullKeyDatabase.newInstance(language: l, country: c).save(validate: false, flush: true)
         }
@@ -90,7 +91,9 @@ class UniqueConstraintNullsSpec extends GrailsDataTckSpec {
         databaseReading in [UniqueNulls.SKIP, UniqueNulls.VALUE]
         manager.session.datastore.uniqueNulls == databaseReading
         !new UniqueNullKeyDatabase(language: language, country: country).validate() ==
-                (databaseReading == UniqueNulls.VALUE ? valueConflicts : skipConflicts)
+                (databaseReading == UniqueNulls.VALUE
+                        ? ((language == null && country == null && entirelyNullExempt) ? skipConflicts : valueConflicts)
+                        : skipConflicts)
 
         where:
         language | country || valueConflicts | skipConflicts

@@ -300,6 +300,12 @@ public abstract class AbstractHibernateDatastore extends AbstractDatastore imple
         return UniqueNullsPerDialect.forDialect(dialect).uniqueNulls();
     }
 
+    @Override
+    public boolean isEntirelyNullKeyExempt() {
+        Dialect dialect = ((SessionFactoryImplementor) getSessionFactory()).getJdbcServices().getDialect();
+        return UniqueNullsPerDialect.forDialect(dialect).isEntirelyNullKeyExempt();
+    }
+
     /**
      * @return The {@link DataSource} being used by this datastore instance
      */

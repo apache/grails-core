@@ -129,13 +129,23 @@ public abstract class AbstractDatastore implements Datastore, StatelessDatastore
      */
     @Override
     public UniqueNulls getUniqueNulls() {
+        UniqueNulls configured = getConfiguredUniqueNulls();
+        return configured == null || configured == UniqueNulls.DATABASE ? getDatabaseUniqueNulls() : configured;
+    }
+
+    @Override
+    public UniqueNulls getConfiguredUniqueNulls() {
         PropertyResolver configuration = connectionDetails;
         if (configuration == null && this instanceof ConnectionSourcesProvider<?, ?> provider && provider.getConnectionSources() != null) {
             configuration = provider.getConnectionSources().getBaseConfiguration();
         }
-        UniqueNulls configured = configuration == null ? null :
+        return configuration == null ? null :
                 UniqueNulls.of(configuration.getProperty(Settings.SETTING_UNIQUE_NULLS));
-        return configured == null || configured == UniqueNulls.DATABASE ? getDatabaseUniqueNulls() : configured;
+    }
+
+    @Override
+    public boolean isEntirelyNullKeyExempt() {
+        return true;
     }
 
     protected static PropertyResolver mapToPropertyResolver(Map<String, Object> connectionDetails) {

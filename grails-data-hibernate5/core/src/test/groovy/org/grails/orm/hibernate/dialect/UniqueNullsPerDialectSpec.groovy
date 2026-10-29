@@ -37,22 +37,23 @@ import org.grails.datastore.mapping.config.UniqueNulls
 class UniqueNullsPerDialectSpec extends Specification {
 
     @Unroll
-    void '#dialect reads a null in a unique key as #expected'() {
+    void '#dialect reads a null in a unique key as #expected with all-null exempt #allNullExempt'() {
         expect:
         UniqueNullsPerDialect.forDialect(dialect).uniqueNulls() == expected
+        UniqueNullsPerDialect.forDialect(dialect).isEntirelyNullKeyExempt() == allNullExempt
 
         where:
-        dialect                       || expected
-        new H2Dialect()               || UniqueNulls.SKIP
-        new PostgreSQL95Dialect()     || UniqueNulls.SKIP
-        new MySQL57Dialect()          || UniqueNulls.SKIP
-        new DB2Dialect()              || UniqueNulls.VALUE
-        new DB2400Dialect()           || UniqueNulls.VALUE
-        new DB2390Dialect()           || UniqueNulls.VALUE
-        new Oracle10gDialect()        || UniqueNulls.VALUE
-        new Oracle9Dialect()          || UniqueNulls.VALUE
-        new OracleDialect()           || UniqueNulls.VALUE
-        new SQLServer2012Dialect()    || UniqueNulls.VALUE
-        new SybaseASE157Dialect()     || UniqueNulls.VALUE
+        dialect                       || expected          | allNullExempt
+        new H2Dialect()               || UniqueNulls.SKIP  | false
+        new PostgreSQL95Dialect()     || UniqueNulls.SKIP  | false
+        new MySQL57Dialect()          || UniqueNulls.SKIP  | false
+        new DB2Dialect()              || UniqueNulls.VALUE | false
+        new DB2400Dialect()           || UniqueNulls.VALUE | false
+        new DB2390Dialect()           || UniqueNulls.VALUE | false
+        new Oracle10gDialect()        || UniqueNulls.VALUE | true
+        new Oracle9Dialect()          || UniqueNulls.VALUE | true
+        new OracleDialect()           || UniqueNulls.VALUE | true
+        new SQLServer2012Dialect()    || UniqueNulls.VALUE | false
+        new SybaseASE157Dialect()     || UniqueNulls.VALUE | false
     }
 }

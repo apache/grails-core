@@ -49,7 +49,9 @@ class UniqueNullsSpec extends Specification {
             NullsKeyFollowing,
             NullsFolderWildcard,
             NullsFolderSkip,
-            NullsFolderValue
+            NullsFolderValue,
+            NullsSingleProperty,
+            NullsSinglePropertyValue
     )
 
     def setup() {
@@ -78,7 +80,19 @@ class UniqueNullsSpec extends Specification {
         'wildcard' | NullsKeyWildcard  || [true, true, false, false, false, false]
         'skip'     | NullsKeySkip      || [true, false, false, false, false, false]
         'value'    | NullsKeyValue     || [true, true, false, true, true, false]
-        'database' | NullsKeyFollowing || [true, true, false, true, true, false]
+        'database' | NullsKeyFollowing || [true, true, false, true, false, false]
+    }
+
+    void 'a nullable unique property without a group allows multiple nulls by default, and rejects under value'() {
+        given:
+        new NullsSingleProperty(email: null).save(validate: false, flush: true)
+        new NullsSinglePropertyValue(email: null).save(validate: false, flush: true)
+
+        expect: 'default database reading allows a second null instance'
+        new NullsSingleProperty(email: null).validate()
+
+        and: 'explicit value reading rejects a second null instance'
+        !new NullsSinglePropertyValue(email: null).validate()
     }
 
     @Unroll
@@ -282,5 +296,25 @@ class NullsFolderValue {
     static constraints = {
         name(unique: [group: 'parent', nulls: 'value'])
         parent(nullable: true)
+    }
+}
+
+@Entity
+class NullsSingleProperty {
+
+    String email
+
+    static constraints = {
+        email(nullable: true, unique: true)
+    }
+}
+
+@Entity
+class NullsSinglePropertyValue {
+
+    String email
+
+    static constraints = {
+        email(nullable: true, unique: [nulls: 'value'])
     }
 }

@@ -129,7 +129,7 @@ The unique index Hibernate creates for the group treats `null` values as follows
 |A row with a `null` in some of the key columns is indexed, and its other columns are compared, so `('en', null)` twice is a violation.
 |===
 
-A datastore that keeps no such index, such as MongoDB, reads `database` as `value`.
+Under `database`, an entirely null key `(null, null)` or an optional single property with value `null` is accepted everywhere except SQL Server, Sybase and Db2 on Hibernate 5, where the plain unique constraint compares it. Datastores without a unique index of their own—MongoDB, Neo4j and the in-memory datastore of unit tests—read `value` for a partly null key and accept an entirely null one. An explicit `value`, on the constraint or in `grails.gorm.unique.nulls`, rejects an entirely null key on every datastore.
 
 To select a reading for one constraint, give the constraint a map with the `group` and the reading as `nulls`:
 

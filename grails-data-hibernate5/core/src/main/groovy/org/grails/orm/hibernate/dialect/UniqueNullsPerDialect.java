@@ -53,22 +53,24 @@ import org.grails.datastore.mapping.config.UniqueNulls;
  */
 public enum UniqueNullsPerDialect {
 
-    ORACLE(UniqueNulls.VALUE, Oracle8iDialect.class, Oracle9Dialect.class),
+    ORACLE(UniqueNulls.VALUE, true, Oracle8iDialect.class, Oracle9Dialect.class),
 
-    SQL_SERVER(UniqueNulls.VALUE, SQLServerDialect.class),
+    SQL_SERVER(UniqueNulls.VALUE, false, SQLServerDialect.class),
 
-    SYBASE(UniqueNulls.VALUE, SybaseDialect.class),
+    SYBASE(UniqueNulls.VALUE, false, SybaseDialect.class),
     // every Db2 dialect of Hibernate 5 creates a plain unique index, which compares null values
-    DB2(UniqueNulls.VALUE, DB2Dialect.class),
+    DB2(UniqueNulls.VALUE, false, DB2Dialect.class),
 
-    DEFAULT(UniqueNulls.SKIP, Dialect.class);
+    DEFAULT(UniqueNulls.SKIP, false, Dialect.class);
 
     private final UniqueNulls uniqueNulls;
+    private final boolean entirelyNullKeyExempt;
     private final Class<? extends Dialect>[] dialectClasses;
 
     @SafeVarargs
-    UniqueNullsPerDialect(UniqueNulls uniqueNulls, Class<? extends Dialect>... dialectClasses) {
+    UniqueNullsPerDialect(UniqueNulls uniqueNulls, boolean entirelyNullKeyExempt, Class<? extends Dialect>... dialectClasses) {
         this.uniqueNulls = uniqueNulls;
+        this.entirelyNullKeyExempt = entirelyNullKeyExempt;
         this.dialectClasses = dialectClasses;
     }
 
@@ -82,5 +84,9 @@ public enum UniqueNullsPerDialect {
 
     public UniqueNulls uniqueNulls() {
         return uniqueNulls;
+    }
+
+    public boolean isEntirelyNullKeyExempt() {
+        return entirelyNullKeyExempt;
     }
 }

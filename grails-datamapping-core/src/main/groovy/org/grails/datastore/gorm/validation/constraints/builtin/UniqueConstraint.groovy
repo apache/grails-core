@@ -153,7 +153,8 @@ class UniqueConstraint extends AbstractConstraint {
             throw new IllegalStateException("Cannot validate object [$target]. It is not a persistent entity")
         }
 
-        UniqueNulls nullsReading = resolveNulls(GormRegistry.findDatastore(constraintClass))
+        Datastore datastore = GormRegistry.findDatastore(constraintClass)
+        UniqueNulls nullsReading = resolveNulls(datastore)
         if (propertyValue == null && nullsReading != UniqueNulls.VALUE) {
             // a null constrained value is not a value to be unique, unless nulls are values
             return
@@ -162,6 +163,21 @@ class UniqueConstraint extends AbstractConstraint {
         EntityReflector reflector = targetEntity.reflector
         String constraintPropertyName = this.constraintPropertyName
         List group = this.group
+
+        boolean isEntirelyNull = propertyValue == null
+        if (isEntirelyNull && !group.isEmpty()) {
+            for (prop in group) {
+                if (reflector.getProperty(target, prop.toString()) != null) {
+                    isEntirelyNull = false
+                    break
+                }
+            }
+        }
+        boolean explicitValue = this.nulls == UniqueNulls.VALUE ||
+                (this.nulls == null && datastore != null && datastore.getConfiguredUniqueNulls() == UniqueNulls.VALUE)
+        if (isEntirelyNull && !explicitValue && (datastore == null || datastore.isEntirelyNullKeyExempt())) {
+            return
+        }
 
         if (target instanceof DirtyCheckable) {
             Boolean anyChanges = target.hasChanged(constraintPropertyName)

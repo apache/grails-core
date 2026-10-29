@@ -335,6 +335,11 @@ class Neo4jQuery extends Query {
         @Override
         @CompileStatic
         CypherExpression handle(GraphPersistentEntity entity, Query.IsNull criterion, CypherBuilder builder, String prefix) {
+            PersistentProperty prop = entity.getPropertyByName(criterion.property)
+            if (!(entity instanceof RelationshipPersistentEntity) && prop instanceof Association && !(prop instanceof Basic) && !(prop instanceof Embedded)) {
+                String pattern = entity.formatAssociationPatternFromExisting((Association) prop, '', prefix, '')
+                return new CypherExpression("NOT ${pattern}")
+            }
             return new CypherExpression("${entity.formatProperty(prefix, criterion.property)} IS NULL")
         }
             },
@@ -359,6 +364,11 @@ class Neo4jQuery extends Query {
         @Override
         @CompileStatic
         CypherExpression handle(GraphPersistentEntity entity, Query.IsNotNull criterion, CypherBuilder builder, String prefix) {
+            PersistentProperty prop = entity.getPropertyByName(criterion.property)
+            if (!(entity instanceof RelationshipPersistentEntity) && prop instanceof Association && !(prop instanceof Basic) && !(prop instanceof Embedded)) {
+                String pattern = entity.formatAssociationPatternFromExisting((Association) prop, '', prefix, '')
+                return new CypherExpression(pattern)
+            }
             return new CypherExpression("${entity.formatProperty(prefix, criterion.property)} IS NOT NULL")
         }
             },

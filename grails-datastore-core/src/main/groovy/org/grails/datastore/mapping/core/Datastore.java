@@ -110,6 +110,27 @@ public interface Datastore extends ServiceRegistry {
     }
 
     /**
+     * The configured {@link UniqueNulls} reading from settings, before resolving {@link UniqueNulls#DATABASE}.
+     *
+     * @return the configured mode, or {@code null} if unconfigured
+     */
+    default UniqueNulls getConfiguredUniqueNulls() {
+        return null;
+    }
+
+    /**
+     * Whether the unique index of the database this datastore keeps omits a key that is {@code null} in every
+     * column, or the datastore does not have a unique index of its own (such as {@code MongoDatastore},
+     * {@code Neo4jDatastore} or {@code SimpleMapDatastore}), so that two rows whose unique key is entirely null
+     * do not conflict.
+     *
+     * @return {@code true} if entirely-null unique keys are exempt from uniqueness checks under the database reading
+     */
+    default boolean isEntirelyNullKeyExempt() {
+        return true;
+    }
+
+    /**
      * Execute the given closure with a session
      *
      * @param callable The callable

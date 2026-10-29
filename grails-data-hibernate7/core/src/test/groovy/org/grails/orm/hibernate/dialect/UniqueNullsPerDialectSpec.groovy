@@ -36,21 +36,22 @@ import org.grails.datastore.mapping.config.UniqueNulls
 class UniqueNullsPerDialectSpec extends Specification {
 
     @Unroll
-    void '#dialect.class.simpleName reads a null in a unique key as #expected'() {
+    void '#dialect.class.simpleName reads a null in a unique key as #expected with all-null exempt #allNullExempt'() {
         expect:
         UniqueNullsPerDialect.forDialect(dialect).uniqueNulls() == expected
+        UniqueNullsPerDialect.forDialect(dialect).isEntirelyNullKeyExempt() == allNullExempt
 
         where:
-        dialect                 || expected
-        new H2Dialect()         || UniqueNulls.SKIP
-        new PostgreSQLDialect() || UniqueNulls.SKIP
-        new CockroachDialect()  || UniqueNulls.SKIP
-        new MySQLDialect()      || UniqueNulls.SKIP
-        new MariaDBDialect()    || UniqueNulls.SKIP
-        new SQLServerDialect()  || UniqueNulls.SKIP
-        new OracleDialect()     || UniqueNulls.VALUE
-        new DB2Dialect()        || UniqueNulls.VALUE
-        new DB2iDialect()       || UniqueNulls.SKIP
-        new DB2zDialect()       || UniqueNulls.SKIP
+        dialect                 || expected          | allNullExempt
+        new H2Dialect()         || UniqueNulls.SKIP  | false
+        new PostgreSQLDialect() || UniqueNulls.SKIP  | false
+        new CockroachDialect()  || UniqueNulls.SKIP  | false
+        new MySQLDialect()      || UniqueNulls.SKIP  | false
+        new MariaDBDialect()    || UniqueNulls.SKIP  | false
+        new SQLServerDialect()  || UniqueNulls.SKIP  | false
+        new OracleDialect()     || UniqueNulls.VALUE | true
+        new DB2Dialect()        || UniqueNulls.VALUE | true
+        new DB2iDialect()       || UniqueNulls.SKIP  | false
+        new DB2zDialect()       || UniqueNulls.SKIP  | false
     }
 }

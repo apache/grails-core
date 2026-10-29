@@ -50,7 +50,7 @@ class UniqueNullsHibernate7Spec extends HibernateGormDatastoreSpec {
             .withStartupTimeout(Duration.ofMinutes(3))
 
     void setupSpec() {
-        manager.registerDomainClasses(UnqLanguage, UnqLanguageValue)
+        manager.registerDomainClasses(UnqLanguage, UnqLanguageValue, UnqEmail)
     }
 
     @Unroll
@@ -140,6 +140,88 @@ class UniqueNullsHibernate7Spec extends HibernateGormDatastoreSpec {
         'skip'     || UniqueNulls.SKIP     | false
         'value'    || UniqueNulls.VALUE    | true
         'wildcard' || UniqueNulls.WILDCARD | true
+    }
+
+    @Unroll
+    void 'on #db an entirely null key is accepted by the database and by validation'() {
+        given: 'the datastore on this database, with the schema created for it'
+        if (container != null && !container.isRunning()) {
+            container.start()
+        }
+        manager.destroy()
+        manager.grailsConfig = [
+                'dataSource.url'            : container?.jdbcUrl ?: "jdbc:h2:mem:uniqueNullsAllNull${db};LOCK_TIMEOUT=10000".toString(),
+                'dataSource.driverClassName': container?.driverClassName ?: 'org.h2.Driver',
+                'dataSource.username'       : container?.username ?: 'sa',
+                'dataSource.password'       : container?.password ?: '',
+                'dataSource.dbCreate'       : 'create-drop'
+        ]
+        manager.setup(this.class)
+        UnqEmail.withNewTransaction {
+            new UnqEmail(email: null).save(validate: false, flush: true)
+        }
+        UnqLanguage.withNewTransaction {
+            new UnqLanguage(language: null, country: null).save(validate: false, flush: true)
+        }
+
+        when: 'a second entirely-null key is validated and saved'
+        boolean emailValid = UnqEmail.withNewSession {
+            UnqEmail.withNewTransaction {
+                new UnqEmail(email: null).validate()
+            }
+        }
+        boolean compositeValid = UnqLanguage.withNewSession {
+            UnqLanguage.withNewTransaction {
+                new UnqLanguage(language: null, country: null).validate()
+            }
+        }
+
+        boolean emailAccepted = false
+        try {
+            UnqEmail.withNewTransaction {
+                new UnqEmail(email: null).save(validate: false, flush: true)
+            }
+            emailAccepted = true
+        } catch (DataIntegrityViolationException ignored) {
+        }
+
+        boolean compositeAccepted = false
+        try {
+            UnqLanguage.withNewTransaction {
+                new UnqLanguage(language: null, country: null).save(validate: false, flush: true)
+            }
+            compositeAccepted = true
+        } catch (DataIntegrityViolationException ignored) {
+        }
+
+        then: 'both rows pass validation and are accepted by the database'
+        manager.session.datastore.entirelyNullKeyExempt == exempt
+        emailValid
+        compositeValid
+        emailAccepted
+        compositeAccepted
+
+        where:
+        db         | container | exempt
+        'H2'       | null      | false
+        'Postgres' | postgres  | false
+        'MySQL'    | mysql     | false
+        'MariaDB'  | mariadb   | false
+        'Oracle'   | oracle    | true
+    }
+}
+
+@Entity
+class UnqEmail {
+
+    String email
+
+    static constraints = {
+        email(nullable: true, unique: true)
+    }
+
+    static mapping = {
+        version false
     }
 }
 
