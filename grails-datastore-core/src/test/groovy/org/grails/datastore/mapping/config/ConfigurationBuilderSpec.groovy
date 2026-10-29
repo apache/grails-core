@@ -484,6 +484,8 @@ class ConfigurationBuilderSpec extends Specification {
 
     void "Test DatastoreUtils resolver retains existing map-backed builder binding"() {
         given:
+        String systemKey = 'grails.gorm.hibernate.minimumIdle'
+        String previousIdle = System.setProperty(systemKey, '3')
         def source = [
                 'grails.gorm.hibernate.configClass': 'configured',
                 'grails.gorm.hibernate.flush.mode': 'AUTO',
@@ -499,8 +501,49 @@ class ConfigurationBuilderSpec extends Specification {
         configuration.hibernate.getConfigClass() == 'configured'
         configuration.hibernate['flush.mode'] == 'AUTO'
         configuration.hibernate['connectionInitSqls'] == ['SET A=1', 'SET B=2']
+        configuration.hibernate['minimumIdle'] == null
         resolver.getProperty('grails.gorm.hibernate', Map) == original
         source.size() == 3
+
+        cleanup:
+        if (previousIdle == null) {
+            System.clearProperty(systemKey)
+        }
+        else {
+            System.setProperty(systemKey, previousIdle)
+        }
+    }
+
+    void "Test DatastoreUtils resolver keeps keys from a lower configuration map"() {
+        given:
+        String systemKey = 'grails.gorm.hibernate.minimumIdle'
+        String previousIdle = System.setProperty(systemKey, '3')
+        def low = [
+                'grails.gorm.hibernate.shared': 'low',
+                'grails.gorm.hibernate.base': 'retained'
+        ]
+        def high = [
+                'grails.gorm.hibernate.shared': 'high',
+                'grails.gorm.hibernate.override': 'new'
+        ]
+        def resolver = DatastoreUtils.createPropertyResolvers(low, high)
+
+        when:
+        def configuration = new SpringMapConfigurationBuilder(resolver).build()
+
+        then:
+        configuration.hibernate['shared'] == 'high'
+        configuration.hibernate['override'] == 'new'
+        configuration.hibernate['base'] == 'retained'
+        configuration.hibernate['minimumIdle'] == null
+
+        cleanup:
+        if (previousIdle == null) {
+            System.clearProperty(systemKey)
+        }
+        else {
+            System.setProperty(systemKey, previousIdle)
+        }
     }
 
     void "Test configuration builder with getter and setter"() {
