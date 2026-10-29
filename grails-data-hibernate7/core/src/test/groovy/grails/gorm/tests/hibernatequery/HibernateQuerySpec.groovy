@@ -29,6 +29,7 @@ import org.apache.grails.data.testing.tck.domains.Pet
 import org.grails.datastore.mapping.query.Query
 import org.grails.orm.hibernate.HibernateDatastore
 import org.grails.orm.hibernate.HibernateSession
+import org.grails.orm.hibernate.query.HibernateAlias
 import org.grails.orm.hibernate.query.HibernateQuery
 import jakarta.persistence.criteria.JoinType
 import java.io.Serializable
@@ -1122,6 +1123,8 @@ class HibernateQuerySpec extends HibernateGormDatastoreSpec {
     def cloneQuery() {
         given:
         hibernateQuery.eq("firstName", "Bob").max(10).offset(5)
+        def alias = new HibernateAlias('pets', 'p', JoinType.LEFT)
+        hibernateQuery.addAlias(alias)
         when:
         HibernateQuery cloned = (HibernateQuery) hibernateQuery.clone()
         then:
@@ -1129,6 +1132,14 @@ class HibernateQuerySpec extends HibernateGormDatastoreSpec {
         cloned.max == hibernateQuery.max
         cloned.offset == hibernateQuery.offset
         cloned.hibernateCriteria != null
+        cloned.aliases == [alias]
+
+        when:
+        cloned.addAlias(new HibernateAlias('pets', 'other'))
+
+        then:
+        cloned.aliases.size() == 2
+        hibernateQuery.aliases == [alias]
     }
 
     def "cloneQuery with order then clearOrders produces no ORDER BY in count"() {

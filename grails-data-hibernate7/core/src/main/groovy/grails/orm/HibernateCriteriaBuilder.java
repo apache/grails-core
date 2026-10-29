@@ -54,6 +54,7 @@ import org.grails.orm.hibernate.GrailsHibernateTemplate;
 import org.grails.orm.hibernate.HibernateDatastore;
 import org.grails.orm.hibernate.HibernateSession;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
+import org.grails.orm.hibernate.query.HibernateAlias;
 import org.grails.orm.hibernate.query.HibernateQuery;
 import org.grails.orm.hibernate.query.SqlGroupProjection;
 import org.grails.orm.hibernate.query.SqlProjection;
@@ -230,28 +231,20 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
     }
 
     public org.grails.datastore.mapping.query.api.Criteria createAlias(String associationPath, String alias) {
-        var prop = hibernateQuery.getEntity().getPropertyByName(associationPath);
-        if (prop instanceof org.grails.datastore.mapping.model.types.Basic) {
-            hibernateQuery.addAlias(
-                    new org.grails.orm.hibernate.query.HibernateAlias(associationPath, alias, JoinType.INNER));
-            return this;
-        }
-        hibernateQuery.getDetachedCriteria().createAlias(associationPath, alias);
-        hibernateQuery.getDetachedCriteria().join(associationPath, JoinType.INNER);
-        return this;
+        return createAlias(associationPath, alias, 0);
     }
 
     public org.grails.datastore.mapping.query.api.Criteria createAlias(
             String associationPath, String alias, int joinType) {
-        var prop = hibernateQuery.getEntity().getPropertyByName(associationPath);
+        var criteria = hibernateQuery.getDetachedCriteria();
+        var prop = criteria.getPersistentEntity().getPropertyByName(associationPath);
         JoinType convertedJoinType = convertFromInt(joinType);
+        criteria.getCriteria().add(new HibernateAlias(associationPath, alias, convertedJoinType));
         if (prop instanceof org.grails.datastore.mapping.model.types.Basic) {
-            hibernateQuery.addAlias(
-                    new org.grails.orm.hibernate.query.HibernateAlias(associationPath, alias, convertedJoinType));
             return this;
         }
-        hibernateQuery.getDetachedCriteria().createAlias(associationPath, alias);
-        hibernateQuery.getDetachedCriteria().join(associationPath, convertedJoinType);
+        criteria.createAlias(associationPath, alias);
+        criteria.join(associationPath, convertedJoinType);
         return this;
     }
 

@@ -75,10 +75,44 @@ The `sort` and `order` arguments accepted alongside the pagination values are ch
 
 === Description
 
+Criteria queries are a type-safe, advanced way to query that uses a Groovy builder to construct potentially complex queries. It is a much better alternative to using a StringBuilder to dynamically construct an HQL query. Refer to the criteria sections in the GORM for link:{hibernate7GuideFromRef}index.html#criteria[Hibernate 7] or link:{hibernate5GuideFromRef}index.html#criteria[Hibernate 5] guide for usage instructions.
 
-Criteria queries are a type-safe, advanced way to query that uses a Groovy builder to construct potentially complex queries. It is a much better alternative to using a StringBuilder to dynamically construct an HQL query. Refer to the user guide section on  link:{hibernate5GuideFromRef}index.html#criteria[Criteria] for usage instructions.
+==== Association aliases
 
-Method reference:
+With Hibernate, `createAlias('association', 'alias')` creates an inner join and lets you refer to the association as `alias.property`.
+
+In both Hibernate 5 and Hibernate 7, the three-argument overload accepts `0` for an inner join, `1` for a left outer join, or `2` for a right outer join. Hibernate 5 also supports `4` for a full join. Hibernate 7 does not support full joins through this overload: any value other than `1` or `2`, including `4`, produces an inner join.
+
+For example, to include books with no author as well as books whose author has a name:
+
+[source,groovy]
+----
+def books = Book.createCriteria().list {
+    createAlias('author', 'a', 1) // left outer join
+    or {
+        isNull('author')
+        isNotNull('a.name')
+    }
+}
+----
+
+The alias uses the requested join type. A left join alone does not guarantee that unmatched rows remain in the result: the restrictions must also allow the missing association, as the `or` block does above.
+
+In Hibernate 7, every explicitly requested alias of an entity association creates a join even when no restriction, projection, or order references it. Declaring a left alias and an inner alias for the same association therefore excludes rows with no associated entity, even if the inner alias is otherwise unused.
+
+In Hibernate 7, an alias declared inside an association block is relative to that association, not the outer domain class. In Hibernate 7, aliases declared in a `list { ... }` closure do not carry over to a subsequent `list { ... }` call on the same criteria builder. Hibernate 5 resolves the alias path from the domain class being queried.
+
+In Hibernate 7, an entity alias declared inside an association block creates its requested join in that association's scope even if the alias is unused. This applies to lists, counts, and paginated totals.
+
+Criteria blocks also support dotted property paths through plain embedded components that are not domain classes. For example, `address { eq('geo.city', 'London') }` can query a nested embedded component with Hibernate 7. These restrictions apply to lists, counts, and paginated totals.
+
+In a Hibernate 7 detached subquery, a plain association path uses the subquery's own root when its entity has that association. Otherwise, it can reference an existing enclosing query join for correlation. An explicitly named outer alias can also be used to correlate the queries.
+
+The enclosing join may also come from an association block in an outer detached query. For example, after `favorite { isNotNull('label') }`, an `exists` subquery over an entity without a `favorite` association can correlate using `eqProperty('favorite.label', 'label')`. Put the association block before the `exists` restriction.
+
+For Hibernate 7-specific rules on alias/path precedence, collection aliases, counts, and subquery scoping, see link:{hibernate7GuideFromRef}index.html#criteriaAssociationAliases[Association Aliases] in the GORM for Hibernate 7 guide.
+
+==== Method reference
 
 [cols="2*", options="header"]
 |===
