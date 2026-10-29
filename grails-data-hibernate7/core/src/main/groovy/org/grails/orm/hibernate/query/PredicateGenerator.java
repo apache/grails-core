@@ -313,6 +313,9 @@ public class PredicateGenerator {
 
         GrailsHibernatePersistentEntity associatedEntity = (GrailsHibernatePersistentEntity) associationCriteria.getAssociation().getAssociatedEntity();
         List<Query.Criterion> criteriaList = associationCriteria.getCriteria();
+        if (criteriaList.isEmpty()) {
+            return null;
+        }
         return criteriaBuilder.and(getPredicates(criteriaQuery, associationRoot, criteriaList, nestedContext, associatedEntity));
     }
 

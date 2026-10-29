@@ -208,6 +208,60 @@ class CreateAliasJoinSpec extends HibernateGormDatastoreSpec {
         }*.name == ['matching']
     }
 
+    void 'a left alias inside a disjunction does not override its restrictions'() {
+        given:
+        def likeA = new CreateAliasLike(label: 'likeA').save(failOnError: true)
+        def likeB = new CreateAliasLike(label: 'likeB').save(failOnError: true)
+        new CreateAliasTeam(name: 'A', favorite: likeA).save(failOnError: true)
+        new CreateAliasTeam(name: 'B', favorite: likeB).save(failOnError: true)
+        new CreateAliasTeam(name: 'C', favorite: likeB).save(failOnError: true)
+        new CreateAliasTeam(name: 'D').save(failOnError: true)
+        new CreateAliasTeam(name: 'E').save(flush: true, failOnError: true)
+        def criteria = {
+            or {
+                createAlias('favorite', 'f', 1)
+                isNull('f.id')
+                eq('f.label', 'likeB')
+            }
+        }
+
+        expect:
+        CreateAliasTeam.withCriteria(criteria)*.name.toSet() == ['B', 'C', 'D', 'E'].toSet()
+        CreateAliasTeam.createCriteria().count(criteria) == 4L
+
+        when:
+        def page = CreateAliasTeam.createCriteria().list(max: 2, sort: 'name', order: 'asc', criteria)
+
+        then:
+        page*.name == ['B', 'C']
+        page.totalCount == 4L
+    }
+
+    void 'an empty association block in a disjunction retains its join without overriding restrictions'() {
+        given:
+        def like = new CreateAliasLike(label: 'like').save(failOnError: true)
+        new CreateAliasTeam(name: 'matching').addToLikes(like).save(failOnError: true)
+        new CreateAliasTeam(name: 'other').addToLikes(like).save(failOnError: true)
+        new CreateAliasTeam(name: 'matching').save(flush: true, failOnError: true)
+        def criteria = {
+            or {
+                likes { }
+                eq('name', 'matching')
+            }
+        }
+
+        expect:
+        CreateAliasTeam.withCriteria(criteria)*.name == ['matching']
+        CreateAliasTeam.createCriteria().count(criteria) == 1L
+
+        when:
+        def page = CreateAliasTeam.createCriteria().list(max: 1, criteria)
+
+        then:
+        page*.name == ['matching']
+        page.totalCount == 1L
+    }
+
     void 'reusing a builder clears aliases before a new list with pagination #paginated'() {
         given:
         def like = new CreateAliasLike(label: 'favorite').save(failOnError: true)

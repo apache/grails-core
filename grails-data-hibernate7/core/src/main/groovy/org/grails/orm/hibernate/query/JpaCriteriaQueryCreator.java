@@ -284,7 +284,8 @@ public class JpaCriteriaQueryCreator<T> {
     private boolean isCountOnly() {
         List<Query.Projection> projectionList = projections.getProjectionList();
         return !projectionList.isEmpty() && projectionList.stream()
-            .allMatch(projection -> projection instanceof Query.CountProjection || projection instanceof Query.CountDistinctProjection);
+                .allMatch(projection -> projection instanceof Query.CountProjection ||
+                        projection instanceof Query.CountDistinctProjection);
     }
 
     private void assignCriteria(

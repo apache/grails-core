@@ -100,7 +100,7 @@ The alias uses the requested join type. A left join alone does not guarantee tha
 
 In Hibernate 7, every explicitly requested alias of an entity association creates a join even when no restriction, projection, or order references it. Declaring a left alias and an inner alias for the same association therefore excludes rows with no associated entity, even if the inner alias is otherwise unused.
 
-An alias declared inside an association block is relative to that association, not the outer domain class. In Hibernate 7, aliases declared in a `list { ... }` closure do not carry over to a subsequent `list { ... }` call on the same criteria builder.
+In Hibernate 7, an alias declared inside an association block is relative to that association, not the outer domain class. In Hibernate 7, aliases declared in a `list { ... }` closure do not carry over to a subsequent `list { ... }` call on the same criteria builder. Hibernate 5 resolves the alias path from the domain class being queried.
 
 In Hibernate 7, an entity alias declared inside an association block creates its requested join in that association's scope even if the alias is unused. This applies to lists, counts, and paginated totals.
 
