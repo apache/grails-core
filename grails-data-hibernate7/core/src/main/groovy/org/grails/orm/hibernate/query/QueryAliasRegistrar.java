@@ -21,8 +21,8 @@ package org.grails.orm.hibernate.query;
 import java.util.ArrayList;
 import java.util.List;
 
+import jakarta.persistence.criteria.From;
 import jakarta.persistence.criteria.JoinType;
-import jakarta.persistence.criteria.Root;
 
 import grails.gorm.DetachedCriteria;
 import org.grails.datastore.gorm.query.criteria.DetachedAssociationCriteria;
@@ -62,7 +62,7 @@ final class QueryAliasRegistrar {
      * @param root the root of the query
      * @return the context, with its aliases registered and explicit entity association joins materialized
      */
-    JpaQueryContext createContext(JpaQueryContext parent, Root<?> root) {
+    JpaQueryContext createContext(JpaQueryContext parent, From<?, ?> root) {
         List<HibernateAlias> aliases = explicitAliases();
         JpaQueryContext context = JpaQueryContext.forSubquery(parent, aliases, root);
         registerDetachedJoins(context);
@@ -105,7 +105,8 @@ final class QueryAliasRegistrar {
     }
 
     /**
-     * Registers the aliases declared by the given criteria, descending into associations and junctions.
+     * Registers the aliases declared by the given criteria, descending into junctions but leaving
+     * association-local aliases for the association's own context.
      * Local aliases are left alone. An inherited implicit path is declared against this query's root,
      * while an explicitly named outer alias remains available for correlation.
      *
@@ -128,7 +129,6 @@ final class QueryAliasRegistrar {
                     JoinType joinType = detachedCriteria.getJoinTypes().getOrDefault(associationPath, JoinType.INNER);
                     context.registerAlias(dac.getAlias(), new HibernateAlias(associationPath, dac.getAlias(), joinType));
                 }
-                discover(dac.getCriteria(), context);
             }
             else if (criterion instanceof Query.PropertyNameCriterion pnc) {
                 discoverProperty(pnc.getProperty(), context);

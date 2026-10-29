@@ -34,7 +34,7 @@ class CreateAliasJoinSpec extends HibernateGormDatastoreSpec {
 
     void setupSpec() {
         manager.grailsConfig.hibernate.session_factory.statement_inspector = sqlCapture
-        manager.registerDomainClasses(CreateAliasTeam, CreateAliasLike, CreateAliasStudent, CreateAliasTag)
+        manager.registerDomainClasses(CreateAliasTeam, CreateAliasLike, CreateAliasStudent, CreateAliasTag, CreateAliasOwner)
     }
 
     void setup() {
@@ -110,6 +110,125 @@ class CreateAliasJoinSpec extends HibernateGormDatastoreSpec {
 
         then:
         rows*.id == [matching.id]
+    }
+
+    void 'association aliases stay local with root tag #rootTag and explicit join type #explicitJoinType'() {
+        given:
+        def a = new CreateAliasTag(name: 'a').save(failOnError: true)
+        def b = new CreateAliasTag(name: 'b').save(failOnError: true)
+        def likeA = new CreateAliasLike(label: 'first', tag: a).save(failOnError: true)
+        def likeB = new CreateAliasLike(label: 'second', tag: b).save(failOnError: true)
+        def entity = rootTag ? CreateAliasTeam : CreateAliasOwner
+        def matching = rootTag ? new CreateAliasTeam(name: 'matching', tag: b) : new CreateAliasOwner(name: 'matching')
+        def other = rootTag ? new CreateAliasTeam(name: 'other', tag: a) : new CreateAliasOwner(name: 'other')
+        matching.addToLikes(likeA).save(failOnError: true)
+        other.addToLikes(likeB).save(flush: true, failOnError: true)
+
+        when:
+        def rows = entity.withCriteria {
+            likes {
+                if (explicitJoinType) {
+                    createAlias('tag', 't', 0)
+                } else {
+                    createAlias('tag', 't')
+                }
+                eq('t.name', 'a')
+            }
+        }
+
+        then:
+        rows*.name == ['matching']
+
+        where:
+        rootTag | explicitJoinType
+        true    | false
+        true    | true
+        false   | false
+        false   | true
+    }
+
+    void 'unused nested aliases materialize on their association with join type #joinType and query #queryType'() {
+        given:
+        def tag = new CreateAliasTag(name: 'Acme').save(failOnError: true)
+        def tagged = new CreateAliasLike(label: 'tagged', tag: tag).save(failOnError: true)
+        def untagged = new CreateAliasLike(label: 'untagged').save(failOnError: true)
+        new CreateAliasOwner(name: 'with tag').addToLikes(tagged).save(failOnError: true)
+        new CreateAliasOwner(name: 'without tag').addToLikes(untagged).save(flush: true, failOnError: true)
+        def criteria = {
+            likes {
+                createAlias('tag', 't', joinType)
+            }
+        }
+        def builder = CreateAliasOwner.createCriteria()
+
+        when:
+        def result
+        if (queryType == 'count') {
+            result = builder.count(criteria)
+        } else if (queryType == 'paginated') {
+            result = builder.list(max: 1, sort: 'name', order: 'asc', criteria)
+        } else {
+            result = builder.list(criteria)
+        }
+
+        then:
+        if (queryType == 'count') {
+            assert result == expectedCount
+        } else if (queryType == 'paginated') {
+            assert result*.name == ['with tag']
+            assert result.totalCount == expectedCount
+        } else {
+            assert result*.name.toSet() == expectedNames.toSet()
+        }
+
+        where:
+        joinType | queryType   | expectedCount | expectedNames
+        0        | 'list'      | 1             | ['with tag']
+        1        | 'list'      | 2             | ['with tag', 'without tag']
+        0        | 'count'     | 1             | ['with tag']
+        1        | 'count'     | 2             | ['with tag', 'without tag']
+        0        | 'paginated' | 1             | ['with tag']
+        1        | 'paginated' | 2             | ['with tag', 'without tag']
+    }
+
+    void 'association aliases preserve left joins and shadow outer aliases'() {
+        given:
+        def tag = new CreateAliasTag(name: 'outer').save(failOnError: true)
+        def like = new CreateAliasLike(label: 'without tag').save(failOnError: true)
+        new CreateAliasTeam(name: 'matching', tag: tag).addToLikes(like).save(flush: true, failOnError: true)
+
+        expect:
+        CreateAliasTeam.withCriteria {
+            createAlias('tag', 't')
+            eq('t.name', 'outer')
+            likes {
+                createAlias('tag', 't', 1)
+                isNull('t.name')
+            }
+        }*.name == ['matching']
+    }
+
+    void 'reusing a builder clears aliases before a new list with pagination #paginated'() {
+        given:
+        def like = new CreateAliasLike(label: 'favorite').save(failOnError: true)
+        new CreateAliasTeam(name: 'with favorite', favorite: like).save(failOnError: true)
+        new CreateAliasTeam(name: 'without favorite').save(flush: true, failOnError: true)
+        def builder = CreateAliasTeam.createCriteria()
+
+        expect:
+        builder.list {
+            createAlias('favorite', 'f')
+        }*.name == ['with favorite']
+
+        when:
+        def rows = paginated ? builder.list(max: 10) { } : builder.list { }
+
+        then:
+        rows*.name.toSet() == ['with favorite', 'without favorite'].toSet()
+        !paginated || rows.totalCount == 2
+
+        where:
+        paginated << [false, true]
     }
 
     void 'an entity collection alias preserves size restrictions without multiplying rows'() {
@@ -1051,6 +1170,13 @@ class CreateAliasLike {
 @Entity
 class CreateAliasTag {
     String name
+}
+
+@Entity
+class CreateAliasOwner {
+    String name
+
+    static hasMany = [likes: CreateAliasLike]
 }
 
 @Entity

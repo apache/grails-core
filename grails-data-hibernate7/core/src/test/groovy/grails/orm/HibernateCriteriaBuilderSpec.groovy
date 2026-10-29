@@ -268,6 +268,9 @@ class HibernateCriteriaBuilderSpec extends HibernateGormDatastoreSpec {
         results.size() == 1
         results[0].firstName == "Barney"
 
+        and: 'the next list does not retain either association alias'
+        c.list { }.size() == 5
+
         where:
         explicitInner << [false, true]
     }

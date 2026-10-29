@@ -266,6 +266,7 @@ class HibernateCriteriaBuilderDirectSpec extends HibernateGormDatastoreSpec {
             eq('firstChild.name', 'c1')
             eq('secondChild.name', 'c1')
         }*.name == ['A']
+        c.list { }.size() == 4
     }
 
     void "test join lock cache and readOnly hints do not affect filtering"() {

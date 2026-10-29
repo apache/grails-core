@@ -158,6 +158,10 @@ Every explicitly requested alias of an entity association creates a join, even w
 
 An explicitly declared alias takes precedence over an association path with the same name. For example, after `createAlias('favorite', 'f')` and `createAlias('likes', 'favorite')`, `f.label` refers to the favorite entity, while `favorite.label` refers to an element of `likes`. This applies independently to restrictions, projections, and ordering; using `f.label` only in a projection or an order does not change which association `favorite.label` restricts.
 
+Aliases declared inside an association block are relative to that association. For example, `likes { createAlias('tag', 't'); eq('t.name', 'a') }` joins the tag of each like, not a tag on the outer entity. A local alias can reuse an outer alias name without changing the outer alias. Aliases declared in a `list { ... }` closure are discarded when another `list { ... }` query starts on the same builder.
+
+An unused entity alias inside an association block still creates its requested join in that association's scope. For example, `likes { createAlias('tag', 't') }` excludes likes with no tag, even without a restriction on `t`. Using join type `1` retains those likes. These join semantics also apply to counts and paginated totals.
+
 ===== Collection Aliases
 
 Declaring two different aliases for the same entity-valued collection in `createCriteria()` or `withCriteria` creates independent joins, so restrictions on those aliases can match different associated entities:
