@@ -49,6 +49,36 @@ class MappingContextTraversableResolverSpec extends Specification {
         resolver.isReachable(book, node, Book, path, ElementType.TYPE)
     }
 
+    void "test isReachable for a null property value"() {
+        given:
+        MappingContext mappingContext = new KeyValueMappingContext("test")
+        mappingContext.addPersistentEntities(Book, Author)
+        mappingContext.initialize()
+        MappingContextTraversableResolver resolver = new MappingContextTraversableResolver(mappingContext)
+        Book book = new Book(title: "The Stand")
+        Path.Node node = Mock(Path.Node)
+        node.getName() >> "author"
+        Path path = Mock(Path)
+
+        expect: "a null value has to be reachable for @NotNull to report it"
+        resolver.isReachable(book, node, Book, path, ElementType.FIELD)
+    }
+
+    void "test isReachable for a node without a property name"() {
+        given:
+        MappingContext mappingContext = new KeyValueMappingContext("test")
+        mappingContext.addPersistentEntities(Book, Author)
+        mappingContext.initialize()
+        MappingContextTraversableResolver resolver = new MappingContextTraversableResolver(mappingContext)
+        Book book = new Book(title: "The Stand")
+        Path.Node node = Mock(Path.Node)
+        node.getName() >> null
+        Path path = Mock(Path)
+
+        expect: "there is nothing to read, so the node is reachable"
+        resolver.isReachable(book, node, Book, path, ElementType.TYPE)
+    }
+
     void "test isReachable for proxy entity"() {
         given:
         MappingContext mappingContext = new KeyValueMappingContext("test")

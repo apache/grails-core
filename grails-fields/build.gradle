@@ -54,6 +54,7 @@ dependencies {
     testImplementation project(':grails-rest-transforms') // RestfulController, which an association link resolves to
     testImplementation project(':grails-testing-support-datamapping')
     testImplementation project(':grails-testing-support-web')
+    testImplementation 'jakarta.validation:jakarta.validation-api' // the Bean Validation annotated test domain
     testImplementation "org.javassist:javassist:$javassistVersion"
     testImplementation "org.jsoup:jsoup:$jsoupVersion"
 

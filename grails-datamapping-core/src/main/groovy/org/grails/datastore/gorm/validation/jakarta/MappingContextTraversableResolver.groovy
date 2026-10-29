@@ -31,6 +31,7 @@ import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.model.PersistentProperty
 import org.grails.datastore.mapping.model.types.Association
 import org.grails.datastore.mapping.proxy.ProxyHandler
+import org.grails.datastore.mapping.reflect.ClassPropertyFetcher
 
 /**
  * A {@link TraversableResolver} that uses the {@link MappingContext} to establish whether validation can cascade
@@ -51,7 +52,24 @@ class MappingContextTraversableResolver implements TraversableResolver {
 
     @Override
     boolean isReachable(Object traversableObject, Path.Node traversableProperty, Class<?> rootBeanType, Path pathToTraversableObject, ElementType elementType) {
-        return proxyHandler.isInitialized(traversableObject) && proxyHandler.isInitialized(traversableObject, traversableProperty.name)
+        if (!proxyHandler.isInitialized(traversableObject)) {
+            return false
+        }
+        String propertyName = traversableProperty.name
+        if (propertyName == null) {
+            // nothing to read for a node without a property name; Hibernate Validator does not consult the resolver
+            // for a class level constraint, so this is only a guard
+            return true
+        }
+        Object value
+        try {
+            value = ClassPropertyFetcher.getInstancePropertyValue(traversableObject, propertyName)
+        }
+        catch (RuntimeException ignored) {
+            return false
+        }
+        // a null value has nothing to initialize, and has to be reachable for constraints such as @NotNull to see it
+        return value == null || proxyHandler.isInitialized(value)
     }
 
     @Override

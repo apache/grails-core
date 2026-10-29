@@ -43,6 +43,7 @@ dependencies {
     compileOnly 'org.apache.groovy:groovy'
     compileOnly 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation
     compileOnly 'org.spockframework:spock-core'
+    compileOnly 'jakarta.validation:jakarta.validation-api' // the Bean Validation annotated domains; the provider comes with grails-datamapping-core
     api project(':grails-datastore-core'), {
         // api: AbstractPersistenceEvent, AbstractPersistenceEventListener, AbstractQueryEvent, Datastore,
         //      DirtyCheckable, ProxyHandler, Session

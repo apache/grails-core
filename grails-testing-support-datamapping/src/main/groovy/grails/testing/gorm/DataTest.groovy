@@ -31,6 +31,7 @@ import grails.core.GrailsClass
 import grails.gorm.validation.PersistentEntityValidator
 import org.grails.core.artefact.DomainClassArtefactHandler
 import org.grails.datastore.gorm.GormEnhancer
+import org.grails.datastore.gorm.validation.jakarta.JakartaValidatorRegistry
 import org.grails.datastore.mapping.config.Settings
 import org.grails.datastore.mapping.core.AbstractDatastore
 import org.grails.datastore.mapping.core.Session
@@ -135,6 +136,12 @@ trait DataTest extends GrailsUnitTest {
                     delegate.messageSource = ref('messageSource')
                     delegate.domainClass = grailsDomain
                     delegate.grailsApplication = grailsApplication
+                }
+            } else if (JakartaValidatorRegistry.isBeanValidated(domain)) {
+                // validates the Bean Validation annotations as well as the constraints block, like GORM does at runtime
+                "$validationBeanName"(JakartaValidatorRegistry, domain, ref('messageSource'), ref(DataTestSetupSpecInterceptor.BEAN_NAME),
+                        ref('constraintRegistry'), ref(DataTestSetupSpecInterceptor.VALIDATOR_FACTORY_BEAN_NAME)) { bean ->
+                    bean.factoryMethod = 'createEntityValidator'
                 }
             } else {
                 "$validationBeanName"(PersistentEntityValidator, domain, ref('messageSource'), ref(DataTestSetupSpecInterceptor.BEAN_NAME))

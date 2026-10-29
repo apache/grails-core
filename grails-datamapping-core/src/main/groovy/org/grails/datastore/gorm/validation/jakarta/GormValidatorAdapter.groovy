@@ -25,8 +25,10 @@ import groovy.transform.CompileStatic
 import jakarta.validation.ConstraintViolation
 import jakarta.validation.Validator
 import jakarta.validation.executable.ExecutableValidator
+import jakarta.validation.metadata.ConstraintDescriptor
 
 import org.springframework.validation.Errors
+import org.springframework.validation.FieldError
 import org.springframework.validation.beanvalidation.SpringValidatorAdapter
 
 import org.grails.datastore.gorm.GormValidateable
@@ -60,6 +62,24 @@ class GormValidatorAdapter extends SpringValidatorAdapter implements CascadingVa
         }
     }
 
+    /**
+     * Validates the object in the given groups, or in the default group when there are none
+     *
+     * @param obj The object to validate
+     * @param errors The errors to report the violations to
+     * @param cascade Whether validation cascades through the properties marked {@code @Valid}
+     * @param groups The groups to validate
+     * @since 8.0.1
+     */
+    void validate(Object obj, Errors errors, boolean cascade, Class<?>[] groups) {
+        CASCADE_VALIDATION.set(cascade)
+        try {
+            validate(obj, errors, (Object[]) groups)
+        } finally {
+            CASCADE_VALIDATION.remove()
+        }
+    }
+
     @Override
     <T> Set<ConstraintViolation<T>> validate(T object, Class<?>[] groups) {
         def constraintViolations = super.validate(object, groups)
@@ -68,6 +88,35 @@ class GormValidatorAdapter extends SpringValidatorAdapter implements CascadingVa
             processConstraintViolations(constraintViolations, errors)
         }
         return constraintViolations
+    }
+
+    /**
+     * Reports a violation of a class level constraint as an error of the nested path of the errors, such as
+     * {@code lines[0]} when GORM cascades validation to an associated object, as Spring reports it when Bean
+     * Validation cascades through {@code @Valid}. Without a nested path it remains a global error.
+     */
+    @Override
+    protected void processConstraintViolations(Set<ConstraintViolation<Object>> violations, Errors errors) {
+        String nestedPath = errors.getNestedPath()
+        if (!nestedPath) {
+            super.processConstraintViolations(violations, errors)
+            return
+        }
+        String path = nestedPath.endsWith(Errors.NESTED_PATH_SEPARATOR)
+                ? nestedPath.substring(0, nestedPath.length() - Errors.NESTED_PATH_SEPARATOR.length())
+                : nestedPath
+        for (ConstraintViolation<Object> violation : violations) {
+            if (determineField(violation)) {
+                super.processConstraintViolations(Collections.singleton(violation), errors)
+                continue
+            }
+            FieldError fieldError = errors.getFieldError('')
+            if (fieldError == null || !fieldError.isBindingFailure()) {
+                ConstraintDescriptor<?> descriptor = violation.getConstraintDescriptor()
+                errors.rejectValue('', determineErrorCode(descriptor),
+                        getArgumentsForConstraint(errors.getObjectName(), path, descriptor), violation.getMessage())
+            }
+        }
     }
 
     @Override
