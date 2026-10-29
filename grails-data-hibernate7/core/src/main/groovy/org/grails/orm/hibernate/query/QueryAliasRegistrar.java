@@ -26,6 +26,7 @@ import jakarta.persistence.criteria.JoinType;
 
 import grails.gorm.DetachedCriteria;
 import org.grails.datastore.gorm.query.criteria.DetachedAssociationCriteria;
+import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.types.Association;
 import org.grails.datastore.mapping.model.types.Basic;
 import org.grails.datastore.mapping.query.Query;
@@ -44,6 +45,7 @@ final class QueryAliasRegistrar {
 
     private final DetachedCriteria<?> detachedCriteria;
     private final HibernateQuery hibernateQuery;
+    private final PersistentEntity persistentEntity;
 
     /**
      * @param detachedCriteria the criteria whose aliases and join types are registered
@@ -52,6 +54,9 @@ final class QueryAliasRegistrar {
     QueryAliasRegistrar(DetachedCriteria<?> detachedCriteria, HibernateQuery hibernateQuery) {
         this.detachedCriteria = detachedCriteria;
         this.hibernateQuery = hibernateQuery;
+        this.persistentEntity = detachedCriteria instanceof DetachedAssociationCriteria<?> associationCriteria ?
+                associationCriteria.getAssociation().getAssociatedEntity() :
+                detachedCriteria.getPersistentEntity();
     }
 
     /**
@@ -68,7 +73,7 @@ final class QueryAliasRegistrar {
         registerDetachedJoins(context);
         discover(detachedCriteria.getCriteria(), context);
         for (HibernateAlias alias : aliases) {
-            if (!(detachedCriteria.getPersistentEntity().getPropertyByName(alias.path()) instanceof Basic)) {
+            if (!(persistentEntity.getPropertyByName(alias.path()) instanceof Basic)) {
                 context.getFullyQualifiedExpression(alias.alias());
             }
         }
@@ -149,7 +154,7 @@ final class QueryAliasRegistrar {
             HibernateAlias inherited = registry.getDefinition(alias);
             boolean inheritedPath = !registry.isOwnDefined(alias) && inherited != null && !inherited.explicit();
             if ((!context.hasAlias(alias) || inheritedPath) &&
-                    (detachedCriteria.getPersistentEntity().getPropertyByName(alias) instanceof Association ||
+                    (persistentEntity.getPropertyByName(alias) instanceof Association ||
                             context.getFrom(alias) != null)) {
                 context.registerAlias(alias, new HibernateAlias(alias, alias, JoinType.INNER, false));
             }

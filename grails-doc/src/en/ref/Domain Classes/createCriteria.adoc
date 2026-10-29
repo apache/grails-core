@@ -104,6 +104,8 @@ In Hibernate 7, an alias declared inside an association block is relative to tha
 
 In Hibernate 7, an entity alias declared inside an association block creates its requested join in that association's scope even if the alias is unused. This applies to lists, counts, and paginated totals.
 
+Criteria blocks also support dotted property paths through plain embedded components that are not domain classes. For example, `address { eq('geo.city', 'London') }` can query a nested embedded component with Hibernate 7. These restrictions apply to lists, counts, and paginated totals.
+
 In a Hibernate 7 detached subquery, a plain association path uses the subquery's own root when its entity has that association. Otherwise, it can reference an existing enclosing query join for correlation. An explicitly named outer alias can also be used to correlate the queries.
 
 The enclosing join may also come from an association block in an outer detached query. For example, after `favorite { isNotNull('label') }`, an `exists` subquery over an entity without a `favorite` association can correlate using `eqProperty('favorite.label', 'label')`. Put the association block before the `exists` restriction.
