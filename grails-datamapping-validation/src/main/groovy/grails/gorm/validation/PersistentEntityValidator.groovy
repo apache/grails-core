@@ -25,6 +25,7 @@ import groovy.transform.CompileStatic
 import org.springframework.context.MessageSource
 import org.springframework.validation.Errors
 import org.springframework.validation.FieldError
+import org.springframework.validation.SmartValidator
 
 import org.grails.datastore.gorm.support.BeforeValidateHelper
 import org.grails.datastore.gorm.validation.constraints.eval.ConstraintsEvaluator
@@ -39,13 +40,17 @@ import org.grails.datastore.mapping.proxy.ProxyHandler
 import org.grails.datastore.mapping.reflect.EntityReflector
 
 /**
- * A Validator that validates a {@link org.grails.datastore.mapping.model.PersistentEntity} against known constraints
+ * A Validator that validates a {@link org.grails.datastore.mapping.model.PersistentEntity} against known constraints.
+ * <p>
+ * As a {@link SmartValidator}, it validates an object with validation hints, which it passes to the validator of
+ * each object validation cascades to, see {@link #getAssociationValidationHints}. An associated object is validated
+ * once with each distinct set of hints it is reached with.
  *
  * @author Graeme Rocher
  * @since 6.0
  */
 @CompileStatic
-class PersistentEntityValidator implements CascadingValidator, ConstrainedEntity {
+class PersistentEntityValidator implements CascadingValidator, ConstrainedEntity, SmartValidator {
 
     private static final List<String> EMBEDDED_EXCLUDES = Arrays.asList(
                                                             GormProperties.IDENTITY,
@@ -89,19 +94,49 @@ class PersistentEntityValidator implements CascadingValidator, ConstrainedEntity
 
     @Override
     void validate(Object obj, Errors errors, boolean cascade = true) {
+        validate(obj, errors, cascade, NO_VALIDATION_HINTS)
+    }
+
+    /**
+     * Validates the object with the given validation hints, cascading to its associations. The hints are passed to
+     * {@link #getValidatedConstrainedProperties} and {@link #validateBeyondConstraints}, and to the validator of
+     * each associated object as {@link #getAssociationValidationHints} converts them. A plain entity is validated
+     * as without hints. For an entity annotated with Bean Validation constraints, the hints that are classes are
+     * the groups to validate in.
+     *
+     * @param obj The object to validate
+     * @param errors The errors to report the violations to
+     * @param validationHints The validation hints, none to validate as {@link #validate(Object, Errors)} does
+     * @since 8.0.1
+     */
+    @Override
+    void validate(Object obj, Errors errors, Object... validationHints) {
+        validate(obj, errors, true, validationHints ?: NO_VALIDATION_HINTS)
+    }
+
+    /**
+     * Validates the object with the given validation hints, cascading to its associations when asked to.
+     *
+     * @param obj The object to validate
+     * @param errors The errors to report the violations to
+     * @param cascade Whether to cascade to the associations of the object
+     * @param hints The validation hints, {@link #NO_VALIDATION_HINTS} for none
+     * @since 8.0.1
+     */
+    protected void validate(Object obj, Errors errors, boolean cascade, Object[] hints) {
         if (obj == null || !targetClass.isInstance(obj)) {
             throw new IllegalArgumentException("Argument [$obj] is not an instance of [$targetClass] which this validator is configured for")
         }
 
-        Map<String, ConstrainedProperty> constrainedProperties = getValidatedConstrainedProperties(NO_VALIDATION_HINTS)
+        Map<String, ConstrainedProperty> constrainedProperties = getValidatedConstrainedProperties(hints)
         Set<String> constrainedPropertyNames = new HashSet<>(constrainedProperties.keySet())
 
         def validatedObjects = new HashSet()
-        validatedObjects.add(obj)
+        validatedObjects.add(new ValidatedObject(obj, hints))
 
-        // a validation started while another one cascades, such as by a custom validator, starts without hints
+        // a validation started while another one cascades, such as by a custom validator, starts with its own hints
         Object[] enclosingHints = CASCADE_HINTS.get()
-        CASCADE_HINTS.set(NO_VALIDATION_HINTS)
+        CASCADE_HINTS.set(hints)
         try {
             for (PersistentProperty pp in entity.persistentProperties) {
                 def propertyName = pp.name
@@ -133,7 +168,7 @@ class PersistentEntityValidator implements CascadingValidator, ConstrainedEntity
             }
         }
 
-        validateBeyondConstraints(obj, errors, NO_VALIDATION_HINTS)
+        validateBeyondConstraints(obj, errors, hints)
     }
 
     /**
@@ -290,11 +325,18 @@ class PersistentEntityValidator implements CascadingValidator, ConstrainedEntity
             return
         }
 
-        if (validatedObjects.contains(associatedObject)) {
-            return
+        // the hints decide what the object is validated with, so it is validated once with each distinct set of them
+        Object[] hints = CASCADE_HINTS.get()
+        Object[] associatedHints = NO_VALIDATION_HINTS
+        PersistentEntity owner = association.owner
+        def ownerValidator = owner.is(entity) ? this : owner.mappingContext.getEntityValidator(owner)
+        if (ownerValidator instanceof PersistentEntityValidator) {
+            associatedHints = ((PersistentEntityValidator) ownerValidator).getAssociationValidationHints(association, hints ?: NO_VALIDATION_HINTS)
         }
 
-        validatedObjects.add(associatedObject)
+        if (!validatedObjects.add(new ValidatedObject(associatedObject, associatedHints))) {
+            return
+        }
 
         PersistentEntity associatedEntity = association.getAssociatedEntity()
         if (associatedEntity == null) {
@@ -312,13 +354,6 @@ class PersistentEntityValidator implements CascadingValidator, ConstrainedEntity
         Association otherSide = null
         if (association.isBidirectional()) {
             otherSide = association.getInverseSide()
-        }
-
-        Object[] hints = CASCADE_HINTS.get()
-        Object[] associatedHints = NO_VALIDATION_HINTS
-        def ownerValidator = association.owner.is(entity) ? this : mappingContext.getEntityValidator(association.owner)
-        if (ownerValidator instanceof PersistentEntityValidator) {
-            associatedHints = ((PersistentEntityValidator) ownerValidator).getAssociationValidationHints(association, hints ?: NO_VALIDATION_HINTS)
         }
 
         PersistentEntityValidator associatedValidator = null
@@ -423,5 +458,35 @@ class PersistentEntityValidator implements CascadingValidator, ConstrainedEntity
     @Override
     boolean supports(Class<?> clazz) {
         return targetClass.is(clazz)
+    }
+
+    /**
+     * An object validation has reached, with the validation hints it was validated with. Two objects that are
+     * equal reached with the same hints are the same validated object, so a cycle of associations ends, while an
+     * object reached again with other hints is validated again with them.
+     */
+    private static final class ValidatedObject {
+
+        private final Object object
+        private final List<Object> hints
+
+        ValidatedObject(Object object, Object[] hints) {
+            this.object = object
+            this.hints = Arrays.asList(hints)
+        }
+
+        @Override
+        boolean equals(Object other) {
+            if (!(other instanceof ValidatedObject)) {
+                return false
+            }
+            ValidatedObject that = (ValidatedObject) other
+            return object == that.object && hints == that.hints
+        }
+
+        @Override
+        int hashCode() {
+            return 31 * object.hashCode() + hints.hashCode()
+        }
     }
 }

@@ -51,10 +51,12 @@ import org.grails.datastore.mapping.model.types.Association
  * of the validated groups declares ({@code @NotNull}, {@code @NotBlank}, {@code @NotEmpty} or {@code @Null}), so a
  * null value is reported once. Bean Validation does not cascade: the GORM validator cascades to the associations
  * as it does for any entity, and validates an annotated associated entity both ways through
- * {@link #validateBeyondConstraints}. An object is validated in the default group, and an object associated
- * through a property marked {@code @Valid} in the groups of the object owning it, converted as the
- * {@code @ConvertGroup} annotations of the property declare, as Bean Validation cascades. Any other associated
- * object is validated in the default group, as it is on its own.
+ * {@link #validateBeyondConstraints}. An object is validated in the default group, or in the groups given as
+ * validation hints to {@link #validate(Object, Errors, Object...)}, and an object associated through a property
+ * marked {@code @Valid} in the groups of the object owning it, converted as the {@code @ConvertGroup} annotations
+ * of the property declare, as Bean Validation cascades, see {@link #getAssociationValidationHints}. Any other
+ * associated object is validated in the default group, as it is on its own. An associated object reached through
+ * two associations is validated once in each distinct list of groups.
  * <p>
  * {@link #getConstrainedProperties()} describes the annotations as GORM constraints next to the ones of the block,
  * see {@link JakartaConstraintsTranslator}.
@@ -134,6 +136,12 @@ class JakartaPersistentEntityValidator extends PersistentEntityValidator {
      * The groups an object associated through a property marked {@code @Valid} is validated in: the groups of the
      * object owning it, converted as the {@code @ConvertGroup} annotations of the property declare. An object
      * associated through any other property is validated in the default group, as it is on its own.
+     * <p>
+     * A conversion applies to the groups the provider validates when a group of the owner is validated: the group
+     * and the groups it extends, and, for a group sequence, its groups in their order. A group none of whose groups
+     * is converted stays as it is, so a sequence keeps stopping at the first of its groups with a violation. The
+     * groups a sequence converts to are validated in its order, each of them, as the provider validates the groups
+     * a conversion produces.
      */
     @Override
     protected Object[] getAssociationValidationHints(Association association, Object[] hints) {
@@ -146,8 +154,26 @@ class JakartaPersistentEntityValidator extends PersistentEntityValidator {
             conversions.put(conversion.from, conversion.to)
         }
         List<Class<?>> groups = groupsOf(hints) ?: Collections.<Class<?>> singletonList(Default)
-        List<Class<?>> converted = groups.collect { Class<?> group -> conversions.get(group) ?: group }
+        List<Class<?>> converted = new ArrayList<>()
+        for (Class<?> group in groups) {
+            List<Class<?>> validated = JakartaConstraintsTranslator.validatedGroupsOf(group)
+            List<Class<?>> convertedGroups = validated.collect { Class<?> validatedGroup -> conversions.get(validatedGroup) ?: validatedGroup }
+            if (convertedGroups == validated) {
+                addGroup(converted, group)
+            }
+            else {
+                for (Class<?> convertedGroup in convertedGroups) {
+                    addGroup(converted, convertedGroup)
+                }
+            }
+        }
         return converted == [Default] ? NO_VALIDATION_HINTS : converted.toArray()
+    }
+
+    private static void addGroup(List<Class<?>> groups, Class<?> group) {
+        if (!groups.contains(group)) {
+            groups.add(group)
+        }
     }
 
     private CascadableDescriptor findCascadedDescriptor(String propertyName) {

@@ -24,8 +24,11 @@ import spock.lang.IgnoreIf
 import grails.gorm.validation.ConstrainedEntity
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.apache.grails.data.testing.tck.domains.BeanValidatedArticle
+import org.apache.grails.data.testing.tck.domains.BeanValidatedAttachment
+import org.apache.grails.data.testing.tck.domains.BeanValidatedDossier
 import org.apache.grails.data.testing.tck.domains.BeanValidatedInvoice
 import org.apache.grails.data.testing.tck.domains.BeanValidatedInvoiceLine
+import org.apache.grails.data.testing.tck.domains.BeanValidatedIssue
 import org.apache.grails.data.testing.tck.domains.BeanValidatedNotice
 import org.apache.grails.data.testing.tck.domains.BeanValidatedPair
 import org.apache.grails.data.testing.tck.domains.BeanValidatedPairing
@@ -33,6 +36,7 @@ import org.apache.grails.data.testing.tck.domains.BeanValidatedParcel
 import org.apache.grails.data.testing.tck.domains.BeanValidatedPost
 import org.apache.grails.data.testing.tck.domains.BeanValidatedRecall
 import org.apache.grails.data.testing.tck.domains.BeanValidatedReview
+import org.apache.grails.data.testing.tck.domains.BeanValidatedSection
 import org.apache.grails.data.testing.tck.domains.BeanValidatedShipment
 import org.apache.grails.data.testing.tck.domains.BeanValidatedTeaser
 
@@ -46,7 +50,8 @@ class BeanValidationSpec extends GrailsDataTckSpec {
     void setupSpec() {
         manager.registerDomainClasses(BeanValidatedInvoice, BeanValidatedInvoiceLine, BeanValidatedShipment, BeanValidatedParcel,
                 BeanValidatedReview, BeanValidatedPair, BeanValidatedPairing, BeanValidatedArticle, BeanValidatedPost, BeanValidatedTeaser,
-                BeanValidatedNotice, BeanValidatedRecall)
+                BeanValidatedNotice, BeanValidatedRecall, BeanValidatedDossier, BeanValidatedAttachment, BeanValidatedIssue,
+                BeanValidatedSection)
     }
 
     void 'the annotations and the constraints block are validated, each violation once'() {
@@ -214,5 +219,43 @@ class BeanValidationSpec extends GrailsDataTckSpec {
         pairing.errors.fieldErrors*.field == ['pairs[0]']
         pairing.errors.getFieldError('pairs[0]').code == 'DistinctLabels'
         pairing.save() == null
+    }
+
+    void 'an instance associated twice, each association converting the default group to another group, is validated in both'() {
+        given: 'an attachment valid for publishing but not for archiving, as the cover and the appendix of a dossier'
+        def attachment = new BeanValidatedAttachment(label: 'Cover', tag: '')
+        def dossier = new BeanValidatedDossier(title: 'Groups', cover: attachment, appendix: attachment)
+
+        expect: 'the appendix reports the ArchiveChecks violation, and the cover none'
+        !dossier.validate()
+        dossier.errors.errorCount == 1
+        dossier.errors.getFieldError('appendix.tag').code == 'NotBlank'
+        dossier.save() == null
+
+        when: 'the attachment is valid for both'
+        attachment.tag = 'kept'
+
+        then:
+        dossier.validate()
+        dossier.save(flush: true) != null
+    }
+
+    void 'a group sequence an association converts to is expanded before the conversions of the associated instance apply'() {
+        given: 'a section validated in a sequence of PublishChecks, whose attachment converts PublishChecks to ArchiveChecks'
+        def attachment = new BeanValidatedAttachment(label: 'Cover', tag: '')
+        def issue = new BeanValidatedIssue(title: 'Sequence', section: new BeanValidatedSection(heading: 'Head', attachment: attachment))
+
+        expect: 'the attachment is validated in ArchiveChecks'
+        !issue.validate()
+        issue.errors.errorCount == 1
+        issue.errors.getFieldError('section.attachment.tag').code == 'NotBlank'
+        issue.save() == null
+
+        when: 'the attachment is valid for archiving'
+        attachment.tag = 'kept'
+
+        then:
+        issue.validate()
+        issue.save(flush: true) != null
     }
 }

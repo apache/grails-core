@@ -300,6 +300,42 @@ class PersistentEntityValidatorSpec extends Specification {
         sectionValidator.beyondHints == [[], ['sections']]
         shelfValidator.beyondHints == [['shelves'], ['sections', 'shelves'], ['sections', 'shelves']]
     }
+
+    def "an object is validated with the validation hints it is given, and an associated object once with each hints it is reached with"() {
+        given: "validators giving the hints of the owner followed by the name of the association, and a lamp a desk reaches three ways"
+        MappingContext mappingContext = new KeyValueMappingContext("test")
+        mappingContext.mappingFactory = new GormKeyValueMappingFactory("test")
+        mappingContext.syntaxStrategy = new GormMappingConfigurationStrategy(mappingContext.mappingFactory)
+        PersistentEntity deskEntity = mappingContext.addPersistentEntity(HintedDesk)
+        PersistentEntity lampEntity = mappingContext.addPersistentEntity(HintedLamp)
+        DefaultValidatorRegistry registry = new DefaultValidatorRegistry(mappingContext, new ConnectionSourceSettings())
+        HintingValidator deskValidator = new HintingValidator(deskEntity, registry.messageSource, registry.constraintsEvaluator)
+        HintingValidator lampValidator = new HintingValidator(lampEntity, registry.messageSource, registry.constraintsEvaluator)
+        mappingContext.addEntityValidator(deskEntity, deskValidator)
+        mappingContext.addEntityValidator(lampEntity, lampValidator)
+        HintedLamp lamp = new HintedLamp(name: 'lamp')
+        HintedDesk desk = new HintedDesk(name: 'desk', left: lamp, right: lamp, lamps: [lamp, lamp] as List)
+
+        when: "the desk is validated with hints, as a SmartValidator"
+        deskValidator.validate(desk, new ValidationErrors(desk), 'draft')
+
+        then: "the desk is validated with them"
+        deskValidator.constraintHints == [['draft']]
+        deskValidator.beyondHints == [['draft']]
+
+        and: "the lamp once with the hints of each association, and once for the two entries of the list with the same hints"
+        lampValidator.constraintHints.size() == 3
+        lampValidator.constraintHints as Set == [['draft', 'left'], ['draft', 'right'], ['draft', 'lamps']] as Set
+        lampValidator.beyondHints == lampValidator.constraintHints
+
+        when: "the desk is validated without hints"
+        [deskValidator, lampValidator]*.clear()
+        deskValidator.validate(desk, new ValidationErrors(desk))
+
+        then:
+        deskValidator.beyondHints == [[]]
+        lampValidator.beyondHints as Set == [['left'], ['right'], ['lamps']] as Set
+    }
 }
 
 /**
@@ -431,6 +467,21 @@ class HintedSection {
 class HintedShelf {
     String name
     static belongsTo = [section: HintedSection]
+}
+
+@Entity
+class HintedDesk {
+    String name
+    HintedLamp left
+    HintedLamp right
+    List<HintedLamp> lamps
+    static hasMany = [lamps: HintedLamp]
+}
+
+@Entity
+class HintedLamp {
+    String name
+    static belongsTo = [HintedDesk]
 }
 
 @Entity

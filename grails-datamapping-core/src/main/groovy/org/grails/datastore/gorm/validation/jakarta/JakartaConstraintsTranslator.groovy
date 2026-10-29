@@ -175,6 +175,20 @@ class JakartaConstraintsTranslator {
     }
 
     /**
+     * The groups the provider validates when the given group is, in the order it validates them: the group itself
+     * and the groups it extends, or, for a group sequence, its groups in their order, each with the groups it
+     * extends, with a nested sequence expanded in place.
+     *
+     * @param group The group, or group sequence
+     * @return The validated groups, each once
+     */
+    static List<Class<?>> validatedGroupsOf(Class<?> group) {
+        Set<Class<?>> groups = new LinkedHashSet<>()
+        addSequencedGroups([group] as Class<?>[], groups, new HashSet<Class<?>>())
+        return Collections.unmodifiableList(new ArrayList<>(groups))
+    }
+
+    /**
      * Adds the groups validated when the given ones are, as the provider validates them: a group brings the groups
      * it extends, and a sequence its own groups.
      */

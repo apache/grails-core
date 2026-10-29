@@ -18,14 +18,19 @@
  */
 package org.grails.datastore.gorm.validation.jakarta
 
+import jakarta.validation.GroupSequence
 import jakarta.validation.Valid
+import jakarta.validation.Validation
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.NotNull
 import jakarta.validation.constraints.Size
 import jakarta.validation.groups.ConvertGroup
 import jakarta.validation.groups.Default
 
+import org.springframework.validation.DataBinder
 import org.springframework.validation.Errors
+import org.springframework.validation.SmartValidator
+import org.springframework.validation.ValidationUtils
 import org.springframework.validation.Validator as SpringValidator
 import org.springframework.validation.annotation.Validated
 
@@ -48,7 +53,7 @@ class JakartaValidatorRegistrySpec extends Specification {
     void setup() {
         mappingContext.addPersistentEntities(PlainBook, ValidatedBook, ConstrainedBook, MysteriousBook,
                 AnnotatedShelf, AnnotatedShelfBook, PlainShelf, GroupedBook, PublishingShelf, PublishedBook, PublishedChapter,
-                PublishedBookNote)
+                PublishedBookNote, SharedChapterBook, SharedChapter, SequencedBook, SequencedPart)
         mappingContext.initialize()
         registry = new JakartaValidatorRegistry(mappingContext, new ConnectionSourceSettings())
         mappingContext.validatorRegistry = registry
@@ -234,6 +239,112 @@ class JakartaValidatorRegistrySpec extends Specification {
         errors.errorCount == 4
     }
 
+    void "the validator validates in the groups given as validation hints, cascading with them"() {
+        given: "a book violating the annotations of both groups, with a chapter marked @Valid and a note"
+        SpringValidator validator = registry.getValidator(mappingContext.getPersistentEntity(PublishedBook.name))
+        PublishedBook book = new PublishedBook(label: '', code: null)
+        book.chapter = new PublishedChapter(heading: '', book: book)
+        book.note = new PublishedBookNote(summary: '', book: book)
+        Errors errors = new ValidationErrors(book)
+
+        when: "it is validated with the OnPublish group as a validation hint, as ValidationUtils and a DataBinder validate"
+        ValidationUtils.invokeValidator(validator, book, errors, OnPublish)
+
+        then: "the book is validated in OnPublish, so its block reports the null its default group annotation would"
+        validator instanceof SmartValidator
+        errors.getFieldError('label').code == 'NotBlank'
+        errors.getFieldError('code').code == 'nullable'
+
+        and: "its chapter, marked @Valid, in OnPublish too, and its note in the default group"
+        errors.getFieldError('chapter.heading').code == 'NotBlank'
+        !errors.hasFieldErrors('chapter.draft')
+        errors.getFieldError('note.text').code == 'NotNull'
+        !errors.hasFieldErrors('note.summary')
+        errors.errorCount == 4
+
+        when: "a DataBinder validates it with the group"
+        DataBinder binder = new DataBinder(book)
+        binder.validator = validator
+        binder.validate(OnPublish)
+
+        then:
+        binder.bindingResult.getFieldError('label').code == 'NotBlank'
+        binder.bindingResult.getFieldError('chapter.heading').code == 'NotBlank'
+        binder.bindingResult.errorCount == 4
+
+        when: "it is validated without hints"
+        errors = new ValidationErrors(book)
+        ValidationUtils.invokeValidator(validator, book, errors)
+
+        then: "it is validated in the default group, where the block admits the empty label and the chapter is checked in"
+        !errors.hasFieldErrors('label')
+        errors.getFieldError('code').code == 'NotNull'
+        errors.getFieldError('chapter.draft').code == 'NotNull'
+        errors.getFieldError('note.text').code == 'NotNull'
+        errors.errorCount == 3
+    }
+
+    void "an instance associated twice, each association converting the default group to another group, is validated in both"() {
+        given: "a chapter valid for publishing but not for archiving, as the opening and the closing of a book"
+        SharedChapter chapter = new SharedChapter(heading: 'Shared', archiveNote: '')
+        SharedChapterBook book = new SharedChapterBook(title: 'Groups', opening: chapter, closing: chapter)
+        Errors errors = new ValidationErrors(book)
+
+        expect: "the provider reports the violation of the closing"
+        beanValidationPaths(book) == ['closing.archiveNote']
+
+        when:
+        registry.getValidator(mappingContext.getPersistentEntity(SharedChapterBook.name)).validate(book, errors)
+
+        then: "so does GORM, having validated the chapter in OnPublish as the opening and in OnArchive as the closing"
+        errors.getFieldError('closing.archiveNote').code == 'NotBlank'
+        errors.errorCount == 1
+    }
+
+    void "a group sequence an association converts to is expanded before the conversions of the associated instance apply"() {
+        given: "a part validated in a sequence of OnPublish, whose chapter converts OnPublish to OnArchive"
+        SharedChapter chapter = new SharedChapter(heading: 'Shared', archiveNote: '')
+        SequencedBook book = new SequencedBook(title: 'Sequence', part: new SequencedPart(heading: 'Part', chapter: chapter))
+        Errors errors = new ValidationErrors(book)
+
+        expect: "the provider validates the chapter in OnArchive"
+        beanValidationPaths(book) == ['part.chapter.archiveNote']
+
+        when:
+        registry.getValidator(mappingContext.getPersistentEntity(SequencedBook.name)).validate(book, errors)
+
+        then: "and so does GORM"
+        errors.getFieldError('part.chapter.archiveNote').code == 'NotBlank'
+        errors.errorCount == 1
+    }
+
+    void "a group sequence none of whose groups is converted stops at the first group with a violation"() {
+        given: "an epilogue violating both groups of the sequence it is validated in"
+        SequencedBook book = new SequencedBook(title: 'Sequence', epilogue: new SharedChapter(heading: '', archiveNote: ''))
+        Errors errors = new ValidationErrors(book)
+
+        expect: "the provider stops after OnPublish"
+        beanValidationPaths(book) == ['epilogue.heading']
+
+        when:
+        registry.getValidator(mappingContext.getPersistentEntity(SequencedBook.name)).validate(book, errors)
+
+        then: "and so does GORM"
+        errors.getFieldError('epilogue.heading').code == 'NotBlank'
+        !errors.hasFieldErrors('epilogue.archiveNote')
+        errors.errorCount == 1
+    }
+
+    private static List<String> beanValidationPaths(Object instance) {
+        def factory = Validation.buildDefaultValidatorFactory()
+        try {
+            return factory.validator.validate(instance)*.propertyPath*.toString().sort()
+        }
+        finally {
+            factory.close()
+        }
+    }
+
     void "a custom constraint is still validated by Bean Validation"() {
         given:
         def entity = mappingContext.getPersistentEntity(MysteriousBook.name)
@@ -396,4 +507,67 @@ class PublishedBookNote {
     String text
 
     static belongsTo = [book: PublishedBook]
+}
+
+interface OnArchive {}
+
+@GroupSequence([OnPublish])
+interface PublishingSequence {}
+
+@GroupSequence([OnPublish, OnArchive])
+interface PublishingThenArchiving {}
+
+@Entity
+@Validated
+class SharedChapterBook {
+    @NotNull
+    String title
+
+    @Valid
+    @ConvertGroup(from = Default, to = OnPublish)
+    SharedChapter opening
+
+    @Valid
+    @ConvertGroup(from = Default, to = OnArchive)
+    SharedChapter closing
+}
+
+@Entity
+@Validated
+class SharedChapter {
+    @NotBlank(groups = OnPublish)
+    String heading
+
+    @NotBlank(groups = OnArchive)
+    String archiveNote
+
+    static belongsTo = [SharedChapterBook, SequencedBook, SequencedPart]
+}
+
+@Entity
+@Validated
+class SequencedBook {
+    @NotNull
+    String title
+
+    @Valid
+    @ConvertGroup(from = Default, to = PublishingSequence)
+    SequencedPart part
+
+    @Valid
+    @ConvertGroup(from = Default, to = PublishingThenArchiving)
+    SharedChapter epilogue
+}
+
+@Entity
+@Validated
+class SequencedPart {
+    @NotNull
+    String heading
+
+    @Valid
+    @ConvertGroup(from = OnPublish, to = OnArchive)
+    SharedChapter chapter
+
+    static belongsTo = [SequencedBook]
 }
