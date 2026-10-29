@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.hibernate.MappingException;
+import org.hibernate.boot.spi.InFlightMetadataCollector;
 import org.hibernate.mapping.Column;
 import org.hibernate.mapping.Table;
 
@@ -35,17 +36,31 @@ public class CreateKeyForProps {
 
     private final ColumnNameForPropertyAndPathFetcher columnNameForPropertyAndPathFetcher;
     private final UniqueKeyForColumnsCreator uniqueKeyForColumnsCreator;
+    private final InFlightMetadataCollector metadataCollector;
 
     public CreateKeyForProps(ColumnNameForPropertyAndPathFetcher columnNameForPropertyAndPathFetcher) {
-        this.columnNameForPropertyAndPathFetcher = columnNameForPropertyAndPathFetcher;
-        this.uniqueKeyForColumnsCreator = new UniqueKeyForColumnsCreator();
+        this(columnNameForPropertyAndPathFetcher, new UniqueKeyForColumnsCreator(), null);
+    }
+
+    public CreateKeyForProps(
+            ColumnNameForPropertyAndPathFetcher columnNameForPropertyAndPathFetcher,
+            InFlightMetadataCollector metadataCollector) {
+        this(columnNameForPropertyAndPathFetcher, new UniqueKeyForColumnsCreator(), metadataCollector);
     }
 
     protected CreateKeyForProps(
             ColumnNameForPropertyAndPathFetcher columnNameForPropertyAndPathFetcher,
             UniqueKeyForColumnsCreator uniqueKeyForColumnsCreator) {
+        this(columnNameForPropertyAndPathFetcher, uniqueKeyForColumnsCreator, null);
+    }
+
+    protected CreateKeyForProps(
+            ColumnNameForPropertyAndPathFetcher columnNameForPropertyAndPathFetcher,
+            UniqueKeyForColumnsCreator uniqueKeyForColumnsCreator,
+            InFlightMetadataCollector metadataCollector) {
         this.columnNameForPropertyAndPathFetcher = columnNameForPropertyAndPathFetcher;
         this.uniqueKeyForColumnsCreator = uniqueKeyForColumnsCreator;
+        this.metadataCollector = metadataCollector;
     }
 
     public void createKeyForProps(HibernatePersistentProperty grailsProp, String path, Table table, String columnName) {
@@ -59,11 +74,8 @@ public class CreateKeyForProps {
         PropertyConfig mappedForm = grailsProp.getMappedForm();
 
         if (mappedForm.isUnique() && mappedForm.isUniqueWithinGroup()) {
-
-            List<Column> keyList = new ArrayList<>();
-            keyList.add(new Column(columnName));
-            addGroupColumns(grailsProp, mappedForm, path, keyList);
-            uniqueKeyForColumnsCreator.createUniqueKeyForColumns(table, keyList);
+            createKeyWhenReady(() -> createKeyForGroup(grailsProp, path, table,
+                    List.of(new Column(columnName)), mappedForm));
         }
     }
 
@@ -85,6 +97,20 @@ public class CreateKeyForProps {
         if (!mappedForm.isUnique() || columns.isEmpty()) {
             return;
         }
+        createKeyWhenReady(() -> createKeyForGroup(grailsProp, path, table, columns, mappedForm));
+    }
+
+    private void createKeyWhenReady(Runnable createKey) {
+        if (metadataCollector == null || metadataCollector.isInSecondPass()) {
+            createKey.run();
+        } else {
+            metadataCollector.addSecondPass(persistentClasses -> createKey.run());
+        }
+    }
+
+    private void createKeyForGroup(
+            HibernatePersistentProperty grailsProp, String path, Table table, List<Column> columns,
+            PropertyConfig mappedForm) {
         List<Column> keyList = new ArrayList<>(columns);
         if (mappedForm.isUniqueWithinGroup()) {
             addGroupColumns(grailsProp, mappedForm, path, keyList);

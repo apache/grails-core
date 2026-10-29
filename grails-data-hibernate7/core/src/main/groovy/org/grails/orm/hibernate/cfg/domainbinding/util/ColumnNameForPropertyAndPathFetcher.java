@@ -101,9 +101,9 @@ public class ColumnNameForPropertyAndPathFetcher {
 
     /**
      * The names of all the columns of the property: the one name {@link #getColumnNameForPropertyAndPath} resolves
-     * without a column configuration for a property that has one column, or one name per attribute of the
-     * embeddable class for a property mapped with a composite user type, which spans one column per attribute and
-     * has no single column name.
+     * without a column configuration for an unconfigured property, one name per configured column, or one name
+     * per attribute of the embeddable class for a property mapped with a composite user type, which spans one
+     * column per attribute and has no single column name.
      *
      * @param grailsProp the property
      * @param path the path of the property within its entity
@@ -113,6 +113,12 @@ public class ColumnNameForPropertyAndPathFetcher {
     public List<String> getColumnNamesForPropertyAndPath(HibernatePersistentProperty grailsProp, String path) {
         if (grailsProp.getCompositeUserType() != null) {
             return compositeUserTypeColumns.columnNamesOf(grailsProp, path);
+        }
+        List<ColumnConfig> columns = grailsProp.getHibernateMappedForm().getColumns();
+        if (!columns.isEmpty()) {
+            return columns.stream()
+                    .map(column -> getColumnNameForPropertyAndPath(grailsProp, path, column))
+                    .toList();
         }
         return Collections.singletonList(getColumnNameForPropertyAndPath(grailsProp, path, null));
     }

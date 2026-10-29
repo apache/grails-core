@@ -129,6 +129,7 @@ class ColumnNameForPropertyAndPathFetcherSpec extends Specification {
         )
         def grailsProp = Mock(HibernatePersistentProperty) {
             getCompositeUserType() >> null
+            getHibernateMappedForm() >> new PropertyConfig()
             getColumnName(null) >> "`explicit_col`"
         }
 
@@ -163,6 +164,53 @@ class ColumnNameForPropertyAndPathFetcherSpec extends Specification {
         result == ["amount_amount", "amount_currency"]
         0 * grailsProp.getColumnName(_)
         0 * defaultColumnFetcher._
+    }
+
+    def "expands every configured column in config order"() {
+        given:
+        def namingStrategy = Mock(PersistentEntityNamingStrategy)
+        def defaultColumnFetcher = Mock(DefaultColumnNameFetcher)
+        def fetcher = new ColumnNameForPropertyAndPathFetcher(namingStrategy, defaultColumnFetcher, backticksRemover)
+        def firstColumn = new ColumnConfig(name: 'parent_code')
+        def secondColumn = new ColumnConfig(name: 'parent_revision')
+        def property = Mock(HibernatePersistentProperty) {
+            getHibernateMappedForm() >> new PropertyConfig(columns: [firstColumn, secondColumn])
+            getColumnName(firstColumn) >> 'parent_code'
+            getColumnName(secondColumn) >> 'parent_revision'
+        }
+
+        when:
+        def names = fetcher.getColumnNamesForPropertyAndPath(property, 'child_path')
+
+        then:
+        names == ['parent_code', 'parent_revision']
+        0 * property.getColumnName(null)
+        0 * defaultColumnFetcher._
+    }
+
+    def "keeps configured column order when an explicit column is followed by an implicit column"() {
+        given:
+        def namingStrategy = Stub(PersistentEntityNamingStrategy) {
+            resolveColumnName('childPath') >> 'child_path'
+        }
+        def defaultColumnFetcher = Stub(DefaultColumnNameFetcher) {
+            getDefaultColumnName(_) >> 'parent_id'
+        }
+        def fetcher = new ColumnNameForPropertyAndPathFetcher(namingStrategy, defaultColumnFetcher, backticksRemover)
+        def explicitColumn = new ColumnConfig(name: '`parent_code`')
+        def implicitColumn = new ColumnConfig()
+        def property = Mock(HibernatePersistentProperty) {
+            getHibernateMappedForm() >> new PropertyConfig(columns: [explicitColumn, implicitColumn])
+            getColumnName(explicitColumn) >> '`parent_code`'
+            getColumnName(implicitColumn) >> null
+        }
+
+        when:
+        def names = fetcher.getColumnNamesForPropertyAndPath(property, 'childPath')
+
+        then:
+        names == ['`parent_code`', 'child_path_parent_id']
+        0 * property.getColumnName(null)
     }
 
     def "a fetcher built with a building context resolves a composite user type as the binder of its property does"() {
