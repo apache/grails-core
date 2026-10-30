@@ -172,4 +172,63 @@ class NavigableMapSpec extends Specification {
         output['app.groups[1][0]'] == 'c'
         output.navigate('app', 'groups') == [['a', 'b'], ['c']]
     }
+
+    def "a dotted key inside a nested map is merged under the path of that map"() {
+        given:
+        NavigableMap output = new NavigableMap()
+
+        when: 'a nested map holds a dotted key that, alone, names another property'
+        output.merge([a: [b: 'root'], x: ['a.b': 'nested']], true)
+
+        then: 'the other property keeps its value, read as a flat key and through the nested maps'
+        output['a.b'] == 'root'
+        output.navigate('a', 'b') == 'root'
+
+        and: 'the dotted key is read under the path of the map that holds it'
+        output['x.a.b'] == 'nested'
+        output.navigate('x', 'a', 'b') == 'nested'
+    }
+
+    def "a dotted key inside a nested map holding #description writes the flat keys of its full path only"() {
+        given:
+        NavigableMap output = new NavigableMap()
+
+        when:
+        output.merge(input, true)
+
+        then:
+        output.keySet() == rootKeys as Set
+
+        where:
+        description             | input                          | rootKeys
+        'a map'                 | [x: ['a.b': [c: 'v']]]         | ['x', 'x.a.b', 'x.a.b.c']
+        'a map with a dot'      | [x: ['a.b': ['c.d': 'v']]]     | ['x', 'x.a.b', 'x.a.b.c.d']
+        'a value, two dots in'  | [x: ['a.b.c': 'v']]            | ['x', 'x.a.b.c']
+        'a value'               | [a: [c: '1'], x: ['a.b': 'v']] | ['a', 'a.c', 'x', 'x.a.b']
+    }
+
+    def "the flat key of a map under a dotted key inside a nested map is the map the nested maps hold"() {
+        given:
+        NavigableMap output = new NavigableMap()
+
+        when:
+        output.merge([x: ['a.b': [c: 'v']]], true)
+
+        then:
+        output['x.a.b'].is(output.navigate('x', 'a', 'b'))
+        output.navigate('x', 'a', 'b', 'c') == 'v'
+    }
+
+    def "a dotted key inside a nested map writes no key at the root"() {
+        given:
+        NavigableMap output = new NavigableMap()
+
+        when:
+        output.merge([logging: [level: ['org.springframework': 'DEBUG']]], true)
+
+        then:
+        output['logging.level.org.springframework'] == 'DEBUG'
+        !output.containsKey('org.springframework')
+        !output.keySet().contains('org.springframework')
+    }
 }

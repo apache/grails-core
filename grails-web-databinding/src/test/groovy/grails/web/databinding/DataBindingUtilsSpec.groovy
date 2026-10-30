@@ -24,6 +24,7 @@ import spock.lang.Specification
 import org.springframework.context.ApplicationContext
 import org.springframework.context.support.StaticApplicationContext
 
+import grails.config.Settings
 import grails.core.DefaultGrailsApplication
 import grails.core.GrailsApplication
 import grails.databinding.CollectionDataBindingSource
@@ -31,10 +32,13 @@ import grails.databinding.DataBinder
 import grails.databinding.SimpleMapDataBindingSource
 import grails.util.Holders
 import grails.web.mime.MimeTypeResolver
+import org.grails.config.PropertySourcesConfig
 import org.grails.datastore.mapping.keyvalue.mapping.config.KeyValueMappingContext
 import org.grails.datastore.mapping.model.MappingContext
 import org.grails.datastore.mapping.proxy.ProxyFactory
 import org.grails.web.databinding.BindingIncludeLists
+import org.grails.web.databinding.DefaultASTDatabindingHelper
+import org.grails.web.databinding.GeneratedDatabindingWhiteList
 import org.grails.web.databinding.bindingsource.DataBindingSourceRegistry
 import org.grails.web.databinding.bindingsource.DefaultDataBindingSourceRegistry
 
@@ -102,16 +106,62 @@ class DataBindingUtilsSpec extends Specification {
         command.version == null
     }
 
-    void 'test a superclass whitelist does not restrict an unenhanced subclass in compatibility mode'() {
+    void 'test a subclass of a whitelisted class is bound by the whitelist it inherits'() {
         given:
         def command = new SubclassOfWhitelistedCommand()
 
         when:
         DataBindingUtils.bindObjectToInstance(command, [name: 'Grails', version: '8'])
 
-        then: 'only a whitelist declared on the bound class describes its eligible properties'
+        then: 'the whitelist its superclass declares describes its eligible properties, as if it had been compiled against it'
         command.name == 'Grails'
-        command.version == '8'
+        command.version == null
+    }
+
+    void 'test a class with binding rules compiled apart from any controller is bound by them'() {
+        expect: 'a class compiled with no controller that binds it in sight got its whitelist fields, and the record, all the same'
+        RecordedCommand.declaredFields*.name.contains(DefaultASTDatabindingHelper.LEGACY_DATABINDING_WHITELIST)
+        RecordedCommand.declaredFields*.name.contains(DefaultASTDatabindingHelper.DEFAULT_DATABINDING_WHITELIST)
+        RecordedCommand.getAnnotation(GeneratedDatabindingWhiteList) != null
+
+        when:
+        def command = new RecordedCommand()
+        DataBindingUtils.bindObjectToInstance(command, [name: 'Grails', version: '8', secret: 'submitted', note: 'Note'])
+
+        then: 'what the class declares transient or bindable: false is not bound'
+        command.name == 'Grails'
+        command.note == 'Note'
+        command.version == null
+        command.secret == null
+
+        and: 'the include list of the type is what its rules allow'
+        BindingIncludeLists.propertyNames(RecordedCommand) as Set == ['name', 'note'] as Set
+
+        and: 'a subclass that only inherits those rules is bound by them too, with its own properties'
+        BindingIncludeLists.propertyNames(SubclassOfRecordedCommand) as Set == ['name', 'note', 'extra'] as Set
+    }
+
+    void 'test under deny by default a class compiled apart from any controller binds only what it constrains bindable: true'() {
+        given:
+        def originalConfig = Holders.config
+        Holders.grailsApplication = null
+        Holders.setConfig(new PropertySourcesConfig([(Settings.DATABINDING_DENY_BY_DEFAULT): true]))
+        DataBindingUtils.clearBindingCaches()
+
+        when:
+        def command = new RecordedCommand()
+        DataBindingUtils.bindObjectToInstance(command, [name: 'Grails', version: '8', secret: 'submitted', note: 'Note'])
+
+        then:
+        BindingIncludeLists.propertyNames(RecordedCommand) == ['note']
+        command.note == 'Note'
+        command.name == null
+        command.version == null
+        command.secret == null
+
+        cleanup:
+        DataBindingUtils.clearBindingCaches()
+        Holders.setConfig(originalConfig)
     }
 
     void 'test a proxy is bound with the whitelist of the class it stands for'() {
@@ -119,7 +169,7 @@ class DataBindingUtilsSpec extends Specification {
         def mappingContext = new KeyValueMappingContext('test')
         mappingContext.proxyFactory = Stub(ProxyFactory) {
             isProxy(_ as ProxyOfWhitelistedCommand) >> true
-            getProxiedClass(_ as ProxyOfWhitelistedCommand) >> WhitelistedCommand
+            unwrap(_ as ProxyOfWhitelistedCommand) >> new WhitelistedCommand()
         }
         def application = new DefaultGrailsApplication()
         application.mappingContext = mappingContext
@@ -137,9 +187,9 @@ class DataBindingUtilsSpec extends Specification {
         proxy.name == 'Grails'
         proxy.version == null
 
-        and: 'a subclass that is not a proxy still binds the properties its superclass whitelist leaves out'
+        and: 'a subclass that is not a proxy is bound by the whitelist it inherits too'
         subclass.name == 'Grails'
-        subclass.version == '8'
+        subclass.version == null
     }
 
     @Issue('https://github.com/apache/grails-core/issues/16558')
@@ -198,7 +248,7 @@ class DataBindingUtilsSpec extends Specification {
     void 'test the include list of a type is the one its instances are bound with'() {
         expect:
         BindingIncludeLists.propertyNames(WhitelistedCommand) == ['name']
-        BindingIncludeLists.propertyNames(SubclassOfWhitelistedCommand) == null
+        BindingIncludeLists.propertyNames(SubclassOfWhitelistedCommand) == ['name']
 
         and: 'a type that declares none is not restricted'
         BindingIncludeLists.propertyNames(NoWhitelistCommand) == null
@@ -379,6 +429,27 @@ class WhitelistedCommand {
 }
 
 class SubclassOfWhitelistedCommand extends WhitelistedCommand {
+}
+
+// Compiled with no controller that binds it in sight, as a command object in a plugin is: Grails generates its
+// whitelist fields from the rules it declares all the same.
+class RecordedCommand {
+
+    String name
+    String version
+    String secret
+    String note
+
+    static transients = ['secret']
+    static constraints = {
+        version bindable: false
+        note bindable: true
+    }
+}
+
+class SubclassOfRecordedCommand extends RecordedCommand {
+
+    String extra
 }
 
 // Stands for the subclass a datastore generates at runtime to proxy an instance of the class it extends.

@@ -24,6 +24,7 @@ import jakarta.servlet.http.HttpServletRequestWrapper
 import org.springframework.mock.web.MockHttpServletRequest
 import org.springframework.mock.web.MockHttpServletResponse
 import org.springframework.mock.web.MockServletContext
+import org.springframework.web.context.request.RequestContextHolder
 import org.springframework.web.context.support.StaticWebApplicationContext
 
 import org.grails.web.util.GrailsApplicationAttributes
@@ -104,6 +105,75 @@ class GrailsWebRequestSpec extends Specification {
 
         expect: 'that substitution is gone, so either accessor may be called'
         webRequest.getCurrentRequest().is(webRequest.getRequest())
+    }
+
+    void 'looking up the web request of a request finds the one bound to the thread for that very request'() {
+        given: 'a request that holds the web request of another thread, as one processed alongside a task does'
+        def request = new MockHttpServletRequest(servletContext)
+        def stored = new GrailsWebRequest(request, new MockHttpServletResponse(), servletContext)
+        request.setAttribute(GrailsApplicationAttributes.WEB_REQUEST, stored)
+        def bound = new GrailsWebRequest(request, new MockHttpServletResponse(), servletContext)
+        RequestContextHolder.setRequestAttributes(bound)
+
+        expect: 'this thread finds its own web request from the request'
+        GrailsWebRequest.lookup(request).is(bound)
+
+        and: 'from a wrapper of the request, however deep, such as the multipart request the dispatcher resolves'
+        GrailsWebRequest.lookup(new HttpServletRequestWrapper(request)).is(bound)
+        GrailsWebRequest.lookup(new HttpServletRequestWrapper(new HttpServletRequestWrapper(request))).is(bound)
+
+        cleanup:
+        RequestContextHolder.resetRequestAttributes()
+    }
+
+    void 'looking up the web request of a request a thread bound to a wrapper of it finds the one bound to the thread'() {
+        given: 'a web request built with a wrapper of the request, as the outermost request usually is'
+        def request = new MockHttpServletRequest(servletContext)
+        def wrapper = new HttpServletRequestWrapper(request)
+        def stored = new GrailsWebRequest(request, new MockHttpServletResponse(), servletContext)
+        request.setAttribute(GrailsApplicationAttributes.WEB_REQUEST, stored)
+        def bound = new GrailsWebRequest(wrapper, new MockHttpServletResponse(), servletContext)
+        RequestContextHolder.setRequestAttributes(bound)
+
+        expect: 'the request it wraps finds it too'
+        GrailsWebRequest.lookup(request).is(bound)
+
+        and: 'another wrapper of that request is still the same request'
+        GrailsWebRequest.lookup(new HttpServletRequestWrapper(request)).is(bound)
+
+        cleanup:
+        RequestContextHolder.resetRequestAttributes()
+    }
+
+    void 'looking up the web request of another request finds the one stored on it'() {
+        given: 'a thread bound to the web request of one request'
+        def bound = newWebRequest()
+        RequestContextHolder.setRequestAttributes(bound)
+
+        and: 'another request, such as the request of a forward, that holds a web request of its own'
+        def other = new MockHttpServletRequest(servletContext)
+        def stored = new GrailsWebRequest(other, new MockHttpServletResponse(), servletContext)
+        other.setAttribute(GrailsApplicationAttributes.WEB_REQUEST, stored)
+
+        expect:
+        GrailsWebRequest.lookup(other).is(stored)
+
+        and: 'a request without one falls back to the web request bound to the thread'
+        GrailsWebRequest.lookup(new MockHttpServletRequest(servletContext)).is(bound)
+
+        cleanup:
+        RequestContextHolder.resetRequestAttributes()
+    }
+
+    void 'looking up the web request of a request outside any web request finds the one stored on it'() {
+        given:
+        def request = new MockHttpServletRequest(servletContext)
+        def stored = new GrailsWebRequest(request, new MockHttpServletResponse(), servletContext)
+        request.setAttribute(GrailsApplicationAttributes.WEB_REQUEST, stored)
+
+        expect:
+        GrailsWebRequest.lookup(request).is(stored)
+        GrailsWebRequest.lookup(new MockHttpServletRequest(servletContext)) == null
     }
 
     private GrailsWebRequest newWebRequest() {

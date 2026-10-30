@@ -92,7 +92,7 @@ jobs:
       pull-requests: read
       # Required by the hold-off step to list release pipeline runs.
       actions: read
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       # Do nothing while a release of this branch is in progress. The release
       # pipeline runs from `release: published` through the vote gates to the

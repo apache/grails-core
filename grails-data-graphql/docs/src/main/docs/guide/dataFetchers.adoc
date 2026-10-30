@@ -159,5 +159,5 @@ In this example a property was added to the `Tag` domain to retrieve the list of
 
 [source,groovy,indent=0]
 ----
-include::{sourcedir}/examples/grails-test-app/grails-app/domain/grails/test/app/Tag.groovy[tags=getPosts]
+include::{sourcedir}/grails-test-examples/graphql/grails-test-app/grails-app/domain/grails/test/app/Tag.groovy[tags=getPosts]
 ----

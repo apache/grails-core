@@ -34,6 +34,7 @@ image::register_start.png[]
 
 By default e-mail validation for user creation is turned on.  If you wish to turn it off see the 'E-Mail Validation Parameter' section below.
 If this is turned off then no e-mail is sent to the user and they are automatically redirected to the link that would have been sent in the e-mail.
+The registration form always collects an e-mail address and stores it on the new user, so your User domain class needs an `email` field even if e-mail validation is turned off - see the note under Notes below.
 
 After filling out valid values an email will be sent and you'll see a success screen:
 
@@ -51,13 +52,25 @@ image::register_final.png[]
 
 The post-registration destination url is configurable in `grails-app/conf/application.groovy` using the `postRegisterUrl` attribute:
 
+[source,groovy]
+----
+grails.plugin.springsecurity.ui.register.postRegisterUrl = '/welcome'
+----
+
 If you don't specify a value then the `grails.plugin.springsecurity.successHandler.defaultTargetUrl` value will be used, which is `'/'` by default.
 
 In addition, each new user will be granted `ROLE_USER` after finalizing the registration. If you want to change the default role, add more, or grant no roles at all (for example if you want an admin to approve new users and explicitly enable new users) then you can customize that with the `defaultRoleNames` attribute (which is a List of Strings):
 
 [source,groovy]
 ----
-grails.plugin.springsecurity.ui.register.postRegisterUrl = '/welcome'
+grails.plugin.springsecurity.ui.register.defaultRoleNames = [] // no roles
+----
+
+or
+
+[source,groovy]
+----
+grails.plugin.springsecurity.ui.register.defaultRoleNames = ['ROLE_CUSTOMER']
 ----
 
 
@@ -87,18 +100,6 @@ grails.plugin.springsecurity.ui.register.emailSubject = '...'
 ----
 
 The `emailBody` property should be a GString and will have the User domain class instance in scope in the `user` variable, and the generated url to click to finalize the signup in the `url` variable.
-
-[source,groovy]
-----
-grails.plugin.springsecurity.ui.register.defaultRoleNames = [] // no roles
-----
-
-or
-
-[source,groovy]
-----
-grails.plugin.springsecurity.ui.register.defaultRoleNames = ['ROLE_CUSTOMER']
-----
 
 === Notes
 

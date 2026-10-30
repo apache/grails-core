@@ -148,11 +148,16 @@ public class DataBindingUtils {
     }
 
     /**
-     * The class whose include list an object is bound with. A proxy of an entity is a subclass generated at runtime
-     * that declares no include list of its own, so it is bound as the persistent class it stands for, rather than
-     * as an unenhanced subclass would be.
+     * The class whose include list an object is bound with: its own class when that declares one; else, when the
+     * object is a proxy of an entity, as the subclass a datastore generates at runtime is, the class of what it
+     * stands for, which the proxy handler of the mapping context unwraps and which binding into the proxy would
+     * initialize anyway; else its own class.
      */
     private static Class bindingType(final Object object) {
+        final Class objectClass = object.getClass();
+        if (BindingIncludeLists.declaresIncludeList(objectClass)) {
+            return objectClass;
+        }
         final GrailsApplication application = Holders.findApplication();
         if (application != null) {
             try {
@@ -167,12 +172,16 @@ public class DataBindingUtils {
         return object.getClass();
     }
 
+    /**
+     * The class of an object, or, when it is a proxy of an entity, the class of what it stands for, which the proxy
+     * handler of the mapping context unwraps and which binding into the proxy would initialize anyway.
+     */
     private static Class persistentClass(final Object object, final MappingContext mappingContext) {
         final ProxyHandler proxyHandler = mappingContext.getProxyHandler();
         if (proxyHandler != null && proxyHandler.isProxy(object)) {
-            final Class proxiedClass = proxyHandler.getProxiedClass(object);
-            if (proxiedClass != null) {
-                return proxiedClass;
+            final Object unwrapped = proxyHandler.unwrap(object);
+            if (unwrapped != null) {
+                return unwrapped.getClass();
             }
         }
         return object.getClass();
@@ -465,7 +474,8 @@ public class DataBindingUtils {
      *
      * @param object The object to bind to
      * @param source The source object
-     * @param include The explicit list of properties to include. {@code clearMissing} is ignored when this is {@code null}
+     * @param include The explicit list of properties to include; {@code null} for the white list generated on the
+     *                class, which an exclude list then narrows. {@code clearMissing} is ignored when this is {@code null}
      * @param exclude The list of properties to exclude. Excluded and {@code bindable: false} properties are never cleared
      * @param filter The prefix to filter by
      * @param clearMissing Whether omitted explicitly included properties should be cleared after normal binding completes
@@ -476,12 +486,7 @@ public class DataBindingUtils {
     public static BindingResult bindObjectToInstance(Object object, Object source, List include, List exclude, String filter, boolean clearMissing) {
         boolean explicitInclude = include != null;
         if (include == null) {
-            if (exclude == null || isDenyByDefaultEnabled()) {
-                include = getBindingIncludeList(object);
-            } else {
-                // Exclude-only in compatibility mode must not intersect the class allowlist.
-                include = GrailsWebDataBinder.bindAllBindingIncludeList();
-            }
+            include = getBindingIncludeList(object);
         }
         else if (include.isEmpty() && !GrailsWebDataBinder.isBindAllIncludeList(include)) {
             include = Collections.singletonList(DefaultASTDatabindingHelper.NO_BINDABLE_PROPERTIES);
@@ -510,11 +515,7 @@ public class DataBindingUtils {
     public static BindingResult bindObjectToDomainInstance(PersistentEntity entity, Object object,
                                                            Object source, List include, List exclude, String filter) {
         if (include == null) {
-            if (exclude == null || isDenyByDefaultEnabled()) {
-                include = getBindingIncludeList(object);
-            } else {
-                include = GrailsWebDataBinder.bindAllBindingIncludeList();
-            }
+            include = getBindingIncludeList(object);
         }
         else if (include.isEmpty() && !GrailsWebDataBinder.isBindAllIncludeList(include)) {
             include = Collections.singletonList(DefaultASTDatabindingHelper.NO_BINDABLE_PROPERTIES);
@@ -551,11 +552,7 @@ public class DataBindingUtils {
             Object source, List include, List exclude, String filter, boolean clearMissing, GrailsApplication grailsApplication) {
         boolean explicitInclude = include != null;
         if (include == null) {
-            if (exclude == null || isDenyByDefaultEnabled()) {
-                include = getBindingIncludeList(object);
-            } else {
-                include = GrailsWebDataBinder.bindAllBindingIncludeList();
-            }
+            include = getBindingIncludeList(object);
         }
         else if (include.isEmpty() && !GrailsWebDataBinder.isBindAllIncludeList(include)) {
             include = Collections.singletonList(DefaultASTDatabindingHelper.NO_BINDABLE_PROPERTIES);

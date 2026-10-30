@@ -28,6 +28,10 @@ import spock.lang.Specification
 import spock.lang.Unroll
 
 import org.springframework.context.support.StaticMessageSource
+import org.grails.datastore.gorm.proxy.GroovyProxyFactory
+import org.grails.datastore.mapping.proxy.ProxyFactory
+import org.springframework.validation.BeanPropertyBindingResult
+import org.springframework.validation.Errors
 
 import grails.config.Settings
 import grails.util.Holders
@@ -54,8 +58,8 @@ class GrailsWebDataBinderSpec extends Specification implements DataTest {
         mockDomains(
                 AssociationBindingAuthor, AssociationBindingBook, AssociationBindingPage, Author, BinderNullabilityEntity,
                 Child, CollectionContainer, ConstraintsCountingWidget, DataBindingBook, Fidget, Foo, GeneratedBindingChild,
-                GeneratedBindingParent, Parent, Publication, Publisher, RawCollectionContainer, Team, UnbindableChildEntity,
-                UnbindableParentEntity, Widget
+                GeneratedBindingParent, Parent, ProxiedPublisher, ProxiedPublisherHolder, Publication, Publisher,
+                RawCollectionContainer, Team, UnbindableChildEntity, UnbindableParentEntity, Widget
         )
     }
 
@@ -1360,6 +1364,73 @@ class GrailsWebDataBinderSpec extends Specification implements DataTest {
         sortedSetOfWidgets[2].isBindable == 'Is Uno (SortedSet)'
     }
 
+    void 'Test that a property holding a validation result is never bound, even when the white list names it'() {
+        given: 'a white list naming the validation result, as a class compiled by an earlier Grails carries it'
+        def report = new ReportWithValidation()
+
+        when:
+        binder.bind(report, new SimpleMapDataBindingSource([name: 'Quarterly', validation: [nestedPath: 'submitted.']]),
+                ['name', 'validation', 'validation.*'])
+
+        then:
+        report.name == 'Quarterly'
+        report.validation.nestedPath == ''
+        !report.validation.hasErrors()
+    }
+
+    void 'Test that a proxy the Groovy proxy factory creates is bound by the white list of its class, bound #how'() {
+        given: 'the proxy factory GORM falls back to when javassist is not on the classpath'
+        def mappingContext = grailsApplication.mappingContext
+        def originalProxyFactory = mappingContext.proxyFactory
+        mappingContext.proxyFactory = new GroovyProxyFactory()
+        def publisherId = new ProxiedPublisher(name: 'Acme').save(flush: true, failOnError: true).id
+
+        and: 'a proxy for it, from a session that does not hold the instance'
+        datastore.currentSession.clear()
+        def proxy = ProxiedPublisher.proxy(publisherId)
+
+        expect: 'the association is a proxy, and an instance of the class it stands for'
+        mappingContext.proxyHandler.isProxy(proxy)
+        proxy.getClass() == ProxiedPublisher
+
+        when:
+        def target = nested ? new ProxiedPublisherHolder(publisher: proxy) : proxy
+        def source = nested ? [publisher: [name: 'Acme Periodicals', verified: true]] : [name: 'Acme Periodicals', verified: true]
+        DataBindingUtils.bindObjectToInstance(target, source)
+
+        then: 'the bindable property is bound, and the one the class keeps out of binding is not'
+        proxy.name == 'Acme Periodicals'
+        !proxy.verified
+
+        cleanup:
+        mappingContext.proxyFactory = originalProxyFactory
+
+        where:
+        how        | nested
+        'nested'   | true
+        'directly' | false
+    }
+
+    void 'Test that an error while unwrapping a proxy reaches the caller'() {
+        given: 'a proxy handler that cannot unwrap what it takes for a proxy, as one whose row is gone or whose session is closed cannot'
+        def mappingContext = grailsApplication.mappingContext
+        def originalProxyFactory = mappingContext.proxyFactory
+        mappingContext.proxyFactory = Stub(ProxyFactory) {
+            isProxy(_ as ReportWithValidation) >> true
+            unwrap(_ as ReportWithValidation) >> { throw new IllegalStateException('the row is gone') }
+        }
+
+        when: 'an object its class gives no white list to is bound'
+        DataBindingUtils.bindObjectToInstance(new ReportWithValidation(), [name: 'Quarterly'])
+
+        then: 'the error is not swallowed'
+        IllegalStateException e = thrown()
+        e.message == 'the row is gone'
+
+        cleanup:
+        mappingContext.proxyFactory = originalProxyFactory
+    }
+
     void 'Test that binding errors are populated on a @Validateable instance'() {
 
         given:
@@ -2464,6 +2535,31 @@ class PrimitiveContainer implements Validateable {
 @SuppressWarnings('unused')
 class SomeValidateableClass implements Validateable {
     Integer someNumber
+}
+
+class ReportWithValidation {
+    String name
+    Errors validation = new BeanPropertyBindingResult(this, 'report')
+}
+
+@Entity
+class ProxiedPublisher {
+    String name
+    boolean verified
+
+    static constraints = {
+        verified bindable: false
+    }
+}
+
+@Entity
+class ProxiedPublisherHolder {
+    String title
+    ProxiedPublisher publisher
+
+    static constraints = {
+        title nullable: true
+    }
 }
 
 @Entity

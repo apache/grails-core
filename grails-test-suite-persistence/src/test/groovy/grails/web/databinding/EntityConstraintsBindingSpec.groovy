@@ -73,10 +73,11 @@ class EntityConstraintsBindingSpec extends Specification {
     }
 
     void 'a proxy of an entity is bound with the constraints the validator of the entity holds'() {
-        given: 'a datastore that generates a proxy as a subclass of the entity it stands for'
+        given: 'a datastore that generates a proxy as a subclass of the entity it stands for, and unwraps it to the entity'
         mappingContext.proxyFactory = Stub(ProxyFactory) {
             isProxy(_ as ProxyOfValidatedRecord) >> true
             getProxiedClass(_ as ProxyOfValidatedRecord) >> ValidatedRecord
+            unwrap(_ as ProxyOfValidatedRecord) >> new ValidatedRecord()
         }
         PersistentEntity entity = mappingContext.addPersistentEntity(ValidatedRecord)
         mappingContext.addEntityValidator(entity, new HeldConstraintsValidator(ValidatedRecord, 'secret'))

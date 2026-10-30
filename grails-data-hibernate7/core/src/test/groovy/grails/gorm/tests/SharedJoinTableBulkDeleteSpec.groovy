@@ -198,6 +198,53 @@ class SharedJoinTableBulkDeleteSpec extends HibernateGormDatastoreSpec {
         }
     }
 
+    void "clearing one association of a shared join table leaves the rows of the other, with a key column each"() {
+        given: 'a group with a role in each association'
+        Map<String, Long> ids = SjtbdGroup.withNewTransaction {
+            SjtbdRole admin = new SjtbdRole(name: 'admin').save(flush: true)
+            SjtbdRole guest = new SjtbdRole(name: 'guest').save(flush: true)
+            SjtbdGroup group = new SjtbdGroup(name: 'group')
+            group.addToAllow(admin)
+            group.addToDeny(guest)
+            [group: group.save(flush: true).id]
+        }
+
+        when: 'the allowed roles are cleared'
+        SjtbdGroup.withNewSession {
+            SjtbdGroup.withNewTransaction {
+                SjtbdGroup group = SjtbdGroup.get(ids.group)
+                group.allow.clear()
+                group.save(flush: true)
+            }
+        }
+
+        then: 'the denied roles are still there'
+        SjtbdGroup.withNewSession {
+            SjtbdGroup.withNewTransaction {
+                SjtbdGroup group = SjtbdGroup.get(ids.group)
+                group.allow.isEmpty() && group.deny*.name == ['guest']
+            }
+        }
+
+        when: 'the denied roles are cleared after an allowed role is added back'
+        SjtbdGroup.withNewSession {
+            SjtbdGroup.withNewTransaction {
+                SjtbdGroup group = SjtbdGroup.get(ids.group)
+                group.addToAllow(SjtbdRole.findByName('admin'))
+                group.deny.clear()
+                group.save(flush: true)
+            }
+        }
+
+        then: 'the allowed roles are still there'
+        SjtbdGroup.withNewSession {
+            SjtbdGroup.withNewTransaction {
+                SjtbdGroup group = SjtbdGroup.get(ids.group)
+                group.deny.isEmpty() && group.allow*.name == ['admin']
+            }
+        }
+    }
+
     void "removing one element of a shared join table's set keeps the other elements, with a key column each"() {
         given: 'a group with two roles in each association'
         Long id = SjtbdGroup.withNewTransaction {
