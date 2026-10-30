@@ -22,7 +22,9 @@ import javax.sql.DataSource
 
 import grails.gorm.annotation.Entity
 import org.grails.orm.hibernate.cfg.Settings
+import org.springframework.orm.hibernate5.SessionHolder
 import org.springframework.transaction.TransactionDefinition
+import org.springframework.transaction.support.TransactionSynchronizationManager
 import spock.lang.AutoCleanup
 import spock.lang.Issue
 import spock.lang.Specification
@@ -139,6 +141,23 @@ class WithNewSessionNonLazyPoolSpec extends Specification {
         tomcatDataSource.pool.active == 0
         NonLazyBook.count() == 1
         NonLazyAuthor.count() == 2
+    }
+
+    void "withNewSession runs and rebinds holder when outer request session was closed before scope"() {
+        given: "a closed outer request session with holder still bound"
+        SessionHolder boundHolder =
+                (SessionHolder) TransactionSynchronizationManager.getResource(datastore.sessionFactory)
+        requestSession.close()
+        assert !requestSession.isOpen()
+
+        when: "running withNewSession"
+        int count = NonLazyAuthor.withNewSession {
+            NonLazyAuthor.count()
+        }
+
+        then: "the closure executes and the closed holder is restored"
+        count == 0
+        TransactionSynchronizationManager.getResource(datastore.sessionFactory).is(boundHolder)
     }
 }
 

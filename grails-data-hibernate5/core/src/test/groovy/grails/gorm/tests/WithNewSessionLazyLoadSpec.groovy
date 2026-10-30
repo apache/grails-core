@@ -177,7 +177,7 @@ class WithNewSessionLazyLoadSpec extends GrailsDataTckSpec<GrailsDataHibernate5T
         book.author.name == 'Ursula'
     }
 
-    void "request-bound session remains usable after nested withNewSession inside SUPPORTS transaction without in-scope query"() {
+    void "request-bound session remains open after withNewSession under SUPPORTS when outer session is untouched"() {
         given: "an initial transaction to ensure the request session is disconnected"
         manager.sessionFactory.currentSession
         SessionHolder requestSessionHolder = TransactionSynchronizationManager.getResource(manager.sessionFactory)

@@ -85,7 +85,7 @@ interface OuterSessionLifecycleStrategy {
         boolean hasConnectionHolder = txResources.getResource(dataSource) != null;
         boolean hasSynchronization = txResources.isSynchronizationActive();
 
-        if (!hasOpenSession && !hasConnectionHolder && !hasSynchronization) {
+        if (previousHolder == null && !hasConnectionHolder && !hasSynchronization) {
             return new NoOpOuterSessionStrategy();
         }
 

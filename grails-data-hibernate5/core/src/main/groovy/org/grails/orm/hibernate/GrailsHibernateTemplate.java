@@ -315,9 +315,7 @@ public class GrailsHibernateTemplate implements IHibernateTemplate {
                 session.setDefaultReadOnly(true);
             }
             Session sessionToExpose = (enforceNativeSession || exposeNativeSession ? session : createSessionProxy(session));
-            T result = executeInSession(action, sessionToExpose);
-            flushIfNecessary(session, existingTransaction);
-            return result;
+            return executeInSession(action, sessionToExpose, session, existingTransaction);
         } finally {
             if (existingTransaction) {
                 LOG.debug("Not closing pre-bound Hibernate Session after HibernateTemplate");
@@ -331,8 +329,14 @@ public class GrailsHibernateTemplate implements IHibernateTemplate {
     }
 
     protected <T> T executeInSession(HibernateCallback<T> action, Session session) throws DataAccessException {
+        return executeInSession(action, session, session, false);
+    }
+
+    protected <T> T executeInSession(HibernateCallback<T> action, Session session, Session rawSession, boolean existingTransaction) throws DataAccessException {
         try {
-            return action.doInHibernate(session);
+            T result = action.doInHibernate(session);
+            flushIfNecessary(rawSession, existingTransaction);
+            return result;
         } catch (HibernateException ex) {
             throw convertHibernateAccessException(ex);
         } catch (PersistenceException ex) {

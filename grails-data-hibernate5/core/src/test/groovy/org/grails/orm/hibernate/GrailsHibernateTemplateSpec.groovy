@@ -22,6 +22,7 @@ import java.sql.SQLException
 
 import org.apache.grails.data.testing.tck.domains.Book
 import org.grails.orm.hibernate.cfg.Settings
+import org.hibernate.HibernateException
 import org.hibernate.Session
 import org.hibernate.exception.GenericJDBCException
 import org.springframework.dao.DataAccessException
@@ -71,5 +72,25 @@ class GrailsHibernateTemplateSpec extends Specification {
 
         then:
         thrown(org.springframework.orm.hibernate5.HibernateSystemException)
+    }
+
+    void "doExecute translates HibernateException thrown during flushIfNecessary to DataAccessException"() {
+        given:
+        GrailsHibernateTemplate customTemplate = new GrailsHibernateTemplate(datastore.sessionFactory, datastore) {
+            @Override
+            protected void flushIfNecessary(Session session, boolean existingTransaction) throws HibernateException {
+                throw new HibernateException('Simulated flush failure')
+            }
+        }
+        customTemplate.setFlushMode(GrailsHibernateTemplate.FLUSH_EAGER)
+
+        when:
+        Book.withTransaction {
+            customTemplate.execute { Session session -> 'ok' }
+        }
+
+        then:
+        DataAccessException ex = thrown(DataAccessException)
+        ex.message.contains('Simulated flush failure')
     }
 }

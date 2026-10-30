@@ -56,7 +56,7 @@ class OuterSessionLifecycleStrategySpec extends Specification {
         strategy instanceof NoOpOuterSessionStrategy
     }
 
-    void "from returns NoOpOuterSessionStrategy when session is null"() {
+    void "from returns DefaultOuterSessionStrategy when session is null with bound holder"() {
         given:
         SessionHolder emptyHolder = Mock(SessionHolder)
         emptyHolder.getSession() >> null
@@ -66,10 +66,10 @@ class OuterSessionLifecycleStrategySpec extends Specification {
                 emptyHolder, sessionFactory, dataSource, txResources)
 
         then:
-        strategy instanceof NoOpOuterSessionStrategy
+        strategy instanceof DefaultOuterSessionStrategy
     }
 
-    void "from returns NoOpOuterSessionStrategy when session is closed"() {
+    void "from returns DefaultOuterSessionStrategy when session is closed with bound holder"() {
         given:
         session.isOpen() >> false
 
@@ -78,7 +78,7 @@ class OuterSessionLifecycleStrategySpec extends Specification {
                 sessionHolder, sessionFactory, dataSource, txResources)
 
         then:
-        strategy instanceof NoOpOuterSessionStrategy
+        strategy instanceof DefaultOuterSessionStrategy
     }
 
     void "from returns ActiveTransactionOuterSessionStrategy when previousHolder is null but transaction is active and DataSource holder is bound"() {
