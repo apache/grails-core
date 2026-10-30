@@ -84,9 +84,19 @@ public interface HqlQueryMethods {
         hints.forEach(d::setHint);
     }
 
+    /**
+     * @deprecated since 8.0.1, use {@link #populateParameters(HqlQueryDelegate, QueryParameters)} instead.
+     */
+    @Deprecated(since = "8.0.1", forRemoval = true)
     static void populateParameters(HqlQueryDelegate d, HqlQueryContext queryContext) {
-        if (queryContext.namedParams() != null && !queryContext.namedParams().isEmpty()) {
-            queryContext.namedParams().forEach((key, value) -> {
+        if (queryContext != null) {
+            populateParameters(d, queryContext.parameters());
+        }
+    }
+
+    static void populateParameters(HqlQueryDelegate d, QueryParameters parameters) {
+        if (parameters != null && parameters.hasNamed()) {
+            parameters.named().forEach((key, value) -> {
                 if (INTERNAL_SETTINGS.contains(key)) return;
                 Object val = convertValue(value);
                 if (val instanceof Collection) {
@@ -97,9 +107,9 @@ public interface HqlQueryMethods {
                     d.setParameter(key, val);
                 }
             });
-        } else if (queryContext.positionalParams() != null && !queryContext.positionalParams().isEmpty()) {
-            for (int i = 0; i < queryContext.positionalParams().size(); i++) {
-                Object val = convertValue(queryContext.positionalParams().get(i));
+        } else if (parameters != null && parameters.hasPositional()) {
+            for (int i = 0; i < parameters.positional().size(); i++) {
+                Object val = convertValue(parameters.positional().get(i));
                 d.setParameter(i + 1, val);
             }
         }

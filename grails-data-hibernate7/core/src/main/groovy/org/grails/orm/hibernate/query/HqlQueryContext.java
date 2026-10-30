@@ -53,6 +53,12 @@ public record HqlQueryContext(
         boolean isUpdate,
         boolean isNative) {
 
+    /**
+     * Constructs a context from raw map/list parameters and settings.
+     *
+     * @deprecated since 8.0.1, use {@link #HqlQueryContext(String, Class, QueryParameters, QuerySettings, boolean, boolean)} instead.
+     */
+    @Deprecated(since = "8.0.1", forRemoval = true)
     public HqlQueryContext(
             String hql,
             Class<?> targetClass,
@@ -127,32 +133,60 @@ public record HqlQueryContext(
 
     // ─── Backwards Compatibility Accessors ────────────────────────────────────
 
+    /**
+     * @deprecated since 8.0.1, use {@link #parameters()} and {@link QueryParameters#named()} instead.
+     */
+    @Deprecated(since = "8.0.1", forRemoval = true)
     public Map<String, Object> namedParams() {
         return parameters != null ? parameters.named() : Collections.emptyMap();
     }
 
+    /**
+     * @deprecated since 8.0.1, use {@link #parameters()} and {@link QueryParameters#positional()} instead.
+     */
+    @Deprecated(since = "8.0.1", forRemoval = true)
     public List<Object> positionalParams() {
         return parameters != null ? parameters.positional() : Collections.emptyList();
     }
 
+    /**
+     * @deprecated since 8.0.1, use {@link #settings()} and {@link QuerySettings#settings()} instead.
+     */
+    @Deprecated(since = "8.0.1", forRemoval = true)
     public Map<String, Object> querySettings() {
         return settings != null ? settings.settings() : Collections.emptyMap();
     }
 
+    /**
+     * @deprecated since 8.0.1, use {@link #settings()} and {@link QuerySettings#hints()} instead.
+     */
+    @Deprecated(since = "8.0.1", forRemoval = true)
     public Map<String, Object> hints() {
         return settings != null ? settings.hints() : Collections.emptyMap();
     }
 
     // ─── HQL resolution delegation ───────────────────────────────────────────
 
+    /**
+     * @deprecated since 8.0.1, use {@link QueryParameters#normalizeMultiLineQueryString(String)} instead.
+     */
+    @Deprecated(since = "8.0.1", forRemoval = true)
     static String normalizeMultiLineQueryString(String query) {
         return QueryParameters.normalizeMultiLineQueryString(query);
     }
 
+    /**
+     * @deprecated since 8.0.1, use {@link QueryParameters#resolveHql(CharSequence, Map)} instead.
+     */
+    @Deprecated(since = "8.0.1", forRemoval = true)
     static @Nullable String resolveHql(CharSequence queryCharseq, Map<String, Object> namedParams) {
         return QueryParameters.resolveHql(queryCharseq, namedParams);
     }
 
+    /**
+     * @deprecated since 8.0.1, use {@link QueryParameters#resolveHql(CharSequence, boolean, Collection)} instead.
+     */
+    @Deprecated(since = "8.0.1", forRemoval = true)
     static @Nullable String resolveHql(
             CharSequence queryCharseq, boolean isNative, Collection<Object> positionalParams) {
         return QueryParameters.resolveHql(queryCharseq, isNative, positionalParams);
