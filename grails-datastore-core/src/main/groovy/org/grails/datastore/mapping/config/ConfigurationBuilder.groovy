@@ -33,11 +33,9 @@ import groovy.util.logging.Slf4j
 import org.springframework.core.convert.ConversionFailedException
 import org.springframework.core.convert.ConverterNotFoundException
 import org.springframework.core.env.ConfigurableEnvironment
-import org.springframework.util.PlaceholderResolutionException
 import org.springframework.core.env.EnumerablePropertySource
 import org.springframework.core.env.PropertyResolver
 import org.springframework.core.env.PropertySource
-import org.springframework.core.env.StandardEnvironment
 import org.springframework.util.ClassUtils
 import org.springframework.util.ReflectionUtils
 
@@ -433,113 +431,51 @@ abstract class ConfigurationBuilder<B, C> {
     }
 
     private Map resolveMapProperty(String propertyPath, Map fallBackValue) {
-        Map directValue
-        RuntimeException conversionFailure = null
-        try {
-            directValue = propertyResolver.getProperty(propertyPath, Map)
-        } catch (ConversionFailedException | ConverterNotFoundException e) {
-            conversionFailure = e
-            directValue = null
+        if (propertyResolver instanceof DatastoreEnvironment || !(propertyResolver instanceof ConfigurableEnvironment)) {
+            return readDirectMap(propertyPath, fallBackValue)
         }
-        if (!(propertyResolver instanceof ConfigurableEnvironment) && directValue != null && !directValue.isEmpty()) {
+        ConfigurableEnvironment environment = (ConfigurableEnvironment) propertyResolver
+        String prefix = propertyPath + '.'
+        Map<String, Object> result = new LinkedHashMap<>()
+        Set<Map<String, Object>> containers = Collections.newSetFromMap(new IdentityHashMap<Map<String, Object>, Boolean>())
+        Set<List<Object>> builtLists = Collections.newSetFromMap(new IdentityHashMap<List<Object>, Boolean>())
+        containers.add(result)
+        boolean stored = false
+        for (PropertySource<?> propertySource : environment.propertySources) {
+            if (!(propertySource instanceof EnumerablePropertySource)) {
+                continue
+            }
+            for (String name : ((EnumerablePropertySource<?>) propertySource).propertyNames) {
+                if (name == null || !name.startsWith(prefix)) {
+                    continue
+                }
+                String relativeName = name.substring(prefix.length())
+                if (relativeName.isEmpty() || pathBlocked(result, builtLists, relativeName)) {
+                    continue
+                }
+                Object value = readEnvironmentValue(environment, name)
+                if (value == null) {
+                    continue
+                }
+                putFlattenedName(result, containers, builtLists, relativeName, value)
+                stored = true
+            }
+        }
+        if (!stored) {
+            // A map stored at the exact path is used only when no flattened name exists.
+            return readDirectMap(propertyPath, fallBackValue)
+        }
+        return result
+    }
+
+    /**
+     * Read the exact path. ConversionFailedException and ConverterNotFoundException propagate
+     * from this call, which a raw environment reaches only after the walk stored nothing.
+     */
+    private Map readDirectMap(String propertyPath, Map fallBackValue) {
+        Map directValue = propertyResolver.getProperty(propertyPath, Map)
+        if (directValue != null && !directValue.isEmpty()) {
             return directValue
-        }
-        if (propertyResolver instanceof ConfigurableEnvironment) {
-            ConfigurableEnvironment environment = (ConfigurableEnvironment) propertyResolver
-            String prefix = propertyPath + '.'
-            Map<String, Object> result = new LinkedHashMap<>()
-            for (PropertySource<?> propertySource : environment.propertySources) {
-                // StandardEnvironment also exposes JVM system properties. They are not
-                // prepared configuration. A lower configuration map still has to merge.
-                if (environment instanceof DatastoreEnvironment) {
-                    String sourceName = propertySource.getName()
-                    if (sourceName == StandardEnvironment.SYSTEM_PROPERTIES_PROPERTY_SOURCE_NAME ||
-                            sourceName == StandardEnvironment.SYSTEM_ENVIRONMENT_PROPERTY_SOURCE_NAME) {
-                        continue
-                    }
-                }
-                Object sourceValue = propertySource.getProperty(propertyPath)
-                Map<String, Object> sourceMap = new LinkedHashMap<>()
-                if (sourceValue instanceof Map && !((Map) sourceValue).isEmpty()) {
-                    sourceMap = copyConfigMap((Map<?, ?>) sourceValue)
-                }
-                else if (propertySource instanceof EnumerablePropertySource) {
-                    for (String name : ((EnumerablePropertySource<?>) propertySource).propertyNames) {
-                        String relativeName = name.startsWith(prefix) ? name.substring(prefix.length()) : null
-                        if (relativeName == null || hasResolvedValue(result, relativeName) || leafAlreadySet(sourceMap, relativeName)) {
-                            continue
-                        }
-                        // An exact path already stored, including an empty map, wins over a lower
-                        // scalar. Skip that scalar before placeholder resolution. A lower map still
-                        // merges, so its missing children are kept.
-                        if ((exactPathPresent(result, relativeName) || indexedLiteralClaimed(result, relativeName)) && !firstRawValueIsMap(environment, name)) {
-                            continue
-                        }
-                        Object value = readEnvironmentValue(environment, name)
-                        if (value == null) {
-                            continue
-                        }
-                        if (value instanceof Map) {
-                            Map<String, Object> copied = copyConfigMap((Map<?, ?>) value)
-                            Map<String, Object> filtered = withoutSourceAliases(sourceMap, relativeName, copied)
-                            if (filtered.isEmpty() && !copied.isEmpty()) {
-                                continue
-                            }
-                            value = filtered
-                        }
-                        String[] segments = name.substring(prefix.length()).split('\\.')
-                        Map<String, Object> current = sourceMap
-                        for (int segmentIndex = 0; segmentIndex < segments.length - 1; segmentIndex++) {
-                            String segment = segments[segmentIndex]
-                            Object child = current.get(segment)
-                            if (!(child instanceof Map)) {
-                                child = new LinkedHashMap<String, Object>()
-                                current.put(segment, child)
-                            }
-                            current = (Map<String, Object>) child
-                        }
-                        String leaf = segments[segments.length - 1]
-                        int bracket = leaf.lastIndexOf('[')
-                        if (bracket > 0 && leaf.endsWith(']') && leaf.substring(bracket + 1, leaf.length() - 1).matches('\\d+')) {
-                            int index = Integer.parseInt(leaf.substring(bracket + 1, leaf.length() - 1))
-                            String listName = leaf.substring(0, bracket)
-                            Object existing = current.get(listName)
-                            List<Object> values = existing instanceof List ? new ArrayList<Object>((List<?>) existing) : new ArrayList<Object>()
-                            while (values.size() <= index) {
-                                values.add(null)
-                            }
-                            values.set(index, value)
-                            current.put(listName, values)
-                        }
-                        else if (value instanceof Map) {
-                            Map<String, Object> copied = copyConfigMap((Map<?, ?>) value)
-                            Object existing = current.get(leaf)
-                            if (existing instanceof Map) {
-                                mergeMissing((Map<String, Object>) existing, copied)
-                            }
-                            else {
-                                current.put(leaf, copied)
-                            }
-                        }
-                        else if (current.get(leaf) == null) {
-                            current.put(leaf, value)
-                        }
-                    }
-                }
-                if (sourceMap.isEmpty() && sourceValue != null && !(sourceValue instanceof Map)) {
-                    Map<String, Object> converted = convertSourceMap(environment, sourceValue)
-                    if (converted != null) {
-                        sourceMap = converted
-                    }
-                }
-                mergeMissing(result, sourceMap)
-            }
-            if (!result.isEmpty()) {
-                return result == directValue ? directValue : result
-            }
-        }
-        if (conversionFailure != null) {
-            throw conversionFailure
         }
         return directValue != null ? directValue : fallBackValue
     }
@@ -563,263 +499,96 @@ abstract class ConfigurationBuilder<B, C> {
         return null
     }
 
-    private static boolean hasResolvedValue(Map<String, Object> result, String name) {
-        for (Map.Entry<String, Object> entry : result.entrySet()) {
-            if (name == entry.key && !(entry.value instanceof Map)) {
+    /**
+     * True when this path is already stored, or an ancestor holds a non-map.
+     * A stored map is not a blocking ancestor of a missing leaf.
+     * Only a list this walk built from a numeric index accepts a later index.
+     */
+    private static boolean pathBlocked(Map<String, Object> result, Set<List<Object>> builtLists, String name) {
+        int bracket = indexedBracket(name)
+        String listPath = bracket > 0 ? name.substring(0, bracket) : name
+        String[] segments = listPath.split('\\.')
+        Map<String, Object> current = result
+        for (int i = 0; i < segments.length - 1; i++) {
+            if (!current.containsKey(segments[i])) {
+                return false
+            }
+            Object child = current.get(segments[i])
+            if (!(child instanceof Map)) {
                 return true
             }
-            if (name.startsWith(entry.key + '.')) {
-                if (!(entry.value instanceof Map) || hasResolvedValue((Map<String, Object>) entry.value, name.substring(entry.key.length() + 1))) {
-                    return true
-                }
-            }
+            current = (Map<String, Object>) child
         }
-        int dot = name.indexOf('.')
-        String head = dot < 0 ? name : name.substring(0, dot)
-        int bracket = head.indexOf('[')
-        if (bracket > 0) {
-            head = head.substring(0, bracket)
-        }
-        if (!result.containsKey(head)) {
+        String leaf = segments[segments.length - 1]
+        if (!current.containsKey(leaf)) {
             return false
         }
-        Object value = result.get(head)
-        if (!(value instanceof Map)) {
+        if (bracket < 0) {
             return true
         }
-        return dot >= 0 && hasResolvedValue((Map<String, Object>) value, name.substring(dot + 1))
-    }
-
-    /**
-     * True when this enumeration already stored the named leaf.
-     * A map container is not a claim, so a later parent map can still add missing children.
-     * A scalar or list parent is not a claim either, so a later same-source nested key can replace it.
-     */
-    private static boolean leafAlreadySet(Map<String, Object> source, String name) {
-        for (Map.Entry<String, Object> entry : source.entrySet()) {
-            if (name == entry.key) {
-                return !(entry.value instanceof Map)
-            }
-            if (entry.value instanceof Map && name.startsWith(entry.key + '.')) {
-                if (leafAlreadySet((Map<String, Object>) entry.value, name.substring(entry.key.length() + 1))) {
-                    return true
-                }
-            }
-        }
-        int dot = name.indexOf('.')
-        if (dot < 0 || name.substring(0, dot).indexOf('[') > 0) {
-            return false
-        }
-        Object child = source.get(name.substring(0, dot))
-        if (!(child instanceof Map)) {
-            return false
-        }
-        return leafAlreadySet((Map<String, Object>) child, name.substring(dot + 1))
-    }
-
-    /**
-     * True when this exact path is already stored. An empty map counts.
-     * A literal dotted key such as {@code a.b} is a real prefix, not only the
-     * first segment. An index segment is not a claim, so a later entry can still
-     * update a list.
-     */
-    private static boolean exactPathPresent(Map<String, Object> source, String name) {
-        if (source.get(name) != null) {
+        Object existing = current.get(leaf)
+        if (!(existing instanceof List) || !builtLists.contains((List<Object>) existing)) {
             return true
         }
-        if (name.indexOf('[') < 0) {
-            for (Map.Entry<String, Object> entry : source.entrySet()) {
-                if (entry.value instanceof Map && name.startsWith(entry.key + '.')) {
-                    if (exactPathPresent((Map<String, Object>) entry.value, name.substring(entry.key.length() + 1))) {
-                        return true
-                    }
-                }
-            }
-        }
-        int dot = name.indexOf('.')
-        if (dot < 0 || name.substring(0, dot).indexOf('[') > 0) {
-            return false
-        }
-        Object child = source.get(name.substring(0, dot))
-        if (!(child instanceof Map)) {
-            return false
-        }
-        return exactPathPresent((Map<String, Object>) child, name.substring(dot + 1))
+        int index = Integer.parseInt(name.substring(bracket + 1, name.length() - 1))
+        List<?> values = (List<?>) existing
+        return index < values.size() && values.get(index) != null
     }
 
-    /**
-     * True when {@code name} is an index under a stored literal key whose value is not a map,
-     * such as {@code a.b[0]} when {@code a.b} already holds a list. A map value is not a claim.
-     */
-    private static boolean indexedLiteralClaimed(Map<String, Object> source, String name) {
-        int bracket = name.indexOf('[')
-        if (bracket <= 0) {
-            return false
+    private static void putFlattenedName(Map<String, Object> result, Set<Map<String, Object>> containers,
+                                         Set<List<Object>> builtLists, String name, Object value) {
+        int bracket = indexedBracket(name)
+        String listPath = bracket > 0 ? name.substring(0, bracket) : name
+        String[] segments = listPath.split('\\.')
+        Map<String, Object> current = result
+        for (int i = 0; i < segments.length - 1; i++) {
+            Object child = current.get(segments[i])
+            if (child instanceof Map && !containers.contains((Map<String, Object>) child)) {
+                Map<String, Object> copied = new LinkedHashMap<>((Map<String, Object>) child)
+                containers.add(copied)
+                current.put(segments[i], copied)
+                child = copied
+            }
+            if (!(child instanceof Map) || !containers.contains((Map<String, Object>) child)) {
+                Map<String, Object> created = new LinkedHashMap<>()
+                containers.add(created)
+                current.put(segments[i], created)
+                child = created
+            }
+            current = (Map<String, Object>) child
         }
-        return nonMapLiteralPresent(source, name.substring(0, bracket))
+        String leaf = segments[segments.length - 1]
+        if (bracket < 0) {
+            current.put(leaf, value)
+            return
+        }
+        int index = Integer.parseInt(name.substring(bracket + 1, name.length() - 1))
+        Object existing = current.get(leaf)
+        List<Object> values
+        if (existing instanceof List && builtLists.contains((List<Object>) existing)) {
+            values = (List<Object>) existing
+        }
+        else {
+            values = new ArrayList<>()
+            builtLists.add(values)
+        }
+        while (values.size() <= index) {
+            values.add(null)
+        }
+        values.set(index, value)
+        current.put(leaf, values)
     }
 
-    /**
-     * Copy a map from the same source, omitting leaves already stored under a literal key.
-     * Missing siblings are kept. A scalar ancestor is not a claim.
-     */
-    private static Map<String, Object> withoutSourceAliases(Map<String, Object> root, String prefix, Map<String, Object> extra) {
-        Map<String, Object> copy = new LinkedHashMap<>()
-        for (Map.Entry<String, Object> entry : extra.entrySet()) {
-            String path = prefix + '.' + entry.key
-            if (!(entry.value instanceof Map) && exactPathPresent(root, path)) {
-                continue
-            }
-            if (entry.value instanceof Map) {
-                if (((Map) entry.value).isEmpty()) {
-                    copy.put(entry.key, new LinkedHashMap<String, Object>())
-                }
-                else {
-                    Map<String, Object> nested = withoutSourceAliases(root, path, (Map<String, Object>) entry.value)
-                    if (!nested.isEmpty()) {
-                        copy.put(entry.key, nested)
-                    }
-                }
-            }
-            else {
-                copy.put(entry.key, entry.value)
-            }
+    private static int indexedBracket(String name) {
+        int bracket = name.lastIndexOf('[')
+        if (bracket <= 0 || !name.endsWith(']')) {
+            return -1
         }
-        return copy
-    }
-
-    private static boolean nonMapLiteralPresent(Map<String, Object> source, String name) {
-        Object direct = source.get(name)
-        if (direct != null && !(direct instanceof Map)) {
-            return true
+        if (name.lastIndexOf('.') > bracket) {
+            return -1
         }
-        for (Map.Entry<String, Object> entry : source.entrySet()) {
-            if (entry.value instanceof Map && name.startsWith(entry.key + '.')) {
-                if (nonMapLiteralPresent((Map<String, Object>) entry.value, name.substring(entry.key.length() + 1))) {
-                    return true
-                }
-            }
-        }
-        int dot = name.indexOf('.')
-        if (dot < 0) {
-            return false
-        }
-        Object child = source.get(name.substring(0, dot))
-        if (!(child instanceof Map)) {
-            return false
-        }
-        return nonMapLiteralPresent((Map<String, Object>) child, name.substring(dot + 1))
-    }
-
-    /**
-     * A raw value that is not itself a map can still convert to one, for example a
-     * higher-precedence string the environment's conversion service understands.
-     * A string is resolved with the environment's placeholder settings first, so a
-     * value such as {@code pool} referenced by a placeholder converts as that text.
-     * Unresolvable placeholder text is left unchanged and fails conversion instead of
-     * failing the build: a lower source must not throw, and the winning value was
-     * already resolved by {@code getProperty}. Dotted keys on that same source are
-     * used instead when enumeration already found some.
-     */
-    private static Map<String, Object> convertSourceMap(ConfigurableEnvironment environment, Object sourceValue) {
-        Object convertible = sourceValue
-        if (convertible instanceof String) {
-            try {
-                convertible = environment.resolvePlaceholders((String) convertible)
-            } catch (PlaceholderResolutionException ignored) {
-                return null
-            }
-        }
-        try {
-            Map converted = environment.getConversionService().convert(convertible, Map)
-            if (converted == null || converted.isEmpty()) {
-                return null
-            }
-            return copyConfigMap(converted)
-        } catch (ConversionFailedException | ConverterNotFoundException ignored) {
-            return null
-        }
-    }
-
-    /**
-     * Look at the first raw value only. Placeholder resolution is intentionally not done here.
-     */
-    private static boolean firstRawValueIsMap(ConfigurableEnvironment environment, String name) {
-        for (PropertySource<?> propertySource : environment.propertySources) {
-            Object value = propertySource.getProperty(name)
-            if (value != null) {
-                return value instanceof Map
-            }
-        }
-        return false
-    }
-
-    private static Map<String, Object> copyConfigMap(Map<?, ?> source) {
-        Map<String, Object> copy = new LinkedHashMap<>()
-        for (Map.Entry<?, ?> entry : source.entrySet()) {
-            if (entry.key == null || entry.value == null) {
-                continue
-            }
-            Object value = entry.value instanceof Map ? copyConfigMap((Map<?, ?>) entry.value) : entry.value
-            copy.put(entry.key.toString(), value)
-        }
-        return copy
-    }
-
-    private static void mergeMissing(Map<String, Object> target, Map<String, Object> extra) {
-        mergeMissing(target, extra, target, '')
-    }
-
-    private static void mergeMissing(Map<String, Object> root, Map<String, Object> extra, Map<String, Object> target, String prefix) {
-        for (Map.Entry<String, Object> entry : extra.entrySet()) {
-            String path = prefix ? prefix + '.' + entry.key : entry.key
-            Object existing = target.get(entry.key)
-            if (existing instanceof Map && entry.value instanceof Map) {
-                mergeMissing(root, (Map<String, Object>) entry.value, (Map<String, Object>) existing, path)
-            }
-            else if (!target.containsKey(entry.key) && !hasResolvedValue(root, path)) {
-                Object value = entry.value
-                if (!(value instanceof Map) && exactPathPresent(root, path)) {
-                    continue
-                }
-                if (value instanceof Map) {
-                    value = withoutResolvedDescendants(root, path, (Map<String, Object>) value)
-                    if (((Map) value).isEmpty() && !((Map) entry.value).isEmpty()) {
-                        continue
-                    }
-                }
-                target.put(entry.key, value)
-            }
-        }
-    }
-
-    /**
-     * Copy a lower-precedence map, omitting leaves already supplied by a higher literal key.
-     * Stored keys are not split or rewritten.
-     */
-    private static Map<String, Object> withoutResolvedDescendants(Map<String, Object> root, String prefix, Map<String, Object> extra) {
-        Map<String, Object> copy = new LinkedHashMap<>()
-        for (Map.Entry<String, Object> entry : extra.entrySet()) {
-            String path = prefix + '.' + entry.key
-            if (hasResolvedValue(root, path) || (!(entry.value instanceof Map) && exactPathPresent(root, path))) {
-                continue
-            }
-            if (entry.value instanceof Map) {
-                if (((Map) entry.value).isEmpty()) {
-                    copy.put(entry.key, new LinkedHashMap<String, Object>())
-                }
-                else {
-                    Map<String, Object> nested = withoutResolvedDescendants(root, path, (Map<String, Object>) entry.value)
-                    if (!nested.isEmpty()) {
-                        copy.put(entry.key, nested)
-                    }
-                }
-            }
-            else {
-                copy.put(entry.key, entry.value)
-            }
-        }
-        return copy
+        String indexText = name.substring(bracket + 1, name.length() - 1)
+        return indexText.matches('\\d+') ? bracket : -1
     }
 
     protected Object newChildBuilderForFallback(Object childBuilder, Object fallbackConfig) {
