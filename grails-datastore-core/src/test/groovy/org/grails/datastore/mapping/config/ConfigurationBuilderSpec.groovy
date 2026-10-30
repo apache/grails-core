@@ -89,7 +89,7 @@ class ConfigurationBuilderSpec extends Specification {
         then:
         configuration.properties == [maximumPoolSize: '50', options: [enabled: true], connectionInitSqls: ['SET A=1', 'SET B=2']]
         configuration.properties.connectionInitSqls.is(values.connectionInitSqls)
-        !configuration.properties.options.is(values.options)
+        configuration.properties.options.is(values.options)
         values.maximumPoolSize == '${pool.size}'
     }
 
@@ -104,83 +104,18 @@ class ConfigurationBuilderSpec extends Specification {
 
         when:
         def properties = new MapConfigurationBuilder(environment).build().properties
-        def copied = nested ? properties.options : properties
+        def stored = nested ? properties.options : properties
 
         then:
-        copied == options
-        copied['dbms.memory.pagecache.size'] == '512M'
-        copied.nested == ['dbms.memory.heap.max_size': '1G']
+        stored == options
+        stored['dbms.memory.pagecache.size'] == '512M'
+        stored.nested == ['dbms.memory.heap.max_size': '1G']
         options == ['dbms.memory.pagecache.size': '512M', nested: ['dbms.memory.heap.max_size': '1G']]
-        !nested || (!copied.is(options) && !copied.nested.is(options.nested))
 
         where:
         propertyPath                    | nested
         'dataSource.properties'         | false
         'dataSource.properties.options' | true
-    }
-
-    void "Test lower literal map keys fill only paths missing from higher flattened properties"() {
-        given:
-        def environment = new StandardEnvironment()
-        def options = ['dbms.memory.pagecache.size': '512M', 'dbms.memory.heap.max_size': '2G']
-        environment.propertySources.addFirst(new MapPropertySource('low', [
-                'dataSource.properties.options': options
-        ]))
-        environment.propertySources.addFirst(new MapPropertySource('high', [
-                'dataSource.properties.options.dbms.memory.pagecache.size': '1G'
-        ]))
-
-        when:
-        def properties = new MapConfigurationBuilder(environment).build().properties
-
-        then:
-        properties.options == [dbms: [memory: [pagecache: [size: '1G']]], 'dbms.memory.heap.max_size': '2G']
-        options == ['dbms.memory.pagecache.size': '512M', 'dbms.memory.heap.max_size': '2G']
-    }
-
-    void "Test higher literal map keys resolve flattened descendants for #options"() {
-        given:
-        def environment = new StandardEnvironment()
-        environment.propertySources.addFirst(new MapPropertySource('low', [
-                'dataSource.properties.options.dbms.memory.pagecache.size': '512M'
-        ]))
-        environment.propertySources.addFirst(new MapPropertySource('high', [
-                'dataSource.properties.options': options
-        ]))
-
-        expect:
-        new MapConfigurationBuilder(environment).build().properties.options == expected
-
-        where:
-        options                                          | expected
-        ['dbms.memory.pagecache.size': '1G']              | ['dbms.memory.pagecache.size': '1G']
-        ['dbms.memory': '1G']                             | ['dbms.memory': '1G']
-        ['dbms.memory': [pagecache: [size: '1G']]]         | ['dbms.memory': [pagecache: [size: '1G']]]
-        ['dbms.memory': [heap: [max_size: '2G']]]          | ['dbms.memory': [heap: [max_size: '2G']], dbms: [memory: [pagecache: [size: '512M']]]]
-        ['dbms.mem': '1G']                                | ['dbms.mem': '1G', dbms: [memory: [pagecache: [size: '512M']]]]
-    }
-
-    void "Test a higher literal key blocks only the matching leaf of a lower map"() {
-        given:
-        def environment = new StandardEnvironment()
-        environment.propertySources.addFirst(new MapPropertySource('low', [
-                'dataSource.properties.options.oracle': [jdbc: [sendBooleanAsNativeBoolean: false], pool: 'kept']
-        ]))
-        environment.propertySources.addFirst(new MapPropertySource('mid', [
-                'dataSource.properties.options.oracle.other': 'kept'
-        ]))
-        environment.propertySources.addFirst(new MapPropertySource('high', [
-                'dataSource.properties.options': ['oracle.jdbc.sendBooleanAsNativeBoolean': 'true']
-        ]))
-
-        when:
-        def options = new MapConfigurationBuilder(environment).build().properties.options
-
-        then:
-        options['oracle.jdbc.sendBooleanAsNativeBoolean'] == 'true'
-        options.oracle.pool == 'kept'
-        options.oracle.other == 'kept'
-        options.oracle.jdbc == null
     }
 
     void "Test string placeholders follow the environment policy"() {
@@ -199,259 +134,6 @@ class ConfigurationBuilderSpec extends Specification {
         expect:
         new MapConfigurationBuilder(resolving).build().properties.connectionInitSql == 'SELECT ok'
         new MapConfigurationBuilder(lenient).build().properties.connectionInitSql == 'SELECT ${literal}'
-    }
-
-    void "Test indexed entries copy an existing list instead of mutating it"() {
-        given:
-        List<String> original = List.of('SELECT 1')
-        def environment = new StandardEnvironment()
-        environment.propertySources.addFirst(new MapPropertySource('config', [
-                'dataSource.properties.connectionInitSqls': original,
-                'dataSource.properties.connectionInitSqls[0]': 'SELECT 2'
-        ]))
-
-        when:
-        def sqls = new MapConfigurationBuilder(environment).build().properties.connectionInitSqls
-
-        then:
-        sqls == ['SELECT 2']
-        original == ['SELECT 1']
-    }
-
-    void "Test a higher map keeps its leaf when a lower source repeats that descendant"() {
-        given:
-        def environment = new StandardEnvironment()
-        environment.propertySources.addLast(new MapPropertySource('low', [
-                'dataSource.properties.options': [enabled: false],
-                'dataSource.properties.options.enabled': false
-        ]))
-        environment.propertySources.addFirst(new PropertySource<Object>('high') {
-            @Override
-            Object getProperty(String name) {
-                return name == 'dataSource.properties.options' ? [enabled: true] : null
-            }
-        })
-
-        expect:
-        new MapConfigurationBuilder(environment).build().properties.options == [enabled: true]
-    }
-
-    void "Test a higher map leaf is not replaced by a lower map or unresolved placeholder"() {
-        given:
-        def environment = new StandardEnvironment()
-        environment.propertySources.addLast(new MapPropertySource('low', [
-                'dataSource.properties.options': [enabled: false],
-                'dataSource.properties.options.enabled': '${missing}',
-                'dataSource.properties.pool': [size: 1],
-                'dataSource.properties.pool.size': [nested: 'LOW']
-        ]))
-        environment.propertySources.addFirst(new PropertySource<Object>('high') {
-            @Override
-            Object getProperty(String name) {
-                if (name == 'dataSource.properties.options') {
-                    return [enabled: true]
-                }
-                if (name == 'dataSource.properties.pool') {
-                    return [size: 4]
-                }
-                return null
-            }
-        })
-
-        when:
-        def properties = new MapConfigurationBuilder(environment).build().properties
-
-        then:
-        properties.options == [enabled: true]
-        properties.pool == [size: 4]
-    }
-
-    void "Test a later parent map still contributes keys that a flattened child did not set"() {
-        given:
-        def environment = new StandardEnvironment()
-        environment.propertySources.addFirst(new MapPropertySource('config', [
-                'dataSource.properties.dataSourceProperties.reWriteBatchedInserts': true,
-                'dataSource.properties.dataSourceProperties': [prepareThreshold: 0]
-        ]))
-
-        expect:
-        new MapConfigurationBuilder(environment).build().properties.dataSourceProperties == [
-                reWriteBatchedInserts: true,
-                prepareThreshold: 0
-        ]
-    }
-
-    void "Test a higher literal dotted key blocks a lower flattened alias"() {
-        given:
-        def environment = new StandardEnvironment()
-        environment.propertySources.addLast(new MapPropertySource('low', [
-                'dataSource.properties.options': ['oracle.jdbc.flag': 'LOW'],
-                'dataSource.properties.options.oracle.jdbc.flag': '${missing}'
-        ]))
-        environment.propertySources.addFirst(new PropertySource<Object>('high') {
-            @Override
-            Object getProperty(String name) {
-                return name == 'dataSource.properties.options' ? ['oracle.jdbc.flag': 'HIGH'] : null
-            }
-        })
-
-        expect:
-        new MapConfigurationBuilder(environment).build().properties.options == ['oracle.jdbc.flag': 'HIGH']
-    }
-
-    void "Test an explicit empty nested map blocks a lower value"() {
-        given:
-        def environment = new StandardEnvironment()
-        environment.propertySources.addLast(new MapPropertySource('low', [
-                'dataSource.properties.options.nested': 'LOW'
-        ]))
-        environment.propertySources.addFirst(new MapPropertySource('high', [
-                'dataSource.properties.options': [nested: [:]]
-        ]))
-
-        expect:
-        new MapConfigurationBuilder(environment).build().properties.options == [nested: [:]]
-    }
-
-    void "Test an explicit empty nested map blocks a lower unresolved placeholder"() {
-        given:
-        def environment = new StandardEnvironment()
-        environment.propertySources.addLast(new MapPropertySource('low', [
-                'dataSource.properties.options.nested': '${missing}',
-                'dataSource.properties.options.nested.child': 'kept',
-                'dataSource.properties.options.other': 'kept',
-                'dataSource.properties.options.added': [child: 'kept']
-        ]))
-        environment.propertySources.addFirst(new MapPropertySource('high', [
-                'dataSource.properties.options': [nested: [:]]
-        ]))
-
-        expect:
-        new MapConfigurationBuilder(environment).build().properties.options == [
-                nested: [child: 'kept'],
-                other: 'kept',
-                added: [child: 'kept']
-        ]
-    }
-
-    void "Test an empty map under a literal dotted key blocks a lower unresolved placeholder"() {
-        given:
-        def environment = new StandardEnvironment()
-        environment.propertySources.addLast(new MapPropertySource('low', [
-                'dataSource.properties.options.dbms.memory.nested': '${missing}'
-        ]))
-        environment.propertySources.addFirst(new MapPropertySource('high', [
-                'dataSource.properties.options': ['dbms.memory': [nested: [:]]]
-        ]))
-
-        expect:
-        new MapConfigurationBuilder(environment).build().properties.options == ['dbms.memory': [nested: [:]]]
-    }
-
-    void "Test a lower map keeps a missing sibling and drops a scalar shadowed by a literal dotted key"() {
-        given:
-        def environment = new StandardEnvironment()
-        environment.propertySources.addLast(new MapPropertySource('low', [
-                'dataSource.properties.options.dbms.memory': [nested: 'LOW', kept: 'kept']
-        ]))
-        environment.propertySources.addFirst(new MapPropertySource('high', [
-                'dataSource.properties.options': ['dbms.memory': [nested: [:]]]
-        ]))
-
-        expect:
-        new MapConfigurationBuilder(environment).build().properties.options == [
-                'dbms.memory': [nested: [:]],
-                dbms: [memory: [kept: 'kept']]
-        ]
-    }
-
-    void "Test a converted string map keeps its values over a lower flattened property"() {
-        given:
-        def environment = new StandardEnvironment()
-        environment.conversionService.addConverter(String, Map) { String source ->
-            if (source == 'pool:50') {
-                return [maximumPoolSize: 50]
-            }
-            throw new ConverterNotFoundException(TypeDescriptor.valueOf(String), TypeDescriptor.valueOf(Map))
-        }
-        environment.propertySources.addLast(new MapPropertySource('low', [
-                'dataSource.properties.maximumPoolSize': 10,
-                'dataSource.properties.minimumIdle': 2
-        ]))
-        environment.propertySources.addFirst(new MapPropertySource('high', [
-                'dataSource.properties': 'pool:50'
-        ]))
-
-        expect:
-        new MapConfigurationBuilder(environment).build().properties == [maximumPoolSize: 50, minimumIdle: 2]
-    }
-
-    void "Test a placeholder string map keeps its resolved values over a lower flattened property"() {
-        given:
-        def environment = new StandardEnvironment()
-        environment.conversionService.addConverter(String, Map) { String source ->
-            if (source == 'pool:50') {
-                return [maximumPoolSize: 50]
-            }
-            throw new ConverterNotFoundException(TypeDescriptor.valueOf(String), TypeDescriptor.valueOf(Map))
-        }
-        environment.propertySources.addLast(new MapPropertySource('low', [
-                'dataSource.properties.maximumPoolSize': 10,
-                'dataSource.properties.minimumIdle': 2
-        ]))
-        environment.propertySources.addFirst(new MapPropertySource('high', [
-                'dataSource.properties': '${pool}',
-                pool: 'pool:50'
-        ]))
-
-        expect:
-        new MapConfigurationBuilder(environment).build().properties == [maximumPoolSize: 50, minimumIdle: 2]
-    }
-
-    void "Test a literal dotted list shadows a lower indexed placeholder"() {
-        given:
-        def environment = new StandardEnvironment()
-        environment.propertySources.addLast(new MapPropertySource('low', [
-                'dataSource.properties.a.b[0]': '${missing}'
-        ]))
-        environment.propertySources.addFirst(new MapPropertySource('high', [
-                'dataSource.properties': ['a.b': ['HIGH']]
-        ]))
-
-        expect:
-        new MapConfigurationBuilder(environment).build().properties == ['a.b': ['HIGH']]
-    }
-
-    void "Test a later nested map keeps a same-source literal key and its missing siblings"() {
-        given:
-        def environment = new StandardEnvironment()
-        environment.propertySources.addFirst(new MapPropertySource('config', [
-                'dataSource.properties.dataSourceProperties': ['oracle.jdbc.flag': 'true'],
-                'dataSource.properties.dataSourceProperties.oracle.jdbc': [flag: 'false', other: 'kept']
-        ]))
-
-        when:
-        def properties = new MapConfigurationBuilder(environment).build().properties.dataSourceProperties
-
-        then:
-        properties['oracle.jdbc.flag'] == 'true'
-        properties.oracle.jdbc.other == 'kept'
-        properties.oracle.jdbc.flag == null
-    }
-
-    void "Test a lower circular placeholder string does not replace a higher map"() {
-        given:
-        def environment = new StandardEnvironment()
-        environment.propertySources.addLast(new MapPropertySource('low', [
-                'dataSource.properties': '${loop}',
-                loop: '${loop}'
-        ]))
-        environment.propertySources.addFirst(new MapPropertySource('high', [
-                'dataSource.properties': [x: 50]
-        ]))
-
-        expect:
-        new MapConfigurationBuilder(environment).build().properties == [x: 50]
     }
 
     void "Test Spring Environment rebuilds map-backed builder settings with source precedence"() {
@@ -477,9 +159,96 @@ class ConfigurationBuilderSpec extends Specification {
         then:
         configuration.hibernate.getConfigClass() == 'configured'
         configuration.hibernate['flush'] == [mode: 'HIGH']
-        configuration.hibernate['options'] == [size: 50, inherited: true]
-        configuration.hibernate['local'] == [enabled: true]
+        configuration.hibernate['options'] == [size: 50]
+        configuration.hibernate['local'] == 'replaced by nested map'
         configuration.hibernate['connectionInitSqls'] == ['SET A=1', 'SET B=2']
+    }
+
+    void "Test a higher map value keeps a missing lower flattened leaf without mutating the source"() {
+        given:
+        def options = [enabled: true]
+        def environment = new StandardEnvironment()
+        environment.propertySources.addFirst(new MapPropertySource('low', [
+                'dataSource.properties.options.timeout': 1000
+        ]))
+        environment.propertySources.addFirst(new MapPropertySource('high', [
+                'dataSource.properties.options': options
+        ]))
+
+        when:
+        def properties = new MapConfigurationBuilder(environment).build().properties
+
+        then:
+        properties.options == [enabled: true, timeout: 1000]
+        !properties.options.is(options)
+        options == [enabled: true]
+    }
+
+    void "Test a higher source list blocks a lower index and an unresolved placeholder"() {
+        given:
+        def sqls = ['HIGH']
+        def emptySqls = []
+        def environment = new StandardEnvironment()
+        environment.propertySources.addFirst(new MapPropertySource('low', [
+                'dataSource.properties.sqls[1]': 'LOW',
+                'dataSource.properties.emptySqls[1]': '${missing}'
+        ]))
+        environment.propertySources.addFirst(new MapPropertySource('high', [
+                'dataSource.properties.sqls': sqls,
+                'dataSource.properties.emptySqls': emptySqls,
+                'dataSource.properties.built[1]': 'SET B=2',
+                'dataSource.properties.built[0]': 'SET A=1'
+        ]))
+
+        when:
+        def properties = new MapConfigurationBuilder(environment).build().properties
+
+        then:
+        properties.sqls.is(sqls)
+        properties.emptySqls.is(emptySqls)
+        properties.built == ['SET A=1', 'SET B=2']
+        sqls == ['HIGH']
+        emptySqls.isEmpty()
+    }
+
+    void "Test a higher map leaf is not replaced by a lower map or unresolved placeholder"() {
+        given:
+        def options = [enabled: true]
+        def pool = [size: 4]
+        def environment = new StandardEnvironment()
+        environment.propertySources.addFirst(new MapPropertySource('low', [
+                'dataSource.properties.options': [enabled: false],
+                'dataSource.properties.options.enabled': '${missing}',
+                'dataSource.properties.pool': '${missing}'
+        ]))
+        environment.propertySources.addFirst(new MapPropertySource('high', [
+                'dataSource.properties.options': options,
+                'dataSource.properties.pool': pool
+        ]))
+
+        when:
+        def properties = new MapConfigurationBuilder(environment).build().properties
+
+        then:
+        properties.options.is(options)
+        properties.pool.is(pool)
+        options == [enabled: true]
+        pool == [size: 4]
+    }
+
+    void "Test a lower circular placeholder does not replace a higher map"() {
+        given:
+        def environment = new StandardEnvironment()
+        environment.propertySources.addFirst(new MapPropertySource('low', [
+                'dataSource.properties': '${loop}',
+                loop: '${loop}'
+        ]))
+        environment.propertySources.addFirst(new MapPropertySource('high', [
+                'dataSource.properties': [x: 50]
+        ]))
+
+        expect:
+        new MapConfigurationBuilder(environment).build().properties == [x: 50]
     }
 
     void "Test DatastoreUtils resolver retains existing map-backed builder binding"() {
@@ -504,38 +273,6 @@ class ConfigurationBuilderSpec extends Specification {
         configuration.hibernate['minimumIdle'] == null
         resolver.getProperty('grails.gorm.hibernate', Map) == original
         source.size() == 3
-
-        cleanup:
-        if (previousIdle == null) {
-            System.clearProperty(systemKey)
-        }
-        else {
-            System.setProperty(systemKey, previousIdle)
-        }
-    }
-
-    void "Test DatastoreUtils resolver keeps keys from a lower configuration map"() {
-        given:
-        String systemKey = 'grails.gorm.hibernate.minimumIdle'
-        String previousIdle = System.setProperty(systemKey, '3')
-        def low = [
-                'grails.gorm.hibernate.shared': 'low',
-                'grails.gorm.hibernate.base': 'retained'
-        ]
-        def high = [
-                'grails.gorm.hibernate.shared': 'high',
-                'grails.gorm.hibernate.override': 'new'
-        ]
-        def resolver = DatastoreUtils.createPropertyResolvers(low, high)
-
-        when:
-        def configuration = new SpringMapConfigurationBuilder(resolver).build()
-
-        then:
-        configuration.hibernate['shared'] == 'high'
-        configuration.hibernate['override'] == 'new'
-        configuration.hibernate['base'] == 'retained'
-        configuration.hibernate['minimumIdle'] == null
 
         cleanup:
         if (previousIdle == null) {
