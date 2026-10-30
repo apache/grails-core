@@ -18,6 +18,7 @@
  */
 package grails.web.databinding
 
+import spock.lang.Issue
 import spock.lang.Specification
 
 import org.springframework.context.ApplicationContext
@@ -189,6 +190,45 @@ class DataBindingUtilsSpec extends Specification {
         and: 'a subclass that is not a proxy is bound by the whitelist it inherits too'
         subclass.name == 'Grails'
         subclass.version == null
+    }
+
+    @Issue('https://github.com/apache/grails-core/issues/16558')
+    void 'test a constrained property backed by a map keeps its bindable: false'() {
+        given:
+        def command = new MapConstraintsCommand()
+
+        when:
+        DataBindingUtils.bindObjectToInstance(command, [name: 'Grails', secret: 'Hidden'])
+
+        then:
+        command.name == 'Grails'
+        command.secret == null
+    }
+
+    @Issue('https://github.com/apache/grails-core/issues/16558')
+    void 'test a map-backed constrained property that wraps another is read through the one it wraps'() {
+        given:
+        def command = new MapWrappedConstraintsCommand()
+
+        when:
+        DataBindingUtils.bindObjectToInstance(command, [name: 'Grails', secret: 'Hidden'])
+
+        then:
+        command.name == 'Grails'
+        command.secret == null
+    }
+
+    @Issue('https://github.com/apache/grails-core/issues/16558')
+    void 'test a constrained property that wraps another is read through the one it wraps'() {
+        given:
+        def command = new WrappedConstraintsCommand()
+
+        when:
+        DataBindingUtils.bindObjectToInstance(command, [name: 'Grails', secret: 'Hidden'])
+
+        then:
+        command.name == 'Grails'
+        command.secret == null
     }
 
     void 'test binding before GORM has initialized the mapping context'() {
@@ -414,6 +454,56 @@ class SubclassOfRecordedCommand extends RecordedCommand {
 
 // Stands for the subclass a datastore generates at runtime to proxy an instance of the class it extends.
 class ProxyOfWhitelistedCommand extends WhitelistedCommand {
+}
+
+class WrappedConstraintsCommand {
+
+    String name
+    String secret
+
+    static Map getConstraintsMap() {
+        [secret: new WrappingConstrainedProperty(new MetaConstrainedProperty(bindable: false))]
+    }
+}
+
+class MapConstraintsCommand {
+
+    String name
+    String secret
+
+    static Map getConstraintsMap() {
+        [secret: [metaConstraints: [bindable: false]]]
+    }
+}
+
+class MapWrappedConstraintsCommand {
+
+    String name
+    String secret
+
+    static Map getConstraintsMap() {
+        [secret: [property: new MetaConstrainedProperty(bindable: false)]]
+    }
+}
+
+// Holds its meta constraints, such as bindable, as a constrained property of GORM does.
+class MetaConstrainedProperty {
+
+    boolean bindable
+
+    Object getMetaConstraintValue(String name) {
+        name == 'bindable' ? bindable : null
+    }
+}
+
+// Wraps a constrained property, as the ones a validateable class holds do, without its accessors.
+class WrappingConstrainedProperty {
+
+    final Object property
+
+    WrappingConstrainedProperty(Object property) {
+        this.property = property
+    }
 }
 
 class CountedCommand {
