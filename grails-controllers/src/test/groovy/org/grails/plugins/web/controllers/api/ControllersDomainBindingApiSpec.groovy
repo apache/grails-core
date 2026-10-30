@@ -20,11 +20,18 @@ package org.grails.plugins.web.controllers.api
 
 import org.springframework.beans.factory.config.AutowireCapableBeanFactory
 import org.springframework.context.ApplicationContext
+import org.springframework.mock.web.MockHttpServletRequest
 import spock.lang.Specification
 
+import grails.web.servlet.mvc.GrailsParameterMap
+import org.grails.web.json.JSONObject
+
+import grails.artefact.Artefact
+import grails.config.Settings
 import grails.core.DefaultGrailsApplication
 import grails.core.GrailsApplication
 import grails.util.Holders
+import org.grails.config.PropertySourcesConfig
 import org.grails.core.support.GrailsApplicationDiscoveryStrategy
 import org.grails.datastore.mapping.keyvalue.mapping.config.KeyValueMappingContext
 
@@ -123,14 +130,75 @@ class ControllersDomainBindingApiSpec extends Specification {
     void 'named arguments are still bound when no application has been bound yet'() {
         given:
         Holders.clear()
-        def widget = new Widget()
+        def widget = new UnmappedDomain()
 
         when:
-        ControllersDomainBindingApi.initialize(widget, [name: 'spanner'])
+        ControllersDomainBindingApi.initialize(widget, [id: 7L, name: 'spanner', secret: 'nope', dateCreated: new Date()])
+
+        then:
+        widget.id == 7L
+        widget.name == 'spanner'
+        widget.secret == null
+        widget.dateCreated == null
+    }
+
+    void 'a constructor map does not set a transient field'() {
+        given:
+        Holders.clear()
+        def widget = new TransientFieldDomain()
+        def created = new Date()
+
+        when:
+        ControllersDomainBindingApi.initialize(widget, [name: 'spanner', dateCreated: created])
 
         then:
         widget.name == 'spanner'
+        widget.dateCreated == null
         0 * beanFactory.autowireBeanProperties(_, _, _)
+    }
+
+    void 'request parameters do not set id when no application has been bound yet'() {
+        given:
+        Holders.clear()
+        def widget = new UnmappedDomain()
+        def params = new GrailsParameterMap([id: '9', name: 'spanner'], new MockHttpServletRequest())
+
+        when:
+        ControllersDomainBindingApi.initialize(widget, params)
+
+        then:
+        widget.id == null
+        widget.name == 'spanner'
+    }
+
+    void 'a JSON request body does not set id when no application has been bound yet'() {
+        given:
+        Holders.clear()
+        def widget = new UnmappedDomain()
+        def body = new JSONObject()
+        body.put('id', 9)
+        body.put('name', 'spanner')
+
+        when:
+        ControllersDomainBindingApi.initialize(widget, body)
+
+        then:
+        widget.id == null
+        widget.name == 'spanner'
+    }
+
+    void 'a constructor map does not open an unallowlisted nested property'() {
+        given:
+        Holders.clear()
+        Holders.setConfig(new PropertySourcesConfig([(Settings.DATABINDING_DENY_BY_DEFAULT): true]))
+        def parent = new UnmappedParent(child: new UnmappedChild())
+
+        when:
+        ControllersDomainBindingApi.initialize(parent, [child: [name: 'ok', admin: true]])
+
+        then:
+        parent.child.name == 'ok'
+        !parent.child.admin
     }
 }
 
@@ -139,6 +207,42 @@ class Widget {
     Long id
     Long version
     String name
+}
+
+@Artefact('Domain')
+class TransientFieldDomain {
+    String name
+    transient Date dateCreated
+}
+
+@Artefact('Domain')
+class UnmappedParent {
+    UnmappedChild child
+
+    static constraints = {
+        child bindable: true
+    }
+}
+
+@Artefact('Domain')
+class UnmappedChild {
+    String name
+    boolean admin
+
+    static constraints = {
+        name bindable: true
+        admin bindable: false
+    }
+}
+
+@Artefact('Domain')
+class UnmappedDomain {
+    Long id
+    String name
+    String secret
+    Date dateCreated
+
+    static transients = ['secret', 'dateCreated']
 }
 
 class Gadget {
