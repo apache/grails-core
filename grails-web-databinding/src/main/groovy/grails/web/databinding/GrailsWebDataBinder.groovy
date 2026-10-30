@@ -36,6 +36,7 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.context.MessageSource
 import org.springframework.validation.BeanPropertyBindingResult
 import org.springframework.validation.BindingResult
+import org.springframework.validation.Errors
 import org.springframework.validation.FieldError
 import org.springframework.validation.ObjectError
 
@@ -243,8 +244,16 @@ class GrailsWebDataBinder extends SimpleDataBinder {
         populateErrors(object, bindingResult)
     }
 
+    /**
+     * A property that holds the validation result of the object, as the {@code errors} of a Validateable class or
+     * of a domain class does, is never bound, whatever the white list says: a class compiled before the white list
+     * left such a property out still names it there.
+     */
     @Override
     protected boolean isOkToBind(MetaProperty property, List whiteList, List blackList) {
+        if (property.type != null && Errors.isAssignableFrom(property.type)) {
+            return false
+        }
         boolean allowed = super.isOkToBind(property, whiteList, blackList)
         if (!allowed && DataBindingUtils.isGeneratedBindingIncludeList(whiteList) &&
                 super.isOkToBind(property, null, blackList) &&
