@@ -18,10 +18,7 @@
  */
 package org.grails.orm.hibernate.query;
 
-import java.lang.reflect.Array;
-import java.util.ArrayList;
 import java.util.Collection;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -109,24 +106,6 @@ public interface HqlQueryMethods {
     }
 
     static Object convertValue(Object value) {
-        if (value instanceof CharSequence) {
-            return value.toString();
-        }
-        if (value instanceof Collection<?> coll) {
-            List<Object> newList = new ArrayList<>(coll.size());
-            for (Object o : coll) {
-                newList.add(convertValue(o));
-            }
-            return newList;
-        }
-        if (value != null && value.getClass().isArray()) {
-            int length = Array.getLength(value);
-            Object newArray = Array.newInstance(value.getClass().getComponentType() == CharSequence.class || CharSequence.class.isAssignableFrom(value.getClass().getComponentType()) ? String.class : value.getClass().getComponentType(), length);
-            for (int i = 0; i < length; i++) {
-                Array.set(newArray, i, convertValue(Array.get(value, i)));
-            }
-            return newArray;
-        }
-        return value;
+        return QueryParameters.convertValue(value);
     }
 }
