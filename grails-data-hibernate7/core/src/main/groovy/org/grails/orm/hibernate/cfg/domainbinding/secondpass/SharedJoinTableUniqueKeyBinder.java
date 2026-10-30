@@ -50,9 +50,10 @@ import org.hibernate.mapping.Value;
  * the keys of each collection are created and completes what is missing, in the shape the database needs
  * ({@link SharedJoinTableUniqueness}). A collection whose table is its own already has its constraint and is left as
  * Hibernate bound it, and so is a collection without a join table, whose key the other side owns, or whose element is
- * a large object, which cannot be indexed and which Hibernate leaves without a key too. It also restricts
- * each collection of a shared table to its own rows, which Hibernate's removal of all the rows of a collection by its
- * key would otherwise not.</p>
+ * a large object, which cannot be indexed and which Hibernate leaves without a key too. It also restricts a
+ * collection that shares a key column with another on that table to its own rows, which Hibernate's removal of all
+ * the rows of a collection by its key would otherwise not (collections with separate key columns delete only their
+ * own rows by key and need no restriction).</p>
  *
  * <p>Hibernate applies the restriction to the statements that load, count, join and delete the rows of a collection,
  * but loses it in the test of emptiness ({@code is empty}, {@code is not empty}); GORM translates that test as a size
@@ -95,7 +96,12 @@ public class SharedJoinTableUniqueKeyBinder {
         if (table == null || collection.isInverse() || collection.isOneToMany() || collection.getKey() == null) {
             return;
         }
-        restrictRowsToOwnCollection(collection, table);
+        List<Collection> sharing = collectionsSharing(collection, table);
+        restrictRowsToOwnCollection(sharing);
+        if (collection instanceof IndexedCollection) {
+            makeIndexedCollectionsShareable(sharing, table);
+            return;
+        }
         if (!collection.isSet()) {
             return;
         }
@@ -108,6 +114,24 @@ public class SharedJoinTableUniqueKeyBinder {
     }
 
     /**
+     * The collections that share the join table of the collection, the collection among them, or none when the table is
+     * the collection's own. They are found among the bindings of the metadata; one that is not bound yet joins when its
+     * own pass runs, which finds the others bound.
+     */
+    private List<Collection> collectionsSharing(Collection collection, Table table) {
+        if (!hasColumnsOfOthers(collection, table)) {
+            return List.of();
+        }
+        List<Collection> sharing = new ArrayList<>();
+        for (Collection other : metadataBuildingContext.getMetadataCollector().getCollectionBindings()) {
+            if (other.getCollectionTable() == table && !other.isInverse() && !other.isOneToMany() && other.getKey() != null) {
+                sharing.add(other);
+            }
+        }
+        return sharing.size() < 2 ? List.of() : sharing;
+    }
+
+    /**
      * Hibernate removes all the rows of a collection with one statement on its key, and loads them with one. On a join
      * table several collections share, a key column two of them use would take the rows of the other collection
      * along, so each collection that shares a key column with another on that table is restricted to the rows that have
@@ -116,30 +140,19 @@ public class SharedJoinTableUniqueKeyBinder {
      * among the bindings of the metadata; one whose element is not bound yet is restricted when its own pass runs,
      * which finds the others bound.
      */
-    private void restrictRowsToOwnCollection(Collection collection, Table table) {
-        if (!hasColumnsOfOthers(collection, table)) {
-            return;
-        }
-        List<Collection> sharing = new ArrayList<>();
-        for (Collection other : metadataBuildingContext.getMetadataCollector().getCollectionBindings()) {
-            if (other.getCollectionTable() == table && !other.isInverse() && !other.isOneToMany() && other.getKey() != null) {
-                sharing.add(other);
-            }
-        }
-        if (sharing.size() < 2) {
-            return;
-        }
+    private void restrictRowsToOwnCollection(List<Collection> sharing) {
         Dialect dialect = metadataBuildingContext.getMetadataCollector().getDatabase().getDialect();
         for (Collection member : sharing) {
             if (!sharesKeyColumnWithOther(member, sharing)) {
                 continue;
             }
-            List<String> present = new ArrayList<>();
-            for (Column column : columnsOf(member)) {
-                present.add(column.getQuotedName(dialect) + " is not null");
-            }
-            if (present.isEmpty()) {
+            List<Column> columns = restrictingColumns(member, sharing);
+            if (columns.isEmpty()) {
                 continue;
+            }
+            List<String> present = new ArrayList<>();
+            for (Column column : columns) {
+                present.add(column.getQuotedName(dialect) + " is not null");
             }
             String restriction = String.join(" and ", present);
             String where = member.getWhere();
@@ -148,6 +161,65 @@ public class SharedJoinTableUniqueKeyBinder {
             } else if (!where.contains(restriction)) {
                 member.setWhere("(" + where + ") and " + restriction);
             }
+        }
+    }
+
+    private static List<Column> restrictingColumns(Collection member, List<Collection> sharing) {
+        List<Column> columns = new ArrayList<>();
+        if (member instanceof IndexedCollection indexed && indexed.getIndex() != null) {
+            for (Selectable selectable : indexed.getIndex().getSelectables()) {
+                if (selectable instanceof Column column && !columns.contains(column)) {
+                    columns.add(column);
+                }
+            }
+            Set<Column> otherElements = new HashSet<>();
+            for (Collection other : sharing) {
+                if (other != member) {
+                    otherElements.addAll(columnsOf(other));
+                }
+            }
+            for (Column column : columnsOf(member)) {
+                if (!otherElements.contains(column) && !columns.contains(column)) {
+                    columns.add(column);
+                }
+            }
+            return columns;
+        }
+        return columnsOf(member);
+    }
+
+    /**
+     * Hibernate keys the join table of a list or a map by the key and the index columns of the collection, with a
+     * primary key over them ({@code IndexedCollection.createPrimaryKey}), which the next collection of a shared table
+     * replaces with its own, and which makes them not null. A row of one collection leaves the columns of the others
+     * null, so on a shared table that key fails the first insert of every collection but the last
+     * (apache/grails-core#16700). Each list or map of the table loses that primary key, gets nullable key and index
+     * columns, and a uniqueness of its own over them in the shape the database needs ({@link SharedJoinTableUniqueness}):
+     * a position, or a map key, is taken once in the collection, while its elements may repeat.
+     */
+    private void makeIndexedCollectionsShareable(List<Collection> sharing, Table table) {
+        for (Collection member : sharing) {
+            if (!(member instanceof IndexedCollection indexed) || indexed.getIndex() == null) {
+                continue;
+            }
+            List<Column> keyColumns = member.getKey().getColumns();
+            List<Column> indexColumns = new ArrayList<>();
+            for (Selectable selectable : indexed.getIndex().getSelectables()) {
+                if (selectable instanceof Column column) {
+                    indexColumns.add(column);
+                }
+            }
+            if (keyColumns.isEmpty() || indexColumns.isEmpty()) {
+                continue;
+            }
+            Set<Column> own = new HashSet<>(keyColumns);
+            own.addAll(indexColumns);
+            if (table.hasPrimaryKey() && own.containsAll(table.getPrimaryKey().getColumns())) {
+                table.setPrimaryKey(null);
+            }
+            keyColumns.forEach(column -> column.setNullable(true));
+            indexColumns.forEach(column -> column.setNullable(true));
+            uniqueness.apply(table, keyColumns, indexColumns, new ImplicitNaming(table));
         }
     }
 

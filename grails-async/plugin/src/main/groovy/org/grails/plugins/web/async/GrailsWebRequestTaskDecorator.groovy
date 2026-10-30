@@ -39,6 +39,10 @@ import org.grails.web.util.GrailsApplicationAttributes
  * the task's web request, so code the task runs, such as data binding, behaves as it does outside a request. A task
  * that starts after the request has completed runs without a web request.</p>
  *
+ * <p>The task's web request is bound to the task's thread only, not stored on the request, which the request thread
+ * is still processing, so {@link GrailsWebRequest#lookup(jakarta.servlet.http.HttpServletRequest)} finds the request
+ * thread's own web request there and the task's in the task.</p>
+ *
  * @since 8.0
  */
 @CompileStatic
