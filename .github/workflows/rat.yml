@@ -61,7 +61,7 @@ jobs:
         run: ./gradlew rat
       - name: Upload RAT HTML report
         if: always()
-        uses: actions/upload-artifact@v7.0.1
+        uses: actions/upload-artifact@v7.0.2
         with:
           name: rat-report
           path: build/reports/rat/index.html
