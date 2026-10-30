@@ -117,7 +117,7 @@ class PersistentEntityValidator implements CascadingValidator, ConstrainedEntity
 
     /**
      * Validates the object with the given validation hints, cascading to its associations when asked to. A proxy
-     * of the entity is validated as the instance it stands for.
+     * of the entity is validated as the instance it stands for, and so is a proxy of an associated object.
      *
      * @param obj The object to validate
      * @param errors The errors to report the violations to
@@ -378,21 +378,25 @@ class PersistentEntityValidator implements CascadingValidator, ConstrainedEntity
     }
 
     /**
-     * Cascades validation to a one-to-one or many-to-one property. The associated object is validated with the
-     * hints the validator of the owning entity gives for the association: its constraints once, with the hints
-     * given for all the hints of the owner, and, once for each distinct hints it is reached with, its associations
-     * and its rules beyond the constraints, through {@link #validateAssociationsAndBeyond} of its own validator.
+     * Cascades validation to a one-to-one or many-to-one property. A proxy is validated as the instance it stands
+     * for, as the object validation starts with is. The associated object is validated with the hints the validator
+     * of the owning entity gives for the association: its constraints once, with the hints given for all the hints
+     * of the owner, and, once for each distinct hints it is reached with, its associations and its rules beyond the
+     * constraints, through {@link #validateAssociationsAndBeyond} of its own validator.
      *
      * @param errors The Errors instance
      * @param bean The original BeanWrapper
-     * @param associatedObject The associated object's current value
+     * @param associatedObject The associated object's current value, a proxy or the instance itself
      * @param association The GrailsDomainClassProperty instance
      * @param propertyName The name of the property
      * @param indexOrKey
      */
     @SuppressWarnings('rawtypes')
     protected void cascadeValidationToOne(Object parentObject, String propertyName, Association association, Errors errors, EntityReflector reflector, Object associatedObject, Object indexOrKey, Set validatedObjects) {
-        if (associatedObject == null) {
+        // the instance holds the state a validator reading fields, such as Bean Validation, looks for, which a proxy
+        // does not carry, and it is the one a cycle of associations has to end at however it is reached
+        Object instance = unwrap(associatedObject)
+        if (instance == null) {
             return
         }
 
@@ -410,7 +414,7 @@ class PersistentEntityValidator implements CascadingValidator, ConstrainedEntity
             associatedAllHints = ownerAllHints.is(ownerHints) ? associatedHints : hinting.getAssociationValidationHints(association, ownerAllHints)
         }
 
-        if (!validatedObjects.add(new ValidatedObject(associatedObject, associatedHints))) {
+        if (!validatedObjects.add(new ValidatedObject(instance, associatedHints))) {
             return
         }
 
@@ -420,7 +424,7 @@ class PersistentEntityValidator implements CascadingValidator, ConstrainedEntity
         }
 
         // Make sure this object is eligible to cascade validation at all.
-        if (!association.doesCascadeValidate(associatedObject)) {
+        if (!association.doesCascadeValidate(instance)) {
             return
         }
 
@@ -442,17 +446,17 @@ class PersistentEntityValidator implements CascadingValidator, ConstrainedEntity
             CASCADE.set(new Cascade(associatedHints, associatedAllHints, association))
 
             // the constraints do not depend on the hints of a step, so they are validated once for all of them
-            if (validatedObjects.add(new ValidatedConstraints(associatedObject, associatedAllHints))) {
+            if (validatedObjects.add(new ValidatedConstraints(instance, associatedAllHints))) {
                 // Invoke any beforeValidate callbacks on the associated object before validating
-                validateHelper.invokeBeforeValidate(associatedObject, associatedConstrainedProperties.keySet() as List<String>)
-                validateConstraints(associatedObject, associatedEntity, errors, associatedReflector, associatedConstrainedProperties, association, false)
+                validateHelper.invokeBeforeValidate(instance, associatedConstrainedProperties.keySet() as List<String>)
+                validateConstraints(instance, associatedEntity, errors, associatedReflector, associatedConstrainedProperties, association, false)
             }
 
             if (associatedValidator != null) {
-                associatedValidator.validateAssociationsAndBeyond(associatedObject, errors, true, associatedHints, validatedObjects)
+                associatedValidator.validateAssociationsAndBeyond(instance, errors, true, associatedHints, validatedObjects)
             }
             else {
-                cascadeToAssociations(associatedObject, associatedEntity, errors, associatedReflector, associatedHints, validatedObjects)
+                cascadeToAssociations(instance, associatedEntity, errors, associatedReflector, associatedHints, validatedObjects)
             }
         }
         finally {

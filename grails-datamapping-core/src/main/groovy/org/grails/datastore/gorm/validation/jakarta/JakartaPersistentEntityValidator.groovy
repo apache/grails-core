@@ -27,9 +27,7 @@ import groovy.transform.CompileStatic
 import jakarta.validation.Validator
 import jakarta.validation.groups.Default
 import jakarta.validation.metadata.CascadableDescriptor
-import jakarta.validation.metadata.ContainerElementTypeDescriptor
 import jakarta.validation.metadata.GroupConversionDescriptor
-import jakarta.validation.metadata.PropertyDescriptor
 
 import org.springframework.context.MessageSource
 import org.springframework.validation.Errors
@@ -171,7 +169,9 @@ class JakartaPersistentEntityValidator extends PersistentEntityValidator {
     /**
      * Validates the Bean Validation annotations of the object in the groups among its hints, cascading only through
      * the properties marked {@code @Valid} that are not persistent associations, as the GORM validator cascades to
-     * those. The violations of the groups the object is not validated in, see {@link ExcludedGroups}, are left out.
+     * those. The violations of the groups the object is not validated in, see {@link ExcludedGroups}, are left out,
+     * on the object and on the objects the provider cascades to, whose groups the {@code @ConvertGroup} annotations
+     * of the properties convert.
      */
     @Override
     protected void validateBeyondConstraints(Object obj, Errors errors, Object[] hints) {
@@ -183,18 +183,16 @@ class JakartaPersistentEntityValidator extends PersistentEntityValidator {
 
     /**
      * The groups whose constraints a validation of the entity in the given groups reports: the groups the provider
-     * validates with them, without the excluded ones, and, for the default group, the groups the entity redefines
-     * it with.
+     * validates with them, without the excluded ones. The adapter converts them along its own cascade through the
+     * properties marked {@code @Valid}, and reads the default group among them as the groups each class redefines it
+     * with, see {@link GormValidatorAdapter#validate(Object, Errors, boolean, Class[], Set)}.
      */
-    private Set<Class<?>> reportedGroupsOf(List<Class<?>> groups, Set<Class<?>> excluded) {
+    private static Set<Class<?>> reportedGroupsOf(List<Class<?>> groups, Set<Class<?>> excluded) {
         Set<Class<?>> reported = new LinkedHashSet<>()
         for (Class<?> group in groups) {
             reported.addAll(JakartaConstraintsTranslator.validatedGroupsOf(group))
         }
         reported.removeAll(excluded)
-        if (reported.contains(Default)) {
-            reported.addAll(translator.defaultGroups)
-        }
         return reported
     }
 
@@ -261,11 +259,7 @@ class JakartaPersistentEntityValidator extends PersistentEntityValidator {
     }
 
     private CascadableDescriptor findCascadedDescriptor(String propertyName) {
-        PropertyDescriptor property = translator.beanDescriptor.getConstraintsForProperty(propertyName)
-        if (property == null || property.isCascaded()) {
-            return property
-        }
-        return property.constrainedContainerElementTypes.find { ContainerElementTypeDescriptor element -> element.isCascaded() }
+        return JakartaConstraintsTranslator.cascadedDescriptorOf(translator.beanDescriptor.getConstraintsForProperty(propertyName))
     }
 
     /**
@@ -310,8 +304,9 @@ class JakartaPersistentEntityValidator extends PersistentEntityValidator {
      * groups it extends, whereas Bean Validation cascading validates an associated object in a group of its owner
      * no conversion converts alone, and in the groups it extends only as the owner validates them, each converted
      * or not by itself. The groups a group extends that are converted are excluded from the validation of the
-     * associated object in the unconverted group: their violations are not reported, and their annotations do not
-     * relax the {@code nullable} constraint of the block.
+     * associated object in the unconverted group: their violations are not reported, nor the ones the provider finds
+     * through them on an object it cascades to, while a violation it finds through a conversion of a group that is
+     * validated is, and their annotations do not relax the {@code nullable} constraint of the block.
      *
      * @since 8.0.1
      */

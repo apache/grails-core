@@ -327,6 +327,26 @@ class BeanValidationSpec extends GrailsDataTckSpec {
         shelf.save(flush: true) != null
     }
 
+    void 'an initialized proxy of an associated instance is validated as the instance it stands for'() {
+        given: 'a shelf saved with a valid book, and a proxy of the book initialized once the session is cleared'
+        def saved = new BeanValidatedShelf(name: 'shelf', book: new BeanValidatedShelfBook(title: 'Groups', isbn: '1234567890123')).save(flush: true)
+        manager.session.clear()
+        def proxyHandler = BeanValidatedShelfBook.gormPersistentEntity.mappingContext.proxyHandler
+        def book = BeanValidatedShelfBook.proxy(saved.book.id)
+        book.title
+
+        expect:
+        proxyHandler.isProxy(book)
+        proxyHandler.isInitialized(book)
+
+        when: 'a shelf holding the proxy is validated'
+        def shelf = new BeanValidatedShelf(name: 'other', book: book)
+
+        then: 'the book is validated with its own fields, which the proxy does not carry'
+        shelf.validate()
+        !shelf.errors.hasErrors()
+    }
+
     void 'a subclass declaring no annotation of its own is validated with the annotations it inherits'() {
         given:
         def bulletin = new BeanValidatedBulletin(tag: 'toolong')

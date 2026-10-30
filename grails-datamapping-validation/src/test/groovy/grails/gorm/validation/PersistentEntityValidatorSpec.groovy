@@ -394,6 +394,55 @@ class PersistentEntityValidatorSpec extends Specification {
         errors.errorCount == 1
         errors.getFieldError('name').code == 'nullable'
     }
+
+    def "an initialized proxy of an associated instance is validated as the instance it stands for"() {
+        given: "a desk whose lamp is an initialized proxy, and a validator recording the lamps it validates"
+        MappingContext mappingContext = new KeyValueMappingContext("test")
+        mappingContext.mappingFactory = new GormKeyValueMappingFactory("test")
+        mappingContext.syntaxStrategy = new GormMappingConfigurationStrategy(mappingContext.mappingFactory)
+        PersistentEntity deskEntity = mappingContext.addPersistentEntity(HintedDesk)
+        PersistentEntity lampEntity = mappingContext.addPersistentEntity(HintedLamp)
+        DefaultValidatorRegistry registry = new DefaultValidatorRegistry(mappingContext, new ConnectionSourceSettings())
+        RecordingValidator lampValidator = new RecordingValidator(lampEntity, registry.messageSource, registry.constraintsEvaluator)
+        mappingContext.addEntityValidator(deskEntity, registry.getValidator(deskEntity))
+        mappingContext.addEntityValidator(lampEntity, lampValidator)
+        HintedLamp lamp = new HintedLamp(name: 'lamp')
+        Session session = Mock(Session) {
+            getMappingContext() >> mappingContext
+            retrieve(_, _) >> lamp
+        }
+        HintedLamp proxy = mappingContext.proxyFactory.createProxy(session, HintedLamp, 1L)
+        proxy.name
+        HintedDesk desk = new HintedDesk(name: 'desk', left: proxy)
+        Errors errors = new ValidationErrors(desk)
+
+        expect:
+        mappingContext.proxyHandler.isProxy(proxy)
+        mappingContext.proxyHandler.isInitialized(proxy)
+
+        when: "the proxy is reached through a to-one association"
+        mappingContext.getEntityValidator(deskEntity).validate(desk, errors)
+
+        then: "the lamp behind it is validated, under the path of the association"
+        lampValidator.validated.size() == 1
+        lampValidator.validated[0].is(lamp)
+        lampValidator.paths == ['left.']
+        errors.getFieldError('left.name').code == 'beyond'
+        errors.errorCount == 1
+
+        when: "the proxy is reached through a collection, next to the lamp itself"
+        lampValidator.validated.clear()
+        lampValidator.paths.clear()
+        desk = new HintedDesk(name: 'desk', lamps: [proxy, lamp] as List)
+        errors = new ValidationErrors(desk)
+        mappingContext.getEntityValidator(deskEntity).validate(desk, errors)
+
+        then: "the lamp is validated once, the proxy and the lamp being the same instance"
+        lampValidator.validated.size() == 1
+        lampValidator.validated[0].is(lamp)
+        lampValidator.paths == ['lamps[0].']
+        errors.errorCount == 1
+    }
 }
 
 /**
@@ -538,6 +587,7 @@ class HintedDesk {
 
 @Entity
 class HintedLamp {
+    Long id
     String name
     static belongsTo = [HintedDesk]
 }

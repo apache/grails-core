@@ -23,9 +23,16 @@ import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 
 import jakarta.validation.ConstraintViolation
+import jakarta.validation.ElementKind
+import jakarta.validation.Path
 import jakarta.validation.Validator
 import jakarta.validation.executable.ExecutableValidator
+import jakarta.validation.groups.Default
+import jakarta.validation.metadata.CascadableDescriptor
 import jakarta.validation.metadata.ConstraintDescriptor
+import jakarta.validation.metadata.ContainerElementTypeDescriptor
+import jakarta.validation.metadata.GroupConversionDescriptor
+import jakarta.validation.metadata.PropertyDescriptor
 
 import org.springframework.validation.Errors
 import org.springframework.validation.FieldError
@@ -91,7 +98,10 @@ class GormValidatorAdapter extends SpringValidatorAdapter implements CascadingVa
      * reporting only the violations of the constraints declared in one of the reported groups. The provider
      * validates a group together with the groups it extends; when validation cascades from an object validated in
      * a group whose extended groups a {@code @ConvertGroup} converts, the associated object is validated in the
-     * group alone, so the violations of the converted groups are left out.
+     * group alone, so the violations of the converted groups are left out. The reported groups are the ones of the
+     * object; for an object the provider cascades to through the properties marked {@code @Valid}, they are converted
+     * along the path of the violation as the {@code @ConvertGroup} annotations of those properties declare, the way
+     * the provider converts the groups it validates in, see {@link #isReported}.
      *
      * @param obj The object to validate
      * @param errors The errors to report the violations to
@@ -109,7 +119,7 @@ class GormValidatorAdapter extends SpringValidatorAdapter implements CascadingVa
         try {
             Set<ConstraintViolation<Object>> reported = new LinkedHashSet<>()
             for (ConstraintViolation<Object> violation : thisValidator.validate(obj, groups)) {
-                if (!Collections.disjoint(violation.constraintDescriptor.groups, reportedGroups)) {
+                if (isReported(violation, reportedGroups)) {
                     reported.add(violation)
                 }
             }
@@ -117,6 +127,92 @@ class GormValidatorAdapter extends SpringValidatorAdapter implements CascadingVa
         } finally {
             CASCADE_VALIDATION.remove()
         }
+    }
+
+    /**
+     * Whether the violation is of a constraint declared in one of the reported groups, as they apply to the bean
+     * holding the constraint. The provider cascades to a bean through a property marked {@code @Valid} once for each
+     * group it validates the owner in, converting the group as the {@code @ConvertGroup} annotations of the property
+     * declare: a converted group is validated as the group it converts to, with the groups that one extends or
+     * sequences, and an unconverted group alone. The reported groups follow the same conversions along the path of
+     * the violation, from the validated object to the bean holding the constraint, so a violation the provider found
+     * through a conversion of a reported group is reported, and one it found through a group that is not reported is
+     * not. The default group of a bean stands for the groups of the sequence redefining it, if any.
+     */
+    private boolean isReported(ConstraintViolation<?> violation, Set<Class<?>> reportedGroups) {
+        List<Path.Node> nodes = violation.propertyPath.toList()
+        Class<?> beanClass = violation.rootBeanClass
+        Set<Class<?>> groups = reportedGroups
+        // the last node is the constrained element, the nodes before it the properties the provider cascaded through
+        for (int i = 0; i < nodes.size() - 1; i++) {
+            Path.Node node = nodes.get(i)
+            if (node.kind != ElementKind.PROPERTY) {
+                continue
+            }
+            PropertyDescriptor property = thisValidator.getConstraintsForClass(beanClass).getConstraintsForProperty(node.name)
+            CascadableDescriptor cascaded = JakartaConstraintsTranslator.cascadedDescriptorOf(property)
+            if (cascaded != null) {
+                groups = convertedGroupsOf(withDefaultGroupsOf(groups, beanClass), cascaded.groupConversions)
+            }
+            beanClass = i == nodes.size() - 2
+                    ? (violation.leafBean?.getClass() ?: Object)
+                    : cascadedClassOf(property, nodes.get(i + 1))
+        }
+        return !Collections.disjoint(violation.constraintDescriptor.groups, withDefaultGroupsOf(groups, beanClass))
+    }
+
+    /**
+     * The groups the provider cascades to a bean with when it validates the owner in the given groups, converted as
+     * the given conversions declare: each converted group as the group it converts to, with the groups that one
+     * extends or sequences, and each other group alone.
+     */
+    private static Set<Class<?>> convertedGroupsOf(Set<Class<?>> groups, Set<GroupConversionDescriptor> conversions) {
+        if (conversions.isEmpty()) {
+            return groups
+        }
+        Map<Class<?>, Class<?>> targets = new HashMap<>()
+        for (GroupConversionDescriptor conversion in conversions) {
+            targets.put(conversion.from, conversion.to)
+        }
+        Set<Class<?>> converted = new LinkedHashSet<>()
+        for (Class<?> group in groups) {
+            Class<?> target = targets.get(group)
+            if (target == null) {
+                converted.add(group)
+            }
+            else {
+                converted.addAll(JakartaConstraintsTranslator.validatedGroupsOf(target))
+            }
+        }
+        return converted
+    }
+
+    /**
+     * The groups with, when the default group is among them, the groups the class redefines it with
+     */
+    private static Set<Class<?>> withDefaultGroupsOf(Set<Class<?>> groups, Class<?> beanClass) {
+        if (!groups.contains(Default)) {
+            return groups
+        }
+        Set<Class<?>> expanded = new LinkedHashSet<>(groups)
+        expanded.addAll(JakartaConstraintsTranslator.defaultGroupsOf(beanClass))
+        return expanded
+    }
+
+    /**
+     * The declared class of the bean a cascaded property leads to: the cascaded type argument of the container when
+     * the next node of the path is an element of one, otherwise the type of the property, {@code Object} when unknown
+     */
+    private static Class<?> cascadedClassOf(PropertyDescriptor property, Path.Node next) {
+        if (property == null) {
+            return Object
+        }
+        if (next.isInIterable()) {
+            ContainerElementTypeDescriptor element = property.constrainedContainerElementTypes
+                    .find { ContainerElementTypeDescriptor candidate -> candidate.isCascaded() }
+            return element?.elementClass ?: Object
+        }
+        return property.elementClass ?: Object
     }
 
     @Override

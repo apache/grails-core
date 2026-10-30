@@ -46,7 +46,9 @@ import jakarta.validation.constraints.PositiveOrZero
 import jakarta.validation.constraints.Size
 import jakarta.validation.groups.Default
 import jakarta.validation.metadata.BeanDescriptor
+import jakarta.validation.metadata.CascadableDescriptor
 import jakarta.validation.metadata.ConstraintDescriptor
+import jakarta.validation.metadata.ContainerElementTypeDescriptor
 import jakarta.validation.metadata.PropertyDescriptor
 import jakarta.validation.metadata.Scope
 
@@ -118,8 +120,8 @@ class JakartaConstraintsTranslator {
     JakartaConstraintsTranslator(Validator validator, Class<?> beanClass) {
         this.beanDescriptor = validator.getConstraintsForClass(beanClass)
         List<Class<?>> hierarchy = hierarchyOf(beanClass)
-        int redefining = hierarchy.findIndexOf { Class<?> type -> !type.isInterface() && type.getAnnotation(GroupSequence) != null }
-        this.defaultGroups = redefining < 0 ? DEFAULT_GROUP : sequencedDefaultGroupsOf(hierarchy.get(redefining))
+        int redefining = indexOfRedefiningClass(hierarchy)
+        this.defaultGroups = defaultGroupsOf(hierarchy, redefining)
         this.declaredConstraints = findDeclaredConstraints(validator, hierarchy, redefining, defaultGroups)
         this.constraintDescriptors = Collections.unmodifiableMap(findValidatedConstraints(DEFAULT_GROUP, Collections.<Class<?>> emptySet()))
     }
@@ -151,6 +153,44 @@ class JakartaConstraintsTranslator {
             }
         }
         return result
+    }
+
+    /**
+     * The groups the default group of a class stands for, as the provider validates it: the {@link Default} group
+     * and, when a class of the hierarchy redefines the default group with a {@link GroupSequence}, the groups of the
+     * sequence of the first one from the class up to do so, see {@link #getDefaultGroups()}.
+     *
+     * @param beanClass The class
+     * @return The groups
+     */
+    static Set<Class<?>> defaultGroupsOf(Class<?> beanClass) {
+        List<Class<?>> hierarchy = hierarchyOf(beanClass)
+        return defaultGroupsOf(hierarchy, indexOfRedefiningClass(hierarchy))
+    }
+
+    /**
+     * The descriptor of the cascading of a property marked {@code @Valid}: the property itself, or, when the mark is
+     * on a type argument of a container such as {@code List<@Valid Child>}, that container element.
+     *
+     * @param property The descriptor of the property, null for a property without constraints
+     * @return The cascadable descriptor, null when the property is not cascaded
+     */
+    static CascadableDescriptor cascadedDescriptorOf(PropertyDescriptor property) {
+        if (property == null || property.isCascaded()) {
+            return property
+        }
+        return property.constrainedContainerElementTypes.find { ContainerElementTypeDescriptor element -> element.isCascaded() }
+    }
+
+    /**
+     * @return The index in the hierarchy of the first class redefining the default group, -1 when none does
+     */
+    private static int indexOfRedefiningClass(List<Class<?>> hierarchy) {
+        return hierarchy.findIndexOf { Class<?> type -> !type.isInterface() && type.getAnnotation(GroupSequence) != null }
+    }
+
+    private static Set<Class<?>> defaultGroupsOf(List<Class<?>> hierarchy, int redefining) {
+        return redefining < 0 ? DEFAULT_GROUP : sequencedDefaultGroupsOf(hierarchy.get(redefining))
     }
 
     /**

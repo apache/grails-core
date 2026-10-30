@@ -31,6 +31,7 @@ import spock.lang.Specification
 import jakarta.validation.Constraint
 import jakarta.validation.ConstraintValidator
 import jakarta.validation.ConstraintValidatorContext
+import jakarta.validation.GroupSequence
 import jakarta.validation.Payload
 import jakarta.validation.Valid
 import jakarta.validation.Validation
@@ -39,6 +40,8 @@ import jakarta.validation.constraints.Digits
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.NotNull
 import jakarta.validation.constraints.Null
+import jakarta.validation.groups.ConvertGroup
+import jakarta.validation.groups.Default
 
 /**
  * Created by graemerocher on 30/12/2016.
@@ -129,11 +132,58 @@ class GormValidatorAdapterSpec extends Specification {
         then:
         errors.fieldErrors*.field.sort() == ['note', 'retired']
     }
+
+    void 'the reported groups of a bean the provider cascades to are converted along the path of the violation'() {
+        given: 'a stamp validated in ExtendedGroup reporting it alone, whose details convert ExtendedGroup to DetailGroup'
+        def adapter = new GormValidatorAdapter(Validation.buildDefaultValidatorFactory().validator)
+        def stamp = new Stamp(note: 'ok', details: new StampDetails(summary: '', draft: 'yes'))
+        def errors = new BeanPropertyBindingResult(stamp, 'stamp')
+
+        expect: 'the provider finds a violation of DetailGroup through ExtendedGroup and one of BaseGroup through BaseGroup'
+        adapter.validate(stamp, [ExtendedGroup] as Class<?>[])*.propertyPath*.toString().sort() == ['details.draft', 'details.summary']
+
+        when:
+        adapter.validate(stamp, errors, false, [ExtendedGroup] as Class<?>[], [ExtendedGroup] as Set<Class<?>>)
+
+        then: 'the violation of DetailGroup is reported, and the one of BaseGroup, which is not reported, is not'
+        errors.fieldErrors*.field == ['details.summary']
+        errors.getFieldError('details.summary').code == 'NotBlank'
+
+        when: 'BaseGroup is reported too'
+        errors = new BeanPropertyBindingResult(stamp, 'stamp')
+        adapter.validate(stamp, errors, false, [ExtendedGroup] as Class<?>[], [ExtendedGroup, BaseGroup] as Set<Class<?>>)
+
+        then:
+        errors.fieldErrors*.field.sort() == ['details.draft', 'details.summary']
+    }
+
+    void 'the default group of a bean stands for the groups of the sequence redefining it'() {
+        given: 'a holder validated in the default group reporting it alone, whose entry redefines the default group with a sequence'
+        def adapter = new GormValidatorAdapter(Validation.buildDefaultValidatorFactory().validator)
+        def holder = new SequencedHolder(entry: new SequencedEntry(code: null))
+        def errors = new BeanPropertyBindingResult(holder, 'holder')
+
+        when:
+        adapter.validate(holder, errors, false, [Default] as Class<?>[], [Default] as Set<Class<?>>)
+
+        then: 'the violation of the group of the sequence of the entry is reported'
+        errors.fieldErrors*.field == ['entry.code']
+        errors.getFieldError('entry.code').code == 'NotNull'
+
+        when: 'the entry is validated on its own'
+        errors = new BeanPropertyBindingResult(holder.entry, 'entry')
+        adapter.validate(holder.entry, errors, false, [Default] as Class<?>[], [Default] as Set<Class<?>>)
+
+        then:
+        errors.fieldErrors*.field == ['code']
+    }
 }
 
 interface BaseGroup {}
 
 interface ExtendedGroup extends BaseGroup {}
+
+interface DetailGroup {}
 
 class Stamp {
 
@@ -142,6 +192,34 @@ class Stamp {
 
     @NotBlank(groups = ExtendedGroup)
     String note
+
+    @Valid
+    @ConvertGroup(from = ExtendedGroup, to = DetailGroup)
+    StampDetails details
+}
+
+class StampDetails {
+
+    @NotBlank(groups = DetailGroup)
+    String summary
+
+    @Null(groups = BaseGroup)
+    String draft
+}
+
+interface EntryChecks {}
+
+class SequencedHolder {
+
+    @Valid
+    SequencedEntry entry
+}
+
+@GroupSequence([EntryChecks, SequencedEntry])
+class SequencedEntry {
+
+    @NotNull(groups = EntryChecks)
+    String code
 }
 
 class Product implements GormValidateable {

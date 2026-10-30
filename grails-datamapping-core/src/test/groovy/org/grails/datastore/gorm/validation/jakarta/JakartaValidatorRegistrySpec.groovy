@@ -49,6 +49,7 @@ import grails.gorm.validation.CascadingValidator
 import grails.gorm.validation.ConstrainedEntity
 import grails.gorm.validation.ConstrainedProperty
 import grails.gorm.validation.PersistentEntityValidator
+import org.grails.datastore.mapping.core.Session
 import org.grails.datastore.mapping.core.connections.ConnectionSourceSettings
 import org.grails.datastore.mapping.keyvalue.mapping.config.KeyValueMappingContext
 import org.grails.datastore.mapping.model.MappingContext
@@ -513,6 +514,68 @@ class JakartaValidatorRegistrySpec extends Specification {
         errors.errorCount == 1
     }
 
+    void "an initialized proxy of an annotated associated instance is validated as the instance it stands for"() {
+        given: "a shelf whose book is an initialized proxy of a valid book"
+        SpringValidator validator = registry.getValidator(mappingContext.getPersistentEntity(AnnotatedShelf.name))
+        AnnotatedShelf shelf = new AnnotatedShelf(name: 'shelf')
+        AnnotatedShelfBook book = new AnnotatedShelfBook(label: 'Label', code: 'C1', shelf: shelf)
+        Session session = Mock(Session) {
+            getMappingContext() >> mappingContext
+            retrieve(_, _) >> book
+        }
+        AnnotatedShelfBook proxy = mappingContext.proxyFactory.createProxy(session, AnnotatedShelfBook, 1L)
+        proxy.label
+        shelf.books = [proxy] as Set
+        Errors errors = new ValidationErrors(shelf)
+
+        expect:
+        mappingContext.proxyHandler.isProxy(proxy)
+        mappingContext.proxyHandler.isInitialized(proxy)
+
+        when:
+        validator.validate(shelf, errors)
+
+        then: "the annotations are checked on the book, whose fields the proxy does not carry"
+        !errors.hasErrors()
+
+        when: "the book violates an annotation"
+        book.label = ''
+        errors = new ValidationErrors(shelf)
+        validator.validate(shelf, errors)
+
+        then: "the violation is reported with the value of the book"
+        errors.errorCount == 1
+        errors.getFieldError('books[0].label').code == 'NotBlank'
+        errors.getFieldError('books[0].label').rejectedValue == ''
+    }
+
+    void "a @ConvertGroup on a property marked @Valid that is not a persistent association converts the groups the owning instance is validated in"() {
+        given: "a child validated in Extended without Base, whose transient details convert Extended to DetailsChecks and violate DetailsChecks and Base"
+        ExtendedOwner owner = new ExtendedOwner(name: 'owner',
+                child: new ExtendedChild(label: 'ok', note: 'ok', details: new ExtendedChildDetails(summary: '', draft: 'yes')))
+        Errors errors = new ValidationErrors(owner)
+        SpringValidator validator = registry.getValidator(mappingContext.getPersistentEntity(ExtendedOwner.name))
+
+        expect: "the provider validates the details in DetailsChecks, through Extended, and not in Base, which the association converts"
+        beanValidationPaths(owner, Extended) == ['child.details.summary']
+
+        when:
+        ValidationUtils.invokeValidator(validator, owner, errors, Extended)
+
+        then: "and so does GORM"
+        errors.getFieldError('child.details.summary').code == 'NotBlank'
+        !errors.hasFieldErrors('child.details.draft')
+        errors.errorCount == 1
+
+        when: "the owner is validated in Base"
+        errors = new ValidationErrors(owner)
+        ValidationUtils.invokeValidator(validator, owner, errors, Base)
+
+        then: "the child is validated in Converted alone, and so are its details"
+        beanValidationPaths(owner, Base) == []
+        !errors.hasErrors()
+    }
+
     private static List<String> beanValidationPaths(Object instance, Class<?>... groups) {
         def factory = Validation.buildDefaultValidatorFactory()
         try {
@@ -830,6 +893,8 @@ interface Extended extends Base {}
 
 interface Converted {}
 
+interface DetailsChecks {}
+
 @Entity
 class ExtendedOwner {
     @NotNull
@@ -851,7 +916,21 @@ class ExtendedChild {
     @NotBlank(groups = Extended)
     String note
 
+    @Valid
+    @ConvertGroup(from = Extended, to = DetailsChecks)
+    ExtendedChildDetails details
+
     static belongsTo = [ExtendedOwner]
+
+    static transients = ['details']
+}
+
+class ExtendedChildDetails {
+    @NotBlank(groups = DetailsChecks)
+    String summary
+
+    @Null(groups = Base)
+    String draft
 }
 
 interface StepA {}
