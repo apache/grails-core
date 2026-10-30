@@ -37,6 +37,10 @@ under the License.
 |`true`
 |"`strict`" mode where a request mapping is required for all resources; if `true` make sure to allow `permitAll` for "`/`", "`/js/pass:[**]`", "`/css/pass:[**]`", "`/images/pass:[**]`", "`/login/pass:[**]`", "`/logout/pass:[**]`", and so on
 
+|rejectRequestsDuringStartup
+|`true`
+|If `true`, respond with 503 to every request, including a static resource, until the application has started. Set to `false` to allow those requests. See <<core-filters>>
+
 |anon.key
 |"`foo`"
 |anonymousProcessingFilter key

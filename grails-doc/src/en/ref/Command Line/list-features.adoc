@@ -50,6 +50,9 @@ Available Features
 (+) denotes the feature is included by default
   Name                                Description
   ----------------------------------  ---------------------------------
+  API
+  gorm-graphql                        Generates a GraphQL schema based on entities in GORM.
+
   CI/CD
   github-workflow-java-ci [PREVIEW]   Adds a Github Actions Workflow to Build and Test Grails Application
 

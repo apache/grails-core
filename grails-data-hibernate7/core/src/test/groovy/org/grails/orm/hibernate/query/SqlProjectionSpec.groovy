@@ -22,13 +22,24 @@ import org.hibernate.type.StandardBasicTypes
 import spock.lang.Specification
 import spock.lang.Unroll
 
+import static org.grails.orm.hibernate.query.SqlSyntax.H2
+import static org.grails.orm.hibernate.query.SqlSyntax.MYSQL
+import static org.grails.orm.hibernate.query.SqlSyntax.ORACLE
+import static org.grails.orm.hibernate.query.SqlSyntax.POSTGRESQL
+import static org.grails.orm.hibernate.query.SqlSyntax.SQL
+import static org.grails.orm.hibernate.query.SqlSyntax.TRANSACT_SQL
+
 class SqlProjectionSpec extends Specification {
 
+    static final List<SqlSyntax> NATIVE = [TRANSACT_SQL, POSTGRESQL, MYSQL, ORACLE, H2, SQL]
+
     @Unroll
-    void 'the SQL #sql is split into the columns #columns'() {
+    void 'the SQL #sql is split into the columns #columns in every SQL syntax'() {
         expect:
-        SqlGroupProjection.of(sql)*.sql == columns
-        SqlProjection.of(sql, columns.collect { null }, columns.collect { null })*.sql == columns
+        NATIVE.every { SqlSyntax syntax ->
+            SqlGroupProjection.of(sql, syntax)*.sql == columns &&
+                    SqlProjection.of(sql, columns.collect { null }, columns.collect { null }, syntax)*.sql == columns
+        }
 
         where:
         sql                                             | columns
@@ -37,57 +48,103 @@ class SqlProjectionSpec extends Specification {
         "coalesce(label, 'a,b'), label"                 | ["coalesce(label, 'a,b')", 'label']
         'concat(a, concat(b, c)), d'                    | ['concat(a, concat(b, c))', 'd']
         '"odd,name", other'                             | ['"odd,name"', 'other']
-        '[odd,name], ARRAY[a, b]'                       | ['[odd,name]', 'ARRAY[a, b]']
-        'sum(height) as [total (cm)], c'                | ['sum(height) as [total (cm)]', 'c']
-        'sum(height) as [a]]b], c'                      | ['sum(height) as [a]]b]', 'c']
-        'arr[f(a, b)], ARRAY[ARRAY[1, 2]], c'           | ['arr[f(a, b)]', 'ARRAY[ARRAY[1, 2]]', 'c']
         'a /* b, c */, d'                               | ['a /* b, c */', 'd']
         'a -- b, c\n, d'                                | ['a -- b, c', 'd']
-        '$$a,b$$, c'                                    | ['$$a,b$$', 'c']
-        '$tag$a,$$,b$tag$, c'                           | ['$tag$a,$$,b$tag$', 'c']
         'a$b, $1'                                       | ['a$b', '$1']
     }
 
     @Unroll
-    void 'the alias #alias is removed from #column'() {
+    void 'the SQL #sql is split into the columns #columns where brackets hold arrays'() {
         expect:
-        SqlProjection.of(column, [alias], [null])*.sql == [expected]
+        SqlGroupProjection.of(sql, SQL)*.sql == columns
+        SqlProjection.of(sql, columns.collect { null }, columns.collect { null }, SQL)*.sql == columns
 
         where:
-        column                          | alias       | expected
-        'sum(height) as total'          | 'total'     | 'sum(height)'
-        'sum(height) AS Total'          | 'total'     | 'sum(height)'
-        'sum(height) as "total"'        | 'total'     | 'sum(height)'
-        'sum(height) as `total`'        | 'total'     | 'sum(height)'
-        'sum(height) as [total]'        | 'total'     | 'sum(height)'
-        'cast(width as integer) as w'   | 'w'         | 'cast(width as integer)'
-        'cast(width as integer)'        | 'integer'   | 'cast(width as integer)'
-        'sum(height) as total /* c */'  | 'total'     | 'sum(height)'
-        'sum(height) as total -- c'     | 'total'     | 'sum(height)'
-        'sum(height) as total'          | 'other'     | 'sum(height) as total'
-        'sum(height) as "total]'        | 'total'     | 'sum(height) as "total]'
-        'width'                         | 'width'     | 'width'
-        'sum(height) as total'          | null        | 'sum(height) as total'
+        sql                                             | columns
+        'arr[f(a, b)], ARRAY[ARRAY[1, 2]], c'           | ['arr[f(a, b)]', 'ARRAY[ARRAY[1, 2]]', 'c']
+        'ARRAY [a, b], "items"[1]'                      | ['ARRAY [a, b]', '"items"[1]']
+        "ARRAY['['], height"                            | ["ARRAY['[']", 'height']
     }
 
     @Unroll
-    void 'the quoted alias #alias, which may hold any character, is removed from #column'() {
+    void 'the SQL #sql is split into the columns #columns on #syntax, by its dollar quoted strings'() {
         expect:
-        SqlProjection.of(column, [alias], [null])*.sql == [expected]
+        SqlGroupProjection.of(sql, syntax)*.sql == columns
+
+        where:
+        sql                      | syntax     || columns
+        '$$a,b$$, c'             | POSTGRESQL || ['$$a,b$$', 'c']
+        '$$a,b$$, c'             | H2         || ['$$a,b$$', 'c']
+        '$tag$a,$$,b$tag$, c'    | POSTGRESQL || ['$tag$a,$$,b$tag$', 'c']
+        '$tag$a,$$,b$tag$, c'    | H2         || ['$tag$a', '$$,b$tag$, c']
+    }
+
+    @Unroll
+    void 'the SQL #sql is split into the columns #columns on #syntax'() {
+        expect:
+        SqlGroupProjection.of(sql, syntax)*.sql == columns
+
+        where:
+        sql                              | syntax || columns
+        "concat('it\\'s, ', b), c"       | MYSQL  || ["concat('it\\'s, ', b)", 'c']
+        "concat('it\\'s, ', b), c"       | H2     || ["concat('it\\'s, ', b), c"]
+        "q'[it's, ]' as a, c"            | ORACLE || ["q'[it's, ]' as a", 'c']
+        'a # one, two\n, c'              | MYSQL  || ['a # one, two', 'c']
+        'a /* /* x, y */ z, */, c'       | POSTGRESQL || ['a /* /* x, y */ z, */', 'c']
+        'a /* /* x, y */ z, */, c'       | TRANSACT_SQL || ['a /* /* x, y */ z, */', 'c']
+    }
+
+    @Unroll
+    void 'the Transact-SQL #sql is split into the columns #columns where brackets quote an identifier'() {
+        expect:
+        SqlGroupProjection.of(sql, TRANSACT_SQL)*.sql == columns
+        SqlProjection.of(sql, columns.collect { null }, columns.collect { null }, TRANSACT_SQL)*.sql == columns
+
+        where:
+        sql                                             | columns
+        '[odd,name], [a[b]'                             | ['[odd,name]', '[a[b]']
+        'sum(height) as [total (cm)], c'                | ['sum(height) as [total (cm)]', 'c']
+        'sum(height) as [a]]b], c'                      | ['sum(height) as [a]]b]', 'c']
+        "width as [box's width], height as total"       | ["width as [box's width]", 'height as total']
+        'width as [a"b], c'                             | ['width as [a"b]', 'c']
+    }
+
+    @Unroll
+    void 'the alias #alias is removed from #column in every SQL syntax'() {
+        expect:
+        NATIVE.every { SqlProjection.of(column, [alias], [null], it)*.sql == [expected] }
 
         where:
         column                          | alias          | expected
+        'sum(height) as total'          | 'total'        | 'sum(height)'
+        'sum(height) AS Total'          | 'total'        | 'sum(height)'
+        'sum(height) as "total"'        | 'total'        | 'sum(height)'
+        'sum(height) as `total`'        | 'total'        | 'sum(height)'
+        'cast(width as integer) as w'   | 'w'            | 'cast(width as integer)'
+        'cast(width as integer)'        | 'integer'      | 'cast(width as integer)'
+        'sum(height) as total /* c */'  | 'total'        | 'sum(height)'
+        'sum(height) as total -- c'     | 'total'        | 'sum(height)'
+        'sum(height) as total'          | 'other'        | 'sum(height) as total'
+        'sum(height) as "total]'        | 'total'        | 'sum(height) as "total]'
         'sum(height) as "total height"' | 'total height' | 'sum(height)'
         'sum(height) as `total height`' | 'total height' | 'sum(height)'
-        'sum(height) as [total-height]' | 'total-height' | 'sum(height)'
         'sum(height) as "say ""hi"""'   | 'say "hi"'     | 'sum(height)'
         'sum(height) as "total height"' | 'total'        | 'sum(height) as "total height"'
+        'width'                         | 'width'        | 'width'
+        'sum(height) as total'          | null           | 'sum(height) as total'
+    }
+
+    void 'a bracket alias is removed only where brackets quote an identifier'() {
+        expect:
+        SqlProjection.of('sum(height) as [total]', ['total'], [null], TRANSACT_SQL)*.sql == ['sum(height)']
+        SqlProjection.of('sum(height) as [total-height]', ['total-height'], [null], TRANSACT_SQL)*.sql == ['sum(height)']
+        SqlProjection.of('sum(height) as [total]', ['total'], [null], SQL)*.sql == ['sum(height) as [total]']
     }
 
     void 'each column becomes a projection with its alias and type'() {
         when:
         List<SqlProjection> projections = SqlProjection.of('width, sum(height) as total', ['width', 'total'],
-                [StandardBasicTypes.INTEGER, Long])
+                [StandardBasicTypes.INTEGER, Long], SQL)
 
         then:
         projections*.sql == ['width', 'sum(height)']
@@ -104,15 +161,38 @@ class SqlProjectionSpec extends Specification {
 
     void 'the group by clause is split into one expression each'() {
         expect:
-        SqlGroupProjection.of("date_trunc('day', created_at), kind")*.sql == ["date_trunc('day', created_at)", 'kind']
+        SqlGroupProjection.of("date_trunc('day', created_at), kind", SQL)*.sql == ["date_trunc('day', created_at)", 'kind']
     }
 
     void 'a type that is not a type constant, a Hibernate type or a class is rejected'() {
         when:
-        SqlProjection.of('width', ['width'], ['integer'])
+        SqlProjection.of('width', ['width'], ['integer'], SQL)
 
         then:
         IllegalArgumentException e = thrown()
         e.message.contains('must be a StandardBasicTypes constant')
+    }
+
+    void 'the numbers of columns, aliases and types must match'() {
+        when:
+        SqlProjection.of('width, height', ['width'], [null], SQL)
+
+        then:
+        IllegalArgumentException e = thrown()
+        e.message.contains('selects 2 columns but 1 column aliases')
+
+        when:
+        SqlProjection.of('width', ['width'], [], SQL)
+
+        then:
+        e = thrown()
+        e.message.contains('as many types as column aliases')
+
+        when:
+        SqlGroupProjection.of(' ', SQL)
+
+        then:
+        e = thrown()
+        e.message.contains('must not be empty')
     }
 }

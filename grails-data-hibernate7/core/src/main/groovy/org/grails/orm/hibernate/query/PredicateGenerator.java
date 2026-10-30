@@ -34,6 +34,7 @@ import jakarta.persistence.criteria.AbstractQuery;
 import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.Expression;
 import jakarta.persistence.criteria.From;
+import jakarta.persistence.criteria.Join;
 import jakarta.persistence.criteria.JoinType;
 import jakarta.persistence.criteria.ParameterExpression;
 import jakarta.persistence.criteria.Path;
@@ -431,7 +432,7 @@ public class PredicateGenerator {
                     return criteriaBuilder.disjunction(); // Always false for empty IN on collection
                 }
                 Predicate[] memberOfPredicates = converted.stream()
-                    .map(v -> criteriaBuilder.isMember((Object) v, (Expression) propertyPath))
+                    .map(v -> criteriaBuilder.isMember((Object) v, (Expression) resolveCollectionPath(propertyPath)))
                     .toArray(Predicate[]::new);
                 return criteriaBuilder.or(memberOfPredicates);
             }
@@ -440,17 +441,17 @@ public class PredicateGenerator {
         } else if (pc instanceof Query.Between between) {
             return criteriaBuilder.between((Expression<? extends Comparable>) propertyPath, (Comparable) convertValue(entity, propertyName, between.getFrom(), propertyPath), (Comparable) convertValue(entity, propertyName, between.getTo(), propertyPath));
         } else if (pc instanceof Query.SizeEquals) {
-            return criteriaBuilder.equal(criteriaBuilder.size((Expression<java.util.Collection<?>>) propertyPath), (Integer) pc.getValue());
+            return criteriaBuilder.equal(criteriaBuilder.size(resolveCollectionPath(propertyPath)), (Integer) pc.getValue());
         } else if (pc instanceof Query.SizeNotEquals) {
-            return criteriaBuilder.notEqual(criteriaBuilder.size((Expression<java.util.Collection<?>>) propertyPath), (Integer) pc.getValue());
+            return criteriaBuilder.notEqual(criteriaBuilder.size(resolveCollectionPath(propertyPath)), (Integer) pc.getValue());
         } else if (pc instanceof Query.SizeGreaterThan) {
-            return criteriaBuilder.greaterThan(criteriaBuilder.size((Expression<java.util.Collection<?>>) propertyPath), (Integer) pc.getValue());
+            return criteriaBuilder.greaterThan(criteriaBuilder.size(resolveCollectionPath(propertyPath)), (Integer) pc.getValue());
         } else if (pc instanceof Query.SizeGreaterThanEquals) {
-            return criteriaBuilder.greaterThanOrEqualTo(criteriaBuilder.size((Expression<java.util.Collection<?>>) propertyPath), (Integer) pc.getValue());
+            return criteriaBuilder.greaterThanOrEqualTo(criteriaBuilder.size(resolveCollectionPath(propertyPath)), (Integer) pc.getValue());
         } else if (pc instanceof Query.SizeLessThan) {
-            return criteriaBuilder.lessThan(criteriaBuilder.size((Expression<java.util.Collection<?>>) propertyPath), (Integer) pc.getValue());
+            return criteriaBuilder.lessThan(criteriaBuilder.size(resolveCollectionPath(propertyPath)), (Integer) pc.getValue());
         } else if (pc instanceof Query.SizeLessThanEquals) {
-            return criteriaBuilder.lessThanOrEqualTo(criteriaBuilder.size((Expression<java.util.Collection<?>>) propertyPath), (Integer) pc.getValue());
+            return criteriaBuilder.lessThanOrEqualTo(criteriaBuilder.size(resolveCollectionPath(propertyPath)), (Integer) pc.getValue());
         }
 
         throw new UnsupportedOperationException("Unsupported criterion: " + pc.getClass().getName());
@@ -554,11 +555,19 @@ public class PredicateGenerator {
         } else if (((Object) c) instanceof Query.IsNotNull) {
             return criteriaBuilder.isNotNull(propertyPath);
         } else if (((Object) c) instanceof Query.IsEmpty) {
-            return criteriaBuilder.isEmpty((Expression<java.util.Collection<?>>) propertyPath);
+            return criteriaBuilder.isEmpty(resolveCollectionPath(propertyPath));
         } else if (((Object) c) instanceof Query.IsNotEmpty) {
-            return criteriaBuilder.isNotEmpty((Expression<java.util.Collection<?>>) propertyPath);
+            return criteriaBuilder.isNotEmpty(resolveCollectionPath(propertyPath));
         }
         throw new UnsupportedOperationException("Unsupported property name criterion: " + c.getClass().getName());
+    }
+
+    @SuppressWarnings("unchecked")
+    private Expression<Collection<?>> resolveCollectionPath(Expression<?> expression) {
+        if (expression instanceof Join<?, ?> join && join.getParent() != null && join.getAttribute() != null) {
+            return (Expression<Collection<?>>) (Expression<?>) join.getParent().get(join.getAttribute().getName());
+        }
+        return (Expression<Collection<?>>) expression;
     }
 
     @SuppressWarnings("unchecked")

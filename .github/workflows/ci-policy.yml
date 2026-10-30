@@ -44,7 +44,7 @@ permissions:
 jobs:
   decide:
     name: "Decide whether the tests run"
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-22.04
     outputs:
       run-tests: ${{ steps.decide.outputs.run-tests }}
     steps:

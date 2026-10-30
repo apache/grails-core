@@ -139,6 +139,31 @@ grails -Dgrails.env=UAT run-app
 ./gradlew bootRun -Dgrails.env=UAT
 ----
 
+Views are compiled ahead of time by the build: GSP pages by the `compileGroovyPages` and `compileWebappGroovyPages` tasks, JSON views by `compileGsonViews` and markup views by `compileGmlViews`. The page compiler reads `application.yml` and `application.groovy`, and the view compilers `application.yml`, for one environment, so the settings a compiled view carries, such as the GSP codecs under `grails.views.gsp.codecs`, are those of that environment. The build compiles its views for the environment it is run with, given as `-Dgrails.env` to Gradle or as the `GRAILS_ENV` environment variable, and for `development` where neither is given:
+
+[source,bash]
+----
+./gradlew bootJar -Dgrails.env=UAT
+----
+
+A `-Dgrails.env` a build gives the compiler itself, among the fork options of a compile task, is kept, and outranks both.
+
+The build compiles each view once, for one environment, and the JSON and markup views it compiles serve the tests as well as the archive. A setting such a view carries therefore cannot differ between the tests and the archive: it belongs at the top level of the configuration rather than under `environments.test`, or the tests are run with the environment stated as above. Each compile task empties its output directory before it compiles, so the directory is the task's own: within the build directory, and not one the views are compiled against.
+
+A build can state the environment on the compile tasks instead, each of which has a `grailsEnvironment` property; the JSON and markup tasks, `compileGsonViews` and `compileGmlViews`, take it the same way where their plugins are applied:
+
+[source,groovy]
+----
+tasks.named('compileGroovyPages') {
+    grailsEnvironment = 'uat'
+}
+tasks.named('compileWebappGroovyPages') {
+    grailsEnvironment = 'uat'
+}
+----
+
+The environment is part of what the compiled views are, so the build cache keeps views compiled for different environments apart.
+
 
 === Programmatic Environment Detection
 
