@@ -84,7 +84,7 @@ import org.grails.datastore.mapping.reflect.ClassPropertyFetcher
  * {@code @GroupSequenceProvider} is described in the sequence the provider gives for no instance, and validated in
  * the one it chooses for each instance, see {@link #findDefaultGroups}.
  *
- * @since 8.0.1
+ * @since 9.0.0
  */
 @Slf4j
 @CompileStatic

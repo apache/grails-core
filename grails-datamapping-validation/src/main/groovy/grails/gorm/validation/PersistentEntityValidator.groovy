@@ -44,8 +44,10 @@ import org.grails.datastore.mapping.reflect.EntityReflector
  * <p>
  * As a {@link SmartValidator}, it validates an object with validation hints, which it passes to the validator of
  * each object validation cascades to, see {@link #getAssociationValidationHints}. An associated instance is
- * validated once with each distinct set of hints it is reached with, whatever it compares equal to: a cycle of
- * associations ends at an instance already reached, and two instances are both validated.
+ * validated once with each distinct set of hints it is reached with, whatever it compares equal to: two instances
+ * are both validated, while a cycle of associations ends at the instance it leads back to, whatever hints it is
+ * reached with. An instance of a subclass of the entity that is an entity of its own is validated by the validator
+ * of that entity.
  *
  * @author Graeme Rocher
  * @since 6.0
@@ -60,7 +62,7 @@ class PersistentEntityValidator implements CascadingValidator, ConstrainedEntity
     /**
      * No validation hints: an object is validated as {@link #validate} validates it
      *
-     * @since 8.0.1
+     * @since 9.0.0
      */
     protected static final Object[] NO_VALIDATION_HINTS = new Object[0]
 
@@ -108,7 +110,7 @@ class PersistentEntityValidator implements CascadingValidator, ConstrainedEntity
      * @param obj The object to validate
      * @param errors The errors to report the violations to
      * @param validationHints The validation hints, none to validate as {@link #validate(Object, Errors)} does
-     * @since 8.0.1
+     * @since 9.0.0
      */
     @Override
     void validate(Object obj, Errors errors, Object... validationHints) {
@@ -117,13 +119,15 @@ class PersistentEntityValidator implements CascadingValidator, ConstrainedEntity
 
     /**
      * Validates the object with the given validation hints, cascading to its associations when asked to. A proxy
-     * of the entity is validated as the instance it stands for, and so is a proxy of an associated object.
+     * of the entity is validated as the instance it stands for, and so is a proxy of an associated object. An
+     * instance of a subclass of the entity that is an entity of its own is handed to the validator of that entity,
+     * with the same hints, as {@link #supports} accepts the subclasses of the entity.
      *
      * @param obj The object to validate
      * @param errors The errors to report the violations to
      * @param cascade Whether to cascade to the associations of the object
      * @param hints The validation hints, {@link #NO_VALIDATION_HINTS} for none
-     * @since 8.0.1
+     * @since 9.0.0
      */
     protected void validate(Object obj, Errors errors, boolean cascade, Object[] hints) {
         Object target = unwrap(obj)
@@ -131,12 +135,19 @@ class PersistentEntityValidator implements CascadingValidator, ConstrainedEntity
             throw new IllegalArgumentException("Argument [$obj] is not an instance of [$targetClass] which this validator is configured for")
         }
 
+        PersistentEntityValidator subclassValidator = findSubclassEntityValidator(target)
+        if (subclassValidator != null) {
+            subclassValidator.validate(target, errors, cascade, hints)
+            return
+        }
+
         def validatedObjects = new HashSet()
         validatedObjects.add(new ValidatedObject(target, hints))
 
         // a validation started while another one cascades, such as by a custom validator, starts with its own hints
+        // and its own path, which a cycle of associations ends at
         Cascade enclosing = CASCADE.get()
-        CASCADE.set(new Cascade(hints, hints, null))
+        CASCADE.set(new Cascade(target, hints, hints, null, null))
         try {
             validateConstraints(target, entity, errors, entityReflector, getValidatedConstrainedProperties(target, hints), null, true)
             validateAssociationsAndBeyond(target, errors, cascade, hints, validatedObjects)
@@ -144,6 +155,28 @@ class PersistentEntityValidator implements CascadingValidator, ConstrainedEntity
         finally {
             restoreCascade(enclosing)
         }
+    }
+
+    /**
+     * The validator of the entity of the class of the instance, when that class is a subclass of the class of the
+     * entity of this validator and an entity of its own, with a validator of this kind of its own, null when the
+     * instance is to be validated by this validator.
+     */
+    private PersistentEntityValidator findSubclassEntityValidator(Object instance) {
+        Class<?> type = instance.getClass()
+        if (type == targetClass) {
+            return null
+        }
+        MappingContext mappingContext = entity.mappingContext
+        PersistentEntity subclassEntity = mappingContext.getPersistentEntity(type.name)
+        if (subclassEntity == null || subclassEntity.is(entity)) {
+            return null
+        }
+        def validator = mappingContext.getEntityValidator(subclassEntity)
+        if (validator instanceof PersistentEntityValidator && !validator.is(this)) {
+            return (PersistentEntityValidator) validator
+        }
+        return null
     }
 
     /**
@@ -156,7 +189,7 @@ class PersistentEntityValidator implements CascadingValidator, ConstrainedEntity
      * @param hints The validation hints the object is validated with, {@link #NO_VALIDATION_HINTS} for the object
      * {@link #validate} is called with, see {@link #getAssociationValidationHints}
      * @return The constraints to validate
-     * @since 8.0.1
+     * @since 9.0.0
      */
     protected Map<String, ConstrainedProperty> getValidatedConstrainedProperties(Object obj, Object[] hints) {
         return this.constrainedProperties
@@ -172,7 +205,7 @@ class PersistentEntityValidator implements CascadingValidator, ConstrainedEntity
      * @param errors The errors to report the violations to
      * @param hints The validation hints the object is validated with, {@link #NO_VALIDATION_HINTS} for the object
      * {@link #validate} is called with, see {@link #getAssociationValidationHints}
-     * @since 8.0.1
+     * @since 9.0.0
      */
     protected void validateBeyondConstraints(Object obj, Errors errors, Object[] hints) {
         // the constraints are the only rules of a plain entity
@@ -192,7 +225,7 @@ class PersistentEntityValidator implements CascadingValidator, ConstrainedEntity
      * @param hints The validation hints the object is validated with, {@link #NO_VALIDATION_HINTS} for the object
      * {@link #validate} is called with, see {@link #getAssociationValidationHints}
      * @param validatedObjects The objects this validation has reached, to pass on to the cascade
-     * @since 8.0.1
+     * @since 9.0.0
      */
     protected void validateAssociationsAndBeyond(Object obj, Errors errors, boolean cascade, Object[] hints, Set validatedObjects) {
         if (cascade) {
@@ -212,12 +245,12 @@ class PersistentEntityValidator implements CascadingValidator, ConstrainedEntity
      * @param reflector The reflector of the entity
      * @param hints The validation hints the object is validated with
      * @param validatedObjects The objects this validation has reached
-     * @since 8.0.1
+     * @since 9.0.0
      */
     protected void cascadeToAssociations(Object obj, PersistentEntity objEntity, Errors errors, EntityReflector reflector, Object[] hints, Set validatedObjects) {
         Cascade current = CASCADE.get()
         Association reachedThrough = current?.association
-        CASCADE.set(new Cascade(hints, current == null ? hints : current.allHints, reachedThrough))
+        CASCADE.set(new Cascade(obj, hints, current == null ? hints : current.allHints, reachedThrough, current))
         try {
             for (PersistentProperty pp in objEntity.persistentProperties) {
                 if (!(pp instanceof Association)) {
@@ -246,7 +279,7 @@ class PersistentEntityValidator implements CascadingValidator, ConstrainedEntity
      * @param association The association, a property of the entity of this validator
      * @param hints The validation hints the object owning the association is validated with
      * @return The validation hints of the associated object
-     * @since 8.0.1
+     * @since 9.0.0
      */
     protected Object[] getAssociationValidationHints(Association association, Object[] hints) {
         return NO_VALIDATION_HINTS
@@ -381,10 +414,12 @@ class PersistentEntityValidator implements CascadingValidator, ConstrainedEntity
 
     /**
      * Cascades validation to a one-to-one or many-to-one property. A proxy is validated as the instance it stands
-     * for, as the object validation starts with is. The associated object is validated with the hints the validator
-     * of the owning entity gives for the association: its constraints once, with the hints given for all the hints
-     * of the owner, and, once for each distinct hints it is reached with, its associations and its rules beyond the
-     * constraints, through {@link #validateAssociationsAndBeyond} of its own validator.
+     * for, as the object validation starts with is. A cycle of associations ends here: an instance validation is
+     * cascading from, the object validation started with or one on the path to the associated object, is not
+     * validated again, whatever hints it is reached with. Any other associated object is validated with the hints
+     * the validator of the owning entity gives for the association: its constraints once, with the hints given for
+     * all the hints of the owner, and, once for each distinct hints it is reached with, its associations and its
+     * rules beyond the constraints, through {@link #validateAssociationsAndBeyond} of its own validator.
      *
      * @param errors The Errors instance
      * @param bean The original BeanWrapper
@@ -402,8 +437,13 @@ class PersistentEntityValidator implements CascadingValidator, ConstrainedEntity
             return
         }
 
-        // the hints decide what the object is validated with, so it is validated once with each distinct set of them
+        // a cycle of associations ends at an instance validation is cascading from, whatever hints it is reached with
         Cascade cascade = CASCADE.get()
+        if (cascade != null && cascade.leadsBackTo(instance)) {
+            return
+        }
+
+        // the hints decide what the object is validated with, so it is validated once with each distinct set of them
         Object[] ownerHints = cascade == null ? NO_VALIDATION_HINTS : cascade.hints
         Object[] ownerAllHints = cascade == null ? NO_VALIDATION_HINTS : cascade.allHints
         Object[] associatedHints = NO_VALIDATION_HINTS
@@ -445,7 +485,7 @@ class PersistentEntityValidator implements CascadingValidator, ConstrainedEntity
         String nestedPath = errors.getNestedPath()
         try {
             errors.setNestedPath(buildNestedPath(nestedPath, propertyName, indexOrKey))
-            CASCADE.set(new Cascade(associatedHints, associatedAllHints, association))
+            CASCADE.set(new Cascade(instance, associatedHints, associatedAllHints, association, cascade))
 
             // the constraints do not depend on the hints of a step, so they are validated once for all of them
             if (validatedObjects.add(new ValidatedConstraints(instance, associatedAllHints))) {
@@ -508,7 +548,8 @@ class PersistentEntityValidator implements CascadingValidator, ConstrainedEntity
     }
 
     /**
-     * @return Whether the class is the class of the entity or a subclass of it, such as the class of a proxy
+     * @return Whether the class is the class of the entity or a subclass of it, such as the class of a proxy, or
+     * the class of an entity extending it, whose instances {@link #validate} hands to the validator of that entity
      */
     @Override
     boolean supports(Class<?> clazz) {
@@ -516,9 +557,15 @@ class PersistentEntityValidator implements CascadingValidator, ConstrainedEntity
     }
 
     /**
-     * The validation hints of an object whose associations validation is cascading to
+     * An object whose associations validation is cascading to, with its validation hints and the cascade it was
+     * reached through, whose objects lead from the object validation started with to it
      */
     private static final class Cascade {
+
+        /**
+         * The object
+         */
+        final Object instance
 
         /**
          * The hints the object is validated with in the current step
@@ -536,10 +583,30 @@ class PersistentEntityValidator implements CascadingValidator, ConstrainedEntity
          */
         final Association association
 
-        Cascade(Object[] hints, Object[] allHints, Association association) {
+        /**
+         * The cascade of the object this object was reached from, null for the object validation was started with
+         */
+        final Cascade parent
+
+        Cascade(Object instance, Object[] hints, Object[] allHints, Association association, Cascade parent) {
+            this.instance = instance
             this.hints = hints
             this.allHints = allHints
             this.association = association
+            this.parent = parent
+        }
+
+        /**
+         * @return Whether the candidate is the object of this cascade or of one it was reached through, so that an
+         * association to the candidate is a cycle leading back to it
+         */
+        boolean leadsBackTo(Object candidate) {
+            for (Cascade cascade = this; cascade != null; cascade = cascade.parent) {
+                if (cascade.instance.is(candidate)) {
+                    return true
+                }
+            }
+            return false
         }
     }
 

@@ -443,6 +443,134 @@ class PersistentEntityValidatorSpec extends Specification {
         lampValidator.paths == ['lamps[0].']
         errors.errorCount == 1
     }
+
+    def "a cycle of associations ends at the object validation started with, whatever hints it is reached with"() {
+        given: "an account whose region's office leads back to it, and validators giving no hints to the associated objects"
+        MappingContext mappingContext = new KeyValueMappingContext("test")
+        mappingContext.mappingFactory = new GormKeyValueMappingFactory("test")
+        mappingContext.syntaxStrategy = new GormMappingConfigurationStrategy(mappingContext.mappingFactory)
+        PersistentEntity accountEntity = mappingContext.addPersistentEntity(CycledAccount)
+        mappingContext.addPersistentEntity(CycledRegion)
+        mappingContext.addPersistentEntity(CycledOffice)
+        ValidatorRegistry registry = new DefaultValidatorRegistry(mappingContext, new ConnectionSourceSettings())
+        mappingContext.validatorRegistry = registry
+        CycledAccount account = new CycledAccount(owner: null)
+        account.region = new CycledRegion(name: 'north', office: new CycledOffice(city: 'Oslo', account: account))
+        Errors errors = new ValidationErrors(account)
+
+        when: "the account is validated with a hint, as ValidationUtils and a DataBinder validate"
+        ValidationUtils.invokeValidator(registry.getValidator(accountEntity), account, errors, 'draft')
+
+        then: "its owner is reported once, not again under the path leading back to it"
+        errors.errorCount == 1
+        errors.getFieldError('owner').code == 'nullable'
+        !errors.hasFieldErrors('region.office.account.owner')
+
+        when: "it is validated without hints"
+        errors = new ValidationErrors(account)
+        registry.getValidator(accountEntity).validate(account, errors)
+
+        then:
+        errors.errorCount == 1
+        errors.getFieldError('owner').code == 'nullable'
+    }
+
+    def "a cycle of associations ends at an object on the path to it, whatever hints it is reached with"() {
+        given: "an office leading back to the account and to the region it is reached through, and validators giving the hints of the owner followed by the name of the association"
+        MappingContext mappingContext = new KeyValueMappingContext("test")
+        mappingContext.mappingFactory = new GormKeyValueMappingFactory("test")
+        mappingContext.syntaxStrategy = new GormMappingConfigurationStrategy(mappingContext.mappingFactory)
+        PersistentEntity accountEntity = mappingContext.addPersistentEntity(CycledAccount)
+        PersistentEntity regionEntity = mappingContext.addPersistentEntity(CycledRegion)
+        PersistentEntity officeEntity = mappingContext.addPersistentEntity(CycledOffice)
+        DefaultValidatorRegistry registry = new DefaultValidatorRegistry(mappingContext, new ConnectionSourceSettings())
+        HintingValidator accountValidator = new HintingValidator(accountEntity, registry.messageSource, registry.constraintsEvaluator)
+        HintingValidator regionValidator = new HintingValidator(regionEntity, registry.messageSource, registry.constraintsEvaluator)
+        HintingValidator officeValidator = new HintingValidator(officeEntity, registry.messageSource, registry.constraintsEvaluator)
+        mappingContext.addEntityValidator(accountEntity, accountValidator)
+        mappingContext.addEntityValidator(regionEntity, regionValidator)
+        mappingContext.addEntityValidator(officeEntity, officeValidator)
+        CycledAccount account = new CycledAccount(owner: 'owner')
+        CycledRegion region = new CycledRegion(name: 'north')
+        region.office = new CycledOffice(city: 'Oslo', account: account, region: region)
+        account.region = region
+
+        when:
+        accountValidator.validate(account, new ValidationErrors(account), 'draft')
+
+        then: "the account and the region are validated once each, with the hints they are first reached with"
+        accountValidator.constraintHints == [['draft']]
+        accountValidator.beyondHints == [['draft']]
+        regionValidator.constraintHints == [['draft', 'region']]
+        regionValidator.beyondHints == [['draft', 'region']]
+        officeValidator.constraintHints == [['draft', 'region', 'office']]
+        officeValidator.beyondHints == [['draft', 'region', 'office']]
+    }
+
+    def "an instance of a subclass that is an entity of its own is validated by the validator of that entity"() {
+        given: "documents and reports, which extend them with a rule and an association of their own, and a validator of reports recording its hints"
+        MappingContext mappingContext = new KeyValueMappingContext("test")
+        mappingContext.mappingFactory = new GormKeyValueMappingFactory("test")
+        mappingContext.syntaxStrategy = new GormMappingConfigurationStrategy(mappingContext.mappingFactory)
+        PersistentEntity documentEntity = mappingContext.addPersistentEntity(SubclassedDocument)
+        PersistentEntity reportEntity = mappingContext.addPersistentEntity(SubclassedReport)
+        mappingContext.addPersistentEntity(SubclassedAppendix)
+        DefaultValidatorRegistry registry = new DefaultValidatorRegistry(mappingContext, new ConnectionSourceSettings())
+        mappingContext.validatorRegistry = registry
+        HintingValidator reportValidator = new HintingValidator(reportEntity, registry.messageSource, registry.constraintsEvaluator)
+        mappingContext.addEntityValidator(reportEntity, reportValidator)
+        Validator documentValidator = registry.getValidator(documentEntity)
+        SubclassedReport report = new SubclassedReport(name: 'report', appendix: new SubclassedAppendix(label: null))
+        Errors errors = new ValidationErrors(report)
+
+        expect: "the validator of documents supports reports, as it supports the class of a proxy"
+        documentValidator.supports(SubclassedReport)
+
+        when: "a report is handed to it with hints, as ValidationUtils does with a validator supporting its class"
+        ValidationUtils.invokeValidator(documentValidator, report, errors, 'draft')
+
+        then: "the validator of reports validates it with them, its rules and its associations"
+        reportValidator.constraintHints == [['draft']]
+        reportValidator.beyondHints == [['draft']]
+        errors.errorCount == 2
+        errors.getFieldError('pages').code == 'nullable'
+        errors.getFieldError('appendix.label').code == 'nullable'
+
+        when: "without cascading"
+        reportValidator.clear()
+        errors = new ValidationErrors(report)
+        ((CascadingValidator) documentValidator).validate(report, errors, false)
+
+        then:
+        reportValidator.constraintHints == [[]]
+        errors.errorCount == 1
+        errors.getFieldError('pages').code == 'nullable'
+
+        when: "a proxy of a report is handed to it"
+        reportValidator.clear()
+        Session session = Mock(Session) {
+            getMappingContext() >> mappingContext
+            retrieve(_, _) >> report
+        }
+        SubclassedReport proxy = mappingContext.proxyFactory.createProxy(session, SubclassedReport, 1L)
+        errors = new ValidationErrors(proxy)
+        documentValidator.validate(proxy, errors)
+
+        then: "the report it stands for is validated by the validator of reports"
+        reportValidator.constraintHints == [[]]
+        errors.getFieldError('pages').code == 'nullable'
+
+        when: "a document is handed to it"
+        reportValidator.clear()
+        SubclassedDocument document = new SubclassedDocument()
+        errors = new ValidationErrors(document)
+        documentValidator.validate(document, errors)
+
+        then: "it validates the document itself"
+        reportValidator.constraintHints.empty
+        errors.errorCount == 1
+        errors.getFieldError('name').code == 'nullable'
+    }
 }
 
 /**
@@ -667,5 +795,64 @@ class Publisher implements DirtyCheckable {
             errors = new ValidationErrors(this)
         }
         errors
+    }
+}
+
+@Entity
+class CycledAccount {
+    String owner
+    CycledRegion region
+
+    static constraints = {
+        owner(nullable: false)
+    }
+}
+
+@Entity
+class CycledRegion {
+    String name
+    CycledOffice office
+}
+
+/**
+ * An office leading back to the account and to the region it is reached through
+ */
+@Entity
+class CycledOffice {
+    String city
+    CycledAccount account
+    CycledRegion region
+}
+
+@Entity
+class SubclassedDocument {
+    Long id
+    String name
+
+    static constraints = {
+        name(nullable: false)
+    }
+}
+
+/**
+ * A report, an entity of its own extending documents with a rule and an association of its own
+ */
+@Entity
+class SubclassedReport extends SubclassedDocument {
+    Integer pages
+    SubclassedAppendix appendix
+
+    static constraints = {
+        pages(nullable: false)
+    }
+}
+
+@Entity
+class SubclassedAppendix {
+    String label
+    static belongsTo = [report: SubclassedReport]
+
+    static constraints = {
+        label(nullable: false)
     }
 }

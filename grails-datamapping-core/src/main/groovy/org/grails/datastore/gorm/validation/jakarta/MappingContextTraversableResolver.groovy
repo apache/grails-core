@@ -23,6 +23,7 @@ import java.lang.annotation.ElementType
 
 import groovy.transform.CompileStatic
 
+import jakarta.validation.ElementKind
 import jakarta.validation.Path
 import jakarta.validation.TraversableResolver
 
@@ -35,9 +36,11 @@ import org.grails.datastore.mapping.reflect.ClassPropertyFetcher
 
 /**
  * A {@link TraversableResolver} that uses the {@link MappingContext} to establish whether validation can cascade.
- * While the GORM validator cascades to the persistent associations of an entity
- * ({@link GormValidatorAdapter#CASCADE_VALIDATION} is {@code false}), Bean Validation cascades only through the
- * properties marked {@code @Valid} that are not persistent associations, such as a transient property.
+ * While the GORM validator cascades to the persistent associations of the entity it validates
+ * ({@link GormValidatorAdapter#CASCADE_VALIDATION} is {@code false}), Bean Validation cascades from that instance,
+ * the root bean of its validation, only through the properties marked {@code @Valid} that are not persistent
+ * associations, such as a transient property, and from a bean it reaches that way, which the GORM validator does not
+ * reach, through every property marked {@code @Valid}.
  *
  * @author Graeme Rocher
  * @since 6.1
@@ -80,8 +83,9 @@ class MappingContextTraversableResolver implements TraversableResolver {
         Class type = proxyHandler.getProxiedClass(traversableObject)
         PersistentEntity entity = mappingContext.getPersistentEntity(type.name)
         if (GormValidatorAdapter.CASCADE_VALIDATION.get() == Boolean.FALSE) {
-            // the GORM validator cascades to the persistent associations, Bean Validation to every other @Valid property
-            return !(entity?.getPropertyByName(traversableProperty.name) instanceof Association)
+            // the GORM validator cascades to the persistent associations of the root bean, Bean Validation to every
+            // other @Valid property of it, and to every @Valid property of a bean reached through one of those
+            return !isRootBean(pathToTraversableObject) || !(entity?.getPropertyByName(traversableProperty.name) instanceof Association)
         }
         if (entity != null) {
             PersistentEntity currentEntity = entity
@@ -106,5 +110,20 @@ class MappingContextTraversableResolver implements TraversableResolver {
             }
         }
         return false
+    }
+
+    /**
+     * @return Whether the path leads to the root bean of the validation: it names no property, holding no node or
+     * the node of the root bean alone, a bean node without a name, depending on the provider
+     */
+    private static boolean isRootBean(Path pathToTraversableObject) {
+        Iterator<Path.Node> nodes = pathToTraversableObject?.iterator()
+        while (nodes != null && nodes.hasNext()) {
+            Path.Node node = nodes.next()
+            if (node.name != null || node.kind != ElementKind.BEAN) {
+                return false
+            }
+        }
+        return true
     }
 }

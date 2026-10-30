@@ -19,10 +19,12 @@
 
 package org.apache.grails.data.testing.tck.tests
 
+import org.springframework.validation.ValidationUtils
 import spock.lang.IgnoreIf
 
 import grails.gorm.validation.ConstrainedEntity
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
+import org.apache.grails.data.testing.tck.domains.BeanValidatedAccount
 import org.apache.grails.data.testing.tck.domains.BeanValidatedArticle
 import org.apache.grails.data.testing.tck.domains.BeanValidatedAttachment
 import org.apache.grails.data.testing.tck.domains.BeanValidatedBasket
@@ -30,7 +32,11 @@ import org.apache.grails.data.testing.tck.domains.BeanValidatedBasketLine
 import org.apache.grails.data.testing.tck.domains.BeanValidatedBulletin
 import org.apache.grails.data.testing.tck.domains.BeanValidatedChapter
 import org.apache.grails.data.testing.tck.domains.BeanValidatedCounterpart
+import org.apache.grails.data.testing.tck.domains.BeanValidatedDocument
 import org.apache.grails.data.testing.tck.domains.BeanValidatedDossier
+import org.apache.grails.data.testing.tck.domains.BeanValidatedFeatured
+import org.apache.grails.data.testing.tck.domains.BeanValidatedFeaturedAuthor
+import org.apache.grails.data.testing.tck.domains.BeanValidatedHolder
 import org.apache.grails.data.testing.tck.domains.BeanValidatedInvoice
 import org.apache.grails.data.testing.tck.domains.BeanValidatedInvoiceLine
 import org.apache.grails.data.testing.tck.domains.BeanValidatedIssue
@@ -38,12 +44,15 @@ import org.apache.grails.data.testing.tck.domains.BeanValidatedLedger
 import org.apache.grails.data.testing.tck.domains.BeanValidatedManuscript
 import org.apache.grails.data.testing.tck.domains.BeanValidatedMember
 import org.apache.grails.data.testing.tck.domains.BeanValidatedNotice
+import org.apache.grails.data.testing.tck.domains.BeanValidatedOffice
 import org.apache.grails.data.testing.tck.domains.BeanValidatedOrder
 import org.apache.grails.data.testing.tck.domains.BeanValidatedPair
 import org.apache.grails.data.testing.tck.domains.BeanValidatedPairing
 import org.apache.grails.data.testing.tck.domains.BeanValidatedParcel
 import org.apache.grails.data.testing.tck.domains.BeanValidatedPost
 import org.apache.grails.data.testing.tck.domains.BeanValidatedRecall
+import org.apache.grails.data.testing.tck.domains.BeanValidatedRegion
+import org.apache.grails.data.testing.tck.domains.BeanValidatedReport
 import org.apache.grails.data.testing.tck.domains.BeanValidatedReview
 import org.apache.grails.data.testing.tck.domains.BeanValidatedSection
 import org.apache.grails.data.testing.tck.domains.BeanValidatedShelf
@@ -53,6 +62,8 @@ import org.apache.grails.data.testing.tck.domains.BeanValidatedTeaser
 import org.apache.grails.data.testing.tck.support.BeanValidatedLedgerDetails
 import org.apache.grails.data.testing.tck.support.BeanValidatedLedgerLeaf
 import org.apache.grails.data.testing.tck.support.BeanValidatedOrderDetails
+import org.apache.grails.data.testing.tck.support.PublishChecks
+import org.grails.datastore.mapping.validation.ValidationErrors
 
 /**
  * A domain class annotated with Bean Validation constraints is validated against its annotations and its
@@ -67,7 +78,8 @@ class BeanValidationSpec extends GrailsDataTckSpec {
                 BeanValidatedNotice, BeanValidatedRecall, BeanValidatedDossier, BeanValidatedAttachment, BeanValidatedIssue,
                 BeanValidatedSection, BeanValidatedBasket, BeanValidatedBasketLine, BeanValidatedOrder, BeanValidatedShelf,
                 BeanValidatedShelfBook, BeanValidatedBulletin, BeanValidatedManuscript, BeanValidatedChapter, BeanValidatedLedger,
-                BeanValidatedCounterpart, BeanValidatedMember)
+                BeanValidatedCounterpart, BeanValidatedMember, BeanValidatedAccount, BeanValidatedRegion, BeanValidatedOffice,
+                BeanValidatedHolder, BeanValidatedFeatured, BeanValidatedFeaturedAuthor, BeanValidatedDocument, BeanValidatedReport)
     }
 
     void 'the annotations and the constraints block are validated, each violation once'() {
@@ -468,5 +480,86 @@ class BeanValidationSpec extends GrailsDataTckSpec {
 
         and: 'the constraints describe the class as the provider does for no instance'
         !((ConstrainedEntity) entity.mappingContext.getEntityValidator(entity)).constrainedProperties.desk.nullable
+    }
+
+    void 'a cycle of associations leads back to an instance validated in a group without validating it again'() {
+        given: 'an account whose region, marked @Valid, has an office leading back to the account and to the region'
+        def account = new BeanValidatedAccount(summary: '', owner: null)
+        def region = new BeanValidatedRegion(code: '', name: null)
+        region.office = new BeanValidatedOffice(city: 'Oslo', account: account, region: region)
+        account.region = region
+        def entity = BeanValidatedAccount.gormPersistentEntity
+        def validator = entity.mappingContext.getEntityValidator(entity)
+        def errors = new ValidationErrors(account)
+
+        when: 'the account is validated in PublishChecks, as ValidationUtils and a DataBinder validate'
+        ValidationUtils.invokeValidator(validator, account, errors, PublishChecks)
+
+        then: 'the account and its region are validated in it once each, not again in the default group under the path leading back to them'
+        errors.getFieldError('summary').code == 'NotBlank'
+        errors.getFieldError('region.code').code == 'NotBlank'
+        errors.errorCount == 2
+
+        and: 'validate() validates the default group, once each as well'
+        !account.validate()
+        account.errors.getFieldError('owner').code == 'NotNull'
+        account.errors.getFieldError('region.name').code == 'NotNull'
+        account.errors.errorCount == 2
+    }
+
+    void 'the provider cascades through a persistent association marked @Valid of a domain instance it reached through a transient property'() {
+        given: 'a holder whose transient featured item has an author marked @Valid, both violating an annotation'
+        def holder = new BeanValidatedHolder(name: 'holder',
+                featured: new BeanValidatedFeatured(title: '', author: new BeanValidatedFeaturedAuthor(name: '')))
+
+        expect: 'the item and its author are validated under their paths'
+        !holder.validate()
+        holder.errors.getFieldError('featured.title').code == 'NotBlank'
+        holder.errors.getFieldError('featured.author.name').code == 'NotBlank'
+        holder.errors.errorCount == 2
+        holder.save() == null
+
+        and: 'the item validated on its own cascades to its author through GORM, once'
+        !holder.featured.validate()
+        holder.featured.errors.getFieldError('title').code == 'NotBlank'
+        holder.featured.errors.getFieldError('author.name').code == 'NotBlank'
+        holder.featured.errors.errorCount == 2
+
+        when: 'both are valid'
+        holder.featured.title = 'Featured'
+        holder.featured.author.name = 'Author'
+
+        then:
+        holder.validate()
+        holder.save(flush: true) != null
+    }
+
+    void 'an instance of a subclass that is a domain class of its own is validated by the validator of that subclass'() {
+        given: 'a report, which extends documents with an annotation and a constraints block of its own, and the validator of documents'
+        def entity = BeanValidatedDocument.gormPersistentEntity
+        def documentValidator = entity.mappingContext.getEntityValidator(entity)
+        def report = new BeanValidatedReport(title: 'Report', pages: null, summary: 'toolong')
+        def errors = new ValidationErrors(report)
+
+        expect: 'the validator of documents supports reports'
+        documentValidator.supports(BeanValidatedReport)
+
+        when: 'a report is handed to it, as ValidationUtils does with a validator supporting its class'
+        ValidationUtils.invokeValidator(documentValidator, report, errors)
+
+        then: 'the annotation and the block of reports are validated, as validate() validates them'
+        errors.getFieldError('pages').code == 'NotNull'
+        errors.getFieldError('summary').code == 'maxSize.exceeded'
+        errors.errorCount == 2
+        !report.validate()
+        report.errors.errorCount == 2
+
+        when: 'the report is valid'
+        report.pages = 3
+        report.summary = 'ok'
+
+        then:
+        report.validate()
+        report.save(flush: true) != null
     }
 }

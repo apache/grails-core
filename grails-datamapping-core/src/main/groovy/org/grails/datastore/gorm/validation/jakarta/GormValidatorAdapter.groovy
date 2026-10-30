@@ -56,7 +56,8 @@ class GormValidatorAdapter extends SpringValidatorAdapter implements CascadingVa
     /**
      * Whether the validation in progress on the thread cascades to the persistent associations of an entity. When
      * {@code false}, the GORM validator cascades to them, and Bean Validation cascades only through the properties
-     * marked {@code @Valid} that are not persistent associations, see {@link MappingContextTraversableResolver}. A
+     * marked {@code @Valid} of the entity that are not persistent associations, and from the objects it reaches that
+     * way through every property marked {@code @Valid}, see {@link MappingContextTraversableResolver}. A
      * validation started while another one is in progress, such as by a custom constraint validating another entity,
      * leaves the value of the enclosing one in place when it ends.
      */
@@ -86,9 +87,10 @@ class GormValidatorAdapter extends SpringValidatorAdapter implements CascadingVa
      * @param obj The object to validate
      * @param errors The errors to report the violations to
      * @param cascade Whether validation cascades to the persistent associations of the entity through the
-     * properties marked {@code @Valid}; it cascades through the other properties marked {@code @Valid} either way
+     * properties marked {@code @Valid}; it cascades through the other properties marked {@code @Valid}, and from the
+     * objects they hold through every property marked {@code @Valid}, either way
      * @param groups The groups to validate
-     * @since 8.0.1
+     * @since 9.0.0
      */
     void validate(Object obj, Errors errors, boolean cascade, Class<?>[] groups) {
         Boolean enclosing = CASCADE_VALIDATION.get()
@@ -115,7 +117,7 @@ class GormValidatorAdapter extends SpringValidatorAdapter implements CascadingVa
      * @param cascade Whether validation cascades to the persistent associations of the entity
      * @param groups The groups to validate
      * @param reportedGroups The groups whose violations to report, null to report every violation
-     * @since 8.0.1
+     * @since 9.0.0
      */
     void validate(Object obj, Errors errors, boolean cascade, Class<?>[] groups, Set<Class<?>> reportedGroups) {
         if (reportedGroups == null) {

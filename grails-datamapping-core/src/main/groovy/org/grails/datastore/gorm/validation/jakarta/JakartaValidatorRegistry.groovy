@@ -118,7 +118,7 @@ class JakartaValidatorRegistry extends DefaultValidatorRegistry implements Valid
      * @param context The context
      * @param messageSource The message source
      * @return The validator factory
-     * @since 8.0.1
+     * @since 9.0.0
      */
     static ValidatorFactory createValidatorFactory(MappingContext context, MessageSource messageSource) {
         return buildConfigurationFor(context, messageSource).buildValidatorFactory()
@@ -139,7 +139,7 @@ class JakartaValidatorRegistry extends DefaultValidatorRegistry implements Valid
     /**
      * @param entity The entity
      * @return Whether the entity is validated with Bean Validation, see {@link #isBeanValidated(PersistentEntity, jakarta.validation.Validator)}
-     * @since 8.0.1
+     * @since 9.0.0
      */
     boolean isBeanValidated(PersistentEntity entity) {
         return isBeanValidated(entity, validatorFactory.getValidator())
@@ -152,7 +152,7 @@ class JakartaValidatorRegistry extends DefaultValidatorRegistry implements Valid
      * @param entity The entity
      * @param validator The Bean Validation validator
      * @return Whether the entity is validated with Bean Validation
-     * @since 8.0.1
+     * @since 9.0.0
      */
     static boolean isBeanValidated(PersistentEntity entity, jakarta.validation.Validator validator) {
         return validator.getConstraintsForClass(entity.javaClass).isBeanConstrained()
@@ -169,7 +169,7 @@ class JakartaValidatorRegistry extends DefaultValidatorRegistry implements Valid
      * @param validatorFactory The Bean Validation validator factory
      * @return The validator
      * @see JakartaPersistentEntityValidator
-     * @since 8.0.1
+     * @since 9.0.0
      */
     static JakartaPersistentEntityValidator createEntityValidator(PersistentEntity entity, MessageSource messageSource,
             ConstraintsEvaluator constraintsEvaluator, ConstraintRegistry constraintRegistry, ValidatorFactory validatorFactory) {

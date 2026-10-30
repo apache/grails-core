@@ -68,7 +68,8 @@ class JakartaValidatorRegistrySpec extends Specification {
                 AnnotatedShelf, AnnotatedShelfBook, PlainShelf, GroupedBook, PublishingShelf, PublishedBook, PublishedChapter,
                 PublishedBookNote, SharedChapterBook, SharedChapter, SequencedBook, SequencedPart, CascadingShelf, ReviewedBook,
                 ValidatedDocument, ValidatedReport, TitledBook, DetailedBook, ExtendedOwner, ExtendedChild, SequencedOwner, SequencedRoot,
-                SequencedChild, SequencedGrandchild, AuditedRecord, AuditedRecordAuditor, ProvidedMember)
+                SequencedChild, SequencedGrandchild, AuditedRecord, AuditedRecordAuditor, ProvidedMember, LinkedAccount, LinkedRegion,
+                LinkedOffice, FeaturedHolder, FeaturedItem, FeaturedAuthor, AnnotatedDocument, AnnotatedReport)
         mappingContext.initialize()
         registry = new JakartaValidatorRegistry(mappingContext, new ConnectionSourceSettings())
         mappingContext.validatorRegistry = registry
@@ -661,6 +662,101 @@ class JakartaValidatorRegistrySpec extends Specification {
         !((ConstrainedEntity) validator).constrainedProperties.desk.nullable
     }
 
+    void "a cycle of associations leads back to an instance validated with hints without validating it again"() {
+        given: "an account validated in OnPublish, whose region, marked @Valid, has an office leading back to the account and to the region"
+        SpringValidator validator = registry.getValidator(mappingContext.getPersistentEntity(LinkedAccount.name))
+        LinkedAccount account = new LinkedAccount(summary: '', owner: null)
+        LinkedRegion region = new LinkedRegion(code: '', name: null)
+        region.office = new LinkedOffice(city: 'Oslo', account: account, region: region)
+        account.region = region
+        Errors errors = new ValidationErrors(account)
+
+        expect: "the provider validates the account and its region in OnPublish, and cascades no further"
+        beanValidationPaths(account, OnPublish) == ['region.code', 'summary']
+
+        when:
+        ValidationUtils.invokeValidator(validator, account, errors, OnPublish)
+
+        then: "and so does GORM: the office leads back to the account and to the region, which are not validated again in the default group"
+        errors.getFieldError('summary').code == 'NotBlank'
+        errors.getFieldError('region.code').code == 'NotBlank'
+        errors.errorCount == 2
+
+        when: "the account is validated without hints"
+        errors = new ValidationErrors(account)
+        validator.validate(account, errors)
+
+        then: "the default group annotations of the account and of the region are reported once each"
+        errors.getFieldError('owner').code == 'NotNull'
+        errors.getFieldError('region.name').code == 'NotNull'
+        errors.errorCount == 2
+    }
+
+    void "the provider cascades through a persistent association marked @Valid of a bean it reached through a transient property"() {
+        given: "a holder whose transient item, marked @Valid, has an author marked @Valid, both violating an annotation"
+        SpringValidator validator = registry.getValidator(mappingContext.getPersistentEntity(FeaturedHolder.name))
+        FeaturedHolder holder = new FeaturedHolder(name: 'holder', featured: new FeaturedItem(title: '', author: new FeaturedAuthor(name: '')))
+        Errors errors = new ValidationErrors(holder)
+
+        expect: "the provider cascades to the item, and from it to the author"
+        beanValidationPaths(holder) == ['featured.author.name', 'featured.title']
+
+        when:
+        validator.validate(holder, errors)
+
+        then: "and so does GORM, which does not reach the item itself"
+        errors.getFieldError('featured.title').code == 'NotBlank'
+        errors.getFieldError('featured.author.name').code == 'NotBlank'
+        errors.errorCount == 2
+
+        when: "the item is validated on its own"
+        errors = new ValidationErrors(holder.featured)
+        registry.getValidator(mappingContext.getPersistentEntity(FeaturedItem.name)).validate(holder.featured, errors)
+
+        then: "GORM cascades to its author, which the provider leaves to it, so the author is validated once"
+        errors.getFieldError('title').code == 'NotBlank'
+        errors.getFieldError('author.name').code == 'NotBlank'
+        errors.errorCount == 2
+    }
+
+    void "an instance of a subclass that is an entity of its own is validated by the validator of that entity"() {
+        given: "a report, which extends documents with annotations and a constraints block of its own"
+        SpringValidator documentValidator = registry.getValidator(mappingContext.getPersistentEntity(AnnotatedDocument.name))
+        SpringValidator reportValidator = registry.getValidator(mappingContext.getPersistentEntity(AnnotatedReport.name))
+        AnnotatedReport report = new AnnotatedReport(title: 'Report', pages: null, summary: '', code: null)
+        Errors errors = new ValidationErrors(report)
+
+        expect: "the validator of documents supports reports, and is not theirs"
+        documentValidator.supports(AnnotatedReport)
+        !reportValidator.is(documentValidator)
+
+        when: "a report is handed to the validator of documents, as ValidationUtils does with a validator supporting its class"
+        ValidationUtils.invokeValidator(documentValidator, report, errors)
+
+        then: "the annotations and the block of reports are validated, as by their own validator"
+        errors.getFieldError('pages').code == 'NotNull'
+        errors.getFieldError('code').code == 'nullable'
+        errors.errorCount == 2
+
+        when: "with a group as a validation hint"
+        errors = new ValidationErrors(report)
+        ValidationUtils.invokeValidator(documentValidator, report, errors, OnPublish)
+
+        then: "reports are validated in it"
+        errors.getFieldError('summary').code == 'NotBlank'
+        errors.getFieldError('code').code == 'nullable'
+        errors.errorCount == 2
+
+        when: "a document is handed to it"
+        AnnotatedDocument document = new AnnotatedDocument(title: '')
+        errors = new ValidationErrors(document)
+        ValidationUtils.invokeValidator(documentValidator, document, errors)
+
+        then: "it validates the document itself"
+        errors.getFieldError('title').code == 'NotBlank'
+        errors.errorCount == 1
+    }
+
     private static List<String> beanValidationPaths(Object instance, Class<?>... groups) {
         def factory = Validation.buildDefaultValidatorFactory()
         try {
@@ -1166,4 +1262,93 @@ class SequencedGrandchild {
     String x
 
     static belongsTo = [SequencedChild]
+}
+
+@Entity
+class LinkedAccount {
+    @NotBlank(groups = OnPublish)
+    String summary
+
+    @NotNull
+    String owner
+
+    @Valid
+    LinkedRegion region
+}
+
+@Entity
+class LinkedRegion {
+    @NotBlank(groups = OnPublish)
+    String code
+
+    @NotNull
+    String name
+
+    LinkedOffice office
+}
+
+/**
+ * An office without annotations, leading back to the account and to the region it is reached through
+ */
+@Entity
+class LinkedOffice {
+    String city
+    LinkedAccount account
+    LinkedRegion region
+}
+
+@Entity
+class FeaturedHolder {
+    @NotBlank
+    String name
+
+    @Valid
+    FeaturedItem featured
+
+    static transients = ['featured']
+}
+
+/**
+ * An item the provider reaches through the transient property of a holder, with a persistent association marked
+ * {@code @Valid}
+ */
+@Entity
+class FeaturedItem {
+    @NotBlank
+    String title
+
+    @Valid
+    FeaturedAuthor author
+}
+
+@Entity
+class FeaturedAuthor {
+    @NotBlank
+    String name
+
+    static belongsTo = [FeaturedItem]
+}
+
+@Entity
+class AnnotatedDocument {
+    @NotBlank
+    String title
+}
+
+/**
+ * A report, an entity of its own extending documents with annotations and a constraints block of its own
+ */
+@Entity
+class AnnotatedReport extends AnnotatedDocument {
+    @NotNull
+    Integer pages
+
+    @NotBlank(groups = OnPublish)
+    String summary
+
+    String code
+
+    static constraints = {
+        code nullable: false
+    }
 }
