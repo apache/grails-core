@@ -1,0 +1,72 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+==== Bean Validation Annotations
+
+Domain classes can also be constrained with https://jakarta.ee/specifications/bean-validation/[Jakarta Bean Validation] annotations, either instead of or alongside the `constraints` block:
+
+[source,groovy]
+----
+import jakarta.validation.constraints.Email
+import jakarta.validation.constraints.Max
+import jakarta.validation.constraints.Min
+import jakarta.validation.constraints.NotBlank
+import jakarta.validation.constraints.NotNull
+import jakarta.validation.constraints.Size
+
+class Member {
+    @NotBlank @Size(max = 30) String name
+    @NotNull @Email String email
+    @NotNull @Min(1L) @Max(5L) Integer level
+    String referenceCode
+
+    static constraints = {
+        referenceCode nullable: false, matches: /[A-Z]{2}-\d{4}/
+    }
+}
+----
+
+GORM validates a domain class with the Bean Validation provider (Hibernate Validator), in addition to its own constraints, when the provider considers the class constrained: it declares or inherits a constraint annotation on a property or a getter, a class level constraint, or a property marked `@Valid`. Calling `validate()` or `save()` checks both, and each violation is reported once in the `errors` of the instance: the annotations with Spring's Bean Validation message codes (for example `NotBlank.com.example.Member.name`, `NotBlank.name` and `NotBlank`, falling back to the message of the annotation), and the `constraints` block with the usual link:validation.html#constraints[constraint] codes.
+
+The nullability of a property is decided by its annotations of the default group when it has any: `@NotNull`, `@NotBlank` and `@NotEmpty` make it required and `@Null` keeps it empty, regardless of the `grails.gorm.default.nullable` setting or a `nullable` constraint in the block. `validate()` and `save()` validate the default group only, so an annotation restricted to another group (such as `@NotNull(groups = OnPublish)`) leaves the `nullable` constraint of the block in force. When a domain class redefines its default group with `@GroupSequence`, every group the sequence validates belongs to the default group, including the groups those groups extend and the groups of a nested sequence. As Hibernate Validator applies it, the sequence of a superclass covers the annotations declared by that superclass and the classes above it, whereas a subclass that does not redefine the default group itself validates its own annotations in the `Default` group only. A domain class that redefines its default group with Hibernate Validator's `@GroupSequenceProvider` is validated in the sequence the provider chooses for each instance, and the nullability of its properties follows that sequence: `nullable: false` in the block gives way to a `@Null(groups = Retired)` on an instance the provider validates in `Retired`, and stays in force on one it does not. Declare every other rule once, either as an annotation or in the block, as a rule declared in both places is checked twice.
+
+GORM cascades validation to the associations of an annotated domain class exactly as it does for any other domain class, validating the annotations of an annotated associated class together with its `constraints` block, so `@Valid` is not needed on an association between domain classes. An associated instance of a subclass that is a domain class of its own is validated with the rules of its own class, its annotations, its `constraints` block and its associations, whatever the declared type of the association, as it is on its own. Each associated instance is validated, whatever it compares equal to; only a cycle of associations ends, at the instance it leads back to, whatever groups the instance is reached with. The errors of an associated instance are reported under the path of the association, as `lines[0].label` for example, and a class level constraint of the associated class on the path of the association itself, as `lines[0]`. A property marked `@Valid` that is not a persistent association, such as a transient property holding a value object, is cascaded to by Bean Validation itself, with or without `deepValidate`, in the groups the instance owning it is validated in, converted as the `@ConvertGroup` annotations of the property declare, and so is each value it cascades to in turn, as the class of the value, whatever the declared type of the property. Its violations are reported under its path as well. From such a value, which GORM does not reach, Bean Validation cascades through every property marked `@Valid`, a persistent association included, validating the annotations of each value it reaches, not a `constraints` block. A custom constraint may validate another domain instance with `validate()` while the instance declaring it is validated; the validation it runs in goes on unchanged.
+
+As with Spring's nested validation, the message codes of an annotation error found through an association name the validated class and the path, such as `NotBlank.com.example.Invoice.lines[0].label` and `NotBlank.com.example.Invoice.lines.label`, while the codes of the `constraints` block keep the class of the associated instance. A message keyed `NotBlank.com.example.InvoiceLine.label` therefore applies to a line validated on its own but not through its invoice, whereas `NotBlank.lines.label`, `NotBlank.label` and `NotBlank` apply both ways.
+
+An associated instance is validated in the default group, as it is on its own, except through an association marked `@Valid`, which is validated in the groups of the instance owning it, converted as the `@ConvertGroup` annotations of the association declare, as Bean Validation cascades:
+
+* With `@Valid @ConvertGroup(from = Default, to = OnPublish)` on `lines`, `invoice.validate()` checks the `OnPublish` annotations of each line instead of its default ones, together with the `constraints` block of the line, whose `nullable` constraint then gives way to the `OnPublish` annotations declaring the nullability of a property. The owning class needs no constraint annotation of its own for the conversion to apply.
+* A conversion applies to each group Bean Validation validates when the owning instance is validated: a group and the groups it extends, and, for a group sequence, its groups in their order. So a `@ConvertGroup(from = OnPublish, to = OnArchive)` on an association of the line applies when the invoice converted the default group to a sequence of `OnPublish`. A group of the owner that no conversion converts is validated alone on the associated instance: when the owner is validated in `Extended`, which extends `Base`, and the association converts `Base` to `Converted`, the associated instance is validated in `Extended` and `Converted`, and an annotation of `Base` on it is not checked.
+* A group sequence, whether given as a validation hint or converted to, is validated group by group over the instance and every instance it cascades to, and stops at the first group with a violation among them, as Bean Validation does. A violation of a line in the first group of a sequence the invoice is validated in therefore stops the invoice and all its lines before the second group. The `constraints` block of the validated instance, and of an associated instance when it is first reached, counts as the first group the instance is validated in, so a violation of it stops a sequence as a violation of that group does. A group is validated once, as Bean Validation reports each violation once: a group given both on its own and in a sequence is validated on its own, and the sequence skips it, so a violation of it does not stop the sequence.
+* An instance reached through two associations is validated once in each distinct list of groups, so an attachment that is both the `cover` and the `appendix` of a dossier is checked in the groups each association converts to.
+
+The validator of an annotated domain class is a Spring `SmartValidator`: the validation hints that are classes are the groups to validate in, so `ValidationUtils.invokeValidator(validator, instance, errors, OnPublish)` and `DataBinder.validate(OnPublish)` check the `OnPublish` annotations of the instance instead of its default ones, together with its `constraints` block, and cascade with these groups as the associations marked `@Valid` convert them. The validator of a domain class is the one its mapping context holds for its persistent entity:
+
+[source,groovy]
+----
+def entity = Member.gormPersistentEntity
+def validator = entity.mappingContext.getEntityValidator(entity)
+----
+
+The validator supports the domain class and its subclasses, so a proxy of an instance is validated as the instance it stands for, and so is an initialized proxy of an associated instance that validation cascades to. An instance of a subclass that is a domain class of its own, handed to the validator of the superclass, is validated by the validator of its own class, with the same groups. `validate()` and `save()` take no groups and validate the default group.
+
+The constrained properties of the domain class (its `constrainedProperties`), used by scaffolding, the OpenAPI descriptions and plugins such as the fields plugin, describe the annotations of the default group as well: `@NotNull` as `nullable: false`, `@Size` as `minSize` and `maxSize`, `@Min`, `@Max`, `@DecimalMin` and `@DecimalMax` as `min` and `max` (on an integer property, the nearest whole number the bound admits), `@Email` as `email`, `@Pattern` as `matches`, `@AssertTrue` and `@AssertFalse` as `inList`, and Hibernate Validator's `@Length`, `@Range`, `@URL` and `@CreditCardNumber` as their GORM counterparts. A custom constraint composed of these annotations is described through them, with the attributes it overrides applied, unless Hibernate Validator's `@ConstraintComposition` combines them other than with `AND`, as the constraints of an `OR` composition do not each apply; annotations without an equivalent, such as `@Past` or a custom constraint with its own validator, and a constraint on a getter without a backing field, such as a cross field `@AssertTrue`, are only validated.
+
+Unit tests mocking a domain class with link:testing.html#unitTestingDomainClasses[DataTest] or `DomainUnitTest` validate the annotations and the `constraints` block the same way.

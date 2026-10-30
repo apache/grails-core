@@ -23,6 +23,7 @@ import java.lang.annotation.ElementType
 
 import groovy.transform.CompileStatic
 
+import jakarta.validation.ElementKind
 import jakarta.validation.Path
 import jakarta.validation.TraversableResolver
 
@@ -31,9 +32,15 @@ import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.model.PersistentProperty
 import org.grails.datastore.mapping.model.types.Association
 import org.grails.datastore.mapping.proxy.ProxyHandler
+import org.grails.datastore.mapping.reflect.ClassPropertyFetcher
 
 /**
- * A {@link TraversableResolver} that uses the {@link MappingContext} to establish whether validation can cascade
+ * A {@link TraversableResolver} that uses the {@link MappingContext} to establish whether validation can cascade.
+ * While the GORM validator cascades to the persistent associations of the entity it validates
+ * ({@link GormValidatorAdapter#CASCADE_VALIDATION} is {@code false}), Bean Validation cascades from that instance,
+ * the root bean of its validation, only through the properties marked {@code @Valid} that are not persistent
+ * associations, such as a transient property, and from a bean it reaches that way, which the GORM validator does not
+ * reach, through every property marked {@code @Valid}.
  *
  * @author Graeme Rocher
  * @since 6.1
@@ -51,16 +58,35 @@ class MappingContextTraversableResolver implements TraversableResolver {
 
     @Override
     boolean isReachable(Object traversableObject, Path.Node traversableProperty, Class<?> rootBeanType, Path pathToTraversableObject, ElementType elementType) {
-        return proxyHandler.isInitialized(traversableObject) && proxyHandler.isInitialized(traversableObject, traversableProperty.name)
+        if (!proxyHandler.isInitialized(traversableObject)) {
+            return false
+        }
+        String propertyName = traversableProperty.name
+        if (propertyName == null) {
+            // nothing to read for a node without a property name; Hibernate Validator does not consult the resolver
+            // for a class level constraint, so this is only a guard
+            return true
+        }
+        Object value
+        try {
+            value = ClassPropertyFetcher.getInstancePropertyValue(traversableObject, propertyName)
+        }
+        catch (RuntimeException ignored) {
+            return false
+        }
+        // a null value has nothing to initialize, and has to be reachable for constraints such as @NotNull to see it
+        return value == null || proxyHandler.isInitialized(value)
     }
 
     @Override
     boolean isCascadable(Object traversableObject, Path.Node traversableProperty, Class<?> rootBeanType, Path pathToTraversableObject, ElementType elementType) {
-        if (GormValidatorAdapter.CASCADE_VALIDATION.get() == Boolean.FALSE) {
-            return false
-        }
         Class type = proxyHandler.getProxiedClass(traversableObject)
         PersistentEntity entity = mappingContext.getPersistentEntity(type.name)
+        if (GormValidatorAdapter.CASCADE_VALIDATION.get() == Boolean.FALSE) {
+            // the GORM validator cascades to the persistent associations of the root bean, Bean Validation to every
+            // other @Valid property of it, and to every @Valid property of a bean reached through one of those
+            return !isRootBean(pathToTraversableObject) || !(entity?.getPropertyByName(traversableProperty.name) instanceof Association)
+        }
         if (entity != null) {
             PersistentEntity currentEntity = entity
             for (Path.Node n in pathToTraversableObject) {
@@ -84,5 +110,20 @@ class MappingContextTraversableResolver implements TraversableResolver {
             }
         }
         return false
+    }
+
+    /**
+     * @return Whether the path leads to the root bean of the validation: it names no property, holding no node or
+     * the node of the root bean alone, a bean node without a name, depending on the provider
+     */
+    private static boolean isRootBean(Path pathToTraversableObject) {
+        Iterator<Path.Node> nodes = pathToTraversableObject?.iterator()
+        while (nodes != null && nodes.hasNext()) {
+            Path.Node node = nodes.next()
+            if (node.name != null || node.kind != ElementKind.BEAN) {
+                return false
+            }
+        }
+        return true
     }
 }

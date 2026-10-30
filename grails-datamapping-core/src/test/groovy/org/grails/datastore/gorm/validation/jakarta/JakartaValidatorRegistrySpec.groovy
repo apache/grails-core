@@ -18,16 +18,44 @@
  */
 package org.grails.datastore.gorm.validation.jakarta
 
-import jakarta.validation.constraints.NotBlank
+import java.lang.annotation.ElementType
+import java.lang.annotation.Retention
+import java.lang.annotation.RetentionPolicy
+import java.lang.annotation.Target
 
+import jakarta.validation.Constraint
+import jakarta.validation.ConstraintValidator
+import jakarta.validation.ConstraintValidatorContext
+import jakarta.validation.GroupSequence
+import jakarta.validation.Payload
+import jakarta.validation.Valid
+import jakarta.validation.Validation
+import jakarta.validation.constraints.NotBlank
+import jakarta.validation.constraints.NotNull
+import jakarta.validation.constraints.Null
+import jakarta.validation.constraints.Size
+import jakarta.validation.groups.ConvertGroup
+import jakarta.validation.groups.Default
+
+import org.hibernate.validator.group.GroupSequenceProvider
+import org.hibernate.validator.spi.group.DefaultGroupSequenceProvider
+import org.springframework.validation.DataBinder
+import org.springframework.validation.Errors
+import org.springframework.validation.SmartValidator
+import org.springframework.validation.ValidationUtils
 import org.springframework.validation.Validator as SpringValidator
 import org.springframework.validation.annotation.Validated
 
 import grails.gorm.annotation.Entity
+import grails.gorm.validation.CascadingValidator
+import grails.gorm.validation.ConstrainedEntity
+import grails.gorm.validation.ConstrainedProperty
 import grails.gorm.validation.PersistentEntityValidator
+import org.grails.datastore.mapping.core.Session
 import org.grails.datastore.mapping.core.connections.ConnectionSourceSettings
 import org.grails.datastore.mapping.keyvalue.mapping.config.KeyValueMappingContext
 import org.grails.datastore.mapping.model.MappingContext
+import org.grails.datastore.mapping.validation.ValidationErrors
 import spock.lang.Specification
 
 class JakartaValidatorRegistrySpec extends Specification {
@@ -36,9 +64,16 @@ class JakartaValidatorRegistrySpec extends Specification {
     JakartaValidatorRegistry registry
 
     void setup() {
-        mappingContext.addPersistentEntities(PlainBook, ValidatedBook)
+        mappingContext.addPersistentEntities(PlainBook, ValidatedBook, ConstrainedBook, MysteriousBook,
+                AnnotatedShelf, AnnotatedShelfBook, PlainShelf, GroupedBook, PublishingShelf, PublishedBook, PublishedChapter,
+                PublishedBookNote, SharedChapterBook, SharedChapter, SequencedBook, SequencedPart, CascadingShelf, ReviewedBook,
+                ValidatedDocument, ValidatedReport, TitledBook, DetailedBook, ExtendedOwner, ExtendedChild, SequencedOwner, SequencedRoot,
+                SequencedChild, SequencedGrandchild, AuditedRecord, AuditedRecordAuditor, ProvidedMember, LinkedAccount, LinkedRegion,
+                LinkedOffice, FeaturedHolder, FeaturedItem, FeaturedAuthor, AnnotatedDocument, AnnotatedReport, AnnotatedFolder,
+                UnannotatedDocument, AnnotatedMemo, UnannotatedFolder, SequencedRecord)
         mappingContext.initialize()
         registry = new JakartaValidatorRegistry(mappingContext, new ConnectionSourceSettings())
+        mappingContext.validatorRegistry = registry
     }
 
     void cleanup() {
@@ -50,15 +85,17 @@ class JakartaValidatorRegistrySpec extends Specification {
         JakartaValidatorRegistry.isAvailable()
     }
 
-    void "returns a jakarta backed validator for entities annotated with @Validated"() {
+    void "returns a jakarta backed entity validator for entities annotated with @Validated"() {
         given:
         def entity = mappingContext.getPersistentEntity(ValidatedBook.name)
 
         when:
         SpringValidator validator = registry.getValidator(entity)
 
-        then:
-        validator instanceof GormValidatorAdapter
+        then: "it is the entity validator every consumer of the constraints looks for, backed by Bean Validation"
+        validator instanceof JakartaPersistentEntityValidator
+        validator instanceof PersistentEntityValidator
+        ((JakartaPersistentEntityValidator) validator).beanValidator instanceof GormValidatorAdapter
     }
 
     void "falls back to the default constraint based validator for entities without @Validated"() {
@@ -70,6 +107,807 @@ class JakartaValidatorRegistrySpec extends Specification {
 
         then:
         validator instanceof PersistentEntityValidator
+    }
+
+    void "the validator of an annotated entity exposes the constraints block and the annotations as constraints"() {
+        given:
+        def entity = mappingContext.getPersistentEntity(ConstrainedBook.name)
+
+        when:
+        SpringValidator validator = registry.getValidator(entity)
+
+        then:
+        validator instanceof ConstrainedEntity
+        Map<String, ConstrainedProperty> constraints = ((ConstrainedEntity) validator).constrainedProperties
+        !constraints.title.nullable
+        constraints.code.maxSize == 5
+        constraints.code.nullable
+        !constraints.isbn.nullable
+        constraints.isbn.maxSize == 13
+
+        and: "the same validator is returned every time"
+        registry.getValidator(entity).is(validator)
+    }
+
+    void "the annotations and the constraints block are both validated, with a single error per violation"() {
+        given:
+        def entity = mappingContext.getPersistentEntity(ConstrainedBook.name)
+        SpringValidator validator = registry.getValidator(entity)
+        ConstrainedBook book = new ConstrainedBook(code: 'toolong')
+        Errors errors = new ValidationErrors(book)
+
+        when:
+        validator.validate(book, errors)
+
+        then:
+        errors.getFieldErrorCount('title') == 1
+        errors.getFieldError('title').code == 'NotNull'
+        errors.getFieldErrorCount('code') == 1
+        errors.getFieldError('code').code == 'Size'
+        errors.getFieldErrorCount('isbn') == 1
+        errors.getFieldError('isbn').code == 'nullable'
+        errors.errorCount == 3
+
+        when: "a null title is also required by the constraints block"
+        book = new ConstrainedBook(code: 'ok', isbn: '1234567890123')
+        errors = new ValidationErrors(book)
+        validator.validate(book, errors)
+
+        then: "Bean Validation reports it once"
+        errors.errorCount == 1
+        errors.getFieldError('title').code == 'NotNull'
+    }
+
+    void "validation cascades to an annotated association, checking its annotations and its constraints block once"() {
+        given:
+        SpringValidator validator = registry.getValidator(mappingContext.getPersistentEntity(AnnotatedShelf.name))
+        AnnotatedShelf shelf = new AnnotatedShelf(name: 'shelf')
+        shelf.books = [new AnnotatedShelfBook(label: '', code: null, shelf: shelf)] as Set
+        Errors errors = new ValidationErrors(shelf)
+
+        when:
+        validator.validate(shelf, errors)
+
+        then: "the annotation and the constraints block of the book are each reported once, under the association"
+        errors.errorCount == 2
+        errors.getFieldError('books[0].label').code == 'NotBlank'
+        errors.getFieldError('books[0].code').code == 'nullable'
+
+        when: "validation does not cascade"
+        errors = new ValidationErrors(shelf)
+        ((CascadingValidator) validator).validate(shelf, errors, false)
+
+        then: "the book is not checked"
+        !errors.hasErrors()
+    }
+
+    void "a plain entity cascades to an annotated association"() {
+        given:
+        SpringValidator validator = registry.getValidator(mappingContext.getPersistentEntity(PlainShelf.name))
+        PlainShelf shelf = new PlainShelf(name: 'shelf')
+        shelf.books = [new ConstrainedBook(code: 'toolong', isbn: '1234567890123')] as Set
+        Errors errors = new ValidationErrors(shelf)
+
+        when:
+        validator.validate(shelf, errors)
+
+        then:
+        validator instanceof PersistentEntityValidator
+        !(validator instanceof JakartaPersistentEntityValidator)
+        errors.errorCount == 2
+        errors.getFieldError('books[0].title').code == 'NotNull'
+        errors.getFieldError('books[0].code').code == 'Size'
+    }
+
+    void "an annotation of another group than the default one leaves the constraints block in force"() {
+        given:
+        def entity = mappingContext.getPersistentEntity(GroupedBook.name)
+        SpringValidator validator = registry.getValidator(entity)
+        GroupedBook book = new GroupedBook()
+        Errors errors = new ValidationErrors(book)
+
+        when:
+        validator.validate(book, errors)
+
+        then: "validate() does not run the group, so the block reports the null"
+        errors.errorCount == 1
+        errors.getFieldError('title').code == 'nullable'
+
+        and: "the metadata says what is enforced"
+        !((ConstrainedEntity) validator).constrainedProperties.title.nullable
+    }
+
+    void "an association marked @Valid is validated in the groups of its owner, converted as @ConvertGroup declares"() {
+        given: "a book violating the annotations of both groups and its constraints block"
+        SpringValidator validator = registry.getValidator(mappingContext.getPersistentEntity(PublishingShelf.name))
+        PublishingShelf shelf = new PublishingShelf(name: 'shelf')
+        PublishedBook book = new PublishedBook(shelf: shelf)
+        book.chapter = new PublishedChapter(heading: '', book: book)
+        book.note = new PublishedBookNote(summary: '', book: book)
+        shelf.books = [book] as Set
+        Errors errors = new ValidationErrors(shelf)
+
+        when:
+        validator.validate(shelf, errors)
+
+        then: "the book is validated in OnPublish, so its block reports the null its default group annotation would"
+        errors.getFieldError('books[0].label').code == 'NotBlank'
+        errors.getFieldErrorCount('books[0].label') == 1
+        errors.getFieldError('books[0].code').code == 'nullable'
+
+        and: "its chapter, marked @Valid, in OnPublish too"
+        errors.getFieldError('books[0].chapter.heading').code == 'NotBlank'
+        !errors.hasFieldErrors('books[0].chapter.draft')
+
+        and: "its note, not marked @Valid, in the default group, as on its own"
+        errors.getFieldError('books[0].note.text').code == 'NotNull'
+        !errors.hasFieldErrors('books[0].note.summary')
+        errors.errorCount == 4
+
+        when: "the book is validated on its own"
+        errors = new ValidationErrors(book)
+        registry.getValidator(mappingContext.getPersistentEntity(PublishedBook.name)).validate(book, errors)
+
+        then: "it is validated in the default group, and so is its chapter"
+        errors.getFieldError('label').code == 'nullable'
+        errors.getFieldError('code').code == 'NotNull'
+        errors.getFieldError('chapter.draft').code == 'NotNull'
+        errors.getFieldError('note.text').code == 'NotNull'
+        errors.errorCount == 4
+    }
+
+    void "the validator validates in the groups given as validation hints, cascading with them"() {
+        given: "a book violating the annotations of both groups, with a chapter marked @Valid and a note"
+        SpringValidator validator = registry.getValidator(mappingContext.getPersistentEntity(PublishedBook.name))
+        PublishedBook book = new PublishedBook(label: '', code: null)
+        book.chapter = new PublishedChapter(heading: '', book: book)
+        book.note = new PublishedBookNote(summary: '', book: book)
+        Errors errors = new ValidationErrors(book)
+
+        when: "it is validated with the OnPublish group as a validation hint, as ValidationUtils and a DataBinder validate"
+        ValidationUtils.invokeValidator(validator, book, errors, OnPublish)
+
+        then: "the book is validated in OnPublish, so its block reports the null its default group annotation would"
+        validator instanceof SmartValidator
+        errors.getFieldError('label').code == 'NotBlank'
+        errors.getFieldError('code').code == 'nullable'
+
+        and: "its chapter, marked @Valid, in OnPublish too, and its note in the default group"
+        errors.getFieldError('chapter.heading').code == 'NotBlank'
+        !errors.hasFieldErrors('chapter.draft')
+        errors.getFieldError('note.text').code == 'NotNull'
+        !errors.hasFieldErrors('note.summary')
+        errors.errorCount == 4
+
+        when: "a DataBinder validates it with the group"
+        DataBinder binder = new DataBinder(book)
+        binder.validator = validator
+        binder.validate(OnPublish)
+
+        then:
+        binder.bindingResult.getFieldError('label').code == 'NotBlank'
+        binder.bindingResult.getFieldError('chapter.heading').code == 'NotBlank'
+        binder.bindingResult.errorCount == 4
+
+        when: "it is validated without hints"
+        errors = new ValidationErrors(book)
+        ValidationUtils.invokeValidator(validator, book, errors)
+
+        then: "it is validated in the default group, where the block admits the empty label and the chapter is checked in"
+        !errors.hasFieldErrors('label')
+        errors.getFieldError('code').code == 'NotNull'
+        errors.getFieldError('chapter.draft').code == 'NotNull'
+        errors.getFieldError('note.text').code == 'NotNull'
+        errors.errorCount == 3
+    }
+
+    void "an instance associated twice, each association converting the default group to another group, is validated in both"() {
+        given: "a chapter valid for publishing but not for archiving, as the opening and the closing of a book"
+        SharedChapter chapter = new SharedChapter(heading: 'Shared', archiveNote: '')
+        SharedChapterBook book = new SharedChapterBook(title: 'Groups', opening: chapter, closing: chapter)
+        Errors errors = new ValidationErrors(book)
+
+        expect: "the provider reports the violation of the closing"
+        beanValidationPaths(book) == ['closing.archiveNote']
+
+        when:
+        registry.getValidator(mappingContext.getPersistentEntity(SharedChapterBook.name)).validate(book, errors)
+
+        then: "so does GORM, having validated the chapter in OnPublish as the opening and in OnArchive as the closing"
+        errors.getFieldError('closing.archiveNote').code == 'NotBlank'
+        errors.errorCount == 1
+    }
+
+    void "a group sequence an association converts to is expanded before the conversions of the associated instance apply"() {
+        given: "a part validated in a sequence of OnPublish, whose chapter converts OnPublish to OnArchive"
+        SharedChapter chapter = new SharedChapter(heading: 'Shared', archiveNote: '')
+        SequencedBook book = new SequencedBook(title: 'Sequence', part: new SequencedPart(heading: 'Part', chapter: chapter))
+        Errors errors = new ValidationErrors(book)
+
+        expect: "the provider validates the chapter in OnArchive"
+        beanValidationPaths(book) == ['part.chapter.archiveNote']
+
+        when:
+        registry.getValidator(mappingContext.getPersistentEntity(SequencedBook.name)).validate(book, errors)
+
+        then: "and so does GORM"
+        errors.getFieldError('part.chapter.archiveNote').code == 'NotBlank'
+        errors.errorCount == 1
+    }
+
+    void "a group sequence none of whose groups is converted stops at the first group with a violation"() {
+        given: "an epilogue violating both groups of the sequence it is validated in"
+        SequencedBook book = new SequencedBook(title: 'Sequence', epilogue: new SharedChapter(heading: '', archiveNote: ''))
+        Errors errors = new ValidationErrors(book)
+
+        expect: "the provider stops after OnPublish"
+        beanValidationPaths(book) == ['epilogue.heading']
+
+        when:
+        registry.getValidator(mappingContext.getPersistentEntity(SequencedBook.name)).validate(book, errors)
+
+        then: "and so does GORM"
+        errors.getFieldError('epilogue.heading').code == 'NotBlank'
+        !errors.hasFieldErrors('epilogue.archiveNote')
+        errors.errorCount == 1
+    }
+
+    void "an association marked @Valid of an entity without constraint annotations is validated in the group its @ConvertGroup converts to"() {
+        given: "a shelf without an annotated property, whose book converts the default group to OnPublish"
+        CascadingShelf shelf = new CascadingShelf(name: 'shelf', book: new ReviewedBook(title: '', isbn: null))
+        Errors errors = new ValidationErrors(shelf)
+
+        expect: "the provider validates the book in OnPublish"
+        beanValidationPaths(shelf) == ['book.title']
+
+        when:
+        SpringValidator validator = registry.getValidator(mappingContext.getPersistentEntity(CascadingShelf.name))
+        validator.validate(shelf, errors)
+
+        then: "the shelf gets the validator honouring the conversion, so GORM does the same"
+        validator instanceof JakartaPersistentEntityValidator
+        errors.getFieldError('book.title').code == 'NotBlank'
+        !errors.hasFieldErrors('book.isbn')
+        errors.errorCount == 1
+    }
+
+    void "a subclass declaring no annotation of its own is validated with the annotations it inherits"() {
+        given:
+        ValidatedReport report = new ValidatedReport(title: '')
+        Errors errors = new ValidationErrors(report)
+
+        expect:
+        beanValidationPaths(report) == ['title']
+
+        when:
+        SpringValidator validator = registry.getValidator(mappingContext.getPersistentEntity(ValidatedReport.name))
+        validator.validate(report, errors)
+
+        then:
+        validator instanceof JakartaPersistentEntityValidator
+        errors.getFieldError('title').code == 'NotBlank'
+        errors.errorCount == 1
+        !((ConstrainedEntity) validator).constrainedProperties.title.nullable
+    }
+
+    void "an entity whose only constraint is a class level one is validated with it"() {
+        given:
+        TitledBook book = new TitledBook(title: 'Same', subtitle: 'Same')
+        Errors errors = new ValidationErrors(book)
+
+        expect:
+        beanValidationPaths(book) == ['']
+
+        when:
+        SpringValidator validator = registry.getValidator(mappingContext.getPersistentEntity(TitledBook.name))
+        validator.validate(book, errors)
+
+        then:
+        validator instanceof JakartaPersistentEntityValidator
+        errors.errorCount == 1
+        errors.globalErrors*.code == ['DistinctTitles']
+    }
+
+    void "a property marked @Valid that is not a persistent association is cascaded to by Bean Validation"() {
+        given: "a book whose transient details violate an annotation"
+        DetailedBook book = new DetailedBook(title: 'Details', details: new BookDetails(summary: ''))
+        Errors errors = new ValidationErrors(book)
+        SpringValidator validator = registry.getValidator(mappingContext.getPersistentEntity(DetailedBook.name))
+
+        expect:
+        beanValidationPaths(book) == ['details.summary']
+
+        when:
+        validator.validate(book, errors)
+
+        then: "the details are validated under their path"
+        errors.getFieldError('details.summary').code == 'NotBlank'
+        errors.errorCount == 1
+
+        when: "validation does not cascade to the associations"
+        errors = new ValidationErrors(book)
+        ((CascadingValidator) validator).validate(book, errors, false)
+
+        then: "the details, which are no association, are validated all the same"
+        errors.getFieldError('details.summary').code == 'NotBlank'
+        errors.errorCount == 1
+    }
+
+    void "a group of the owner no conversion converts is validated alone on the associated instance, without the converted groups it extends"() {
+        given: "a child whose association converts Base, which the Extended group of its owner extends"
+        ExtendedOwner owner = new ExtendedOwner(name: 'owner', child: new ExtendedChild(retired: 'yes', label: '', note: ''))
+        Errors errors = new ValidationErrors(owner)
+        SpringValidator validator = registry.getValidator(mappingContext.getPersistentEntity(ExtendedOwner.name))
+
+        expect: "the provider validates the child in Extended alone and in Converted, not in Base"
+        beanValidationPaths(owner, Extended) == ['child.label', 'child.note']
+
+        when:
+        ValidationUtils.invokeValidator(validator, owner, errors, Extended)
+
+        then: "and so does GORM"
+        errors.getFieldError('child.label').code == 'NotBlank'
+        errors.getFieldError('child.note').code == 'NotBlank'
+        !errors.hasFieldErrors('child.retired')
+        errors.errorCount == 2
+
+        when: "the owner is validated in Base"
+        errors = new ValidationErrors(owner)
+        ValidationUtils.invokeValidator(validator, owner, errors, Base)
+
+        then: "the child is validated in Converted alone"
+        beanValidationPaths(owner, Base) == ['child.label']
+        errors.getFieldError('child.label').code == 'NotBlank'
+        errors.errorCount == 1
+    }
+
+    void "a group sequence an association converts to stops at the first group with a violation of the associated instance or of its own associations"() {
+        given: "a child validated in StepA then StepB, whose grandchild converts StepA to StepX and violates it"
+        SequencedOwner owner = new SequencedOwner(name: 'owner',
+                child: new SequencedChild(a: 'ok', b: '', grandchild: new SequencedGrandchild(x: '')))
+        Errors errors = new ValidationErrors(owner)
+        SpringValidator validator = registry.getValidator(mappingContext.getPersistentEntity(SequencedOwner.name))
+
+        expect: "the provider finds the violation of the grandchild in StepA and stops before StepB"
+        beanValidationPaths(owner) == ['child.grandchild.x']
+
+        when:
+        validator.validate(owner, errors)
+
+        then: "and so does GORM"
+        errors.getFieldError('child.grandchild.x').code == 'NotBlank'
+        !errors.hasFieldErrors('child.b')
+        errors.errorCount == 1
+
+        when: "the grandchild is valid"
+        owner.child.grandchild.x = 'ok'
+        errors = new ValidationErrors(owner)
+        validator.validate(owner, errors)
+
+        then: "the sequence goes on to StepB"
+        beanValidationPaths(owner) == ['child.b']
+        errors.getFieldError('child.b').code == 'NotBlank'
+        errors.errorCount == 1
+    }
+
+    void "a group sequence given as a validation hint stops at the first group with a violation anywhere in the graph"() {
+        given: "a root violating StepA, whose child violates StepB"
+        SequencedRoot root = new SequencedRoot(a: '', child: new SequencedChild(a: 'ok', b: '', grandchild: new SequencedGrandchild(x: 'ok')))
+        Errors errors = new ValidationErrors(root)
+        SpringValidator validator = registry.getValidator(mappingContext.getPersistentEntity(SequencedRoot.name))
+
+        expect: "the provider stops after StepA"
+        beanValidationPaths(root, StepAThenB) == ['a']
+
+        when:
+        ValidationUtils.invokeValidator(validator, root, errors, StepAThenB)
+
+        then: "and so does GORM: the child is not validated in StepB"
+        errors.getFieldError('a').code == 'NotBlank'
+        !errors.hasFieldErrors('child.b')
+        errors.errorCount == 1
+
+        when: "the root is valid in StepA"
+        root.a = 'ok'
+        errors = new ValidationErrors(root)
+        ValidationUtils.invokeValidator(validator, root, errors, StepAThenB)
+
+        then:
+        beanValidationPaths(root, StepAThenB) == ['child.b']
+        errors.getFieldError('child.b').code == 'NotBlank'
+        errors.errorCount == 1
+    }
+
+    void "an initialized proxy of an annotated associated instance is validated as the instance it stands for"() {
+        given: "a shelf whose book is an initialized proxy of a valid book"
+        SpringValidator validator = registry.getValidator(mappingContext.getPersistentEntity(AnnotatedShelf.name))
+        AnnotatedShelf shelf = new AnnotatedShelf(name: 'shelf')
+        AnnotatedShelfBook book = new AnnotatedShelfBook(label: 'Label', code: 'C1', shelf: shelf)
+        Session session = Mock(Session) {
+            getMappingContext() >> mappingContext
+            retrieve(_, _) >> book
+        }
+        AnnotatedShelfBook proxy = mappingContext.proxyFactory.createProxy(session, AnnotatedShelfBook, 1L)
+        proxy.label
+        shelf.books = [proxy] as Set
+        Errors errors = new ValidationErrors(shelf)
+
+        expect:
+        mappingContext.proxyHandler.isProxy(proxy)
+        mappingContext.proxyHandler.isInitialized(proxy)
+
+        when:
+        validator.validate(shelf, errors)
+
+        then: "the annotations are checked on the book, whose fields the proxy does not carry"
+        !errors.hasErrors()
+
+        when: "the book violates an annotation"
+        book.label = ''
+        errors = new ValidationErrors(shelf)
+        validator.validate(shelf, errors)
+
+        then: "the violation is reported with the value of the book"
+        errors.errorCount == 1
+        errors.getFieldError('books[0].label').code == 'NotBlank'
+        errors.getFieldError('books[0].label').rejectedValue == ''
+    }
+
+    void "a @ConvertGroup on a property marked @Valid that is not a persistent association converts the groups the owning instance is validated in"() {
+        given: "a child validated in Extended without Base, whose transient details convert Extended to DetailsChecks and violate DetailsChecks and Base"
+        ExtendedOwner owner = new ExtendedOwner(name: 'owner',
+                child: new ExtendedChild(label: 'ok', note: 'ok', details: new ExtendedChildDetails(summary: '', draft: 'yes')))
+        Errors errors = new ValidationErrors(owner)
+        SpringValidator validator = registry.getValidator(mappingContext.getPersistentEntity(ExtendedOwner.name))
+
+        expect: "the provider validates the details in DetailsChecks, through Extended, and not in Base, which the association converts"
+        beanValidationPaths(owner, Extended) == ['child.details.summary']
+
+        when:
+        ValidationUtils.invokeValidator(validator, owner, errors, Extended)
+
+        then: "and so does GORM"
+        errors.getFieldError('child.details.summary').code == 'NotBlank'
+        !errors.hasFieldErrors('child.details.draft')
+        errors.errorCount == 1
+
+        when: "the owner is validated in Base"
+        errors = new ValidationErrors(owner)
+        ValidationUtils.invokeValidator(validator, owner, errors, Base)
+
+        then: "the child is validated in Converted alone, and so are its details"
+        beanValidationPaths(owner, Base) == []
+        !errors.hasErrors()
+    }
+
+    void "a transient property marked @Valid is cascaded to as the value it holds, whatever its declared type"() {
+        given: "a child validated in Extended without Base, whose transient record, declared as an Object, converts Extended to DetailsChecks for its details"
+        ExtendedOwner owner = new ExtendedOwner(name: 'owner', child: new ExtendedChild(label: 'ok', note: 'ok',
+                record: new ExtendedChildRecord(details: new ExtendedChildDetails(summary: '', draft: 'yes'))))
+        Errors errors = new ValidationErrors(owner)
+        SpringValidator validator = registry.getValidator(mappingContext.getPersistentEntity(ExtendedOwner.name))
+
+        expect: "the provider validates the details in DetailsChecks, as the class of the record converts Extended, and not in Base"
+        beanValidationPaths(owner, Extended) == ['child.record.details.summary']
+
+        when:
+        ValidationUtils.invokeValidator(validator, owner, errors, Extended)
+
+        then: "and so does GORM"
+        errors.getFieldError('child.record.details.summary').code == 'NotBlank'
+        !errors.hasFieldErrors('child.record.details.draft')
+        errors.errorCount == 1
+    }
+
+    void "a custom constraint validating another domain instance leaves the validation it runs in unchanged"() {
+        given: "a record whose transient details cascade to a leaf violating an annotation, and whose auditor a custom constraint validates on its own"
+        AuditedRecord record = new AuditedRecord(name: 'audited', auditor: new AuditedRecordAuditor(login: 'auditor'),
+                details: new AuditedRecordDetails(leaf: new AuditedRecordLeaf(label: '')))
+        Errors errors = new ValidationErrors(record)
+        SpringValidator validator = registry.getValidator(mappingContext.getPersistentEntity(AuditedRecord.name))
+        ValidAuditorValidator.validator = registry.getValidator(mappingContext.getPersistentEntity(AuditedRecordAuditor.name))
+
+        when:
+        validator.validate(record, errors)
+
+        then: "the leaf is validated although the constraint validated the auditor in between"
+        errors.getFieldError('details.leaf.label').code == 'NotBlank'
+        errors.errorCount == 1
+
+        when: "the auditor is invalid"
+        record.auditor.login = ''
+        errors = new ValidationErrors(record)
+        validator.validate(record, errors)
+
+        then:
+        errors.getFieldError('auditor').code == 'ValidAuditor'
+        errors.getFieldError('details.leaf.label').code == 'NotBlank'
+        errors.errorCount == 2
+
+        cleanup:
+        ValidAuditorValidator.validator = null
+    }
+
+    void "the nullability constraints of the block give way to the annotations of the sequence a group sequence provider chooses for the instance"() {
+        given: "a member whose desk the block requires and a @Null of RetiredChecks forbids, a group its provider validates for a retired member"
+        SpringValidator validator = registry.getValidator(mappingContext.getPersistentEntity(ProvidedMember.name))
+        ProvidedMember member = new ProvidedMember(name: 'active', retired: false)
+        Errors errors = new ValidationErrors(member)
+
+        when: "an active member has no desk"
+        validator.validate(member, errors)
+
+        then: "the block requires one"
+        errors.getFieldError('desk').code == 'nullable'
+        errors.errorCount == 1
+
+        when: "a retired member has no desk"
+        member = new ProvidedMember(name: 'retired', retired: true)
+        errors = new ValidationErrors(member)
+        validator.validate(member, errors)
+
+        then: "the @Null of the group the provider chose decides, as the provider does"
+        beanValidationPaths(member) == []
+        !errors.hasErrors()
+
+        when: "a retired member has a desk"
+        member.desk = 'A1'
+        errors = new ValidationErrors(member)
+        validator.validate(member, errors)
+
+        then:
+        errors.getFieldError('desk').code == 'Null'
+        errors.errorCount == 1
+
+        and: "the constraints describe the class as the provider does for no instance"
+        !((ConstrainedEntity) validator).constrainedProperties.desk.nullable
+    }
+
+    void "a cycle of associations leads back to an instance validated with hints without validating it again"() {
+        given: "an account validated in OnPublish, whose region, marked @Valid, has an office leading back to the account and to the region"
+        SpringValidator validator = registry.getValidator(mappingContext.getPersistentEntity(LinkedAccount.name))
+        LinkedAccount account = new LinkedAccount(summary: '', owner: null)
+        LinkedRegion region = new LinkedRegion(code: '', name: null)
+        region.office = new LinkedOffice(city: 'Oslo', account: account, region: region)
+        account.region = region
+        Errors errors = new ValidationErrors(account)
+
+        expect: "the provider validates the account and its region in OnPublish, and cascades no further"
+        beanValidationPaths(account, OnPublish) == ['region.code', 'summary']
+
+        when:
+        ValidationUtils.invokeValidator(validator, account, errors, OnPublish)
+
+        then: "and so does GORM: the office leads back to the account and to the region, which are not validated again in the default group"
+        errors.getFieldError('summary').code == 'NotBlank'
+        errors.getFieldError('region.code').code == 'NotBlank'
+        errors.errorCount == 2
+
+        when: "the account is validated without hints"
+        errors = new ValidationErrors(account)
+        validator.validate(account, errors)
+
+        then: "the default group annotations of the account and of the region are reported once each"
+        errors.getFieldError('owner').code == 'NotNull'
+        errors.getFieldError('region.name').code == 'NotNull'
+        errors.errorCount == 2
+    }
+
+    void "the provider cascades through a persistent association marked @Valid of a bean it reached through a transient property"() {
+        given: "a holder whose transient item, marked @Valid, has an author marked @Valid, both violating an annotation"
+        SpringValidator validator = registry.getValidator(mappingContext.getPersistentEntity(FeaturedHolder.name))
+        FeaturedHolder holder = new FeaturedHolder(name: 'holder', featured: new FeaturedItem(title: '', author: new FeaturedAuthor(name: '')))
+        Errors errors = new ValidationErrors(holder)
+
+        expect: "the provider cascades to the item, and from it to the author"
+        beanValidationPaths(holder) == ['featured.author.name', 'featured.title']
+
+        when:
+        validator.validate(holder, errors)
+
+        then: "and so does GORM, which does not reach the item itself"
+        errors.getFieldError('featured.title').code == 'NotBlank'
+        errors.getFieldError('featured.author.name').code == 'NotBlank'
+        errors.errorCount == 2
+
+        when: "the item is validated on its own"
+        errors = new ValidationErrors(holder.featured)
+        registry.getValidator(mappingContext.getPersistentEntity(FeaturedItem.name)).validate(holder.featured, errors)
+
+        then: "GORM cascades to its author, which the provider leaves to it, so the author is validated once"
+        errors.getFieldError('title').code == 'NotBlank'
+        errors.getFieldError('author.name').code == 'NotBlank'
+        errors.errorCount == 2
+    }
+
+    void "an instance of a subclass that is an entity of its own is validated by the validator of that entity"() {
+        given: "a report, which extends documents with annotations and a constraints block of its own"
+        SpringValidator documentValidator = registry.getValidator(mappingContext.getPersistentEntity(AnnotatedDocument.name))
+        SpringValidator reportValidator = registry.getValidator(mappingContext.getPersistentEntity(AnnotatedReport.name))
+        AnnotatedReport report = new AnnotatedReport(title: 'Report', pages: null, summary: '', code: null)
+        Errors errors = new ValidationErrors(report)
+
+        expect: "the validator of documents supports reports, and is not theirs"
+        documentValidator.supports(AnnotatedReport)
+        !reportValidator.is(documentValidator)
+
+        when: "a report is handed to the validator of documents, as ValidationUtils does with a validator supporting its class"
+        ValidationUtils.invokeValidator(documentValidator, report, errors)
+
+        then: "the annotations and the block of reports are validated, as by their own validator"
+        errors.getFieldError('pages').code == 'NotNull'
+        errors.getFieldError('code').code == 'nullable'
+        errors.errorCount == 2
+
+        when: "with a group as a validation hint"
+        errors = new ValidationErrors(report)
+        ValidationUtils.invokeValidator(documentValidator, report, errors, OnPublish)
+
+        then: "reports are validated in it"
+        errors.getFieldError('summary').code == 'NotBlank'
+        errors.getFieldError('code').code == 'nullable'
+        errors.errorCount == 2
+
+        when: "a document is handed to it"
+        AnnotatedDocument document = new AnnotatedDocument(title: '')
+        errors = new ValidationErrors(document)
+        ValidationUtils.invokeValidator(documentValidator, document, errors)
+
+        then: "it validates the document itself"
+        errors.getFieldError('title').code == 'NotBlank'
+        errors.errorCount == 1
+    }
+
+    void "an associated instance of a subclass that is an entity of its own is validated with the annotations and the block of that entity"() {
+        given: "a folder whose document, marked @Valid, is a report, which extends documents with annotations and a constraints block of its own"
+        SpringValidator validator = registry.getValidator(mappingContext.getPersistentEntity(AnnotatedFolder.name))
+        AnnotatedFolder folder = new AnnotatedFolder(name: 'folder',
+                document: new AnnotatedReport(title: 'Report', pages: null, summary: '', code: null))
+        Errors errors = new ValidationErrors(folder)
+
+        expect: "the provider validates the document as the report it is"
+        beanValidationPaths(folder) == ['document.pages']
+
+        when:
+        validator.validate(folder, errors)
+
+        then: "and so does GORM, with the block of reports"
+        errors.getFieldError('document.pages').code == 'NotNull'
+        errors.getFieldError('document.code').code == 'nullable'
+        errors.errorCount == 2
+
+        when: "the folder is validated in OnPublish"
+        errors = new ValidationErrors(folder)
+        ValidationUtils.invokeValidator(validator, folder, errors, OnPublish)
+
+        then: "the report is validated in it, as the association marked @Valid passes the group on"
+        beanValidationPaths(folder, OnPublish) == ['document.summary']
+        errors.getFieldError('document.summary').code == 'NotBlank'
+        errors.getFieldError('document.code').code == 'nullable'
+        errors.errorCount == 2
+
+        when: "a folder without annotations holds a memo, an annotated subclass of documents without annotations"
+        UnannotatedFolder plainFolder = new UnannotatedFolder(name: 'folder', document: new AnnotatedMemo(title: 'Memo', pages: null))
+        errors = new ValidationErrors(plainFolder)
+        registry.getValidator(mappingContext.getPersistentEntity(UnannotatedFolder.name)).validate(plainFolder, errors)
+
+        then: "the memo is validated with its annotations, by the validator of memos"
+        errors.getFieldError('document.pages').code == 'NotNull'
+        errors.errorCount == 1
+
+        when: "the folder holds a document"
+        plainFolder.document = new UnannotatedDocument(title: 'Document')
+        errors = new ValidationErrors(plainFolder)
+        registry.getValidator(mappingContext.getPersistentEntity(UnannotatedFolder.name)).validate(plainFolder, errors)
+
+        then:
+        !errors.hasErrors()
+    }
+
+    void "an element of a transient set marked @Valid is cascaded to as the value it holds, whatever the declared type of the elements"() {
+        given: "a child validated in Extended without Base, whose transient records, a set declared of Objects, convert Extended to DetailsChecks for their details"
+        ExtendedOwner owner = new ExtendedOwner(name: 'owner', child: new ExtendedChild(label: 'ok', note: 'ok',
+                records: [new ExtendedChildRecord(details: new ExtendedChildDetails(summary: '', draft: 'yes'))] as Set))
+        Errors errors = new ValidationErrors(owner)
+        SpringValidator validator = registry.getValidator(mappingContext.getPersistentEntity(ExtendedOwner.name))
+
+        expect: "the provider validates the details in DetailsChecks, as the class of the record converts Extended, and not in Base, on a path without an index"
+        beanValidationPaths(owner, Extended) == ['child.records[].details.summary']
+
+        when:
+        ValidationUtils.invokeValidator(validator, owner, errors, Extended)
+
+        then: "and so does GORM"
+        errors.getFieldError('child.records[].details.summary').code == 'NotBlank'
+        !errors.hasFieldErrors('child.records[].details.draft')
+        errors.errorCount == 1
+    }
+
+    void "a group given as a validation hint both on its own and in a group sequence is validated once"() {
+        given: "a root violating StepA, whose child violates StepB, validated in StepA and in StepA then StepB"
+        SequencedRoot root = new SequencedRoot(a: '', child: new SequencedChild(a: 'ok', b: '', grandchild: new SequencedGrandchild(x: 'ok')))
+        Errors errors = new ValidationErrors(root)
+        SpringValidator validator = registry.getValidator(mappingContext.getPersistentEntity(SequencedRoot.name))
+
+        expect: "the provider reports the violation of StepA once, and the sequence, which StepA on its own does not stop, goes on to StepB"
+        beanValidationPaths(root, StepA, StepAThenB) == ['a', 'child.b']
+
+        when:
+        ValidationUtils.invokeValidator(validator, root, errors, StepA, StepAThenB)
+
+        then: "and so does GORM"
+        errors.getFieldErrors('a')*.code == ['NotBlank']
+        errors.getFieldError('child.b').code == 'NotBlank'
+        errors.errorCount == 2
+
+        when: "the sequence alone is given"
+        errors = new ValidationErrors(root)
+        ValidationUtils.invokeValidator(validator, root, errors, StepAThenB)
+
+        then: "the violation of StepA stops it"
+        beanValidationPaths(root, StepAThenB) == ['a']
+        errors.getFieldError('a').code == 'NotBlank'
+        errors.errorCount == 1
+    }
+
+    void "a violation of the constraints block stops a group sequence given as a validation hint after its first group"() {
+        given: "a record without the code its block requires, valid in StepA and violating StepB"
+        SequencedRecord record = new SequencedRecord(a: 'ok', b: '', code: null)
+        Errors errors = new ValidationErrors(record)
+        SpringValidator validator = registry.getValidator(mappingContext.getPersistentEntity(SequencedRecord.name))
+
+        when:
+        ValidationUtils.invokeValidator(validator, record, errors, StepAThenB)
+
+        then: "the violation of the block counts as one of StepA, the first group the record is validated in, so StepB is not validated"
+        errors.getFieldError('code').code == 'nullable'
+        !errors.hasFieldErrors('b')
+        errors.errorCount == 1
+
+        when: "the record has a code"
+        record.code = 'R1'
+        errors = new ValidationErrors(record)
+        ValidationUtils.invokeValidator(validator, record, errors, StepAThenB)
+
+        then: "the sequence goes on to StepB"
+        beanValidationPaths(record, StepAThenB) == ['b']
+        errors.getFieldError('b').code == 'NotBlank'
+        errors.errorCount == 1
+
+        when: "StepA is given on its own as well"
+        record.code = null
+        errors = new ValidationErrors(record)
+        ValidationUtils.invokeValidator(validator, record, errors, StepA, StepAThenB)
+
+        then: "the violation of the block counts as one of the groups validated on their own, which stop no sequence"
+        errors.getFieldError('code').code == 'nullable'
+        errors.getFieldError('b').code == 'NotBlank'
+        errors.errorCount == 2
+    }
+
+    private static List<String> beanValidationPaths(Object instance, Class<?>... groups) {
+        def factory = Validation.buildDefaultValidatorFactory()
+        try {
+            return factory.validator.validate(instance, groups)*.propertyPath*.toString().sort()
+        }
+        finally {
+            factory.close()
+        }
+    }
+
+    void "a custom constraint is still validated by Bean Validation"() {
+        given:
+        def entity = mappingContext.getPersistentEntity(MysteriousBook.name)
+        SpringValidator validator = registry.getValidator(entity)
+        MysteriousBook book = new MysteriousBook(secret: 'plain')
+        Errors errors = new ValidationErrors(book)
+
+        when:
+        validator.validate(book, errors)
+
+        then:
+        errors.getFieldError('secret').code == 'Mysterious'
+        ((ConstrainedEntity) validator).constrainedProperties.secret.appliedConstraints*.name == ['nullable']
     }
 
     void "exposes the underlying jakarta ValidatorFactory operations"() {
@@ -95,4 +933,600 @@ class PlainBook {
 class ValidatedBook {
     @NotBlank
     String title
+}
+
+@Entity
+@Validated
+class ConstrainedBook {
+    @NotNull
+    String title
+    @Size(max = 5)
+    String code
+    String isbn
+
+    static constraints = {
+        title nullable: false
+        isbn nullable: false, maxSize: 13
+    }
+}
+
+@Entity
+@Validated
+class MysteriousBook {
+    @Mysterious
+    String secret
+}
+
+@Entity
+@Validated
+class AnnotatedShelf {
+    @NotNull
+    String name
+
+    static hasMany = [books: AnnotatedShelfBook]
+}
+
+@Entity
+@Validated
+class AnnotatedShelfBook {
+    @NotBlank
+    String label
+    String code
+
+    static belongsTo = [shelf: AnnotatedShelf]
+
+    static constraints = {
+        code nullable: false
+    }
+}
+
+@Entity
+class PlainShelf {
+    String name
+
+    static hasMany = [books: ConstrainedBook]
+}
+
+interface OnPublish {}
+
+@Entity
+@Validated
+class GroupedBook {
+    @NotNull(groups = OnPublish)
+    String title
+
+    static constraints = {
+        title nullable: false
+    }
+}
+
+@Entity
+@Validated
+class PublishingShelf {
+    @NotNull
+    String name
+
+    @Valid
+    @ConvertGroup(from = Default, to = OnPublish)
+    Set<PublishedBook> books
+
+    static hasMany = [books: PublishedBook]
+}
+
+@Entity
+@Validated
+class PublishedBook {
+    @NotBlank(groups = OnPublish)
+    String label
+
+    @NotNull
+    String code
+
+    @Valid
+    PublishedChapter chapter
+
+    PublishedBookNote note
+
+    static belongsTo = [shelf: PublishingShelf]
+
+    static constraints = {
+        label nullable: false
+        code nullable: false
+    }
+}
+
+@Entity
+@Validated
+class PublishedChapter {
+    @NotBlank(groups = OnPublish)
+    String heading
+
+    @NotNull
+    String draft
+
+    static belongsTo = [book: PublishedBook]
+}
+
+@Entity
+@Validated
+class PublishedBookNote {
+    @NotBlank(groups = OnPublish)
+    String summary
+
+    @NotNull
+    String text
+
+    static belongsTo = [book: PublishedBook]
+}
+
+interface OnArchive {}
+
+@GroupSequence([OnPublish])
+interface PublishingSequence {}
+
+@GroupSequence([OnPublish, OnArchive])
+interface PublishingThenArchiving {}
+
+@Entity
+@Validated
+class SharedChapterBook {
+    @NotNull
+    String title
+
+    @Valid
+    @ConvertGroup(from = Default, to = OnPublish)
+    SharedChapter opening
+
+    @Valid
+    @ConvertGroup(from = Default, to = OnArchive)
+    SharedChapter closing
+}
+
+@Entity
+@Validated
+class SharedChapter {
+    @NotBlank(groups = OnPublish)
+    String heading
+
+    @NotBlank(groups = OnArchive)
+    String archiveNote
+
+    static belongsTo = [SharedChapterBook, SequencedBook, SequencedPart]
+}
+
+@Entity
+@Validated
+class SequencedBook {
+    @NotNull
+    String title
+
+    @Valid
+    @ConvertGroup(from = Default, to = PublishingSequence)
+    SequencedPart part
+
+    @Valid
+    @ConvertGroup(from = Default, to = PublishingThenArchiving)
+    SharedChapter epilogue
+}
+
+@Entity
+@Validated
+class SequencedPart {
+    @NotNull
+    String heading
+
+    @Valid
+    @ConvertGroup(from = OnPublish, to = OnArchive)
+    SharedChapter chapter
+
+    static belongsTo = [SequencedBook]
+}
+
+@Entity
+class CascadingShelf {
+    String name
+
+    @Valid
+    @ConvertGroup(from = Default, to = OnPublish)
+    ReviewedBook book
+}
+
+@Entity
+class ReviewedBook {
+    @NotBlank(groups = OnPublish)
+    String title
+
+    @NotNull
+    String isbn
+
+    static belongsTo = [CascadingShelf]
+}
+
+@Entity
+class ValidatedDocument {
+    @NotBlank
+    String title
+}
+
+@Entity
+class ValidatedReport extends ValidatedDocument {
+    String summary
+}
+
+@Constraint(validatedBy = [DistinctTitlesValidator])
+@Target([ElementType.TYPE])
+@Retention(RetentionPolicy.RUNTIME)
+@interface DistinctTitles {
+
+    String message() default 'the subtitle must differ from the title'
+
+    Class<?>[] groups() default []
+
+    Class<? extends Payload>[] payload() default []
+}
+
+class DistinctTitlesValidator implements ConstraintValidator<DistinctTitles, TitledBook> {
+
+    @Override
+    boolean isValid(TitledBook book, ConstraintValidatorContext context) {
+        book == null || book.title == null || book.title != book.subtitle
+    }
+}
+
+@Entity
+@DistinctTitles
+class TitledBook {
+    String title
+    String subtitle
+}
+
+@Entity
+class DetailedBook {
+    @NotNull
+    String title
+
+    @Valid
+    BookDetails details
+
+    static transients = ['details']
+}
+
+class BookDetails {
+    @NotBlank
+    String summary
+}
+
+interface Base {}
+
+interface Extended extends Base {}
+
+interface Converted {}
+
+interface DetailsChecks {}
+
+@Entity
+class ExtendedOwner {
+    @NotNull
+    String name
+
+    @Valid
+    @ConvertGroup(from = Base, to = Converted)
+    ExtendedChild child
+}
+
+@Entity
+class ExtendedChild {
+    @Null(groups = Base)
+    String retired
+
+    @NotBlank(groups = Converted)
+    String label
+
+    @NotBlank(groups = Extended)
+    String note
+
+    @Valid
+    @ConvertGroup(from = Extended, to = DetailsChecks)
+    ExtendedChildDetails details
+
+    @Valid
+    Object record
+
+    @Valid
+    Set<Object> records
+
+    static belongsTo = [ExtendedOwner]
+
+    static transients = ['details', 'record', 'records']
+}
+
+class ExtendedChildRecord {
+    @Valid
+    @ConvertGroup(from = Extended, to = DetailsChecks)
+    ExtendedChildDetails details
+}
+
+class ExtendedChildDetails {
+    @NotBlank(groups = DetailsChecks)
+    String summary
+
+    @Null(groups = Base)
+    String draft
+}
+
+@Entity
+class AuditedRecord {
+    @NotNull
+    String name
+
+    @Valid
+    AuditedRecordDetails details
+
+    @ValidAuditor
+    AuditedRecordAuditor auditor
+
+    static transients = ['details', 'auditor']
+}
+
+class AuditedRecordDetails {
+    @Valid
+    AuditedRecordLeaf leaf
+}
+
+class AuditedRecordLeaf {
+    @NotBlank
+    String label
+}
+
+@Entity
+class AuditedRecordAuditor {
+    @NotBlank
+    String login
+}
+
+@Constraint(validatedBy = [ValidAuditorValidator])
+@Target([ElementType.FIELD])
+@Retention(RetentionPolicy.RUNTIME)
+@interface ValidAuditor {
+
+    String message() default 'the auditor is not valid'
+
+    Class<?>[] groups() default []
+
+    Class<? extends Payload>[] payload() default []
+}
+
+/**
+ * Validates the auditor with the validator of its entity, a validation of its own inside the one of the record.
+ */
+class ValidAuditorValidator implements ConstraintValidator<ValidAuditor, AuditedRecordAuditor> {
+
+    static SpringValidator validator
+
+    @Override
+    boolean isValid(AuditedRecordAuditor auditor, ConstraintValidatorContext context) {
+        if (auditor == null) {
+            return true
+        }
+        Errors errors = new ValidationErrors(auditor)
+        validator.validate(auditor, errors)
+        return !errors.hasErrors()
+    }
+}
+
+interface RetiredChecks {}
+
+@Entity
+@GroupSequenceProvider(ProvidedMemberSequenceProvider)
+class ProvidedMember {
+    @NotBlank
+    String name
+
+    boolean retired
+
+    @Null(groups = RetiredChecks)
+    String desk
+
+    static constraints = {
+        desk nullable: false
+    }
+}
+
+class ProvidedMemberSequenceProvider implements DefaultGroupSequenceProvider<ProvidedMember> {
+
+    @Override
+    List<Class<?>> getValidationGroups(Class<?> klass, ProvidedMember member) {
+        List<Class<?>> sequence = [ProvidedMember]
+        if (member?.retired) {
+            sequence.add(RetiredChecks)
+        }
+        return sequence
+    }
+}
+
+interface StepA {}
+
+interface StepB {}
+
+interface StepX {}
+
+@GroupSequence([StepA, StepB])
+interface StepAThenB {}
+
+@Entity
+class SequencedOwner {
+    @NotNull
+    String name
+
+    @Valid
+    @ConvertGroup(from = Default, to = StepAThenB)
+    SequencedChild child
+}
+
+@Entity
+class SequencedRoot {
+    @NotBlank(groups = StepA)
+    String a
+
+    @Valid
+    SequencedChild child
+}
+
+@Entity
+class SequencedChild {
+    @NotBlank(groups = StepA)
+    String a
+
+    @NotBlank(groups = StepB)
+    String b
+
+    @Valid
+    @ConvertGroup(from = StepA, to = StepX)
+    SequencedGrandchild grandchild
+
+    static belongsTo = [SequencedOwner, SequencedRoot]
+}
+
+@Entity
+class SequencedGrandchild {
+    @NotBlank(groups = StepX)
+    String x
+
+    static belongsTo = [SequencedChild]
+}
+
+@Entity
+class LinkedAccount {
+    @NotBlank(groups = OnPublish)
+    String summary
+
+    @NotNull
+    String owner
+
+    @Valid
+    LinkedRegion region
+}
+
+@Entity
+class LinkedRegion {
+    @NotBlank(groups = OnPublish)
+    String code
+
+    @NotNull
+    String name
+
+    LinkedOffice office
+}
+
+/**
+ * An office without annotations, leading back to the account and to the region it is reached through
+ */
+@Entity
+class LinkedOffice {
+    String city
+    LinkedAccount account
+    LinkedRegion region
+}
+
+@Entity
+class FeaturedHolder {
+    @NotBlank
+    String name
+
+    @Valid
+    FeaturedItem featured
+
+    static transients = ['featured']
+}
+
+/**
+ * An item the provider reaches through the transient property of a holder, with a persistent association marked
+ * {@code @Valid}
+ */
+@Entity
+class FeaturedItem {
+    @NotBlank
+    String title
+
+    @Valid
+    FeaturedAuthor author
+}
+
+@Entity
+class FeaturedAuthor {
+    @NotBlank
+    String name
+
+    static belongsTo = [FeaturedItem]
+}
+
+@Entity
+class AnnotatedDocument {
+    @NotBlank
+    String title
+}
+
+/**
+ * A report, an entity of its own extending documents with annotations and a constraints block of its own
+ */
+@Entity
+class AnnotatedReport extends AnnotatedDocument {
+    @NotNull
+    Integer pages
+
+    @NotBlank(groups = OnPublish)
+    String summary
+
+    String code
+
+    static constraints = {
+        code nullable: false
+    }
+}
+
+@Entity
+class AnnotatedFolder {
+    @NotNull
+    String name
+
+    @Valid
+    AnnotatedDocument document
+}
+
+@Entity
+class UnannotatedDocument {
+    String title
+}
+
+/**
+ * A memo, an entity of its own extending documents without annotations with an annotation
+ */
+@Entity
+class AnnotatedMemo extends UnannotatedDocument {
+    @NotNull
+    Integer pages
+}
+
+@Entity
+class UnannotatedFolder {
+    String name
+    UnannotatedDocument document
+}
+
+/**
+ * A record validated in a group sequence given as a validation hint, with a rule of the constraints block
+ */
+@Entity
+class SequencedRecord {
+    @NotBlank(groups = StepA)
+    String a
+
+    @NotBlank(groups = StepB)
+    String b
+
+    String code
+
+    static constraints = {
+        code nullable: false
+    }
 }
