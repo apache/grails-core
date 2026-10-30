@@ -18,30 +18,20 @@
  */
 package org.grails.orm.hibernate.query;
 
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.stream.Collectors;
-
-import groovy.lang.GString;
 
 import jakarta.annotation.Nullable;
 
-import org.hibernate.jpa.AvailableHints;
-
 import org.grails.datastore.mapping.model.PersistentEntity;
-
-import static org.grails.orm.hibernate.query.HqlQueryMethods.convertValue;
 
 /**
  * Immutable value object that holds all resolved HQL query state which can be computed without a
- * Hibernate {@code Session}: the final HQL string, the result target class, any named parameters
- * (including those expanded from a {@link GString}), and flags for whether the query is an update
- * or native SQL.
+ * Hibernate {@code Session}: the final HQL string, the result target class, the {@link QueryParameters},
+ * the {@link QuerySettings}, and flags for whether the query is an update or native SQL.
  *
  * <p><strong>Security Note:</strong> The {@code hql} string must be trust-verified or
  * properly parameterized (e.g. via {@link GString} expansion in {@link #prepare}) before
@@ -58,12 +48,35 @@ import static org.grails.orm.hibernate.query.HqlQueryMethods.convertValue;
 public record HqlQueryContext(
         String hql,
         Class<?> targetClass,
-        Map<String, Object> namedParams,
-        List<Object> positionalParams,
-        Map<String, Object> querySettings,
-        Map<String, Object> hints,
+        QueryParameters parameters,
+        QuerySettings settings,
         boolean isUpdate,
         boolean isNative) {
+
+    /**
+     * Constructs a context from raw map/list parameters and settings.
+     *
+     * @deprecated since 8.0.1, use {@link #HqlQueryContext(String, Class, QueryParameters, QuerySettings, boolean, boolean)} instead.
+     */
+    @Deprecated(since = "8.0.1", forRemoval = true)
+    public HqlQueryContext(
+            String hql,
+            Class<?> targetClass,
+            Map<String, Object> namedParams,
+            List<Object> positionalParams,
+            Map<String, Object> querySettings,
+            Map<String, Object> hints,
+            boolean isUpdate,
+            boolean isNative) {
+        this(
+                hql,
+                targetClass,
+                QueryParameters.of(namedParams, positionalParams),
+                QuerySettings.of(querySettings, hints),
+                isUpdate,
+                isNative
+        );
+    }
 
     // ─── Factory ─────────────────────────────────────────────────────────────
 
@@ -72,93 +85,114 @@ public record HqlQueryContext(
      * named parameters. No {@code Session} is required.
      */
     public static HqlQueryContext prepare(
-        PersistentEntity entity,
-        CharSequence queryCharseq,
-        Map<String, Object> namedParams,
-        Collection<Object> positionalParams,
-        Map<String, Object> querySettings,
-        Map<String, Object> hints,
-        boolean isNative,
-        boolean isUpdate) {
+            PersistentEntity entity,
+            CharSequence queryCharseq,
+            Map<String, Object> namedParams,
+            Collection<Object> positionalParams,
+            Map<String, Object> querySettings,
+            Map<String, Object> hints,
+            boolean isNative,
+            boolean isUpdate) {
         return prepare(entity, queryCharseq, namedParams, positionalParams, querySettings, hints, isNative, isUpdate, null);
     }
 
     public static HqlQueryContext prepare(
-        PersistentEntity entity,
-        CharSequence queryCharseq,
-        Map<String, Object> namedParams,
-        Collection<Object> positionalParams,
-        Map<String, Object> querySettings,
-        Map<String, Object> hints,
-        boolean isNative,
-        boolean isUpdate,
-        Class<?> targetClassOverride) {
+            PersistentEntity entity,
+            CharSequence queryCharseq,
+            Map<String, Object> namedParams,
+            Collection<Object> positionalParams,
+            Map<String, Object> querySettings,
+            Map<String, Object> hints,
+            boolean isNative,
+            boolean isUpdate,
+            Class<?> targetClassOverride) {
 
-        var namedParamsCopy = Optional.ofNullable(namedParams)
-            .map(HashMap::new)
-            .orElseGet(HashMap::new);
+        QueryParameters.Expanded expanded = QueryParameters.expand(
+                queryCharseq, namedParams, positionalParams, isNative);
+        String resolved = expanded.query();
+        QueryParameters parameters = expanded.parameters();
 
-        var positionalParamsCopy = Optional.ofNullable(positionalParams)
-            .map(ArrayList::new)
-            .orElseGet(ArrayList::new);
-
-        var querySettingsCopy = Optional.ofNullable(querySettings)
-            .map(HashMap::new)
-            .orElseGet(HashMap::new);
-
-        var filteredHints = Optional.ofNullable(hints)
-            .orElseGet(Collections::emptyMap)
-            .entrySet().stream()
-            .filter(e -> AvailableHints.getDefinedHints().contains(e.getKey()))
-            .collect(Collectors.toUnmodifiableMap(Map.Entry::getKey, Map.Entry::getValue));
-
-        String resolved = positionalParamsCopy.isEmpty() ?
-                resolveHql(queryCharseq, namedParamsCopy) :
-                resolveHql(queryCharseq, isNative, positionalParamsCopy);
-        // native SQL is not HQL and is never read as such; an HQL query is read once, and its normalized form and
-        // its result type come from that reading, except an update, which runs as written
         HqlText reading = isNative ? null : HqlText.of(resolved);
         var hql = Optional.ofNullable(isNative || isUpdate ? resolved : reading.normalized())
-            .filter(s -> !s.trim().isEmpty())
-            .orElseGet(() -> "from %s".formatted(entity.getName()));
+                .filter(s -> !s.trim().isEmpty())
+                .orElseGet(() -> "from %s".formatted(entity.getName()));
 
-        namedParamsCopy.replaceAll((k, v) -> convertValue(v));
-        positionalParamsCopy.replaceAll(HqlQueryMethods::convertValue);
-
-        // a native query always returns entities, as Hibernate 5 did by adding the entity to every native query
         Class<?> targetClass = targetClassOverride != null ? targetClassOverride :
                 isNative ? entity.getJavaClass() : reading.target(entity.getJavaClass());
 
+        QuerySettings settings = QuerySettings.of(querySettings, hints);
+
         return new HqlQueryContext(
-            hql,
-            targetClass,
-            namedParamsCopy,
-            positionalParamsCopy,
-            querySettingsCopy,
-            filteredHints,
-            isUpdate,
-            isNative);
+                hql,
+                targetClass,
+                parameters,
+                settings,
+                isUpdate,
+                isNative);
     }
 
-    // ─── HQL resolution ──────────────────────────────────────────────────────
+    // ─── Backwards Compatibility Accessors ────────────────────────────────────
 
+    /**
+     * @deprecated since 8.0.1, use {@link #parameters()} and {@link QueryParameters#named()} instead.
+     */
+    @Deprecated(since = "8.0.1", forRemoval = true)
+    public Map<String, Object> namedParams() {
+        return parameters != null ? parameters.named() : Collections.emptyMap();
+    }
+
+    /**
+     * @deprecated since 8.0.1, use {@link #parameters()} and {@link QueryParameters#positional()} instead.
+     */
+    @Deprecated(since = "8.0.1", forRemoval = true)
+    public List<Object> positionalParams() {
+        return parameters != null ? parameters.positional() : Collections.emptyList();
+    }
+
+    /**
+     * @deprecated since 8.0.1, use {@link #settings()} and {@link QuerySettings#settings()} instead.
+     */
+    @Deprecated(since = "8.0.1", forRemoval = true)
+    public Map<String, Object> querySettings() {
+        return settings != null ? settings.settings() : Collections.emptyMap();
+    }
+
+    /**
+     * @deprecated since 8.0.1, use {@link #settings()} and {@link QuerySettings#hints()} instead.
+     */
+    @Deprecated(since = "8.0.1", forRemoval = true)
+    public Map<String, Object> hints() {
+        return settings != null ? settings.hints() : Collections.emptyMap();
+    }
+
+    // ─── HQL resolution delegation ───────────────────────────────────────────
+
+    /**
+     * @deprecated since 8.0.1, use {@link QueryParameters#normalizeMultiLineQueryString(String)} instead.
+     */
+    @Deprecated(since = "8.0.1", forRemoval = true)
+    static String normalizeMultiLineQueryString(String query) {
+        return QueryParameters.normalizeMultiLineQueryString(query);
+    }
+
+    /**
+     * @deprecated since 8.0.1, use {@link QueryParameters#resolveHql(CharSequence, Map)} instead.
+     */
+    @Deprecated(since = "8.0.1", forRemoval = true)
     static @Nullable String resolveHql(CharSequence queryCharseq, Map<String, Object> namedParams) {
-        String raw = queryCharseq instanceof GString gstr ?
-                buildNamedParameterQueryFromGString(gstr, namedParams) :
-                queryCharseq != null ? queryCharseq.toString() : "";
-        return normalizeMultiLineQueryString(raw);
+        return QueryParameters.resolveHql(queryCharseq, namedParams);
     }
 
+    /**
+     * @deprecated since 8.0.1, use {@link QueryParameters#resolveHql(CharSequence, boolean, Collection)} instead.
+     */
+    @Deprecated(since = "8.0.1", forRemoval = true)
     static @Nullable String resolveHql(
             CharSequence queryCharseq, boolean isNative, Collection<Object> positionalParams) {
-        String raw = queryCharseq instanceof GString gstr ?
-                buildPositionalParameterQueryFromGString(gstr, positionalParams, isNative) :
-                queryCharseq != null ? queryCharseq.toString() : "";
-        return normalizeMultiLineQueryString(raw);
+        return QueryParameters.resolveHql(queryCharseq, isNative, positionalParams);
     }
 
-    // ─── Projection analysis ─────────────────────────────────────────────────
-    // The query is read once, by HqlText; these entry points read a text of their own for the callers that have one.
+    // ─── Projection analysis delegation ──────────────────────────────────────
 
     static Class<?> getTarget(CharSequence hql, Class<?> clazz) {
         return HqlText.of(hql).target(clazz);
@@ -178,51 +212,5 @@ public record HqlQueryContext(
 
     static boolean isHasAlias(String s, int cur, int tokenEnd) {
         return HqlText.isClauseAlias(s, cur, tokenEnd);
-    }
-
-    private static String normalizeMultiLineQueryString(String query) {
-        if (query == null || query.indexOf('\n') == -1) return query;
-        return query.trim().replace("\n", " ");
-    }
-
-    private static String buildNamedParameterQueryFromGString(GString query, Map<String, Object> params) {
-        StringBuilder sql = new StringBuilder();
-        Object[] values = query.getValues();
-        String[] strings = query.getStrings();
-        for (int i = 0; i < strings.length; i++) {
-            sql.append(strings[i]);
-            if (i < values.length) {
-                if (!sql.isEmpty() && !Character.isWhitespace(sql.charAt(sql.length() - 1))) {
-                    sql.append(' ');
-                }
-                String name = "p" + i;
-                sql.append(':').append(name);
-                params.put(name, values[i]);
-            }
-        }
-        return sql.toString();
-    }
-
-    private static String buildPositionalParameterQueryFromGString(
-        GString query, Collection<Object> positionalParams, boolean isNative) {
-        StringBuilder sql = new StringBuilder();
-        Object[] values = query.getValues();
-        String[] strings = query.getStrings();
-        for (int i = 0; i < strings.length; i++) {
-            sql.append(strings[i]);
-            if (i < values.length) {
-                if (!sql.isEmpty() && !Character.isWhitespace(sql.charAt(sql.length() - 1))) {
-                    sql.append(' ');
-                }
-                if (isNative) {
-                    sql.append('?');
-                } else {
-                    sql.append('?').append(positionalParams.size() + 1);
-                }
-                Object value = values[i];
-                positionalParams.add(value);
-            }
-        }
-        return sql.toString();
     }
 }
