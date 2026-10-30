@@ -68,6 +68,17 @@ class HttpServletRequestExtension {
     }
 
     /**
+     * The type a request's {@code Content-Type} names where no configured type matches it, with its type and subtype in
+     * lower case, as Spring reads them, so that it equals the type of a binding source creator whatever case the client
+     * sends.
+     */
+    private static MimeType requestedMimeType(String header) {
+        MimeType mimeType = new MimeType(header)
+        mimeType.name = mimeType.name?.toLowerCase(Locale.ROOT)
+        mimeType
+    }
+
+    /**
      * Obtains a list of configured {@link grails.web.mime.MimeType} instances for the request
      *
      * @param request The request
@@ -86,11 +97,12 @@ class HttpServletRequestExtension {
             if (context == null) {
                 context = WebApplicationContextUtils.getWebApplicationContext(request.servletContext)
             }
-            MimeType[] mimeTypes = context != null ? context.getBean(MimeUtility).getKnownMimeTypes() as MimeType[] : MimeType.getConfiguredMimeTypes()
+            MimeUtility mimeUtility = context?.getBeanProvider(MimeUtility)?.getIfAvailable()
+            MimeType[] mimeTypes = mimeUtility != null ? mimeUtility.getKnownMimeTypes() as MimeType[] : MimeType.getConfiguredMimeTypes()
             def parser = new DefaultAcceptHeaderParser(mimeTypes)
             String header = request.contentType
             if (!header) header = request.getHeader(HttpHeaders.CONTENT_TYPE)
-            result = parser.parse(header, header ? new MimeType(header) : MimeType.HTML)
+            result = parser.parse(header, header ? requestedMimeType(header) : MimeType.HTML)
 
             request.setAttribute(GrailsApplicationAttributes.REQUEST_FORMATS, result)
         }

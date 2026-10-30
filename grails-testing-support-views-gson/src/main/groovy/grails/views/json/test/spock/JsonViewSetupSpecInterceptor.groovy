@@ -25,12 +25,15 @@ import groovy.transform.TypeCheckingMode
 import org.spockframework.runtime.extension.IMethodInterceptor
 import org.spockframework.runtime.extension.IMethodInvocation
 
+import org.springframework.beans.factory.config.ConfigurableListableBeanFactory
+import org.springframework.context.ConfigurableApplicationContext
 import org.springframework.web.servlet.i18n.SessionLocaleResolver
 
 import grails.core.GrailsApplication
 import grails.plugin.json.view.JsonViewGrailsPlugin
 import grails.views.json.test.JsonViewUnitTest
 import org.grails.datastore.mapping.keyvalue.mapping.config.KeyValueMappingContext
+import org.grails.testing.GrailsApplicationBuilder
 import org.grails.web.mapping.DefaultLinkGenerator
 import org.grails.web.mapping.UrlMappingsHolderFactoryBean
 
@@ -49,12 +52,22 @@ class JsonViewSetupSpecInterceptor implements IMethodInterceptor {
 
         GrailsApplication grailsApp = test.grailsApplication
         def config = grailsApp.config
+        ConfigurableListableBeanFactory beanFactory = ((ConfigurableApplicationContext) test.applicationContext).beanFactory
+        boolean localeResolverPresent = test.applicationContext.containsBean('localeResolver')
 
         test.defineBeans {
-            grailsLinkGenerator(DefaultLinkGenerator, config?.grails?.serverURL ?: 'http://localhost:8080')
-            localeResolver(SessionLocaleResolver)
-            grailsUrlMappingsHolder(UrlMappingsHolderFactoryBean) {
-                grailsApplication = grailsApp
+            // a URL mappings holder and link generator the spec declares, and any locale resolver the context has, such
+            // as the one grails.i18n.localeResolver configures, are kept, as the web test traits keep them
+            if (!GrailsApplicationBuilder.isDeclaredByTest(beanFactory, 'grailsLinkGenerator')) {
+                grailsLinkGenerator(DefaultLinkGenerator, config?.grails?.serverURL ?: 'http://localhost:8080')
+            }
+            if (!localeResolverPresent) {
+                localeResolver(SessionLocaleResolver)
+            }
+            if (!GrailsApplicationBuilder.isDeclaredByTest(beanFactory, 'grailsUrlMappingsHolder')) {
+                grailsUrlMappingsHolder(UrlMappingsHolderFactoryBean) {
+                    grailsApplication = grailsApp
+                }
             }
             grailsDomainClassMappingContext(KeyValueMappingContext, 'test') {
                 canInitializeEntities = true

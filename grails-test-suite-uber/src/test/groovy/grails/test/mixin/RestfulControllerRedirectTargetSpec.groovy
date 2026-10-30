@@ -24,7 +24,6 @@ import grails.rest.RestfulController
 import grails.testing.gorm.DomainUnitTest
 import grails.testing.web.controllers.ControllerUnitTest
 import org.grails.core.artefact.ControllerArtefactHandler
-import org.grails.web.mime.HttpServletResponseExtension
 
 import spock.lang.Specification
 
@@ -35,14 +34,6 @@ import spock.lang.Specification
  * same controller that its API responses name in their {@code Location} header.
  */
 class RestfulControllerRedirectTargetSpec extends Specification implements ControllerUnitTest<MoviesController>, DomainUnitTest<Film> {
-
-    def setup() {
-        HttpServletResponseExtension.@mimeTypes = null
-    }
-
-    def cleanup() {
-        HttpServletResponseExtension.@mimeTypes = null
-    }
 
     void "an HTML form save redirects to the controller that saved the instance"() {
         when: 'a Film is saved through MoviesController from an HTML form'

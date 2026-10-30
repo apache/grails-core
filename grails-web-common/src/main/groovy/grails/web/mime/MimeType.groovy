@@ -65,13 +65,14 @@ class MimeType {
 
     MimeType(String name, String extension, Map<String, String> params = [:]) {
         if (name && name.contains(';')) {
-            List tokenWithArgs = name.split(';').toList()
-            name = tokenWithArgs[0]
+            List tokenWithArgs = name.split(';', -1).toList()
+            name = ((String) tokenWithArgs[0]).trim()
             final paramsList = tokenWithArgs[1..-1]
             paramsList.each { String it ->
                 def i = it.indexOf('=')
-                if (i > -1) {
-                    parameters[it[0..i - 1].trim()] = it[i + 1..-1].trim()
+                if (i > 0) {
+                    // a parameter name is case-insensitive, and q and v are read by their lower-case names
+                    parameters[it.substring(0, i).trim().toLowerCase(Locale.ROOT)] = it.substring(i + 1).trim()
                 }
             }
 
@@ -116,7 +117,8 @@ class MimeType {
 
         MimeType mimeType = (MimeType) o
 
-        if (name != mimeType.name) {
+        // a media type name is case-insensitive
+        if (name == null ? mimeType.name != null : !name.equalsIgnoreCase(mimeType.name)) {
             return false
         }
 
@@ -128,7 +130,7 @@ class MimeType {
     }
 
     int hashCode() {
-        def result = name.hashCode()
+        def result = name == null ? 0 : name.toLowerCase(Locale.ROOT).hashCode()
         result = 31 * result + (version != null ? version.hashCode() : 0)
         return result
     }
@@ -152,8 +154,8 @@ class MimeType {
      * Creates the default MimeType configuration used when none is supplied via the
      * {@code grails.mime.types} setting. The defaults mirror the full set of MIME types that new
      * Grails applications have historically declared in {@code application.yml}, so content
-     * negotiation works out of the box without any configuration. User supplied configuration is
-     * merged over these defaults, overriding them per extension.
+     * negotiation works out of the box without any configuration. A {@code grails.mime.types} setting replaces
+     * them, or, with {@code grails.mime.mergeDefaults}, is merged over them, overriding them per extension.
      */
     static MimeType[] createDefaults() {
         [

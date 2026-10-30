@@ -21,7 +21,9 @@ package org.grails.web.binding
 import java.sql.Time
 import java.time.Instant
 import java.time.LocalDateTime
+import java.time.Month
 import java.time.OffsetDateTime
+import java.time.OffsetTime
 import java.time.ZonedDateTime
 
 import spock.lang.Specification
@@ -54,7 +56,9 @@ class DateTimeRoundTripBindingSpec extends Specification implements ControllerUn
                 offset: OffsetDateTime.parse('2025-10-07T23:14:31+02:00'),
                 zoned : ZonedDateTime.parse('2025-10-07T23:14:31+02:00'),
                 local : LocalDateTime.parse('2025-10-07T21:14:31.25'),
-                time  : Time.valueOf('01:48:46')
+                time  : Time.valueOf('01:48:46'),
+                clock : OffsetTime.parse('03:00:00.5+05:30'),
+                month : Month.SEPTEMBER
         ] as JSON).toString()
 
         when:
@@ -67,6 +71,8 @@ class DateTimeRoundTripBindingSpec extends Specification implements ControllerUn
         appointment.zoned.toInstant() == instant
         appointment.local == LocalDateTime.parse('2025-10-07T21:14:31.25')
         appointment.time == Time.valueOf('01:48:46')
+        appointment.clock == OffsetTime.parse('03:00:00.5+05:30')
+        appointment.month == Month.SEPTEMBER
     }
 
     void 'binds a date before 1582 that Grails renders in JSON back to the same date'() {
@@ -127,6 +133,8 @@ class Appointment implements Validateable {
     ZonedDateTime zoned
     LocalDateTime local
     Time time
+    OffsetTime clock
+    Month month
 }
 
 @Artefact('Controller')

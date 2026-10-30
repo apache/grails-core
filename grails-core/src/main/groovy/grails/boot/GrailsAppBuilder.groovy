@@ -67,7 +67,7 @@ import org.springframework.core.metrics.ApplicationStartup
  *
  * @author Graeme Rocher
  * @since 3.0.6
- * @see GrailsApp#contextHierarchyMember
+ * @see GrailsApp#isContextHierarchyMember()
  */
 @CompileStatic
 class GrailsAppBuilder extends SpringApplicationBuilder {

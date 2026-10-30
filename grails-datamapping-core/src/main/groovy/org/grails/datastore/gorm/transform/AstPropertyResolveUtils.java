@@ -73,14 +73,10 @@ public class AstPropertyResolveUtils {
      *     (and the compilation/classloader it belongs to) rather than being pinned forever by a
      *     static field.</li>
      * </ul>
-     * This does <strong>not</strong> extend to whether a given {@code ClassNode} is treated as a
-     * domain class in the first place: {@link AstUtils#isDomainClass(ClassNode)} is
-     * {@code @Memoized}, and Groovy's default memoize is keyed by argument <em>equality</em>
-     * ({@code ClassNode#equals}/{@code hashCode} both reduce to the class name), not identity. Two
-     * distinct, same-named {@code ClassNode}s can therefore still receive the same domain-class
-     * verdict from each other via that memo cache, independent of the property cache here. That is
-     * a narrower, pre-existing exposure in {@code isDomainClass} itself - this class neither causes
-     * nor fixes it, and it is tracked separately rather than folded into this cache's guarantees.
+     * Whether a given {@code ClassNode} is treated as a domain class in the first place is kept
+     * the same way: {@link AstUtils#isDomainClass(ClassNode)} remembers its verdict as metadata of
+     * the node, so two distinct, same-named {@code ClassNode}s each get their own answer and no
+     * node is pinned by a static cache.
      * Per {@link ClassNode#getModule()}'s own convention, the cache is stored on
      * {@link ClassNode#redirect()} - the node a placeholder/generics-parameterized reference
      * ultimately stands in for - so that looking a class up through different reference nodes still
@@ -155,7 +151,7 @@ public class AstPropertyResolveUtils {
      * @return The type
      */
     public static ClassNode getPropertyType(ClassNode classNode, String propertyName) {
-        if (propertyName == null || propertyName.length() == 0) {
+        if (propertyName == null || propertyName.isEmpty()) {
             return null;
         }
         Map<String, ClassNode> cachedProperties = getPropertiesFromCache(classNode);
@@ -271,12 +267,11 @@ public class AstPropertyResolveUtils {
     private static void cachePropertiesForAssociationMetadata(Map<String, ClassNode> cachedProperties, ClassPropertyFetcher propertyFetcher, String associationMetadataName) {
         if (propertyFetcher.isReadableProperty(associationMetadataName)) {
             Object propertyValue = propertyFetcher.getPropertyValue(associationMetadataName);
-            if (propertyValue instanceof Map) {
-                Map hasManyMap = (Map) propertyValue;
+            if (propertyValue instanceof Map<?, ?> hasManyMap) {
                 for (Object propertyName : hasManyMap.keySet()) {
                     Object val = hasManyMap.get(propertyName);
-                    if (val instanceof Class) {
-                        cachedProperties.put(propertyName.toString(), ClassHelper.make((Class) val).getPlainNodeReference());
+                    if (val instanceof Class<?> valType) {
+                        cachedProperties.put(propertyName.toString(), ClassHelper.make(valType).getPlainNodeReference());
                     }
                 }
             }
@@ -284,8 +279,7 @@ public class AstPropertyResolveUtils {
     }
 
     private static void populatePropertiesForInitialExpression(Map<String, ClassNode> cachedProperties, Expression initialExpression) {
-        if (initialExpression instanceof MapExpression) {
-            MapExpression me = (MapExpression) initialExpression;
+        if (initialExpression instanceof MapExpression me) {
             List<MapEntryExpression> mapEntryExpressions = me.getMapEntryExpressions();
             for (MapEntryExpression mapEntryExpression : mapEntryExpressions) {
                 Expression keyExpression = mapEntryExpression.getKeyExpression();

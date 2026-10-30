@@ -3,9 +3,52 @@ plugins {
     id 'org.graalvm.buildtools.native' version '1.1.7'
 }
 
+// compiles with Gradle's own Groovy, so the build resolves nothing
+grails {
+    bom = null
+    cliAutoProvision = false
+}
+dependencies {
+    implementation localGroovy()
+}
+
+// -PfixtureIndy=false stands in for grails { indy = false }; -PfixtureTaskIndy=false for a build script
+// that sets the option on the compile tasks directly, which the grails block never sees
+if (providers.gradleProperty('fixtureIndy').present) {
+    grails {
+        indy = providers.gradleProperty('fixtureIndy').get().toBoolean()
+    }
+}
+if (providers.gradleProperty('fixtureTaskIndy').present) {
+    tasks.withType(GroovyCompile).configureEach {
+        groovyOptions.optimizationOptions.indy = providers.gradleProperty('fixtureTaskIndy').get().toBoolean()
+    }
+}
+// -PfixtureLateTaskIndy=false does the same from the build script's own afterEvaluate, which runs after the
+// plugin's and so has the last word on the task
+if (providers.gradleProperty('fixtureLateTaskIndy').present) {
+    afterEvaluate {
+        tasks.withType(GroovyCompile).configureEach {
+            groovyOptions.optimizationOptions.indy = providers.gradleProperty('fixtureLateTaskIndy').get().toBoolean()
+        }
+    }
+}
+
 tasks.register('inspectDefaults') {
-    def indy = providers.provider { project.extensions.getByName('grails').indy.get() }
+    def indyOption = providers.provider {
+        Map<String, Boolean> options = project.tasks.named('compileGroovy', GroovyCompile).get().groovyOptions.optimizationOptions
+        options.containsKey('indy') ? String.valueOf(options.indy) : 'unset'
+    }
     doLast {
-        println "INDY=${indy.get()}"
+        println "INDY_OPTION=${indyOption.get()}"
+    }
+}
+
+tasks.register('inspectBytecode') {
+    dependsOn 'compileGroovy'
+    def classFile = layout.buildDirectory.file('classes/groovy/main/demo/Dynamic.class')
+    doLast {
+        String bytes = new String(classFile.get().asFile.bytes, 'ISO-8859-1')
+        println "CALL_SITES=${bytes.contains('IndyInterface') ? 'indy' : bytes.contains('getCallSiteArray') ? 'classic' : 'none'}"
     }
 }

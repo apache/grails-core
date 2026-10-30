@@ -1,0 +1,62 @@
+%{--
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+--}%
+<%@ page trimLogicLines="true" expressionCodec="none" %>
+<%@ page import="org.grails.forge.application.ApplicationType" %>
+<%@ page import="org.grails.forge.application.Project" %>
+<%@ page import="org.grails.forge.feature.Features" %>
+<%@ page import="org.grails.forge.build.gradle.GradleBuild" %>
+<%@ page import="org.grails.forge.build.gradle.GradleDependency" %>
+<%@ page import="org.grails.forge.build.gradle.GradleRepository" %>
+<%@ page import="org.grails.forge.util.VersionInfo" %>
+<%@ model="ApplicationType applicationType" %>
+<%@ model="Project project" %>
+<%@ model="Features features" %>
+<%@ model="GradleBuild gradleBuild" %>
+<%@ model="String grailsVersion" %>
+// load the root gradle.properties only for properties not already set
+// (e.g., buildSrc/gradle.properties or by environment variables like ORG_GRADLE_PROJECT_grailsVersion=7.0.0)
+// https://github.com/gradle/gradle/issues/2534
+def props = new Properties()
+file('../gradle.properties').withInputStream { props.load(it) }
+props.each { key, val ->
+    if (!project.hasProperty(key)) {
+        project.ext."$key" = val
+    }
+}
+
+repositories {
+    <% for (GradleRepository repo : gradleBuild.getBuildRepositories()) { %>
+    ${repo.toSnippet('    ')}
+    <% } %>
+}
+
+dependencies {
+    <% if (features.contains('gorm-hibernate7') && features.contains('grails-micronaut')) { %>
+    implementation platform("org.apache.grails:grails-hibernate7-micronaut-bom:$grailsVersion")
+    <% } else if (features.contains('grails-micronaut')) { %>
+    implementation platform("org.apache.grails:grails-micronaut-bom:$grailsVersion")
+    <% } else if (features.contains('gorm-hibernate7')) { %>
+    implementation platform("org.apache.grails:grails-hibernate7-bom:$grailsVersion")
+    <% } else { %>
+    implementation platform("org.apache.grails:grails-bom:$grailsVersion")
+    <% } %>
+    <% for (GradleDependency dependency : gradleBuild.getBuildSrcDependencies()) { %>
+    ${dependency.toSnippet()}
+    <% } %>
+}

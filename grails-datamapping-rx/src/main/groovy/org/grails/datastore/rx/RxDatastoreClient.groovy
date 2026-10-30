@@ -20,7 +20,6 @@
 package org.grails.datastore.rx
 
 import grails.gorm.rx.proxy.ObservableProxy
-import org.grails.datastore.mapping.core.Datastore
 import org.grails.datastore.mapping.core.connections.ConnectionSource
 import org.grails.datastore.mapping.core.connections.ConnectionSourceSettings
 import org.grails.datastore.mapping.core.connections.ConnectionSources
@@ -32,12 +31,11 @@ import org.grails.datastore.mapping.query.Query
 import org.grails.datastore.mapping.query.QueryCreator
 import org.grails.datastore.gorm.events.ConfigurableApplicationEventPublisher
 import org.grails.gorm.rx.config.Settings
-import rx.Observable
+import io.reactivex.rxjava3.core.Observable
 
 /**
  * Represents a client connection pool that can be used to interact with a backing implementation in RxGORM
  *
- * @author Graeme Rocher
  * @since 6.0
  *
  * @param The native client interface
@@ -53,7 +51,6 @@ interface RxDatastoreClient<T> extends Closeable, QueryCreator, Settings, Connec
      * @return A single observable result
      */
     public <T1> Observable<T1> get(Class<T1> type, Serializable id)
-
 
     /**
      * Persist and instance and return the observable
@@ -206,7 +203,6 @@ interface RxDatastoreClient<T> extends Closeable, QueryCreator, Settings, Connec
      * @return The {@link RxDatastoreClient} instance
      */
     RxDatastoreClient getDatastoreClient(String connectionSourceName)
-
 
     /**
      * @return The multi tenancy mode

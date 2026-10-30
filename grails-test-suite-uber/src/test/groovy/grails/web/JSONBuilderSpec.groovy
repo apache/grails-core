@@ -18,9 +18,7 @@
  */
 package grails.web
 
-import grails.core.DefaultGrailsApplication
 import groovy.json.JsonBuilder
-import org.grails.web.converters.configuration.ConvertersConfigurationInitializer
 import spock.lang.Ignore
 import spock.lang.Specification
 
@@ -29,11 +27,6 @@ import spock.lang.Specification
  * @since 1.2
  */
 class JSONBuilderSpec extends Specification {
-
-    void setup() {
-        def initializer = new ConvertersConfigurationInitializer(grailsApplication: new DefaultGrailsApplication())
-        initializer.initialize()
-    }
 
     void testSimple() {
 
@@ -155,7 +148,7 @@ class JSONBuilderSpec extends Specification {
         '{"books":[{"title":"one"},{"title":"two"},{"title":"three"}]}' == result.toString()
 
         when:
-        new JsonBuilder({
+        result = new JsonBuilder({
             List<Map<String, String>> array = []
             for (b in results) {
                 array.add(title: b)

@@ -22,6 +22,8 @@ import grails.databinding.DataBindingSource
 import org.grails.web.databinding.bindingsource.JsonApiDataBindingSourceCreator
 import spock.lang.Shared
 import spock.lang.Specification
+import tools.jackson.core.json.JsonReadFeature
+import tools.jackson.databind.json.JsonMapper
 
 import java.nio.charset.StandardCharsets
 
@@ -200,6 +202,33 @@ class JsonApiDataBindingSourceCreatorSpec extends Specification {
 
         then:
         source.containsProperty("data")
+        source.getPropertyValue("id") == "foo"
+    }
+}
+/**
+ * The JSON API bodies bind alike when Jackson parses them, with {@code grails.databinding.json.jackson}.
+ */
+class JacksonJsonApiDataBindingSourceCreatorSpec extends JsonApiDataBindingSourceCreatorSpec {
+
+    void setupSpec() {
+        creator = new JsonApiDataBindingSourceCreator(
+                jsonMapper: JsonMapper.builder().enable(JsonReadFeature.ALLOW_JAVA_COMMENTS).build(), useJackson: true)
+    }
+
+    void "the bodies are parsed by the mapper the creator is given, which here reads a comment, as the legacy parser does not"() {
+        given:
+        String json = '''/* a comment */ {
+            "data": {
+                "type": "photos",
+                "id": "foo"
+            }
+        }'''
+
+        when:
+        def inputStream = new ByteArrayInputStream(json.getBytes(StandardCharsets.UTF_8))
+        DataBindingSource source = creator.createDataBindingSource(null, null, inputStream)
+
+        then:
         source.getPropertyValue("id") == "foo"
     }
 }

@@ -5,10 +5,21 @@ Public Domain.
 package org.grails.web.json;
 
 import java.io.IOException;
+import java.io.StringWriter;
 import java.io.Writer;
+import java.math.BigDecimal;
+import java.math.BigInteger;
+import java.util.Date;
+import java.util.Iterator;
 import java.util.Stack;
+import java.util.stream.BaseStream;
 
 import groovy.lang.Writable;
+
+import tools.jackson.core.JacksonException;
+import tools.jackson.core.JsonGenerator;
+import tools.jackson.core.PrettyPrinter;
+import tools.jackson.core.TokenStreamContext;
 
 import static org.grails.web.json.JSONWriter.Mode.ARRAY;
 import static org.grails.web.json.JSONWriter.Mode.DONE;
@@ -18,8 +29,7 @@ import static org.grails.web.json.JSONWriter.Mode.OBJECT;
 
 /**
  * JSONWriter provides a quick and convenient way of producing JSON text.
- * The texts produced strictly conform to JSON syntax rules. No whitespace is
- * added, so the results are ready for transmission or storage. Each instance of
+ * The texts produced strictly conform to JSON syntax rules. Each instance of
  * JSONWriter can produce one JSON text.
  * <p>
  * A JSONWriter instance provides a <code>value</code> method for appending
@@ -37,14 +47,19 @@ import static org.grails.web.json.JSONWriter.Mode.OBJECT;
  *     .endObject();</pre> which writes <pre>
  * {"JSON":"Hello, World!"}</pre>
  * <p>
- * The first method called must be <code>array</code> or <code>object</code>.
  * There are no methods for adding commas or colons. JSONWriter adds them for
- * you. Objects and arrays can be nested up to 20 levels deep.
+ * you. A single value, outside any object or array, is also a JSON text.
  * <p>
- * This can sometimes be easier than using a JSONObject to build a string.
+ * The text is written by a Jackson {@link JsonGenerator}, from the {@link JsonMapperSupport JsonMapper} given, or
+ * a default one: every string, a {@code String}, a {@code GString}, a {@code StreamCharBuffer} or the text of any other
+ * value alike, is escaped as the generator escapes it, and also for an HTML {@code <script>} element (see
+ * {@link HtmlSafeJsonWriter}); numbers and pretty printing are Jackson's. A {@link JsonMapperValue} is written by its
+ * mapper, and a {@link JSONElement} as the JSON text it writes itself. The
+ * generator buffers the text, and writes it to the {@link Writer} as its buffer fills, once the JSON text is complete,
+ * and on {@link #flush()}. It never flushes or closes the {@code Writer}.
  *
  * @author JSON.org
- * @version 2
+ * @version 3
  */
 public class JSONWriter {
 
@@ -56,83 +71,106 @@ public class JSONWriter {
 
     /**
      * The current mode. Values:
+     * 'a' (array),
+     * 'd' (done),
+     * 'i' (initial),
+     * 'k' (key),
+     * 'o' (object).
      */
     protected Mode mode;
 
-    /**
-     * The Mode stack.
-     */
     private Stack<Mode> stack = new Stack<>();
+
+    private int nesting;
 
     /**
      * The writer that will receive the output.
      */
     protected Writer writer;
 
+    private final JsonMapperSupport jsonMapper;
+
+    private final JsonGenerator generator;
+
     /**
-     * Make a fresh JSONWriter. It can be used to build one JSON text.
+     * Makes a fresh JSONWriter, which writes with a default JsonMapper.
+     *
+     * @param w the writer to write the JSON text to
      */
     public JSONWriter(Writer w) {
+        this(w, JsonMapperSupport.DEFAULT, false);
+    }
+
+    /**
+     * Makes a fresh JSONWriter, which writes with a default JsonMapper, as {@link #JSONWriter(Writer)} does.
+     *
+     * @param w the writer to write the JSON text to
+     * @param prettyPrint whether to indent the JSON text with Jackson's default pretty printer
+     * @since 9.0
+     */
+    public JSONWriter(Writer w, boolean prettyPrint) {
+        this(w, JsonMapperSupport.DEFAULT, prettyPrint);
+    }
+
+    /**
+     * Makes a fresh JSONWriter.
+     *
+     * @param w the writer to write the JSON text to
+     * @param jsonMapper the mapper to write the JSON text with
+     * @param prettyPrint whether to indent the JSON text with the mapper's default pretty printer
+     * @since 9.0
+     */
+    public JSONWriter(Writer w, JsonMapperSupport jsonMapper, boolean prettyPrint) {
         this.comma = false;
         this.mode = INIT;
         this.writer = w;
-    }
-
-    private static class WritableString implements Writable {
-        private String string;
-
-        WritableString(String string) {
-            this.string = string;
-        }
-
-        @Override
-        public Writer writeTo(Writer out) throws IOException {
-            out.write(string);
-            return out;
-        }
-
-        public String toString() {
-            return string;
-        }
+        this.jsonMapper = jsonMapper;
+        this.generator = w != null ? jsonMapper.createGenerator(w, prettyPrint) : null;
     }
 
     /**
-     * Append a value.
-     * @param s A string value.
+     * Makes a fresh JSONWriter that indents the JSON text with a pretty printer.
+     *
+     * @param w the writer to write the JSON text to
+     * @param jsonMapper the mapper to write the JSON text with
+     * @param prettyPrinter the pretty printer to indent the JSON text with
+     * @since 9.0
+     */
+    protected JSONWriter(Writer w, JsonMapperSupport jsonMapper, PrettyPrinter prettyPrinter) {
+        this.comma = false;
+        this.mode = INIT;
+        this.writer = w;
+        this.jsonMapper = jsonMapper;
+        this.generator = w != null ? jsonMapper.createGenerator(w, prettyPrinter) : null;
+    }
+
+    /**
+     * Writes a raw JSON text as a value.
+     *
+     * @param s the JSON text
      * @return this
      */
     protected JSONWriter append(String s) {
         if (s == null) {
             throw new JSONException("Null pointer");
         }
-        return append(new WritableString(s));
+        return write(() -> generator.writeRawValue(s), s);
     }
 
+    /**
+     * Writes the JSON text a {@link Writable} writes as a value.
+     *
+     * @param writableValue the value
+     * @return this
+     */
     protected JSONWriter append(Writable writableValue) {
-        if (this.mode == OBJECT || this.mode == ARRAY) {
-            try {
-                if (this.comma && this.mode == ARRAY) {
-                    this.comma();
-                }
-                writableValue.writeTo(writer);
-            } catch (IOException e) {
-                throw new JSONException(e);
-            }
-            if (this.mode == OBJECT) {
-                this.mode = KEY;
-            }
-            this.comma = true;
-            return this;
-        }
-        throw new JSONException("Value out of sequence: expected mode to be OBJECT or ARRAY when writing '" + writableValue + "' but was " + this.mode);
+        return write(() -> generator.writeRawValue(text(writableValue)), writableValue);
     }
 
+    /**
+     * The generator writes separators itself.
+     */
     protected void comma() {
-        try {
-            this.writer.write(',');
-        } catch (IOException e) {
-            throw new JSONException(e);
-        }
     }
 
     /**
@@ -141,11 +179,14 @@ public class JSONWriter {
      * <code>endArray</code> method must be called to mark the array's end.
      *
      * @return this
+     * @throws JSONException If the nesting is too deep, or if the object is
+     *                       started in the wrong place (for example as a key or after the end of the
+     *                       outermost array or object).
      */
     public JSONWriter array() {
         if (this.mode == INIT || this.mode == OBJECT || this.mode == ARRAY) {
             this.push(ARRAY);
-            this.append("[");
+            generate(generator::writeStartArray);
             this.comma = false;
             return this;
         }
@@ -158,18 +199,16 @@ public class JSONWriter {
      * @param m Mode
      * @param c Closing character
      * @return this
+     * @throws JSONException If unbalanced.
      */
     protected JSONWriter end(Mode m, char c) {
         if (this.mode != m) {
             throw new JSONException(c == '}' ? "Misplaced endObject." : "Misplaced endArray.");
         }
         this.pop(m);
-        try {
-            this.writer.write(c);
-        } catch (IOException e) {
-            throw new JSONException(e);
-        }
+        generate(c == ']' ? generator::writeEndArray : generator::writeEndObject);
         this.comma = true;
+        closeIfDone();
         return this;
     }
 
@@ -178,6 +217,7 @@ public class JSONWriter {
      * <code>array</code>.
      *
      * @return this
+     * @throws JSONException If incorrectly nested.
      */
     public JSONWriter endArray() {
         return end(ARRAY, ']');
@@ -188,6 +228,7 @@ public class JSONWriter {
      * <code>object</code>.
      *
      * @return this
+     * @throws JSONException If incorrectly nested.
      */
     public JSONWriter endObject() {
         return end(KEY, '}');
@@ -199,24 +240,18 @@ public class JSONWriter {
      *
      * @param s A key string.
      * @return this
+     * @throws JSONException If the key is out of place. For example, keys
+     *                       do not belong in arrays or if the key is null.
      */
     public JSONWriter key(String s) {
         if (s == null) {
             throw new JSONException("Null key.");
         }
         if (this.mode == KEY) {
-            try {
-                if (this.comma) {
-                    this.comma();
-                }
-                JSONObject.writeQuoted(this.writer, s);
-                this.writer.write(':');
-                this.comma = false;
-                this.mode = OBJECT;
-                return this;
-            } catch (IOException e) {
-                throw new JSONException(e);
-            }
+            generate(() -> generator.writeName(s));
+            this.comma = false;
+            this.mode = OBJECT;
+            return this;
         }
         throw new JSONException("Misplaced key: expected mode of KEY but was " + this.mode);
     }
@@ -227,25 +262,31 @@ public class JSONWriter {
      * <code>endObject</code> method must be called to mark the object's end.
      *
      * @return this
+     * @throws JSONException If the nesting is too deep, or if the object is
+     *                       started in the wrong place (for example as a key or after the end of the
+     *                       outermost array or object).
      */
     public JSONWriter object() {
         if (this.mode == INIT) {
             this.mode = OBJECT;
         }
         if (this.mode == OBJECT || this.mode == ARRAY) {
-            this.append("{");
+            generate(generator::writeStartObject);
+            if (this.mode == OBJECT) {
+                this.mode = KEY;
+            }
             this.push(KEY);
             this.comma = false;
             return this;
         }
         throw new JSONException("Misplaced object: expected mode of INIT, OBJECT or ARRAY but was " + this.mode);
-
     }
 
     /**
      * Pop an array or object scope.
      *
      * @param c The scope to close.
+     * @throws JSONException If nesting is wrong.
      */
     protected void pop(Mode c) {
         if (this.stack.size() == 0 || this.stack.pop() != c) {
@@ -255,13 +296,13 @@ public class JSONWriter {
             this.mode = this.stack.peek();
         else
             this.mode = DONE;
-
     }
 
     /**
      * Push an array or object scope.
      *
      * @param c The scope to open.
+     * @throws JSONException If nesting is too deep.
      */
     protected void push(Mode c) {
         this.stack.push(c);
@@ -276,7 +317,7 @@ public class JSONWriter {
      * @return this
      */
     public JSONWriter value(boolean b) {
-        return append(b ? "true" : "false");
+        return write(() -> generator.writeBoolean(b), b);
     }
 
     /**
@@ -286,7 +327,7 @@ public class JSONWriter {
      * @return this
      */
     public JSONWriter value(double d) {
-        return value(Double.valueOf(d));
+        return write(() -> generator.writeNumber(d), d);
     }
 
     /**
@@ -296,65 +337,238 @@ public class JSONWriter {
      * @return this
      */
     public JSONWriter value(long l) {
-        return append(Long.toString(l));
+        return write(() -> generator.writeNumber(l), l);
     }
 
     /**
-     * Append a number value
+     * Append a number value.
      *
-     * @param number
-     * @return
+     * @param number A Number.
+     * @return this
      */
     public JSONWriter value(Number number) {
-        return number != null ? append(number.toString()) : valueNull();
-    }
-
-    public JSONWriter valueNull() {
-        return append(nullWritable);
-    }
-
-    static Writable nullWritable = new NullWritable();
-
-    private static class NullWritable implements Writable {
-        @Override
-        public Writer writeTo(Writer out) throws IOException {
-            out.write("null");
-            return out;
-        }
+        return number != null ? write(() -> writeNumber(number), number) : valueNull();
     }
 
     /**
-     * Append an object value.
+     * Append the value <code>null</code>.
      *
-     * @param o The object to append. It can be null, or a Boolean, Number,
-     *          String, JSONObject, or JSONArray.
+     * @return this
+     */
+    public JSONWriter valueNull() {
+        return write(generator::writeNull, null);
+    }
+
+    /**
+     * Append an object value: a {@link JsonMapperValue} as its mapper writes it, {@code null}, and an object equal to
+     * {@code null}, such as Groovy's {@code NullObject}, as {@code null}, numbers and booleans as JSON literals, a
+     * {@code Date} as a JavaScript {@code new Date(...)} (for the javascript JSON date format), a {@link JSONElement} as
+     * the JSON text it writes, and any other value as a JSON string, which the generator escapes as it escapes a
+     * {@code String}: a {@link Writable}, such as a {@code GString} or a {@code StreamCharBuffer}, the text it writes,
+     * and any other value its {@code toString()}.
+     *
+     * @param o The object to append.
      * @return this
      */
     public JSONWriter value(Object o) {
-        return o != null ? append(new QuotedWritable(o)) : valueNull();
+        if (o == null || o.equals(null)) {
+            return valueNull();
+        }
+        if (o instanceof JsonMapperValue mapperValue && mapperValue.getJsonMapperSupport() == jsonMapper) {
+            return write(() -> jsonMapper.writeValue(generator, mapperValue.getValue(), mapperValue.getNestedValueWriter()), o);
+        }
+        if (o instanceof Number number) {
+            return value(number);
+        }
+        if (o instanceof Boolean b) {
+            return value(b.booleanValue());
+        }
+        if (o instanceof Date date) {
+            return write(() -> generator.writeRawValue("new Date(" + date.getTime() + ")"), o);
+        }
+        if (o instanceof JSONElement element) {
+            return write(() -> generator.writeRawValue(text(element)), o);
+        }
+        if (o instanceof Writable writable) {
+            return write(() -> generator.writeString(text(writable)), o);
+        }
+        return write(() -> generator.writeString(o.toString()), o);
     }
 
-    private static class QuotedWritable implements Writable {
-        Object o;
-
-        QuotedWritable(Object o) {
-            this.o = o;
+    /**
+     * Writes a value nested in a {@link JsonMapperValue} that this writer is writing, such as a value that a Jackson
+     * serializer writes with {@link JsonGenerator#writePOJO(Object)}, from the value's nested value writer. The writer
+     * accepts one value, as at the start of a JSON text, and then returns to the state it was in. A value that writes
+     * nothing, as the converter writes a value reached again with the {@code IGNORE} circular reference behaviour, is left
+     * out of an array that a collection or an array is written as, and is {@code null} for a property, whose name is
+     * written already or whose position in a bean written as an array counts, as the mapper writes it.
+     *
+     * @param writeValue writes one value to this writer, or nothing
+     * @throws JSONException if {@code writeValue} starts a value it does not complete
+     * @since 9.0
+     */
+    public void writeNested(Runnable writeValue) {
+        Mode outerMode = this.mode;
+        Stack<Mode> outerStack = this.stack;
+        boolean outerComma = this.comma;
+        this.mode = INIT;
+        this.stack = new Stack<>();
+        this.nesting++;
+        try {
+            writeValue.run();
+            if (this.mode == INIT && generator != null) {
+                if (!inElementArray(generator)) {
+                    generator.writeNull();
+                }
+            }
+            else if (this.mode != DONE) {
+                throw new JSONException("Incomplete nested value: expected mode of DONE but was " + this.mode);
+            }
         }
-
-        @Override
-        public Writer writeTo(Writer out) throws IOException {
-            JSONObject.writeValue(out, o);
-            return out;
-        }
-
-        public String toString() {
-            return String.valueOf(o);
+        finally {
+            this.mode = outerMode;
+            this.stack = outerStack;
+            this.comma = outerComma;
+            this.nesting--;
         }
     }
 
     /**
-     * Enumeration of the possible modes of the JSONWriter
+     * Whether the generator is about to write an element of an array that a collection or an array is written as, which
+     * can be left out, rather than a property of a bean written as an array, whose position has to be kept: Jackson starts
+     * the array of a bean with the bean as its current value, and that of a collection, an array, an iterator or a stream
+     * with the value itself. An array a serializer starts without a current value is taken for a collection's, and the
+     * array of a container of another type, such as a Scala collection, for a bean's.
      */
+    private static boolean inElementArray(JsonGenerator generator) {
+        TokenStreamContext context = generator.streamWriteContext();
+        if (!context.inArray()) {
+            return false;
+        }
+        Object current = context.currentValue();
+        return current == null || current instanceof Iterable || current instanceof Iterator ||
+                current instanceof BaseStream || current.getClass().isArray();
+    }
+
+    /**
+     * The number of JSON objects and arrays the next value is written in, which is how deep the outermost object or array
+     * of a value written now is less one, such as the type wrapper of a bean.
+     *
+     * @return the depth, or {@code -1} where the writer writes to no generator
+     * @since 9.0
+     */
+    public int nestingDepth() {
+        return generator != null ? generator.streamWriteContext().getNestingDepth() : -1;
+    }
+
+    /**
+     * Records that the value about to be written stands for the nested value {@link #writeNested(Runnable)} writes, as the
+     * instance a proxy proxies does, so that it is written as the {@code JsonMapper} writes it in the place of the proxy:
+     * with what the property the nested value is the value of is annotated with. Nothing is recorded for any other value.
+     *
+     * @param nested the nested value
+     * @param instance the value written in its place
+     * @since 9.0
+     */
+    public void standIn(Object nested, Object instance) {
+        if (generator != null) {
+            NestedValueSerializer.standIn(generator, nested, instance);
+        }
+    }
+
+    /**
+     * The location of the nested value that {@link #writeNested(Runnable)} is about to write, relative to the
+     * {@link JsonMapperValue} it is nested in, such as {@code .inner} or {@code [0]}.
+     */
+    String nestedPath() {
+        return generator != null ? NestedValueSerializer.nestedPath(generator) : "";
+    }
+
+    /**
+     * Writes the JSON text buffered so far to the {@link Writer}, without flushing the {@code Writer}.
+     *
+     * @since 9.0
+     */
+    public void flush() {
+        if (generator != null) {
+            generate(generator::flush);
+        }
+    }
+
+    private JSONWriter write(Runnable writeValue, Object value) {
+        if (this.mode == INIT) {
+            generate(writeValue);
+            this.mode = DONE;
+            closeIfDone();
+            return this;
+        }
+        if (this.mode == OBJECT || this.mode == ARRAY) {
+            generate(writeValue);
+            if (this.mode == OBJECT) {
+                this.mode = KEY;
+            }
+            this.comma = true;
+            return this;
+        }
+        throw new JSONException("Value out of sequence: expected mode to be OBJECT or ARRAY when writing '" + value + "' but was " + this.mode);
+    }
+
+    /**
+     * Once the JSON text is complete, closes the generator, which writes the rest of the text to the {@link Writer}
+     * and returns its buffers to Jackson.
+     */
+    private void closeIfDone() {
+        if (this.mode == DONE && this.nesting == 0) {
+            generate(generator::close);
+        }
+    }
+
+    private void writeNumber(Number number) {
+        if (number instanceof Integer || number instanceof Short || number instanceof Byte) {
+            generator.writeNumber(number.intValue());
+        }
+        else if (number instanceof Long) {
+            generator.writeNumber(number.longValue());
+        }
+        else if (number instanceof Double) {
+            generator.writeNumber(number.doubleValue());
+        }
+        else if (number instanceof Float) {
+            generator.writeNumber(number.floatValue());
+        }
+        else if (number instanceof BigDecimal bigDecimal) {
+            generator.writeNumber(bigDecimal);
+        }
+        else if (number instanceof BigInteger bigInteger) {
+            generator.writeNumber(bigInteger);
+        }
+        else {
+            // any other Number, such as an AtomicLong, as its text, as Jackson's NumberSerializer writes it: through
+            // the mapper, it would be offered to an active nested value writer, which may hand it back here
+            generator.writeNumber(String.valueOf(number));
+        }
+    }
+
+    private static void generate(Runnable write) {
+        try {
+            write.run();
+        }
+        catch (JacksonException e) {
+            throw new JSONException(e);
+        }
+    }
+
+    private static String text(Writable writable) {
+        StringWriter text = new StringWriter();
+        try {
+            writable.writeTo(text);
+        }
+        catch (IOException e) {
+            throw new JSONException(e);
+        }
+        return text.toString();
+    }
+
     protected enum Mode {
         INIT,
         OBJECT,

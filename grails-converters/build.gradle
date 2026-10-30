@@ -20,6 +20,7 @@
 plugins {
     id 'groovy'
     id 'java-library'
+    id 'java-test-fixtures'
     id 'project-report'
     id 'org.apache.grails.buildsrc.properties'
     id 'org.apache.grails.buildsrc.dependency-validator'
@@ -36,12 +37,15 @@ group = 'org.apache.grails'
 
 dependencies {
     implementation platform(project(':grails-bom'))
+    testFixturesImplementation platform(project(':grails-bom'))
 
     implementation 'io.micrometer:micrometer-observation'
     api project(':grails-web-common')
     api 'org.apache.groovy:groovy'
+    api 'org.springframework.boot:spring-boot-jackson'
+    api 'tools.jackson.core:jackson-databind' // grails.converters.JSON writes through Spring Boot's JsonMapper
 
-    // api needed downstream: ConvertersExtension is a Groovy extension module with HttpServletRequest
+    // api needed downstream: ConvertersModuleExtension is a Groovy extension module with HttpServletRequest
     // in its signatures, and the Groovy compiler loads it from any compile classpath it is on
     compileOnlyApi 'jakarta.servlet:jakarta.servlet-api'
 
@@ -60,7 +64,6 @@ dependencies {
 
     testImplementation 'jakarta.servlet:jakarta.servlet-api'
     testImplementation 'org.springframework:spring-test'
-    testImplementation 'tools.jackson.core:jackson-databind' // JSON rendering is compared against Spring Boot's Jackson JsonMapper
 
     testImplementation 'org.apache.groovy:groovy-test-junit5'
     testImplementation 'org.junit.jupiter:junit-jupiter-api'
@@ -82,4 +85,14 @@ dependencies {
 apply {
     from rootProject.layout.projectDirectory.file('gradle/docs-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/test-config.gradle')
+}
+
+// The test fixtures are beans the specs of this module and of grails-xml share, not test support for applications or
+// plugins, so they are neither published nor in the API docs
+ext.internalTestFixtures = true
+components.java.withVariantsFromConfiguration(configurations.testFixturesApiElements) { ConfigurationVariantDetails details ->
+    details.skip()
+}
+components.java.withVariantsFromConfiguration(configurations.testFixturesRuntimeElements) { ConfigurationVariantDetails details ->
+    details.skip()
 }

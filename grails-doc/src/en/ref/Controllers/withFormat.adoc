@@ -49,6 +49,10 @@ class BookController {
 }
 ----
 
+NOTE: `grails.converters.XML` and `render ... as XML` require `org.apache.grails:grails-xml`, which the web starter and
+`grails-web-boot` bring in Grails 9; applications without either, and applications upgrading to Grails 10, add it
+explicitly. They are deprecated for removal in Grails 11, with the rest of the legacy XML conversion.
+
 
 === Description
 
@@ -66,7 +70,7 @@ withFormat {
 
 Here we invoke three methods called `html`, `js` and `xml` that use mime type names configured in `grails-app/conf/application.yml` (See link:{guidePath}theWebLayer.html#contentNegotiation[Content Negotiation] for more information). The call to `html` accepts a model (a Map) which is passed on to the view. Grails searches for a view called `grails-app/views/book/list.html.gsp` and if that is not found fallback to `grails-app/views/book/list.gsp`.
 
-Note that the order of the types is significant if the request format is "all" or if more than one content type has the same "q" rating in the accept header. In the former case, the first type handler in the block is executed ("html" in the short example above). The latter case is more confusing because it only holds if there is more than one content type with the highest "q" rating for which you have a type handler *and* you have more than one type handler matching that "q" rating. For example if the request has "text/html" and "application/xml" with a "q" rating of 1.0, then this code:
+The types of the `Accept` header are ordered by their "q" rating, and those with the same rating by their place in the header. `text/xml` and `application/xml` are one type, `application/xml`, with the larger of their ratings, in the place of the first of them, and `application/problem+xml` is read as `application/xml` where that is configured, unless `grails.mime.types` or a `MimeTypeProvider` bean provides `application/problem+xml` itself, which then counts as a more specific XML type. A more specific XML type, such as `application/atom+xml`, listed after that type and rated at least as high, first takes its place in the header, ahead of it and of those that took its place before it: for `application/xml;q=0.9, application/json, application/atom+xml` the order is `application/atom+xml`, `application/json`, `application/xml`, for `application/xml, application/atom+xml, application/rss+xml` it is `application/rss+xml`, `application/atom+xml`, `application/xml`, and for `text/xml, application/json, application/atom+xml, application/xml` it is `application/atom+xml`, `application/xml`, `application/json`. A header that lists `text/xml` but neither `application/xml` nor `application/problem+xml` keeps its order, as in Grails 8: for `text/xml, application/atom+xml` it is `application/xml`, `application/atom+xml`. The first of them is the response format. Where the block handles it, its handler is executed; otherwise the next types are tried in that order, and the first the block handles is used. Where the response format is "all", or the header reaches `*/*` before a type the block handles, the block's `*` handler is executed, or its first handler where it has none ("html" in the short example above), so the order of the types in the block is significant then. Otherwise the order of the header decides, not that of the block: if the request has "text/html" and then "application/xml" with a "q" rating of 1.0, then this code:
 
 [source,groovy]
 ----
@@ -76,7 +80,7 @@ withFormat {
 }
 ----
 
-will use the "xml" type handler for the request.
+will use the "html" type handler for the request.
 
 Another important factor to note is that the `withFormat` method deals with the _response_ format and not the request format. As of Grails 2.0, there is a separate `withFormat` method made available on the `request` that you can use to handle the request format which is dictated by the `CONTENT_TYPE` header of the request:
 
@@ -103,11 +107,11 @@ withFormat {
 
 This way the `html` Closure will only be executed if the `html` format is matched.
 
-NOTE: Grails ignores the HTTP Accept header unless you add a `grails.mime.use.accept.header = true` setting to your `application.groovy` file. In other words, `withFormat()` will be completely unaffected by the Accept header without that setting.
+NOTE: Grails honours the HTTP Accept header by default. Set `grails.mime.use.accept.header = false` in your `application.groovy` file to have `withFormat()` ignore it, so that only the format parameter and the URI extension decide.
 
 [source,groovy]
 ----
-grails.mime.use.accept.header = true
+grails.mime.use.accept.header = false
 ----
 
 Or the equivalent in `application.yml`:
@@ -118,5 +122,5 @@ grails:
     mime:
         use:
             accept:
-                header: true
+                header: false
 ----

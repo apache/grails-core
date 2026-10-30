@@ -19,8 +19,6 @@
 
 package org.grails.forge.fixture
 
-import io.micronaut.context.BeanContext
-import io.micronaut.inject.qualifiers.Qualifiers
 import org.grails.forge.application.ApplicationType
 import org.grails.forge.application.ContextFactory
 import org.grails.forge.application.OperatingSystem
@@ -28,6 +26,7 @@ import org.grails.forge.application.generator.GeneratorContext
 import org.grails.forge.build.dependencies.Source
 import org.grails.forge.feature.AvailableFeatures
 import org.grails.forge.feature.Feature
+import org.grails.forge.feature.FeatureRegistry
 import org.grails.forge.feature.FeatureContext
 import org.grails.forge.feature.Features
 import org.grails.forge.feature.validation.FeatureValidator
@@ -37,11 +36,13 @@ import org.grails.forge.options.Language
 import org.grails.forge.options.Options
 import org.grails.forge.options.TestFramework
 
+import org.springframework.context.ApplicationContext
+
 import java.util.function.Consumer
 
 trait ContextFixture {
 
-    abstract BeanContext getBeanContext()
+    abstract ApplicationContext getBeanContext()
 
     String getGradleAnnotationProcessorScope(Language language, Source source = Source.MAIN) {
         if (language == Language.GROOVY) {
@@ -73,7 +74,7 @@ trait ContextFixture {
                                        Options options = new Options(),
                                        ApplicationType applicationType = ApplicationType.WEB) {
 
-        AvailableFeatures availableFeatures = beanContext.getBean(AvailableFeatures, Qualifiers.byName(applicationType.name))
+        AvailableFeatures availableFeatures = beanContext.getBean(FeatureRegistry).availableFeatures(applicationType)
 
         ContextFactory factory = beanContext.getBean(ContextFactory)
 

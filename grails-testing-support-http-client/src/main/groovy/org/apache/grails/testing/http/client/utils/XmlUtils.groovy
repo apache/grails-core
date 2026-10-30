@@ -55,6 +55,7 @@ class XmlUtils {
     private static final Pattern LINE_ENDINGS = ~/\r\n|[\r\n]/
     private static final Pattern XML_DECLARATION = ~/^\s*(<\?xml\b.*?\?>)/
 
+    // Groovy 6.0.0-beta-2: recognized SAX feature URIs preserve the secure XmlSlurper defaults.
     private static final Map<String, Boolean> SECURE_XML_SLURPER_FEATURES = [
             (XMLConstants.FEATURE_SECURE_PROCESSING): true,
             (XmlParserFeature.DISALLOW_DOCTYPE_DECL.featureName): true,
@@ -62,6 +63,11 @@ class XmlUtils {
             (XmlParserFeature.EXTERNAL_PARAMETER_ENTITIES.featureName): false,
             (XmlParserFeature.LOAD_DTD_GRAMMAR.featureName): false,
             (XmlParserFeature.LOAD_EXTERNAL_DTD.featureName): false
+    ].asImmutable()
+
+    private static final Map<String, String> SECURE_XML_SLURPER_PROPERTIES = [
+            (XMLConstants.ACCESS_EXTERNAL_DTD): '',
+            (XMLConstants.ACCESS_EXTERNAL_SCHEMA): ''
     ].asImmutable()
 
     /**
@@ -242,7 +248,16 @@ class XmlUtils {
             }
         }
 
-        saxParserFactory.newSAXParser()
+        def saxParser = saxParserFactory.newSAXParser()
+        SECURE_XML_SLURPER_PROPERTIES.each { name, value ->
+            try {
+                saxParser.setProperty(name, value)
+            }
+            catch (Exception ignored) {
+                // ignore, parser doesn't support
+            }
+        }
+        saxParser
     }
 
 }

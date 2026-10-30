@@ -19,14 +19,12 @@
 
 package grails.gorm.rx
 
-import groovy.transform.InheritConstructors
 import org.grails.datastore.gorm.query.criteria.AbstractCriteriaBuilder
 import org.grails.datastore.mapping.model.MappingContext
 import org.grails.datastore.mapping.query.Query
 import org.grails.datastore.mapping.query.QueryCreator
-import org.grails.datastore.mapping.query.api.Criteria
 import org.grails.datastore.rx.query.RxQuery
-import rx.Observable
+import io.reactivex.rxjava3.core.Observable
 
 import static org.grails.datastore.gorm.finders.DynamicFinder.populateArgumentsForCriteria
 
@@ -35,7 +33,6 @@ import static org.grails.datastore.gorm.finders.DynamicFinder.populateArgumentsF
  *
  * @see grails.gorm.CriteriaBuilder
  *
- * @author Graeme Rocher
  * @since 6.0
  */
 class CriteriaBuilder<T> extends AbstractCriteriaBuilder {
@@ -53,10 +50,10 @@ class CriteriaBuilder<T> extends AbstractCriteriaBuilder {
      * @return An observable
      */
     Observable<T> get(@DelegatesTo(CriteriaBuilder) Closure callable) {
-        ensureQueryIsInitialized();
-        invokeClosureNode(callable);
+        ensureQueryIsInitialized()
+        invokeClosureNode(callable)
 
-        uniqueResult = true;
+        uniqueResult = true
         return ((RxQuery)query).singleResult()
     }
 
@@ -96,7 +93,7 @@ class CriteriaBuilder<T> extends AbstractCriteriaBuilder {
      * @return An observable
      */
     Observable<T> findAll(@DelegatesTo(CriteriaBuilder) Closure additionalCriteria) {
-        findAll (Collections.emptyMap(), additionalCriteria)
+        findAll(Collections.emptyMap(), additionalCriteria)
     }
 
     /**
@@ -120,7 +117,7 @@ class CriteriaBuilder<T> extends AbstractCriteriaBuilder {
      * @return An observable that emits a list
      */
     Observable<List<T>> list(Map args = Collections.emptyMap(), @DelegatesTo(CriteriaBuilder) Closure additionalCriteria = null) {
-        findAll(args, additionalCriteria).toList()
+        findAll(args, additionalCriteria).toList().toObservable()
     }
 
     /**
@@ -129,8 +126,8 @@ class CriteriaBuilder<T> extends AbstractCriteriaBuilder {
      * @param additionalCriteria Any additional criteria
      * @return An observable that emits a list
      */
-    Observable<List<T>> list(@DelegatesTo(CriteriaBuilder) Closure additionalCriteria ) {
-        findAll(Collections.emptyMap(), additionalCriteria).toList()
+    Observable<List<T>> list(@DelegatesTo(CriteriaBuilder) Closure additionalCriteria) {
+        findAll(Collections.emptyMap(), additionalCriteria).toList().toObservable()
     }
 
     /**
@@ -141,11 +138,10 @@ class CriteriaBuilder<T> extends AbstractCriteriaBuilder {
      * @return The total results
      */
     Observable<Number> count(Map args, @DelegatesTo(CriteriaBuilder) Closure additionalCriteria = null) {
-        Query query = prepareQuery(args, additionalCriteria)
+        prepareQuery(args, additionalCriteria)
         query.projections().count()
         return ((RxQuery)query).singleResult(args)
     }
-
 
     /**
      * Calculates the total number of matches for the query
@@ -160,22 +156,21 @@ class CriteriaBuilder<T> extends AbstractCriteriaBuilder {
 
     Observable<List<T>> listDistinct(Map args = Collections.emptyMap(), @DelegatesTo(CriteriaBuilder) Closure additionalCriteria = null) {
         prepareQuery(args, additionalCriteria)
-        query.projections().distinct();
+        query.projections().distinct()
 
-        ((RxQuery)query).findAll(args).toList()
+        ((RxQuery)query).findAll(args).toList().toObservable()
     }
 
     Observable<List> listDistinct(@DelegatesTo(CriteriaBuilder) Closure callable) {
         listDistinct(Collections.emptyMap(), callable)
     }
 
-
     protected void prepareQuery(Map args, Closure additionalCriteria) {
         ensureQueryIsInitialized()
-        populateArgumentsForCriteria(targetClass, query, args);
+        populateArgumentsForCriteria(targetClass, query, args)
         invokeClosureNode(additionalCriteria)
         for (Query.Order orderEntry : orderEntries) {
-            query.order(orderEntry);
+            query.order(orderEntry)
         }
     }
 

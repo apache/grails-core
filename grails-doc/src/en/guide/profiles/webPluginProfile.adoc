@@ -92,7 +92,6 @@ Provided Features:
 * markup-views - Adds support for Markup Views to the project
 * mongodb - Adds GORM for MongoDB to the project
 * neo4j - Adds GORM for Neo4j to the project
-* rx-mongodb - Adds RxGORM for MongoDB to the project
 * asset-pipeline-plugin - Adds Asset Pipeline to a Grails Plugin for packaging
 * maven-publish - Publish Artifacts to Maven Central
 ----

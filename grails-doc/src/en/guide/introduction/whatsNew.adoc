@@ -42,6 +42,34 @@ See xref:commandLine#gradleConfigurationCache[Using the Gradle Configuration Cac
 
 Grails Micronaut is maintained and released from the https://github.com/apache/grails-micronaut[Apache Grails Micronaut repository] and consumes published Grails Core artifacts.
 
+==== Groovy's invokedynamic default applies again
+
+Grails 7 and 8 compile every Groovy source set of an application without invokedynamic, because Groovy 4 and 5 ran dynamic code markedly slower with it (https://github.com/apache/grails-core/issues/15293[#15293]).
+Grails 9 runs on Groovy 6 and no longer overrides the compiler: unless the build sets `grails { indy }`, each Groovy compile task keeps the Groovy compiler's own default, which is invokedynamic.
+Grails' own published modules are compiled with invokedynamic as well.
+
+To keep compiling classic call sites, set it in `build.gradle`:
+
+[source,groovy]
+.build.gradle
+----
+grails {
+    indy = false
+}
+----
+
+On Groovy 6, classic call sites need `org.apache.groovy:groovy-callsite` on the classpath. Grails does not carry it, so an application that opts out declares it, at the version the Grails BOM manages:
+
+[source,groovy]
+.build.gradle
+----
+dependencies {
+    implementation 'org.apache.groovy:groovy-callsite'
+}
+----
+
+An application that keeps the default never ships the module. The same dependency is needed, whatever the application's own setting, for a library that was compiled with classic call sites, because Groovy 6 can load such a class only with the module: `org.testcontainers:testcontainers-spock` is one, so declare the module as `testRuntimeOnly` next to it.
+
 ==== Spring Boot 4.1 and Spring Framework 7
 
 Grails {grailsMajorVersion} is built on Spring Boot {springBootVersion} and Spring Framework {springVersion}.
@@ -58,6 +86,65 @@ Jackson `JsonMapper`, so a Grails application and a Spring Boot application retu
 `ZoneId` and `TimeZone` as their IDs, and `Date`, `Calendar` and `ZonedDateTime` map keys as their values
 render. See the Date and Time Rendering sections of the REST and JSON Views guides, and the upgrade guide for the
 types that render differently than in Grails 7.
+
+==== JSON Responses Through Spring Boot's Jackson Mapper, and RFC 9457 Problems
+
+With `grails.web.rendering.json.spring: true`, `respond` writes JSON through Spring MVC's message converters, with a
+mapper Grails derives from Spring Boot's Jackson `JsonMapper`, so the `spring.jackson.*` settings and the application's
+Jackson modules apply to its responses as they do in a Spring Boot application. `render json: value` writes with the
+same mapper, and `grails.converters.json.legacy: false` makes `grails.converters.JSON` write through Spring Boot's
+mapper as well. Grails 9 keeps Grails 8's JSON by default.
+
+Named Jackson configurations, registered with the `NamedJsonConfigurationRegistry` bean, are selected for each response,
+in place of the thread-local `JSON.use(...)`. Every registry has a `deep` configuration, which writes the associations of
+domain class instances in full:
+
+[source,groovy]
+----
+respond book, jsonConfiguration: 'catalog'
+render json: book, jsonConfiguration: 'deep', excludes: ['isbn']
+----
+
+`respond` writes a Spring `ProblemDetail` as Spring MVC writes one that a handler method returns, with the handler of
+Spring MVC's handler adapter, so the application's `ResponseBodyAdvice` and `ErrorResponse.Interceptor` beans apply to
+it: as `application/problem+json`, or as `application/problem+xml` for a request that asks for a problem in XML where
+the action responds in XML and `jackson-dataformat-xml` is present, with the status the problem carries unless `respond`
+is given one, as a `ResponseEntity` is in Spring MVC. A Spring `ErrorResponse`, such as an `ErrorResponseException`,
+is answered the same way, with its status and headers. `ValidationProblemDetailFactory` creates a problem for
+validation errors.
+
+With `grails.databinding.json.jackson: true`, JSON request bodies are bound as Spring Boot's mapper parses them, with its
+`spring.jackson.*` parser settings, in place of Groovy's `JsonSlurper`.
+
+XML conversion, binding and renderers move to the `grails-xml` module, which the Grails 9 web starter and
+`grails-web-boot` still bring, and which a JSON-only application can exclude. Grails reads the `Accept` and
+`Content-Type` headers with Spring's media type parser, so media type names match whatever their case.
+
+With `grails.exceptionresolver.springHandlers: true`, which Grails 10 makes the default, an exception a controller
+action throws is resolved first as Spring MVC resolves one a handler method throws: by the `@ExceptionHandler` methods
+of the controller and of the `@ControllerAdvice` beans that apply to it, Spring Boot's handler of
+`spring.mvc.problemdetails.enabled` among them, which answers the exceptions of Spring MVC with RFC 9457 problems. See
+xref:theWebLayer#controllerExceptionHandling[Declarative Controller Exception Handling].
+
+An action can return what a Spring MVC handler method returns to write the response, such as a `ResponseEntity`, a
+`ProblemDetail` or a `StreamingResponseBody`, and Spring MVC writes it with the return value handlers of its handler
+adapter, the `ResponseBodyAdvice` beans that apply to the controller, and the action's `@JsonView` and
+`@ResponseStatus`. With `grails.controllers.responseBody: true`, which Grails 10 makes the default, so does any value of
+an action annotated `@ResponseBody`, a `CompletableFuture` it returns included. The `@JsonView` of an action also
+selects the properties `respond` writes through Spring MVC. See
+xref:theWebLayer#springResponses[Returning Spring MVC Responses].
+
+See xref:upgrading#upgrading90x[Upgrading from Grails 8 to Grails 9], sections 4 to 11 and 13 to 16.
+
+==== Hibernate 7 Criteria Queries Can Be Extended
+
+A plugin or an application can add its own criteria and orders to the Hibernate 7 criteria builder. A criterion
+handler now receives the query context, through which it resolves a property path, whether through an alias created
+with `createAlias` or an association, to the join GORM created for it, so a custom criterion and a built-in one on
+the same association restrict the same row. A new order handler turns a `Query.Order` subclass into a JPA order by
+any expression, such as `random()` or a SQL formula, in its place among the query's orders. Both kinds of handler
+are registered in code, or by a plugin through `META-INF/services` providers that are loaded when the first query
+runs. See the section on extending the criteria builder in the GORM for Hibernate 7 guide.
 
 ==== Hibernate 7 Application Generation
 
@@ -84,6 +171,47 @@ grails -t forge create-app --features=gorm-async com.example.demo
 
 The feature layers on top of whichever GORM implementation is selected, defaulting to Hibernate when none is chosen.
 The `grails-datamapping-async` artifact it brings in is intended for direct consumption by applications and libraries, so it moved from the `org.apache.grails.data` group to `org.apache.grails`; see the xref:upgrading#upgrading80x[upgrade guide] for the coordinate change.
+
+==== Spring AI Integration
+
+The new `grails-spring-ai` plugin integrates https://spring.io/projects/spring-ai[Spring AI] {springAiVersion}.
+The Spring AI version is managed by the Grails BOM, a `ChatClient.Builder` is auto-configured for whichever provider the application adds, the plugin ships defaults suited to a web application, and `grails-testing-support-ai` gives unit and integration tests a scripted chat model so they need neither a provider nor credentials.
+New applications select it with the `grails-spring-ai`, `spring-ai-openai`, `spring-ai-anthropic` or `spring-ai-ollama` features, and the `org.apache.grails.skills:grails-ai-developer` agent skill teaches AI coding agents the same.
+See xref:usingAi#aiInstallation[Using AI in Your Application].
+
+==== Streaming Responses from Controller Actions
+
+A controller action can return a Reactive Streams `Publisher`, such as a Reactor `Flux`, and Grails streams every item it emits to the client as a server-sent event while the container thread is released.
+Items are rendered as text or JSON, or through a `StreamItemRenderer` bean for a type of its own, which is how `grails-spring-ai` streams the chat responses of a model.
+Such an action streams instead of rendering its view as it did before; set `grails.async.streaming.enabled` to `false` to keep the previous behaviour. A publisher that emits at most one item, such as a Reactor `Mono`, is not streamed but resolved, its value being the action's result as a returned `Promise`'s value is. See xref:upgrading#upgrading81x[the upgrade guide].
+See xref:async#asyncStreaming[Streaming Responses].
+
+==== RxJava Data Services on RxJava 3
+
+`grails-datamapping-rx` is built on RxJava 3 instead of the unmaintained RxJava 1, so a GORM data service
+method can declare `io.reactivex.rxjava3.core.Observable` or `io.reactivex.rxjava3.core.Single` and GORM
+implements it over any GORM datastore. The `RxEntity` reactive domain model in the same module is also
+ported, but still has no datastore implementation behind it and is proposed for removal in 9.0; see the
+xref:upgrading#upgrading90x[upgrade guide] for the import and blocking-call changes an application that
+uses either needs. See <<rxjava,RxJava Support>>.
+
+==== RxJava 1 and RxJava 2 Modules Deprecated
+
+The RxJava 1 and RxJava 2 implementations of the Grails promise and event bus APIs, `grails-async-rxjava`,
+`grails-async-rxjava2`, `grails-events-rxjava` and `grails-events-rxjava2`, are deprecated for removal
+since Grails 9.0. Both RxJava versions are no longer maintained. The implementations keep working, and they
+log a warning when their promise factory or event bus is created. The RxJava 3 implementations,
+`grails-async-rxjava3` and `grails-events-rxjava3`, remain supported and are the replacements:
+
+[source,groovy]
+.build.gradle
+----
+runtimeOnly 'org.apache.grails.async:grails-async-rxjava3'
+runtimeOnly 'org.apache.grails.events:grails-events-rxjava3'
+----
+
+The `Promise` and `EventBus` APIs an application uses are the same, so an application that only uses the
+Grails APIs needs no code change. See <<asyncPromises,Promises>> and <<events,Events>>.
 
 ==== Plugin Beans Register Before Spring Boot Auto-Configuration
 
@@ -116,6 +244,22 @@ See the xref:upgrading#upgrading80x[upgrade guide] for details.
 
 Unit tests get the same hooks: a test declares its beans in a `beans` block, as an application or plugin does, or overrides `beanRegistrar()`, or declares a static nested `@Configuration` class — and `doWithSpring()` on the testing traits is deprecated to match.
 See <<unitTesting,Unit Testing>>.
+
+==== Fluent Application Builder with Context Hierarchies
+
+`GrailsAppBuilder` is now a complete counterpart of Spring Boot's `SpringApplicationBuilder`. Every builder method returns the Grails builder, the application it runs is a `GrailsApp` with the Grails startup defaults, and a parent/child context hierarchy built with `child()`, `parent()` and `sibling()` starts a `GrailsApp` in every context:
+
+[source,groovy]
+----
+new GrailsAppBuilder(SharedConfiguration)
+        .child(Application)
+        .run(args)
+----
+
+The Grails plugin lifecycle runs in the one context of the hierarchy whose sources include the `Application` class; the other contexts are plain Spring contexts that share the Grails beans through the parent chain, and a second Grails application in the same hierarchy is refused at startup.
+As in Spring Boot, the parent cannot host a web server, so a web application is the child of a shared parent, while a Grails application that serves no web requests, such as a command-line tool built without the web plugins, can be the parent of plain Spring children.
+A Grails application without a web server no longer prints a `Grails application running at ...` line when it starts.
+See <<applicationBuilder,Building the Application>>.
 
 ==== CLI Commands Move to Companion `-cli` Artifacts
 
@@ -436,7 +580,7 @@ the xref:upgrading#upgrading80x[upgrade guide] for details.
 
 ==== Agent Skills Published with Grails
 
-Grails now publishes its app-facing https://agentskills.io[Agent Skills] with every release: `org.apache.grails.skills:grails-developer`, for building Grails applications, and `org.apache.grails.skills:grails-8-upgrade`, for upgrading an application from Grails 7. The jars use the https://www.skillsjars.com[SkillsJars] layout and the Grails BOM manages them, so an application applies the SkillsJars Gradle plugin, declares the skills without a version, and runs `./gradlew extractSkillsJars` to write the skills for its Grails version to the directory its AI coding agent reads. See xref:gettingStarted#agentSkills[Agent Skills].
+Grails now publishes its app-facing https://agentskills.io[Agent Skills] with every release: `org.apache.grails.skills:grails-developer`, for building Grails applications, `org.apache.grails.skills:grails-8-upgrade`, for upgrading an application from Grails 7, and `org.apache.grails.skills:grails-9-upgrade`, for upgrading an application from Grails 8. The jars use the https://www.skillsjars.com[SkillsJars] layout and the Grails BOM manages them, so an application applies the SkillsJars Gradle plugin, declares the skills without a version, and runs `./gradlew extractSkillsJars` to write the skills for its Grails version to the directory its AI coding agent reads. See xref:gettingStarted#agentSkills[Agent Skills].
 
 ==== Test HTTP Client Form Requests
 
@@ -562,7 +706,9 @@ java -Dspring.aot.enabled=true -jar build/libs/myapp.jar
 
 AOT processing is also what a GraalVM native image requires: Spring Boot refuses to start an image without a
 build-time generated initializer. Reachability metadata for the application's own artefacts and compiled pages is
-written from the build output, and `traceNativeMetadata` records what the framework reflects on along a request path.
+written from the build output, the framework registers the reflection it does on its own behalf while the
+application starts -- finding the plugins, creating their beans and artefacts, and what Groovy does for enums,
+traits and closures -- and `traceNativeMetadata` records what the framework reflects on along a request path.
 
 See the <<deploymentAot,Ahead-of-Time Processing>> section for what it changes at runtime and what it
 does not yet cover.
@@ -585,6 +731,39 @@ grails {
 
 See the <<deploymentAotCache,Ahead-of-Time Caching>> section, which includes measured figures and the
 conditions under which a JVM will decline a cache.
+
+==== Startup Progress Page
+
+With the new `grails-startup-progress` module, which Forge offers as a feature of the same name,
+`./gradlew bootRun` no longer leaves port 8080 closed while the application starts. From the moment the
+application context is prepared, a browser opening the application sees a progress page: the stage the start
+has reached, how many beans have been created and which one is being created now, and the beans that have
+taken longest so far. The page reloads into the application once it is ready, after `BootStrap` has run, and
+shows the exception if the start fails. It is on by default in development mode and can be turned on
+elsewhere with `grails.startup.progress.enabled`. With `grails.startup.progress.openBrowser`, which `bootRun`
+also takes as a Gradle property, for example `./gradlew bootRun -Pgrails.startup.progress.openBrowser`, a
+browser opens on the page as the application starts. Bean names and failures are shown only to a browser signed
+in with the address the application logs, which the browser it opens is. Once the application is running, the
+same view is a report of how long each stage of the start took, at `/__grails/startup`, and a client sending
+`Accept: application/json` gets it as data. Work done during the start can report its own progress with
+`grails.boot.StartupTask`, which the database migration plugin uses to show how many change sets are left to
+run. See <<startupProgress,Watching the Application Start>>.
+
+==== Finding Query-Heavy Pages with query-tail
+
+The new `query-tail` command shows the pages of a running application ranked by the statements they run per
+request, and for each page the statement that repeats most within one request, which is what an N+1 looks like.
+It covers every store GORM runs statements on: SQL through Hibernate 5 and 7, Cypher through Neo4j and commands
+through MongoDB. With the GORM GraphQL plugin, each GraphQL operation is a page of its own, such as
+`graphql/index (query BookList)`.
+Start the application with `grails run-app --query-tail` (or `./gradlew bootRun -Pgrails.gorm.queryTail.enabled`), then
+`grails query-tail` in a second terminal follows the capture and refreshes as requests are served. `--statements`
+ranks the statements, `--page=book/show` shows one page's, `--stream` prints each statement as it runs, and
+`--all --once` reports a whole run, including an integration test run. The command reads a capture file and does
+not boot the application. Capture is off unless the application is started with it, and an application started
+without it carries nothing that records. Statements are captured without their values: literals are recorded as `?`
+and comments are dropped, while the database runs each statement as written. See
+xref:conf#queryTail[Finding Query-Heavy Pages with query-tail].
 
 ==== Banner Colour, Container Version and Start Mark
 
@@ -643,6 +822,10 @@ cron expression, date or trigger names the argument that is missing, and calling
 scheduler does not know about explains why it is not registered — neither ends in a `NullPointerException`
 any more. See <<quartzLongRunningJobs,Long-Running Jobs>> for what a job that outlives its trigger's
 interval needs, and <<upgrading80x>> for the details.
+
+==== Faster Configuration Lookups
+
+`grailsApplication.config.getProperty` no longer probes the process environment on every call. The environment is read once, when the configuration is created, and its variable names are indexed, so a property that no variable can match is answered without touching `System.getenv`. A test that installs environment variables installs them before the application context is created, or calls `refresh()` on the configuration afterwards to have them seen; see xref:upgrading#upgrading81x[the upgrade guide].
 
 ==== Compiled Tag Resolution
 

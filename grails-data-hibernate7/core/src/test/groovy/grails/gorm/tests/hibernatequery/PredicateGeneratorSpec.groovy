@@ -59,6 +59,44 @@ class PredicateGeneratorSpec extends HibernateGormDatastoreSpec {
         predicateGenerator = new PredicateGenerator(cb, session.datastore.mappingContext.conversionService)
     }
 
+    def "test getPredicates gives a contextual criterion handler the query context"() {
+        given:
+        JpaQueryContext seen = null
+        PredicateGenerator.registerCriterionHandler(PredicateGeneratorSpecMarker, { q, r, cb, criterion, context ->
+            seen = context
+            cb.conjunction()
+        } as PredicateGenerator.ContextualCriterionHandler)
+
+        when:
+        def predicates = predicateGenerator.getPredicates(query, root, [new PredicateGeneratorSpecMarker()], fromProvider, personEntity)
+
+        then:
+        predicates.length == 1
+        seen.is(fromProvider)
+
+        cleanup:
+        PredicateGenerator.clearCustomCriterionHandlers()
+    }
+
+    def "test getPredicates still calls a criterion handler that takes no context"() {
+        given:
+        boolean called = false
+        PredicateGenerator.registerCriterionHandler(PredicateGeneratorSpecMarker) { q, r, cb, criterion ->
+            called = true
+            cb.conjunction()
+        }
+
+        when:
+        def predicates = predicateGenerator.getPredicates(query, root, [new PredicateGeneratorSpecMarker()], fromProvider, personEntity)
+
+        then:
+        predicates.length == 1
+        called
+
+        cleanup:
+        PredicateGenerator.clearCustomCriterionHandlers()
+    }
+
     def "test getPredicates with Equals criterion"() {
         given:
         List criteria = [new Query.Equals("firstName", "Bob")]
@@ -571,6 +609,10 @@ class PredicateGeneratorSpec extends HibernateGormDatastoreSpec {
         then:
         predicates.length == 1
     }
+}
+
+/** A criterion with no built-in handling, so only a registered handler converts it. */
+class PredicateGeneratorSpecMarker implements Query.Criterion {
 }
 
 @Entity

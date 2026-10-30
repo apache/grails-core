@@ -1,0 +1,43 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+Add the plugin and one provider starter. Spring AI's version comes from the Grails BOM, so neither needs a version:
+
+[source,groovy]
+.build.gradle
+----
+dependencies {
+    implementation 'org.apache.grails:grails-spring-ai'
+    implementation 'org.springframework.ai:spring-ai-starter-model-openai'
+    testImplementation 'org.apache.grails:grails-testing-support-ai'
+}
+----
+
+The plugin provides the chat client and the auto-configuration every provider shares; the starter provides the model. Spring AI implements each provider as a separate module, so the application names the one it talks to, and `grails-spring-ai` does not pick one for it. Any provider works in place of OpenAI here; <<aiProviders,Model Providers>> lists them with what each needs. The same goes for the other Spring AI starters, such as a vector store or the MCP client: declare them without a version and the BOM supplies it.
+
+The provider's credentials go in its own properties, such as `spring.ai.openai.api-key`. Read them from the environment rather than committing them:
+
+Credentials come from the environment: Spring AI reads the key from the provider's environment variable, `OPENAI_API_KEY` here, `ANTHROPIC_API_KEY` for Anthropic, when the configuration sets none. An application that gets the key from elsewhere sets `spring.ai.openai.api-key` itself; do not set it to a placeholder such as `${OPENAI_API_KEY}`, which is sent as the key, and fails as one, when the variable is unset.
+
+A new application gets all of this from the `grails-spring-ai` feature, or from one of the `spring-ai-openai`, `spring-ai-anthropic` and `spring-ai-ollama` features, which add the provider's starter and its configuration as well. The provider features exclude one another, since a second starter would auto-configure a second chat model with nothing to choose between them:
+
+[source,console]
+----
+$ grails -t forge create-app my-app --features spring-ai-openai
+----

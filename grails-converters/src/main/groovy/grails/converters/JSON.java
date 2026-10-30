@@ -23,11 +23,19 @@ import java.io.InputStream;
 import java.io.PushbackInputStream;
 import java.io.Reader;
 import java.io.Writer;
+import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Stack;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.BiConsumer;
+import java.util.function.BiPredicate;
+import java.util.function.Function;
 
 import groovy.lang.Closure;
 import groovy.util.BuilderSupport;
@@ -49,8 +57,13 @@ import org.grails.web.converters.configuration.ConverterConfiguration;
 import org.grails.web.converters.configuration.ConvertersConfigurationHolder;
 import org.grails.web.converters.configuration.DefaultConverterConfiguration;
 import org.grails.web.converters.exceptions.ConverterException;
+import org.grails.web.converters.jackson.ConverterJsonModule;
+import org.grails.web.converters.jackson.DomainClassJacksonModule;
+import org.grails.web.converters.jackson.DomainClassRenderer;
+import org.grails.web.converters.jackson.DomainClassRendering;
 import org.grails.web.converters.marshaller.ClosureObjectMarshaller;
 import org.grails.web.converters.marshaller.ObjectMarshaller;
+import org.grails.web.converters.marshaller.json.JsonMapperValueMarshaller;
 import org.grails.web.json.JSONArray;
 import org.grails.web.json.JSONElement;
 import org.grails.web.json.JSONException;
@@ -58,6 +71,8 @@ import org.grails.web.json.JSONObject;
 import org.grails.web.json.JSONTokener;
 import org.grails.web.json.JSONWriter;
 import org.grails.web.json.JsonDateFormat;
+import org.grails.web.json.JsonMapperSupport;
+import org.grails.web.json.JsonMapperValue;
 import org.grails.web.json.PathCapturingJSONWriterWrapper;
 import org.grails.web.json.PrettyPrintJSONWriter;
 
@@ -78,6 +93,27 @@ public class JSON extends AbstractConverter<JSONWriter> implements IncludeExclud
     protected boolean prettyPrint;
     protected JSONWriter writer;
     protected Stack<Object> referenceStack;
+
+    /** How many JSON objects and arrays each object on the reference stack is written in, where the writer knows it. */
+    private Map<Object, Integer> referenceDepths = new IdentityHashMap<>();
+
+    /** Whether this render wraps the root value in an object, whose key is part of the path of every value in it. */
+    private boolean rootWrapped;
+
+    /** For each class written in the place of a proxy in this render, the class of the proxy, whose includes apply to it. */
+    private Map<Class<?>, Class<?>> projectedAs = new ConcurrentHashMap<>();
+
+    /** The filters and renderings of the objects being written when a proxy's includes came to apply to their class. */
+    private Map<Object, BiPredicate<String, String>> pinnedFilters = new IdentityHashMap<>();
+    private Map<Object, DomainClassRendering> pinnedRenderings = new IdentityHashMap<>();
+    protected JsonMapperSupport jsonMapperSupport;
+
+    private Map<Class<?>, DomainClassRendering> domainClassRenderings = new ConcurrentHashMap<>();
+
+    private Map<Class<?>, BiPredicate<String, String>> propertyFilters = new ConcurrentHashMap<>();
+
+    private static final BiPredicate<String, String> NO_FILTER = (property, written) -> true;
+    private JSONWriter jsonWriter;
 
     protected ConverterConfiguration<JSON> initConfig() {
         return ConvertersConfigurationHolder.getConverterConfiguration(JSON.class);
@@ -108,8 +144,21 @@ public class JSON extends AbstractConverter<JSONWriter> implements IncludeExclud
         this.prettyPrint = prettyPrint;
     }
 
+    @SuppressWarnings("deprecation")
     private void prepareRender(Writer out) {
-        writer = prettyPrint ? new PrettyPrintJSONWriter(out) : new JSONWriter(out);
+        // a domain class instance is rendered as the converter's marshaller for it asks, with its includes and excludes
+        domainClassRenderings = new ConcurrentHashMap<>();
+        propertyFilters = new ConcurrentHashMap<>();
+        JsonMapperSupport configured = ConvertersConfigurationHolder.getJsonMapperSupport();
+        // The legacy converter's mapper writes only the JSON text, so neither attribute is read
+        jsonMapperSupport = ConvertersConfigurationHolder.isLegacyJson() ? configured : configured
+                .withAttribute(DomainClassJacksonModule.RENDERINGS, (Function<Object, DomainClassRendering>) this::domainClassRendering)
+                .withAttribute(DomainClassJacksonModule.STAND_INS, (BiConsumer<Object, Object>) this::projectAs)
+                .withAttribute(ConverterJsonModule.PROPERTY_FILTERS, (Function<Object, BiPredicate<String, String>>) this::propertyFilter);
+        jsonWriter = prettyPrint && ConvertersConfigurationHolder.isLegacyJson() ?
+                new PrettyPrintJSONWriter(out, jsonMapperSupport, PrettyPrintJSONWriter.DEFAULT_INDENT_STR) :
+                new JSONWriter(out, jsonMapperSupport, prettyPrint);
+        writer = jsonWriter;
         if (circularReferenceBehaviour == CircularReferenceBehaviour.PATH) {
             if (log.isInfoEnabled()) {
                 log.info(String.format("Using experimental CircularReferenceBehaviour.PATH for %s", getClass().getName()));
@@ -117,10 +166,15 @@ public class JSON extends AbstractConverter<JSONWriter> implements IncludeExclud
             writer = new PathCapturingJSONWriterWrapper(writer);
         }
         referenceStack = new Stack<>();
+        referenceDepths = new IdentityHashMap<>();
+        projectedAs = new ConcurrentHashMap<>();
+        pinnedFilters = new IdentityHashMap<>();
+        pinnedRenderings = new IdentityHashMap<>();
     }
 
     private void finalizeRender(Writer out) {
         try {
+            jsonWriter.flush();
             out.flush();
             out.close();
         }
@@ -133,12 +187,40 @@ public class JSON extends AbstractConverter<JSONWriter> implements IncludeExclud
      * Directs the JSON Writer to the given Writer
      *
      * @param out the Writer
-     * @throws org.grails.web.converters.exceptions.ConverterException
+     * @throws org.grails.web.converters.exceptions.ConverterException where the value cannot be written, also where it is
+     *         nested deeper than the thread's stack lets the converter write it
      *
      */
     public void render(Writer out) throws ConverterException {
         prepareRender(out);
-        value(target);
+        try {
+            Object root = target == null || ConvertersConfigurationHolder.isLegacyJson() ? null :
+                    config.getProxyHandler().unwrapIfProxy(target);
+            String rootName = root == null ? null : jsonMapperSupport.rootName(root.getClass());
+            rootWrapped = rootName != null;
+            if (rootWrapped) {
+                // as the mapper wraps a value it writes on its own, as Spring Boot wraps the body of a response
+                try {
+                    writer.object();
+                    writer.key(rootName);
+                    value(target);
+                    writer.endObject();
+                }
+                catch (JSONException e) {
+                    throw new ConverterException(e);
+                }
+            }
+            else {
+                value(target);
+            }
+        }
+        catch (StackOverflowError e) {
+            // caught once the stack has unwound: a value nested deeper than the thread's stack lets the converter write
+            // it, such as an object graph without end, fails as a value the converter cannot write does, as Jackson
+            // reports a bean it overflows the stack writing
+            throw new ConverterException("The value is nested deeper than the thread's stack lets the converter write it, " +
+                    "or is an object graph without end", e);
+        }
         finalizeRender(out);
     }
 
@@ -179,10 +261,19 @@ public class JSON extends AbstractConverter<JSONWriter> implements IncludeExclud
      * @throws ConverterException
      */
     public void value(Object o) throws ConverterException {
-        o = config.getProxyHandler().unwrapIfProxy(o);
+        Object unwrapped = config.getProxyHandler().unwrapIfProxy(o);
+        if (unwrapped != o && unwrapped != null) {
+            standIn(o, unwrapped);
+        }
+        o = unwrapped;
         try {
             if (o == null) {
                 writer.valueNull();
+            }
+            else if (!ConvertersConfigurationHolder.isLegacyJson() && isScalar(o) &&
+                    getJsonMapperSupport().hasCustomSerializer(o.getClass())) {
+                // as the mapper writes it inside a container, with the serializer a module of the application gives its type
+                writer.value(new JsonMapperValue(o, getJsonMapperSupport()));
             }
             else if (o instanceof CharSequence) {
                 writer.value(o);
@@ -190,25 +281,31 @@ public class JSON extends AbstractConverter<JSONWriter> implements IncludeExclud
             else if (o instanceof Class<?>) {
                 writer.value(((Class<?>) o).getName());
             }
-            else if (o instanceof Number) {
-                writer.value((Number) o);
+            else if (o instanceof Number number && (ConvertersConfigurationHolder.isLegacyJson() || isJdkNumber(number))) {
+                // another Number is rendered by its marshaller, such as one the JsonMapper has a serializer for
+                writer.value(number);
             } else if (o instanceof Boolean) {
                 writer.value((Boolean) o);
             } else if (o.getClass().isPrimitive() && !o.getClass().equals(byte[].class)) {
                 writer.value(o);
             }
             else {
-                if (referenceStack.contains(o)) {
+                ObjectMarshaller<JSON> marshaller = config.getMarshaller(o);
+                if (referenceIndex(o) >= 0 && !writesObjectId(o, marshaller)) {
                     handleCircularRelationship(o);
                 }
                 else {
                     referenceStack.push(o);
-                    ObjectMarshaller<JSON> marshaller = config.getMarshaller(o);
+                    int depth = jsonWriter != null && !ConvertersConfigurationHolder.isLegacyJson() ? jsonWriter.nestingDepth() : -1;
+                    if (depth >= 0) {
+                        referenceDepths.put(o, depth);
+                    }
                     if (marshaller == null) {
                         throw new ConverterException("Unconvertable Object of class: " + o.getClass().getName());
                     }
                     marshaller.marshalObject(o, this);
                     referenceStack.pop();
+                    referenceDepths.remove(o);
                 }
             }
         }
@@ -218,6 +315,150 @@ public class JSON extends AbstractConverter<JSONWriter> implements IncludeExclud
         catch (JSONException e) {
             throw new ConverterException(e);
         }
+    }
+
+    /**
+     * Whether a value reached again is written as the object id the mapper gives it, rather than as a circular
+     * reference: only when the mapper writes the value, and writes it with object ids.
+     */
+    private boolean writesObjectId(Object o, ObjectMarshaller<JSON> marshaller) {
+        return !ConvertersConfigurationHolder.isLegacyJson() && JsonMapperValueMarshaller.writesWithMapper(marshaller) &&
+                getJsonMapperSupport().writesObjectIds(o.getClass());
+    }
+
+    /**
+     * Records that an instance is written in the place of a value that stands for it, such as the instance a proxy
+     * proxies: it is written as the {@code JsonMapper} writes it in the place of the value, and, from then on in this
+     * render, the includes and excludes the converter has for the class of the value apply to the instances of the class
+     * of the instance that have none of their own, as the projection of {@code respond} is given it; an object of that
+     * class the converter is already writing keeps those it started with. A marshaller that writes such an instance calls
+     * it before it writes the instance.
+     *
+     * @param value the value, such as a proxy
+     * @param instance the instance written in its place
+     * @since 9.0
+     */
+    public void standIn(Object value, Object instance) {
+        if (writer != null) {
+            writer.standIn(value, instance);
+        }
+        projectAs(value, instance);
+    }
+
+    /**
+     * The includes and excludes for the class of a proxy apply to the class of the instance written in its place, until the
+     * render ends; the domain class serializer tells of a proxy it unwraps itself, where the proxy handler leaves a GORM
+     * proxy as it is. An object of that class the converter is writing keeps the includes and excludes it started with.
+     */
+    private void projectAs(Object value, Object instance) {
+        Class<?> type = value.getClass();
+        if (instance == null || instance.getClass() == type || !includes.containsKey(type) && !excludes.containsKey(type)) {
+            return;
+        }
+        Class<?> written = instance.getClass();
+        if (projectedAs.containsKey(written)) {
+            return;
+        }
+        for (Object being : referenceStack != null ? referenceStack : List.of()) {
+            if (being.getClass() == written) {
+                pinnedFilters.putIfAbsent(being, propertyFilters.computeIfAbsent(written, this::createPropertyFilter));
+                pinnedRenderings.putIfAbsent(being, domainClassRendering(being));
+            }
+        }
+        projectedAs.put(written, type);
+        propertyFilters.remove(written);
+        domainClassRenderings.remove(written);
+    }
+
+    /**
+     * The class whose includes and excludes apply to a class: the proxy class it was written in the place of, where it has
+     * none of its own, or else itself.
+     */
+    private Class<?> projectionClass(Class<?> type) {
+        if (type == null || includes.containsKey(type) || excludes.containsKey(type)) {
+            return type;
+        }
+        return projectedAs.getOrDefault(type, type);
+    }
+
+    /** The includes for a class, or else those of the proxy class whose instances it was written in the place of. */
+    @Override
+    @SuppressWarnings("rawtypes")
+    public List<String> getIncludes(Class type) {
+        return includes.get(projectionClass(type));
+    }
+
+    /** The excludes for a class, or else those of the proxy class whose instances it was written in the place of. */
+    @Override
+    @SuppressWarnings("rawtypes")
+    public List<String> getExcludes(Class type) {
+        return excludes.get(projectionClass(type));
+    }
+
+    /** A string, class name, boolean or number the converter writes as a single JSON value itself. */
+    private static boolean isScalar(Object o) {
+        return o instanceof CharSequence || o instanceof Class<?> || o instanceof Boolean ||
+                (o instanceof Number number && isJdkNumber(number));
+    }
+
+    private static boolean isJdkNumber(Number number) {
+        return number instanceof Integer || number instanceof Long || number instanceof Double || number instanceof BigDecimal ||
+                number instanceof Short || number instanceof Byte || number instanceof Float || number instanceof BigInteger;
+    }
+
+    /**
+     * Which properties of a bean the converter writes: those its includes and excludes for the class of the bean allow,
+     * which name a property by the name the class gives it or by the name it is written with, as those of
+     * {@code render} and {@code respond} do.
+     */
+    private BiPredicate<String, String> propertyFilter(Object bean) {
+        BiPredicate<String, String> filter = pinnedFilters.get(bean);
+        if (filter == null) {
+            filter = propertyFilters.computeIfAbsent(bean.getClass(), this::createPropertyFilter);
+        }
+        return filter == NO_FILTER ? null : filter;
+    }
+
+    private BiPredicate<String, String> createPropertyFilter(Class<?> type) {
+        List<String> includes = getIncludes(type);
+        List<String> excludes = getExcludes(type);
+        // empty includes include none of the properties, as the legacy marshallers have them
+        if (includes == null && (excludes == null || excludes.isEmpty())) {
+            return NO_FILTER;
+        }
+        return (property, written) -> (excludes == null || !excludes.contains(property) && !excludes.contains(written)) &&
+                (includes == null || includes.contains(property) || includes.contains(written));
+    }
+
+    private DomainClassRendering domainClassRendering(Object instance) {
+        if (pinnedRenderings.containsKey(instance)) {
+            return pinnedRenderings.get(instance);
+        }
+        if (!(lookupObjectMarshaller(instance) instanceof DomainClassRenderer renderer)) {
+            return null;
+        }
+        return domainClassRenderings.computeIfAbsent(instance.getClass(), type -> renderer.getRendering(this, type));
+    }
+
+    /**
+     * @return the JsonMapper this converter writes with
+     * @since 9.0
+     */
+    public JsonMapperSupport getJsonMapperSupport() {
+        return jsonMapperSupport != null ? jsonMapperSupport : ConvertersConfigurationHolder.getJsonMapperSupport();
+    }
+
+    /**
+     * The JSON object key for a map key, as the JsonMapper writes it: a {@code String} key as it is, and a
+     * {@code Date} key, for example, in the mapper's date format. Rendering as Grails 8 did
+     * ({@code grails.converters.json.legacy}), a date key as a UTC instant and any other key as its {@code toString()}.
+     *
+     * @param key a non-null map key
+     * @return the JSON object key
+     * @since 9.0
+     */
+    public String formatKey(Object key) {
+        return ConvertersConfigurationHolder.isLegacyJson() ? JsonDateFormat.formatKey(key) : getJsonMapperSupport().formatKey(key);
     }
 
     public ObjectMarshaller<JSON> lookupObjectMarshaller(Object target) {
@@ -241,17 +482,28 @@ public class JSON extends AbstractConverter<JSONWriter> implements IncludeExclud
      * @throws JSONException
      */
     public String toString(boolean prettyPrint) throws JSONException {
-        String json = super.toString();
-        if (prettyPrint) {
-            Object jsonObject = new JSONTokener(json).nextValue();
-            if (jsonObject instanceof JSONObject) {
-                return ((JSONObject) jsonObject).toString(3);
+        if (ConvertersConfigurationHolder.isLegacyJson()) {
+            // as Grails 8 rendered it: with the configured pretty printing, and indented by three spaces for true
+            String json = super.toString();
+            if (prettyPrint) {
+                Object value = new JSONTokener(json).nextValue();
+                if (value instanceof JSONObject jsonObject) {
+                    return jsonObject.toString(3);
+                }
+                if (value instanceof JSONArray jsonArray) {
+                    return jsonArray.toString(3);
+                }
             }
-            if (jsonObject instanceof JSONArray) {
-                return ((JSONArray) jsonObject).toString(3);
-            }
+            return json;
         }
-        return json;
+        boolean configuredPrettyPrint = this.prettyPrint;
+        this.prettyPrint = prettyPrint;
+        try {
+            return super.toString();
+        }
+        finally {
+            this.prettyPrint = configuredPrettyPrint;
+        }
     }
 
     /**
@@ -266,7 +518,10 @@ public class JSON extends AbstractConverter<JSONWriter> implements IncludeExclud
     }
 
     /**
-     * Parses the given JSON String and returns either a JSONObject or a JSONArray
+     * Parses the given JSON String and returns either a JSONObject or a JSONArray. With
+     * {@code grails.converters.json.legacy} set to {@code false}, the application's Jackson mapper parses it, and what it
+     * accepts is what its read features allow, such as {@code spring.jackson.json.read.allow-java-comments}; otherwise Grails'
+     * own parser does, which also accepts single quotes, comments, unquoted values and the like.
      *
      * @param source A string containing some JSON
      * @return either a JSONObject or a JSONArray - depending on the given JSON
@@ -274,7 +529,8 @@ public class JSON extends AbstractConverter<JSONWriter> implements IncludeExclud
      */
     public static JSONElement parse(String source) throws ConverterException {
         try {
-            final Object value = new JSONTokener(source).nextValue();
+            final Object value = ConvertersConfigurationHolder.isLegacyJson() ?
+                    new JSONTokener(source).nextValue() : ConvertersConfigurationHolder.getJsonMapperSupport().parse(source);
             if (value instanceof JSONElement) {
                 return (JSONElement) value;
             }
@@ -357,15 +613,16 @@ public class JSON extends AbstractConverter<JSONWriter> implements IncludeExclud
                 final boolean isCollection = Collection.class.isAssignableFrom(o.getClass());
                 final boolean isMap = Map.class.isAssignableFrom(o.getClass());
                 if (!(isMap || isCollection)) {
-                    Map<String, Object> props = new HashMap<>();
-                    props.put("class", o.getClass());
-                    StringBuilder ref = new StringBuilder();
-                    int idx = referenceStack.indexOf(o);
-                    for (int i = referenceStack.size() - 1; i > idx; i--) {
-                        ref.append("../");
-                    }
-                    props.put("_ref", ref.substring(0, ref.length() - 1));
-                    value(props);
+                    // One step up for each JSON object or array from the one the reference is written in to the value the
+                    // object is written as, its type wrapper included, as respond counts them; the legacy converter, and a
+                    // writer that writes to no generator, count one for each object the converter is writing in between, as
+                    // Grails 8 did, which a marshaller that writes an object as another value counts twice
+                    int idx = referenceIndex(o);
+                    Integer start = ConvertersConfigurationHolder.isLegacyJson() ? null : referenceDepths.get(o);
+                    int current = jsonWriter != null ? jsonWriter.nestingDepth() : -1;
+                    int levels = start != null && current >= 0 ? Math.max(0, current - start - 1) : referenceStack.size() - 1 - idx;
+                    // "." where the object repeats the one the reference is written in, where Grails 8 failed
+                    writeReference("_ref", levels == 0 ? "." : String.join("/", Collections.nCopies(levels, "..")), o);
                 }
                 else {
                     if (isMap) {
@@ -382,18 +639,61 @@ public class JSON extends AbstractConverter<JSONWriter> implements IncludeExclud
                 value(null);
                 break;
             case PATH:
-                Map<String, Object> props = new HashMap<>();
-                props.put("class", o.getClass());
-                int idx = referenceStack.indexOf(o);
+                int idx = referenceIndex(o);
                 PathCapturingJSONWriterWrapper pcWriter = (PathCapturingJSONWriterWrapper) writer;
-                props.put("ref", String.format("root%s", pcWriter.getStackReference(idx)));
-                value(props);
+                // a wrapped root value is a step further from the root of the JSON text
+                writeReference("ref", String.format("root%s", pcWriter.getStackReference(rootWrapped ? idx + 1 : idx)), o);
                 break;
             case IGNORE:
                 break;
         }
     }
 
+    /**
+     * Where an object is on the stack of the objects being written: the first that is the object itself, as Jackson and
+     * {@code respond} find an object reached again, or, in the legacy converter, the first equal to it, as Grails 8 found
+     * it.
+     *
+     * @return its index, or {@code -1} where it is not being written
+     */
+    private int referenceIndex(Object o) {
+        if (ConvertersConfigurationHolder.isLegacyJson()) {
+            return referenceStack.indexOf(o);
+        }
+        for (int i = 0; i < referenceStack.size(); i++) {
+            if (referenceStack.get(i) == o) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    /**
+     * Writes a reference to an object reached again with its keys in the order Grails 8 wrote them, whatever order the
+     * mapper writes the entries of a map in. The legacy converter writes it as a map, as Grails 8 did.
+     */
+    private void writeReference(String key, String reference, Object o) {
+        if (ConvertersConfigurationHolder.isLegacyJson()) {
+            // a map, as Grails 8 wrote it, which a marshaller the application registers for maps writes
+            Map<String, Object> props = new HashMap<>();
+            props.put("class", o.getClass());
+            props.put(key, reference);
+            value(props);
+            return;
+        }
+        writer.object();
+        writer.key(key);
+        writer.value(reference);
+        writer.key("class");
+        writer.value(o.getClass().getName());
+        writer.endObject();
+    }
+
+    /**
+     * @deprecated Scheduled for removal in Grails 11. Inject {@link grails.converters.json.NamedJsonConfigurationRegistry} and call
+     * {@link grails.converters.json.NamedJsonConfigurationRegistry#writer(String)}.
+     */
+    @Deprecated(since = "9.0", forRemoval = true)
     public static ConverterConfiguration<JSON> getNamedConfig(String configName) throws ConverterException {
         ConverterConfiguration<JSON> cfg = ConvertersConfigurationHolder.getNamedConverterConfiguration(configName, JSON.class);
         if (cfg == null) {
@@ -402,6 +702,13 @@ public class JSON extends AbstractConverter<JSONWriter> implements IncludeExclud
         return cfg;
     }
 
+    /**
+     * @deprecated Scheduled for removal in Grails 11. Inject {@link grails.converters.json.NamedJsonConfigurationRegistry} and call
+     * {@link grails.converters.json.NamedJsonConfigurationRegistry#writeValueAsString(String, Object)} or
+     * {@link grails.converters.json.NamedJsonConfigurationRegistry#writeValue(String, java.io.Writer, Object)} with a
+     * configuration such as {@link grails.converters.json.NamedJsonConfigurationRegistry#DEEP}.
+     */
+    @Deprecated(since = "9.0", forRemoval = true)
     public static Object use(String configName, Closure<?> callable) throws ConverterException {
         ConverterConfiguration<JSON> old = ConvertersConfigurationHolder.getThreadLocalConverterConfiguration(JSON.class);
         ConverterConfiguration<JSON> cfg = getNamedConfig(configName);
@@ -414,6 +721,12 @@ public class JSON extends AbstractConverter<JSONWriter> implements IncludeExclud
         }
     }
 
+    /**
+     * @deprecated Scheduled for removal in Grails 11. Inject {@link grails.converters.json.NamedJsonConfigurationRegistry} and select the
+     * configuration explicitly for each write, such as {@link grails.converters.json.NamedJsonConfigurationRegistry#DEEP}. The
+     * replacement does not mutate thread-local state.
+     */
+    @Deprecated(since = "9.0", forRemoval = true)
     public static void use(String cfgName) throws ConverterException {
         if (cfgName == null || "default".equals(cfgName)) {
             ConvertersConfigurationHolder.setThreadLocalConverterConfiguration(JSON.class, null);
@@ -423,14 +736,26 @@ public class JSON extends AbstractConverter<JSONWriter> implements IncludeExclud
         }
     }
 
+    /**
+     * Registers a supported converter customization. This applies to {@code render value as JSON}
+     * and legacy {@code respond}; Spring response conversion uses Jackson serializers instead.
+     */
     public static void registerObjectMarshaller(Class<?> clazz, Closure<?> callable) throws ConverterException {
         registerObjectMarshaller(new ClosureObjectMarshaller<>(clazz, callable));
     }
 
+    /**
+     * Registers a supported converter customization. This applies to {@code render value as JSON}
+     * and legacy {@code respond}; Spring response conversion uses Jackson serializers instead.
+     */
     public static void registerObjectMarshaller(Class<?> clazz, int priority, Closure<?> callable) throws ConverterException {
         registerObjectMarshaller(new ClosureObjectMarshaller<>(clazz, callable), priority);
     }
 
+    /**
+     * Registers a supported converter customization. This applies to {@code render value as JSON}
+     * and legacy {@code respond}; Spring response conversion uses Jackson serializers instead.
+     */
     public static void registerObjectMarshaller(ObjectMarshaller<JSON> om) throws ConverterException {
         ConverterConfiguration<JSON> cfg = ConvertersConfigurationHolder.getConverterConfiguration(JSON.class);
         if (cfg == null) {
@@ -443,6 +768,10 @@ public class JSON extends AbstractConverter<JSONWriter> implements IncludeExclud
         ((DefaultConverterConfiguration<JSON>) cfg).registerObjectMarshaller(om);
     }
 
+    /**
+     * Registers a supported converter customization. This applies to {@code render value as JSON}
+     * and legacy {@code respond}; Spring response conversion uses Jackson serializers instead.
+     */
     public static void registerObjectMarshaller(ObjectMarshaller<JSON> om, int priority) throws ConverterException {
         ConverterConfiguration<JSON> cfg = ConvertersConfigurationHolder.getConverterConfiguration(JSON.class);
         if (cfg == null) {
@@ -455,6 +784,11 @@ public class JSON extends AbstractConverter<JSONWriter> implements IncludeExclud
         ((DefaultConverterConfiguration<JSON>) cfg).registerObjectMarshaller(om, priority);
     }
 
+    /**
+     * @deprecated Scheduled for removal in Grails 11. Inject {@link grails.converters.json.NamedJsonConfigurationRegistry} and use
+     * {@link grails.converters.json.NamedJsonConfigurationRegistry#register(String, java.util.function.Consumer)}.
+     */
+    @Deprecated(since = "9.0", forRemoval = true)
     public static void createNamedConfig(String name, Closure<?> callable) throws ConverterException {
         DefaultConverterConfiguration<JSON> cfg = new DefaultConverterConfiguration<>(ConvertersConfigurationHolder.getConverterConfiguration(JSON.class));
         try {
@@ -466,6 +800,16 @@ public class JSON extends AbstractConverter<JSONWriter> implements IncludeExclud
         }
     }
 
+    /**
+     * @deprecated Scheduled for removal in Grails 11. Register marshallers with
+     * {@link #registerObjectMarshaller(Class, Closure)}, and set what else the default configuration held with the
+     * converter's settings: {@code grails.converters.json.pretty.print}, {@code grails.converters.encoding},
+     * {@code grails.converters.json.circular.reference.behaviour} and
+     * {@code grails.converters.json.cacheObjectMarshallerSelectionByClass}. A Spring Boot {@code JsonMapperBuilderCustomizer}
+     * configures the {@code JsonMapper} the converter writes values with when {@code grails.converters.json.legacy} is
+     * {@code false}, though not how it lays out what it writes, which the converter decides.
+     */
+    @Deprecated(since = "9.0", forRemoval = true)
     public static void withDefaultConfiguration(Closure<?> callable) throws ConverterException {
         ConverterConfiguration<JSON> cfg = ConvertersConfigurationHolder.getConverterConfiguration(JSON.class);
         if (!(cfg instanceof DefaultConverterConfiguration<?>)) {
@@ -473,7 +817,6 @@ public class JSON extends AbstractConverter<JSONWriter> implements IncludeExclud
         }
         try {
             callable.call(cfg);
-            ConvertersConfigurationHolder.setDefaultConfiguration(JSON.class, cfg);
             ConvertersConfigurationHolder.setDefaultConfiguration(JSON.class, cfg);
         }
         catch (Throwable t) {
@@ -548,7 +891,7 @@ public class JSON extends AbstractConverter<JSONWriter> implements IncludeExclud
                 for (Object o : valueMap.entrySet()) {
                     Map.Entry element = (Map.Entry) o;
                     Object elementKey = element.getKey();
-                    writer.key(elementKey == null ? "null" : JsonDateFormat.formatKey(elementKey));
+                    writer.key(elementKey == null ? "null" : json.formatKey(elementKey));
                     json.convertAnother(element.getValue());
                 }
                 writer.endObject();

@@ -40,6 +40,7 @@ dependencies {
     testImplementation project(':grails-domain-class')
     testImplementation project(':grails-interceptors')
     testImplementation project(':grails-rest-transforms')
+    testImplementation project(':grails-xml')
     testImplementation project(':grails-services')
     testImplementation project(':grails-url-mappings')
     testImplementation project(':grails-spring')

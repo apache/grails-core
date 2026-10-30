@@ -40,6 +40,13 @@ class GroovydocEnhancerPlugin implements Plugin<Project> {
                 GroovydocEnhancerExtension,
                 project
         )
+        Provider<GroovydocMemoryThrottle> throttle = project.gradle.sharedServices.registerIfAbsent(
+                'groovydocMemoryThrottle', GroovydocMemoryThrottle) {
+            it.maxParallelUsages.set(1)
+        }
+        project.tasks.withType(Groovydoc).configureEach {
+            it.usesService(throttle)
+        }
         registerDocumentationConfiguration(project)
         configureGroovydocDefaults(project, extension)
         configureAntBuilderExecution(project, extension)

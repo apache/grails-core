@@ -229,7 +229,7 @@ public class JpaCriteriaQueryCreator<T> {
                         // double quotes is case sensitive, while backquotes (MySQL) and square brackets (SQL Server)
                         // leave a column alias case insensitive
                         String groupBy = sqlGroupProjection.getSql().trim();
-                        String name = SqlProjection.unquote(groupBy);
+                        String name = SqlText.of(groupBy, SqlSyntax.forCriteriaBuilder(criteriaBuilder)).unquoted();
                         boolean caseSensitive = groupBy.startsWith("\"") && !name.equals(groupBy);
                         SqlProjection aliased = findSqlProjection(name, !caseSensitive);
                         return translator.translateSql(aliased != null ? aliased.getSql() : sqlGroupProjection.getSql(), null);
@@ -272,28 +272,55 @@ public class JpaCriteriaQueryCreator<T> {
 
     @SuppressWarnings("unchecked")
     private void assignOrderBy(CriteriaQuery<?> cq, JpaQueryContext context) {
+        if (isCountOnly()) {
+            // a count returns one row whatever the order, and an ORDER BY on a column that is not aggregated fails
+            // on H2 and most other databases, so a count query leaves the criteria's orders out, handled ones too
+            return;
+        }
         List<Query.Order> orders = detachedCriteria.getOrders();
         if (!orders.isEmpty()) {
-            var jpaOrders = orders.stream()
-                    .map(order -> {
-                        var propertyName = order.getProperty();
-                        SqlProjection sqlProjection = findSqlProjection(propertyName, false);
-                        Expression<?> expression = sqlProjection != null ?
-                                context.getSelectionAlias(sqlProjection.getColumnAlias()) :
-                                context.getFullyQualifiedExpression(propertyName);
-                        if (order.isIgnoreCase() && expression.getJavaType().equals(String.class)) {
-                            return order.getDirection().equals(Query.Order.Direction.ASC) ?
-                                    criteriaBuilder.asc(criteriaBuilder.lower((Expression<String>) expression)) :
-                                    criteriaBuilder.desc(criteriaBuilder.lower((Expression<String>) expression));
-                        } else {
-                            return order.getDirection().equals(Query.Order.Direction.ASC) ?
-                                    criteriaBuilder.asc(expression) :
-                                    criteriaBuilder.desc(expression);
-                        }
-                    })
-                    .toArray(jakarta.persistence.criteria.Order[]::new);
-            cq.orderBy(jpaOrders);
+            List<jakarta.persistence.criteria.Order> jpaOrders = new ArrayList<>();
+            for (Query.Order order : orders) {
+                PredicateGenerator.OrderHandler customHandler = PredicateGenerator.orderHandler(order.getClass());
+                if (customHandler != null) {
+                    // the handler of a Query.Order subclass builds its JPA order, or leaves the order out
+                    jakarta.persistence.criteria.Order customOrder =
+                            customHandler.handle(cq, context.getRoot(), criteriaBuilder, order, context);
+                    if (customOrder != null) {
+                        jpaOrders.add(customOrder);
+                    }
+                    continue;
+                }
+                String propertyName = order.getProperty();
+                SqlProjection sqlProjection = findSqlProjection(propertyName, false);
+                Expression<?> expression = sqlProjection != null ?
+                        context.getSelectionAlias(sqlProjection.getColumnAlias()) :
+                        context.getFullyQualifiedExpression(propertyName);
+                jakarta.persistence.criteria.Order jpaOrder;
+                if (order.isIgnoreCase() && expression.getJavaType().equals(String.class)) {
+                    jpaOrder = order.getDirection().equals(Query.Order.Direction.ASC) ?
+                            criteriaBuilder.asc(criteriaBuilder.lower((Expression<String>) expression)) :
+                            criteriaBuilder.desc(criteriaBuilder.lower((Expression<String>) expression));
+                } else {
+                    jpaOrder = order.getDirection().equals(Query.Order.Direction.ASC) ?
+                            criteriaBuilder.asc(expression) :
+                            criteriaBuilder.desc(expression);
+                }
+                jpaOrders.add(jpaOrder);
+            }
+            cq.orderBy(jpaOrders.toArray(new jakarta.persistence.criteria.Order[0]));
         }
+    }
+
+    /**
+     * Whether the query selects nothing but counts, as {@code count()} and {@code countDistinct()} do: such a query
+     * has one row, so the criteria's orders do not apply to it. A query that groups and counts keeps its orders.
+     */
+    private boolean isCountOnly() {
+        List<Query.Projection> projectionList = projections.getProjectionList();
+        return !projectionList.isEmpty() && projectionList.stream()
+                .allMatch(projection -> projection instanceof Query.CountProjection ||
+                        projection instanceof Query.CountDistinctProjection);
     }
 
     private void discoverAliases(List<Query.Criterion> criteria, JpaQueryContext context) {

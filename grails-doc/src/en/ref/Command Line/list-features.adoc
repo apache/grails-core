@@ -50,6 +50,12 @@ Available Features
 (+) denotes the feature is included by default
   Name                                Description
   ----------------------------------  ---------------------------------
+  AI
+  grails-spring-ai                    Integrates Spring AI: a chat client over the provider of your choice, chat responses streamed from controller actions, and scripted models for tests.
+  spring-ai-anthropic                 Uses Anthropic Claude models through Spring AI, with the API key taken from the ANTHROPIC_API_KEY environment variable.
+  spring-ai-ollama                    Uses models served by a local Ollama through Spring AI; no credentials needed.
+  spring-ai-openai                    Uses OpenAI models through Spring AI, with the API key taken from the OPENAI_API_KEY environment variable.
+
   CI/CD
   github-workflow-java-ci [PREVIEW]   Adds a Github Actions Workflow to Build and Test Grails Application
 

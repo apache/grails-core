@@ -19,16 +19,12 @@
 
 package grails.gorm.tests
 
+import java.util.concurrent.atomic.AtomicReference
 
 import org.apache.grails.data.neo4j.core.Neo4jGormDatastoreSpec
 import grails.gorm.annotation.Entity
-import org.grails.datastore.gorm.neo4j.Neo4jTransaction
 import org.grails.datastore.mapping.core.OptimisticLockingException
-import org.grails.datastore.mapping.core.Session
-import org.grails.datastore.mapping.transactions.SessionHolder
-import org.neo4j.graphdb.GraphDatabaseService
-import org.neo4j.graphdb.Transaction
-import org.springframework.transaction.support.TransactionSynchronizationManager
+import spock.util.concurrent.PollingConditions
 
 /**
  * @author Burt Beckwith
@@ -73,12 +69,7 @@ class OptimisticLockingSpec extends Neo4jGormDatastoreSpec {
         given:
         def o = new OptLockVersioned(name: 'locked').save(flush: true)
         manager.session.transaction.commit()
-        manager.session.transaction.nativeTransaction.close()
         manager.session.clear()
-
-        def neo4jSession = (org.neo4j.driver.Session) manager.session.getNativeInterface()
-        SessionHolder sessionHolder = (SessionHolder) TransactionSynchronizationManager.getResource(manager.session.getDatastore());
-//        sessionHolder.setTransaction( new Neo4jTransaction(neo4jSession))
 
         when:
         o = OptLockVersioned.get(o.id)
@@ -87,23 +78,37 @@ class OptimisticLockingSpec extends Neo4jGormDatastoreSpec {
         o != null
 
         when:
+        def failure = new AtomicReference<Throwable>()
         Thread.start {
-            OptLockVersioned.withNewSession { s ->
-                OptLockVersioned.withTransaction {
-                    def reloaded = OptLockVersioned.get(o.id)
-                    assert reloaded
-                    reloaded.name += ' in new manager.session'
-                    reloaded.save(flush: true)
+            try {
+                OptLockVersioned.withNewSession {
+                    OptLockVersioned.withTransaction {
+                        def reloaded = OptLockVersioned.get(o.id)
+                        assert reloaded
+                        reloaded.name += ' in new session'
+                        reloaded.save(flush: true)
+                    }
                 }
+            } catch (Throwable t) {
+                failure.set(t)
             }
         }.join()
-        // The background thread's save is already synchronized via join() above; this sleep is
-        // headroom for the embedded Neo4j harness's own write durability, not thread completion.
-        // A noisy/loaded CI runner can push that past a couple of seconds - give it more room
-        // rather than risk a spurious failure (heisenbug).
-        sleep 5000
+        // A thread that died from an exception has also finished, so join() alone cannot tell a
+        // completed write from a crashed one; surface the captured outcome with its stack trace.
+        if (failure.get()) {
+            throw failure.get()
+        }
+        // Poll until an independent session sees the committed write rather than sleeping a
+        // fixed budget, so a healthy run pays nothing and a broken one fails with the observed value.
+        new PollingConditions(timeout: 10, initialDelay: 0.1, delay: 0.2).eventually {
+            def observedName
+            OptLockVersioned.withNewSession {
+                observedName = OptLockVersioned.get(o.id).name
+            }
+            assert observedName == 'locked in new session'
+        }
 
-        o.name += ' in main manager.session'
+        o.name += ' in main session'
         def ex
         try {
             o.save(flush: true)
@@ -119,33 +124,48 @@ class OptimisticLockingSpec extends Neo4jGormDatastoreSpec {
         then:
         ex instanceof OptimisticLockingException
         o.version == 1
-        o.name == 'locked in new manager.session'
+        o.name == 'locked in new session'
     }
 
     void "Test optimistic locking disabled with 'version false'"() {
 
         given:
         def o = new OptLockNotVersioned(name: 'locked').save(flush: true)
+        manager.session.transaction.commit()
         manager.session.clear()
 
         when:
         o = OptLockNotVersioned.get(o.id)
 
-        try {
-            Thread.start {
-                OptLockNotVersioned.withNewSession { s ->
-                    def reloaded = OptLockNotVersioned.get(o.id)
-                    reloaded.name += ' in new manager.session'
-                    reloaded.save(flush: true)
+        def failure = new AtomicReference<Throwable>()
+        def backgroundUpdate = Thread.start {
+            try {
+                OptLockNotVersioned.withNewSession {
+                    OptLockNotVersioned.withTransaction {
+                        def reloaded = OptLockNotVersioned.get(o.id)
+                        assert reloaded
+                        reloaded.name += ' in new session'
+                        reloaded.save(flush: true)
+                    }
                 }
-            }.join(2000)
-        } catch (InterruptedException e) {
-            // ignore
+            } catch (Throwable t) {
+                failure.set(t)
+            }
         }
-        // Same headroom rationale as "Test optimistic locking" above.
-        sleep 5000
+        backgroundUpdate.join()
+        // Same completion check and polling rationale as "Test optimistic locking" above.
+        if (failure.get()) {
+            throw failure.get()
+        }
+        def nameAfterBackgroundUpdate
+        new PollingConditions(timeout: 10, initialDelay: 0.1, delay: 0.2).eventually {
+            OptLockNotVersioned.withNewSession {
+                nameAfterBackgroundUpdate = OptLockNotVersioned.get(o.id).name
+            }
+            assert nameAfterBackgroundUpdate == 'locked in new session'
+        }
 
-        o.name += ' in main manager.session'
+        o.name += ' in main session'
         def ex
         try {
             o.save(flush: true)
@@ -159,8 +179,12 @@ class OptimisticLockingSpec extends Neo4jGormDatastoreSpec {
         o = OptLockNotVersioned.get(o.id)
 
         then:
+        // Proves the background write actually landed before the main session's blind
+        // overwrite; without it, the two assertions below would pass even if the background
+        // thread never ran.
+        nameAfterBackgroundUpdate == 'locked in new session'
         ex == null
-        o.name == 'locked in main manager.session'
+        o.name == 'locked in main session'
     }
 }
 

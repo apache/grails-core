@@ -24,6 +24,12 @@ import spock.util.concurrent.PollingConditions
 
 class ActorEventBusSpec extends Specification {
 
+    void 'the GPars event bus is deprecated for removal in favour of groovy.concurrent'() {
+        expect:
+            ActorEventBus.getAnnotation(Deprecated).since() == '9.0'
+            ActorEventBus.getAnnotation(Deprecated).forRemoval()
+    }
+
     void 'Test actor event bus with single arg'() {
 
         given: 'an actor event bus'

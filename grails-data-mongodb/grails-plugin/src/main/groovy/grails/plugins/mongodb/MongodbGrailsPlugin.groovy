@@ -53,7 +53,6 @@ class MongodbGrailsPlugin extends Plugin {
     Closure doWithSpring() {
         ConfigSupport.prepareConfig(config, (ConfigurableApplicationContext) applicationContext)
         def initializer = new MongoDbDataStoreSpringInitializer((PropertyResolver) config, grailsApplication.getArtefacts(DomainClassArtefactHandler.TYPE).collect() { GrailsClass cls -> cls.clazz })
-        initializer.registerApplicationIfNotPresent = false
 
         def applicationName = Metadata.getCurrent().getApplicationName()
         if (!applicationName.contains('@')) {

@@ -31,6 +31,8 @@ import org.springframework.boot.webmvc.autoconfigure.WebMvcAutoConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.web.filter.FormContentFilter;
 
+import org.grails.web.config.http.GrailsFilters;
+
 /**
  * Guarantees a {@link FormContentFilter} for every Grails servlet web application, so
  * {@code application/x-www-form-urlencoded} bodies of {@code PUT}, {@code PATCH} and {@code DELETE}
@@ -59,7 +61,9 @@ public class GrailsFormContentFilterAutoConfiguration {
     @ConditionalOnMissingBean(FormContentFilter.class)
     @ConditionalOnBooleanProperty(name = "spring.mvc.formcontent.filter.enabled", matchIfMissing = true)
     public OrderedFormContentFilter formContentFilter() {
-        return new OrderedFormContentFilter();
+        OrderedFormContentFilter formContentFilter = new OrderedFormContentFilter();
+        formContentFilter.setOrder(GrailsFilters.FORM_CONTENT_FILTER.getOrder());
+        return formContentFilter;
     }
 
     /**

@@ -20,14 +20,30 @@ package org.grails.orm.hibernate.cfg
 
 import javax.sql.DataSource
 
+import grails.gorm.annotation.Entity
+import org.apache.grails.data.hibernate5.core.querytail.QueryTailSessionFactoryObserver
+import org.apache.grails.datamapping.core.querytail.QueryTailRecord
+import org.apache.grails.datastore.core.querytail.QueryTailSettings
 import org.grails.datastore.gorm.jdbc.connections.DataSourceSettings
+import org.grails.datastore.mapping.core.DatastoreUtils
 import org.grails.datastore.mapping.core.connections.ConnectionSource
+import org.grails.orm.hibernate.connections.HibernateConnectionSourceFactory
+import org.hibernate.SessionFactory
+import org.hibernate.SessionFactoryObserver
+import org.hibernate.boot.registry.BootstrapServiceRegistry
+import org.hibernate.boot.registry.StandardServiceRegistryBuilder
 import org.hibernate.cfg.AvailableSettings
 import org.hibernate.cfg.Environment
+import org.hibernate.engine.spi.SessionFactoryImplementor
+import org.hibernate.service.internal.AbstractServiceRegistryImpl
 import org.springframework.context.ApplicationContext
 import spock.lang.Specification
+import spock.lang.TempDir
 
 class HibernateMappingContextConfigurationSpec extends Specification {
+
+    @TempDir
+    File tempDir
 
     ClassLoader originalContextClassLoader
 
@@ -37,6 +53,76 @@ class HibernateMappingContextConfigurationSpec extends Specification {
 
     def cleanup() {
         Thread.currentThread().contextClassLoader = originalContextClassLoader
+        RecordingSessionFactoryObserver.events.clear()
+    }
+
+    void "an observer set on the configuration #set is told of the session factory, and the registry is still destroyed, with capture #capture"() {
+        given:
+        def connectionSource = new HibernateConnectionSourceFactory(ObservedConfigurationBook).create(ConnectionSource.DEFAULT,
+                DatastoreUtils.createPropertyResolver([
+                        'dataSource.url'                   : 'jdbc:h2:mem:observedConfigurationDB;LOCK_TIMEOUT=10000',
+                        'dataSource.dbCreate'              : 'create-drop',
+                        'hibernate.configClass'            : configuration.name,
+                        (QueryTailSettings.SETTING_ENABLED): String.valueOf(capture == 'on'),
+                        (QueryTailSettings.SETTING_FILE)   : new File(tempDir, 'capture.log').path]))
+        SessionFactoryImplementor sessionFactory = connectionSource.source as SessionFactoryImplementor
+        def registry = sessionFactory.serviceRegistry.parentServiceRegistry as AbstractServiceRegistryImpl
+        def observer = sessionFactory.sessionFactoryOptions.sessionFactoryObservers.find { it instanceof QueryTailSessionFactoryObserver }
+        sessionFactory.openSession().withCloseable { session -> session.createNativeQuery('select 1 as probed').list() }
+
+        expect: 'the capture, when there is one, opened with the session factory'
+        RecordingSessionFactoryObserver.events == ['created']
+        registry.active
+        (observer != null) == (capture == 'on')
+        capture == 'off' || observer.capture.open
+        capture == 'off' || observer.file.readLines().collect { QueryTailRecord.parse(it) }.findAll()*.sql.count('select ? as probed') == 1
+
+        when:
+        connectionSource.close()
+
+        then: 'and closed with it'
+        RecordingSessionFactoryObserver.events == ['created', 'closing', 'closed']
+        !registry.active
+        capture == 'off' || !observer.capture.open
+
+        where:
+        set                                 | configuration                  | capture
+        'before the build'                  | ObservingConfiguration         | 'off'
+        'as it builds the session factory'  | BuildObservingConfiguration    | 'off'
+        'as it builds the service registry' | RegistryObservingConfiguration | 'off'
+        'before the build'                  | ObservingConfiguration         | 'on'
+        'as it builds the session factory'  | BuildObservingConfiguration    | 'on'
+        'as it builds the service registry' | RegistryObservingConfiguration | 'on'
+    }
+
+    void "a configuration holds the observer the application set even as it builds a session factory, with capture #capture"() {
+        given:
+        def connectionSource = new HibernateConnectionSourceFactory(ObservedConfigurationBook).create(ConnectionSource.DEFAULT,
+                DatastoreUtils.createPropertyResolver([
+                        'dataSource.url'                   : 'jdbc:h2:mem:heldObserverDB;LOCK_TIMEOUT=10000',
+                        'dataSource.dbCreate'              : 'create-drop',
+                        'hibernate.configClass'            : HoldingConfiguration.name,
+                        (QueryTailSettings.SETTING_ENABLED): String.valueOf(capture == 'on'),
+                        (QueryTailSettings.SETTING_FILE)   : new File(tempDir, 'capture.log').path]))
+        SessionFactoryImplementor sessionFactory = connectionSource.source as SessionFactoryImplementor
+        def registry = sessionFactory.serviceRegistry.parentServiceRegistry as AbstractServiceRegistryImpl
+        def observer = sessionFactory.sessionFactoryOptions.sessionFactoryObservers.find { it instanceof QueryTailSessionFactoryObserver }
+
+        expect: 'the configuration held what the application set as the session factory was created'
+        HoldingSessionFactoryObserver.held == [true]
+        (observer != null) == (capture == 'on')
+
+        when:
+        connectionSource.close()
+
+        then: 'and the registry is destroyed with the session factory'
+        !registry.active
+
+        cleanup:
+        HoldingSessionFactoryObserver.held.clear()
+
+        where:
+        capture << ['off', 'on']
     }
 
     void "setApplicationContext uses the context class loader when DevTools is not active"() {
@@ -259,5 +345,84 @@ class HibernateMappingContextConfigurationSpec extends Specification {
 
     private static ClassLoader loaderUnder(ClassLoader parent) {
         new URLClassLoader([] as URL[], parent)
+    }
+}
+
+@Entity
+class ObservedConfigurationBook {
+    Long id
+    Long version
+    String title
+}
+
+class ObservingConfiguration extends HibernateMappingContextConfiguration {
+
+    ObservingConfiguration() {
+        setSessionFactoryObserver(new RecordingSessionFactoryObserver())
+    }
+}
+
+class BuildObservingConfiguration extends HibernateMappingContextConfiguration {
+
+    @Override
+    SessionFactory buildSessionFactory() {
+        setSessionFactoryObserver(new RecordingSessionFactoryObserver())
+        super.buildSessionFactory()
+    }
+}
+
+class HoldingConfiguration extends HibernateMappingContextConfiguration {
+
+    HoldingConfiguration() {
+        setSessionFactoryObserver(new HoldingSessionFactoryObserver(configuration: this))
+    }
+}
+
+/**
+ * Records whether the configuration it observes holds it as the session factory is created, which is what another
+ * build of the configuration, on another thread, would read.
+ */
+class HoldingSessionFactoryObserver implements SessionFactoryObserver {
+
+    static final List<Boolean> held = [].asSynchronized()
+
+    HibernateMappingContextConfiguration configuration
+
+    @Override
+    void sessionFactoryCreated(SessionFactory factory) {
+        held << configuration.sessionFactoryObserver.is(this)
+    }
+
+    @Override
+    void sessionFactoryClosed(SessionFactory factory) {
+    }
+}
+
+class RegistryObservingConfiguration extends HibernateMappingContextConfiguration {
+
+    @Override
+    protected StandardServiceRegistryBuilder createStandardServiceRegistryBuilder(BootstrapServiceRegistry bootstrapServiceRegistry) {
+        setSessionFactoryObserver(new RecordingSessionFactoryObserver())
+        super.createStandardServiceRegistryBuilder(bootstrapServiceRegistry)
+    }
+}
+
+class RecordingSessionFactoryObserver implements SessionFactoryObserver {
+
+    static final List<String> events = [].asSynchronized()
+
+    @Override
+    void sessionFactoryCreated(SessionFactory factory) {
+        events << 'created'
+    }
+
+    @Override
+    void sessionFactoryClosing(SessionFactory factory) {
+        events << 'closing'
+    }
+
+    @Override
+    void sessionFactoryClosed(SessionFactory factory) {
+        events << 'closed'
     }
 }

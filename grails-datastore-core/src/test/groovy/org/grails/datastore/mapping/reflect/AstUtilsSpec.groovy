@@ -26,12 +26,80 @@ import org.codehaus.groovy.ast.ClassHelper
 import org.codehaus.groovy.ast.ClassNode
 import org.codehaus.groovy.ast.MethodNode
 import org.codehaus.groovy.ast.Parameter
+import org.codehaus.groovy.ast.builder.AstBuilder
+import org.codehaus.groovy.control.CompilePhase
 import spock.lang.Specification
 
 /**
  * Created by graemerocher on 19/04/2017.
  */
 class AstUtilsSpec extends Specification {
+
+    void 'domain parent selection skips plain superclasses'() {
+        given:
+        def plain = new ClassNode('SharedDetails', Modifier.PUBLIC, ClassHelper.OBJECT_TYPE)
+        def root = new ClassNode('RootEntity', Modifier.PUBLIC, plain)
+        root.addAnnotation(new AnnotationNode(ClassHelper.make(annotationName)))
+        def intermediate = new ClassNode('PlainIntermediate', Modifier.PUBLIC, root)
+        def child = new ClassNode('ChildEntity', Modifier.PUBLIC, intermediate)
+
+        expect:
+        AstUtils.getFurthestUnresolvedDomainParent(child).is(root)
+        AstUtils.getFurthestUnresolvedDomainParent(root).is(root)
+        AstUtils.getFurthestUnresolvedParent(child).is(plain)
+
+        where:
+        annotationName << [
+            'grails.persistence.Entity',
+            'grails.gorm.annotation.Entity',
+            'jakarta.persistence.Entity'
+        ]
+    }
+
+    void 'domain parent selection crosses a plain intermediate in either declaration order'() {
+        given:
+        def nodes = new AstBuilder().buildFromString(CompilePhase.CONVERSION, false, declarations)
+        def root = nodes.find { it instanceof ClassNode && it.name == 'Animal' }
+        def intermediate = nodes.find { it instanceof ClassNode && it.name == 'Mammal' }
+        def child = nodes.find { it instanceof ClassNode && it.name == 'Dog' }
+        intermediate.superClass = root
+        child.superClass = intermediate
+
+        expect:
+        AstUtils.getFurthestUnresolvedDomainParent(child).is(root)
+        AstUtils.getFurthestUnresolvedDomainParent(root).is(root)
+
+        where:
+        declarations << [
+            '@grails.persistence.Entity abstract class Animal { }; abstract class Mammal extends Animal { }; @grails.persistence.Entity class Dog extends Mammal { }',
+            '@grails.persistence.Entity class Dog extends Mammal { }; abstract class Mammal extends Animal { }; @grails.persistence.Entity abstract class Animal { }'
+        ]
+    }
+
+    void 'domain parent selection does not reuse classification of same-named classes'() {
+        given:
+        def firstParent = new ClassNode('RecompiledParent', Modifier.PUBLIC, ClassHelper.OBJECT_TYPE)
+        def secondParent = new ClassNode('RecompiledParent', Modifier.PUBLIC, ClassHelper.OBJECT_TYPE)
+        def domainParent = domainFirst ? firstParent : secondParent
+        domainParent.addAnnotation(new AnnotationNode(ClassHelper.make('grails.persistence.Entity')))
+        def firstChild = new ClassNode('FirstChild', Modifier.PUBLIC, firstParent)
+        def secondChild = new ClassNode('SecondChild', Modifier.PUBLIC, secondParent)
+
+        expect:
+        AstUtils.getFurthestUnresolvedDomainParent(firstChild).is(domainFirst ? firstParent : firstChild)
+        AstUtils.getFurthestUnresolvedDomainParent(secondChild).is(domainFirst ? secondChild : secondParent)
+
+        where:
+        domainFirst << [false, true]
+    }
+
+    void 'domain parent selection does not modify a resolved superclass'() {
+        given:
+        def child = new ClassNode('ChildEntity', Modifier.PUBLIC, ClassHelper.make(Object))
+
+        expect:
+        AstUtils.getFurthestUnresolvedDomainParent(child).is(child)
+    }
 
     void "test implements interface"() {
         given:

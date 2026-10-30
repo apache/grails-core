@@ -19,64 +19,72 @@
 package grails.plugin.hibernate
 
 import grails.core.DefaultGrailsApplication
-import grails.core.GrailsApplication
 import grails.gorm.annotation.Entity
-import grails.spring.BeanBuilder
 import org.grails.config.PropertySourcesConfig
-import org.grails.core.artefact.DomainClassArtefactHandler
-import org.springframework.beans.factory.config.BeanDefinition
+import org.grails.datastore.mapping.core.connections.ConnectionSource
+import org.grails.plugins.DefaultGrailsPlugin
+import org.grails.spring.DefaultRuntimeSpringConfiguration
+import org.grails.spring.RuntimeSpringConfiguration
+import org.hibernate.SessionFactory
+import org.hibernate.dialect.H2Dialect
 import org.springframework.context.support.GenericApplicationContext
-import org.springframework.core.convert.support.ConfigurableConversionService
+import org.springframework.transaction.PlatformTransactionManager
+import spock.lang.AutoCleanup
 import spock.lang.Specification
 
+/**
+ * Drives {@link HibernateGrailsPlugin#doWithSpring()} the same way the real {@code GrailsPluginManager} does: via
+ * {@link org.grails.plugins.DefaultGrailsPlugin#doWithRuntimeConfiguration}, followed by merging the accumulated
+ * bean definitions into a fresh {@link GenericApplicationContext} and refreshing it - exactly what
+ * {@link RuntimeSpringConfiguration#registerBeansWithContext} exists for, and how a real Grails Boot application
+ * merges plugin-registered beans into the application's own context. Refreshing the plugin's own internal
+ * {@code GrailsApplicationContext} directly doesn't work here: it renames Spring's "environment" bean to
+ * "springEnvironment" (a long-standing workaround for GRAILS-7851) which breaks the SpEL datasource expressions
+ * that {@code HibernateDatastoreConnectionSourcesRegistrar} registers.
+ */
 class HibernateGrailsPluginSpec extends Specification {
 
-    def "doWithSpring registers the Hibernate datastore beans"() {
-        given:
-        Map<String, BeanDefinition> beans = beanDefinitionsFor([
-                'dataSource.url': 'jdbc:h2:mem:hibernateGrailsPluginSpecDb;LOCK_TIMEOUT=10000',
-        ])
+    @AutoCleanup
+    GenericApplicationContext applicationContext
 
-        expect: "the core Hibernate infrastructure beans are registered"
-        beans.containsKey('hibernateDatastore')
-        beans.containsKey('sessionFactory')
-        beans.containsKey('transactionManager')
+    void "doWithSpring registers the Hibernate beans and prepares the config for class conversion"() {
+        given: "a Grails application with one domain class and an H2 test datasource"
+        def app = new DefaultGrailsApplication([PluginSpecBook] as Class[], getClass().classLoader)
+        app.initialise()
+        def config = new PropertySourcesConfig((Map<String, Object>) [
+                'dataSource.url'        : 'jdbc:h2:mem:hibernateGrailsPluginSpec;LOCK_TIMEOUT=10000',
+                'dataSource.dialect'    : H2Dialect.name,
+                'hibernate.hbm2ddl.auto': 'create-drop',
+                'some.class'            : PluginSpecBook.name
+        ])
+        app.setConfig(config)
+
+        and: "the plugin driven the same way the real GrailsPluginManager drives it"
+        def grailsPlugin = new DefaultGrailsPlugin(HibernateGrailsPlugin, app)
+        RuntimeSpringConfiguration springConfig = new DefaultRuntimeSpringConfiguration()
+        grailsPlugin.applicationContext = springConfig.unrefreshedApplicationContext
+
+        expect: "the class value cannot be resolved before doWithSpring runs"
+        config.getProperty('some.class', Class) == null
+
+        when: "the plugin is configured, then its beans merged into the application's real context"
+        grailsPlugin.doWithRuntimeConfiguration(springConfig)
+        applicationContext = new GenericApplicationContext()
+        springConfig.registerBeansWithContext(applicationContext)
+        applicationContext.refresh()
+
+        then: "the Hibernate beans registered by the plugin are present"
+        applicationContext.getBean('sessionFactory', SessionFactory).metamodel.entities.size() == 1
+        applicationContext.getBean(PlatformTransactionManager)
+
+        and: "the config can now resolve a String value as a Class"
+        config.getProperty('some.class', Class) == PluginSpecBook
+
+        and: "the plugin recorded the configured data source names"
+        (grailsPlugin.instance as HibernateGrailsPlugin).dataSourceNames.contains(ConnectionSource.DEFAULT)
     }
 
-    def "doWithSpring records the configured data source names on the plugin"() {
-        given:
-        HibernateGrailsPlugin plugin = pluginFor([
-                'dataSource.url': 'jdbc:h2:mem:hibernateGrailsPluginSpecDsNames;LOCK_TIMEOUT=10000',
-        ])
-
-        when:
-        new BeanBuilder().beans(plugin.doWithSpring())
-
-        then: "the plugin's dataSourceNames were populated as a side effect"
-        plugin.dataSourceNames.contains('default')
-    }
-
-    def "doWithSpring installs a Class converter on the application context's conversion service"() {
-        given: "a PropertySourcesConfig (triggering the conversion-service-installation branch) and our own ApplicationContext, so we can inspect its ConversionService directly afterwards"
-        PropertySourcesConfig config = new PropertySourcesConfig([
-                'dataSource.url': 'jdbc:h2:mem:hibernateGrailsPluginSpecConverter;LOCK_TIMEOUT=10000',
-        ])
-        GenericApplicationContext applicationContext = new GenericApplicationContext()
-        HibernateGrailsPlugin plugin = pluginForConfig(config, applicationContext)
-        ConfigurableConversionService conversionService = applicationContext.environment.conversionService
-
-        expect: "no String->Class converter registered yet"
-        !conversionService.canConvert(String, Class)
-
-        when:
-        new BeanBuilder().beans(plugin.doWithSpring())
-
-        then: "the environment's conversion service can now convert a String to a Class"
-        conversionService.canConvert(String, Class)
-        conversionService.convert(HibernateGrailsPlugin.name, Class) == HibernateGrailsPlugin
-    }
-
-    def "onChange is a no-op"() {
+    void "onChange is a no-op"() {
         given:
         HibernateGrailsPlugin plugin = new HibernateGrailsPlugin()
 
@@ -86,33 +94,9 @@ class HibernateGrailsPluginSpec extends Specification {
         then:
         noExceptionThrown()
     }
-
-    private Map<String, BeanDefinition> beanDefinitionsFor(Map<String, Object> config) {
-        BeanBuilder beanBuilder = new BeanBuilder()
-        beanBuilder.beans pluginFor(config).doWithSpring()
-        beanBuilder.beanDefinitions
-    }
-
-    private HibernateGrailsPlugin pluginFor(Map<String, Object> config) {
-        pluginForConfig(new PropertySourcesConfig(config), new GenericApplicationContext())
-    }
-
-    private HibernateGrailsPlugin pluginForConfig(PropertySourcesConfig config, GenericApplicationContext applicationContext) {
-        GrailsApplication grailsApplication = new DefaultGrailsApplication()
-        grailsApplication.config = config
-        grailsApplication.registerArtefactHandler(new DomainClassArtefactHandler())
-        grailsApplication.initialise()
-        grailsApplication.addArtefact(DomainClassArtefactHandler.TYPE, HibernateGrailsPluginSpecEntity)
-
-        HibernateGrailsPlugin plugin = new HibernateGrailsPlugin()
-        plugin.grailsApplication = grailsApplication
-        plugin.applicationContext = applicationContext
-        plugin
-    }
 }
 
 @Entity
-class HibernateGrailsPluginSpecEntity {
-    Long id
-    String name
+class PluginSpecBook {
+    String title
 }

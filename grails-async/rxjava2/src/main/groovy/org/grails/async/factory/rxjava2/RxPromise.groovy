@@ -47,10 +47,15 @@ import org.grails.async.factory.BoundPromise
  *
  * @author Graeme Rocher
  * @since 3.3
+ *
+ * @deprecated RxJava 2 is no longer maintained. Use the RxJava 3 implementation in
+ * {@code grails-async-rxjava3} instead. This class, and the {@code grails-async-rxjava2} module that provides it,
+ * will be removed in a future release.
  */
 @AutoFinal
 @CompileStatic
 @PackageScope
+@Deprecated(since = '9.0', forRemoval = true)
 class RxPromise<T>  implements Promise<T> {
 
     protected final Subject<T> subject

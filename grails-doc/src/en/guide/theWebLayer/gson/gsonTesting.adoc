@@ -91,4 +91,6 @@ The new trait works exactly the same way as the old one, however since the new t
 
 To get started, add the `org.apache.grails:grails-testing-support-views-gson` dependency to your project and implement the link:{api}grails/views/json/test/JsonViewUnitTest.html[JsonViewUnitTest] trait in your test instead of `JsonViewTest`.
 
+`JsonViewUnitTest` provides a URL mappings holder, a link generator, which starts absolute links with `grails.serverURL`, or `http://localhost:8080` without it, and a session locale resolver. A URL mappings holder or link generator the test declares in `doWithSpring`, `beanRegistrar()` or a `@Bean` method of a nested `@Configuration` class, under its name or with its name as an alias, is kept, as is any locale resolver the test's context has, such as the one `grails.i18n.localeResolver` configures, as in the web test traits.
+
 NOTE: The new testing trait, like the testing framework, requires Spock.

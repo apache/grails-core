@@ -30,7 +30,7 @@ class MutationInterceptorInvokerSpec extends Specification {
         given:
         GraphQLFetcherInterceptor interceptor = Mock(GraphQLFetcherInterceptor)
         DataFetchingEnvironment environment = Mock(DataFetchingEnvironment) {
-            getFields() >> []
+            getMergedField() >> null
         }
 
         when:
@@ -45,7 +45,7 @@ class MutationInterceptorInvokerSpec extends Specification {
         given:
         GraphQLFetcherInterceptor interceptor = Mock(GraphQLFetcherInterceptor)
         DataFetchingEnvironment environment = Mock(DataFetchingEnvironment) {
-            getFields() >> []
+            getMergedField() >> null
         }
 
         when:

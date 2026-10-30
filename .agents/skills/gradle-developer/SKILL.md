@@ -37,6 +37,7 @@ Related skills (do not substitute this one):
 | Failing tests / aggregate reports | `test-fixer` |
 | Merging an external plugin repo into the monorepo | `mono-repo-integration` |
 | App-facing Grails 8 upgrade guidance | `grails-8-upgrade` |
+| App-facing Grails 9 upgrade guidance | `grails-9-upgrade` |
 
 ---
 
@@ -67,7 +68,7 @@ This git repo is **several independent Gradle builds**, not one flat multiprojec
 | **Root framework** | repo root | 60+ published modules, BOMs, test-examples, profiles, docs | `./gradlew …` from root |
 | **build-logic** | `build-logic/` | Shared **convention plugins** via `includeBuild` | `cd build-logic && ./gradlew …` (or root pluginManagement includeBuild) |
 | **grails-gradle** | `grails-gradle/` | **Published** Grails Gradle plugins for apps | `cd grails-gradle && ./gradlew …` |
-| **grails-forge** | `grails-forge/` | App generator (own wrapper, own deps) | `cd grails-forge && ./gradlew …` |
+| **grails-forge** | `grails-forge/` | App generator: a Grails plugin and two Grails applications built against the framework by coordinates (`includeBuild('..')` substitution) | `cd grails-forge && ./gradlew …` |
 | **end-to-end** | `end-to-end/` | Tests against **published** artifacts in `build/local-maven` | Full 3-step flow below (see `end-to-end/README.md`) |
 | **gradle-bootstrap** | `gradle-bootstrap/` | Regenerates shared wrappers from `.sdkmanrc` | `gradle -p gradle-bootstrap` (see wrapper section) |
 
@@ -162,7 +163,7 @@ Never unify those casually.
    - `grails-profiles/base/skeleton/` and `grails-profiles/profile/skeleton/`
    - `grails-shell-cli/src/test/resources/gradle-sample/` (and `bin/test` copy if present)
    - Forge **generated-app** wrapper assets (all of these - properties alone is not enough):
-     - `grails-forge/grails-forge-core/.../gradleWrapperProperties.rocker.raw` (properties template)
+     - `grails-forge/grails-forge-core/grails-app/views/forge/.../gradleWrapperProperties.gsp` (properties page)
      - `grails-forge/grails-forge-core/src/main/resources/gradle/gradlew`
      - `grails-forge/grails-forge-core/src/main/resources/gradle/gradlew.bat`
      - `grails-forge/grails-forge-core/src/main/resources/gradle/wrapper/gradle-wrapper.jar`
@@ -415,6 +416,14 @@ Plugin IDs (implementation under `build-logic/plugins/…/buildsrc/`):
 - `Jar.duplicatesStrategy = FAIL` - duplicate entries are configuration bugs
 - Reproducible archives: no timestamps, fixed order, unix 0644/0755
 - Groovy `configurationScript` → `gradle/groovy-compile-configscript.groovy` (annotation member order / GROOVY-12146 workaround, PR #15963)
+
+### Groovy invokedynamic and `groovy-callsite`
+
+- Library modules always compile with invokedynamic: `CompilePlugin` sets `indy = true` on every `GroovyCompile` task and ignores `-PgrailsIndy`. They never carry `groovy-callsite`, and **`grails-common` must not declare it**: an application that keeps the default would ship it, and the decision is that only an application opting out with `grails { indy = false }` declares the module itself.
+- The Grails Gradle plugin leaves `grails { indy }` unset, so applications and the framework's Grails plugin modules get the Groovy compiler's default, invokedynamic. CI's `functional`, `mongodbFunctional`, `hibernate5Functional`, `hibernate7Functional`, `neo4jFunctional` and `sitemesh2` lanes pass `-PgrailsIndy=false`, which `gradle/grails-extension-gradle-config.gradle` turns into `grails { indy = false }` for the 108 plugin modules and example apps that apply it. In that lane `CompilePlugin` declares `groovy-callsite` on every source set of every module (not in the build-logic and grails-gradle builds, whose code runs inside Gradle on its own Groovy; grails-core gets it also when Forge builds it as an included build), because a module compiled with invokedynamic may still compile or run against a classic-compiled one (a test module against a plugin module's test fixtures; the GSON view compiler against a plugin's classes), and the `ast` source set the Grails plugin gives every plugin project has no BOM platform, so the version is named outright: read from `dependencies.gradle`, applied to the root project once (the build-logic builds apply it the same way; only the BOM projects do otherwise, so `rootProject.findProperty('bomDependencyVersions')` is `null` on a plain build). Every Groovy-compiling module must apply `org.apache.grails.buildsrc.compile` for this to reach it. The applications the Forge specs generate consume that classic-compiled framework from `build/local-maven`, so in that lane the specs run every generated build with `grails-forge/gradle/classic-framework.init.gradle`, which declares the module on each source set; `gradle/test-config.gradle` names the script in the `forge.generatedBuild.initScript` system property and `GeneratedBuild` in the CLI module's test fixtures turns it into arguments.
+- A library compiled with classic call sites needs the module in every lane: `org.testcontainers:testcontainers-spock` is one (Spock, Geb and the Asset Pipeline versions in use are not), so the modules that test with it declare `testRuntimeOnly 'org.apache.groovy:groovy-callsite'` next to it. Scan a jar with `grep -c '$getCallSiteArray'` over its classes to tell.
+- Forge's modules do not apply that script, so `-PgrailsIndy` has no effect on the Forge build.
+- A project that applies `org.graalvm.buildtools.native` keeps an `indy` convention of `true`, fails at evaluation if it sets `grails { indy = false }`, and fails any Groovy compile task whose `indy` option is `false` when it starts.
 
 ### Published Grails Gradle plugins (`grails-gradle`)
 

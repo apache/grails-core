@@ -24,10 +24,6 @@ import org.grails.datastore.mapping.core.DatastoreUtils
 import org.grails.orm.hibernate.HibernateDatastore
 import org.hibernate.engine.jdbc.spi.JdbcServices
 import org.hibernate.internal.SessionFactoryImpl
-import org.testcontainers.mariadb.MariaDBContainer
-import org.testcontainers.mysql.MySQLContainer
-import org.testcontainers.oracle.OracleContainer
-import org.testcontainers.postgresql.PostgreSQLContainer
 import org.testcontainers.spock.Testcontainers
 import spock.lang.Requires
 import spock.lang.Shared
@@ -36,7 +32,6 @@ import spock.lang.Specification
 import java.sql.Connection
 import java.sql.ResultSet
 import java.sql.Statement
-import java.time.Duration
 
 /**
  * Boots a datastore with {@code dbCreate: create-drop} and the default id mapping on every database that
@@ -51,11 +46,10 @@ import java.time.Duration
 @Requires({ HibernateGormDatastoreSpec.isDockerAvailable() })
 class NativeIdGeneratorHibernate7Spec extends Specification {
 
-    @Shared postgres = new PostgreSQLContainer("postgres:16")
-    @Shared mysql = new MySQLContainer("mysql:8.0")
-    @Shared mariadb = new MariaDBContainer("mariadb:10.11")
-    @Shared oracle = new OracleContainer("gvenzl/oracle-free:slim-faststart")
-            .withStartupTimeout(Duration.ofMinutes(3))
+    @Shared postgres = DatabaseContainers.POSTGRES
+    @Shared mysql = DatabaseContainers.MYSQL
+    @Shared mariadb = DatabaseContainers.MARIADB
+    @Shared oracle = DatabaseContainers.ORACLE
 
     void "default id mapping generates distinct ids and creates the sequence it needs with #db"() {
         given:

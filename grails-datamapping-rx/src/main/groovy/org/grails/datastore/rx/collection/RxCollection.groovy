@@ -21,20 +21,18 @@ package org.grails.datastore.rx.collection
 import groovy.transform.CompileStatic
 import groovy.transform.Generated
 
-import rx.Observable
-import rx.Subscriber
-import rx.Subscription
+import io.reactivex.rxjava3.core.Observable
+import io.reactivex.rxjava3.core.Observer
 
 import grails.gorm.rx.collection.ObservableCollection
 
 /**
  * A trait that can be implemented by collection types to make them observable
  *
- * @author Graeme Rocher
  * @since 6.0
  */
 @CompileStatic
-trait RxCollection<T> implements ObservableCollection<T>{
+trait RxCollection<T> implements ObservableCollection<T> {
 
     /**
      * The underlying observable
@@ -46,7 +44,7 @@ trait RxCollection<T> implements ObservableCollection<T>{
      */
     @Generated
     Observable<List> toListObservable() {
-        observable.toList()
+        observable.toList().toObservable()
     }
 
     @Generated
@@ -55,7 +53,7 @@ trait RxCollection<T> implements ObservableCollection<T>{
     }
 
     @Generated
-    Subscription subscribe(Subscriber subscriber) {
-        return observable.subscribe(subscriber)
+    void subscribe(Observer observer) {
+        observable.subscribe(observer)
     }
 }

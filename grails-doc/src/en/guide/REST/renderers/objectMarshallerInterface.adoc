@@ -17,6 +17,8 @@ specific language governing permissions and limitations
 under the License.
 ////
 
+NOTE: XML conversion needs `org.apache.grails:grails-xml`, and is scheduled for removal in Grails 11.
+
 For more complex marshallers it is recommended you implement the link:{api}org/grails/web/converters/marshaller/ObjectMarshaller.html[ObjectMarshaller] interface. For example given a domain class:
 
 [source,groovy]

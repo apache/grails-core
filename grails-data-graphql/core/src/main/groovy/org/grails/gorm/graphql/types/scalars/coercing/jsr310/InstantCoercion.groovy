@@ -19,6 +19,8 @@
 
 package org.grails.gorm.graphql.types.scalars.coercing.jsr310
 
+import graphql.GraphQLContext
+import graphql.execution.CoercedVariables
 import graphql.language.IntValue
 import graphql.language.StringValue
 import graphql.language.Value
@@ -53,31 +55,26 @@ class InstantCoercion implements Coercing<Instant, Instant> {
     }
 
     @Override
-    Instant serialize(Object input) {
+    Instant serialize(Object input, GraphQLContext graphQLContext, Locale locale) {
         convert(input).orElseThrow {
             throw new CoercingSerializeException("Could not convert ${input.class.name} to an Instant")
         }
     }
 
     @Override
-    Instant parseValue(Object input) {
+    Instant parseValue(Object input, GraphQLContext graphQLContext, Locale locale) {
         convert(input).orElseThrow {
             throw new CoercingParseValueException("Could not convert ${input.class.name} to an Instant")
         }
     }
 
     @Override
-    Instant parseLiteral(Object input) {
-
-        if (input instanceof Value) {
-            Object value
-            if (input instanceof IntValue) {
-                value = ((IntValue) input).value.longValue()
-            }
-            else if (input instanceof StringValue) {
-                value = ((StringValue) input).value
-            }
-            parseInstant(value).orElse(null)
+    Instant parseLiteral(Value<?> input, CoercedVariables variables, GraphQLContext graphQLContext, Locale locale) {
+        if (input instanceof IntValue) {
+            parseInstant(((IntValue) input).value.longValue()).orElse(null)
+        }
+        else if (input instanceof StringValue) {
+            parseInstant(((StringValue) input).value).orElse(null)
         }
         else {
             null

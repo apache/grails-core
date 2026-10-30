@@ -1,0 +1,2 @@
+org.apache.grails.testing.ai.AiTestingAutoConfiguration
+org.apache.grails.testing.ai.AiTestingVectorStoreAutoConfiguration

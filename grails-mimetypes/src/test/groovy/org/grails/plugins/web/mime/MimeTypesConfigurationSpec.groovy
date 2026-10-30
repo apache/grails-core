@@ -18,23 +18,34 @@
  */
 package org.grails.plugins.web.mime
 
+import java.util.function.Supplier
+
+import org.springframework.beans.factory.ObjectProvider
+import org.springframework.context.ApplicationContext
+import org.springframework.context.annotation.AnnotatedBeanDefinitionReader
+import org.springframework.context.annotation.Bean
+import org.springframework.context.annotation.Configuration
+import org.springframework.context.annotation.Import
+import org.springframework.http.MediaType
+import org.springframework.mock.web.MockServletContext
+import org.springframework.web.accept.ContentNegotiationManager
+import org.springframework.web.context.support.AnnotationConfigWebApplicationContext
+import org.springframework.web.context.support.GenericWebApplicationContext
+import org.springframework.web.servlet.LocaleResolver
+import org.springframework.web.servlet.config.annotation.EnableWebMvc
+import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter
+
 import grails.core.DefaultGrailsApplication
+import grails.core.GrailsApplication
 import grails.spring.BeanBuilder
 import grails.web.mime.MimeType
-import org.grails.web.mime.HttpServletResponseExtension
+import grails.web.mime.MimeTypeProvider
+import org.grails.web.mime.DefaultMimeUtility
+import org.grails.web.mime.GrailsContentNegotiationStrategy
+import org.grails.web.mime.GrailsMimeTypesWebMvcConfigurer
 import spock.lang.Specification
 
 class MimeTypesConfigurationSpec extends Specification {
-
-    void setup() {
-        // Clear the static mimeTypes cache to prevent test environment pollution
-        HttpServletResponseExtension.@mimeTypes = null
-    }
-
-    void cleanup() {
-        // Clear the static mimeTypes cache after each test for test isolation
-        HttpServletResponseExtension.@mimeTypes = null
-    }
 
     void "test when no mimeTypes configured then the defaults should be used"() {
         when:
@@ -106,6 +117,158 @@ class MimeTypesConfigurationSpec extends Specification {
         and: "other defaults are untouched"
         mimeTypes.find { it.extension == 'html' && it.name == 'text/html' }
         mimeTypes.findAll { it.extension == 'xml' }*.name == ['text/xml', 'application/xml']
+    }
+
+    void 'Grails format resolution resolves against the MIME types of the MimeUtility, as request.format does'() {
+        given:
+        def custom = [new MimeType('application/vnd.acme+json', 'acme'), new MimeType('text/html', 'html')] as MimeType[]
+        def mimeUtility = Stub(ObjectProvider) { getObject() >> new DefaultMimeUtility(custom) }
+
+        expect:
+        MimeTypesConfiguration.grailsMimeTypesWebMvcConfigurer(mimeUtility, new DefaultGrailsApplication())
+                .contentNegotiationStrategy.configuredMimeTypes as List == custom as List
+    }
+
+    void 'a MIME type provider that needs #infrastructure does not close a startup cycle'() {
+        given: 'circular references disallowed, as Spring Boot does, so that a cycle fails the refresh'
+        def context = new AnnotationConfigWebApplicationContext()
+        context.allowCircularReferences = false
+        context.servletContext = new MockServletContext()
+        context.register(configuration)
+
+        when:
+        context.refresh()
+
+        then:
+        noExceptionThrown()
+        context.getBean(GrailsMimeTypesWebMvcConfigurer).contentNegotiationStrategy instanceof GrailsContentNegotiationStrategy
+
+        and: 'the data formats are registered with Spring MVC, a format Spring does not know among them'
+        context.getBean(ContentNegotiationManager).getMediaTypeMappings().get('hal') == MediaType.parseMediaType('application/hal+json')
+
+        cleanup:
+        context.close()
+
+        where:
+        infrastructure                    | configuration
+        'a locale resolver'               | CycleConfiguration
+        "Spring MVC's handler adapter"    | HandlerAdapterCycleConfiguration
+    }
+
+    void 'the data formats grails.mime.types declares are registered with Spring MVC, in place of the defaults'() {
+        when:
+        Map<String, MediaType> mappings = mediaTypeMappings([json: 'application/vnd.acme+json', csv: 'text/csv', html: 'text/html'])
+
+        then:
+        mappings.json == MediaType.parseMediaType('application/vnd.acme+json')
+        mappings.csv == MediaType.parseMediaType('text/csv')
+        !mappings.containsKey('hal')
+    }
+
+    void 'with mergeDefaults, the defaults grails.mime.types does not declare are registered with Spring MVC too'() {
+        when:
+        Map<String, MediaType> mappings = mediaTypeMappings([json: 'application/vnd.acme+json'], true)
+
+        then:
+        mappings.json == MediaType.parseMediaType('application/vnd.acme+json')
+        mappings.hal == MediaType.parseMediaType('application/hal+json')
+        mappings.csv == MediaType.parseMediaType('text/csv')
+    }
+
+    void 'the MIME types a provider adds are not registered with Spring MVC, which asks for its formats while it starts'() {
+        given:
+        def provider = new MimeTypeProvider() {
+            @Override
+            MimeType[] getMimeTypes() {
+                [new MimeType('application/vnd.acme+xml', 'xml')] as MimeType[]
+            }
+        }
+
+        def known = []
+
+        when:
+        Map<String, MediaType> mappings = mediaTypeMappings([json: 'application/vnd.acme+json'], false, known, provider)
+
+        then: "Grails knows the provider's type"
+        known*.name.contains('application/vnd.acme+xml')
+
+        and: 'Spring MVC is not given it'
+        mappings.json == MediaType.parseMediaType('application/vnd.acme+json')
+        mappings.xml != MediaType.parseMediaType('application/vnd.acme+xml')
+    }
+
+    private static Map<String, MediaType> mediaTypeMappings(Map types, boolean mergeDefaults = false, List<MimeType> known = [],
+                                                            MimeTypeProvider... providers) {
+        def application = new DefaultGrailsApplication()
+        application.config['grails.mime.types'] = types
+        application.config['grails.mime.mergeDefaults'] = mergeDefaults
+        def context = new GenericWebApplicationContext(new MockServletContext())
+        application.setApplicationContext(context)
+        context.registerBean('grailsApplication', GrailsApplication, { application } as Supplier<GrailsApplication>)
+        providers.eachWithIndex { MimeTypeProvider provider, int index ->
+            context.registerBean("mimeTypeProvider${index}".toString(), MimeTypeProvider, { provider } as Supplier<MimeTypeProvider>)
+        }
+        new AnnotatedBeanDefinitionReader(context).register(MvcConfiguration)
+        context.refresh()
+        try {
+            known.addAll(context.getBean('mimeTypes', MimeType[]))
+            return context.getBean(ContentNegotiationManager).mediaTypeMappings
+        }
+        finally {
+            context.close()
+        }
+    }
+
+    @Configuration(proxyBeanMethods = false)
+    @EnableWebMvc
+    @Import(MimeTypesConfiguration)
+    static class MvcConfiguration {
+    }
+
+    @Configuration(proxyBeanMethods = false)
+    @EnableWebMvc
+    @Import(MimeTypesConfiguration)
+    static class CycleConfiguration {
+
+        @Bean
+        GrailsApplication grailsApplication(ApplicationContext applicationContext) {
+            def application = new DefaultGrailsApplication()
+            application.setApplicationContext(applicationContext)
+            application
+        }
+
+        @Bean
+        MimeTypeProvider localeAwareMimeTypeProvider(LocaleResolver localeResolver) {
+            new MimeTypeProvider() {
+                @Override
+                MimeType[] getMimeTypes() {
+                    [] as MimeType[]
+                }
+            }
+        }
+    }
+
+    @Configuration(proxyBeanMethods = false)
+    @EnableWebMvc
+    @Import(MimeTypesConfiguration)
+    static class HandlerAdapterCycleConfiguration {
+
+        @Bean
+        GrailsApplication grailsApplication(ApplicationContext applicationContext) {
+            def application = new DefaultGrailsApplication()
+            application.setApplicationContext(applicationContext)
+            application
+        }
+
+        @Bean
+        MimeTypeProvider adapterAwareMimeTypeProvider(RequestMappingHandlerAdapter handlerAdapter) {
+            new MimeTypeProvider() {
+                @Override
+                MimeType[] getMimeTypes() {
+                    [] as MimeType[]
+                }
+            }
+        }
     }
 
     private MimeType[] resolveMimeTypes(Map config, boolean mergeDefaults = false) {

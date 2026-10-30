@@ -24,7 +24,6 @@ import grails.persistence.Entity
 import grails.testing.gorm.DomainUnitTest
 import grails.testing.web.controllers.ControllerUnitTest
 import grails.web.mime.MimeType
-import org.grails.web.mime.HttpServletResponseExtension
 import org.grails.web.util.GrailsApplicationAttributes
 import org.springframework.web.servlet.ModelAndView
 import spock.lang.Issue
@@ -36,15 +35,6 @@ class RespondMethodSpec extends Specification implements ControllerUnitTest<Book
         // Access config to ensure grailsApplication is initialized and Holders is populated.
         // This triggers doWithConfig() which registers the custom MIME types.
         assert config != null
-        
-        // Clear the static mimeTypes cache to prevent test environment pollution.
-        // This must be done AFTER accessing config to ensure the new config is applied.
-        HttpServletResponseExtension.@mimeTypes = null
-    }
-
-    def cleanup() {
-        // Clear the static mimeTypes cache to prevent test environment pollution
-        HttpServletResponseExtension.@mimeTypes = null
     }
 
     Closure doWithConfig() {{ config ->
@@ -63,6 +53,17 @@ class RespondMethodSpec extends Specification implements ControllerUnitTest<Book
                                     form         : 'application/x-www-form-urlencoded',
                                     multipartForm: 'multipart/form-data']
     }}
+
+    void 'respond preserves legacy JSON by default during the Grails 9 migration'() {
+        given:
+        response.format = 'json'
+
+        when:
+        controller.respond([65, 66] as byte[])
+
+        then:
+        response.text == '[65,66]'
+    }
 
     void "Test that the respond method produces the correct model for a domain instance and no specific content type"() {
         given:"A book instance"
@@ -122,6 +123,24 @@ class RespondMethodSpec extends Specification implements ControllerUnitTest<Book
             result == null
             response.contentType == 'text/xml;charset=UTF-8'
             response.xml.error.message.text() == 'Property [title] of class [class grails.rest.web.Book] cannot be null'
+    }
+
+    void 'respond writes the legacy errors JSON for a domain instance with errors by default during the Grails 9 migration'() {
+        given:
+        def book = new Book(title: '')
+        book.validate()
+        response.format = 'json'
+
+        when:
+        controller.show(book)
+
+        then: 'the Grails 8 body and status, not a problem'
+        response.status == 422
+        response.contentType == 'application/json;charset=UTF-8'
+        response.json.errors.first().object == Book.name
+        response.json.errors.first().field == 'title'
+        response.json.errors.first().message == 'Property [title] of class [class grails.rest.web.Book] cannot be null'
+        !response.json.containsKey('status')
     }
 
     void "Test that the respond method produces JSON for a domain instance and a content type of JSON"() {

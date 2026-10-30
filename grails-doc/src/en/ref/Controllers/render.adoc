@@ -80,6 +80,12 @@ render(contentType: "application/json") {
     book(title: b.title, author: b.author)
 }
 
+// render a value as JSON with the Grails mapper, derived from Spring Boot's Jackson mapper, which respond
+// uses with grails.web.rendering.json.spring set to true, or with a configuration registered with the
+// NamedJsonConfigurationRegistry
+render json: book
+render json: book, jsonConfiguration: 'catalog', excludes: ['isbn']
+
 // render with status code
 render(status: 503, text: "Failed to update book ${b.id}")
 
@@ -109,9 +115,12 @@ Parameters:
 * `model` (optional) - The model to use in rendering
 * `collection` (optional) - For rendering a template against each item in a collection
 * `contentType` (optional) - The contentType of the response
-* `encoding` (optional) - The encoding of the response
+* `encoding` (optional) - The encoding of the response. With `json`, it defaults to `grails.converters.encoding`, which the JSON converter, and `respond` without Spring JSON rendering, write JSON in, and which defaults to UTF-8
 * `plugin` (optional) - The plugin to look for the template in
 * `status` (optional) - The HTTP status code to use
 * `file` (optional) - The byte[], java.io.File, or inputStream you wish to send with the response. File responses are rendered with `Content-Disposition: attachment` by default. If a `Content-Disposition` header is already set on the response, Grails leaves it alone.
 * `fileName` (optional) - For specifying an attachment file name while rendering a file. Unsafe characters in the filename are escaped before they are written to the header.
 * `inline` (optional) - Set to `true` while rendering a file to omit the default attachment `Content-Disposition` header.
+* `json` (optional) - A value to write as JSON with the Grails mapper, which Grails derives from Spring Boot's Jackson `JsonMapper` and which writes domain class instances with the serializer `grails.converters.JSON` writes them with when `grails.converters.json.legacy` is `false`: their persistent properties, references to associated instances and the converter's settings, with the Jackson annotations of the class applied. Marshallers registered with `JSON.registerObjectMarshaller(...)` apply only to the converter, which also writes an enum by its name, where the mapper writes it as Jackson does. `respond` writes JSON with the same mapper when `grails.web.rendering.json.spring` is `true` or a `jsonConfiguration` is given, writes a `ProblemDetail` with Spring's message converters, and writes anything else with the legacy converter. A value the mapper fails to write throws the mapper's exception, a Jackson `JacksonException`, and a failure of the response's writer a `ControllerExecutionException`, where `respond` reports both as Spring MVC's converters do
+* `jsonConfiguration` (optional) - With `json`, the name of a configuration registered with the `NamedJsonConfigurationRegistry` to write the value with, such as `deep`, which Grails registers to write the associations of domain class instances in full. A name that is not registered throws `IllegalArgumentException`; an empty name selects the default configuration, as it does for `respond`
+* `includes`, `excludes` (optional) - With `json`, the properties to include or leave out of the instances of the value's class, or of its elements' classes for a collection or array

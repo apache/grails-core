@@ -82,7 +82,11 @@ class VersionInfoSpec extends Specification {
             properties += "grails.endOfSupport=${endOfSupport}\n"
         }
         Files.writeString(versionsDir.resolve('grails-versions.properties'), properties)
-        URL[] urls = [versionsDir.toUri().toURL(), VersionInfo.protectionDomain.codeSource.location]
+        URL[] urls = [
+                versionsDir.toUri().toURL(),
+                VersionInfo.protectionDomain.codeSource.location,
+                GroovyObject.protectionDomain.codeSource.location
+        ]
         new URLClassLoader(urls, ClassLoader.platformClassLoader).loadClass(VersionInfo.name)
     }
 }

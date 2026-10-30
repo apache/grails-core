@@ -28,7 +28,10 @@ import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.file.DuplicatesStrategy
 import org.gradle.api.plugins.JavaPluginExtension
+import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.PathSensitivity
+import org.gradle.api.tasks.SourceSet
+import org.gradle.api.tasks.SourceSetContainer
 import org.gradle.api.tasks.bundling.AbstractArchiveTask
 import org.gradle.api.tasks.bundling.Jar
 import org.gradle.api.tasks.compile.GroovyCompile
@@ -36,11 +39,13 @@ import org.gradle.api.tasks.compile.JavaCompile
 import org.gradle.api.tasks.javadoc.Javadoc
 import org.gradle.external.javadoc.StandardJavadocDocletOptions
 
-import static org.apache.grails.buildsrc.GradleUtils.lookupProperty
 import static org.apache.grails.buildsrc.GradleUtils.lookupPropertyByType
 
 @CompileStatic
 class CompilePlugin implements Plugin<Project> {
+
+    /** Root project names of the builds whose code runs inside Gradle; see {@link #configureCallSiteModule}. */
+    private static final Set<String> GRADLE_SIDE_BUILDS = ['build-logic-root', 'grails-gradle'].toSet()
 
     static final String AUTO_CONFIGURATION_IMPORTS_PATH =
             'src/main/resources/META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports'
@@ -61,7 +66,53 @@ class CompilePlugin implements Plugin<Project> {
         configureJavaVersion(project)
         configureJars(project)
         configureCompiler(project)
+        configureCallSiteModule(project)
         configureReproducible(project)
+    }
+
+    /**
+     * Declares {@code org.apache.groovy:groovy-callsite} on every source set when the build runs with
+     * {@code -PgrailsIndy=false}, the CI lane that compiles the Grails plugin modules and example apps
+     * with classic call sites.
+     *
+     * <p>Grails does not carry the module: an application that opts out of invokedynamic declares it
+     * itself. The lane stands in for such an application across the whole build, so every project needs
+     * it, on every source set: the ones compiled classic need it to compile, and every other one may load
+     * a classic-compiled class from them, as a test compiling against a plugin module's test fixtures
+     * does. The version is named outright, read from the map in {@code dependencies.gradle}, because the
+     * ast source set the Grails plugin gives a plugin project has no platform on its configurations.</p>
+     *
+     * <p>Not in the build-logic and grails-gradle builds, whether invoked or included: the property reaches
+     * every included build, but their code runs inside Gradle on its own Groovy, where the Groovy 6
+     * module's copies of the call-site classes collide with Gradle's, and they are never compiled classic.
+     * grails-core itself is injected wherever it is built, including as a build Forge includes.</p>
+     */
+    private static void configureCallSiteModule(Project project) {
+        Boolean indy = lookupPropertyByType(project, 'grailsIndy', Boolean)
+        if (indy == null || indy || project.gradle.rootProject.name in GRADLE_SIDE_BUILDS) {
+            return
+        }
+        project.plugins.withId('java-base') {
+            // A provider, so the version is read once the build scripts have run and the root's map exists.
+            Provider<String> module = project.provider { callSiteModule(project) }
+            project.extensions.getByType(SourceSetContainer).configureEach { SourceSet sourceSet ->
+                project.dependencies.addProvider(sourceSet.implementationConfigurationName, module)
+            }
+        }
+    }
+
+    private static String callSiteModule(Project project) {
+        Project root = project.rootProject
+        if (!root.extensions.extraProperties.has('bomDependencyVersions')) {
+            File versions = root.layout.projectDirectory.file('dependencies.gradle').asFile
+            if (versions.file) {
+                root.apply(from: versions)
+            }
+        }
+        Object version = root.extensions.extraProperties.has('bomDependencyVersions')
+                ? ((Map) root.extensions.extraProperties.get('bomDependencyVersions')).get('groovy.version')
+                : null
+        version ? "org.apache.groovy:groovy-callsite:${version}" as String : 'org.apache.groovy:groovy-callsite'
     }
 
     private static void configureJavaVersion(Project project) {
@@ -118,12 +169,13 @@ class CompilePlugin implements Plugin<Project> {
                 if (!it.options.compilerArgs.contains('-parameters')) {
                     it.options.compilerArgs.add('-parameters')
                 }
-                // Grails 8 keeps invokedynamic off for published artifacts. Groovy 5's
-                // compiler default is indy=true, which is a large runtime regression for
-                // dynamic Groovy (see #15293). Unpublished build-logic uses Gradle's
-                // default. Grails 9 / Groovy 6 can flip this. CI can still opt in with
-                // -PgrailsIndy=true (same property as grails-extension-gradle-config.gradle).
-                it.groovyOptions.optimizationOptions.put('indy', lookupProperty(project, 'grailsIndy', false))
+                // Grails 9 compiles with invokedynamic on. Groovy 6 moved classic call-site
+                // bytecode into the optional groovy-callsite module (GROOVY-11158), which the
+                // framework's library modules do not carry, so they never opt out. -PgrailsIndy
+                // (see grails-extension-gradle-config.gradle) still governs the Grails plugin
+                // modules, which that script gives groovy-callsite when the lane turns indy off,
+                // and applications opt out with grails { indy = false } plus that dependency.
+                it.groovyOptions.optimizationOptions.put('indy', true)
                 // encoding needs to be the same since it's different across platforms
                 it.options.encoding = StandardCharsets.UTF_8.name()
                 it.options.fork = true

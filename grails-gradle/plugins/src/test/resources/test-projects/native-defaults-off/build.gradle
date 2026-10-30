@@ -5,10 +5,13 @@ plugins {
 // An application that builds neither an image nor a cache applies neither plugin, and so should
 // find nothing has been decided on its behalf.
 tasks.register('inspectDefaults') {
-    def indy = providers.provider { project.extensions.getByName('grails').indy.get() }
+    def indyOption = providers.provider {
+        Map<String, Boolean> options = project.tasks.named('compileGroovy', GroovyCompile).get().groovyOptions.optimizationOptions
+        options.containsKey('indy') ? String.valueOf(options.indy) : 'unset'
+    }
     def hasNativeExtension = providers.provider { project.extensions.findByName('graalvmNative') != null }
     doLast {
-        println "INDY=${indy.get()}"
+        println "INDY_OPTION=${indyOption.get()}"
         println "HAS_NATIVE_EXTENSION=${hasNativeExtension.get()}"
     }
 }

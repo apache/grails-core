@@ -81,13 +81,10 @@ jobs:
       - name: "📝 Derive matching Apache Groovy branch from dependencies.gradle"
         id: groovy-branch
         run: |
-          # Extract the major and minor version of `groovy.version` declared in this
-          # branch's dependencies.gradle (e.g. '5.0.5' -> '5_0', '4.0.31' -> '4_0')
-          # and use it to pick the matching Apache Groovy development branch
-          # (GROOVY_<major>_<minor>_X).
-          # This keeps `7.0.x` PRs validating against Groovy 4 and `8.0.x` PRs
-          # validating against Groovy 5 without hard-coding the branch here.
-          GROOVY_MAJOR_MINOR=$(sed -nE "s/.*'groovy\.version'.*'([0-9]+)\.([0-9]+)\.[0-9]+'.*/\1_\2/p" dependencies.gradle | head -n 1)
+          # Extract the main BOM's Groovy release line, ignoring prerelease suffixes
+          # (e.g. '6.0.0-RC-2' -> '6_0'), and build its matching maintenance branch.
+          # Groovy master has moved to 7.x; Grails 9 still validates Groovy 6 here.
+          GROOVY_MAJOR_MINOR=$(sed -nE "s/^[[:space:]]*'groovy\.version'[[:space:]]*:[[:space:]]*'([0-9]+)\.([0-9]+)\.[0-9]+.*/\1_\2/p" dependencies.gradle | head -n 1)
           if [ -z "$GROOVY_MAJOR_MINOR" ]; then
             echo "::error::Could not determine Apache Groovy major/minor version from dependencies.gradle"
             exit 1
@@ -108,7 +105,7 @@ jobs:
           cache-read-only: ${{ steps.gradle-cache-policy.outputs.read-only }}
           develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY }}
       - name: "🔍 Setup TestLens"
-        uses: testlens-app/setup-testlens@d29a2be31512b3aeda3adcef09fbe0d55af90c51 # v1.9.4
+        uses: testlens-app/setup-testlens@89edf53f781ac41833b4bc74d0e19a5315c79c67 # v1.10.0
       - name: "📝 Store Groovy version to use when building Grails"
         id: groovy-version
         run: |
@@ -141,7 +138,10 @@ jobs:
             gradle_task: testShard
           - shard_index: 2
             gradle_task: testShard
-    runs-on: ubuntu-latest
+    # ubuntu-22.04 for the reason gradle.yml's mongodbFunctional job gives: this job runs the MongoDB specifications
+    # against mongo:8.0, and ubuntu-latest is now the ubuntu-26.04 image, whose 7.0.0-1017-azure kernel MongoDB 8.0
+    # refuses to start on (https://github.com/actions/runner-images/issues/15005). Move back with that job.
+    runs-on: ubuntu-22.04
     steps:
       - name: "⚙️ Maximize build space"
         run: |
@@ -180,7 +180,7 @@ jobs:
           cache-read-only: ${{ steps.gradle-cache-policy.outputs.read-only }}
           develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY }}
       - name: "🔍 Setup TestLens"
-        uses: testlens-app/setup-testlens@d29a2be31512b3aeda3adcef09fbe0d55af90c51 # v1.9.4
+        uses: testlens-app/setup-testlens@89edf53f781ac41833b4bc74d0e19a5315c79c67 # v1.10.0
       - name: "📥 Fetch the locally built Groovy artifacts"
         uses: actions/download-artifact@v8.0.1
         with:

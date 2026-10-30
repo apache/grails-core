@@ -59,6 +59,40 @@ class AuthorSearchCommand implements grails.validation.Validateable {
 In this example, both `name` and `age` will allow null values during validation.
 
 
+==== Sharing Properties With Domain Classes
+
+Prefer a Groovy trait when sharing properties between a command object and a domain class.
+Keep the trait in `src/main/groovy` and implement it in both classes:
+
+[source,groovy]
+----
+trait PersonDetails {
+    String name
+}
+
+@grails.persistence.Entity
+class Person implements PersonDetails {
+    static constraints = {
+        name blank: false
+    }
+}
+
+class PersonCommand implements PersonDetails, grails.validation.Validateable {
+    static constraints = {
+        name blank: false
+    }
+}
+----
+
+GORM maps the trait's `name` property on `Person`, while `PersonCommand` validates `name` without acquiring `id` or `version` from the domain class.
+This trait-based approach also works in earlier Grails versions; it does not depend on the Grails 9 change to generated property placement.
+
+If you use a shared non-domain superclass instead, keep it in `src/main/groovy`, outside `grails-app/domain`, and do not annotate it as an entity.
+Grails adds generated `id` and `version` properties to the domain class, not to that shared superclass, so a command object extending the superclass does not acquire those persistence properties.
+When domain classes extend other domain classes, generated persistence properties remain on the domain superclass.
+This also applies when a plain class sits between two domain classes: the properties are declared on the domain ancestor, not duplicated on the child or declared on the plain intermediate class.
+Properties explicitly declared on a superclass are still inherited normally.
+
 ==== Using Command Objects
 
 
@@ -216,12 +250,15 @@ class Widget {
 
 [source,bash]
 ----
-$ curl -H "Content-Type: application/json" -d '{"name":"Some Widget","42"}'[size] localhost:8080/demo/createWidget
+$ curl -H "Content-Type: application/json" -d '{"name":"Some Widget","size":"42"}' localhost:8080/demo/createWidget
  Name: Some Widget, Size: 42
 
-$ curl -H "Content-Type: application/xml" -d '<widget><name>Some Other Widget</name><size>2112</size></widget>' localhost:8080/bodybind/demo/createWidget
+$ curl -H "Content-Type: application/xml" -d '<widget><name>Some Other Widget</name><size>2112</size></widget>' localhost:8080/demo/createWidget
  Name: Some Other Widget, Size: 2112
 ----
+
+NOTE: Binding an XML body requires `org.apache.grails:grails-xml`, which the Grails 9 web starter and `grails-web-boot`
+bring. Without it the body is not read, and only the request parameters are bound.
 
 [NOTE]
 ====
@@ -313,6 +350,6 @@ There is also support for JSON, so you can submit the following with correct dat
     }, {
         "title": "The Definitive Guide to Grails 2",
         "isbn": "1111-343455-1112"
-    }],
+    }]
 }
 ----

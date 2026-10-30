@@ -61,6 +61,7 @@ class UrlMappingsInfoHandlerAdapter implements HandlerAdapter, ApplicationContex
     protected Map<String, Object> controllerCache = new ConcurrentHashMap<>()
     protected ResponseRedirector redirector
     protected ObservationRegistry observationRegistry = ObservationRegistry.NOOP
+    protected ActionReturnValues actionReturnValues
 
     void setApplicationContext(ApplicationContext applicationContext) {
         this.actionResultTransformers = applicationContext.getBeansOfType(ActionResultTransformer).values()
@@ -68,6 +69,7 @@ class UrlMappingsInfoHandlerAdapter implements HandlerAdapter, ApplicationContex
         this.redirector = new ResponseRedirector(applicationContext.getBean(LinkGenerator))
         this.observationRegistry = applicationContext.getBeanProvider(ObservationRegistry)
                 .getIfAvailable({ -> ObservationRegistry.NOOP })
+        this.actionReturnValues = new ActionReturnValues(applicationContext)
     }
 
     @Override
@@ -98,6 +100,10 @@ class UrlMappingsInfoHandlerAdapter implements HandlerAdapter, ApplicationContex
                 }
                 if (asyncResult instanceof ModelAndView resolvedModelAndView) {
                     return resolvedModelAndView
+                }
+                if (asyncResult != null && actionReturnValues != null && ActionReturnValues.isAsync(request)) {
+                    // the value a CompletableFuture or a DeferredResult an action returned completed with
+                    return actionReturnValues.writeAsync(asyncResult, request, response)
                 }
             }
         }
@@ -162,8 +168,14 @@ class UrlMappingsInfoHandlerAdapter implements HandlerAdapter, ApplicationContex
                 }
 
                 def modelAndView = request.getAttribute(GrailsApplicationAttributes.MODEL_AND_VIEW)
+                String methodName = controllerClass.actionUriToViewName(action)
                 if (modelAndView instanceof ModelAndView) {
                     return (ModelAndView) modelAndView
+                }
+                else if (actionReturnValues?.isBody(result, controller, methodName, webRequest)) {
+                    // a ResponseEntity, a ProblemDetail or the value of an action annotated @ResponseBody, which
+                    // Spring MVC writes as the response
+                    return actionReturnValues.write(result, controller, methodName, request, response)
                 }
                 else if (result instanceof Map) {
                     String viewName = controllerClass.actionUriToViewName(action)

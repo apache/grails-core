@@ -18,7 +18,6 @@
  */
 package org.grails.web.json
 
-import java.io.IOException
 import java.io.StringWriter
 import java.io.Writer
 import java.util.Date
@@ -26,6 +25,7 @@ import java.util.Date
 import groovy.lang.Writable
 import groovy.transform.CompileStatic
 import spock.lang.Specification
+import tools.jackson.databind.json.JsonMapper
 
 class JSONWriterApiSpec extends Specification {
 
@@ -44,6 +44,17 @@ class JSONWriterApiSpec extends Specification {
         then:
         result.is(writer)
         output.toString() == '{"items":[{"name":"Grails"},[true,false,2.5,4000000000,1.25,null,null,null,{"nested":true},[1,2]]],"empty":{}}'
+    }
+
+    void "control characters without a short escape are escaped as Grails 8 escaped them, in keys and values"() {
+        given:
+        def output = new StringWriter()
+
+        when:
+        new JSONWriter(output).object().key('k\u001F').value('a\u001Bb\u000Bc\u000E').endObject()
+
+        then: 'in lower-case hexadecimal, but the vertical tab'
+        output.toString() == '{"k\\u001f":"a\\u001bb\\u000Bc\\u000e"}'
     }
 
     void "object values quote strings string builders and ordinary objects"() {
@@ -97,7 +108,6 @@ class JSONWriterApiSpec extends Specification {
 
         where:
         setup                                      | operation                         | message
-        ({ JSONWriter w -> })                         | ({ w -> w.value(true) })          | 'Value out of sequence'
         ({ JSONWriter w -> w.object() })              | ({ w -> w.value((Object) 'bad') }) | 'Value out of sequence'
         ({ JSONWriter w -> })                         | ({ w -> w.key('key') })           | 'Misplaced key'
         ({ JSONWriter w -> w.array() })               | ({ w -> w.key('key') })           | 'Misplaced key'
@@ -112,36 +122,65 @@ class JSONWriterApiSpec extends Specification {
         ({ JSONWriter w -> w.array().endArray() })    | ({ w -> w.value(1L) })            | 'Value out of sequence'
     }
 
-    void "wrap IO failures when opening writing separating keys and closing containers"() {
+    void "a writer made to pretty print indents as a default JsonMapper's default pretty printer does"() {
         given:
-        def output = Stub(Writer) {
-            write(_) >> { List arguments ->
-                def value = arguments[0]
-                if (value == failingValue) {
-                    throw new IOException('broken output')
-                }
-            }
-        }
-        def writer = new JSONWriter(output)
+        def indented = new StringWriter()
+        def plain = new StringWriter()
+        def unindented = new StringWriter()
 
         when:
-        operation(writer)
+        new JSONWriter(indented, true).object().key('a').value(1).key('b').array().value(2).endArray().endObject()
+        new JSONWriter(plain, false).object().key('a').value(1).endObject()
+        new JSONWriter(unindented).object().key('a').value(1).endObject()
 
         then:
-        def error = thrown(JSONException)
-        error.cause instanceof IOException
-        error.message == 'broken output'
+        indented.toString() == JsonMapper.builder().build().writerWithDefaultPrettyPrinter().writeValueAsString([a: 1, b: [2]])
+        plain.toString() == unindented.toString()
+    }
 
-        where:
-        failingValue | operation
-        '['          | ({ w -> w.array() })
-        '{'          | ({ w -> w.object() })
-        'true'       | ({ w -> w.array().value(true) })
-        (int) ','    | ({ w -> w.array().value(true).value(false) })
-        (int) ','    | ({ w -> w.object().key('one').value(true).key('two') })
-        (int) ':'    | ({ w -> w.object().key('one') })
-        (int) ']'    | ({ w -> w.array().endArray() })
-        (int) '}'    | ({ w -> w.object().endObject() })
+    void "the nesting depth is the number of objects and arrays the next value is written in"() {
+        given:
+        def writer = new JSONWriter(new StringWriter())
+
+        expect:
+        writer.nestingDepth() == 0
+
+        when:
+        writer.object().key('list').array()
+
+        then:
+        writer.nestingDepth() == 2
+
+        when:
+        writer.endArray()
+
+        then:
+        writer.nestingDepth() == 1
+
+        and: 'a writer that writes to no generator does not know it'
+        new JSONWriter(null).nestingDepth() == -1
+    }
+
+    void "the nesting depth of a nested value is that of the place the mapper writes it in"() {
+        given:
+        def output = new StringWriter()
+        def support = new JsonMapperSupport(JsonMapper.builder().build())
+        def writer = new JSONWriter(output, support, false)
+        List<Integer> depths = []
+
+        when: 'the mapper writes a map and hands back the list of one of its properties'
+        writer.value(new JsonMapperValue([list: [1]], support, { Object nested ->
+            writer.writeNested {
+                depths << writer.nestingDepth()
+                writer.value('x')
+            }
+            true
+        }))
+        writer.flush()
+
+        then:
+        depths == [1]
+        output.toString() == '{"list":"x"}'
     }
 
     void "primitive overloads are available without Groovy dispatch"() {

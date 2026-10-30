@@ -32,6 +32,7 @@ import org.springframework.beans.factory.support.BeanDefinitionRegistry;
 import org.springframework.beans.factory.support.BeanDefinitionRegistryPostProcessor;
 import org.springframework.beans.factory.support.BeanRegistryAdapter;
 import org.springframework.beans.factory.support.DefaultSingletonBeanRegistry;
+import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationListener;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.event.ContextRefreshedEvent;
@@ -89,6 +90,13 @@ import org.grails.spring.RuntimeSpringConfiguration;
  * {@link GrailsApplicationPostProcessor} reuses them instead of rebuilding and skips the already-drained
  * plugin runtime configuration.
  *
+ * <p>In a parent/child context hierarchy, such as {@link grails.boot.GrailsAppBuilder} builds, exactly one
+ * context is the Grails application. The lifecycle keeps state that is JVM-wide — {@link Holders}, the
+ * {@link Environment#isInitializing() initializing} flag, the shutdown operations — which a second
+ * application in the same hierarchy would overwrite and then clear when it closed, so a context whose
+ * parent chain already holds a {@code grailsApplication} refuses to start as another one. The other
+ * contexts of the hierarchy are plain Spring contexts and reach the Grails beans through their parent.
+ *
  * @since 8.0
  */
 public class GrailsEarlyPluginRegistrationPostProcessor
@@ -137,6 +145,12 @@ public class GrailsEarlyPluginRegistrationPostProcessor
         if (!launchedByGrails && !containsApplicationClass(applicationSources)) {
             LOG.debug("Not a Grails application — the plugin lifecycle does not run for this context");
             return;
+        }
+        ApplicationContext parent = applicationContext.getParent();
+        if (parent != null && parent.containsBean(GrailsApplication.APPLICATION_ID)) {
+            throw new IllegalStateException("A Grails application already exists in the parent hierarchy of this context. " +
+                    "Only one context in a hierarchy can be the Grails application; the other contexts share its beans " +
+                    "through their parent, so leave the Grails application class out of their sources.");
         }
 
         // The initializing flag is a system property, so a leak on failure poisons every subsequent

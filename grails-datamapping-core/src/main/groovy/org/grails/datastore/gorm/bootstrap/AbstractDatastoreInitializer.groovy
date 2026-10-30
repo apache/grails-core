@@ -79,7 +79,6 @@ abstract class AbstractDatastoreInitializer implements ResourceLoaderAware {
     Collection<Class> persistentClasses = []
     Collection<String> packages = []
     PropertyResolver configuration = new StandardEnvironment()
-    boolean registerApplicationIfNotPresent = true
     Object originalConfiguration
 
     protected ClassLoader classLoader = Thread.currentThread().contextClassLoader
@@ -309,7 +308,14 @@ abstract class AbstractDatastoreInitializer implements ResourceLoaderAware {
         }
     }
 
+    /**
+     * Hook subclasses can override to contribute bean definitions common to every datastore type
+     * they configure. The {@code registry} and {@code type} parameters are unused by this default
+     * no-op implementation but are part of the override contract used by overriders such as the
+     * Hibernate and MongoDB datastore initializers.
+     */
     @CompileDynamic
+    @SuppressWarnings(['GrMethodMayBeStatic', 'GroovyUnusedDeclaration'])
     Closure getCommonConfiguration(BeanDefinitionRegistry registry, String type) {
         return {}
     }
@@ -349,7 +355,7 @@ abstract class AbstractDatastoreInitializer implements ResourceLoaderAware {
     }
 
     protected boolean isMappedClass(String datastoreType, Class cls) {
-        datastoreType.equals(ClassPropertyFetcher.getStaticPropertyValue(cls, GormProperties.MAPPING_STRATEGY, String))
+        datastoreType == ClassPropertyFetcher.getStaticPropertyValue(cls, GormProperties.MAPPING_STRATEGY, String)
     }
 
     abstract Closure getBeanDefinitions(BeanDefinitionRegistry beanDefinitionRegistry)
@@ -386,7 +392,7 @@ abstract class AbstractDatastoreInitializer implements ResourceLoaderAware {
                 }
             }
             loadDataServices(null)
-                    .each { serviceName, serviceClass ->
+                    .each { String serviceName, Class<?> serviceClass ->
                         "$serviceName"(DatastoreServiceMethodInvokingFactoryBean, serviceClass) {
                             targetObject = ref("${type}Datastore")
                             targetMethod = 'getService'
@@ -431,6 +437,7 @@ abstract class AbstractDatastoreInitializer implements ResourceLoaderAware {
     }
 
     @CompileDynamic
+    @SuppressWarnings('GrMethodMayBeStatic')
     protected boolean containsRegisteredBean(Object builder, BeanDefinitionRegistry registry, String beanName) {
         registry.containsBeanDefinition(beanName) || (builder.hasProperty('springConfig') && builder.springConfig.containsBean(beanName))
     }
@@ -461,7 +468,13 @@ abstract class AbstractDatastoreInitializer implements ResourceLoaderAware {
      */
     protected abstract Class<AbstractDatastorePersistenceContextInterceptor> getPersistenceInterceptorClass()
 
+    /**
+     * Not made static: {@code getClass()} intentionally resolves the classloader of the concrete
+     * subclass instance rather than this base class, which matters when a subclass is loaded by a
+     * different (e.g. plugin/OSGi) classloader than {@link AbstractDatastoreInitializer} itself.
+     */
     @CompileStatic
+    @SuppressWarnings('GrMethodMayBeStatic')
     protected Class getGrailsApplicationClass() {
         ClassLoader cl = getClass().getClassLoader()
         if (ClassUtils.isPresent('grails.core.DefaultGrailsApplication', cl)) {
@@ -471,6 +484,7 @@ abstract class AbstractDatastoreInitializer implements ResourceLoaderAware {
 
     }
 
+    @SuppressWarnings('GrMethodMayBeStatic')
     protected boolean isGrailsPresent() {
         ClassLoader cl = getClass().getClassLoader()
         if (ClassUtils.isPresent('grails.core.DefaultGrailsApplication', cl)) {
@@ -480,6 +494,7 @@ abstract class AbstractDatastoreInitializer implements ResourceLoaderAware {
     }
 
     @CompileStatic
+    @SuppressWarnings('GrMethodMayBeStatic')
     protected Class getGrailsValidatorClass() {
         throw new UnsupportedOperationException('Method getGrailsValidatorClass no longer supported')
     }
@@ -490,13 +505,14 @@ abstract class AbstractDatastoreInitializer implements ResourceLoaderAware {
             try {
                 Thread.currentThread().contextClassLoader.loadClass('org.springframework.beans.factory.groovy.GroovyBeanDefinitionReader')
                 return true
-            } catch (e) {
+            } catch (ignored) {
                 return false
             }
         }
         static void registerBeans(BeanDefinitionRegistry registry, Closure beanDefinitions) {
             def classLoader = Thread.currentThread().contextClassLoader
-            def beanReader = classLoader.loadClass('org.springframework.beans.factory.groovy.GroovyBeanDefinitionReader').newInstance(registry)
+            def readerClass = classLoader.loadClass('org.springframework.beans.factory.groovy.GroovyBeanDefinitionReader')
+            def beanReader = readerClass.getDeclaredConstructor(BeanDefinitionRegistry).newInstance(registry)
             beanReader.beans(beanDefinitions)
         }
     }
@@ -507,14 +523,15 @@ abstract class AbstractDatastoreInitializer implements ResourceLoaderAware {
             try {
                 Thread.currentThread().contextClassLoader.loadClass('grails.spring.BeanBuilder')
                 return true
-            } catch (e) {
+            } catch (ignored) {
                 return false
             }
         }
 
         static void registerBeans(BeanDefinitionRegistry registry, Closure beanDefinitions) {
             def classLoader = Thread.currentThread().contextClassLoader
-            def beanBuilder = classLoader.loadClass('grails.spring.BeanBuilder').newInstance()
+            def beanBuilderClass = classLoader.loadClass('grails.spring.BeanBuilder')
+            def beanBuilder = beanBuilderClass.getDeclaredConstructor().newInstance()
             beanBuilder.beans(beanDefinitions)
             beanBuilder.registerBeans(registry)
         }

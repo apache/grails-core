@@ -22,6 +22,7 @@ package grails.boot
 import java.lang.reflect.Method
 import java.lang.reflect.Modifier
 
+import org.springframework.beans.factory.BeanCreationException
 import org.springframework.beans.factory.support.DefaultListableBeanFactory
 import org.springframework.boot.WebApplicationType
 import org.springframework.boot.builder.SpringApplicationBuilder
@@ -29,6 +30,7 @@ import org.springframework.context.ConfigurableApplicationContext
 import org.springframework.context.annotation.AnnotationConfigApplicationContext
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
+import org.springframework.context.annotation.Lazy
 import org.springframework.context.support.AbstractApplicationContext
 import spock.lang.Specification
 import spock.util.environment.RestoreSystemProperties
@@ -216,6 +218,91 @@ class GrailsAppBuilderSpec extends Specification {
         and: 'the parent holds the application of the child while it runs'
         parent.getBean(GrailsApplication.APPLICATION_ID).is(grailsApplication)
         parent.getBean(GrailsPluginManager.BEAN_NAME).is(child.getBean(GrailsPluginManager.BEAN_NAME))
+
+        when: 'the child closes'
+        child.close()
+
+        then: 'the parent is given back what it had, and nothing more'
+        parent.isActive()
+        !parent.containsBean(GrailsApplication.APPLICATION_ID)
+        !parent.containsBean(GrailsPluginManager.BEAN_NAME)
+        parent.getBean(BuilderSharedConfig.SharedService) != null
+    }
+
+    void 'a Grails child that fails to start takes its loan back, so another can start beneath the same parent'() {
+        given:
+        GrailsAppBuilder parentBuilder = tracked(new GrailsAppBuilder(BuilderSharedConfig))
+
+        when: 'a Grails child fails after its bean factory post-processors have lent its singletons to the parent'
+        tracked(parentBuilder.child(BuilderTestApplication, BuilderFailingConfig).web(WebApplicationType.NONE)).run()
+
+        then:
+        BeanCreationException e = thrown()
+        e.beanName == 'failingBean'
+
+        and: 'the parent is running and holds nothing of the application that never started'
+        ConfigurableApplicationContext parent = parentBuilder.context()
+        parent.isActive()
+        !parent.containsBean(GrailsApplication.APPLICATION_ID)
+        !parent.containsBean(GrailsPluginManager.BEAN_NAME)
+
+        when: 'another Grails child starts beneath it'
+        ConfigurableApplicationContext second = tracked(parentBuilder.child(BuilderTestApplication).web(WebApplicationType.NONE)).run()
+
+        then:
+        second.isActive()
+        second.parent.is(parent)
+        parent.getBean(GrailsApplication.APPLICATION_ID).is(second.getBean(GrailsApplication.APPLICATION_ID))
+    }
+
+    void 'a parent keeps a pluginManager of its own when the Grails child closes'() {
+        given:
+        GrailsAppBuilder parentBuilder = tracked(new GrailsAppBuilder(BuilderOwnPluginManagerConfig))
+        GrailsAppBuilder childBuilder = tracked(parentBuilder.child(BuilderTestApplication).web(WebApplicationType.NONE))
+        ConfigurableApplicationContext child = childBuilder.run()
+        ConfigurableApplicationContext parent = parentBuilder.context()
+        Object own = parent.getBean(GrailsPluginManager.BEAN_NAME)
+
+        expect: 'the child lent the parent only what it did not already hold'
+        own instanceof BuilderOwnPluginManagerConfig.OwnPluginManager
+        !own.is(child.getBean(GrailsPluginManager.BEAN_NAME))
+        parent.getBean(GrailsApplication.APPLICATION_ID).is(child.getBean(GrailsApplication.APPLICATION_ID))
+
+        when:
+        child.close()
+
+        then: 'the loan is withdrawn and the parent\'s own bean is left alone'
+        !parent.containsBean(GrailsApplication.APPLICATION_ID)
+        parent.getBean(GrailsPluginManager.BEAN_NAME).is(own)
+    }
+
+    void 'a parent bean that injected the lent application goes with the loan and is recreated against the next one'() {
+        given:
+        GrailsAppBuilder parentBuilder = tracked(new GrailsAppBuilder(BuilderObservingConfig))
+        ConfigurableApplicationContext first = tracked(parentBuilder.child(BuilderTestApplication).web(WebApplicationType.NONE)).run()
+        ConfigurableApplicationContext parent = parentBuilder.context()
+
+        when: 'the parent bean is first asked for while the application runs'
+        BuilderObservingConfig.GrailsObserver observer = parent.getBean(BuilderObservingConfig.GrailsObserver)
+
+        then:
+        observer.grailsApplication.is(first.getBean(GrailsApplication.APPLICATION_ID))
+        parent.beanFactory.containsSingleton('grailsObserver')
+
+        when: 'the application closes'
+        first.close()
+
+        then: 'the bean that depended on it is destroyed with the loan, as it holds a closed application'
+        parent.isActive()
+        !parent.beanFactory.containsSingleton('grailsObserver')
+
+        when: 'another Grails application starts beneath the parent'
+        ConfigurableApplicationContext second = tracked(parentBuilder.child(BuilderTestApplication).web(WebApplicationType.NONE)).run()
+        BuilderObservingConfig.GrailsObserver recreated = parent.getBean(BuilderObservingConfig.GrailsObserver)
+
+        then: 'the bean is created again, against the new application'
+        !recreated.is(observer)
+        recreated.grailsApplication.is(second.getBean(GrailsApplication.APPLICATION_ID))
     }
 
     void 'a Grails parent shares its application with a plain child that runs no lifecycle of its own'() {
@@ -239,6 +326,23 @@ class GrailsAppBuilderSpec extends Specification {
         and: 'yet reaches the Grails beans through it'
         child.getBean(GrailsApplication.APPLICATION_ID).is(parent.getBean(GrailsApplication.APPLICATION_ID))
         child.getBean(BuilderPlainConfig.PlainMarker) != null
+    }
+
+    void 'a second Grails application in the hierarchy is refused'() {
+        given:
+        GrailsAppBuilder parentBuilder = tracked(new GrailsAppBuilder(BuilderTestApplication))
+        GrailsAppBuilder childBuilder = tracked(parentBuilder.child(BuilderOtherApplication).web(WebApplicationType.NONE))
+
+        when:
+        childBuilder.run()
+
+        then:
+        IllegalStateException e = thrown()
+        e.message.contains('Only one context in a hierarchy can be the Grails application')
+
+        and: 'the parent is unaffected'
+        parentBuilder.context().isActive()
+        parentBuilder.context().getBean(GrailsApplication.APPLICATION_ID) != null
     }
 
     void 'parent(Class) attaches a Grails parent that starts before the child'() {
@@ -376,5 +480,51 @@ class BuilderSharedConfig {
     }
 }
 
+@Configuration
+class BuilderFailingConfig {
+
+    @Bean
+    FailingBean failingBean() {
+        throw new IllegalStateException('this bean cannot be created')
+    }
+
+    static class FailingBean {
+    }
+}
+
+@Configuration
+class BuilderOwnPluginManagerConfig {
+
+    @Bean(name = 'pluginManager')
+    OwnPluginManager ownPluginManager() {
+        new OwnPluginManager()
+    }
+
+    static class OwnPluginManager {
+    }
+}
+
+@Configuration
+class BuilderObservingConfig {
+
+    @Bean
+    @Lazy
+    GrailsObserver grailsObserver(GrailsApplication grailsApplication) {
+        new GrailsObserver(grailsApplication)
+    }
+
+    static class GrailsObserver {
+
+        final GrailsApplication grailsApplication
+
+        GrailsObserver(GrailsApplication grailsApplication) {
+            this.grailsApplication = grailsApplication
+        }
+    }
+}
+
 class BuilderTestApplication extends GrailsAutoConfiguration {
+}
+
+class BuilderOtherApplication extends GrailsAutoConfiguration {
 }

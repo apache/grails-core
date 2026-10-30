@@ -19,46 +19,14 @@ under the License.
 
 === Installation
 
-==== Installation using Grails
-
-To get started with RxGORM for MongoDB in a Grails application simply add the following dependency to your `build.gradle` file:
+The RxGORM API described in this guide, the `RxEntity` domain model and the RxJava data services, is provided by the `grails-datamapping-rx` module. In a Grails application its version is managed by the Grails BOM:
 
 [source,groovy,subs="attributes"]
 .`build.gradle`
 ----
-implementation "org.grails.plugins:rx-mongodb:{version}"
+implementation "org.apache.grails.data:grails-datamapping-rx:{version}"
 ----
 
-==== Installation without Grails
+The RxJava data services need nothing more: they run on whichever GORM datastore the application uses. See the RxJava Support section of the Grails user guide.
 
-If you are not developing a Grails application then define the following dependency in your `build.gradle` or `pom.xml`:
-
-[source,groovy,subs="attributes"]
-.`build.gradle`
-----
-implementation "org.grails:grails-datastore-gorm-rx-mongodb:{version}"
-----
-
-With that done you will need to place the following logic in the bootstrap path of your application:
-
-[source,groovy]
-----
-import org.grails.datastore.rx.mongodb.*
-import com.mongodb.rx.client.MongoClient
-...
-MongoClient mongoClient = ... // create the MongoClient
-
-new RxMongoDatastoreClient(
-            mongoClient, // <1>
-            "myDatabase", // <2>
-            MyClass // <3>
-)
-----
-
-<1> The `MongoClient` instance
-<2> The name of the default database to save objects to
-<3> One or many classes that implement link:../api/grails/gorm/rx/RxEntity.html[RxEntity]
-
-The `org.grails.datastore.rx.mongodb.RxMongoDatastoreClient` class is required to initialize RxGORM for MongoDB.
-
-
+An `RxEntity` application also needs a datastore implementation of RxGORM, and none ships with this release. The only one that ever existed, RxGORM for MongoDB (`org.grails.plugins:rx-mongodb` in a Grails application, `org.grails:grails-datastore-gorm-rx-mongodb` outside one), was last released for GORM 6.1 on RxJava 1, so it cannot be used with this release unless it is rebuilt against it. Such an implementation is initialised from the bootstrap path of the application through its `RxDatastoreClient`, which takes the connection to the datastore, the name of the default database and the classes that implement link:../api/grails/gorm/rx/RxEntity.html[RxEntity].

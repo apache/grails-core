@@ -35,6 +35,7 @@ import grails.plugin.json.view.JsonViewWritableScript
 import grails.rest.render.RendererRegistry
 import grails.views.mvc.SmartViewResolver
 import grails.web.mime.MimeType
+import org.grails.plugins.web.rest.render.DefaultRendererRegistry
 
 /**
  * @author Graeme Rocher
@@ -71,6 +72,10 @@ class JsonViewResolver extends SmartViewResolver {
         if (rendererRegistry != null) {
             def errorsRenderer = new ErrorsJsonViewRenderer((Class) Errors)
             errorsRenderer.setJsonViewResolver(this)
+            if (rendererRegistry instanceof DefaultRendererRegistry) {
+                // the errors no view renders are written in the encoding of the registry's own renderers
+                errorsRenderer.encoding = ((DefaultRendererRegistry) rendererRegistry).encoding
+            }
             rendererRegistry.addRenderer(errorsRenderer)
             def defaultJsonRenderer = rendererRegistry.findRenderer(MimeType.JSON, Object)
             viewConfiguration.mimeTypes.each { String mimeTypeString ->

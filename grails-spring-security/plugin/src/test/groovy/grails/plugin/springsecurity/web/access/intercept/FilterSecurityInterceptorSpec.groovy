@@ -201,4 +201,112 @@ class FilterSecurityInterceptorSpec extends AbstractUnitSpec {
         response.committed
         0 * chain._
     }
+
+    void 'doFilter authorizes a request once and passes its later dispatches through'() {
+        given:
+        def authentication = UsernamePasswordAuthenticationToken.authenticated(
+            'user', 'password', AuthorityUtils.createAuthorityList('ROLE_USER'))
+        SecurityContextHolder.context.authentication = authentication
+        def attributes = [new SecurityConfig('ROLE_USER')]
+        def interceptor = new FilterSecurityInterceptor(
+            securityMetadataSource: Stub(FilterInvocationSecurityMetadataSource) {
+                getAttributes(_ as FilterInvocation) >> attributes
+            },
+            accessDecisionManager: Mock(AccessDecisionManager)
+        )
+        FilterChain chain = Mock()
+
+        when: 'the request is dispatched'
+        interceptor.doFilter(request, response, chain)
+
+        then: 'it is authorized'
+        1 * interceptor.accessDecisionManager.decide(authentication, _ as FilterInvocation, attributes)
+        1 * chain.doFilter(request, response)
+
+        when: 'the same request is dispatched again, as it is to render its error page'
+        interceptor.doFilter(request, response, chain)
+
+        then: 'it is not authorized again'
+        0 * interceptor.accessDecisionManager._
+        1 * chain.doFilter(request, response)
+    }
+
+    void 'doFilter passes the later dispatches of a public request through without authorizing them'() {
+        given:
+        SecurityContextHolder.context.authentication = UsernamePasswordAuthenticationToken.authenticated(
+            'user', 'password', AuthorityUtils.NO_AUTHORITIES)
+        def interceptor = new FilterSecurityInterceptor(
+            rejectPublicInvocations: false,
+            securityMetadataSource: Stub(FilterInvocationSecurityMetadataSource) {
+                getAttributes(_ as FilterInvocation) >>> [null, [new SecurityConfig('ROLE_USER')]]
+            },
+            accessDecisionManager: Mock(AccessDecisionManager)
+        )
+        FilterChain chain = Mock()
+
+        when: 'a request without a rule is dispatched'
+        interceptor.doFilter(request, response, chain)
+
+        then:
+        1 * chain.doFilter(request, response)
+
+        when: 'the same request is dispatched to a URL that has a rule'
+        interceptor.doFilter(request, response, chain)
+
+        then: 'the rule is not applied'
+        0 * interceptor.accessDecisionManager._
+        1 * chain.doFilter(request, response)
+    }
+
+    void 'doFilter does not authorize the error dispatch of a request it denied'() {
+        given:
+        SecurityContextHolder.context.authentication = UsernamePasswordAuthenticationToken.authenticated(
+            'user', 'password', AuthorityUtils.NO_AUTHORITIES)
+        def interceptor = new FilterSecurityInterceptor(
+            securityMetadataSource: Stub(FilterInvocationSecurityMetadataSource) {
+                getAttributes(_ as FilterInvocation) >> [new SecurityConfig('ROLE_USER')]
+            },
+            accessDecisionManager: Mock(AccessDecisionManager)
+        )
+        FilterChain chain = Mock()
+
+        when: 'the request is denied'
+        interceptor.doFilter(request, response, chain)
+
+        then:
+        1 * interceptor.accessDecisionManager.decide(_, _, _) >> { throw new AccessDeniedException('Access is denied') }
+        thrown(AccessDeniedException)
+        0 * chain._
+
+        when: 'the error page for the denial is dispatched on the same request'
+        interceptor.doFilter(request, response, chain)
+
+        then: 'the dispatch is not authorized'
+        0 * interceptor.accessDecisionManager._
+        1 * chain.doFilter(request, response)
+    }
+
+    void 'doFilter authorizes every dispatch of a request when observeOncePerRequest is false'() {
+        given:
+        def authentication = UsernamePasswordAuthenticationToken.authenticated(
+            'user', 'password', AuthorityUtils.createAuthorityList('ROLE_USER'))
+        SecurityContextHolder.context.authentication = authentication
+        def attributes = [new SecurityConfig('ROLE_USER')]
+        def interceptor = new FilterSecurityInterceptor(
+            observeOncePerRequest: false,
+            securityMetadataSource: Stub(FilterInvocationSecurityMetadataSource) {
+                getAttributes(_ as FilterInvocation) >> attributes
+            },
+            accessDecisionManager: Mock(AccessDecisionManager)
+        )
+        FilterChain chain = Mock()
+
+        when:
+        interceptor.doFilter(request, response, chain)
+        interceptor.doFilter(request, response, chain)
+
+        then:
+        2 * interceptor.accessDecisionManager.decide(authentication, _ as FilterInvocation, attributes)
+        2 * chain.doFilter(request, response)
+    }
 }

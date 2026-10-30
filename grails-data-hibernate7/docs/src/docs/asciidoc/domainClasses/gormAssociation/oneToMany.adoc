@@ -62,6 +62,8 @@ class Book {
 
 The join table name defaults to `author_books` and can be customised — see xref:ormdsl-tableAndColumnNames[Table and Column Names].
 
+An owner may declare several unidirectional one-to-many associations, such as `static hasMany = [roles: Role, tags: Tag]`. Each one is written to its own join table, including two associations to the same class that map different tables with `joinTable`. Two associations to the same class share one join table by default, with a key column each (`item_role` with `item_roles_id` and `item_deny_roles_id` for `static hasMany = [roles: Role, denyRoles: Role]`), and so do associations that `joinTable` maps onto one table. Each association keeps its rows unique by its own key column and the element, through a unique key per association, or on Oracle and Db2 LUW one unique key over both key columns and the element.
+
 === Sorting
 
 You can define a default sort order for the collection:

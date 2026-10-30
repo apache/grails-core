@@ -103,6 +103,7 @@ include(
         'grails-services',
         'grails-shell-cli',
         'grails-spring',
+        'grails-startup-progress',
         'grails-test-core',
         'grails-undertow',
         'grails-undertow-spring-boot',
@@ -117,6 +118,7 @@ include(
         'grails-web-databinding',
         'grails-web-mvc',
         'grails-web-url-mappings',
+        'grails-xml',
 
         // POM / BOMs
         'grails-dependencies-starter-web',
@@ -141,6 +143,7 @@ include(
         'grails-events-core',
         'grails-events-transforms',
         'grails-events-gpars',
+        'grails-events-groovy-concurrent',
         'grails-events-spring',
         'grails-events-rxjava',
         'grails-events-rxjava2',
@@ -150,6 +153,7 @@ include(
         // async
         'grails-async-core',
         'grails-async-gpars',
+        'grails-async-groovy-concurrent',
         'grails-async-rxjava',
         'grails-async-rxjava2',
         'grails-async-rxjava3',
@@ -180,8 +184,7 @@ include(
         'grails-datamapping-core-test',
 
         // RX projects
-        // until this can be finished being ported to the current Grails release, we are disabling
-        //'grails-datamapping-rx',
+        'grails-datamapping-rx',
 
         // Spring Security
         // Note: Spring Security documentation is now part of grails-doc (grails-doc/src/en/guide/security).
@@ -199,6 +202,9 @@ include(
         'grails-spring-security-rest-testapp-profile',
         'grails-spring-security-ui',
 
+        // AI
+        'grails-spring-ai',
+
         // Mail
         'grails-mail',
 
@@ -209,6 +215,7 @@ include(
         'grails-redis',
 
         // Testing Support
+        'grails-testing-support-ai',
         'grails-testing-support-core',
         'grails-testing-support-datamapping',
         'grails-testing-support-dbcleanup-core',
@@ -228,8 +235,10 @@ include(
         'grails-wrapper',
 
         // Agent Skills (published for consumption by AI coding agents)
+        'grails-skills-ai',
         'grails-skills-developer',
         'grails-skills-upgrade-guide-8',
+        'grails-skills-upgrade-guide-9',
 )
 
 project(':grails-bom').projectDir = file('grails-bom/default')
@@ -243,6 +252,7 @@ project(':grails-neo4j-bom').projectDir = file('grails-bom/neo4j')
 project(':grails-events-core').projectDir = file('grails-events/core')
 project(':grails-events-transforms').projectDir = file('grails-events/transforms')
 project(':grails-events-gpars').projectDir = file('grails-events/gpars')
+project(':grails-events-groovy-concurrent').projectDir = file('grails-events/groovy-concurrent')
 project(':grails-events-spring').projectDir = file('grails-events/spring')
 project(':grails-events-rxjava').projectDir = file('grails-events/rxjava')
 project(':grails-events-rxjava2').projectDir = file('grails-events/rxjava2')
@@ -251,13 +261,16 @@ project(':grails-events').projectDir = file('grails-events/plugin')
 
 project(':grails-async-core').projectDir = file('grails-async/core')
 project(':grails-async-gpars').projectDir = file('grails-async/gpars')
+project(':grails-async-groovy-concurrent').projectDir = file('grails-async/groovy-concurrent')
 project(':grails-async-rxjava').projectDir = file('grails-async/rxjava')
 project(':grails-async-rxjava2').projectDir = file('grails-async/rxjava2')
 project(':grails-async-rxjava3').projectDir = file('grails-async/rxjava3')
 project(':grails-async').projectDir = file('grails-async/plugin')
 
+project(':grails-skills-ai').projectDir = file('grails-skills/ai')
 project(':grails-skills-developer').projectDir = file('grails-skills/developer')
 project(':grails-skills-upgrade-guide-8').projectDir = file('grails-skills/upgrade-guide-8')
+project(':grails-skills-upgrade-guide-9').projectDir = file('grails-skills/upgrade-guide-9')
 
 project(':grails-dependencies-starter-web').projectDir = file('grails-dependencies/starter-web')
 project(':grails-dependencies-test').projectDir = file('grails-dependencies/test')
@@ -280,9 +293,8 @@ project(':grails-undertow').projectDir = file('grails-undertow/plugin')
 // Data Mapping - Documentation
 include 'grails-data-docs-guide-developer'
 project(':grails-data-docs-guide-developer').projectDir = file('grails-data-docs/guide-developer')
-// until this can be finished being ported to the current Grails release, we are disabling
-// include 'grails-data-docs-guide-rx'
-// project(':grails-data-docs-guide-rx').projectDir = file('docs/guide-rx')
+include 'grails-data-docs-guide-rx'
+project(':grails-data-docs-guide-rx').projectDir = file('grails-data-docs/guide-rx')
 include 'grails-data-docs-guide-whats-new'
 project(':grails-data-docs-guide-whats-new').projectDir = file('grails-data-docs/guide-whats-new')
 include 'grails-data-docs-stage'
@@ -545,6 +557,7 @@ project(':grails-test-examples-redis').projectDir = new File(settingsDir, 'grail
 // Functional Tests
 include(
         'grails-test-examples-aot',
+        'grails-test-examples-ai',
         'grails-test-examples-app1',
         'grails-test-examples-app2',
         'grails-test-examples-app3',
@@ -595,6 +608,7 @@ include(
         'grails-test-examples-undertow',
         'grails-test-examples-views-functional-tests',
         'grails-test-examples-views-functional-tests-plugin',
+        'grails-test-examples-startup-progress',
         'grails-test-examples-welcome-page',
         'grails-test-examples-welcome-page-jetty',
 )
@@ -603,6 +617,7 @@ project(':grails-test-examples-benchmarks').projectDir = file('grails-test-examp
 project(':grails-test-examples-beans-dsl').projectDir = file('grails-test-examples/beans-dsl')
 project(':grails-test-examples-beans-dsl-plugin').projectDir = file('grails-test-examples/beans-dsl-plugin')
 project(':grails-test-examples-aot').projectDir = file('grails-test-examples/aot')
+project(':grails-test-examples-ai').projectDir = file('grails-test-examples/ai')
 project(':grails-test-examples-app1').projectDir = file('grails-test-examples/app1')
 project(':grails-test-examples-app2').projectDir = file('grails-test-examples/app2')
 project(':grails-test-examples-app3').projectDir = file('grails-test-examples/app3')
@@ -646,6 +661,7 @@ project(':grails-test-examples-views-functional-tests-plugin').projectDir = file
 project(':grails-test-examples-test-phases').projectDir = file('grails-test-examples/test-phases')
 project(':grails-test-examples-jetty').projectDir = file('grails-test-examples/jetty')
 project(':grails-test-examples-undertow').projectDir = file('grails-test-examples/undertow')
+project(':grails-test-examples-startup-progress').projectDir = file('grails-test-examples/startup-progress')
 project(':grails-test-examples-welcome-page').projectDir = file('grails-test-examples/welcome-page')
 project(':grails-test-examples-welcome-page-jetty').projectDir = file('grails-test-examples/welcome-page-jetty')
 project(':grails-test-examples-latency').projectDir = file('grails-test-examples/latency')

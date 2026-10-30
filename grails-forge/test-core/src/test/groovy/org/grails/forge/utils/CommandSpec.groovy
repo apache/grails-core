@@ -15,14 +15,15 @@
  */
 package org.grails.forge.utils
 
-import io.micronaut.context.ApplicationContext
-import io.micronaut.core.util.functional.ThrowingSupplier
+import org.grails.forge.util.ThrowingSupplier
 import org.gradle.testkit.runner.BuildResult
 import org.gradle.testkit.runner.GradleRunner
 import org.grails.forge.application.ApplicationType
 import org.grails.forge.application.OperatingSystem
 import org.grails.forge.application.Project
 import org.grails.forge.application.generator.ProjectGenerator
+import org.grails.forge.cli.Application
+import org.grails.forge.cli.GeneratedBuild
 import org.grails.forge.io.ConsoleOutput
 import org.grails.forge.io.FileSystemOutputHandler
 import org.grails.forge.io.OutputHandler
@@ -42,9 +43,10 @@ import java.nio.file.Files
 
 abstract class CommandSpec extends Specification {
 
+    /** The Forge CLI's Grails application, which is what generates the projects these specs build. */
     @Shared
     @AutoCleanup
-    ApplicationContext applicationContext
+    org.springframework.context.ConfigurableApplicationContext applicationContext
 
     @Shared
     GradleRunner gradleRunner = GradleRunner.create()
@@ -56,7 +58,7 @@ abstract class CommandSpec extends Specification {
     File dir
 
     void setupSpec() {
-        applicationContext = ApplicationContext.run(getConfiguration())
+        applicationContext = Application.builder().run()
         testKit = Files.createTempDirectory("${tempDirectoryPrefix}TestKit").toFile()
         gradleRunner.withTestKitDir(testKit)
     }
@@ -70,19 +72,13 @@ abstract class CommandSpec extends Specification {
         testKit.deleteDir()
     }
 
-    Map<String, Object> getConfiguration() {
-        return Collections.EMPTY_MAP
-    }
-
     BuildResult executeGradle(String command) {
-        gradleRunner.withProjectDir(dir)
-                .withArguments(command.split(' '))
-                .build()
+        executeGradle(command.split(' '))
     }
 
     BuildResult executeGradle(String... arguments) {
         gradleRunner.withProjectDir(dir)
-                .withArguments(arguments)
+                .withArguments(GeneratedBuild.arguments() + arguments.toList())
                 .build()
     }
 

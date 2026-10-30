@@ -96,7 +96,12 @@ dependencies {
     testImplementation 'org.testcontainers:testcontainers-mariadb'
     testImplementation 'com.oracle.database.jdbc:ojdbc11'
     testImplementation 'org.testcontainers:testcontainers-oracle-free'
+    // IBM's driver (IPLA licence), for the test rows against the Db2 container only, as ojdbc11 is for Oracle's
+    testImplementation 'com.ibm.db2:jcc'
+    testImplementation 'org.testcontainers:testcontainers-db2'
     testImplementation 'org.testcontainers:testcontainers-spock'
+    // testcontainers-spock is compiled with classic call sites, which Groovy 6 loads only with this module
+    testRuntimeOnly 'org.apache.groovy:groovy-callsite'
     testImplementation 'org.jsr107.ri:cache-ri-impl'
 
     testImplementation 'org.objenesis:objenesis'

@@ -27,6 +27,7 @@ import org.springframework.web.servlet.View
 import spock.lang.Specification
 
 import grails.util.GrailsWebMockUtil
+import org.grails.web.json.JSONObject
 import org.grails.web.servlet.mvc.GrailsWebRequest
 import org.grails.web.servlet.mvc.ParameterCreationListener
 import org.grails.web.servlet.view.CompositeViewResolver
@@ -90,6 +91,23 @@ class ResponseRendererSpec extends Specification {
         1 * viewResolver.resolveView('/templateRendering/_first', _) >> view
         1 * viewResolver.resolveView('/otherTemplateRendering/_second', _) >> view
         2 * view.render(_, _, _)
+    }
+
+    void 'a JSON object with a json key is rendered as it is, not read as render arguments'() {
+        given:
+        bindRequest()
+        def response = GrailsWebRequest.lookup().currentResponse
+        def renderer = new FileRenderingController()
+        def object = new JSONObject()
+        object.put('json', 'value')
+
+        when:
+        renderer.render(object)
+
+        then: 'the whole object is written, with no named JSON renderer needed'
+        response.contentType.startsWith('application/json')
+        response.contentAsString.contains('"json"')
+        response.contentAsString.contains('"value"')
     }
 
     void 'file renders are attachments by default without a file name'() {

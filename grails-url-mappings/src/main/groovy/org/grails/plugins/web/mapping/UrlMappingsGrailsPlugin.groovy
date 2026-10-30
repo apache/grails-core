@@ -50,6 +50,7 @@ import org.grails.core.artefact.UrlMappingsArtefactHandler
 import org.grails.web.mapping.CachingLinkGenerator
 import org.grails.web.mapping.DefaultLinkGenerator
 import org.grails.web.mapping.UrlMappingsHolderFactoryBean
+import org.grails.web.mapping.mvc.ActionExceptionHandlerResolver
 import org.grails.web.mapping.mvc.UrlMappingsInfoHandlerAdapter
 import org.grails.web.mapping.servlet.UrlMappingsErrorPageCustomizer
 import org.grails.web.util.HiddenHttpMethod
@@ -110,6 +111,9 @@ class UrlMappingsGrailsPlugin extends Plugin {
         }
 
         bean(UrlMappingsInfoHandlerAdapter).conditionalOnMissingBean()
+
+        // Spring MVC's @ExceptionHandler methods, for an exception an action throws, where the application opts in
+        bean(ActionExceptionHandlerResolver).conditionalOnMissingBean()
     }
 
     @Override

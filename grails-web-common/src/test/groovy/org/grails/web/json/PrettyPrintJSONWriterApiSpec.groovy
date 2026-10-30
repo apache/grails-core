@@ -18,9 +18,7 @@
  */
 package org.grails.web.json
 
-import java.io.IOException
 import java.io.StringWriter
-import java.io.Writer
 
 import spock.lang.Specification
 
@@ -71,7 +69,6 @@ class PrettyPrintJSONWriterApiSpec extends Specification {
         operation                           | message
         ({ w -> w.key(null) })                 | 'Null key'
         ({ w -> w.key('key') })                | 'Misplaced key'
-        ({ w -> w.value(true) })               | 'Value out of sequence'
         ({ w -> w.object().valueNull() })      | 'Value out of sequence'
         ({ w -> w.array().endObject() })       | 'Misplaced endObject'
         ({ w -> w.object().endArray() })       | 'Misplaced endArray'
@@ -91,34 +88,5 @@ class PrettyPrintJSONWriterApiSpec extends Specification {
         def error = thrown(JSONException)
         error.message == 'Misplaced endObject.'
         output.toString() == written
-    }
-
-    void "pretty writer wraps failures in newlines indentation keys and values"() {
-        given:
-        def output = Stub(Writer) {
-            write(_) >> { List arguments ->
-                def value = arguments[0]
-                if (value == failingValue) {
-                    throw new IOException('broken output')
-                }
-            }
-        }
-        def writer = new PrettyPrintJSONWriter(output)
-
-        when:
-        operation(writer)
-
-        then:
-        def error = thrown(JSONException)
-        error.cause instanceof IOException
-        error.message == 'broken output'
-
-        where:
-        failingValue                   | operation
-        PrettyPrintJSONWriter.NEWLINE  | ({ w -> w.object().key('key') })
-        '  '                           | ({ w -> w.object().key('key') })
-        ': '                           | ({ w -> w.object().key('key') })
-        'true'                         | ({ w -> w.array().value(true) })
-        (int) ','                      | ({ w -> w.array().value(true).value(false) })
     }
 }

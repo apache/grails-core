@@ -18,7 +18,10 @@
  */
 package org.apache.grails.core.plugins
 
+import java.nio.file.Path
+
 import spock.lang.Specification
+import spock.lang.TempDir
 import spock.lang.Unroll
 
 import org.grails.plugins.DefaultGrailsPlugin
@@ -27,6 +30,9 @@ import org.grails.plugins.DefaultGrailsPlugin
  * Test suite for PluginUtils utility methods
  */
 class PluginUtilsSpec extends Specification {
+
+    @TempDir
+    Path temp
 
     @Unroll
     def "isPluginVersionCompatible checks that plugin with grailsVersion=#pluginGrailsVersion is compatible with grails #grailsVersion"() {
@@ -176,6 +182,55 @@ class PluginUtilsSpec extends Specification {
         !resource.exists()
     }
 
+    def "getGeneratedConfigurationPath names the copy after the plugin class"() {
+        expect:
+        PluginUtils.getGeneratedConfigurationPath('com.example.FooGrailsPlugin', 'plugin.yml') ==
+                'META-INF/grails/plugin-configuration/com.example.FooGrailsPlugin/plugin.yml'
+    }
+
+    @Unroll
+    def "readPluginConfiguration prefers the generated copy of a #fileName to the one beside the plugin"(String fileName) {
+        given: 'a plugin with its configuration at its root, and a copy the build generated'
+        Path root = temp.resolve('plugin')
+        PluginClassFixtures.compilePlugin(root, 'fixture.copy.CopiedGrailsPlugin')
+        PluginClassFixtures.write(root, fileName, 'beside: the plugin')
+        PluginClassFixtures.write(root,
+                PluginUtils.getGeneratedConfigurationPath('fixture.copy.CopiedGrailsPlugin', fileName), 'copied: by the build')
+        URLClassLoader loader = PluginClassFixtures.loaderOver(root)
+
+        when:
+        def resource = PluginUtils.readPluginConfiguration(loader.loadClass('fixture.copy.CopiedGrailsPlugin'))
+
+        then: 'it keeps its name, which is how its format is chosen'
+        resource.filename == fileName
+        resource.inputStream.text == 'copied: by the build'
+
+        cleanup:
+        loader?.close()
+
+        where:
+        fileName << ['plugin.yml', 'plugin.groovy']
+    }
+
+    def "readPluginConfiguration finds each plugin's own configuration where every class is at one root"() {
+        given: 'two plugins at one root, as every class is in a native image, each with only a copy of its configuration'
+        Path root = temp.resolve('image')
+        PluginClassFixtures.compilePlugin(root, 'fixture.alpha.AlphaGrailsPlugin')
+        PluginClassFixtures.compilePlugin(root, 'fixture.beta.BetaGrailsPlugin')
+        PluginClassFixtures.write(root,
+                PluginUtils.getGeneratedConfigurationPath('fixture.alpha.AlphaGrailsPlugin', 'plugin.yml'), 'alpha: one')
+        PluginClassFixtures.write(root,
+                PluginUtils.getGeneratedConfigurationPath('fixture.beta.BetaGrailsPlugin', 'plugin.yml'), 'beta: two')
+        URLClassLoader loader = PluginClassFixtures.loaderOver(root)
+
+        expect:
+        PluginUtils.readPluginConfiguration(loader.loadClass('fixture.alpha.AlphaGrailsPlugin')).inputStream.text == 'alpha: one'
+        PluginUtils.readPluginConfiguration(loader.loadClass('fixture.beta.BetaGrailsPlugin')).inputStream.text == 'beta: two'
+
+        cleanup:
+        loader?.close()
+    }
+
     // Tests for additional public methods
 
     @Unroll
@@ -239,10 +294,8 @@ class PluginUtilsSpec extends Specification {
         def mapWithIncludes = ['includes': ['dev', 'test'] as Set]
 
         then:
-        with(PluginUtils) {
-            supportsValueInIncludeExcludeMap(mapWithIncludes, 'dev')
-            !supportsValueInIncludeExcludeMap(mapWithIncludes, 'prod')
-        }
+        PluginUtils.supportsValueInIncludeExcludeMap(mapWithIncludes, 'dev')
+        !PluginUtils.supportsValueInIncludeExcludeMap(mapWithIncludes, 'prod')
     }
 
     def "supportsValueInIncludeExcludeMap checks excludes"() {
@@ -250,10 +303,8 @@ class PluginUtilsSpec extends Specification {
         def mapWithExcludes = ['excludes': ['prod'] as Set]
 
         then:
-        with(PluginUtils) {
-            supportsValueInIncludeExcludeMap(mapWithExcludes, 'dev')
-            !supportsValueInIncludeExcludeMap(mapWithExcludes, 'prod')
-        }
+        PluginUtils.supportsValueInIncludeExcludeMap(mapWithExcludes, 'dev')
+        !PluginUtils.supportsValueInIncludeExcludeMap(mapWithExcludes, 'prod')
     }
 
     def "scanPluginDescriptors returns empty list when no descriptors found"() {

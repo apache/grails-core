@@ -149,6 +149,25 @@ class JsonDateTimeRenderingSpec extends Specification {
         expect: 'other date and time types render as they do by default'
         new JSON([date: new Date(0L), time: new Time(0L), month: Month.MAY, calendar: calendar('1970-01-01T00:00Z[UTC]')]).toString() ==
                 '{"date":new Date(0),"time":new Date(0),"month":"MAY","calendar":"1970-01-01T00:00:00.000Z"}'
+
+        and: "Grails' own parser reads them back"
+        JSON.parse(new JSON([date: new Date(0L)]).toString()).date == new Date(0L)
+    }
+
+    void "JavaScript dates, which are not JSON, cannot be set with grails.converters.json.legacy false, whose parser cannot read them"() {
+        given:
+        ConvertersConfigurationHolder.clear()
+        def grailsApplication = new DefaultGrailsApplication()
+        grailsApplication.config.setAt('grails.converters.json.date', 'javascript')
+        grailsApplication.config.setAt('grails.converters.json.legacy', false)
+
+        when:
+        new ConvertersConfigurationInitializer(grailsApplication: grailsApplication).initialize()
+
+        then:
+        IllegalStateException e = thrown()
+        e.message.contains('grails.converters.json.date')
+        e.message.contains('grails.converters.json.legacy')
     }
 
     void "the JSON builder writes date map keys the same way as Spring Boot"() {

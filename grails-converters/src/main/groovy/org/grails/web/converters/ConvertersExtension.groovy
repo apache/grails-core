@@ -22,43 +22,52 @@ import groovy.transform.CompileStatic
 
 import jakarta.servlet.http.HttpServletRequest
 
-import grails.converters.JSON
-import grails.converters.XML
-import org.grails.web.servlet.mvc.GrailsWebRequest
+import org.codehaus.groovy.runtime.InvokerHelper
 
 /**
- *
- *
+ * The methods Grails 8 compiled {@code request.JSON}, {@code request.XML} and {@code as JSON} into in classes compiled
+ * with {@code @CompileStatic}, kept so that a library compiled against Grails 8 runs without being recompiled. It is no
+ * longer an extension class: the extensions are {@link ConvertersModuleExtension}'s, and {@code request.XML} is the
+ * {@code grails-xml} module's.
  *
  * @author Jeff Brown
  * @author Graeme Rocher
  *
  * @since 3.0
- *
+ * @deprecated Scheduled for removal in Grails 11. Recompile against Grails 9, which calls the extensions directly.
  */
+@Deprecated(since = '9.0', forRemoval = true)
 @CompileStatic
 class ConvertersExtension {
 
     static getJSON(HttpServletRequest request) {
-        JSON.parse(request)
+        ConvertersModuleExtension.getJSON(request)
     }
 
+    /**
+     * Parses the request body as XML, with the {@code grails-xml} module, as {@code request.XML} does.
+     *
+     * @throws IllegalStateException without the {@code grails-xml} module
+     */
     static getXML(HttpServletRequest request) {
-        XML.parse(request)
+        try {
+            // reaches the grails-xml module's extension, since this class is not one
+            InvokerHelper.getProperty(request, 'XML')
+        }
+        catch (MissingPropertyException e) {
+            if (e.property != 'XML') {
+                throw e
+            }
+            throw new IllegalStateException('request.XML parses the request body as XML, which requires ' +
+                    'org.apache.grails:grails-xml on the classpath', e)
+        }
     }
 
     static <T> T asType(instance, Class<T> clazz) {
-        if (ConverterUtil.isConverterClass(clazz)) {
-            return ConverterUtil.createConverter(clazz,
-                                                 instance,
-                                                 GrailsWebRequest.lookup()?.applicationContext)
-        }
-        else {
-            return (T) ConverterUtil.invokeOriginalAsTypeMethod(instance, clazz)
-        }
+        ConvertersModuleExtension.asType(instance, clazz)
     }
 
     static <T> T  asType(Object[] array, Class<T> clazz) {
-        asType((Object) array, clazz)
+        ConvertersModuleExtension.asType(array, clazz)
     }
 }

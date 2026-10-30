@@ -86,6 +86,8 @@ dependencies {
     testImplementation 'org.testcontainers:testcontainers'
     testImplementation 'org.testcontainers:testcontainers-postgresql'
     testImplementation 'org.testcontainers:testcontainers-spock'
+    // testcontainers-spock is compiled with classic call sites, which Groovy 6 loads only with this module
+    testRuntimeOnly 'org.apache.groovy:groovy-callsite'
     testImplementation 'org.postgresql:postgresql'
     enversRuntime("org.hibernate.orm:hibernate-envers")
 }

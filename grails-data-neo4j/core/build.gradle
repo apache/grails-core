@@ -64,8 +64,10 @@ dependencies {
     testImplementation 'org.spockframework:spock-core'
     testImplementation 'jakarta.validation:jakarta.validation-api'
     testImplementation 'org.hibernate.validator:hibernate-validator'
-    testImplementation "org.codehaus.gpars:gpars:$gparsVersion"
     testImplementation 'org.objenesis:objenesis'
+    testImplementation 'org.testcontainers:testcontainers-neo4j', {
+        // test: Neo4jContainer, the Neo4j 5 server QueryTailNeo4j5Spec runs Cypher against
+    }
 
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 

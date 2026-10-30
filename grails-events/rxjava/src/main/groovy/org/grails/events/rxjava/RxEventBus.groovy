@@ -21,6 +21,7 @@ package org.grails.events.rxjava
 
 import java.util.concurrent.Callable
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicBoolean
 
 import groovy.transform.AutoFinal
 import groovy.transform.CompileStatic
@@ -46,11 +47,17 @@ import org.grails.events.registry.EventSubscriberSubscription
  * @author Graeme Rocher
  * @since 3.3
  *
+ * @deprecated RxJava 1 is no longer maintained. Use the RxJava 3 implementation in
+ * {@code grails-events-rxjava3} ({@code org.grails.events.rxjava3.RxEventBus}) instead.
+ * This class, and the {@code grails-events-rxjava} module that provides it, will be removed in a future release.
  */
 @Slf4j
 @AutoFinal
 @CompileStatic
+@Deprecated(since = '9.0', forRemoval = true)
 class RxEventBus extends AbstractEventBus {
+
+    private static final AtomicBoolean DEPRECATION_LOGGED = new AtomicBoolean()
 
     protected final Map<CharSequence, PublishSubject> subjects = new ConcurrentHashMap<CharSequence, PublishSubject>().withDefault {
         PublishSubject.create()
@@ -60,6 +67,10 @@ class RxEventBus extends AbstractEventBus {
 
     RxEventBus(Scheduler scheduler = Schedulers.io()) {
         this.scheduler = scheduler
+        if (DEPRECATION_LOGGED.compareAndSet(false, true)) {
+            log.warn('The RxJava 1 event bus (grails-events-rxjava) is deprecated and will be removed in a future ' +
+                    'release of Grails. Replace it with grails-events-rxjava3.')
+        }
     }
 
     @Override

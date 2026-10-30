@@ -33,8 +33,9 @@ import grails.plugin.json.view.mvc.JsonViewResolver
  * The errors views of JSON views, only loaded where JSON views is present.
  *
  * <p>JSON views renders the errors of a controller with its own {@code _errors} view where it has
- * one, and otherwise with the view for {@code Errors}, falling back to the view for any object.
- * It renders only JSON; the converters render the errors in any other format.</p>
+ * one, and otherwise with the view for {@code Errors}; without either, the converters render them, as
+ * the view for any object does not. It renders only JSON; the converters render the errors in any
+ * other format.</p>
  */
 @CompileStatic
 class JsonErrorsViews extends ErrorsViews {
@@ -67,8 +68,9 @@ class JsonErrorsViews extends ErrorsViews {
             ErrorsRendering found = ErrorsRendering.CONVERTERS
             for (JsonViewResolver resolver : resolvers) {
                 View view = resolve(Errors.name) { resolver.resolveView(Errors, Locale.ENGLISH) }
-                if (view != null) {
-                    found = view.is(resolver.objectView) ? ErrorsRendering.OBJECT_VIEW : ErrorsRendering.ERRORS_VIEW
+                // the view for any object does not render validation errors
+                if (view != null && !view.is(resolver.objectView)) {
+                    found = ErrorsRendering.ERRORS_VIEW
                     break
                 }
             }

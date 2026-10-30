@@ -16,6 +16,12 @@ KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License.
 ////
+
+NOTE: XML conversion, renderers and binding require `org.apache.grails:grails-xml`. The Grails 9
+web starter and `grails-web-boot` bring it; applications without either, and applications upgrading to Grails 10,
+must add the dependency explicitly, as xref:upgrading#upgrading90x[the upgrade guide] describes under
+"XML Web Support Moves to a Separate Module". Advertising an XML format alone does not install XML support.
+
 Grails applications can publish an https://www.openapis.org/[OpenAPI] description of their REST
 endpoints. The optional `grails-openapi` module derives it from the application itself - its URL
 mappings, its controllers, its domain classes and command objects, and their constraints - and
@@ -420,8 +426,8 @@ has and the `errors` a validateable object has are not part of it.
 
 A property of a class the Grails operations are described with - a domain class, a command object,
 or any other class, such as one an `@ApiResponse` names - is described by the name Grails'
-converters, JSON views and data binding render and bind it by: its own. So neither a
-`@JsonProperty` rename, which Grails ignores, nor the name Jackson would otherwise write, such as
+converters, JSON views and data binding render and bind it by with their default settings: its own. So neither a
+`@JsonProperty` rename, which they then ignore, nor the name Jackson would otherwise write, such as
 `isbn` for `ISBN`, changes it, and a command object's request parameters are described by the names
 Grails binds them by. Where the description should name a property otherwise, `@Schema(name)`
 renames it, and its constraints, and whether it is required or read only, follow the rename. A
@@ -578,7 +584,17 @@ described once as the `ValidationErrors` schema, or as `grails.validation.Valida
 the class Grails renders them from, where the document already describes something else as
 `ValidationErrors`, such as a class of the application a Spring MVC endpoint returns. The
 converters render them, in JSON as an object
-listing them and in XML as an `errors` element holding an `error` element for each. Where a JSON
+listing them and in XML as an `errors` element holding an `error` element for each. With
+`grails.web.rendering.json.spring` set to `true`, `respond` writes them as an RFC 9457 problem, with which it answers a
+client asking for any JSON type as `application/problem+json`: that is described under the `ValidationProblem` schema,
+with the `type`, `title`, `status`, `detail` and `instance` of the problem and an `errors` array holding the `object`,
+`field`, `codes` and `message` of each error, and its `rejectedValue` where the application's
+`ValidationProblemDetailFactory` includes it. With `grails.converters.json.legacy` set to `false` and
+`grails.web.rendering.json.spring` left `false`, the JSON converter writes them as an object listing the `object`,
+`field`, `codes` and `message` of each, without the rejected value, described under the `JsonValidationErrors` schema.
+Either is named with the prefix `grails.validation.` where the document already describes something else by its name.
+The XML keeps the `ValidationErrors` schema whatever the settings, `grails.web.rendering.xml.spring` included, since the
+Grails XML converter keeps rendering it. Where a JSON
 view renders them, as the errors view of an application generated with JSON views does, they are
 described in JSON as that view renders them: one error with its message, path and link, or several
 embedded with their total. The status is the one the view sets, which is `422` for the errors view
@@ -587,11 +603,14 @@ an application is generated with. So:
 * A controller with an errors view of its own, such as `grails-app/views/book/_errors.gson`, is
   described answering `422` in JSON without a shape, since only the application knows it; the view
   answers with the status it sets, as the errors view it is usually copied from sets `422`.
-* An application with JSON views but no errors view renders the errors with the view for any
-  object, which answers with success rather than `422`, so its `422` is described in XML alone.
+* An application with JSON views but no errors view renders the errors as the converters render
+  them, with `422`, since the view for any object does not render them, so they are described as
+  the converters render them, in JSON and XML.
 * An application rendering its errors another way declares `ValidationErrors` in the base document,
   which then describes them in every media type, or describes an action's errors with
-  `@ApiResponse`.
+  `@ApiResponse`. That schema describes them under the controller's own media types, also with
+  `grails.web.rendering.json.spring`, under which `respond` writes them as `application/problem+json`
+  unless the application renders them otherwise.
 
 A response and a request body are described in the media types of the formats the controller
 declares in `responseFormats`, for the action or for every action, and in `application/json` where
@@ -611,14 +630,20 @@ for `xml` by default. Only a data format, `json` or `xml`, carries the shape des
 renders a view, a form or a HAL document, such as `html` or `hal`, is listed without one. A request
 body is described in the data formats alone.
 
-The XML is described as the converters render it, with the OpenAPI `xml` object: a domain class or a
+The XML is described as the Grails XML converter renders it, with the OpenAPI `xml` object: a domain class or a
 command object as an element named for its class, such as `book`, its identifier as the `id`
 attribute and its version as an attribute, an association as an element carrying the associated
 identifier as the `id` attribute, a collection of values as an element holding one named for the
 class of each, such as `<lines><string>a</string></lines>`, and a listing as a `list` element
 holding one for each. The `xml` object cannot describe a map, which Grails renders as `entry`
 elements keyed by an attribute, and the document describes the XML Grails renders by default, not
-that of `grails.converters.xml.default.deep` or `grails.converters.xml.domain.include.class`.
+that of `grails.converters.xml.default.deep`. The
+JSON shapes are likewise those of the Grails JSON converter as Grails 8 rendered them. The opt-ins of the
+xref:upgrading#upgrading90x[upgrade guide], `grails.web.rendering.json.spring` and
+`grails.converters.json.legacy: false`, keep them for a domain class, which a serializer shaped as that converter
+rendered it writes, and change the validation errors, which are described as they write them;
+`grails.web.rendering.xml.spring` leaves domain classes, listings and validation errors to the Grails XML converter.
+What Jackson applies besides under those settings is listed under Limitations below.
 
 `RestfulController` answers its own `save` and `update` with a `Location` header naming the
 resource, which the `201` and `200` responses describe, and its `patch` too, which `update` serves.
@@ -858,7 +883,11 @@ listing. Its other actions are described as any controller's are.
   describes the resource in any scope.
 * A resource is described as Grails renders a domain class or an object by default. A JSON view,
   other than the errors view, or a custom renderer that renders another shape is described with
-  `@ApiResponse`.
+  `@ApiResponse`. With `grails.web.rendering.json.spring`, `grails.converters.json.legacy: false` or
+  `grails.web.rendering.xml.spring`, Jackson writes a bean by its own rules, and with the first two a domain class with
+  what the application gives Jackson, so that a `@JsonProperty` rename, a naming strategy or Jackson's own naming, such
+  as `isbn` for `ISBN`, can name a property in a response otherwise than data binding binds it; the property is
+  described by the name it is bound by, and `@Schema(name)` describes it by the other.
 * A date is described as a `date-time`. Grails binds it with the formats
   `grails.databinding.dateFormats` lists, which by default read the offset or `Z` of a time only
   when it has three digits of milliseconds, such as `2024-05-01T10:00:00.000+02:00`, or an offset

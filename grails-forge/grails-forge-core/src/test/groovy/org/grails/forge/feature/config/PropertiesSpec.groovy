@@ -19,7 +19,7 @@
 
 package org.grails.forge.feature.config
 
-import org.grails.forge.BeanContextSpec
+import org.grails.forge.ApplicationContextSpec
 import org.grails.forge.application.ApplicationType
 import org.grails.forge.application.generator.GeneratorContext
 import org.grails.forge.feature.FeaturePhase
@@ -29,7 +29,7 @@ import spock.lang.Shared
 import spock.lang.Subject
 import spock.lang.Unroll
 
-class PropertiesSpec extends BeanContextSpec implements CommandOutputFixture {
+class PropertiesSpec extends ApplicationContextSpec implements CommandOutputFixture {
 
     @Shared
     @Subject

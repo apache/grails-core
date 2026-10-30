@@ -26,12 +26,11 @@ import org.grails.datastore.rx.query.QueryState
 import org.grails.gorm.rx.api.RxGormInstanceApi
 import org.grails.gorm.rx.api.RxGormStaticApi
 import org.grails.gorm.rx.api.RxGormValidationApi
-import rx.Observable
+import io.reactivex.rxjava3.core.Observable
 
 /**
  * Internal non-client methods implemented by the implementor
  *
- * @author Graeme Rocher
  * @since 6.0
  */
 interface RxDatastoreClientImplementor<T> extends RxDatastoreClient<T> {

@@ -19,24 +19,15 @@
 
 apply plugin: 'org.apache.grails.buildsrc.groovydoc'
 
-groovydocEnhancer {
-    javaVersionEnabled = false
-}
-
 dependencies {
-    // The `documentation` configuration is registered by the buildsrc.groovydoc
-    // plugin and is independent of compileClasspath/testRuntimeClasspath, so the
-    // micronaut-platform BOM we apply elsewhere does not reach it. Apply it here so
-    // the unversioned groovy-* artifacts below resolve through groovy-bom.
-    documentation platform("io.micronaut.platform:micronaut-platform:$micronautVersion")
-    documentation 'org.apache.groovy:groovy-templates'
-    documentation 'org.apache.groovy:groovy-dateutil'
+    // the Groovy that runs Groovydoc, for the groovydoc plugin's documentation configuration
+    documentation platform("org.apache.grails:grails-bom:$projectVersion")
     documentation 'org.apache.groovy:groovy-ant'
     documentation 'org.apache.groovy:groovy-groovydoc'
+    documentation 'org.apache.groovy:groovy-templates'
 }
 
 tasks.withType(Groovydoc).configureEach { Groovydoc gdoc ->
-    gdoc.classpath += project.configurations.documentation
     gdoc.windowTitle = "${project.findProperty('pomArtifactId') ?: project.name} - $projectVersion"
     gdoc.docTitle = "${project.findProperty('pomArtifactId') ?: project.name} - $projectVersion"
 }

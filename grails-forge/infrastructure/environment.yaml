@@ -181,15 +181,6 @@ Resources:
           Value:
             Ref: HostName
         - Namespace: aws:elasticbeanstalk:application:environment
-          OptionName: MICRONAUT_ENV_DEDUCTION
-          Value: 'false'
-        - Namespace: aws:elasticbeanstalk:application:environment
-          OptionName: MICRONAUT_ENVIRONMENTS
-          Value: aws
-        - Namespace: aws:elasticbeanstalk:application:environment
-          OptionName: MICRONAUT_SERVER_PORT
-          Value: '5000'
-        - Namespace: aws:elasticbeanstalk:application:environment
           OptionName: SERVER_PORT
           Value: '5000'
         - Namespace: aws:elasticbeanstalk:cloudwatch:logs

@@ -15,7 +15,7 @@ class ${className}Controller {
 
     ${className}Service ${propertyName}Service
 
-    static responseFormats = ['json', 'xml']
+    static responseFormats = ['json']
     static allowedMethods = [save: "POST", update: "PUT", delete: "DELETE"]
 
     def index(Integer max) {

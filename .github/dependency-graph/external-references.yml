@@ -69,6 +69,7 @@ references:
   - purl: pkg:maven/org.apache.grails/grails-web-taglib
   - purl: pkg:maven/org.apache.grails/grails-web-url-mappings
   - purl: pkg:maven/org.apache.grails/grails-wrapper
+  - purl: pkg:maven/org.apache.grails/grails-xml
   - purl: pkg:maven/org.apache.grails.data/grails-data-hibernate5
   - purl: pkg:maven/org.apache.grails.data/grails-data-hibernate5-core
   - purl: pkg:maven/org.apache.grails.data/grails-data-hibernate5-dbmigration
@@ -87,6 +88,7 @@ references:
   - purl: pkg:maven/org.apache.grails.data/grails-datamapping-tck-base
   - purl: pkg:maven/org.apache.grails.data/grails-datamapping-tck-domains
   - purl: pkg:maven/org.apache.grails.data/grails-datamapping-tck-tests
+  - purl: pkg:maven/org.apache.grails.async/grails-async-groovy-concurrent
   - purl: pkg:maven/org.apache.grails.data/grails-datamapping-validation
   - purl: pkg:maven/org.apache.grails.data/grails-datastore-async
   - purl: pkg:maven/org.apache.grails.data/grails-datastore-core
@@ -94,10 +96,13 @@ references:
   - purl: pkg:maven/org.apache.grails.databinding/grails-databinding-core
   - purl: pkg:maven/org.apache.grails.events/grails-events-core
   - purl: pkg:maven/org.apache.grails.events/grails-events-gpars
+  - purl: pkg:maven/org.apache.grails.events/grails-events-groovy-concurrent
   - purl: pkg:maven/org.apache.grails.events/grails-events-spring
   - purl: pkg:maven/org.apache.grails.events/grails-events-transforms
   - purl: pkg:maven/org.apache.grails.i18n/grails-i18n
   - purl: pkg:maven/org.apache.grails.skills/grails-8-upgrade
+  - purl: pkg:maven/org.apache.grails.skills/grails-9-upgrade
+  - purl: pkg:maven/org.apache.grails.skills/grails-ai-developer
   - purl: pkg:maven/org.apache.grails.skills/grails-developer
   - purl: pkg:maven/org.apache.grails.views/grails-gsp-core
   - purl: pkg:maven/org.apache.grails.views/grails-views-core

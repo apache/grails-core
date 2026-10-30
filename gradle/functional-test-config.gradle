@@ -211,3 +211,30 @@ tasks.named('groovydoc').configure {
     // We don't need to generate docs for test projects
     enabled = false
 }
+
+// App-level indy A/B benches (grails-test-examples/benchmarks/README.adoc). Enabled with -PappBench=true,
+// normally by the appIndyBench orchestrator; optional -PappBenchWarmup, -PappBenchSamples, -PappBenchChunks
+// and -PappBenchOut. Only integrationTest is wired, and only when appBench is enabled, so ordinary runs do not
+// pick up app.bench.* system properties or -PappBenchOut as task inputs and outputs.
+def appBenchEnabled = providers.gradleProperty('appBench').map { Boolean.parseBoolean(it) }.orElse(false)
+if (appBenchEnabled.get()) {
+    def appBenchWarmup = providers.gradleProperty('appBenchWarmup').orElse('200')
+    def appBenchSamples = providers.gradleProperty('appBenchSamples').orElse('1000')
+    def appBenchChunks = providers.gradleProperty('appBenchChunks').orElse('10')
+    def appBenchOut = providers.gradleProperty('appBenchOut').orElse('')
+
+    pluginManager.withPlugin('org.apache.grails.gradle.grails-integration-test') {
+        tasks.named('integrationTest', Test) { Test test ->
+            test.systemProperty('app.bench', 'true')
+            test.systemProperty('app.bench.warmup', appBenchWarmup.get())
+            test.systemProperty('app.bench.samples', appBenchSamples.get())
+            test.systemProperty('app.bench.chunks', appBenchChunks.get())
+            if (appBenchOut.get()) {
+                test.systemProperty('app.bench.out', appBenchOut.get())
+                test.outputs.file(appBenchOut.get())
+            }
+            test.outputs.upToDateWhen { false }
+            test.outputs.cacheIf { false }
+        }
+    }
+}

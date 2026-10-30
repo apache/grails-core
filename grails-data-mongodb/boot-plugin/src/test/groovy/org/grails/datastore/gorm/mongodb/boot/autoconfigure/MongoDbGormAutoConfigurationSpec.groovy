@@ -24,10 +24,13 @@ import org.springframework.boot.mongodb.autoconfigure.MongoAutoConfiguration
 import org.springframework.context.annotation.AnnotationConfigApplicationContext
 import org.springframework.context.annotation.Configuration
 import org.springframework.context.annotation.Import
+import org.springframework.core.env.MapPropertySource
 
 import grails.gorm.annotation.Entity
+import org.apache.grails.datamapping.core.querytail.QueryTailRecord
 import org.apache.grails.testing.mongo.AbstractMongoGrailsExtension
 import org.apache.grails.testing.mongo.AutoStartedMongoSpec
+import spock.lang.TempDir
 import spock.util.environment.RestoreSystemProperties
 
 /**
@@ -37,6 +40,9 @@ import spock.util.environment.RestoreSystemProperties
 class MongoDbGormAutoConfigurationSpec extends AutoStartedMongoSpec {
 
     protected AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext();
+
+    @TempDir
+    File tempDir
 
     @Override
     boolean shouldInitializeDatastore() {
@@ -64,6 +70,20 @@ class MongoDbGormAutoConfigurationSpec extends AutoStartedMongoSpec {
 
         then:"GORM queries work"
             Person.count() != null
+    }
+
+    void 'the commands of the client GORM builds from Spring Boot settings are captured for query-tail'() {
+        given:
+        File file = new File(tempDir, 'capture.log')
+        context.environment.propertySources.addFirst(new MapPropertySource('queryTail',
+                ['grails.gorm.queryTail.enabled': 'true', 'grails.gorm.queryTail.file': file.path] as Map<String, Object>))
+
+        when:
+        context.refresh()
+        Person.count()
+
+        then:
+        file.readLines().collect { QueryTailRecord.parse(it) }.findAll { it != null }.any { it.sql.contains('.person') }
     }
 
     @Configuration

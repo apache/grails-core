@@ -21,13 +21,13 @@ package org.grails.plugins.web.rest.render.html
 import grails.persistence.Entity
 import grails.validation.ValidationErrors
 import grails.web.mime.MimeType
-import org.grails.web.mime.HttpServletResponseExtension
 import org.grails.web.util.GrailsApplicationAttributes
 import org.grails.web.servlet.mvc.GrailsWebRequest
 import org.grails.plugins.web.rest.render.ServletRenderContext
 import org.springframework.mock.web.MockHttpServletRequest
 import org.springframework.mock.web.MockHttpServletResponse
 import org.springframework.mock.web.MockServletContext
+import org.springframework.http.ProblemDetail
 import org.springframework.web.servlet.ModelAndView
 import spock.lang.Specification
 
@@ -36,16 +36,6 @@ import spock.lang.Specification
  */
 
 class HtmlRendererSpec extends Specification {
-
-    void setup() {
-        // Clear the static mimeTypes cache to prevent test environment pollution
-        HttpServletResponseExtension.@mimeTypes = null
-    }
-
-    void cleanup() {
-        // Clear the static mimeTypes cache after each test for test isolation
-        HttpServletResponseExtension.@mimeTypes = null
-    }
 
     void "Test that HTML renderer sets the content type with the configured charset"() {
         when: "a domain instance is rendered for a negotiated HTML request"
@@ -169,6 +159,51 @@ class HtmlRendererSpec extends Specification {
             modelAndView.viewName == 'test'
             modelAndView.model == [book:book]
         }
+
+    void "the view respond names renders a problem with the status the problem carries"() {
+        given:
+        def renderer = new DefaultHtmlRenderer(Object)
+        def request = new MockHttpServletRequest()
+        request.requestURI = '/books/1'
+        def webRequest = new GrailsWebRequest(request, new MockHttpServletResponse(), new MockServletContext())
+        webRequest.actionName = 'show'
+        def renderContext = new ServletRenderContext(webRequest, [view: 'conflict']) {
+            @Override
+            MimeType getAcceptMimeType() {
+                MimeType.HTML
+            }
+        }
+        def problem = ProblemDetail.forStatus(409)
+
+        when:
+        renderer.render(problem, renderContext)
+        ModelAndView modelAndView = webRequest.currentRequest.getAttribute(GrailsApplicationAttributes.MODEL_AND_VIEW)
+
+        then:
+        modelAndView.viewName == 'conflict'
+        modelAndView.model == [problemDetail: problem]
+        webRequest.currentResponse.status == 409
+        problem.instance == URI.create('/books/1')
+    }
+
+    void "the view respond names renders a problem with the status respond is given"() {
+        given:
+        def renderer = new DefaultHtmlRenderer(Object)
+        def webRequest = new GrailsWebRequest(new MockHttpServletRequest(), new MockHttpServletResponse(), new MockServletContext())
+        webRequest.actionName = 'show'
+        def renderContext = new ServletRenderContext(webRequest, [view: 'conflict', status: 400]) {
+            @Override
+            MimeType getAcceptMimeType() {
+                MimeType.HTML
+            }
+        }
+
+        when:
+        renderer.render(ProblemDetail.forStatus(409), renderContext)
+
+        then:
+        webRequest.currentResponse.status == 400
+    }
 }
 @Entity
 class Book {

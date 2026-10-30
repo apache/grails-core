@@ -37,6 +37,14 @@
             "description": "JSON & Converters"
         },
         {
+            "name": "grails.converters.default",
+            "description": "JSON & Converters"
+        },
+        {
+            "name": "grails.converters.domain",
+            "description": "JSON & Converters"
+        },
+        {
             "name": "grails.converters.xml",
             "description": "JSON & Converters"
         },
@@ -155,13 +163,109 @@
         {
             "name": "grails.converters.json.domain.include.class",
             "type": "java.lang.Boolean",
-            "description": "Whether to include the class property when marshalling domain objects to JSON.",
+            "description": "Whether to include the class name when rendering domain objects to JSON, with the JSON converter, respond's Spring JSON, render json:, the named JSON configurations and, with grails.converters.json.domain.jackson.enabled, the application's JsonMapper. Defaults to grails.converters.domain.include.class.",
+            "defaultValue": false
+        },
+        {
+            "name": "grails.converters.json.domain.include.version",
+            "type": "java.lang.Boolean",
+            "description": "Whether to include the version property when rendering domain objects to JSON, with the JSON converter, respond's Spring JSON, render json:, the named JSON configurations and, with grails.converters.json.domain.jackson.enabled, the application's JsonMapper. Defaults to grails.converters.domain.include.version.",
+            "defaultValue": false
+        },
+        {
+            "name": "grails.converters.json.default.deep",
+            "type": "java.lang.Boolean",
+            "description": "Whether the associated domain class instances of a domain object rendered to JSON are rendered in full rather than as references of their id, with the JSON converter, respond's Spring JSON, render json:, the named JSON configurations, which cannot render references while it is set, and, with grails.converters.json.domain.jackson.enabled, the application's JsonMapper.",
+            "defaultValue": false
+        },
+        {
+            "name": "grails.converters.json.circular.reference.behaviour",
+            "type": "java.lang.String",
+            "description": "How an object that is reached again while it is being rendered to JSON is written: DEFAULT writes a reference to it, EXCEPTION fails, INSERT_NULL writes null, IGNORE leaves an element of a list out and writes a property, or the value of a map, as null, where the legacy JSON converter fails on such a property, and PATH writes its path. It applies to the JSON converter, to respond's Spring JSON, render json: and the named JSON configurations, and, with grails.converters.json.domain.jackson.enabled, to the domain objects the application's JsonMapper renders. Defaults to grails.converters.default.circular.reference.behaviour.",
+            "defaultValue": "DEFAULT"
+        },
+        {
+            "name": "grails.converters.default.circular.reference.behaviour",
+            "type": "java.lang.String",
+            "description": "How an object that is reached again while it is being rendered is written, by the converters whose grails.converters.json.circular.reference.behaviour or grails.converters.xml.circular.reference.behaviour is not set: DEFAULT, EXCEPTION, INSERT_NULL, IGNORE or PATH.",
+            "defaultValue": "DEFAULT"
+        },
+        {
+            "name": "grails.converters.json.pretty.print",
+            "type": "java.lang.Boolean",
+            "description": "Whether the JSON converter indents the JSON it renders. Defaults to grails.converters.default.pretty.print.",
+            "defaultValue": false
+        },
+        {
+            "name": "grails.converters.default.pretty.print",
+            "type": "java.lang.Boolean",
+            "description": "Whether the converters whose grails.converters.json.pretty.print or grails.converters.xml.pretty.print is not set indent what they render.",
+            "defaultValue": false
+        },
+        {
+            "name": "grails.converters.domain.include.class",
+            "type": "java.lang.Boolean",
+            "description": "Whether to include the class name when rendering domain objects, for the converters whose grails.converters.json.domain.include.class or grails.converters.xml.domain.include.class is not set. The XML converter writes it only in its deep named configuration, XML.use('deep'), as Grails 8 did.",
+            "defaultValue": false
+        },
+        {
+            "name": "grails.converters.domain.include.version",
+            "type": "java.lang.Boolean",
+            "description": "Whether to include the version when rendering domain objects, for the converters whose grails.converters.json.domain.include.version or grails.converters.xml.domain.include.version is not set.",
             "defaultValue": false
         },
         {
             "name": "grails.converters.xml.domain.include.class",
             "type": "java.lang.Boolean",
-            "description": "Whether to include the class attribute when marshalling domain objects to XML.",
+            "description": "Whether to include the class attribute when marshalling domain objects to XML in the XML converter's deep named configuration, XML.use('deep'); its default rendering, with or without grails.converters.xml.default.deep, writes no class attribute, as in Grails 8. Defaults to grails.converters.domain.include.class.",
+            "defaultValue": false
+        },
+        {
+            "name": "grails.converters.xml.domain.include.version",
+            "type": "java.lang.Boolean",
+            "description": "Whether to include the version attribute when rendering domain objects to XML with the XML converter of the grails-xml module. Defaults to grails.converters.domain.include.version.",
+            "defaultValue": false
+        },
+        {
+            "name": "grails.converters.xml.default.deep",
+            "type": "java.lang.Boolean",
+            "description": "Whether the associated domain class instances of a domain object rendered to XML by the XML converter of the grails-xml module are rendered in full rather than as references of their id.",
+            "defaultValue": false
+        },
+        {
+            "name": "grails.converters.xml.circular.reference.behaviour",
+            "type": "java.lang.String",
+            "description": "How the XML converter of the grails-xml module writes an object that is reached again while it is being rendered: DEFAULT writes a ref attribute with its path, EXCEPTION fails, and any other value leaves its element empty. Defaults to grails.converters.default.circular.reference.behaviour.",
+            "defaultValue": "DEFAULT"
+        },
+        {
+            "name": "grails.converters.xml.pretty.print",
+            "type": "java.lang.Boolean",
+            "description": "Whether the XML converter of the grails-xml module indents the XML it renders. Defaults to grails.converters.default.pretty.print.",
+            "defaultValue": false
+        },
+        {
+            "name": "grails.exceptionresolver.springHandlers",
+            "type": "java.lang.Boolean",
+            "description": "Whether an exception a controller action throws is resolved first by the @ExceptionHandler methods Spring MVC resolves those of a handler method with: those of the controller's class and of the @ControllerAdvice beans that apply to it, Spring Boot's handler of spring.mvc.problemdetails.enabled among them. One none of them handles is resolved as before. Grails 10 makes it the default.",
+            "defaultValue": false
+        },
+        {
+            "name": "grails.controllers.responseBody",
+            "type": "java.lang.Boolean",
+            "description": "Whether Spring MVC writes any value of a controller action annotated @ResponseBody, or of an action of a controller annotated so, directly or with an annotation such as @RestController, as the body of the response, as it writes the value of a handler method annotated so, rather than Grails rendering the action's view for a model. A ResponseEntity, a ProblemDetail and the other values Spring MVC writes whatever a handler method is annotated with are written whatever it says. Grails 10 makes it the default.",
+            "defaultValue": false
+        },
+        {
+            "name": "grails.converters.json.legacy",
+            "type": "java.lang.Boolean",
+            "description": "Whether the JSON converter renders and parses JSON as Grails 8 did, with the marshallers and pretty-print layouts of Grails 8 and its own parser, rather than with the application's Jackson JsonMapper. Set it to false to render JSON through the JsonMapper, parse JSON.parse and request.JSON with it, and write validation errors without their rejected values, which Grails 10 makes the default.",
+            "defaultValue": true
+        },
+        {
+            "name": "grails.converters.json.domain.jackson.enabled",
+            "type": "java.lang.Boolean",
+            "description": "Whether domain classes are registered with the application's Jackson JsonMapper, so that it renders them with the serializer the JSON converter renders them with when grails.converters.json.legacy is false, including when a Spring MVC controller returns one. When false, the JsonMapper renders domain classes as Jackson beans.",
             "defaultValue": false
         },
         {

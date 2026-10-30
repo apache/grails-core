@@ -60,6 +60,7 @@ import grails.plugin.springsecurity.web.filter.GrailsRememberMeAuthenticationFil
 import grails.plugin.springsecurity.web.filter.IpAddressFilter
 import grails.plugins.Plugin
 import groovy.util.logging.Slf4j
+import org.grails.web.config.http.GrailsFilters
 import org.grails.web.mime.HttpServletResponseExtension
 import org.springframework.boot.context.properties.bind.Bindable
 import org.springframework.boot.context.properties.bind.Binder
@@ -227,13 +228,11 @@ class SpringSecurityCoreGrailsPlugin extends Plugin {
             springSecurityBeanFactoryPostProcessor(classFor('springSecurityBeanFactoryPostProcessor', SpringSecurityBeanFactoryPostProcessor))
 
             // configure the filter and optionally the listener
-            int filterOrder = securityFilterOrder()
-
             springSecurityFilterChainRegistrationBean(classFor('springSecurityFilterChainRegistrationBean', FilterRegistrationBean)) {
                 filter = ref('springSecurityFilterChain')
                 urlPatterns = ['/*']
                 dispatcherTypes = EnumSet.of(DispatcherType.ERROR, DispatcherType.REQUEST)
-                order = filterOrder
+                order = GrailsFilters.SPRING_SECURITY_FILTER_CHAIN.order
             }
 
             if (conf.useHttpSessionEventPublisher) {
@@ -1145,18 +1144,6 @@ class SpringSecurityCoreGrailsPlugin extends Plugin {
 
     private Class classFor(String beanName, Class defaultType) {
         beanTypeResolver.resolveType beanName, defaultType
-    }
-
-    private static int securityFilterOrder() {
-        try {
-            def securityProperties = SpringSecurityCoreGrailsPlugin.classLoader.loadClass(
-                    'org.springframework.boot.autoconfigure.security.SecurityProperties'
-            )
-            return (Integer) securityProperties.getField('DEFAULT_FILTER_ORDER').get(null)
-        }
-        catch (Throwable ignored) {
-            return -100
-        }
     }
 
     static Map<String, PasswordEncoder> idToPasswordEncoder(ConfigObject conf) {

@@ -17,7 +17,9 @@ specific language governing permissions and limitations
 under the License.
 ////
 
-The default renderers for XML and JSON can be found in the `grails.rest.render.xml` and `grails.rest.render.json` packages respectively. These use the Grails converters (`grails.converters.XML` and `grails.converters.JSON`) by default for response rendering. 
+The default renderers for XML and JSON can be found in the `grails.rest.render.xml` and `grails.rest.render.json` packages respectively. These use the Grails converters (`grails.converters.XML` and `grails.converters.JSON`) by default for response rendering. The XML renderers and `grails.converters.XML` are part of the `grails-xml` module, which the Grails 9 web starter and `grails-web-boot` bring; from Grails 10 it is added explicitly.
+
+WARNING: `XmlRenderer`, `XmlCollectionRenderer` and `grails.converters.XML` are deprecated and scheduled for removal in Grails 11. The examples below use `JsonRenderer`; `XmlRenderer` takes the same `includes` and `excludes` until it is removed.
 
 You can easily customize response rendering using these default renderers. A common change you may want to make is to include or exclude certain properties from rendering. 
 
@@ -29,10 +31,10 @@ As mentioned previously, Grails maintains a registry of `grails.rest.render.Rend
 
 [source,groovy]
 ----
-import grails.rest.render.xml.*
+import grails.rest.render.json.*
 
 beans = {
-    bookRenderer(XmlRenderer, Book) {
+    bookRenderer(JsonRenderer, Book) {
         includes = ['title']
     }
 }
@@ -41,14 +43,14 @@ beans = {
 
 NOTE: The bean name is not important (Grails will scan the application context for all registered renderer beans), but for organizational and readability purposes it is recommended you name it something meaningful.
 
-To exclude a property, the `excludes` property of the `XmlRenderer` class can be used:
+To exclude a property, the `excludes` property of the `JsonRenderer` class can be used:
 
 [source,groovy]
 ----
-import grails.rest.render.xml.*
+import grails.rest.render.json.*
 
 beans = {
-    bookRenderer(XmlRenderer, Book) {
+    bookRenderer(JsonRenderer, Book) {
         excludes = ['isbn']
     }
 }
@@ -65,12 +67,113 @@ As mentioned previously, the default renders use the `grails.converters` package
 import grails.converters.*
 
 ...
-render book as XML
-
-// or render book as JSON
+render book as JSON
 ----
 
-Why the separation between converters and renderers? Well a renderer has more flexibility to use whatever rendering technology you chose. When implementing a custom renderer you could use https://github.com/FasterXML/jackson/[Jackson], https://github.com/google/gson[Google Gson] or any Java library to implement the renderer. Converters on the other hand are very much tied to Grails' own marshalling implementation.
+Why the separation between converters and renderers? Well a renderer has more flexibility to use whatever rendering technology you chose. When implementing a custom renderer you could use https://github.com/FasterXML/jackson/[Jackson], https://github.com/google/gson[Google Gson] or any Java library to implement the renderer. Converters on the other hand use Grails' object marshallers, and can write JSON through the application's Jackson `JsonMapper`, as described below.
+
+
+==== JSON Rendering With Spring Boot's JsonMapper
+
+
+In Grails 9, the JSON converter renders JSON as Grails 8 did, by default. With `grails.converters.json.legacy` set to
+`false`, which Grails 10 makes the default, it writes JSON through the application's Jackson `JsonMapper`, the one
+Spring Boot auto-configures, so a Grails application and a Spring Boot application return the same JSON for the same
+values. The mapper then writes every single value it has a dedicated serializer for, such as dates and times, `Month`,
+`UUID`, `Locale`, `byte[]`, types with a `@JsonValue` other than enums and the types of Jackson modules registered with
+the application, and it formats and pretty prints the JSON text. `spring.jackson.*` properties therefore configure
+`render ... as JSON` as well:
+
+[source,yaml]
+----
+grails:
+    converters:
+        json:
+            legacy: false
+spring:
+    jackson:
+        time-zone: America/New_York
+----
+
+Domain classes are rendered by Jackson's bean serializer, which Grails shapes to the domain class, as described below.
+Beans, records, `Optional` values, collections, maps and arrays are written by the mapper as Spring Boot writes them, and
+the values they contain are rendered as any other value is, so Jackson annotations, mix-ins and the mapper's naming and
+inclusion apply. Grails adds only its own rules: enums render by `name()`, so that the JSON binds back to them, the
+converter's includes and excludes decide which properties of a bean are written, methods annotated `@PersistenceMethod`
+or `@ControllerMethod` are not properties, and strings are escaped for an HTML `<script>` element (`</` is written as
+`<\u002f`). To render a type differently, register an object marshaller for it, which takes precedence over the mapper,
+for example in `BootStrap.init`:
+
+[source,groovy]
+----
+JSON.registerObjectMarshaller(Date) { Date date ->
+    date.time
+}
+----
+
+A serializer that a Jackson module provides, such as a `@JacksonComponent`, renders its type. The values that it writes,
+such as the properties of its type, are rendered as any other value is, so object marshallers apply to them, and an
+object marshaller registered for the type itself takes precedence over the serializer.
+
+Setting `grails.converters.json.date` to `javascript` renders `java.util.Date` values as JavaScript `new Date(...)`
+expressions instead, which are not JSON and which only Grails' own parser reads back. It requires
+`grails.converters.json.legacy` left `true`, the default in Grails 9, with which the converter renders JSON as Grails 8
+did; the upgrade guide lists the differences. With `legacy` set to `false`, an application that sets it fails to start.
+
+With `legacy` left `true`, `JSON.parse` and `request.JSON` parse with Grails' own parser, which also accepts JSON that
+strict parsers reject, such as single-quoted strings and comments. With `legacy` set to `false`, the application's
+Jackson mapper parses, and the `spring.jackson.json.read.*` properties, such as
+`spring.jackson.json.read.allow-java-comments`, decide what it accepts.
+
+
+==== Domain Classes and the JsonMapper
+
+
+With `grails.converters.json.legacy` set to `false`, the JSON converter renders a domain class instance with Jackson's bean
+serializer, which Grails shapes to the domain class:
+
+[source,json]
+----
+{"id":1,"title":"Grails","publisher":{"id":3},"authors":[{"id":1},{"id":2}]}
+----
+
+* The persistent properties are written, in the order the domain class declares them, after the class name, the id and the
+version, which are written when they apply. The version and the class name are written when
+`grails.converters.json.domain.include.version` and `grails.converters.json.domain.include.class` are `true`.
+* An associated domain class instance is written as a reference of its id, or in full when
+`grails.converters.json.default.deep` is `true`, or, for the converter, within the deprecated `JSON.use('deep') { }`. An instance that is
+reached again while it is being written is written as `grails.converters.json.circular.reference.behaviour` selects.
+* A proxy is written as the instance it proxies, and a reference to a proxy is written from its identifier, without
+loading it.
+* What Jackson applies to any bean applies to the instance: `@JsonIgnore`, `@JsonIgnoreProperties` and write-only
+properties leave a property out; `@JsonProperty`, `@JsonNaming` and the mapper's naming strategy name the properties, also
+in references; `@JsonInclude` and `spring.jackson.default-property-inclusion` decide about null and empty properties;
+`@JsonView`, `@JsonFormat`, a `@JsonSerialize` serializer on a property, mix-ins, filters and `@JsonPropertyOrder` apply; a
+domain class with `@JsonTypeInfo` is written with its type id, and an instance in a `@JsonUnwrapped` property is written into
+the enclosing object.
+* A domain class with its own `@JsonSerialize` serializer, with a `@JsonValue`, that implements `JacksonSerializable`, or
+that a Jackson module provides a serializer for, is written by that serializer, as any class is, also where it is the value
+of an association, which is otherwise written as a reference.
+
+The property values are rendered by the converter's marshallers. The application's `JsonMapper` itself renders domain
+classes as Jackson beans, as it does any class. To have it render them with the serializer the JSON converter renders
+them with, including when a Spring MVC controller returns one or when you call `jsonMapper.writeValueAsString(book)`,
+set the following. The mapper then writes the property values itself, so the converter's marshallers and its rule for
+enums do not apply to them:
+
+[source,yaml]
+----
+grails:
+    converters:
+        json:
+            domain:
+                jackson:
+                    enabled: true
+----
+
+Grails then registers the module as a Jackson `JacksonModule` bean named `domainClassJacksonModule`, which Spring Boot
+adds to its `JsonMapper` and to every mapper built from its `JsonMapper.Builder` bean. To add it to a `JsonMapper` you
+build otherwise, inject that bean as a `tools.jackson.databind.JacksonModule` and pass it to the builder's `addModule`.
 
 
 ==== Date and Time Rendering
@@ -118,9 +221,8 @@ render; other map keys render with their `toString()`. JSON views render dates a
 A `Month` renders by its name, such as `"SEPTEMBER"`, as every enum does, where Spring Boot writes its number. Data binding
 binds a `Month` from either.
 
-Setting `grails.converters.json.date` to `javascript` renders `java.util.Date` values as JavaScript `new Date(...)`
-constructors instead. To render a type differently, register an object marshaller for it, for example in `BootStrap.init`.
-This one renders a `Month` as its number, as Spring Boot does:
+To render a type differently, register an object marshaller for it, for example in `BootStrap.init`. This one renders a
+`Month` as its number, as Spring Boot does:
 
 [source,groovy]
 ----
@@ -128,3 +230,8 @@ JSON.registerObjectMarshaller(Month) { Month month ->
     month.value
 }
 ----
+
+With `grails.converters.json.legacy` set to `false`, the mapper writes these values, so `spring.jackson.*` properties
+apply to them. An `OffsetTime` then uses its `toString()` form, which omits zero seconds and writes fractional seconds
+in groups of three digits, such as `"03:00-03:00"`, and a `Month` renders as its number, such as `9`. Map keys use the
+mapper's key serializers, so its date format and time zone settings apply to date keys as well.

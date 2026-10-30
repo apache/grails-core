@@ -41,6 +41,23 @@ respond Book.get(1), formats: ['xml', 'json']
 
 The respond method uses link:{guidePath}theWebLayer.html#contentNegotiation[Content Negotiation] to respond with the most appropriate content type. See the documentation on  link:{guidePath}REST.html[REST support] for more information.
 
+`respond` answers in the first type the client accepts, in the order of preference of its `Accept` header, as
+`withFormat` orders it, that is one of the formats
+and that a renderer renders the value in, and a client that accepts any type in the first of the formats a renderer
+renders it in. When there is none, it sends `406 Not Acceptable`, or `404` for validation errors when the client
+accepts one of the formats.
+
+With `grails.web.rendering.json.spring: true`, and with a `jsonConfiguration`, `respond` writes JSON as Spring MVC writes
+the value a `@ResponseBody` handler method of the controller returns: with Spring MVC's response body handler, so the
+application's `ResponseBodyAdvice` beans apply to it as to a method of the controller, in UTF-8 and as
+`application/json`, or `text/json` for a client that asks for it where the Grails mapper or a named configuration writes
+it; an application's own JSON converter, such as a subclass of Spring's Jackson converter, one with mappers for the
+type, or a converter of another library, writes it as a JSON type that converter supports. The `@JsonView` of the action selects the properties
+written, other than those of a problem or of a named configuration. With `grails.web.rendering.xml.spring: true`, `respond`
+writes an ordinary bean in XML the same way, with the Spring MVC converter that writes it, in UTF-8; the values the
+Grails XML converter still writes, such as domain classes, collections and validation errors, are not given to the
+advice.
+
 If a view is picked for rendering then a model will automatically be calculated to pass to the view.
 
 The following table summarizes this convention:
@@ -66,8 +83,55 @@ Supported `arguments`:
 * `model` - The model to use in case of HTML rendering
 * `status` - The response status
 * `formats` - A list of formats to respond with
-* `includes` - Properties to include if rendering with the converters API
-* `excludes` - Properties to exclude if rendering with the converters API
+* `includes`, `excludes` - For a JSON or XML response, the properties to include or leave out. JSON written through Spring applies them to the instances of the value's class, or of its elements' classes for a collection or array, which must be domain class instances or beans: a value without properties, such as a map or a string, throws `IllegalArgumentException`, also for an empty `includes` list, which includes none of the properties. The legacy JSON converter and XML apply them to the instances of the value's class only, so not to the elements of a collection, unless a `JsonCollectionRenderer` or `XmlCollectionRenderer` bean renders it, which applies them to the elements, apart from the `excludes` a `JsonCollectionRenderer` is given, which on the legacy path it ignores, as in Grails 8. They do not apply to a `ProblemDetail`, nor to the problem `respond` makes of validation errors, which are written as Spring MVC writes them
+* `jsonConfiguration` - For a JSON response, the name of a configuration registered with the `NamedJsonConfigurationRegistry` to write the value with, such as `deep`, which Grails registers to write the associations of domain class instances in full. The default JSON renderers, and `JsonRenderer` and `JsonCollectionRenderer` beans, write the value with it; the HAL and Vnd.Error renderers, a view, and a renderer the application implements itself do not use it. A `ProblemDetail` and validation errors are written as they are without one, a problem as Spring MVC writes it. Wherever one of the renderers that use it writes the response, or renders a GSP view in its place, a name that is not registered throws `IllegalArgumentException`, also for a problem and for validation errors
+
+A Spring `ProblemDetail` is written as Spring MVC writes one that a handler method returns: `respond` hands it to the
+handler Spring MVC's handler adapter writes a `ResponseEntity` with, so the application's `ResponseBodyAdvice` beans
+apply to it as to a method of the controller, and its `ErrorResponse.Interceptor` beans see it. The response has the
+status the problem carries, and an absent `instance` is set to the current resource path. A `status` argument decides
+the status of the response, as the status of a `ResponseEntity` does in Spring MVC: a problem that carries another keeps
+its own, and Spring MVC logs a warning. Its properties are written by the mapper of Spring Boot's converter, as a Spring
+MVC controller writes them: a domain class instance, validation errors or a value that leads back to itself among them is
+written, or fails, as Jackson writes any bean, whatever the `grails.converters.json` settings, unless
+`grails.converters.json.domain.jackson.enabled` gives Spring Boot's mapper the domain class serializer. Respond with
+`validationProblemDetailFactory.create(errors)` to answer with validation errors as a problem. A Spring `ErrorResponse`,
+such as an `ErrorResponseException`, is answered as Spring MVC answers one a handler method returns: with its problem,
+whose `problemDetail.type.*`, `problemDetail.title.*` and `problemDetail.*` message codes are resolved with the
+application's messages, as Spring MVC's `ResponseEntityExceptionHandler` resolves them, and with its status and headers.
+
+Spring MVC's content negotiation selects the type, as for a Spring MVC controller, whatever the `grails.mime` settings
+say: from the `Accept` header, unless `spring.mvc.contentnegotiation.*` or the application's `WebMvcConfigurer` beans
+configure it otherwise, so that a `format` parameter decides only where
+`spring.mvc.contentnegotiation.favor-parameter` is `true`. The problem is written as `application/problem+xml` where the
+request asks for a problem in XML, such as with `application/problem+xml` or `application/*+xml`, the action responds in
+XML, and Spring MVC has an XML converter, which needs `jackson-dataformat-xml`, and as `application/problem+json`
+otherwise: also for a client that asks for `application/xml` or `text/xml`, a browser, one that accepts anything, and one
+asking only for HTML or CSV. A request Spring MVC's content negotiation rejects, such as one whose `Accept` header has a
+quality value above 1, as in `application/json;q=2`, is answered as Spring MVC answers it: with the status alone, without
+a body or a `Content-Type`, for a 4xx or 5xx problem, and otherwise with an `HttpMediaTypeNotAcceptableException`, which
+Spring MVC's exception resolver answers with `406 Not Acceptable`.
+
+A view, whether a GSP, a JSON view or a markup view, renders a problem only when `respond` names it with the `view`
+argument: `respond` then picks the format as for any value, and the view of that format renders the problem with the
+status it carries. In a format with no such view, the problem is written in that format where it is JSON or XML, the
+JSON view of the name renders it in any other format if there is one, such as `conflict.json.gsp` or `conflict.gson`,
+and otherwise it is written as without a view. In HTML the view of the name is a GSP, such as `conflict.gsp` or
+`conflict.html.gsp`, looked up as for any view an action renders, in the controller's namespace and in the plugin that
+provides the controller as well: a JSON or markup view of the name, or a JSP, does not render a problem as HTML. The
+action's view and the templates found by convention do not render problems. A renderer the application registers for
+`ProblemDetail`, or for a type other than `Object` that problems share, such as `Serializable`, renders them in its
+format, as a registered renderer renders any type it is registered for; the default renderer of a format, and one the
+application registers for `Object`, which stands in for it, do not. A `JsonRenderer` or `XmlRenderer` bean registered
+for problems writes them as Spring MVC writes them, whatever its `includes` and `excludes`:
+
+[source,groovy]
+----
+respond validationProblemDetailFactory.create(book.errors)   // 422 application/problem+json
+respond ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, 'The book is checked out')
+respond new ErrorResponseException(HttpStatus.SERVICE_UNAVAILABLE)   // 503 application/problem+json, with its headers
+respond problem, view: 'conflict'                            // the conflict view of the format the problem is written in, with the problem's status, where one exists
+----
 
 WARNING: Due to the way Groovy works, while responding with a Map and arguments it is important to respond in this manner `respond([:], status: 200)` instead of this manner `respond([:], [status: 200])`. Failure to do so will result in the arguments being reversed.
 

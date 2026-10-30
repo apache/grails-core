@@ -44,6 +44,7 @@ class ListSecondPassBinderSpec extends HibernateGormDatastoreSpec {
         ColumnNameForPropertyAndPathFetcher cnfpapf = new ColumnNameForPropertyAndPathFetcher(ns, dcnf, br)
         CollectionHolder ch = new CollectionHolder(mbc)
         SimpleValueBinder svb = new SimpleValueBinder(mbc, ns, je)
+        CompositeUserTypeBinder cutb = new CompositeUserTypeBinder(mbc, ns, je)
         EnumTypeBinder etb = new EnumTypeBinder(mbc, cnfpapf, ns)
         SimpleValueColumnFetcher svcf = new SimpleValueColumnFetcher()
         CompositeIdentifierToManyToOneBinder citmto = new CompositeIdentifierToManyToOneBinder(
@@ -58,7 +59,7 @@ class ListSecondPassBinderSpec extends HibernateGormDatastoreSpec {
         ComponentUpdater cu = new ComponentUpdater(pfvc)
         ComponentBinder comb = new ComponentBinder(mbc, binder.getMappingCacheHolder(), cu)
 
-        GrailsPropertyBinder pb = new GrailsPropertyBinder(etb, comb, cb, svb, otob, mtob, fkotob)
+        GrailsPropertyBinder pb = new GrailsPropertyBinder(etb, comb, cb, svb, cutb, otob, mtob, fkotob)
         CompositeIdBinder cib = new CompositeIdBinder(mbc, cu, pb)
         PropertyBinder pbh = new PropertyBinder()
         SimpleIdBinder sib = new SimpleIdBinder(mbc, new BasicValueCreator(mbc, je, ns), svb, pbh)

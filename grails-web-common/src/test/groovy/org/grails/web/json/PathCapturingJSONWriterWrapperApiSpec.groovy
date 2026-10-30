@@ -95,8 +95,19 @@ class PathCapturingJSONWriterWrapperApiSpec extends Specification {
         objectOutput.toString() == '{"boolean":true,"double":2.5,"long":7,"null":null}'
     }
 
-    void "public raw append and comma delegate to the wrapped writer"() {
+    void "the nesting depth is the wrapped writer's"() {
         given:
+        def writer = new PathCapturingJSONWriterWrapper(new JSONWriter(new StringWriter()))
+
+        when:
+        writer.object().key('list').array()
+
+        then:
+        writer.nestingDepth() == 2
+    }
+
+    void "public raw append delegates to the wrapped writer and comma writes nothing"() {
+        given: 'the generator writes the separators itself, so comma() has nothing to add'
         def output = new StringWriter()
         def writer = new PathCapturingJSONWriterWrapper(new JSONWriter(output))
         def commaOutput = new StringWriter()
@@ -111,22 +122,17 @@ class PathCapturingJSONWriterWrapperApiSpec extends Specification {
         then:
         result.is(writer)
         output.toString() == '[true]'
-        commaOutput.toString() == ','
+        commaOutput.toString() == ''
         writer.getCurrentStackReference() == ''
     }
 
-    void "delegated raw append rejects null and invalid sequences"() {
+    void "delegated raw append rejects null"() {
         when:
-        appendRaw(new PathCapturingJSONWriterWrapper(new JSONWriter(new StringWriter())), value)
+        appendRaw(new PathCapturingJSONWriterWrapper(new JSONWriter(new StringWriter())), null)
 
         then:
         def error = thrown(JSONException)
-        error.message.contains(message)
-
-        where:
-        value  | message
-        null   | 'Null pointer'
-        'true' | 'Value out of sequence'
+        error.message.contains('Null pointer')
     }
 
     void "stack references reject depths beyond the current path"() {

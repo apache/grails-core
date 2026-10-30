@@ -19,29 +19,19 @@
 
 package org.grails.forge.cli.command
 
-import io.micronaut.configuration.picocli.MicronautFactory
-import io.micronaut.configuration.picocli.PicocliRunner
-import io.micronaut.context.ApplicationContext
-import io.micronaut.context.env.Environment
 import org.grails.forge.application.ApplicationType
 import org.grails.forge.application.WebAvailableFeatures
 import org.grails.forge.cli.CodeGenConfig
+import org.grails.forge.cli.CliRunner
 import org.grails.forge.cli.CommandFixture
 import org.grails.forge.cli.CommandSpec
+import org.grails.forge.cli.GeneratedBuild
+import org.grails.forge.cli.GrailsPicocliFactory
 import org.grails.forge.io.ConsoleOutput
 import picocli.CommandLine
-import spock.lang.AutoCleanup
-import spock.lang.Shared
+import spock.util.environment.RestoreSystemProperties
 
 class CreateAppCommandSpec extends CommandSpec implements CommandFixture {
-
-    @Shared
-    @AutoCleanup
-    ApplicationContext ctx = ApplicationContext.run(Environment.CLI)
-
-    @Shared
-    @AutoCleanup
-    ApplicationContext beanContext = ApplicationContext.run()
 
     PrintStream originalOut
     PrintStream originalErr
@@ -62,11 +52,30 @@ class CreateAppCommandSpec extends CommandSpec implements CommandFixture {
         System.setOut(new PrintStream(out))
 
         when:
-        PicocliRunner.run(CreateAppCommand, ctx, "foobar")
+        CliRunner.run(CreateAppCommand, beanContext, "foobar")
 
         then:
         noExceptionThrown()
         out.toString().contains("Application created")
+    }
+
+    @RestoreSystemProperties
+    void "a generated build accepts an init script whose path contains spaces"() {
+        given:
+        generateProject(ApplicationType.WEB)
+        File initScript = new File(dir, 'init scripts/verify arguments.gradle')
+        initScript.parentFile.mkdirs()
+        String configuredInitScript = System.getProperty(GeneratedBuild.INIT_SCRIPT_PROPERTY)
+        initScript.setText(configuredInitScript ? new File(configuredInitScript).getText('UTF-8') : '', 'UTF-8')
+        initScript.append("\nprintln 'FORGE_INIT_SCRIPT_LOADED'\n", 'UTF-8')
+        System.setProperty(GeneratedBuild.INIT_SCRIPT_PROPERTY, initScript.absolutePath)
+
+        when:
+        executeGradleCommand('help --console=plain')
+
+        then:
+        testOutputContains('FORGE_INIT_SCRIPT_LOADED')
+        testOutputContains('BUILD SUCCESSFUL')
     }
 
     void "test creating a project with an invalid gorm implementation"() {
@@ -75,7 +84,7 @@ class CreateAppCommandSpec extends CommandSpec implements CommandFixture {
         System.setErr(new PrintStream(baos))
 
         when:
-        PicocliRunner.run(CreateAppCommand, ctx, "temp",  "--gorm", "xyz")
+        CliRunner.run(CreateAppCommand, beanContext, "temp",  "--gorm", "xyz")
 
         then:
         noExceptionThrown()
@@ -88,7 +97,7 @@ class CreateAppCommandSpec extends CommandSpec implements CommandFixture {
         System.setOut(new PrintStream(out))
 
         when:
-        PicocliRunner.run(CreateAppCommand, ctx, "dataswitch", "--data", "hibernate7")
+        CliRunner.run(CreateAppCommand, beanContext, "dataswitch", "--data", "hibernate7")
 
         then:
         noExceptionThrown()
@@ -101,7 +110,7 @@ class CreateAppCommandSpec extends CommandSpec implements CommandFixture {
         System.setOut(new PrintStream(out))
 
         when:
-        PicocliRunner.run(CreateAppCommand, ctx, "dshort", "-d", "hibernate7")
+        CliRunner.run(CreateAppCommand, beanContext, "dshort", "-d", "hibernate7")
 
         then:
         noExceptionThrown()
@@ -114,7 +123,7 @@ class CreateAppCommandSpec extends CommandSpec implements CommandFixture {
         System.setOut(new PrintStream(out))
 
         when:
-        PicocliRunner.run(CreateAppCommand, ctx, "gshort", "-g", "hibernate5")
+        CliRunner.run(CreateAppCommand, beanContext, "gshort", "-g", "hibernate5")
 
         then:
         noExceptionThrown()
@@ -127,7 +136,7 @@ class CreateAppCommandSpec extends CommandSpec implements CommandFixture {
         System.setOut(new PrintStream(out))
 
         when:
-        PicocliRunner.run(CreateAppCommand, ctx, "legacygorm", "--gorm", "hibernate")
+        CliRunner.run(CreateAppCommand, beanContext, "legacygorm", "--gorm", "hibernate")
 
         then:
         noExceptionThrown()
@@ -140,7 +149,7 @@ class CreateAppCommandSpec extends CommandSpec implements CommandFixture {
         System.setOut(new PrintStream(out))
 
         when:
-        PicocliRunner.run(CreateAppCommand, ctx, "hib5gorm", "--gorm", "hibernate5")
+        CliRunner.run(CreateAppCommand, beanContext, "hib5gorm", "--gorm", "hibernate5")
 
         then:
         noExceptionThrown()
@@ -149,7 +158,7 @@ class CreateAppCommandSpec extends CommandSpec implements CommandFixture {
 
     void "the --features completion candidates are listed in name order"() {
         when:
-        List<String> candidates = new CommandLine(CreateAppCommand, new MicronautFactory(ctx))
+        List<String> candidates = new CommandLine(CreateAppCommand, new GrailsPicocliFactory(beanContext))
                 .commandSpec
                 .findOption('--features')
                 .completionCandidates()
@@ -171,7 +180,7 @@ class CreateAppCommandSpec extends CommandSpec implements CommandFixture {
         }
 
         when:
-        PicocliRunner.run(CreateAppCommand, ctx, "temp", "--list-features")
+        CliRunner.run(CreateAppCommand, beanContext, "temp", "--list-features")
 
         then:
         noExceptionThrown()

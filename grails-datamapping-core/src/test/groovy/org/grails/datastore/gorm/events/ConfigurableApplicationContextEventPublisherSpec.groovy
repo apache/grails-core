@@ -19,14 +19,18 @@
 package org.grails.datastore.gorm.events
 
 import org.springframework.context.ApplicationContext
+import org.springframework.context.ApplicationEvent
 import org.springframework.context.ApplicationListener
+import org.springframework.context.ConfigurableApplicationContext
+import org.springframework.context.PayloadApplicationEvent
 import org.springframework.context.event.ContextRefreshedEvent
 import org.springframework.context.support.GenericApplicationContext
 import spock.lang.Specification
 
 /**
  * Covers the publisher being built by the container rather than handed a context, which is what
- * lets a datastore reference it as a bean definition instead of an already-constructed object.
+ * lets a datastore reference it as a bean definition instead of an already-constructed object,
+ * and that every operation is delegated to whichever context it ends up holding.
  */
 class ConfigurableApplicationContextEventPublisherSpec extends Specification {
 
@@ -111,5 +115,44 @@ class ConfigurableApplicationContextEventPublisherSpec extends Specification {
 
         then:
             thrown(IllegalStateException)
+    }
+
+    void 'addApplicationListener delegates to the wrapped ApplicationContext'() {
+        given:
+            ConfigurableApplicationContext wrapped = Mock(ConfigurableApplicationContext)
+            def publisher = new ConfigurableApplicationContextEventPublisher(wrapped)
+            ApplicationListener listener = Mock(ApplicationListener)
+
+        when:
+            publisher.addApplicationListener(listener)
+
+        then:
+            1 * wrapped.addApplicationListener(listener)
+    }
+
+    void 'publishEvent(ApplicationEvent) delegates to the wrapped ApplicationContext'() {
+        given:
+            ConfigurableApplicationContext wrapped = Mock(ConfigurableApplicationContext)
+            def publisher = new ConfigurableApplicationContextEventPublisher(wrapped)
+            ApplicationEvent event = new PayloadApplicationEvent<>(this, 'payload')
+
+        when:
+            publisher.publishEvent(event)
+
+        then:
+            1 * wrapped.publishEvent(event)
+    }
+
+    void 'publishEvent(Object) delegates to the wrapped ApplicationContext as a plain payload'() {
+        given:
+            ConfigurableApplicationContext wrapped = Mock(ConfigurableApplicationContext)
+            def publisher = new ConfigurableApplicationContextEventPublisher(wrapped)
+            Object payload = 'a plain payload'
+
+        when:
+            publisher.publishEvent(payload)
+
+        then:
+            1 * wrapped.publishEvent(payload)
     }
 }

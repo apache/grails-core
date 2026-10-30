@@ -16,17 +16,16 @@
  */
 package grails.gorm.rx;
 
-import rx.Observable;
-import rx.Subscriber;
-import rx.Subscription;
+import io.reactivex.rxjava3.core.Observable;
+import io.reactivex.rxjava3.core.ObservableSource;
+import io.reactivex.rxjava3.core.Observer;
 
 /**
  * Common interface for persistent related observables to implement such as collections and proxies
  *
  * @since 6.0
- * @author Graeme Rocher
  */
-public interface PersistentObservable<T> {
+public interface PersistentObservable<T> extends ObservableSource<T> {
 
     /**
      * Returns an Observable for the operation
@@ -47,9 +46,9 @@ public interface PersistentObservable<T> {
      * <a href="http://reactivex.io/documentation/observable.html">ReactiveX documentation</a>.
      *</p>
      *
-     * @param subscriber the Subscriber that will handle emissions and notifications from the Observable
-     * @return a Subscription reference with which Subscribers that are Observers can
-     *         unsubscribe from the Observable
+     * @param observer the Observer that will handle emissions and notifications from the Observable; the
+     *                 {@link io.reactivex.rxjava3.disposables.Disposable} it receives in {@code onSubscribe} disposes the subscription
      */
-    Subscription subscribe(Subscriber<? super T> subscriber);
+    @Override
+    void subscribe(Observer<? super T> observer);
 }

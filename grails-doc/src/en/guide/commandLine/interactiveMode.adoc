@@ -74,7 +74,9 @@ Creates an application
                           github-workflow-java-ci, jrebel, testcontainers, sqlserver,
                           grails-console, views-markup, asset-pipeline-grails, views-json,
                           gorm-neo4j, asciidoctor, grails-web-console,
-                          logbackGroovy, mongo-sync, shade, geb, properties
+                          logbackGroovy, mongo-sync, shade, geb, properties,
+                          grails-spring-ai, spring-ai-openai, spring-ai-anthropic,
+                          spring-ai-ollama
   -d, --data, -g, --gorm=Grails Data Implementation
                         Which Grails Data implementation to configure (-g, --gorm are legacy
                           aliases). Possible values: hibernate5, hibernate7, mongodb.
@@ -101,6 +103,12 @@ Available Features
 (+) denotes the feature is included by default
   Name                                Description
   ----------------------------------  ---------------
+  AI
+  grails-spring-ai                    Integrates Spring AI: a chat client over the provider of your choice, chat responses streamed from controller actions, and scripted models for tests.
+  spring-ai-anthropic                 Uses Anthropic Claude models through Spring AI, with the API key taken from the ANTHROPIC_API_KEY environment variable.
+  spring-ai-ollama                    Uses models served by a local Ollama through Spring AI; no credentials needed.
+  spring-ai-openai                    Uses OpenAI models through Spring AI, with the API key taken from the OPENAI_API_KEY environment variable.
+
   CI/CD
   github-workflow-java-ci [PREVIEW]   Adds a Github Actions Workflow to Build and Test Grails Application
 

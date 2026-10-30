@@ -48,11 +48,13 @@ In the above example RxGORM has no choice but to block in order to load the asso
 [source,groovy]
 ----
 for (Book book in books) {
-    book.author.subscribe { Author author ->
+    book.author.toObservable().subscribe { Author author ->
         println "Author: ${author.name}"
     }
 }
 ----
+
+The proxy is an `io.reactivex.rxjava3.core.ObservableSource`, which takes an `Observer` rather than a closure; `toObservable()` returns the `Observable` that loads it.
 
 Another alternative if you know you plan to access the `author` association, is to use an eager GORM query. In this case GORM will fetch and initialize the association in a non-blocking manner:
 

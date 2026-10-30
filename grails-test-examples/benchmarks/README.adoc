@@ -61,6 +61,41 @@ Render a report from a JMH JSON result file with the Gradle comparison task:
 Add `--base <path>` to compare paired base and HEAD results. Add `--output <file>` to write the
 rendered Markdown report to a file as well as standard output.
 
+== App-level indy A/B benches
+
+Measure full-stack HTTP latency for `grailsIndy=false` then `grailsIndy=true` against
+`grails-test-examples` (latency, app1, gsp-layout) and compare with `:grails-test-examples-benchmarks:jmhCompare`.
+The orchestrator is a Gradle task. There is no PowerShell or shell runner. The `-PappBench=true` wiring
+lives in `gradle/functional-test-config.gradle`, so any example app can host an `AppBench*` spec; the
+orchestrator runs the ones listed in its `APPS` roster.
+
+[source,bash]
+----
+./gradlew :grails-test-examples-benchmarks:appIndyBench
+----
+
+Optional properties:
+
+|===
+| Property | Default | Purpose
+
+| `appBenchWarmup` | `200` | Discarded warmup requests per spec
+| `appBenchSamples` | `1000` | Timed requests per spec
+| `appBenchChunks` | `10` | Contiguous chunks of each timed series. Their means stand in for JMH iteration means and feed the `scoreError` t-interval, so keep this near the 10 that JMH's PR profile produces
+| `appBenchOutDir` | `build/app-bench` | Output directory; a relative path resolves against the repository root. The JSON results (`noindy/`, `indy/`) and `indy-vs-noindy.md` are written to its `run/` subdirectory, which is recreated on every run
+| `appBenchMaxWorkers` | `4` | `--max-workers` for each nested Gradle invocation
+|===
+
+CI on the `performance` label uses warmup 30000 / samples 10000 / chunks 10. A cold example app keeps getting
+faster for tens of thousands of requests: measured from a cold start, app1 only settled within 5% of its steady
+latency after about 28,000 requests, and a shorter warm-up leaves that drift inside the measured series, where it
+widens the interval and flips verdicts between runs. The requests are cheap next to the nested Gradle builds around
+them, about 20 seconds per build on a CI runner. Even settled, expect intervals of roughly ±3-7%, so a smaller
+difference reads as `no clear change`. The local defaults are a quick smoke profile, not one to draw verdicts from.
+The CPU ruler written next to each
+HTTP entry discards at least 50,000 calls of its own before sampling, whatever `appBenchWarmup` says, so the
+runner-health check compares two JIT-settled loops rather than two JVMs caught mid-compilation.
+
 == Gradle properties
 
 |===

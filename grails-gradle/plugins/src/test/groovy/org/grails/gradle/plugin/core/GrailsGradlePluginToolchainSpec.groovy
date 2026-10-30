@@ -133,6 +133,146 @@ class GrailsGradlePluginToolchainSpec extends GradleSpecification {
         result.output.contains('CONSOLE_AVAILABLE=true')
     }
 
+    def "BootRun hands startup progress settings given as Gradle properties to the application"() {
+        given:
+        setupTestResourceProject('bootrun-startup-progress')
+
+        when:
+        def result = executeTask('inspectBootRunStartupProgress',
+                ['-Pgrails.startup.progress.openBrowser', '-Pgrails.startup.progress.browserCommand=firefox,--new-window'])
+
+        then: 'each reaches the application under its own name, a bare one as true'
+        result.output.contains('STARTUP_PROGRESS_ARG -Dgrails.startup.progress.openBrowser=true')
+        result.output.contains('STARTUP_PROGRESS_ARG -Dgrails.startup.progress.browserCommand=firefox,--new-window')
+    }
+
+    def "BootRun hands no startup progress settings to the application when none are given"() {
+        given:
+        setupTestResourceProject('bootrun-startup-progress')
+
+        when:
+        def result = executeTask('inspectBootRunStartupProgress')
+
+        then:
+        !result.output.contains('STARTUP_PROGRESS_ARG')
+    }
+
+    def "forked application and test JVMs receive query-tail settings given as Gradle properties"() {
+        given:
+        setupTestResourceProject('fork-query-tail')
+
+        when:
+        def result = executeTask('inspectQueryTail',
+                ['-Pgrails.gorm.queryTail.enabled', '-Pgrails.gorm.queryTail.file=build/statements.log'])
+
+        then: 'bootRun and test both get them, a bare one as true'
+        result.output.contains('QUERY_TAIL_ARG bootRun -Dgrails.gorm.queryTail.enabled=true')
+        result.output.contains('QUERY_TAIL_ARG bootRun -Dgrails.gorm.queryTail.file=build/statements.log')
+        result.output.contains('QUERY_TAIL_ARG test -Dgrails.gorm.queryTail.enabled=true')
+        result.output.contains('QUERY_TAIL_ARG test -Dgrails.gorm.queryTail.file=build/statements.log')
+    }
+
+    def "the test JVMs of a build capturing query-tail statements share one run, which the next build does not"() {
+        given:
+        setupTestResourceProject('fork-query-tail')
+
+        when: 'two builds run, the second from the configuration cache the first stored'
+        def configured = executeTask('inspectQueryTail', ['-Pgrails.gorm.queryTail.enabled'])
+        def first = executeTask('inspectQueryTailRun', ['-Pgrails.gorm.queryTail.enabled'])
+        def second = executeTask('inspectQueryTailRun', ['-Pgrails.gorm.queryTail.enabled'])
+
+        then: 'only the test task is told the run, which each build names anew'
+        configured.output.contains('QUERY_TAIL_ARG test -Dgrails.gorm.queryTail.run=')
+        !configured.output.contains('QUERY_TAIL_ARG bootRun -Dgrails.gorm.queryTail.run=')
+        runOf(first.output)
+        runOf(second.output)
+        runOf(second.output) != runOf(first.output)
+    }
+
+    def "the test JVMs are told the run of the build when the application enables capture in its own configuration"() {
+        given:
+        setupTestResourceProject('fork-query-tail')
+
+        when: 'no query-tail setting is given to the build'
+        def result = executeTask('inspectQueryTailRun')
+
+        then:
+        runOf(result.output)
+    }
+
+    def "a query-tail run given to the build is passed as it is, in place of the build's own"() {
+        given:
+        setupTestResourceProject('fork-query-tail')
+
+        when:
+        def result = executeTask('inspectQueryTailRun', ['-Pgrails.gorm.queryTail.run=nightly'])
+        def passed = executeTask('inspectQueryTail', ['-Pgrails.gorm.queryTail.run=nightly'])
+
+        then: 'the test JVM is told that run, and no other'
+        runOf(result.output) == 'nightly'
+        result.output.readLines().count { it.startsWith('QUERY_TAIL_RUN ') } == 1
+        passed.output.contains('QUERY_TAIL_ARG test -Dgrails.gorm.queryTail.run=nightly')
+    }
+
+    def "projects that load the plugin with their own class loaders share the run of the build"() {
+        given: 'each project loads the plugin from its own build script classpath'
+        def runner = setupTestResourceProject('fork-query-tail-classloaders')
+        Properties underTest = new Properties()
+        getClass().classLoader.getResource('plugin-under-test-metadata.properties').withInputStream { underTest.load(it) }
+        new File(runner.projectDir, 'plugin-classpath.txt').text =
+                underTest.getProperty('implementation-classpath').split(File.pathSeparator).join('\n')
+
+        when: 'no project has it from the plugin classpath every build script sees'
+        runner.withPluginClasspath([])
+        def result = executeTask('inspectQueryTailRun', ['-Pgrails.gorm.queryTail.enabled'])
+        List<String> runs = result.output.readLines().findAll { it.startsWith('QUERY_TAIL_RUN ') }
+
+        then: 'each project is told the one run'
+        runs.size() == 2
+        runs.collect { it.substring(it.indexOf(' -D')) }.unique().size() == 1
+
+        cleanup:
+        runner.withPluginClasspath()
+    }
+
+    def "a test task is neither taken from the build cache nor skipped as up to date while query-tail capture is requested: #requested"() {
+        given:
+        setupTestResourceProject('fork-query-tail')
+
+        when:
+        def result = executeTask('inspectQueryTailCaching', arguments)
+
+        then:
+        result.output.contains("QUERY_TAIL_CACHING cacheable=${!capturing} upToDate=${!capturing}")
+
+        where:
+        requested                               | arguments                                                               || capturing
+        'enabled bare'                          | ['-Pgrails.gorm.queryTail.enabled']                                     || true
+        'enabled true'                          | ['-Pgrails.gorm.queryTail.enabled=true']                                || true
+        'enabled yes'                           | ['-Pgrails.gorm.queryTail.enabled=YES']                                 || true
+        'enabled false'                         | ['-Pgrails.gorm.queryTail.enabled=false']                               || false
+        'a file but not enabled'                | ['-Pgrails.gorm.queryTail.file=build/statements.log']                   || false
+        'nothing'                               | []                                                                      || false
+    }
+
+    private static String runOf(String output) {
+        output.readLines().find { it.startsWith('QUERY_TAIL_RUN -Dgrails.gorm.queryTail.run=') }
+                ?.substring('QUERY_TAIL_RUN -Dgrails.gorm.queryTail.run='.length())
+    }
+
+    def "forked JVMs receive no query-tail settings when none are given, but the run of the build"() {
+        given:
+        setupTestResourceProject('fork-query-tail')
+
+        when:
+        def result = executeTask('inspectQueryTail')
+        List<String> passed = result.output.readLines().findAll { it.startsWith('QUERY_TAIL_ARG') }
+
+        then: 'a test JVM that does not capture ignores the run'
+        passed.size() == 1
+        passed.first().startsWith('QUERY_TAIL_ARG test -Dgrails.gorm.queryTail.run=')
+    }
+
     def "custom heap sizes are not overridden by fork settings"() {
         given:
         setupTestResourceProject('fork-settings-custom')

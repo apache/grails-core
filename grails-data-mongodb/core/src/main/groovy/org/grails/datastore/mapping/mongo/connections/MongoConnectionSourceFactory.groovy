@@ -19,6 +19,8 @@
 
 package org.grails.datastore.mapping.mongo.connections
 
+import java.util.function.Consumer
+import java.util.function.Function
 import java.util.function.Supplier
 
 import groovy.transform.CompileStatic
@@ -107,7 +109,9 @@ class MongoConnectionSourceFactory extends AbstractConnectionSourceFactory<Mongo
      * the datastore starts and can be stopped for a CRaC checkpoint and started again after the restore. A client
      * that is not one is closed for the checkpoint instead, and a replacement is built for the restore: return a
      * {@link MongoConnectionSource} for it, so that whatever reads the client from the connection source gets the
-     * replacement.
+     * replacement. Build it with {@link MongoConnectionSource#create}, which registers the query-tail listener the
+     * settings call for on the client and closes it with the connection source; the commands of a client built
+     * otherwise are not captured, which the datastore warns of when capture is enabled.
      */
     @Override
     ConnectionSource<MongoClient, MongoConnectionSourceSettings> create(String name, MongoConnectionSourceSettings settings) {
@@ -122,9 +126,11 @@ class MongoConnectionSourceFactory extends AbstractConnectionSourceFactory<Mongo
         for (MongoClientSettingsBuilderCustomizer customizer : clientSettingsCustomizers) {
             customizer.customize(builder)
         }
-        MongoClientSettings clientSettings = builder.build()
-        MongoClient client = new RestartableMongoClient(name, { MongoClients.create(clientSettings) } as Supplier<MongoClient>)
-        return new MongoConnectionSource(name, client, settings)
+        MongoConnectionSource.create(name, settings, { Consumer<MongoClientSettings.Builder> gormSettings ->
+            gormSettings.accept(builder)
+            MongoClientSettings clientSettings = builder.build()
+            new RestartableMongoClient(name, { MongoClients.create(clientSettings) } as Supplier<MongoClient>)
+        } as Function<Consumer<MongoClientSettings.Builder>, MongoClient>)
     }
 
     @Override

@@ -162,6 +162,8 @@ dependencies {
     shellCliDependencies project(':grails-web-core')
     shellCliDependencies project(':grails-web-databinding')
     shellCliDependencies project(':grails-web-url-mappings')
+    // the XML support grails-converters, grails-rest-transforms and grails-web-databinding held before Grails 9
+    shellCliDependencies project(':grails-xml')
 }
 
 apply {

@@ -438,6 +438,20 @@ public class GrailsWebRequest extends DispatcherServletWebRequest {
                 currentRequest.getAttribute(REDIRECT_CALLED) == null;
     }
 
+    /**
+     * Whether the response has been rendered, as {@code render}, {@code respond} and {@code redirect} render it, or
+     * committed, whatever its status, where {@link #isRenderView()} is also false for a status of 300 or more, such as
+     * that of an error page.
+     *
+     * @return whether it has
+     * @since 9.0
+     */
+    public boolean isResponseRendered() {
+        return !renderView ||
+                getCurrentResponse().isCommitted() ||
+                getRequest().getAttribute(REDIRECT_CALLED) != null;
+    }
+
     public String getId() {
         Object id = getParams().get(ID_PARAMETER);
         return id == null ? null : id.toString();

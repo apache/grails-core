@@ -218,4 +218,27 @@ class GrailsExtensionSpec extends Specification {
         then:
         extension.compileStatic.gsp.get()
     }
+
+    def "indy is unset by default, which leaves the Groovy compiler's own default in place"() {
+        given:
+        Project project = ProjectBuilder.builder().build()
+
+        when:
+        GrailsExtension extension = new GrailsExtension(project)
+
+        then:
+        !extension.indy.present
+    }
+
+    def "indy can be opted out"() {
+        given:
+        Project project = ProjectBuilder.builder().build()
+        GrailsExtension extension = new GrailsExtension(project)
+
+        when:
+        extension.indy = false
+
+        then:
+        !extension.indy.get()
+    }
 }

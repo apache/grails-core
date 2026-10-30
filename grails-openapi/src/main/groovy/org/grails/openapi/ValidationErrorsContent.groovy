@@ -39,9 +39,13 @@ import grails.core.GrailsControllerClass
  *
  * <p>The converters render the errors, in JSON and XML, and answer with 422. Where the application
  * renders with JSON views, a view renders them in JSON instead: the errors view an application is
- * generated with, which answers with 422, a controller's own errors view, which answers as it sets,
- * or, without either, the view for any object, which answers with success. A schema the base
- * document declares under the name describes the errors in every media type, in place of these.</p>
+ * generated with, which answers with 422, or a controller's own errors view, which answers as it
+ * sets; without either, the converters render them. With {@code grails.web.rendering.json.spring},
+ * {@code respond} writes them in JSON as an RFC 9457 problem, as {@code application/problem+json},
+ * and with {@code grails.converters.json.legacy} false the JSON converter writes them with their
+ * codes and without the rejected value, each described under a schema of its own. A schema the
+ * base document declares under the name describes the errors in every media type, in place of
+ * these.</p>
  */
 @CompileStatic
 class ValidationErrorsContent {
@@ -50,6 +54,11 @@ class ValidationErrorsContent {
     private final ErrorsViews views
     private final String schemaName
     private final boolean declared
+    private final boolean springJson
+    private final String jsonSchemaName
+
+    /** The media type {@code respond} writes a problem in. */
+    static final String PROBLEM_JSON = 'application/problem+json'
 
     /**
      * @param views the views that render the errors in JSON
@@ -57,10 +66,24 @@ class ValidationErrorsContent {
      * @param declared whether the base document declares the errors, under that name
      */
     ValidationErrorsContent(Components components, ErrorsViews views, String schemaName, boolean declared) {
+        this(components, views, schemaName, declared, false, null)
+    }
+
+    /**
+     * @param views the views that render the errors in JSON
+     * @param schemaName the name the errors are described under
+     * @param declared whether the base document declares the errors, under that name
+     * @param springJson whether {@code respond} writes the JSON errors as a problem
+     * @param jsonSchemaName the name the JSON errors are described under where they differ from the XML, or {@code null}
+     */
+    ValidationErrorsContent(Components components, ErrorsViews views, String schemaName, boolean declared,
+                            boolean springJson, String jsonSchemaName) {
         this.components = components
         this.views = views
         this.schemaName = schemaName
         this.declared = declared
+        this.springJson = springJson
+        this.jsonSchemaName = jsonSchemaName
     }
 
     /**
@@ -95,9 +118,59 @@ class ValidationErrorsContent {
             // Only the application knows the shape of the controller's own view.
             content.addMediaType(mediaType, new MediaType())
         }
-        else if (views.rendering() != ErrorsRendering.OBJECT_VIEW) {
+        else if (jsonSchemaName == null) {
             content.addMediaType(mediaType, new MediaType().schema(reference()))
         }
+        else {
+            // respond answers a client asking for any JSON type with the problem
+            content.addMediaType(springJson ? PROBLEM_JSON : mediaType, new MediaType().schema(jsonReference()))
+        }
+    }
+
+    private Schema<?> jsonReference() {
+        if (!components.schemas?.containsKey(jsonSchemaName)) {
+            components.addSchemas(jsonSchemaName, springJson ? problemErrors() : mapperErrors())
+        }
+        ComponentSchemas.referenceTo(jsonSchemaName)
+    }
+
+    /** An error as the entries respond and the JSON mapper write it. */
+    private static Schema<?> mapperError(boolean rejectedValue) {
+        Schema<?> error = new ObjectSchema()
+                .addProperty('object', new StringSchema().description('The name of the object that failed validation'))
+                .addProperty('field', new StringSchema().description('The property that failed validation'))
+        if (rejectedValue) {
+            error.addProperty('rejectedValue', new Schema<>().description(
+                    'The value that was rejected, where the application\'s ValidationProblemDetailFactory includes it'))
+        }
+        error.addProperty('codes', new ArraySchema().items(new StringSchema())
+                        .description('The message codes of the error, the most specific first'))
+                .addProperty('message', new StringSchema().description('Why the value was rejected'))
+        error.setRequired(['object', 'codes', 'message'])
+        error
+    }
+
+    /** The errors the JSON converter writes with grails.converters.json.legacy set to false. */
+    private static Schema<?> mapperErrors() {
+        Schema<?> errors = new ObjectSchema().description('The validation errors of a request that could not be bound')
+                .addProperty('errors', new ArraySchema().items(mapperError(false)))
+        errors.setRequired(['errors'])
+        errors
+    }
+
+    /** The RFC 9457 problem respond writes the errors as with grails.web.rendering.json.spring. */
+    private static Schema<?> problemErrors() {
+        Schema<?> problem = new ObjectSchema()
+                .description('The validation errors of a request that could not be bound, as an RFC 9457 problem')
+                .addProperty('type', new StringSchema().format('uri-reference')
+                        .description('The problem type, which is left out where it is about:blank'))
+                .addProperty('title', new StringSchema().description('A summary of the problem, Validation failed'))
+                .addProperty('status', new IntegerSchema().description('The status of the response'))
+                .addProperty('detail', new StringSchema().description('How many errors the request has'))
+                .addProperty('instance', new StringSchema().format('uri-reference').description('The path the request was made to'))
+                .addProperty('errors', new ArraySchema().items(mapperError(true)))
+        problem.setRequired(['title', 'status', 'detail', 'errors'])
+        problem
     }
 
     private Schema<?> reference() {

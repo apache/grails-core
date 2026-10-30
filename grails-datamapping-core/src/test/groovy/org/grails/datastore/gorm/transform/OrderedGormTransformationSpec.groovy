@@ -29,7 +29,8 @@ import spock.lang.Specification
  * transforms is {@code CompilationUnitAware} - so the branch of
  * {@code collectAndOrderGormTransformations} taken for a discovered transform that is NOT
  * {@code CompilationUnitAware} was never exercised. Neither was the catch block that runs when a
- * transform's {@code GormASTTransformationClass} name can't be loaded at all.
+ * transform's {@code GormASTTransformationClass} name can't be loaded at all, or when it loads but
+ * its constructor throws.
  */
 class OrderedGormTransformationSpec extends Specification {
 
@@ -60,6 +61,22 @@ class OrderedGormTransformationSpec extends Specification {
         then: 'a normal compile error is reported rather than an internal compiler crash'
         org.codehaus.groovy.control.MultipleCompilationErrorsException e = thrown()
         e.message.contains('Could not load GORM transform')
+    }
+
+    void "a transform whose constructor throws is reported with the constructor's own message, not the reflective wrapper's"() {
+        when: 'a class is annotated with a marker whose GormASTTransformationClass loads but cannot be instantiated'
+        new GroovyClassLoader().parseClass('''
+            package org.grails.datastore.gorm.transform.fixture
+
+            @org.grails.datastore.gorm.transform.ApplyThrowingConstructorGormTransform
+            class ThrowingConstructorTransformTarget {
+            }
+        ''')
+
+        then: 'the compile error names the transform and carries the cause the constructor threw'
+        org.codehaus.groovy.control.MultipleCompilationErrorsException e = thrown()
+        e.message.contains('Could not load GORM transform for name [org.grails.datastore.gorm.transform.ThrowingConstructorTestTransformation]')
+        e.message.contains(ThrowingConstructorTestTransformation.CONSTRUCTOR_MESSAGE)
     }
 
     void "priority orders the transform via GORM_TRANSFORMS_ORDER"() {

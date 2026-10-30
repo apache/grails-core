@@ -1,0 +1,11 @@
+// what the test task's JVM is told when it runs: its argument providers asked as the task executes, as Gradle asks them
+tasks.register('inspectQueryTailRun') {
+    def testArguments = tasks.named('test', Test).get().jvmArgumentProviders
+    def projectName = project.name
+    usesService(gradle.sharedServices.registrations.named('grailsQueryTailRun').get().service)
+    doLast {
+        testArguments.each { provider ->
+            provider.asArguments().findAll { it.startsWith('-Dgrails.gorm.queryTail.run=') }.each { println "QUERY_TAIL_RUN ${projectName} ${it}" }
+        }
+    }
+}

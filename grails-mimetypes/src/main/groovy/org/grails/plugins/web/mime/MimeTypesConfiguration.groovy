@@ -18,9 +18,12 @@
  */
 package org.grails.plugins.web.mime
 
+import java.util.function.Supplier
+
 import groovy.transform.CompileStatic
 import groovy.transform.TypeCheckingMode
 
+import org.springframework.beans.factory.ObjectProvider
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.context.annotation.Primary
@@ -34,6 +37,8 @@ import grails.web.mime.MimeTypeResolver
 import grails.web.mime.MimeUtility
 import org.grails.web.mime.DefaultMimeTypeResolver
 import org.grails.web.mime.DefaultMimeUtility
+import org.grails.web.mime.GrailsContentNegotiationStrategy
+import org.grails.web.mime.GrailsMimeTypesWebMvcConfigurer
 
 /**
  * Configuration for Codecs
@@ -64,8 +69,19 @@ class MimeTypesConfiguration {
     @Primary
     MimeType[] mimeTypes() {
         final Config config = grailsApplication.getConfig()
-        final Map<CharSequence, Object> mimeConfig = getMimeConfig(config)
+        List<MimeType> mimes = new ArrayList<>(Arrays.asList(configuredMimeTypes(config, getMimeConfig(config))))
+        processProviders(mimes, this.mimeTypeProviders)
+        final Map<String, MimeTypeProvider> childTypes = grailsApplication.mainContext.getBeansOfType(MimeTypeProvider)
+        processProviders(mimes, childTypes.values())
 
+        return mimes.toArray(new MimeType[0])
+    }
+
+    /**
+     * The MIME types {@code grails.mime.types} declares, or the defaults, without those the {@code MimeTypeProvider}
+     * beans add.
+     */
+    private static MimeType[] configuredMimeTypes(Config config, Map<CharSequence, Object> mimeConfig) {
         List<MimeType> mimes = new ArrayList<>()
         if (mimeConfig == null || mimeConfig.isEmpty()) {
             // No user configuration: fall back to the built-in framework defaults
@@ -103,10 +119,6 @@ class MimeTypesConfiguration {
             }
         }
 
-        processProviders(mimes, this.mimeTypeProviders)
-        final Map<String, MimeTypeProvider> childTypes = grailsApplication.mainContext.getBeansOfType(MimeTypeProvider)
-        processProviders(mimes, childTypes.values())
-
         return mimes.toArray(new MimeType[0])
     }
 
@@ -122,8 +134,45 @@ class MimeTypesConfiguration {
         return new DefaultMimeTypeResolver()
     }
 
-    @CompileStatic(TypeCheckingMode.SKIP)
+    /**
+     * Static, so that registering the configurer does not create this configuration, whose
+     * constructor collects every {@code MimeTypeProvider}, among them the renderers. Spring MVC
+     * creates its configurers while its infrastructure beans are created, and a renderer that
+     * depends on one of those beans would otherwise close a cycle. For the same reason, the
+     * formats it registers with Spring MVC are those of the configuration: those
+     * {@code grails.mime.types} declares, or the defaults where it declares none or
+     * {@code grails.mime.mergeDefaults} adds them, which Spring MVC's content negotiation manager
+     * needs as it is created, and not those a {@code MimeTypeProvider} adds.
+     */
+    @Bean
+    static GrailsMimeTypesWebMvcConfigurer grailsMimeTypesWebMvcConfigurer(
+            ObjectProvider<MimeUtility> mimeUtility, GrailsApplication grailsApplication) {
+        // A user agent that is not a regular expression is reported as the application starts, rather than by every
+        // request, which builds the strategy once it is first asked for
+        GrailsContentNegotiationStrategy.disabledUserAgentPatterns(grailsApplication.config)
+        // The MIME types request.format and response.format resolve against as well
+        Supplier<GrailsContentNegotiationStrategy> strategy = () ->
+                new GrailsContentNegotiationStrategy(mimeUtility.getObject().knownMimeTypes as MimeType[], grailsApplication.config)
+        Supplier<MimeType[]> formats = () ->
+                configuredMimeTypes(grailsApplication.config, declaredMimeTypes(grailsApplication.config))
+        return new GrailsMimeTypesWebMvcConfigurer(strategy, formats)
+    }
+
+    /**
+     * The MIME types the {@code mimeTypes} bean, and so the application's {@code MimeUtility}, starts from, before those
+     * of the {@code MimeTypeProvider} beans. The formats registered with Spring MVC are those {@code grails.mime.types}
+     * declares, whatever a subclass returns here, since they are read before this configuration may be created (see
+     * {@link #grailsMimeTypesWebMvcConfigurer}).
+     *
+     * @param config the application's configuration
+     * @return the MIME types by format, or {@code null} for the defaults
+     */
     protected Map<CharSequence, Object> getMimeConfig(Config config) {
+        return declaredMimeTypes(config)
+    }
+
+    @CompileStatic(TypeCheckingMode.SKIP)
+    private static Map<CharSequence, Object> declaredMimeTypes(Config config) {
         return config.getProperty(Settings.MIME_TYPES, Map)
     }
 

@@ -17,6 +17,11 @@ specific language governing permissions and limitations
 under the License.
 ////
 
+NOTE: Named converter configurations, `XML.createNamedConfig(...)` and `XML.use(...)` as well as
+`JSON.createNamedConfig(...)` and `JSON.use(...)`, are deprecated and scheduled for removal in Grails 11. XML conversion
+needs `org.apache.grails:grails-xml`, and is scheduled for removal in Grails 11 too. Select a shape of JSON for a response
+with a named Jackson configuration instead (see <<jacksonJson,Customizing JSON With Jackson>>).
+
 It is also possible to register named configurations. For example:
 
 [source,groovy]

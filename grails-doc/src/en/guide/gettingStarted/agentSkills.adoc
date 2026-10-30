@@ -19,12 +19,16 @@ under the License.
 
 Grails publishes https://agentskills.io[Agent Skills] that teach AI coding agents how to work with Grails. A skill is a `SKILL.md` file of instructions that an agent loads when a task calls for it.
 
+This section is about AI as a development tool. Using AI models from the application itself, through Spring AI, is covered in <<usingAi,Using AI in Your Application>>.
+
 [options="header",cols="1,2,3"]
 |===
 | Skill | Coordinates | Use
 
 | `grails-developer` | `org.apache.grails.skills:grails-developer` | Building Grails applications: controllers, services, GORM, views, plugins, and testing with Spock and Geb
 | `grails-8-upgrade` | `org.apache.grails.skills:grails-8-upgrade` | Upgrading an application from Grails 7 to Grails 8
+| `grails-9-upgrade` | `org.apache.grails.skills:grails-9-upgrade` | Upgrading an application from Grails 8 to Grails 9
+| `grails-ai-developer` | `org.apache.grails.skills:grails-ai-developer` | Using AI models from an application: providers, the chat client, streamed answers, configuration and testing, see <<usingAi,Using AI in Your Application>>
 |===
 
 The skills are released with Grails, under the same version, and the Grails BOM manages them, so an application gets the skills written for the Grails version it builds with.
@@ -43,7 +47,7 @@ plugins {
 
 dependencies {
     skill 'org.apache.grails.skills:grails-developer'
-    skill 'org.apache.grails.skills:grails-8-upgrade'
+    skill 'org.apache.grails.skills:grails-9-upgrade'
 }
 
 skillsjars {
@@ -81,19 +85,19 @@ dependencies {
 }
 ----
 
-==== Grails 7 Applications
+==== Applications on the Previous Major Version
 
-The upgrade skill is for applications still on Grails 7. They apply the SkillsJars Gradle plugin as above, but the Grails 7 BOM does not manage the skills, so they name the version:
+An upgrade skill is for applications still on the previous major version, such as `grails-9-upgrade` for an application on Grails 8. They apply the SkillsJars Gradle plugin as above, but their Grails BOM does not manage the skill, so they name the version:
 
 [source,groovy,subs="attributes"]
 .build.gradle
 ----
 dependencies {
-    skill 'org.apache.grails.skills:grails-8-upgrade:{version}'
+    skill 'org.apache.grails.skills:grails-9-upgrade:{version}'
 }
 ----
 
-Once the application is on Grails 8, the version can be dropped.
+Once the application is on Grails 9, the version can be dropped.
 
 ==== The SkillsJars Layout
 
