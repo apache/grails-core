@@ -24,11 +24,8 @@ import java.util.concurrent.RejectedExecutionException
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 
-import jakarta.servlet.DispatcherType
-
 import org.springframework.beans.factory.support.BeanRegistryAdapter
-import org.springframework.boot.web.servlet.FilterRegistrationBean
-import org.springframework.core.Ordered
+import org.springframework.boot.web.servlet.ServletListenerRegistrationBean
 import org.springframework.beans.factory.support.DefaultListableBeanFactory
 import org.springframework.core.env.StandardEnvironment
 import org.springframework.core.task.AsyncTaskExecutor
@@ -74,25 +71,22 @@ class ControllersAsyncGrailsPluginSpec extends Specification {
         beanFactory.getBeanDefinition('asyncPromiseResponseActionResultTransformer').beanClassName == AsyncActionResultTransformer.name
         beanFactory.getBeanDefinition('grailsPromiseFactory').beanClassName == PromiseFactory.name
         beanFactory.getBeanDefinition('grailsWebRequestTaskDecorator').beanClassName == TaskDecorator.name
-        beanFactory.getBeanDefinition('grailsTaskRequestFilter').beanClassName == FilterRegistrationBean.name
+        beanFactory.getBeanDefinition('grailsTaskRequestListener').beanClassName == ServletListenerRegistrationBean.name
         beanFactory.getBeanDefinition('grailsPromiseExecutor').fallback
     }
 
     @Issue('https://github.com/apache/grails-core/issues/15851')
-    void 'beanRegistrar registers the filter telling when a request has been processed, innermost and for the dispatches the container starts'() {
+    void 'beanRegistrar registers the listener telling the tasks of a request when the container is done with it'() {
         given:
         def beanFactory = new DefaultListableBeanFactory()
         def registrar = new ControllersAsyncGrailsPlugin().beanRegistrar()
         new BeanRegistryAdapter(beanFactory, new StandardEnvironment(), registrar.getClass()).register(registrar)
 
         when:
-        FilterRegistrationBean registration = beanFactory.getBean('grailsTaskRequestFilter', FilterRegistrationBean)
+        ServletListenerRegistrationBean registration = beanFactory.getBean('grailsTaskRequestListener', ServletListenerRegistrationBean)
 
         then:
-        registration.filter instanceof TaskRequestFilter
-        registration.determineDispatcherTypes() == EnumSet.of(DispatcherType.REQUEST, DispatcherType.ASYNC, DispatcherType.ERROR)
-        registration.order == Ordered.LOWEST_PRECEDENCE
-        registration.asyncSupported
+        registration.listener instanceof TaskRequestListener
     }
 
     void 'promise factory uses the application task executor'() {

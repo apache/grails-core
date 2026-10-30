@@ -21,31 +21,22 @@ package pubsub.demo
 import groovy.json.JsonOutput
 
 /**
- * Forwards while tasks read the request, and goes on once the forward has returned.
+ * Starts tasks that read the request they were started during, while it is live and once it has completed.
  */
 class TaskRequestController {
 
     TaskRequestService taskRequestService
 
-    def forwarding() {
-        taskRequestService.readOnceCompleted("${params.run}-request")
-        forward(action: 'forwarded')
-        request.setAttribute('late', 'set after the forward')
+    def outlive() {
+        request.setAttribute('model', 'books')
+        taskRequestService.readOnceDetached(params.run)
+        render 'started'
     }
 
-    def forwarded() {
-        taskRequestService.readOnceCompleted("${params.run}-forward")
-        render 'forwarded'
-    }
-
-    def forwardingOnly() {
-        forward(action: 'forwardedOnly')
-        request.setAttribute('late', 'set after the forward')
-    }
-
-    def forwardedOnly() {
-        taskRequestService.readOnceCompleted("${params.run}-forwardOnly")
-        render 'forwarded'
+    def live() {
+        request.setAttribute('model', 'books')
+        taskRequestService.readWhileLive(params.run)
+        render 'read'
     }
 
     def seen() {

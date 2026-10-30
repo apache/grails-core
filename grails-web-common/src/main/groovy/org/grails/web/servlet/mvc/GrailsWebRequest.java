@@ -505,15 +505,28 @@ public class GrailsWebRequest extends DispatcherServletWebRequest {
 
     /**
      * Looks up the current Grails WebRequest instance
-     * @return The GrailsWebRequest instance
+     * @return The GrailsWebRequest instance, or {@code null} when there is none or it is {@linkplain #isDetached()
+     *         detached}
      */
     public static @Nullable GrailsWebRequest lookup() {
         GrailsWebRequest webRequest = null;
         RequestAttributes requestAttributes = RequestContextHolder.getRequestAttributes();
-        if (requestAttributes instanceof GrailsWebRequest) {
-            webRequest = (GrailsWebRequest) requestAttributes;
+        if (requestAttributes instanceof GrailsWebRequest grailsWebRequest && !grailsWebRequest.isDetached()) {
+            webRequest = grailsWebRequest;
         }
         return webRequest;
+    }
+
+    /**
+     * Whether the request this web request was created for has completed while the web request is still bound to
+     * a thread, as the web request of a task that outlives the request it was started during is. {@link #lookup()}
+     * does not return a detached web request, so code that runs on behaves as it does outside a request.
+     *
+     * @return {@code false}, unless a subclass detaches the web request
+     * @since 8.0.1
+     */
+    protected boolean isDetached() {
+        return false;
     }
 
     /**

@@ -29,14 +29,15 @@ import org.springframework.web.context.request.RequestContextHolder
 
 import org.grails.web.servlet.mvc.GrailsWebRequest
 import org.grails.web.util.GrailsApplicationAttributes
-import org.grails.web.util.WebUtils
 
 /**
  * Propagates the current Grails web request through a Spring-managed task executor.
  *
- * <p>The task sees the request it was started during until that request completes, and a copy of the request
- * taken as it completed from then on, so a task that outlives the request does not read a request the container
- * has recycled.</p>
+ * <p>The task is given a {@link TaskRequest} and a {@link TaskResponse}: wrappers of the request and response it was
+ * started during, which call them while the request is live and throw an {@link IllegalStateException} once it has
+ * completed, since the container recycles them then. From then on {@link GrailsWebRequest#lookup()} no longer finds
+ * the task's web request, so code the task runs, such as data binding, behaves as it does outside a request. A task
+ * that starts after the request has completed runs without a web request.</p>
  *
  * @since 8.0
  */
@@ -53,15 +54,45 @@ class GrailsWebRequestTaskDecorator implements TaskDecorator {
             return task
         }
 
-        HttpServletRequest request = TaskRequest.of(captured)
-        // Taken now, so the task does not hold the web request, whose request the container recycles
-        HttpServletResponse response = captured.currentResponse
+        HttpServletRequest current = captured.currentRequest
+        HttpServletResponse currentResponse = captured.currentResponse
+        TaskRequestLifecycle lifecycle
+        if (current instanceof TaskRequest) {
+            // A task started from a task is given wrappers of its own of what that task's wrap, with the same life
+            lifecycle = ((TaskRequest) current).lifecycle
+            current = (HttpServletRequest) current.request
+            if (currentResponse instanceof TaskResponse) {
+                currentResponse = (HttpServletResponse) currentResponse.response
+            }
+        }
+        else {
+            try {
+                lifecycle = TaskRequestLifecycle.of(captured)
+            }
+            catch (IllegalStateException ignored) {
+                // The web request outlived its request, which the container has recycled, so the task runs without it
+                return task
+            }
+        }
+        // Each task has wrappers of its own, so a forward or include one task makes does not change another's
+        TaskRequest request = new TaskRequest(current, lifecycle)
+        HttpServletResponse response = currentResponse == null ? null : new TaskResponse(currentResponse, lifecycle)
         GrailsApplicationAttributes attributes = captured.attributes
         return () -> {
             RequestAttributes previous = RequestContextHolder.getRequestAttributes()
-            GrailsWebRequest taskRequest = new GrailsWebRequest(request, response, attributes)
-            WebUtils.storeGrailsWebRequest(taskRequest)
             try {
+                // Nothing is bound while the task's web request is created, so whichever thread runs the task, it
+                // starts with an encoding state of its own, not the one of a web request bound to that thread
+                RequestContextHolder.resetRequestAttributes()
+                // Created while the request is live, so it does not complete meanwhile. It is bound to the task's
+                // thread only: the request keeps its own web request, which the container still uses after the tasks
+                // of an asynchronous request are detached, such as for an error page
+                GrailsWebRequest taskRequest = request.lifecycle.whileLive {
+                    new TaskWebRequest(request, response, attributes)
+                }
+                if (taskRequest != null) {
+                    RequestContextHolder.setRequestAttributes(taskRequest)
+                }
                 task.run()
             }
             finally {

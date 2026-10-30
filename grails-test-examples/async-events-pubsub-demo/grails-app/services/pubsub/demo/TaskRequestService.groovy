@@ -23,27 +23,69 @@ import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 
 import jakarta.servlet.http.HttpServletRequest
+import jakarta.servlet.http.HttpServletResponse
 
 import grails.async.Promises
 import org.grails.web.servlet.mvc.GrailsWebRequest
-import org.grails.web.util.WebUtils
 
 /**
- * Starts tasks that read the request they were started during once it has left the application, and keeps what
- * they read.
+ * Starts tasks that read the request they were started during, and keeps what they saw.
  */
 class TaskRequestService {
 
     final Map<String, Map<String, Object>> seen = new ConcurrentHashMap<>()
 
-    void readOnceCompleted(CharSequence name) {
-        HttpServletRequest live = GrailsWebRequest.lookup().currentRequest
-        CountDownLatch completed = (CountDownLatch) live.getAttribute(RequestCompletedFilter.COMPLETED)
+    // A task that outlives the request: it takes the request while it is live, waits until the container is done
+    // with it, then uses what it took and binds a domain class
+    void readOnceDetached(String name) {
+        CountDownLatch taken = new CountDownLatch(1)
         Promises.task {
-            completed.await(10, TimeUnit.SECONDS)
+            GrailsWebRequest webRequest = GrailsWebRequest.lookup()
+            HttpServletRequest request = webRequest.currentRequest
+            HttpServletResponse response = webRequest.currentResponse
+            Map<String, Object> result = [live: request.getAttribute('model')]
+            taken.countDown()
+            long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(10)
+            while (GrailsWebRequest.lookup() != null && System.nanoTime() < deadline) {
+                Thread.sleep(10)
+            }
+            result.detached = GrailsWebRequest.lookup() == null
+            result.request = failureOf { request.getAttribute('model') }
+            result.response = failureOf { response.contentType }
+            Book book = new Book(title: 'Grails')
+            result.title = book.title
+            result.bindingErrors = book.errors.errorCount
+            seen[name] = result
+        }.onError { Throwable failure ->
+            seen[name] = [failure: failure.toString()]
+            taken.countDown()
+        }
+        taken.await(10, TimeUnit.SECONDS)
+    }
+
+    // A task the request waits for: it reads the request while it is live, including what was set after it started
+    void readWhileLive(String name) {
+        HttpServletRequest live = GrailsWebRequest.lookup().currentRequest
+        CountDownLatch set = new CountDownLatch(1)
+        CountDownLatch read = new CountDownLatch(1)
+        Promises.task {
+            set.await(10, TimeUnit.SECONDS)
             HttpServletRequest request = GrailsWebRequest.lookup().currentRequest
-            seen[name.toString()] = [late: request.getAttribute('late'), forward: WebUtils.isForward(request),
-                                     forwardURI: WebUtils.getForwardURI(request), uri: request.requestURI]
+            seen[name] = [model: request.getAttribute('model'), late: request.getAttribute('late'), uri: request.requestURI]
+            read.countDown()
+        }
+        live.setAttribute('late', 'set after the task started')
+        set.countDown()
+        read.await(10, TimeUnit.SECONDS)
+    }
+
+    private static String failureOf(Closure<?> call) {
+        try {
+            call.call()
+            return null
+        }
+        catch (IllegalStateException failure) {
+            return failure.message
         }
     }
 }

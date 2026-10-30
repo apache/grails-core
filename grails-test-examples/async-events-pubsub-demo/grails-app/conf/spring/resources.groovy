@@ -17,18 +17,6 @@
  *  under the License.
  */
 
-import jakarta.servlet.DispatcherType
-
-import org.springframework.boot.web.servlet.FilterRegistrationBean
-import org.springframework.core.Ordered
-
-import pubsub.demo.RequestCompletedFilter
-
 // Place your Spring DSL code here
 beans = {
-    requestCompletedFilter(FilterRegistrationBean) {
-        filter = new RequestCompletedFilter()
-        dispatcherTypes = EnumSet.of(DispatcherType.REQUEST)
-        order = Ordered.HIGHEST_PRECEDENCE
-    }
 }

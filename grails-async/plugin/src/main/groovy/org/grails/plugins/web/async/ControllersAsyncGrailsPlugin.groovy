@@ -24,13 +24,10 @@ import groovy.util.logging.Slf4j
 import java.util.concurrent.Executor
 import java.util.function.UnaryOperator
 
-import jakarta.servlet.DispatcherType
-
 import org.springframework.beans.factory.BeanRegistrar
 import org.springframework.beans.factory.BeanRegistry
 import org.springframework.beans.factory.NoSuchBeanDefinitionException
-import org.springframework.boot.web.servlet.FilterRegistrationBean
-import org.springframework.core.Ordered
+import org.springframework.boot.web.servlet.ServletListenerRegistrationBean
 import org.springframework.core.env.Environment
 import org.springframework.core.task.AsyncTaskExecutor
 import org.springframework.core.task.TaskDecorator
@@ -66,8 +63,8 @@ class ControllersAsyncGrailsPlugin extends Plugin {
             registry.registerBean('grailsWebRequestTaskDecorator', TaskDecorator) {
                 it.supplier { new GrailsWebRequestTaskDecorator() }
             }
-            registry.registerBean('grailsTaskRequestFilter', FilterRegistrationBean) {
-                it.supplier { taskRequestFilter() }
+            registry.registerBean('grailsTaskRequestListener', ServletListenerRegistrationBean) {
+                it.supplier { new ServletListenerRegistrationBean<TaskRequestListener>(new TaskRequestListener()) }
             }
             registry.registerBean('grailsPromiseExecutor', AsyncTaskExecutor) {
                 it.fallback()
@@ -110,14 +107,5 @@ class ControllersAsyncGrailsPlugin extends Plugin {
                 }
             }
         }
-    }
-
-    private static FilterRegistrationBean<TaskRequestFilter> taskRequestFilter() {
-        FilterRegistrationBean<TaskRequestFilter> registration = new FilterRegistrationBean<>(new TaskRequestFilter())
-        // The dispatches the container starts, never a forward or an include, which run within one of them
-        registration.dispatcherTypes = EnumSet.of(DispatcherType.REQUEST, DispatcherType.ASYNC, DispatcherType.ERROR)
-        // Innermost, so the requests are copied inside the other filters, such as the security filter chain
-        registration.order = Ordered.LOWEST_PRECEDENCE
-        return registration
     }
 }
