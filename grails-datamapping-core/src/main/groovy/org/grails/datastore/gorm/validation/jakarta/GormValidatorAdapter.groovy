@@ -19,6 +19,8 @@
 
 package org.grails.datastore.gorm.validation.jakarta
 
+import java.lang.reflect.Array
+
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 
@@ -34,6 +36,7 @@ import jakarta.validation.metadata.ContainerElementTypeDescriptor
 import jakarta.validation.metadata.GroupConversionDescriptor
 import jakarta.validation.metadata.PropertyDescriptor
 
+import org.codehaus.groovy.runtime.InvokerHelper
 import org.springframework.validation.Errors
 import org.springframework.validation.FieldError
 import org.springframework.validation.beanvalidation.SpringValidatorAdapter
@@ -53,7 +56,9 @@ class GormValidatorAdapter extends SpringValidatorAdapter implements CascadingVa
     /**
      * Whether the validation in progress on the thread cascades to the persistent associations of an entity. When
      * {@code false}, the GORM validator cascades to them, and Bean Validation cascades only through the properties
-     * marked {@code @Valid} that are not persistent associations, see {@link MappingContextTraversableResolver}.
+     * marked {@code @Valid} that are not persistent associations, see {@link MappingContextTraversableResolver}. A
+     * validation started while another one is in progress, such as by a custom constraint validating another entity,
+     * leaves the value of the enclosing one in place when it ends.
      */
     public static final ThreadLocal<Boolean> CASCADE_VALIDATION = new ThreadLocal<>()
 
@@ -66,11 +71,12 @@ class GormValidatorAdapter extends SpringValidatorAdapter implements CascadingVa
 
     @Override
     void validate(Object obj, Errors errors, boolean cascade) {
+        Boolean enclosing = CASCADE_VALIDATION.get()
         CASCADE_VALIDATION.set(cascade)
         try {
             validate(obj, errors)
         } finally {
-            CASCADE_VALIDATION.remove()
+            restoreCascade(enclosing)
         }
     }
 
@@ -85,11 +91,12 @@ class GormValidatorAdapter extends SpringValidatorAdapter implements CascadingVa
      * @since 8.0.1
      */
     void validate(Object obj, Errors errors, boolean cascade, Class<?>[] groups) {
+        Boolean enclosing = CASCADE_VALIDATION.get()
         CASCADE_VALIDATION.set(cascade)
         try {
             validate(obj, errors, (Object[]) groups)
         } finally {
-            CASCADE_VALIDATION.remove()
+            restoreCascade(enclosing)
         }
     }
 
@@ -115,6 +122,7 @@ class GormValidatorAdapter extends SpringValidatorAdapter implements CascadingVa
             validate(obj, errors, cascade, groups)
             return
         }
+        Boolean enclosing = CASCADE_VALIDATION.get()
         CASCADE_VALIDATION.set(cascade)
         try {
             Set<ConstraintViolation<Object>> reported = new LinkedHashSet<>()
@@ -125,7 +133,20 @@ class GormValidatorAdapter extends SpringValidatorAdapter implements CascadingVa
             }
             processConstraintViolations(reported, errors)
         } finally {
+            restoreCascade(enclosing)
+        }
+    }
+
+    /**
+     * Puts the cascade flag of the enclosing validation back, if any, once a validation ends: a validation started
+     * while another one is in progress must not change how the enclosing one cascades.
+     */
+    private static void restoreCascade(Boolean enclosing) {
+        if (enclosing == null) {
             CASCADE_VALIDATION.remove()
+        }
+        else {
+            CASCADE_VALIDATION.set(enclosing)
         }
     }
 
@@ -137,10 +158,14 @@ class GormValidatorAdapter extends SpringValidatorAdapter implements CascadingVa
      * sequences, and an unconverted group alone. The reported groups follow the same conversions along the path of
      * the violation, from the validated object to the bean holding the constraint, so a violation the provider found
      * through a conversion of a reported group is reported, and one it found through a group that is not reported is
-     * not. The default group of a bean stands for the groups of the sequence redefining it, if any.
+     * not. The beans along the path are the ones the provider cascaded to, read from the validated object, as the
+     * conversions and the constraints are the ones of their classes rather than of the declared types of the
+     * properties. The default group of a bean stands for the groups of the sequence redefining it, if any, the one a
+     * group sequence provider chooses for the bean.
      */
     private boolean isReported(ConstraintViolation<?> violation, Set<Class<?>> reportedGroups) {
         List<Path.Node> nodes = violation.propertyPath.toList()
+        Object bean = violation.rootBean
         Class<?> beanClass = violation.rootBeanClass
         Set<Class<?>> groups = reportedGroups
         // the last node is the constrained element, the nodes before it the properties the provider cascaded through
@@ -152,13 +177,13 @@ class GormValidatorAdapter extends SpringValidatorAdapter implements CascadingVa
             PropertyDescriptor property = thisValidator.getConstraintsForClass(beanClass).getConstraintsForProperty(node.name)
             CascadableDescriptor cascaded = JakartaConstraintsTranslator.cascadedDescriptorOf(property)
             if (cascaded != null) {
-                groups = convertedGroupsOf(withDefaultGroupsOf(groups, beanClass), cascaded.groupConversions)
+                groups = convertedGroupsOf(withDefaultGroupsOf(groups, beanClass, bean), cascaded.groupConversions)
             }
-            beanClass = i == nodes.size() - 2
-                    ? (violation.leafBean?.getClass() ?: Object)
-                    : cascadedClassOf(property, nodes.get(i + 1))
+            Path.Node next = nodes.get(i + 1)
+            bean = i == nodes.size() - 2 ? violation.leafBean : cascadedBeanOf(bean, node, next)
+            beanClass = bean?.getClass() ?: cascadedClassOf(property, next)
         }
-        return !Collections.disjoint(violation.constraintDescriptor.groups, withDefaultGroupsOf(groups, beanClass))
+        return !Collections.disjoint(violation.constraintDescriptor.groups, withDefaultGroupsOf(groups, beanClass, bean))
     }
 
     /**
@@ -188,15 +213,53 @@ class GormValidatorAdapter extends SpringValidatorAdapter implements CascadingVa
     }
 
     /**
-     * The groups with, when the default group is among them, the groups the class redefines it with
+     * The groups with, when the default group is among them, the groups the class redefines it with, for the bean
+     * when it is known and a group sequence provider chooses them per instance
      */
-    private static Set<Class<?>> withDefaultGroupsOf(Set<Class<?>> groups, Class<?> beanClass) {
+    private static Set<Class<?>> withDefaultGroupsOf(Set<Class<?>> groups, Class<?> beanClass, Object bean) {
         if (!groups.contains(Default)) {
             return groups
         }
         Set<Class<?>> expanded = new LinkedHashSet<>(groups)
-        expanded.addAll(JakartaConstraintsTranslator.defaultGroupsOf(beanClass))
+        expanded.addAll(JakartaConstraintsTranslator.defaultGroupsOf(beanClass, bean))
         return expanded
+    }
+
+    /**
+     * The bean a cascaded property of the given bean leads to: the value of the property, or, when the next node of
+     * the path is an element of a container, the element at its index or key. Null when the bean is unknown, the
+     * property cannot be read, or the element cannot be told, as one of a set, which the declared type of the
+     * property then stands for, see {@link #cascadedClassOf}.
+     */
+    private static Object cascadedBeanOf(Object bean, Path.Node node, Path.Node next) {
+        if (bean == null) {
+            return null
+        }
+        Object value
+        try {
+            value = InvokerHelper.getProperty(bean, node.name)
+        }
+        catch (MissingPropertyException ignored) {
+            return null
+        }
+        if (!next.isInIterable()) {
+            return value
+        }
+        if (next.key != null) {
+            return value instanceof Map ? ((Map) value).get(next.key) : null
+        }
+        Integer index = next.index
+        if (index == null) {
+            return null
+        }
+        if (value instanceof List) {
+            List list = (List) value
+            return index < list.size() ? list.get(index) : null
+        }
+        if (value != null && value.getClass().isArray()) {
+            return index < Array.getLength(value) ? Array.get(value, index) : null
+        }
+        return null
     }
 
     /**

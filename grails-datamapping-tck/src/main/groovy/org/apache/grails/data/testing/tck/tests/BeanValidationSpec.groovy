@@ -29,11 +29,14 @@ import org.apache.grails.data.testing.tck.domains.BeanValidatedBasket
 import org.apache.grails.data.testing.tck.domains.BeanValidatedBasketLine
 import org.apache.grails.data.testing.tck.domains.BeanValidatedBulletin
 import org.apache.grails.data.testing.tck.domains.BeanValidatedChapter
+import org.apache.grails.data.testing.tck.domains.BeanValidatedCounterpart
 import org.apache.grails.data.testing.tck.domains.BeanValidatedDossier
 import org.apache.grails.data.testing.tck.domains.BeanValidatedInvoice
 import org.apache.grails.data.testing.tck.domains.BeanValidatedInvoiceLine
 import org.apache.grails.data.testing.tck.domains.BeanValidatedIssue
+import org.apache.grails.data.testing.tck.domains.BeanValidatedLedger
 import org.apache.grails.data.testing.tck.domains.BeanValidatedManuscript
+import org.apache.grails.data.testing.tck.domains.BeanValidatedMember
 import org.apache.grails.data.testing.tck.domains.BeanValidatedNotice
 import org.apache.grails.data.testing.tck.domains.BeanValidatedOrder
 import org.apache.grails.data.testing.tck.domains.BeanValidatedPair
@@ -47,6 +50,8 @@ import org.apache.grails.data.testing.tck.domains.BeanValidatedShelf
 import org.apache.grails.data.testing.tck.domains.BeanValidatedShelfBook
 import org.apache.grails.data.testing.tck.domains.BeanValidatedShipment
 import org.apache.grails.data.testing.tck.domains.BeanValidatedTeaser
+import org.apache.grails.data.testing.tck.support.BeanValidatedLedgerDetails
+import org.apache.grails.data.testing.tck.support.BeanValidatedLedgerLeaf
 import org.apache.grails.data.testing.tck.support.BeanValidatedOrderDetails
 
 /**
@@ -61,7 +66,8 @@ class BeanValidationSpec extends GrailsDataTckSpec {
                 BeanValidatedReview, BeanValidatedPair, BeanValidatedPairing, BeanValidatedArticle, BeanValidatedPost, BeanValidatedTeaser,
                 BeanValidatedNotice, BeanValidatedRecall, BeanValidatedDossier, BeanValidatedAttachment, BeanValidatedIssue,
                 BeanValidatedSection, BeanValidatedBasket, BeanValidatedBasketLine, BeanValidatedOrder, BeanValidatedShelf,
-                BeanValidatedShelfBook, BeanValidatedBulletin, BeanValidatedManuscript, BeanValidatedChapter)
+                BeanValidatedShelfBook, BeanValidatedBulletin, BeanValidatedManuscript, BeanValidatedChapter, BeanValidatedLedger,
+                BeanValidatedCounterpart, BeanValidatedMember)
     }
 
     void 'the annotations and the constraints block are validated, each violation once'() {
@@ -398,5 +404,69 @@ class BeanValidationSpec extends GrailsDataTckSpec {
         then:
         manuscript.validate()
         manuscript.save(flush: true) != null
+    }
+
+    void 'a custom constraint validating another domain instance leaves the validation it runs in unchanged'() {
+        given: 'a ledger whose transient details cascade to a leaf violating an annotation, and whose counterpart a custom constraint validates on its own'
+        def ledger = new BeanValidatedLedger(name: 'Ledger', counterpart: new BeanValidatedCounterpart(code: 'CP'),
+                details: new BeanValidatedLedgerDetails(leaf: new BeanValidatedLedgerLeaf(label: '')))
+
+        expect: 'the leaf is validated although the constraint validated the counterpart in between'
+        !ledger.validate()
+        ledger.errors.errorCount == 1
+        ledger.errors.getFieldError('details.leaf.label').code == 'NotBlank'
+        ledger.save() == null
+
+        when: 'the counterpart is invalid'
+        ledger.counterpart.code = ''
+
+        then:
+        !ledger.validate()
+        ledger.errors.getFieldError('counterpart').code == 'ValidCounterpart'
+        ledger.errors.getFieldError('details.leaf.label').code == 'NotBlank'
+
+        when: 'the ledger is valid'
+        ledger.counterpart.code = 'CP'
+        ledger.details.leaf.label = 'Leaf'
+
+        then:
+        ledger.validate()
+        ledger.save(flush: true) != null
+    }
+
+    void 'the nullability constraints of the block give way to the annotations of the sequence a group sequence provider chooses for the instance'() {
+        given: 'a member whose desk the block requires and a @Null of RetiredChecks forbids, a group its provider validates for a retired member'
+        def member = new BeanValidatedMember(name: 'Active', retired: false)
+        def entity = BeanValidatedMember.gormPersistentEntity
+
+        expect: 'an active member needs a desk'
+        !member.validate()
+        member.errors.errorCount == 1
+        member.errors.getFieldError('desk').code == 'nullable'
+        member.save() == null
+
+        when: 'a retired member has none'
+        member = new BeanValidatedMember(name: 'Retired', retired: true)
+
+        then: 'the @Null the provider validates decides, as Bean Validation does'
+        member.validate()
+
+        when: 'a retired member has one'
+        member.desk = 'A1'
+
+        then:
+        !member.validate()
+        member.errors.errorCount == 1
+        member.errors.getFieldError('desk').code == 'Null'
+
+        when: 'an active member has one'
+        member = new BeanValidatedMember(name: 'Active', retired: false, desk: 'A1')
+
+        then:
+        member.validate()
+        member.save(flush: true) != null
+
+        and: 'the constraints describe the class as the provider does for no instance'
+        !((ConstrainedEntity) entity.mappingContext.getEntityValidator(entity)).constrainedProperties.desk.nullable
     }
 }

@@ -536,9 +536,9 @@ class HintingValidator extends PersistentEntityValidator {
     }
 
     @Override
-    protected Map<String, ConstrainedProperty> getValidatedConstrainedProperties(Object[] hints) {
+    protected Map<String, ConstrainedProperty> getValidatedConstrainedProperties(Object obj, Object[] hints) {
         constraintHints.add(hints as List)
-        super.getValidatedConstrainedProperties(hints)
+        super.getValidatedConstrainedProperties(obj, hints)
     }
 
     @Override

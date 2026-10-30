@@ -57,7 +57,10 @@ import org.grails.datastore.mapping.model.types.Association
  * validated in the default group, as it is on its own. An associated object reached through two associations is
  * validated once in each distinct list of groups. A group sequence is validated group by group, each group over
  * the object and the objects it cascades to, and stops at the first group with a violation among them, see
- * {@link #validateAssociationsAndBeyond}.
+ * {@link #validateAssociationsAndBeyond}. The default group of an entity redefining it with Hibernate Validator's
+ * {@code @GroupSequenceProvider} stands for the sequence the provider chooses for the instance, so the nullability
+ * constraints of the block that give way to its annotations are decided per instance, see
+ * {@link #getValidatedConstrainedProperties}.
  * <p>
  * {@link #getConstrainedProperties()} describes the annotations as GORM constraints next to the ones of the block,
  * see {@link JakartaConstraintsTranslator}.
@@ -94,7 +97,7 @@ class JakartaPersistentEntityValidator extends PersistentEntityValidator {
                 : new GormValidatorAdapter(beanValidator)
         this.constraintsEvaluator = constraintsEvaluator
         this.translator = new JakartaConstraintsTranslator(this.beanValidator, targetClass)
-        Map<String, ConstrainedProperty> validated = super.getValidatedConstrainedProperties(NO_VALIDATION_HINTS)
+        Map<String, ConstrainedProperty> validated = super.constrainedProperties
         translator.delegateNullabilityToBeanValidation(validated)
         this.describedConstrainedProperties = Collections.unmodifiableMap(translator.translate(validated, constraintRegistry))
     }
@@ -111,19 +114,22 @@ class JakartaPersistentEntityValidator extends PersistentEntityValidator {
 
     /**
      * The constraints of the block, with the nullability of the properties an annotation of the groups the object
-     * is validated in checks for null left to Bean Validation.
+     * is validated in checks for null left to Bean Validation. The default group among them stands for the groups
+     * the class redefines it with, for the object when a group sequence provider chooses them per instance, see
+     * {@link JakartaConstraintsTranslator#findDefaultGroups}.
      */
     @Override
-    protected Map<String, ConstrainedProperty> getValidatedConstrainedProperties(Object[] hints) {
+    protected Map<String, ConstrainedProperty> getValidatedConstrainedProperties(Object obj, Object[] hints) {
         List<Class<?>> groups = groupsOf(hints)
         Set<Class<?>> excluded = excludedGroupsOf(hints)
-        if (groups.isEmpty() && excluded.isEmpty()) {
-            return super.getValidatedConstrainedProperties(hints)
+        Set<Class<?>> defaultGroups = translator.findDefaultGroups(obj)
+        if (groups.isEmpty() && excluded.isEmpty() && defaultGroups == translator.defaultGroups) {
+            return super.getValidatedConstrainedProperties(obj, hints)
         }
-        List<Object> key = [groups, excluded] as List<Object>
+        List<Object> key = [groups, excluded, defaultGroups] as List<Object>
         return validatedConstrainedPropertiesByGroups.computeIfAbsent(key, { List<Object> k ->
             Map<String, ConstrainedProperty> evaluated = constraintsEvaluator.evaluate(targetClass)
-            translator.delegateNullabilityToBeanValidation(evaluated, groups ?: DEFAULT_GROUP_LIST, excluded)
+            translator.delegateNullabilityToBeanValidation(evaluated, groups ?: DEFAULT_GROUP_LIST, excluded, defaultGroups)
             return Collections.unmodifiableMap(evaluated)
         } as Function<List<Object>, Map<String, ConstrainedProperty>>)
     }
@@ -184,7 +190,7 @@ class JakartaPersistentEntityValidator extends PersistentEntityValidator {
     /**
      * The groups whose constraints a validation of the entity in the given groups reports: the groups the provider
      * validates with them, without the excluded ones. The adapter converts them along its own cascade through the
-     * properties marked {@code @Valid}, and reads the default group among them as the groups each class redefines it
+     * properties marked {@code @Valid}, and reads the default group among them as the groups each bean redefines it
      * with, see {@link GormValidatorAdapter#validate(Object, Errors, boolean, Class[], Set)}.
      */
     private static Set<Class<?>> reportedGroupsOf(List<Class<?>> groups, Set<Class<?>> excluded) {

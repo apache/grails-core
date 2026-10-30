@@ -37,6 +37,8 @@ import jakarta.validation.constraints.Size
 import jakarta.validation.groups.ConvertGroup
 import jakarta.validation.groups.Default
 
+import org.hibernate.validator.group.GroupSequenceProvider
+import org.hibernate.validator.spi.group.DefaultGroupSequenceProvider
 import org.springframework.validation.DataBinder
 import org.springframework.validation.Errors
 import org.springframework.validation.SmartValidator
@@ -66,7 +68,7 @@ class JakartaValidatorRegistrySpec extends Specification {
                 AnnotatedShelf, AnnotatedShelfBook, PlainShelf, GroupedBook, PublishingShelf, PublishedBook, PublishedChapter,
                 PublishedBookNote, SharedChapterBook, SharedChapter, SequencedBook, SequencedPart, CascadingShelf, ReviewedBook,
                 ValidatedDocument, ValidatedReport, TitledBook, DetailedBook, ExtendedOwner, ExtendedChild, SequencedOwner, SequencedRoot,
-                SequencedChild, SequencedGrandchild)
+                SequencedChild, SequencedGrandchild, AuditedRecord, AuditedRecordAuditor, ProvidedMember)
         mappingContext.initialize()
         registry = new JakartaValidatorRegistry(mappingContext, new ConnectionSourceSettings())
         mappingContext.validatorRegistry = registry
@@ -576,6 +578,89 @@ class JakartaValidatorRegistrySpec extends Specification {
         !errors.hasErrors()
     }
 
+    void "a transient property marked @Valid is cascaded to as the value it holds, whatever its declared type"() {
+        given: "a child validated in Extended without Base, whose transient record, declared as an Object, converts Extended to DetailsChecks for its details"
+        ExtendedOwner owner = new ExtendedOwner(name: 'owner', child: new ExtendedChild(label: 'ok', note: 'ok',
+                record: new ExtendedChildRecord(details: new ExtendedChildDetails(summary: '', draft: 'yes'))))
+        Errors errors = new ValidationErrors(owner)
+        SpringValidator validator = registry.getValidator(mappingContext.getPersistentEntity(ExtendedOwner.name))
+
+        expect: "the provider validates the details in DetailsChecks, as the class of the record converts Extended, and not in Base"
+        beanValidationPaths(owner, Extended) == ['child.record.details.summary']
+
+        when:
+        ValidationUtils.invokeValidator(validator, owner, errors, Extended)
+
+        then: "and so does GORM"
+        errors.getFieldError('child.record.details.summary').code == 'NotBlank'
+        !errors.hasFieldErrors('child.record.details.draft')
+        errors.errorCount == 1
+    }
+
+    void "a custom constraint validating another domain instance leaves the validation it runs in unchanged"() {
+        given: "a record whose transient details cascade to a leaf violating an annotation, and whose auditor a custom constraint validates on its own"
+        AuditedRecord record = new AuditedRecord(name: 'audited', auditor: new AuditedRecordAuditor(login: 'auditor'),
+                details: new AuditedRecordDetails(leaf: new AuditedRecordLeaf(label: '')))
+        Errors errors = new ValidationErrors(record)
+        SpringValidator validator = registry.getValidator(mappingContext.getPersistentEntity(AuditedRecord.name))
+        ValidAuditorValidator.validator = registry.getValidator(mappingContext.getPersistentEntity(AuditedRecordAuditor.name))
+
+        when:
+        validator.validate(record, errors)
+
+        then: "the leaf is validated although the constraint validated the auditor in between"
+        errors.getFieldError('details.leaf.label').code == 'NotBlank'
+        errors.errorCount == 1
+
+        when: "the auditor is invalid"
+        record.auditor.login = ''
+        errors = new ValidationErrors(record)
+        validator.validate(record, errors)
+
+        then:
+        errors.getFieldError('auditor').code == 'ValidAuditor'
+        errors.getFieldError('details.leaf.label').code == 'NotBlank'
+        errors.errorCount == 2
+
+        cleanup:
+        ValidAuditorValidator.validator = null
+    }
+
+    void "the nullability constraints of the block give way to the annotations of the sequence a group sequence provider chooses for the instance"() {
+        given: "a member whose desk the block requires and a @Null of RetiredChecks forbids, a group its provider validates for a retired member"
+        SpringValidator validator = registry.getValidator(mappingContext.getPersistentEntity(ProvidedMember.name))
+        ProvidedMember member = new ProvidedMember(name: 'active', retired: false)
+        Errors errors = new ValidationErrors(member)
+
+        when: "an active member has no desk"
+        validator.validate(member, errors)
+
+        then: "the block requires one"
+        errors.getFieldError('desk').code == 'nullable'
+        errors.errorCount == 1
+
+        when: "a retired member has no desk"
+        member = new ProvidedMember(name: 'retired', retired: true)
+        errors = new ValidationErrors(member)
+        validator.validate(member, errors)
+
+        then: "the @Null of the group the provider chose decides, as the provider does"
+        beanValidationPaths(member) == []
+        !errors.hasErrors()
+
+        when: "a retired member has a desk"
+        member.desk = 'A1'
+        errors = new ValidationErrors(member)
+        validator.validate(member, errors)
+
+        then:
+        errors.getFieldError('desk').code == 'Null'
+        errors.errorCount == 1
+
+        and: "the constraints describe the class as the provider does for no instance"
+        !((ConstrainedEntity) validator).constrainedProperties.desk.nullable
+    }
+
     private static List<String> beanValidationPaths(Object instance, Class<?>... groups) {
         def factory = Validation.buildDefaultValidatorFactory()
         try {
@@ -920,9 +1005,18 @@ class ExtendedChild {
     @ConvertGroup(from = Extended, to = DetailsChecks)
     ExtendedChildDetails details
 
+    @Valid
+    Object record
+
     static belongsTo = [ExtendedOwner]
 
-    static transients = ['details']
+    static transients = ['details', 'record']
+}
+
+class ExtendedChildRecord {
+    @Valid
+    @ConvertGroup(from = Extended, to = DetailsChecks)
+    ExtendedChildDetails details
 }
 
 class ExtendedChildDetails {
@@ -931,6 +1025,96 @@ class ExtendedChildDetails {
 
     @Null(groups = Base)
     String draft
+}
+
+@Entity
+class AuditedRecord {
+    @NotNull
+    String name
+
+    @Valid
+    AuditedRecordDetails details
+
+    @ValidAuditor
+    AuditedRecordAuditor auditor
+
+    static transients = ['details', 'auditor']
+}
+
+class AuditedRecordDetails {
+    @Valid
+    AuditedRecordLeaf leaf
+}
+
+class AuditedRecordLeaf {
+    @NotBlank
+    String label
+}
+
+@Entity
+class AuditedRecordAuditor {
+    @NotBlank
+    String login
+}
+
+@Constraint(validatedBy = [ValidAuditorValidator])
+@Target([ElementType.FIELD])
+@Retention(RetentionPolicy.RUNTIME)
+@interface ValidAuditor {
+
+    String message() default 'the auditor is not valid'
+
+    Class<?>[] groups() default []
+
+    Class<? extends Payload>[] payload() default []
+}
+
+/**
+ * Validates the auditor with the validator of its entity, a validation of its own inside the one of the record.
+ */
+class ValidAuditorValidator implements ConstraintValidator<ValidAuditor, AuditedRecordAuditor> {
+
+    static SpringValidator validator
+
+    @Override
+    boolean isValid(AuditedRecordAuditor auditor, ConstraintValidatorContext context) {
+        if (auditor == null) {
+            return true
+        }
+        Errors errors = new ValidationErrors(auditor)
+        validator.validate(auditor, errors)
+        return !errors.hasErrors()
+    }
+}
+
+interface RetiredChecks {}
+
+@Entity
+@GroupSequenceProvider(ProvidedMemberSequenceProvider)
+class ProvidedMember {
+    @NotBlank
+    String name
+
+    boolean retired
+
+    @Null(groups = RetiredChecks)
+    String desk
+
+    static constraints = {
+        desk nullable: false
+    }
+}
+
+class ProvidedMemberSequenceProvider implements DefaultGroupSequenceProvider<ProvidedMember> {
+
+    @Override
+    List<Class<?>> getValidationGroups(Class<?> klass, ProvidedMember member) {
+        List<Class<?>> sequence = [ProvidedMember]
+        if (member?.retired) {
+            sequence.add(RetiredChecks)
+        }
+        return sequence
+    }
 }
 
 interface StepA {}

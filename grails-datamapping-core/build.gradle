@@ -93,7 +93,7 @@ dependencies {
         // comp: CompileDynamic, CompileStatic
     }
     implementation 'org.hibernate.validator:hibernate-validator', {
-        // impl: ResourceBundleMessageInterpolator
+        // impl: ResourceBundleMessageInterpolator, GroupSequenceProvider, DefaultGroupSequenceProvider
     }
 
     compileOnlyApi "jakarta.el:jakarta.el-api:$elApiVersion"

@@ -138,7 +138,7 @@ class PersistentEntityValidator implements CascadingValidator, ConstrainedEntity
         Cascade enclosing = CASCADE.get()
         CASCADE.set(new Cascade(hints, hints, null))
         try {
-            validateConstraints(target, entity, errors, entityReflector, getValidatedConstrainedProperties(hints), null, true)
+            validateConstraints(target, entity, errors, entityReflector, getValidatedConstrainedProperties(target, hints), null, true)
             validateAssociationsAndBeyond(target, errors, cascade, hints, validatedObjects)
         }
         finally {
@@ -151,12 +151,14 @@ class PersistentEntityValidator implements CascadingValidator, ConstrainedEntity
      * of the entity and the defaults. {@link #getConstrainedProperties()} exposes the same constraints, unless a
      * subclass also describes rules it validates by other means in them, such as Bean Validation annotations.
      *
+     * @param obj The object to validate, the instance a proxy stands for, for a subclass whose rules depend on the
+     * instance, such as the groups a Bean Validation group sequence provider chooses for it
      * @param hints The validation hints the object is validated with, {@link #NO_VALIDATION_HINTS} for the object
      * {@link #validate} is called with, see {@link #getAssociationValidationHints}
      * @return The constraints to validate
      * @since 8.0.1
      */
-    protected Map<String, ConstrainedProperty> getValidatedConstrainedProperties(Object[] hints) {
+    protected Map<String, ConstrainedProperty> getValidatedConstrainedProperties(Object obj, Object[] hints) {
         return this.constrainedProperties
     }
 
@@ -437,7 +439,7 @@ class PersistentEntityValidator implements CascadingValidator, ConstrainedEntity
         def validator = mappingContext.getEntityValidator(associatedEntity)
         if (validator instanceof PersistentEntityValidator) {
             associatedValidator = (PersistentEntityValidator) validator
-            associatedConstrainedProperties = associatedValidator.getValidatedConstrainedProperties(associatedAllHints)
+            associatedConstrainedProperties = associatedValidator.getValidatedConstrainedProperties(instance, associatedAllHints)
         }
 
         String nestedPath = errors.getNestedPath()

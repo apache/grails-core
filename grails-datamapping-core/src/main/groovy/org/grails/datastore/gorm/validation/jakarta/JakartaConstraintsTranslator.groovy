@@ -52,6 +52,9 @@ import jakarta.validation.metadata.ContainerElementTypeDescriptor
 import jakarta.validation.metadata.PropertyDescriptor
 import jakarta.validation.metadata.Scope
 
+import org.hibernate.validator.group.GroupSequenceProvider
+import org.hibernate.validator.spi.group.DefaultGroupSequenceProvider
+
 import org.springframework.context.support.StaticMessageSource
 import org.springframework.util.ClassUtils
 import org.springframework.util.ReflectionUtils
@@ -77,7 +80,9 @@ import org.grails.datastore.mapping.reflect.ClassPropertyFetcher
  * validated but not described, unless the {@code constraints} block constrains the property. Annotations without
  * a GORM equivalent (such as {@code @Past}, {@code @Digits} or custom constraints) are left out, and so are the
  * constraints composing a constraint composed with Hibernate Validator's {@code @ConstraintComposition} other than
- * {@code AND}, as they do not each apply.
+ * {@code AND}, as they do not each apply. A class redefining the default group with Hibernate Validator's
+ * {@code @GroupSequenceProvider} is described in the sequence the provider gives for no instance, and validated in
+ * the one it chooses for each instance, see {@link #findDefaultGroups}.
  *
  * @since 8.0.1
  */
@@ -90,16 +95,31 @@ class JakartaConstraintsTranslator {
     private static final String CONSTRAINT_COMPOSITION = 'org.hibernate.validator.constraints.ConstraintComposition'
 
     /**
+     * The group sequence provider of each class redefining the default group with one, instantiated once, as the
+     * provider instantiates it: through its public constructor without parameters.
+     */
+    private static final ClassValue<DefaultGroupSequenceProvider<Object>> GROUP_SEQUENCE_PROVIDERS = new ClassValue<DefaultGroupSequenceProvider<Object>>() {
+
+        @Override
+        protected DefaultGroupSequenceProvider<Object> computeValue(Class<?> type) {
+            GroupSequenceProvider annotation = type.getAnnotation(GroupSequenceProvider)
+            return annotation == null ? null : (DefaultGroupSequenceProvider<Object>) annotation.value().getConstructor().newInstance()
+        }
+    }
+
+    /**
      * The descriptor of the class
      */
     final BeanDescriptor beanDescriptor
 
     /**
      * The groups the default group of the class stands for, as the provider validates it: the {@link Default}
-     * group and, when a class of the hierarchy redefines the default group with a {@link GroupSequence}, the
-     * groups of the sequence of the first one from the class up to do so
+     * group and, when a class of the hierarchy redefines the default group, the groups of the sequence of the first
+     * one from the class up to do so, the sequence its {@link GroupSequence} declares or the one its
+     * {@link GroupSequenceProvider} gives for no instance, as the provider describes the class
      *
      * @see #validatedGroupsOf
+     * @see #findDefaultGroups
      */
     final Set<Class<?>> defaultGroups
 
@@ -114,16 +134,26 @@ class JakartaConstraintsTranslator {
     private final Map<String, List<DeclaredConstraint>> declaredConstraints
 
     /**
+     * The class, its interfaces and its superclasses, see {@link #hierarchyOf}
+     */
+    private final List<Class<?>> hierarchy
+
+    /**
+     * The index in the hierarchy of the first class redefining the default group, -1 when none does
+     */
+    private final int redefining
+
+    /**
      * @param validator The Bean Validation validator to read the descriptors of the class and its superclasses from
      * @param beanClass The class
      */
     JakartaConstraintsTranslator(Validator validator, Class<?> beanClass) {
         this.beanDescriptor = validator.getConstraintsForClass(beanClass)
-        List<Class<?>> hierarchy = hierarchyOf(beanClass)
-        int redefining = indexOfRedefiningClass(hierarchy)
-        this.defaultGroups = defaultGroupsOf(hierarchy, redefining)
-        this.declaredConstraints = findDeclaredConstraints(validator, hierarchy, redefining, defaultGroups)
-        this.constraintDescriptors = Collections.unmodifiableMap(findValidatedConstraints(DEFAULT_GROUP, Collections.<Class<?>> emptySet()))
+        this.hierarchy = hierarchyOf(beanClass)
+        this.redefining = indexOfRedefiningClass(hierarchy)
+        this.defaultGroups = defaultGroupsOf(hierarchy, redefining, null)
+        this.declaredConstraints = findDeclaredConstraints(validator, hierarchy, redefining)
+        this.constraintDescriptors = Collections.unmodifiableMap(findValidatedConstraints(DEFAULT_GROUP, Collections.<Class<?>> emptySet(), defaultGroups))
     }
 
     /**
@@ -134,21 +164,20 @@ class JakartaConstraintsTranslator {
     }
 
     /**
-     * Reads the constraints each class of the hierarchy declares, with the groups the default group stands for in
-     * that class. As the provider validates them, the first class from the described class up to redefine the
-     * default group with a {@link GroupSequence} applies its sequence to its own constraints and to the ones of its
-     * superclasses, whereas the classes below it validate theirs in the {@link Default} group only.
+     * Reads the constraints each class of the hierarchy declares, noting whether the default group of that class is
+     * the redefined one. As the provider validates them, the first class from the described class up to redefine the
+     * default group applies its sequence to its own constraints and to the ones of its superclasses, whereas the
+     * classes below it validate theirs in the {@link Default} group only.
      */
-    private static Map<String, List<DeclaredConstraint>> findDeclaredConstraints(Validator validator, List<Class<?>> hierarchy, int redefining,
-            Set<Class<?>> sequenced) {
+    private static Map<String, List<DeclaredConstraint>> findDeclaredConstraints(Validator validator, List<Class<?>> hierarchy, int redefining) {
         Map<String, List<DeclaredConstraint>> result = new TreeMap<>()
         for (int i = 0; i < hierarchy.size(); i++) {
-            Set<Class<?>> defaultGroups = redefining >= 0 && i >= redefining ? sequenced : DEFAULT_GROUP
+            boolean sequenced = redefining >= 0 && i >= redefining
             for (PropertyDescriptor property in validator.getConstraintsForClass(hierarchy.get(i)).constrainedProperties) {
                 Set<ConstraintDescriptor<?>> declared = property.findConstraints().lookingAt(Scope.LOCAL_ELEMENT).constraintDescriptors
                 for (ConstraintDescriptor<?> descriptor in declared) {
                     result.computeIfAbsent(property.propertyName) { String name -> new ArrayList<DeclaredConstraint>() }
-                            .add(new DeclaredConstraint(descriptor, defaultGroups))
+                            .add(new DeclaredConstraint(descriptor, sequenced))
                 }
             }
         }
@@ -157,15 +186,44 @@ class JakartaConstraintsTranslator {
 
     /**
      * The groups the default group of a class stands for, as the provider validates it: the {@link Default} group
-     * and, when a class of the hierarchy redefines the default group with a {@link GroupSequence}, the groups of the
-     * sequence of the first one from the class up to do so, see {@link #getDefaultGroups()}.
+     * and, when a class of the hierarchy redefines the default group with a {@link GroupSequence} or a
+     * {@link GroupSequenceProvider}, the groups of the sequence of the first one from the class up to do so, the one
+     * a provider gives for no instance, see {@link #getDefaultGroups()}.
      *
      * @param beanClass The class
      * @return The groups
      */
     static Set<Class<?>> defaultGroupsOf(Class<?> beanClass) {
+        return defaultGroupsOf(beanClass, null)
+    }
+
+    /**
+     * The groups the default group of an instance of a class stands for, as the provider validates it:
+     * {@link #defaultGroupsOf(Class)}, with the sequence of a class redefining the default group with a
+     * {@link GroupSequenceProvider} as the provider chooses it for the instance.
+     *
+     * @param beanClass The class
+     * @param instance The instance, null for none
+     * @return The groups
+     */
+    static Set<Class<?>> defaultGroupsOf(Class<?> beanClass, Object instance) {
         List<Class<?>> hierarchy = hierarchyOf(beanClass)
-        return defaultGroupsOf(hierarchy, indexOfRedefiningClass(hierarchy))
+        return defaultGroupsOf(hierarchy, indexOfRedefiningClass(hierarchy), instance)
+    }
+
+    /**
+     * The groups the default group of the given instance of the class stands for: {@link #getDefaultGroups()}, or,
+     * when the class redefining the default group does so with a {@link GroupSequenceProvider}, the groups of the
+     * sequence the provider chooses for the instance.
+     *
+     * @param instance The instance, null for none
+     * @return The groups
+     */
+    Set<Class<?>> findDefaultGroups(Object instance) {
+        if (instance == null || redefining < 0 || hierarchy.get(redefining).getAnnotation(GroupSequenceProvider) == null) {
+            return defaultGroups
+        }
+        return sequencedDefaultGroupsOf(hierarchy.get(redefining), instance)
     }
 
     /**
@@ -183,14 +241,17 @@ class JakartaConstraintsTranslator {
     }
 
     /**
-     * @return The index in the hierarchy of the first class redefining the default group, -1 when none does
+     * @return The index in the hierarchy of the first class redefining the default group, with a {@link GroupSequence}
+     * or a {@link GroupSequenceProvider}, -1 when none does
      */
     private static int indexOfRedefiningClass(List<Class<?>> hierarchy) {
-        return hierarchy.findIndexOf { Class<?> type -> !type.isInterface() && type.getAnnotation(GroupSequence) != null }
+        return hierarchy.findIndexOf { Class<?> type ->
+            !type.isInterface() && (type.getAnnotation(GroupSequence) != null || type.getAnnotation(GroupSequenceProvider) != null)
+        }
     }
 
-    private static Set<Class<?>> defaultGroupsOf(List<Class<?>> hierarchy, int redefining) {
-        return redefining < 0 ? DEFAULT_GROUP : sequencedDefaultGroupsOf(hierarchy.get(redefining))
+    private static Set<Class<?>> defaultGroupsOf(List<Class<?>> hierarchy, int redefining, Object instance) {
+        return redefining < 0 ? DEFAULT_GROUP : sequencedDefaultGroupsOf(hierarchy.get(redefining), instance)
     }
 
     /**
@@ -217,15 +278,28 @@ class JakartaConstraintsTranslator {
 
     /**
      * The groups the default group of a class stands for when the class redefines it: the {@link Default} group, and
-     * the groups of the sequence, in which the class itself stands for the {@link Default} group.
+     * the groups of its sequence, in which the class itself stands for the {@link Default} group.
      */
-    private static Set<Class<?>> sequencedDefaultGroupsOf(Class<?> redefining) {
+    private static Set<Class<?>> sequencedDefaultGroupsOf(Class<?> redefining, Object instance) {
         Set<Class<?>> groups = new HashSet<>()
         groups.add(Default)
         Set<Class<?>> visitedSequences = new HashSet<>()
         visitedSequences.add(redefining)
-        addSequencedGroups(redefining.getAnnotation(GroupSequence).value(), groups, visitedSequences)
+        addSequencedGroups(defaultSequenceOf(redefining, instance), groups, visitedSequences)
         return Collections.unmodifiableSet(groups)
+    }
+
+    /**
+     * The sequence a class redefines the default group with, without the class itself: the groups its
+     * {@link GroupSequence} declares, or the ones its {@link GroupSequenceProvider} chooses for the instance, for no
+     * instance as the provider describes the class, none when it chooses none.
+     */
+    private static Class<?>[] defaultSequenceOf(Class<?> redefining, Object instance) {
+        GroupSequence sequence = redefining.getAnnotation(GroupSequence)
+        List<Class<?>> groups = sequence != null
+                ? Arrays.asList(sequence.value())
+                : GROUP_SEQUENCE_PROVIDERS.get(redefining).getValidationGroups(redefining, instance)
+        return (groups ?: Collections.<Class<?>> emptyList()).findAll { Class<?> group -> group != redefining }.toArray(new Class<?>[0])
     }
 
     /**
@@ -307,8 +381,10 @@ class JakartaConstraintsTranslator {
      *
      * @param groups The groups validated
      * @param excludedGroups The groups validated with them, as groups they extend, whose constraints are not reported
+     * @param defaultGroups The groups the default group stands for, see {@link #findDefaultGroups}
      */
-    private Map<String, List<ConstraintDescriptor<?>>> findValidatedConstraints(Collection<Class<?>> groups, Set<Class<?>> excludedGroups) {
+    private Map<String, List<ConstraintDescriptor<?>>> findValidatedConstraints(Collection<Class<?>> groups, Set<Class<?>> excludedGroups,
+            Set<Class<?>> defaultGroups) {
         Set<Class<?>> requested = new HashSet<>()
         addSequencedGroups(groups.toArray(new Class<?>[0]), requested, new HashSet<Class<?>>())
         requested.removeAll(excludedGroups)
@@ -316,7 +392,7 @@ class JakartaConstraintsTranslator {
         declaredConstraints.each { String propertyName, List<DeclaredConstraint> declared ->
             List<ConstraintDescriptor<?>> validated = new ArrayList<>()
             for (DeclaredConstraint constraint in declared) {
-                if (constraint.isValidatedIn(requested)) {
+                if (constraint.isValidatedIn(requested, defaultGroups)) {
                     validated.add(constraint.descriptor)
                 }
             }
@@ -360,10 +436,24 @@ class JakartaConstraintsTranslator {
      * @see JakartaPersistentEntityValidator.ExcludedGroups
      */
     Set<String> findNullabilityConstrainedProperties(Collection<Class<?>> groups, Set<Class<?>> excludedGroups) {
-        if (isDefaultGroup(groups) && excludedGroups.isEmpty()) {
+        return findNullabilityConstrainedProperties(groups, excludedGroups, defaultGroups)
+    }
+
+    /**
+     * The properties whose nullability a constraint validated in the given groups declares, as
+     * {@link #findNullabilityConstrainedProperties(Collection, Set)}, the default group among them standing for the
+     * given groups.
+     *
+     * @param groups The groups, the default group when there are none
+     * @param excludedGroups The groups validated with them, as groups they extend, whose constraints are not reported
+     * @param defaultGroups The groups the default group stands for, see {@link #findDefaultGroups}
+     * @return The property names
+     */
+    Set<String> findNullabilityConstrainedProperties(Collection<Class<?>> groups, Set<Class<?>> excludedGroups, Set<Class<?>> defaultGroups) {
+        if (isDefaultGroup(groups) && excludedGroups.isEmpty() && defaultGroups == this.defaultGroups) {
             return nullabilityConstrainedProperties
         }
-        return nullabilityConstrainedPropertiesOf(findValidatedConstraints(groups ?: DEFAULT_GROUP, excludedGroups))
+        return nullabilityConstrainedPropertiesOf(findValidatedConstraints(groups ?: DEFAULT_GROUP, excludedGroups, defaultGroups))
     }
 
     private static boolean isDefaultGroup(Collection<Class<?>> groups) {
@@ -426,7 +516,22 @@ class JakartaConstraintsTranslator {
      * @see JakartaPersistentEntityValidator.ExcludedGroups
      */
     void delegateNullabilityToBeanValidation(Map<String, ConstrainedProperty> constraints, Collection<Class<?>> groups, Set<Class<?>> excludedGroups) {
-        for (String propertyName in findNullabilityConstrainedProperties(groups, excludedGroups)) {
+        delegateNullabilityToBeanValidation(constraints, groups, excludedGroups, defaultGroups)
+    }
+
+    /**
+     * Leaves the nullability of the properties Bean Validation checks for null in the given groups to it, as
+     * {@link #delegateNullabilityToBeanValidation(Map, Collection, Set)}, the default group among them standing for
+     * the given groups.
+     *
+     * @param constraints The evaluated GORM constraints of the class
+     * @param groups The groups the class is validated in, the default group when there are none
+     * @param excludedGroups The groups validated with them, as groups they extend, whose constraints are not reported
+     * @param defaultGroups The groups the default group stands for, see {@link #findDefaultGroups}
+     */
+    void delegateNullabilityToBeanValidation(Map<String, ConstrainedProperty> constraints, Collection<Class<?>> groups, Set<Class<?>> excludedGroups,
+            Set<Class<?>> defaultGroups) {
+        for (String propertyName in findNullabilityConstrainedProperties(groups, excludedGroups, defaultGroups)) {
             ConstrainedProperty constrained = constraints.get(propertyName)
             if (constrained != null && constrained.hasAppliedConstraint(ConstrainedProperty.NULLABLE_CONSTRAINT)) {
                 constrained.applyConstraint(ConstrainedProperty.NULLABLE_CONSTRAINT, true)
@@ -775,22 +880,28 @@ class JakartaConstraintsTranslator {
     private static class DeclaredConstraint {
 
         final ConstraintDescriptor<?> descriptor
-        final Set<Class<?>> defaultGroups
 
-        DeclaredConstraint(ConstraintDescriptor<?> descriptor, Set<Class<?>> defaultGroups) {
+        /**
+         * Whether the default group of the declaring class is the one the hierarchy redefines, rather than
+         * {@link Default} alone
+         */
+        final boolean sequenced
+
+        DeclaredConstraint(ConstraintDescriptor<?> descriptor, boolean sequenced) {
             this.descriptor = descriptor
-            this.defaultGroups = defaultGroups
+            this.sequenced = sequenced
         }
 
         /**
          * @param groups The groups validated, with the groups they extend and the groups of their sequences
+         * @param defaultGroups The groups the redefined default group stands for
          * @return Whether the constraint is validated in them
          */
-        boolean isValidatedIn(Set<Class<?>> groups) {
+        boolean isValidatedIn(Set<Class<?>> groups, Set<Class<?>> defaultGroups) {
             Set<Class<?>> validated = groups
             if (groups.contains(Default)) {
                 validated = new HashSet<>(groups)
-                validated.addAll(defaultGroups)
+                validated.addAll(sequenced ? defaultGroups : DEFAULT_GROUP)
             }
             return !Collections.disjoint(descriptor.groups, validated)
         }

@@ -53,6 +53,8 @@ import org.hibernate.validator.constraints.CreditCardNumber
 import org.hibernate.validator.constraints.Length
 import org.hibernate.validator.constraints.Range
 import org.hibernate.validator.constraints.URL
+import org.hibernate.validator.group.GroupSequenceProvider
+import org.hibernate.validator.spi.group.DefaultGroupSequenceProvider
 import org.springframework.context.support.StaticMessageSource
 import spock.lang.Shared
 import spock.lang.Specification
@@ -176,6 +178,31 @@ class JakartaConstraintsTranslatorSpec extends Specification {
         merged.label.maxSize == 3
         !merged.containsKey('name')
         !merged.containsKey('retired')
+    }
+
+    void "the default groups of a class with a group sequence provider are the ones the provider chooses, for no instance and for each instance"() {
+        given:
+        JakartaConstraintsTranslator translator = translatorFor(ProvidedProduct)
+        DefaultConstrainedProperty retiredCode = constrained('retiredCode', String, [nullable: false])
+        Set<Class<?>> retiredGroups = [jakarta.validation.groups.Default, RetirementChecks] as Set
+
+        expect: "the class is described in the sequence the provider gives for no instance, the default group alone"
+        translator.defaultGroups == [jakarta.validation.groups.Default] as Set
+        JakartaConstraintsTranslator.defaultGroupsOf(ProvidedProduct) == translator.defaultGroups
+        translator.findDefaultGroups(null) == translator.defaultGroups
+        translator.findDefaultGroups(new ProvidedProduct(retired: false)) == translator.defaultGroups
+        translator.nullabilityConstrainedProperties == ['name'] as Set
+
+        and: "a retired product is validated in RetirementChecks as well"
+        translator.findDefaultGroups(new ProvidedProduct(retired: true)) == retiredGroups
+        JakartaConstraintsTranslator.defaultGroupsOf(ProvidedProduct, new ProvidedProduct(retired: true)) == retiredGroups
+        translator.findNullabilityConstrainedProperties([], [] as Set, retiredGroups) == ['name', 'retiredCode'] as Set
+
+        when:
+        translator.delegateNullabilityToBeanValidation([retiredCode: retiredCode], [], [] as Set, retiredGroups)
+
+        then: "the @Null of the group the provider chose relaxes the nullable constraint of the block"
+        retiredCode.nullable
     }
 
     void "the properties whose nullability a constraint of given groups declares are found, and their nullable constraint relaxed"() {
@@ -410,6 +437,28 @@ class SequencedProduct {
     @NotNull(groups = Basics) String name
     @Min(value = 1L) Integer quantity
     @NotNull(groups = OnReview) String reviewer
+}
+
+interface RetirementChecks {}
+
+@SuppressWarnings('unused')
+@GroupSequenceProvider(ProvidedProductSequenceProvider)
+class ProvidedProduct {
+    @NotNull String name
+    boolean retired
+    @Null(groups = RetirementChecks) String retiredCode
+}
+
+class ProvidedProductSequenceProvider implements DefaultGroupSequenceProvider<ProvidedProduct> {
+
+    @Override
+    List<Class<?>> getValidationGroups(Class<?> klass, ProvidedProduct product) {
+        List<Class<?>> sequence = [ProvidedProduct]
+        if (product?.retired) {
+            sequence.add(RetirementChecks)
+        }
+        return sequence
+    }
 }
 
 interface ParentChecks {}
