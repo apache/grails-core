@@ -18,6 +18,7 @@
  */
 package org.grails.plugins.web.async
 
+import java.time.Duration
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.RejectedExecutionException
@@ -27,6 +28,7 @@ import java.util.concurrent.atomic.AtomicInteger
 import org.springframework.beans.factory.support.BeanRegistryAdapter
 import org.springframework.boot.web.servlet.ServletListenerRegistrationBean
 import org.springframework.beans.factory.support.DefaultListableBeanFactory
+import org.springframework.core.env.MapPropertySource
 import org.springframework.core.env.StandardEnvironment
 import org.springframework.core.task.AsyncTaskExecutor
 import org.springframework.core.task.TaskDecorator
@@ -85,8 +87,34 @@ class ControllersAsyncGrailsPluginSpec extends Specification {
         when:
         ServletListenerRegistrationBean registration = beanFactory.getBean('grailsTaskRequestListener', ServletListenerRegistrationBean)
 
-        then:
+        then: 'completing a request waits for a call a task is making as long as the container lets a read or write wait'
         registration.listener instanceof TaskRequestListener
+        ((TaskRequestListener) registration.listener).callWait == Duration.ofSeconds(60)
+    }
+
+    @Issue('https://github.com/apache/grails-core/issues/15851')
+    void 'grails.async.requestCompletionWait sets how long completing a request waits for a call a task is making'() {
+        given:
+        def beanFactory = new DefaultListableBeanFactory()
+        def environment = new StandardEnvironment()
+        environment.propertySources.addFirst(new MapPropertySource('test', ['grails.async.requestCompletionWait': '2s']))
+        def registrar = new ControllersAsyncGrailsPlugin().beanRegistrar()
+        new BeanRegistryAdapter(beanFactory, environment, registrar.getClass()).register(registrar)
+
+        when:
+        ServletListenerRegistrationBean registration = beanFactory.getBean('grailsTaskRequestListener', ServletListenerRegistrationBean)
+
+        then:
+        ((TaskRequestListener) registration.listener).callWait == Duration.ofSeconds(2)
+    }
+
+    @Issue('https://github.com/apache/grails-core/issues/15851')
+    void 'the listener does not take a negative wait'() {
+        when:
+        new TaskRequestListener(Duration.ofSeconds(-1))
+
+        then:
+        thrown(IllegalArgumentException)
     }
 
     void 'promise factory uses the application task executor'() {

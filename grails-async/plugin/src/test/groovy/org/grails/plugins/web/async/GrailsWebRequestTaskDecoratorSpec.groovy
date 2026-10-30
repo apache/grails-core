@@ -19,9 +19,11 @@
 package org.grails.plugins.web.async
 
 import java.lang.ref.WeakReference
+import java.time.Duration
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 
+import jakarta.servlet.AsyncContext
 import jakarta.servlet.ReadListener
 import jakarta.servlet.ServletInputStream
 import jakarta.servlet.ServletOutputStream
@@ -424,6 +426,229 @@ class GrailsWebRequestTaskDecoratorSpec extends Specification {
     }
 
     @Issue('https://github.com/apache/grails-core/issues/15851')
+    void 'a write a task is making to the response when the request completes finishes first, and the next one throws'() {
+        given:
+        BlockingResponse liveResponse = new BlockingResponse()
+        GrailsWebRequest original = GrailsWebMockUtil.bindMockWebRequest(new MockServletContext(), new MockHttpServletRequest(), liveResponse)
+        Map seen = [:]
+        Runnable decorated = new GrailsWebRequestTaskDecorator().decorate {
+            ServletOutputStream output = GrailsWebRequest.lookup().currentResponse.outputStream
+            output.write('during'.bytes)
+            seen.after = failureOf { output.write('after'.bytes) }
+        }
+        RequestContextHolder.resetRequestAttributes()
+
+        when: 'the request completes while the task is writing'
+        Thread task = Thread.start { decorated.run() }
+        assert liveResponse.entered.await(10, TimeUnit.SECONDS)
+        Thread completing = Thread.start { original.requestCompleted() }
+        waitUntilBlocked(completing)
+
+        then: 'completing waits for the write'
+        completing.alive
+
+        when:
+        liveResponse.release.countDown()
+        completing.join(10000)
+        task.join(10000)
+
+        then:
+        !completing.alive
+        liveResponse.contentAsString == 'during'
+        seen.after.message == "$COMPLETED response output"
+    }
+
+    @Issue('https://github.com/apache/grails-core/issues/15851')
+    void 'a write that fails while the request completes, which waits for it, reports its own failure'() {
+        given:
+        BlockingResponse liveResponse = new BlockingResponse()
+        liveResponse.failure = new IOException('The client went away')
+        GrailsWebRequest original = GrailsWebMockUtil.bindMockWebRequest(new MockServletContext(), new MockHttpServletRequest(), liveResponse)
+        Map seen = [:]
+        Runnable decorated = new GrailsWebRequestTaskDecorator().decorate {
+            ServletOutputStream output = GrailsWebRequest.lookup().currentResponse.outputStream
+            seen.failure = failureOf { output.write('during'.bytes) }
+        }
+        RequestContextHolder.resetRequestAttributes()
+
+        when:
+        Thread task = Thread.start { decorated.run() }
+        assert liveResponse.entered.await(10, TimeUnit.SECONDS)
+        Thread completing = Thread.start { original.requestCompleted() }
+        waitUntilBlocked(completing)
+        liveResponse.release.countDown()
+        completing.join(10000)
+        task.join(10000)
+
+        then:
+        seen.failure.is(liveResponse.failure)
+    }
+
+    @Issue('https://github.com/apache/grails-core/issues/15851')
+    void 'a read listener the container rejected leaves the body read under the lock, so a read is still waited for'() {
+        given:
+        BlockingBodyRequest live = new BlockingBodyRequest()
+        live.rejectListener = true
+        GrailsWebRequest original = GrailsWebMockUtil.bindMockWebRequest(new MockServletContext(), live, new MockHttpServletResponse())
+        Map seen = [:]
+        Runnable decorated = new GrailsWebRequestTaskDecorator().decorate {
+            ServletInputStream body = GrailsWebRequest.lookup().currentRequest.inputStream
+            seen.rejected = failureOf { body.setReadListener(Mock(ReadListener)) }
+            seen.during = body.read(new byte[4], 0, 4)
+        }
+        RequestContextHolder.resetRequestAttributes()
+
+        when:
+        Thread task = Thread.start { decorated.run() }
+        assert live.entered.await(10, TimeUnit.SECONDS)
+        Thread completing = Thread.start { original.requestCompleted() }
+        waitUntilBlocked(completing)
+
+        then: 'completing waits for the read'
+        completing.alive
+
+        when:
+        live.release.countDown()
+        completing.join(10000)
+        task.join(10000)
+
+        then:
+        !completing.alive
+        seen.rejected instanceof IllegalStateException
+        seen.during == 4
+    }
+
+    @Issue('https://github.com/apache/grails-core/issues/15851')
+    void 'a read of the body a task is making when the request completes finishes first, and the next one throws'() {
+        given:
+        BlockingBodyRequest live = new BlockingBodyRequest()
+        GrailsWebRequest original = GrailsWebMockUtil.bindMockWebRequest(new MockServletContext(), live, new MockHttpServletResponse())
+        Map seen = [:]
+        Runnable decorated = new GrailsWebRequestTaskDecorator().decorate {
+            ServletInputStream body = GrailsWebRequest.lookup().currentRequest.inputStream
+            seen.during = body.read(new byte[4], 0, 4)
+            seen.after = failureOf { body.read() }
+        }
+        RequestContextHolder.resetRequestAttributes()
+
+        when: 'the request completes while the task is reading'
+        Thread task = Thread.start { decorated.run() }
+        assert live.entered.await(10, TimeUnit.SECONDS)
+        Thread completing = Thread.start { original.requestCompleted() }
+        waitUntilBlocked(completing)
+
+        then: 'completing waits for the read'
+        completing.alive
+
+        when:
+        live.release.countDown()
+        completing.join(10000)
+        task.join(10000)
+
+        then:
+        !completing.alive
+        seen.during == 4
+        seen.after.message == "$COMPLETED request body"
+    }
+
+    @Issue('https://github.com/apache/grails-core/issues/15851')
+    void 'once a read listener was set through a task stream, #call does not hold off the request completing'() {
+        given:
+        ListeningRequest live = new ListeningRequest()
+        GrailsWebRequest original = GrailsWebMockUtil.bindMockWebRequest(new MockServletContext(), live, new MockHttpServletResponse())
+        Map seen = [:]
+        Runnable decorated = new GrailsWebRequestTaskDecorator().decorate {
+            ServletInputStream body = GrailsWebRequest.lookup().currentRequest.inputStream
+            body.setReadListener(Mock(ReadListener))
+            // A nonblocking read asks whether more is ready, which the container answers on the connection's own
+            // lock while another thread completes the request
+            live.onCall = {
+                Thread completing = Thread.start { original.requestCompleted() }
+                completing.join(2000)
+                live.completedInTime = !completing.alive
+            }
+            seen.failure = failureOf { calling.call(GrailsWebRequest.lookup().currentRequest, body) }
+        }
+        RequestContextHolder.resetRequestAttributes()
+
+        when:
+        decorated.run()
+
+        then:
+        live.completedInTime
+        seen.failure.message == "$COMPLETED $failed"
+
+        where:
+        call                    | failed         | calling
+        'reading the body'      | 'request body' | { HttpServletRequest request, ServletInputStream body -> body.read() }
+        'reading the parts'     | 'request'      | { HttpServletRequest request, ServletInputStream body -> request.parts }
+    }
+
+    @Issue('https://github.com/apache/grails-core/issues/15851')
+    void 'completing the request gives up waiting, after the wait the listener was given, for a call that waits for what the completing thread holds'() {
+        given:
+        Object containerLock = new Object()
+        MockServletContext servletContext = new MockServletContext()
+        LockingRequest live = new LockingRequest(containerLock)
+        TaskRequestListener listener = new TaskRequestListener(Duration.ofMillis(500))
+        listener.requestInitialized(new ServletRequestEvent(servletContext, live))
+        GrailsWebMockUtil.bindMockWebRequest(servletContext, live, new MockHttpServletResponse())
+        Map seen = [:]
+        Runnable decorated = new GrailsWebRequestTaskDecorator().decorate {
+            HttpServletRequest request = GrailsWebRequest.lookup().currentRequest
+            seen.during = request.getAttribute('locked')
+            seen.after = failureOf { request.getAttribute('locked') }
+        }
+        RequestContextHolder.resetRequestAttributes()
+
+        when: 'the container completes the request holding a lock a call the task is making waits for'
+        Thread completing = Thread.start {
+            synchronized (containerLock) {
+                live.held.countDown()
+                assert live.entered.await(10, TimeUnit.SECONDS)
+                listener.requestDestroyed(new ServletRequestEvent(servletContext, live))
+            }
+        }
+        assert live.held.await(10, TimeUnit.SECONDS)
+        Thread task = Thread.start { decorated.run() }
+        completing.join(10000)
+        task.join(10000)
+
+        then: 'completing went on after the wait, and then the call finished'
+        !completing.alive
+        !task.alive
+        seen.during == 'locked value'
+        seen.after.message == "$COMPLETED request"
+    }
+
+    @Issue('https://github.com/apache/grails-core/issues/15851')
+    void 'a task started once asynchronous processing has begun is detached as it completes, even when it completes before the dispatch ends'() {
+        given:
+        MockServletContext servletContext = new MockServletContext()
+        MockHttpServletRequest live = new MockHttpServletRequest(servletContext)
+        live.asyncSupported = true
+        TaskRequestListener listener = new TaskRequestListener()
+        listener.requestInitialized(new ServletRequestEvent(servletContext, live))
+        GrailsWebMockUtil.bindMockWebRequest(servletContext, live, new MockHttpServletResponse())
+        live.startAsync()
+        HttpServletRequest taskRequest
+        Runnable decorated = new GrailsWebRequestTaskDecorator().decorate {
+            taskRequest = GrailsWebRequest.lookup().currentRequest
+        }
+        RequestContextHolder.resetRequestAttributes()
+        decorated.run()
+
+        expect:
+        taskRequest.getAttribute('anything') == null
+
+        when: 'the asynchronous processing completes, before the container is done with the request'
+        live.asyncContext.complete()
+
+        then:
+        failureOf { taskRequest.getAttribute('anything') }.message == "$COMPLETED request"
+    }
+
+    @Issue('https://github.com/apache/grails-core/issues/15851')
     void 'with the listener, a request completes when the container is done with it, not when a forward completes its web request'() {
         given:
         MockServletContext servletContext = new MockServletContext()
@@ -481,6 +706,51 @@ class GrailsWebRequestTaskDecoratorSpec extends Specification {
 
         then:
         failureOf { taskRequest.getAttribute('stage') }.message == "$COMPLETED request"
+    }
+
+    @Issue('https://github.com/apache/grails-core/issues/15851')
+    void 'a request whose asynchronous processing completed before the dispatch ended completes once the container recycles it, which #recycling'() {
+        given:
+        MockServletContext servletContext = new MockServletContext()
+        RecyclableRequest live = new RecyclableRequest()
+        live.asyncSupported = true
+        TaskRequestListener listener = new TaskRequestListener()
+        listener.requestInitialized(new ServletRequestEvent(servletContext, live))
+        GrailsWebMockUtil.bindMockWebRequest(servletContext, live, new MockHttpServletResponse())
+        HttpServletRequest taskRequest
+        Map seen = [:]
+        Runnable decorated = new GrailsWebRequestTaskDecorator().decorate {
+            taskRequest = GrailsWebRequest.lookup().currentRequest
+        }
+        Runnable later = new GrailsWebRequestTaskDecorator().decorate {
+            seen.lookup = GrailsWebRequest.lookup()
+        }
+        RequestContextHolder.resetRequestAttributes()
+        decorated.run()
+
+        when: 'the asynchronous processing is started and completed before the dispatch ends, and the container tells the listener afterwards while still reporting it as started, as Tomcat does'
+        live.startAsync()
+        live.asyncContext.complete()
+        live.asyncStarted = true
+        listener.requestDestroyed(new ServletRequestEvent(servletContext, live))
+        live.setAttribute('stage', 'completing')
+
+        then: 'until the container recycles the request, the task still reaches it'
+        taskRequest.getAttribute('stage') == 'completing'
+
+        when:
+        recycle.call(live)
+        later.run()
+
+        then:
+        failureOf { taskRequest.getAttribute('stage') }.message == "$COMPLETED request"
+        seen.containsKey('lookup')
+        seen.lookup == null
+
+        where:
+        recycling                     | recycle
+        'clears its attributes'       | { RecyclableRequest request -> request.clearAttributes() }
+        'throws as its facade does'   | { RecyclableRequest request -> request.recycled = true }
     }
 
     @Issue('https://github.com/apache/grails-core/issues/15851')
@@ -617,30 +887,38 @@ class GrailsWebRequestTaskDecoratorSpec extends Specification {
     }
 
     @Issue('https://github.com/apache/grails-core/issues/15851')
-    void 'an attribute value a task reads is the object the request holds'() {
+    void 'an attribute value a task reads is the object the request holds, even a reader'() {
         given:
         GrailsWebRequest original = GrailsWebMockUtil.bindMockWebRequest()
         MockHttpServletRequest live = (MockHttpServletRequest) original.currentRequest
         Map<String, Object> model = [title: 'Grails']
         Set<String> types = ['application/json'] as Set
+        LineNumberReader lines = new LineNumberReader(new StringReader('first\nsecond\n'))
         live.setAttribute('model', model)
         live.setAttribute('types', types)
+        live.setAttribute('lines', lines)
         Map seen = [:]
         Runnable decorated = new GrailsWebRequestTaskDecorator().decorate {
             HttpServletRequest request = GrailsWebRequest.lookup().currentRequest
             seen.model = request.getAttribute('model')
             seen.types = request.getAttribute('types')
+            seen.lines = (LineNumberReader) request.getAttribute('lines')
             ((Map) seen.model).put('author', 'Graeme')
         }
         RequestContextHolder.resetRequestAttributes()
 
         when:
         decorated.run()
+        original.requestCompleted()
 
         then:
         seen.model.is(model)
         seen.types.is(types)
+        seen.lines.is(lines)
         model.author == 'Graeme'
+
+        and: 'a reader of the application, not of the body, stays its own after the request completes'
+        lines.readLine() == 'first'
     }
 
     @Issue('https://github.com/apache/grails-core/issues/15851')
@@ -723,7 +1001,7 @@ class GrailsWebRequestTaskDecoratorSpec extends Specification {
     }
 
     @Issue('https://github.com/apache/grails-core/issues/15851')
-    void '#call on the body stream does not hold off the request completing, which the container may do while it answers'() {
+    void '#call does not hold off the request completing, which the container may do while it answers'() {
         given:
         ListeningRequest live = new ListeningRequest()
         GrailsWebRequest original = GrailsWebMockUtil.bindMockWebRequest(new MockServletContext(), live, new MockHttpServletResponse())
@@ -734,11 +1012,11 @@ class GrailsWebRequestTaskDecoratorSpec extends Specification {
             // The container completes the request on another thread before it answers
             live.onCall = {
                 Thread completing = Thread.start { original.requestCompleted() }
-                completing.join(5000)
+                completing.join(2000)
                 live.completedInTime = !completing.alive
             }
             ServletInputStream body = taskRequest.inputStream
-            seen.failure = failureOf { calling.call(body) }
+            seen.failure = failureOf { calling.call(taskRequest, body) }
         }
         RequestContextHolder.resetRequestAttributes()
 
@@ -747,7 +1025,7 @@ class GrailsWebRequestTaskDecoratorSpec extends Specification {
 
         then: 'the request completed meanwhile, which the call reports'
         live.completedInTime
-        seen.failure.message == "$COMPLETED request body"
+        seen.failure.message == "$COMPLETED $failed"
         failureOf { taskRequest.getAttribute('anything') }.message == "$COMPLETED request"
 
         when: 'the container calls a listener it was given'
@@ -757,13 +1035,14 @@ class GrailsWebRequestTaskDecoratorSpec extends Specification {
         0 * _
 
         where:
-        call              | calling
-        'setReadListener' | { ServletInputStream body -> body.setReadListener(Mock(ReadListener)) }
-        'isReady'         | { ServletInputStream body -> body.ready }
+        call              | failed         | calling
+        'setReadListener' | 'request body' | { HttpServletRequest request, ServletInputStream body -> body.setReadListener(Mock(ReadListener)) }
+        'isReady'         | 'request body' | { HttpServletRequest request, ServletInputStream body -> body.ready }
+        'startAsync'      | 'request'      | { HttpServletRequest request, ServletInputStream body -> request.startAsync() }
     }
 
     @Issue('https://github.com/apache/grails-core/issues/15851')
-    void '#call on the response output does not hold off the request completing, and its listener is not called once it has'() {
+    void '#call on the response does not hold off the request completing, and a write listener is not called once it has'() {
         given:
         ListeningResponse liveResponse = new ListeningResponse()
         GrailsWebRequest original = GrailsWebMockUtil.bindMockWebRequest(new MockServletContext(), new MockHttpServletRequest(), liveResponse)
@@ -772,11 +1051,12 @@ class GrailsWebRequestTaskDecoratorSpec extends Specification {
         Runnable decorated = new GrailsWebRequestTaskDecorator().decorate {
             liveResponse.onCall = {
                 Thread completing = Thread.start { original.requestCompleted() }
-                completing.join(5000)
+                completing.join(2000)
                 liveResponse.completedInTime = !completing.alive
             }
-            ServletOutputStream output = GrailsWebRequest.lookup().currentResponse.outputStream
-            seen.failure = failureOf { calling.call(output, listener) }
+            HttpServletResponse response = GrailsWebRequest.lookup().currentResponse
+            ServletOutputStream output = response.outputStream
+            seen.failure = failureOf { calling.call(response, output, listener) }
         }
         RequestContextHolder.resetRequestAttributes()
 
@@ -786,13 +1066,12 @@ class GrailsWebRequestTaskDecoratorSpec extends Specification {
 
         then:
         liveResponse.completedInTime
-        seen.failure.message == "$COMPLETED response output"
+        seen.failure.message == "$COMPLETED $failed"
         0 * listener._
 
         where:
-        call               | calling
-        'setWriteListener' | { ServletOutputStream output, WriteListener given -> output.setWriteListener(given) }
-        'isReady'          | { ServletOutputStream output, WriteListener given -> output.ready }
+        call               | failed            | calling
+        'setWriteListener' | 'response output' | { HttpServletResponse response, ServletOutputStream output, WriteListener given -> output.setWriteListener(given) }
     }
 
     private static Throwable failureOf(Closure<?> call) {
@@ -884,19 +1163,38 @@ class GrailsWebRequestTaskDecoratorSpec extends Specification {
         }
     }
 
-    // A request whose body stream runs a callback as it answers whether it is ready or is given a read listener
+    // A request that runs a callback as its body stream reads, answers whether it is ready or is given a read
+    // listener, and as it starts asynchronous processing or reads its parts
     static class ListeningRequest extends MockHttpServletRequest {
 
         Closure<?> onCall
         volatile boolean completedInTime
         ReadListener listener
 
+        ListeningRequest() {
+            asyncSupported = true
+        }
+
+        @Override
+        AsyncContext startAsync() {
+            onCall?.call()
+            return super.startAsync()
+        }
+
+        @Override
+        Collection<Part> getParts() {
+            onCall?.call()
+            return super.getParts()
+        }
+
         @Override
         ServletInputStream getInputStream() {
             ServletInputStream body = super.getInputStream()
             return new ServletInputStream() {
+                // As a nonblocking read asks whether more is ready
                 @Override
                 int read() {
+                    onCall?.call()
                     return body.read()
                 }
 
@@ -907,20 +1205,20 @@ class GrailsWebRequestTaskDecoratorSpec extends Specification {
 
                 @Override
                 boolean isReady() {
-                    onCall.call()
+                    onCall?.call()
                     return true
                 }
 
                 @Override
                 void setReadListener(ReadListener readListener) {
                     listener = readListener
-                    onCall.call()
+                    onCall?.call()
                 }
             }
         }
     }
 
-    // A response whose output runs a callback as it answers whether it is ready or is given a write listener
+    // A response whose output runs a callback as it is given a write listener
     static class ListeningResponse extends MockHttpServletResponse {
 
         Closure<?> onCall
@@ -938,7 +1236,6 @@ class GrailsWebRequestTaskDecoratorSpec extends Specification {
 
                 @Override
                 boolean isReady() {
-                    onCall.call()
                     return true
                 }
 
@@ -948,6 +1245,114 @@ class GrailsWebRequestTaskDecoratorSpec extends Specification {
                     onCall.call()
                 }
             }
+        }
+    }
+
+    // A response whose output blocks a write until the test releases it, and then fails it if it was given a failure
+    static class BlockingResponse extends MockHttpServletResponse {
+
+        final CountDownLatch entered = new CountDownLatch(1)
+        final CountDownLatch release = new CountDownLatch(1)
+        IOException failure
+
+        @Override
+        ServletOutputStream getOutputStream() {
+            ServletOutputStream output = super.getOutputStream()
+            return new ServletOutputStream() {
+                @Override
+                void write(int b) {
+                    output.write(b)
+                }
+
+                @Override
+                void write(byte[] source, int offset, int length) {
+                    entered.countDown()
+                    release.await(10, TimeUnit.SECONDS)
+                    if (failure != null) {
+                        throw failure
+                    }
+                    output.write(source, offset, length)
+                }
+
+                @Override
+                boolean isReady() {
+                    return true
+                }
+
+                @Override
+                void setWriteListener(WriteListener writeListener) {
+                }
+            }
+        }
+    }
+
+    // A request whose body blocks a read until the test releases it, and rejects a read listener if told to
+    static class BlockingBodyRequest extends MockHttpServletRequest {
+
+        final CountDownLatch entered = new CountDownLatch(1)
+        final CountDownLatch release = new CountDownLatch(1)
+        boolean rejectListener
+
+        BlockingBodyRequest() {
+            content = 'body of the request'.bytes
+        }
+
+        @Override
+        ServletInputStream getInputStream() {
+            ServletInputStream body = super.getInputStream()
+            return new ServletInputStream() {
+                @Override
+                int read() {
+                    return body.read()
+                }
+
+                @Override
+                int read(byte[] destination, int offset, int length) {
+                    entered.countDown()
+                    release.await(10, TimeUnit.SECONDS)
+                    return body.read(destination, offset, length)
+                }
+
+                @Override
+                boolean isFinished() {
+                    return body.finished
+                }
+
+                @Override
+                boolean isReady() {
+                    return true
+                }
+
+                @Override
+                void setReadListener(ReadListener readListener) {
+                    if (rejectListener) {
+                        throw new IllegalStateException('A read listener is already set')
+                    }
+                }
+            }
+        }
+    }
+
+    // A request whose attribute 'locked' waits for a lock the container holds as it completes the request
+    static class LockingRequest extends MockHttpServletRequest {
+
+        final Object containerLock
+        final CountDownLatch held = new CountDownLatch(1)
+        final CountDownLatch entered = new CountDownLatch(1)
+
+        LockingRequest(Object containerLock) {
+            this.containerLock = containerLock
+        }
+
+        @Override
+        Object getAttribute(String name) {
+            if (name == 'locked') {
+                entered.countDown()
+                synchronized (containerLock) {
+                    return 'locked value'
+                }
+            }
+            return super.getAttribute(name)
         }
     }
 }

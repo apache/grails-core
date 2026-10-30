@@ -28,8 +28,15 @@ import jakarta.servlet.WriteListener
 
 /**
  * The guarded body streams and readers of a task's request and the guarded output of its response: each calls the
- * live one under the read lock of the request's {@link TaskRequestLifecycle}, until the request completes, and
- * then throws an {@link IllegalStateException}.
+ * live one until the request completes, and then throws an {@link IllegalStateException}.
+ *
+ * <p>A call holds the read lock of the request's {@link TaskRequestLifecycle}, so a read or write a task is making
+ * when the request completes finishes first. Asking whether the body is ready and setting a read or write listener
+ * do not, nor does reading the body once a read listener was set through a task's stream: the container may answer
+ * them on the connection's own lock, which a thread completing the request may hold while it waits for the
+ * lifecycle's lock. They are checked before and after instead, so a call the request completing overtook reports
+ * it, whatever it returned or threw, and a listener set through them is no longer called once the request has
+ * completed.</p>
  */
 @PackageScope
 @CompileStatic
@@ -50,27 +57,68 @@ final class TaskStreams {
         Object guarded
         TaskRequestLifecycle.Detachable detachable
         if (live instanceof ServletInputStream) {
-            TaskInputStream stream = new TaskInputStream(lifecycle, (ServletInputStream) live, what)
+            TaskInputStream stream = new TaskInputStream(lifecycle, (ServletInputStream) live, "$what body".toString())
             guarded = stream
             detachable = stream
         }
         else if (live instanceof BufferedReader) {
-            TaskReader reader = new TaskReader(lifecycle, (BufferedReader) live, what)
+            TaskReader reader = new TaskReader(lifecycle, (BufferedReader) live, "$what body".toString())
             guarded = reader
             detachable = reader
         }
         else if (live instanceof ServletOutputStream) {
-            TaskOutputStream stream = new TaskOutputStream(lifecycle, (ServletOutputStream) live, what)
+            TaskOutputStream stream = new TaskOutputStream(lifecycle, (ServletOutputStream) live, "$what output".toString())
             guarded = stream
             detachable = stream
         }
         else {
-            TaskWriter writer = new TaskWriter(lifecycle, (PrintWriter) live, what)
+            TaskWriter writer = new TaskWriter(lifecycle, (PrintWriter) live, "$what output".toString())
             guarded = new TaskPrintWriter(writer)
             detachable = writer
         }
         lifecycle.attach(detachable)
         return guarded
+    }
+
+    private static Throwable failed(TaskRequestLifecycle lifecycle, String what, Throwable failure) {
+        return lifecycle.overtaken(what, failure)
+    }
+
+    // A call on a body stream or reader, which may throw what reading the body throws
+    @FunctionalInterface
+    private static interface BodyCall<S, T> {
+
+        T call(S body) throws IOException
+    }
+
+    // A read of the body: under the lock, so a read a task is making when the request completes finishes first,
+    // unless a read listener was set through a task's stream. A nonblocking read asks whether more is ready, which
+    // the container may answer on the connection's own lock, held by a thread completing the request while it waits
+    // for the lifecycle's lock, so then it is checked before and after instead
+    private static <S, T> T readBody(TaskRequestLifecycle lifecycle, S live, Object reader, String what, BodyCall<S, T> call)
+            throws IOException {
+        if (!lifecycle.readingWithoutLock) {
+            S body = lifecycle.enter(live, what)
+            try {
+                return call.call(body)
+            }
+            catch (IOException | RuntimeException failure) {
+                throw lifecycle.abandoned(what, failure)
+            }
+            finally {
+                lifecycle.exit()
+            }
+        }
+        S body = lifecycle.check(live, what)
+        T result
+        try {
+            result = call.call(body)
+        }
+        catch (IOException | RuntimeException failure) {
+            throw failed(lifecycle, what, failure)
+        }
+        lifecycle.check(reader, what)
+        return result
     }
 
     private static final class TaskInputStream extends ServletInputStream implements TaskRequestLifecycle.Detachable {
@@ -90,23 +138,18 @@ final class TaskStreams {
             live = null
         }
 
-        private ServletInputStream enter() {
-            return lifecycle.enter(live, "$what body".toString())
-        }
-
-        // After a call made without the lock, which the request completing may have overtaken: whatever the call did
-        // or threw, it reports that the request has completed
-        private void checkLive() {
-            if (lifecycle.completed) {
-                throw TaskRequestLifecycle.completedFailure("$what body".toString())
-            }
-        }
-
+        // Written out, as the reads a task makes most
         @Override
         int read() throws IOException {
-            ServletInputStream stream = enter()
+            if (lifecycle.readingWithoutLock) {
+                return readBody(lifecycle, live, this, what, (ServletInputStream body) -> body.read())
+            }
+            ServletInputStream stream = lifecycle.enter(live, what)
             try {
                 return stream.read()
+            }
+            catch (IOException | RuntimeException failure) {
+                throw lifecycle.abandoned(what, failure)
             }
             finally {
                 lifecycle.exit()
@@ -115,9 +158,15 @@ final class TaskStreams {
 
         @Override
         int read(byte[] destination, int offset, int length) throws IOException {
-            ServletInputStream stream = enter()
+            if (lifecycle.readingWithoutLock) {
+                return readBody(lifecycle, live, this, what, (ServletInputStream body) -> body.read(destination, offset, length))
+            }
+            ServletInputStream stream = lifecycle.enter(live, what)
             try {
                 return stream.read(destination, offset, length)
+            }
+            catch (IOException | RuntimeException failure) {
+                throw lifecycle.abandoned(what, failure)
             }
             finally {
                 lifecycle.exit()
@@ -126,122 +175,87 @@ final class TaskStreams {
 
         @Override
         int readLine(byte[] destination, int offset, int length) throws IOException {
-            ServletInputStream stream = enter()
-            try {
-                return stream.readLine(destination, offset, length)
-            }
-            finally {
-                lifecycle.exit()
-            }
+            return readBody(lifecycle, live, this, what, (ServletInputStream body) -> body.readLine(destination, offset, length))
         }
 
         @Override
         long skip(long count) throws IOException {
-            ServletInputStream stream = enter()
-            try {
-                return stream.skip(count)
-            }
-            finally {
-                lifecycle.exit()
-            }
+            return readBody(lifecycle, live, this, what, (ServletInputStream body) -> body.skip(count))
         }
 
         @Override
         int available() throws IOException {
-            ServletInputStream stream = enter()
-            try {
-                return stream.available()
-            }
-            finally {
-                lifecycle.exit()
-            }
+            return readBody(lifecycle, live, this, what, (ServletInputStream body) -> body.available())
         }
 
         @Override
         boolean markSupported() {
-            ServletInputStream stream = enter()
-            try {
-                return stream.markSupported()
-            }
-            finally {
-                lifecycle.exit()
-            }
+            return readBody(lifecycle, live, this, what, (ServletInputStream body) -> body.markSupported())
         }
 
         @Override
         void mark(int readLimit) {
-            ServletInputStream stream = enter()
-            try {
-                stream.mark(readLimit)
-            }
-            finally {
-                lifecycle.exit()
-            }
+            readBody(lifecycle, live, this, what, (ServletInputStream body) -> {
+                body.mark(readLimit)
+                return null
+            })
         }
 
         @Override
         void reset() throws IOException {
-            ServletInputStream stream = enter()
-            try {
-                stream.reset()
-            }
-            finally {
-                lifecycle.exit()
-            }
+            readBody(lifecycle, live, this, what, (ServletInputStream body) -> {
+                body.reset()
+                return null
+            })
         }
 
         @Override
         void close() throws IOException {
-            ServletInputStream stream = enter()
-            try {
-                stream.close()
-            }
-            finally {
-                lifecycle.exit()
-            }
+            readBody(lifecycle, live, this, what, (ServletInputStream body) -> {
+                body.close()
+                return null
+            })
         }
 
         @Override
         boolean isFinished() {
-            ServletInputStream stream = enter()
-            try {
-                return stream.isFinished()
-            }
-            finally {
-                lifecycle.exit()
-            }
+            return readBody(lifecycle, live, this, what, (ServletInputStream body) -> body.isFinished())
         }
 
+        // Without the lock: at the end of the body, off a thread of the container, the container answers it on the
+        // connection's own lock
         @Override
         boolean isReady() {
-            ServletInputStream stream = enter()
-            lifecycle.exit()
-            // Without the lock, as the container may answer it on the connection's own lock
+            ServletInputStream stream = lifecycle.check(live, what)
+            boolean ready
             try {
-                boolean ready = stream.isReady()
-                checkLive()
-                return ready
+                ready = stream.isReady()
             }
             catch (RuntimeException failure) {
-                checkLive()
-                throw failure
+                throw failed(lifecycle, what, failure)
             }
+            lifecycle.check(this, what)
+            return ready
         }
 
+        // Without the lock, as the container answers it on the connection's own lock. From now on the body is read
+        // without the lock too
         @Override
         void setReadListener(ReadListener readListener) {
-            ServletInputStream stream = enter()
-            lifecycle.exit()
-            // Called without the lock: the container answers it on the connection's own lock, which a thread
-            // completing the request may hold while it waits for the lock
+            ServletInputStream stream = lifecycle.check(live, what)
+            lifecycle.settingReadListener()
+            boolean set = false
             try {
                 stream.setReadListener(new TaskReadListener(lifecycle, readListener))
-                checkLive()
+                set = true
             }
             catch (RuntimeException failure) {
-                checkLive()
-                throw failure
+                throw failed(lifecycle, what, failure)
             }
+            finally {
+                lifecycle.readListenerSet(set)
+            }
+            lifecycle.check(this, what)
         }
     }
 
@@ -263,15 +277,18 @@ final class TaskStreams {
             live = null
         }
 
-        private BufferedReader enter() {
-            return lifecycle.enter(live, "$what body".toString())
-        }
-
+        // Written out, as the reads a task makes most
         @Override
         int read() throws IOException {
-            BufferedReader reader = enter()
+            if (lifecycle.readingWithoutLock) {
+                return readBody(lifecycle, live, this, what, (BufferedReader body) -> body.read())
+            }
+            BufferedReader reader = lifecycle.enter(live, what)
             try {
                 return reader.read()
+            }
+            catch (IOException | RuntimeException failure) {
+                throw lifecycle.abandoned(what, failure)
             }
             finally {
                 lifecycle.exit()
@@ -280,9 +297,15 @@ final class TaskStreams {
 
         @Override
         int read(char[] destination, int offset, int length) throws IOException {
-            BufferedReader reader = enter()
+            if (lifecycle.readingWithoutLock) {
+                return readBody(lifecycle, live, this, what, (BufferedReader body) -> body.read(destination, offset, length))
+            }
+            BufferedReader reader = lifecycle.enter(live, what)
             try {
                 return reader.read(destination, offset, length)
+            }
+            catch (IOException | RuntimeException failure) {
+                throw lifecycle.abandoned(what, failure)
             }
             finally {
                 lifecycle.exit()
@@ -291,9 +314,15 @@ final class TaskStreams {
 
         @Override
         String readLine() throws IOException {
-            BufferedReader reader = enter()
+            if (lifecycle.readingWithoutLock) {
+                return readBody(lifecycle, live, this, what, (BufferedReader body) -> body.readLine())
+            }
+            BufferedReader reader = lifecycle.enter(live, what)
             try {
                 return reader.readLine()
+            }
+            catch (IOException | RuntimeException failure) {
+                throw lifecycle.abandoned(what, failure)
             }
             finally {
                 lifecycle.exit()
@@ -302,68 +331,41 @@ final class TaskStreams {
 
         @Override
         long skip(long count) throws IOException {
-            BufferedReader reader = enter()
-            try {
-                return reader.skip(count)
-            }
-            finally {
-                lifecycle.exit()
-            }
+            return readBody(lifecycle, live, this, what, (BufferedReader body) -> body.skip(count))
         }
 
         @Override
         boolean ready() throws IOException {
-            BufferedReader reader = enter()
-            try {
-                return reader.ready()
-            }
-            finally {
-                lifecycle.exit()
-            }
+            return readBody(lifecycle, live, this, what, (BufferedReader body) -> body.ready())
         }
 
         @Override
         boolean markSupported() {
-            BufferedReader reader = enter()
-            try {
-                return reader.markSupported()
-            }
-            finally {
-                lifecycle.exit()
-            }
+            return readBody(lifecycle, live, this, what, (BufferedReader body) -> body.markSupported())
         }
 
         @Override
         void mark(int readAheadLimit) throws IOException {
-            BufferedReader reader = enter()
-            try {
-                reader.mark(readAheadLimit)
-            }
-            finally {
-                lifecycle.exit()
-            }
+            readBody(lifecycle, live, this, what, (BufferedReader body) -> {
+                body.mark(readAheadLimit)
+                return null
+            })
         }
 
         @Override
         void reset() throws IOException {
-            BufferedReader reader = enter()
-            try {
-                reader.reset()
-            }
-            finally {
-                lifecycle.exit()
-            }
+            readBody(lifecycle, live, this, what, (BufferedReader body) -> {
+                body.reset()
+                return null
+            })
         }
 
         @Override
         void close() throws IOException {
-            BufferedReader reader = enter()
-            try {
-                reader.close()
-            }
-            finally {
-                lifecycle.exit()
-            }
+            readBody(lifecycle, live, this, what, (BufferedReader body) -> {
+                body.close()
+                return null
+            })
         }
     }
 
@@ -384,23 +386,22 @@ final class TaskStreams {
             live = null
         }
 
-        private ServletOutputStream enter() {
-            return lifecycle.enter(live, "$what output".toString())
+        private ServletOutputStream before() {
+            return lifecycle.check(live, what)
         }
 
-        // After a call made without the lock, which the request completing may have overtaken: whatever the call did
-        // or threw, it reports that the request has completed
-        private void checkLive() {
-            if (lifecycle.completed) {
-                throw TaskRequestLifecycle.completedFailure("$what output".toString())
-            }
+        private void after() {
+            lifecycle.check(this, what)
         }
 
         @Override
         void write(int b) throws IOException {
-            ServletOutputStream stream = enter()
+            ServletOutputStream stream = lifecycle.enter(live, what)
             try {
                 stream.write(b)
+            }
+            catch (IOException | RuntimeException failure) {
+                throw lifecycle.abandoned(what, failure)
             }
             finally {
                 lifecycle.exit()
@@ -409,9 +410,12 @@ final class TaskStreams {
 
         @Override
         void write(byte[] source, int offset, int length) throws IOException {
-            ServletOutputStream stream = enter()
+            ServletOutputStream stream = lifecycle.enter(live, what)
             try {
                 stream.write(source, offset, length)
+            }
+            catch (IOException | RuntimeException failure) {
+                throw lifecycle.abandoned(what, failure)
             }
             finally {
                 lifecycle.exit()
@@ -420,9 +424,12 @@ final class TaskStreams {
 
         @Override
         void flush() throws IOException {
-            ServletOutputStream stream = enter()
+            ServletOutputStream stream = lifecycle.enter(live, what)
             try {
                 stream.flush()
+            }
+            catch (IOException | RuntimeException failure) {
+                throw lifecycle.abandoned(what, failure)
             }
             finally {
                 lifecycle.exit()
@@ -431,9 +438,12 @@ final class TaskStreams {
 
         @Override
         void close() throws IOException {
-            ServletOutputStream stream = enter()
+            ServletOutputStream stream = lifecycle.enter(live, what)
             try {
                 stream.close()
+            }
+            catch (IOException | RuntimeException failure) {
+                throw lifecycle.abandoned(what, failure)
             }
             finally {
                 lifecycle.exit()
@@ -442,33 +452,27 @@ final class TaskStreams {
 
         @Override
         boolean isReady() {
-            ServletOutputStream stream = enter()
-            lifecycle.exit()
-            // Without the lock, as the container may answer it on the connection's own lock
+            ServletOutputStream stream = lifecycle.enter(live, what)
             try {
-                boolean ready = stream.isReady()
-                checkLive()
-                return ready
+                return stream.isReady()
             }
-            catch (RuntimeException failure) {
-                checkLive()
-                throw failure
+            catch (IOException | RuntimeException failure) {
+                throw lifecycle.abandoned(what, failure)
+            }
+            finally {
+                lifecycle.exit()
             }
         }
 
         @Override
         void setWriteListener(WriteListener writeListener) {
-            ServletOutputStream stream = enter()
-            lifecycle.exit()
-            // Called without the lock: the container answers it on the connection's own lock, which a thread
-            // completing the request may hold while it waits for the lock
+            ServletOutputStream stream = before()
             try {
                 stream.setWriteListener(new TaskWriteListener(lifecycle, writeListener))
-                checkLive()
+                after()
             }
             catch (RuntimeException failure) {
-                checkLive()
-                throw failure
+                throw failed(lifecycle, what, failure)
             }
         }
     }
@@ -491,15 +495,14 @@ final class TaskStreams {
             live = null
         }
 
-        private PrintWriter enter() {
-            return lifecycle.enter(live, "$what output".toString())
-        }
-
         @Override
         void write(int c) {
-            PrintWriter writer = enter()
+            PrintWriter writer = lifecycle.enter(live, what)
             try {
                 writer.write(c)
+            }
+            catch (IOException | RuntimeException failure) {
+                throw lifecycle.abandoned(what, failure)
             }
             finally {
                 lifecycle.exit()
@@ -508,9 +511,12 @@ final class TaskStreams {
 
         @Override
         void write(char[] source, int offset, int length) {
-            PrintWriter writer = enter()
+            PrintWriter writer = lifecycle.enter(live, what)
             try {
                 writer.write(source, offset, length)
+            }
+            catch (IOException | RuntimeException failure) {
+                throw lifecycle.abandoned(what, failure)
             }
             finally {
                 lifecycle.exit()
@@ -519,9 +525,12 @@ final class TaskStreams {
 
         @Override
         void write(String source, int offset, int length) {
-            PrintWriter writer = enter()
+            PrintWriter writer = lifecycle.enter(live, what)
             try {
                 writer.write(source, offset, length)
+            }
+            catch (IOException | RuntimeException failure) {
+                throw lifecycle.abandoned(what, failure)
             }
             finally {
                 lifecycle.exit()
@@ -530,9 +539,12 @@ final class TaskStreams {
 
         @Override
         void flush() {
-            PrintWriter writer = enter()
+            PrintWriter writer = lifecycle.enter(live, what)
             try {
                 writer.flush()
+            }
+            catch (IOException | RuntimeException failure) {
+                throw lifecycle.abandoned(what, failure)
             }
             finally {
                 lifecycle.exit()
@@ -541,9 +553,12 @@ final class TaskStreams {
 
         @Override
         void close() {
-            PrintWriter writer = enter()
+            PrintWriter writer = lifecycle.enter(live, what)
             try {
                 writer.close()
+            }
+            catch (IOException | RuntimeException failure) {
+                throw lifecycle.abandoned(what, failure)
             }
             finally {
                 lifecycle.exit()
@@ -552,9 +567,12 @@ final class TaskStreams {
 
         @PackageScope
         boolean liveError() {
-            PrintWriter writer = enter()
+            PrintWriter writer = lifecycle.enter(live, what)
             try {
                 return writer.checkError()
+            }
+            catch (IOException | RuntimeException failure) {
+                throw lifecycle.abandoned(what, failure)
             }
             finally {
                 lifecycle.exit()
@@ -579,8 +597,8 @@ final class TaskStreams {
         }
     }
 
-    // A listener a task set without the lock, which is no longer called once the request has completed, in case the
-    // container was setting it on a request it had already recycled
+    // A listener a task set, which is no longer called once the request has completed, in case the container was
+    // setting it on a request the request completing had overtaken
     private static final class TaskReadListener implements ReadListener {
 
         private final TaskRequestLifecycle lifecycle
@@ -614,7 +632,7 @@ final class TaskStreams {
         }
     }
 
-    // A write listener a task set without the lock, as {@link TaskReadListener} is for reading
+    // A write listener a task set, as {@link TaskReadListener} is for reading
     private static final class TaskWriteListener implements WriteListener {
 
         private final TaskRequestLifecycle lifecycle

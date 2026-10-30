@@ -34,10 +34,13 @@ import jakarta.servlet.ServletOutputStream
  * read lock of the request's {@link TaskRequestLifecycle}, until the request completes, and then nothing, so every
  * call throws an {@link IllegalStateException}.
  *
- * <p>What a call returns that reads or writes the live object later is guarded the same way: the body's stream or
- * reader and the response's stream or writer. The parameters, headers, attribute names, locales, trailer fields and
- * parts are returned as a copy, since the container reuses what backs them for the requests that follow. Anything
- * else, such as an attribute's value, is returned as it is.</p>
+ * <p>What {@code getInputStream}, {@code getReader}, {@code getOutputStream} and {@code getWriter} return is guarded
+ * as well, by {@link TaskStreams}. Starting asynchronous processing, and reading the parts once a read listener was
+ * set through a task's stream, are not called under the read lock: the container may answer them on its own locks,
+ * which a thread completing the request may hold while it waits for the lifecycle's lock, so they are checked
+ * before and after instead. The parameters, headers, attribute names, locales, trailer fields and parts are
+ * returned as a copy, since the container reuses what backs them for the requests that follow. Anything else, such
+ * as an attribute's value, is returned as it is.</p>
  */
 @PackageScope
 @CompileStatic
@@ -46,6 +49,13 @@ final class TaskGuard implements InvocationHandler, TaskRequestLifecycle.Detacha
     // What the container answers from what it reuses for the requests that follow, so a task keeps a copy
     private static final Set<String> SNAPSHOTS = Set.of('getParameterMap', 'getParameterNames', 'getHeaderNames',
             'getHeaders', 'getAttributeNames', 'getLocales', 'getTrailerFields', 'getParts')
+
+    // What returns the body's or the output's stream, reader or writer, which a task reads or writes later
+    private static final Set<String> STREAMS = Set.of('getInputStream', 'getReader', 'getOutputStream', 'getWriter')
+
+    // What reads the body to answer, which, once a read listener was set through a task's stream, reads it without
+    // blocking, so the container may answer it on the connection's own lock
+    private static final Set<String> PARTS = Set.of('getPart', 'getParts')
 
     private final TaskRequestLifecycle lifecycle
     private final String what
@@ -126,21 +136,44 @@ final class TaskGuard implements InvocationHandler, TaskRequestLifecycle.Detacha
                     return live == null ? "The $what of a completed request".toString() : "The $what of a task".toString()
             }
         }
+        // Starting asynchronous processing waits for the asynchronous state of the container, which a thread
+        // completing the request holds while it waits for the lock
+        if (method.name == 'startAsync' || (PARTS.contains(method.name) && lifecycle.readingWithoutLock)) {
+            return callUnlocked(method, args)
+        }
         Object target = lifecycle.enter(live, what)
         try {
             return guard(method, method.invoke(target, args))
         }
         catch (InvocationTargetException e) {
-            throw e.targetException
+            // A call completing did not wait for reports that the request has completed
+            throw lifecycle.abandoned(what, e.targetException)
         }
         finally {
             lifecycle.exit()
         }
     }
 
+    // Checked before and after, so a call the request completing overtook reports it, whatever it did
+    private Object callUnlocked(Method method, Object[] args) throws Throwable {
+        Object target = lifecycle.check(live, what)
+        Object result
+        try {
+            result = method.invoke(target, args)
+        }
+        catch (InvocationTargetException e) {
+            throw lifecycle.overtaken(what, e.targetException)
+        }
+        lifecycle.check(this, what)
+        return guard(method, result)
+    }
+
     private Object guard(Method method, Object result) {
-        if (!SNAPSHOTS.contains(method.name)) {
+        if (STREAMS.contains(method.name)) {
             return guardStream(result)
+        }
+        if (!SNAPSHOTS.contains(method.name)) {
+            return result
         }
         if (result instanceof Enumeration) {
             return Collections.enumeration(Collections.list((Enumeration<?>) result))

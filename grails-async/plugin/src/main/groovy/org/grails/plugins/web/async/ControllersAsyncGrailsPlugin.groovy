@@ -27,6 +27,7 @@ import java.util.function.UnaryOperator
 import org.springframework.beans.factory.BeanRegistrar
 import org.springframework.beans.factory.BeanRegistry
 import org.springframework.beans.factory.NoSuchBeanDefinitionException
+import org.springframework.boot.convert.DurationStyle
 import org.springframework.boot.web.servlet.ServletListenerRegistrationBean
 import org.springframework.core.env.Environment
 import org.springframework.core.task.AsyncTaskExecutor
@@ -53,6 +54,11 @@ import org.grails.plugins.web.async.mvc.AsyncActionResultTransformer
 @Slf4j
 class ControllersAsyncGrailsPlugin extends Plugin {
 
+    /**
+     * How long completing a request waits for a call a task started during it is making, such as {@code 60s}.
+     */
+    static final String REQUEST_COMPLETION_WAIT = 'grails.async.requestCompletionWait'
+
     def grailsVersion = '8.0.0-SNAPSHOT > *'
     def loadAfter = ['controllers']
 
@@ -64,7 +70,7 @@ class ControllersAsyncGrailsPlugin extends Plugin {
                 it.supplier { new GrailsWebRequestTaskDecorator() }
             }
             registry.registerBean('grailsTaskRequestListener', ServletListenerRegistrationBean) {
-                it.supplier { new ServletListenerRegistrationBean<TaskRequestListener>(new TaskRequestListener()) }
+                it.supplier { new ServletListenerRegistrationBean<TaskRequestListener>(taskRequestListener(environment)) }
             }
             registry.registerBean('grailsPromiseExecutor', AsyncTaskExecutor) {
                 it.fallback()
@@ -107,5 +113,11 @@ class ControllersAsyncGrailsPlugin extends Plugin {
                 }
             }
         }
+    }
+
+    // How long completing a request waits for a call a task is making, from grails.async.requestCompletionWait
+    private static TaskRequestListener taskRequestListener(Environment environment) {
+        String configured = environment.getProperty(REQUEST_COMPLETION_WAIT)
+        return configured == null ? new TaskRequestListener() : new TaskRequestListener(DurationStyle.detectAndParse(configured))
     }
 }
