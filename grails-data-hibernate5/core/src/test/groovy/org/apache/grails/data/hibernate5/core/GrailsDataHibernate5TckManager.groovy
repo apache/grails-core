@@ -53,6 +53,7 @@ class GrailsDataHibernate5TckManager extends GrailsDataTckManager {
     ApplicationContext applicationContext
     HibernateDatastore multiDataSourceDatastore
     HibernateDatastore multiTenantMultiDataSourceDatastore
+    boolean isTransactional = true
 
     @Override
     void setup(Class<? extends Specification> spec) {
@@ -63,7 +64,6 @@ class GrailsDataHibernate5TckManager extends GrailsDataTckManager {
     @Override
     Session createSession() {
         ConfigObject grailsConfig = new ConfigObject()
-        boolean isTransactional = true
 
         System.setProperty('hibernate5.gorm.suite', "true")
         grailsApplication = new DefaultGrailsApplication(domainClasses as Class[], new GroovyClassLoader(GrailsDataHibernate5TckManager.getClassLoader()))
