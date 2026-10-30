@@ -47,7 +47,7 @@ import org.grails.datastore.mapping.reflect.EntityReflector
  * validated once with each distinct set of hints it is reached with, whatever it compares equal to: two instances
  * are both validated, while a cycle of associations ends at the instance it leads back to, whatever hints it is
  * reached with. An instance of a subclass of the entity that is an entity of its own is validated by the validator
- * of that entity.
+ * of that entity, and so is an associated instance of a subclass entity of the declared type of its association.
  *
  * @author Graeme Rocher
  * @since 6.0
@@ -149,8 +149,9 @@ class PersistentEntityValidator implements CascadingValidator, ConstrainedEntity
         Cascade enclosing = CASCADE.get()
         CASCADE.set(new Cascade(target, hints, hints, null, null))
         try {
+            int errorCountBeforeConstraints = errors.errorCount
             validateConstraints(target, entity, errors, entityReflector, getValidatedConstrainedProperties(target, hints), null, true)
-            validateAssociationsAndBeyond(target, errors, cascade, hints, validatedObjects)
+            validateAssociationsAndBeyond(target, errors, cascade, hints, validatedObjects, errorCountBeforeConstraints)
         }
         finally {
             restoreCascade(enclosing)
@@ -163,20 +164,29 @@ class PersistentEntityValidator implements CascadingValidator, ConstrainedEntity
      * instance is to be validated by this validator.
      */
     private PersistentEntityValidator findSubclassEntityValidator(Object instance) {
-        Class<?> type = instance.getClass()
-        if (type == targetClass) {
+        PersistentEntity subclassEntity = entityOf(entity, instance)
+        if (subclassEntity.is(entity)) {
             return null
         }
-        MappingContext mappingContext = entity.mappingContext
-        PersistentEntity subclassEntity = mappingContext.getPersistentEntity(type.name)
-        if (subclassEntity == null || subclassEntity.is(entity)) {
-            return null
-        }
-        def validator = mappingContext.getEntityValidator(subclassEntity)
+        def validator = entity.mappingContext.getEntityValidator(subclassEntity)
         if (validator instanceof PersistentEntityValidator && !validator.is(this)) {
             return (PersistentEntityValidator) validator
         }
         return null
+    }
+
+    /**
+     * The entity whose rules an instance has: the entity of the class of the instance, when that class is a
+     * subclass of the class of the given entity and an entity of its own, otherwise the given entity, the one
+     * declared for the instance.
+     */
+    private static PersistentEntity entityOf(PersistentEntity declaredEntity, Object instance) {
+        Class<?> type = instance.getClass()
+        if (type == declaredEntity.javaClass) {
+            return declaredEntity
+        }
+        PersistentEntity instanceEntity = declaredEntity.mappingContext.getPersistentEntity(type.name)
+        return instanceEntity ?: declaredEntity
     }
 
     /**
@@ -217,7 +227,8 @@ class PersistentEntityValidator implements CascadingValidator, ConstrainedEntity
      * {@link #validateBeyondConstraints}. Called for the object being validated by {@link #validate}, and for each
      * associated object validation cascades to by the validator of its entity, with the nested path of the errors
      * set to the association. A subclass validating in steps, such as the groups of a Bean Validation group
-     * sequence, overrides it to cascade and validate step by step.
+     * sequence, overrides it to cascade and validate step by step, counting the violations of the constraints,
+     * reported just before, as violations of the first step.
      *
      * @param obj The object to validate
      * @param errors The errors to report the violations to
@@ -225,9 +236,12 @@ class PersistentEntityValidator implements CascadingValidator, ConstrainedEntity
      * @param hints The validation hints the object is validated with, {@link #NO_VALIDATION_HINTS} for the object
      * {@link #validate} is called with, see {@link #getAssociationValidationHints}
      * @param validatedObjects The objects this validation has reached, to pass on to the cascade
+     * @param errorCountBeforeConstraints The number of errors the errors held before the constraints of the object
+     * were validated, the errors above it being the violations of the constraints
      * @since 9.0.0
      */
-    protected void validateAssociationsAndBeyond(Object obj, Errors errors, boolean cascade, Object[] hints, Set validatedObjects) {
+    protected void validateAssociationsAndBeyond(Object obj, Errors errors, boolean cascade, Object[] hints, Set validatedObjects,
+            int errorCountBeforeConstraints) {
         if (cascade) {
             cascadeToAssociations(obj, entity, errors, entityReflector, hints, validatedObjects)
         }
@@ -419,7 +433,9 @@ class PersistentEntityValidator implements CascadingValidator, ConstrainedEntity
      * validated again, whatever hints it is reached with. Any other associated object is validated with the hints
      * the validator of the owning entity gives for the association: its constraints once, with the hints given for
      * all the hints of the owner, and, once for each distinct hints it is reached with, its associations and its
-     * rules beyond the constraints, through {@link #validateAssociationsAndBeyond} of its own validator.
+     * rules beyond the constraints, through {@link #validateAssociationsAndBeyond} of its own validator. An instance
+     * of a subclass entity of the declared type of the association has the rules of that entity, and is validated
+     * with its constraints and by its validator, as {@link #validate} validates it.
      *
      * @param errors The Errors instance
      * @param bean The original BeanWrapper
@@ -460,8 +476,8 @@ class PersistentEntityValidator implements CascadingValidator, ConstrainedEntity
             return
         }
 
-        PersistentEntity associatedEntity = association.getAssociatedEntity()
-        if (associatedEntity == null) {
+        PersistentEntity declaredEntity = association.getAssociatedEntity()
+        if (declaredEntity == null) {
             return
         }
 
@@ -470,6 +486,9 @@ class PersistentEntityValidator implements CascadingValidator, ConstrainedEntity
             return
         }
 
+        // the rules of the instance are the ones of its class: an instance of a subclass entity of the declared type
+        // of the association is validated with the constraints, the associations and the validator of that entity
+        PersistentEntity associatedEntity = entityOf(declaredEntity, instance)
         MappingContext mappingContext = associatedEntity.getMappingContext()
         EntityReflector associatedReflector = mappingContext.getEntityReflector(associatedEntity)
 
@@ -488,6 +507,7 @@ class PersistentEntityValidator implements CascadingValidator, ConstrainedEntity
             CASCADE.set(new Cascade(instance, associatedHints, associatedAllHints, association, cascade))
 
             // the constraints do not depend on the hints of a step, so they are validated once for all of them
+            int errorCountBeforeConstraints = errors.errorCount
             if (validatedObjects.add(new ValidatedConstraints(instance, associatedAllHints))) {
                 // Invoke any beforeValidate callbacks on the associated object before validating
                 validateHelper.invokeBeforeValidate(instance, associatedConstrainedProperties.keySet() as List<String>)
@@ -495,7 +515,7 @@ class PersistentEntityValidator implements CascadingValidator, ConstrainedEntity
             }
 
             if (associatedValidator != null) {
-                associatedValidator.validateAssociationsAndBeyond(instance, errors, true, associatedHints, validatedObjects)
+                associatedValidator.validateAssociationsAndBeyond(instance, errors, true, associatedHints, validatedObjects, errorCountBeforeConstraints)
             }
             else {
                 cascadeToAssociations(instance, associatedEntity, errors, associatedReflector, associatedHints, validatedObjects)

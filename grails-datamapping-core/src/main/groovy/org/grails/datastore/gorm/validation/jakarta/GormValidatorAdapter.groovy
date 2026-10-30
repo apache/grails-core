@@ -37,6 +37,8 @@ import jakarta.validation.metadata.GroupConversionDescriptor
 import jakarta.validation.metadata.PropertyDescriptor
 
 import org.codehaus.groovy.runtime.InvokerHelper
+import org.hibernate.validator.path.ContainerElementNode
+import org.hibernate.validator.path.PropertyNode
 import org.springframework.validation.Errors
 import org.springframework.validation.FieldError
 import org.springframework.validation.beanvalidation.SpringValidatorAdapter
@@ -228,12 +230,18 @@ class GormValidatorAdapter extends SpringValidatorAdapter implements CascadingVa
     }
 
     /**
-     * The bean a cascaded property of the given bean leads to: the value of the property, or, when the next node of
-     * the path is an element of a container, the element at its index or key. Null when the bean is unknown, the
-     * property cannot be read, or the element cannot be told, as one of a set, which the declared type of the
-     * property then stands for, see {@link #cascadedClassOf}.
+     * The bean a cascaded property of the given bean leads to: the value the node of the property records when the
+     * provider records it, as Hibernate Validator does, the bean it cascaded to, an element of a container when the
+     * property holds one; otherwise the value of the property, or, when the next node of the path is an element of a
+     * container, the element at its index or key. Null when the bean is unknown, the property cannot be read, or the
+     * element cannot be told, as one of a set whose node records no value, which the declared type of the property
+     * then stands for, see {@link #cascadedClassOf}.
      */
     private static Object cascadedBeanOf(Object bean, Path.Node node, Path.Node next) {
+        Object recorded = recordedValueOf(node)
+        if (recorded != null) {
+            return recorded
+        }
         if (bean == null) {
             return null
         }
@@ -260,6 +268,21 @@ class GormValidatorAdapter extends SpringValidatorAdapter implements CascadingVa
         }
         if (value != null && value.getClass().isArray()) {
             return index < Array.getLength(value) ? Array.get(value, index) : null
+        }
+        return null
+    }
+
+    /**
+     * The value Hibernate Validator records on a node of the path of a violation: on the node of a cascaded
+     * property, the bean the provider cascaded to, the element of a container when the property holds one, which
+     * the path does not tell for a set. Null for a node of another provider.
+     */
+    private static Object recordedValueOf(Path.Node node) {
+        if (node instanceof PropertyNode) {
+            return ((PropertyNode) node).getValue()
+        }
+        if (node instanceof ContainerElementNode) {
+            return ((ContainerElementNode) node).getValue()
         }
         return null
     }

@@ -176,6 +176,23 @@ class GormValidatorAdapterSpec extends Specification {
         errors.getFieldError('attachment.details.summary').code == 'NotBlank'
     }
 
+    void 'the reported groups follow the class of an element of a set the provider cascades to, which the path does not tell'() {
+        given: 'a stamp validated in ExtendedGroup reporting it alone, whose attachments, a set declared of Objects, convert ExtendedGroup to DetailGroup for their details'
+        def adapter = new GormValidatorAdapter(Validation.buildDefaultValidatorFactory().validator)
+        def stamp = new Stamp(note: 'ok', attachments: [new StampAttachment(details: new StampDetails(summary: '', draft: 'yes'))] as Set)
+        def errors = new BeanPropertyBindingResult(stamp, 'stamp')
+
+        expect: 'the provider finds a violation of DetailGroup through ExtendedGroup and one of BaseGroup through BaseGroup, on paths without an index'
+        adapter.validate(stamp, [ExtendedGroup] as Class<?>[])*.propertyPath*.toString().sort() == ['attachments[].details.draft', 'attachments[].details.summary']
+
+        when:
+        adapter.validate(stamp, errors, false, [ExtendedGroup] as Class<?>[], [ExtendedGroup] as Set<Class<?>>)
+
+        then: 'the violation of DetailGroup, converted by the class of the element, is reported, and the one of BaseGroup is not'
+        errors.fieldErrors*.field == ['attachments[].details.summary']
+        errors.getFieldError('attachments[].details.summary').code == 'NotBlank'
+    }
+
     void 'the default group of a bean the provider cascades to stands for the sequence its group sequence provider chooses for it'() {
         given: 'a holder validated in the default group reporting it alone, whose entry is validated in EntryChecks when it is checked'
         def adapter = new GormValidatorAdapter(Validation.buildDefaultValidatorFactory().validator)
@@ -272,6 +289,9 @@ class Stamp {
 
     @Valid
     Object attachment
+
+    @Valid
+    Set<Object> attachments
 }
 
 class StampAttachment {

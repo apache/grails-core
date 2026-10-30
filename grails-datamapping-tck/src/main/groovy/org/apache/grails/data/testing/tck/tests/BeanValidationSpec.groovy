@@ -29,6 +29,7 @@ import org.apache.grails.data.testing.tck.domains.BeanValidatedArticle
 import org.apache.grails.data.testing.tck.domains.BeanValidatedAttachment
 import org.apache.grails.data.testing.tck.domains.BeanValidatedBasket
 import org.apache.grails.data.testing.tck.domains.BeanValidatedBasketLine
+import org.apache.grails.data.testing.tck.domains.BeanValidatedBrief
 import org.apache.grails.data.testing.tck.domains.BeanValidatedBulletin
 import org.apache.grails.data.testing.tck.domains.BeanValidatedChapter
 import org.apache.grails.data.testing.tck.domains.BeanValidatedCounterpart
@@ -36,6 +37,7 @@ import org.apache.grails.data.testing.tck.domains.BeanValidatedDocument
 import org.apache.grails.data.testing.tck.domains.BeanValidatedDossier
 import org.apache.grails.data.testing.tck.domains.BeanValidatedFeatured
 import org.apache.grails.data.testing.tck.domains.BeanValidatedFeaturedAuthor
+import org.apache.grails.data.testing.tck.domains.BeanValidatedFolder
 import org.apache.grails.data.testing.tck.domains.BeanValidatedHolder
 import org.apache.grails.data.testing.tck.domains.BeanValidatedInvoice
 import org.apache.grails.data.testing.tck.domains.BeanValidatedInvoiceLine
@@ -63,6 +65,7 @@ import org.apache.grails.data.testing.tck.support.BeanValidatedLedgerDetails
 import org.apache.grails.data.testing.tck.support.BeanValidatedLedgerLeaf
 import org.apache.grails.data.testing.tck.support.BeanValidatedOrderDetails
 import org.apache.grails.data.testing.tck.support.PublishChecks
+import org.apache.grails.data.testing.tck.support.PublishThenArchive
 import org.grails.datastore.mapping.validation.ValidationErrors
 
 /**
@@ -79,7 +82,8 @@ class BeanValidationSpec extends GrailsDataTckSpec {
                 BeanValidatedSection, BeanValidatedBasket, BeanValidatedBasketLine, BeanValidatedOrder, BeanValidatedShelf,
                 BeanValidatedShelfBook, BeanValidatedBulletin, BeanValidatedManuscript, BeanValidatedChapter, BeanValidatedLedger,
                 BeanValidatedCounterpart, BeanValidatedMember, BeanValidatedAccount, BeanValidatedRegion, BeanValidatedOffice,
-                BeanValidatedHolder, BeanValidatedFeatured, BeanValidatedFeaturedAuthor, BeanValidatedDocument, BeanValidatedReport)
+                BeanValidatedHolder, BeanValidatedFeatured, BeanValidatedFeaturedAuthor, BeanValidatedDocument, BeanValidatedReport,
+                BeanValidatedFolder, BeanValidatedBrief)
     }
 
     void 'the annotations and the constraints block are validated, each violation once'() {
@@ -561,5 +565,61 @@ class BeanValidationSpec extends GrailsDataTckSpec {
         then:
         report.validate()
         report.save(flush: true) != null
+    }
+
+    void 'an associated instance of a subclass that is a domain class of its own is validated with the rules of that subclass'() {
+        given: 'a folder whose document is a report, which extends documents with an annotation and a constraints block of its own'
+        def report = new BeanValidatedReport(title: 'Report', pages: null, summary: 'toolong')
+        def folder = new BeanValidatedFolder(name: 'Folder', document: report)
+
+        expect: 'the annotation and the block of reports are validated through the folder, under the path of the association'
+        !folder.validate()
+        folder.errors.errorCount == 2
+        folder.errors.getFieldError('document.pages').code == 'NotNull'
+        folder.errors.getFieldError('document.summary').code == 'maxSize.exceeded'
+        folder.save() == null
+
+        when: 'the report is valid'
+        report.pages = 3
+        report.summary = 'ok'
+
+        then:
+        folder.validate()
+        report.save() != null
+        folder.save(flush: true) != null
+    }
+
+    void 'a violation of the constraints block stops a group sequence given as a validation hint after its first group'() {
+        given: 'a brief without the code its block requires, valid for publishing and not for archiving, and its validator'
+        def entity = BeanValidatedBrief.gormPersistentEntity
+        def validator = entity.mappingContext.getEntityValidator(entity)
+        def brief = new BeanValidatedBrief(code: null, heading: 'Head', tag: '')
+        def errors = new ValidationErrors(brief)
+
+        when: 'the brief is validated in PublishChecks then ArchiveChecks'
+        ValidationUtils.invokeValidator(validator, brief, errors, PublishThenArchive)
+
+        then: 'the violation of the block, one of PublishChecks, the first group, stops the sequence before ArchiveChecks'
+        errors.errorCount == 1
+        errors.getFieldError('code').code == 'nullable'
+
+        when: 'the brief has a code'
+        brief.code = 'B1'
+        errors = new ValidationErrors(brief)
+        ValidationUtils.invokeValidator(validator, brief, errors, PublishThenArchive)
+
+        then: 'the sequence goes on to ArchiveChecks'
+        errors.errorCount == 1
+        errors.getFieldError('tag').code == 'NotBlank'
+
+        when: 'the brief violates PublishChecks, given on its own and as the first group of the sequence'
+        brief.heading = ''
+        errors = new ValidationErrors(brief)
+        ValidationUtils.invokeValidator(validator, brief, errors, PublishChecks, PublishThenArchive)
+
+        then: 'the violation is reported once, and the sequence, which the group validated on its own does not stop, goes on to ArchiveChecks'
+        errors.errorCount == 2
+        errors.getFieldErrors('heading')*.code == ['NotBlank']
+        errors.getFieldError('tag').code == 'NotBlank'
     }
 }

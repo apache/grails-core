@@ -69,7 +69,8 @@ class JakartaValidatorRegistrySpec extends Specification {
                 PublishedBookNote, SharedChapterBook, SharedChapter, SequencedBook, SequencedPart, CascadingShelf, ReviewedBook,
                 ValidatedDocument, ValidatedReport, TitledBook, DetailedBook, ExtendedOwner, ExtendedChild, SequencedOwner, SequencedRoot,
                 SequencedChild, SequencedGrandchild, AuditedRecord, AuditedRecordAuditor, ProvidedMember, LinkedAccount, LinkedRegion,
-                LinkedOffice, FeaturedHolder, FeaturedItem, FeaturedAuthor, AnnotatedDocument, AnnotatedReport)
+                LinkedOffice, FeaturedHolder, FeaturedItem, FeaturedAuthor, AnnotatedDocument, AnnotatedReport, AnnotatedFolder,
+                UnannotatedDocument, AnnotatedMemo, UnannotatedFolder, SequencedRecord)
         mappingContext.initialize()
         registry = new JakartaValidatorRegistry(mappingContext, new ConnectionSourceSettings())
         mappingContext.validatorRegistry = registry
@@ -757,6 +758,133 @@ class JakartaValidatorRegistrySpec extends Specification {
         errors.errorCount == 1
     }
 
+    void "an associated instance of a subclass that is an entity of its own is validated with the annotations and the block of that entity"() {
+        given: "a folder whose document, marked @Valid, is a report, which extends documents with annotations and a constraints block of its own"
+        SpringValidator validator = registry.getValidator(mappingContext.getPersistentEntity(AnnotatedFolder.name))
+        AnnotatedFolder folder = new AnnotatedFolder(name: 'folder',
+                document: new AnnotatedReport(title: 'Report', pages: null, summary: '', code: null))
+        Errors errors = new ValidationErrors(folder)
+
+        expect: "the provider validates the document as the report it is"
+        beanValidationPaths(folder) == ['document.pages']
+
+        when:
+        validator.validate(folder, errors)
+
+        then: "and so does GORM, with the block of reports"
+        errors.getFieldError('document.pages').code == 'NotNull'
+        errors.getFieldError('document.code').code == 'nullable'
+        errors.errorCount == 2
+
+        when: "the folder is validated in OnPublish"
+        errors = new ValidationErrors(folder)
+        ValidationUtils.invokeValidator(validator, folder, errors, OnPublish)
+
+        then: "the report is validated in it, as the association marked @Valid passes the group on"
+        beanValidationPaths(folder, OnPublish) == ['document.summary']
+        errors.getFieldError('document.summary').code == 'NotBlank'
+        errors.getFieldError('document.code').code == 'nullable'
+        errors.errorCount == 2
+
+        when: "a folder without annotations holds a memo, an annotated subclass of documents without annotations"
+        UnannotatedFolder plainFolder = new UnannotatedFolder(name: 'folder', document: new AnnotatedMemo(title: 'Memo', pages: null))
+        errors = new ValidationErrors(plainFolder)
+        registry.getValidator(mappingContext.getPersistentEntity(UnannotatedFolder.name)).validate(plainFolder, errors)
+
+        then: "the memo is validated with its annotations, by the validator of memos"
+        errors.getFieldError('document.pages').code == 'NotNull'
+        errors.errorCount == 1
+
+        when: "the folder holds a document"
+        plainFolder.document = new UnannotatedDocument(title: 'Document')
+        errors = new ValidationErrors(plainFolder)
+        registry.getValidator(mappingContext.getPersistentEntity(UnannotatedFolder.name)).validate(plainFolder, errors)
+
+        then:
+        !errors.hasErrors()
+    }
+
+    void "an element of a transient set marked @Valid is cascaded to as the value it holds, whatever the declared type of the elements"() {
+        given: "a child validated in Extended without Base, whose transient records, a set declared of Objects, convert Extended to DetailsChecks for their details"
+        ExtendedOwner owner = new ExtendedOwner(name: 'owner', child: new ExtendedChild(label: 'ok', note: 'ok',
+                records: [new ExtendedChildRecord(details: new ExtendedChildDetails(summary: '', draft: 'yes'))] as Set))
+        Errors errors = new ValidationErrors(owner)
+        SpringValidator validator = registry.getValidator(mappingContext.getPersistentEntity(ExtendedOwner.name))
+
+        expect: "the provider validates the details in DetailsChecks, as the class of the record converts Extended, and not in Base, on a path without an index"
+        beanValidationPaths(owner, Extended) == ['child.records[].details.summary']
+
+        when:
+        ValidationUtils.invokeValidator(validator, owner, errors, Extended)
+
+        then: "and so does GORM"
+        errors.getFieldError('child.records[].details.summary').code == 'NotBlank'
+        !errors.hasFieldErrors('child.records[].details.draft')
+        errors.errorCount == 1
+    }
+
+    void "a group given as a validation hint both on its own and in a group sequence is validated once"() {
+        given: "a root violating StepA, whose child violates StepB, validated in StepA and in StepA then StepB"
+        SequencedRoot root = new SequencedRoot(a: '', child: new SequencedChild(a: 'ok', b: '', grandchild: new SequencedGrandchild(x: 'ok')))
+        Errors errors = new ValidationErrors(root)
+        SpringValidator validator = registry.getValidator(mappingContext.getPersistentEntity(SequencedRoot.name))
+
+        expect: "the provider reports the violation of StepA once, and the sequence, which StepA on its own does not stop, goes on to StepB"
+        beanValidationPaths(root, StepA, StepAThenB) == ['a', 'child.b']
+
+        when:
+        ValidationUtils.invokeValidator(validator, root, errors, StepA, StepAThenB)
+
+        then: "and so does GORM"
+        errors.getFieldErrors('a')*.code == ['NotBlank']
+        errors.getFieldError('child.b').code == 'NotBlank'
+        errors.errorCount == 2
+
+        when: "the sequence alone is given"
+        errors = new ValidationErrors(root)
+        ValidationUtils.invokeValidator(validator, root, errors, StepAThenB)
+
+        then: "the violation of StepA stops it"
+        beanValidationPaths(root, StepAThenB) == ['a']
+        errors.getFieldError('a').code == 'NotBlank'
+        errors.errorCount == 1
+    }
+
+    void "a violation of the constraints block stops a group sequence given as a validation hint after its first group"() {
+        given: "a record without the code its block requires, valid in StepA and violating StepB"
+        SequencedRecord record = new SequencedRecord(a: 'ok', b: '', code: null)
+        Errors errors = new ValidationErrors(record)
+        SpringValidator validator = registry.getValidator(mappingContext.getPersistentEntity(SequencedRecord.name))
+
+        when:
+        ValidationUtils.invokeValidator(validator, record, errors, StepAThenB)
+
+        then: "the violation of the block counts as one of StepA, the first group the record is validated in, so StepB is not validated"
+        errors.getFieldError('code').code == 'nullable'
+        !errors.hasFieldErrors('b')
+        errors.errorCount == 1
+
+        when: "the record has a code"
+        record.code = 'R1'
+        errors = new ValidationErrors(record)
+        ValidationUtils.invokeValidator(validator, record, errors, StepAThenB)
+
+        then: "the sequence goes on to StepB"
+        beanValidationPaths(record, StepAThenB) == ['b']
+        errors.getFieldError('b').code == 'NotBlank'
+        errors.errorCount == 1
+
+        when: "StepA is given on its own as well"
+        record.code = null
+        errors = new ValidationErrors(record)
+        ValidationUtils.invokeValidator(validator, record, errors, StepA, StepAThenB)
+
+        then: "the violation of the block counts as one of the groups validated on their own, which stop no sequence"
+        errors.getFieldError('code').code == 'nullable'
+        errors.getFieldError('b').code == 'NotBlank'
+        errors.errorCount == 2
+    }
+
     private static List<String> beanValidationPaths(Object instance, Class<?>... groups) {
         def factory = Validation.buildDefaultValidatorFactory()
         try {
@@ -1104,9 +1232,12 @@ class ExtendedChild {
     @Valid
     Object record
 
+    @Valid
+    Set<Object> records
+
     static belongsTo = [ExtendedOwner]
 
-    static transients = ['details', 'record']
+    static transients = ['details', 'record', 'records']
 }
 
 class ExtendedChildRecord {
@@ -1345,6 +1476,53 @@ class AnnotatedReport extends AnnotatedDocument {
 
     @NotBlank(groups = OnPublish)
     String summary
+
+    String code
+
+    static constraints = {
+        code nullable: false
+    }
+}
+
+@Entity
+class AnnotatedFolder {
+    @NotNull
+    String name
+
+    @Valid
+    AnnotatedDocument document
+}
+
+@Entity
+class UnannotatedDocument {
+    String title
+}
+
+/**
+ * A memo, an entity of its own extending documents without annotations with an annotation
+ */
+@Entity
+class AnnotatedMemo extends UnannotatedDocument {
+    @NotNull
+    Integer pages
+}
+
+@Entity
+class UnannotatedFolder {
+    String name
+    UnannotatedDocument document
+}
+
+/**
+ * A record validated in a group sequence given as a validation hint, with a rule of the constraints block
+ */
+@Entity
+class SequencedRecord {
+    @NotBlank(groups = StepA)
+    String a
+
+    @NotBlank(groups = StepB)
+    String b
 
     String code
 

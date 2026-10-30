@@ -571,6 +571,46 @@ class PersistentEntityValidatorSpec extends Specification {
         errors.errorCount == 1
         errors.getFieldError('name').code == 'nullable'
     }
+
+    def "an associated instance of a subclass that is an entity of its own is validated with the rules of that entity"() {
+        given: "folders holding a document, and reports, which extend documents with a rule and an association of their own, with a validator of reports recording its hints"
+        MappingContext mappingContext = new KeyValueMappingContext("test")
+        mappingContext.mappingFactory = new GormKeyValueMappingFactory("test")
+        mappingContext.syntaxStrategy = new GormMappingConfigurationStrategy(mappingContext.mappingFactory)
+        mappingContext.addPersistentEntity(SubclassedDocument)
+        PersistentEntity reportEntity = mappingContext.addPersistentEntity(SubclassedReport)
+        mappingContext.addPersistentEntity(SubclassedAppendix)
+        PersistentEntity folderEntity = mappingContext.addPersistentEntity(SubclassedFolder)
+        DefaultValidatorRegistry registry = new DefaultValidatorRegistry(mappingContext, new ConnectionSourceSettings())
+        mappingContext.validatorRegistry = registry
+        HintingValidator reportValidator = new HintingValidator(reportEntity, registry.messageSource, registry.constraintsEvaluator)
+        mappingContext.addEntityValidator(reportEntity, reportValidator)
+        Validator folderValidator = registry.getValidator(folderEntity)
+        SubclassedFolder folder = new SubclassedFolder(name: 'folder',
+                document: new SubclassedReport(name: 'report', pages: null, appendix: new SubclassedAppendix(label: null)))
+        Errors errors = new ValidationErrors(folder)
+
+        when: "a folder whose document is a report is validated"
+        folderValidator.validate(folder, errors)
+
+        then: "the validator of reports validates the report, with the rules and the associations of reports, under the path of the association"
+        reportValidator.constraintHints == [[]]
+        reportValidator.beyondHints == [[]]
+        errors.errorCount == 2
+        errors.getFieldError('document.pages').code == 'nullable'
+        errors.getFieldError('document.appendix.label').code == 'nullable'
+
+        when: "the document of the folder is a document"
+        reportValidator.clear()
+        folder.document = new SubclassedDocument(name: null)
+        errors = new ValidationErrors(folder)
+        folderValidator.validate(folder, errors)
+
+        then: "it is validated with the rules of documents"
+        reportValidator.constraintHints.empty
+        errors.errorCount == 1
+        errors.getFieldError('document.name').code == 'nullable'
+    }
 }
 
 /**
@@ -855,4 +895,13 @@ class SubclassedAppendix {
     static constraints = {
         label(nullable: false)
     }
+}
+
+/**
+ * A folder holding a document, which may be a report
+ */
+@Entity
+class SubclassedFolder {
+    String name
+    SubclassedDocument document
 }
