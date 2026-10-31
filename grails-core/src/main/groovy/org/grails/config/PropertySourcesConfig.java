@@ -20,8 +20,11 @@ package org.grails.config;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.ListIterator;
 import java.util.Map;
 
 import groovy.util.ConfigObject;
@@ -107,44 +110,70 @@ public class PropertySourcesConfig extends NavigableMapConfig {
     }
 
     private void mergeEnumerablePropertySource(EnumerablePropertySource enumerablePropertySource) {
+        Map<Object, Object> copies = new IdentityHashMap<>();
         if (enumerablePropertySource instanceof NavigableMapPropertySource) {
-            configMap.merge(((NavigableMapPropertySource) enumerablePropertySource).getSource(), false);
+            configMap.merge((Map<?, ?>) copyOf(((NavigableMapPropertySource) enumerablePropertySource).getSource(), copies), false);
         } else {
             Map<String, Object> map = new LinkedHashMap<>();
 
             final String[] propertyNames = enumerablePropertySource.getPropertyNames();
             for (String propertyName : propertyNames) {
                 Object value = enumerablePropertySource.getProperty(propertyName);
-                if (value instanceof ConfigObject) {
-                    if (((ConfigObject) value).isEmpty()) continue;
-                } else {
-                    value = processAndEvaluate(value);
+                if (value instanceof ConfigObject && ((ConfigObject) value).isEmpty()) {
+                    continue;
                 }
-                map.put(propertyName, value);
+                map.put(propertyName, copyOf(value, copies));
             }
 
             configMap.merge(map, true);
         }
     }
 
-    private Object processAndEvaluate(Object value) {
-        if (value instanceof CharSequence) {
-            value = resolvePlaceholders(value.toString());
-        } else if (value instanceof List) {
-            List<Object> result = new ArrayList<>();
-            for (Object element : (List) value) {
-                result.add(processAndEvaluate(element));
-            }
-            return result;
-        } else if (value instanceof Map) {
-            Map<Object, Object> result = new LinkedHashMap<>();
-            for (Object key : ((Map) value).keySet()) {
-                result.put(key, processAndEvaluate(((Map) value).get(key)));
-            }
-            return result;
+    /**
+     * A copy of a value of a property source, with a copy of each list and map in it, so the config never holds the
+     * source's own list, which a later indexed write, such as {@code app.list[1]} from a property source of higher
+     * precedence, would change in place. A list or map the source holds under several keys, as under a flat key and in
+     * its nested map, is copied once, so the config holds one list under each of them, as it held the source's.
+     */
+    @SuppressWarnings("unchecked")
+    private static Object copyOf(Object value, Map<Object, Object> copies) {
+        if (!(value instanceof List || value instanceof Map)) {
+            return value;
         }
+        Object copied = copies.get(value);
+        if (copied != null) {
+            return copied;
+        }
+        if (value instanceof List) {
+            List<Object> copy = shallowCopyOf((List<Object>) value);
+            copies.put(value, copy);
+            for (ListIterator<Object> elements = copy.listIterator(); elements.hasNext();) {
+                elements.set(copyOf(elements.next(), copies));
+            }
+            return copy;
+        }
+        Map<Object, Object> copy = value instanceof NavigableMap ?
+                (Map<Object, Object>) (Map<?, ?>) ((NavigableMap) value).clone() : new LinkedHashMap<>();
+        copies.put(value, copy);
+        for (Map.Entry<?, ?> entry : ((Map<?, ?>) value).entrySet()) {
+            copy.put(entry.getKey(), copyOf(entry.getValue(), copies));
+        }
+        return copy;
+    }
 
-        return value;
+    /**
+     * A list of the same kind as the one given, as the config held the source's own list before, or an
+     * {@link ArrayList} for a list that cannot be copied as its kind, such as an unmodifiable one.
+     */
+    @SuppressWarnings("unchecked")
+    private static List<Object> shallowCopyOf(List<Object> list) {
+        if (list instanceof ArrayList) {
+            return (List<Object>) ((ArrayList<Object>) list).clone();
+        }
+        if (list instanceof LinkedList) {
+            return (List<Object>) ((LinkedList<Object>) list).clone();
+        }
+        return new ArrayList<>(list);
     }
 
     public void setClassLoader(ClassLoader classLoader) {

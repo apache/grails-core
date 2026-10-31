@@ -34,6 +34,22 @@ production:
 
 Similarly system arguments can be accessed.
 
+A placeholder in an element of a list, or in a map inside one, is resolved when the list is read through `grailsApplication.config`:
+
+[source,yaml]
+----
+app:
+    origins:
+        - https://app.example.com
+        - '${EXTRA_ORIGIN:https://admin.example.com}'
+----
+
+`grailsApplication.config` gives the resolved element whether the list is read whole, with `config.getProperty('app.origins', List)`, or by index, with `config.getProperty('app.origins[1]')`.
+
+NOTE: A list bound with `@ConfigurationProperties`, such as `grails.cors.allowedOrigins`, still receives the placeholder as written when `application.yml` is read through Grails' YAML loader. Write such a list as one comma-separated value, `'https://app.example.com,${EXTRA_ORIGIN:https://admin.example.com}'`, and the placeholder is resolved when the list is bound.
+
+A placeholder escaped with a backslash is kept as text: `+\${EXTRA_ORIGIN}+` in `application.yml`, a system property or a command line argument is read as `+${EXTRA_ORIGIN}+`, as the `Environment` reads it.
+
 You will need to have this in `build.gradle` to modify the `bootRun` target if `grails run-app` or `./gradlew bootRun` is used to start the application
 
 [source,groovy]
