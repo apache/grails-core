@@ -57,6 +57,7 @@ import grails.util.GrailsNameUtils
 import grails.gorm.validation.ConstrainedEntity
 import grails.gorm.validation.ConstrainedProperty
 import grails.validation.Validateable
+import org.grails.core.artefact.DomainClassArtefactHandler
 import org.grails.datastore.mapping.model.MappingContext
 import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.model.PersistentProperty
@@ -447,7 +448,7 @@ class GrailsModelConverter implements ModelConverter {
         applyConstraints(model, constraints.findAll { String name, Constrained constrained -> !(name in readOnly) },
                 versionName, names, propertyNames)
         if (bindable != null) {
-            markUnbound(model, names, bindable, beanProperties)
+            markUnbound(model, names, schemaBindable(type, entity, bindable), beanProperties)
         }
         unbindable?.each { String name -> describable(model, names[name] ?: name)?.setReadOnly(true) }
     }
@@ -518,6 +519,48 @@ class GrailsModelConverter implements ModelConverter {
      * one constrained {@code bindable: false}, or a transient - is not something a client sends,
      * so it is read only.
      */
+    /**
+     * A domain class with no mapping context still has a generated white list that drops id and
+     * version. That exclusion is not a schema fact. An explicit bindable constraint is.
+     */
+    private static List<String> schemaBindable(Class<?> type, PersistentEntity entity, List<String> bindable) {
+        if (entity != null || !DomainClassArtefactHandler.isDomainClass(type)) {
+            return bindable
+        }
+        List<String> schemaBindable = new ArrayList<String>(bindable)
+        List<String> explicitlyUnbindable = BindingIncludeLists.unbindablePropertyNames(type)
+        Collection transientNames = transientNames(type)
+        for (String name : ['id', 'version', 'dateCreated', 'lastUpdated']) {
+            if (!explicitlyUnbindable.contains(name) && !transientNames.contains(name) && !isTransientField(type, name)) {
+                schemaBindable.add(name)
+            }
+        }
+        schemaBindable
+    }
+
+    private static Collection transientNames(Class<?> type) {
+        try {
+            Object value = InvokerHelper.getProperty(type, 'transients')
+            if (value instanceof Collection) {
+                return (Collection) value
+            }
+        } catch (Exception ignored) {
+        }
+        Collections.emptyList()
+    }
+
+    private static boolean isTransientField(Class<?> type, String name) {
+        Class<?> current = type
+        while (current != null && current != Object) {
+            try {
+                return java.lang.reflect.Modifier.isTransient(current.getDeclaredField(name).modifiers)
+            } catch (NoSuchFieldException ignored) {
+                current = current.superclass
+            }
+        }
+        false
+    }
+
     private static void markUnbound(Schema model, Map<String, String> names, List<String> bindable,
                                     Set<String> beanProperties) {
         if (!model.properties) {

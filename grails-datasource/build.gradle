@@ -58,6 +58,7 @@ dependencies {
     compileOnly 'jakarta.servlet:jakarta.servlet-api'
 
     testImplementation 'com.h2database:h2'
+    testImplementation 'com.zaxxer:HikariCP'
     testImplementation 'jakarta.servlet:jakarta.servlet-api'
     testImplementation 'org.springframework:spring-test'
     testImplementation 'org.apache.groovy:groovy-json', {

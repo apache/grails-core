@@ -23,6 +23,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -42,6 +43,7 @@ import org.springframework.validation.FieldError;
 import org.springframework.validation.ObjectError;
 
 import grails.core.GrailsApplication;
+import grails.web.servlet.mvc.GrailsParameterMap;
 import grails.databinding.CollectionDataBindingSource;
 import grails.databinding.DataBinder;
 import grails.databinding.DataBindingSource;
@@ -133,6 +135,59 @@ public class DataBindingUtils {
      */
     public static BindingResult bindObjectToInstance(Object object, Object source) {
         return bindObjectToInstance(object, source, getBindingIncludeList(object), Collections.emptyList(), null);
+    }
+
+    /**
+     * Binds the arguments of a map constructor. A Groovy map literal is a {@link LinkedHashMap} and
+     * may set {@code id} and {@code version} unless a constraint says they are not bindable. A request
+     * map, including {@link GrailsParameterMap} and {@code request.JSON}, keeps the generated white list.
+     * Other allowlist exclusions, such as a transient, stay excluded.
+     */
+    public static BindingResult bindNamedConstructorArguments(Object object, Object source) {
+        if (!(source instanceof LinkedHashMap) || isDenyByDefaultEnabled()) {
+            return bindObjectToInstance(object, source);
+        }
+        List include = getBindingIncludeList(object);
+        if (include == null) {
+            return bindObjectToInstance(object, source, GrailsWebDataBinder.bindAllBindingIncludeList(),
+                    Collections.emptyList(), null);
+        }
+        List constructorInclude = new ArrayList(include);
+        List<String> explicitlyUnbindable = BindingIncludeLists.unbindablePropertyNames(object.getClass());
+        Collection transientNames = transientNames(object.getClass());
+        for (String name : new String[] {"id", "version", "dateCreated", "lastUpdated"}) {
+            if (!explicitlyUnbindable.contains(name) && !transientNames.contains(name) &&
+                    !isTransientField(object.getClass(), name)) {
+                constructorInclude.add(name);
+            }
+        }
+        if (BindingIncludeLists.isGenerated(include)) {
+            constructorInclude = BindingIncludeLists.asGenerated(constructorInclude);
+        }
+        return bindObjectToInstance(object, source, constructorInclude, Collections.emptyList(), null);
+    }
+
+    private static Collection transientNames(final Class<?> type) {
+        try {
+            Object value = GroovySystem.getMetaClassRegistry().getMetaClass(type).getProperty(type, "transients");
+            if (value instanceof Collection) {
+                return (Collection) value;
+            }
+        } catch (Exception ignored) {
+        }
+        return Collections.emptyList();
+    }
+
+    private static boolean isTransientField(final Class<?> type, final String name) {
+        Class<?> current = type;
+        while (current != null && current != Object.class) {
+            try {
+                return java.lang.reflect.Modifier.isTransient(current.getDeclaredField(name).getModifiers());
+            } catch (NoSuchFieldException ignored) {
+                current = current.getSuperclass();
+            }
+        }
+        return false;
     }
 
     protected static List getBindingIncludeList(final Object object) {

@@ -61,7 +61,7 @@ public class ControllersDomainBindingApi {
         GrailsApplication application = findApplication();
         PersistentEntity dc = getDomainClass(instance, application);
         if (dc == null) {
-            DataBindingUtils.bindObjectToInstance(instance, namedArgs);
+            DataBindingUtils.bindNamedConstructorArguments(instance, namedArgs);
         }
         else {
             DataBindingUtils.bindObjectToDomainInstance(dc, instance, namedArgs);

@@ -19,6 +19,9 @@
 
 package org.grails.datastore.mapping.config
 
+import groovy.transform.builder.Builder
+import groovy.transform.builder.SimpleStrategy
+
 import org.grails.datastore.mapping.core.DatastoreUtils
 import org.grails.datastore.mapping.core.exceptions.ConfigurationException
 import org.grails.datastore.mapping.core.connections.ConnectionSourceSettings
@@ -29,6 +32,10 @@ import org.springframework.core.convert.TypeDescriptor
 import org.grails.datastore.mapping.multitenancy.TenantResolver
 import org.grails.datastore.mapping.multitenancy.resolvers.FixedTenantResolver
 import org.springframework.core.env.PropertyResolver
+import org.springframework.core.env.PropertySource
+import org.springframework.core.env.MapPropertySource
+import org.springframework.core.env.StandardEnvironment
+import org.springframework.core.env.SystemEnvironmentPropertySource
 import org.springframework.util.ReflectionUtils
 import spock.lang.Specification
 
@@ -44,6 +51,237 @@ import java.util.concurrent.TimeUnit
  * Created by graemerocher on 29/06/16.
  */
 class ConfigurationBuilderSpec extends Specification {
+
+    void "Test discovered dotted map properties use higher relaxed environment values"() {
+        given:
+        def environment = new StandardEnvironment()
+        environment.propertySources.addFirst(new MapPropertySource('low', [
+                'dataSource.properties.maximumPoolSize': 10
+        ]))
+        environment.propertySources.addFirst(new SystemEnvironmentPropertySource('high', [
+                DATASOURCE_PROPERTIES_MAXIMUMPOOLSIZE: '50'
+        ]))
+
+        expect:
+        new MapConfigurationBuilder(environment).build().properties == [maximumPoolSize: '50']
+    }
+
+    void "Test discovered dotted map properties use higher non-enumerable values without conversion"() {
+        given:
+        def environment = new StandardEnvironment()
+        def values = [maximumPoolSize: '${pool.size}', options: [enabled: true], connectionInitSqls: ['SET A=1', 'SET B=2']]
+        environment.propertySources.addFirst(new MapPropertySource('low', [
+                'dataSource.properties.maximumPoolSize': 10,
+                'dataSource.properties.options': [enabled: false],
+                'dataSource.properties.connectionInitSqls': ['LOW'],
+                'pool.size': '50'
+        ]))
+        environment.propertySources.addFirst(new PropertySource<Map>('high', values) {
+            @Override
+            Object getProperty(String name) {
+                return name.startsWith('dataSource.properties.') ? getSource().get(name.substring('dataSource.properties.'.length())) : null
+            }
+        })
+
+        when:
+        def configuration = new MapConfigurationBuilder(environment).build()
+
+        then:
+        configuration.properties == [maximumPoolSize: '50', options: [enabled: true], connectionInitSqls: ['SET A=1', 'SET B=2']]
+        configuration.properties.connectionInitSqls.is(values.connectionInitSqls)
+        configuration.properties.options.is(values.options)
+        values.maximumPoolSize == '${pool.size}'
+    }
+
+    void "Test existing maps preserve literal dotted keys at #propertyPath"() {
+        given:
+        def options = [
+                'dbms.memory.pagecache.size': '512M',
+                nested: ['dbms.memory.heap.max_size': '1G']
+        ]
+        def environment = new StandardEnvironment()
+        environment.propertySources.addFirst(new MapPropertySource('configuration', [(propertyPath): options]))
+
+        when:
+        def properties = new MapConfigurationBuilder(environment).build().properties
+        def stored = nested ? properties.options : properties
+
+        then:
+        stored == options
+        stored['dbms.memory.pagecache.size'] == '512M'
+        stored.nested == ['dbms.memory.heap.max_size': '1G']
+        options == ['dbms.memory.pagecache.size': '512M', nested: ['dbms.memory.heap.max_size': '1G']]
+
+        where:
+        propertyPath                    | nested
+        'dataSource.properties'         | false
+        'dataSource.properties.options' | true
+    }
+
+    void "Test string placeholders follow the environment policy"() {
+        given:
+        def resolving = new StandardEnvironment()
+        resolving.propertySources.addFirst(new MapPropertySource('defined', [
+                literal: 'ok',
+                'dataSource.properties.connectionInitSql': 'SELECT ${literal}'
+        ]))
+        def lenient = new StandardEnvironment()
+        lenient.setIgnoreUnresolvableNestedPlaceholders(true)
+        lenient.propertySources.addFirst(new MapPropertySource('open', [
+                'dataSource.properties.connectionInitSql': 'SELECT ${literal}'
+        ]))
+
+        expect:
+        new MapConfigurationBuilder(resolving).build().properties.connectionInitSql == 'SELECT ok'
+        new MapConfigurationBuilder(lenient).build().properties.connectionInitSql == 'SELECT ${literal}'
+    }
+
+    void "Test Spring Environment rebuilds map-backed builder settings with source precedence"() {
+        given:
+        def environment = new StandardEnvironment()
+        environment.propertySources.addFirst(new MapPropertySource('low', [
+                'grails.gorm.hibernate.flush.mode.nested': 'low',
+                'grails.gorm.hibernate.options': [size: 20, inherited: true],
+                'grails.gorm.hibernate.local': 'replaced by nested map',
+                'grails.gorm.hibernate.local.enabled': true
+        ]))
+        environment.propertySources.addFirst(new MapPropertySource('high', [
+                'grails.gorm.hibernate.configClass': 'configured',
+                'grails.gorm.hibernate.flush.mode': 'HIGH',
+                'grails.gorm.hibernate.options.size': 50,
+                'grails.gorm.hibernate.connectionInitSqls[1]': 'SET B=2',
+                'grails.gorm.hibernate.connectionInitSqls[0]': 'SET A=1'
+        ]))
+
+        when:
+        def configuration = new SpringMapConfigurationBuilder(environment).build()
+
+        then:
+        configuration.hibernate.getConfigClass() == 'configured'
+        configuration.hibernate['flush'] == [mode: 'HIGH']
+        configuration.hibernate['options'] == [size: 50]
+        configuration.hibernate['local'] == 'replaced by nested map'
+        configuration.hibernate['connectionInitSqls'] == ['SET A=1', 'SET B=2']
+    }
+
+    void "Test a higher map value keeps a missing lower flattened leaf without mutating the source"() {
+        given:
+        def options = [enabled: true]
+        def environment = new StandardEnvironment()
+        environment.propertySources.addFirst(new MapPropertySource('low', [
+                'dataSource.properties.options.timeout': 1000
+        ]))
+        environment.propertySources.addFirst(new MapPropertySource('high', [
+                'dataSource.properties.options': options
+        ]))
+
+        when:
+        def properties = new MapConfigurationBuilder(environment).build().properties
+
+        then:
+        properties.options == [enabled: true, timeout: 1000]
+        !properties.options.is(options)
+        options == [enabled: true]
+    }
+
+    void "Test a higher source list blocks a lower index and an unresolved placeholder"() {
+        given:
+        def sqls = ['HIGH']
+        def emptySqls = []
+        def environment = new StandardEnvironment()
+        environment.propertySources.addFirst(new MapPropertySource('low', [
+                'dataSource.properties.sqls[1]': 'LOW',
+                'dataSource.properties.emptySqls[1]': '${missing}'
+        ]))
+        environment.propertySources.addFirst(new MapPropertySource('high', [
+                'dataSource.properties.sqls': sqls,
+                'dataSource.properties.emptySqls': emptySqls,
+                'dataSource.properties.built[1]': 'SET B=2',
+                'dataSource.properties.built[0]': 'SET A=1'
+        ]))
+
+        when:
+        def properties = new MapConfigurationBuilder(environment).build().properties
+
+        then:
+        properties.sqls.is(sqls)
+        properties.emptySqls.is(emptySqls)
+        properties.built == ['SET A=1', 'SET B=2']
+        sqls == ['HIGH']
+        emptySqls.isEmpty()
+    }
+
+    void "Test a higher map leaf is not replaced by a lower map or unresolved placeholder"() {
+        given:
+        def options = [enabled: true]
+        def pool = [size: 4]
+        def environment = new StandardEnvironment()
+        environment.propertySources.addFirst(new MapPropertySource('low', [
+                'dataSource.properties.options': [enabled: false],
+                'dataSource.properties.options.enabled': '${missing}',
+                'dataSource.properties.pool': '${missing}'
+        ]))
+        environment.propertySources.addFirst(new MapPropertySource('high', [
+                'dataSource.properties.options': options,
+                'dataSource.properties.pool': pool
+        ]))
+
+        when:
+        def properties = new MapConfigurationBuilder(environment).build().properties
+
+        then:
+        properties.options.is(options)
+        properties.pool.is(pool)
+        options == [enabled: true]
+        pool == [size: 4]
+    }
+
+    void "Test a lower circular placeholder does not replace a higher map"() {
+        given:
+        def environment = new StandardEnvironment()
+        environment.propertySources.addFirst(new MapPropertySource('low', [
+                'dataSource.properties': '${loop}',
+                loop: '${loop}'
+        ]))
+        environment.propertySources.addFirst(new MapPropertySource('high', [
+                'dataSource.properties': [x: 50]
+        ]))
+
+        expect:
+        new MapConfigurationBuilder(environment).build().properties == [x: 50]
+    }
+
+    void "Test DatastoreUtils resolver retains existing map-backed builder binding"() {
+        given:
+        String systemKey = 'grails.gorm.hibernate.minimumIdle'
+        String previousIdle = System.setProperty(systemKey, '3')
+        def source = [
+                'grails.gorm.hibernate.configClass': 'configured',
+                'grails.gorm.hibernate.flush.mode': 'AUTO',
+                'grails.gorm.hibernate.connectionInitSqls': ['SET A=1', 'SET B=2']
+        ]
+        def resolver = DatastoreUtils.createPropertyResolver(source)
+        def original = new LinkedHashMap(resolver.getProperty('grails.gorm.hibernate', Map))
+
+        when:
+        def configuration = new SpringMapConfigurationBuilder(resolver).build()
+
+        then:
+        configuration.hibernate.getConfigClass() == 'configured'
+        configuration.hibernate['flush.mode'] == 'AUTO'
+        configuration.hibernate['connectionInitSqls'] == ['SET A=1', 'SET B=2']
+        configuration.hibernate['minimumIdle'] == null
+        resolver.getProperty('grails.gorm.hibernate', Map) == original
+        source.size() == 3
+
+        cleanup:
+        if (previousIdle == null) {
+            System.clearProperty(systemKey)
+        }
+        else {
+            System.setProperty(systemKey, previousIdle)
+        }
+    }
 
     void "Test configuration builder with getter and setter"() {
         given:"A configuration"
@@ -560,6 +798,58 @@ class ConfigurationBuilderSpec extends Specification {
         configuration.mapBacked.keySet().every { it instanceof String }
     }
 
+    static class MapConfigurationBuilder extends ConfigurationBuilder<MapConfiguration, MapConfiguration> {
+
+        MapConfigurationBuilder(PropertyResolver propertyResolver) {
+            super(propertyResolver, 'dataSource')
+        }
+
+        @Override
+        protected MapConfiguration createBuilder() {
+            return new MapConfiguration()
+        }
+
+        @Override
+        protected MapConfiguration toConfiguration(MapConfiguration builder) {
+            return builder
+        }
+    }
+
+    @Builder(builderStrategy = SimpleStrategy, prefix = '')
+    static class MapConfiguration {
+
+        Map properties
+    }
+
+    static class SpringMapConfigurationBuilder extends ConfigurationBuilder<SpringMapConfig, SpringMapConfig> {
+
+        SpringMapConfigurationBuilder(PropertyResolver propertyResolver) {
+            super(propertyResolver, Settings.PREFIX)
+        }
+
+        @Override
+        protected SpringMapConfig createBuilder() {
+            return new SpringMapConfig()
+        }
+
+        @Override
+        protected SpringMapConfig toConfiguration(SpringMapConfig builder) {
+            return builder
+        }
+    }
+
+    @Builder(builderStrategy = SimpleStrategy, prefix = '')
+    static class SpringMapConfig {
+
+        SpringMapSettings hibernate
+    }
+
+    @Builder(builderStrategy = SimpleStrategy, prefix = '')
+    static class SpringMapSettings extends LinkedHashMap<String, Object> {
+
+        String configClass
+    }
+
     static class TestConfigurationBuilder extends ConfigurationBuilder<ConnectionSourceSettings, ConnectionSourceSettings> {
 
         TestConfigurationBuilder(PropertyResolver propertyResolver) {
@@ -771,3 +1061,4 @@ class ConfigurationBuilderSpec extends Specification {
         }
     }
 }
+

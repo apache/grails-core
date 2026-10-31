@@ -362,6 +362,17 @@ class PersistentEntitySchemaSpec extends Specification {
         !openApi.components.schemas['Widget'].properties.id?.readOnly
     }
 
+    void 'an explicit bindable false stays read only when the domain has no mapping context'() {
+        when:
+        def openApi = OpenApiFixture.document([RestrictedWidgetController], []) {
+            '/restrictedWidgets'(resources: 'restrictedWidget')
+        }
+
+        then:
+        openApi.components.schemas['RestrictedWidget'].properties.id.readOnly
+        !openApi.components.schemas['RestrictedWidget'].properties.label.readOnly
+    }
+
     void 'honors a Schema annotation on the domain class'() {
         given:
         def openApi = new OpenAPI()
@@ -723,4 +734,18 @@ class RenamedBook {
 @Artefact('Controller')
 class RenamedBookController extends RestfulController<RenamedBook> {
     RenamedBookController() { super(RenamedBook) }
+}
+
+@Entity
+class RestrictedWidget {
+    String label
+
+    static constraints = {
+        id bindable: false
+    }
+}
+
+@Artefact('Controller')
+class RestrictedWidgetController extends RestfulController<RestrictedWidget> {
+    RestrictedWidgetController() { super(RestrictedWidget) }
 }

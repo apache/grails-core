@@ -32,7 +32,10 @@ import groovy.util.logging.Slf4j
 
 import org.springframework.core.convert.ConversionFailedException
 import org.springframework.core.convert.ConverterNotFoundException
+import org.springframework.core.env.ConfigurableEnvironment
+import org.springframework.core.env.EnumerablePropertySource
 import org.springframework.core.env.PropertyResolver
+import org.springframework.core.env.PropertySource
 import org.springframework.util.ClassUtils
 import org.springframework.util.ReflectionUtils
 
@@ -258,7 +261,7 @@ abstract class ConfigurationBuilder<B, C> {
                         }
 
                         if (newBuilder instanceof Map) {
-                            Map subMap = propertyResolver.getProperty(propertyPath, Map, Collections.emptyMap())
+                            Map subMap = resolveMapProperty(propertyPath, Collections.emptyMap())
                             if (!subMap.isEmpty()) {
                                 ((Map) newBuilder).putAll(subMap)
                             }
@@ -395,7 +398,9 @@ abstract class ConfigurationBuilder<B, C> {
 
                         def value
                         try {
-                            value = propertyResolver.getProperty(propertyPathForArg, argType, fallBackValue)
+                            value = argType == Map
+                                    ? resolveMapProperty(propertyPathForArg, (Map) fallBackValue)
+                                    : propertyResolver.getProperty(propertyPathForArg, argType, fallBackValue)
                         } catch (ConversionFailedException e) {
                             value = handleConversionException(e, argType, propertyPathForArg, fallBackValue)
                         } catch (ConverterNotFoundException e) {
@@ -423,6 +428,167 @@ abstract class ConfigurationBuilder<B, C> {
 
         }
 
+    }
+
+    private Map resolveMapProperty(String propertyPath, Map fallBackValue) {
+        if (propertyResolver instanceof DatastoreEnvironment || !(propertyResolver instanceof ConfigurableEnvironment)) {
+            return readDirectMap(propertyPath, fallBackValue)
+        }
+        ConfigurableEnvironment environment = (ConfigurableEnvironment) propertyResolver
+        String prefix = propertyPath + '.'
+        Map<String, Object> result = new LinkedHashMap<>()
+        Set<Map<String, Object>> containers = Collections.newSetFromMap(new IdentityHashMap<Map<String, Object>, Boolean>())
+        Set<List<Object>> builtLists = Collections.newSetFromMap(new IdentityHashMap<List<Object>, Boolean>())
+        containers.add(result)
+        boolean stored = false
+        for (PropertySource<?> propertySource : environment.propertySources) {
+            if (!(propertySource instanceof EnumerablePropertySource)) {
+                continue
+            }
+            for (String name : ((EnumerablePropertySource<?>) propertySource).propertyNames) {
+                if (name == null || !name.startsWith(prefix)) {
+                    continue
+                }
+                String relativeName = name.substring(prefix.length())
+                if (relativeName.isEmpty() || pathBlocked(result, builtLists, relativeName)) {
+                    continue
+                }
+                Object value = readEnvironmentValue(environment, name)
+                if (value == null) {
+                    continue
+                }
+                putFlattenedName(result, containers, builtLists, relativeName, value)
+                stored = true
+            }
+        }
+        if (!stored) {
+            // A map stored at the exact path is used only when no flattened name exists.
+            return readDirectMap(propertyPath, fallBackValue)
+        }
+        return result
+    }
+
+    /**
+     * Read the exact path. ConversionFailedException and ConverterNotFoundException propagate
+     * from this call, which a raw environment reaches only after the walk stored nothing.
+     */
+    private Map readDirectMap(String propertyPath, Map fallBackValue) {
+        Map directValue = propertyResolver.getProperty(propertyPath, Map)
+        if (directValue != null && !directValue.isEmpty()) {
+            return directValue
+        }
+        return directValue != null ? directValue : fallBackValue
+    }
+
+    /**
+     * Read the highest precedence entry, preserving maps and lists. String values are resolved
+     * through the environment so its unresolvable-placeholder setting is kept.
+     */
+    private static Object readEnvironmentValue(ConfigurableEnvironment environment, String name) {
+        for (PropertySource<?> propertySource : environment.propertySources) {
+            Object value = propertySource.getProperty(name)
+            if (value == null) {
+                continue
+            }
+            if (!(value instanceof String)) {
+                return value
+            }
+            String resolved = environment.getProperty(name)
+            return resolved != null ? resolved : value
+        }
+        return null
+    }
+
+    /**
+     * True when this path is already stored, or an ancestor holds a non-map.
+     * A stored map is not a blocking ancestor of a missing leaf.
+     * Only a list this walk built from a numeric index accepts a later index.
+     */
+    private static boolean pathBlocked(Map<String, Object> result, Set<List<Object>> builtLists, String name) {
+        int bracket = indexedBracket(name)
+        String listPath = bracket > 0 ? name.substring(0, bracket) : name
+        String[] segments = listPath.split('\\.')
+        Map<String, Object> current = result
+        for (int i = 0; i < segments.length - 1; i++) {
+            if (!current.containsKey(segments[i])) {
+                return false
+            }
+            Object child = current.get(segments[i])
+            if (!(child instanceof Map)) {
+                return true
+            }
+            current = (Map<String, Object>) child
+        }
+        String leaf = segments[segments.length - 1]
+        if (!current.containsKey(leaf)) {
+            return false
+        }
+        if (bracket < 0) {
+            return true
+        }
+        Object existing = current.get(leaf)
+        if (!(existing instanceof List) || !builtLists.contains((List<Object>) existing)) {
+            return true
+        }
+        int index = Integer.parseInt(name.substring(bracket + 1, name.length() - 1))
+        List<?> values = (List<?>) existing
+        return index < values.size() && values.get(index) != null
+    }
+
+    private static void putFlattenedName(Map<String, Object> result, Set<Map<String, Object>> containers,
+                                         Set<List<Object>> builtLists, String name, Object value) {
+        int bracket = indexedBracket(name)
+        String listPath = bracket > 0 ? name.substring(0, bracket) : name
+        String[] segments = listPath.split('\\.')
+        Map<String, Object> current = result
+        for (int i = 0; i < segments.length - 1; i++) {
+            Object child = current.get(segments[i])
+            if (child instanceof Map && !containers.contains((Map<String, Object>) child)) {
+                Map<String, Object> copied = new LinkedHashMap<>((Map<String, Object>) child)
+                containers.add(copied)
+                current.put(segments[i], copied)
+                child = copied
+            }
+            if (!(child instanceof Map) || !containers.contains((Map<String, Object>) child)) {
+                Map<String, Object> created = new LinkedHashMap<>()
+                containers.add(created)
+                current.put(segments[i], created)
+                child = created
+            }
+            current = (Map<String, Object>) child
+        }
+        String leaf = segments[segments.length - 1]
+        if (bracket < 0) {
+            current.put(leaf, value)
+            return
+        }
+        int index = Integer.parseInt(name.substring(bracket + 1, name.length() - 1))
+        Object existing = current.get(leaf)
+        List<Object> values
+        if (existing instanceof List && builtLists.contains((List<Object>) existing)) {
+            values = (List<Object>) existing
+        }
+        else {
+            values = new ArrayList<>()
+            builtLists.add(values)
+        }
+        while (values.size() <= index) {
+            values.add(null)
+        }
+        values.set(index, value)
+        current.put(leaf, values)
+    }
+
+    private static int indexedBracket(String name) {
+        int bracket = name.lastIndexOf('[')
+        if (bracket <= 0 || !name.endsWith(']')) {
+            return -1
+        }
+        if (name.lastIndexOf('.') > bracket) {
+            return -1
+        }
+        String indexText = name.substring(bracket + 1, name.length() - 1)
+        return indexText.matches('\\d+') ? bracket : -1
     }
 
     protected Object newChildBuilderForFallback(Object childBuilder, Object fallbackConfig) {
@@ -680,3 +846,4 @@ abstract class ConfigurationBuilder<B, C> {
         return ClassUtils.isAssignableValue(propertyType, nestedValue) ? nestedValue : null
     }
 }
+

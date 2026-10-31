@@ -153,6 +153,7 @@ class CommandObjectSpec extends Specification {
         with(openApi.components.schemas['PickupAddressCommand'].properties) {
             !street.readOnly
             verifiedBy.readOnly
+            id.readOnly
         }
 
         and: 'its subclass, which has no list of its own, binds its own properties, but none constrained bindable: false'
@@ -228,9 +229,11 @@ class NestedOrderCommand implements Validateable {
 class PickupAddressCommand implements Validateable {
     String street
     String verifiedBy
+    Long id
 
     static constraints = {
         verifiedBy bindable: false
+        id bindable: false
     }
 }
 
