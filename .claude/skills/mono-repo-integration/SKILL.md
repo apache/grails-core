@@ -1,0 +1,1 @@
+../../../.agents/skills/mono-repo-integration/SKILL.md
