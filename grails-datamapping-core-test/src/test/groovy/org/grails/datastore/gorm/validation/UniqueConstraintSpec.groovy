@@ -40,7 +40,9 @@ class UniqueConstraintSpec extends Specification {
             DefaultChannel,
             ListChannel,
             OtherListChannel,
-            Organization
+            Organization,
+            ScopedEntry,
+            SubScopedEntry
     )
 
     def setup() {
@@ -143,6 +145,27 @@ class UniqueConstraintSpec extends Specification {
         alphaChannel2.validate()
     }
 
+    void 'a null group value is compared as a value, including for subclasses'() {
+        given: 'a scoped entry and a subclass entry with the same name in no scope'
+        new ScopedEntry(name: 'Alpha', scope: 'one').save(failOnError: true, flush: true)
+        new SubScopedEntry(name: 'Beta').save(failOnError: true, flush: true)
+
+        expect: 'a null scope does not conflict with a row that has a scope'
+        new ScopedEntry(name: 'Alpha').validate()
+        new SubScopedEntry(name: 'Alpha').validate()
+
+        and: 'a null scope conflicts with a row whose scope is null, whichever class it is'
+        !new ScopedEntry(name: 'Beta').validate()
+        !new SubScopedEntry(name: 'Beta').validate()
+
+        and: 'the error is reported on the constrained property'
+        new SubScopedEntry(name: 'Beta').with { validate(); errors.getFieldError('name').code } == 'unique'
+
+        and: 'a scope conflicts only with the same scope'
+        !new ScopedEntry(name: 'Alpha', scope: 'one').validate()
+        new ScopedEntry(name: 'Alpha', scope: 'two').validate()
+    }
+
     void 'unique constraint works with hasOne'() {
         given: 'an existing channel'
         def testOrg = new Organization(
@@ -211,4 +234,23 @@ class Organization {
 
     static hasOne = [defaultChannel: DefaultChannel]
     static hasMany = [channels: Channel]
+}
+
+@Entity
+class ScopedEntry {
+
+    String name
+    String scope
+
+    static constraints = {
+        name unique: 'scope'
+        scope nullable: true
+    }
+}
+
+@Entity
+class SubScopedEntry extends ScopedEntry {
+
+    static constraints = {
+    }
 }

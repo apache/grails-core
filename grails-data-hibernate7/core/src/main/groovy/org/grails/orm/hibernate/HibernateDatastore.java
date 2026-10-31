@@ -25,6 +25,8 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.io.Serializable;
 import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -50,6 +52,7 @@ import org.hibernate.FlushMode;
 import org.hibernate.SessionFactory;
 import org.hibernate.boot.Metadata;
 import org.hibernate.cfg.Environment;
+import org.hibernate.dialect.Dialect;
 import org.hibernate.engine.spi.SessionFactoryImplementor;
 import org.hibernate.event.service.spi.EventListenerRegistry;
 import org.hibernate.event.spi.EventType;
@@ -92,6 +95,7 @@ import org.grails.datastore.gorm.validation.constraints.MappingContextAwareConst
 import org.grails.datastore.gorm.validation.constraints.builtin.UniqueConstraint;
 import org.grails.datastore.gorm.validation.constraints.registry.ConstraintRegistry;
 import org.grails.datastore.gorm.validation.registry.support.ValidatorRegistries;
+import org.grails.datastore.mapping.config.UniqueNulls;
 import org.grails.datastore.mapping.core.AbstractDatastore;
 import org.grails.datastore.mapping.core.ConnectionNotFoundException;
 import org.grails.datastore.mapping.core.Datastore;
@@ -126,6 +130,7 @@ import org.grails.orm.hibernate.cfg.Settings;
 import org.grails.orm.hibernate.connections.HibernateConnectionSource;
 import org.grails.orm.hibernate.connections.HibernateConnectionSourceFactory;
 import org.grails.orm.hibernate.connections.HibernateConnectionSourceSettings;
+import org.grails.orm.hibernate.dialect.UniqueNullsPerDialect;
 import org.grails.orm.hibernate.event.listener.HibernateEventListener;
 import org.grails.orm.hibernate.multitenancy.MultiTenantCollectionEventListener;
 import org.grails.orm.hibernate.multitenancy.MultiTenantEventListener;
@@ -178,6 +183,7 @@ public class HibernateDatastore extends AbstractDatastore
     public static final String PUBLIC_SCHEMA = "PUBLIC";
 
     protected SessionFactory sessionFactory;
+    protected volatile UniqueNullsPerDialect uniqueNullsPerDialect;
 
     /** The hibernate template. */
     protected IHibernateTemplate hibernateTemplate;
@@ -358,6 +364,10 @@ public class HibernateDatastore extends AbstractDatastore
         }
 
         this.gormEnhancer = initialize();
+        try {
+            getResolvedUniqueNulls();
+        } catch (Exception ignored) {
+        }
     }
 
     private HibernateDatastore createChildDatastore(
@@ -490,6 +500,10 @@ public class HibernateDatastore extends AbstractDatastore
         this.autoTimestampEventListener = null;
         this.gormEnhancer = null;
         this.metadata = null;
+        try {
+            getResolvedUniqueNulls();
+        } catch (Exception ignored) {
+        }
     }
 
     public HibernateDatastore(MappingContext mappingContext, SessionFactory sessionFactory, PropertyResolver config) {
@@ -986,6 +1000,87 @@ public class HibernateDatastore extends AbstractDatastore
 
     public SessionFactory getSessionFactory() {
         return sessionFactory;
+    }
+
+    /**
+     * How the unique index Hibernate creates for the database of this datastore treats a {@code null} in a composite
+     * key; see {@link UniqueNullsPerDialect}.
+     */
+    @Override
+    public UniqueNulls getDatabaseUniqueNulls() {
+        return getResolvedUniqueNulls().uniqueNulls();
+    }
+
+    @Override
+    public boolean isEntirelyNullKeyExempt() {
+        return getResolvedUniqueNulls().isEntirelyNullKeyExempt();
+    }
+
+    protected UniqueNullsPerDialect getResolvedUniqueNulls() {
+        UniqueNullsPerDialect cached = this.uniqueNullsPerDialect;
+        if (cached == null) {
+            synchronized (this) {
+                cached = this.uniqueNullsPerDialect;
+                if (cached == null) {
+                    Dialect dialect = null;
+                    try {
+                        if (getSessionFactory() instanceof SessionFactoryImplementor sfi) {
+                            dialect = sfi.getJdbcServices().getDialect();
+                        }
+                    } catch (Exception ignored) {
+                    }
+                    String h2Mode = null;
+                    if (isH2Dialect(dialect)) {
+                        h2Mode = queryH2Mode();
+                    }
+                    cached = UniqueNullsPerDialect.forDialect(dialect, getJdbcUrl(), h2Mode);
+                    this.uniqueNullsPerDialect = cached;
+                }
+            }
+        }
+        return cached;
+    }
+
+    protected String queryH2Mode() {
+        try {
+            DataSource ds = getDataSource();
+            if (ds != null) {
+                try (Connection conn = ds.getConnection();
+                     PreparedStatement ps = conn.prepareStatement(
+                             "select setting_value from information_schema.settings where setting_name = 'MODE'");
+                     ResultSet rs = ps.executeQuery()) {
+                    if (rs.next()) {
+                        return rs.getString(1);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            LOG.debug("Could not determine H2 MODE from information_schema.settings: {}", e.getMessage());
+        }
+        return null;
+    }
+
+    private static boolean isH2Dialect(Dialect dialect) {
+        return dialect != null && (dialect instanceof org.hibernate.dialect.H2Dialect ||
+                dialect.getClass().getSimpleName().startsWith("H2"));
+    }
+
+    protected String getJdbcUrl() {
+        if (this.connectionSources != null) {
+            if (this.connectionSources.getDefaultConnectionSource() != null) {
+                HibernateConnectionSourceSettings settings = this.connectionSources.getDefaultConnectionSource().getSettings();
+                if (settings != null && settings.getDataSource() != null && settings.getDataSource().getUrl() != null) {
+                    return settings.getDataSource().getUrl();
+                }
+            }
+            if (this.connectionSources.getBaseConfiguration() != null) {
+                String url = this.connectionSources.getBaseConfiguration().getProperty("dataSource.url", String.class);
+                if (url != null) {
+                    return url;
+                }
+            }
+        }
+        return null;
     }
 
     /**

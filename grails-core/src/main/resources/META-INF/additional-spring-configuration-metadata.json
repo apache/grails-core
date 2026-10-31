@@ -311,6 +311,12 @@
             "defaultValue": {}
         },
         {
+            "name": "grails.gorm.unique.nulls",
+            "type": "java.lang.String",
+            "description": "How the unique constraint reads a null in a composite key: database (the reading of the database's own unique index), skip (a null is never a duplicate), value (a null matches only another null) or wildcard (a null group property matches every row, the behavior before Grails 9).",
+            "defaultValue": "database"
+        },
+        {
             "name": "grails.gorm.default.nullable",
             "type": "java.lang.Boolean",
             "description": "Whether an unconstrained persistent property is nullable by default (Grails 8). Set to false to restore the legacy required-by-default behaviour.",

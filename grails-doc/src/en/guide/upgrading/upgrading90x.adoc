@@ -1241,3 +1241,34 @@ Grails no longer registers a character encoding filter of its own. It used to, a
 * `spring.servlet.encoding.enabled: false` turns the encoding filter off.
 * The CAS plugin's single sign-out filter, which reads a parameter of every POST, is registered right after the encoding filter.
 * A filter of your own that reads request parameters needs a later order than `Ordered.HIGHEST_PRECEDENCE`, or form input reaches controllers decoded as ISO-8859-1. One registered at exactly `Ordered.HIGHEST_PRECEDENCE` through a `FilterRegistrationBean` runs before the encoding filter.
+
+==== 21. A Null in a Unique Constraint's Composite Key Follows the Database
+
+A `unique` constraint that names other properties, such as `url unique: 'httpMethod'`, validates the constrained property together with the properties of its group.
+Before Grails 9, a group property whose value was `null` was left out of the query that looks for a conflicting row.
+The constraint then checked the constrained property alone, so `new Language(language: 'en')` was rejected when a `Language` with `language: 'en'` and `country: 'US'` existed, although the two rows differ in `country`.
+That was stricter than any reading of `null`: in SQL a `null` never conflicts, and where `null` is a value it conflicts only with another `null`.
+
+In Grails 9 the constraint reads a `null` in its key, in the group and in the constrained property, as the unique index of the database does, so that the validation and the index agree:
+
+* `skip` on H2, PostgreSQL, MySQL, MariaDB, on SQL Server with Hibernate 7, and on Db2 for IBM i and z/OS with Hibernate 7, whose index leaves a row with a `null` out: `('en', null)` is never a duplicate.
+* `value` on Oracle, on Db2 for Linux, UNIX and Windows with Hibernate 7 (`exclude null keys` indexes partly null keys), on Db2, SQL Server and Sybase with Hibernate 5 (a plain unique constraint compares `null` values), and on a datastore with no such index such as MongoDB: a partly null key `('en', null)` conflicts only with another `('en', null)`. Under `database`, an entirely null key `(null, null)` or an optional single property with value `null` is accepted on every database (and on datastores without a unique index of their own, such as MongoDB, Neo4j, and the in-memory datastore of unit tests) except SQL Server, Sybase, and Db2 on Hibernate 5, where the plain unique constraint compares `null` values. An explicit `value` reading rejects an entirely null key on every datastore. H2 compatibility modes follow the native platform each mode emulates (for example, `MODE=Oracle` reads `value`). See the per-database table in the <<unique,unique>> constraint reference.
+
+Applications that relied on a `null` group value matching every row of the constrained property are affected: their saves are no longer rejected when the rows differ in that group property. To keep the previous behavior for a constraint, ask for the `wildcard` reading:
+
+[source,groovy]
+----
+url unique: [group: 'httpMethod', nulls: 'wildcard']
+----
+
+To select a reading for the whole application, set `grails.gorm.unique.nulls` to `database` (the default), `skip`, `value` or `wildcard`:
+
+[source,yaml]
+----
+grails:
+    gorm:
+        unique:
+            nulls: wildcard
+----
+
+`name unique: true` is not a replacement for `wildcard`, since it makes the name unique across every parent. The constraints reference describes the four readings and the reading each database gets under `database`.
