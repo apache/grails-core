@@ -18,18 +18,25 @@
  */
 package org.grails.orm.hibernate
 
+import java.sql.SQLException
 import java.util.UUID
 
 import grails.gorm.annotation.Entity
 import grails.gorm.hibernate.HibernateEntity
 import grails.gorm.tests.HibernateGormDatastoreSpec
 import jakarta.persistence.PersistenceException
+import org.grails.orm.hibernate.support.hibernate7.HibernateJdbcException
+import org.grails.orm.hibernate.support.hibernate7.SessionHolder
 import org.grails.orm.hibernate.support.hibernate7.TransactionResources
 import org.hibernate.FlushMode
 import org.hibernate.HibernateException
 import org.hibernate.LockMode
 import org.hibernate.Session
+import org.hibernate.engine.spi.SessionFactoryImplementor
+import org.hibernate.exception.GenericJDBCException
+import org.hibernate.service.spi.ServiceRegistryImplementor
 import org.springframework.dao.DataAccessException
+import org.springframework.dao.DataIntegrityViolationException
 import org.springframework.transaction.support.TransactionSynchronizationManager
 
 class GrailsHibernateTemplateSpec extends HibernateGormDatastoreSpec {
@@ -38,7 +45,7 @@ class GrailsHibernateTemplateSpec extends HibernateGormDatastoreSpec {
 
     @Override
     void setupSpec() {
-        manager.registerDomainClasses(TemplateBook)
+        manager.registerDomainClasses(TemplateBook, TemplateLengthOverrunEntity)
     }
 
     void setup() {
@@ -164,6 +171,47 @@ class GrailsHibernateTemplateSpec extends HibernateGormDatastoreSpec {
         then: "the new session is functional and returns a non-null result"
         count != null
         count >= 0L
+    }
+
+    void "executeWithNewSession flushes eagerly and translates HibernateException to DataAccessException"() {
+        given:
+        template.flushMode = GrailsHibernateTemplate.FLUSH_EAGER
+
+        when: "an entity exceeding column length is persisted and flushed inside executeWithNewSession"
+        template.executeWithNewSession { Session session ->
+            session.beginTransaction()
+            TemplateLengthOverrunEntity entity = new TemplateLengthOverrunEntity(code: 'this string is much too long for varchar 5')
+            session.persist(entity)
+            null
+        }
+
+        then:
+        thrown(DataIntegrityViolationException)
+    }
+
+    void "executeWithNewSession restores outer session and propagates exception when openSession fails"() {
+        given:
+        Session outerSession = sessionFactory.openSession()
+        SessionHolder outerHolder = new SessionHolder(outerSession)
+
+        SessionFactoryImplementor mockFactory = Mock(SessionFactoryImplementor)
+        ServiceRegistryImplementor registry = Mock(ServiceRegistryImplementor)
+        mockFactory.getServiceRegistry() >> registry
+        mockFactory.openSession() >> { throw new RuntimeException("Simulated openSession failure") }
+        GrailsHibernateTemplate mockTemplate = new GrailsHibernateTemplate(mockFactory, manager.hibernateDatastore)
+        TransactionSynchronizationManager.bindResource(mockFactory, outerHolder)
+
+        when:
+        mockTemplate.executeWithNewSession { Session s -> 'unreachable' }
+
+        then:
+        RuntimeException ex = thrown(RuntimeException)
+        ex.message == "Simulated openSession failure"
+        TransactionSynchronizationManager.getResource(mockFactory) == outerHolder
+
+        cleanup:
+        TransactionSynchronizationManager.unbindResourceIfPossible(mockFactory)
+        outerSession?.close()
     }
 
     // -------------------------------------------------------------------------
@@ -1007,6 +1055,14 @@ class GrailsHibernateTemplateSpec extends HibernateGormDatastoreSpec {
         thrown(DataAccessException)
     }
 
+    void "doExecute wraps untranslatable GenericJDBCException as HibernateJdbcException"() {
+        when:
+        template.execute { sess -> throw new GenericJDBCException('msg', new SQLException('untranslatable')) }
+
+        then:
+        thrown(HibernateJdbcException)
+    }
+
     void "doExecute wraps PersistenceException with HibernateException cause as DataAccessException"() {
         when:
         template.execute { sess ->
@@ -1123,6 +1179,18 @@ class GrailsHibernateTemplateSpec extends HibernateGormDatastoreSpec {
         converted instanceof DataAccessException
     }
 
+    void "convertHibernateAccessException falls back to SessionFactoryUtils when translator returns null"() {
+        given:
+        GenericJDBCException genericEx = new GenericJDBCException('msg', new SQLException('untranslatable'))
+
+        when:
+        DataAccessException converted = template.convertHibernateAccessException(genericEx)
+
+        then:
+        converted instanceof HibernateJdbcException
+        converted.cause == genericEx
+    }
+
     void "createSessionProxy handles EventSource"() {
         given:
         def mockEventSourceSession = Mock(org.hibernate.event.spi.EventSource)
@@ -1215,11 +1283,14 @@ class GrailsHibernateTemplateSpec extends HibernateGormDatastoreSpec {
         def templateUnderTest = new GrailsHibernateTemplate(mockSessionFactory)
         templateUnderTest.txResources = mockTxResources
 
+        def mockSession = Mock(org.hibernate.engine.spi.SessionImplementor)
+        mockSessionFactory.getCurrentSession() >> mockSession
+
         when: "executeWithNewSession is called"
         templateUnderTest.executeWithNewSession { session -> }
 
         then: "The multi-tenant data source is handled correctly"
-        1 * mockSessionFactory.openSession() >> Mock(org.hibernate.engine.spi.SessionImplementor)
+        1 * mockSessionFactory.openSession() >> mockSession
         // Ensure the resource is unbound
         1 * mockTxResources.unbindResourceIfPossible(mockMultiTenantDataSource) >> null
         
@@ -1238,4 +1309,15 @@ class TemplateBook implements HibernateEntity<TemplateBook> {
 class H7TemplateTsmBook implements HibernateEntity<H7TemplateTsmBook> {
     String title
     String author
+}
+
+@Entity
+class TemplateLengthOverrunEntity implements HibernateEntity<TemplateLengthOverrunEntity> {
+    Long id
+    Long version
+    String code
+
+    static mapping = {
+        code length: 5
+    }
 }
