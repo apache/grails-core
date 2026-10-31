@@ -320,9 +320,10 @@ public class PredicateGenerator {
 
         // Create a nested context for this association
         JpaQueryContext nestedContext = new JpaQueryContext(fromsByProvider, null, associationRoot);
+        List<Query.Criterion> criteriaList = associationCriteria.getCriteria();
+        JpaCriteriaQueryCreator.discoverAliases(criteriaList, nestedContext);
 
         GrailsHibernatePersistentEntity associatedEntity = (GrailsHibernatePersistentEntity) associationCriteria.getAssociation().getAssociatedEntity();
-        List<Query.Criterion> criteriaList = associationCriteria.getCriteria();
         return criteriaBuilder.and(getPredicates(criteriaQuery, associationRoot, criteriaList, nestedContext, associatedEntity));
     }
 
@@ -344,9 +345,10 @@ public class PredicateGenerator {
 
         // Create a nested context for this association
         JpaQueryContext nestedContext = new JpaQueryContext(fromsByProvider, null, associationRoot);
+        List<Query.Criterion> criteriaList = associationQuery.getAssociationCriteria();
+        JpaCriteriaQueryCreator.discoverAliases(criteriaList, nestedContext);
 
         GrailsHibernatePersistentEntity associatedEntity = associationQuery.getEntity();
-        List<Query.Criterion> criteriaList = associationQuery.getAssociationCriteria();
         return criteriaBuilder.and(getPredicates(criteriaQuery, associationRoot, criteriaList, nestedContext, associatedEntity));
     }
 

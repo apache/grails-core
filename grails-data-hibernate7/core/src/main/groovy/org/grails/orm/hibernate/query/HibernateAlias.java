@@ -27,10 +27,14 @@ import org.grails.datastore.mapping.query.Query;
  *
  * @author walterduquedeestrada
  */
-public record HibernateAlias(String path, String alias, JoinType joinType)
+public record HibernateAlias(String path, String alias, JoinType joinType, boolean explicit)
         implements Query.Criterion, Query.QueryElement {
 
+    public HibernateAlias(String path, String alias, JoinType joinType) {
+        this(path, alias, joinType, true);
+    }
+
     public HibernateAlias(String path, String alias) {
-        this(path, alias, JoinType.INNER);
+        this(path, alias, JoinType.INNER, true);
     }
 }

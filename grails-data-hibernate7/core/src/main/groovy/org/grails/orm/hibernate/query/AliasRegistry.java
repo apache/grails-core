@@ -28,13 +28,23 @@ import jakarta.persistence.criteria.Expression;
 public class AliasRegistry {
     private final Map<String, HibernateAlias> definitions = new HashMap<>();
     private final Map<String, Expression<?>> realizedExpressions = new HashMap<>();
-    private final AliasRegistry parent;
+    private final boolean isSubquery;
+    private AliasRegistry parent;
 
     public AliasRegistry() {
-        this.parent = null;
+        this(null, false);
     }
 
     public AliasRegistry(AliasRegistry parent) {
+        this(parent, false);
+    }
+
+    public AliasRegistry(AliasRegistry parent, boolean isSubquery) {
+        this.parent = parent;
+        this.isSubquery = isSubquery;
+    }
+
+    public void setParent(AliasRegistry parent) {
         this.parent = parent;
     }
 
@@ -46,19 +56,34 @@ public class AliasRegistry {
         realizedExpressions.put(alias, expression);
     }
 
+    public boolean hasLocalDefinition(String alias) {
+        return definitions.containsKey(alias);
+    }
+
+    public boolean isExplicit(String alias) {
+        HibernateAlias def = definitions.get(alias);
+        if (def != null) {
+            return def.explicit();
+        }
+        if (parent != null) {
+            return parent.isExplicit(alias);
+        }
+        return false;
+    }
+
     public boolean isDefined(String alias) {
         if (definitions.containsKey(alias) || realizedExpressions.containsKey(alias)) {
             return true;
         }
         if (parent != null) {
-            return parent.isDefined(alias);
+            return isSubquery ? parent.isExplicit(alias) : parent.isDefined(alias);
         }
         return false;
     }
 
     public HibernateAlias getDefinition(String alias) {
         HibernateAlias def = definitions.get(alias);
-        if (def == null && parent != null) {
+        if (def == null && parent != null && (isSubquery ? parent.isExplicit(alias) : parent.isDefined(alias))) {
             return parent.getDefinition(alias);
         }
         return def;
@@ -66,13 +91,14 @@ public class AliasRegistry {
 
     public Expression<?> getRealized(String alias) {
         Expression<?> expr = realizedExpressions.get(alias);
-        if (expr == null && parent != null) {
+        if (expr == null && parent != null && (isSubquery ? parent.isExplicit(alias) : parent.isDefined(alias))) {
             return parent.getRealized(alias);
         }
         return expr;
     }
 
     public boolean hasRealized(String alias) {
-        return realizedExpressions.containsKey(alias) || (parent != null && parent.hasRealized(alias));
+        return realizedExpressions.containsKey(alias) ||
+            (parent != null && (isSubquery ? parent.isExplicit(alias) : parent.isDefined(alias)) && parent.hasRealized(alias));
     }
 }
