@@ -25,6 +25,7 @@ import org.hibernate.dialect.DB2zDialect;
 import org.hibernate.dialect.Dialect;
 import org.hibernate.dialect.OracleDialect;
 
+import org.grails.datastore.mapping.config.DatabasePlatform;
 import org.grails.datastore.mapping.config.UniqueNulls;
 
 /**
@@ -57,6 +58,9 @@ public enum UniqueNullsPerDialect implements DialectKeyed<UniqueNullsPerDialect>
     // Db2 for Linux, UNIX and Windows: `exclude null keys` leaves out only a key that is null in every column
     DB2(UniqueNulls.VALUE, true, DB2Dialect.class),
 
+    // Compatibility modes (e.g. H2 in MODE=MSSQLServer or MODE=Derby) where all keys including all-null are compared
+    COMPARE_ALL(UniqueNulls.VALUE, false),
+
     DEFAULT(UniqueNulls.SKIP, false, Dialect.class);
 
     private final UniqueNulls uniqueNulls;
@@ -72,7 +76,40 @@ public enum UniqueNullsPerDialect implements DialectKeyed<UniqueNullsPerDialect>
 
     /** The reading that fits the dialect, {@link #DEFAULT} unless the dialect is listed. */
     public static UniqueNullsPerDialect forDialect(Dialect dialect) {
+        return forDialect(dialect, null, null);
+    }
+
+    /**
+     * The reading that fits the dialect and optional JDBC URL, resolving compatibility modes (such as H2
+     * in {@code MODE=Oracle} or {@code MODE=MSSQLServer}) when applicable.
+     */
+    public static UniqueNullsPerDialect forDialect(Dialect dialect, String jdbcUrl) {
+        return forDialect(dialect, jdbcUrl, null);
+    }
+
+    /**
+     * The reading that fits the dialect, optional JDBC URL, and optional runtime H2 mode, resolving
+     * compatibility modes (such as H2 in {@code MODE=Oracle} or {@code MODE=MSSQLServer}) when applicable.
+     */
+    public static UniqueNullsPerDialect forDialect(Dialect dialect, String jdbcUrl, String h2Mode) {
+        if (dialect != null && isH2(dialect)) {
+            String modeSpec = (h2Mode != null && !h2Mode.trim().isEmpty()) ? h2Mode : jdbcUrl;
+            if (modeSpec != null) {
+                DatabasePlatform platform = DatabasePlatform.resolveForH2(modeSpec);
+                if (platform == DatabasePlatform.ORACLE || platform == DatabasePlatform.DB2_LUW) {
+                    return ORACLE;
+                }
+                if (platform == DatabasePlatform.SQL_SERVER || platform == DatabasePlatform.DERBY || platform == DatabasePlatform.SYBASE) {
+                    return COMPARE_ALL;
+                }
+            }
+        }
         return DialectKeyed.forDialect(UniqueNullsPerDialect.class, dialect);
+    }
+
+    private static boolean isH2(Dialect dialect) {
+        return dialect instanceof org.hibernate.dialect.H2Dialect ||
+                dialect.getClass().getSimpleName().startsWith("H2");
     }
 
     @Override

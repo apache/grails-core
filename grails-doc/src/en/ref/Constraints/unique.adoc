@@ -98,6 +98,16 @@ The unique index Hibernate creates for the group treats `null` values as follows
 |`skip`
 |`null` values are distinct in a unique index.
 
+|H2 (Oracle mode)
+|5 and 7
+|`value`
+|Emulates Oracle: a row with a `null` in some key columns is indexed and compared, while entirely-null keys are exempt.
+
+|H2 (SQL Server and Derby modes)
+|5 and 7
+|`value`
+|Emulates SQL Server and Derby: unique constraints compare all `null` values as equal.
+
 |SQL Server
 |7
 |`skip`
@@ -129,7 +139,7 @@ The unique index Hibernate creates for the group treats `null` values as follows
 |A row with a `null` in some of the key columns is indexed, and its other columns are compared, so `('en', null)` twice is a violation.
 |===
 
-Under `database`, an entirely null key `(null, null)` or an optional single property with value `null` is accepted everywhere except SQL Server, Sybase and Db2 on Hibernate 5, where the plain unique constraint compares it. Datastores without a unique index of their own—MongoDB, Neo4j and the in-memory datastore of unit tests—read `value` for a partly null key and accept an entirely null one. An explicit `value`, on the constraint or in `grails.gorm.unique.nulls`, rejects an entirely null key on every datastore.
+Under `database`, an entirely null key `(null, null)` or an optional single property with value `null` is accepted everywhere except SQL Server, Sybase and Db2 on Hibernate 5, where the plain unique constraint compares it. Datastores without a unique index of their own (MongoDB, Neo4j, and the in-memory datastore of unit tests) read `value` for a partly null key and accept an entirely null one. An explicit `value`, on the constraint or in `grails.gorm.unique.nulls`, rejects an entirely null key on every datastore.
 
 To select a reading for one constraint, give the constraint a map with the `group` and the reading as `nulls`:
 

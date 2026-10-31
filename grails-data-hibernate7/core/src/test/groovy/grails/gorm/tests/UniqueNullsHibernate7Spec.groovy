@@ -50,7 +50,7 @@ class UniqueNullsHibernate7Spec extends HibernateGormDatastoreSpec {
             .withStartupTimeout(Duration.ofMinutes(3))
 
     void setupSpec() {
-        manager.registerDomainClasses(UnqLanguage, UnqLanguageValue, UnqEmail)
+        manager.registerDomainClasses(UnqLanguage, UnqLanguageValue, UnqEmail, UnqLanguageSetGroup)
     }
 
     @Unroll
@@ -209,6 +209,101 @@ class UniqueNullsHibernate7Spec extends HibernateGormDatastoreSpec {
         'MariaDB'  | mariadb   | false
         'Oracle'   | oracle    | true
     }
+
+    @Unroll
+    void 'H2 in #h2Mode mode resolves uniqueNulls as #reading and allNullExempt as #allNullExempt'() {
+        given:
+        manager.destroy()
+        manager.grailsConfig = [
+                'dataSource.url'            : "jdbc:h2:mem:uniqueNullsH2Mode${h2Mode};MODE=${h2Mode};LOCK_TIMEOUT=10000".toString(),
+                'dataSource.driverClassName': 'org.h2.Driver',
+                'dataSource.username'       : 'sa',
+                'dataSource.password'       : '',
+                'dataSource.dbCreate'       : 'create-drop'
+        ]
+        manager.setup(this.class)
+        UnqLanguage.withNewTransaction {
+            new UnqLanguage(language: 'en', country: null).save(validate: false, flush: true)
+        }
+
+        when: 'the same partly-null key is validated and saved'
+        boolean validationRejects = UnqLanguage.withNewSession {
+            UnqLanguage.withNewTransaction {
+                !new UnqLanguage(language: 'en', country: null).validate()
+            }
+        }
+        boolean indexRejects = false
+        try {
+            UnqLanguage.withNewTransaction {
+                new UnqLanguage(language: 'en', country: null).save(validate: false, flush: true)
+            }
+        } catch (DataIntegrityViolationException ignored) {
+            indexRejects = true
+        }
+
+        then: 'the datastore reflects the mode and validation agrees with the index'
+        manager.session.datastore.databaseUniqueNulls == reading
+        manager.session.datastore.uniqueNulls == reading
+        manager.session.datastore.isEntirelyNullKeyExempt() == allNullExempt
+        validationRejects == indexRejects
+        indexRejects == (reading == UniqueNulls.VALUE)
+
+        where:
+        h2Mode        || reading             | allNullExempt
+        'Oracle'      || UniqueNulls.VALUE   | true
+        'MSSQLServer' || UniqueNulls.VALUE   | false
+        'Derby'       || UniqueNulls.VALUE   | false
+        'PostgreSQL'  || UniqueNulls.SKIP    | false
+        'MySQL'       || UniqueNulls.SKIP    | false
+        'REGULAR'     || UniqueNulls.SKIP    | false
+    }
+
+    void 'a unique constraint with a Set group generates a composite unique index'() {
+        given:
+        manager.destroy()
+        manager.grailsConfig = [
+                'dataSource.url'            : 'jdbc:h2:mem:uniqueNullsSetGroup;LOCK_TIMEOUT=10000',
+                'dataSource.driverClassName': 'org.h2.Driver',
+                'dataSource.username'       : 'sa',
+                'dataSource.password'       : '',
+                'dataSource.dbCreate'       : 'create-drop'
+        ]
+        manager.setup(this.class)
+
+        expect: 'the mapped property has the set elements in its uniqueness group'
+        def entity = manager.session.mappingContext.getPersistentEntity(UnqLanguageSetGroup.name)
+        entity.getPropertyByName('language').mapping.mappedForm.uniquenessGroup == ['country']
+
+        when: 'saving an initial row'
+        UnqLanguageSetGroup.withNewTransaction {
+            new UnqLanguageSetGroup(language: 'en', country: 'US').save(failOnError: true, flush: true)
+        }
+
+        then: 'a duplicate row is rejected by validation'
+        UnqLanguageSetGroup.withNewSession {
+            UnqLanguageSetGroup.withNewTransaction {
+                !new UnqLanguageSetGroup(language: 'en', country: 'US').validate()
+            }
+        }
+
+        and: 'a different country in the group is valid'
+        UnqLanguageSetGroup.withNewSession {
+            UnqLanguageSetGroup.withNewTransaction {
+                new UnqLanguageSetGroup(language: 'en', country: 'GB').validate()
+            }
+        }
+
+        and: 'the database composite unique key rejects the duplicate at the SQL level'
+        boolean sqlRejectsDuplicate = false
+        try {
+            UnqLanguageSetGroup.withNewTransaction {
+                new UnqLanguageSetGroup(language: 'en', country: 'US').save(validate: false, flush: true)
+            }
+        } catch (DataIntegrityViolationException ignored) {
+            sqlRejectsDuplicate = true
+        }
+        sqlRejectsDuplicate
+    }
 }
 
 @Entity
@@ -255,5 +350,22 @@ class UnqLanguageValue {
 
     static mapping = {
         version false
+    }
+}
+
+@Entity
+class UnqLanguageSetGroup {
+
+    String language
+    String country
+
+    static constraints = {
+        language(nullable: true, unique: [group: (['country'] as Set), nulls: 'value'])
+        country(nullable: true)
+    }
+
+    static mapping = {
+        version false
+        language unique: (['country'] as Set)
     }
 }

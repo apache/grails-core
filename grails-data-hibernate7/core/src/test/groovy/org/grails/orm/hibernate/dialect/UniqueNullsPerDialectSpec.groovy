@@ -54,4 +54,36 @@ class UniqueNullsPerDialectSpec extends Specification {
         new DB2iDialect()       || UniqueNulls.SKIP  | false
         new DB2zDialect()       || UniqueNulls.SKIP  | false
     }
+
+    @Unroll
+    void 'H2 with #url reads nulls as #expected with all-null exempt #allNullExempt'() {
+        expect:
+        UniqueNullsPerDialect.forDialect(new H2Dialect(), url).uniqueNulls() == expected
+        UniqueNullsPerDialect.forDialect(new H2Dialect(), url).isEntirelyNullKeyExempt() == allNullExempt
+
+        where:
+        url                                 || expected          | allNullExempt
+        'jdbc:h2:mem:db;LOCK_TIMEOUT=10000' || UniqueNulls.SKIP  | false
+        'jdbc:h2:mem:db;MODE=PostgreSQL'    || UniqueNulls.SKIP  | false
+        'jdbc:h2:mem:db;MODE=MySQL'         || UniqueNulls.SKIP  | false
+        'jdbc:h2:mem:db;MODE=Oracle'        || UniqueNulls.VALUE | true
+        'jdbc:h2:mem:db;MODE=MSSQLServer'   || UniqueNulls.VALUE | false
+        'jdbc:h2:mem:db;MODE=Derby'         || UniqueNulls.VALUE | false
+    }
+
+    @Unroll
+    void 'H2 with mode #mode reads nulls as #expected with all-null exempt #allNullExempt'() {
+        expect:
+        UniqueNullsPerDialect.forDialect(new H2Dialect(), null, mode).uniqueNulls() == expected
+        UniqueNullsPerDialect.forDialect(new H2Dialect(), null, mode).isEntirelyNullKeyExempt() == allNullExempt
+
+        where:
+        mode          || expected          | allNullExempt
+        'REGULAR'     || UniqueNulls.SKIP  | false
+        'PostgreSQL'  || UniqueNulls.SKIP  | false
+        'MySQL'       || UniqueNulls.SKIP  | false
+        'Oracle'      || UniqueNulls.VALUE | true
+        'MSSQLServer' || UniqueNulls.VALUE | false
+        'Derby'       || UniqueNulls.VALUE | false
+    }
 }

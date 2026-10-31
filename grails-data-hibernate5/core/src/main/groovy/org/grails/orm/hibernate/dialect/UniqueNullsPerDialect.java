@@ -28,6 +28,7 @@ import org.hibernate.dialect.Oracle9Dialect;
 import org.hibernate.dialect.SQLServerDialect;
 import org.hibernate.dialect.SybaseDialect;
 
+import org.grails.datastore.mapping.config.DatabasePlatform;
 import org.grails.datastore.mapping.config.UniqueNulls;
 
 /**
@@ -76,10 +77,43 @@ public enum UniqueNullsPerDialect {
 
     /** The reading that fits the dialect, {@link #DEFAULT} unless the dialect is listed. */
     public static UniqueNullsPerDialect forDialect(Dialect dialect) {
+        return forDialect(dialect, null, null);
+    }
+
+    /**
+     * The reading that fits the dialect and optional JDBC URL, resolving compatibility modes (such as H2
+     * in {@code MODE=Oracle} or {@code MODE=MSSQLServer}) when applicable.
+     */
+    public static UniqueNullsPerDialect forDialect(Dialect dialect, String jdbcUrl) {
+        return forDialect(dialect, jdbcUrl, null);
+    }
+
+    /**
+     * The reading that fits the dialect, optional JDBC URL, and optional runtime H2 mode, resolving
+     * compatibility modes (such as H2 in {@code MODE=Oracle} or {@code MODE=MSSQLServer}) when applicable.
+     */
+    public static UniqueNullsPerDialect forDialect(Dialect dialect, String jdbcUrl, String h2Mode) {
+        if (dialect != null && isH2(dialect)) {
+            String modeSpec = (h2Mode != null && !h2Mode.trim().isEmpty()) ? h2Mode : jdbcUrl;
+            if (modeSpec != null) {
+                DatabasePlatform platform = DatabasePlatform.resolveForH2(modeSpec);
+                if (platform == DatabasePlatform.ORACLE) {
+                    return ORACLE;
+                }
+                if (platform == DatabasePlatform.SQL_SERVER || platform == DatabasePlatform.DERBY || platform == DatabasePlatform.SYBASE) {
+                    return SQL_SERVER;
+                }
+            }
+        }
         return Arrays.stream(values())
                 .filter(entry -> entry != DEFAULT && Arrays.stream(entry.dialectClasses).anyMatch(clazz -> clazz.isInstance(dialect)))
                 .findFirst()
                 .orElse(DEFAULT);
+    }
+
+    private static boolean isH2(Dialect dialect) {
+        return dialect instanceof org.hibernate.dialect.H2Dialect ||
+                dialect.getClass().getSimpleName().startsWith("H2");
     }
 
     public UniqueNulls uniqueNulls() {

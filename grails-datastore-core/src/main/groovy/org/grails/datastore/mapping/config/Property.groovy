@@ -287,12 +287,27 @@ class Property implements Cloneable {
 
     void setUnique(String name) {
         setUnique(true)
-        this.uniquenessGroup.add(name)
+        if (!this.uniquenessGroup.contains(name)) {
+            this.uniquenessGroup.add(name)
+        }
     }
 
     void setUnique(List<String> names) {
         setUnique(true)
-        this.uniquenessGroup.addAll(names)
+        for (String name : names) {
+            if (!this.uniquenessGroup.contains(name)) {
+                this.uniquenessGroup.add(name)
+            }
+        }
+    }
+
+    void setUnique(Collection<String> names) {
+        setUnique(true)
+        for (String name : names) {
+            if (!this.uniquenessGroup.contains(name)) {
+                this.uniquenessGroup.add(name)
+            }
+        }
     }
 
     /**
@@ -304,6 +319,12 @@ class Property implements Cloneable {
         Object group = options.get('group')
         if (group instanceof List) {
             setUnique((List<String>) group)
+        } else if (group instanceof Collection) {
+            setUnique(((Collection<?>) group).collect { it.toString() })
+        } else if (group instanceof Iterable) {
+            setUnique(((Iterable<?>) group).collect { it.toString() })
+        } else if (group instanceof Object[]) {
+            setUnique(((Object[]) group).collect { it.toString() })
         } else if (group instanceof CharSequence) {
             setUnique(group.toString())
         } else {
@@ -320,6 +341,10 @@ class Property implements Cloneable {
     }
 
     void unique(List<String> names) {
+        setUnique(names)
+    }
+
+    void unique(Collection<String> names) {
         setUnique(names)
     }
 

@@ -21,6 +21,9 @@ package org.grails.orm.hibernate;
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.Serializable;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
@@ -101,6 +104,7 @@ public abstract class AbstractHibernateDatastore extends AbstractDatastore imple
     private static final ThreadLocal<Boolean> RESOLVING_TENANT = new ThreadLocal<>();
 
     protected final SessionFactory sessionFactory;
+    protected volatile UniqueNullsPerDialect uniqueNullsPerDialect;
     protected final ConnectionSources<SessionFactory, HibernateConnectionSourceSettings> connectionSources;
     protected final String defaultFlushModeName;
     protected final MultiTenancySettings.MultiTenancyMode multiTenantMode;
@@ -146,6 +150,10 @@ public abstract class AbstractHibernateDatastore extends AbstractDatastore imple
         if (multiTenantResolver instanceof DatastoreAware) {
             ((DatastoreAware) multiTenantResolver).setDatastore(this);
         }
+        try {
+            getResolvedUniqueNulls();
+        } catch (Exception ignored) {
+        }
     }
 
     protected AbstractHibernateDatastore(MappingContext mappingContext, SessionFactory sessionFactory, PropertyResolver config, ApplicationContext applicationContext, String dataSourceName) {
@@ -176,6 +184,10 @@ public abstract class AbstractHibernateDatastore extends AbstractDatastore imple
         this.tenantResolver = new FixedTenantResolver();
         this.multiTenantMode = MultiTenancySettings.MultiTenancyMode.NONE;
         this.schemaHandler = new DefaultSchemaHandler();
+        try {
+            getResolvedUniqueNulls();
+        } catch (Exception ignored) {
+        }
     }
 
     public AbstractHibernateDatastore(MappingContext mappingContext, SessionFactory sessionFactory, PropertyResolver config) {
@@ -296,14 +308,79 @@ public abstract class AbstractHibernateDatastore extends AbstractDatastore imple
      */
     @Override
     public UniqueNulls getDatabaseUniqueNulls() {
-        Dialect dialect = ((SessionFactoryImplementor) getSessionFactory()).getJdbcServices().getDialect();
-        return UniqueNullsPerDialect.forDialect(dialect).uniqueNulls();
+        return getResolvedUniqueNulls().uniqueNulls();
     }
 
     @Override
     public boolean isEntirelyNullKeyExempt() {
-        Dialect dialect = ((SessionFactoryImplementor) getSessionFactory()).getJdbcServices().getDialect();
-        return UniqueNullsPerDialect.forDialect(dialect).isEntirelyNullKeyExempt();
+        return getResolvedUniqueNulls().isEntirelyNullKeyExempt();
+    }
+
+    protected UniqueNullsPerDialect getResolvedUniqueNulls() {
+        UniqueNullsPerDialect cached = this.uniqueNullsPerDialect;
+        if (cached == null) {
+            synchronized (this) {
+                cached = this.uniqueNullsPerDialect;
+                if (cached == null) {
+                    Dialect dialect = null;
+                    try {
+                        if (getSessionFactory() instanceof SessionFactoryImplementor) {
+                            dialect = ((SessionFactoryImplementor) getSessionFactory()).getJdbcServices().getDialect();
+                        }
+                    } catch (Exception ignored) {
+                    }
+                    String h2Mode = null;
+                    if (isH2Dialect(dialect)) {
+                        h2Mode = queryH2Mode();
+                    }
+                    cached = UniqueNullsPerDialect.forDialect(dialect, getJdbcUrl(), h2Mode);
+                    this.uniqueNullsPerDialect = cached;
+                }
+            }
+        }
+        return cached;
+    }
+
+    protected String queryH2Mode() {
+        try {
+            DataSource ds = getDataSource();
+            if (ds != null) {
+                try (Connection conn = ds.getConnection();
+                     PreparedStatement ps = conn.prepareStatement(
+                             "select setting_value from information_schema.settings where setting_name = 'MODE'");
+                     ResultSet rs = ps.executeQuery()) {
+                    if (rs.next()) {
+                        return rs.getString(1);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            LOG.debug("Could not determine H2 MODE from information_schema.settings: {}", e.getMessage());
+        }
+        return null;
+    }
+
+    private static boolean isH2Dialect(Dialect dialect) {
+        return dialect != null && (dialect instanceof org.hibernate.dialect.H2Dialect ||
+                dialect.getClass().getSimpleName().startsWith("H2"));
+    }
+
+    protected String getJdbcUrl() {
+        if (this.connectionSources != null) {
+            if (this.connectionSources.getDefaultConnectionSource() != null) {
+                HibernateConnectionSourceSettings settings = this.connectionSources.getDefaultConnectionSource().getSettings();
+                if (settings != null && settings.getDataSource() != null && settings.getDataSource().getUrl() != null) {
+                    return settings.getDataSource().getUrl();
+                }
+            }
+            if (this.connectionSources.getBaseConfiguration() != null) {
+                String url = this.connectionSources.getBaseConfiguration().getProperty("dataSource.url", String.class);
+                if (url != null) {
+                    return url;
+                }
+            }
+        }
+        return null;
     }
 
     /**
