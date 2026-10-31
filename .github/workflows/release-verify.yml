@@ -26,6 +26,10 @@ on:
         description: 'Release tag to verify (e.g. v7.0.5)'
         required: true
         type: string
+      distribution_base_url:
+        description: 'ATR candidate directory for this version (not a GitHub URL); empty uses dist/dev'
+        required: false
+        type: string
 
 permissions: { }
 
@@ -91,6 +95,7 @@ jobs:
       - name: "✅ Verify release"
         env:
           RELEASE_TAG: ${{ inputs.release_tag }}
+          GRAILS_DISTRIBUTION_BASE_URL: ${{ inputs.distribution_base_url }}
         run: |
           mkdir -p grails-verify
           cd grails-verify

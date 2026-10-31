@@ -80,6 +80,9 @@ jobs:
       - name: '📧 Announcement Email'
         run: |
           echo "::group::Announcement Email"
+          echo "If this candidate was staged on ATR, do NOT send this mail to announce@apache.org"
+          echo "(ATR already announced there once). Send only the extra lists. If this candidate did"
+          echo "not use ATR, send to announce@ plus the project lists as shown."
           echo ""
           echo "TO:"
           echo "*************************************************"
@@ -95,4 +98,17 @@ jobs:
           echo "*************************************************"
           cat .github/vote_templates/announce.txt | envsubst
           echo "*************************************************"
+          echo "::endgroup::"
+      - name: "📧 Optional ATR announce (experimental)"
+        # Beta announce contract: https://releases.apache.org/docs/finish-phase
+        run: |
+          echo "::group::Apache Trusted Releases (opt-in)"
+          echo "If this candidate was staged on ATR, publish docs, SDKMAN!, and"
+          echo "https://grails.apache.org/download.html before announcing. Confirm that page, then:"
+          echo "  Actions -> Release - ATR Announce (experimental) -> version ${VERSION}"
+          echo "One successful announce goes to announce@apache.org and must not be rerun for other lists."
+          echo "If ATR rejects it because the mirrors are not ready, retry that same announce after checking ATR."
+          echo "Then send dev@grails.apache.org, users@grails.apache.org, and dev@groovy.apache.org by hand."
+          echo "Publication to dist/release is done by ATR, not by an svn move from dist/atr."
+          echo "See RELEASE.md section 'Apache Trusted Releases (ATR)'."
           echo "::endgroup::"

@@ -34,6 +34,8 @@ echo "Downloading files to ${DOWNLOAD_LOCATION}"
 mkdir -p "${DOWNLOAD_LOCATION}"
 
 VERSION=${RELEASE_TAG#v}
+DISTRIBUTION_BASE_URL="${GRAILS_DISTRIBUTION_BASE_URL:-https://dist.apache.org/repos/dist/dev/grails/${SVN_FOLDER}/${VERSION}}"
+DISTRIBUTION_BASE_URL="${DISTRIBUTION_BASE_URL%/}"
 
 # Source distro
 echo "Downloading GitHub source release files"
@@ -42,9 +44,9 @@ curl -f -L -o "${DOWNLOAD_LOCATION}/github-apache-${PROJECT_NAME}-${VERSION}-src
 curl -f -L -o "${DOWNLOAD_LOCATION}/github-apache-${PROJECT_NAME}-${VERSION}-src.zip.sha512" "https://github.com/${REPO_NAME}/releases/download/${RELEASE_TAG}/apache-${PROJECT_NAME}-${VERSION}-src.zip.sha512"
 
 echo "Downloading SVN source release files"
-curl -f -L -o "${DOWNLOAD_LOCATION}/apache-${PROJECT_NAME}-${VERSION}-src.zip" "https://dist.apache.org/repos/dist/dev/grails/${SVN_FOLDER}/${VERSION}/sources/apache-${PROJECT_NAME}-${VERSION}-src.zip"
-curl -f -L -o "${DOWNLOAD_LOCATION}/apache-${PROJECT_NAME}-${VERSION}-src.zip.asc" "https://dist.apache.org/repos/dist/dev/grails/${SVN_FOLDER}/${VERSION}/sources/apache-${PROJECT_NAME}-${VERSION}-src.zip.asc"
-curl -f -L -o "${DOWNLOAD_LOCATION}/apache-${PROJECT_NAME}-${VERSION}-src.zip.sha512" "https://dist.apache.org/repos/dist/dev/grails/${SVN_FOLDER}/${VERSION}/sources/apache-${PROJECT_NAME}-${VERSION}-src.zip.sha512"
+curl -f -L -o "${DOWNLOAD_LOCATION}/apache-${PROJECT_NAME}-${VERSION}-src.zip" "${DISTRIBUTION_BASE_URL}/sources/apache-${PROJECT_NAME}-${VERSION}-src.zip"
+curl -f -L -o "${DOWNLOAD_LOCATION}/apache-${PROJECT_NAME}-${VERSION}-src.zip.asc" "${DISTRIBUTION_BASE_URL}/sources/apache-${PROJECT_NAME}-${VERSION}-src.zip.asc"
+curl -f -L -o "${DOWNLOAD_LOCATION}/apache-${PROJECT_NAME}-${VERSION}-src.zip.sha512" "${DISTRIBUTION_BASE_URL}/sources/apache-${PROJECT_NAME}-${VERSION}-src.zip.sha512"
 
 # wrapper
 echo "Downloading GitHub wrapper release files"
@@ -53,9 +55,9 @@ curl -f -L -o "${DOWNLOAD_LOCATION}/github-apache-${PROJECT_NAME}-wrapper-${VERS
 curl -f -L -o "${DOWNLOAD_LOCATION}/github-apache-${PROJECT_NAME}-wrapper-${VERSION}-bin.zip.sha512" "https://github.com/${REPO_NAME}/releases/download/${RELEASE_TAG}/apache-${PROJECT_NAME}-wrapper-${VERSION}-bin.zip.sha512"
 
 echo "Downloading SVN wrapper release files"
-curl -f -L -o "${DOWNLOAD_LOCATION}/apache-${PROJECT_NAME}-wrapper-${VERSION}-bin.zip" "https://dist.apache.org/repos/dist/dev/grails/${SVN_FOLDER}/${VERSION}/distribution/apache-${PROJECT_NAME}-wrapper-${VERSION}-bin.zip"
-curl -f -L -o "${DOWNLOAD_LOCATION}/apache-${PROJECT_NAME}-wrapper-${VERSION}-bin.zip.asc" "https://dist.apache.org/repos/dist/dev/grails/${SVN_FOLDER}/${VERSION}/distribution/apache-${PROJECT_NAME}-wrapper-${VERSION}-bin.zip.asc"
-curl -f -L -o "${DOWNLOAD_LOCATION}/apache-${PROJECT_NAME}-wrapper-${VERSION}-bin.zip.sha512" "https://dist.apache.org/repos/dist/dev/grails/${SVN_FOLDER}/${VERSION}/distribution/apache-${PROJECT_NAME}-wrapper-${VERSION}-bin.zip.sha512"
+curl -f -L -o "${DOWNLOAD_LOCATION}/apache-${PROJECT_NAME}-wrapper-${VERSION}-bin.zip" "${DISTRIBUTION_BASE_URL}/distribution/apache-${PROJECT_NAME}-wrapper-${VERSION}-bin.zip"
+curl -f -L -o "${DOWNLOAD_LOCATION}/apache-${PROJECT_NAME}-wrapper-${VERSION}-bin.zip.asc" "${DISTRIBUTION_BASE_URL}/distribution/apache-${PROJECT_NAME}-wrapper-${VERSION}-bin.zip.asc"
+curl -f -L -o "${DOWNLOAD_LOCATION}/apache-${PROJECT_NAME}-wrapper-${VERSION}-bin.zip.sha512" "${DISTRIBUTION_BASE_URL}/distribution/apache-${PROJECT_NAME}-wrapper-${VERSION}-bin.zip.sha512"
 
 # sdkman delegating cli
 echo "Downloading GitHub cli release files"
@@ -64,9 +66,9 @@ curl -f -L -o "${DOWNLOAD_LOCATION}/github-apache-${PROJECT_NAME}-${VERSION}-bin
 curl -f -L -o "${DOWNLOAD_LOCATION}/github-apache-${PROJECT_NAME}-${VERSION}-bin.zip.sha512" "https://github.com/${REPO_NAME}/releases/download/${RELEASE_TAG}/apache-${PROJECT_NAME}-${VERSION}-bin.zip.sha512"
 
 echo "Downloading SVN wrapper release files"
-curl -f -L -o "${DOWNLOAD_LOCATION}/apache-${PROJECT_NAME}-${VERSION}-bin.zip" "https://dist.apache.org/repos/dist/dev/grails/${SVN_FOLDER}/${VERSION}/distribution/apache-${PROJECT_NAME}-${VERSION}-bin.zip"
-curl -f -L -o "${DOWNLOAD_LOCATION}/apache-${PROJECT_NAME}-${VERSION}-bin.zip.asc" "https://dist.apache.org/repos/dist/dev/grails/${SVN_FOLDER}/${VERSION}/distribution/apache-${PROJECT_NAME}-${VERSION}-bin.zip.asc"
-curl -f -L -o "${DOWNLOAD_LOCATION}/apache-${PROJECT_NAME}-${VERSION}-bin.zip.sha512" "https://dist.apache.org/repos/dist/dev/grails/${SVN_FOLDER}/${VERSION}/distribution/apache-${PROJECT_NAME}-${VERSION}-bin.zip.sha512"
+curl -f -L -o "${DOWNLOAD_LOCATION}/apache-${PROJECT_NAME}-${VERSION}-bin.zip" "${DISTRIBUTION_BASE_URL}/distribution/apache-${PROJECT_NAME}-${VERSION}-bin.zip"
+curl -f -L -o "${DOWNLOAD_LOCATION}/apache-${PROJECT_NAME}-${VERSION}-bin.zip.asc" "${DISTRIBUTION_BASE_URL}/distribution/apache-${PROJECT_NAME}-${VERSION}-bin.zip.asc"
+curl -f -L -o "${DOWNLOAD_LOCATION}/apache-${PROJECT_NAME}-${VERSION}-bin.zip.sha512" "${DISTRIBUTION_BASE_URL}/distribution/apache-${PROJECT_NAME}-${VERSION}-bin.zip.sha512"
 
 # documentation
 echo "Downloading GitHub docs release files"
@@ -75,9 +77,9 @@ curl -f -L -o "${DOWNLOAD_LOCATION}/github-apache-${PROJECT_NAME}-${VERSION}-doc
 curl -f -L -o "${DOWNLOAD_LOCATION}/github-apache-${PROJECT_NAME}-${VERSION}-docs.zip.sha512" "https://github.com/${REPO_NAME}/releases/download/${RELEASE_TAG}/apache-${PROJECT_NAME}-${VERSION}-docs.zip.sha512"
 
 echo "Downloading SVN docs release files"
-curl -f -L -o "${DOWNLOAD_LOCATION}/apache-${PROJECT_NAME}-${VERSION}-docs.zip" "https://dist.apache.org/repos/dist/dev/grails/${SVN_FOLDER}/${VERSION}/distribution/apache-${PROJECT_NAME}-${VERSION}-docs.zip"
-curl -f -L -o "${DOWNLOAD_LOCATION}/apache-${PROJECT_NAME}-${VERSION}-docs.zip.asc" "https://dist.apache.org/repos/dist/dev/grails/${SVN_FOLDER}/${VERSION}/distribution/apache-${PROJECT_NAME}-${VERSION}-docs.zip.asc"
-curl -f -L -o "${DOWNLOAD_LOCATION}/apache-${PROJECT_NAME}-${VERSION}-docs.zip.sha512" "https://dist.apache.org/repos/dist/dev/grails/${SVN_FOLDER}/${VERSION}/distribution/apache-${PROJECT_NAME}-${VERSION}-docs.zip.sha512"
+curl -f -L -o "${DOWNLOAD_LOCATION}/apache-${PROJECT_NAME}-${VERSION}-docs.zip" "${DISTRIBUTION_BASE_URL}/distribution/apache-${PROJECT_NAME}-${VERSION}-docs.zip"
+curl -f -L -o "${DOWNLOAD_LOCATION}/apache-${PROJECT_NAME}-${VERSION}-docs.zip.asc" "${DISTRIBUTION_BASE_URL}/distribution/apache-${PROJECT_NAME}-${VERSION}-docs.zip.asc"
+curl -f -L -o "${DOWNLOAD_LOCATION}/apache-${PROJECT_NAME}-${VERSION}-docs.zip.sha512" "${DISTRIBUTION_BASE_URL}/distribution/apache-${PROJECT_NAME}-${VERSION}-docs.zip.sha512"
 
 # validate downloads
 set +e
