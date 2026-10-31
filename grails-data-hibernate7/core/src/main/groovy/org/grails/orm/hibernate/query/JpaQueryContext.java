@@ -23,6 +23,7 @@ import java.util.Map;
 
 import jakarta.persistence.criteria.Expression;
 import jakarta.persistence.criteria.From;
+import jakarta.persistence.criteria.JoinType;
 import jakarta.persistence.criteria.ParameterExpression;
 import jakarta.persistence.criteria.Path;
 
@@ -41,6 +42,7 @@ public class JpaQueryContext implements Cloneable {
     private final ExpressionResolver resolver;
     private final Map<ParameterExpression<?>, Object> parameterValues = new LinkedHashMap<>();
     private final Map<String, Expression<?>> selectionAliases = new HashMap<>();
+    private final boolean isSubquery;
     private JpaQueryContext parent;
 
     public JpaQueryContext() {
@@ -68,21 +70,26 @@ public class JpaQueryContext implements Cloneable {
     }
 
     public static JpaQueryContext forSubquery(JpaQueryContext parent, From<?, ?> root) {
-        return new JpaQueryContext(parent, null, root);
+        return forSubquery(parent, null, root);
     }
 
     public static JpaQueryContext forSubquery(JpaQueryContext parent, List<HibernateAlias> aliases, From<?, ?> root) {
-        return new JpaQueryContext(parent, aliases, root);
+        return new JpaQueryContext(parent, aliases, root, true);
     }
 
     /**
      * Internal constructor for subqueries and base initialization.
      */
     public JpaQueryContext(JpaQueryContext parent, List<HibernateAlias> aliases, From<?, ?> root) {
+        this(parent, aliases, root, false);
+    }
+
+    public JpaQueryContext(JpaQueryContext parent, List<HibernateAlias> aliases, From<?, ?> root, boolean isSubquery) {
         this.parent = parent;
-        this.joinTracker = new JoinTracker(parent != null ? parent.getJoinTracker() : null, root);
-        this.aliasRegistry = new AliasRegistry(parent != null ? parent.getAliasRegistry() : null);
-        this.resolver = new ExpressionResolver(aliasRegistry, joinTracker);
+        this.isSubquery = isSubquery;
+        this.joinTracker = isSubquery ? new JoinTracker(root) : new JoinTracker(parent != null ? parent.getJoinTracker() : null, root);
+        this.aliasRegistry = new AliasRegistry(parent != null ? parent.getAliasRegistry() : null, isSubquery);
+        this.resolver = new ExpressionResolver(aliasRegistry, joinTracker, this);
         if (aliases != null) {
             for (HibernateAlias alias : aliases) {
                 aliasRegistry.define(alias.alias(), alias);
@@ -91,6 +98,10 @@ public class JpaQueryContext implements Cloneable {
         if (root != null) {
             this.joinTracker.addJoin("root", root);
         }
+    }
+
+    public boolean isSubquery() {
+        return isSubquery;
     }
 
     protected JoinTracker getJoinTracker() {
@@ -106,8 +117,15 @@ public class JpaQueryContext implements Cloneable {
         this.joinTracker.addJoin("root", root);
     }
 
+    public JpaQueryContext getParent() {
+        return parent;
+    }
+
     public void setParent(JpaQueryContext parent) {
         this.parent = parent;
+        if (this.aliasRegistry != null && parent != null) {
+            this.aliasRegistry.setParent(parent.getAliasRegistry());
+        }
     }
 
     public From<?, ?> getRoot() {
@@ -123,7 +141,13 @@ public class JpaQueryContext implements Cloneable {
     }
 
     public void registerAlias(String alias, Expression<?> expression) {
+        if (!aliasRegistry.hasLocalDefinition(alias)) {
+            aliasRegistry.define(alias, new HibernateAlias(alias, alias, JoinType.INNER, true));
+        }
         aliasRegistry.realize(alias, expression);
+        if (!isSubquery && parent != null && aliasRegistry.isExplicit(alias)) {
+            parent.registerAlias(alias, expression);
+        }
     }
 
     public void registerAlias(String alias, HibernateAlias definition) {
@@ -162,15 +186,11 @@ public class JpaQueryContext implements Cloneable {
     }
 
     public boolean hasAlias(String alias) {
-        return aliasRegistry.isDefined(alias) || aliasRegistry.hasRealized(alias) || (parent != null && parent.hasAlias(alias));
+        return aliasRegistry.isDefined(alias) || aliasRegistry.hasRealized(alias);
     }
 
     public Expression<?> getAliasedExpression(String alias) {
-        Expression<?> expr = aliasRegistry.getRealized(alias);
-        if (expr == null && parent != null) {
-            return parent.getAliasedExpression(alias);
-        }
-        return expr;
+        return aliasRegistry.getRealized(alias);
     }
 
     public Expression<?> getFullyQualifiedExpression(String path) {

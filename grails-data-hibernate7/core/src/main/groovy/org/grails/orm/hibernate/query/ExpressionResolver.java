@@ -27,10 +27,16 @@ import jakarta.persistence.criteria.Path;
 public class ExpressionResolver {
     private final AliasRegistry aliasRegistry;
     private final JoinTracker joinTracker;
+    private final JpaQueryContext context;
 
     public ExpressionResolver(AliasRegistry aliasRegistry, JoinTracker joinTracker) {
+        this(aliasRegistry, joinTracker, null);
+    }
+
+    public ExpressionResolver(AliasRegistry aliasRegistry, JoinTracker joinTracker, JpaQueryContext context) {
         this.aliasRegistry = aliasRegistry;
         this.joinTracker = joinTracker;
+        this.context = context;
     }
 
     public Expression<?> resolve(String path) {
@@ -76,7 +82,7 @@ public class ExpressionResolver {
         if (cleanPath.contains(".")) {
             int dotIdx = cleanPath.indexOf(".");
             String aliasCandidate = cleanPath.substring(0, dotIdx);
-            if (aliasRegistry.isDefined(aliasCandidate)) {
+            if (aliasRegistry.isDefined(aliasCandidate) || (context != null && !context.isSubquery() && joinTracker.getJoin(aliasCandidate) != null)) {
                 return resolveFromAlias(aliasCandidate, cleanPath.substring(dotIdx + 1));
             }
         }
@@ -108,14 +114,44 @@ public class ExpressionResolver {
             return subPath != null ? getPath((From<?, ?>) aliased, subPath) : aliased;
         }
 
-        // 3. If defined but not joined, materialize it on the CURRENT root
+        // 3. If defined but not joined, materialize it on the CURRENT root or PARENT context
         if (aliasRegistry.isDefined(alias)) {
+            if (!aliasRegistry.hasLocalDefinition(alias) && context != null && context.getParent() != null) {
+                Expression<?> parentExpr = context.getParent().getFullyQualifiedExpression(alias);
+                if (parentExpr != null) {
+                    return subPath != null && parentExpr instanceof From<?, ?> from ? getPath(from, subPath) : parentExpr;
+                }
+            }
             HibernateAlias def = aliasRegistry.getDefinition(alias);
             if (def != null && def.path() != null) {
-                aliased = joinTracker.getRoot().join(def.path(), def.joinType());
-                aliasRegistry.realize(alias, aliased);
-                joinTracker.addJoin(alias, (From<?, ?>) aliased);
-                return subPath != null ? getPath((From<?, ?>) aliased, subPath) : aliased;
+                String path = def.path();
+                if (path.contains(".")) {
+                    String[] parts = path.split("\\.");
+                    Expression<?> current = resolve(parts[0]);
+                    From<?, ?> from = (current instanceof From<?, ?> f) ? f : null;
+                    if (from == null && joinTracker.getRoot() != null) {
+                        try {
+                            from = joinTracker.getRoot().join(parts[0], def.joinType());
+                        } catch (Exception ignored) {
+                        }
+                    }
+                    if (from != null) {
+                        for (int i = 1; i < parts.length - 1; i++) {
+                            from = from.join(parts[i], def.joinType());
+                        }
+                        aliased = from.join(parts[parts.length - 1], def.joinType());
+                    }
+                } else if (joinTracker.getRoot() != null) {
+                    aliased = joinTracker.getRoot().join(path, def.joinType());
+                }
+                if (aliased != null) {
+                    aliasRegistry.realize(alias, aliased);
+                    joinTracker.addJoin(alias, (From<?, ?>) aliased);
+                    if (context != null && aliasRegistry.isExplicit(alias)) {
+                        context.registerAlias(alias, aliased);
+                    }
+                    return subPath != null ? getPath((From<?, ?>) aliased, subPath) : aliased;
+                }
             }
         }
 

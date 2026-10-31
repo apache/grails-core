@@ -312,7 +312,7 @@ public class JpaCriteriaQueryCreator<T> {
                         projection instanceof Query.CountDistinctProjection);
     }
 
-    private void discoverAliases(List<Query.Criterion> criteria, JpaQueryContext context) {
+    public static void discoverAliases(List<Query.Criterion> criteria, JpaQueryContext context) {
         if (criteria == null) return;
         for (Query.Criterion criterion : criteria) {
             if (criterion instanceof HibernateAlias ha) {
@@ -324,14 +324,13 @@ public class JpaCriteriaQueryCreator<T> {
                 if (dac.getAlias() != null) {
                     context.registerAlias(dac.getAlias(), new HibernateAlias(dac.getAssociationPath(), dac.getAlias()));
                 }
-                discoverAliases(dac.getCriteria(), context);
             } else if (criterion instanceof Query.PropertyNameCriterion pnc) {
                 String propertyName = pnc.getProperty();
                 if (propertyName.contains(".")) {
                     String alias = propertyName.substring(0, propertyName.indexOf("."));
                     // Only register if not already known in this or parent context
                     if (!context.hasAlias(alias)) {
-                        context.registerAlias(alias, new HibernateAlias(alias, alias));
+                        context.registerAlias(alias, new HibernateAlias(alias, alias, JoinType.INNER, false));
                     }
                 }
             } else if (criterion instanceof Query.Junction junction) {
@@ -342,7 +341,7 @@ public class JpaCriteriaQueryCreator<T> {
 
     private void registerDetachedJoins(JpaQueryContext context) {
         detachedCriteria.getJoinTypes().forEach((path, joinType) ->
-                context.registerAlias(path, new HibernateAlias(path, path, joinType))
+                context.registerAlias(path, new HibernateAlias(path, path, joinType, false))
         );
     }
 

@@ -94,4 +94,55 @@ class AliasRegistrySpec extends Specification {
         child.getRealized("f") == childExpr
         parent.getRealized("f") == parentExpr
     }
+
+    def "test implicit aliases are delegated to child registry in same query but not subquery"() {
+        given:
+        def parent = new AliasRegistry()
+        def child = new AliasRegistry(parent, false)
+        def subquery = new AliasRegistry(parent, true)
+        def implicitDef = new HibernateAlias("owner", "owner", JoinType.INNER, false)
+
+        when:
+        parent.define("owner", implicitDef)
+
+        then: "locally defined in parent"
+        parent.isDefined("owner")
+        !parent.isExplicit("owner")
+        parent.getDefinition("owner") == implicitDef
+
+        and: "visible to child in same query"
+        child.isDefined("owner")
+        child.getDefinition("owner") == implicitDef
+
+        and: "not visible across subquery boundary"
+        !subquery.isDefined("owner")
+        !subquery.isExplicit("owner")
+        subquery.getDefinition("owner") == null
+    }
+
+    def "test implicit alias realization is delegated to child registry in same query but not subquery"() {
+        given:
+        def parent = new AliasRegistry()
+        def child = new AliasRegistry(parent, false)
+        def subquery = new AliasRegistry(parent, true)
+        def implicitDef = new HibernateAlias("owner", "owner", JoinType.INNER, false)
+        def expr = Mock(Expression)
+
+        when:
+        parent.define("owner", implicitDef)
+        parent.realize("owner", expr)
+
+        then: "realized in parent"
+        parent.hasRealized("owner")
+        parent.getRealized("owner") == expr
+
+        and: "visible to child in same query"
+        child.hasRealized("owner")
+        child.getRealized("owner") == expr
+
+        and: "not visible across subquery boundary"
+        !subquery.isDefined("owner")
+        !subquery.hasRealized("owner")
+        subquery.getRealized("owner") == null
+    }
 }
