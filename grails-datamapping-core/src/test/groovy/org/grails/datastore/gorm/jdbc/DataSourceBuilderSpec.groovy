@@ -19,11 +19,74 @@
 package org.grails.datastore.gorm.jdbc
 
 import com.zaxxer.hikari.HikariDataSource
+import org.grails.datastore.gorm.jdbc.connections.DataSourceConnectionSourceFactory
+import org.grails.datastore.mapping.core.DatastoreUtils
+import org.grails.datastore.mapping.core.connections.ConnectionSource
 import org.grails.datastore.mapping.core.exceptions.ConfigurationException
 import org.springframework.jdbc.datasource.DriverManagerDataSource
 import spock.lang.Specification
 
 class DataSourceBuilderSpec extends Specification {
+
+    def "documented HikariCP pool and driver properties bind from Groovy configuration"() {
+        given:
+        def config = new ConfigSlurper().parse('''
+            dataSource {
+                pooled = true
+                lazy = false
+                transactionAware = false
+                url = "jdbc:h2:mem:documentedHikariConfig"
+                driverClassName = "org.h2.Driver"
+                username = "sa"
+                password = ""
+                type = "com.zaxxer.hikari.HikariDataSource"
+                properties {
+                    registerMbeans = true
+                    maximumPoolSize = 50
+                    minimumIdle = 5
+                    connectionTimeout = 10000
+                    maxLifetime = 600000
+                    idleTimeout = 60000
+                    validationTimeout = 3000
+                    transactionIsolation = "TRANSACTION_READ_COMMITTED"
+                    leakDetectionThreshold = 120000
+                    dataSourceProperties {
+                        cachePrepStmts = "true"
+                        prepStmtCacheSize = "250"
+                        prepStmtCacheSqlLimit = "2048"
+                        connectTimeout = "15000"
+                        socketTimeout = "120000"
+                    }
+                }
+            }
+        ''')
+
+        when:
+        def connectionSource = new DataSourceConnectionSourceFactory().create(
+                ConnectionSource.DEFAULT, DatastoreUtils.createPropertyResolver(config))
+
+        then:
+        connectionSource.source instanceof HikariDataSource
+        HikariDataSource ds = (HikariDataSource) connectionSource.source
+        ds.jdbcUrl == 'jdbc:h2:mem:documentedHikariConfig'
+        ds.registerMbeans
+        ds.maximumPoolSize == 50
+        ds.minimumIdle == 5
+        ds.connectionTimeout == 10000
+        ds.maxLifetime == 600000
+        ds.idleTimeout == 60000
+        ds.validationTimeout == 3000
+        ds.transactionIsolation == 'TRANSACTION_READ_COMMITTED'
+        ds.leakDetectionThreshold == 120000
+        ds.dataSourceProperties.getProperty('cachePrepStmts') == 'true'
+        ds.dataSourceProperties.getProperty('prepStmtCacheSize') == '250'
+        ds.dataSourceProperties.getProperty('prepStmtCacheSqlLimit') == '2048'
+        ds.dataSourceProperties.getProperty('connectTimeout') == '15000'
+        ds.dataSourceProperties.getProperty('socketTimeout') == '120000'
+
+        cleanup:
+        connectionSource?.close()
+    }
 
     def "build creates a DataSource with basic properties"() {
         when:

@@ -44,11 +44,15 @@ Once you have the JAR resolved you need to get familiar with how Grails manages 
 * `readOnly` - If `true` makes the DataSource read-only, which results in the connection pool calling `setReadOnly(true)` on each `Connection`
 * `transactional` - If `false` leaves the DataSource's transactionManager bean outside the chained BE1PC transaction manager implementation. This only applies to additional datasources.
 * `persistenceInterceptor` - The default datasource is automatically wired up to the persistence interceptor, other datasources are not wired up automatically unless this is set to `true`
-* `properties` - Extra properties to set on the DataSource bean. See the https://tomcat.apache.org/tomcat-7.0-doc/jdbc-pool.html#Common_Attributes[Tomcat Pool] documentation. There is also a Javadoc format https://tomcat.apache.org/tomcat-7.0-doc/api/org/apache/tomcat/jdbc/pool/PoolConfiguration.html[documentation of the properties].
-* `jmxExport` - If `false`, will disable registration of JMX MBeans for all DataSources. By default JMX MBeans are added for DataSources with `jmxEnabled = true` in properties.
+* `properties` - Extra properties to set on the DataSource bean. The supported properties depend on the connection pool implementation. See the https://github.com/brettwooldridge/HikariCP#configuration-knobs-baby[HikariCP configuration documentation] for HikariCP, or the https://tomcat.apache.org/tomcat-9.0-doc/jdbc-pool.html#Common_Attributes[Tomcat JDBC Pool documentation] for Tomcat JDBC Pool.
+* `jmxExport` - If `true`, registers JMX MBeans for Tomcat JDBC Pool DataSources with `jmxEnabled = true` in their properties (defaults to false). For HikariCP, use `properties.registerMbeans = true` instead.
 * `type` - The connection pool class if you want to force Grails to use it when there are more than one available.
 
-A typical configuration for MySQL in `application.groovy` may be something like:
+The following examples explicitly select HikariCP. Pool properties are not portable between implementations: Grails does not translate Tomcat JDBC Pool settings such as `maxActive`, `minIdle`, `maxWait`, or `jdbcInterceptors` into HikariCP settings. Unsupported properties can be silently ignored. For HikariCP, use `maximumPoolSize`, `minimumIdle`, and `connectionTimeout` (in milliseconds); there is no direct equivalent for Tomcat's `maxIdle` or `jdbcInterceptors`.
+
+To use Tomcat-specific properties instead, select `type = "org.apache.tomcat.jdbc.pool.DataSource"` and ensure Tomcat JDBC Pool is on the classpath.
+
+A typical configuration for MySQL with HikariCP in `application.groovy` may be something like:
 
 [source,groovy]
 ----
@@ -62,23 +66,10 @@ dataSource {
     password = "password"
     type = "com.zaxxer.hikari.HikariDataSource"
     properties {
-       jmxEnabled = true
-       initialSize = 5
-       maxActive = 50
-       minIdle = 5
-       maxIdle = 25
-       maxWait = 10000
-       maxAge = 10 * 60000
-       timeBetweenEvictionRunsMillis = 5000
-       minEvictableIdleTimeMillis = 60000
-       validationQuery = "SELECT 1"
-       validationQueryTimeout = 3
-       validationInterval = 15000
-       testOnBorrow = true
-       testWhileIdle = true
-       testOnReturn = false
-       jdbcInterceptors = "ConnectionState;StatementCache(max=200)"
-       defaultTransactionIsolation = java.sql.Connection.TRANSACTION_READ_COMMITTED
+        maximumPoolSize = 50
+        minimumIdle = 5
+        connectionTimeout = 10000
+        transactionIsolation = "TRANSACTION_READ_COMMITTED"
     }
 }
 ----
@@ -93,7 +84,8 @@ dataSource {
 }
 ----
 
-Example of advanced configuration using extra properties:
+Example of advanced HikariCP configuration using extra properties. Pool timeouts are in milliseconds. `leakDetectionThreshold` logs a possible connection leak; it does not reclaim abandoned connections. HikariCP uses JDBC4 `Connection.isValid()` for validation, so a `connectionTestQuery` is normally unnecessary with a JDBC4 driver.
+
 [source,groovy]
 ----
 dataSource {
@@ -106,67 +98,23 @@ dataSource {
     password = "password"
     type = "com.zaxxer.hikari.HikariDataSource"
     properties {
-       // Documentation for Tomcat JDBC Pool
-       // https://tomcat.apache.org/tomcat-7.0-doc/jdbc-pool.html#Common_Attributes
-       // https://tomcat.apache.org/tomcat-7.0-doc/api/org/apache/tomcat/jdbc/pool/PoolConfiguration.html
-       jmxEnabled = true
-       initialSize = 5
-       maxActive = 50
-       minIdle = 5
-       maxIdle = 25
-       maxWait = 10000
-       maxAge = 10 * 60000
-       timeBetweenEvictionRunsMillis = 5000
-       minEvictableIdleTimeMillis = 60000
-       validationQuery = "SELECT 1"
-       validationQueryTimeout = 3
-       validationInterval = 15000
-       testOnBorrow = true
-       testWhileIdle = true
-       testOnReturn = false
-       ignoreExceptionOnPreLoad = true
-       // https://tomcat.apache.org/tomcat-7.0-doc/jdbc-pool.html#JDBC_interceptors
-       jdbcInterceptors = "ConnectionState;StatementCache(max=200)"
-       defaultTransactionIsolation = java.sql.Connection.TRANSACTION_READ_COMMITTED // safe default
-       // controls for leaked connections 
-       abandonWhenPercentageFull = 100 // settings are active only when pool is full
-       removeAbandonedTimeout = 120
-       removeAbandoned = true
-       // use JMX console to change this setting at runtime
-       logAbandoned = false // causes stacktrace recording overhead, use only for debugging
-       // JDBC driver properties
-       // Mysql as example
-       dbProperties {
-           // Mysql specific driver properties
-           // https://dev.mysql.com/doc/connector-j/en/connector-j-reference-configuration-properties.html
-           // let Tomcat JDBC Pool handle reconnecting
-           autoReconnect=false
-           // truncation behaviour 
-           jdbcCompliantTruncation=false
-           // mysql 0-date conversion
-           zeroDateTimeBehavior='convertToNull'
-           // Tomcat JDBC Pool's StatementCache is used instead, so disable mysql driver's cache
-           cachePrepStmts=false
-           cacheCallableStmts=false
-           // Tomcat JDBC Pool's StatementFinalizer keeps track
-           dontTrackOpenResources=true
-           // performance optimization: reduce number of SQLExceptions thrown in mysql driver code
-           holdResultsOpenOverStatementClose=true
-           // enable MySQL query cache - using server prep stmts will disable query caching
-           useServerPrepStmts=false
-           // metadata caching
-           cacheServerConfiguration=true
-           cacheResultSetMetadata=true
-           metadataCacheSize=100
-           // timeouts for TCP/IP
-           connectTimeout=15000
-           socketTimeout=120000
-           // timer tuning (disable)
-           maintainTimeStats=false
-           enableQueryTimeouts=false
-           // misc tuning
-           noDatetimeStringSync=true
-       }
+        registerMbeans = true
+        maximumPoolSize = 50
+        minimumIdle = 5
+        connectionTimeout = 10000
+        maxLifetime = 600000
+        idleTimeout = 60000
+        validationTimeout = 3000
+        transactionIsolation = "TRANSACTION_READ_COMMITTED"
+        leakDetectionThreshold = 120000
+        // MySQL JDBC driver properties, not pool settings
+        dataSourceProperties {
+            cachePrepStmts = "true"
+            prepStmtCacheSize = "250"
+            prepStmtCacheSqlLimit = "2048"
+            connectTimeout = "15000"
+            socketTimeout = "120000"
+        }
     }
 }
 ----
