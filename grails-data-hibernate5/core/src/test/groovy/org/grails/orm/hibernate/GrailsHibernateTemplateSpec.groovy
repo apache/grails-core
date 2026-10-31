@@ -20,13 +20,20 @@ package org.grails.orm.hibernate
 
 import java.sql.SQLException
 
+import grails.gorm.annotation.Entity
 import org.apache.grails.data.testing.tck.domains.Book
 import org.grails.orm.hibernate.cfg.Settings
 import org.hibernate.HibernateException
 import org.hibernate.Session
+import org.hibernate.SessionFactory
+import org.hibernate.engine.spi.SessionFactoryImplementor
 import org.hibernate.exception.GenericJDBCException
+import org.hibernate.service.spi.ServiceRegistryImplementor
 import org.springframework.dao.DataAccessException
+import org.springframework.dao.DataIntegrityViolationException
 import org.springframework.orm.hibernate5.HibernateJdbcException
+import org.springframework.orm.hibernate5.SessionHolder
+import org.springframework.transaction.support.TransactionSynchronizationManager
 import spock.lang.AutoCleanup
 import spock.lang.Specification
 
@@ -38,7 +45,7 @@ class GrailsHibernateTemplateSpec extends Specification {
     GrailsHibernateTemplate template
 
     void setup() {
-        datastore = new HibernateDatastore([(Settings.SETTING_DB_CREATE): 'create-drop'], Book)
+        datastore = new HibernateDatastore([(Settings.SETTING_DB_CREATE): 'create-drop'], Book, TemplateTestEntity)
         template = new GrailsHibernateTemplate(datastore.sessionFactory, datastore)
     }
 
@@ -76,21 +83,58 @@ class GrailsHibernateTemplateSpec extends Specification {
 
     void "doExecute translates HibernateException thrown during flushIfNecessary to DataAccessException"() {
         given:
-        GrailsHibernateTemplate customTemplate = new GrailsHibernateTemplate(datastore.sessionFactory, datastore) {
-            @Override
-            protected void flushIfNecessary(Session session, boolean existingTransaction) throws HibernateException {
-                throw new HibernateException('Simulated flush failure')
-            }
+        template.setFlushMode(GrailsHibernateTemplate.FLUSH_EAGER)
+        TemplateTestEntity entity = null
+        TemplateTestEntity.withTransaction {
+            entity = new TemplateTestEntity(code: 'abc').save(flush: true)
         }
-        customTemplate.setFlushMode(GrailsHibernateTemplate.FLUSH_EAGER)
 
-        when:
-        Book.withTransaction {
-            customTemplate.execute { Session session -> 'ok' }
+        when: "an update exceeding column length is flushed during template execute"
+        TemplateTestEntity.withTransaction {
+            template.execute { Session session ->
+                TemplateTestEntity loaded = session.get(TemplateTestEntity, entity.id)
+                loaded.code = 'this string is much too long for varchar 5'
+                null
+            }
         }
 
         then:
-        DataAccessException ex = thrown(DataAccessException)
-        ex.message.contains('Simulated flush failure')
+        thrown(DataIntegrityViolationException)
+    }
+
+    void "executeWithNewSession restores outer session and propagates exception when openSession fails"() {
+        given:
+        Session outerSession = datastore.sessionFactory.openSession()
+        SessionHolder outerHolder = new SessionHolder(outerSession)
+
+        SessionFactoryImplementor mockFactory = Mock(SessionFactoryImplementor)
+        ServiceRegistryImplementor registry = Mock(ServiceRegistryImplementor)
+        mockFactory.getServiceRegistry() >> registry
+        mockFactory.openSession() >> { throw new RuntimeException("Simulated openSession failure") }
+        GrailsHibernateTemplate mockTemplate = new GrailsHibernateTemplate(mockFactory, datastore)
+        TransactionSynchronizationManager.bindResource(mockFactory, outerHolder)
+
+        when:
+        mockTemplate.executeWithNewSession { Session s -> 'unreachable' }
+
+        then:
+        RuntimeException ex = thrown(RuntimeException)
+        ex.message == "Simulated openSession failure"
+        TransactionSynchronizationManager.getResource(mockFactory) == outerHolder
+
+        cleanup:
+        TransactionSynchronizationManager.unbindResourceIfPossible(mockFactory)
+        outerSession?.close()
+    }
+}
+
+@Entity
+class TemplateTestEntity {
+    Long id
+    Long version
+    String code
+
+    static mapping = {
+        code length: 5
     }
 }

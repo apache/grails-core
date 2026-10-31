@@ -44,14 +44,6 @@ class NonTransactionalSynchronizationOuterSessionStrategy extends AbstractOuterS
             SessionFactory sessionFactory,
             DataSource dataSource,
             TransactionResources txResources,
-            SessionHolder previousHolder) {
-        super(sessionFactory, dataSource, txResources, previousHolder);
-    }
-
-    NonTransactionalSynchronizationOuterSessionStrategy(
-            SessionFactory sessionFactory,
-            DataSource dataSource,
-            TransactionResources txResources,
             SessionHolder previousHolder,
             boolean lazyConnection) {
         super(sessionFactory, dataSource, txResources, previousHolder, lazyConnection);

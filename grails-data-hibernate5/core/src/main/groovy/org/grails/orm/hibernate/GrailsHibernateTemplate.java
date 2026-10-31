@@ -86,7 +86,6 @@ public class GrailsHibernateTemplate implements IHibernateTemplate {
     protected SQLExceptionTranslator jdbcExceptionTranslator;
     protected int flushMode = FLUSH_AUTO;
     private boolean applyFlushModeOnlyToNonExistingTransactions = false;
-    private boolean transactionAware = false;
     private boolean lazyConnection = false;
     protected TransactionResources txResources = new DefaultTransactionResources();
 
@@ -106,7 +105,6 @@ public class GrailsHibernateTemplate implements IHibernateTemplate {
         if (connectionProvider instanceof DatasourceConnectionProviderImpl) {
             DataSource ds = ((DatasourceConnectionProviderImpl) connectionProvider).getDataSource();
             if (ds instanceof TransactionAwareDataSourceProxy transactionAwareProxy) {
-                this.transactionAware = true;
                 DataSource target = transactionAwareProxy.getTargetDataSource();
                 if (target instanceof org.springframework.jdbc.datasource.LazyConnectionDataSourceProxy) {
                     this.lazyConnection = true;
@@ -191,33 +189,29 @@ public class GrailsHibernateTemplate implements IHibernateTemplate {
     }
 
     private void cleanupNewSession(Session newSession) {
+        if (txResources.isSynchronizationActive()) {
+            txResources.clearSynchronization();
+        }
+        txResources.unbindResourceIfPossible(sessionFactory);
+        ConnectionHolder connectionHolder = dataSource != null ?
+                (ConnectionHolder) txResources.unbindResourceIfPossible(dataSource) : null;
         try {
-            if (txResources.isSynchronizationActive()) {
-                txResources.clearSynchronization();
+            if (connectionHolder != null && dataSource != null &&
+                    !(dataSource instanceof org.grails.datastore.gorm.jdbc.MultiTenantDataSource) &&
+                    !connectionHolder.getConnection().isClosed()) {
+                Connection conn = connectionHolder.getConnection();
+                DataSourceUtils.releaseConnection(conn, dataSource);
             }
-            txResources.unbindResource(sessionFactory);
-            ConnectionHolder connectionHolder =
-                    (ConnectionHolder) txResources.unbindResourceIfPossible(dataSource);
-            try {
-                if (connectionHolder != null &&
-                        !(dataSource instanceof org.grails.datastore.gorm.jdbc.MultiTenantDataSource) &&
-                        !connectionHolder.getConnection().isClosed()) {
-                    Connection conn = connectionHolder.getConnection();
-                    DataSourceUtils.releaseConnection(conn, dataSource);
-                }
-            } catch (SQLException e) {
-                if (LOG.isDebugEnabled()) {
-                    LOG.debug(
-                            "Could not close opened JDBC connection. Did the application close the connection manually?: " +
-                                    e.getMessage());
-                }
+        } catch (SQLException e) {
+            if (LOG.isDebugEnabled()) {
+                LOG.debug(
+                        "Could not close opened JDBC connection. Did the application close the connection manually?: " +
+                                e.getMessage());
             }
+        }
 
-            if (newSession != null) {
-                SessionFactoryUtils.closeSession(newSession);
-            }
-        } catch (RuntimeException e) {
-            LOG.warn("Error cleaning up new Hibernate session: {}", e.getMessage(), e);
+        if (newSession != null) {
+            SessionFactoryUtils.closeSession(newSession);
         }
     }
 
@@ -328,10 +322,6 @@ public class GrailsHibernateTemplate implements IHibernateTemplate {
         }
     }
 
-    protected <T> T executeInSession(HibernateCallback<T> action, Session session) throws DataAccessException {
-        return executeInSession(action, session, session, false);
-    }
-
     protected <T> T executeInSession(HibernateCallback<T> action, Session session, Session rawSession, boolean existingTransaction) throws DataAccessException {
         try {
             T result = action.doInHibernate(session);
@@ -352,10 +342,6 @@ public class GrailsHibernateTemplate implements IHibernateTemplate {
     protected boolean isSessionTransactional(Session session) {
         SessionHolder sessionHolder = (SessionHolder) txResources.getResource(sessionFactory);
         return sessionHolder != null && sessionHolder.getSession() == session;
-    }
-
-    public boolean isLazyConnection() {
-        return lazyConnection;
     }
 
     protected Session getSession() {

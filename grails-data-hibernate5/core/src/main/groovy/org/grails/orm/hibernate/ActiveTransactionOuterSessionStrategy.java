@@ -39,14 +39,6 @@ class ActiveTransactionOuterSessionStrategy extends AbstractOuterSessionLifecycl
             SessionFactory sessionFactory,
             DataSource dataSource,
             TransactionResources txResources,
-            SessionHolder previousHolder) {
-        super(sessionFactory, dataSource, txResources, previousHolder);
-    }
-
-    ActiveTransactionOuterSessionStrategy(
-            SessionFactory sessionFactory,
-            DataSource dataSource,
-            TransactionResources txResources,
             SessionHolder previousHolder,
             boolean lazyConnection) {
         super(sessionFactory, dataSource, txResources, previousHolder, lazyConnection);

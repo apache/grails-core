@@ -54,23 +54,6 @@ interface OuterSessionLifecycleStrategy {
      * @param sessionFactory the current Hibernate SessionFactory
      * @param dataSource the underlying DataSource
      * @param txResources the transaction synchronization and resource manager
-     * @return the appropriate {@link OuterSessionLifecycleStrategy}
-     */
-    static OuterSessionLifecycleStrategy from(
-            SessionHolder previousHolder,
-            SessionFactory sessionFactory,
-            DataSource dataSource,
-            TransactionResources txResources) {
-        return from(previousHolder, sessionFactory, dataSource, txResources, false);
-    }
-
-    /**
-     * Factory method creating the appropriate strategy based on the outer session, connection, and transaction context.
-     *
-     * @param previousHolder the session holder bound to the outer scope, or null
-     * @param sessionFactory the current Hibernate SessionFactory
-     * @param dataSource the underlying DataSource
-     * @param txResources the transaction synchronization and resource manager
      * @param lazyConnection whether the datasource is configured with a lazy connection proxy
      * @return the appropriate {@link OuterSessionLifecycleStrategy}
      */
@@ -82,7 +65,7 @@ interface OuterSessionLifecycleStrategy {
             boolean lazyConnection) {
 
         boolean hasOpenSession = previousHolder != null && previousHolder.getSession() != null && previousHolder.getSession().isOpen();
-        boolean hasConnectionHolder = txResources.getResource(dataSource) != null;
+        boolean hasConnectionHolder = dataSource != null && txResources.getResource(dataSource) != null;
         boolean hasSynchronization = txResources.isSynchronizationActive();
 
         if (previousHolder == null && !hasConnectionHolder && !hasSynchronization) {

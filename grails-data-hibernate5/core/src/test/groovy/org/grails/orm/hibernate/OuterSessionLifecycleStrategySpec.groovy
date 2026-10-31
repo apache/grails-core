@@ -50,7 +50,7 @@ class OuterSessionLifecycleStrategySpec extends Specification {
     void "from returns NoOpOuterSessionStrategy when previousHolder is null"() {
         when:
         OuterSessionLifecycleStrategy strategy = OuterSessionLifecycleStrategy.from(
-                null, sessionFactory, dataSource, txResources)
+                null, sessionFactory, dataSource, txResources, false)
 
         then:
         strategy instanceof NoOpOuterSessionStrategy
@@ -63,7 +63,7 @@ class OuterSessionLifecycleStrategySpec extends Specification {
 
         when:
         OuterSessionLifecycleStrategy strategy = OuterSessionLifecycleStrategy.from(
-                emptyHolder, sessionFactory, dataSource, txResources)
+                emptyHolder, sessionFactory, dataSource, txResources, false)
 
         then:
         strategy instanceof DefaultOuterSessionStrategy
@@ -75,7 +75,7 @@ class OuterSessionLifecycleStrategySpec extends Specification {
 
         when:
         OuterSessionLifecycleStrategy strategy = OuterSessionLifecycleStrategy.from(
-                sessionHolder, sessionFactory, dataSource, txResources)
+                sessionHolder, sessionFactory, dataSource, txResources, false)
 
         then:
         strategy instanceof DefaultOuterSessionStrategy
@@ -89,7 +89,7 @@ class OuterSessionLifecycleStrategySpec extends Specification {
 
         when:
         OuterSessionLifecycleStrategy strategy = OuterSessionLifecycleStrategy.from(
-                null, sessionFactory, dataSource, txResources)
+                null, sessionFactory, dataSource, txResources, false)
 
         then:
         strategy instanceof ActiveTransactionOuterSessionStrategy
@@ -104,7 +104,7 @@ class OuterSessionLifecycleStrategySpec extends Specification {
 
         when:
         OuterSessionLifecycleStrategy strategy = OuterSessionLifecycleStrategy.from(
-                null, sessionFactory, dataSource, txResources)
+                null, sessionFactory, dataSource, txResources, false)
 
         then:
         strategy instanceof DefaultOuterSessionStrategy
@@ -117,7 +117,7 @@ class OuterSessionLifecycleStrategySpec extends Specification {
 
         when:
         OuterSessionLifecycleStrategy strategy = OuterSessionLifecycleStrategy.from(
-                sessionHolder, sessionFactory, dataSource, txResources)
+                sessionHolder, sessionFactory, dataSource, txResources, false)
 
         then:
         strategy instanceof ActiveTransactionOuterSessionStrategy
@@ -131,7 +131,7 @@ class OuterSessionLifecycleStrategySpec extends Specification {
 
         when:
         OuterSessionLifecycleStrategy strategy = OuterSessionLifecycleStrategy.from(
-                sessionHolder, sessionFactory, dataSource, txResources)
+                sessionHolder, sessionFactory, dataSource, txResources, false)
 
         then:
         strategy instanceof NonTransactionalSynchronizationOuterSessionStrategy
@@ -145,7 +145,7 @@ class OuterSessionLifecycleStrategySpec extends Specification {
 
         when:
         OuterSessionLifecycleStrategy strategy = OuterSessionLifecycleStrategy.from(
-                sessionHolder, sessionFactory, dataSource, txResources)
+                sessionHolder, sessionFactory, dataSource, txResources, false)
 
         then:
         strategy instanceof DefaultOuterSessionStrategy
@@ -183,7 +183,7 @@ class OuterSessionLifecycleStrategySpec extends Specification {
         SessionHolder holder = new SessionHolder(sessionImpl)
 
         ActiveTransactionOuterSessionStrategy strategy = new ActiveTransactionOuterSessionStrategy(
-                sessionFactory, dataSource, txResources, holder)
+                sessionFactory, dataSource, txResources, holder, false)
 
         when:
         strategy.prepare()
@@ -205,7 +205,7 @@ class OuterSessionLifecycleStrategySpec extends Specification {
         txResources.getSynchronizations() >> syncList
 
         ActiveTransactionOuterSessionStrategy strategy = new ActiveTransactionOuterSessionStrategy(
-                sessionFactory, dataSource, txResources, sessionHolder)
+                sessionFactory, dataSource, txResources, sessionHolder, false)
 
         when: "suspending and unbinding"
         strategy.suspendAndUnbind()
@@ -417,7 +417,7 @@ class OuterSessionLifecycleStrategySpec extends Specification {
         txResources.isSynchronizationActive() >> false
 
         DefaultOuterSessionStrategy strategy = new DefaultOuterSessionStrategy(
-                sessionFactory, dataSource, txResources, sessionHolder)
+                sessionFactory, dataSource, txResources, sessionHolder, false)
 
         when:
         strategy.prepare()
@@ -450,7 +450,7 @@ class OuterSessionLifecycleStrategySpec extends Specification {
 
         SessionHolder holder = new SessionHolder(sessionImpl)
         DefaultOuterSessionStrategy strategy = new DefaultOuterSessionStrategy(
-                sessionFactory, dataSource, txResources, holder)
+                sessionFactory, dataSource, txResources, holder, false)
 
         when:
         strategy.prepare()
@@ -474,7 +474,7 @@ class OuterSessionLifecycleStrategySpec extends Specification {
 
         SessionHolder holder = new SessionHolder(sessionImpl)
         DefaultOuterSessionStrategy strategy = new DefaultOuterSessionStrategy(
-                sessionFactory, dataSource, txResources, holder)
+                sessionFactory, dataSource, txResources, holder, false)
 
         strategy.prepare()
 

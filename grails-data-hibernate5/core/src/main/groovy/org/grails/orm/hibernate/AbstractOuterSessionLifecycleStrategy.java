@@ -61,14 +61,6 @@ abstract class AbstractOuterSessionLifecycleStrategy implements OuterSessionLife
             SessionFactory sessionFactory,
             DataSource dataSource,
             TransactionResources txResources,
-            SessionHolder previousHolder) {
-        this(sessionFactory, dataSource, txResources, previousHolder, false);
-    }
-
-    AbstractOuterSessionLifecycleStrategy(
-            SessionFactory sessionFactory,
-            DataSource dataSource,
-            TransactionResources txResources,
             SessionHolder previousHolder,
             boolean lazyConnection) {
         this.sessionFactory = sessionFactory;
@@ -129,7 +121,7 @@ abstract class AbstractOuterSessionLifecycleStrategy implements OuterSessionLife
 
     @Override
     public void suspendAndUnbind() {
-        previousConnectionHolder = (ConnectionHolder) txResources.getResource(dataSource);
+        previousConnectionHolder = dataSource != null ? (ConnectionHolder) txResources.getResource(dataSource) : null;
         previousActiveSynchronization = txResources.isSynchronizationActive();
         transactionSynchronizations = previousActiveSynchronization ? txResources.getSynchronizations() : null;
 
@@ -142,7 +134,7 @@ abstract class AbstractOuterSessionLifecycleStrategy implements OuterSessionLife
             txResources.unbindResource(sessionFactory);
         }
 
-        if (previousConnectionHolder != null) {
+        if (previousConnectionHolder != null && dataSource != null) {
             txResources.unbindResource(dataSource);
         }
     }
@@ -165,7 +157,7 @@ abstract class AbstractOuterSessionLifecycleStrategy implements OuterSessionLife
             }
         }
 
-        if (previousConnectionHolder != null) {
+        if (previousConnectionHolder != null && dataSource != null) {
             txResources.bindResource(dataSource, previousConnectionHolder);
         }
     }
