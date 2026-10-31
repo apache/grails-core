@@ -18,6 +18,7 @@
  */
 package grails.config
 
+import org.grails.config.CodeGenConfig
 import org.grails.config.NavigableMap
 import spock.lang.Specification
 import spock.lang.Unroll
@@ -171,6 +172,37 @@ class NavigableMapSpec extends Specification {
         output['app.groups'] == [['a', 'b'], ['c']]
         output['app.groups[1][0]'] == 'c'
         output.navigate('app', 'groups') == [['a', 'b'], ['c']]
+    }
+
+    def "navigate stops at a value that is not a map, and reads a list by index"() {
+        given:
+        NavigableMap output = new NavigableMap()
+        output.merge([app: [name: 'demo', ports: [8080, 8443], rows: [[name: 'first']], codes: ['0': 'zero']]], true)
+
+        expect: 'a path that ends on the value answers with it'
+        output.navigate('app', 'name') == 'demo'
+        output.navigate('app', 'ports') == [8080, 8443]
+
+        and: 'a path that continues past a scalar is absent rather than the value'
+        output.navigate('app', 'name', 'deeper') == null
+        new CodeGenConfig(output).navigate(String, 'app', 'name', 'deeper') == null
+
+        and: 'a whole number after a list names its element, as in Spring Boot, and so does an index after its name'
+        output.navigate('app', 'ports', '0') == 8080
+        output.navigate('app', 'ports[1]') == 8443
+        output.navigate('app', 'rows', '0', 'name') == 'first'
+
+        and: 'any other segment after a list is absent'
+        output.navigate('app', 'ports', '2') == null
+        output.navigate('app', 'ports', '-1') == null
+        output.navigate('app', 'ports', '+1') == null
+        output.navigate('app', 'ports', '01') == null
+        output.navigate('app', 'ports[01]') == null
+        output.navigate('app', 'ports', 'first') == null
+        output.navigate('app', 'ports', '0', 'deeper') == null
+
+        and: 'a map with a key that is a number reads it as before'
+        output.navigate('app', 'codes', '0') == 'zero'
     }
 
     def "a dotted key inside a nested map is merged under the path of that map"() {

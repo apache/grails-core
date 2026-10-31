@@ -1,6 +1,6 @@
 ---
 name: grails-9-upgrade
-description: Guide for upgrading Grails applications from Grails 8.x to Grails 9, covering the Groovy 6 baseline, the GPars deprecation in favour of groovy.concurrent, invokedynamic compilation, the separate grails-xml module, the opt-in settings for Spring JSON rendering, Jackson request binding, Spring MVC exception handlers and response bodies, the Jackson-backed JSON converter and domain class rendering, named JSON configurations, RFC 9457 validation problems, format resolution, web unit tests, generated GORM id and version properties, RxGORM on RxJava 3 (imports, blocking calls, subscribers, empty results), the deprecated RxJava 1 and RxJava 2 async and events modules, and the character encoding filter Spring Boot now registers
+description: Guide for upgrading Grails applications from Grails 8.x to Grails 9, covering the Groovy 6 baseline, the GPars deprecation in favour of groovy.concurrent, invokedynamic compilation, the separate grails-xml module, the opt-in settings for Spring JSON rendering, Jackson request binding, Spring MVC exception handlers and response bodies, the Jackson-backed JSON converter and domain class rendering, named JSON configurations, RFC 9457 validation problems, format resolution, web unit tests, generated GORM id and version properties, RxGORM on RxJava 3 (imports, blocking calls, subscribers, empty results), the deprecated RxJava 1 and RxJava 2 async and events modules, the character encoding filter Spring Boot now registers, configuration keys below a value that is not a map, which are absent, and list elements read by index as in Spring Boot
 license: Apache-2.0
 ---
 
@@ -438,6 +438,15 @@ Grails no longer registers a character encoding filter of its own. Spring Boot's
 - Grails 8.1 already registers its encoding filter at `Ordered.HIGHEST_PRECEDENCE`, so coming from 8.1 the encoding filter runs where it did. Coming from 8.0, filters ordered between `Ordered.HIGHEST_PRECEDENCE + 1` and -181 now run after the encoding filter, with the request encoding set. In a packaged application, asset-pipeline's filter then declares that charset on every asset response, for example `text/css;charset=UTF-8`.
 - A filter that reads request parameters needs a later order than `Ordered.HIGHEST_PRECEDENCE`. The CAS plugin registers its single sign-out filter at `Ordered.HIGHEST_PRECEDENCE + 1`.
 
+## A Configuration Key Below a Value That Is Not a Map Is Absent
+
+`getProperty` on `grailsApplication.config` answers a dotted key that runs past a value that is not a map, such as `server.url.port` when `server.url` is a string, `server.ports.0` when `server.ports` is a list, or `grails.gorm.default.constraints.nullable` when the parent is a closure from `application.groovy`, with `null` or the default, and `containsProperty` of such a key is `false`; Grails 8 answered with the parent value. `navigate` answers `null` too. Below a list, a whole-number segment names an element instead, as in Spring Boot: `server.ports.0` is the first port, where Grails 8 answered with the whole list, and `server.ports[0]` is the same element for a list from `application.yml` or `application.groovy`. A list of maps reads into its elements, `app.rows.0.name`; an index past the end, or a number with a leading zero such as `01`, is absent; a map whose keys are numbers reads as before. A placeholder in a list element, such as `${EXAMPLE_ORIGIN:https://default.example.com}` in `app.origins`, is not resolved by `config`, by index or in the whole list, as in Grails 8; the `Environment` resolves it, so read such an element there or bind the list with `@ConfigurationProperties`.
+
+- A typed read with a default changes silently, because the default takes over: with `x.y: false` set as a shorthand for the block, `getProperty('x.y.enabled', Boolean, true)` answered `false` in Grails 8 and answers `true`.
+- A property source of lower precedence that sets the deeper key now answers it: with `a.b: x` in one source and `a.b.c: y` in a source of lower precedence, `getProperty('a.b.c')` answers `y`, where Grails 8 answered `x`, as a Spring `Environment` over the same sources does. `navigate('a', 'b', 'c')` answers `null`.
+- Code that reads a child of a string or a closure and relied on being answered with the parent reads the parent instead.
+- Code that read a whole list through a key ending in a whole number, such as `server.ports.0`, now gets the element; read the list as `server.ports`.
+
 ## Verification Checklist
 
 - [ ] `gradle.properties` names the Grails 9 version and the wrapper is Gradle 9.8 or later
@@ -464,6 +473,9 @@ Grails no longer registers a character encoding filter of its own. Spring Boot's
 - [ ] No application filter that reads request parameters is registered at `Ordered.HIGHEST_PRECEDENCE`
 - [ ] No filter is ordered from `GrailsFilters.CHARACTER_ENCODING_FILTER`, which is deprecated
 - [ ] The application starts with no `deprecated` warning from the Grails async or events modules
+- [ ] No code reads a child of a string or closure configuration value expecting the parent
+- [ ] No code reads a whole list through a key ending in a whole number, such as `server.ports.0`
+- [ ] No typed read with a default, such as `getProperty('x.y.enabled', Boolean, true)`, names a key below a configuration value that is not a map
 - [ ] The full test suite passes on Groovy 6
 
 ## Pitfalls to Avoid

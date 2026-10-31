@@ -257,17 +257,48 @@ class NavigableMap implements Map<String, Object>, Cloneable {
 
     private Object navigateMap(Map<String, Object> map, String... path) {
         if (map == null || path == null) return null
-        if (path.length == 0) {
-            return map
-        } else if (path.length == 1) {
-            return map.get(path[0])
-        } else {
-            def submap = map.get(path[0])
-            if (submap instanceof Map) {
-                return navigateMap((Map<String, Object>) submap, path.tail())
+        Object value = map
+        for (String segment in path) {
+            value = childOf(value, segment)
+            if (value == null) {
+                return null
             }
-            return submap
         }
+        value
+    }
+
+    /**
+     * The child a segment of a path names: the entry of a map, or the element of a list at a whole-number segment, as
+     * Spring Boot reads {@code server.ports.0}. A whole number with a leading zero, such as {@code 01}, is not an
+     * index, as in Spring Boot. A segment with an index after a name, {@code ports[0]}, names the element of the list
+     * under {@code ports} when the map holds no key of that name itself. Anything else below a value that
+     * is not a map has no child.
+     */
+    private static Object childOf(Object value, String segment) {
+        if (value instanceof Map) {
+            Map map = (Map) value
+            if (map.containsKey(segment)) {
+                return map.get(segment)
+            }
+            int bracket = segment.indexOf('[')
+            if (bracket > 0 && segment.endsWith(']')) {
+                Object child = map.get(segment.substring(0, bracket))
+                for (String index in segment.substring(bracket + 1, segment.length() - 1).split('\\]\\[', -1)) {
+                    child = childOf(child, index)
+                    if (child == null) {
+                        return null
+                    }
+                }
+                return child
+            }
+            return null
+        }
+        if (value instanceof List && segment ==~ /0|[1-9]\d{0,8}/) {
+            List list = (List) value
+            int index = segment.toInteger()
+            return index >= 0 && index < list.size() ? list.get(index) : null
+        }
+        null
     }
 
     /**

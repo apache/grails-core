@@ -18,9 +18,13 @@
  */
 package org.grails.config
 
+import org.grails.config.yaml.YamlPropertySourceLoader
+import org.springframework.boot.context.properties.source.ConfigurationPropertySources
 import org.springframework.core.env.MapPropertySource
 import org.springframework.core.env.MutablePropertySources
 import org.springframework.core.env.PropertySource
+import org.springframework.core.env.StandardEnvironment
+import org.springframework.core.io.ByteArrayResource
 import spock.lang.Ignore
 import spock.lang.Issue
 import spock.lang.Specification
@@ -133,10 +137,148 @@ class PropertySourcesConfigSpec extends Specification {
         config.getProperty('.plain.nested.value.') == 'found'
         config.getProperty('...') == null
 
-        and: "a key that runs past a scalar answers with that scalar, as it always has"
-        // Grails 8 behaviour, pinned on purpose: apache/grails-core#16732 makes such a key absent on 9.0.x
-        config.getProperty('plain.nested.value.deeper') == 'found'
-        config.containsProperty('plain.nested.value.deeper')
+        and: "a key that runs past a scalar is absent, where Grails 8 answered with the scalar"
+        config.getProperty('plain.nested.value.deeper') == null
+        !config.containsProperty('plain.nested.value.deeper')
+    }
+
+    void 'a dotted key that runs past a value that is not a map is absent'() {
+        given: "a scalar, a list and a closure, the value shapes application.yml and application.groovy produce"
+        def constraints = { nullable true }
+        def config = new PropertySourcesConfig([
+                server: [url: 'http://localhost', ports: [8080, 8443]],
+                grails: [gorm: ['default': [constraints: constraints]]]
+        ])
+
+        expect: "each value resolves itself"
+        config.getProperty('server.url') == 'http://localhost'
+        config.getProperty('server.ports', List) == [8080, 8443]
+        config.getProperty('grails.gorm.default.constraints', Closure).is(constraints)
+
+        and: "a key that names a child of any of them, other than an element of the list, is absent rather than the value"
+        config.getProperty('server.url.port') == null
+        config.getProperty('server.url.port', String, 'none') == 'none'
+        config.getProperty('server.ports.first') == null
+        config.getProperty('grails.gorm.default.constraints.nullable') == null
+
+        and: "containsProperty agrees"
+        !config.containsProperty('server.url.port')
+        !config.containsProperty('server.ports.first')
+        !config.containsProperty('grails.gorm.default.constraints.nullable')
+    }
+
+    void 'a whole number after a list names its element, as Spring Boot reads it, from #description'() {
+        given:
+        def config = new PropertySourcesConfig(source)
+
+        expect: "the element, by a whole-number segment or by an index after the name"
+        config.getProperty('server.ports.0', Integer) == 8080
+        config.getProperty('server.ports.1', Integer) == 8443
+        config.getProperty('server.ports[1]', Integer) == 8443
+        config.containsProperty('server.ports.0')
+        config.navigate('server', 'ports', '1') == 8443
+
+        and: "a list of maps reads into its elements"
+        config.getProperty('app.rows.0.name') == 'first'
+        config.getProperty('app.rows[1].name') == 'second'
+
+        and: "an index past the end, or a segment that is not a whole number, is absent"
+        config.getProperty('server.ports.2') == null
+        !config.containsProperty('server.ports.2')
+        config.getProperty('server.ports.-1') == null
+        config.getProperty('server.ports.01') == null
+        config.getProperty('server.ports[01]') == null
+        config.getProperty('server.ports.0.deeper') == null
+
+        where:
+        description                        | source
+        'a list held whole, as from a map' | [server: [ports: [8080, 8443]], app: [rows: [[name: 'first'], [name: 'second']]]]
+        'application.yml'                  | new YamlPropertySourceLoader().load('application.yml', new ByteArrayResource("server:\n  ports:\n    - 8080\n    - 8443\napp:\n  rows:\n    - name: first\n    - name: second\n".bytes)).first()
+    }
+
+    void 'a whole number after a list gives the element the Spring environment gives'() {
+        given: "application.yml in a config and in an environment with configuration property sources attached"
+        def source = new YamlPropertySourceLoader().load('application.yml', new ByteArrayResource("server:\n  ports:\n    - 8080\n    - 8443\n".bytes)).first()
+        def environment = new StandardEnvironment()
+        environment.propertySources.addFirst(source)
+        ConfigurationPropertySources.attach(environment)
+        def config = new PropertySourcesConfig(source)
+
+        expect:
+        environment.getProperty('server.ports.0', Integer) == 8080
+        config.getProperty('server.ports.0', Integer) == 8080
+        environment.getProperty('server.ports.2') == null
+        config.getProperty('server.ports.2') == null
+
+        and: "a number with a leading zero is not an index"
+        environment.getProperty('server.ports.01') == null
+        config.getProperty('server.ports.01') == null
+    }
+
+    void 'a full key stored with #method wins over the element of the list it names: #key'() {
+        given:
+        def config = new PropertySourcesConfig([server: [ports: [8080, 8443]]])
+
+        when:
+        write(config, key)
+
+        then: "the stored value, not the element"
+        config.getProperty(key, Integer) == 9000
+        config.get(key) == 9000
+
+        and: "the other element still reads from the list"
+        config.getProperty('server.ports[0]', Integer) == 8080
+        config.getProperty('server.ports.0', Integer) == 8080
+
+        where:
+        method   | key               | write
+        'put'    | 'server.ports[1]' | { PropertySourcesConfig c, String k -> c.put(k, 9000) }
+        'putAll' | 'server.ports[1]' | { PropertySourcesConfig c, String k -> c.putAll([(k): 9000]) }
+        'setAt'  | 'server.ports[1]' | { PropertySourcesConfig c, String k -> c[k] = 9000 }
+        'put'    | 'server.ports.1'  | { PropertySourcesConfig c, String k -> c.put(k, 9000) }
+        'putAll' | 'server.ports.1'  | { PropertySourcesConfig c, String k -> c.putAll([(k): 9000]) }
+        'setAt'  | 'server.ports.1'  | { PropertySourcesConfig c, String k -> c[k] = 9000 }
+    }
+
+    void 'a map with a key that is a whole number reads it as before'() {
+        given:
+        def config = new PropertySourcesConfig([codes: ['0': 'zero', '1': 'one']])
+
+        expect:
+        config.getProperty('codes.0') == 'zero'
+        config.navigate('codes', '1') == 'one'
+    }
+
+    void 'a typed read with a default below a value that is not a map gets the default'() {
+        given: "a parent set to a boolean as a shorthand for its block"
+        def config = new PropertySourcesConfig([x: [y: false]])
+
+        expect: "the default, where Grails 8 answered with the parent"
+        config.getProperty('x.y.enabled', Boolean, true)
+        config.getProperty('x.y', Boolean) == false
+    }
+
+    void 'a key below a value that is not a map is answered by a property source of lower precedence that sets it'() {
+        given: "a property source that sets a.b to a value, and one of lower precedence that sets a.b.c"
+        def higher = new MapPropertySource('higher', ['a.b': 'x'])
+        def lower = new MapPropertySource('lower', ['a.b.c': 'y'])
+        def sources = new MutablePropertySources()
+        sources.addLast(higher)
+        sources.addLast(lower)
+        def config = new PropertySourcesConfig(sources)
+
+        and: "a Spring environment over the same two sources"
+        def environment = new StandardEnvironment()
+        environment.propertySources.addLast(higher)
+        environment.propertySources.addLast(lower)
+
+        expect: "getProperty answers with the deeper key, where Grails 8 answered with a.b, as the environment does"
+        config.getProperty('a.b.c') == 'y'
+        config.containsProperty('a.b.c')
+        environment.getProperty('a.b.c') == 'y'
+
+        and: "navigate stops at the value"
+        config.navigate('a', 'b', 'c') == null
     }
 
     void 'a dotted key inside a nested map is exported under its full path and overwrites no other property'() {

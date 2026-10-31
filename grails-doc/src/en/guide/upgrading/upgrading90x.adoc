@@ -1241,3 +1241,38 @@ Grails no longer registers a character encoding filter of its own. It used to, a
 * `spring.servlet.encoding.enabled: false` turns the encoding filter off.
 * The CAS plugin's single sign-out filter, which reads a parameter of every POST, is registered right after the encoding filter.
 * A filter of your own that reads request parameters needs a later order than `Ordered.HIGHEST_PRECEDENCE`, or form input reaches controllers decoded as ISO-8859-1. One registered at exactly `Ordered.HIGHEST_PRECEDENCE` through a `FilterRegistrationBean` runs before the encoding filter.
+
+==== 21. A Configuration Key Below a Value That Is Not a Map Is Absent
+
+In Grails 8, `getProperty` on `grailsApplication.config` answered a dotted key that runs past a value that is not a map with that value: `server.url.port` when `server.url` is a string, `server.ports.0` when `server.ports` is a list, or `grails.gorm.default.constraints.nullable` when `grails.gorm.default.constraints` is a closure from `application.groovy`. `containsProperty` of such a key was `true`. In Grails 9 the key is absent: `getProperty` returns `null` or the default, `containsProperty` returns `false`, and `navigate` answers `null`.
+
+Below a list, a whole-number segment names an element instead, as Spring Boot reads it, and so does an index after the name of the list, whether the list comes from `application.yml` or from `application.groovy`:
+
+[source,groovy]
+----
+// server.ports: [8080, 8443]
+config.getProperty('server.ports.0')      // Grails 8: [8080, 8443], Grails 9: 8080
+config.getProperty('server.ports[1]')     // 8443
+config.navigate('server', 'ports', '0')   // Grails 8: [8080, 8443], Grails 9: 8080
+config.getProperty('server.ports.2')      // Grails 8: [8080, 8443], Grails 9: null
+----
+
+A list of maps reads into its elements, as `app.rows.0.name`. An index past the end of the list, a number with a leading zero such as `01`, or any other segment after it, is absent. A map whose keys are numbers, such as `codes: {'0': zero}`, reads as before.
+
+A placeholder in a list element, such as `${EXAMPLE_ORIGIN:https://default.example.com}` as an element of `app.origins`, is not resolved by `config`: `getProperty('app.origins.1')`, `getProperty('app.origins[1]')` and the elements of `getProperty('app.origins', List)` hold it as written, as the whole list did in Grails 8, where the `Environment` answers `https://default.example.com`. Read such an element through the `Environment`, or bind the list with `@ConfigurationProperties`.
+
+A typed read with a default changes with nothing to point at it, because the default takes over. With the parent set to a boolean as a shorthand for its block:
+
+[source,groovy]
+----
+// x.y: false
+config.getProperty('x.y.enabled', Boolean, true)   // Grails 8: false, Grails 9: true
+----
+
+A property source of lower precedence that sets the deeper key now answers it. With `a.b: x` in one property source and `a.b.c: y` in a source of lower precedence, `getProperty('a.b.c')` answers `y` where Grails 8 answered `x`, as a Spring `Environment` over the same sources does, and `containsProperty('a.b.c')` stays `true`. `navigate('a', 'b', 'c')` answers `null`.
+
+===== Required Actions
+
+* Code that reads a child of a string or a closure and relied on being answered with the parent reads the parent instead.
+* Code that read a whole list through a key ending in a whole number, such as `server.ports.0`, now gets the element; it reads the list as `server.ports`.
+* A typed read with a default below such a value, such as `getProperty('x.y.enabled', Boolean, true)` when `x.y` is `false`, reads the parent, or the configuration sets the deeper key.
