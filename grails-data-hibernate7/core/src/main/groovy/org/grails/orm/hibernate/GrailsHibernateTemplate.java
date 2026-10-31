@@ -46,7 +46,6 @@ import org.hibernate.engine.jdbc.connections.spi.ConnectionProvider;
 import org.hibernate.engine.spi.SessionFactoryImplementor;
 import org.hibernate.engine.spi.SessionImplementor;
 import org.hibernate.event.spi.EventSource;
-import org.hibernate.exception.GenericJDBCException;
 import org.hibernate.query.Query;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -59,7 +58,6 @@ import org.springframework.jdbc.datasource.DataSourceUtils;
 import org.springframework.jdbc.datasource.TransactionAwareDataSourceProxy;
 import org.springframework.jdbc.support.SQLErrorCodeSQLExceptionTranslator;
 import org.springframework.jdbc.support.SQLExceptionTranslator;
-import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.util.Assert;
 
 import org.grails.orm.hibernate.support.hibernate7.DefaultTransactionResources;
@@ -146,6 +144,7 @@ public class GrailsHibernateTemplate implements IHibernateTemplate {
     private boolean osivReadOnly;
     private boolean passReadOnlyToHibernate = false;
     private boolean applyFlushModeOnlyToNonExistingTransactions = false;
+    private boolean lazyConnection = false;
     protected TransactionResources txResources = new DefaultTransactionResources();
 
     protected GrailsHibernateTemplate() {
@@ -159,13 +158,21 @@ public class GrailsHibernateTemplate implements IHibernateTemplate {
         ConnectionProvider connectionProvider = ((SessionFactoryImplementor) sessionFactory)
                 .getServiceRegistry()
                 .getService(ConnectionProvider.class);
-        this.dataSource = connectionProvider != null ? connectionProvider.unwrap(DataSource.class) : null;
-        if (this.dataSource != null) {
-            if (this.dataSource instanceof TransactionAwareDataSourceProxy) {
-                DataSource target = ((TransactionAwareDataSourceProxy) this.dataSource).getTargetDataSource();
+        DataSource ds = connectionProvider != null ? connectionProvider.unwrap(DataSource.class) : null;
+        if (ds != null) {
+            if (ds instanceof TransactionAwareDataSourceProxy transactionAwareProxy) {
+                DataSource target = transactionAwareProxy.getTargetDataSource();
+                if (target instanceof org.springframework.jdbc.datasource.LazyConnectionDataSourceProxy) {
+                    this.lazyConnection = true;
+                }
                 if (target != null) {
                     this.dataSource = target;
                 }
+            } else {
+                if (ds instanceof org.springframework.jdbc.datasource.LazyConnectionDataSourceProxy) {
+                    this.lazyConnection = true;
+                }
+                this.dataSource = ds;
             }
             jdbcExceptionTranslator = new SQLErrorCodeSQLExceptionTranslator(this.dataSource);
         } else {
@@ -219,97 +226,50 @@ public class GrailsHibernateTemplate implements IHibernateTemplate {
     @Override
     public <T> T executeWithNewSession(final Closure<T> callable) {
         SessionHolder sessionHolder = (SessionHolder) txResources.getResource(sessionFactory);
-        SessionHolder previousHolder = sessionHolder;
-        ConnectionHolder previousConnectionHolder =
-                (ConnectionHolder) txResources.getResource(dataSource);
+        OuterSessionLifecycleStrategy strategy = OuterSessionLifecycleStrategy.from(
+                sessionHolder, sessionFactory, dataSource, txResources, lazyConnection);
+
+        strategy.prepare();
         Session newSession = null;
-        boolean previousActiveSynchronization = txResources.isSynchronizationActive();
-        List<TransactionSynchronization> transactionSynchronizations =
-                previousActiveSynchronization ? txResources.getSynchronizations() : null;
         try {
-            // if there are any previous synchronizations active we need to clear them and restore them
-            // later (see finally block)
-            if (previousActiveSynchronization) {
-                txResources.clearSynchronization();
-                // init a new synchronization to ensure that any opened database connections are closed by
-                // the synchronization
-                txResources.initSynchronization();
-            }
+            strategy.suspendAndUnbind();
 
-            // if there are already bound holders, unbind them so they can be restored later
-            if (sessionHolder != null) {
-                txResources.unbindResource(sessionFactory);
-            }
-            // Unbind any pre-existing connection holder independently of the session holder: a
-            // DataSource binding can exist without a matching SessionFactory binding when, for
-            // example, Spring's SQLErrorCodesFactory eagerly acquires a connection via
-            // DataSourceUtils during SQLErrorCodeSQLExceptionTranslator initialisation while a
-            // parent-transaction synchronisation is already active.  Leaving it bound causes
-            // HibernateTransactionManager.doBegin to throw "Already value bound" at line 565.
-            if (previousConnectionHolder != null) {
-                txResources.unbindResource(dataSource);
-            }
-
-            // create and bind a new session holder for the new session
             newSession = sessionFactory.openSession();
             applyFlushMode(newSession, false);
             sessionHolder = new SessionHolder(newSession);
             txResources.bindResource(sessionFactory, sessionHolder);
 
-            return callable.call(newSession);
+            return execute(callable::call);
         } finally {
-            try {
-                // if an active synchronization was registered during the life time of the new session clear
-                // it
-                if (txResources.isSynchronizationActive()) {
-                    txResources.clearSynchronization();
-                }
-                // If there is a synchronization active then leave it to the synchronization to close the
-                // session
-                // Clear any bound sessions and connections
-                txResources.unbindResource(sessionFactory);
-                ConnectionHolder connectionHolder =
-                        (ConnectionHolder) txResources.unbindResourceIfPossible(dataSource);
-                // if there is a connection holder and it holds an open connection close it
-                try {
-                    if (connectionHolder != null &&
-                            !(dataSource instanceof org.grails.datastore.gorm.jdbc.MultiTenantDataSource) &&
-                            !connectionHolder.getConnection().isClosed()) {
-                        Connection conn = connectionHolder.getConnection();
-                        DataSourceUtils.releaseConnection(conn, dataSource);
-                    }
-                } catch (SQLException e) {
-                    // ignore, connection closed already?
-                    if (LOG.isDebugEnabled()) {
-                        LOG.debug(
-                                "Could not close opened JDBC connection. Did the application close the connection manually?: " +
-                                        e.getMessage());
-                    }
-                }
+            cleanupNewSession(newSession);
+            strategy.restore();
+        }
+    }
 
-                if (newSession != null) {
-                    SessionFactoryUtils.closeSession(newSession);
-                }
-            } finally {
-                // if there were previously active synchronizations then register those again
-                if (previousActiveSynchronization) {
-                    txResources.initSynchronization();
-                    for (TransactionSynchronization transactionSynchronization : transactionSynchronizations) {
-                        txResources.registerSynchronization(transactionSynchronization);
-                    }
-                }
-
-                // now restore any previous state
-                if (previousHolder != null) {
-                    txResources.bindResource(sessionFactory, previousHolder);
-                }
-                // Restore the connection holder independently of the session holder so that
-                // the parent-transaction's ConnectionSynchronization (re-registered above) can
-                // still release it when the outer transaction completes.
-                if (previousConnectionHolder != null) {
-                    txResources.bindResource(dataSource, previousConnectionHolder);
-                }
+    private void cleanupNewSession(Session newSession) {
+        if (txResources.isSynchronizationActive()) {
+            txResources.clearSynchronization();
+        }
+        txResources.unbindResourceIfPossible(sessionFactory);
+        ConnectionHolder connectionHolder = dataSource != null ?
+                (ConnectionHolder) txResources.unbindResourceIfPossible(dataSource) : null;
+        try {
+            if (connectionHolder != null && dataSource != null &&
+                    !(dataSource instanceof org.grails.datastore.gorm.jdbc.MultiTenantDataSource) &&
+                    !connectionHolder.getConnection().isClosed()) {
+                Connection conn = connectionHolder.getConnection();
+                DataSourceUtils.releaseConnection(conn, dataSource);
             }
+        } catch (SQLException e) {
+            if (LOG.isDebugEnabled()) {
+                LOG.debug(
+                        "Could not close opened JDBC connection. Did the application close the connection manually?: " +
+                                e.getMessage());
+            }
+        }
+
+        if (newSession != null) {
+            SessionFactoryUtils.closeSession(newSession);
         }
     }
 
@@ -680,10 +640,8 @@ public class GrailsHibernateTemplate implements IHibernateTemplate {
     @SuppressWarnings("ConstantConditions")
     protected DataAccessException convertHibernateAccessException(HibernateException ex) {
         if (ex instanceof JDBCException) {
-            return convertJdbcAccessException((JDBCException) ex, jdbcExceptionTranslator);
-        }
-        if (GenericJDBCException.class.equals(ex.getClass())) {
-            return convertJdbcAccessException((GenericJDBCException) ex, jdbcExceptionTranslator);
+            DataAccessException dae = convertJdbcAccessException((JDBCException) ex, jdbcExceptionTranslator);
+            return dae != null ? dae : SessionFactoryUtils.convertHibernateAccessException(ex);
         }
         return SessionFactoryUtils.convertHibernateAccessException(ex);
     }
