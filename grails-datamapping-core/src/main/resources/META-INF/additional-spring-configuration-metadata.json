@@ -3,6 +3,10 @@
         {
             "name": "dataSource",
             "description": "DataSource"
+        },
+        {
+            "name": "grails.gorm.queryTail",
+            "description": "Statement capture for the query-tail command: SQL through Hibernate, Cypher through Neo4j and commands through MongoDB"
         }
     ],
     "properties": [
@@ -86,6 +90,17 @@
             "type": "java.lang.String",
             "description": "The connection pool implementation class when multiple are on the classpath.",
             "defaultValue": "com.zaxxer.hikari.HikariDataSource"
+        },
+        {
+            "name": "grails.gorm.queryTail.enabled",
+            "type": "java.lang.Boolean",
+            "description": "Whether the application records every statement GORM runs, SQL through Hibernate, Cypher through Neo4j and commands through MongoDB, with the controller and action serving the request, to the file the query-tail command tails. Off by default: an application started without it carries nothing that records, so it costs nothing per statement. Turned on for one run by grails run-app --query-tail or ./gradlew bootRun -Pgrails.gorm.queryTail.enabled.",
+            "defaultValue": false
+        },
+        {
+            "name": "grails.gorm.queryTail.file",
+            "type": "java.lang.String",
+            "description": "The file captured statements are written to, absolute or relative to the application directory, where the query-tail command reads it, or to the working directory when the application was not started by Gradle. When not set the file is query-tail/capture.log under the build directory, where the query-tail command looks for it."
         }
     ]
 }

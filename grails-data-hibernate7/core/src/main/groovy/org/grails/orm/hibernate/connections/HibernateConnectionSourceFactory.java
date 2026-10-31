@@ -43,6 +43,7 @@ import org.springframework.context.support.StaticMessageSource;
 import org.springframework.core.env.PropertyResolver;
 import org.springframework.core.io.Resource;
 
+import org.apache.grails.data.hibernate7.core.querytail.QueryTailSessionFactoryObserver;
 import org.grails.datastore.gorm.jdbc.connections.CachedDataSourceConnectionSourceFactory;
 import org.grails.datastore.gorm.jdbc.connections.DataSourceConnectionSourceFactory;
 import org.grails.datastore.gorm.jdbc.connections.DataSourceSettings;
@@ -213,6 +214,7 @@ public class HibernateConnectionSourceFactory
         configuration.setSessionFactoryBeanName(
                 ConnectionSource.DEFAULT.equals(name) ? "sessionFactory" : "sessionFactory_" + name);
         configuration.addProperties(settings.toProperties());
+        QueryTailSessionFactoryObserver.install(settings.getQueryTail(), configuration);
         return configuration;
     }
 

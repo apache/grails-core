@@ -216,6 +216,11 @@ include::ref/Command Line/schema-export.adoc[]
 
 include::ref/Command Line/shell.adoc[]
 
+[[ref-command-line-query-tail]]
+==== query-tail
+
+include::ref/Command Line/query-tail.adoc[]
+
 [[ref-command-line-stats]]
 ==== stats
 

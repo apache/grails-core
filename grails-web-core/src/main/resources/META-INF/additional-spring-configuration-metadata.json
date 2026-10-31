@@ -69,14 +69,22 @@
         {
             "name": "grails.filter.encoding",
             "type": "java.lang.String",
-            "description": "The character encoding for the Grails character encoding filter.",
-            "defaultValue": "UTF-8"
+            "description": "The character encoding of the character encoding filter.",
+            "deprecation": {
+                "level": "warning",
+                "reason": "Spring Boot registers the character encoding filter; its encoding is configured with spring.servlet.encoding.charset.",
+                "replacement": "spring.servlet.encoding.charset"
+            }
         },
         {
             "name": "grails.filter.forceEncoding",
             "type": "java.lang.Boolean",
-            "description": "Whether to force the encoding filter to set the encoding on the response.",
-            "defaultValue": true
+            "description": "Whether the character encoding filter overrides the encoding of the request and the response.",
+            "deprecation": {
+                "level": "warning",
+                "reason": "Spring Boot registers the character encoding filter; whether it overrides the encoding is configured with spring.servlet.encoding.force.",
+                "replacement": "spring.servlet.encoding.force"
+            }
         },
         {
             "name": "grails.exceptionresolver.logRequestParameters",

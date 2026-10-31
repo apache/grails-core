@@ -19,3 +19,5 @@
 org.springframework.boot.EnvironmentPostProcessor=\
   org.grails.plugins.web.controllers.GrailsWebResourcesEnvironmentPostProcessor,\
   org.grails.plugins.web.controllers.GrailsControllersEnvironmentPostProcessor
+org.springframework.context.ApplicationContextInitializer=\
+  org.grails.plugins.web.controllers.GrailsCharacterEncodingInitializer

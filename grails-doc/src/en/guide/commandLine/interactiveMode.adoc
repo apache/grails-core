@@ -70,7 +70,7 @@ Creates an application
                           gorm-hibernate7, spring-boot-starter-jetty, spring-boot-starter-tomcat,
                           micronaut-http-client, cache-ehcache, hibernate-validator, postgres,
                           mysql, cache, database-migration, grails-gsp, hamcrest, gorm-mongodb,
-                          assertj, mockito, grails-undertow,
+                          gorm-graphql, assertj, mockito, grails-undertow,
                           github-workflow-java-ci, jrebel, testcontainers, sqlserver,
                           grails-console, views-markup, asset-pipeline-grails, views-json,
                           gorm-neo4j, asciidoctor, grails-web-console,
@@ -108,6 +108,9 @@ Available Features
   spring-ai-anthropic                 Uses Anthropic Claude models through Spring AI, with the API key taken from the ANTHROPIC_API_KEY environment variable.
   spring-ai-ollama                    Uses models served by a local Ollama through Spring AI; no credentials needed.
   spring-ai-openai                    Uses OpenAI models through Spring AI, with the API key taken from the OPENAI_API_KEY environment variable.
+
+  API
+  gorm-graphql                        Generates a GraphQL schema based on entities in GORM.
 
   CI/CD
   github-workflow-java-ci [PREVIEW]   Adds a Github Actions Workflow to Build and Test Grails Application

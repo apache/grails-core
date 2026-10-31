@@ -53,6 +53,25 @@ class CompilePluginSpec extends Specification {
         compileGroovy.inputs.files.files.count { it.canonicalFile == importsFile.canonicalFile } == 1
     }
 
+    void 'the hand-authored factories files are compiler inputs, each registered once'() {
+        given:
+        Project project = ProjectBuilder.builder().withProjectDir(projectDir).build()
+        GroovyCompile compileGroovy = project.tasks.register('compileGroovy', GroovyCompile).get()
+        List<File> factoriesFiles = ([CompilePlugin.GRAILS_FACTORIES_PATH] + CompilePlugin.CLI_FACTORIES_PATHS).collect { String path ->
+            File file = new File(projectDir, path)
+            file.parentFile.mkdirs()
+            file.text = 'example.Type=example.Implementation\n'
+            file.canonicalFile
+        }
+
+        when:
+        CompilePlugin.registerFactoriesInputs(project, compileGroovy)
+        CompilePlugin.registerFactoriesInputs(project, compileGroovy)
+
+        then:
+        compileGroovy.inputs.files.files*.canonicalFile.findAll { it in factoriesFiles }.sort() == factoriesFiles.sort()
+    }
+
     def setup() {
         testProjectDir.resolve('settings.gradle').toFile().text = ''
         testProjectDir.resolve('.asf.yaml').toFile().text = ''

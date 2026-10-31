@@ -29,6 +29,8 @@ import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateManyToManyP
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateOneToManyProperty
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyEntityProperty
 
+import org.hibernate.boot.spi.MetadataBuildingContext
+import org.hibernate.mapping.Collection
 import org.hibernate.mapping.ManyToOne
 
 import org.grails.datastore.mapping.model.PersistentEntity
@@ -44,7 +46,10 @@ import org.grails.orm.hibernate.cfg.domainbinding.util.BackticksRemover
 
 class CollectionSecondPassBinderSpec extends HibernateGormDatastoreSpec {
 
+    SharedJoinTableUniqueKeyBinder sharedJoinTableUniqueKeyBinder = Mock()
+
     CollectionSecondPassBinder binder
+    CollectionSecondPassBinder legacyBinder
     BidirectionalMapElementBinder mockBidirectionalMapElementBinder = Mock(BidirectionalMapElementBinder)
 
     void setup() {
@@ -73,6 +78,16 @@ class CollectionSecondPassBinderSpec extends HibernateGormDatastoreSpec {
                 mockBidirectionalMapElementBinder,
                 new ManyToOneElementBinder(mtob, cfpcb),
                 new HibernateToManyEntityOrderByBinder(),
+                new ToManyEntityMultiTenantFilterBinder(dcnf),
+                sharedJoinTableUniqueKeyBinder
+        )
+        legacyBinder = new CollectionSecondPassBinder(
+                cku,
+                uotmb,
+                cwjtb,
+                mockBidirectionalMapElementBinder,
+                new ManyToOneElementBinder(mtob, cfpcb),
+                new HibernateToManyEntityOrderByBinder(),
                 new ToManyEntityMultiTenantFilterBinder(dcnf)
         )
     }
@@ -81,6 +96,25 @@ class CollectionSecondPassBinderSpec extends HibernateGormDatastoreSpec {
         PersistentEntity entity = createPersistentEntity(domainClass)
         HibernatePersistentProperty property = (HibernatePersistentProperty) entity.getPropertyByName(propertyName)
         return property
+    }
+
+    def "the constructor of 8.0.0 creates the keys and leaves a shared join table as Hibernate binds it"() {
+        given: 'a set bound by its first and second pass'
+        def property = createTestHibernateToManyProperty(CSPBUniOwner, "items") as HibernateToManyProperty
+        hibernateFirstPass()
+        legacyBinder.bindCollectionSecondPass(property)
+
+        when: 'a binder built without a shared join table binder, as in 8.0.0, creates the keys'
+        legacyBinder.createCollectionKeys(property)
+
+        then:
+        noExceptionThrown()
+
+        when: 'the binder with one asks it to complete the table'
+        binder.createCollectionKeys(property)
+
+        then:
+        1 * sharedJoinTableUniqueKeyBinder.bind(property.collection)
     }
 
     def "bindCollectionSecondPass succeeds for Basic String collection"() {
@@ -297,6 +331,22 @@ class CollectionSecondPassBinderSpec extends HibernateGormDatastoreSpec {
         1 * mockComponentBinder.bindEmbeddedCollectionComponent(embeddedProperty) >> mockComponent
         bag.element == mockComponent
     }
+
+    void "createCollectionKeys creates the keys of the collection and then gives a shared join table its uniqueness"() {
+        given: 'a set, mocked over its constructor as the mapping classes have no default one'
+        Collection collection = Mock(org.hibernate.mapping.Set, constructorArgs: [Stub(MetadataBuildingContext), null])
+        HibernateToManyProperty property = Stub() { getCollection() >> collection }
+
+        when:
+        binder.createCollectionKeys(property)
+
+        then: 'the keys first, as the uniqueness is read from them'
+        1 * collection.createAllKeys()
+
+        then:
+        1 * sharedJoinTableUniqueKeyBinder.bind(collection)
+    }
+
 }
 
 @Entity
@@ -387,4 +437,5 @@ class CSPBMapItem implements HibernateEntity<CSPBMapItem> {
     Long id
     CSPBMapOwner owner
     static belongsTo = [owner: CSPBMapOwner]
+
 }

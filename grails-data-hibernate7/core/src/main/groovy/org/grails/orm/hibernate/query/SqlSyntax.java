@@ -26,6 +26,8 @@ import jakarta.persistence.criteria.CriteriaBuilder;
 
 import org.hibernate.SessionFactory;
 import org.hibernate.dialect.CockroachDialect;
+import org.hibernate.dialect.DB2iDialect;
+import org.hibernate.dialect.DB2zDialect;
 import org.hibernate.dialect.Dialect;
 import org.hibernate.dialect.H2Dialect;
 import org.hibernate.dialect.MySQLDialect;
@@ -48,7 +50,7 @@ import org.grails.orm.hibernate.dialect.DialectKeyed;
  * <li>a backslash escapes in a MySQL or MariaDB string, and in a PostgreSQL {@code E'...'} string only;</li>
  * <li>{@code $tag$...$tag$} is a string on PostgreSQL, {@code $$...$$} on H2, and {@code q'[...]'} on Oracle;</li>
  * <li>{@code #} starts a comment on MySQL, which also needs a space or a control character after {@code --};</li>
- * <li>block comments nest on PostgreSQL and SQL Server, and not elsewhere;</li>
+ * <li>block comments nest on PostgreSQL, SQL Server, Db2 for IBM i and Db2 for z/OS, and not elsewhere;</li>
  * <li>{@code //} starts a comment on H2, and an alias may be written as a string on MySQL and SQL Server.</li>
  * </ul>
  * The defaults of each server are assumed. The modes that change the lexical rules, such as {@code NO_BACKSLASH_ESCAPES}
@@ -88,6 +90,10 @@ public enum SqlSyntax implements DialectKeyed<SqlSyntax> {
 
     /** H2: {@code $$...$$} is a string, and {@code //} starts a comment as {@code --} does. */
     H2(EnumSet.of(Feature.LINE_COMMENTS, Feature.DOUBLE_SLASH_COMMENTS, Feature.UNTAGGED_DOLLAR_QUOTES), H2Dialect.class),
+
+    /** Db2 for IBM i and Db2 for z/OS: block comments nest. */
+    DB2_NESTED_COMMENTS(EnumSet.of(Feature.LINE_COMMENTS, Feature.NESTED_BLOCK_COMMENTS),
+            DB2iDialect.class, DB2zDialect.class),
 
     /** The SQL standard, for every other database: line comments and block comments that do not nest. */
     SQL(EnumSet.of(Feature.LINE_COMMENTS), Dialect.class),

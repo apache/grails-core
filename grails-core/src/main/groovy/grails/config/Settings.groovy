@@ -19,12 +19,20 @@
 
 package grails.config
 
+import groovy.transform.CompileStatic
+
 /**
  * Constants for names of settings in Grails
+ *
+ * <p>Compiled statically, because one constant is computed rather than written out and the interface
+ * is initialized as an application starts: compiled dynamically, its {@code System.getProperty} call
+ * was dispatched through a metaclass, which a native image cannot do for a JDK method nothing
+ * registered.</p>
  *
  * @author Graeme Rocher
  * @since 3.0
  */
+@CompileStatic
 interface Settings {
 
     /**
@@ -230,13 +238,21 @@ interface Settings {
     String CONTROLLERS_RESPONSE_BODY_DEFAULT = 'false'
 
     /**
-     * The encoding to use for filters, default to UTF-8
+     * The encoding of the character encoding filter.
+     *
+     * @deprecated since 9.0, for removal. Spring Boot registers the character encoding filter; configure
+     * {@code spring.servlet.encoding.charset} instead.
      */
+    @Deprecated(since = '9.0', forRemoval = true)
     String FILTER_ENCODING = 'grails.filter.encoding'
 
     /**
-     * The encoding to use for filters, default to UTF-8
+     * Whether the character encoding filter overrides the encoding of the request and the response.
+     *
+     * @deprecated since 9.0, for removal. Spring Boot registers the character encoding filter; configure
+     * {@code spring.servlet.encoding.force} instead.
      */
+    @Deprecated(since = '9.0', forRemoval = true)
     String FILTER_FORCE_ENCODING = 'grails.filter.forceEncoding'
 
     /**

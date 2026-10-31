@@ -74,6 +74,7 @@ public class ListSecondPassBinder {
         list.setInverse(false);
         list.getElement().createForeignKey();
         bindBackReferences(property, list);
+        collectionSecondPassBinder.createCollectionKeys(property);
     }
 
     private void bindIndexColumn(HibernateToManyProperty property) {

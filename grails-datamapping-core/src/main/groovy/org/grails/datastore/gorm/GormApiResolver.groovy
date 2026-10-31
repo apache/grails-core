@@ -156,12 +156,13 @@ class GormApiResolver {
 
     PersistentEntity findEntity(Class entity, String qualifier = null) {
         String resolvedQualifier = qualifier ?: findTenantId(entity)
-        return findDatastore(entity, resolvedQualifier)?.mappingContext?.getPersistentEntity(entity.name)
+        String className = entity != null ? NameUtils.getClassName(entity) : null
+        return findDatastore(entity, resolvedQualifier)?.mappingContext?.getPersistentEntity(className)
     }
 
     private String findTenantId(Class entity) {
         if (entity != null && MultiTenant.isAssignableFrom(entity)) {
-            Datastore defaultDatastore = registry.getDatastoreByString(entity.name, ConnectionSource.DEFAULT)
+            Datastore defaultDatastore = registry.getDatastore(entity, ConnectionSource.DEFAULT)
             if (defaultDatastore instanceof MultiTenantCapableDatastore) {
                 MultiTenantCapableDatastore multiTenantCapableDatastore = (MultiTenantCapableDatastore) defaultDatastore
                 try {

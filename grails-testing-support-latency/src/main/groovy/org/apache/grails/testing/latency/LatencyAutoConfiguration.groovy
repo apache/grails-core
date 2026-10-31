@@ -26,7 +26,8 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplicat
 import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.boot.web.servlet.FilterRegistrationBean
 import org.springframework.context.annotation.Bean
-import org.springframework.core.Ordered
+
+import org.grails.web.config.http.GrailsFilters
 
 /**
  * Auto-configuration that registers the {@link LatencyFilter} when
@@ -50,7 +51,7 @@ class LatencyAutoConfiguration {
         FilterRegistrationBean<LatencyFilter> registration = new FilterRegistrationBean<>()
         registration.filter = new LatencyFilter(latencyProperties)
         registration.urlPatterns = latencyProperties.urlPatterns
-        registration.order = Ordered.HIGHEST_PRECEDENCE
+        registration.order = GrailsFilters.LATENCY_FILTER.order
         registration
     }
 }

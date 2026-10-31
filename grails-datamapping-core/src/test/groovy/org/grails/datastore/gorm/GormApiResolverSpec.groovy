@@ -953,6 +953,27 @@ class GormApiResolverSpec extends Specification {
         selector.select(registry, stateRegistry, PlainEntity, PlainEntity.name, 0, resolver) == defaultDs
     }
 
+    void "findEntity looks up a dollar-named proxy by the unwrapped entity name"() {
+        given:
+        def registry = new GormRegistry()
+        def resolver = new GormApiResolver(registry)
+        def persistentEntity = Stub(PersistentEntity)
+        def mappingContext = Mock(MappingContext)
+        def datastore = Stub(Datastore) {
+            getMappingContext() >> mappingContext
+        }
+        registry.registerEntityDatastore(GormApiResolverProxyEntity.name, ConnectionSource.DEFAULT, datastore)
+
+        when:
+        def stock = resolver.findEntity(GormApiResolverProxyEntity$HibernateProxy)
+        def wrapped = resolver.findEntity(GormApiResolverProxyEntity$HibernateProxy$ByteBuddy$Wrapper)
+
+        then:
+        2 * mappingContext.getPersistentEntity(GormApiResolverProxyEntity.name) >> persistentEntity
+        stock == persistentEntity
+        wrapped == persistentEntity
+    }
+
     interface SubDatastore extends Datastore {}
     interface MultipleConnectionSourceDatastore extends Datastore, MultipleConnectionSourceCapableDatastore {}
     interface MixedDatastore extends MultiTenantCapableDatastore, MultipleConnectionSourceCapableDatastore, Datastore {}
@@ -964,4 +985,13 @@ class GormApiResolverSpec extends Specification {
     static class TenantEntity implements MultiTenant<TenantEntity> {
         Long id
     }
+}
+
+class GormApiResolverProxyEntity {
+}
+
+class GormApiResolverProxyEntity$HibernateProxy extends GormApiResolverProxyEntity {
+}
+
+class GormApiResolverProxyEntity$HibernateProxy$ByteBuddy$Wrapper extends GormApiResolverProxyEntity$HibernateProxy {
 }

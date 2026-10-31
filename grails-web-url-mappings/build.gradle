@@ -71,10 +71,14 @@ dependencies {
 
     api 'org.apache.groovy:groovy'
     api project(':grails-datamapping-validation')
+    // api: QueryTailRequestReader, which UrlMappingQueryTailRequestReader implements for the query-tail capture
+    api project(':grails-datastore-core')
 
     implementation 'com.github.ben-manes.caffeine:caffeine'
 
     testImplementation project(':grails-test-suite-base')
+    // the query-tail attribution, which finds UrlMappingQueryTailRequestReader as an application finds it
+    testImplementation project(':grails-datamapping-core')
 
     compileOnly 'jakarta.servlet:jakarta.servlet-api'
     compileOnly 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation
