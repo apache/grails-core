@@ -24,12 +24,20 @@ import grails.gorm.DetachedCriteria
 import grails.gorm.tests.HibernateGormDatastoreSpec
 import jakarta.persistence.criteria.CriteriaQuery
 import jakarta.persistence.criteria.Expression
+import jakarta.persistence.criteria.From
+import jakarta.persistence.criteria.JoinType
 import jakarta.persistence.criteria.Root
 import jakarta.persistence.criteria.Predicate
 import org.hibernate.query.criteria.JpaExpression
+import org.hibernate.query.sqm.tree.domain.SqmPath
+import org.hibernate.query.sqm.tree.predicate.SqmComparisonPredicate
+import org.hibernate.query.sqm.tree.predicate.SqmInListPredicate
+import org.hibernate.query.sqm.tree.predicate.SqmJunctionPredicate
+import org.hibernate.query.sqm.tree.select.SqmSubQuery
 import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.query.Query
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
+import org.grails.orm.hibernate.query.HibernateAlias
 import org.grails.orm.hibernate.query.JpaQueryContext
 import org.grails.orm.hibernate.query.PredicateGenerator
 import org.grails.orm.hibernate.query.PropertyArithmetic
@@ -570,6 +578,193 @@ class PredicateGeneratorSpec extends HibernateGormDatastoreSpec {
 
         then:
         predicates.length == 1
+    }
+
+    def "test getPredicates joins an association block with the join type of its alias definition"() {
+        given: "the join type JpaCriteriaQueryCreator registers for an association block of the queried entity"
+        fromProvider.registerAlias("pets", new HibernateAlias("pets", "pets", JoinType.LEFT))
+        List criteria = new DetachedCriteria(PredicateGeneratorSpecPerson).build {
+            pets {
+                eq("name", "Lucky")
+            }
+        }.criteria
+
+        when:
+        def predicates = predicateGenerator.getPredicates(query, root, criteria, fromProvider, personEntity)
+
+        then:
+        predicates.length == 1
+        root.joins*.attribute*.name == ["pets"]
+        root.joins*.joinType == [JoinType.LEFT]
+    }
+
+    def "test getPredicates joins a nested association block with the join type recorded on the enclosing block"() {
+        given:
+        List criteria = new DetachedCriteria(PredicateGeneratorSpecPerson).build {
+            pets {
+                join("face", JoinType.LEFT)
+                face {
+                    eq("name", "Funny")
+                }
+            }
+        }.criteria
+
+        when:
+        def predicates = predicateGenerator.getPredicates(query, root, criteria, fromProvider, personEntity)
+        From petsJoin = root.joins.find { it.attribute.name == "pets" }
+
+        then:
+        predicates.length == 1
+        petsJoin.joinType == JoinType.INNER
+        petsJoin.joins*.attribute*.name == ["face"]
+        petsJoin.joins*.joinType == [JoinType.LEFT]
+    }
+
+    def "test getPredicates joins a nested association block without a recorded join type with an inner join"() {
+        given:
+        List criteria = new DetachedCriteria(PredicateGeneratorSpecPerson).build {
+            pets {
+                face {
+                    eq("name", "Funny")
+                }
+            }
+        }.criteria
+
+        when:
+        def predicates = predicateGenerator.getPredicates(query, root, criteria, fromProvider, personEntity)
+        From petsJoin = root.joins.find { it.attribute.name == "pets" }
+
+        then:
+        predicates.length == 1
+        petsJoin.joins*.attribute*.name == ["face"]
+        petsJoin.joins*.joinType == [JoinType.INNER]
+    }
+
+    def "test getPredicates reuses the join its context made for an association block"() {
+        given:
+        From petsJoin = root.join("pets", JoinType.LEFT)
+        fromProvider.addFrom("pets", petsJoin)
+        List criteria = new DetachedCriteria(PredicateGeneratorSpecPerson).build {
+            pets {
+                eq("name", "Lucky")
+            }
+        }.criteria
+
+        when:
+        def predicates = predicateGenerator.getPredicates(query, root, criteria, fromProvider, personEntity)
+
+        then:
+        predicates.length == 1
+        root.joins.size() == 1
+        root.joins.first().is(petsJoin)
+    }
+
+    def "test getPredicates does not reuse the join of an outer association block of the same name"() {
+        given: "a block for the face of the person and one for the face of its pets"
+        List criteria = new DetachedCriteria(PredicateGeneratorSpecPerson).build {
+            face {
+                eq("name", "Funny")
+            }
+            pets {
+                face {
+                    eq("name", "Happy")
+                }
+            }
+        }.criteria
+
+        when:
+        def predicates = predicateGenerator.getPredicates(query, root, criteria, fromProvider, personEntity)
+        From petsJoin = root.joins.find { it.attribute.name == "pets" }
+
+        then: "the face of the pets is joined from the pets"
+        predicates.length == 2
+        root.joins*.attribute*.name.sort() == ["face", "pets"]
+        petsJoin.joins*.attribute*.name == ["face"]
+    }
+
+    def "test getPredicates resolves a path through a nested association block to its join when an outer context realized the same alias"() {
+        given: "the face of the person, realized as an alias the way a criterion on face.name of the person realizes it"
+        From personFace = root.join("face")
+        fromProvider.addFrom("face", personFace)
+        fromProvider.registerAlias("face", personFace)
+        List criteria = new DetachedCriteria(PredicateGeneratorSpecPerson).build {
+            pets {
+                face {
+                    eq("name", "Happy")
+                }
+                eq("face.name", "Happy")
+            }
+        }.criteria
+
+        when:
+        def predicates = predicateGenerator.getPredicates(query, root, criteria, fromProvider, personEntity)
+        From petsJoin = root.joins.find { it.attribute.name == "pets" }
+        From petFace = petsJoin.joins.first()
+
+        then: "both criteria on the name of a face restrict the face of the pets"
+        predicates.length == 1
+        comparedPaths(predicates[0]).size() == 2
+        comparedPaths(predicates[0]).every { it.lhs.is(petFace) }
+    }
+
+    def "test getPredicates joins an association block of a subquery from the root of the subquery"() {
+        given: "the outer query already joined pets"
+        fromProvider.addFrom("pets", root.join("pets"))
+        def subCriteria = new DetachedCriteria(PredicateGeneratorSpecPerson).build {
+            pets {
+                eq("name", "Lucky")
+            }
+            projections {
+                property("id")
+            }
+        }
+        List criteria = [new Query.In("id", subCriteria)]
+
+        when:
+        def predicates = predicateGenerator.getPredicates(query, root, criteria, fromProvider, personEntity)
+        SqmSubQuery subquery = (predicates[0] as SqmInListPredicate).listExpressions.first() as SqmSubQuery
+        Root subqueryRoot = subquery.roots.first()
+
+        then:
+        predicates.length == 1
+        root.joins.size() == 1
+        subqueryRoot.joins*.attribute*.name == ["pets"]
+    }
+
+    def "test getPredicates takes a path of a subquery from the root of the subquery when an outer association block joined the same name"() {
+        given: "an association block of the outer query for face, then a subquery projecting the name of its own face"
+        def subCriteria = new DetachedCriteria(PredicateGeneratorSpecPerson).build {
+            projections {
+                property("face.name")
+            }
+        }
+        List criteria = new DetachedCriteria(PredicateGeneratorSpecPerson).build {
+            face {
+                eq("name", "Funny")
+            }
+        }.criteria + [new Query.In("firstName", subCriteria)]
+
+        when:
+        def predicates = predicateGenerator.getPredicates(query, root, criteria, fromProvider, personEntity)
+        From outerFace = root.joins.find { it.attribute.name == "face" }
+        SqmSubQuery subquery = (predicates[1] as SqmInListPredicate).listExpressions.first() as SqmSubQuery
+        SqmPath selection = subquery.selection as SqmPath
+
+        then: "the projected name is the name of the face of the root of the subquery, not of the outer join"
+        predicates.length == 2
+        outerFace != null
+        !selection.lhs.is(outerFace)
+        selection.lhs.lhs.is(subquery.roots.first())
+    }
+
+    /**
+     * Returns the path on the left of each comparison in the predicate.
+     */
+    private static List<SqmPath> comparedPaths(Predicate predicate) {
+        if (predicate instanceof SqmJunctionPredicate) {
+            return predicate.predicates.collectMany { comparedPaths(it) }
+        }
+        predicate instanceof SqmComparisonPredicate ? [predicate.leftHandExpression as SqmPath] : []
     }
 }
 

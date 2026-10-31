@@ -133,4 +133,50 @@ class ExpressionResolverSpec extends Specification {
         1 * faceJoin.get("name") >> namePath
         result == namePath
     }
+
+    def "test resolve prefers a join from its own root over an alias the parent realized for the same name"() {
+        given: "the face of the outer root, realized as an alias, and the face joined from this root"
+        def parentFace = Mock(Join)
+        def parentAliasRegistry = new AliasRegistry()
+        parentAliasRegistry.realize("face", parentFace)
+        def parentJoinTracker = new JoinTracker(Mock(From))
+        parentJoinTracker.addJoin("face", parentFace)
+
+        def localFace = Mock(Join)
+        def joinTracker = new JoinTracker(parentJoinTracker, Mock(From))
+        joinTracker.addJoin("face", localFace)
+        def resolver = new ExpressionResolver(new AliasRegistry(parentAliasRegistry), joinTracker)
+        def namePath = Mock(Path)
+
+        when:
+        def face = resolver.resolve("face")
+        def name = resolver.resolve("face.name")
+
+        then:
+        0 * parentFace.get(_)
+        1 * localFace.get("name") >> namePath
+        face.is(localFace)
+        name.is(namePath)
+    }
+
+    def "test resolve takes a path of a subquery from its own root when the parent joined the same name without an alias"() {
+        given: "the owner joined by an association block of the outer query"
+        def parentOwner = Mock(Join)
+        def parentJoinTracker = new JoinTracker(Mock(From))
+        parentJoinTracker.addJoin("owner", parentOwner)
+
+        def subRoot = Mock(From)
+        def ownerPath = Mock(Path)
+        def firstNamePath = Mock(Path)
+        def resolver = new ExpressionResolver(new AliasRegistry(new AliasRegistry()), new JoinTracker(parentJoinTracker, subRoot))
+
+        when:
+        def result = resolver.resolve("owner.firstName")
+
+        then:
+        0 * parentOwner.get(_)
+        1 * subRoot.get("owner") >> ownerPath
+        1 * ownerPath.get("firstName") >> firstNamePath
+        result.is(firstNamePath)
+    }
 }
