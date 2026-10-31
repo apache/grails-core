@@ -67,30 +67,33 @@ export GRADLE_OPTS="-Dorg.gradle.jvmargs=-Xmx4G"
 
 ## Available Skills
 
-> **AI AGENTS - MANDATORY**: Before writing or modifying any code, you **MUST** read the relevant skill file(s) below. Do not write Groovy/Grails/Gradle code without first loading these instructions:
-> - Writing Grails code → Read `.agents/skills/grails-developer/SKILL.md`
-> - Writing Groovy code → Read `.agents/skills/groovy-developer/SKILL.md`
-> - Writing Java code → Read `.agents/skills/java-developer/SKILL.md`
-> - Writing or changing Gradle builds → Read `.agents/skills/gradle-developer/SKILL.md`
-> - Upgrading applications to Grails 8 → Read `.agents/skills/grails-8-upgrade/SKILL.md`
-> - Writing Hibernate code → Read `.agents/skills/hibernate-developer/SKILL.md`
-> - Fixing style/analysis violations → Read `.agents/skills/violation-fixer/SKILL.md`
-> - Fixing broken test → Read `.agents/skills/test-fixer/SKILL.md`
-> - Integrating a standalone repository -> Read `.agents/skills/mono-repo-integration/SKILL.md`
+> **AI AGENTS - CONDITIONAL SKILL LOADING PROTOCOL**:
+> To conserve context window and maintain sharp focus, do **NOT** preload all skills.
+> Before proposing, writing, or modifying any code, inspect your target file paths and task intent against the trigger conditions below.
+> You **MUST** load only the matched skill file(s) using your file reading capability:
+> - **Hibernate or persistence work** (`grails-data-hibernate*/**`, `*Hibernate*`, `*Query*`, session/transaction lifecycle, domain binding) → Read `.agents/skills/hibernate-developer/SKILL.md`
+> - **Gradle build or dependency changes** (`*.gradle`, `build-logic/**`, `gradle/**`, `dependencies.gradle`, BOMs, convention plugins) → Read `.agents/skills/gradle-developer/SKILL.md`
+> - **Groovy code and Spock specifications** (`**/*.groovy`, AST transforms, closures, DSLs) → Read `.agents/skills/groovy-developer/SKILL.md`
+> - **Java sources and interop** (`**/*.java`, Java 21 baseline, records, sealed types) → Read `.agents/skills/java-developer/SKILL.md`
+> - **Style, CodeNarc, Checkstyle, PMD, SpotBugs violations** (`codeStyle`, `aggregateViolations`, linting) → Read `.agents/skills/violation-fixer/SKILL.md`
+> - **Fixing test failures or flaky tests** (test debugging, parallel test isolation, thread-local resets) → Read `.agents/skills/test-fixer/SKILL.md`
+> - **Merging standalone plugin repositories into monorepo** → Read `.agents/skills/mono-repo-integration/SKILL.md`
+> - **Grails application upgrade guidance** (7.x to 8.x breaking changes, Jakarta EE 10, Spring Boot 4) → Read `.agents/skills/grails-8-upgrade/SKILL.md`
+> - **Grails web application development** (controllers, views, GORM models, taglibs, services, web MVC) → Read `.agents/skills/grails-developer/SKILL.md`
 >
 > Use your file reading capability to load the skill content before proceeding with any code changes.
 
-| Skill | Path | Use For |
-|-------|------|---------|
-| **grails-developer** | `.agents/skills/grails-developer/SKILL.md` | Grails apps, GORM, controllers, views |
-| **groovy-developer** | `.agents/skills/groovy-developer/SKILL.md` | Groovy 5 syntax, closures, DSLs, Spock |
-| **gradle-developer** | `.agents/skills/gradle-developer/SKILL.md` | Gradle 9 builds, BOM/platforms, convention plugins, wrappers |
-| **grails-8-upgrade** | `.agents/skills/grails-8-upgrade/SKILL.md` | Upgrading Grails applications from 7.x to 8 |
-| **java-developer** | `.agents/skills/java-developer/SKILL.md` | Java 21 features, Groovy interop |
-| **hibernate-developer** | `.agents/skills/hibernate-developer/SKILL.md` | Hibernate 7 mapping, binders, generators |
-| **violation-fixer** | `.agents/skills/violation-fixer/SKILL.md` | Fix style/analysis violations (CodeNarc, Checkstyle, PMD, SpotBugs) |
-| **test-fixer** | `.agents/skills/test-fixer/SKILL.md` | Aggregate and fix test failures |
-| **mono-repo-integration** | `.agents/skills/mono-repo-integration/SKILL.md` | Merge a standalone Grails plugin repository into this monorepo |
+| Skill | Trigger / File Pattern | Path | Key Focus Areas |
+|-------|------------------------|------|-----------------|
+| **hibernate-developer** | `grails-data-hibernate*/**`, `*Hibernate*`, `*Query*`, session/tx lifecycle, domain mapping | `.agents/skills/hibernate-developer/SKILL.md` | Domain binding, session & transaction lifecycle, criteria/SQM correlation, patch-line API minimalism |
+| **gradle-developer** | `*.gradle`, `build-logic/**`, `gradle/**`, `dependencies.gradle`, BOM platforms | `.agents/skills/gradle-developer/SKILL.md` | Gradle 9 builds, convention plugins, BOM dependency rules, build health |
+| **groovy-developer** | `**/*.groovy`, Spock specs, DSLs, metaClass | `.agents/skills/groovy-developer/SKILL.md` | Groovy 5/6 syntax, `@GrailsCompileStatic`, AST transforms, closures |
+| **java-developer** | `**/*.java`, Java interop | `.agents/skills/java-developer/SKILL.md` | Java 21 baseline features, Groovy interop, records, sealed types |
+| **violation-fixer** | CodeNarc, Checkstyle, PMD, SpotBugs violations, `codeStyle`, conventions | `.agents/skills/violation-fixer/SKILL.md` | Code quality, static analysis tools, repo conventions |
+| **test-fixer** | Broken or flaky tests, test isolation, fork pollution | `.agents/skills/test-fixer/SKILL.md` | Test failure debugging, report analysis, thread-safe request context |
+| **mono-repo-integration** | Merging standalone Grails plugin repos | `.agents/skills/mono-repo-integration/SKILL.md` | Monorepo integration, subproject wiring, BOM registration |
+| **grails-8-upgrade** | Upgrading applications from Grails 7.x to 8 | `.agents/skills/grails-8-upgrade/SKILL.md` | Application upgrade guide, Jakarta EE 10, Spring Boot 4.1, validation changes |
+| **grails-developer** | Controllers, views, GORM models, taglibs, services, web MVC | `.agents/skills/grails-developer/SKILL.md` | Web applications, REST APIs, GORM, controllers, views, plugins |
 
 ## Repository Conventions
 
