@@ -84,7 +84,7 @@ class JpaQueryBuilderFunctionSpec extends Specification {
         def info = new JpaQueryBuilder(entity, criteria).buildUpdate(age: 30)
 
         then:
-        info.query == "UPDATE ${JpaFunctionTestPerson.name} jpaFunctionTestPerson SET jpaFunctionTestPerson.age=:p1 WHERE (upper(jpaFunctionTestPerson.name) IN (SELECT jpaFunctionTestPerson1.name FROM ${JpaFunctionTestPerson.name} jpaFunctionTestPerson1 WHERE jpaFunctionTestPerson1.name=:p2jpaFunctionTestPerson1.age > :p3) AND lower(jpaFunctionTestPerson.name) = :p4)"
+        info.query == "UPDATE ${JpaFunctionTestPerson.name} jpaFunctionTestPerson SET jpaFunctionTestPerson.age=:p1 WHERE (upper(jpaFunctionTestPerson.name) IN (SELECT jpaFunctionTestPerson1.name FROM ${JpaFunctionTestPerson.name} jpaFunctionTestPerson1 WHERE jpaFunctionTestPerson1.name=:p2 AND jpaFunctionTestPerson1.age > :p3) AND lower(jpaFunctionTestPerson.name) = :p4)"
         info.parameters == [30, 'Alice', 21, 'bob']
     }
 
