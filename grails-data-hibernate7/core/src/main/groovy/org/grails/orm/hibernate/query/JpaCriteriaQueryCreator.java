@@ -113,6 +113,7 @@ public class JpaCriteriaQueryCreator<T> {
         }
 
         context = JpaQueryContext.forSubquery(parentContext, aliases, root);
+        registerRootAlias(context, root);
         registerDetachedJoins(context);
         discoverAliases(detachedCriteria.getCriteria(), context);
 
@@ -175,6 +176,7 @@ public class JpaCriteriaQueryCreator<T> {
         }
 
         context = JpaQueryContext.forSubquery(parentContext, aliases, root);
+        registerRootAlias(context, root);
         registerDetachedJoins(context);
         discoverAliases(detachedCriteria.getCriteria(), context);
 
@@ -344,6 +346,18 @@ public class JpaCriteriaQueryCreator<T> {
         detachedCriteria.getJoinTypes().forEach((path, joinType) ->
                 context.registerAlias(path, new HibernateAlias(path, path, joinType))
         );
+    }
+
+    /**
+     * Registers the alias the criteria declares for its root, so a criterion that refers to it, in this
+     * query or in a subquery (the subquery context resolves through its parent), resolves to the root
+     * instead of an unknown property path.
+     */
+    private void registerRootAlias(JpaQueryContext context, Root<?> root) {
+        String rootAlias = detachedCriteria.getAlias();
+        if (rootAlias != null) {
+            context.registerAlias(rootAlias, root);
+        }
     }
 
     private void assignCriteria(

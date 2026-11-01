@@ -174,4 +174,99 @@ class AliasSelfBook {
         then: 'the comparison between the two self-aliased references was rewritten into an eqProperty call'
         eqPropertyCalls.any { constantArg(it, 0) == 'a.someProperty' && constantArg(it, 1) == 'b.someProperty' }
     }
+
+    void "comparing a plain property against a nested alias path produces an eqProperty call"() {
+        given:
+        String source = '''
+import grails.gorm.annotation.Entity
+import org.grails.datastore.gorm.query.transform.ApplyDetachedCriteriaTransform
+
+@ApplyDetachedCriteriaTransform
+@Entity
+class AliasNestedVarBook {
+    String someStringProperty
+    String otherProperty
+
+    static findNestedAliasVarMatch() {
+        AliasNestedVarBook.where {
+            def t = AliasNestedVarBook
+            otherProperty == t.nested.whatever
+        }
+    }
+}
+'''
+
+        when:
+        ClassNode classNode = compileToClassNode(source, 'AliasNestedVarBook')
+        List<MethodCallExpression> eqPropertyCalls = methodCallsNamed(classNode, 'eqProperty', 'findNestedAliasVarMatch')
+
+        then: 'the nested alias chain on the right-hand side resolves to root alias t and produces eqProperty'
+        eqPropertyCalls.any { constantArg(it, 0) == 'otherProperty' && constantArg(it, 1) == 't.nested.whatever' }
+    }
+
+    void "comparing an association property against a nested alias path produces an eqProperty call"() {
+        given:
+        String source = '''
+import grails.gorm.annotation.Entity
+import org.grails.datastore.gorm.query.transform.ApplyDetachedCriteriaTransform
+
+@ApplyDetachedCriteriaTransform
+@Entity
+class AliasNestedAssocBook {
+    String someStringProperty
+    AliasAssocPropAuthor someAssociation
+
+    static findNestedAliasAssocMatch() {
+        AliasNestedAssocBook.where {
+            def t = AliasNestedAssocBook
+            someAssociation.assocProp == t.nested.whatever
+        }
+    }
+}
+
+@Entity
+class AliasAssocPropAuthor {
+    String assocProp
+}
+'''
+
+        when:
+        ClassNode classNode = compileToClassNode(source, 'AliasNestedAssocBook')
+        List<MethodCallExpression> eqPropertyCalls = methodCallsNamed(classNode, 'eqProperty', 'findNestedAliasAssocMatch')
+
+        then: 'the association property comparison against the nested alias chain produces eqProperty'
+        eqPropertyCalls.any { constantArg(it, 0) == 'assocProp' && constantArg(it, 1) == 't.nested.whatever' }
+    }
+
+    void "comparing a property against a property chain not rooted at a variable produces an eq call"() {
+        given:
+        String source = '''
+import grails.gorm.annotation.Entity
+import org.grails.datastore.gorm.query.transform.ApplyDetachedCriteriaTransform
+
+@ApplyDetachedCriteriaTransform
+@Entity
+class AliasNonVarRootBook {
+    String otherProperty
+
+    static Map holder() { [nested: [whatever: 'x']] }
+
+    static findNonVarRootMatch() {
+        AliasNonVarRootBook.where {
+            def t = AliasNonVarRootBook
+            otherProperty == holder().nested.whatever
+        }
+    }
+}
+'''
+
+        when:
+        ClassNode classNode = compileToClassNode(source, 'AliasNonVarRootBook')
+        List<MethodCallExpression> eqPropertyCalls = methodCallsNamed(classNode, 'eqProperty', 'findNonVarRootMatch')
+        List<MethodCallExpression> eqCalls = methodCallsNamed(classNode, 'eq', 'findNonVarRootMatch')
+
+        then: 'the right-hand chain does not start at a variable and falls back to eq'
+        eqPropertyCalls.isEmpty()
+        eqCalls.any { constantArg(it, 0) == 'otherProperty' }
+    }
 }
