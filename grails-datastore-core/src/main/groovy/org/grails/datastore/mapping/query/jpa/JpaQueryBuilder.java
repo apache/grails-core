@@ -41,6 +41,7 @@ import org.grails.datastore.mapping.query.AssociationQuery;
 import org.grails.datastore.mapping.query.Query;
 import org.grails.datastore.mapping.query.api.AssociationCriteria;
 import org.grails.datastore.mapping.query.api.QueryableCriteria;
+import org.grails.datastore.mapping.query.criteria.FunctionCallingCriterion;
 
 /**
  * Builds JPA 1.0 String-based queries from the Query model
@@ -605,6 +606,73 @@ public class JpaQueryBuilder {
             }
         });
 
+        queryHandlers.put(FunctionCallingCriterion.class, new QueryHandler() {
+            public int handle(PersistentEntity entity, Query.Criterion criterion, StringBuilder q, StringBuilder whereClause, String logicalName, int position, List parameters, ConversionService conversionService, boolean allowJoins, boolean hibernateCompatible) {
+                FunctionCallingCriterion functionCriterion = (FunctionCallingCriterion) criterion;
+                String name = functionCriterion.getProperty();
+                validateProperty(entity, name, FunctionCallingCriterion.class);
+                if (functionCriterion.isOnValue()) {
+                    throw new InvalidDataAccessResourceUsageException("A function on the value of a comparison is not supported: " + functionCriterion.getFunctionName());
+                }
+                Query.PropertyCriterion wrapped = functionCriterion.getPropertyCriterion();
+                if (wrapped instanceof Query.ILike) {
+                    whereClause.append("lower(")
+                               .append(functionCriterion.getFunctionName())
+                               .append(OPEN_BRACKET)
+                               .append(logicalName)
+                               .append(DOT)
+                               .append(name)
+                               .append(CLOSE_BRACKET)
+                               .append(") like lower(")
+                               .append(PARAMETER_PREFIX)
+                               .append(++position)
+                               .append(CLOSE_BRACKET);
+                    parameters.add(wrapped.getValue());
+                    return position;
+                }
+                whereClause.append(functionCriterion.getFunctionName())
+                           .append(OPEN_BRACKET)
+                           .append(logicalName)
+                           .append(DOT)
+                           .append(name)
+                           .append(CLOSE_BRACKET);
+                if (wrapped instanceof Query.In in) {
+                    whereClause.append(" IN (");
+                    QueryableCriteria subquery = in.getSubquery();
+                    if (subquery != null) {
+                        buildSubQuery(q, whereClause, position, parameters, conversionService, allowJoins, hibernateCompatible, subquery);
+                        position = parameters.size();
+                    }
+                    else {
+                        for (Iterator i = in.getValues().iterator(); i.hasNext();) {
+                            Object val = i.next();
+                            whereClause.append(PARAMETER_PREFIX).append(++position);
+                            if (i.hasNext()) {
+                                whereClause.append(COMMA);
+                            }
+                            parameters.add(val);
+                        }
+                    }
+                    whereClause.append(CLOSE_BRACKET);
+                }
+                else if (wrapped instanceof Query.Equals && wrapped.getValue() == null) {
+                    whereClause.append(" IS NULL");
+                }
+                else if (wrapped instanceof Query.NotEquals && wrapped.getValue() == null) {
+                    whereClause.append(" IS NOT NULL");
+                }
+                else {
+                    String operator = functionOperator(wrapped);
+                    if (operator == null) {
+                        throw new InvalidDataAccessResourceUsageException("Unsupported criterion in a function call: " + wrapped.getClass().getSimpleName());
+                    }
+                    whereClause.append(operator).append(PARAMETER_PREFIX).append(++position);
+                    parameters.add(wrapped.getValue());
+                }
+                return position;
+            }
+        });
+
         queryHandlers.put(Query.In.class, new QueryHandler() {
             public int handle(PersistentEntity entity, Query.Criterion criterion, StringBuilder q, StringBuilder whereClause, String logicalName, int position, List parameters, ConversionService conversionService, boolean allowJoins, boolean hibernateCompatible) {
                 Query.In inQuery = (Query.In) criterion;
@@ -618,6 +686,7 @@ public class JpaQueryBuilder {
                 QueryableCriteria subquery = inQuery.getSubquery();
                 if (subquery != null) {
                     buildSubQuery(q, whereClause, position, parameters, conversionService, allowJoins, hibernateCompatible, subquery);
+                    position = parameters.size();
                 }
                 else {
                     for (Iterator i = inQuery.getValues().iterator(); i.hasNext();) {
@@ -771,6 +840,7 @@ public class JpaQueryBuilder {
                 .append(name)
                 .append(comparisonExpression);
         buildSubQuery(q, whereClause, position, parameters, conversionService, allowJoins, hibernateCompatible, subquery);
+        position = parameters.size();
         whereClause.append(CLOSE_BRACKET);
         return position;
     }
@@ -806,7 +876,7 @@ public class JpaQueryBuilder {
         List<Query.Criterion> criteria = subquery.getCriteria();
         for (Query.Criterion subCriteria : criteria) {
             QueryHandler queryHandler = queryHandlers.get(subCriteria.getClass());
-            queryHandler.handle(associatedEntity, subCriteria, q, whereClause, associatedEntityLogicalName, position, parameters, conversionService, allowJoins, hibernateCompatible);
+            position = queryHandler.handle(associatedEntity, subCriteria, q, whereClause, associatedEntityLogicalName, position, parameters, conversionService, allowJoins, hibernateCompatible);
         }
     }
 
@@ -960,5 +1030,30 @@ public class JpaQueryBuilder {
         }
 
         return position;
+    }
+
+    private static String functionOperator(Query.PropertyCriterion wrapped) {
+        if (wrapped instanceof Query.Equals) {
+            return " = ";
+        }
+        if (wrapped instanceof Query.NotEquals) {
+            return " != ";
+        }
+        if (wrapped instanceof Query.GreaterThan) {
+            return " > ";
+        }
+        if (wrapped instanceof Query.GreaterThanEquals) {
+            return " >= ";
+        }
+        if (wrapped instanceof Query.LessThan) {
+            return " < ";
+        }
+        if (wrapped instanceof Query.LessThanEquals) {
+            return " <= ";
+        }
+        if (wrapped instanceof Query.Like) {
+            return " LIKE ";
+        }
+        return null;
     }
 }
