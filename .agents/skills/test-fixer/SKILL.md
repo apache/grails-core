@@ -23,6 +23,7 @@ Activate this skill when:
 - Preparing a commit and verifying affected module tests.
 - Triaging regressions after a dependency upgrade or refactor.
 - Reviewing aggregate test results from `:grails-test-report`.
+- For verifying assertion depth and killing surviving mutants with PITest, see `.agents/skills/mutation-testing/SKILL.md`.
 
 ---
 
