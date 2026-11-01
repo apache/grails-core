@@ -115,6 +115,163 @@ class DetachCriteriaSubquerySpec extends HibernateGormDatastoreSpec {
         result.size() == 1
     }
 
+    void "test a lazy subquery keeps its restriction when used with inList"() {
+        setup:
+        new Organisation(name: 'A').save(flush: true)
+        new Organisation(name: 'B').save(flush: true)
+
+        when:
+        DetachedCriteria<Organisation> subquery = Organisation.whereLazy { eq('name', 'A') }
+        List<Organisation> result = Organisation.where { inList('name', subquery) }.list()
+
+        then:
+        result*.name == ['A']
+        subquery.criteria.isEmpty()
+    }
+
+    void "test a lazy subquery keeps its restriction when used with gtAll"() {
+        setup:
+        new Organisation(name: 'A').save(flush: true)
+        new Organisation(name: 'B').save(flush: true)
+
+        when:
+        DetachedCriteria<Organisation> subquery = Organisation.whereLazy { eq('name', 'A') }
+        List<Organisation> result = Organisation.where { gtAll('name', subquery) }.list()
+
+        then:
+        result*.name == ['B']
+        subquery.criteria.isEmpty()
+    }
+
+    void "test a buildLazy subquery keeps its restriction when used with notIn"() {
+        setup:
+        new Organisation(name: 'A').save(flush: true)
+        new Organisation(name: 'B').save(flush: true)
+
+        when:
+        DetachedCriteria<Organisation> subquery = new DetachedCriteria<>(Organisation).buildLazy { eq('name', 'A') }
+        List<Organisation> result = Organisation.where { notIn('name', subquery) }.list()
+
+        then:
+        result*.name == ['B']
+        subquery.criteria.isEmpty()
+    }
+
+    void "test a lazy subquery keeps its restriction when used with exists and notExists"() {
+        setup:
+        new Organisation(name: 'A').save(flush: true)
+        new Organisation(name: 'B').save(flush: true)
+
+        when:
+        DetachedCriteria<Organisation> matchingSubquery = Organisation.whereLazy { eq('name', 'A') }.id()
+        DetachedCriteria<Organisation> nonMatchingSubquery = Organisation.whereLazy { eq('name', 'NON_EXISTENT') }.id()
+        List<Organisation> existsResult = Organisation.where { exists(matchingSubquery) }.list()
+        List<Organisation> notExistsResult = Organisation.where { notExists(nonMatchingSubquery) }.list()
+
+        then:
+        existsResult.size() == 2
+        notExistsResult.size() == 2
+        matchingSubquery.criteria.isEmpty()
+        nonMatchingSubquery.criteria.isEmpty()
+    }
+
+    void "test a lazy criteria is materialized without mutating the original"() {
+        setup:
+        new Organisation(name: 'A').save(flush: true)
+        new Organisation(name: 'B').save(flush: true)
+
+        when:
+        DetachedCriteria<Organisation> criteria = Organisation.whereLazy { eq('name', 'A') }
+        DetachedCriteria<Organisation> materialized = criteria.materializeLazyCriteria()
+        DetachedCriteria<Organisation> materializedAgain = materialized.materializeLazyCriteria()
+        List<Organisation> fromOriginal = criteria.list()
+        List<Organisation> fromCopy = materialized.list()
+
+        then: 'the copy is a different criteria and both read the restriction without mutating the original'
+        !materialized.is(criteria)
+        materializedAgain.is(materialized)
+        criteria.criteria.isEmpty()
+        materialized.criteria.size() == 1
+        fromOriginal*.name == ['A']
+        fromCopy*.name == ['A']
+    }
+
+    void "test a lazy criteria with defaultMax and defaultOffset applies them on execution"() {
+        setup:
+        new Organisation(name: 'A').save(flush: true)
+        new Organisation(name: 'B').save(flush: true)
+        new Organisation(name: 'C').save(flush: true)
+
+        when:
+        DetachedCriteria<Organisation> criteria = Organisation.whereLazy {
+            ne('name', 'Z')
+        }.sort('name').max(1).offset(1)
+        List<Organisation> result = criteria.list()
+
+        then:
+        result*.name == ['B']
+        criteria.criteria.isEmpty()
+    }
+
+    void "test a lazy criteria invoked with a dynamic finder does not mutate the original"() {
+        setup:
+        new Organisation(name: 'A').save(flush: true)
+        new Organisation(name: 'B').save(flush: true)
+
+        when:
+        DetachedCriteria<Organisation> criteria = Organisation.whereLazy { ne('name', 'Z') }
+        Organisation found = criteria.findByName('A')
+
+        then:
+        found != null
+        found.name == 'A'
+        criteria.criteria.isEmpty()
+    }
+
+    void "test a lazy criteria used with updateAll and deleteAll does not mutate the original"() {
+        setup:
+        new Organisation(name: 'A').save(flush: true)
+        new Organisation(name: 'B').save(flush: true)
+
+        when:
+        DetachedCriteria<Organisation> updateCriteria = Organisation.whereLazy { eq('name', 'A') }
+        Number updated = updateCriteria.updateAll(name: 'A_UPDATED')
+        DetachedCriteria<Organisation> deleteCriteria = Organisation.whereLazy { eq('name', 'A_UPDATED') }
+        Number deleted = deleteCriteria.deleteAll()
+
+        then:
+        updated == 1
+        deleted == 1
+        updateCriteria.criteria.isEmpty()
+        deleteCriteria.criteria.isEmpty()
+    }
+
+    void "test applyLazyCriteria mutates in place idempotently when called directly"() {
+        setup:
+        DetachedCriteria<Organisation> criteria = Organisation.whereLazy { eq('name', 'A') }
+
+        when:
+        criteria.applyLazyCriteria()
+        criteria.applyLazyCriteria()
+
+        then:
+        criteria.criteria.size() == 1
+    }
+
+    void "test a not-equals subquery materializes a lazy criteria"() {
+        setup:
+        new Organisation(name: 'A').save(flush: true)
+        new Organisation(name: 'B').save(flush: true)
+
+        when:
+        DetachedCriteria<Organisation> subquery = Organisation.whereLazy { eq('name', 'A') }
+        List<Organisation> result = Organisation.where { ne('name', subquery) }.list()
+
+        then: 'the lazy subquery keeps its restriction and is not mutated'
+        result*.name == ['B']
+        subquery.criteria.isEmpty()
+    }
+
     private User createUser(String email) {
         User user = new User(email: email)
         Organisation defaultOrg = Organisation.findOrCreateByName("default")

@@ -1044,8 +1044,7 @@ abstract class AbstractDetachedCriteria<T> implements Criteria, Cloneable {
         initialiseIfNecessary(targetClass)
         def method = dynamicFinders.find { FinderMethod f -> f.isMethodMatch(methodName) }
         if (method != null) {
-            applyLazyCriteria()
-            return method.invoke(targetClass, methodName, this, args)
+            return method.invoke(targetClass, methodName, materializeLazyCriteria(), args)
         }
 
         if (!args) {
@@ -1108,7 +1107,14 @@ abstract class AbstractDetachedCriteria<T> implements Criteria, Cloneable {
 
     protected abstract QueryableCriteria buildQueryableCriteria(Closure queryClosure)
 
-    protected void applyLazyCriteria() {
+    /**
+     * Applies a pending {@code buildLazy} closure, if any, so the criteria can be read by a query
+     * implementation. Query implementations call this before they translate a criteria that only
+     * appears as a subquery value; the executed root criteria is materialized by
+     * {@link grails.gorm.DetachedCriteria}. Idempotent: once applied, the deferred closure is
+     * cleared. The public contract is declared by {@code QueryableCriteria}.
+     */
+    void applyLazyCriteria() {
         if (lazyQuery == null) {
             return
         }
@@ -1116,6 +1122,22 @@ abstract class AbstractDetachedCriteria<T> implements Criteria, Cloneable {
         def criteria = lazyQuery
         lazyQuery = null
         this.with(criteria)
+    }
+
+    /**
+     * Returns this criteria with its deferred query applied, without mutating it: the original keeps the
+     * deferred query, so a criteria shared between threads materializes a copy each time and no deferred
+     * definition is applied twice.
+     */
+    AbstractDetachedCriteria<T> materializeLazyCriteria() {
+        Closure pending = lazyQuery
+        if (pending == null) {
+            return this
+        }
+        AbstractDetachedCriteria<T> materialized = clone()
+        materialized.lazyQuery = null
+        materialized.with(pending)
+        return materialized
     }
 
     @Override

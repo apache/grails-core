@@ -557,8 +557,7 @@ class DetachedCriteria<T> extends AbstractDetachedCriteria<T> implements GormOpe
      */
     Number deleteAll() {
         GormRegistry.instance.findStaticApi(targetClass, connectionName).withDatastoreSession { Session session ->
-            applyLazyCriteria()
-            session.deleteAll(this)
+            session.deleteAll(materializeLazyCriteria())
         }
     }
 
@@ -569,8 +568,7 @@ class DetachedCriteria<T> extends AbstractDetachedCriteria<T> implements GormOpe
      */
     Number updateAll(Map properties) {
         GormRegistry.instance.findStaticApi(targetClass, connectionName).withDatastoreSession { Session session ->
-            applyLazyCriteria()
-            session.updateAll(this, properties)
+            session.updateAll(materializeLazyCriteria(), properties)
         }
     }
 
@@ -719,6 +717,11 @@ class DetachedCriteria<T> extends AbstractDetachedCriteria<T> implements GormOpe
         return (DetachedCriteria) super.clone()
     }
 
+    @Override
+    DetachedCriteria<T> materializeLazyCriteria() {
+        return (DetachedCriteria<T>) super.materializeLazyCriteria()
+    }
+
     protected void handleJunction(Closure callable) {
         try {
             callable.delegate = this
@@ -739,7 +742,7 @@ class DetachedCriteria<T> extends AbstractDetachedCriteria<T> implements GormOpe
 
         GormStaticApi staticApi = GormRegistry.instance.findStaticApi(targetClass, connectionName)
         staticApi.withDatastoreSession { Session session ->
-            applyLazyCriteria()
+            DetachedCriteria<T> effective = materializeLazyCriteria()
             Query query
             if (alias && (session instanceof QueryAliasAwareSession)) {
                 query = session.createQuery(targetClass, alias)
@@ -748,13 +751,13 @@ class DetachedCriteria<T> extends AbstractDetachedCriteria<T> implements GormOpe
                 query = session.createQuery(targetClass)
             }
 
-            if (defaultMax != null) {
-                query.max(defaultMax)
+            if (effective.defaultMax != null) {
+                query.max(effective.defaultMax)
             }
-            if (defaultOffset != null) {
-                query.offset(defaultOffset)
+            if (effective.defaultOffset != null) {
+                query.offset(effective.defaultOffset)
             }
-            DynamicFinder.applyDetachedCriteria(query, this)
+            DynamicFinder.applyDetachedCriteria(query, effective)
 
             if (query instanceof QueryArgumentsAware) {
                 ((QueryArgumentsAware) query).arguments = args
@@ -769,16 +772,6 @@ class DetachedCriteria<T> extends AbstractDetachedCriteria<T> implements GormOpe
 
             return callable.call(query)
         }
-    }
-
-    protected void applyLazyCriteria() {
-        if (lazyQuery == null) {
-            return
-        }
-
-        def criteria = lazyQuery
-        lazyQuery = null
-        this.with(criteria)
     }
 
 }
