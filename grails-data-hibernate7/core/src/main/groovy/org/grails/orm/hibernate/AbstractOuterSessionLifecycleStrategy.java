@@ -104,6 +104,11 @@ abstract class AbstractOuterSessionLifecycleStrategy implements OuterSessionLife
         Connection con = logicalConnection.getPhysicalConnection();
         if (con != null) {
             try {
+                // getPhysicalConnection() returns the TransactionAwareDataSourceProxy handle, which only takes a
+                // target connection, and binds its ConnectionHolder, on its first real call. getAutoCommit() is
+                // that call; a method the proxy answers itself (hashCode()) would leave the holder unbound and
+                // the outer session would share the inner transaction's connection. Do not remove it as dead code.
+                // With dataSource.lazy: true the lazy proxy defers the pooled connection, so an idle session stays free.
                 con.getAutoCommit();
             } catch (SQLException e) {
                 LOG.warn("Could not initialize physical connection: {}", e.getMessage(), e);

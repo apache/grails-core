@@ -28,9 +28,10 @@ import org.grails.orm.hibernate.support.hibernate7.TransactionResources;
 /**
  * Strategy applied when an outer session exists but no Spring transaction synchronization is active.
  *
- * <p>Primes a disconnected outer session so that {@code txResources.getResource(dataSource)} captures
- * its {@code ConnectionHolder} before the new session begins, preventing outer session lazy loading
- * inside {@code withNewSession} from borrowing the inner transaction's connection.</p>
+ * <p>Unbinds the outer session and connection holders while the new session runs and rebinds them afterwards.
+ * It does not prime the outer session, so an idle session never checks out a pooled connection. If the outer
+ * session was not connected on entry and is connected when the scope ends, it is disconnected on restore so
+ * that connection returns to the pool. A bound holder whose session is closed is unbound and rebound the same way.</p>
  */
 class DefaultOuterSessionStrategy extends AbstractOuterSessionLifecycleStrategy {
 

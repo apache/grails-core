@@ -54,6 +54,9 @@ class NonTransactionalSynchronizationOuterSessionStrategy extends AbstractOuterS
         super.prepare();
         if (lazyConnection && !wasPhysicallyConnectedAtPrepare) {
             primeIfDisconnected();
+            // When nothing in this scope uses the outer session, no session synchronization is registered, and
+            // Spring's JDBC ConnectionSynchronization would close the connection the primed session still holds.
+            // Disconnect the session first (on suspend, for a nested REQUIRED transaction, and before completion).
             txResources.registerSynchronization(new TransactionSynchronization() {
                 @Override
                 public int getOrder() {
