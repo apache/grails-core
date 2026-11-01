@@ -63,7 +63,12 @@ public class FunctionCallingCriterionHandler implements InternalCriterionHandler
             }
             Collection<Object> values = new ArrayList<>();
             for (Object v : in.getValues()) {
-                values.add(convertFunctionValue(context.getConversionService(), functionName, v));
+                if (v != null) {
+                    values.add(convertFunctionValue(context.getConversionService(), functionName, v));
+                }
+            }
+            if (values.isEmpty()) {
+                return criteriaBuilder.disjunction();
             }
             return left.in(values);
         }

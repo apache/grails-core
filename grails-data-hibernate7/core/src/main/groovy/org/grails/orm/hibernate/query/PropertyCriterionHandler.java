@@ -22,6 +22,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 import jakarta.persistence.criteria.Expression;
@@ -178,13 +179,15 @@ public class PropertyCriterionHandler implements InternalCriterionHandler<Query.
 
         Collection<?> collection = value instanceof Collection ? (Collection<?>) value : Collections.singletonList(value);
         List<Object> converted = collection.stream()
+            .filter(Objects::nonNull)
             .map(v -> context.convertValue(propertyName, v, propertyPath))
             .collect(Collectors.toList());
 
+        if (converted.isEmpty()) {
+            return criteriaBuilder.disjunction();
+        }
+
         if (context.isCollectionPath(propertyPath)) {
-            if (converted.isEmpty()) {
-                return criteriaBuilder.disjunction();
-            }
             Predicate[] memberOfPredicates = converted.stream()
                 .map(v -> criteriaBuilder.isMember((Object) v, (Expression) context.resolveCollectionPath(propertyPath)))
                 .toArray(Predicate[]::new);
@@ -196,7 +199,12 @@ public class PropertyCriterionHandler implements InternalCriterionHandler<Query.
 
     @SuppressWarnings("unchecked")
     static Subquery<?> buildSubquery(CriterionContext context, Expression<?> propertyPath, QueryableCriteria<?> qc, String propertyName) {
-        if (qc.getProjections().isEmpty() && propertyPath != null) {
+        Query.ProjectionList projectionList = new Query.ProjectionList();
+        for (Object p : qc.getProjections()) {
+            projectionList.add((Query.Projection) p);
+        }
+
+        if (projectionList.isEmpty()) {
             String propName = propertyName;
             if (propName != null && propName.contains(grails.orm.HibernateCriteriaBuilder.ALIAS_SEPARATOR)) {
                 propName = propName.split(grails.orm.HibernateCriteriaBuilder.ALIAS_SEPARATOR)[1];
@@ -204,17 +212,12 @@ public class PropertyCriterionHandler implements InternalCriterionHandler<Query.
             if (propName != null) {
                 PersistentProperty prop = qc.getPersistentEntity().getPropertyByName(propName);
                 if (prop != null) {
-                    ((QueryableCriteria) qc).getProjections().add(Projections.property(propName));
+                    projectionList.add(Projections.property(propName));
                 }
             }
         }
 
-        Query.ProjectionList projectionList = new Query.ProjectionList();
-        for (Object p : qc.getProjections()) {
-            projectionList.add((Query.Projection) p);
-        }
-
-        Class<?> expectedType = resolveSubqueryType(propertyPath, qc);
+        Class<?> expectedType = resolveSubqueryType(propertyPath, qc, projectionList);
         Subquery<?> subquery = context.getCriteriaQuery().subquery(expectedType);
         var creator = new JpaCriteriaQueryCreator(projectionList, context.getCriteriaBuilder(), (GrailsHibernatePersistentEntity) qc.getPersistentEntity(), (DetachedCriteria) qc, context.getConversionService());
         creator.setParentContext(context.getQueryContext());
@@ -222,9 +225,10 @@ public class PropertyCriterionHandler implements InternalCriterionHandler<Query.
         return subquery;
     }
 
-    static Class<?> resolveSubqueryType(Expression<?> propertyPath, QueryableCriteria<?> qc) {
-        if (!qc.getProjections().isEmpty()) {
-            Object first = qc.getProjections().get(0);
+    static Class<?> resolveSubqueryType(Expression<?> propertyPath, QueryableCriteria<?> qc, Query.ProjectionList projectionList) {
+        List<Query.Projection> projections = projectionList != null ? projectionList.getProjectionList() : qc.getProjections();
+        if (!projections.isEmpty()) {
+            Object first = projections.get(0);
             if (first instanceof Query.CountProjection || first instanceof Query.CountDistinctProjection) {
                 return Long.class;
             } else if (first instanceof Query.AvgProjection) {

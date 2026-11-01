@@ -131,6 +131,27 @@ class WhereQueryFunctionsSpec extends HibernateGormDatastoreSpec {
         matches == ['a', 'b']
     }
 
+    void "function IN criterion filters null values, handles all-null and empty lists, and converts numeric function values"() {
+        given:
+        seedEntities()
+
+        when:
+        def mixedNullString = WhereQueryFunctionEntity.where { upper(name) in ['A', null, 'C'] }.list()*.name.sort()
+        def allNullString = WhereQueryFunctionEntity.where { upper(name) in [null] }.list()
+        def emptyString = WhereQueryFunctionEntity.where { upper(name) in [] }.list()
+        def mixedNullNumeric = WhereQueryFunctionEntity.where { year(created) in ['2011', null, 2013] }.list()*.name.sort()
+        def allNullNumeric = WhereQueryFunctionEntity.where { year(created) in [null] }.list()
+        def emptyNumeric = WhereQueryFunctionEntity.where { year(created) in [] }.list()
+
+        then:
+        mixedNullString == ['a', 'c']
+        allNullString.isEmpty()
+        emptyString.isEmpty()
+        mixedNullNumeric == ['a', 'c']
+        allNullNumeric.isEmpty()
+        emptyNumeric.isEmpty()
+    }
+
     void "bulk updateAll and deleteAll support function IN, ILike, and subquery criteria"() {
         given:
         seedEntities()

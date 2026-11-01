@@ -23,14 +23,10 @@ import jakarta.persistence.criteria.Predicate;
 import jakarta.persistence.criteria.Subquery;
 
 import org.hibernate.query.criteria.HibernateCriteriaBuilder;
-import org.hibernate.query.criteria.JpaSubQuery;
 
-import grails.gorm.DetachedCriteria;
-import org.grails.datastore.mapping.model.PersistentProperty;
-import org.grails.datastore.mapping.query.Projections;
+import org.grails.datastore.mapping.core.exceptions.ConfigurationException;
 import org.grails.datastore.mapping.query.Query;
 import org.grails.datastore.mapping.query.api.QueryableCriteria;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
 
 /**
  * Handles subquery criteria comparing a property to an ALL/SOME/NOT IN subquery.
@@ -42,33 +38,16 @@ public class SubqueryCriterionHandler implements InternalCriterionHandler<Query.
     @Override
     @SuppressWarnings("unchecked")
     public Predicate handle(CriterionContext context, Query.SubqueryCriterion c) {
-        Expression<?> propertyPath = context.resolvePath(c.getProperty());
+        String propertyName = c.getProperty();
+        Expression<?> propertyPath = context.resolvePath(propertyName);
+        if (propertyPath == null) {
+            String className = context.getEntity() != null ? context.getEntity().getJavaClass().getName() : "unknown";
+            throw new ConfigurationException("Cannot use subquery criteria on non-existent property [" + propertyName + "] of class [" + className + "]");
+        }
         QueryableCriteria<?> qc = c.getValue();
 
-        Class<?> expectedType = propertyPath != null ? propertyPath.getJavaType() : qc.getPersistentEntity().getJavaClass();
-
-        if (qc.getProjections().isEmpty()) {
-            PersistentProperty prop = qc.getPersistentEntity().getPropertyByName(c.getProperty());
-            if (prop != null) {
-                ((QueryableCriteria) qc).getProjections().add(Projections.property(c.getProperty()));
-            }
-        }
-
-        Query.ProjectionList projectionList = new Query.ProjectionList();
-        for (Query.Projection p : qc.getProjections()) {
-            projectionList.add(p);
-        }
-
         HibernateCriteriaBuilder criteriaBuilder = context.getCriteriaBuilder();
-        Subquery<?> subquery = context.getCriteriaQuery().subquery(expectedType);
-        var creator = new JpaCriteriaQueryCreator(
-                projectionList,
-                criteriaBuilder,
-                (GrailsHibernatePersistentEntity) qc.getPersistentEntity(),
-                (DetachedCriteria) qc,
-                context.getConversionService());
-        creator.setParentContext(context.getQueryContext());
-        creator.populateSubquery((JpaSubQuery) subquery);
+        Subquery<?> subquery = PropertyCriterionHandler.buildSubquery(context, propertyPath, qc, propertyName);
 
         if (c instanceof Query.EqualsAll) {
             return criteriaBuilder.equal(propertyPath, (Expression) criteriaBuilder.all(subquery));
