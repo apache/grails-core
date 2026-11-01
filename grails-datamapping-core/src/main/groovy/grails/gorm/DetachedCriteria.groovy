@@ -744,8 +744,8 @@ class DetachedCriteria<T> extends AbstractDetachedCriteria<T> implements GormOpe
         staticApi.withDatastoreSession { Session session ->
             DetachedCriteria<T> effective = materializeLazyCriteria()
             Query query
-            if (alias && (session instanceof QueryAliasAwareSession)) {
-                query = session.createQuery(targetClass, alias)
+            if (effective.alias && (session instanceof QueryAliasAwareSession)) {
+                query = session.createQuery(targetClass, effective.alias)
             }
             else {
                 query = session.createQuery(targetClass)

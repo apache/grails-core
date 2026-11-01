@@ -872,7 +872,14 @@ abstract class AbstractDetachedCriteria<T> implements Criteria, Cloneable {
     @CompileStatic
     AbstractDetachedCriteria<T> clone() {
         AbstractDetachedCriteria criteria = newInstance()
-        criteria.@criteria = new ArrayList(this.criteria)
+        Map<DetachedAssociationCriteria, DetachedAssociationCriteria> associationCopies = new IdentityHashMap<>()
+        List<Query.Criterion> clonedCriteria = new ArrayList<>(this.criteria.size())
+        for (Query.Criterion criterion : this.criteria) {
+            clonedCriteria.add(criterion instanceof DetachedAssociationCriteria ?
+                    copyAssociationCriteria((DetachedAssociationCriteria) criterion, associationCopies) : criterion)
+        }
+        criteria.@criteria = clonedCriteria
+        criteria.@alias = this.alias
         final projections = new ArrayList(this.projections)
         criteria.@projections = projections
         criteria.projectionList = new DetachedProjections(projections)
@@ -884,8 +891,27 @@ abstract class AbstractDetachedCriteria<T> implements Criteria, Cloneable {
         criteria.@junctions = new ArrayList(this.junctions)
         criteria.@connectionName = this.connectionName
         criteria.@lazyQuery = this.lazyQuery
-        criteria.@associationCriteriaMap = new LinkedHashMap<>(this.associationCriteriaMap)
+        Map<String, DetachedAssociationCriteria> clonedAssociations = new LinkedHashMap<>()
+        for (Map.Entry<String, DetachedAssociationCriteria> entry : this.associationCriteriaMap.entrySet()) {
+            clonedAssociations.put(entry.key, copyAssociationCriteria(entry.value, associationCopies))
+        }
+        criteria.@associationCriteriaMap = clonedAssociations
         return criteria
+    }
+
+    /**
+     * Copies an association node once per clone, so the criteria list and the association map of the copy
+     * refer to the same node and a change to that node never reaches the original.
+     */
+    @CompileStatic
+    private static DetachedAssociationCriteria copyAssociationCriteria(DetachedAssociationCriteria source,
+            Map<DetachedAssociationCriteria, DetachedAssociationCriteria> copies) {
+        DetachedAssociationCriteria copy = copies.get(source)
+        if (copy == null) {
+            copy = (DetachedAssociationCriteria) source.clone()
+            copies.put(source, copy)
+        }
+        return copy
     }
 
     protected abstract AbstractDetachedCriteria newInstance()
