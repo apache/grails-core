@@ -30,6 +30,7 @@ import com.github.spotbugs.snom.SpotBugsPlugin
 import com.github.spotbugs.snom.SpotBugsTask
 import info.solidsoft.gradle.pitest.PitestPlugin
 import info.solidsoft.gradle.pitest.PitestPluginExtension
+import org.gradle.api.GradleException
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.file.Directory
@@ -40,6 +41,7 @@ import org.gradle.api.logging.Logging
 import org.gradle.api.plugins.quality.Pmd
 import org.gradle.api.plugins.quality.PmdExtension
 import org.gradle.api.plugins.quality.PmdPlugin
+import org.gradle.api.tasks.SourceSetContainer
 
 /**
  * Convention plugin for Grails byte code analysis (PMD, SpotBugs, and PITest mutation testing).
@@ -65,6 +67,7 @@ class GrailsCodeAnalysisPlugin implements Plugin<Project> {
     static String PITEST_TARGET_TESTS_PROPERTY = 'grails.code-analysis.pitest.targetTests'
     static String PITEST_THREADS_PROPERTY = 'grails.code-analysis.pitest.threads'
     static String PITEST_MUTATORS_PROPERTY = 'grails.code-analysis.pitest.mutators'
+    static String PITEST_MUTABLE_PROJECTS_PROPERTY = 'grails.code-analysis.pitest.mutableProjects'
 
     static final Set<String> GROOVY_EXCLUDED_METHODS = [
             '$getStaticMetaClass',
@@ -277,6 +280,7 @@ class GrailsCodeAnalysisPlugin implements Plugin<Project> {
             def targetTestsProp = project.providers.gradleProperty(PITEST_TARGET_TESTS_PROPERTY)
             def threadsProp = project.providers.gradleProperty(PITEST_THREADS_PROPERTY)
             def mutatorsProp = project.providers.gradleProperty(PITEST_MUTATORS_PROPERTY)
+            def mutableProjectsProp = project.providers.gradleProperty(PITEST_MUTABLE_PROJECTS_PROPERTY)
 
             project.extensions.configure(PitestPluginExtension) { PitestPluginExtension pitest ->
                 String configuredPitestVersion = project.findProperty('pitestVersion') as String
@@ -315,6 +319,30 @@ class GrailsCodeAnalysisPlugin implements Plugin<Project> {
                 )
                 if (mutatorsProp.present) {
                     pitest.mutators.set(mutatorsProp.map { String val -> val.split(',')*.trim().findAll() as Set<String> })
+                }
+            }
+
+            // PITest mutates the classes of the module it runs in. Naming other projects here also mutates their
+            // compiled main classes, so a class can be tested with the specs of another module.
+            if (mutableProjectsProp.present) {
+                List<String> mutablePaths = mutableProjectsProp.get().split(',')*.trim().findAll() as List<String>
+                mutablePaths.each { String path ->
+                    if (project.rootProject.findProject(path) == null) {
+                        throw new GradleException("${PITEST_MUTABLE_PROJECTS_PROPERTY} names a project that does not exist: ${path}")
+                    }
+                }
+                project.extensions.configure(PitestPluginExtension) { PitestPluginExtension pitest ->
+                    pitest.additionalMutableCodePaths.set(project.provider {
+                        Set<File> classesDirs = new LinkedHashSet<File>()
+                        mutablePaths.each { String path ->
+                            Project other = project.rootProject.project(path)
+                            classesDirs.addAll(other.extensions.getByType(SourceSetContainer).named('main').get().output.classesDirs.files)
+                        }
+                        classesDirs
+                    })
+                }
+                project.tasks.named('pitest').configure { task ->
+                    mutablePaths.each { String path -> task.dependsOn("${path}:classes" as String) }
                 }
             }
         }

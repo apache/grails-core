@@ -51,6 +51,12 @@ Activate this skill when:
   -Pgrails.code-analysis.pitest.targetTests="grails.core.DefaultGrailsApplicationSpec" \
   -Pgrails.code-analysis.pitest.mutators=STRONGER \
   -Pgrails.code-analysis.pitest.threads=4
+
+# Mutate a class of another module with the specs of this one (the class and its specs are often in different modules)
+./gradlew :grails-datamapping-core-test:pitest \
+  -Pgrails.code-analysis.pitest.mutableProjects=:grails-datastore-core \
+  -Pgrails.code-analysis.pitest.targetClasses="org.grails.datastore.mapping.query.jpa.JpaQueryBuilder" \
+  -Pgrails.code-analysis.pitest.targetTests="grails.gorm.tests.JpaQueryBuilderSpec,grails.gorm.tests.JpaQueryBuilderBulkWriteSpec"
 ```
 
 ### Opting In from a Module `build.gradle`
@@ -71,6 +77,7 @@ grailsCodeAnalysis {
 | `grails.code-analysis.enabled.pitest.projects` | *(empty)* | Comma-separated project paths (e.g. `:grails-core`) |
 | `grails.code-analysis.pitest.targetClasses` | `org.apache.grails.*,org.grails.*,grails.*,${project.group}.*` | Comma-separated class globs to mutate |
 | `grails.code-analysis.pitest.targetTests` | `*` (all tests in module) | Comma-separated test class globs to run |
+| `grails.code-analysis.pitest.mutableProjects` | *(empty)* | Comma-separated project paths whose compiled main classes are also mutated, so the specs of this module can test a class that lives in another module. A path that does not exist fails the build. |
 | `grails.code-analysis.pitest.threads` | `4` | Number of concurrent mutation threads |
 | `grails.code-analysis.pitest.mutators` | PITest `DEFAULTS` | Comma-separated mutator names or group (`DEFAULTS`, `STRONGER`) |
 

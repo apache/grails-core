@@ -246,6 +246,99 @@ class GrailsCodeAnalysisPluginSpec extends Specification {
         secondRun.output.contains('Configuration cache entry reused')
     }
 
+    def "PITest mutates classes of the projects named in mutableProjects, and only those, with the specs of the module it runs in"() {
+        given:
+        testProjectDir.resolve('gradle.properties').toFile().text = '''
+            pitestVersion=1.19.6
+            pitestJunit5PluginVersion=1.2.2
+        '''
+        testProjectDir.resolve('settings.gradle').toFile().text = "include 'lib', 'selected'"
+        def libDir = testProjectDir.resolve('lib')
+        libDir.toFile().mkdirs()
+        libDir.resolve('build.gradle').toFile().text = "plugins { id 'java-library' }"
+        def javaFile = libDir.resolve('src/main/java/org/grails/example/Calculator.java').toFile()
+        javaFile.parentFile.mkdirs()
+        javaFile.text = '''
+            package org.grails.example;
+
+            public class Calculator {
+                public static int add(int a, int b) {
+                    return a + b;
+                }
+            }
+        '''
+        def selectedDir = testProjectDir.resolve('selected')
+        selectedDir.toFile().mkdirs()
+        selectedDir.resolve('build.gradle').toFile().text = '''
+            plugins {
+                id 'groovy'
+                id 'org.apache.grails.gradle.grails-code-analysis'
+            }
+            repositories {
+                mavenCentral()
+            }
+            dependencies {
+                implementation project(':lib')
+                implementation localGroovy()
+                testImplementation platform('org.spockframework:spock-bom:2.4-M6-groovy-4.0')
+                testImplementation 'org.spockframework:spock-core'
+                testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+            }
+            tasks.withType(Test).configureEach {
+                useJUnitPlatform()
+            }
+        '''
+        def specFile = selectedDir.resolve('src/test/groovy/org/grails/example/CalculatorSpec.groovy').toFile()
+        specFile.parentFile.mkdirs()
+        specFile.text = '''
+            package org.grails.example
+
+            import spock.lang.Specification
+
+            class CalculatorSpec extends Specification {
+                def "adds"() {
+                    expect:
+                    Calculator.add(2, 3) == 5
+                }
+            }
+        '''
+        File mutationsXml = testProjectDir.resolve('build/reports/code-analysis/pitest/selected/mutations.xml').toFile()
+
+        when: "the other project is not named"
+        def withoutProperty = run(
+                ':selected:pitest',
+                '-Pgrails.code-analysis.pitest.targetClasses=org.grails.example.*'
+        )
+
+        then: "its classes are not mutated"
+        withoutProperty.output.contains('BUILD SUCCESSFUL')
+        !mutationsXml.exists() || !mutationsXml.text.contains('<mutatedMethod>add</mutatedMethod>')
+
+        when: "the other project is named"
+        def withProperty = run(
+                ':selected:pitest',
+                '-Pgrails.code-analysis.pitest.targetClasses=org.grails.example.*',
+                '-Pgrails.code-analysis.pitest.mutableProjects=:lib',
+                '--configuration-cache'
+        )
+
+        then: "its classes are mutated and the specs of this module kill the mutants"
+        withProperty.output.contains('BUILD SUCCESSFUL')
+        mutationsXml.exists()
+        mutationsXml.text.contains('<mutatedClass>org.grails.example.Calculator</mutatedClass>')
+        mutationsXml.text.contains("status='KILLED'")
+        mutationsXml.text.contains('<mutatedMethod>add</mutatedMethod>')
+
+        when: "the named project does not exist"
+        def missing = runAndFail(
+                ':selected:pitest',
+                '-Pgrails.code-analysis.pitest.mutableProjects=:nowhere'
+        )
+
+        then:
+        missing.output.contains('names a project that does not exist: :nowhere')
+    }
+
     def "enablePmd configures PMD immediately, so the build script customizes pmdMain and the reports directory afterwards"() {
         given:
         testProjectDir.resolve('build.gradle').toFile().text = '''
@@ -381,6 +474,14 @@ ${projects ? "grails.code-analysis.enabled.${tool}.projects=${projects}" : ''}
 
     private def run(String... arguments) {
         run(testProjectDir, arguments)
+    }
+
+    private def runAndFail(String... arguments) {
+        GradleRunner.create()
+                .withProjectDir(testProjectDir.toFile())
+                .withArguments(arguments + ['--stacktrace'])
+                .withPluginClasspath()
+                .buildAndFail()
     }
 
     private def run(Path projectDirectory, String... arguments) {
