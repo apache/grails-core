@@ -532,6 +532,23 @@ class PropertySourcesConfigSpec extends Specification {
         config.app.rows[1].name == 'second'
     }
 
+    void 'a key with a second subscript right after the first, #key, writes no field into the element of the first'() {
+        given:
+        def config = new PropertySourcesConfig(new MapPropertySource('application.properties', [(key): 'x']))
+
+        expect: "the value is read by its key"
+        config.getProperty(key) == 'x'
+
+        and: "the nested maps hold no container for it, and the flat key holds the value under the first subscript, as before"
+        config.navigate('app', 'grid') == null
+        config.getProperty('app.grid', Object)[first].values() as List == ['x']
+
+        where:
+        key                    | first
+        'app.grid[0][1].name'  | 0
+        'app.grid[a][b].name'  | 'a'
+    }
+
     void 'a list of maps is given as plain maps by getProperty and read through dot notation, from #description'() {
         given:
         def config = new PropertySourcesConfig(source)

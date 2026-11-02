@@ -304,6 +304,23 @@ class NavigableMapSpec extends Specification {
         }
     }
 
+    def "a key with a second subscript right after the first, #key, builds no container in the nested map"() {
+        given:
+        NavigableMap output = new NavigableMap()
+
+        when:
+        output.merge([(key): 'x'], true)
+
+        then: 'the nested map holds no container, and the flat key holds the value under the first subscript, as before'
+        output.navigate('a', 'grid') == null
+        output.get('a.grid')[first].values() as List == ['x']
+
+        where:
+        key                  | first
+        'a.grid[0][1].name'  | 0
+        'a.grid[k][1].name'  | 'k'
+    }
+
     def "an indexed key with a property after the index writes a map over a value of a list that is not a map"() {
         given:
         NavigableMap output = new NavigableMap()

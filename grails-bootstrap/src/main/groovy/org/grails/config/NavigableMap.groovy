@@ -191,7 +191,8 @@ class NavigableMap implements Map<String, Object>, Cloneable {
     private void holdIndexedContainer(NavigableMap targetMap, String indexedKey) {
         int subscriptStart = indexedKey.indexOf('[')
         int subscriptEnd = subscriptStart > -1 ? indexedKey.indexOf(']', subscriptStart) : -1
-        if (subscriptEnd < 0 || indexedKey.indexOf('.', subscriptEnd) < 0) {
+        if (subscriptEnd < 0 || !indexedKey.startsWith('.', subscriptEnd + 1)) {
+            // only a property right after the subscript is held; a second subscript, grid[0][1].name, is written as before
             return
         }
         String containerKey = indexedKey.substring(0, subscriptStart)
