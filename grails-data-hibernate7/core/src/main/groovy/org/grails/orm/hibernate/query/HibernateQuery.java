@@ -518,6 +518,17 @@ public class HibernateQuery extends Query implements QueryArgumentsAware {
         return firePostQueryEvent(result);
     }
 
+    /**
+     * Runs the query for a criteria {@code get}: the one row that matches, {@code null} for none,
+     * and a {@link org.hibernate.NonUniqueResultException} when several match.
+     */
+    public Object uniqueResult() {
+        firePreQueryEvent();
+        var creator = createJpaCriteriaQueryCreator();
+        Object result = getHibernateQueryExecutor().uniqueResult(getCurrentSession(), creator.createQuery(), creator.getParameterValues());
+        return firePostQueryEvent(result);
+    }
+
     private Object executeSingleResult() {
         return singleResult(getCurrentSession());
     }
