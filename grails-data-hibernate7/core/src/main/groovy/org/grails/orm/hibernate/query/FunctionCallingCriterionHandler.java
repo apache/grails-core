@@ -85,10 +85,10 @@ public class FunctionCallingCriterionHandler implements InternalCriterionHandler
             }
             if (rawValue instanceof QueryableCriteria<?> qc) {
                 Subquery<?> subquery = PropertyCriterionHandler.buildSubquery(context, left, qc, criterion.getProperty());
-                return criteriaBuilder.or(criteriaBuilder.notEqual(left, subquery), criteriaBuilder.isNull(left));
+                return criteriaBuilder.notEqual(left, subquery);
             }
             Object value = convertFunctionValue(context.getConversionService(), functionName, rawValue);
-            return criteriaBuilder.or(criteriaBuilder.notEqual(left, value), criteriaBuilder.isNull(left));
+            return criteriaBuilder.notEqual(left, value);
         }
 
         Object value = convertFunctionValue(context.getConversionService(), functionName, rawValue);
