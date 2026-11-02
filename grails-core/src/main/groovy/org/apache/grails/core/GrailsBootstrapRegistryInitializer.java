@@ -108,8 +108,7 @@ public class GrailsBootstrapRegistryInitializer implements BootstrapRegistryInit
 
     /**
      * Resolves a {@link StackTraceFilterer} from the given context's environment, honouring
-     * {@link Settings#SETTING_LOGGING_STACKTRACE_FILTER_CLASS} and
-     * {@link Settings#SETTING_LOG_FULL_STACKTRACE_ON_FILTER}.
+     * {@link Settings#SETTING_LOGGING_STACKTRACE_FILTER_CLASS}.
      *
      * <p>Defensive throughout: a misconfigured filterer must never fail application startup, so
      * every config read, class load and instantiation degrades to a plain
@@ -119,7 +118,6 @@ public class GrailsBootstrapRegistryInitializer implements BootstrapRegistryInit
         Environment environment = applicationContext.getEnvironment();
         Class<? extends StackTraceFilterer> filtererClass =
                 resolveFiltererClass(environment, applicationContext.getClassLoader());
-        boolean logFullStackTraceOnFilter = resolveLogFullStackTraceOnFilter(environment);
 
         StackTraceFilterer filterer;
         try {
@@ -129,9 +127,6 @@ public class GrailsBootstrapRegistryInitializer implements BootstrapRegistryInit
             LOG.warn("Problem instantiating configured StackTraceFilterer [{}], falling back to default: {}",
                     filtererClass.getName(), t.getMessage());
             filterer = new DefaultStackTraceFilterer();
-        }
-        if (filterer instanceof DefaultStackTraceFilterer) {
-            ((DefaultStackTraceFilterer) filterer).setLogFullStackTraceOnFilter(logFullStackTraceOnFilter);
         }
         return filterer;
     }
@@ -184,22 +179,5 @@ public class GrailsBootstrapRegistryInitializer implements BootstrapRegistryInit
                     configured, t.getMessage());
         }
         return DefaultStackTraceFilterer.class;
-    }
-
-    /**
-     * Reads {@link Settings#SETTING_LOG_FULL_STACKTRACE_ON_FILTER}, defaulting to {@code true} both
-     * when unset and when the configured value cannot be converted to a boolean — a bad value here
-     * must not propagate out of the close listener and fail startup.
-     */
-    private boolean resolveLogFullStackTraceOnFilter(Environment environment) {
-        try {
-            return environment.getProperty(
-                    Settings.SETTING_LOG_FULL_STACKTRACE_ON_FILTER, Boolean.class, Boolean.TRUE);
-        }
-        catch (Throwable t) {
-            LOG.warn("Problem reading [{}], defaulting to true: {}",
-                    Settings.SETTING_LOG_FULL_STACKTRACE_ON_FILTER, t.getMessage());
-            return true;
-        }
     }
 }

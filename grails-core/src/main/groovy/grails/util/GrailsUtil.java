@@ -66,8 +66,8 @@ public class GrailsUtil {
      * {@code GrailsExceptionResolver} bean.
      *
      * <p>{@code GrailsUtil} intentionally has no dependency on {@code GrailsApplication} or Spring's
-     * {@code Environment} here — the caller is responsible for resolving the configured class and
-     * {@code logFullStackTraceOnFilter} flag and handing over a ready-to-use instance.
+     * {@code Environment} here — the caller is responsible for resolving the configured class
+     * and handing over a ready-to-use instance.
      *
      * <p>No-ops when {@code filterer} is null. Safe to call more than once — the last call wins.
      * The installed filterer is JVM-global rather than per-context, so in a JVM hosting more than

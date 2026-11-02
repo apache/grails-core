@@ -73,7 +73,28 @@ grailsApplication.config.refresh()
 
 Two smaller differences: variable names are upper-cased with `Locale.ROOT`, as Spring does, so a key containing `i` matches its upper-cased variable under a Turkish default locale too; and `getProperty(null)` returns the default value instead of throwing a `NullPointerException`.
 
-==== 5. The Character Encoding Filter Runs First
+==== 5. Full Stack Trace Logging Has One Switch
+
+Built-in stack trace filtering no longer logs as a side effect. Previously a request exception could produce
+one full-trace record from the exception resolver and another record for every throwable visited by the
+filterer, including nested causes.
+
+`grails.exceptionresolver.logFullStackTrace` is now the sole switch for resolver-driven full-trace logging.
+It still defaults to `false`: a request exception produces only the resolver's filtered, request-context
+record. Set it to `true` to emit exactly one additional unfiltered record, including the full cause chain,
+to the `StackTrace` logger before filtering.
+
+===== Required Actions
+
+Remove `grails.exceptionresolver.logFullStackTraceOnFilter` from configuration; it is deprecated and ignored.
+If you relied on its previously enabled default to populate a separate stack trace appender, enable
+`grails.exceptionresolver.logFullStackTrace` instead. Existing `StackTrace` logger routing continues to work.
+
+Sanitization outside the exception resolver no longer emits `StackTrace` records either. Code that needs
+to log an unfiltered exception outside request handling must log it explicitly before sanitizing it.
+Custom `StackTraceFilterer` implementations remain responsible for their own logging policy.
+
+==== 6. The Character Encoding Filter Runs First
 
 Grails 8.1 registers its character encoding filter at `Ordered.HIGHEST_PRECEDENCE`, the order Spring Boot gives its own, instead of at -180. Once a filter reads a request parameter, the servlet container has decoded the request body, as ISO-8859-1 unless an encoding was set by then, so a filter ordered ahead of the encoding filter that read a parameter garbled non-ASCII form input for the rest of the request, for example `CafÃ©` for `Café`.
 

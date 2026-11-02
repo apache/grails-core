@@ -26,8 +26,7 @@ import spock.lang.Specification
 /**
  * Verifies that {@link GrailsUtil#initializeStackFilterer(StackTraceFilterer)} installs the given
  * filterer for {@link GrailsUtil#deepSanitize}, {@link GrailsUtil#sanitizeRootCause} and
- * {@link GrailsUtil#printSanitizedStackTrace}. Config-driven resolution (the configured class +
- * {@code logFullStackTraceOnFilter}) happens in
+ * {@link GrailsUtil#printSanitizedStackTrace}. Config-driven filterer class resolution happens in
  * {@code org.apache.grails.core.GrailsBootstrapRegistryInitializer}, covered separately by
  * {@code GrailsBootstrapRegistryInitializerSpec}.
  *
@@ -104,13 +103,13 @@ class GrailsUtilStackFiltererSpec extends Specification {
         first.recursiveCalls == 0
     }
 
-    def 'installed DefaultStackTraceFilterer honours logFullStackTraceOnFilter=false'() {
+    def 'installed DefaultStackTraceFilterer ignores legacy logging value #legacyValue'() {
         given: 'a capture of the dedicated STACK_LOG logger'
         def logCapture = new LogCapture(DefaultStackTraceFilterer.STACK_LOG_NAME)
 
-        and: 'a filterer with the side-effect emission disabled'
+        and: 'a filterer configured through the compatibility setter'
         def quietFilterer = new DefaultStackTraceFilterer()
-        quietFilterer.logFullStackTraceOnFilter = false
+        quietFilterer.logFullStackTraceOnFilter = legacyValue
 
         when:
         GrailsUtil.initializeStackFilterer(quietFilterer)
@@ -121,21 +120,26 @@ class GrailsUtilStackFiltererSpec extends Specification {
 
         cleanup:
         logCapture.close()
+
+        where:
+        legacyValue << [true, false]
     }
 
-    def 'installed DefaultStackTraceFilterer emits Full Stack Trace by default'() {
+    def 'installed DefaultStackTraceFilterer sanitizes without logging by default'() {
         given: 'a capture of the dedicated STACK_LOG logger'
         def logCapture = new LogCapture(DefaultStackTraceFilterer.STACK_LOG_NAME)
 
-        and: 'a filterer with the default (enabled) side-effect emission'
-        def loudFilterer = new DefaultStackTraceFilterer()
+        and: 'a default filterer and an exception with internal frames'
+        def defaultFilterer = new DefaultStackTraceFilterer()
+        def exception = exceptionWithApplicationFrame()
 
         when:
-        GrailsUtil.initializeStackFilterer(loudFilterer)
-        GrailsUtil.deepSanitize(exceptionWithApplicationFrame())
+        GrailsUtil.initializeStackFilterer(defaultFilterer)
+        GrailsUtil.deepSanitize(exception)
 
-        then: "a 'Full Stack Trace:' entry is emitted -- the positive control proving the negative case above is meaningful"
-        logCapture.events.any { it.formattedMessage.contains(StackTraceFilterer.FULL_STACK_TRACE_MESSAGE) }
+        then: 'sanitization retains application frames without a logging side effect'
+        logCapture.events.empty
+        exception.stackTrace*.className == ['test.FooController']
 
         cleanup:
         logCapture.close()

@@ -87,63 +87,29 @@ Setting the `StackTrace` logger level to `OFF` in Logback makes the opt-in a no-
 This is useful if the property is enabled in a shared `application.yml` but a particular environment needs to
 silence the extra record.
 
-==== Side-Effect Emission From the Filterer
+==== Filtering Does Not Log
 
-In addition to the resolver-driven emission described above, `DefaultStackTraceFilterer.filter(Throwable)` emits
-the unfiltered stack trace to the `StackTrace` logger as a side effect _before_ trimming the trace in place.
-This preserves the pre-7.1 behaviour where any caller of the filterer — `GrailsExceptionResolver`,
-`GroovyPageView.deepSanitize`, `GrailsUtil.sanitizeRootCause`, or custom plugin code — produced a `StackTrace`
-log record. It means non-resolver code paths (for example, a scheduled job that calls
-`GrailsUtil.sanitizeRootCause(ex)` before logging via its own logger) continue to populate the `StackTrace`
-appender without an explicit emission call.
+Since Grails 8.1, built-in stack trace filtering only trims frames; it never writes log records. This also
+applies to sanitization outside request handling, such as `GrailsUtil.sanitizeRootCause` and
+`GrailsUtil.deepSanitize`. Code that needs the original trace outside the exception resolver must log it
+explicitly _before_ sanitizing it.
 
-NOTE: Both `grails.logging.stackTraceFiltererClass` and `grails.exceptionresolver.logFullStackTraceOnFilter`
-apply outside the exception resolver too — including GSP view-render exceptions — so this property controls
-emission everywhere the filterer is used, not just for resolver-driven requests. In any context not started
-through `SpringApplication` — the CLI, plain `main()` usage, Grails unit tests — the previous fallback
-behaviour applies unchanged: a plain `DefaultStackTraceFilterer` with no configuration applied. The
-configured filterer is JVM-global rather than per-context, so in a JVM hosting more than one application
-context the last one booted supplies the filterer for all of them. Custom `StackTraceFilterer`
-implementations that don't extend `DefaultStackTraceFilterer` are responsible for their own logging policy.
+`grails.exceptionresolver.logFullStackTrace` is the single switch for resolver-driven full-trace logging.
+The legacy `grails.exceptionresolver.logFullStackTraceOnFilter` setting is deprecated and ignored, whether
+set to `true` or `false`. Remove it from application configuration.
 
-The behaviour is enabled by default. To disable the side-effect emission and rely solely on
-`logFullStackTrace` for resolver-driven output, set:
-
-[source, yaml]
-.grails-app/conf/application.yml
-----
-grails:
-    exceptionresolver:
-        logFullStackTraceOnFilter: false
-----
-
-When the side-effect emission is enabled and `logFullStackTrace` is also enabled, a request exception produces
-both — one resolver-driven record (top-level exception with the full cause chain) and one record per throwable
-visited by the recursive filter walk. This matches pre-7.1 multiplicity. Pick the combination that suits your
-log-routing setup:
-
-[cols="1,1,3"]
+[cols="1,3"]
 |===
-|`logFullStackTrace` |`logFullStackTraceOnFilter` |Behaviour for a request exception with N causes
+|`logFullStackTrace` |Behaviour for a request exception, including nested causes
 
 |`false` (default)
-|`true` (default)
-|N `StackTrace` records (one per throwable in the chain) + 1 resolver record. Matches pre-7.1 (minus a former
-duplicate "condensed" record).
+|1 resolver record with the filtered trace. No `StackTrace` records.
 
 |`true`
-|`false`
-|1 `StackTrace` record (top-level with full chain) + 1 resolver record. Cleanest output; recommended for new
-deployments that don't depend on per-cause emission.
-
-|`true`
-|`true`
-|N+1 `StackTrace` records + 1 resolver record. Highest fidelity, most verbose.
-
-|`false`
-|`false`
-|1 resolver record only. Silent on `StackTrace`.
+|1 `StackTrace` record with the unfiltered trace and full cause chain, plus 1 resolver record with the filtered trace.
 |===
+
+Custom `StackTraceFilterer` implementations remain responsible for their own logging policy.
 
 ==== Including Per-Request Context in the Exception Log
 

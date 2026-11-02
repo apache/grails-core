@@ -18,6 +18,7 @@
  */
 package org.grails.web.errors
 
+import ch.qos.logback.classic.Level
 import grails.config.Config
 import grails.core.DefaultGrailsApplication
 import grails.core.GrailsApplication
@@ -170,7 +171,6 @@ class GrailsExceptionResolverSpec extends Specification {
         def config = Mock(Config)
         config.getProperty('grails.exceptionresolver.logAuditor', Boolean, false) >> true
         config.getProperty('grails.exceptionresolver.logRemoteAddr', Boolean, false) >> false
-        config.getProperty('grails.exceptionresolver.logFullStackTraceOnFilter', Boolean, true) >> false
         config.getProperty('grails.exceptionresolver.logFullStackTrace', Boolean, false) >> false
         config.getProperty('grails.exceptionresolver.logRequestParameters', Boolean, _) >> false
         def grailsApp = Mock(GrailsApplication)
@@ -196,7 +196,6 @@ class GrailsExceptionResolverSpec extends Specification {
         def config = Mock(Config)
         config.getProperty('grails.exceptionresolver.logAuditor', Boolean, false) >> false
         config.getProperty('grails.exceptionresolver.logRemoteAddr', Boolean, false) >> false
-        config.getProperty('grails.exceptionresolver.logFullStackTraceOnFilter', Boolean, true) >> false
         config.getProperty('grails.exceptionresolver.logFullStackTrace', Boolean, false) >> false
         config.getProperty('grails.exceptionresolver.logRequestParameters', Boolean, _) >> false
         def grailsApp = Mock(GrailsApplication)
@@ -222,7 +221,6 @@ class GrailsExceptionResolverSpec extends Specification {
         def config = Mock(Config)
         config.getProperty('grails.exceptionresolver.logAuditor', Boolean, false) >> true
         config.getProperty('grails.exceptionresolver.logRemoteAddr', Boolean, false) >> false
-        config.getProperty('grails.exceptionresolver.logFullStackTraceOnFilter', Boolean, true) >> false
         config.getProperty('grails.exceptionresolver.logFullStackTrace', Boolean, false) >> false
         config.getProperty('grails.exceptionresolver.logRequestParameters', Boolean, _) >> false
         def grailsApp = Mock(GrailsApplication)
@@ -248,7 +246,6 @@ class GrailsExceptionResolverSpec extends Specification {
         def config = Mock(Config)
         config.getProperty('grails.exceptionresolver.logAuditor', Boolean, false) >> false
         config.getProperty('grails.exceptionresolver.logRemoteAddr', Boolean, false) >> true
-        config.getProperty('grails.exceptionresolver.logFullStackTraceOnFilter', Boolean, true) >> false
         config.getProperty('grails.exceptionresolver.logFullStackTrace', Boolean, false) >> false
         config.getProperty('grails.exceptionresolver.logRequestParameters', Boolean, _) >> false
         def grailsApp = Mock(GrailsApplication)
@@ -271,7 +268,6 @@ class GrailsExceptionResolverSpec extends Specification {
         def config = Mock(Config)
         config.getProperty('grails.exceptionresolver.logAuditor', Boolean, false) >> true
         config.getProperty('grails.exceptionresolver.logRemoteAddr', Boolean, false) >> true
-        config.getProperty('grails.exceptionresolver.logFullStackTraceOnFilter', Boolean, true) >> false
         config.getProperty('grails.exceptionresolver.logFullStackTrace', Boolean, false) >> false
         config.getProperty('grails.exceptionresolver.logRequestParameters', Boolean, _) >> false
         def grailsApp = Mock(GrailsApplication)
@@ -298,7 +294,6 @@ class GrailsExceptionResolverSpec extends Specification {
         def config = Mock(Config)
         config.getProperty('grails.exceptionresolver.logAuditor', Boolean, false) >> false
         config.getProperty('grails.exceptionresolver.logRemoteAddr', Boolean, false) >> true
-        config.getProperty('grails.exceptionresolver.logFullStackTraceOnFilter', Boolean, true) >> false
         config.getProperty('grails.exceptionresolver.logFullStackTrace', Boolean, false) >> false
         config.getProperty('grails.exceptionresolver.logRequestParameters', Boolean, _) >> false
         def grailsApp = Mock(GrailsApplication)
@@ -330,15 +325,15 @@ class GrailsExceptionResolverSpec extends Specification {
         !lookup.getCurrentAuditor().isPresent()
     }
 
-    void "logFullStackTraceIfEnabled emits the unfiltered trace when opt-in is enabled, and filterStackTrace then removes internal frames so the resolver log only sees the filtered trace"() {
+    void 'resolveException logs full traces only when enabled=#enabled despite legacy=#legacyValue and promoted=#promoted'() {
         given: "captures of both the resolver logger and the StackTrace logger"
-        def resolverLog = new LogCapture(GrailsExceptionResolver)
+        def resolverLog = new LogCapture(GrailsExceptionResolver, Level.ERROR)
         def stackLog = new LogCapture(DefaultStackTraceFilterer.STACK_LOG_NAME)
 
-        and: "A resolver whose config opts in to full stack trace logging"
+        and: 'a resolver with either a locally constructed or bootstrap-promoted filterer'
         def config = Mock(Config)
-        config.getProperty('grails.exceptionresolver.logFullStackTrace', Boolean, false) >> true
-        config.getProperty('grails.exceptionresolver.logFullStackTraceOnFilter', Boolean, true) >> false
+        config.getProperty('grails.exceptionresolver.logFullStackTrace', Boolean, false) >> enabled
+        config.getProperty('grails.exceptionresolver.logFullStackTraceOnFilter', Boolean, true) >> legacyValue
         config.getProperty('grails.exceptionresolver.logAuditor', Boolean, false) >> false
         config.getProperty('grails.exceptionresolver.logRemoteAddr', Boolean, false) >> false
         config.getProperty('grails.exceptionresolver.logRequestParameters', Boolean, _) >> false
@@ -346,46 +341,87 @@ class GrailsExceptionResolverSpec extends Specification {
                 DefaultStackTraceFilterer
         def grailsApp = Mock(GrailsApplication)
         grailsApp.getConfig() >> config
+        webContext = new StaticWebApplicationContext()
+        webContext.beanFactory.registerSingleton(GrailsApplication.APPLICATION_ID, grailsApp)
+        if (promoted) {
+            webContext.beanFactory.registerSingleton(
+                    GrailsBootstrapRegistryInitializer.STACK_TRACE_FILTERER_BEAN_NAME, new DefaultStackTraceFilterer())
+        }
+        webContext.refresh()
+        grailsApp.getMainContext() >> webContext
+        servletContext.setAttribute(WebApplicationContext.ROOT_WEB_APPLICATION_CONTEXT_ATTRIBUTE, webContext)
         def resolver = new GrailsExceptionResolver()
-        resolver.grailsApplication = grailsApp
+        resolver.setGrailsApplication(grailsApp)
+        resolver.servletContext = servletContext
+        resolver.defaultErrorView = '/error'
 
-        and: "An exception with a mix of internal (filterable) and application frames"
-        def exception = new RuntimeException('boom')
+        and: 'an exception and nested cause with internal and application frames'
+        def cause = new IllegalStateException('root cause')
+        cause.stackTrace = [
+                new StackTraceElement('java.lang.reflect.Method', 'invoke', 'Method.java', 580),
+                new StackTraceElement('com.example.MyService', 'run', 'MyService.groovy', 20),
+        ] as StackTraceElement[]
+        def exception = new RuntimeException('boom', cause)
         exception.stackTrace = [
                 new StackTraceElement('java.lang.reflect.Method', 'invoke', 'Method.java', 580),
                 new StackTraceElement('com.example.MyController', 'show', 'MyController.groovy', 10),
         ] as StackTraceElement[]
         def request = new MockHttpServletRequest('GET', '/test')
 
-        when: "The real resolveException ordering runs: log full trace, filter, then log with request context"
-        resolver.logFullStackTraceIfEnabled(exception)
-        resolver.filterStackTrace(exception)
-        resolver.logStackTrace(exception, request)
+        when: 'the exception is handled through the public resolver API'
+        def response = new MockHttpServletResponse()
+        def result = resolver.resolveException(request, response, null, exception)
 
-        then: "Both loggers emit exactly once"
-        stackLog.events.size() == 1
+        then: 'the resolver always logs once and full trace logging is strictly opt-in'
+        result.viewName == '/error'
+        response.status == 500
+        stackLog.events.size() == (enabled ? 1 : 0)
         resolverLog.events.size() == 1
-        stackLog.events[0].formattedMessage.contains(StackTraceFilterer.FULL_STACK_TRACE_MESSAGE)
+        !enabled || stackLog.events[0].formattedMessage.contains(StackTraceFilterer.FULL_STACK_TRACE_MESSAGE)
         resolverLog.events[0].formattedMessage.contains('[GET] /test')
 
         and: "The application frame appears in both the unfiltered and filtered log entries"
-        [stackLog.events[0], resolverLog.events[0]].every { event ->
+        (stackLog.events + resolverLog.events).every { event ->
             event.throwableProxy.stackTraceElementProxyArray.any {
                 it.stackTraceElement.className == 'com.example.MyController'
             }
         }
 
         and: "The internal frame appears only in the unfiltered StackTrace entry, not in the filtered resolver entry"
-        stackLog.events[0].throwableProxy.stackTraceElementProxyArray.any {
+        !enabled || stackLog.events[0].throwableProxy.stackTraceElementProxyArray.any {
             it.stackTraceElement.className == 'java.lang.reflect.Method'
         }
         resolverLog.events[0].throwableProxy.stackTraceElementProxyArray.every {
             it.stackTraceElement.className != 'java.lang.reflect.Method'
         }
 
+        and: 'the cause is included unfiltered in the single full record and filtered in the resolver record'
+        !enabled || stackLog.events[0].throwableProxy.cause.stackTraceElementProxyArray.any {
+            it.stackTraceElement.className == 'java.lang.reflect.Method'
+        }
+        resolverLog.events[0].throwableProxy.cause.stackTraceElementProxyArray*.stackTraceElement*.className ==
+                ['com.example.MyService']
+        exception.stackTrace*.className == ['com.example.MyController']
+        cause.stackTrace*.className == ['com.example.MyService']
+
         cleanup:
         resolverLog.close()
         stackLog.close()
+
+        where:
+        enabled | legacyValue | promoted
+        true    | true        | false
+        true    | false       | false
+        true    | null        | false
+        false   | true        | false
+        false   | false       | false
+        false   | null        | false
+        true    | true        | true
+        true    | false       | true
+        true    | null        | true
+        false   | true        | true
+        false   | false       | true
+        false   | null        | true
     }
 
     void "getRequestLogMessage masks excluded request parameters case-insensitively"() {
@@ -395,7 +431,6 @@ class GrailsExceptionResolverSpec extends Specification {
         config.getProperty('grails.exceptionresolver.params.exclude', List, _) >> [null, 'password', 'token']
         config.getProperty('grails.exceptionresolver.logAuditor', Boolean, false) >> false
         config.getProperty('grails.exceptionresolver.logRemoteAddr', Boolean, false) >> false
-        config.getProperty('grails.exceptionresolver.logFullStackTraceOnFilter', Boolean, true) >> false
         config.getProperty('grails.exceptionresolver.logFullStackTrace', Boolean, false) >> false
         def grailsApp = Mock(GrailsApplication)
         grailsApp.getConfig() >> config
@@ -443,7 +478,6 @@ class GrailsExceptionResolverSpec extends Specification {
         given:
         def config = Mock(Config)
         config.getProperty('grails.logging.stackTraceFiltererClass', Class, DefaultStackTraceFilterer) >> DefaultStackTraceFilterer
-        config.getProperty('grails.exceptionresolver.logFullStackTraceOnFilter', Boolean, true) >> true
         def mainContext = Mock(ApplicationContext)
         mainContext.getBean(GrailsBootstrapRegistryInitializer.STACK_TRACE_FILTERER_BEAN_NAME, StackTraceFilterer) >> { throw new NoSuchBeanDefinitionException(GrailsBootstrapRegistryInitializer.STACK_TRACE_FILTERER_BEAN_NAME) }
         def grailsApp = Mock(GrailsApplication)
@@ -463,7 +497,6 @@ class GrailsExceptionResolverSpec extends Specification {
         given:
         def config = Mock(Config)
         config.getProperty('grails.logging.stackTraceFiltererClass', Class, DefaultStackTraceFilterer) >> DefaultStackTraceFilterer
-        config.getProperty('grails.exceptionresolver.logFullStackTraceOnFilter', Boolean, true) >> true
         def grailsApp = Mock(GrailsApplication)
         grailsApp.getMainContext() >> null
         grailsApp.getConfig() >> config
@@ -482,7 +515,6 @@ class GrailsExceptionResolverSpec extends Specification {
         given: 'an application that registers its own stackTraceFilterer bean of an incompatible type'
         def config = Mock(Config)
         config.getProperty('grails.logging.stackTraceFiltererClass', Class, DefaultStackTraceFilterer) >> DefaultStackTraceFilterer
-        config.getProperty('grails.exceptionresolver.logFullStackTraceOnFilter', Boolean, true) >> true
         def mainContext = Mock(ApplicationContext)
         mainContext.getBean(GrailsBootstrapRegistryInitializer.STACK_TRACE_FILTERER_BEAN_NAME, StackTraceFilterer) >> {
             throw new BeanNotOfRequiredTypeException(

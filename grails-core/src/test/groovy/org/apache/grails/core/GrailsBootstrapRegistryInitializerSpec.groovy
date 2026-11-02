@@ -221,10 +221,10 @@ class GrailsBootstrapRegistryInitializerSpec extends Specification {
         promotedFilterer(context) instanceof DefaultStackTraceFilterer
     }
 
-    def 'propagates logFullStackTraceOnFilter=false to the promoted DefaultStackTraceFilterer'() {
+    def 'ignores legacy logFullStackTraceOnFilter value #legacyValue on the promoted filterer'() {
         given:
         def context = contextWithProperties([
-                (Settings.SETTING_LOG_FULL_STACKTRACE_ON_FILTER): 'false'
+                (Settings.SETTING_LOG_FULL_STACKTRACE_ON_FILTER): legacyValue
         ])
         def logCapture = new LogCapture(DefaultStackTraceFilterer.STACK_LOG_NAME)
 
@@ -237,19 +237,24 @@ class GrailsBootstrapRegistryInitializerSpec extends Specification {
 
         cleanup:
         logCapture.close()
+
+        where:
+        legacyValue << ['true', 'false', 'yes-please']
     }
 
-    def 'defaults logFullStackTraceOnFilter to true on the promoted DefaultStackTraceFilterer'() {
+    def 'promoted DefaultStackTraceFilterer sanitizes without logging by default'() {
         given:
         def context = contextWithProperties([:])
         def logCapture = new LogCapture(DefaultStackTraceFilterer.STACK_LOG_NAME)
+        def exception = exceptionWithApplicationFrame()
 
         when:
         closeBootstrapContext(context)
-        GrailsUtil.deepSanitize(exceptionWithApplicationFrame())
+        GrailsUtil.deepSanitize(exception)
 
-        then: 'the positive control proving the negative case above is meaningful'
-        logCapture.events.any { it.formattedMessage.contains(StackTraceFilterer.FULL_STACK_TRACE_MESSAGE) }
+        then: 'sanitization retains application frames without a logging side effect'
+        logCapture.events.empty
+        exception.stackTrace*.className == ['test.FooController']
 
         cleanup:
         logCapture.close()

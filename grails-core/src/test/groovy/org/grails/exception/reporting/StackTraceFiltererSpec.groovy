@@ -64,7 +64,7 @@ class StackTraceFiltererSpec extends Specification {
         }
     }
 
-    def 'filter emits a StackTrace log entry for a single throwable by default'() {
+    def 'filter trims a single throwable without logging by default'() {
         given: 'a configured log appender to capture the StackTrace log entry'
             def logCapture = new LogCapture('StackTrace')
 
@@ -78,19 +78,20 @@ class StackTraceFiltererSpec extends Specification {
         when: 'the exception is filtered'
             filterer.filter(exception)
 
-        then: "a 'Full Stack Trace:' entry is emitted by the filterer for backwards compatibility"
-            logCapture.events.any { it.formattedMessage.contains('Full Stack Trace:') }
+        then: 'filtering is silent and retains only application frames'
+            logCapture.events.empty
+            exception.stackTrace*.className == ['test.FooController']
 
         cleanup:
             logCapture.close()
     }
 
-    def 'filter does not emit a StackTrace log entry when logFullStackTraceOnFilter is disabled'() {
+    def 'filter ignores the legacy logFullStackTraceOnFilter value #legacyValue'() {
         given: 'a configured log appender to capture the StackTrace log entry'
             def logCapture = new LogCapture('StackTrace')
 
-        and: 'a filterer with the side-effect emission disabled'
-            def quietFilterer = new DefaultStackTraceFilterer(logFullStackTraceOnFilter: false)
+        and: 'a filterer configured through the compatibility setter'
+            def quietFilterer = new DefaultStackTraceFilterer(logFullStackTraceOnFilter: legacyValue)
 
         and: 'an exception whose stack trace mixes application and internal frames'
             def exception = new RuntimeException('boom')
@@ -107,6 +108,9 @@ class StackTraceFiltererSpec extends Specification {
 
         cleanup:
             logCapture.close()
+
+        where:
+            legacyValue << [true, false]
     }
 
     def 'retains controller frames across wrapped exceptions during recursive filtering'() {
@@ -156,7 +160,7 @@ class StackTraceFiltererSpec extends Specification {
             }
     }
 
-    def 'filter emits one StackTrace log entry per throwable when walking the cause chain by default'() {
+    def 'recursive filtering trims the entire cause chain without logging by default'() {
         given: 'a configured log appender to capture the StackTrace log entry'
             def logCapture = new LogCapture('StackTrace')
 
@@ -176,19 +180,21 @@ class StackTraceFiltererSpec extends Specification {
         when: 'recursive filtering is applied to the top-level exception'
             filterer.filter(exception, true)
 
-        then: "a 'Full Stack Trace:' entry is emitted per throwable in the chain (pre-7.1 behaviour)"
-            logCapture.events.count { it.formattedMessage.contains('Full Stack Trace:') } == 2
+        then: 'no log entries are emitted for any throwable in the chain'
+            logCapture.events.empty
+            exception.stackTrace*.className == ['test.FooController']
+            rootCause.stackTrace*.className == ['test.FooService']
 
         cleanup:
             logCapture.close()
     }
 
-    def 'filter does not emit a StackTrace log entry when walking the cause chain with logFullStackTraceOnFilter disabled'() {
+    def 'recursive filtering ignores the legacy logFullStackTraceOnFilter value #legacyValue'() {
         given: 'a configured log appender to capture the StackTrace log entry'
             def logCapture = new LogCapture('StackTrace')
 
-        and: 'a filterer with the side-effect emission disabled'
-            def quietFilterer = new DefaultStackTraceFilterer(logFullStackTraceOnFilter: false)
+        and: 'a filterer configured through the compatibility setter'
+            def quietFilterer = new DefaultStackTraceFilterer(logFullStackTraceOnFilter: legacyValue)
 
         and: 'a wrapped exception whose wrapper and cause mix application and internal frames'
             def rootCause = new IllegalStateException('root cause')
@@ -211,6 +217,9 @@ class StackTraceFiltererSpec extends Specification {
 
         cleanup:
             logCapture.close()
+
+        where:
+            legacyValue << [true, false]
     }
 
     def 'recursive filtering visits every throwable in the cause chain and sanitizes each'() {

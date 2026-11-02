@@ -526,7 +526,6 @@ public class GrailsExceptionResolver extends SimpleMappingExceptionResolver impl
             logger.error("Problem instantiating StackTracePrinter class, using default: " + t.getMessage());
             stackFilterer = new DefaultStackTraceFilterer();
         }
-        applyLogFullStackTraceOnFilter();
     }
 
     /**
@@ -561,18 +560,10 @@ public class GrailsExceptionResolver extends SimpleMappingExceptionResolver impl
     }
 
     /**
-     * Propagates {@code grails.exceptionresolver.logFullStackTraceOnFilter} to the
-     * filterer instance when it is a {@link DefaultStackTraceFilterer} (or subclass
-     * thereof). Custom {@link StackTraceFilterer} implementations that do not extend
-     * the default are responsible for their own logging policy.
+     * Retained for compatibility; filtering no longer emits log records.
+     * @deprecated Since 8.1. Use {@code grails.exceptionresolver.logFullStackTrace}.
      */
+    @Deprecated(since = "8.1")
     protected void applyLogFullStackTraceOnFilter() {
-        if (stackFilterer instanceof DefaultStackTraceFilterer) {
-            Config config = grailsApplication != null ? grailsApplication.getConfig() : null;
-            boolean logOnFilter = config == null ?
-                true :
-                config.getProperty(Settings.SETTING_LOG_FULL_STACKTRACE_ON_FILTER, Boolean.class, true);
-            ((DefaultStackTraceFilterer) stackFilterer).setLogFullStackTraceOnFilter(logOnFilter);
-        }
     }
 }

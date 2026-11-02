@@ -108,7 +108,16 @@ class GrailsExceptionResolverTests {
         resolver.exceptionMappings = ['java.lang.Exception': '/error'] as Properties
         resolver.grailsApplication = application
 
-        def ex = new Exception()
+        def cause = new IllegalStateException('root cause')
+        cause.stackTrace = [
+                new StackTraceElement('java.lang.reflect.Method', 'invoke', 'Method.java', 580),
+                new StackTraceElement('example.BookService', 'save', 'BookService.groovy', 10)
+        ] as StackTraceElement[]
+        def ex = new Exception('request failed', cause)
+        ex.stackTrace = [
+                new StackTraceElement('java.lang.reflect.Method', 'invoke', 'Method.java', 580),
+                new StackTraceElement('example.BookController', 'save', 'BookController.groovy', 20)
+        ] as StackTraceElement[]
         def request = webRequest.currentRequest
         def response = webRequest.currentResponse
         def handler = new Object()
@@ -116,6 +125,8 @@ class GrailsExceptionResolverTests {
 
         assertNotNull modelAndView, "should have returned a ModelAndView"
         assertEquals "/myView", modelAndView.view.url
+        assert ex.stackTrace*.className == ['example.BookController']
+        assert cause.stackTrace*.className == ['example.BookService']
     }
 
     @Test

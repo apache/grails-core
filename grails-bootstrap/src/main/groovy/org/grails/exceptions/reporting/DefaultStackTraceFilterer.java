@@ -34,11 +34,9 @@ import org.apache.commons.logging.LogFactory;
 public class DefaultStackTraceFilterer implements StackTraceFilterer {
     public static final String STACK_LOG_NAME = "StackTrace";
     /**
-     * Dedicated logger for exception stack traces. The filterer emits the unfiltered
-     * trace to this logger as a side effect of {@link #filter(Throwable)} — before the
-     * trace is trimmed in place — when {@link #logFullStackTraceOnFilter} is {@code true}
-     * (the default). {@code GrailsExceptionResolver} also emits to this logger when
-     * {@code grails.exceptionresolver.logFullStackTrace} is enabled. Exposed as a public
+     * Dedicated logger for exception stack traces. {@code GrailsExceptionResolver}
+     * emits to this logger when {@code grails.exceptionresolver.logFullStackTrace}
+     * is enabled. Filtering itself does not log. Exposed as a public
      * constant so that subclasses and logback configurations can reference the logger
      * name symbolically.
      */
@@ -67,7 +65,6 @@ public class DefaultStackTraceFilterer implements StackTraceFilterer {
     private List<String> packagesToFilter = new ArrayList<>();
     private boolean shouldFilter;
     private String cutOffPackage = null;
-    private boolean logFullStackTraceOnFilter = true;
 
     public DefaultStackTraceFilterer() {
         this(!Boolean.getBoolean(SYS_PROP_DISPLAY_FULL_STACKTRACE));
@@ -88,14 +85,13 @@ public class DefaultStackTraceFilterer implements StackTraceFilterer {
     }
 
     /**
-     * Controls whether {@link #filter(Throwable)} emits the unfiltered stack trace
-     * to {@link #STACK_LOG} as a side effect before trimming the trace in place.
-     * Defaults to {@code true} for backwards compatibility with pre-7.1 behaviour;
-     * set to {@code false} to disable the side-effect emission. The exception
-     * resolver wires this from {@code grails.exceptionresolver.logFullStackTraceOnFilter}.
+     * Retained for compatibility; filtering no longer emits log records.
+     * @param logFullStackTraceOnFilter ignored
+     * @deprecated Since 8.1. Use {@code grails.exceptionresolver.logFullStackTrace}
+     * to enable full stack trace logging in the exception resolver.
      */
+    @Deprecated(since = "8.1")
     public void setLogFullStackTraceOnFilter(boolean logFullStackTraceOnFilter) {
-        this.logFullStackTraceOnFilter = logFullStackTraceOnFilter;
     }
 
     public Throwable filter(Throwable source, boolean recursive) {
@@ -125,11 +121,6 @@ public class DefaultStackTraceFilterer implements StackTraceFilterer {
         // Only trim the trace if there was some application trace on the stack
         // if not we will just skip sanitizing and leave it as is
         if (!newTrace.isEmpty()) {
-            if (logFullStackTraceOnFilter) {
-                // emit the unfiltered trace before mutating in place; once setStackTrace(clean)
-                // runs the original frames are gone
-                STACK_LOG.error(FULL_STACK_TRACE_MESSAGE, source);
-            }
             StackTraceElement[] clean = new StackTraceElement[newTrace.size()];
             newTrace.toArray(clean);
             source.setStackTrace(clean);
