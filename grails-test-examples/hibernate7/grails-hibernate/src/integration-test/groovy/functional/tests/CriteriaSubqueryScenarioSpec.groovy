@@ -22,6 +22,7 @@ package functional.tests
 import grails.gorm.DetachedCriteria
 import grails.gorm.transactions.Rollback
 import grails.testing.mixin.integration.Integration
+import org.hibernate.exception.DataException
 import spock.lang.Specification
 
 /**
@@ -172,5 +173,17 @@ class CriteriaSubqueryScenarioSpec extends Specification {
         names(above) == ['c']
         names(below) == ['a']
         names(top) == ['c']
+    }
+
+    void "where: comparing with a subquery that returns several rows is a database error on both modules"() {
+        given:
+        seed()
+        def newQtys = ScenarioItem.where { status == ScenarioStatus.NEW }.property('qty')
+
+        when:
+        ScenarioItem.where { qty > newQtys }.list()
+
+        then:
+        thrown(DataException)
     }
 }
