@@ -416,11 +416,12 @@ class PredicateGeneratorSpec extends HibernateGormDatastoreSpec {
         predicates.length == 1
     }
 
-    def "test getPredicates with NotEquals criterion includes null values"() {
+    def "test getPredicates with NotEquals criterion leaves out null values as SQL does"() {
         given:
         new PredicateGeneratorSpecNullableAgeEntity(name: "Null 1", age: null).save(failOnError: true)
         new PredicateGeneratorSpecNullableAgeEntity(name: "Equal", age: 11).save(failOnError: true)
-        new PredicateGeneratorSpecNullableAgeEntity(name: "Null 2", age: null).save(flush: true, failOnError: true)
+        new PredicateGeneratorSpecNullableAgeEntity(name: "Null 2", age: null).save(failOnError: true)
+        new PredicateGeneratorSpecNullableAgeEntity(name: "Other", age: 12).save(flush: true, failOnError: true)
         CriteriaQuery<Long> countQuery = cb.createQuery(Long)
         Root<PredicateGeneratorSpecNullableAgeEntity> countRoot = countQuery.from(PredicateGeneratorSpecNullableAgeEntity)
         GrailsHibernatePersistentEntity nullableAgeEntity = session.datastore.mappingContext.getPersistentEntity(PredicateGeneratorSpecNullableAgeEntity.name) as GrailsHibernatePersistentEntity
@@ -432,7 +433,7 @@ class PredicateGeneratorSpec extends HibernateGormDatastoreSpec {
         Long count = sessionFactory.currentSession.createQuery(countQuery).singleResult
 
         then:
-        count == 2L
+        count == 1L
     }
 
     def "test getPredicates with SqlRestriction binds the values and replaces {alias}"() {

@@ -144,11 +144,9 @@ public class PropertyCriterionHandler implements InternalCriterionHandler<Query.
         }
         if (value instanceof QueryableCriteria qc) {
             Subquery<?> subquery = buildSubquery(context, propertyPath, qc, pc.getProperty());
-            return criteriaBuilder.or(criteriaBuilder.notEqual(propertyPath, subquery), criteriaBuilder.isNull(propertyPath));
+            return criteriaBuilder.notEqual(propertyPath, subquery);
         }
-        return criteriaBuilder.or(
-            criteriaBuilder.notEqual(propertyPath, context.convertComparisonValue(pc.getProperty(), value, propertyPath)),
-            criteriaBuilder.isNull(propertyPath));
+        return criteriaBuilder.notEqual(propertyPath, context.convertComparisonValue(pc.getProperty(), value, propertyPath));
     }
 
     @SuppressWarnings("unchecked")

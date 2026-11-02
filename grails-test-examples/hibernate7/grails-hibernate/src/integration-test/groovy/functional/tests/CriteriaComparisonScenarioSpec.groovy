@@ -58,7 +58,7 @@ class CriteriaComparisonScenarioSpec extends Specification {
         names(rows) == ['b']
     }
 
-    void "where: != includes rows whose value is null, as the TCK defines"() {
+    void "where: != leaves out rows whose value is null, as SQL does"() {
         given:
         seed()
 
@@ -66,7 +66,7 @@ class CriteriaComparisonScenarioSpec extends Specification {
         def rows = ScenarioItem.where { qty != 2 }.list()
 
         then:
-        names(rows) == ['a', 'c', 'd']
+        names(rows) == ['a', 'c']
     }
 
     void "where: simple gt"() {
@@ -318,7 +318,7 @@ class CriteriaComparisonScenarioSpec extends Specification {
         'embedded'        | { eq 'dims.width', 20 }                            || ['b']
     }
 
-    void "criteria builder: ne includes rows whose value is null, as the TCK defines"() {
+    void "criteria builder: ne leaves out rows whose value is null, as SQL does"() {
         given:
         seed()
 
@@ -326,7 +326,7 @@ class CriteriaComparisonScenarioSpec extends Specification {
         def rows = ScenarioItem.createCriteria().list { ne 'qty', 2 }
 
         then:
-        names(rows) == ['a', 'c', 'd']
+        names(rows) == ['a', 'c']
     }
 
     void "dynamic finders compare, negate and test null"() {

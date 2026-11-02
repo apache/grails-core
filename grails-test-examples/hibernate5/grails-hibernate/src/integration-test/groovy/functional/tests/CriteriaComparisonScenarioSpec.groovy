@@ -58,7 +58,7 @@ class CriteriaComparisonScenarioSpec extends Specification {
         names(rows) == ['b']
     }
 
-    void "where: != leaves out rows whose value is null (Hibernate 5 follows SQL here)"() {
+    void "where: != leaves out rows whose value is null, as SQL does"() {
         given:
         seed()
 
@@ -317,7 +317,7 @@ class CriteriaComparisonScenarioSpec extends Specification {
         'embedded'        | { eq 'dims.width', 20 }                            || ['b']
     }
 
-    void "criteria builder: ne leaves out rows whose value is null (Hibernate 5 follows SQL here)"() {
+    void "criteria builder: ne leaves out rows whose value is null, as SQL does"() {
         given:
         seed()
 
