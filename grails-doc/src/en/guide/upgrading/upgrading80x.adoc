@@ -1487,6 +1487,12 @@ A bulk statement cannot join, so these query shapes are now written as subquerie
 
 A bulk statement does not update the entities already loaded in the session. Clear or refresh them before reading them again.
 
+===== 26.15 Query arguments reach criteria queries on Hibernate 7
+
+The `readOnly`, `fetchSize`, `timeout` and `flushMode` arguments were applied to HQL queries and finders, but a criteria query dropped them: `Person.where { age > 18 }.list(readOnly: true)`, `Person.findAll(readOnly: true) { age > 18 }` and `Person.withCriteria(readOnly: true) { gt('age', 18) }` loaded modifiable entities, and `flushMode: 'MANUAL'` still flushed pending changes first (issue https://github.com/apache/grails-core/issues/16808[#16808]). Every query entry point now reads these arguments the same way. A value that is not a whole number, such as `fetchSize: 'lots'`, throws an `IllegalArgumentException` that names the argument. The `flushMode` values are `MANUAL`, `COMMIT` and `ALWAYS`; `AUTO` follows the session.
+
+The criteria closures of `where`, `whereLazy`, `whereAny` and `findAll` on a domain class are now annotated with `@DelegatesTo(DetachedCriteria)`, so `eq`, `gt` and the other criteria methods type-check inside `@CompileStatic` code instead of needing `@CompileDynamic`.
+
 ==== 27. GORM Properties Are Nullable by Default
 
 Grails 8 changes the validation default so that an *unconstrained persistent (domain) property is nullable by default* rather than required.
