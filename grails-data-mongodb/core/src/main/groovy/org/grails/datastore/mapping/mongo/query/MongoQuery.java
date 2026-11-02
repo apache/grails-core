@@ -486,7 +486,8 @@ public class MongoQuery extends BsonQuery implements QueryArgumentsAware {
     }
 
     @Override
-    protected List executeQuery(final PersistentEntity entity, final Junction criteria) {
+    protected List executeQuery(final PersistentEntity entity, final Junction queryCriteria) {
+        final Junction criteria = resolveSubqueries(queryCriteria);
         final AbstractMongoSession mongoSession = this.mongoSession;
         com.mongodb.client.MongoCollection<Document> collection = mongoSession.getCollection(entity);
 

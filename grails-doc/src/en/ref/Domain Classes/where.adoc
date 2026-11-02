@@ -79,6 +79,8 @@ final query = Person.where {
 }
 ----
 
+On MongoDB and Neo4j the subquery runs first and its result is used as a value, so `age > avg(age)`, `age == max(age)` and `inList` / `notIn` against a subquery work there too. The subquery is run again each time the query is. A comparison needs a subquery that returns one row, and `exists`, `notExists` and the `all` and `some` forms throw an `InvalidDataAccessResourceUsageException` on these datastores.
+
 
 === Description
 
