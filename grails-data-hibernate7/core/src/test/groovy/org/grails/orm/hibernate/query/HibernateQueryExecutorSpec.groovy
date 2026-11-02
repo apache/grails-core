@@ -18,10 +18,15 @@
  */
 package org.grails.orm.hibernate.query
 
+import jakarta.persistence.LockModeType
 import jakarta.persistence.criteria.CriteriaBuilder
+import jakarta.persistence.criteria.ParameterExpression
 import jakarta.persistence.criteria.Root
 
 import org.hibernate.NonUniqueResultException
+import org.hibernate.Session
+import org.hibernate.query.Query
+import org.hibernate.query.QueryFlushMode
 import org.hibernate.query.criteria.JpaCriteriaQuery
 
 import grails.gorm.annotation.Entity
@@ -118,6 +123,129 @@ class HibernateQueryExecutorSpec extends HibernateGormDatastoreSpec {
 
         expect:
         executor().singleResult(sessionFactory.currentSession, itemsWithAmountAbove(99), [:]) == null
+    }
+
+    private static HibernateQueryExecutor executorWith(Map settings) {
+        new HibernateQueryExecutor(settings.offset, settings.maxResults, settings.lock, settings.queryCache,
+                settings.fetchSize, settings.timeout, settings.flushMode, settings.readOnly, new HibernateProxyHandler())
+    }
+
+    void "list applies every setting it was given to the query"() {
+        given:
+        Session session = Mock()
+        Query query = Mock()
+        JpaCriteriaQuery<ExecutorItem> cq = itemsWithAmountAbove(0)
+        def executor = executorWith(offset: 5, maxResults: 10, lock: LockModeType.PESSIMISTIC_WRITE, queryCache: true,
+                fetchSize: 20, timeout: 30, flushMode: QueryFlushMode.FLUSH, readOnly: true)
+
+        when:
+        def rows = executor.list(session, cq, [:])
+
+        then:
+        1 * session.createQuery(cq) >> query
+        1 * query.setFirstResult(5)
+        1 * query.setMaxResults(10)
+        1 * query.setLockMode(LockModeType.PESSIMISTIC_WRITE)
+        1 * query.setHint('org.hibernate.cacheable', true)
+        1 * query.setFetchSize(20)
+        1 * query.setTimeout(30)
+        1 * query.setQueryFlushMode(QueryFlushMode.FLUSH)
+        1 * query.setReadOnly(true)
+        1 * query.getResultList() >> [new ExecutorItem(name: 'x', amount: 1)]
+        rows*.name == ['x']
+    }
+
+    void "readOnly false and queryCache false are still applied"() {
+        given:
+        Session session = Mock()
+        Query query = Mock()
+        JpaCriteriaQuery<ExecutorItem> cq = itemsWithAmountAbove(0)
+
+        when:
+        executorWith(queryCache: false, readOnly: false).list(session, cq, [:])
+
+        then:
+        1 * session.createQuery(cq) >> query
+        1 * query.setHint('org.hibernate.cacheable', false)
+        1 * query.setReadOnly(false)
+        1 * query.getResultList() >> []
+    }
+
+    void "list leaves a setting alone when it is null or not positive"() {
+        given:
+        Session session = Mock()
+        Query query = Mock()
+        JpaCriteriaQuery<ExecutorItem> cq = itemsWithAmountAbove(0)
+
+        when:
+        executorWith(settings).list(session, cq, [:])
+
+        then:
+        1 * session.createQuery(cq) >> query
+        0 * query.setFirstResult(_)
+        0 * query.setMaxResults(_)
+        0 * query.setLockMode(_)
+        0 * query.setHint(_, _)
+        0 * query.setFetchSize(_)
+        0 * query.setTimeout(_)
+        0 * query.setQueryFlushMode(_)
+        0 * query.setReadOnly(_)
+        1 * query.getResultList() >> []
+
+        where:
+        settings << [
+                [:],
+                [offset: 0, maxResults: 0, fetchSize: 0, timeout: 0],
+                [offset: -1, maxResults: -1, fetchSize: -1, timeout: -1]
+        ]
+    }
+
+    void "list sets the query parameters it was given"() {
+        given:
+        Session session = Mock()
+        Query query = Mock()
+        CriteriaBuilder cb = sessionFactory.criteriaBuilder
+        JpaCriteriaQuery<ExecutorItem> cq = itemsWithAmountAbove(0)
+        ParameterExpression<Integer> minimum = cb.parameter(Integer)
+
+        when:
+        executor().list(session, cq, [(minimum): 2])
+
+        then:
+        1 * session.createQuery(cq) >> query
+        1 * query.setParameter(minimum, 2)
+        1 * query.getResultList() >> []
+    }
+
+    void "a tuple query returns its rows as they are"() {
+        given:
+        Session session = Mock()
+        Query query = Mock()
+        CriteriaBuilder cb = sessionFactory.criteriaBuilder
+        JpaCriteriaQuery cq = (JpaCriteriaQuery) cb.createTupleQuery()
+
+        when:
+        executor().list(session, cq, [:])
+
+        then:
+        1 * session.createQuery(cq) >> query
+        1 * query.setTupleTransformer(_)
+        1 * query.getResultList() >> []
+    }
+
+    void "a query that is not a tuple query keeps the default row transformer"() {
+        given:
+        Session session = Mock()
+        Query query = Mock()
+        JpaCriteriaQuery<ExecutorItem> cq = itemsWithAmountAbove(0)
+
+        when:
+        executor().list(session, cq, [:])
+
+        then:
+        1 * session.createQuery(cq) >> query
+        0 * query.setTupleTransformer(_)
+        1 * query.getResultList() >> []
     }
 }
 
