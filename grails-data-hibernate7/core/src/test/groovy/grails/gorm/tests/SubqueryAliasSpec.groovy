@@ -63,6 +63,27 @@ class SubqueryAliasSpec extends Specification {
     }
 
     @Rollback
+    void "Test subquery comparing an id with an association of the root alias"() {
+        given:
+        Club c1 = new Club(name: "Manchester United").save()
+        Club c2 = new Club(name: "Arsenal").save()
+        new Team(name: "First Team", club: c1).save(flush: true)
+        new Team(name: "Second Team", club: c2).save(flush: true)
+
+        when:
+        List<Team> teams = Team.where {
+            def t = Team
+            exists(Club.where {
+                id == t.club && name == "Manchester United"
+            }.property('name'))
+
+        }.list()
+
+        then:
+        teams*.name == ["First Team"]
+    }
+
+    @Rollback
     void "Test a derived criteria keeps the root alias"() {
         given:
         Club c1 = new Club(name: "Manchester United").save()
