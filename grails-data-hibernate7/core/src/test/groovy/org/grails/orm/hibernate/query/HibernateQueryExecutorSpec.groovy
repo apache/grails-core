@@ -247,6 +247,74 @@ class HibernateQueryExecutorSpec extends HibernateGormDatastoreSpec {
         0 * query.setTupleTransformer(_)
         1 * query.getResultList() >> []
     }
+
+    void "scroll returns the scrollable results of the configured query"() {
+        given:
+        Session session = Mock()
+        Query query = Mock()
+        JpaCriteriaQuery<ExecutorItem> cq = itemsWithAmountAbove(0)
+        def scrollable = Mock(org.hibernate.ScrollableResults)
+
+        when:
+        def result = executorWith(fetchSize: 7).scroll(session, cq, [:])
+
+        then:
+        1 * session.createQuery(cq) >> query
+        1 * query.setFetchSize(7)
+        1 * query.scroll() >> scrollable
+        result.is(scrollable)
+    }
+
+    void "singleResult returns the one row of the query"() {
+        given:
+        Session session = Mock()
+        Query query = Mock()
+        JpaCriteriaQuery<ExecutorItem> cq = itemsWithAmountAbove(0)
+        def item = new ExecutorItem(name: 'only', amount: 1)
+
+        when:
+        def result = executor().singleResult(session, cq, [:])
+
+        then:
+        1 * session.createQuery(cq) >> query
+        1 * query.getSingleResult() >> item
+        result.is(item)
+    }
+
+    void "singleResult falls back to the first row when the query reports several"() {
+        given:
+        Session session = Mock()
+        Query query = Mock()
+        JpaCriteriaQuery<ExecutorItem> cq = itemsWithAmountAbove(0)
+        def first = new ExecutorItem(name: 'first', amount: 1)
+
+        when:
+        def result = executor().singleResult(session, cq, [:])
+
+        then:
+        1 * session.createQuery(cq) >> query
+        1 * query.getSingleResult() >> { throw new jakarta.persistence.NonUniqueResultException('several') }
+        1 * query.getResultList() >> [first, new ExecutorItem(name: 'second', amount: 2)]
+        result.is(first)
+    }
+
+    void "the tuple transformer of a tuple query hands each row back unchanged"() {
+        given:
+        Session session = Mock()
+        Query query = Mock()
+        CriteriaBuilder cb = sessionFactory.criteriaBuilder
+        JpaCriteriaQuery cq = (JpaCriteriaQuery) cb.createTupleQuery()
+        def transformer
+
+        when:
+        executor().list(session, cq, [:])
+
+        then:
+        1 * session.createQuery(cq) >> query
+        1 * query.setTupleTransformer(_) >> { args -> transformer = args[0]; query }
+        1 * query.getResultList() >> []
+        transformer.transformTuple(['row'] as Object[], ['alias'] as String[]) == ['row'] as Object[]
+    }
 }
 
 @Entity
