@@ -378,8 +378,7 @@ class PropertySourcesConfigSpec extends Specification {
         [description, source, type] << [
                 [
                         ['by indexed keys', ['app.rows[0].name': 'first', 'app.rows[1].name': 'second']],
-                        ['as a linked list', [app: [rows: new LinkedList([[name: 'first'], [name: 'second']])]]],
-                        ['as a linked list of navigable maps', [app: [rows: new LinkedList([navigableMap(name: 'first'), navigableMap(name: 'second')])]]]
+                        ['as a linked list', [app: [rows: new LinkedList([[name: 'first'], [name: 'second']])]]]
                 ],
                 [List, Collection, LinkedList, ArrayList, Set, Iterable, Object]
         ].combinations().collect { pair, type -> [pair[0], pair[1], type] }
@@ -549,9 +548,11 @@ class PropertySourcesConfigSpec extends Specification {
         'app.grid[a][b].name'  | 'a'
     }
 
-    void 'a list of maps is given as plain maps by getProperty and read through dot notation, from #description'() {
+    void 'a list of maps written by indexed keys is given as plain maps by getProperty, as before, and read through dot notation'() {
         given:
-        def config = new PropertySourcesConfig(source)
+        def config = new PropertySourcesConfig(new MapPropertySource('application.properties', [
+                'app.rows[0].name': 'first', 'app.rows[0].db.url': 'jdbc:x', 'app.rows[1].name': 'second',
+        ]))
 
         expect: "getProperty gives the maps as plain maps, as it gives a map"
         List rows = config.getProperty('app.rows', List)
@@ -561,11 +562,42 @@ class PropertySourcesConfigSpec extends Specification {
         and: "dot notation reads into an element, and a miss inside one is null-safe"
         config.app.rows[0].db.url == 'jdbc:x'
         (config.app.rows[1].missing.deeper ?: 'default') == 'default'
+    }
+
+    void 'a list of maps #description is given by getProperty as #type.simpleName with the nested maps it holds, as before, so a miss inside an element is null-safe'() {
+        given:
+        def propertySources = new MutablePropertySources()
+        sources().each { propertySources.addLast(it) }
+        def config = new PropertySourcesConfig(propertySources)
+        if (merged) {
+            config.merge(merged())
+        }
+
+        when:
+        def rows = config.getProperty('app.rows', type)
+
+        then: "the list holds the maps that navigation reads"
+        type.isInstance(rows)
+        rows.every { it instanceof NavigableMap }
+        rows*.name as List == names
+
+        and:
+        ((rows as List)[1].missing.deeper ?: 'default') == 'default'
 
         where:
-        description         | source
-        'indexed keys'      | new MapPropertySource('application.properties', ['app.rows[0].name': 'first', 'app.rows[0].db.url': 'jdbc:x', 'app.rows[1].name': 'second'])
-        'application.yml'   | new YamlPropertySourceLoader().load('application.yml', new ByteArrayResource("app:\n  rows:\n    - name: first\n      db:\n        url: jdbc:x\n    - name: second\n".bytes)).first()
+        [description, sources, merged, names, type] << [
+                [
+                        ['from application.yml', { -> [rowsYaml()] }, null, ['first', 'second']],
+                        ['from application.yml under an indexed key', { -> [new MapPropertySource('high', ['app.rows[1].name': 'override']), rowsYaml()] }, null, ['first', 'override']],
+                        ['from application.yml over an indexed key', { -> [rowsYaml(), new MapPropertySource('low', ['app.rows[1].name': 'low'])] }, null, ['first', 'second']],
+                        ['merged as a linked list of navigable maps', { -> [] }, { -> [app: [rows: new LinkedList([navigableMap(name: 'first'), navigableMap(name: 'second')])]] }, ['first', 'second']]
+                ],
+                [List, Collection, LinkedList, ArrayList, Set, Iterable, Object]
+        ].combinations().collect { row, type -> row + [type] }
+    }
+
+    private static PropertySource rowsYaml() {
+        new YamlPropertySourceLoader().load('application.yml', new ByteArrayResource("app:\n  rows:\n    - name: first\n      db:\n        url: jdbc:x\n    - name: second\n".bytes)).first()
     }
 
     void 'a list of maps written by indexed keys gives the same list as application.yml'() {

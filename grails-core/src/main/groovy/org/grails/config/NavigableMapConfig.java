@@ -333,6 +333,9 @@ public abstract class NavigableMapConfig implements Config {
         if (value == null) {
             value = configMap.get(key);
         }
+        if (value instanceof List && isWrittenByIndexedKeys(key, (List<?>) value)) {
+            value = withPlainMaps((List<?>) value);
+        }
 
         return convertValueIfNecessary(value, targetType, defaultValue);
     }
@@ -411,6 +414,32 @@ public abstract class NavigableMapConfig implements Config {
         return to;
     }
 
+    /**
+     * Whether the list holds a nested map for an element that indexed keys alone wrote, {@code rows[0].name}. The flat
+     * key of such a list holds the plain maps the subscripts wrote, which getProperty gave before the nested maps held
+     * the list. A list from application.yml, or merged as a list, holds its nested maps under the flat key too, and is
+     * given as it is held, as before.
+     */
+    private boolean isWrittenByIndexedKeys(String key, List<?> list) {
+        if (!holdsNavigableMap(list)) {
+            return false;
+        }
+        Object flat = configMap.get(key);
+        return flat instanceof List && !holdsNavigableMap((List<?>) flat);
+    }
+
+    /**
+     * The list with its maps as plain maps, as getProperty gives a map, whatever type the list is read as.
+     */
+    private List<Object> withPlainMaps(List<?> list) {
+        final IdentityHashMap<NavigableMap, Map<Object, Object>> cache = new IdentityHashMap<>();
+        final List<Object> converted = new ArrayList<>(list.size());
+        for (Object o: list) {
+            converted.add(o instanceof NavigableMap ? convertToMap((NavigableMap) o, cache) : o);
+        }
+        return converted;
+    }
+
     private static boolean holdsNavigableMap(List<?> list) {
         for (Object o: list) {
             if (o instanceof NavigableMap) {
@@ -441,15 +470,6 @@ public abstract class NavigableMapConfig implements Config {
     }
 
     private <T> T convertValueIfNecessary(Object originalValue, Class<T> targetType, T defaultValue) {
-        if (originalValue instanceof List && holdsNavigableMap((List<?>) originalValue)) {
-            // the maps of a list are given as plain maps, as a map is, whatever type the list is read as
-            final IdentityHashMap<NavigableMap, Map<Object, Object>> cache = new IdentityHashMap<>();
-            final List<Object> converted = new ArrayList<>();
-            for (Object o: (List<?>) originalValue) {
-                converted.add(o instanceof NavigableMap ? convertToMap((NavigableMap) o, cache) : o);
-            }
-            originalValue = converted;
-        }
         if (originalValue != null) {
             if (targetType.isInstance(originalValue)) {
                 if (originalValue instanceof NavigableMap && targetType.equals(Map.class)) {
