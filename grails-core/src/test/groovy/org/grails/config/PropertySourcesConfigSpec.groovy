@@ -841,6 +841,33 @@ app:
         [host, url, tag, route].toSet().size() == 4
     }
 
+    void 'an escaped placeholder in a map inside an element of a list in application.yml is kept as text by every read of it'() {
+        given: "application.yml with an escaped placeholder in an element and in a map inside it, and a value for the placeholder"
+        def yml = '''\
+app:
+  rows:
+    - url: '\\${host}'
+      db:
+        host: '\\${host}'
+'''
+        def propertySources = new MutablePropertySources()
+        propertySources.addFirst(new MapPropertySource('values', [host: 'secret']))
+        propertySources.addLast(new YamlPropertySourceLoader().load('application.yml', new ByteArrayResource(yml.bytes)).first())
+        def config = new PropertySourcesConfig(propertySources)
+
+        expect: "the value in the map inside the element is the text, by its indexed key, by navigation, in the whole list and in the export"
+        config.getProperty('app.rows[0].db.host') == '${host}'
+        config.navigate('app', 'rows')[0].db.host == '${host}'
+        config['app.rows'][0].db.host == '${host}'
+        config.getProperty('app.rows', List)[0].db.host == '${host}'
+        config.toProperties().getProperty('app.rows[0].db.host') == '${host}'
+
+        and: "so is the value in the element itself"
+        config.getProperty('app.rows[0].url') == '${host}'
+        config['app.rows'][0].url == '${host}'
+        config.toProperties().getProperty('app.rows[0].url') == '${host}'
+    }
+
     void 'a value of an ordinary property source is resolved once, so an escaped placeholder is kept as text, as the environment keeps it'() {
         given: "a property source the environment resolves as it reads it, with an escaped placeholder in a value, a list, an indexed key and a ConfigObject"
         def section = new ConfigObject()

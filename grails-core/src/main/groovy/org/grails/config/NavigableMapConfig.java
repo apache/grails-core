@@ -71,7 +71,9 @@ public abstract class NavigableMapConfig implements Config {
          * The texts the merge in progress has resolved, by the full name of the entry and the text. The merge writes one
          * entry under several keys: a dotted key under the whole key and in its nested map, and a list element in its
          * list in the nested map, in its list under the flat key and under its indexed key. Every write takes one value,
-         * even for {@code ${random.uuid}}.
+         * even for {@code ${random.uuid}}. A value written below a subscript, {@code db.host} of
+         * {@code rows[0].db.host}, is written again into its element as it was resolved, so each resolved text is also
+         * recorded as resolved for its entry, and an escaped placeholder kept as text is not resolved a second time.
          */
         private Map<List<String>, String> resolvedTexts;
 
@@ -96,7 +98,9 @@ public abstract class NavigableMapConfig implements Config {
             Object value = sourceValue;
             if (sourceValue instanceof CharSequence || sourceValue instanceof List ||
                     (sourceValue instanceof Map && isIndexed(sourceKey))) {
-                value = resolved(path == null || path.isEmpty() ? sourceKey : path + '.' + sourceKey, sourceValue);
+                // the full name of the entry, also for a value written below a subscript into its element, db.host of rows[0]
+                List<String> targetPath = targetMap.getPath();
+                value = resolved(targetPath.isEmpty() ? sourceKey : String.join(".", targetPath) + '.' + sourceKey, sourceValue);
             }
             super.mergeMapEntry(rootMap, path, targetMap, sourceKey, value, parseFlatKeys, isNestedSet);
         }
@@ -151,7 +155,10 @@ public abstract class NavigableMapConfig implements Config {
             if (resolvedTexts == null) {
                 return resolvePlaceholders(text);
             }
-            return resolvedTexts.computeIfAbsent(Arrays.asList(entryName(name), text), key -> resolvePlaceholders(text));
+            String entry = entryName(name);
+            String resolved = resolvedTexts.computeIfAbsent(Arrays.asList(entry, text), key -> resolvePlaceholders(text));
+            resolvedTexts.putIfAbsent(Arrays.asList(entry, resolved), resolved);
+            return resolved;
         }
 
         /**
