@@ -144,7 +144,7 @@ public class CriteriaMethodInvoker {
                 result = hibernateQuery.list();
             }
         } else {
-            result = hibernateQuery.singleResult();
+            result = hibernateQuery.uniqueResult();
         }
         if (!builder.isParticipate()) {
             builder.closeSession();

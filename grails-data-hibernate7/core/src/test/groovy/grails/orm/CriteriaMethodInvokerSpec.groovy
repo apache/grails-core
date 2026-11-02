@@ -72,7 +72,7 @@ class CriteriaMethodInvokerSpec extends Specification {
         then:
         1 * builder.setUniqueResult(true)
         1 * builder.isUniqueResult() >> true
-        1 * query.singleResult() >> null
+        1 * query.uniqueResult() >> null
         1 * builder.isParticipate() >> true
     }
 

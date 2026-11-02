@@ -65,6 +65,24 @@ public record HibernateQueryExecutor(
         }
     }
 
+    /**
+     * Returns the one row the query matches, {@code null} when none match, and fails when several
+     * match, as the criteria {@code get} of Hibernate 5 does. {@link #singleResult} returns the
+     * first of several rows instead.
+     *
+     * @throws NonUniqueResultException when more than one row matches
+     */
+    public Object uniqueResult(Session session, JpaCriteriaQuery jpaCq, Map<ParameterExpression<?>, Object> parameterValues) {
+        List<?> results = configureQuery(session, jpaCq, parameterValues).getResultList();
+        if (results.isEmpty()) {
+            return null;
+        }
+        if (results.size() > 1) {
+            throw new NonUniqueResultException(results.size());
+        }
+        return proxyHandler.unwrap(results.get(0));
+    }
+
     @SuppressWarnings("unchecked")
     private Query configureQuery(Session session, JpaCriteriaQuery jpaCq, Map<ParameterExpression<?>, Object> parameterValues) {
         var query = session.createQuery(jpaCq);
