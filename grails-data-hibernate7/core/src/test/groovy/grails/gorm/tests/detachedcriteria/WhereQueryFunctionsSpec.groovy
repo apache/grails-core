@@ -97,7 +97,7 @@ class WhereQueryFunctionsSpec extends HibernateGormDatastoreSpec {
         convertedInt == ['a']
     }
 
-    void "function comparisons handle null operands and null-inclusive NotEquals"() {
+    void "function comparisons handle null operands, and NotEquals leaves out null rows as SQL does"() {
         given:
         seedEntities()
 
@@ -109,7 +109,7 @@ class WhereQueryFunctionsSpec extends HibernateGormDatastoreSpec {
         then:
         nullLabel == ['c']
         nonNullLabel == ['a', 'b', 'd']
-        notAlpha == ['b', 'c', 'd']
+        notAlpha == ['b', 'd']
     }
 
     void "function IN criterion supports projected DetachedCriteria subquery"() {
