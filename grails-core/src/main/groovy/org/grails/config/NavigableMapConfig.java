@@ -19,15 +19,19 @@
 package org.grails.config;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.IdentityHashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Properties;
 import java.util.Set;
 import java.util.StringTokenizer;
+import java.util.regex.Pattern;
 
 import groovy.util.ConfigObject;
 import org.codehaus.groovy.runtime.DefaultGroovyMethods;
@@ -53,15 +57,111 @@ import org.grails.core.exceptions.GrailsConfigurationException;
 @Deprecated
 public abstract class NavigableMapConfig implements Config {
     protected static final Logger LOG = LoggerFactory.getLogger(NavigableMapConfig.class);
+
+    /**
+     * A key in brackets that is not an index and holds no dot, {@code [x]} of {@code routes[x]}.
+     */
+    private static final Pattern NAMED_SUBSCRIPT = Pattern.compile("\\[([^.\\[\\]]*[^.\\[\\]0-9][^.\\[\\]]*)]");
     protected ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
     protected ConfigurableConversionService conversionService = new DefaultConversionService();
+
     protected NavigableMap configMap = new NavigableMap() {
+
+        /**
+         * The texts the merge in progress has resolved, by the full name of the entry and the text. The merge writes one
+         * entry under several keys: a dotted key under the whole key and in its nested map, and a list element in its
+         * list in the nested map, in its list under the flat key and under its indexed key. Every write takes one value,
+         * even for {@code ${random.uuid}}.
+         */
+        private Map<List<String>, String> resolvedTexts;
+
         @Override
-        protected Object mergeMapEntry(NavigableMap targetMap, String sourceKey, Object newValue) {
-            if (newValue instanceof CharSequence) {
-                newValue = resolvePlaceholders(newValue.toString());
+        public void merge(Map sourceMap, boolean parseFlatKeys) {
+            resolvedTexts = new HashMap<>();
+            try {
+                super.merge(sourceMap, parseFlatKeys);
+            } finally {
+                resolvedTexts = null;
             }
-            return super.mergeMapEntry(targetMap, sourceKey, newValue);
+        }
+
+        /**
+         * Resolves the placeholders in a value before it is written: in a string, in the strings of a list, through
+         * the maps and lists it holds, and in a map written under an indexed key, {@code rows[0]}, which is written into
+         * its list as it is. A map written under a plain key is merged entry by entry, through this method.
+         */
+        @Override
+        protected void mergeMapEntry(NavigableMap rootMap, String path, NavigableMap targetMap, String sourceKey,
+                Object sourceValue, boolean parseFlatKeys, boolean isNestedSet) {
+            Object value = sourceValue;
+            if (sourceValue instanceof CharSequence || sourceValue instanceof List ||
+                    (sourceValue instanceof Map && isIndexed(sourceKey))) {
+                value = resolved(path == null || path.isEmpty() ? sourceKey : path + '.' + sourceKey, sourceValue);
+            }
+            super.mergeMapEntry(rootMap, path, targetMap, sourceKey, value, parseFlatKeys, isNestedSet);
+        }
+
+        private boolean isIndexed(String sourceKey) {
+            int subscriptStart = sourceKey.indexOf('[');
+            return subscriptStart > -1 && sourceKey.indexOf(']') > subscriptStart;
+        }
+
+        /**
+         * The value with the placeholders in its strings resolved, through the lists and maps it holds. A list or map
+         * holding no placeholder is the one given, and any other is a copy of the same kind, so the property source
+         * keeps what it holds.
+         */
+        @SuppressWarnings("unchecked")
+        private Object resolved(String name, Object value) {
+            if (value instanceof CharSequence) {
+                return resolvedText(name, value.toString());
+            }
+            if (value instanceof List) {
+                List<?> list = (List<?>) value;
+                List<Object> resolved = null;
+                for (int i = 0; i < list.size(); i++) {
+                    Object element = resolved(name + '[' + i + ']', list.get(i));
+                    if (resolved == null && !Objects.equals(element, list.get(i))) {
+                        resolved = new ArrayList<>(list);
+                    }
+                    if (resolved != null) {
+                        resolved.set(i, element);
+                    }
+                }
+                return resolved != null ? resolved : list;
+            }
+            if (value instanceof Map) {
+                Map<?, ?> map = (Map<?, ?>) value;
+                Map<Object, Object> resolved = null;
+                for (Map.Entry<?, ?> entry : map.entrySet()) {
+                    Object element = resolved(name + '.' + entry.getKey(), entry.getValue());
+                    if (resolved == null && !Objects.equals(element, entry.getValue())) {
+                        resolved = map instanceof NavigableMap ? (Map<Object, Object>) (Map<?, ?>) ((NavigableMap) map).clone() : new LinkedHashMap<>(map);
+                    }
+                    if (resolved != null) {
+                        resolved.put(entry.getKey(), element);
+                    }
+                }
+                return resolved != null ? resolved : map;
+            }
+            return value;
+        }
+
+        private String resolvedText(String name, String text) {
+            if (resolvedTexts == null) {
+                return resolvePlaceholders(text);
+            }
+            return resolvedTexts.computeIfAbsent(Arrays.asList(entryName(name), text), key -> resolvePlaceholders(text));
+        }
+
+        /**
+         * The name with each key in brackets that is not an index and holds no dot written as a part of a dotted name.
+         * {@code routes[x]} names the entry {@code x} of the map {@code routes}, and an element of a list from
+         * application.yml holds it under both names, so both take one resolution. A key with a dot, {@code [a.b]}, stays
+         * in its brackets, so it is not taken for the entry {@code b} of a map {@code a}.
+         */
+        private String entryName(String name) {
+            return name.indexOf('[') < 0 ? name : NAMED_SUBSCRIPT.matcher(name).replaceAll(".$1");
         }
     };
 
