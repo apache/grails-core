@@ -99,9 +99,9 @@ class DataBindingUtils {
             }
             PersistentProperty prop = persistentEntity.getPropertyByName(propertyName)
 
-            if (prop != null && prop instanceof OneToOne && prop.isBidirectional()) {
-                Object val = source[key]
-                PersistentProperty otherSide = prop.getInverseSide()
+            if (prop != null && prop instanceof OneToOne && ((OneToOne) prop).isBidirectional()) {
+                Object val = source.get(key)
+                PersistentProperty otherSide = ((OneToOne) prop).getInverseSide()
                 if (val != null && otherSide != null) {
                     MetaClass mc = GroovySystem.getMetaClassRegistry().getMetaClass(val.getClass())
                     try {
@@ -131,20 +131,25 @@ class DataBindingUtils {
     }
 
     /**
-     * The class whose include list an object is bound with. A proxy of an entity is a subclass generated at runtime
-     * that declares no include list of its own, so it is bound as the persistent class it stands for, rather than
-     * as an unenhanced subclass would be.
+     * The class whose include list an object is bound with: its own class when that declares one; else, when the
+     * object is a proxy of an entity, as the subclass a datastore generates at runtime is, the class of what it
+     * stands for, which the proxy handler of the mapping context unwraps and which binding into the proxy would
+     * initialize anyway; else its own class.
      */
     private static Class bindingType(final Object object) {
+        final Class objectClass = object.getClass()
+        if (BindingIncludeLists.declaresIncludeList(objectClass)) {
+            return objectClass
+        }
         final GrailsApplication application = Holders.findApplication()
-        if (application) {
+        if (application != null) {
             try {
                 final MappingContext mappingContext = application.getMappingContext()
-                final ProxyHandler proxyHandler = mappingContext?.getProxyHandler()
-                if (proxyHandler && proxyHandler.isProxy(object)) {
-                    final Class proxiedClass = proxyHandler.getProxiedClass(object)
-                    if (proxiedClass != null) {
-                        return proxiedClass
+                final ProxyHandler proxyHandler = mappingContext != null ? mappingContext.getProxyHandler() : null
+                if (proxyHandler != null && proxyHandler.isProxy(object)) {
+                    final Object unwrapped = proxyHandler.unwrap(object)
+                    if (unwrapped != null) {
+                        return unwrapped.getClass()
                     }
                 }
             } catch (GrailsConfigurationException ignored) {
@@ -200,21 +205,21 @@ class DataBindingUtils {
         try {
             Object constrainedProperties = metaClass.getProperty(object, 'constraintsMap')
             if (constrainedProperties instanceof Map) {
-                return constrainedProperties
+                return (Map) constrainedProperties
             }
         } catch (Exception ignored) {
         }
         try {
             Object constrainedProperties = metaClass.invokeMethod(object, 'getConstraintsMap', new Object[0])
             if (constrainedProperties instanceof Map) {
-                return constrainedProperties
+                return (Map) constrainedProperties
             }
         } catch (Exception ignored) {
         }
         try {
             Object constrainedProperties = metaClass.getProperty(object, 'constraints')
             if (constrainedProperties instanceof Map) {
-                return constrainedProperties
+                return (Map) constrainedProperties
             }
         } catch (Exception ignored) {
         }
@@ -304,12 +309,12 @@ class DataBindingUtils {
                 newObject = targetType.getDeclaredConstructor().newInstance()
             } catch (NoSuchMethodException | InvocationTargetException ex) {
                 throw new InstantiationException(
-                    "Could not instantiate class [${targetType.getName()}]: ${ex.getMessage()}"
+                    'Could not instantiate class [' + targetType.getName() + ']: ' + ex.getMessage()
                 )
             }
 
             bindObjectToDomainInstance(entity, newObject, dataBindingSource, getBindingIncludeList(newObject), Collections.emptyList(), null, false, application)
-            collectionToPopulate << newObject
+            collectionToPopulate.add(newObject)
         }
     }
 
@@ -320,7 +325,7 @@ class DataBindingUtils {
     }
 
     private static PersistentEntity findPersistentEntity(final GrailsApplication application, final String className) {
-        if (application) {
+        if (application != null) {
             try {
                 return application.getMappingContext().getPersistentEntity(className)
             } catch (GrailsConfigurationException ignored) {
@@ -350,7 +355,8 @@ class DataBindingUtils {
      *
      * @param object The object to bind to
      * @param source The source object
-     * @param include The explicit list of properties to include. {@code clearMissing} is ignored when this is {@code null}
+     * @param include The explicit list of properties to include; {@code null} for the white list generated on the
+     *                class, which an exclude list then narrows. {@code clearMissing} is ignored when this is {@code null}
      * @param exclude The list of properties to exclude. Excluded and {@code bindable: false} properties are never cleared
      * @param filter The prefix to filter by
      * @param clearMissing Whether omitted explicitly included properties should be cleared after normal binding completes
@@ -361,12 +367,7 @@ class DataBindingUtils {
     static BindingResult bindObjectToInstance(Object object, Object source, List include, List exclude, String filter, boolean clearMissing) {
         boolean explicitInclude = include != null
         if (include == null) {
-            if (exclude == null || isDenyByDefaultEnabled()) {
-                include = getBindingIncludeList(object)
-            } else {
-                // Exclude-only in compatibility mode must not intersect the class allowlist.
-                include = GrailsWebDataBinder.bindAllBindingIncludeList()
-            }
+            include = getBindingIncludeList(object)
         }
         else if (include.isEmpty() && !GrailsWebDataBinder.isBindAllIncludeList(include)) {
             include = Collections.singletonList(DefaultASTDatabindingHelper.NO_BINDABLE_PROPERTIES)
@@ -395,11 +396,7 @@ class DataBindingUtils {
     static BindingResult bindObjectToDomainInstance(PersistentEntity entity, Object object,
                                                            Object source, List include, List exclude, String filter) {
         if (include == null) {
-            if (exclude == null || isDenyByDefaultEnabled()) {
-                include = getBindingIncludeList(object)
-            } else {
-                include = GrailsWebDataBinder.bindAllBindingIncludeList()
-            }
+            include = getBindingIncludeList(object)
         }
         else if (include.isEmpty() && !GrailsWebDataBinder.isBindAllIncludeList(include)) {
             include = Collections.singletonList(DefaultASTDatabindingHelper.NO_BINDABLE_PROPERTIES)
@@ -436,11 +433,7 @@ class DataBindingUtils {
             Object source, List include, List exclude, String filter, boolean clearMissing, GrailsApplication grailsApplication) {
         boolean explicitInclude = include != null
         if (include == null) {
-            if (exclude == null || isDenyByDefaultEnabled()) {
-                include = getBindingIncludeList(object)
-            } else {
-                include = GrailsWebDataBinder.bindAllBindingIncludeList()
-            }
+            include = getBindingIncludeList(object)
         }
         else if (include.isEmpty() && !GrailsWebDataBinder.isBindAllIncludeList(include)) {
             include = Collections.singletonList(DefaultASTDatabindingHelper.NO_BINDABLE_PROPERTIES)
@@ -457,7 +450,7 @@ class DataBindingUtils {
                 if (targetMetaClass.hasProperty(object, 'errors') != null) {
                     Object existingErrors = targetMetaClass.getProperty(object, 'errors')
                     if (existingErrors instanceof BindingResult) {
-                        clearMissingResult.addAllErrors(existingErrors)
+                        clearMissingResult.addAllErrors((BindingResult) existingErrors)
                     }
                 }
                 MissingPropertyClearer.clearMissingIncludedProperties(
@@ -482,8 +475,8 @@ class DataBindingUtils {
             BindingResult newResult = new ValidationErrors(object)
             for (Object error in bindingResult.getAllErrors()) {
                 if (error instanceof FieldError) {
-                    FieldError fieldError = error
-                    final boolean isBlank = BLANK == fieldError.getRejectedValue()
+                    FieldError fieldError = (FieldError) error
+                    final boolean isBlank = BLANK.equals(fieldError.getRejectedValue())
                     if (!isBlank) {
                         newResult.addError(fieldError)
                     }
@@ -517,14 +510,16 @@ class DataBindingUtils {
 
     protected static String[] getMessageCodes(String messageCode,
             Class objectType) {
-        String[] codes = ["${objectType.getName()}.$messageCode", messageCode] as String[]
+        String[] codes = [objectType.getName() + '.' + messageCode, messageCode] as String[]
         return codes
     }
 
     static DataBindingSourceRegistry getDataBindingSourceRegistry(GrailsApplication grailsApplication) {
         final ContextBoundBeans beans = getContextBoundBeans(grailsApplication)
-        DataBindingSourceRegistry registry = beans?.getDataBindingSourceRegistry()
-        registry ?= new DefaultDataBindingSourceRegistry()
+        DataBindingSourceRegistry registry = beans == null ? null : beans.getDataBindingSourceRegistry()
+        if (registry == null) {
+            registry = new DefaultDataBindingSourceRegistry()
+        }
 
         return registry
     }
@@ -550,7 +545,7 @@ class DataBindingUtils {
     static MimeTypeResolver getMimeTypeResolver(
             GrailsApplication grailsApplication) {
         final ContextBoundBeans beans = getContextBoundBeans(grailsApplication)
-        return beans?.getMimeTypeResolver()
+        return beans == null ? null : beans.getMimeTypeResolver()
     }
 
     static MimeType resolveMimeType(Object bindingSource, MimeTypeResolver mimeTypeResolver) {
@@ -559,10 +554,12 @@ class DataBindingUtils {
 
     private static DataBinder getGrailsWebDataBinder(final GrailsApplication grailsApplication) {
         final ContextBoundBeans beans = getContextBoundBeans(grailsApplication)
-        DataBinder dataBinder = beans?.getDataBinder()
-        // this should really never happen in the running app as the binder
-        // should always be found in the context
-        dataBinder ?= new GrailsWebDataBinder(grailsApplication)
+        DataBinder dataBinder = beans == null ? null : beans.getDataBinder()
+        if (dataBinder == null) {
+            // this should really never happen in the running app as the binder
+            // should always be found in the context
+            dataBinder = new GrailsWebDataBinder(grailsApplication)
+        }
         return dataBinder
     }
 
@@ -571,11 +568,11 @@ class DataBindingUtils {
      * @return the cached beans of the application's main context or null if there is no context to look beans up in
      */
     private static ContextBoundBeans getContextBoundBeans(final GrailsApplication grailsApplication) {
-        if (!grailsApplication) {
+        if (grailsApplication == null) {
             return null
         }
         final ApplicationContext context = grailsApplication.getMainContext()
-        if (!context) {
+        if (context == null) {
             return null
         }
         ContextBoundBeans beans = contextBoundBeans
@@ -588,8 +585,10 @@ class DataBindingUtils {
 
     @SuppressWarnings('unchecked')
     static Map convertPotentialGStrings(Map<Object, Object> args) {
-        Map newArgs = [:]
-        args.each { key, value -> newArgs[unwrapGString(key)] = unwrapGString(value) }
+        Map newArgs = new HashMap(args.size())
+        for (Map.Entry<Object, Object> entry : args.entrySet()) {
+            newArgs.put(unwrapGString(entry.getKey()), unwrapGString(entry.getValue()))
+        }
         return newArgs
     }
 
