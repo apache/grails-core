@@ -82,7 +82,8 @@ tasks.withType(Test).configureEach {
         showCauses = true
         showStackTraces = true
     }
-    excludes = ['**/*TestCase.class', '**/*$*.class']
+    // Keeps any patterns the module excluded before applying this script.
+    exclude('**/*TestCase.class', '**/*$*.class')
     maxParallelForks = rootProject.ext.configuredTestParallel
     maxHeapSize = "${rootProject.ext.testForkHeapMb}m"
     forkEvery = hasProperty('forkEveryUnitTest') ? getProperty('forkEveryUnitTest') as long : (isCiBuild ? 50 : 100)
