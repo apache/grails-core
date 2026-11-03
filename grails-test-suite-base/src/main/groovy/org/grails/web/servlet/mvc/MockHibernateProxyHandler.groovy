@@ -17,12 +17,40 @@
  *  under the License.
  */
 
-package org.grails.web.servlet.mvc;
+package org.grails.web.servlet.mvc
 
-import java.io.Serializable;
+import groovy.transform.CompileStatic
 
-public interface HibernateProxy extends Serializable {
-    Object writeReplace();
+import grails.core.support.proxy.EntityProxyHandler
 
-    LazyInitializer getHibernateLazyInitializer();
+@CompileStatic
+class MockHibernateProxyHandler implements EntityProxyHandler {
+
+    boolean isProxy(Object o) {
+        return false
+    }
+
+    Object unwrapIfProxy(Object instance) {
+        return null
+    }
+
+    boolean isInitialized(Object o) {
+        return false
+    }
+
+    void initialize(Object o) {
+    }
+
+    boolean isInitialized(Object obj, String associationName) {
+        return false
+    }
+
+    Object getProxyIdentifier(Object o) {
+        return null
+    }
+
+    Class<?> getProxiedClass(Object o) {
+        return null
+    }
+
 }

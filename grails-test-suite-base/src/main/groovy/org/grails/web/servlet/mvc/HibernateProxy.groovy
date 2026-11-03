@@ -17,33 +17,12 @@
  *  under the License.
  */
 
-package org.grails.web.converters;
+package org.grails.web.servlet.mvc
 
-/**
- * Created by jameskleeh on 2/7/17.
- */
-public class Author {
-    private String name;
-    private Integer age;
+interface HibernateProxy extends Serializable {
 
-    Author(String name, Integer age) {
-        this.name = name;
-        this.age = age;
-    }
+    Object writeReplace()
 
-    public String getName() {
-        return name;
-    }
+    LazyInitializer getHibernateLazyInitializer()
 
-    public void setName(String name) {
-        this.name = name;
-    }
-
-    public Integer getAge() {
-        return age;
-    }
-
-    public void setAge(Integer age) {
-        this.age = age;
-    }
 }

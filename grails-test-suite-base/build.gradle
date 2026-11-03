@@ -78,3 +78,9 @@ tasks.withType(Groovydoc).configureEach {
     // tests do not have groovydoc
     enabled = false
 }
+
+apply {
+    // Brings useJUnitPlatform() (needed for the Spock specs added alongside this module's converted
+    // classes) and the junit-platform-launcher runtime dependency it requires.
+    from rootProject.layout.projectDirectory.file('gradle/test-config.gradle')
+}

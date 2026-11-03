@@ -17,24 +17,26 @@
  *  under the License.
  */
 
+@SuppressWarnings('UnnecessarySemicolon')
 package grails.util;
-
-import java.util.HashMap;
-import java.util.Map;
 
 import jakarta.servlet.http.HttpServletRequest;
 
+import groovy.transform.CompileStatic;
 import org.springframework.web.servlet.support.RequestDataValueProcessor;
 
-public class MockRequestDataValueProcessor implements RequestDataValueProcessor {
+// TODO(groovyism-cleanup): semicolons + double-quoted strings kept to preserve rename-similarity against the original .java (see matrei's review on #16576). Removed by the stacked groovyism-cleanup PR.
+@SuppressWarnings(['UnnecessarySemicolon', 'UnnecessaryGString'])
+@CompileStatic
+class MockRequestDataValueProcessor implements RequestDataValueProcessor {
 
-    public Map<String, String> getExtraHiddenFields(HttpServletRequest request) {
+    Map<String, String> getExtraHiddenFields(HttpServletRequest request) {
         Map<String, String> extraHiddenFields = new HashMap<>();
         extraHiddenFields.put("requestDataValueProcessorHiddenName", "hiddenValue");
         return extraHiddenFields;
     }
 
-    public String processAction(HttpServletRequest request, String action, String httpMethod) {
+    String processAction(HttpServletRequest request, String action, String httpMethod) {
         if (action.indexOf("requestDataValueProcessorParamName=paramValue") > -1) {
             action = action.replace("?requestDataValueProcessorParamName=paramValue&", "?");
             action = action.replace("?requestDataValueProcessorParamName=paramValue", "");
@@ -43,11 +45,11 @@ public class MockRequestDataValueProcessor implements RequestDataValueProcessor 
         return action;
     }
 
-    public String processFormFieldValue(HttpServletRequest request, String name, String value, String type) {
+    String processFormFieldValue(HttpServletRequest request, String name, String value, String type) {
         return value + "_PROCESSED_";
     }
 
-    public String processUrl(HttpServletRequest request, String url) {
+    String processUrl(HttpServletRequest request, String url) {
         String toAppend;
         if (url.indexOf("?") > -1) {
             toAppend = "&requestDataValueProcessorParamName=paramValue";
@@ -61,4 +63,5 @@ public class MockRequestDataValueProcessor implements RequestDataValueProcessor 
         }
         return url;
     }
+
 }
