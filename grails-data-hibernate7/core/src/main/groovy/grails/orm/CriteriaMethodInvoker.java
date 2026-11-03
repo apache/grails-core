@@ -204,6 +204,14 @@ public class CriteriaMethodInvoker {
             final boolean embedded =
                     attribute.getPersistentAttributeType() == Attribute.PersistentAttributeType.EMBEDDED;
 
+            if (attribute.getPersistentAttributeType() == Attribute.PersistentAttributeType.ELEMENT_COLLECTION) {
+                ElementCollectionRestrictions restrictions = new ElementCollectionRestrictions(hibernateQuery, name);
+                callable.setDelegate(restrictions);
+                callable.setResolveStrategy(Closure.DELEGATE_ONLY);
+                callable.call();
+                return name;
+            }
+
             if (attribute.isAssociation() || embedded) {
                 Class<?> oldTargetClass = builder.getTargetClass();
                 Class<?> associationClass = builder.getClassForAssociationType(attribute);
@@ -401,5 +409,42 @@ public class CriteriaMethodInvoker {
         callable.setDelegate(builder);
         callable.setResolveStrategy(Closure.DELEGATE_FIRST);
         callable.call();
+    }
+
+    /**
+     * The criteria available inside a block over a collection of basic values (for example enums):
+     * the values are addressed through the {@code elements} pseudo property, as in Hibernate 5.
+     */
+    private static final class ElementCollectionRestrictions {
+
+        private static final String ELEMENTS = "elements";
+
+        private final HibernateQuery query;
+        private final String collection;
+
+        private ElementCollectionRestrictions(HibernateQuery query, String collection) {
+            this.query = query;
+            this.collection = collection;
+        }
+
+        public Object eq(String property, Object value) {
+            return in(property, java.util.List.of(value));
+        }
+
+        public Object in(String property, Collection<?> values) {
+            requireElements(property);
+            return query.in(collection, new java.util.ArrayList<>(values));
+        }
+
+        public Object inList(String property, Collection<?> values) {
+            return in(property, values);
+        }
+
+        private void requireElements(String property) {
+            if (!ELEMENTS.equals(property)) {
+                throw new IllegalArgumentException("Only the [" + ELEMENTS + "] property can be queried on the collection of basic values ["
+                        + collection + "], not [" + property + "]");
+            }
+        }
     }
 }
