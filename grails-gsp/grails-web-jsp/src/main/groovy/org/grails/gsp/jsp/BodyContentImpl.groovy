@@ -16,11 +16,10 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
+@SuppressWarnings('UnnecessarySemicolon')
 package org.grails.gsp.jsp;
 
-import java.io.IOException;
-import java.io.Reader;
-import java.io.Writer;
+import groovy.transform.CompileStatic;
 
 import jakarta.servlet.jsp.JspWriter;
 import jakarta.servlet.jsp.tagext.BodyContent;
@@ -33,9 +32,12 @@ import org.grails.buffer.StreamCharBuffer;
  * @author Graeme Rocher
  * @since 1.1
  */
+// TODO(groovyism-cleanup): semicolons kept to preserve rename-similarity against the original .java (see matrei's review on #16576). Removed by the stacked groovyism-cleanup PR.
+@SuppressWarnings(['UnnecessarySemicolon'])
+@CompileStatic
 class BodyContentImpl extends BodyContent {
 
-    static final char[] LINE_BREAK = System.getProperty("line.separator").toCharArray();
+    static final char[] LINE_BREAK = System.getProperty('line.separator').toCharArray();
 
     private StreamCharBuffer streamBuffer;
     private Writer streamBufferWriter;
@@ -51,19 +53,19 @@ class BodyContentImpl extends BodyContent {
     }
 
     @Override
-    public void flush() throws IOException {
+    void flush() throws IOException {
         if (streamBuffer == null) {
             getEnclosingWriter().flush();
         }
     }
 
     @Override
-    public void clear() throws IOException {
+    void clear() throws IOException {
         clearBuffer();
     }
 
     @Override
-    public void clearBuffer() throws IOException {
+    void clearBuffer() throws IOException {
         if (streamBuffer != null) {
             initBuffer();
         }
@@ -73,126 +75,126 @@ class BodyContentImpl extends BodyContent {
     }
 
     @Override
-    public int getRemaining() {
+    int getRemaining() {
         return Integer.MAX_VALUE;
     }
 
     @Override
-    public void newLine() throws IOException {
+    void newLine() throws IOException {
         write(LINE_BREAK);
     }
 
     @Override
-    public void close() throws IOException {
+    void close() throws IOException {
         // do nothing
     }
 
     @Override
-    public void print(boolean b) throws IOException {
+    void print(boolean b) throws IOException {
         write(b ? Boolean.TRUE.toString() : Boolean.FALSE.toString());
     }
 
     @Override
-    public void print(char c) throws IOException {
-        write(c);
+    void print(char c) throws IOException {
+        write((int) c);
     }
 
     @Override
-    public void print(char[] chars) throws IOException {
+    void print(char[] chars) throws IOException {
         write(chars);
     }
 
     @Override
-    public void print(double d) throws IOException {
+    void print(double d) throws IOException {
         write(Double.toString(d));
     }
 
     @Override
-    public void print(float f) throws IOException {
+    void print(float f) throws IOException {
         write(Float.toString(f));
     }
 
     @Override
-    public void print(int i) throws IOException {
+    void print(int i) throws IOException {
         write(Integer.toString(i));
     }
 
     @Override
-    public void print(long l) throws IOException {
+    void print(long l) throws IOException {
         write(Long.toString(l));
     }
 
     @Override
-    public void print(Object o) throws IOException {
-        write(o == null ? "null" : o.toString());
+    void print(Object o) throws IOException {
+        write(o == null ? 'null' : o.toString());
     }
 
     @Override
-    public void print(String s) throws IOException {
+    void print(String s) throws IOException {
         write(s);
     }
 
     @Override
-    public void println() throws IOException {
+    void println() throws IOException {
         newLine();
     }
 
     @Override
-    public void println(boolean b) throws IOException {
+    void println(boolean b) throws IOException {
         print(b);
         newLine();
     }
 
     @Override
-    public void println(char c) throws IOException {
+    void println(char c) throws IOException {
         print(c);
         newLine();
     }
 
     @Override
-    public void println(char[] chars) throws IOException {
+    void println(char[] chars) throws IOException {
         print(chars);
         newLine();
     }
 
     @Override
-    public void println(double d) throws IOException {
+    void println(double d) throws IOException {
         print(d);
         newLine();
     }
 
     @Override
-    public void println(float f) throws IOException {
+    void println(float f) throws IOException {
         print(f);
         newLine();
     }
 
     @Override
-    public void println(int i) throws IOException {
+    void println(int i) throws IOException {
         print(i);
         newLine();
     }
 
     @Override
-    public void println(long l) throws IOException {
+    void println(long l) throws IOException {
         print(l);
         newLine();
     }
 
     @Override
-    public void println(Object o) throws IOException {
+    void println(Object o) throws IOException {
         print(o);
         newLine();
     }
 
     @Override
-    public void println(String s) throws IOException {
+    void println(String s) throws IOException {
         print(s);
         newLine();
     }
 
     @Override
-    public void write(int c) throws IOException {
+    void write(int c) throws IOException {
         if (streamBufferWriter != null) {
             streamBufferWriter.write(c);
         }
@@ -202,7 +204,7 @@ class BodyContentImpl extends BodyContent {
     }
 
     @Override
-    public void write(char[] cbuf, int off, int len) throws IOException {
+    void write(char[] cbuf, int off, int len) throws IOException {
         if (streamBufferWriter != null) {
             streamBufferWriter.write(cbuf, off, len);
         }
@@ -212,17 +214,17 @@ class BodyContentImpl extends BodyContent {
     }
 
     @Override
-    public String getString() {
+    String getString() {
         return streamBuffer.toString();
     }
 
     @Override
-    public Reader getReader() {
+    Reader getReader() {
         return streamBuffer.getReader();
     }
 
     @Override
-    public void writeOut(Writer out) throws IOException {
+    void writeOut(Writer out) throws IOException {
         streamBuffer.writeTo(out);
     }
 }

@@ -16,39 +16,41 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.web.taglib.jsp;
+package org.grails.web.taglib.jsp
+
+import groovy.transform.CompileStatic
 
 /**
- * JSP facade onto the GSP message tag
- *
  * @author Graeme Rocher
  * @since 28-Feb-2006
  */
-public class JspMessageTag extends JspInvokeGrailsTagLibTag {
-    private static final long serialVersionUID = -3098229619044871773L;
+@CompileStatic
+class JspCurrencySelectTag extends JspInvokeGrailsTagLibTag {
 
-    private static final String TAG_NAME = "message";
+    private static final long serialVersionUID = -7627197546193185836L
 
-    private String code;
-    private String error;
+    private static final String TAG_NAME = 'currencySelect'
 
-    public JspMessageTag() {
-        setTagName(TAG_NAME);
+    private String name
+    private String value
+
+    JspCurrencySelectTag() {
+        setTagName(TAG_NAME)
     }
 
-    public String getCode() {
-        return code;
+    String getName() {
+        return name
     }
 
-    public void setCode(String code) {
-        this.code = code;
+    void setName(String name) {
+        this.name = name
     }
 
-    public String getError() {
-        return error;
+    String getValue() {
+        return value
     }
 
-    public void setError(String error) {
-        this.error = error;
+    void setValue(String value) {
+        this.value = value
     }
 }

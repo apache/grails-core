@@ -16,48 +16,52 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.web.taglib.jsp;
+package org.grails.web.taglib.jsp
+
+import groovy.transform.CompileStatic
 
 /**
- * JSP facade onto the GSP hasErrors tag
+ * JSP facade onto the GSP eachError tag
  *
  * @author Graeme Rocher
  * @since 28-Feb-2006
  */
-public class JspHasErrorsTag extends JspInvokeGrailsTagLibTag {
-    private static final long serialVersionUID = -5226668051247749800L;
+@CompileStatic
+class JspEachErrorTag extends JspInvokeGrailsTagLibTag {
 
-    private static final String TAG_NAME = "hasErrors";
+    private static final long serialVersionUID = 4905214290442171610L
 
-    private String bean;
-    private String model;
-    private String field;
+    private static final String TAG_NAME = 'eachError'
 
-    public JspHasErrorsTag() {
-        setTagName(TAG_NAME);
+    private String bean
+    private String model
+    private String field
+
+    JspEachErrorTag() {
+        setTagName(TAG_NAME)
     }
 
-    public String getBean() {
-        return bean;
+    String getBean() {
+        return bean
     }
 
-    public void setBean(String bean) {
-        this.bean = bean;
+    void setBean(String bean) {
+        this.bean = bean
     }
 
-    public String getModel() {
-        return model;
+    String getModel() {
+        return model
     }
 
-    public void setModel(String model) {
-        this.model = model;
+    void setModel(String model) {
+        this.model = model
     }
 
-    public String getField() {
-        return field;
+    String getField() {
+        return field
     }
 
-    public void setField(String field) {
-        this.field = field;
+    void setField(String field) {
+        this.field = field
     }
 }

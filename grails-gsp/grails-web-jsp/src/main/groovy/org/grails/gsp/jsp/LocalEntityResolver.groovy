@@ -16,11 +16,10 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
+@SuppressWarnings('UnnecessarySemicolon')
 package org.grails.gsp.jsp;
 
-import java.io.ByteArrayInputStream;
-import java.io.InputStream;
-import java.util.Map;
+import groovy.transform.CompileStatic;
 
 import org.xml.sax.EntityResolver;
 import org.xml.sax.InputSource;
@@ -32,7 +31,10 @@ import static java.util.Map.entry;
  *
  * @author Graeme Rocher
  */
-public class LocalEntityResolver implements EntityResolver {
+// TODO(groovyism-cleanup): semicolons + double-quoted strings kept to preserve rename-similarity against the original .java (see matrei's review on #16576). Removed by the stacked groovyism-cleanup PR.
+@SuppressWarnings(['UnnecessarySemicolon', 'UnnecessaryGString'])
+@CompileStatic
+class LocalEntityResolver implements EntityResolver {
 
     private static final Map<String, String> ENTITIES = Map.ofEntries(
         // JSP taglib 3.0
@@ -69,7 +71,7 @@ public class LocalEntityResolver implements EntityResolver {
         entry("http://java.sun.com/j2ee/dtds/web-app_2_2.dtd", "web-app_2_2.dtd")
     );
 
-    public InputSource resolveEntity(String publicId, String systemId) {
+    InputSource resolveEntity(String publicId, String systemId) {
         String name = ENTITIES.get(publicId);
 
         if (name == null) name = ENTITIES.get(systemId);

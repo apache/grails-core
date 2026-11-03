@@ -16,48 +16,43 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.web.taglib.jsp;
+package org.grails.web.taglib.jsp
+
+import groovy.transform.CompileStatic
 
 /**
- * JSP facade onto the GSP eachError tag
+ * JSP facade onto the GSP message tag
  *
  * @author Graeme Rocher
  * @since 28-Feb-2006
  */
-public class JspEachErrorTag extends JspInvokeGrailsTagLibTag {
-    private static final long serialVersionUID = 4905214290442171610L;
+@CompileStatic
+class JspMessageTag extends JspInvokeGrailsTagLibTag {
 
-    private static final String TAG_NAME = "eachError";
+    private static final long serialVersionUID = -3098229619044871773L
 
-    private String bean;
-    private String model;
-    private String field;
+    private static final String TAG_NAME = 'message'
 
-    public JspEachErrorTag() {
-        setTagName(TAG_NAME);
+    private String code
+    private String error
+
+    JspMessageTag() {
+        setTagName(TAG_NAME)
     }
 
-    public String getBean() {
-        return bean;
+    String getCode() {
+        return code
     }
 
-    public void setBean(String bean) {
-        this.bean = bean;
+    void setCode(String code) {
+        this.code = code
     }
 
-    public String getModel() {
-        return model;
+    String getError() {
+        return error
     }
 
-    public void setModel(String model) {
-        this.model = model;
-    }
-
-    public String getField() {
-        return field;
-    }
-
-    public void setField(String field) {
-        this.field = field;
+    void setError(String error) {
+        this.error = error
     }
 }

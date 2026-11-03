@@ -16,16 +16,22 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
+@SuppressWarnings('UnnecessarySemicolon')
 package org.grails.web.taglib.jsp;
+
+import groovy.transform.CompileStatic;
 
 /**
  * @author Graeme Rocher
- * @since 28-Feb-2006
  */
-public class JspRemoteLinkTag extends JspInvokeGrailsTagLibTag {
-    private static final long serialVersionUID = -1784925242740378205L;
+// TODO(groovyism-cleanup): semicolons kept to preserve rename-similarity against the original .java (see matrei's review on #16576). Removed by the stacked groovyism-cleanup PR.
+@SuppressWarnings(['UnnecessarySemicolon'])
+@CompileStatic
+class JspRemoteFunctionTag extends JspInvokeGrailsTagLibTag {
 
-    private static final String TAG_NAME = "remoteLink";
+    private static final long serialVersionUID = -4345166429867722872L;
+
+    private static final String TAG_NAME = 'remoteFunction';
 
     private String controller;
     private String action;
@@ -44,137 +50,137 @@ public class JspRemoteLinkTag extends JspInvokeGrailsTagLibTag {
     private String onLoaded;
     private String onInteractive;
 
-    public JspRemoteLinkTag() {
+    JspRemoteFunctionTag() {
         setTagName(TAG_NAME);
     }
 
-    public String getParams() {
+    String getParams() {
         return params;
     }
 
-    public void setParams(String params) {
+    void setParams(String params) {
         this.params = params;
     }
 
-    public String getOnSuccess() {
+    String getOnSuccess() {
         return onSuccess;
     }
 
-    public void setOnSuccess(String onSuccess) {
+    void setOnSuccess(String onSuccess) {
         this.onSuccess = onSuccess;
     }
 
-    public String getOnFailure() {
+    String getOnFailure() {
         return onFailure;
     }
 
-    public void setOnFailure(String onFailure) {
+    void setOnFailure(String onFailure) {
         this.onFailure = onFailure;
     }
 
-    public String getOnComplete() {
+    String getOnComplete() {
         return onComplete;
     }
 
-    public void setOnComplete(String onComplete) {
+    void setOnComplete(String onComplete) {
         this.onComplete = onComplete;
     }
 
-    public String getOnLoading() {
+    String getOnLoading() {
         return onLoading;
     }
 
-    public void setOnLoading(String onLoading) {
+    void setOnLoading(String onLoading) {
         this.onLoading = onLoading;
     }
 
-    public String getOnLoaded() {
+    String getOnLoaded() {
         return onLoaded;
     }
 
-    public void setOnLoaded(String onLoaded) {
+    void setOnLoaded(String onLoaded) {
         this.onLoaded = onLoaded;
     }
 
-    public String getOnInteractive() {
+    String getOnInteractive() {
         return onInteractive;
     }
 
-    public void setOnInteractive(String onInteractive) {
+    void setOnInteractive(String onInteractive) {
         this.onInteractive = onInteractive;
     }
 
-    public String getUrl() {
+    String getUrl() {
         return url;
     }
 
-    public void setUrl(String url) {
+    void setUrl(String url) {
         this.url = url;
     }
 
-    public String getController() {
+    String getController() {
         return controller;
     }
 
-    public void setController(String controller) {
+    void setController(String controller) {
         this.controller = controller;
     }
 
-    public String getAction() {
+    String getAction() {
         return action;
     }
 
-    public void setAction(String action) {
+    void setAction(String action) {
         this.action = action;
     }
 
     @Override
-    public String getId() {
+    String getId() {
         return id;
     }
 
     @Override
-    public void setId(String id) {
+    void setId(String id) {
         this.id = id;
     }
 
-    public String getUpdate() {
+    String getUpdate() {
         return update;
     }
 
-    public void setUpdate(String update) {
+    void setUpdate(String update) {
         this.update = update;
     }
 
-    public String getBefore() {
+    String getBefore() {
         return before;
     }
 
-    public void setBefore(String before) {
+    void setBefore(String before) {
         this.before = before;
     }
 
-    public String getAfter() {
+    String getAfter() {
         return after;
     }
 
-    public void setAfter(String after) {
+    void setAfter(String after) {
         this.after = after;
     }
 
-    public String getMethod() {
+    String getMethod() {
         return method;
     }
 
-    public void setMethod(String method) {
+    void setMethod(String method) {
         this.method = method;
     }
 
-    public String getAsynchronous() {
+    String getAsynchronous() {
         return asynchronous;
     }
 
-    public void setAsynchronous(String asynchronous) {
+    void setAsynchronous(String asynchronous) {
         this.asynchronous = asynchronous;
     }
 }

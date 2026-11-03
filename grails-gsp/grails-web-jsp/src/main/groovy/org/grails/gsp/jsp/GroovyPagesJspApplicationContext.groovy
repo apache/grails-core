@@ -16,10 +16,10 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
+@SuppressWarnings('UnnecessarySemicolon')
 package org.grails.gsp.jsp;
 
-import java.util.Iterator;
-import java.util.LinkedList;
+import groovy.transform.CompileStatic;
 
 import jakarta.el.ArrayELResolver;
 import jakarta.el.BeanELResolver;
@@ -48,9 +48,12 @@ import org.springframework.util.ClassUtils;
  * @author Graeme Rocher
  * @since 1.0
  */
-public class GroovyPagesJspApplicationContext implements JspApplicationContext {
+// TODO(groovyism-cleanup): semicolons kept to preserve rename-similarity against the original .java (see matrei's review on #16576). Removed by the stacked groovyism-cleanup PR.
+@SuppressWarnings(['UnnecessarySemicolon'])
+@CompileStatic
+class GroovyPagesJspApplicationContext implements JspApplicationContext {
 
-    private static final Log LOG = LogFactory.getLog(GroovyPagesJspApplicationContext.class);
+    private static final Log LOG = LogFactory.getLog(GroovyPagesJspApplicationContext);
 
     private static final ExpressionFactory expressionFactoryImpl = findExpressionFactoryImplementation();
 
@@ -58,7 +61,7 @@ public class GroovyPagesJspApplicationContext implements JspApplicationContext {
     private final CompositeELResolver elResolver = new CompositeELResolver();
     private final CompositeELResolver additionalResolvers = new CompositeELResolver();
 
-    public GroovyPagesJspApplicationContext() {
+    GroovyPagesJspApplicationContext() {
         elResolver.add(new ImplicitObjectELResolver());
         elResolver.add(additionalResolvers);
         elResolver.add(new MapELResolver());
@@ -70,47 +73,47 @@ public class GroovyPagesJspApplicationContext implements JspApplicationContext {
     }
 
     private static ExpressionFactory findExpressionFactoryImplementation() {
-        ExpressionFactory ef = tryExpressionFactoryImplementation("com.sun");
+        ExpressionFactory ef = tryExpressionFactoryImplementation('com.sun');
         if (ef == null) {
-            ef = tryExpressionFactoryImplementation("org.apache");
+            ef = tryExpressionFactoryImplementation('org.apache');
             if (ef == null) {
-                LOG.warn("Could not find any implementation for " +
-                        ExpressionFactory.class.getName());
+                LOG.warn('Could not find any implementation for ' +
+                        ExpressionFactory.name);
             }
         }
         return ef;
     }
 
     private static ExpressionFactory tryExpressionFactoryImplementation(String packagePrefix) {
-        String className = packagePrefix + ".el.ExpressionFactoryImpl";
+        String className = packagePrefix + '.el.ExpressionFactoryImpl';
         try {
             Class<?> cl = ClassUtils.forName(className, null);
-            if (ExpressionFactory.class.isAssignableFrom(cl)) {
-                LOG.info("Using " + className + " as implementation of " +
-                        ExpressionFactory.class.getName());
+            if (ExpressionFactory.isAssignableFrom(cl)) {
+                LOG.info('Using ' + className + ' as implementation of ' +
+                        ExpressionFactory.name);
                 return (ExpressionFactory) cl.getDeclaredConstructor().newInstance();
             }
-            LOG.warn("Class " + className + " does not implement " +
-                    ExpressionFactory.class.getName());
+            LOG.warn('Class ' + className + ' does not implement ' +
+                    ExpressionFactory.name);
         }
-        catch (ClassNotFoundException e) {
+        catch (ClassNotFoundException ignored) {
             // ignored
         }
         catch (Exception e) {
-            LOG.error("Failed to instantiate " + className, e);
+            LOG.error('Failed to instantiate ' + className, e);
         }
         return null;
     }
 
-    public void addELResolver(ELResolver resolver) {
+    void addELResolver(ELResolver resolver) {
         additionalResolvers.add(resolver);
     }
 
-    public ExpressionFactory getExpressionFactory() {
+    ExpressionFactory getExpressionFactory() {
         return expressionFactoryImpl;
     }
 
-    public void addELContextListener(ELContextListener elContextListener) {
+    void addELContextListener(ELContextListener elContextListener) {
         synchronized (listeners) {
             listeners.addLast(elContextListener);
         }
@@ -130,33 +133,33 @@ public class GroovyPagesJspApplicationContext implements JspApplicationContext {
     private class GroovyPagesELContext extends ELContext {
         private GroovyPagesPageContext pageCtx;
 
-        public GroovyPagesELContext(GroovyPagesPageContext pageCtx) {
+        GroovyPagesELContext(GroovyPagesPageContext pageCtx) {
             this.pageCtx = pageCtx;
         }
 
         @Override
-        public ELResolver getELResolver() {
-            return elResolver;
+        ELResolver getELResolver() {
+            return GroovyPagesJspApplicationContext.this.elResolver;
         }
 
         @Override
-        public FunctionMapper getFunctionMapper() {
+        FunctionMapper getFunctionMapper() {
             return null;
         }
 
         @Override
-        public VariableMapper getVariableMapper() {
+        VariableMapper getVariableMapper() {
             return new VariableMapper() {
 
                 @Override
-                public ValueExpression resolveVariable(String name) {
-                    Object o = pageCtx.findAttribute(name);
+                ValueExpression resolveVariable(String name) {
+                    Object o = GroovyPagesELContext.this.pageCtx.findAttribute(name);
                     if (o == null) return null;
-                    return expressionFactoryImpl.createValueExpression(o, o.getClass());
+                    return GroovyPagesJspApplicationContext.expressionFactoryImpl.createValueExpression(o, o.getClass());
                 }
 
                 @Override
-                public ValueExpression setVariable(String name, ValueExpression valueExpression) {
+                ValueExpression setVariable(String name, ValueExpression valueExpression) {
                     ValueExpression previous = resolveVariable(name);
                     if (valueExpression != null) {
                         GroovyPagesELContext.this.pageCtx.setAttribute(name, valueExpression.getValue(GroovyPagesELContext.this));

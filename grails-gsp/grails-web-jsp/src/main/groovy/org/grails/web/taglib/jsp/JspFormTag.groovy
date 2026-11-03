@@ -16,17 +16,24 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
+@SuppressWarnings('UnnecessarySemicolon')
 package org.grails.web.taglib.jsp;
+
+import groovy.transform.CompileStatic;
 
 /**
  * JSP facade onto the GSP form tag
  *
  * @author Graeme Rocher
  */
-public class JspFormTag extends JspInvokeGrailsTagLibTag {
+// TODO(groovyism-cleanup): semicolons kept to preserve rename-similarity against the original .java (see matrei's review on #16576). Removed by the stacked groovyism-cleanup PR.
+@SuppressWarnings(['UnnecessarySemicolon'])
+@CompileStatic
+class JspFormTag extends JspInvokeGrailsTagLibTag {
+
     private static final long serialVersionUID = -3045238592311090749L;
 
-    private static final String TAG_NAME = "form";
+    private static final String TAG_NAME = 'form';
 
     private String controller;
     private String action;
@@ -35,57 +42,57 @@ public class JspFormTag extends JspInvokeGrailsTagLibTag {
     private String params;
     private String method;
 
-    public JspFormTag() {
+    JspFormTag() {
         setTagName(TAG_NAME);
     }
 
-    public String getMethod() {
+    String getMethod() {
         return method;
     }
 
-    public void setMethod(String method) {
+    void setMethod(String method) {
         this.method = method;
     }
 
-    public String getParams() {
+    String getParams() {
         return params;
     }
 
-    public void setParams(String params) {
+    void setParams(String params) {
         this.params = params;
     }
 
-    public String getController() {
+    String getController() {
         return controller;
     }
 
-    public void setController(String controller) {
+    void setController(String controller) {
         this.controller = controller;
     }
 
-    public String getAction() {
+    String getAction() {
         return action;
     }
 
-    public void setAction(String action) {
+    void setAction(String action) {
         this.action = action;
     }
 
     @Override
-    public String getId() {
+    String getId() {
         return id;
     }
 
     @Override
-    public void setId(String id) {
+    void setId(String id) {
         this.id = id;
     }
 
-    public String getUrl() {
+    String getUrl() {
         return url;
     }
 
-    public void setUrl(String url) {
+    void setUrl(String url) {
         this.url = url;
     }
 }
