@@ -16,9 +16,7 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.web.servlet.mvc;
-
-import groovy.lang.Closure;
+package org.grails.web.servlet.mvc
 
 /**
  * Invokes user code that handles double or invalid submits.
@@ -26,10 +24,10 @@ import groovy.lang.Closure;
  * @author Graeme Rocher
  * @since 1.1
  */
-public interface TokenResponseHandler {
+interface TokenResponseHandler {
 
-    String INVALID_TOKEN_ATTRIBUTE = "invalidToken";
-    String KEY = "org.codehaus.groovy.grails.TOKEN_RESPONSE_HANDLER";
+    String INVALID_TOKEN_ATTRIBUTE = 'invalidToken'
+    String KEY = 'org.codehaus.groovy.grails.TOKEN_RESPONSE_HANDLER'
 
     /**
      * Specify behavior in the event of an invalid token.
@@ -37,17 +35,18 @@ public interface TokenResponseHandler {
      * @param callable The closure to invoke in the event of an invalid token
      * @return A Grails model or null
      */
-    Object invalidToken(@SuppressWarnings("rawtypes") Closure callable);
+    Object invalidToken(@SuppressWarnings('rawtypes') Closure callable)
 
     /**
      * Return whether the response handle was invoked.
      * @return true if it was
      */
-    boolean wasInvoked();
+    boolean wasInvoked()
 
     /**
      * Return whether the token was invalid
      * @return true if it was
      */
-    boolean wasInvalidToken();
+    boolean wasInvalidToken()
+
 }

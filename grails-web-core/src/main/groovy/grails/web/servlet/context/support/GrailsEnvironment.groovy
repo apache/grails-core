@@ -16,10 +16,11 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
+@SuppressWarnings('UnnecessarySemicolon')
 package grails.web.servlet.context.support;
 
-import java.util.Set;
-
+import groovy.transform.CompileStatic;
+import groovy.transform.stc.POJO;
 import org.springframework.core.env.PropertiesPropertySource;
 import org.springframework.core.env.PropertySource;
 import org.springframework.util.StringUtils;
@@ -31,17 +32,26 @@ import grails.util.Environment;
 /**
  * Bridges Grails' existing environment API with the new Spring 3.1 environment profiles API.
  *
+ * <p>The class is a {@link POJO}: Spring's {@code PropertyResolver#getProperty(String)} returns
+ * {@code String}, so it does not override {@code GroovyObject#getProperty(String)} (which returns
+ * {@code Object}), and a dynamic {@code environment.getProperty('a.b')} call would otherwise reach
+ * the Groovy property lookup instead of the Spring property resolution.</p>
+ *
  * @author Graeme Rocher
  * @since 2.0
  */
-public class GrailsEnvironment extends StandardServletEnvironment {
+// TODO(groovyism-cleanup): semicolons kept to preserve rename-similarity against the original .java (see matrei's review on #16576). Removed by the stacked groovyism-cleanup PR.
+@SuppressWarnings(['UnnecessarySemicolon'])
+@POJO
+@CompileStatic
+class GrailsEnvironment extends StandardServletEnvironment {
 
     GrailsApplication grailsApplication;
 
-    public GrailsEnvironment(GrailsApplication grailsApplication) {
+    GrailsEnvironment(GrailsApplication grailsApplication) {
         this.grailsApplication = grailsApplication;
         getPropertySources().addFirst(new GrailsConfigPropertySource());
-        getPropertySources().addFirst(new PropertiesPropertySource("systemProperties", System.getProperties()));
+        getPropertySources().addFirst(new PropertiesPropertySource('systemProperties', System.getProperties()));
     }
 
     @Override
@@ -53,13 +63,16 @@ public class GrailsEnvironment extends StandardServletEnvironment {
 
     private class GrailsConfigPropertySource extends PropertySource<GrailsApplication> {
 
-        public GrailsConfigPropertySource() {
-            super(StringUtils.hasText(grailsApplication.getMetadata().getApplicationName()) ? grailsApplication.getMetadata().getApplicationName() : "grailsApplication", grailsApplication);
+        GrailsConfigPropertySource() {
+            super(StringUtils.hasText(GrailsEnvironment.this.grailsApplication.getMetadata().getApplicationName()) ?
+                    GrailsEnvironment.this.grailsApplication.getMetadata().getApplicationName() : 'grailsApplication',
+                    GrailsEnvironment.this.grailsApplication);
         }
 
         @Override
-        public Object getProperty(String key) {
-            return grailsApplication.getConfig().getProperty(key, Object.class);
+        Object getProperty(String key) {
+            return GrailsEnvironment.this.grailsApplication.getConfig().getProperty(key, Object);
         }
     }
+
 }

@@ -16,40 +16,50 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
+@SuppressWarnings('UnnecessarySemicolon')
 package org.grails.web.servlet.boostrap;
 
-import groovy.lang.Closure;
+import groovy.transform.CompileStatic;
+import groovy.transform.stc.POJO;
 
 import grails.util.Environment;
 import grails.web.servlet.bootstrap.GrailsBootstrapClass;
 import org.grails.core.AbstractGrailsClass;
 import org.grails.datastore.mapping.reflect.ClassPropertyFetcher;
 
-@SuppressWarnings("serial")
-public class DefaultGrailsBootstrapClass extends AbstractGrailsClass implements GrailsBootstrapClass {
+// Not a GroovyObject: AbstractGrailsClass overrides getMetaClass() to return the wrapped artefact
+// class's metaClass (by design), and a synthesized GroovyObject.invokeMethod()/getProperty() would
+// dispatch dynamic calls through that (wrong) metaClass instead of this class's own. Same fix as
+// DefaultGrailsCodecClass and DefaultGrailsJobClass earlier this session.
+// TODO(groovyism-cleanup): semicolons kept to preserve rename-similarity against the original .java (see matrei's review on #16576). Removed by the stacked groovyism-cleanup PR.
+@SuppressWarnings(['serial', 'UnnecessarySemicolon'])
+@POJO
+@CompileStatic
+class DefaultGrailsBootstrapClass extends AbstractGrailsClass implements GrailsBootstrapClass {
 
-    public static final String BOOT_STRAP = "BootStrap";
+    public static final String BOOT_STRAP = 'BootStrap';
 
-    private static final String INIT_CLOSURE = "init";
-    private static final String DESTROY_CLOSURE = "destroy";
-    @SuppressWarnings("rawtypes")
-    private static final Closure BLANK_CLOSURE = new Closure(DefaultGrailsBootstrapClass.class) {
+    private static final String INIT_CLOSURE = 'init';
+    private static final String DESTROY_CLOSURE = 'destroy';
+
+    @SuppressWarnings('rawtypes')
+    private static final Closure BLANK_CLOSURE = new Closure(DefaultGrailsBootstrapClass) {
         @Override
-        public Object call(Object... args) { return null; }
+        Object call(Object... args) { return null; }
     };
     private final Object instance;
 
-    public DefaultGrailsBootstrapClass(Class<?> clazz) {
+    DefaultGrailsBootstrapClass(Class<?> clazz) {
         super(clazz, BOOT_STRAP);
         this.instance = super.getReferenceInstance();
     }
 
     @Override
-    public Object getReferenceInstance() {
+    Object getReferenceInstance() {
         return this.instance;
     }
 
-    public Closure<?> getInitClosure() {
+    Closure<?> getInitClosure() {
         Object obj = ClassPropertyFetcher.getInstancePropertyValue(instance, INIT_CLOSURE);
         if (obj instanceof Closure) {
             return (Closure<?>) obj;
@@ -57,7 +67,7 @@ public class DefaultGrailsBootstrapClass extends AbstractGrailsClass implements 
         return BLANK_CLOSURE;
     }
 
-    public Closure<?> getDestroyClosure() {
+    Closure<?> getDestroyClosure() {
         Object obj = ClassPropertyFetcher.getInstancePropertyValue(instance, DESTROY_CLOSURE);
         if (obj instanceof Closure) {
             return (Closure<?>) obj;
@@ -65,17 +75,18 @@ public class DefaultGrailsBootstrapClass extends AbstractGrailsClass implements 
         return BLANK_CLOSURE;
     }
 
-    public void callInit() {
+    void callInit() {
         Closure<?> init = getInitClosure();
         if (init != null) {
             Environment.executeForCurrentEnvironment(init);
         }
     }
 
-    public void callDestroy() {
+    void callDestroy() {
         Closure<?> destroy = getDestroyClosure();
         if (destroy != null) {
             Environment.executeForCurrentEnvironment(destroy);
         }
     }
+
 }
