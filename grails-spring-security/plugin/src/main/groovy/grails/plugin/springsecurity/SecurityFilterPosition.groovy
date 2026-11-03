@@ -118,7 +118,7 @@ enum SecurityFilterPosition {
     private final int order
 
     SecurityFilterPosition() {
-        this.order = ordinal() * INTERVAL
+        order = ordinal() * INTERVAL
     }
 
     SecurityFilterPosition(int order) {
@@ -126,7 +126,7 @@ enum SecurityFilterPosition {
     }
 
     int getOrder() {
-        return this.order
+        return order
     }
 
 }
