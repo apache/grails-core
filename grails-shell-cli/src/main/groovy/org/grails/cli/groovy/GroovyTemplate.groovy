@@ -1,0 +1,70 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ */
+package org.grails.cli.groovy
+
+import groovy.text.GStringTemplateEngine
+import groovy.text.Template
+import groovy.text.TemplateEngine
+import groovy.transform.CompileStatic
+import org.codehaus.groovy.control.CompilationFailedException
+
+/**
+ * Helpful utilities for working with Groovy {@link Template}s.
+ *
+ * @author Dave Syer
+ * @since 1.0.0
+ */
+@CompileStatic
+abstract class GroovyTemplate {
+
+    static String template(String name) throws IOException, CompilationFailedException, ClassNotFoundException {
+        return template(name, Collections.emptyMap())
+    }
+
+    static String template(String name, Map<String, ?> model)
+            throws IOException, CompilationFailedException, ClassNotFoundException {
+        return template(new GStringTemplateEngine(), name, model)
+    }
+
+    static String template(TemplateEngine engine, String name, Map<String, ?> model)
+            throws IOException, CompilationFailedException, ClassNotFoundException {
+        Writable writable = getTemplate(engine, name).make(model)
+        StringWriter result = new StringWriter()
+        writable.writeTo(result)
+        return result.toString()
+    }
+
+    private static Template getTemplate(TemplateEngine engine, String name)
+            throws CompilationFailedException, ClassNotFoundException, IOException {
+
+        File file = new File('templates', name)
+        if (file.exists()) {
+            return engine.createTemplate(file)
+        }
+
+        ClassLoader classLoader = GroovyTemplate.getClassLoader()
+        URL resource = classLoader.getResource('templates/' + name)
+        if (resource != null) {
+            return engine.createTemplate(resource)
+        }
+
+        return engine.createTemplate(name)
+    }
+
+}

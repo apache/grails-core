@@ -1,0 +1,69 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ */
+package org.grails.cli.command.install
+
+import groovy.transform.CompileStatic
+import joptsimple.OptionSet
+import org.springframework.boot.cli.command.OptionParsingCommand
+import org.springframework.boot.cli.command.status.ExitStatus
+import org.springframework.boot.cli.util.Log
+import org.springframework.util.Assert
+
+import org.grails.cli.command.options.CompilerOptionHandler
+
+/**
+ * {@link org.springframework.boot.cli.command.Command} to install additional dependencies into the CLI.
+ *
+ * @author Dave Syer
+ * @author Andy Wilkinson
+ * @since 1.2.0
+ */
+@CompileStatic
+class InstallCommand extends OptionParsingCommand {
+
+    InstallCommand() {
+        super('install', 'Install dependencies to the lib/ext directory', new InstallOptionHandler())
+    }
+
+    @Override
+    String getUsageHelp() {
+        return '[options] <coordinates>'
+    }
+
+    private static final class InstallOptionHandler extends CompilerOptionHandler {
+
+        @Override
+        @SuppressWarnings('unchecked')
+        protected ExitStatus run(OptionSet options) throws Exception {
+            List<String> args = (List<String>) options.nonOptionArguments()
+            Assert.notEmpty(args,
+                    'Please specify at least one dependency, in the form group:artifact:version, to install')
+            try {
+                new Installer(options, this).install(args)
+            }
+            catch (Exception ex) {
+                String message = ex.getMessage()
+                Log.error((message != null) ? message : ex.getClass().toString())
+            }
+            return ExitStatus.OK
+        }
+
+    }
+
+}
