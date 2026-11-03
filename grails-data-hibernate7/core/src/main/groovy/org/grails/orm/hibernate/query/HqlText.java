@@ -56,6 +56,9 @@ final class HqlText {
 
     private HqlText(String hql) {
         text = hql.trim();
+        String group = firstQueryGroup(text);
+        HqlText analyzed = group.equals(text) ? null : new HqlText(group);
+
         String lower = lowerCaseKeepingLength(text);
         SqlText scan = SqlText.hql(lower);
         selectIndex = scan.indexOfTopLevel(SELECT + " ", 0);
@@ -82,15 +85,13 @@ final class HqlText {
             clauseOriginal = clauseOriginal.substring(prefix.length()).trim();
             clauseLower = clauseLower.substring(prefix.length()).trim();
         }
-        projectionCount = count;
-        selectClauseLower = clauseLower;
-        rootAlias = readRootAlias(lower);
+        String alias = readRootAlias(lower);
 
         // the normalized form: an unaliased root gets the alias e, and the projection is qualified with it
         String rewritten = text;
         String rewrittenClause = clauseLower;
-        String rewrittenRootAlias = rootAlias;
-        if (selectIndex >= 0 && fromIndex >= 0) {
+        String rewrittenRootAlias = alias;
+        if (analyzed == null && selectIndex >= 0 && fromIndex >= 0) {
             int afterFrom = fromIndex + FROM.length() + 2;
             int entityEnd = afterFrom;
             while (entityEnd < text.length() && !Character.isWhitespace(text.charAt(entityEnd))) entityEnd++;
@@ -103,9 +104,37 @@ final class HqlText {
                 rewrittenRootAlias = SYNTHETIC_ALIAS;
             }
         }
+        if (analyzed != null) {
+            count = analyzed.projectionCount;
+            clauseLower = analyzed.selectClauseLower;
+            alias = analyzed.rootAlias;
+            rewritten = text;
+            rewrittenClause = analyzed.normalizedClause;
+            rewrittenRootAlias = analyzed.normalizedRootAlias;
+        }
+        projectionCount = count;
+        selectClauseLower = clauseLower;
+        rootAlias = alias;
         normalized = rewritten;
         normalizedClause = rewrittenClause;
         normalizedRootAlias = rewrittenRootAlias;
+    }
+
+    /**
+     * The interior of a leading parenthesized group, unwrapped while the text starts with one. The projections
+     * and the result type are read from that group, whether a set operator, {@code limit} or anything else follows
+     * it. An unclosed group is left as written. This is not the text sent to Hibernate.
+     */
+    private static String firstQueryGroup(String text) {
+        String current = text;
+        while (current.startsWith("(")) {
+            int close = SqlText.hql(current).closingParen(0);
+            if (close < 0) {
+                return current;
+            }
+            current = current.substring(1, close).trim();
+        }
+        return current;
     }
 
     /**
@@ -156,7 +185,8 @@ final class HqlText {
      * {@code select Person from Person} becomes {@code select e from Person e}. Only the select and from of the
      * query itself are read, not those of a subquery, and what precedes the select, such as a comment or the
      * {@code with} clause of a common table expression, is kept. A query that already aliases its root, or has no
-     * select or from, is returned as it is.
+     * select or from, is returned as it is. A query that starts with a parenthesized group is returned as written:
+     * the group is read for the result type, and a later select is left unchanged.
      */
     String normalized() {
         return normalized;
