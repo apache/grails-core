@@ -99,9 +99,9 @@ class DataBindingUtils {
             }
             PersistentProperty prop = persistentEntity.getPropertyByName(propertyName)
 
-            if (prop != null && prop instanceof OneToOne && ((OneToOne) prop).isBidirectional()) {
-                Object val = source.get(key)
-                PersistentProperty otherSide = ((OneToOne) prop).getInverseSide()
+            if (prop != null && prop instanceof OneToOne && prop.isBidirectional()) {
+                Object val = source[key]
+                PersistentProperty otherSide = prop.getInverseSide()
                 if (val != null && otherSide != null) {
                     MetaClass mc = GroovySystem.getMetaClassRegistry().getMetaClass(val.getClass())
                     try {
@@ -142,11 +142,11 @@ class DataBindingUtils {
             return objectClass
         }
         final GrailsApplication application = Holders.findApplication()
-        if (application != null) {
+        if (application) {
             try {
                 final MappingContext mappingContext = application.getMappingContext()
-                final ProxyHandler proxyHandler = mappingContext != null ? mappingContext.getProxyHandler() : null
-                if (proxyHandler != null && proxyHandler.isProxy(object)) {
+                final ProxyHandler proxyHandler = mappingContext?.getProxyHandler()
+                if (proxyHandler && proxyHandler.isProxy(object)) {
                     final Object unwrapped = proxyHandler.unwrap(object)
                     if (unwrapped != null) {
                         return unwrapped.getClass()
@@ -205,21 +205,21 @@ class DataBindingUtils {
         try {
             Object constrainedProperties = metaClass.getProperty(object, 'constraintsMap')
             if (constrainedProperties instanceof Map) {
-                return (Map) constrainedProperties
+                return constrainedProperties
             }
         } catch (Exception ignored) {
         }
         try {
             Object constrainedProperties = metaClass.invokeMethod(object, 'getConstraintsMap', new Object[0])
             if (constrainedProperties instanceof Map) {
-                return (Map) constrainedProperties
+                return constrainedProperties
             }
         } catch (Exception ignored) {
         }
         try {
             Object constrainedProperties = metaClass.getProperty(object, 'constraints')
             if (constrainedProperties instanceof Map) {
-                return (Map) constrainedProperties
+                return constrainedProperties
             }
         } catch (Exception ignored) {
         }
@@ -309,12 +309,12 @@ class DataBindingUtils {
                 newObject = targetType.getDeclaredConstructor().newInstance()
             } catch (NoSuchMethodException | InvocationTargetException ex) {
                 throw new InstantiationException(
-                    'Could not instantiate class [' + targetType.getName() + ']: ' + ex.getMessage()
+                    "Could not instantiate class [${targetType.getName()}]: ${ex.getMessage()}"
                 )
             }
 
             bindObjectToDomainInstance(entity, newObject, dataBindingSource, getBindingIncludeList(newObject), Collections.emptyList(), null, false, application)
-            collectionToPopulate.add(newObject)
+            collectionToPopulate << newObject
         }
     }
 
@@ -325,7 +325,7 @@ class DataBindingUtils {
     }
 
     private static PersistentEntity findPersistentEntity(final GrailsApplication application, final String className) {
-        if (application != null) {
+        if (application) {
             try {
                 return application.getMappingContext().getPersistentEntity(className)
             } catch (GrailsConfigurationException ignored) {
@@ -450,7 +450,7 @@ class DataBindingUtils {
                 if (targetMetaClass.hasProperty(object, 'errors') != null) {
                     Object existingErrors = targetMetaClass.getProperty(object, 'errors')
                     if (existingErrors instanceof BindingResult) {
-                        clearMissingResult.addAllErrors((BindingResult) existingErrors)
+                        clearMissingResult.addAllErrors(existingErrors)
                     }
                 }
                 MissingPropertyClearer.clearMissingIncludedProperties(
@@ -475,8 +475,8 @@ class DataBindingUtils {
             BindingResult newResult = new ValidationErrors(object)
             for (Object error in bindingResult.getAllErrors()) {
                 if (error instanceof FieldError) {
-                    FieldError fieldError = (FieldError) error
-                    final boolean isBlank = BLANK.equals(fieldError.getRejectedValue())
+                    FieldError fieldError = error
+                    final boolean isBlank = BLANK == fieldError.getRejectedValue()
                     if (!isBlank) {
                         newResult.addError(fieldError)
                     }
@@ -510,16 +510,14 @@ class DataBindingUtils {
 
     protected static String[] getMessageCodes(String messageCode,
             Class objectType) {
-        String[] codes = [objectType.getName() + '.' + messageCode, messageCode] as String[]
+        String[] codes = ["${objectType.getName()}.$messageCode", messageCode] as String[]
         return codes
     }
 
     static DataBindingSourceRegistry getDataBindingSourceRegistry(GrailsApplication grailsApplication) {
         final ContextBoundBeans beans = getContextBoundBeans(grailsApplication)
-        DataBindingSourceRegistry registry = beans == null ? null : beans.getDataBindingSourceRegistry()
-        if (registry == null) {
-            registry = new DefaultDataBindingSourceRegistry()
-        }
+        DataBindingSourceRegistry registry = beans?.getDataBindingSourceRegistry()
+        registry ?= new DefaultDataBindingSourceRegistry()
 
         return registry
     }
@@ -545,7 +543,7 @@ class DataBindingUtils {
     static MimeTypeResolver getMimeTypeResolver(
             GrailsApplication grailsApplication) {
         final ContextBoundBeans beans = getContextBoundBeans(grailsApplication)
-        return beans == null ? null : beans.getMimeTypeResolver()
+        return beans?.getMimeTypeResolver()
     }
 
     static MimeType resolveMimeType(Object bindingSource, MimeTypeResolver mimeTypeResolver) {
@@ -554,12 +552,10 @@ class DataBindingUtils {
 
     private static DataBinder getGrailsWebDataBinder(final GrailsApplication grailsApplication) {
         final ContextBoundBeans beans = getContextBoundBeans(grailsApplication)
-        DataBinder dataBinder = beans == null ? null : beans.getDataBinder()
-        if (dataBinder == null) {
-            // this should really never happen in the running app as the binder
-            // should always be found in the context
-            dataBinder = new GrailsWebDataBinder(grailsApplication)
-        }
+        DataBinder dataBinder = beans?.getDataBinder()
+        // this should really never happen in the running app as the binder
+        // should always be found in the context
+        dataBinder ?= new GrailsWebDataBinder(grailsApplication)
         return dataBinder
     }
 
@@ -568,11 +564,11 @@ class DataBindingUtils {
      * @return the cached beans of the application's main context or null if there is no context to look beans up in
      */
     private static ContextBoundBeans getContextBoundBeans(final GrailsApplication grailsApplication) {
-        if (grailsApplication == null) {
+        if (!grailsApplication) {
             return null
         }
         final ApplicationContext context = grailsApplication.getMainContext()
-        if (context == null) {
+        if (!context) {
             return null
         }
         ContextBoundBeans beans = contextBoundBeans
@@ -585,10 +581,8 @@ class DataBindingUtils {
 
     @SuppressWarnings('unchecked')
     static Map convertPotentialGStrings(Map<Object, Object> args) {
-        Map newArgs = new HashMap(args.size())
-        for (Map.Entry<Object, Object> entry : args.entrySet()) {
-            newArgs.put(unwrapGString(entry.getKey()), unwrapGString(entry.getValue()))
-        }
+        Map newArgs = [:]
+        args.each { key, value -> newArgs[unwrapGString(key)] = unwrapGString(value) }
         return newArgs
     }
 
