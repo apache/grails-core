@@ -16,11 +16,10 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
+@SuppressWarnings('UnnecessarySemicolon')
 package grails.gsp.taglib.compiler;
 
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.Set;
+import groovy.transform.CompileStatic;
 
 import org.codehaus.groovy.ast.ClassNode;
 import org.codehaus.groovy.ast.CodeVisitorSupport;
@@ -42,11 +41,14 @@ import org.codehaus.groovy.ast.expr.TupleExpression;
  *
  * @since 8.0.0
  */
+// TODO(groovyism-cleanup): semicolons kept to preserve rename-similarity against the original .java (see matrei's review on #16576). Removed by the stacked groovyism-cleanup PR.
+@SuppressWarnings(['UnnecessarySemicolon'])
+@CompileStatic
 final class PageBindingCollector extends CodeVisitorSupport {
 
-    private static final String MARKUP_TAG_CALL = "invokeTag";
-    private static final String SET_TAG = "set";
-    private static final String VAR_ATTRIBUTE = "var";
+    private static final String MARKUP_TAG_CALL = 'invokeTag';
+    private static final String SET_TAG = 'set';
+    private static final String VAR_ATTRIBUTE = 'var';
 
     private final Set<String> names = new HashSet<>();
 
@@ -59,7 +61,7 @@ final class PageBindingCollector extends CodeVisitorSupport {
      */
     static Set<String> collect(ClassNode classNode) {
         PageBindingCollector collector = new PageBindingCollector();
-        for (MethodNode method : classNode.getMethods()) {
+        for (MethodNode method in classNode.getMethods()) {
             if (method.getCode() != null) {
                 method.getCode().visit(collector);
             }
@@ -68,26 +70,32 @@ final class PageBindingCollector extends CodeVisitorSupport {
     }
 
     @Override
-    public void visitMethodCallExpression(MethodCallExpression call) {
-        if (MARKUP_TAG_CALL.equals(call.getMethodAsString()) &&
-                call.getArguments() instanceof TupleExpression tuple &&
-                tuple.getExpressions().size() > 3 &&
-                tuple.getExpression(0) instanceof ConstantExpression tagName &&
-                SET_TAG.equals(tagName.getValue()) &&
-                tuple.getExpression(3) instanceof MapExpression attrs) {
-            addVariableName(attrs);
+    void visitMethodCallExpression(MethodCallExpression call) {
+        if (MARKUP_TAG_CALL == call.getMethodAsString() && call.getArguments() instanceof TupleExpression) {
+            TupleExpression tuple = (TupleExpression) call.getArguments();
+            if (tuple.getExpressions().size() > 3 && tuple.getExpression(0) instanceof ConstantExpression) {
+                ConstantExpression tagName = (ConstantExpression) tuple.getExpression(0);
+                if (SET_TAG == tagName.getValue() && tuple.getExpression(3) instanceof MapExpression) {
+                    MapExpression attrs = (MapExpression) tuple.getExpression(3);
+                    addVariableName(attrs);
+                }
+            }
         }
         super.visitMethodCallExpression(call);
     }
 
     private void addVariableName(MapExpression attrs) {
-        for (MapEntryExpression entry : attrs.getMapEntryExpressions()) {
+        for (MapEntryExpression entry in attrs.getMapEntryExpressions()) {
             Expression key = entry.getKeyExpression();
             Expression value = entry.getValueExpression();
-            if (key instanceof ConstantExpression name && VAR_ATTRIBUTE.equals(name.getValue()) &&
-                    value instanceof ConstantExpression variable && variable.getValue() != null) {
-                this.names.add(variable.getValue().toString());
+            if (key instanceof ConstantExpression && value instanceof ConstantExpression) {
+                ConstantExpression name = (ConstantExpression) key;
+                ConstantExpression variable = (ConstantExpression) value;
+                if (VAR_ATTRIBUTE == name.getValue() && variable.getValue() != null) {
+                    this.names.add(variable.getValue().toString());
+                }
             }
         }
     }
+
 }
