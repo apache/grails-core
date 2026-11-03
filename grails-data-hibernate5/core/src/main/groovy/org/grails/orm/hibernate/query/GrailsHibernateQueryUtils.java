@@ -19,7 +19,9 @@
 
 package org.grails.orm.hibernate.query;
 
+import java.util.Collections;
 import java.util.Map;
+import java.util.Set;
 
 import jakarta.persistence.LockModeType;
 import jakarta.persistence.criteria.CriteriaBuilder;
@@ -27,6 +29,7 @@ import jakarta.persistence.criteria.CriteriaQuery;
 import jakarta.persistence.criteria.Expression;
 import jakarta.persistence.criteria.From;
 import jakarta.persistence.criteria.Join;
+import jakarta.persistence.criteria.JoinType;
 import jakarta.persistence.criteria.Root;
 
 import org.hibernate.Criteria;
@@ -44,9 +47,11 @@ import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.PersistentProperty;
 import org.grails.datastore.mapping.model.types.Association;
 import org.grails.datastore.mapping.model.types.Embedded;
+import org.grails.datastore.mapping.model.types.ToOne;
 import org.grails.datastore.mapping.reflect.ClassUtils;
 import org.grails.orm.hibernate.cfg.AbstractGrailsDomainBinder;
 import org.grails.orm.hibernate.cfg.Mapping;
+import org.grails.orm.hibernate.cfg.PropertyConfig;
 
 /**
  * Utility methods for configuring Hibernate queries
@@ -150,6 +155,21 @@ public class GrailsHibernateQueryUtils {
     }
 
     /**
+     * Applies the {@code fetch: 'join'} mapping of to-one associations to a query, which Hibernate
+     * only honours on its own for {@code Criteria} and {@code get()}.
+     */
+    @SuppressWarnings("rawtypes")
+    private static void fetchJoinMappedToOneAssociations(PersistentEntity entity, Root queryRoot, Set explicitFetches) {
+        for (PersistentProperty property : entity.getPersistentProperties()) {
+            if (property instanceof ToOne && !(property instanceof Embedded) && !explicitFetches.contains(property.getName())
+                    && property.getMapping() != null && property.getMapping().getMappedForm() instanceof PropertyConfig
+                    && ((PropertyConfig) property.getMapping().getMappedForm()).getFetchMode() == FetchMode.JOIN) {
+                queryRoot.fetch(property.getName(), JoinType.LEFT);
+            }
+        }
+    }
+
+    /**
      * Populates criteria arguments for the given target class and arguments map
      *
      * @param entity The {@link org.grails.datastore.mapping.model.PersistentEntity} instance
@@ -179,6 +199,9 @@ public class GrailsHibernateQueryUtils {
                     queryRoot.join(associationName);
                 }
             }
+        }
+        if (useDefaultMapping && entity.getJavaClass().equals(query.getResultType())) {
+            fetchJoinMappedToOneAssociations(entity, queryRoot, fetchObj instanceof Map ? ((Map) fetchObj).keySet() : Collections.emptySet());
         }
 
         final Object sortObj = argMap.get(DynamicFinder.ARGUMENT_SORT);

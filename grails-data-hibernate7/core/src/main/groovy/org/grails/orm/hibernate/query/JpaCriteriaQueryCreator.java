@@ -17,9 +17,11 @@ package org.grails.orm.hibernate.query;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 
 import jakarta.persistence.criteria.AbstractQuery;
 import jakarta.persistence.criteria.CriteriaBuilder;
@@ -29,6 +31,7 @@ import jakarta.persistence.criteria.JoinType;
 import jakarta.persistence.criteria.ParameterExpression;
 import jakarta.persistence.criteria.Root;
 
+import org.hibernate.FetchMode;
 import org.hibernate.query.criteria.HibernateCriteriaBuilder;
 import org.hibernate.query.criteria.JpaCriteriaQuery;
 import org.hibernate.query.criteria.JpaSubQuery;
@@ -38,8 +41,12 @@ import org.springframework.core.convert.ConversionService;
 import grails.gorm.DetachedCriteria;
 import org.grails.datastore.gorm.query.criteria.DetachedAssociationCriteria;
 import org.grails.datastore.mapping.model.PersistentEntity;
+import org.grails.datastore.mapping.model.PersistentProperty;
+import org.grails.datastore.mapping.model.types.Embedded;
+import org.grails.datastore.mapping.model.types.ToOne;
 import org.grails.datastore.mapping.query.Query;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty;
 
 /**
  * A class that creates a JPA {@link CriteriaQuery} from a GORM {@link Query} and {@link DetachedCriteria}.
@@ -143,6 +150,16 @@ public class JpaCriteriaQueryCreator<T> {
             return;
         }
         Map<String, ?> joinTypes = detachedCriteria.getJoinTypes();
+        Set<String> requestedFetches = new HashSet<>(hibernateQuery.getFetchJoinPaths());
+        for (PersistentProperty<?> property : entity.getPersistentProperties()) {
+            // The fetch: 'join' mapping of a to-one association applies to every full-entity query
+            if (property instanceof ToOne && !(property instanceof Embedded) && !requestedFetches.contains(property.getName())
+                    && property instanceof HibernatePersistentProperty hibernateProperty
+                    && hibernateProperty.getHibernateMappedForm() != null
+                    && hibernateProperty.getHibernateMappedForm().getFetchMode() == FetchMode.JOIN) {
+                root.fetch(property.getName(), JoinType.LEFT);
+            }
+        }
         for (String fetchPath : hibernateQuery.getFetchJoinPaths()) {
             if (fetchPath == null || fetchPath.indexOf('.') >= 0) {
                 continue;

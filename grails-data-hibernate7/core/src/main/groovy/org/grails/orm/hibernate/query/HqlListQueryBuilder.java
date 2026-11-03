@@ -22,8 +22,14 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+
+import org.hibernate.FetchMode;
 
 import org.grails.datastore.gorm.finders.DynamicFinder;
+import org.grails.datastore.mapping.model.PersistentProperty;
+import org.grails.datastore.mapping.model.types.Embedded;
+import org.grails.datastore.mapping.model.types.ToOne;
 import org.grails.datastore.mapping.reflect.NameUtils;
 import org.grails.orm.hibernate.cfg.HibernateMappingContext;
 import org.grails.orm.hibernate.cfg.Mapping;
@@ -51,6 +57,8 @@ public class HqlListQueryBuilder {
         hql.append(entity.getName()).append(" e");
 
         Object fetchObj = params.get(HibernateQueryArgument.FETCH.value());
+        Set<String> explicitFetches = fetchObj instanceof Map ? ((Map<String, Object>) fetchObj).keySet() : Collections.emptySet();
+        appendMappedToOneFetchJoins(hql, explicitFetches);
         if (fetchObj instanceof Map) {
             Map<String, Object> fetchMap = (Map<String, Object>) fetchObj;
             fetchMap.forEach((prop, type) -> {
@@ -67,6 +75,21 @@ public class HqlListQueryBuilder {
         }
 
         return hql.toString();
+    }
+
+    /**
+     * HQL ignores the {@code fetch: 'join'} mapping of a to-one association, so it is applied here as a
+     * left fetch join to avoid one extra select per row.
+     */
+    private void appendMappedToOneFetchJoins(StringBuilder hql, Set<String> explicitFetches) {
+        for (PersistentProperty<?> property : entity.getPersistentProperties()) {
+            if (property instanceof ToOne && !(property instanceof Embedded) && !explicitFetches.contains(property.getName())
+                    && property instanceof HibernatePersistentProperty hibernateProperty
+                    && hibernateProperty.getHibernateMappedForm() != null
+                    && hibernateProperty.getHibernateMappedForm().getFetchMode() == FetchMode.JOIN) {
+                hql.append(" left join fetch e.").append(property.getName());
+            }
+        }
     }
 
     public String buildCountHql() {
