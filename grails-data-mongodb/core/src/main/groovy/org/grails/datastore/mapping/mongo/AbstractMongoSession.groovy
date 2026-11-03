@@ -74,7 +74,7 @@ abstract class AbstractMongoSession extends AbstractSession<MongoClient> {
     AbstractMongoSession(MongoDatastore datastore, MappingContext mappingContext, ApplicationEventPublisher publisher, boolean stateless) {
         super(datastore, mappingContext, publisher, stateless)
         mongoDatastore = datastore
-        this.defaultDatabase = getDocumentMappingContext().getDefaultDatabaseName()
+        defaultDatabase = getDocumentMappingContext().getDefaultDatabaseName()
     }
 
     @Override
@@ -90,7 +90,7 @@ abstract class AbstractMongoSession extends AbstractSession<MongoClient> {
 
     @Override
     void flush() {
-        flush(this.getWriteConcern())
+        flush(getWriteConcern())
     }
 
     abstract void flush(WriteConcern writeConcern)
@@ -131,7 +131,7 @@ abstract class AbstractMongoSession extends AbstractSession<MongoClient> {
     }
 
     WriteConcern getDeclaredWriteConcern(PersistentEntity entity) {
-        return getDeclaredWriteConcern(this.writeConcern, entity)
+        return getDeclaredWriteConcern(writeConcern, entity)
     }
 
     private WriteConcern getDeclaredWriteConcern(WriteConcern defaultConcern, PersistentEntity entity) {
@@ -233,7 +233,7 @@ abstract class AbstractMongoSession extends AbstractSession<MongoClient> {
      */
     @PackageScope
     void clearClientSession() {
-        this.clientSession = null
+        clientSession = null
     }
 
     /**
@@ -292,7 +292,7 @@ abstract class AbstractMongoSession extends AbstractSession<MongoClient> {
                 session.close()
                 throw e
             }
-            this.clientSession = session
+            clientSession = session
             return new MongoTransaction(this, session, readOnly)
         }
         if (readOnly && getDatastore().isTransactionsEnabled()) {
@@ -360,7 +360,7 @@ abstract class AbstractMongoSession extends AbstractSession<MongoClient> {
     abstract <T> T decode(Class<T> type, Object nativeObject)
 
     protected void addPostFlushOperations(List<PendingOperation> cascadeOperations) {
-        for (PendingOperation cascadeOperation : cascadeOperations) {
+        for (PendingOperation cascadeOperation in cascadeOperations) {
             addPostFlushOperation(cascadeOperation)
         }
     }

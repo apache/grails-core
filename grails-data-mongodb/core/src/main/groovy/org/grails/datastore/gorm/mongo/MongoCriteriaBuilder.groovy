@@ -274,7 +274,7 @@ class MongoCriteriaBuilder extends CriteriaBuilder {
     }
 
     Criteria arguments(Map arguments) {
-        ((QueryArgumentsAware) this.query).setArguments(arguments)
+        ((QueryArgumentsAware) query).arguments = arguments
         return this
     }
 

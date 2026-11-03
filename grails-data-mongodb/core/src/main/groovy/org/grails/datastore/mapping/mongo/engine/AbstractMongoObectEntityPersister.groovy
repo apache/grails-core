@@ -125,7 +125,7 @@ abstract class AbstractMongoObectEntityPersister<T> extends NativeEntryEntityPer
         T cached = (T) ((SessionImplementor<?>) getSession()).getCachedEntry(
                 entity, (Serializable) entityAccess.getIdentifier(), true)
 
-        return !dbo.equals(cached)
+        return dbo != cached
     }
 
     @Override
@@ -194,9 +194,9 @@ abstract class AbstractMongoObectEntityPersister<T> extends NativeEntryEntityPer
 
     @Override
     protected void setEmbeddedCollectionKeys(Association association, EntityAccess embeddedEntityAccess, T embeddedEntry, List<Serializable> keys) {
-        List dbRefs = new ArrayList()
+        List dbRefs = []
         boolean reference = isReference(association)
-        for (Object foreignKey : keys) {
+        for (Object foreignKey in keys) {
             // Same as formulateDatabaseReference: the embedded collection's references must
             // carry the target's stored _id type.
             Object coerced = MongoIdCoercion.coerceIdToStoredType(foreignKey, association.getAssociatedEntity())
@@ -225,10 +225,10 @@ abstract class AbstractMongoObectEntityPersister<T> extends NativeEntryEntityPer
 
         final ValueRetrievalStrategy<T> valueRetrievalStrategy = getValueRetrievalStrategy()
         Object entry = valueRetrievalStrategy.getValue(nativeEntry, getPropertyKey(association))
-        List keys = new ArrayList()
+        List keys = []
         if (entry instanceof List) {
             List entries = (List) entry
-            for (Object o : entries) {
+            for (Object o in entries) {
                 if (o instanceof DBRef) {
                     DBRef dbref = (DBRef) o
                     keys.add(dbref.getId())
@@ -249,7 +249,7 @@ abstract class AbstractMongoObectEntityPersister<T> extends NativeEntryEntityPer
 
         PersistentProperty identity = persistentEntity.getIdentity()
         if (keys instanceof List) {
-            List actualKeys = new ArrayList()
+            List actualKeys = []
             Iterator iterator = keys.iterator()
             while (iterator.hasNext()) {
                 Object key = iterator.next()
@@ -259,7 +259,7 @@ abstract class AbstractMongoObectEntityPersister<T> extends NativeEntryEntityPer
             query.in(identity.getName(), actualKeys)
         } else {
             List<Serializable> keyList = new ArrayList<>()
-            for (Serializable key : keys) {
+            for (Serializable key in keys) {
                 keyList.add(key)
             }
             query.in(identity.getName(), keyList)
@@ -267,8 +267,8 @@ abstract class AbstractMongoObectEntityPersister<T> extends NativeEntryEntityPer
 
         List<Object> entityResults = new ArrayList<>()
         Iterator<Serializable> keyIterator = keys.iterator()
-        Map<Serializable, Object> resultMap = new HashMap<>()
-        for (Object o : query.list()) {
+        Map<Serializable, Object> resultMap = [:]
+        for (Object o in query.list()) {
             Object result = o
             if (isEmbeddedEntry(result)) {
                 final ValueRetrievalStrategy<T> valueRetrievalStrategy = getValueRetrievalStrategy()
@@ -379,9 +379,9 @@ abstract class AbstractMongoObectEntityPersister<T> extends NativeEntryEntityPer
     protected void setManyToMany(PersistentEntity persistentEntity, Object obj,
                                  T nativeEntry, ManyToMany manyToMany, Collection associatedObjects,
                                  Map<Association, List<Serializable>> toManyKeys) {
-        List ids = new ArrayList()
+        List ids = []
         if (associatedObjects != null) {
-            for (Object o : associatedObjects) {
+            for (Object o in associatedObjects) {
                 if (o == null) {
                     ids.add(null)
                 } else {
@@ -442,8 +442,8 @@ abstract class AbstractMongoObectEntityPersister<T> extends NativeEntryEntityPer
             // if the association is a unidirectional one-to-many we store the keys
             // embedded in the owning entity, otherwise we use a foreign key
             if (!association.isBidirectional()) {
-                List dbRefs = new ArrayList()
-                for (Object foreignKey : foreignKeys) {
+                List dbRefs = []
+                for (Object foreignKey in foreignKeys) {
                     // Same as formulateDatabaseReference: the stored reference must carry the
                     // target's _id type, or raw joins and DBRef consumers cannot match it.
                     Object coerced = MongoIdCoercion.coerceIdToStoredType(
@@ -502,8 +502,8 @@ abstract class AbstractMongoObectEntityPersister<T> extends NativeEntryEntityPer
         }
 
         private List extractIdsFromDbRefs(List indexedList) {
-            List resolvedDbRefs = new ArrayList()
-            for (Object indexedAssociation : indexedList) {
+            List resolvedDbRefs = []
+            for (Object indexedAssociation in indexedList) {
                 resolvedDbRefs.add(((DBRef) indexedAssociation).getId())
             }
             return resolvedDbRefs

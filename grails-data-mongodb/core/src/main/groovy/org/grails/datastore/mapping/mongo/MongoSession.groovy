@@ -114,15 +114,15 @@ class MongoSession extends AbstractMongoSession {
                 return
             }
 
-            Map<String, Integer> numberOfOptimisticUpdates = new LinkedHashMap<>()
-            Map<String, Integer> numberOfPessimisticUpdates = new LinkedHashMap<>()
+            Map<String, Integer> numberOfOptimisticUpdates = [:]
+            Map<String, Integer> numberOfPessimisticUpdates = [:]
 
-            Map<PersistentEntity, List<WriteModel<Document>>> writeModels = new LinkedHashMap<>()
-            for (PersistentEntity persistentEntity : pendingInserts.keySet()) {
+            Map<PersistentEntity, List<WriteModel<Document>>> writeModels = [:]
+            for (PersistentEntity persistentEntity in pendingInserts.keySet()) {
                 final Collection<PendingInsert> inserts = pendingInserts.get(persistentEntity)
                 if (inserts != null && !inserts.isEmpty()) {
                     List<WriteModel<Document>> entityWrites = getWriteModelsForEntity(persistentEntity, writeModels)
-                    for (PendingInsert insert : inserts) {
+                    for (PendingInsert insert in inserts) {
                         insert.run()
 
                         if (insert.isVetoed()) {
@@ -137,7 +137,7 @@ class MongoSession extends AbstractMongoSession {
                 }
             }
 
-            for (PersistentEntity persistentEntity : pendingUpdates.keySet()) {
+            for (PersistentEntity persistentEntity in pendingUpdates.keySet()) {
                 final String name = persistentEntity.isRoot() ? persistentEntity.getName() : persistentEntity.getRootEntity().getName()
                 int numberOfOptimistic = numberOfOptimisticUpdates.containsKey(name) ? numberOfOptimisticUpdates.get(name) : 0
                 int numberOfPessimistic = numberOfPessimisticUpdates.containsKey(name) ? numberOfPessimisticUpdates.get(name) : 0
@@ -145,7 +145,7 @@ class MongoSession extends AbstractMongoSession {
                 final Collection<PendingUpdate> updates = pendingUpdates.get(persistentEntity)
                 if (updates != null && !updates.isEmpty()) {
                     List<WriteModel<Document>> entityWrites = getWriteModelsForEntity(persistentEntity, writeModels)
-                    for (PendingUpdate update : updates) {
+                    for (PendingUpdate update in updates) {
                         update.run()
 
                         if (update.isVetoed()) {
@@ -184,12 +184,12 @@ class MongoSession extends AbstractMongoSession {
                 numberOfPessimisticUpdates.put(name, numberOfPessimistic)
             }
 
-            for (PersistentEntity persistentEntity : pendingDeletes.keySet()) {
+            for (PersistentEntity persistentEntity in pendingDeletes.keySet()) {
                 final Collection<PendingDelete> deletes = pendingDeletes.get(persistentEntity)
                 if (deletes != null && !deletes.isEmpty()) {
                     List<WriteModel<Document>> entityWrites = getWriteModelsForEntity(persistentEntity, writeModels)
                     List<Object> nativeKeys = new ArrayList<>()
-                    for (PendingDelete delete : deletes) {
+                    for (PendingDelete delete in deletes) {
                         delete.run()
 
                         if (delete.isVetoed()) {
@@ -213,7 +213,7 @@ class MongoSession extends AbstractMongoSession {
                 }
             }
 
-            for (PersistentEntity persistentEntity : writeModels.keySet()) {
+            for (PersistentEntity persistentEntity in writeModels.keySet()) {
                 com.mongodb.client.MongoCollection<Document> collection = getCollection(persistentEntity)
                 final WriteConcern wc = getWriteConcern()
                 if (wc != null) {
@@ -240,7 +240,7 @@ class MongoSession extends AbstractMongoSession {
                 }
             }
 
-            for (Runnable postFlushOperation : postFlushOperations) {
+            for (Runnable postFlushOperation in postFlushOperations) {
                 postFlushOperation.run()
             }
         } finally {
@@ -255,13 +255,13 @@ class MongoSession extends AbstractMongoSession {
     protected Document createSetAndUnsetDoc(Document updateDoc) {
         final Set<String> keys = updateDoc.keySet()
         final Document unsets = new Document()
-        for (String key : keys) {
+        for (String key in keys) {
             final Object v = updateDoc.get(key)
             if (v == null) {
                 unsets.put(key, '')
             }
         }
-        for (String key : unsets.keySet()) {
+        for (String key in unsets.keySet()) {
             updateDoc.remove(key)
         }
         Document setAndUnsetDoc = new Document(MONGO_SET_OPERATOR, updateDoc)
@@ -296,14 +296,14 @@ class MongoSession extends AbstractMongoSession {
     void delete(Iterable objects) {
         final Map<PersistentEntity, List> toDelete = getDeleteMap(objects)
 
-        for (PersistentEntity persistentEntity : toDelete.keySet()) {
+        for (PersistentEntity persistentEntity in toDelete.keySet()) {
             final PersistentEntity entity = persistentEntity
             final List objectsToDelete = toDelete.get(entity)
             final MongoQuery query = new MongoQuery(this, entity)
             // Filters on the literal "_id" field, not the logical identity name, so the
             // criterion preprocessing in MongoQuery does not recognise it as an id.
             final List<Object> deleteKeys = new ArrayList<Object>()
-            for (Object k : objectsToDelete) {
+            for (Object k in objectsToDelete) {
                 deleteKeys.add(MongoIdCoercion.coerceIdToStoredType(k, entity))
             }
             query.in(MongoEntityPersister.MONGO_ID_FIELD, deleteKeys)
@@ -312,7 +312,7 @@ class MongoSession extends AbstractMongoSession {
             addPendingDelete(new PendingDeleteAdapter<Object, Object>(entity, mongoQuery, null) {
                 @Override
                 void run() {
-                    for (Object o : objectsToDelete) {
+                    for (Object o in objectsToDelete) {
                         if (!persister.cancelDelete(entity, createEntityAccess(entity, o))) {
                             clear(o)
                         }
@@ -324,8 +324,8 @@ class MongoSession extends AbstractMongoSession {
 
     protected Map<PersistentEntity, List> getDeleteMap(Iterable objects) {
         // sort the objects into sets by Persister, in case the objects are of different types.
-        Map<PersistentEntity, List> toDelete = new HashMap<>()
-        for (Object object : objects) {
+        Map<PersistentEntity, List> toDelete = [:]
+        for (Object object in objects) {
             if (object == null) {
                 continue
             }
@@ -335,7 +335,7 @@ class MongoSession extends AbstractMongoSession {
             }
             List listForPersister = toDelete.get(p)
             if (listForPersister == null) {
-                listForPersister = new ArrayList()
+                listForPersister = []
                 toDelete.put(p, listForPersister)
             }
             Serializable id = getObjectIdentifier(object)
@@ -513,7 +513,7 @@ class MongoSession extends AbstractMongoSession {
         MongoQuery mongoQuery = new MongoQuery(this, entity)
         List<Query.Criterion> criteriaList = criteria.getCriteria()
 
-        for (Query.Criterion c : criteriaList) {
+        for (Query.Criterion c in criteriaList) {
             mongoQuery.add(c)
         }
 

@@ -87,7 +87,7 @@ class MongoEntityPersister extends AbstractMongoObectEntityPersister<Document> {
             if (embeddedInstances instanceof Document) {
                 Map instances = new HashMap()
                 Document embedded = (Document) embeddedInstances
-                for (String key : embedded.keySet()) {
+                for (String key in embedded.keySet()) {
                     Object o = embedded.get(key)
                     if (o instanceof Document) {
                         Document nativeEntry = (Document) o
@@ -105,7 +105,7 @@ class MongoEntityPersister extends AbstractMongoObectEntityPersister<Document> {
 
             if (embeddedInstances instanceof Collection) {
                 Collection coll = (Collection) embeddedInstances
-                for (Object dbo : coll) {
+                for (Object dbo in coll) {
                     if (dbo instanceof Document) {
                         Document nativeEntry = (Document) dbo
                         Object instance =
@@ -240,21 +240,21 @@ class MongoEntityPersister extends AbstractMongoObectEntityPersister<Document> {
         } else if (value.getClass().isArray()) {
             Object[] array = (Object[]) value
             List<Object> nativeColl = new ArrayList<Object>(array.length)
-            for (Object item : array) {
+            for (Object item in array) {
                 nativeColl.add(getSimpleNativePropertyValue(item, mappingContext))
             }
             nativeValue = nativeColl
         } else if (value instanceof Collection) {
             Collection existingColl = (Collection) value
             List<Object> nativeColl = new ArrayList<Object>(existingColl.size())
-            for (Object item : existingColl) {
+            for (Object item in existingColl) {
                 nativeColl.add(getSimpleNativePropertyValue(item, mappingContext))
             }
             nativeValue = nativeColl
         } else if (value instanceof Map) {
             Map<String, Object> existingMap = (Map) value
-            Map<String, Object> newMap = new LinkedHashMap<>()
-            for (Map.Entry<String, Object> entry : existingMap.entrySet()) {
+            Map<String, Object> newMap = [:]
+            for (Map.Entry<String, Object> entry in existingMap.entrySet()) {
                 newMap.put(entry.getKey(), getSimpleNativePropertyValue(entry.getValue(), mappingContext))
             }
             nativeValue = newMap
@@ -301,18 +301,18 @@ class MongoEntityPersister extends AbstractMongoObectEntityPersister<Document> {
     }
 
     private Document removeNullEntries(Document nativeEntry) {
-        for (String key : new HashSet<String>(nativeEntry.keySet())) {
+        for (String key in new HashSet<String>(nativeEntry.keySet())) {
             Object o = nativeEntry.get(key)
             if (o == null) {
                 nativeEntry.remove(key)
             } else if (o instanceof Object[]) {
-                for (Object o2 : (Object[]) o) {
+                for (Object o2 in (Object[]) o) {
                     if (o2 instanceof Document) {
                         removeNullEntries((Document) o2)
                     }
                 }
             } else if (o instanceof List) {
-                for (Object o2 : (List) o) {
+                for (Object o2 in (List) o) {
                     if (o2 instanceof Document) {
                         removeNullEntries((Document) o2)
                     }

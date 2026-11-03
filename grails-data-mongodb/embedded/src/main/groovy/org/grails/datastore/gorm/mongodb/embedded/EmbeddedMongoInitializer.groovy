@@ -190,7 +190,7 @@ class EmbeddedMongoInitializer implements ApplicationContextInitializer<Configur
      */
     @PackageScope
     static List<EmbeddedMongoBackend> defaultBackends(ClassLoader classLoader) {
-        List<EmbeddedMongoBackend> backends = new ArrayList<>()
+        List<EmbeddedMongoBackend> backends = []
         if (ClassUtils.isPresent(FLAPDOODLE_MONGOD_CLASS, classLoader)) {
             backends.add(new FlapdoodleMongoBackend())
         }
@@ -266,8 +266,8 @@ class EmbeddedMongoInitializer implements ApplicationContextInitializer<Configur
             url = start(backend, settings, database)
         }
 
-        Map<String, Object> published = new HashMap<>()
-        for (String propertyName : propertyNames) {
+        Map<String, Object> published = [:]
+        for (String propertyName in propertyNames) {
             published.put(propertyName, url)
         }
         environment.getPropertySources().addFirst(new MapPropertySource(PROPERTY_SOURCE_NAME, published))
@@ -381,7 +381,7 @@ class EmbeddedMongoInitializer implements ApplicationContextInitializer<Configur
     private EmbeddedMongoBackend selectBackend(ConfigurableEnvironment environment) {
         String requested = environment.getProperty(BACKEND)
         if (requested != null && !requested.isEmpty()) {
-            for (EmbeddedMongoBackend backend : this.backends) {
+            for (EmbeddedMongoBackend backend in this.backends) {
                 if (backend.getName() == requested) {
                     if (!backend.isAvailable()) {
                         throw new IllegalStateException(BACKEND + '=' + requested +
@@ -401,7 +401,7 @@ class EmbeddedMongoInitializer implements ApplicationContextInitializer<Configur
                     '.')
         }
 
-        for (EmbeddedMongoBackend backend : this.backends) {
+        for (EmbeddedMongoBackend backend in this.backends) {
             if (backend.isAvailable()) {
                 return backend
             }
@@ -413,8 +413,8 @@ class EmbeddedMongoInitializer implements ApplicationContextInitializer<Configur
     }
 
     private List<String> availableNames() {
-        List<String> names = new ArrayList<>()
-        for (EmbeddedMongoBackend backend : this.backends) {
+        List<String> names = []
+        for (EmbeddedMongoBackend backend in this.backends) {
             if (backend.isAvailable()) {
                 names.add(backend.getName())
             }
@@ -423,8 +423,8 @@ class EmbeddedMongoInitializer implements ApplicationContextInitializer<Configur
     }
 
     private Set<String> propertyNames(ConfigurableEnvironment environment) {
-        Set<String> propertyNames = new LinkedHashSet<>()
-        for (String propertyName : environment.getProperty(PROPERTY_NAMES, DEFAULT_PROPERTY_NAME).split(',')) {
+        Set<String> propertyNames = [] as Set
+        for (String propertyName in environment.getProperty(PROPERTY_NAMES, DEFAULT_PROPERTY_NAME).split(',')) {
             String trimmed = propertyName.trim()
             if (!trimmed.isEmpty()) {
                 propertyNames.add(trimmed)
@@ -444,7 +444,7 @@ class EmbeddedMongoInitializer implements ApplicationContextInitializer<Configur
      * them rather than by which happened to be looked at first.</p>
      */
     private Matcher firstAskingForEmbedded(ConfigurableEnvironment environment, Set<String> propertyNames) {
-        for (String propertyName : propertyNames) {
+        for (String propertyName in propertyNames) {
             String url = environment.getProperty(propertyName)
             if (url != null) {
                 Matcher matcher = EMBEDDED_URL.matcher(url.trim())
@@ -486,7 +486,7 @@ class EmbeddedMongoInitializer implements ApplicationContextInitializer<Configur
     private static void stopEverythingAtExit() {
         if (SHUTDOWN_HOOK_ADDED.compareAndSet(false, true)) {
             Runtime.getRuntime().addShutdownHook(new Thread({ ->
-                for (StartedServer started : STARTED.values()) {
+                for (StartedServer started in STARTED.values()) {
                     started.running().stop()
                 }
             } as Runnable))

@@ -14,11 +14,10 @@
  * limitations under the License.
  */
 
-@SuppressWarnings('UnnecessarySemicolon')
-package org.grails.datastore.bson.json;
+package org.grails.datastore.bson.json
 
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
+import java.text.DateFormat
+import java.text.SimpleDateFormat
 
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
@@ -42,114 +41,112 @@ import org.bson.types.ObjectId
  * @since 6.0
  */
 @CompileStatic
-// TODO(groovyism-cleanup): semicolons kept to preserve rename-similarity against the original .java (see matrei's review on #16576). Removed by the stacked groovyism-cleanup PR.
-@SuppressWarnings(['UnnecessarySemicolon'])
 class JsonWriter extends AbstractBsonWriter {
 
-    public static final String ISO_8601 = "yyyy-MM-dd'T'HH:mmZ";
-    public static final TimeZone UTC = TimeZone.getTimeZone('UTC');
+    public static final String ISO_8601 = "yyyy-MM-dd'T'HH:mmZ"
+    public static final TimeZone UTC = TimeZone.getTimeZone('UTC')
 
-    protected final Writer writer;
-    protected final JsonWriterSettings settings;
+    protected final Writer writer
+    protected final JsonWriterSettings settings
 
     JsonWriter(Writer target) {
-        this(target, JsonWriterSettings.builder().build());
+        this(target, JsonWriterSettings.builder().build())
     }
 
     JsonWriter(Writer target, JsonWriterSettings settings) {
-        super(settings);
-        this.writer = target;
-        this.settings = settings;
-        setContext(new Context(null, BsonContextType.TOP_LEVEL, ''));
+        super(settings)
+        this.writer = target
+        this.settings = settings
+        setContext(new Context(null, BsonContextType.TOP_LEVEL, ''))
     }
 
     @Override
     protected void doWriteStartDocument() {
         try {
-            if (getState() == State.VALUE || getState() == State.SCOPE_DOCUMENT) {
-                writeNameHelper(getName());
+            if (state == State.VALUE || state == State.SCOPE_DOCUMENT) {
+                writeNameHelper(name)
             }
-            BsonContextType contextType = (getState() == State.SCOPE_DOCUMENT) ? BsonContextType.SCOPE_DOCUMENT : BsonContextType.DOCUMENT;
-            setContext(new Context(getContext(), contextType, settings.getIndentCharacters()));
+            BsonContextType contextType = (state == State.SCOPE_DOCUMENT) ? BsonContextType.SCOPE_DOCUMENT : BsonContextType.DOCUMENT
+            context = new Context(context, contextType, settings.indentCharacters)
 
-            writer.write(JsonToken.OPEN_BRACE);
+            writer.write(JsonToken.OPEN_BRACE)
         } catch (IOException e) {
-            throwBsonException(e);
+            throwBsonException(e)
         }
     }
 
     @Override
     protected void doWriteEndDocument() {
         try {
-            writer.write(JsonToken.CLOSE_BRACE);
-            if (getContext().getContextType() == BsonContextType.SCOPE_DOCUMENT) {
-                setContext(getContext().getParentContext());
-                writeEndDocument();
+            writer.write(JsonToken.CLOSE_BRACE)
+            if (context.contextType == BsonContextType.SCOPE_DOCUMENT) {
+                context = context.parentContext
+                writeEndDocument()
             } else {
-                setContext(getContext().getParentContext());
+                context = context.parentContext
             }
         } catch (IOException e) {
-            throwBsonException(e);
+            throwBsonException(e)
         }
     }
 
     @Override
     protected void doWriteStartArray() {
         try {
-            writeNameHelper(getName());
-            writer.write(JsonToken.OPEN_BRACKET);
-            setContext(new Context(getContext(), BsonContextType.ARRAY, settings.getIndentCharacters()));
+            writeNameHelper(name)
+            writer.write(JsonToken.OPEN_BRACKET)
+            context = new Context(context, BsonContextType.ARRAY, settings.indentCharacters)
         } catch (IOException e) {
-            throwBsonException(e);
+            throwBsonException(e)
         }
     }
 
     @Override
     protected void doWriteEndArray() {
         try {
-            writer.write(JsonToken.CLOSE_BRACKET);
+            writer.write(JsonToken.CLOSE_BRACKET)
         } catch (IOException e) {
-            throwBsonException(e);
+            throwBsonException(e)
         }
-        setContext(getContext().getParentContext());
+        context = context.parentContext
     }
 
     @Override
     protected void doWriteBinaryData(BsonBinary value) {
         try {
-            writeNameHelper(getName());
-            byte[] data = value.getData();
-            writer.write(Base64.getEncoder().encodeToString(data));
-            setState(getNextState());
+            writeNameHelper(name)
+            byte[] data = value.data
+            writer.write(Base64.getEncoder().encodeToString(data))
+            state = nextState
         } catch (IOException e) {
-            throwBsonException(e);
+            throwBsonException(e)
         }
     }
 
     @Override
     protected void doWriteBoolean(boolean value) {
         try {
-            writeNameHelper(getName());
-            writer.write(value ? JsonToken.BOOLEAN_TRUE : JsonToken.BOOLEAN_FALSE);
-            setState(getNextState());
+            writeNameHelper(name)
+            writer.write(value ? JsonToken.BOOLEAN_TRUE : JsonToken.BOOLEAN_FALSE)
+            state = nextState
         } catch (IOException e) {
-            throwBsonException(e);
+            throwBsonException(e)
         }
     }
 
     @Override
     protected void doWriteDateTime(long value) {
-        DateFormat df = new SimpleDateFormat(ISO_8601);
-        df.setTimeZone(UTC);
+        DateFormat df = new SimpleDateFormat(ISO_8601)
+        df.timeZone = UTC
         try {
-            writeNameHelper(getName());
-            writer.write(JsonToken.QUOTE);
-            Date date = new Date(value);
-            writer.write(df.format(date));
-            writer.write(JsonToken.QUOTE);
-            setState(getNextState());
+            writeNameHelper(name)
+            writer.write(JsonToken.QUOTE)
+            Date date = new Date(value)
+            writer.write(df.format(date))
+            writer.write(JsonToken.QUOTE)
+            state = nextState
         } catch (IOException e) {
-            throwBsonException(e);
+            throwBsonException(e)
         }
     }
 
@@ -161,49 +158,49 @@ class JsonWriter extends AbstractBsonWriter {
     @Override
     protected void doWriteDouble(double value) {
         try {
-            writeNameHelper(getName());
-            writer.write(Double.toString(value));
-            setState(getNextState());
+            writeNameHelper(name)
+            writer.write(Double.toString(value))
+            state = nextState
         } catch (IOException e) {
-            throwBsonException(e);
+            throwBsonException(e)
         }
     }
 
     @Override
     protected void doWriteInt32(int value) {
         try {
-            writeNameHelper(getName());
-            writer.write(Integer.toString(value));
+            writeNameHelper(name)
+            writer.write(Integer.toString(value))
         } catch (IOException e) {
-            throwBsonException(e);
+            throwBsonException(e)
         }
     }
 
     @Override
     protected void doWriteInt64(long value) {
         try {
-            writeNameHelper(getName());
+            writeNameHelper(name)
             if (value >= Integer.MIN_VALUE && value <= Integer.MAX_VALUE) {
-                writer.write(Long.toString(value));
+                writer.write(Long.toString(value))
             } else {
-                writer.write(JsonToken.QUOTE);
-                writer.write(Long.toString(value));
-                writer.write(JsonToken.QUOTE);
+                writer.write(JsonToken.QUOTE)
+                writer.write(Long.toString(value))
+                writer.write(JsonToken.QUOTE)
             }
         } catch (IOException e) {
-            throwBsonException(e);
+            throwBsonException(e)
         }
     }
 
     @Override
     protected void doWriteDecimal128(Decimal128 value) {
         try {
-            writeNameHelper(getName());
-            writer.write(JsonToken.QUOTE);
-            writer.write(value.toString());
-            writer.write(JsonToken.QUOTE);
+            writeNameHelper(name)
+            writer.write(JsonToken.QUOTE)
+            writer.write(value.toString())
+            writer.write(JsonToken.QUOTE)
         } catch (IOException e) {
-            throwBsonException(e);
+            throwBsonException(e)
         }
     }
 
@@ -230,55 +227,55 @@ class JsonWriter extends AbstractBsonWriter {
     @Override
     protected void doWriteNull() {
         try {
-            writeNameHelper(getName());
-            writer.write(JsonToken.NULL);
+            writeNameHelper(name)
+            writer.write(JsonToken.NULL)
         } catch (IOException e) {
-            throwBsonException(e);
+            throwBsonException(e)
         }
     }
 
     @Override
     protected void doWriteObjectId(ObjectId value) {
         try {
-            writeNameHelper(getName());
-            writer.write(value.toString());
+            writeNameHelper(name)
+            writer.write(value.toString())
         } catch (IOException e) {
-            throwBsonException(e);
+            throwBsonException(e)
         }
     }
 
     @Override
     protected void doWriteRegularExpression(BsonRegularExpression regularExpression) {
         try {
-            switch (settings.getOutputMode()) {
+            switch (settings.outputMode) {
                 case JsonMode.STRICT:
-                    writeStartDocument();
-                    writeString('$regex', regularExpression.getPattern());
-                    writeString('$options', regularExpression.getOptions());
-                    writeEndDocument();
-                    break;
+                    writeStartDocument()
+                    writeString('$regex', regularExpression.pattern)
+                    writeString('$options', regularExpression.options)
+                    writeEndDocument()
+                    break
                 default:
-                    writeNameHelper(getName());
-                    writer.write(JsonToken.FORWARD_SLASH);
-                    String escaped = (regularExpression.getPattern() == '') ? '(?:)' : regularExpression.getPattern()
-                            .replace('/', '\\/');
-                    writer.write(escaped);
-                    writer.write(JsonToken.FORWARD_SLASH);
-                    writer.write(regularExpression.getOptions());
-                    break;
+                    writeNameHelper(name)
+                    writer.write(JsonToken.FORWARD_SLASH)
+                    String escaped = (regularExpression.pattern == '') ? '(?:)' : regularExpression.pattern
+                            .replace('/', '\\/')
+                    writer.write(escaped)
+                    writer.write(JsonToken.FORWARD_SLASH)
+                    writer.write(regularExpression.options)
+                    break
             }
         } catch (IOException e) {
-            throwBsonException(e);
+            throwBsonException(e)
         }
     }
 
     @Override
     protected void doWriteString(final String value) {
         try {
-            writeNameHelper(getName());
-            writeStringHelper(value);
+            writeNameHelper(name)
+            writeStringHelper(value)
         } catch (IOException e) {
-            throwBsonException(e);
+            throwBsonException(e)
         }
     }
 
@@ -295,107 +292,107 @@ class JsonWriter extends AbstractBsonWriter {
     @Override
     protected void doWriteUndefined() {
         try {
-            writeNameHelper(getName());
-            writer.write('undefined');
+            writeNameHelper(name)
+            writer.write('undefined')
         } catch (IOException e) {
-            throwBsonException(e);
+            throwBsonException(e)
         }
     }
 
     @Override
     void flush() {
         try {
-            writer.flush();
+            writer.flush()
         } catch (IOException e) {
-            throwBsonException(e);
+            throwBsonException(e)
         }
     }
 
     protected void writeNameHelper(final String name) throws IOException {
-        switch (getContext().getContextType()) {
+        switch (context.contextType) {
             case BsonContextType.ARRAY:
                 // don't write Array element names in JSON
-                if (getContext().hasElements) {
-                    writer.write(JsonToken.COMMA);
+                if (context.hasElements) {
+                    writer.write(JsonToken.COMMA)
                 }
-                break;
+                break
             case BsonContextType.DOCUMENT:
             case BsonContextType.SCOPE_DOCUMENT:
-                if (getContext().hasElements) {
-                    writer.write(JsonToken.COMMA);
+                if (context.hasElements) {
+                    writer.write(JsonToken.COMMA)
                 }
-                if (settings.isIndent()) {
-                    writer.write(settings.getNewLineCharacters());
-                    writer.write(getContext().indentation);
+                if (settings.indent) {
+                    writer.write(settings.newLineCharacters)
+                    writer.write(context.indentation)
                 }
-                writeStringHelper(name);
-                writer.write(JsonToken.COLON);
-                break;
+                writeStringHelper(name)
+                writer.write(JsonToken.COLON)
+                break
             case BsonContextType.TOP_LEVEL:
-                break;
+                break
             default:
-                throw new BSONException('Invalid contextType.');
+                throw new BSONException('Invalid contextType.')
         }
 
-        getContext().hasElements = true;
+        context.hasElements = true
     }
 
     private void throwBsonException(IOException e) {
-        throw new BSONException('Cannot write to writer writer: ' + e.getMessage(), e);
+        throw new BSONException('Cannot write to writer writer: ' + e.getMessage(), e)
     }
 
     @Override
     protected Context getContext() {
-        return (Context) super.getContext();
+        return (Context) super.getContext()
     }
 
     private void writeStringHelper(final String str) throws IOException {
-        writer.write('"');
-        for (final char c : str.toCharArray()) {
+        writer.write('"')
+        for (final char c in str.toCharArray()) {
             switch (c) {
                 case ('"' as char):
-                    writer.write('\\"');
-                    break;
+                    writer.write('\\"')
+                    break
                 case ('\\' as char):
-                    writer.write('\\\\');
-                    break;
+                    writer.write('\\\\')
+                    break
                 case ('\b' as char):
-                    writer.write('\\b');
-                    break;
+                    writer.write('\\b')
+                    break
                 case ('\f' as char):
-                    writer.write('\\f');
-                    break;
+                    writer.write('\\f')
+                    break
                 case ('\n' as char):
-                    writer.write('\\n');
-                    break;
+                    writer.write('\\n')
+                    break
                 case ('\r' as char):
-                    writer.write('\\r');
-                    break;
+                    writer.write('\\r')
+                    break
                 case ('\t' as char):
-                    writer.write('\\t');
-                    break;
+                    writer.write('\\t')
+                    break
                 default:
                     if (isPrintable(c)) {
-                        writer.write(c);
+                        writer.write(c)
                     } else {
-                        int code = (int) c;
-                        writer.write('\\u');
-                        writer.write(Integer.toHexString((code & 0xf000) >> 12));
-                        writer.write(Integer.toHexString((code & 0x0f00) >> 8));
-                        writer.write(Integer.toHexString((code & 0x00f0) >> 4));
-                        writer.write(Integer.toHexString(code & 0x000f));
+                        int code = (int) c
+                        writer.write('\\u')
+                        writer.write(Integer.toHexString((code & 0xf000) >> 12))
+                        writer.write(Integer.toHexString((code & 0x0f00) >> 8))
+                        writer.write(Integer.toHexString((code & 0x00f0) >> 4))
+                        writer.write(Integer.toHexString(code & 0x000f))
                     }
-                    break;
+                    break
             }
         }
-        writer.write('"');
+        writer.write('"')
     }
 
     // The Unicode categories written verbatim rather than as a \\u escape. Compared with == rather
     // than in a switch: Character.getType returns an int while the category constants are bytes,
     // and a Groovy switch matches case values with equals(), which is false across those types.
     private static boolean isPrintable(final char c) {
-        int type = Character.getType(c);
+        int type = Character.getType(c)
         return type == Character.UPPERCASE_LETTER ||
                 type == Character.LOWERCASE_LETTER ||
                 type == Character.TITLECASE_LETTER ||
@@ -414,7 +411,7 @@ class JsonWriter extends AbstractBsonWriter {
                 type == Character.MATH_SYMBOL ||
                 type == Character.CURRENCY_SYMBOL ||
                 type == Character.MODIFIER_SYMBOL ||
-                type == Character.OTHER_SYMBOL;
+                type == Character.OTHER_SYMBOL
     }
 
     /**
@@ -423,8 +420,8 @@ class JsonWriter extends AbstractBsonWriter {
      */
     class Context extends AbstractBsonWriter.Context {
 
-        @PackageScope final String indentation;
-        @PackageScope boolean hasElements;
+        @PackageScope final String indentation
+        @PackageScope boolean hasElements
 
         /**
          * Creates a new context.
@@ -437,13 +434,13 @@ class JsonWriter extends AbstractBsonWriter {
             // The superclass is an inner class of AbstractBsonWriter: its constructor takes the
             // enclosing writer as a hidden first argument, which javac supplies implicitly but
             // Groovy requires to be passed explicitly.
-            super(JsonWriter.this, parentContext, contextType);
-            this.indentation = (parentContext == null) ? indentChars : parentContext.indentation + indentChars;
+            super(JsonWriter.this, parentContext, contextType)
+            this.indentation = (parentContext == null) ? indentChars : parentContext.indentation + indentChars
         }
 
         @Override
         Context getParentContext() {
-            return (Context) super.getParentContext();
+            return (Context) super.getParentContext()
         }
 
     }

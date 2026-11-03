@@ -40,7 +40,7 @@ class WithinBox extends MethodExpression {
     Criterion createCriterion() {
         Object argument = arguments[0]
         if (argument instanceof Box) {
-            return new MongoQuery.WithinBox(propertyName, ((Box) argument).asList())
+            return new MongoQuery.WithinBox(propertyName, argument.asList())
         }
         return new MongoQuery.WithinBox(propertyName, (List) argument)
     }

@@ -104,13 +104,13 @@ class MongoTransaction implements Transaction<ClientSession> {
                     try {
                         clientSession.abortTransaction()
                     } catch (RuntimeException e) {
-                        LOG.debug('Error aborting transaction after failed commit: {}', e.getMessage(), e)
+                        LOG.debug('Error aborting transaction after failed commit: {}', e.message, e)
                     }
                 }
                 try {
                     session.clear()
                 } catch (RuntimeException e) {
-                    LOG.debug('Error clearing session after failed transaction commit: {}', e.getMessage(), e)
+                    LOG.debug('Error clearing session after failed transaction commit: {}', e.message, e)
                 }
             }
             close()

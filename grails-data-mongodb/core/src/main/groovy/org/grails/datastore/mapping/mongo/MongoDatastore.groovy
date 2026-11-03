@@ -301,13 +301,13 @@ class MongoDatastore extends AbstractDatastore implements MappingContext.Listene
         DatastoreTransactionManager datastoreTransactionManager = new DatastoreTransactionManager()
         datastoreTransactionManager.setDatastore(this)
         transactionManager = datastoreTransactionManager
-        for (PersistentEntity entity : mappingContext.getPersistentEntities()) {
+        for (PersistentEntity entity in mappingContext.getPersistentEntities()) {
             registerEntity(entity)
         }
         if (!(connectionSources instanceof SingletonConnectionSources)) {
             final MongoDatastore parent = this
             Iterable<ConnectionSource<MongoClient, MongoConnectionSourceSettings>> allConnectionSources = connectionSources.getAllConnectionSources()
-            for (final ConnectionSource<MongoClient, MongoConnectionSourceSettings> connectionSource : allConnectionSources) {
+            for (final ConnectionSource<MongoClient, MongoConnectionSourceSettings> connectionSource in allConnectionSources) {
                 SingletonConnectionSources<MongoClient, MongoConnectionSourceSettings> singletonConnectionSources = new SingletonConnectionSources<MongoClient, MongoConnectionSourceSettings>(connectionSource, connectionSources.getBaseConfiguration())
                 MongoDatastore childDatastore
 
@@ -874,7 +874,7 @@ class MongoDatastore extends AbstractDatastore implements MappingContext.Listene
      */
     private String buildIndexesSettingName() {
         String connection = connectionName()
-        if (ConnectionSource.DEFAULT.equals(connection)) {
+        if (ConnectionSource.DEFAULT == connection) {
             return MongoSettings.SETTING_BUILD_INDEXES
         }
         return MongoSettings.SETTING_CONNECTIONS + '.' + connection + '.buildIndexes (or ' +
@@ -1074,7 +1074,7 @@ class MongoDatastore extends AbstractDatastore implements MappingContext.Listene
      * can name the same one.
      */
     private Map<MongoNamespace, CollectionDeclarations> declarationsByCollection() {
-        Map<MongoNamespace, CollectionDeclarations> collections = new LinkedHashMap<>()
+        Map<MongoNamespace, CollectionDeclarations> collections = [:]
         for (PersistentEntity entity in indexedEntities()) {
             com.mongodb.client.MongoCollection<Document> collection = getCollection(entity)
             CollectionDeclarations declarations = collections.get(collection.getNamespace())
@@ -1159,7 +1159,7 @@ class MongoDatastore extends AbstractDatastore implements MappingContext.Listene
         for (Map.Entry<MongoNamespace, CollectionDeclarations> entry in declarationsByCollection().entrySet()) {
             MongoNamespace namespace = entry.getKey()
             for (Document index in entry.getValue().collection().listIndexes()) {
-                if (ID_INDEX_NAME.equals(index.getString('name'))) {
+                if (ID_INDEX_NAME == index.getString('name')) {
                     continue
                 }
                 Object key = index.get('key')
@@ -1203,7 +1203,7 @@ class MongoDatastore extends AbstractDatastore implements MappingContext.Listene
         Map<MongoNamespace, CollectionDeclarations> mapped = declarationsByCollection()
         // Listed first, once per collection, rather than inferred from the drop: the driver answers a dropIndex on
         // a collection that no longer exists as a success, and a name can have been given to another index since.
-        Map<MongoNamespace, List<Document>> listed = new HashMap<>()
+        Map<MongoNamespace, List<Document>> listed = [:]
         for (UndeclaredIndex index in indexes) {
             MongoNamespace namespace = new MongoNamespace(index.database(), index.collection())
             CollectionDeclarations declarations = mapped.get(namespace)
@@ -1427,7 +1427,7 @@ class MongoDatastore extends AbstractDatastore implements MappingContext.Listene
          * to its root's collection, and several classes can name the same one. Sharing it also keeps them
          * consistent, so a second class declaring keys the first has just created sees them as present.
          */
-        private final Map<MongoNamespace, ExistingIndexes> existingIndexes = new HashMap<>()
+        private final Map<MongoNamespace, ExistingIndexes> existingIndexes = [:]
 
         IndexBuildSummary(boolean classifying) {
             this.classifying = classifying
@@ -1738,7 +1738,7 @@ class MongoDatastore extends AbstractDatastore implements MappingContext.Listene
     }
 
     protected void registerAllEntitiesWithEnhancer() {
-        for (PersistentEntity persistentEntity : getMappingContext().getPersistentEntities()) {
+        for (PersistentEntity persistentEntity in getMappingContext().getPersistentEntities()) {
             gormEnhancer.registerEntity(persistentEntity)
         }
     }
@@ -1886,7 +1886,7 @@ class MongoDatastore extends AbstractDatastore implements MappingContext.Listene
             final MongoCollection mappedForm = classMapping.getMappedForm()
             if (mappedForm != null) {
                 List<MongoCollection.Index> indices = mappedForm.getIndices()
-                for (MongoCollection.Index index : indices) {
+                for (MongoCollection.Index index in indices) {
                     declarations.add(new IndexDeclaration(new Document(index.getDefinition()), index.getOptions(),
                             'with definition [' + index.getDefinition() + ']'))
                 }
@@ -1905,7 +1905,7 @@ class MongoDatastore extends AbstractDatastore implements MappingContext.Listene
             }
         }
 
-        for (PersistentProperty<MongoAttribute> property : entity.getPersistentProperties()) {
+        for (PersistentProperty<MongoAttribute> property in entity.getPersistentProperties()) {
             final boolean indexed = isIndexed(property)
 
             if (indexed) {
@@ -1954,7 +1954,7 @@ class MongoDatastore extends AbstractDatastore implements MappingContext.Listene
         Map<String, Object> options = rawOptions != null ? new HashMap<>(rawOptions) : new HashMap<>()
 
         // Control flag — not a Mongo index option.
-        boolean recreateOnConflict = Boolean.TRUE.equals(options.remove(INDEX_RECREATE_ON_CONFLICT))
+        boolean recreateOnConflict = Boolean.TRUE == options.remove(INDEX_RECREATE_ON_CONFLICT)
 
         Long expireAfterSeconds = null
         Object ttl = options.remove(INDEX_EXPIRE_AFTER_SECONDS)
@@ -2067,7 +2067,7 @@ class MongoDatastore extends AbstractDatastore implements MappingContext.Listene
 
         // TTL change on an existing index — update in place, no rebuild, no gap. An index that merely holds the
         // name is a different index, so its expiry is not the declared one to update.
-        boolean ttlChange = !nameTaken && expireAfterSeconds != null && !expireAfterSeconds.equals(existingTtlSeconds)
+        boolean ttlChange = !nameTaken && expireAfterSeconds != null && expireAfterSeconds != existingTtlSeconds
         if (ttlChange) {
             try {
                 getMongoClient().getDatabase(getDatabaseName(entity))
@@ -2139,7 +2139,7 @@ class MongoDatastore extends AbstractDatastore implements MappingContext.Listene
      */
     private static Document findIndexByName(Iterable<Document> indexes, String name) {
         for (Document index in indexes) {
-            if (name.equals(index.getString('name'))) {
+            if (name == index.getString('name')) {
                 return index
             }
         }
@@ -2227,9 +2227,9 @@ class MongoDatastore extends AbstractDatastore implements MappingContext.Listene
     private static TextKeys declaredTextKeys(Document keys) {
         Document before = new Document()
         Document after = new Document()
-        Set<String> fields = new LinkedHashSet<>()
+        Set<String> fields = [] as Set
         for (Map.Entry<String, Object> entry in keys.entrySet()) {
-            if ('text'.equals(entry.getValue())) {
+            if ('text' == entry.getValue()) {
                 fields.add(entry.getKey())
             }
             else {
@@ -2248,7 +2248,7 @@ class MongoDatastore extends AbstractDatastore implements MappingContext.Listene
         Document after = new Document()
         boolean pastText = false
         for (Map.Entry<String, Object> entry in key.entrySet()) {
-            if (TEXT_INDEX_KEY.equals(entry.getKey()) || TEXT_INDEX_TERM_KEY.equals(entry.getKey())) {
+            if (TEXT_INDEX_KEY == entry.getKey() || TEXT_INDEX_TERM_KEY == entry.getKey()) {
                 pastText = true
             }
             else {
@@ -2284,7 +2284,7 @@ class MongoDatastore extends AbstractDatastore implements MappingContext.Listene
         if (key.containsKey(TEXT_INDEX_KEY)) {
             return true
         }
-        for (Object v : key.values()) {
+        for (Object v in key.values()) {
             if ('text' == v) {
                 return true
             }
@@ -2303,7 +2303,7 @@ class MongoDatastore extends AbstractDatastore implements MappingContext.Listene
         Iterator<Map.Entry<String, Object>> existing = existingKey.entrySet().iterator()
         for (Map.Entry<String, Object> desired in desiredKey.entrySet()) {
             Map.Entry<String, Object> actual = existing.next()
-            if (!actual.getKey().equals(desired.getKey())) {
+            if (actual.getKey() != desired.getKey()) {
                 return false
             }
             Object a = actual.getValue()
@@ -2312,7 +2312,7 @@ class MongoDatastore extends AbstractDatastore implements MappingContext.Listene
                 if (((Number) a).doubleValue() != ((Number) b).doubleValue()) {
                     return false
                 }
-            } else if (!Objects.equals(a, b)) {
+            } else if (a != b) {
                 return false
             }
         }
@@ -2894,7 +2894,7 @@ class MongoDatastore extends AbstractDatastore implements MappingContext.Listene
 
     class PersistentEntityCodeRegistry implements CodecProvider {
 
-        Map<String, PersistentEntityCodec> codecs = new HashMap<>()
+        Map<String, PersistentEntityCodec> codecs = [:]
 
         @Override
         def <T> Codec<T> get(Class<T> clazz, CodecRegistry registry) {

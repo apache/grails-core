@@ -41,9 +41,9 @@ class Near extends MethodExpression {
         if (arguments.length > 1) {
             Object o = arguments[1]
             if (o instanceof Number) {
-                near.setMaxDistance(Distance.valueOf(((Number) o).doubleValue()))
+                near.maxDistance = Distance.valueOf(o.doubleValue())
             } else {
-                near.setMaxDistance((Distance) o)
+                near.maxDistance = (Distance) o
             }
         }
         return near

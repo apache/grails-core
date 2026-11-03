@@ -58,7 +58,7 @@ final class GormSpringDataSessionSupport {
     static void bindClientSession(MongoDatabaseFactory databaseFactory, ClientSession clientSession) {
         if (!TransactionSynchronizationManager.hasResource(databaseFactory)) {
             MongoResourceHolder holder = new MongoResourceHolder(clientSession, databaseFactory)
-            holder.setSynchronizedWithTransaction(true)
+            holder.synchronizedWithTransaction = true
             TransactionSynchronizationManager.bindResource(databaseFactory, holder)
         }
     }

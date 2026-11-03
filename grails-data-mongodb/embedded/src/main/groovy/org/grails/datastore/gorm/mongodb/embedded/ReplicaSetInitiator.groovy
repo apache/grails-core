@@ -75,7 +75,7 @@ final class ReplicaSetInitiator {
         try {
             client.getDatabase('admin').runCommand(new Document('replSetInitiate', configuration))
         } catch (MongoCommandException ex) {
-            if (ex.getErrorCode() != ALREADY_INITIALIZED) {
+            if (ex.errorCode != ALREADY_INITIALIZED) {
                 throw new IllegalStateException('Could not initiate the replica set ' + replicaSet +
                         ' on the embedded MongoDB at ' + address, ex)
             }
@@ -108,7 +108,7 @@ final class ReplicaSetInitiator {
     private static boolean isPrimary(MongoClient client) {
         try {
             Document hello = client.getDatabase('admin').runCommand(new Document('hello', 1))
-            return Boolean.TRUE.equals(hello.getBoolean('isWritablePrimary'))
+            return Boolean.TRUE == hello.getBoolean('isWritablePrimary')
         } catch (RuntimeException ex) {
             // The server closes connections as it transitions, so a failure here means "not yet".
             return false

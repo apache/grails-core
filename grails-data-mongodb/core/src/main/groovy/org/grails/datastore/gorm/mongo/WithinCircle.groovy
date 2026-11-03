@@ -44,7 +44,7 @@ class WithinCircle extends MethodExpression {
     Criterion createCriterion() {
         Object argument = arguments[0]
         if (argument instanceof Circle) {
-            return new MongoQuery.WithinCircle(propertyName, ((Circle) argument).asList())
+            return new MongoQuery.WithinCircle(propertyName, argument.asList())
         }
         return new MongoQuery.WithinCircle(propertyName, (List) argument)
     }
