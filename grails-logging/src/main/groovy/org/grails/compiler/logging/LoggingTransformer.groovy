@@ -16,25 +16,24 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-@SuppressWarnings('UnnecessarySemicolon')
-package org.grails.compiler.logging;
+package org.grails.compiler.logging
 
-import groovy.transform.CompileStatic;
-import java.lang.reflect.Modifier;
+import java.lang.reflect.Modifier
 
-import groovy.util.logging.Slf4j;
-import org.codehaus.groovy.ast.ASTNode;
-import org.codehaus.groovy.ast.AnnotationNode;
-import org.codehaus.groovy.ast.ClassHelper;
-import org.codehaus.groovy.ast.ClassNode;
-import org.codehaus.groovy.ast.FieldNode;
-import org.codehaus.groovy.classgen.GeneratorContext;
-import org.codehaus.groovy.control.CompilationUnit;
-import org.codehaus.groovy.control.SourceUnit;
-import org.codehaus.groovy.transform.LogASTTransformation;
+import groovy.transform.CompileStatic
+import groovy.util.logging.Slf4j
+import org.codehaus.groovy.ast.ASTNode
+import org.codehaus.groovy.ast.AnnotationNode
+import org.codehaus.groovy.ast.ClassHelper
+import org.codehaus.groovy.ast.ClassNode
+import org.codehaus.groovy.ast.FieldNode
+import org.codehaus.groovy.classgen.GeneratorContext
+import org.codehaus.groovy.control.CompilationUnit
+import org.codehaus.groovy.control.SourceUnit
+import org.codehaus.groovy.transform.LogASTTransformation
 
-import grails.compiler.ast.AllArtefactClassInjector;
-import grails.compiler.ast.AstTransformer;
+import grails.compiler.ast.AllArtefactClassInjector
+import grails.compiler.ast.AstTransformer
 
 /**
  * Adds a log field to all artifacts.
@@ -42,54 +41,52 @@ import grails.compiler.ast.AstTransformer;
  * @author Graeme Rocher
  * @since 2.0
  */
-// TODO(groovyism-cleanup): semicolons kept to preserve rename-similarity against the original .java (see matrei's review on #16576). Removed by the stacked groovyism-cleanup PR.
-@SuppressWarnings('UnnecessarySemicolon')
 @AstTransformer
 @CompileStatic
 class LoggingTransformer implements AllArtefactClassInjector {
 
     @Override
     void performInjection(SourceUnit source, GeneratorContext context, ClassNode classNode) {
-        performInjectionOnAnnotatedClass(source, classNode);
+        performInjectionOnAnnotatedClass(source, classNode)
     }
 
     @Override
     void performInjection(SourceUnit source, ClassNode classNode) {
-        performInjectionOnAnnotatedClass(source, classNode);
+        performInjectionOnAnnotatedClass(source, classNode)
     }
 
     @Override
     void performInjectionOnAnnotatedClass(SourceUnit source, ClassNode classNode) {
-        if (classNode.getNodeMetaData(Slf4j) != null) return;
-        String packageName = Slf4j.getPackage().getName();
+        if (classNode.getNodeMetaData(Slf4j) != null) return
+        String packageName = Slf4j.package.name
 
         // if already annotated skip
-        for (AnnotationNode annotationNode in classNode.getAnnotations()) {
-            if (annotationNode.getClassNode().getPackageName().equals(packageName)) {
-                return;
+        for (AnnotationNode annotationNode in classNode.annotations) {
+            if (annotationNode.classNode.packageName == packageName) {
+                return
             }
         }
 
-        FieldNode logField = classNode.getField('log');
+        FieldNode logField = classNode.getField('log')
         if (logField != null) {
-            if (!Modifier.isPrivate(logField.getModifiers())) {
-                return;
+            if (!Modifier.isPrivate(logField.modifiers)) {
+                return
             }
         }
 
-        if (classNode.getSuperClass().getName().equals('grails.boot.config.GrailsAutoConfiguration')) {
-            return;
+        if (classNode.superClass.name == 'grails.boot.config.GrailsAutoConfiguration') {
+            return
         }
 
-        AnnotationNode annotationNode = new AnnotationNode(ClassHelper.make(Slf4j));
-        LogASTTransformation logASTTransformation = new LogASTTransformation();
-        logASTTransformation.setCompilationUnit(new CompilationUnit(new GroovyClassLoader(getClass().getClassLoader())));
-        logASTTransformation.visit([annotationNode, classNode] as ASTNode[], source);
-        classNode.putNodeMetaData(Slf4j, annotationNode);
+        AnnotationNode annotationNode = new AnnotationNode(ClassHelper.make(Slf4j))
+        LogASTTransformation logASTTransformation = new LogASTTransformation()
+        logASTTransformation.compilationUnit = new CompilationUnit(new GroovyClassLoader(getClass().classLoader))
+        logASTTransformation.visit([annotationNode, classNode] as ASTNode[], source)
+        classNode.putNodeMetaData(Slf4j, annotationNode)
     }
 
     boolean shouldInject(URL url) {
-        return true; // Add log property to all artifact types
+        return true // Add log property to all artifact types
     }
 
 }

@@ -109,19 +109,19 @@ class StartupProgressRunListener implements SpringApplicationRunListener {
 
     @Override
     void contextPrepared(ConfigurableApplicationContext context) {
-        if (application.getWebApplicationType() != WebApplicationType.SERVLET ||
+        if (application.webApplicationType != WebApplicationType.SERVLET ||
                 !(context instanceof WebServerApplicationContext) ||
                 !StartupProgressFilter.startsEmbeddedServer(context)) {
             return
         }
-        Binder binder = Binder.get(context.getEnvironment())
+        Binder binder = Binder.get(context.environment)
         StartupProgressProperties properties
         try {
             properties = binder.bindOrCreate(PROPERTIES_PREFIX, StartupProgressProperties)
         }
         catch (RuntimeException ex) {
             // nothing else reads these settings, so a mistake in them is said here or not at all
-            LOG.warn('Not serving startup progress: the {} settings could not be read: {}', PROPERTIES_PREFIX, ex.getMessage())
+            LOG.warn('Not serving startup progress: the {} settings could not be read: {}', PROPERTIES_PREFIX, ex.message)
             return
         }
         int port
@@ -136,22 +136,22 @@ class StartupProgressRunListener implements SpringApplicationRunListener {
             LOG.debug('Not serving startup progress: the server settings could not be read', ex)
             return
         }
-        if (properties.isOpenBrowser()) {
-            browserCommand = properties.getBrowserCommand()
+        if (properties.openBrowser) {
+            browserCommand = properties.browserCommand
         }
-        boolean pageEnabled = properties.isEnabledOrDefault()
-        boolean reportEnabled = properties.getEndpoint().isEnabledOrDefault()
+        boolean pageEnabled = properties.enabledOrDefault
+        boolean reportEnabled = properties.endpoint.enabledOrDefault
         if (!pageEnabled && !reportEnabled) {
             return
         }
 
         String name = applicationName(binder)
         StartupProgress startupProgress = new StartupProgress(name, Environment.getGrailsVersion(), runStartNanos)
-        StartupAccess startupAccess = new StartupAccess(properties.isShowDetailsOrDefault(), port)
-        String statusPath = path(properties.getStatusPath(), StartupProgressProperties.DEFAULT_STATUS_PATH, 'startup progress status')
+        StartupAccess startupAccess = new StartupAccess(properties.showDetailsOrDefault, port)
+        String statusPath = path(properties.statusPath, StartupProgressProperties.DEFAULT_STATUS_PATH, 'startup progress status')
         StartupProgressPage page = new StartupProgressPage(name, statusPath, Environment.getGrailsVersion())
-        reportPath = reportEnabled ? path(properties.getEndpoint().getPath(), StartupProgressProperties.Endpoint.DEFAULT_PATH, 'startup report') : null
-        if (statusPath.equals(reportPath)) {
+        reportPath = reportEnabled ? path(properties.endpoint.path, StartupProgressProperties.Endpoint.DEFAULT_PATH, 'startup report') : null
+        if (statusPath == reportPath) {
             // a page polling there would take the report for the application answering, and reload without end
             LOG.warn('Not serving the startup report at {}: it is the path the startup progress page polls', reportPath)
             reportPath = null
@@ -166,8 +166,8 @@ class StartupProgressRunListener implements SpringApplicationRunListener {
         progress = startupProgress
         access = startupAccess
 
-        context.setApplicationStartup(StartupProgressApplicationStartup.create(context.getApplicationStartup(), startupProgress, context.getBeanFactory()))
-        ConfigurableListableBeanFactory beanFactory = context.getBeanFactory()
+        context.setApplicationStartup(StartupProgressApplicationStartup.create(context.applicationStartup, startupProgress, context.beanFactory))
+        ConfigurableListableBeanFactory beanFactory = context.beanFactory
         // the lifecycle beans live as long as the context, so they hold what they act on rather than this listener
         StartupProgressServer pageServer = server
         WebServerApplicationContext webContext = (WebServerApplicationContext) context
@@ -179,9 +179,9 @@ class StartupProgressRunListener implements SpringApplicationRunListener {
         }))
         beanFactory.registerSingleton('grailsStartupProgressInitializing', StartupProgressLifecycle.afterWebServer(() -> {
             startupProgress.initializing()
-            if (webContext.getWebServer() != null) {
+            if (webContext.webServer != null) {
                 // a random port is only known now, and names the cookie that signs a browser in to the report
-                startupAccess.usePort(webContext.getWebServer().getPort())
+                startupAccess.usePort(webContext.webServer.port)
             }
         }))
         beanFactory.registerSingleton('grailsStartupProgressFilter',
@@ -236,10 +236,10 @@ class StartupProgressRunListener implements SpringApplicationRunListener {
             progress.ready()
         }
         stopServer()
-        if (context instanceof WebServerApplicationContext && ((WebServerApplicationContext) context).getWebServer() != null) {
+        if (context instanceof WebServerApplicationContext && context.webServer != null) {
             WebServerApplicationContext webContext = (WebServerApplicationContext) context
             String scheme = ssl ? 'https' : 'http'
-            int port = webContext.getWebServer().getPort()
+            int port = webContext.webServer.port
             if (reportPath != null) {
                 // the details of the start are for whoever can read this log, so the address carries the token that shows them
                 LOG.info('Startup report is at {}', uri(scheme, port, reportPath.substring(contextPath.length()), signInQuery()))
@@ -254,13 +254,13 @@ class StartupProgressRunListener implements SpringApplicationRunListener {
         if (progress == null) {
             return
         }
-        StartupProgress.Phase reached = progress.getPhase()
+        StartupProgress.Phase reached = progress.phase
         progress.failed(exception)
         if (server == null) {
             // only the report was served, which nobody watches while the application starts
             return
         }
-        boolean answering = server.isRunning()
+        boolean answering = server.running
         if (!answering && (reached == StartupProgress.Phase.STARTING_WEB_SERVER || reached == StartupProgress.Phase.INITIALIZING)) {
             // a refresh that fails as the web server starts, or once it is up, stops the web server before run
             // listeners hear of it, so take the port back to say why; if the port is still held once the web server
@@ -298,11 +298,11 @@ class StartupProgressRunListener implements SpringApplicationRunListener {
 
     /** The query that signs a browser in from the log, when there are details it would see by signing in. */
     private String signInQuery() {
-        return access.isSignInRequired() ? access.signInQuery() : null
+        return access.signInRequired ? access.signInQuery() : null
     }
 
     private URI uri(String scheme, int port, String path, String query) {
-        String host = address == null || address.isAnyLocalAddress() ? 'localhost' : address.getHostAddress()
+        String host = address == null || address.anyLocalAddress ? 'localhost' : address.hostAddress
         try {
             return new URI(scheme, null, host, port, contextPath + path, query, null)
         }

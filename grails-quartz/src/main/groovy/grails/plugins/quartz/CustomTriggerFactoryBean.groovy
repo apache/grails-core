@@ -52,16 +52,16 @@ class CustomTriggerFactoryBean implements FactoryBean<Trigger>, InitializingBean
             AbstractTrigger at = (AbstractTrigger) customTrigger
 
             // Set job details
-            if (jobDetail != null) {
-                at.setJobKey(jobDetail.getKey())
+            if (jobDetail) {
+                at.jobKey = jobDetail.key
             }
 
             // Set start delay
             if (triggerAttributes.containsKey(GrailsJobClassConstants.START_DELAY)) {
                 Number startDelay = (Number) triggerAttributes.remove(GrailsJobClassConstants.START_DELAY)
-                at.setStartTime(new Date(System.currentTimeMillis() + startDelay.longValue()))
+                at.startTime = new Date(System.currentTimeMillis() + startDelay.longValue())
             } else {
-                at.setStartTime(new Date())
+                at.startTime = new Date()
             }
         }
 
@@ -117,7 +117,7 @@ class StringEditor extends PropertyEditorSupport {
 
     @Override
     void setValue(Object value) {
-        super.setValue(value == null ? null : value.toString())
+        super.setValue(value?.toString())
     }
 
     @Override

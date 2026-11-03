@@ -75,7 +75,7 @@ final class StartupProgressPage {
      */
     @PackageScope
     String render(String method, boolean showDetails, boolean signInForDetails) {
-        boolean reload = 'GET'.equals(method) || 'HEAD'.equals(method)
+        boolean reload = method == 'GET' || method == 'HEAD'
         return render(showDetails, signInForDetails, ',"reload":' + reload)
     }
 
@@ -98,10 +98,10 @@ final class StartupProgressPage {
                 'CONFIG', config)
         // the details are left out of the page, not hidden in it, for a browser that may not see them
         String sections = SECTION.matcher(Template.TEXT).replaceAll(match -> {
-            boolean include = 'DETAILS'.equals(match.group(1)) ? showDetails : signInForDetails
+            boolean include = match.group(1) == 'DETAILS' ? showDetails : signInForDetails
             return include ? Matcher.quoteReplacement(match.group(2)) : ''
         })
-        return PLACEHOLDER.matcher(sections).replaceAll(match -> Matcher.quoteReplacement(values.get(match.group(1))))
+        return PLACEHOLDER.matcher(sections).replaceAll(match -> Matcher.quoteReplacement(values[match.group(1)]))
     }
 
     /**
@@ -110,7 +110,7 @@ final class StartupProgressPage {
      */
     @PackageScope
     static boolean wantsJson(String accept, String rawQuery) {
-        if (rawQuery != null && Arrays.asList(rawQuery.split('&')).contains('format=json')) {
+        if (rawQuery != null && 'format=json' in rawQuery.split('&').toList()) {
             return true
         }
         return accept != null && accept.contains('application/json') && !accept.contains('text/html')

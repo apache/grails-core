@@ -35,7 +35,7 @@ class ReadOnlyDriverManagerDataSource extends DriverManagerDataSource {
     @Override
     protected Connection getConnectionFromDriverManager(final String url, final Properties props) throws SQLException {
         Connection connection = super.getConnectionFromDriverManager(url, props)
-        connection.setReadOnly(true)
+        connection.readOnly = true
         return connection
     }
 

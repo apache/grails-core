@@ -67,7 +67,7 @@ class SessionBinderJobListener extends JobListenerSupport {
      * Before job executing. Init persistence context.
      */
     void jobToBeExecuted(JobExecutionContext context) {
-        if (persistenceInterceptor != null) {
+        if (persistenceInterceptor) {
             persistenceInterceptor.init()
             LOG.debug('Persistence session is opened.')
         }
@@ -77,18 +77,18 @@ class SessionBinderJobListener extends JobListenerSupport {
      * After job executing. Flush and destroy persistence context.
      */
     void jobWasExecuted(JobExecutionContext context, JobExecutionException exception) {
-        if (persistenceInterceptor != null) {
+        if (persistenceInterceptor) {
             try {
                 persistenceInterceptor.flush()
                 persistenceInterceptor.clear()
                 LOG.debug('Persistence session is flushed.')
             } catch (Exception e) {
-                LOG.error('Failed to flush session after job: ' + context.getJobDetail().getDescription(), e)
+                LOG.error("Failed to flush session after job: ${context.jobDetail.description}", e)
             } finally {
                 try {
                     persistenceInterceptor.destroy()
                 } catch (Exception e) {
-                    LOG.error('Failed to finalize session after job: ' + context.getJobDetail().getDescription(), e)
+                    LOG.error("Failed to finalize session after job: ${context.jobDetail.description}", e)
                 }
             }
         }

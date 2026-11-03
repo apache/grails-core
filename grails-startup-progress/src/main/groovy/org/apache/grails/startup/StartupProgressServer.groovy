@@ -74,7 +74,7 @@ final class StartupProgressServer {
             return thread
         })
         httpServer.createContext('/', (HttpExchange request) -> handle(request))
-        httpServer.setExecutor(pool)
+        httpServer.executor = pool
         startFromDaemonThread(httpServer)
         server = httpServer
         executor = pool
@@ -102,7 +102,7 @@ final class StartupProgressServer {
                     interrupted = true
                 }
                 catch (ExecutionException ex) {
-                    throw new IOException('The startup progress server could not be started', ex.getCause())
+                    throw new IOException('The startup progress server could not be started', ex.cause)
                 }
             }
         }
@@ -143,46 +143,46 @@ final class StartupProgressServer {
 
         @Override
         String method() {
-            return exchange.getRequestMethod()
+            return exchange.requestMethod
         }
 
         @Override
         String path() {
-            return exchange.getRequestURI().getRawPath()
+            return exchange.requestURI.rawPath
         }
 
         @Override
         String query() {
-            return exchange.getRequestURI().getRawQuery()
+            return exchange.requestURI.rawQuery
         }
 
         @Override
         String header(String name) {
-            return exchange.getRequestHeaders().getFirst(name)
+            return exchange.requestHeaders.getFirst(name)
         }
 
         @Override
         List<String> headers(String name) {
-            List<String> values = exchange.getRequestHeaders().get(name)
+            List<String> values = exchange.requestHeaders[name]
             return values != null ? values : List.of()
         }
 
         @Override
         void setHeader(String name, String value) {
-            exchange.getResponseHeaders().set(name, value)
+            exchange.responseHeaders.set(name, value)
         }
 
         @Override
         void send(int status, String contentType, byte[] body) throws IOException {
             if (contentType != null) {
-                exchange.getResponseHeaders().set('Content-Type', contentType)
+                exchange.responseHeaders.set('Content-Type', contentType)
             }
-            if (body.length == 0 || 'HEAD'.equals(exchange.getRequestMethod())) {
+            if (body.length == 0 || exchange.requestMethod == 'HEAD') {
                 exchange.sendResponseHeaders(status, -1)
                 return
             }
             exchange.sendResponseHeaders(status, body.length)
-            try (OutputStream out = exchange.getResponseBody()) {
+            try (OutputStream out = exchange.responseBody) {
                 out.write(body)
             }
         }

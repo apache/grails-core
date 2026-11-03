@@ -41,8 +41,8 @@ class ExceptionPrinterJobListener extends JobListenerSupport {
     }
 
     void jobWasExecuted(JobExecutionContext context, JobExecutionException exception) {
-        if (exception != null) {
-            LOG.error('Exception occurred in job: ' + context.getJobDetail().getDescription(), exception)
+        if (exception) {
+            LOG.error("Exception occurred in job: ${context.jobDetail.description}", exception)
         }
     }
 

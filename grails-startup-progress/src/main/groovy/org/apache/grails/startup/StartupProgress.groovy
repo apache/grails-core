@@ -139,7 +139,7 @@ final class StartupProgress {
     void creatingBeans(Set<String> expected) {
         int created = 0
         for (String name : createdBeans) {
-            if (expected.contains(name)) {
+            if (name in expected) {
                 created++
             }
         }
@@ -159,12 +159,12 @@ final class StartupProgress {
     @PackageScope
     void beanCreated(String beanName, long durationNanos) {
         Set<String> expected = expectedBeans
-        if (createdBeans.add(beanName) && expected != null && expected.contains(beanName)) {
+        if (createdBeans.add(beanName) && expected != null && beanName in expected) {
             createdExpectedBeans.incrementAndGet()
         }
         synchronized (slowestBeans) {
             if (slowestBeans.size() < SLOWEST_BEAN_LIMIT || durationNanos > slowestBeans.get(slowestBeans.size() - 1).nanos()) {
-                slowestBeans.removeIf((BeanTiming timing) -> timing.name().equals(beanName))
+                slowestBeans.removeIf((BeanTiming timing) -> timing.name() == beanName)
                 slowestBeans.add(new BeanTiming(beanName, durationNanos))
                 Comparator<BeanTiming> slowestFirst = (BeanTiming first, BeanTiming second) -> Long.compare(second.nanos(), first.nanos())
                 slowestBeans.sort(slowestFirst)
@@ -218,8 +218,8 @@ final class StartupProgress {
             return
         }
         failedPhase = phase
-        failureType = exception.getClass().getName()
-        failureMessage = exception.getMessage()
+        failureType = exception.getClass().name
+        failureMessage = exception.message
         failureStackTrace = stackTrace(exception)
         phaseStarts.set(Phase.FAILED.ordinal(), System.nanoTime())
         phase = Phase.FAILED

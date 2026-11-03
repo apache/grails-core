@@ -119,9 +119,9 @@ final class StartupProgressResponder {
     @PackageScope
     boolean respond(Exchange exchange, Takes takes) throws IOException {
         String path = exchange.path()
-        boolean starting = progress.isReporting()
-        boolean status = path.equals(statusPath)
-        boolean report = path.equals(reportPath)
+        boolean starting = progress.reporting
+        boolean status = path == statusPath
+        boolean report = path == reportPath
         if (status && !starting) {
             // a page still polling once the application is ready is told so, rather than the poll reaching an
             // application that has no such path and logs every request it cannot map
@@ -137,7 +137,7 @@ final class StartupProgressResponder {
             return false
         }
         boolean showDetails = access.showsDetails(exchange.headers('Cookie'))
-        boolean signInForDetails = access.isSignInRequired() && !showDetails
+        boolean signInForDetails = access.signInRequired && !showDetails
         if (status) {
             StartupProgress.Status current = progress.report(showDetails, signInForDetails)
             exchange.setHeader(StartupProgress.PHASE_HEADER, current.phase().name())
@@ -167,15 +167,15 @@ final class StartupProgressResponder {
     private static boolean isPageLoad(Exchange exchange) {
         String mode = exchange.header('Sec-Fetch-Mode')
         if (mode != null) {
-            return 'navigate'.equals(mode) && 'document'.equals(exchange.header('Sec-Fetch-Dest'))
+            return mode == 'navigate' && exchange.header('Sec-Fetch-Dest') == 'document'
         }
-        return '1'.equals(exchange.header('Upgrade-Insecure-Requests'))
+        return exchange.header('Upgrade-Insecure-Requests') == '1'
     }
 
     /** Signs a browser in when its request carries the token from the log, and says whether it did. */
     private boolean signIn(Exchange exchange) throws IOException {
         String method = exchange.method()
-        String signedIn = 'GET'.equals(method) || 'HEAD'.equals(method) ? access.signInRedirect(exchange.path(), exchange.query()) : null
+        String signedIn = method == 'GET' || method == 'HEAD' ? access.signInRedirect(exchange.path(), exchange.query()) : null
         if (signedIn == null) {
             return false
         }
@@ -197,7 +197,7 @@ final class StartupProgressResponder {
      * address once the application is ready, and anything else a plain answer to try again.
      */
     private void sendStarting(Exchange exchange, boolean pageLoad, boolean showDetails, boolean signInForDetails) throws IOException {
-        exchange.setHeader(StartupProgress.PHASE_HEADER, progress.getPhase().name())
+        exchange.setHeader(StartupProgress.PHASE_HEADER, progress.phase.name())
         exchange.setHeader('Retry-After', StartupProgressPage.RETRY_AFTER_SECONDS)
         String accept = exchange.header('Accept')
         if (pageLoad || accept != null && accept.contains('text/html')) {

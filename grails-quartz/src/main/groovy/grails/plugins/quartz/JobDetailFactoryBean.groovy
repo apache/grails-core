@@ -70,28 +70,28 @@ class JobDetailFactoryBean implements FactoryBean<JobDetail>, InitializingBean {
      * @see org.springframework.beans.factory.InitializingBean#afterPropertiesSet()
      */
     void afterPropertiesSet() {
-        String name = jobClass.getFullName()
+        String name = jobClass.fullName
         if (name == null) {
             throw new IllegalStateException('name is required')
         }
 
-        String group = jobClass.getGroup()
+        String group = jobClass.group
         if (group == null) {
             throw new IllegalStateException('group is required')
         }
 
         // Consider the concurrent flag to choose between stateful and stateless job.
         Class<? extends GrailsJobFactory.GrailsJob> clazz =
-                jobClass.isConcurrent() ? GrailsJobFactory.GrailsJob : GrailsJobFactory.StatefulGrailsJob
+                jobClass.concurrent ? GrailsJobFactory.GrailsJob : GrailsJobFactory.StatefulGrailsJob
 
         // Build JobDetail instance.
         JobBuilder builder =
                 newJob(clazz)
                         .withIdentity(name, group)
-                        .storeDurably(jobClass.isDurability())
-                        .requestRecovery(jobClass.isRequestsRecovery())
+                        .storeDurably(jobClass.durability)
+                        .requestRecovery(jobClass.requestsRecovery)
                         .usingJobData(JOB_NAME_PARAMETER, name)
-                        .withDescription(jobClass.getDescription())
+                        .withDescription(jobClass.description)
 
         if (applicationName != null) {
             builder.usingJobData(APPLICATION_NAME_PARAMETER, applicationName)

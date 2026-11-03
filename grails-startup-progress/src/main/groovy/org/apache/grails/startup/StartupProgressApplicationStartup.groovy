@@ -16,25 +16,24 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-@SuppressWarnings('UnnecessarySemicolon')
-package org.apache.grails.startup;
+package org.apache.grails.startup
 
-import java.util.function.Predicate;
-import java.util.function.Supplier;
+import java.util.function.Predicate
+import java.util.function.Supplier
 
-import groovy.transform.CompileStatic;
-import groovy.transform.PackageScope;
+import groovy.transform.CompileStatic
+import groovy.transform.PackageScope
 
-import org.springframework.beans.factory.BeanFactoryUtils;
-import org.springframework.beans.factory.config.BeanDefinition;
-import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
-import org.springframework.boot.context.metrics.buffering.BufferingApplicationStartup;
-import org.springframework.boot.context.metrics.buffering.StartupTimeline;
-import org.springframework.core.SimpleAliasRegistry;
-import org.springframework.core.metrics.ApplicationStartup;
-import org.springframework.core.metrics.StartupStep;
+import org.springframework.beans.factory.BeanFactoryUtils
+import org.springframework.beans.factory.config.BeanDefinition
+import org.springframework.beans.factory.config.ConfigurableListableBeanFactory
+import org.springframework.boot.context.metrics.buffering.BufferingApplicationStartup
+import org.springframework.boot.context.metrics.buffering.StartupTimeline
+import org.springframework.core.SimpleAliasRegistry
+import org.springframework.core.metrics.ApplicationStartup
+import org.springframework.core.metrics.StartupStep
 
-import grails.boot.StartupTask;
+import grails.boot.StartupTask
 
 /**
  * Reads the context's progress from the startup steps Spring records during a refresh, and from the
@@ -43,33 +42,31 @@ import grails.boot.StartupTask;
  * {@code startup} endpoint sees the same steps it would without the progress page. Once the application
  * is ready it reads no more, so what the application creates from then on is no part of the report.
  */
-// TODO(groovyism-cleanup): semicolons kept to preserve rename-similarity against the original .java (see matrei's review on #16576). Removed by the stacked groovyism-cleanup PR.
-@SuppressWarnings('UnnecessarySemicolon')
 @CompileStatic
 final class StartupProgressApplicationStartup implements ApplicationStartup {
 
-    private static final String BEAN_POST_PROCESS_STEP = 'spring.context.beans.post-process';
+    private static final String BEAN_POST_PROCESS_STEP = 'spring.context.beans.post-process'
 
-    private static final String BEAN_INSTANTIATE_STEP = 'spring.beans.instantiate';
+    private static final String BEAN_INSTANTIATE_STEP = 'spring.beans.instantiate'
 
-    private static final String BEAN_NAME_TAG = 'beanName';
+    private static final String BEAN_NAME_TAG = 'beanName'
 
-    private final ApplicationStartup delegate;
+    private final ApplicationStartup delegate
 
-    private final StartupProgress progress;
+    private final StartupProgress progress
 
-    private final ConfigurableListableBeanFactory beanFactory;
+    private final ConfigurableListableBeanFactory beanFactory
 
     /** The innermost bean being created on each thread, so a bean's own time can exclude its dependencies'. */
-    private final ThreadLocal<BeanCreationStep> creating = new ThreadLocal<>();
+    private final ThreadLocal<BeanCreationStep> creating = new ThreadLocal<>()
 
     /** The innermost task running on each thread, which the items reported on that thread belong to. */
-    private final ThreadLocal<TaskStep> running = new ThreadLocal<>();
+    private final ThreadLocal<TaskStep> running = new ThreadLocal<>()
 
     private StartupProgressApplicationStartup(ApplicationStartup delegate, StartupProgress progress, ConfigurableListableBeanFactory beanFactory) {
-        this.delegate = delegate;
-        this.progress = progress;
-        this.beanFactory = beanFactory;
+        this.delegate = delegate
+        this.progress = progress
+        this.beanFactory = beanFactory
     }
 
     /**
@@ -80,28 +77,28 @@ final class StartupProgressApplicationStartup implements ApplicationStartup {
      */
     @PackageScope
     static ApplicationStartup create(ApplicationStartup delegate, StartupProgress progress, ConfigurableListableBeanFactory beanFactory) {
-        StartupProgressApplicationStartup startup = new StartupProgressApplicationStartup(delegate, progress, beanFactory);
-        return delegate instanceof BufferingApplicationStartup ? new Buffering((BufferingApplicationStartup) delegate, startup) : startup;
+        StartupProgressApplicationStartup startup = new StartupProgressApplicationStartup(delegate, progress, beanFactory)
+        return delegate instanceof BufferingApplicationStartup ? new Buffering((BufferingApplicationStartup) delegate, startup) : startup
     }
 
     @Override
     StartupStep start(String name) {
-        StartupStep step = delegate.start(name);
-        if (!progress.isReporting()) {
-            return step;
+        StartupStep step = delegate.start(name)
+        if (!progress.reporting) {
+            return step
         }
         switch (name) {
             case BEAN_INSTANTIATE_STEP:
-                return new BeanCreationStep(step);
+                return new BeanCreationStep(step)
             case BEAN_POST_PROCESS_STEP:
-                progress.loadingDefinitions();
-                return new BeanPostProcessStep(step);
+                progress.loadingDefinitions()
+                return new BeanPostProcessStep(step)
             case StartupTask.TASK_STEP:
-                return new TaskStep(step);
+                return new TaskStep(step)
             case StartupTask.ITEM_STEP:
-                return running.get() != null ? new ItemStep(step, running.get().task) : step;
+                return running.get() != null ? new ItemStep(step, running.get().task) : step
             default:
-                return step;
+                return step
         }
     }
 
@@ -110,14 +107,14 @@ final class StartupProgressApplicationStartup implements ApplicationStartup {
      * registered every definition, which is when the set stops changing.
      */
     private Set<String> eagerSingletons() {
-        Set<String> names = new HashSet<>();
-        for (String name : beanFactory.getBeanDefinitionNames()) {
-            BeanDefinition definition = beanFactory.getBeanDefinition(name);
-            if (definition.isSingleton() && !definition.isAbstract() && !definition.isLazyInit()) {
-                names.add(name);
+        Set<String> names = new HashSet<>()
+        for (String name : beanFactory.beanDefinitionNames) {
+            BeanDefinition definition = beanFactory.getBeanDefinition(name)
+            if (definition.singleton && !definition.abstract && !definition.lazyInit) {
+                names << name
             }
         }
-        return names;
+        return names
     }
 
     /**
@@ -125,8 +122,8 @@ final class StartupProgressApplicationStartup implements ApplicationStartup {
      * factory that makes it.
      */
     private String definedName(String requested) {
-        String name = BeanFactoryUtils.transformedBeanName(requested);
-        return beanFactory instanceof SimpleAliasRegistry ? ((SimpleAliasRegistry) beanFactory).canonicalName(name) : name;
+        String name = BeanFactoryUtils.transformedBeanName(requested)
+        return beanFactory instanceof SimpleAliasRegistry ? ((SimpleAliasRegistry) beanFactory).canonicalName(name) : name
     }
 
     /**
@@ -135,144 +132,144 @@ final class StartupProgressApplicationStartup implements ApplicationStartup {
      */
     private static final class Buffering extends BufferingApplicationStartup {
 
-        private final BufferingApplicationStartup recording;
+        private final BufferingApplicationStartup recording
 
-        private final StartupProgressApplicationStartup progress;
+        private final StartupProgressApplicationStartup progress
 
         Buffering(BufferingApplicationStartup recording, StartupProgressApplicationStartup progress) {
-            super(1);
-            this.recording = recording;
-            this.progress = progress;
+            super(1)
+            this.recording = recording
+            this.progress = progress
         }
 
         @Override
         StartupStep start(String name) {
-            return progress.start(name);
+            return progress.start(name)
         }
 
         @Override
         void startRecording() {
-            recording.startRecording();
+            recording.startRecording()
         }
 
         @Override
         void addFilter(Predicate<StartupStep> filter) {
-            recording.addFilter(filter);
+            recording.addFilter(filter)
         }
 
         @Override
         StartupTimeline getBufferedTimeline() {
-            return recording.getBufferedTimeline();
+            return recording.getBufferedTimeline()
         }
 
         @Override
         StartupTimeline drainBufferedTimeline() {
-            return recording.drainBufferedTimeline();
+            return recording.drainBufferedTimeline()
         }
     }
 
     private abstract static class ForwardingStep implements StartupStep {
 
         @PackageScope
-        final StartupStep step;
+        final StartupStep step
 
         ForwardingStep(StartupStep step) {
-            this.step = step;
+            this.step = step
         }
 
         @Override
         String getName() {
-            return step.getName();
+            return step.name
         }
 
         @Override
         long getId() {
-            return step.getId();
+            return step.id
         }
 
         @Override
         Long getParentId() {
-            return step.getParentId();
+            return step.parentId
         }
 
         @Override
         StartupStep tag(String key, String value) {
-            step.tag(key, value);
-            return this;
+            step.tag(key, value)
+            return this
         }
 
         @Override
         StartupStep tag(String key, Supplier<String> value) {
-            step.tag(key, value);
-            return this;
+            step.tag(key, value)
+            return this
         }
 
         @Override
         StartupStep.Tags getTags() {
-            return step.getTags();
+            return step.tags
         }
 
         @Override
         void end() {
-            step.end();
+            step.end()
         }
     }
 
     private final class BeanPostProcessStep extends ForwardingStep {
 
         BeanPostProcessStep(StartupStep step) {
-            super(step);
+            super(step)
         }
 
         @Override
         void end() {
-            super.end();
-            StartupProgressApplicationStartup.this.progress.creatingBeans(StartupProgressApplicationStartup.this.eagerSingletons());
+            super.end()
+            StartupProgressApplicationStartup.this.progress.creatingBeans(StartupProgressApplicationStartup.this.eagerSingletons())
         }
     }
 
     private final class BeanCreationStep extends ForwardingStep {
 
-        private final long startNanos = System.nanoTime();
+        private final long startNanos = System.nanoTime()
 
-        private final BeanCreationStep enclosing;
+        private final BeanCreationStep enclosing
 
-        private long nestedNanos;
+        private long nestedNanos
 
-        private String beanName;
+        private String beanName
 
         BeanCreationStep(StartupStep step) {
-            super(step);
-            enclosing = StartupProgressApplicationStartup.this.creating.get();
-            StartupProgressApplicationStartup.this.creating.set(this);
+            super(step)
+            enclosing = StartupProgressApplicationStartup.this.creating.get()
+            StartupProgressApplicationStartup.this.creating.set(this)
         }
 
         @Override
         StartupStep tag(String key, String value) {
-            if (BEAN_NAME_TAG.equals(key) && value != null) {
-                beanName = StartupProgressApplicationStartup.this.definedName(value);
-                StartupProgressApplicationStartup.this.progress.beanCreationStarted(beanName);
+            if (key == BEAN_NAME_TAG && value != null) {
+                beanName = StartupProgressApplicationStartup.this.definedName(value)
+                StartupProgressApplicationStartup.this.progress.beanCreationStarted(beanName)
             }
-            return super.tag(key, value);
+            return super.tag(key, value)
         }
 
         @Override
         void end() {
-            super.end();
-            long elapsedNanos = System.nanoTime() - startNanos;
+            super.end()
+            long elapsedNanos = System.nanoTime() - startNanos
             if (beanName != null && StartupProgressApplicationStartup.this.beanFactory.containsBeanDefinition(beanName)) {
-                StartupProgressApplicationStartup.this.progress.beanCreated(beanName, elapsedNanos - nestedNanos);
+                StartupProgressApplicationStartup.this.progress.beanCreated(beanName, elapsedNanos - nestedNanos)
             }
-            if (enclosing != null) {
-                enclosing.@nestedNanos = enclosing.@nestedNanos + elapsedNanos;
-                StartupProgressApplicationStartup.this.creating.set(enclosing);
+            if (enclosing) {
+                enclosing.@nestedNanos = enclosing.@nestedNanos + elapsedNanos
+                StartupProgressApplicationStartup.this.creating.set(enclosing)
                 // the bean this one was created for is being created again, not the one that has just finished
                 if (enclosing.@beanName != null) {
-                    StartupProgressApplicationStartup.this.progress.beanCreationStarted(enclosing.@beanName);
+                    StartupProgressApplicationStartup.this.progress.beanCreationStarted(enclosing.@beanName)
                 }
             }
             else {
-                StartupProgressApplicationStartup.this.creating.remove();
+                StartupProgressApplicationStartup.this.creating.remove()
             }
         }
     }
@@ -280,61 +277,61 @@ final class StartupProgressApplicationStartup implements ApplicationStartup {
     private final class TaskStep extends ForwardingStep {
 
         @PackageScope
-        final StartupProgress.Task task = StartupProgressApplicationStartup.this.progress.taskStarted();
+        final StartupProgress.Task task = StartupProgressApplicationStartup.this.progress.taskStarted()
 
-        private final TaskStep enclosing;
+        private final TaskStep enclosing
 
         TaskStep(StartupStep step) {
-            super(step);
-            enclosing = StartupProgressApplicationStartup.this.running.get();
-            StartupProgressApplicationStartup.this.running.set(this);
+            super(step)
+            enclosing = StartupProgressApplicationStartup.this.running.get()
+            StartupProgressApplicationStartup.this.running.set(this)
         }
 
         @Override
         StartupStep tag(String key, String value) {
-            if (StartupTask.DESCRIPTION_TAG.equals(key)) {
-                task.described(value);
+            if (key == StartupTask.DESCRIPTION_TAG) {
+                task.described(value)
             }
-            else if (StartupTask.TOTAL_TAG.equals(key)) {
-                task.totalled(value);
+            else if (key == StartupTask.TOTAL_TAG) {
+                task.totalled(value)
             }
-            return super.tag(key, value);
+            return super.tag(key, value)
         }
 
         @Override
         void end() {
-            super.end();
-            task.ended();
-            if (enclosing != null) {
-                StartupProgressApplicationStartup.this.running.set(enclosing);
+            super.end()
+            task.ended()
+            if (enclosing) {
+                StartupProgressApplicationStartup.this.running.set(enclosing)
             }
             else {
-                StartupProgressApplicationStartup.this.running.remove();
+                StartupProgressApplicationStartup.this.running.remove()
             }
         }
     }
 
     private static final class ItemStep extends ForwardingStep {
 
-        private final StartupProgress.Task task;
+        private final StartupProgress.Task task
 
         ItemStep(StartupStep step, StartupProgress.Task task) {
-            super(step);
-            this.task = task;
+            super(step)
+            this.task = task
         }
 
         @Override
         StartupStep tag(String key, String value) {
-            if (StartupTask.ITEM_TAG.equals(key)) {
-                task.itemStarted(value);
+            if (key == StartupTask.ITEM_TAG) {
+                task.itemStarted(value)
             }
-            return super.tag(key, value);
+            return super.tag(key, value)
         }
 
         @Override
         void end() {
-            super.end();
-            task.itemEnded();
+            super.end()
+            task.itemEnded()
         }
     }
 }

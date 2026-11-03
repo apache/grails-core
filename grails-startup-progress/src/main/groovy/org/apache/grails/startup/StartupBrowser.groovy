@@ -56,7 +56,7 @@ final class StartupBrowser {
             return
         }
         List<String> commandLine = new ArrayList<>(command.isEmpty() ? systemCommand() : command)
-        commandLine.add(address.toString())
+        commandLine << address.toString()
         try {
             new ProcessBuilder(commandLine)
                     .redirectOutput(ProcessBuilder.Redirect.DISCARD)

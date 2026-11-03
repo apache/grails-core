@@ -68,6 +68,28 @@ class DefaultGrailsJobClassEdgeCasesSpec extends Specification {
         !new DefaultGrailsJobClass(overriddenJob).enabled
     }
 
+    void 'a missing or blank group falls back to the default'() {
+        given:
+        Class missing = gcl.parseClass('class DgcMissingGroupJob { def execute(){} }')
+        Class blank = gcl.parseClass('''
+            class DgcBlankGroupJob {
+                static group = ''
+                def execute(){}
+            }
+        ''')
+        Class present = gcl.parseClass('''
+            class DgcPresentGroupJob {
+                static group = 'myGroup'
+                def execute(){}
+            }
+        ''')
+
+        expect:
+        new DefaultGrailsJobClass(missing).group == 'GRAILS_JOBS'
+        new DefaultGrailsJobClass(blank).group == 'GRAILS_JOBS'
+        new DefaultGrailsJobClass(present).group == 'myGroup'
+    }
+
     void 'a missing or blank description falls back to the default'() {
         given:
         Class missing = gcl.parseClass('class DgcMissingDescJob { def execute(){} }')

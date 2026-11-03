@@ -49,9 +49,7 @@ class GrailsJobFactory extends AdaptableJobFactory implements ApplicationContext
 
     @Override
     protected Object createJobInstance(TriggerFiredBundle bundle) throws Exception {
-        String grailsJobName = (String) bundle.getJobDetail().getJobDataMap().get(
-                JobDetailFactoryBean.JOB_NAME_PARAMETER
-        )
+        String grailsJobName = (String) bundle.jobDetail.jobDataMap[JobDetailFactoryBean.JOB_NAME_PARAMETER]
         if (grailsJobName != null) {
             return new GrailsJob(applicationContext.getBean(grailsJobName))
         } else {
@@ -72,18 +70,18 @@ class GrailsJobFactory extends AdaptableJobFactory implements ApplicationContext
             this.job = job
 
             // Finds an execute method with zero or one parameter.
-            this.executeMethod = ReflectionUtils.findMethod(
+            executeMethod = ReflectionUtils.findMethod(
                     job.getClass(), GrailsJobClassConstants.EXECUTE, (Class<?>[]) null
             )
             if (executeMethod == null) {
                 throw new IllegalArgumentException(
                         MessageFormat.format(
                                 '{0} should declare #{1}() method',
-                                job.getClass().getName(), GrailsJobClassConstants.EXECUTE
+                                job.getClass().name, GrailsJobClassConstants.EXECUTE
                         )
                 )
             }
-            switch (executeMethod.getParameterTypes().length) {
+            switch (executeMethod.parameterTypes.length) {
                 case 0:
                     passExecutionContext = false
                     break
@@ -94,13 +92,13 @@ class GrailsJobFactory extends AdaptableJobFactory implements ApplicationContext
                     throw new IllegalArgumentException(
                             MessageFormat.format(
                                     '{0}#{1}() method should take either no arguments or one argument of type JobExecutionContext',
-                                    job.getClass().getName(), GrailsJobClassConstants.EXECUTE
+                                    job.getClass().name, GrailsJobClassConstants.EXECUTE
                             )
                     )
             }
 
             // Find interrupt method
-            this.interruptMethod = ReflectionUtils.findMethod(job.getClass(), GrailsJobClassConstants.INTERRUPT)
+            interruptMethod = ReflectionUtils.findMethod(job.getClass(), GrailsJobClassConstants.INTERRUPT)
         }
 
         // Execute Job
@@ -112,9 +110,9 @@ class GrailsJobFactory extends AdaptableJobFactory implements ApplicationContext
                     executeMethod.invoke(job)
                 }
             } catch (InvocationTargetException ite) {
-                Throwable targetException = ite.getTargetException()
+                Throwable targetException = ite.targetException
                 if (targetException instanceof JobExecutionException) {
-                    throw (JobExecutionException) targetException
+                    throw targetException
                 } else {
                     throw new JobExecutionException(targetException)
                 }
@@ -122,7 +120,7 @@ class GrailsJobFactory extends AdaptableJobFactory implements ApplicationContext
                 JobExecutionException criticalError = new JobExecutionException(
                         MessageFormat.format(
                                 'Cannot invoke {0}#{1}() method',
-                                job.getClass().getName(), executeMethod.getName()
+                                job.getClass().name, executeMethod.name
                         ),
                         iae
                 )
@@ -143,7 +141,7 @@ class GrailsJobFactory extends AdaptableJobFactory implements ApplicationContext
                 throw new UnableToInterruptJobException(
                         MessageFormat.format(
                                 '{0} does not declare an {1}() method, so it cannot be interrupted',
-                                job.getClass().getName(), GrailsJobClassConstants.INTERRUPT
+                                job.getClass().name, GrailsJobClassConstants.INTERRUPT
                         )
                 )
             }

@@ -95,13 +95,13 @@ final class StartupAccess {
             return null
         }
         boolean signedIn = false
-        List<String> kept = new ArrayList<>()
+        List<String> kept = []
         for (String parameter : rawQuery.split('&')) {
             if (parameter.startsWith(TOKEN_PARAMETER + '=')) {
                 signedIn |= matches(parameter.substring(TOKEN_PARAMETER.length() + 1))
             }
             else if (!parameter.isEmpty()) {
-                kept.add(parameter)
+                kept << parameter
             }
         }
         if (!signedIn) {

@@ -66,7 +66,7 @@ final class StartupProgressFilter implements Filter {
      */
     @PackageScope
     static boolean startsEmbeddedServer(ConfigurableApplicationContext context) {
-        return context instanceof ConfigurableWebApplicationContext && ((ConfigurableWebApplicationContext) context).getServletContext() == null
+        return context instanceof ConfigurableWebApplicationContext && context.servletContext == null
     }
 
     /**
@@ -76,10 +76,10 @@ final class StartupProgressFilter implements Filter {
     static FilterRegistrationBean<Filter> registration(StartupProgressResponder responder, boolean servesProgressPage) {
         StartupProgressResponder.Takes takes = servesProgressPage ? StartupProgressResponder.Takes.PAGE_LOADS : StartupProgressResponder.Takes.OWN_PATHS_ONLY
         FilterRegistrationBean<Filter> registration = new FilterRegistrationBean<Filter>(new StartupProgressFilter(responder, takes))
-        registration.setName('grailsStartupProgressFilter')
+        registration.name = 'grailsStartupProgressFilter'
         registration.addUrlPatterns('/*')
         registration.setDispatcherTypes(DispatcherType.REQUEST)
-        registration.setOrder(Ordered.HIGHEST_PRECEDENCE)
+        registration.order = Ordered.HIGHEST_PRECEDENCE
         return registration
     }
 
@@ -97,17 +97,17 @@ final class StartupProgressFilter implements Filter {
 
         @Override
         String method() {
-            return request.getMethod()
+            return request.method
         }
 
         @Override
         String path() {
-            return request.getRequestURI()
+            return request.requestURI
         }
 
         @Override
         String query() {
-            return request.getQueryString()
+            return request.queryString
         }
 
         @Override
@@ -127,13 +127,13 @@ final class StartupProgressFilter implements Filter {
 
         @Override
         void send(int status, String contentType, byte[] body) throws IOException {
-            response.setStatus(status)
+            response.status = status
             if (contentType != null) {
-                response.setContentType(contentType)
+                response.contentType = contentType
             }
-            response.setContentLength(body.length)
+            response.contentLength = body.length
             if (body.length > 0) {
-                response.getOutputStream().write(body)
+                response.outputStream.write(body)
             }
             response.flushBuffer()
         }

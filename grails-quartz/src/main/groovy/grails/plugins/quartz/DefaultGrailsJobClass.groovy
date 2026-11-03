@@ -66,13 +66,13 @@ class DefaultGrailsJobClass extends AbstractGrailsClass implements GrailsJobClas
 
     private void evaluateTriggers() {
         // registering additional triggersClosure from 'triggersClosure' closure if present
-        Closure triggersClosure = (Closure) GrailsClassUtils.getStaticPropertyValue(getClazz(), 'triggers')
+        Closure triggersClosure = (Closure) GrailsClassUtils.getStaticPropertyValue(clazz, 'triggers')
 
-        TriggersConfigBuilder builder = new TriggersConfigBuilder(getFullName(), grailsApplication)
+        TriggersConfigBuilder builder = new TriggersConfigBuilder(fullName, grailsApplication)
 
-        if (triggersClosure != null) {
+        if (triggersClosure) {
             builder.build(triggersClosure)
-            triggers = (Map) builder.getTriggers()
+            triggers = (Map) builder.triggers
         }
         triggersEvaluated = true
     }
@@ -87,7 +87,7 @@ class DefaultGrailsJobClass extends AbstractGrailsClass implements GrailsJobClas
 
     String getGroup() {
         String group = getStaticPropertyValue(GROUP, String)
-        if (group == null || ''.equals(group)) return DEFAULT_GROUP
+        if (!group) return DEFAULT_GROUP
         return group
     }
 
@@ -118,12 +118,12 @@ class DefaultGrailsJobClass extends AbstractGrailsClass implements GrailsJobClas
 
     String getDescription() {
         String description = (String) getPropertyOrStaticPropertyOrFieldValue(DESCRIPTION, String)
-        if (description == null || ''.equals(description)) return DEFAULT_DESCRIPTION
+        if (!description) return DEFAULT_DESCRIPTION
         return description
     }
 
     Map getTriggers() {
-        if (triggersEvaluated == false) {
+        if (!triggersEvaluated) {
             evaluateTriggers()
         }
         return triggers
