@@ -16,13 +16,10 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
+@SuppressWarnings('UnnecessarySemicolon')
 package org.grails.web.mapping;
 
-import java.util.Collections;
-import java.util.Map;
-
-import groovy.lang.Closure;
-
+import groovy.transform.CompileStatic;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -43,17 +40,20 @@ import grails.web.mapping.exceptions.UrlMappingException;
  * @author Graeme Rocher
  * @since 0.5
  */
-public class DefaultUrlMappingInfo extends AbstractUrlMappingInfo {
+// TODO(groovyism-cleanup): semicolons kept to preserve rename-similarity against the original .java (see matrei's review on #16576). Removed by the stacked groovyism-cleanup PR.
+@SuppressWarnings(['UnnecessarySemicolon'])
+@CompileStatic
+class DefaultUrlMappingInfo extends AbstractUrlMappingInfo {
 
-    private static final Logger LOG = LoggerFactory.getLogger(DefaultUrlMappingInfo.class);
-    private static final String CONTROLLER_PREFIX = "controller:";
-    private static final String ACTION_PREFIX = "action:";
-    private static final String PLUGIN_PREFIX = "plugin:";
-    private static final String NAMESPACE_PREFIX = "namespace:";
-    private static final String ID_PREFIX = "id:";
-    private static final String VIEW_PREFIX = "view:";
-    private static final String METHOD_PREFIX = "method:";
-    private static final String VERSION_PREFIX = "version:";
+    private static final Logger LOG = LoggerFactory.getLogger(DefaultUrlMappingInfo);
+    private static final String CONTROLLER_PREFIX = 'controller:';
+    private static final String ACTION_PREFIX = 'action:';
+    private static final String PLUGIN_PREFIX = 'plugin:';
+    private static final String NAMESPACE_PREFIX = 'namespace:';
+    private static final String ID_PREFIX = 'id:';
+    private static final String VIEW_PREFIX = 'view:';
+    private static final String METHOD_PREFIX = 'method:';
+    private static final String VERSION_PREFIX = 'version:';
 
     private final GrailsApplication grailsApplication;
     private Object controllerName;
@@ -62,7 +62,7 @@ public class DefaultUrlMappingInfo extends AbstractUrlMappingInfo {
     private Object namespace;
     private Object redirectInfo;
     private Object id;
-    private static final String ID_PARAM = "id";
+    private static final String ID_PARAM = 'id';
     private UrlMappingData urlData;
     private Object viewName;
     private boolean parsingRequest;
@@ -71,7 +71,7 @@ public class DefaultUrlMappingInfo extends AbstractUrlMappingInfo {
     private String httpMethod;
     private String version;
 
-    @SuppressWarnings("rawtypes")
+    @SuppressWarnings('rawtypes')
     private DefaultUrlMappingInfo(Map params, UrlMappingData urlData, GrailsApplication grailsApplication) {
         setParams(params);
         id = getParams().get(ID_PARAM);
@@ -82,24 +82,24 @@ public class DefaultUrlMappingInfo extends AbstractUrlMappingInfo {
             applicationContext = grailsApplication.getMainContext();
         }
         if (applicationContext != null && applicationContext.containsBean(UrlConverter.BEAN_NAME)) {
-            urlConverter = applicationContext.getBean(UrlConverter.BEAN_NAME, UrlConverter.class);
+            urlConverter = applicationContext.getBean(UrlConverter.BEAN_NAME, UrlConverter);
         }
         else {
             urlConverter = new CamelCaseUrlConverter();
         }
     }
 
-    @SuppressWarnings("rawtypes")
-    public DefaultUrlMappingInfo(Object redirectInfo, Object controllerName, Object actionName, Object namespace, Object pluginName, Object viewName, Map params,
+    @SuppressWarnings('rawtypes')
+    DefaultUrlMappingInfo(Object redirectInfo, Object controllerName, Object actionName, Object namespace, Object pluginName, Object viewName, Map params,
             UrlMappingData urlData, GrailsApplication grailsApplication) {
         this(redirectInfo, controllerName, actionName, namespace, pluginName, viewName, null, UrlMapping.ANY_VERSION, params, urlData, grailsApplication);
     }
 
-    public DefaultUrlMappingInfo(Object redirectInfo, Object controllerName, Object actionName, Object namespace, Object pluginName, Object viewName,
+    DefaultUrlMappingInfo(Object redirectInfo, Object controllerName, Object actionName, Object namespace, Object pluginName, Object viewName,
                                  String httpMethod, String version, Map<?, ?> params, UrlMappingData urlData, GrailsApplication grailsApplication) {
         this(params, urlData, grailsApplication);
-        Assert.isTrue(redirectInfo != null || controllerName != null || viewName != null, "URL mapping must either provide redirect information, a controller or a view name to map to!");
-        Assert.notNull(params, "Argument [params] cannot be null");
+        Assert.isTrue(redirectInfo != null || controllerName != null || viewName != null, 'URL mapping must either provide redirect information, a controller or a view name to map to!');
+        Assert.notNull(params, 'Argument [params] cannot be null');
         this.controllerName = controllerName;
         this.actionName = actionName;
         this.pluginName = pluginName;
@@ -113,30 +113,30 @@ public class DefaultUrlMappingInfo extends AbstractUrlMappingInfo {
     }
 
     @Override
-    public String getVersion() {
+    String getVersion() {
         return this.version;
     }
 
-    public DefaultUrlMappingInfo(Object viewName, Map params, UrlMappingData urlData, GrailsApplication grailsApplication) {
+    DefaultUrlMappingInfo(Object viewName, Map params, UrlMappingData urlData, GrailsApplication grailsApplication) {
         this(params, urlData, grailsApplication);
         this.viewName = viewName;
-        Assert.notNull(viewName, "Argument [viewName] cannot be null or blank");
+        Assert.notNull(viewName, 'Argument [viewName] cannot be null or blank');
     }
 
-    public DefaultUrlMappingInfo(Object uri, UrlMappingData data, GrailsApplication grailsApplication) {
+    DefaultUrlMappingInfo(Object uri, UrlMappingData data, GrailsApplication grailsApplication) {
         this(Collections.emptyMap(), data, grailsApplication);
         this.uri = uri;
-        Assert.notNull(uri, "Argument [uri] cannot be null or blank");
+        Assert.notNull(uri, 'Argument [uri] cannot be null or blank');
     }
 
-    public DefaultUrlMappingInfo(Object uri, String httpMethod, UrlMappingData data, GrailsApplication grailsApplication) {
+    DefaultUrlMappingInfo(Object uri, String httpMethod, UrlMappingData data, GrailsApplication grailsApplication) {
         this(Collections.emptyMap(), data, grailsApplication);
         this.uri = uri;
         this.httpMethod = httpMethod;
-        Assert.notNull(uri, "Argument [uri] cannot be null or blank");
+        Assert.notNull(uri, 'Argument [uri] cannot be null or blank');
     }
 
-    public DefaultUrlMappingInfo(UrlMappingInfo info, Map params, GrailsApplication grailsApplication) {
+    DefaultUrlMappingInfo(UrlMappingInfo info, Map params, GrailsApplication grailsApplication) {
         this(params, info.getUrlData(), grailsApplication);
         this.redirectInfo = info.getRedirectInfo();
         this.controllerName = info.getControllerName();
@@ -147,63 +147,63 @@ public class DefaultUrlMappingInfo extends AbstractUrlMappingInfo {
     }
 
     @Override
-    public String getHttpMethod() {
+    String getHttpMethod() {
         return httpMethod;
     }
 
     @Override
-    public String toString() {
+    String toString() {
         if (urlData == null) {
             return null;
         }
         return urlData.getUrlPattern();
     }
 
-    @SuppressWarnings("rawtypes")
-    public Map getParameters() {
+    @SuppressWarnings('rawtypes')
+    Map getParameters() {
         return getParams();
     }
 
-    public boolean isParsingRequest() {
+    boolean isParsingRequest() {
         return parsingRequest;
     }
 
-    public void setParsingRequest(boolean parsingRequest) {
+    void setParsingRequest(boolean parsingRequest) {
         this.parsingRequest = parsingRequest;
     }
 
-    public String getPluginName() {
+    String getPluginName() {
         return pluginName == null ? null : pluginName.toString();
     }
 
-    public String getNamespace() {
+    String getNamespace() {
         String name = evaluateNameForValue(namespace);
         return urlConverter.toUrlElement(name);
     }
 
-    public String getControllerName() {
+    String getControllerName() {
         String name = evaluateNameForValue(controllerName);
         if (name == null && getViewName() == null && uri == null) {
-            throw new UrlMappingException("Unable to establish controller name to dispatch for [" +
-                    controllerName + "]. Dynamic closure invocation returned null. Check your mapping file is correct, when assigning the controller name as a request parameter it cannot be an optional token!");
+            throw new UrlMappingException('Unable to establish controller name to dispatch for [' +
+                    controllerName + ']. Dynamic closure invocation returned null. Check your mapping file is correct, when assigning the controller name as a request parameter it cannot be an optional token!');
         }
         return urlConverter.toUrlElement(name);
     }
 
-    public String getActionName() {
+    String getActionName() {
         String name = evaluateNameForValue(actionName);
         return urlConverter.toUrlElement(name);
     }
 
     @Override
-    public boolean hasWildcardCaptures() {
+    boolean hasWildcardCaptures() {
         return controllerName instanceof Closure ||
                 actionName instanceof Closure ||
                 namespace instanceof Closure;
     }
 
     @Override
-    public boolean isNameResolutionRequestDependent() {
+    boolean isNameResolutionRequestDependent() {
         return isRequestDependent(controllerName) || isRequestDependent(actionName) ||
                 isRequestDependent(namespace) || isRequestDependent(viewName);
     }
@@ -221,52 +221,52 @@ public class DefaultUrlMappingInfo extends AbstractUrlMappingInfo {
         return name instanceof Closure && !(name instanceof RuntimeConstraintEvaluator);
     }
 
-    public String getViewName() {
+    String getViewName() {
         return evaluateNameForValue(viewName);
     }
 
-    public String getId() {
+    String getId() {
         return evaluateNameForValue(id);
     }
 
-    public String getURI() {
+    String getURI() {
         return evaluateNameForValue(uri);
     }
 
     @Override
-    public Object getRedirectInfo() {
+    Object getRedirectInfo() {
         return redirectInfo;
     }
 
     @Override
-    public UrlMappingData getUrlData() {
+    UrlMappingData getUrlData() {
         return urlData;
     }
 
     @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
+    boolean equals(Object o) {
+        if (this.is(o)) return true;
         if (o == null || getClass() != o.getClass()) return false;
 
         DefaultUrlMappingInfo that = (DefaultUrlMappingInfo) o;
 
-        if (actionName != null ? !actionName.equals(that.actionName) : that.actionName != null) return false;
-        if (controllerName != null ? !controllerName.equals(that.controllerName) : that.controllerName != null)
+        if (actionName != null ? !actionName.equals(that.@actionName) : that.@actionName != null) return false;
+        if (controllerName != null ? !controllerName.equals(that.@controllerName) : that.@controllerName != null)
             return false;
-        if (httpMethod != null ? !httpMethod.equals(that.httpMethod) : that.httpMethod != null) return false;
-        if (id != null ? !id.equals(that.id) : that.id != null) return false;
-        if (namespace != null ? !namespace.equals(that.namespace) : that.namespace != null) return false;
-        if (pluginName != null ? !pluginName.equals(that.pluginName) : that.pluginName != null) return false;
-        if (redirectInfo != null ? !redirectInfo.equals(that.redirectInfo) : that.redirectInfo != null) return false;
-        if (uri != null ? !uri.equals(that.uri) : that.uri != null) return false;
-        if (version != null ? !version.equals(that.version) : that.version != null) return false;
-        if (viewName != null ? !viewName.equals(that.viewName) : that.viewName != null) return false;
+        if (httpMethod != null ? !httpMethod.equals(that.@httpMethod) : that.@httpMethod != null) return false;
+        if (id != null ? !id.equals(that.@id) : that.@id != null) return false;
+        if (namespace != null ? !namespace.equals(that.@namespace) : that.@namespace != null) return false;
+        if (pluginName != null ? !pluginName.equals(that.@pluginName) : that.@pluginName != null) return false;
+        if (redirectInfo != null ? !redirectInfo.equals(that.@redirectInfo) : that.@redirectInfo != null) return false;
+        if (uri != null ? !uri.equals(that.@uri) : that.@uri != null) return false;
+        if (version != null ? !version.equals(that.@version) : that.@version != null) return false;
+        if (viewName != null ? !viewName.equals(that.@viewName) : that.@viewName != null) return false;
 
         return true;
     }
 
     @Override
-    public int hashCode() {
+    int hashCode() {
         int result = controllerName != null ? (CONTROLLER_PREFIX + controllerName).hashCode() : 0;
         result = 31 * result + (actionName != null ? (ACTION_PREFIX + actionName).hashCode() : 0);
         result = 31 * result + (pluginName != null ? (PLUGIN_PREFIX + pluginName).hashCode() : 0);
@@ -279,4 +279,5 @@ public class DefaultUrlMappingInfo extends AbstractUrlMappingInfo {
         result = 31 * result + (version != null ? (VERSION_PREFIX + version).hashCode() : 0);
         return result;
     }
+
 }

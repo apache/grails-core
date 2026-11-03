@@ -16,12 +16,10 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
+@SuppressWarnings('UnnecessarySemicolon')
 package org.grails.web.mapping;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-
+import groovy.transform.CompileStatic;
 import org.springframework.util.Assert;
 
 import grails.web.mapping.UrlMapping;
@@ -33,12 +31,15 @@ import grails.web.mapping.UrlMappingData;
  * @author Graeme Rocher
  * @since 0.4
  */
-public class DefaultUrlMappingData implements UrlMappingData {
+// TODO(groovyism-cleanup): semicolons kept to preserve rename-similarity against the original .java (see matrei's review on #16576). Removed by the stacked groovyism-cleanup PR.
+@SuppressWarnings(['UnnecessarySemicolon'])
+@CompileStatic
+class DefaultUrlMappingData implements UrlMappingData {
 
-    private static final String CAPTURED_WILDCARD = "(*)";
-    private static final String CAPTURED_DOUBLE_WILDCARD = "(**)";
-    private static final String QUESTION_MARK = "?";
-    private static final String SLASH = "/";
+    private static final String CAPTURED_WILDCARD = '(*)';
+    private static final String CAPTURED_DOUBLE_WILDCARD = '(**)';
+    private static final String QUESTION_MARK = '?';
+    private static final String SLASH = '/';
 
     private final String urlPattern;
     private final String[] logicalUrls;
@@ -49,8 +50,8 @@ public class DefaultUrlMappingData implements UrlMappingData {
     private boolean hasGreedyExtensionParam;
     private int greedyTokenIndex = -1;
 
-    public DefaultUrlMappingData(String urlPattern) {
-        Assert.hasLength(urlPattern, "Argument [urlPattern] cannot be null or blank");
+    DefaultUrlMappingData(String urlPattern) {
+        Assert.hasLength(urlPattern, 'Argument [urlPattern] cannot be null or blank');
         Assert.isTrue(urlPattern.startsWith(SLASH), "Argument [urlPattern] is not a valid URL. It must start with '/' !");
 
         String configuredPattern = configureUrlPattern(urlPattern);
@@ -63,17 +64,17 @@ public class DefaultUrlMappingData implements UrlMappingData {
     }
 
     @Override
-    public boolean hasOptionalExtension() {
+    boolean hasOptionalExtension() {
         return hasOptionalExtension;
     }
 
     @Override
-    public boolean hasGreedyExtensionParam() {
+    boolean hasGreedyExtensionParam() {
         return hasGreedyExtensionParam;
     }
 
     @Override
-    public int getGreedyTokenIndex() {
+    int getGreedyTokenIndex() {
         return greedyTokenIndex;
     }
 
@@ -83,7 +84,7 @@ public class DefaultUrlMappingData implements UrlMappingData {
     }
 
     private String configureUrlPattern(String urlPattern) {
-        return urlPattern.replace("(*)**", CAPTURED_DOUBLE_WILDCARD);
+        return urlPattern.replace('(*)**', CAPTURED_DOUBLE_WILDCARD);
     }
 
     private DefaultUrlMappingData(String urlPattern, String[] logicalUrls, String[] tokens, List<Boolean> optionalTokens) {
@@ -109,14 +110,14 @@ public class DefaultUrlMappingData implements UrlMappingData {
 
                 // Check if the parameter before the extension ends with + (greedy marker)
                 // Can be either (*)+ for required greedy or (*)+? for optional greedy
-                if (beforeExtension.endsWith("+") || beforeExtension.endsWith("+?")) {
+                if (beforeExtension.endsWith('+') || beforeExtension.endsWith('+?')) {
                     hasGreedyExtensionParam = true;
                     // The greedy token is the last token (before extension is stripped)
                     greedyTokenIndex = tokens.length - 1;
                     // Remove the + (keep ? if it follows)
-                    if (beforeExtension.endsWith("+?")) {
+                    if (beforeExtension.endsWith('+?')) {
                         // (*)+? -> (*)?  (optional greedy)
-                        beforeExtension = beforeExtension.substring(0, beforeExtension.length() - 2) + "?";
+                        beforeExtension = beforeExtension.substring(0, beforeExtension.length() - 2) + '?';
                     } else {
                         // (*)+ -> (*)  (required greedy)
                         beforeExtension = beforeExtension.substring(0, beforeExtension.length() - 1);
@@ -168,26 +169,26 @@ public class DefaultUrlMappingData implements UrlMappingData {
         Collections.reverse(urls);
     }
 
-    public String[] getTokens() {
+    String[] getTokens() {
         return tokens;
     }
 
-    public String[] getLogicalUrls() {
+    String[] getLogicalUrls() {
         return logicalUrls;
     }
 
-    public String getUrlPattern() {
+    String getUrlPattern() {
         return urlPattern;
     }
 
-    public boolean isOptional(int index) {
+    boolean isOptional(int index) {
         if (index >= optionalTokens.size()) return true;
         return optionalTokens.get(index).equals(Boolean.TRUE);
     }
 
     @Override
-    public UrlMappingData createRelative(String path) {
-        Assert.hasLength(path, "Argument [path] cannot be null or blank");
+    UrlMappingData createRelative(String path) {
+        Assert.hasLength(path, 'Argument [path] cannot be null or blank');
 
         String newPattern = this.urlPattern + configureUrlPattern(path);
 
@@ -199,4 +200,5 @@ public class DefaultUrlMappingData implements UrlMappingData {
 
         return new DefaultUrlMappingData(newPattern, logicalUrls, tokens, optionalTokens);
     }
+
 }

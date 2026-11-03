@@ -16,13 +16,9 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package grails.web.mapping;
+package grails.web.mapping
 
-import java.util.List;
-
-import groovy.lang.Closure;
-
-import org.springframework.core.io.Resource;
+import org.springframework.core.io.Resource
 
 /**
  * Evaluates URL mapping from the given Spring Resource or class.
@@ -33,7 +29,7 @@ import org.springframework.core.io.Resource;
  * @author Graeme Rocher
  * @since 0.5
  */
-public interface UrlMappingEvaluator {
+interface UrlMappingEvaluator {
 
     /**
      * Evaluates URL mapping from the give Spring Resource
@@ -42,7 +38,7 @@ public interface UrlMappingEvaluator {
      *
      * @return A list of UrlMapping instances
      */
-    List<UrlMapping> evaluateMappings(Resource resource);
+    List<UrlMapping> evaluateMappings(Resource resource)
 
     /**
      * Evaluates mapping from the given class if possible
@@ -50,7 +46,7 @@ public interface UrlMappingEvaluator {
      * @param mappingsClass The class to evaluate mapping from
      * @return A list of UrlMapping instances
      */
-    List<UrlMapping> evaluateMappings(Class<?> mappingsClass);
+    List<UrlMapping> evaluateMappings(Class<?> mappingsClass)
 
     /**
      * Evaluates mapping from the given closure if possible
@@ -58,5 +54,6 @@ public interface UrlMappingEvaluator {
      * @param mappingsClosure The closure to evaluate mapping from
      * @return A list of UrlMapping instances
      */
-    List<UrlMapping> evaluateMappings(Closure<?> mappingsClosure);
+    List<UrlMapping> evaluateMappings(Closure<?> mappingsClosure)
+
 }

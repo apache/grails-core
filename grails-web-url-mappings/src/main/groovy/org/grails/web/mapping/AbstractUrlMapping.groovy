@@ -16,14 +16,12 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
+@SuppressWarnings('UnnecessarySemicolon')
 package org.grails.web.mapping;
-
-import java.net.URI;
-import java.util.Collections;
-import java.util.Map;
 
 import jakarta.servlet.ServletContext;
 
+import groovy.transform.CompileStatic;
 import org.springframework.context.ApplicationContext;
 import org.springframework.web.context.WebApplicationContext;
 
@@ -38,7 +36,10 @@ import grails.web.mapping.UrlMapping;
  * @author Graeme Rocher
  * @since 0.5.5
  */
-public abstract class AbstractUrlMapping implements UrlMapping {
+// TODO(groovyism-cleanup): semicolons kept to preserve rename-similarity against the original .java (see matrei's review on #16576). Removed by the stacked groovyism-cleanup PR.
+@SuppressWarnings(['UnnecessarySemicolon'])
+@CompileStatic
+abstract class AbstractUrlMapping implements UrlMapping {
 
     protected final ConstrainedProperty[] constraints;
     protected Object controllerName;
@@ -65,7 +66,7 @@ public abstract class AbstractUrlMapping implements UrlMapping {
      * @param constraints Any constraints that apply to the mapping
      * @param grailsApplication The GrailsApplication instance
      */
-    public AbstractUrlMapping(Object redirectInfo, Object controllerName, Object actionName, Object namespace, Object pluginName, Object viewName, ConstrainedProperty[] constraints, GrailsApplication grailsApplication) {
+    AbstractUrlMapping(Object redirectInfo, Object controllerName, Object actionName, Object namespace, Object pluginName, Object viewName, ConstrainedProperty[] constraints, GrailsApplication grailsApplication) {
         this.controllerName = controllerName;
         this.actionName = actionName;
         this.namespace = namespace;
@@ -102,68 +103,68 @@ public abstract class AbstractUrlMapping implements UrlMapping {
     }
 
     @Override
-    public String getHttpMethod() {
+    String getHttpMethod() {
         return httpMethod;
     }
 
     @Override
-    public String getVersion() {
+    String getVersion() {
         return version;
     }
 
     /**
      * @see UrlMapping#getConstraints()
      */
-    public Constrained[] getConstraints() {
+    Constrained[] getConstraints() {
         return constraints;
     }
 
     /**
      * @see UrlMapping#getControllerName()
      */
-    public Object getControllerName() {
+    Object getControllerName() {
         return controllerName;
     }
 
     /**
      * @see grails.web.mapping.UrlMapping#getActionName()
      */
-    public Object getActionName() {
+    Object getActionName() {
         return actionName;
     }
 
-    public Object getPluginName() {
+    Object getPluginName() {
         return pluginName;
     }
 
-    public Object getNamespace() {
+    Object getNamespace() {
         return namespace;
     }
 
     /**
      * @see grails.web.mapping.UrlMapping#getViewName()
      */
-    public Object getViewName() {
+    Object getViewName() {
         return viewName;
     }
 
-    public void setParameterValues(Map<String, Object> parameterValues) {
+    void setParameterValues(Map<String, Object> parameterValues) {
         this.parameterValues = Collections.unmodifiableMap(parameterValues);
     }
 
-    public void setParseRequest(boolean shouldParse) {
+    void setParseRequest(boolean shouldParse) {
         this.parseRequest = shouldParse;
     }
 
-    public String getMappingName() {
+    String getMappingName() {
         return mappingName;
     }
 
-    public void setMappingName(String name) {
+    void setMappingName(String name) {
         mappingName = name;
     }
 
-    public boolean hasRuntimeVariable(String name) {
+    boolean hasRuntimeVariable(String name) {
         if (constraints != null) {
             for (int i = 0; i < constraints.length; i++) {
                 ConstrainedProperty cp = constraints[i];
@@ -173,19 +174,20 @@ public abstract class AbstractUrlMapping implements UrlMapping {
         return false;
     }
 
-    public Object getRedirectInfo() {
+    Object getRedirectInfo() {
         return redirectInfo;
     }
 
-    public void setPluginIndex(int pluginIndex) {
+    void setPluginIndex(int pluginIndex) {
         this.pluginIndex = pluginIndex;
     }
 
-    public Integer getPluginIndex() {
+    Integer getPluginIndex() {
         return this.pluginIndex;
     }
 
-    public boolean isDefinedInPlugin() {
+    boolean isDefinedInPlugin() {
         return pluginIndex != null;
     }
+
 }

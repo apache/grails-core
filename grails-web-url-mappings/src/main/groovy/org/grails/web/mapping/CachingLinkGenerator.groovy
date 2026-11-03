@@ -16,15 +16,15 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
+@SuppressWarnings('UnnecessarySemicolon')
 package org.grails.web.mapping;
-
-import java.util.Map;
 
 import org.codehaus.groovy.runtime.DefaultGroovyMethods;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 
+import groovy.transform.CompileStatic;
 import grails.util.GrailsMetaClassUtils;
 import grails.web.mapping.LinkGenerator;
 import grails.web.mapping.UrlMapping;
@@ -37,40 +37,42 @@ import org.grails.web.servlet.mvc.GrailsWebRequest;
  * @since 2.0
  * @author Graeme Rocher
  */
-@SuppressWarnings("rawtypes")
-public class CachingLinkGenerator extends DefaultLinkGenerator {
+// TODO(groovyism-cleanup): semicolons kept to preserve rename-similarity against the original .java (see matrei's review on #16576). Removed by the stacked groovyism-cleanup PR.
+@SuppressWarnings(['rawtypes', 'UnnecessarySemicolon'])
+@CompileStatic
+class CachingLinkGenerator extends DefaultLinkGenerator {
 
     private static final int MAX_SIZE = 5000;
-    public static final String LINK_PREFIX = "link";
-    public static final String RESOURCE_PREFIX = "resource";
-    public static final String USED_ATTRIBUTES_SUFFIX = "-used-attributes";
-    public static final String EMPTY_MAP_STRING = "[:]";
-    private static final String OPENING_BRACKET = "[";
-    private static final String CLOSING_BRACKET = "]";
-    private static final String COMMA_SEPARATOR = ", ";
-    private static final String KEY_VALUE_SEPARATOR = ":";
-    private static final String THIS_MAP = "(this Map)";
+    public static final String LINK_PREFIX = 'link';
+    public static final String RESOURCE_PREFIX = 'resource';
+    public static final String USED_ATTRIBUTES_SUFFIX = '-used-attributes';
+    public static final String EMPTY_MAP_STRING = '[:]';
+    private static final String OPENING_BRACKET = '[';
+    private static final String CLOSING_BRACKET = ']';
+    private static final String COMMA_SEPARATOR = ', ';
+    private static final String KEY_VALUE_SEPARATOR = ':';
+    private static final String THIS_MAP = '(this Map)';
 
     private Cache<String, Object> linkCache;
 
-    public CachingLinkGenerator(String serverBaseURL, String contextPath) {
+    CachingLinkGenerator(String serverBaseURL, String contextPath) {
         super(serverBaseURL, contextPath);
         this.linkCache = createDefaultCache();
     }
 
-    public CachingLinkGenerator(String serverBaseURL) {
+    CachingLinkGenerator(String serverBaseURL) {
         super(serverBaseURL);
         this.linkCache = createDefaultCache();
     }
 
     @Override
-    public String link(Map attrs, String encoding) {
+    String link(Map attrs, String encoding) {
         if (!isCacheable(attrs)) {
             return super.link(attrs, encoding);
         }
 
         // The encoding decides how the link's parameters are escaped, so a link is cached per encoding.
-        final String key = linkKey(attrs) + "encoding[" + encoding + "]";
+        final String key = linkKey(attrs) + 'encoding[' + encoding + ']';
         Object resourceLink = linkCache.getIfPresent(key);
         if (resourceLink == null) {
             resourceLink = super.link(attrs, encoding);
@@ -112,7 +114,7 @@ public class CachingLinkGenerator extends DefaultLinkGenerator {
         } else {
             buffer.append(OPENING_BRACKET);
             boolean first = true;
-            for (Object o : params.entrySet()) {
+            for (Object o in params.entrySet()) {
                 Map.Entry entry = (Map.Entry) o;
                 Object value = entry.getValue();
                 if (value == null) continue;
@@ -129,8 +131,8 @@ public class CachingLinkGenerator extends DefaultLinkGenerator {
 
     protected String getCacheKeyValueForResource(Object o) {
         StringBuilder builder = new StringBuilder(o.getClass().getName());
-        builder.append("->");
-        Object idValue = GrailsMetaClassUtils.invokeMethodIfExists(o, "ident", new Object[0]);
+        builder.append('->');
+        Object idValue = GrailsMetaClassUtils.invokeMethodIfExists(o, 'ident', new Object[0]);
         if (idValue != null) {
             builder.append(idValue.toString());
         } else {
@@ -159,7 +161,7 @@ public class CachingLinkGenerator extends DefaultLinkGenerator {
     }
 
     @Override
-    public String resource(Map attrs) {
+    String resource(Map attrs) {
         final String key = makeKey(RESOURCE_PREFIX, attrs);
         Object resourceLink = linkCache.getIfPresent(key);
         if (resourceLink == null) {
@@ -192,8 +194,9 @@ public class CachingLinkGenerator extends DefaultLinkGenerator {
                                 .build();
     }
 
-    public void clearCache() {
+    void clearCache() {
         linkCache.invalidateAll();
         resetControllerNamespaceCache();
     }
+
 }

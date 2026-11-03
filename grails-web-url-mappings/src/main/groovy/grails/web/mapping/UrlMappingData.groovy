@@ -16,7 +16,7 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package grails.web.mapping;
+package grails.web.mapping
 
 /**
  * <p>Holds information about a parsed URL such as the tokens that make up the URL, The URLs (plural)
@@ -25,7 +25,7 @@ package grails.web.mapping;
  * @author Graeme Rocher
  * @since 0.5
  */
-public interface UrlMappingData {
+interface UrlMappingData {
 
     /**
      * <p>Retrieves the tokens that make up a URL. For example the tokens for the URL /blog/2007/* would
@@ -33,21 +33,21 @@ public interface UrlMappingData {
      *
       * @return The tokens as a string array
      */
-    String[] getTokens();
+    String[] getTokens()
 
     /**
      * <p>Obtains the logical URLs for this URL</p>
      *
      * @return The logical URLs as a string array
      */
-    String[] getLogicalUrls();
+    String[] getLogicalUrls()
 
     /**
      * Retrieves the URL pattern for this UrlMappingData instance
      *
      * @return The URL pattern
      */
-    String getUrlPattern();
+    String getUrlPattern()
 
     /**
      * Returns whether the given token in the URL is optional. The index takes into account matching groups
@@ -57,24 +57,24 @@ public interface UrlMappingData {
      * @param index The index of the matching token
      * @return  True if it is optional
      */
-    boolean isOptional(int index);
+    boolean isOptional(int index)
 
     /**
      * Creates a new UrlMappingData instance relative to this one for the given path
      * @param path The path
      * @return The new instance
      */
-    UrlMappingData createRelative(String path);
+    UrlMappingData createRelative(String path)
 
     /**
      * @return Whether the pattern has an optional extension
      */
-    boolean hasOptionalExtension();
+    boolean hasOptionalExtension()
 
     /**
      * @return Whether the parameter before the optional extension should use greedy matching (last-dot split)
      */
-    boolean hasGreedyExtensionParam();
+    boolean hasGreedyExtensionParam()
 
     /**
      * Returns the token index (0-based) of the greedy parameter, or -1 if no greedy parameter exists.
@@ -83,6 +83,7 @@ public interface UrlMappingData {
      * @return The index of the greedy token, or -1 if none
      */
     default int getGreedyTokenIndex() {
-        return -1;
+        return -1
     }
+
 }

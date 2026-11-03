@@ -16,13 +16,12 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
+@SuppressWarnings('UnnecessarySemicolon')
 package org.grails.web.mapping;
-
-import java.net.URI;
-import java.util.Map;
 
 import org.springframework.util.Assert;
 
+import groovy.transform.CompileStatic;
 import grails.core.GrailsApplication;
 import grails.gorm.validation.ConstrainedProperty;
 import grails.web.mapping.UrlMappingData;
@@ -34,14 +33,16 @@ import grails.web.mapping.UrlMappingInfo;
  * @author mike
  * @since 1.0-RC1
  */
-@SuppressWarnings("rawtypes")
-public class ResponseCodeUrlMapping extends AbstractUrlMapping {
+// TODO(groovyism-cleanup): semicolons + double-quoted strings kept to preserve rename-similarity against the original .java (see matrei's review on #16576). Removed by the stacked groovyism-cleanup PR.
+@SuppressWarnings(['rawtypes', 'UnnecessarySemicolon', 'UnnecessaryGString'])
+@CompileStatic
+class ResponseCodeUrlMapping extends AbstractUrlMapping {
 
     private final ResponseCodeMappingData urlData;
     private final ConstrainedProperty[] constraints = new ConstrainedProperty[0];
     private Class<?> exceptionType;
 
-    public ResponseCodeUrlMapping(UrlMappingData urlData, Object controllerName, Object actionName, Object namespace, Object pluginName, Object viewName, ConstrainedProperty[] constraints, GrailsApplication grailsApplication) {
+    ResponseCodeUrlMapping(UrlMappingData urlData, Object controllerName, Object actionName, Object namespace, Object pluginName, Object viewName, ConstrainedProperty[] constraints, GrailsApplication grailsApplication) {
         super(null, controllerName, actionName, namespace, pluginName, viewName, constraints, grailsApplication);
         this.urlData = (ResponseCodeMappingData) urlData;
 
@@ -49,7 +50,7 @@ public class ResponseCodeUrlMapping extends AbstractUrlMapping {
                 "Constraints can't be used for response code url mapping");
     }
 
-    public ResponseCodeUrlMapping(UrlMappingData urlData, URI uri, ConstrainedProperty[] constraints, GrailsApplication grailsApplication) {
+    ResponseCodeUrlMapping(UrlMappingData urlData, URI uri, ConstrainedProperty[] constraints, GrailsApplication grailsApplication) {
         super(uri, constraints, grailsApplication);
         this.urlData = (ResponseCodeMappingData) urlData;
 
@@ -57,72 +58,72 @@ public class ResponseCodeUrlMapping extends AbstractUrlMapping {
             "Constraints can't be used for response code url mapping");
     }
 
-    public UrlMappingInfo match(String uri) {
+    UrlMappingInfo match(String uri) {
         return null;
     }
 
-    public UrlMappingData getUrlData() {
+    UrlMappingData getUrlData() {
         return urlData;
     }
 
     @Override
-    public ConstrainedProperty[] getConstraints() {
+    ConstrainedProperty[] getConstraints() {
         return constraints;
     }
 
-    public int compareTo(Object o) {
+    int compareTo(Object o) {
         return 0;
     }
 
-    public String createURL(Map values, String encoding) {
+    String createURL(Map values, String encoding) {
         throw new UnsupportedOperationException("Method createURL not implemented in " + getClass());
     }
 
-    public String createURL(Map values, String encoding, String fragment) {
+    String createURL(Map values, String encoding, String fragment) {
         throw new UnsupportedOperationException("Method createURL not implemented in " + getClass());
     }
 
-    public String createURL(String controller, String action, Map values, String encoding) {
+    String createURL(String controller, String action, Map values, String encoding) {
         throw new UnsupportedOperationException("Method createURL not implemented in " + getClass());
     }
 
-    public String createURL(String controller, String action, String pluginName, Map values, String encoding) {
+    String createURL(String controller, String action, String pluginName, Map values, String encoding) {
         throw new UnsupportedOperationException("Method createURL not implemented in " + getClass());
     }
 
-    public String createURL(String controller, String action, String namespace, String pluginName, Map values, String encoding) {
+    String createURL(String controller, String action, String namespace, String pluginName, Map values, String encoding) {
         throw new UnsupportedOperationException("Method createURL not implemented in " + getClass());
     }
 
-    public String createRelativeURL(String controller, String action, Map values, String encoding) {
+    String createRelativeURL(String controller, String action, Map values, String encoding) {
         throw new UnsupportedOperationException("Method createRelativeURL not implemented in " + getClass());
     }
 
-    public String createRelativeURL(String controller, String action, String pluginName, Map values, String encoding) {
+    String createRelativeURL(String controller, String action, String pluginName, Map values, String encoding) {
         throw new UnsupportedOperationException("Method createRelativeURL not implemented in " + getClass());
     }
 
-    public String createRelativeURL(String controller, String action, String namespace, String pluginName, Map values, String encoding) {
+    String createRelativeURL(String controller, String action, String namespace, String pluginName, Map values, String encoding) {
         throw new UnsupportedOperationException("Method createRelativeURL not implemented in " + getClass());
     }
 
-    public String createRelativeURL(String controller, String action, Map values, String encoding, String fragment) {
+    String createRelativeURL(String controller, String action, Map values, String encoding, String fragment) {
         throw new UnsupportedOperationException("Method createRelativeURL not implemented in " + getClass());
     }
 
-    public String createRelativeURL(String controller, String action, String namespace, String pluginName, Map values, String encoding, String fragment) {
+    String createRelativeURL(String controller, String action, String namespace, String pluginName, Map values, String encoding, String fragment) {
         throw new UnsupportedOperationException("Method createRelativeURL not implemented in " + getClass());
     }
 
-    public String createURL(String controller, String action, Map values, String encoding, String fragment) {
+    String createURL(String controller, String action, Map values, String encoding, String fragment) {
         throw new UnsupportedOperationException("Method createURL not implemented in " + getClass());
     }
 
-    public String createURL(String controller, String action, String namespace, String pluginName, Map values, String encoding, String fragment) {
+    String createURL(String controller, String action, String namespace, String pluginName, Map values, String encoding, String fragment) {
         throw new UnsupportedOperationException("Method createURL not implemented in " + getClass());
     }
 
-    public UrlMappingInfo match(int responseCode) {
+    UrlMappingInfo match(int responseCode) {
         if (responseCode == urlData.getResponseCode()) {
             return new DefaultUrlMappingInfo(null, controllerName, actionName, namespace, pluginName, viewName,
                     parameterValues, urlData, grailsApplication);
@@ -130,11 +131,12 @@ public class ResponseCodeUrlMapping extends AbstractUrlMapping {
         return null;
     }
 
-    public void setExceptionType(Class<?> exClass) {
+    void setExceptionType(Class<?> exClass) {
         this.exceptionType = exClass;
     }
 
-    public Class<?> getExceptionType() {
+    Class<?> getExceptionType() {
         return exceptionType;
     }
+
 }

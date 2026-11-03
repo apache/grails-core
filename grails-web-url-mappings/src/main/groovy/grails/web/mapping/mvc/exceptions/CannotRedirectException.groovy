@@ -16,27 +16,31 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.web.mapping;
+package grails.web.mapping.mvc.exceptions
 
-import grails.web.mapping.UrlMappingData;
-import grails.web.mapping.UrlMappingParser;
+import groovy.transform.CompileStatic
+
+import org.grails.web.servlet.mvc.exceptions.ControllerExecutionException
 
 /**
- * A simple implementation of the UrlMappingParser interface. Most of the logical is encapsulated in the
- * DefaultUrlMappingData class.
- *
- * @see DefaultUrlMappingData
+ * Thrown when the request cannot be redirected.
  *
  * @author Graeme Rocher
- * @since 0.5
- *
- *
- * <p>
- * Created: Mar 5, 2007
- * Time: 8:35:26 AM
+ * @since 1.2
  */
-public class DefaultUrlMappingParser implements UrlMappingParser {
-    public UrlMappingData parse(String url) {
-        return new DefaultUrlMappingData(url);
+@CompileStatic
+class CannotRedirectException extends ControllerExecutionException {
+
+    private static final long serialVersionUID = 1L
+
+    CannotRedirectException() {}
+
+    CannotRedirectException(String message, Throwable t) {
+        super(message, t)
     }
+
+    CannotRedirectException(String message) {
+        super(message)
+    }
+
 }

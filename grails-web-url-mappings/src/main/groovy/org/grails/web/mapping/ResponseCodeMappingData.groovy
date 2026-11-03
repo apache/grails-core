@@ -16,7 +16,10 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
+@SuppressWarnings('UnnecessarySemicolon')
 package org.grails.web.mapping;
+
+import groovy.transform.CompileStatic;
 
 import grails.web.mapping.UrlMappingData;
 
@@ -26,47 +29,52 @@ import grails.web.mapping.UrlMappingData;
  * @author mike
  * @since 1.0-RC1
  */
-public class ResponseCodeMappingData implements UrlMappingData {
+// TODO(groovyism-cleanup): semicolons kept to preserve rename-similarity against the original .java (see matrei's review on #16576). Removed by the stacked groovyism-cleanup PR.
+@SuppressWarnings(['UnnecessarySemicolon', 'UnnecessaryGString'])
+@CompileStatic
+class ResponseCodeMappingData implements UrlMappingData {
+
     private final int responseCode;
     private final String responseCodeAsString;
 
-    public ResponseCodeMappingData(String responseCode) {
+    ResponseCodeMappingData(String responseCode) {
         this.responseCode = Integer.parseInt(responseCode);
         this.responseCodeAsString = responseCode;
     }
 
-    public String[] getTokens() {
+    String[] getTokens() {
         return new String[] {responseCodeAsString};
     }
 
-    public String[] getLogicalUrls() {
+    String[] getLogicalUrls() {
         return new String[] {responseCodeAsString};
     }
 
-    public String getUrlPattern() {
+    String getUrlPattern() {
         return responseCodeAsString;
     }
 
-    public boolean isOptional(int index) {
+    boolean isOptional(int index) {
         return false;
     }
 
     @Override
-    public UrlMappingData createRelative(String path) {
+    UrlMappingData createRelative(String path) {
         throw new UnsupportedOperationException("You cannot create relative UrlMappings for response codes");
     }
 
     @Override
-    public boolean hasOptionalExtension() {
+    boolean hasOptionalExtension() {
         return false;
     }
 
     @Override
-    public boolean hasGreedyExtensionParam() {
+    boolean hasGreedyExtensionParam() {
         return false;
     }
 
-    public int getResponseCode() {
+    int getResponseCode() {
         return responseCode;
     }
+
 }

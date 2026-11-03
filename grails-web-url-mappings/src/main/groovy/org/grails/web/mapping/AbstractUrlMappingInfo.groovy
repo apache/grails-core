@@ -16,28 +16,19 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.web.mapping;
+package org.grails.web.mapping
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
+import jakarta.servlet.http.HttpServletRequest
 
-import groovy.lang.Closure;
+import groovy.transform.CompileStatic
+import org.springframework.web.context.request.RequestContextHolder
+import org.springframework.web.context.request.ServletRequestAttributes
+import org.springframework.web.util.UriUtils
 
-import jakarta.servlet.http.HttpServletRequest;
-
-import org.springframework.web.context.request.RequestContextHolder;
-import org.springframework.web.context.request.ServletRequestAttributes;
-import org.springframework.web.util.UriUtils;
-
-import grails.util.GrailsStringUtils;
-import grails.web.mapping.UrlMappingInfo;
-import org.grails.web.servlet.mvc.GrailsWebRequest;
-import org.grails.web.util.HiddenHttpMethod;
+import grails.util.GrailsStringUtils
+import grails.web.mapping.UrlMappingInfo
+import org.grails.web.servlet.mvc.GrailsWebRequest
+import org.grails.web.util.HiddenHttpMethod
 
 /**
  * Abstract super class providing pass functionality for configuring a UrlMappingInfo.
@@ -45,39 +36,40 @@ import org.grails.web.util.HiddenHttpMethod;
  * @author Graeme Rocher
  * @since 1.2
  */
-@SuppressWarnings({"rawtypes", "unchecked"})
-public abstract class AbstractUrlMappingInfo implements UrlMappingInfo {
+@SuppressWarnings(['rawtypes', 'unchecked'])
+@CompileStatic
+abstract class AbstractUrlMappingInfo implements UrlMappingInfo {
 
-    private Map<String, Object> params = Collections.emptyMap();
+    private Map<String, Object> params = Collections.emptyMap()
 
-    public Map<String, Object> getParams() {
-        return params;
+    Map<String, Object> getParams() {
+        return params
     }
 
-    public void setParams(final Map newParams) {
-        Collection keys = newParams.keySet();
-        keys = new ArrayList(keys);
+    void setParams(final Map newParams) {
+        Collection keys = newParams.keySet()
+        keys = new ArrayList(keys)
         Collections.sort((List) keys, new Comparator() {
-            public int compare(Object leftKey, Object rightKey) {
-                Object leftValue = newParams.get(leftKey);
-                Object rightValue = newParams.get(rightKey);
-                boolean leftIsClosure = leftValue instanceof Closure;
-                boolean rightIsClosure = rightValue instanceof Closure;
-                if (leftIsClosure && rightIsClosure) return 0;
-                if (leftIsClosure && !rightIsClosure) return 1;
-                if (rightIsClosure && !leftIsClosure) return -1;
-                return 0;
+            int compare(Object leftKey, Object rightKey) {
+                Object leftValue = newParams.get(leftKey)
+                Object rightValue = newParams.get(rightKey)
+                boolean leftIsClosure = leftValue instanceof Closure
+                boolean rightIsClosure = rightValue instanceof Closure
+                if (leftIsClosure && rightIsClosure) return 0
+                if (leftIsClosure && !rightIsClosure) return 1
+                if (rightIsClosure && !leftIsClosure) return -1
+                return 0
             }
-        });
-        Map<String, Object> sortedParams = new LinkedHashMap<>();
-        for (Object key : keys) {
-            sortedParams.put(String.valueOf(key), newParams.get(key));
+        })
+        Map<String, Object> sortedParams = new LinkedHashMap<>()
+        for (Object key in keys) {
+            sortedParams.put(String.valueOf(key), newParams.get(key))
         }
-        this.params = Collections.unmodifiableMap(sortedParams);
+        this.params = Collections.unmodifiableMap(sortedParams)
     }
 
-    public void configure(GrailsWebRequest webRequest) {
-        populateParamsForMapping(webRequest);
+    void configure(GrailsWebRequest webRequest) {
+        populateParamsForMapping(webRequest)
     }
 
     /**
@@ -87,48 +79,48 @@ public abstract class AbstractUrlMappingInfo implements UrlMappingInfo {
      * @see org.grails.web.servlet.mvc.GrailsWebRequest
      */
     protected void populateParamsForMapping(GrailsWebRequest webRequest) {
-        Map dispatchParams = webRequest.getParams();
-        String encoding = webRequest.getRequest().getCharacterEncoding();
-        if (encoding == null) encoding = "UTF-8";
+        Map dispatchParams = webRequest.getParams()
+        String encoding = webRequest.getRequest().getCharacterEncoding()
+        if (encoding == null) encoding = 'UTF-8'
 
         for (Map.Entry<String, Object> entry : params.entrySet()) {
-            String name = entry.getKey();
-            Object param = entry.getValue();
+            String name = entry.getKey()
+            Object param = entry.getValue()
             if (param instanceof Closure) {
-                param = evaluateNameForValue(param);
+                param = evaluateNameForValue(param)
             }
             if (param instanceof CharSequence) {
-                param = param.toString();
+                param = param.toString()
             }
-            dispatchParams.put(name, param);
+            dispatchParams.put(name, param)
         }
 
-        final String viewName = getViewName();
+        final String viewName = getViewName()
         if (viewName == null && getURI() == null) {
-            webRequest.setControllerNamespace(getNamespace());
-            webRequest.setControllerName(getControllerName());
-            webRequest.setActionName(getActionName());
+            webRequest.setControllerNamespace(getNamespace())
+            webRequest.setControllerName(getControllerName())
+            webRequest.setActionName(getActionName())
         }
 
-        String id = getId();
+        String id = getId()
         if (!GrailsStringUtils.isBlank(id)) {
             try {
-                dispatchParams.put(GrailsWebRequest.ID_PARAMETER, UriUtils.decode(id, encoding));
+                dispatchParams.put(GrailsWebRequest.ID_PARAMETER, UriUtils.decode(id, encoding))
             } catch (IllegalArgumentException e) {
-                dispatchParams.put(GrailsWebRequest.ID_PARAMETER, id);
+                dispatchParams.put(GrailsWebRequest.ID_PARAMETER, id)
             }
         }
     }
 
     protected String evaluateNameForValue(Object value) {
         if (value instanceof CharSequence) {
-            return value.toString().trim();
+            return value.toString().trim()
         }
         else if (value instanceof RuntimeConstraintEvaluator) {
-            return evaluateCapturedName((RuntimeConstraintEvaluator) value);
+            return evaluateCapturedName((RuntimeConstraintEvaluator) value)
         }
         else {
-            return evaluateNameForValue(value, UrlMappingUtils.lookupWebRequest());
+            return evaluateNameForValue(value, UrlMappingUtils.lookupWebRequest())
         }
     }
 
@@ -148,44 +140,44 @@ public abstract class AbstractUrlMappingInfo implements UrlMappingInfo {
      */
     protected String evaluateNameForValue(Object value, GrailsWebRequest webRequest) {
         if (value == null) {
-            return null;
+            return null
         }
 
         if (value instanceof RuntimeConstraintEvaluator) {
-            return evaluateCapturedName((RuntimeConstraintEvaluator) value);
+            return evaluateCapturedName((RuntimeConstraintEvaluator) value)
         }
 
-        String name;
+        String name
         if (value instanceof Closure) {
             if (webRequest == null && RequestContextHolder.getRequestAttributes() != null) {
-                return null;
+                return null
             }
-            Closure callable = (Closure) value;
-            final Closure cloned = (Closure) callable.clone();
-            cloned.setDelegate(webRequest);
-            cloned.setResolveStrategy(Closure.DELEGATE_FIRST);
-            Object result = cloned.call();
-            name = result != null ? result.toString() : null;
+            Closure callable = (Closure) value
+            final Closure cloned = (Closure) callable.clone()
+            cloned.setDelegate(webRequest)
+            cloned.setResolveStrategy(Closure.DELEGATE_FIRST)
+            Object result = cloned.call()
+            name = result != null ? result.toString() : null
         }
         else if (value instanceof Map) {
-            HttpServletRequest request = webRequest != null ? webRequest.getRequest() : currentRequest();
+            HttpServletRequest request = webRequest != null ? webRequest.getRequest() : currentRequest()
             if (request == null) {
-                return null;
+                return null
             }
-            Map httpMethods = (Map) value;
-            name = (String) httpMethods.get(HiddenHttpMethod.effectiveMethod(request));
+            Map httpMethods = (Map) value
+            name = (String) httpMethods.get(HiddenHttpMethod.effectiveMethod(request))
         }
         else {
-            name = value.toString();
+            name = value.toString()
         }
-        return name != null ? name.trim() : null;
+        return name != null ? name.trim() : null
     }
 
     private static HttpServletRequest currentRequest() {
         if (RequestContextHolder.getRequestAttributes() instanceof ServletRequestAttributes attributes) {
-            return attributes.getRequest();
+            return attributes.getRequest()
         }
-        return null;
+        return null
     }
 
     /**
@@ -198,8 +190,8 @@ public abstract class AbstractUrlMappingInfo implements UrlMappingInfo {
      * @return The captured value, or null if the URI did not supply one
      */
     private String evaluateCapturedName(RuntimeConstraintEvaluator evaluator) {
-        Object value = params.get(evaluator.getConstraintName());
-        return value != null ? value.toString().trim() : null;
+        Object value = params.get(evaluator.getConstraintName())
+        return value != null ? value.toString().trim() : null
     }
 
     /**
@@ -210,7 +202,8 @@ public abstract class AbstractUrlMappingInfo implements UrlMappingInfo {
      *
      * @return redirect information for this url mapping, null if no redirect is specified
      */
-    public Object getRedirectInfo() {
-        return null;
+    Object getRedirectInfo() {
+        return null
     }
+
 }

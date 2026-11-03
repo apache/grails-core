@@ -16,13 +16,11 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package grails.web.mapping;
+package grails.web.mapping
 
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
+import groovy.transform.CompileStatic
 
-import grails.gorm.validation.Constrained;
+import grails.gorm.validation.Constrained
 
 /**
  * <p>Defines a URL mapping. A URL mapping is a mapping between a URI such as /book/list and
@@ -36,93 +34,81 @@ import grails.gorm.validation.Constrained;
  * @author Graeme Rocher
  * @since 0.5
  */
-@SuppressWarnings("rawtypes")
-public interface UrlMapping extends Comparable, UrlCreator {
+@SuppressWarnings('rawtypes')
+@CompileStatic
+interface UrlMapping extends Comparable, UrlCreator {
 
-    String WILDCARD = "*";
-    String CAPTURED_WILDCARD = "(*)";
-    String OPTIONAL_EXTENSION_WILDCARD = "(.(*))";
-    String SLASH = "/";
-    char QUESTION_MARK = '?';
-    char AMPERSAND = '&';
-    String DOUBLE_WILDCARD = "**";
-    String CAPTURED_DOUBLE_WILDCARD = "(**)";
+    String WILDCARD = '*'
+    String CAPTURED_WILDCARD = '(*)'
+    String OPTIONAL_EXTENSION_WILDCARD = '(.(*))'
+    String SLASH = '/'
+    char QUESTION_MARK = '?'
+    char AMPERSAND = '&'
+    String DOUBLE_WILDCARD = '**'
+    String CAPTURED_DOUBLE_WILDCARD = '(**)'
 
     /**
      * The controller this mapping matches
      */
-    String CONTROLLER = "controller";
+    String CONTROLLER = 'controller'
     /**
      * The action this mapping matches
      */
-    String ACTION = "action";
+    String ACTION = 'action'
     /**
      * The HTTP method this mapping matches
      */
-    String HTTP_METHOD = "method";
+    String HTTP_METHOD = 'method'
 
     /**
      * Redirect information for this url mapping.
      */
-    String REDIRECT_INFO = "redirect";
+    String REDIRECT_INFO = 'redirect'
 
     /**
      * Constant used to define a Url mapping that matches any HTTP method
      */
-    String ANY_HTTP_METHOD = "*";
+    String ANY_HTTP_METHOD = '*'
 
     /**
      * The version of the URL mapping
      */
-    String VERSION = "version";
+    String VERSION = 'version'
 
     /**
      * Constant used to define a Url mapping that matches any HTTP method
      */
-    String ANY_VERSION = "*";
+    String ANY_VERSION = '*'
 
     /**
      * The URI of the URL mapping
      */
-    String URI = "uri";
+    String URI = 'uri'
     /**
      * The plugin of the URL Mapping
      */
-    String PLUGIN = "plugin";
+    String PLUGIN = 'plugin'
     /**
      * The namespace of the URL mapping
      */
-    String NAMESPACE = "namespace";
+    String NAMESPACE = 'namespace'
 
-    String VIEW = "view";
+    String VIEW = 'view'
 
-    String RESOURCES = "resources";
+    String RESOURCES = 'resources'
 
-    String EXCLUDES = "excludes";
+    String EXCLUDES = 'excludes'
 
-    String INCLUDES = "includes";
+    String INCLUDES = 'includes'
 
-    String PERMANENT = "permanent";
+    String PERMANENT = 'permanent'
 
-    String EXCEPTION = "exception";
+    String EXCEPTION = 'exception'
 
-    Set<String> KEYWORDS = new HashSet<>() {
-        {
-            add(CONTROLLER);
-            add(ACTION);
-            add(HTTP_METHOD);
-            add(REDIRECT_INFO);
-            add(VERSION);
-            add(URI);
-            add(PLUGIN);
-            add(NAMESPACE);
-            add(VIEW);
-            add(RESOURCES);
-            add(INCLUDES);
-            add(PERMANENT);
-            add(EXCEPTION);
-        }
-    };
+    Set<String> KEYWORDS = [
+        CONTROLLER, ACTION, HTTP_METHOD, REDIRECT_INFO, VERSION, URI, PLUGIN,
+        NAMESPACE, VIEW, RESOURCES, INCLUDES, PERMANENT, EXCEPTION
+    ] as Set<String>
 
     /**
      * Matches the given URI and returns an instance of the UrlMappingInfo interface or null
@@ -131,14 +117,14 @@ public interface UrlMapping extends Comparable, UrlCreator {
      * @param uri The URI to match
      * @return An instance of UrlMappingInfo or null if the URI doesn't match
      */
-    UrlMappingInfo match(String uri);
+    UrlMappingInfo match(String uri)
 
     /**
      * Retrieves the UrlMappingData instance that describes this UrlMapping
      *
      * @return The UrlMappingData instance
      */
-    UrlMappingData getUrlData();
+    UrlMappingData getUrlData()
 
     /**
      * <p>The constraints that apply to this UrlMapping. Each constraint maps to a GString token in a
@@ -153,7 +139,7 @@ public interface UrlMapping extends Comparable, UrlCreator {
      *
      * @return An array containing the ConstrainedProperty objects of this URLMapping
      */
-    Constrained[] getConstraints();
+    Constrained[] getConstraints()
 
     /**
      * Retrieves the controller name which is either a groovy.lang.Closure that evaluates the controller
@@ -161,7 +147,7 @@ public interface UrlMapping extends Comparable, UrlCreator {
      *
      * @return The controller name as a {@link groovy.lang.Closure} or {@link java.lang.String}
      */
-    Object getControllerName();
+    Object getControllerName()
 
     /**
      * Retrieves the action name which is either a groovy.lang.Closure that evaluates the action
@@ -169,69 +155,69 @@ public interface UrlMapping extends Comparable, UrlCreator {
      *
      * @return The action name as a {@link groovy.lang.Closure} or {@link java.lang.String}
      */
-    Object getActionName();
+    Object getActionName()
 
     /**
      * The name of the plugin this URL mapping relates to, if any
      *
      * @return The plugin name
      */
-    Object getPluginName();
+    Object getPluginName()
 
     /**
      * @return the name of the controller namespace
      */
-    Object getNamespace();
+    Object getNamespace()
 
     /**
      * Returns the name of the view to map to
      * @return The view name
      */
-    Object getViewName();
+    Object getViewName()
 
     /**
      * The HTTP method this URL mapping applies to. Will be null for all HTTP methods
      * @return The HTTP method
      */
-    String getHttpMethod();
+    String getHttpMethod()
 
     /**
      * @return The version of the URL mapping. Used for versioning of REST services
      */
-    String getVersion();
+    String getVersion()
 
     /**
      * Sets any parameter values that should be populated into the request
      * @param parameterValues The parameter values to set
      */
-    void setParameterValues(Map<String, Object> parameterValues);
+    void setParameterValues(Map<String, Object> parameterValues)
 
     /**
      * Sets whether this UrlMapping should parse the request
      *
      * @param shouldParse True if it should
      */
-    void setParseRequest(boolean shouldParse);
+    void setParseRequest(boolean shouldParse)
 
     /**
      * The name of the mapping in case of named URL mapping
      *
      * @return The mapping name
      */
-    String getMappingName();
+    String getMappingName()
 
     /**
      * Sets the name of the URL mapping
      * @param name The name of the URL mapping
      */
-    void setMappingName(String name);
+    void setMappingName(String name)
 
     /**
      * Whether the mapping has a runtime variable with the given name such as "/$foo"
      * @param name The name of the variable
      * @return true if the mapping has the variable
      */
-    boolean hasRuntimeVariable(String name);
+    boolean hasRuntimeVariable(String name)
 
     /**
      * The redirect information should be a String or a Map.  If it
@@ -241,22 +227,23 @@ public interface UrlMapping extends Comparable, UrlCreator {
      *
      * @return redirect information for this url mapping
      */
-    Object getRedirectInfo();
+    Object getRedirectInfo()
 
     /**
      * Sets whether or not the mapping is defined in a plugin.
      *
      * @param pluginIndex The index of the plugin that defines this mapping
      */
-    void setPluginIndex(int pluginIndex);
+    void setPluginIndex(int pluginIndex)
 
     /**
      * @return The plugin index or null
      */
-    Integer getPluginIndex();
+    Integer getPluginIndex()
 
     /**
      * @return True if the URL mapping comes from a plugin
      */
-    boolean isDefinedInPlugin();
+    boolean isDefinedInPlugin()
+
 }
