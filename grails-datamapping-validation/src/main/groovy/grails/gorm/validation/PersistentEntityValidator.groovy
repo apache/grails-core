@@ -33,6 +33,7 @@ import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.model.PersistentProperty
 import org.grails.datastore.mapping.model.config.GormProperties
 import org.grails.datastore.mapping.model.types.Association
+import org.grails.datastore.mapping.model.types.TenantId
 import org.grails.datastore.mapping.model.types.ToMany
 import org.grails.datastore.mapping.model.types.ToOne
 import org.grails.datastore.mapping.proxy.ProxyHandler
@@ -261,7 +262,8 @@ class PersistentEntityValidator implements CascadingValidator, ConstrainedEntity
                 }
 
                 String associatedPropertyName = associatedPersistentProperty.getName()
-                if (associatedConstrainedProperties.containsKey(associatedPropertyName)) {
+                if (associatedConstrainedProperties.containsKey(associatedPropertyName) &&
+                        !isUnassignedTenantId(associatedEntity, associatedPersistentProperty, associatedReflector, associatedObject)) {
                     ConstrainedProperty associatedConstrainedProperty = associatedConstrainedProperties.get(associatedPropertyName)
                     validatePropertyWithConstraint(associatedObject, errors.getNestedPath() + associatedPropertyName, associatedReflector, errors, associatedConstrainedProperty, associatedPersistentProperty)
                 }
@@ -290,6 +292,15 @@ class PersistentEntityValidator implements CascadingValidator, ConstrainedEntity
         finally {
             errors.setNestedPath(nestedPath)
         }
+    }
+
+    // In discriminator mode, the only mode in which an entity has its tenant id set, multi-tenancy assigns the tenant id
+    // of an associated object as it is inserted, after this cascade, so one that is still unset is not checked here.
+    // Inside Tenants.withoutId it is not assigned then, which this module cannot tell
+    private static boolean isUnassignedTenantId(PersistentEntity entity, PersistentProperty property, EntityReflector reflector,
+                                                Object object) {
+        TenantId tenantId = entity.getTenantId()
+        return tenantId != null && property.is(tenantId) && reflector.getProperty(object, property.getName()) == null
     }
 
     private String buildNestedPath(String nestedPath, String componentName, Object indexOrKey) {

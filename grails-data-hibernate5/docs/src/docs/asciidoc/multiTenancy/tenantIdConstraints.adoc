@@ -1,0 +1,46 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+The tenant id of a multi-tenant domain class, the `tenantId` property or the property named with `tenantId name:` in the mapping, is checked against the constraints declared on it, such as `nullable` or `maxSize`, in every multi-tenancy mode. It gets no default constraints: neither the default `nullable: false` nor the global `'*'` constraints of `grails.gorm.default.constraints`, though a `shared` constraint declared on it applies. A tenant id without declared constraints is not checked.
+
+In `DISCRIMINATOR` mode GORM assigns the current tenant id to an instance before it is validated, so the constraints apply to that tenant id. In the following cases nothing assigns it, so the tenant id is checked as it is set on the instance, and an instance whose tenant id is declared `nullable: false` fails validation while its tenant id is not set:
+
+* code that runs inside `Tenants.withoutId`, or in a method annotated with `@WithoutTenant`, in `DISCRIMINATOR` mode;
+* `DATABASE` and `SCHEMA` mode, where GORM selects the database or schema of the current tenant and does not set a tenant id property;
+* unit tests whose datastore is not configured for `DISCRIMINATOR` mode.
+
+In `DISCRIMINATOR` mode, an instance saved with its owner is validated before GORM assigns its tenant id as it is inserted, so its tenant id is checked during that save only when it already has one. Inside `withoutId` nothing assigns it, so give such an instance its tenant id before saving its owner.
+
+For example, here every book needs a publisher of at most 20 characters, also when it is saved inside `withoutId`:
+
+[source,groovy]
+----
+class Book implements MultiTenant<Book> {
+    String publisher
+    String title
+
+    static constraints = {
+        publisher nullable: false, maxSize: 20
+    }
+
+    static mapping = {
+        tenantId name:'publisher'
+    }
+}
+----

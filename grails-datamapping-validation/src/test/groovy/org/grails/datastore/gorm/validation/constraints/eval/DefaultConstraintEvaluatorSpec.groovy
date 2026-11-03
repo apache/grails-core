@@ -19,9 +19,14 @@
 package org.grails.datastore.gorm.validation.constraints.eval
 
 import org.grails.datastore.gorm.validation.constraints.registry.DefaultConstraintRegistry
+import org.grails.datastore.mapping.core.connections.ConnectionSourceSettings
 import org.grails.datastore.mapping.keyvalue.mapping.config.KeyValueMappingContext
+import org.grails.datastore.mapping.model.types.TenantId
+import org.grails.datastore.mapping.multitenancy.MultiTenancySettings.MultiTenancyMode
 import org.springframework.context.support.StaticMessageSource
+import spock.lang.Issue
 import spock.lang.Specification
+import spock.lang.Unroll
 
 class DefaultConstraintEvaluatorSpec extends Specification {
 
@@ -51,6 +56,81 @@ class DefaultConstraintEvaluatorSpec extends Specification {
         !constraints.name.isBlank()
     }
 
+    @Unroll
+    @Issue('https://github.com/apache/grails-core/issues/14365')
+    void 'a tenant id keeps the constraints declared on it, and gets no default constraints, in #mode mode'() {
+        given:
+        def evaluator = new DefaultConstraintEvaluator(new DefaultConstraintRegistry(new StaticMessageSource()),
+                mappingContext(mode), Collections.emptyMap())
+
+        when:
+        def constraints = evaluator.evaluate(TenantCustomer)
+
+        then: 'the tenant id keeps what is declared on it'
+        constraints.firmId.hasAppliedConstraint('nullable')
+        !constraints.firmId.nullable
+        constraints.firmId.maxSize == 5
+
+        and: 'the other properties get their default constraints, as before'
+        constraints.name.hasAppliedConstraint('nullable')
+
+        when:
+        constraints = evaluator.evaluate(TenantOrder)
+
+        then: 'a tenant id declared without nullable is not given the default nullable'
+        constraints.firmId.maxSize == 5
+        !constraints.firmId.hasAppliedConstraint('nullable')
+
+        when:
+        constraints = evaluator.evaluate(TenantInvoice)
+
+        then: 'a tenant id without declared constraints is not constrained'
+        !constraints.containsKey('tenantId')
+        constraints.number.hasAppliedConstraint('nullable')
+
+        where:
+        mode << MultiTenancyMode.values()
+    }
+
+    @Issue('https://github.com/apache/grails-core/issues/14365')
+    void 'a tenant id gets a shared constraint declared on it, but not the global default constraints'() {
+        given:
+        def evaluator = new DefaultConstraintEvaluator(new DefaultConstraintRegistry(new StaticMessageSource()),
+                mappingContext(MultiTenancyMode.DISCRIMINATOR), ['*': [blank: false], tenantCode: [maxSize: 3]])
+
+        when:
+        def constraints = evaluator.evaluate(TenantOrder)
+
+        then:
+        constraints.name.hasAppliedConstraint('blank')
+        !constraints.firmId.hasAppliedConstraint('blank')
+
+        when:
+        constraints = evaluator.evaluate(TenantAccount)
+
+        then:
+        constraints.firmId.maxSize == 3
+        !constraints.firmId.hasAppliedConstraint('blank')
+
+        when:
+        constraints = evaluator.evaluate(TenantInvoice)
+
+        then: 'a tenant id without declared constraints is not constrained by the global default constraints either'
+        !constraints.containsKey('tenantId')
+        constraints.number.hasAppliedConstraint('blank')
+    }
+
+    private static KeyValueMappingContext mappingContext(MultiTenancyMode mode) {
+        def settings = new ConnectionSourceSettings()
+        settings.multiTenancy.mode = mode
+        def mappingContext = new KeyValueMappingContext('test', settings)
+        mappingContext.addPersistentEntities(TenantCustomer, TenantOrder, TenantInvoice, TenantAccount)
+        // The tenant id is mapped as one in every mode, though only discriminator mode assigns it
+        assert mappingContext.getPersistentEntity(TenantCustomer.name).getPropertyByName('firmId') instanceof TenantId
+        assert mappingContext.getPersistentEntity(TenantInvoice.name).getPropertyByName('tenantId') instanceof TenantId
+        return mappingContext
+    }
+
     class Constraints {
         String name
         static constraints = {
@@ -63,5 +143,57 @@ class DefaultConstraintEvaluatorSpec extends Specification {
         static constraints = {
             importFrom Constraints
         }
+    }
+}
+
+// Stands for grails.gorm.MultiTenant, which this module does not depend on: GORM recognises a multi-tenant entity by
+// the simple name of the interface it implements
+interface MultiTenant {
+}
+
+class TenantCustomer implements MultiTenant {
+    Long id
+    String name
+    String firmId
+
+    static constraints = {
+        firmId nullable: false, maxSize: 5
+    }
+
+    static mapping = {
+        tenantId name: 'firmId'
+    }
+}
+
+class TenantInvoice implements MultiTenant {
+    Long id
+    String number
+    String tenantId
+}
+
+class TenantOrder implements MultiTenant {
+    Long id
+    String name
+    String firmId
+
+    static constraints = {
+        firmId maxSize: 5
+    }
+
+    static mapping = {
+        tenantId name: 'firmId'
+    }
+}
+
+class TenantAccount implements MultiTenant {
+    Long id
+    String firmId
+
+    static constraints = {
+        firmId shared: 'tenantCode'
+    }
+
+    static mapping = {
+        tenantId name: 'firmId'
     }
 }
