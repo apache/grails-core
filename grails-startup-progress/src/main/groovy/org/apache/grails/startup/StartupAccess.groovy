@@ -16,14 +16,14 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.apache.grails.startup;
+package org.apache.grails.startup
 
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.SecureRandom;
-import java.util.ArrayList;
-import java.util.Base64;
-import java.util.List;
+import java.nio.charset.StandardCharsets
+import java.security.MessageDigest
+import java.security.SecureRandom
+
+import groovy.transform.CompileStatic
+import groovy.transform.PackageScope
 
 /**
  * Decides who sees the details of a start: the bean being created, the slowest beans, why a start failed,
@@ -35,102 +35,111 @@ import java.util.List;
  * made once per JVM, so a page signed in stays signed in when Spring Boot DevTools restarts the
  * application.</p>
  */
+@CompileStatic
 final class StartupAccess {
 
     /** The query parameter that carries the token in the logged address. */
-    static final String TOKEN_PARAMETER = "grailsStartupToken";
+    @PackageScope
+    static final String TOKEN_PARAMETER = 'grailsStartupToken'
 
-    private static final String TOKEN = newToken();
+    private static final String TOKEN = newToken()
 
-    private final boolean showDetails;
+    private final boolean showDetails
 
-    private volatile String cookieName;
+    private volatile String cookieName
 
     /**
      * @param showDetails whether details are shown at all, to a browser that has signed in
      * @param port the application's port, which names the cookie, since browsers share cookies between the
      *             ports of a host and two applications on one machine would otherwise sign each other out
      */
+    @PackageScope
     StartupAccess(boolean showDetails, int port) {
-        this.showDetails = showDetails;
-        usePort(port);
+        this.showDetails = showDetails
+        usePort(port)
     }
 
     /**
      * Names the cookie for the port the web server listens on, which for a random port is only known once the
      * web server has started.
      */
+    @PackageScope
     void usePort(int port) {
         if (port > 0) {
-            cookieName = "GRAILS_STARTUP_" + port;
+            cookieName = 'GRAILS_STARTUP_' + port
         }
         else if (cookieName == null) {
-            cookieName = "GRAILS_STARTUP";
+            cookieName = 'GRAILS_STARTUP'
         }
     }
 
     /** Whether a browser has to sign in to see details, which it only does when there are details to see. */
+    @PackageScope
     boolean isSignInRequired() {
-        return showDetails;
+        return showDetails
     }
 
     /** The query that signs a browser in, for the address the application logs and opens a browser on. */
+    @PackageScope
     String signInQuery() {
-        return TOKEN_PARAMETER + "=" + TOKEN;
+        return TOKEN_PARAMETER + '=' + TOKEN
     }
 
     /**
      * The address to send a browser on to when its request carries the token, which is the address it asked
      * for without the token, or {@code null} when the request does not sign in.
      */
+    @PackageScope
     String signInRedirect(String rawPath, String rawQuery) {
         if (!showDetails || rawQuery == null || rawQuery.isEmpty()) {
-            return null;
+            return null
         }
-        boolean signedIn = false;
-        List<String> kept = new ArrayList<>();
-        for (String parameter : rawQuery.split("&")) {
-            if (parameter.startsWith(TOKEN_PARAMETER + "=")) {
-                signedIn |= matches(parameter.substring(TOKEN_PARAMETER.length() + 1));
+        boolean signedIn = false
+        List<String> kept = new ArrayList<>()
+        for (String parameter : rawQuery.split('&')) {
+            if (parameter.startsWith(TOKEN_PARAMETER + '=')) {
+                signedIn |= matches(parameter.substring(TOKEN_PARAMETER.length() + 1))
             }
             else if (!parameter.isEmpty()) {
-                kept.add(parameter);
+                kept.add(parameter)
             }
         }
         if (!signedIn) {
-            return null;
+            return null
         }
-        return kept.isEmpty() ? rawPath : rawPath + "?" + String.join("&", kept);
+        return kept.isEmpty() ? rawPath : rawPath + '?' + String.join('&', kept)
     }
 
     /** The {@code Set-Cookie} header value that keeps a browser signed in. */
+    @PackageScope
     String signInCookie() {
-        return cookieName + "=" + TOKEN + "; Path=/; HttpOnly; SameSite=Strict";
+        return cookieName + '=' + TOKEN + '; Path=/; HttpOnly; SameSite=Strict'
     }
 
     /** Whether a request, by the {@code Cookie} headers it sent, may see details. */
+    @PackageScope
     boolean showsDetails(List<String> cookieHeaders) {
         if (!showDetails || cookieHeaders == null) {
-            return false;
+            return false
         }
         for (String header : cookieHeaders) {
-            for (String cookie : header.split(";")) {
-                String trimmed = cookie.trim();
-                if (trimmed.startsWith(cookieName + "=") && matches(trimmed.substring(cookieName.length() + 1))) {
-                    return true;
+            for (String cookie : header.split(';')) {
+                String trimmed = cookie.trim()
+                if (trimmed.startsWith(cookieName + '=') && matches(trimmed.substring(cookieName.length() + 1))) {
+                    return true
                 }
             }
         }
-        return false;
+        return false
     }
 
     private static boolean matches(String candidate) {
-        return MessageDigest.isEqual(TOKEN.getBytes(StandardCharsets.US_ASCII), candidate.getBytes(StandardCharsets.US_ASCII));
+        return MessageDigest.isEqual(TOKEN.getBytes(StandardCharsets.US_ASCII), candidate.getBytes(StandardCharsets.US_ASCII))
     }
 
     private static String newToken() {
-        byte[] bytes = new byte[32];
-        new SecureRandom().nextBytes(bytes);
-        return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
+        byte[] bytes = new byte[32]
+        new SecureRandom().nextBytes(bytes)
+        return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes)
     }
 }

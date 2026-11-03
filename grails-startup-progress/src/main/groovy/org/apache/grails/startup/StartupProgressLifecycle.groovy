@@ -16,55 +16,61 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.apache.grails.startup;
+package org.apache.grails.startup
 
-import org.springframework.boot.web.server.context.WebServerApplicationContext;
-import org.springframework.context.SmartLifecycle;
+import groovy.transform.CompileStatic
+import groovy.transform.PackageScope
+
+import org.springframework.boot.web.server.context.WebServerApplicationContext
+import org.springframework.context.SmartLifecycle
 
 /**
  * Runs an action when the context's lifecycle reaches a phase next to the embedded web server's own:
  * just before the server starts, to hand the port over, or just after, to say the application is
  * now running its startup hooks.
  */
+@CompileStatic
 final class StartupProgressLifecycle implements SmartLifecycle {
 
-    private final int phase;
+    private final int phase
 
-    private final Runnable action;
+    private final Runnable action
 
-    private volatile boolean running;
+    private volatile boolean running
 
     private StartupProgressLifecycle(int phase, Runnable action) {
-        this.phase = phase;
-        this.action = action;
+        this.phase = phase
+        this.action = action
     }
 
+    @PackageScope
     static StartupProgressLifecycle beforeWebServer(Runnable action) {
-        return new StartupProgressLifecycle(WebServerApplicationContext.START_STOP_LIFECYCLE_PHASE - 1, action);
+        return new StartupProgressLifecycle(WebServerApplicationContext.START_STOP_LIFECYCLE_PHASE - 1, action)
     }
 
+    @PackageScope
     static StartupProgressLifecycle afterWebServer(Runnable action) {
-        return new StartupProgressLifecycle(WebServerApplicationContext.START_STOP_LIFECYCLE_PHASE + 1, action);
+        return new StartupProgressLifecycle(WebServerApplicationContext.START_STOP_LIFECYCLE_PHASE + 1, action)
     }
 
     @Override
-    public void start() {
-        running = true;
-        action.run();
+    void start() {
+        running = true
+        action.run()
     }
 
     @Override
-    public void stop() {
-        running = false;
+    void stop() {
+        running = false
     }
 
     @Override
-    public boolean isRunning() {
-        return running;
+    boolean isRunning() {
+        return running
     }
 
     @Override
-    public int getPhase() {
-        return phase;
+    int getPhase() {
+        return phase
     }
 }

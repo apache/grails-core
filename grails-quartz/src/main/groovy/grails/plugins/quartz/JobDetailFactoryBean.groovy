@@ -14,15 +14,15 @@
  * limitations under the License.
  */
 
-package grails.plugins.quartz;
+package grails.plugins.quartz
 
-import org.quartz.JobBuilder;
-import org.quartz.JobDetail;
+import groovy.transform.CompileStatic
+import org.quartz.JobBuilder
+import org.quartz.JobDetail
+import org.springframework.beans.factory.FactoryBean
+import org.springframework.beans.factory.InitializingBean
 
-import org.springframework.beans.factory.FactoryBean;
-import org.springframework.beans.factory.InitializingBean;
-
-import static org.quartz.JobBuilder.newJob;
+import static org.quartz.JobBuilder.newJob
 
 /**
  * Simplified version of Spring's <a href='http://static.springframework.org/spring/docs/2.5.x/api/org/springframework/scheduling/quartz/MethodInvokingJobDetailFactoryBean.html'>MethodInvokingJobDetailFactoryBean</a>
@@ -32,24 +32,26 @@ import static org.quartz.JobBuilder.newJob;
  * @author Sergey Nebolsin (nebolsin@gmail.com)
  * @since 0.3.2
  */
-public class JobDetailFactoryBean implements FactoryBean<JobDetail>, InitializingBean {
-    public static final transient String JOB_NAME_PARAMETER = "org.grails.plugins.quartz.grailsJobName";
+@CompileStatic
+class JobDetailFactoryBean implements FactoryBean<JobDetail>, InitializingBean {
+
+    public static final transient String JOB_NAME_PARAMETER = 'org.grails.plugins.quartz.grailsJobName'
 
     /**
      * The job data entry naming the application a job was registered by. It is what tells the jobs of one
      * application apart from the jobs of another when both share a job store.
      */
-    public static final transient String APPLICATION_NAME_PARAMETER = "org.apache.grails.quartz.applicationName";
+    public static final transient String APPLICATION_NAME_PARAMETER = 'org.apache.grails.quartz.applicationName'
 
     // Properties
-    private GrailsJobClass jobClass;
-    private String applicationName;
+    private GrailsJobClass jobClass
+    private String applicationName
 
     // Returned object
-    private JobDetail jobDetail;
+    private JobDetail jobDetail
 
-    public void setJobClass(GrailsJobClass jobClass) {
-        this.jobClass = jobClass;
+    void setJobClass(GrailsJobClass jobClass) {
+        this.jobClass = jobClass
     }
 
     /**
@@ -58,8 +60,8 @@ public class JobDetailFactoryBean implements FactoryBean<JobDetail>, Initializin
      *
      * @param applicationName the name of the application registering the job
      */
-    public void setApplicationName(String applicationName) {
-        this.applicationName = applicationName;
+    void setApplicationName(String applicationName) {
+        this.applicationName = applicationName
     }
 
     /**
@@ -67,20 +69,20 @@ public class JobDetailFactoryBean implements FactoryBean<JobDetail>, Initializin
      *
      * @see org.springframework.beans.factory.InitializingBean#afterPropertiesSet()
      */
-    public void afterPropertiesSet() {
-        String name = jobClass.getFullName();
+    void afterPropertiesSet() {
+        String name = jobClass.getFullName()
         if (name == null) {
-            throw new IllegalStateException("name is required");
+            throw new IllegalStateException('name is required')
         }
 
-        String group = jobClass.getGroup();
+        String group = jobClass.getGroup()
         if (group == null) {
-            throw new IllegalStateException("group is required");
+            throw new IllegalStateException('group is required')
         }
 
         // Consider the concurrent flag to choose between stateful and stateless job.
         Class<? extends GrailsJobFactory.GrailsJob> clazz =
-                jobClass.isConcurrent() ? GrailsJobFactory.GrailsJob.class : GrailsJobFactory.StatefulGrailsJob.class;
+                jobClass.isConcurrent() ? GrailsJobFactory.GrailsJob : GrailsJobFactory.StatefulGrailsJob
 
         // Build JobDetail instance.
         JobBuilder builder =
@@ -89,13 +91,13 @@ public class JobDetailFactoryBean implements FactoryBean<JobDetail>, Initializin
                         .storeDurably(jobClass.isDurability())
                         .requestRecovery(jobClass.isRequestsRecovery())
                         .usingJobData(JOB_NAME_PARAMETER, name)
-                        .withDescription(jobClass.getDescription());
+                        .withDescription(jobClass.getDescription())
 
         if (applicationName != null) {
-            builder.usingJobData(APPLICATION_NAME_PARAMETER, applicationName);
+            builder.usingJobData(APPLICATION_NAME_PARAMETER, applicationName)
         }
 
-        jobDetail = builder.build();
+        jobDetail = builder.build()
     }
 
     /**
@@ -104,8 +106,8 @@ public class JobDetailFactoryBean implements FactoryBean<JobDetail>, Initializin
      * @see org.springframework.beans.factory.FactoryBean#getObject()
      */
     @Override
-    public JobDetail getObject() {
-        return jobDetail;
+    JobDetail getObject() {
+        return jobDetail
     }
 
     /**
@@ -114,8 +116,8 @@ public class JobDetailFactoryBean implements FactoryBean<JobDetail>, Initializin
      * @see org.springframework.beans.factory.FactoryBean#getObjectType()
      */
     @Override
-    public Class<JobDetail> getObjectType() {
-        return JobDetail.class;
+    Class<JobDetail> getObjectType() {
+        return JobDetail
     }
 
     /**
@@ -124,7 +126,8 @@ public class JobDetailFactoryBean implements FactoryBean<JobDetail>, Initializin
      * @see org.springframework.beans.factory.FactoryBean#isSingleton()
      */
     @Override
-    public boolean isSingleton() {
-        return true;
+    boolean isSingleton() {
+        return true
     }
+
 }

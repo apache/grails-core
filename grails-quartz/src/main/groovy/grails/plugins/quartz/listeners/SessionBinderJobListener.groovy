@@ -14,15 +14,16 @@
  * limitations under the License.
  */
 
-package grails.plugins.quartz.listeners;
+package grails.plugins.quartz.listeners
 
-import org.quartz.JobExecutionContext;
-import org.quartz.JobExecutionException;
-import org.quartz.listeners.JobListenerSupport;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import groovy.transform.CompileStatic
+import org.quartz.JobExecutionContext
+import org.quartz.JobExecutionException
+import org.quartz.listeners.JobListenerSupport
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 
-import grails.persistence.support.PersistenceContextInterceptor;
+import grails.persistence.support.PersistenceContextInterceptor
 
 /**
  * JobListener implementation which wraps the execution of a Quartz Job in a
@@ -31,64 +32,66 @@ import grails.persistence.support.PersistenceContextInterceptor;
  * @author Sergey Nebolsin (nebolsin@gmail.com)
  * @since 0.2
  */
-public class SessionBinderJobListener extends JobListenerSupport {
+@CompileStatic
+class SessionBinderJobListener extends JobListenerSupport {
 
-    private static final Logger LOG = LoggerFactory.getLogger(SessionBinderJobListener.class);
+    private static final Logger LOG = LoggerFactory.getLogger(SessionBinderJobListener)
 
-    public static final String NAME = "sessionBinderListener";
+    public static final String NAME = 'sessionBinderListener'
 
-    private PersistenceContextInterceptor persistenceInterceptor;
+    private PersistenceContextInterceptor persistenceInterceptor
 
-    public String getName() {
-        return NAME;
+    String getName() {
+        return NAME
     }
 
     /**
      * It is used by the Spring to inject a persistence interceptor.
      * @return the reference of the currently active bean implementation of persistenceInterceptor
      */
-    @SuppressWarnings("UnusedDeclaration")
-    public PersistenceContextInterceptor getPersistenceInterceptor() {
-        return persistenceInterceptor;
+    @SuppressWarnings('UnusedDeclaration')
+    PersistenceContextInterceptor getPersistenceInterceptor() {
+        return persistenceInterceptor
     }
 
     /**
      * It is used by the Spring to inject a persistence interceptor.
      * @param persistenceInterceptor - Normally applied by bean injection to set the reference to the persistenceInterceptor
      */
-    @SuppressWarnings("UnusedDeclaration")
-    public void setPersistenceInterceptor(PersistenceContextInterceptor persistenceInterceptor) {
-        this.persistenceInterceptor = persistenceInterceptor;
+    @SuppressWarnings('UnusedDeclaration')
+    void setPersistenceInterceptor(PersistenceContextInterceptor persistenceInterceptor) {
+        this.persistenceInterceptor = persistenceInterceptor
     }
 
     /**
      * Before job executing. Init persistence context.
      */
-    public void jobToBeExecuted(JobExecutionContext context) {
+    void jobToBeExecuted(JobExecutionContext context) {
         if (persistenceInterceptor != null) {
-            persistenceInterceptor.init();
-            LOG.debug("Persistence session is opened.");
+            persistenceInterceptor.init()
+            LOG.debug('Persistence session is opened.')
         }
     }
 
     /**
      * After job executing. Flush and destroy persistence context.
      */
-    public void jobWasExecuted(JobExecutionContext context, JobExecutionException exception) {
+    void jobWasExecuted(JobExecutionContext context, JobExecutionException exception) {
         if (persistenceInterceptor != null) {
             try {
-                persistenceInterceptor.flush();
-                persistenceInterceptor.clear();
-                LOG.debug("Persistence session is flushed.");
+                persistenceInterceptor.flush()
+                persistenceInterceptor.clear()
+                LOG.debug('Persistence session is flushed.')
             } catch (Exception e) {
-                LOG.error("Failed to flush session after job: " + context.getJobDetail().getDescription(), e);
+                LOG.error('Failed to flush session after job: ' + context.getJobDetail().getDescription(), e)
             } finally {
                 try {
-                    persistenceInterceptor.destroy();
+                    persistenceInterceptor.destroy()
                 } catch (Exception e) {
-                    LOG.error("Failed to finalize session after job: " + context.getJobDetail().getDescription(), e);
+                    LOG.error('Failed to finalize session after job: ' + context.getJobDetail().getDescription(), e)
                 }
             }
         }
     }
+
 }

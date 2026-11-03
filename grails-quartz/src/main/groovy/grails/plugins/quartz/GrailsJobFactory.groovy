@@ -14,25 +14,25 @@
  * limitations under the License.
  */
 
-package grails.plugins.quartz;
+package grails.plugins.quartz
 
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-import java.text.MessageFormat;
+import java.lang.reflect.InvocationTargetException
+import java.lang.reflect.Method
+import java.text.MessageFormat
 
-import org.quartz.DisallowConcurrentExecution;
-import org.quartz.InterruptableJob;
-import org.quartz.JobExecutionContext;
-import org.quartz.JobExecutionException;
-import org.quartz.PersistJobDataAfterExecution;
-import org.quartz.UnableToInterruptJobException;
-import org.quartz.spi.TriggerFiredBundle;
-
-import org.springframework.beans.BeansException;
-import org.springframework.context.ApplicationContext;
-import org.springframework.context.ApplicationContextAware;
-import org.springframework.scheduling.quartz.AdaptableJobFactory;
-import org.springframework.util.ReflectionUtils;
+import groovy.transform.CompileStatic
+import org.quartz.DisallowConcurrentExecution
+import org.quartz.InterruptableJob
+import org.quartz.JobExecutionContext
+import org.quartz.JobExecutionException
+import org.quartz.PersistJobDataAfterExecution
+import org.quartz.UnableToInterruptJobException
+import org.quartz.spi.TriggerFiredBundle
+import org.springframework.beans.BeansException
+import org.springframework.context.ApplicationContext
+import org.springframework.context.ApplicationContextAware
+import org.springframework.scheduling.quartz.AdaptableJobFactory
+import org.springframework.util.ReflectionUtils
 
 /**
  * Job factory which retrieves Job instances from ApplicationContext.
@@ -42,108 +42,110 @@ import org.springframework.util.ReflectionUtils;
  * @author Sergey Nebolsin (nebolsin@gmail.com)
  * @since 0.3.2
  */
-public class GrailsJobFactory extends AdaptableJobFactory implements ApplicationContextAware {
-    private ApplicationContext applicationContext;
+@CompileStatic
+class GrailsJobFactory extends AdaptableJobFactory implements ApplicationContextAware {
+
+    private ApplicationContext applicationContext
 
     @Override
     protected Object createJobInstance(TriggerFiredBundle bundle) throws Exception {
         String grailsJobName = (String) bundle.getJobDetail().getJobDataMap().get(
                 JobDetailFactoryBean.JOB_NAME_PARAMETER
-        );
+        )
         if (grailsJobName != null) {
-            return new GrailsJob(applicationContext.getBean(grailsJobName));
+            return new GrailsJob(applicationContext.getBean(grailsJobName))
         } else {
-            return super.createJobInstance(bundle);
+            return super.createJobInstance(bundle)
         }
     }
 
     /**
      * Quartz Job implementation that invokes execute() on the application's job class.
      */
-    public static class GrailsJob implements InterruptableJob {
-        private Object job;
-        private Method executeMethod;
-        private Method interruptMethod;
-        boolean passExecutionContext;
+    static class GrailsJob implements InterruptableJob {
+        private Object job
+        private Method executeMethod
+        private Method interruptMethod
+        boolean passExecutionContext
 
-        public GrailsJob(Object job) {
-            this.job = job;
+        GrailsJob(Object job) {
+            this.job = job
 
             // Finds an execute method with zero or one parameter.
             this.executeMethod = ReflectionUtils.findMethod(
                     job.getClass(), GrailsJobClassConstants.EXECUTE, (Class<?>[]) null
-            );
+            )
             if (executeMethod == null) {
                 throw new IllegalArgumentException(
                         MessageFormat.format(
-                                "{0} should declare #{1}() method",
+                                '{0} should declare #{1}() method',
                                 job.getClass().getName(), GrailsJobClassConstants.EXECUTE
                         )
-                );
+                )
             }
             switch (executeMethod.getParameterTypes().length) {
                 case 0:
-                    passExecutionContext = false;
-                    break;
+                    passExecutionContext = false
+                    break
                 case 1:
-                    passExecutionContext = true;
-                    break;
+                    passExecutionContext = true
+                    break
                 default:
                     throw new IllegalArgumentException(
                             MessageFormat.format(
-                                    "{0}#{1}() method should take either no arguments or one argument of type JobExecutionContext",
+                                    '{0}#{1}() method should take either no arguments or one argument of type JobExecutionContext',
                                     job.getClass().getName(), GrailsJobClassConstants.EXECUTE
                             )
-                    );
+                    )
             }
 
             // Find interrupt method
-            this.interruptMethod = ReflectionUtils.findMethod(job.getClass(), GrailsJobClassConstants.INTERRUPT);
+            this.interruptMethod = ReflectionUtils.findMethod(job.getClass(), GrailsJobClassConstants.INTERRUPT)
         }
 
         // Execute Job
-        public void execute(final JobExecutionContext context) throws JobExecutionException {
+        void execute(final JobExecutionContext context) throws JobExecutionException {
             try {
                 if (passExecutionContext) {
-                    executeMethod.invoke(job, context);
+                    executeMethod.invoke(job, context)
                 } else {
-                    executeMethod.invoke(job);
+                    executeMethod.invoke(job)
                 }
             } catch (InvocationTargetException ite) {
-                Throwable targetException = ite.getTargetException();
+                Throwable targetException = ite.getTargetException()
                 if (targetException instanceof JobExecutionException) {
-                    throw (JobExecutionException) targetException;
+                    throw (JobExecutionException) targetException
                 } else {
-                    throw new JobExecutionException(targetException);
+                    throw new JobExecutionException(targetException)
                 }
             } catch (IllegalAccessException iae) {
                 JobExecutionException criticalError = new JobExecutionException(
                         MessageFormat.format(
-                                "Cannot invoke {0}#{1}() method",
+                                'Cannot invoke {0}#{1}() method',
                                 job.getClass().getName(), executeMethod.getName()
                         ),
                         iae
-                );
-                criticalError.setUnscheduleAllTriggers(true);
-                throw criticalError;
+                )
+                criticalError.setUnscheduleAllTriggers(true)
+                throw criticalError
             }
         }
 
         // Interrupt Job
-        public void interrupt() throws UnableToInterruptJobException {
+        void interrupt() throws UnableToInterruptJobException {
             if (interruptMethod != null) {
                 try {
-                    interruptMethod.invoke(job);
+                    interruptMethod.invoke(job)
                 } catch (Throwable e) {
-                    throw new UnableToInterruptJobException(e);
+                    throw new UnableToInterruptJobException(e)
                 }
             } else {
                 throw new UnableToInterruptJobException(
                         MessageFormat.format(
-                                "{0} does not declare an {1}() method, so it cannot be interrupted",
+                                '{0} does not declare an {1}() method, so it cannot be interrupted',
                                 job.getClass().getName(), GrailsJobClassConstants.INTERRUPT
                         )
-                );
+                )
             }
         }
 
@@ -152,9 +154,9 @@ public class GrailsJobFactory extends AdaptableJobFactory implements Application
          *
          * @return the GrailsJobClass object.
          */
-        @SuppressWarnings("UnusedDeclaration")
-        public Object getJob() {
-            return job;
+        @SuppressWarnings('UnusedDeclaration')
+        Object getJob() {
+            return job
         }
     }
 
@@ -165,9 +167,9 @@ public class GrailsJobFactory extends AdaptableJobFactory implements Application
      */
     @PersistJobDataAfterExecution
     @DisallowConcurrentExecution
-    public static class StatefulGrailsJob extends GrailsJob {
-        public StatefulGrailsJob(Object job) {
-            super(job);
+    static class StatefulGrailsJob extends GrailsJob {
+        StatefulGrailsJob(Object job) {
+            super(job)
         }
     }
 
@@ -175,7 +177,8 @@ public class GrailsJobFactory extends AdaptableJobFactory implements Application
      * Override from ApplicationContextAware.
      */
     @Override
-    public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
-        this.applicationContext = applicationContext;
+    void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
+        this.applicationContext = applicationContext
     }
+
 }
