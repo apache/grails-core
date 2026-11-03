@@ -26,6 +26,7 @@ import org.sitemesh.SiteMeshContext
 import org.sitemesh.content.Content
 import org.sitemesh.content.ContentProcessor
 import org.sitemesh.content.memory.InMemoryContent
+import org.sitemesh.content.tagrules.html.CoreHtmlTagRuleBundle
 import org.sitemesh.webapp.WebAppContext
 
 import org.springframework.mock.web.MockHttpServletRequest
@@ -124,6 +125,90 @@ class CaptureAwareContentProcessorSpec extends Specification {
         then:
         1 * fallback.build(_ as CharBuffer, _ as SiteMeshContext) >> fallbackContent
         content.is(fallbackContent)
+    }
+
+    void 'falls back when the context is not a web app context'() {
+        given:
+        Content fallbackContent = new InMemoryContent()
+        SiteMeshContext plain = Stub(SiteMeshContext) {
+            getContentToMerge() >> null
+        }
+
+        when:
+        Content content = processor.build(CharBuffer.wrap('<html></html>'), plain)
+
+        then:
+        1 * fallback.build(_ as CharBuffer, plain) >> fallbackContent
+        content.is(fallbackContent)
+    }
+
+    void 'falls back when the web app context has no request'() {
+        given:
+        Content fallbackContent = new InMemoryContent()
+        WebAppContext noRequest = Stub(WebAppContext) {
+            getRequest() >> null
+            getContentToMerge() >> null
+        }
+
+        when:
+        Content content = processor.build(CharBuffer.wrap('<html></html>'), noRequest)
+
+        then:
+        1 * fallback.build(_ as CharBuffer, noRequest) >> fallbackContent
+        content.is(fallbackContent)
+    }
+
+    void 'falls back when the request attribute is not a captured page'() {
+        given:
+        request.setAttribute(Sitemesh3CapturedPage.REQUEST_ATTRIBUTE, 'not a page')
+        Content fallbackContent = new InMemoryContent()
+
+        when:
+        Content content = processor.build(CharBuffer.wrap('<html></html>'), context)
+
+        then:
+        1 * fallback.build(_ as CharBuffer, _ as SiteMeshContext) >> fallbackContent
+        content.is(fallbackContent)
+    }
+
+    void 'a used captured page keeps the rendered original page as its data'() {
+        given:
+        Sitemesh3CapturedPage page = new Sitemesh3CapturedPage()
+        page.setBodyBuffer(bufferOf('<p>hi</p>'))
+        request.setAttribute(Sitemesh3CapturedPage.REQUEST_ATTRIBUTE, page)
+        String original = '<html><body><p>hi</p></body></html>'
+
+        when:
+        processor.build(CharBuffer.wrap(original), context)
+        def out = new StringWriter()
+        page.getData().writeValueTo(out)
+
+        then:
+        page.getData().getValue() == original
+        out.toString() == original
+    }
+
+    void 'the default processor parses html itself when nothing was captured'() {
+        given:
+        def defaultProcessor = new CaptureAwareContentProcessor()
+
+        when:
+        Content content = defaultProcessor.build(CharBuffer.wrap('<html><head><title>Parsed</title></head><body>text</body></html>'), context)
+
+        then:
+        content.getExtractedProperties().getChild('title').value == 'Parsed'
+        content.getExtractedProperties().getChild('body').value == 'text'
+    }
+
+    void 'a processor can be built from tag rule bundles'() {
+        given:
+        def bundled = new CaptureAwareContentProcessor(new CoreHtmlTagRuleBundle())
+
+        when:
+        Content content = bundled.build(CharBuffer.wrap('<html><head><title>Bundled</title></head><body>x</body></html>'), context)
+
+        then:
+        content.getExtractedProperties().getChild('title').value == 'Bundled'
     }
 
     private StreamCharBuffer bufferOf(String value) {

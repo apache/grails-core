@@ -18,6 +18,8 @@
  */
 package grails.gsp.boot
 
+import org.springframework.beans.factory.support.DefaultListableBeanFactory
+import org.springframework.beans.factory.support.GenericBeanDefinition
 import org.springframework.core.env.StandardEnvironment
 import org.springframework.core.env.SystemEnvironmentPropertySource
 import org.springframework.core.io.ByteArrayResource
@@ -147,6 +149,78 @@ class GspAutoConfigurationSpec extends Specification {
 
         expect:
         configuration.resolvePrecompiledViews(empty, ['classpath:/templates']) == null
+    }
+
+    void 'an unreadable view registry leaves the locator rendering from templates'() {
+        given:
+        def failing = new ByteArrayResource(new byte[0]) {
+            @Override
+            InputStream getInputStream() throws IOException {
+                throw new IOException('unreadable')
+            }
+        }
+        ResourceLoader loader = new DefaultResourceLoader() {
+            @Override
+            org.springframework.core.io.Resource getResource(String location) {
+                location.endsWith('gsp/views.properties') ? failing : super.getResource(location)
+            }
+        }
+        configuration.templateRoots = ['classpath:/templates'] as String[]
+
+        expect:
+        !(configuration.groovyPageLocator(loader).findPage('/probe.gsp') instanceof GroovyPageCompiledScriptSource)
+    }
+
+    void 'template roots lose a trailing slash and blank roots are dropped'() {
+        given:
+        configuration.templateRoots = ['classpath:/templates/', ' ', '/'] as String[]
+
+        expect:
+        locator().findPage('/probe.gsp') instanceof GroovyPageCompiledScriptSource
+    }
+
+    void 'without configured roots the class path templates are used, with or without reloading'() {
+        given:
+        configuration.gspReloadingEnabled = reloading
+
+        expect:
+        locator().findPage('/probe.gsp') instanceof GroovyPageCompiledScriptSource == compiled
+
+        where:
+        reloading | compiled
+        false     | true
+        true      | true
+    }
+
+    void 'the view resolver registrar replaces the viewResolver bean with an alias of the GSP resolver'() {
+        given:
+        def registry = new DefaultListableBeanFactory()
+        registry.registerBeanDefinition('viewResolver', new GenericBeanDefinition(beanClass: Object))
+        def registrar = new GspAutoConfiguration.ReplaceViewResolverRegistrar(replaceViewResolverBean: true)
+
+        when:
+        registrar.registerBeanDefinitions(null, registry)
+
+        then:
+        !registry.containsBeanDefinition('viewResolver')
+        registry.isAlias('viewResolver')
+        registry.isAlias('jspViewResolver')
+    }
+
+    void 'the view resolver registrar keeps an existing jspViewResolver and an existing viewResolver when not replacing'() {
+        given:
+        def registry = new DefaultListableBeanFactory()
+        registry.registerBeanDefinition('viewResolver', new GenericBeanDefinition(beanClass: Object))
+        registry.registerBeanDefinition('jspViewResolver', new GenericBeanDefinition(beanClass: Object))
+        def registrar = new GspAutoConfiguration.ReplaceViewResolverRegistrar(replaceViewResolverBean: false)
+
+        when:
+        registrar.registerBeanDefinitions(null, registry)
+
+        then:
+        registry.containsBeanDefinition('viewResolver')
+        registry.containsBeanDefinition('jspViewResolver')
+        !registry.isAlias('jspViewResolver')
     }
 
     /**

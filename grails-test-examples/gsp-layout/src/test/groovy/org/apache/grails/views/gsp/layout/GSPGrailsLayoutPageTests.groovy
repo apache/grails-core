@@ -84,6 +84,15 @@ class GSPGrailsLayoutPageTests extends AbstractGrailsTagTests {
     }
 
     @Test
+    void testGetPropertyBindsToThePageNotTheMetaClassLookup() {
+        def gspGrailsLayoutPage = new GSPGrailsLayoutPage()
+        gspGrailsLayoutPage.addProperty('meta.intval', '123')
+        def method = GroovySystem.metaClassRegistry.getMetaClass(GSPGrailsLayoutPage).pickMethod('getProperty', [String] as Class[])
+        assertEquals('123', method.invoke(gspGrailsLayoutPage, ['meta.intval'] as Object[]))
+        assertEquals('123', gspGrailsLayoutPage.getProperty('meta.intval'))
+    }
+
+    @Test
     void testLayoutTags() {
         def template = '<html><head><title>This is the title</title><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"></head><body onload="somejs();">body here</body></html>'
         def gspGrailsLayoutPage = new GSPGrailsLayoutPage()

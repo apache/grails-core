@@ -20,6 +20,8 @@ package org.grails.plugins.sitemesh3
 
 import java.util.Locale
 
+import jakarta.servlet.ServletException
+
 import org.sitemesh.content.ContentProcessor
 import org.sitemesh.webapp.contentfilter.ResponseMetaData
 
@@ -128,4 +130,56 @@ class GrailsSiteMeshViewContextSpec extends Specification {
         then:
         1 * view.render([:], request, response)
     }
+
+    void "an IOException from the layout view is rethrown unchanged"() {
+        given:
+        def failure = new IOException('disk')
+        viewResolver.resolveViewName('/layouts/custom', Locale.ENGLISH) >> { throw failure }
+
+        when:
+        newContext().dispatch(request, response, '/layouts/custom')
+
+        then:
+        def e = thrown(IOException)
+        e.is(failure)
+    }
+
+    void "a ServletException from the layout view is rethrown unchanged"() {
+        given:
+        def failure = new ServletException('servlet')
+        viewResolver.resolveViewName('/layouts/custom', Locale.ENGLISH) >> { throw failure }
+
+        when:
+        newContext().dispatch(request, response, '/layouts/custom')
+
+        then:
+        def e = thrown(ServletException)
+        e.is(failure)
+    }
+
+    void "any other failure is wrapped in a ServletException naming the layout path"() {
+        given:
+        def failure = new IllegalStateException('bad layout')
+        viewResolver.resolveViewName('/layouts/custom', Locale.ENGLISH) >> { throw failure }
+
+        when:
+        newContext().dispatch(request, response, '/layouts/custom')
+
+        then:
+        def e = thrown(ServletException)
+        e.message == 'Error rendering layout view: /layouts/custom'
+        e.cause.is(failure)
+    }
+
+    void "an absolute path that does not resolve to a view falls back to a request dispatch"() {
+        given:
+        viewResolver.resolveViewName('/layouts/missing', Locale.ENGLISH) >> null
+
+        when:
+        newContext().dispatch(request, response, '/layouts/missing')
+
+        then:
+        response.forwardedUrl == '/layouts/missing'
+    }
 }
+

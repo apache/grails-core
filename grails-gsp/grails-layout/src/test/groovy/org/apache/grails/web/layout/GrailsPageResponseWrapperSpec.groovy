@@ -20,8 +20,11 @@
 package org.apache.grails.web.layout
 
 import com.opensymphony.module.sitemesh.PageParserSelector
+import org.grails.web.servlet.mvc.GrailsWebRequest
 import org.springframework.mock.web.MockHttpServletRequest
 import org.springframework.mock.web.MockHttpServletResponse
+import org.springframework.mock.web.MockServletContext
+import org.springframework.web.context.request.RequestContextHolder
 import spock.lang.Specification
 
 class GrailsPageResponseWrapperSpec extends Specification {
@@ -31,6 +34,10 @@ class GrailsPageResponseWrapperSpec extends Specification {
     PageParserSelector parserSelector = Stub(PageParserSelector) {
         shouldParsePage('text/html') >> true
         getPageParser('text/html') >> new GrailsHTMLPageParser()
+    }
+
+    void cleanup() {
+        RequestContextHolder.resetRequestAttributes()
     }
 
     void 'HTML written through the writer is buffered and parsed without committing the response'() {
@@ -64,7 +71,7 @@ class GrailsPageResponseWrapperSpec extends Specification {
     void 'HTML output stream uses the declared encoding'() {
         given:
         def wrapper = new GrailsPageResponseWrapper(request, response, parserSelector)
-        def html = '<html><body>caf\u00e9</body></html>'
+        def html = '<html><body>café</body></html>'
         wrapper.setHeader('Content-Type', 'text/html;charset=UTF-8')
 
         when:
@@ -74,7 +81,7 @@ class GrailsPageResponseWrapperSpec extends Specification {
         then:
         wrapper.isUsingStream()
         page.page == html
-        page.body == 'caf\u00e9'
+        page.body == 'café'
         response.contentAsByteArray.length == 0
     }
 
@@ -219,5 +226,176 @@ class GrailsPageResponseWrapperSpec extends Specification {
         response.forwardedUrl == '/forwarded'
         wrapper.status == 201
         response.status == 201
+    }
+
+    void 'getPage returns null when no parser is available for the content type'() {
+        given:
+        def noParserSelector = Stub(PageParserSelector) {
+            shouldParsePage(_ as String) >> true
+            getPageParser(_ as String) >> null
+        }
+        def wrapper = new GrailsPageResponseWrapper(request, response, noParserSelector)
+        wrapper.setContentType('text/html;charset=UTF-8')
+        wrapper.writer.write('<html/>')
+        wrapper.writer.flush()
+
+        expect:
+        wrapper.page == null
+    }
+
+    void 'an unused GSP layout page is not reported as active and getPage falls back to parsing'() {
+        given:
+        def gspPage = new GSPGrailsLayoutPage()
+        request.setAttribute(EmbeddedGrailsLayoutView.GSP_GRAILS_LAYOUT_PAGE, gspPage)
+        def wrapper = wrapper()
+        wrapper.setContentType('text/html;charset=UTF-8')
+        wrapper.writer.write('<html><body>Parsed</body></html>')
+        wrapper.writer.flush()
+
+        when:
+        def page = wrapper.page
+
+        then:
+        !wrapper.gspGrailsLayoutActive
+        !page.is(gspPage)
+        page.body == 'Parsed'
+    }
+
+    void 'activating buffering twice keeps the first buffer'() {
+        given:
+        def wrapper = wrapper()
+        wrapper.setContentType('text/html;charset=UTF-8')
+        wrapper.writer.write('first')
+        wrapper.writer.flush()
+
+        when:
+        wrapper.activateGrailsLayout('text/html', 'UTF-8')
+
+        then:
+        wrapper.contents == 'first'.toCharArray()
+    }
+
+    void 'the buffer is created lazily and registers itself on the GSP layout page'() {
+        given:
+        def gspPage = new GSPGrailsLayoutPage()
+        request.setAttribute(EmbeddedGrailsLayoutView.GSP_GRAILS_LAYOUT_PAGE, gspPage)
+        def wrapper = wrapper()
+        wrapper.setContentType('text/html;charset=UTF-8')
+
+        when:
+        wrapper.writer.write('abc')
+        wrapper.writer.flush()
+
+        then:
+        gspPage.getPageBuffer() != null
+        gspPage.getPage() == 'abc'
+    }
+
+    void 'the output stream goes straight to the response when not parseable'() {
+        given:
+        def wrapper = wrapper()
+        wrapper.setContentType('application/octet-stream')
+
+        when:
+        wrapper.outputStream.write('raw'.bytes)
+
+        then:
+        !wrapper.usingStream
+        response.contentAsString == 'raw'
+    }
+
+    void 'a success status leaves buffered content alone'() {
+        given:
+        def wrapper = wrapper()
+        wrapper.setContentType('text/html;charset=UTF-8')
+        wrapper.writer.write('keep')
+        wrapper.writer.flush()
+
+        when:
+        wrapper.setStatus(200)
+
+        then:
+        wrapper.contents == 'keep'.toCharArray()
+    }
+
+    void 'clearing a byte buffer and resetting the GSP page happens on error status'() {
+        given:
+        def gspPage = new GSPGrailsLayoutPage()
+        gspPage.addProperty('a', 'b')
+        request.setAttribute(EmbeddedGrailsLayoutView.GSP_GRAILS_LAYOUT_PAGE, gspPage)
+        def wrapper = wrapper()
+        wrapper.setContentType('text/html;charset=UTF-8')
+        wrapper.outputStream.write('bytes'.bytes)
+
+        when:
+        wrapper.setStatus(404)
+
+        then:
+        wrapper.contents.length == 0
+        !gspPage.used
+    }
+
+    void 'sendError clears the buffer, delegates and restores the bound GrailsWebRequest'() {
+        given:
+        def webRequest = new GrailsWebRequest(request, response, new MockServletContext())
+        RequestContextHolder.setRequestAttributes(webRequest)
+        def wrapper = wrapper()
+        wrapper.setContentType('text/html;charset=UTF-8')
+        wrapper.writer.write('partial')
+        wrapper.writer.flush()
+
+        when:
+        wrapper.sendError(404)
+
+        then:
+        wrapper.contents == null
+        response.status == 404
+        GrailsWebRequest.lookup().is(webRequest)
+    }
+
+    void 'sendError with a message delegates the message'() {
+        given:
+        def webRequest = new GrailsWebRequest(request, response, new MockServletContext())
+        RequestContextHolder.setRequestAttributes(webRequest)
+        def wrapper = wrapper()
+
+        when:
+        wrapper.sendError(403, 'forbidden')
+
+        then:
+        response.status == 403
+        response.errorMessage == 'forbidden'
+        GrailsWebRequest.lookup().is(webRequest)
+    }
+
+    void 'reset and resetBuffer are ignored while buffering and delegated otherwise'() {
+        given:
+        def wrapper = wrapper()
+        response.setStatus(201)
+        response.writer.write('written')
+
+        when:
+        wrapper.reset()
+        wrapper.resetBuffer()
+
+        then:
+        response.status == 200
+        response.contentAsString == ''
+
+        when:
+        def buffering = new GrailsPageResponseWrapper(request, response, parserSelector)
+        buffering.setContentType('text/html;charset=UTF-8')
+        response.setStatus(201)
+        response.writer.write('kept')
+        buffering.reset()
+        buffering.resetBuffer()
+
+        then:
+        response.status == 201
+        response.contentAsString == 'kept'
+    }
+
+    private GrailsPageResponseWrapper wrapper() {
+        new GrailsPageResponseWrapper(request, response, parserSelector)
     }
 }
