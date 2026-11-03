@@ -44,7 +44,7 @@ class CodecLookupHelper {
      * @return the encoder instance
      */
     static Encoder lookupEncoder(GrailsApplication grailsApplication, String codecName) {
-        ApplicationContext ctx = grailsApplication != null ? grailsApplication.getMainContext() : null
+        ApplicationContext ctx = grailsApplication?.mainContext
         if (ctx != null) {
             try {
                 CodecLookup codecLookup = ctx.getBean('codecLookup', CodecLookup)

@@ -39,8 +39,8 @@ class CombinedCodecIdentifier implements CodecIdentifier {
         String[] encoderNamesArr = new String[size]
         for (int i = 0; i < size; i++) {
             int targetIndex = reverseOrder ? (size - 1 - i) : i
-            codecIdentifiers[targetIndex] = encodersOrDecoders[i].getCodecIdentifier()
-            encoderNamesArr[targetIndex] = codecIdentifiers[targetIndex].getCodecName()
+            codecIdentifiers[targetIndex] = encodersOrDecoders[i].codecIdentifier
+            encoderNamesArr[targetIndex] = codecIdentifiers[targetIndex].codecName
         }
         this.codecName = StringUtils.collectionToDelimitedString(Arrays.asList(encoderNamesArr), 'And')
         this.codecAlias = StringUtils.collectionToCommaDelimitedString(Arrays.asList(encoderNamesArr))
@@ -58,7 +58,7 @@ class CombinedCodecIdentifier implements CodecIdentifier {
 
     @Override
     boolean isEquivalent(CodecIdentifier other) {
-        for (CodecIdentifier codecIdentifier : codecIdentifiers) {
+        for (CodecIdentifier codecIdentifier in codecIdentifiers) {
             if (codecIdentifier.isEquivalent(other)) {
                 return true
             }

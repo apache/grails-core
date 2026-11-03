@@ -65,7 +65,7 @@ class RawCodec implements Encoder, Decoder, StreamingEncoder, CodecFactory {
     Object encode(Object o) {
         if (o instanceof String) {
             // create a new copy of the String instance
-            return new String((String) o)
+            return new String(o)
         } else if (o instanceof CharSequence) {
             // convert CharSequence to String so that we have a new instance
             return String.valueOf(o)

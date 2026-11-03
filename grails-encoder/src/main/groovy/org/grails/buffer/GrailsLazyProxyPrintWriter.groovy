@@ -54,7 +54,7 @@ class GrailsLazyProxyPrintWriter extends GrailsPrintWriter {
 
     @Override
     boolean isAllowUnwrappingOut() {
-        return destinationActivated ? super.isAllowUnwrappingOut() : false
+        return destinationActivated && super.isAllowUnwrappingOut()
     }
 
     @Override

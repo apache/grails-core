@@ -33,7 +33,7 @@ class ChainedEncoders {
             return null
         }
         List<StreamingEncoder> streamingEncoders = new ArrayList<>()
-        for (Encoder encoder : encoders) {
+        for (Encoder encoder in encoders) {
             if (!(encoder instanceof StreamingEncoder)) {
                 return null
             }
@@ -69,20 +69,20 @@ class ChainedEncoders {
                     streamEncodeable.encodeTo(((StreamCharBuffer.StreamCharBufferWriter) buffer.getWriter()).getEncodedAppender(), null)
                 }
                 for (int i = 0; i < encoders.size() - 1; i++) {
-                    buffer = buffer.encodeToBuffer(encoders.get(i))
+                    buffer = buffer.encodeToBuffer(encoders[i])
                 }
                 lastStreamEncodeable = buffer
             }
-            lastStreamEncodeable.encodeTo(appender, encoders.get(encoders.size() - 1))
+            lastStreamEncodeable.encodeTo(appender, encoders[encoders.size() - 1])
         }
     }
 
     static void chainStreamingEncode(StreamEncodeable streamEncodeable, EncodedAppender appender, List<StreamingEncoder> encoders) throws IOException {
         EncodedAppender target
         Encoder lastEncoder
-        if (encoders != null && encoders.size() > 0) {
+        if (encoders != null && !encoders.isEmpty()) {
             target = chainAllButLastEncoders(appender, encoders)
-            lastEncoder = encoders.get(0)
+            lastEncoder = encoders[0]
         } else {
             target = appender
             lastEncoder = null
@@ -93,7 +93,7 @@ class ChainedEncoders {
     static EncodedAppender chainAllButLastEncoders(EncodedAppender appender, List<StreamingEncoder> encoders) {
         EncodedAppender target = appender
         for (int i = encoders.size() - 1; i >= 1; i--) {
-            StreamingEncoder encoder = encoders.get(i)
+            StreamingEncoder encoder = encoders[i]
             target = new StreamingEncoderEncodedAppender(encoder, target)
         }
         return target
@@ -102,7 +102,7 @@ class ChainedEncoders {
     static EncodedAppender chainAllEncoders(EncodedAppender appender, List<StreamingEncoder> encoders) {
         EncodedAppender target = appender
         for (int i = encoders.size() - 1; i >= 0; i--) {
-            StreamingEncoder encoder = encoders.get(i)
+            StreamingEncoder encoder = encoders[i]
             target = new StreamingEncoderEncodedAppender(encoder, target)
         }
         return target

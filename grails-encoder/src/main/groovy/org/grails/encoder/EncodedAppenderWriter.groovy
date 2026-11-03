@@ -110,7 +110,7 @@ class EncodedAppenderWriter extends Writer implements EncodedAppenderWriterFacto
     @Override
     Writer append(CharSequence csq) throws IOException {
         encodedAppender.append(encoder,
-                (encodingStateRegistry != null) ? encodingStateRegistry.getEncodingStateFor(csq) : null, csq, 0,
+                encodingStateRegistry?.getEncodingStateFor(csq), csq, 0,
                 csq.length())
         return this
     }

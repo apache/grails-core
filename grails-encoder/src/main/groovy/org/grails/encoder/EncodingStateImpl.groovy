@@ -83,7 +83,7 @@ class EncodingStateImpl implements EncodingState {
             return false
         EncodingStateImpl other = (EncodingStateImpl) obj
         if (encoders == null) {
-            if (other.encoders != null && other.encoders.size() > 0)
+            if (other.encoders != null && !other.encoders.isEmpty())
                 return false
         }
         else if (!encoders.equals(other.encoders))
@@ -94,9 +94,9 @@ class EncodingStateImpl implements EncodingState {
     EncodingState appendEncoder(Encoder encoder) {
         if (encoder == null) return this
         Set<Encoder> newEncoders
-        if (encoders == null || encoders.size() == 0) {
+        if (encoders == null || encoders.isEmpty()) {
             newEncoders = Collections.singleton(encoder)
-        } else if (encoders.size() == 1 && encoders.contains(encoder)) {
+        } else if (encoders.size() == 1 && encoder in encoders) {
             return this
         } else {
             newEncoders = new LinkedHashSet<>()
@@ -109,25 +109,23 @@ class EncodingStateImpl implements EncodingState {
     @Override
     String toString() {
         StringBuilder sb = new StringBuilder()
-        sb.append('EncodingStateImpl')
-        if (encoders != null && encoders.size() > 0) {
-            sb.append(' [encoders=')
+        sb << 'EncodingStateImpl'
+        if (encoders != null && !encoders.isEmpty()) {
+            sb << ' [encoders='
             boolean first = true
-            for (Encoder encoder : encoders) {
+            for (Encoder encoder in encoders) {
                 if (!first) {
-                    sb.append(', ')
+                    sb << ', '
                 } else {
                     first = false
                 }
-                sb.append('[@')
-                sb.append(System.identityHashCode(encoder))
-                sb.append(' ')
-                sb.append(encoder.getCodecIdentifier().getCodecName() + ' safe:' + encoder.isSafe() + ' apply to safe:' + encoder.isApplyToSafelyEncoded())
-                sb.append(']')
+                sb << '[@' << System.identityHashCode(encoder) << ' '
+                sb << "${encoder.codecIdentifier.codecName} safe:${encoder.safe} apply to safe:${encoder.applyToSafelyEncoded}"
+                sb << ']'
             }
-            sb.append(']')
+            sb << ']'
         } else {
-            sb.append('[no encoders]')
+            sb << '[no encoders]'
         }
         return sb.toString()
     }

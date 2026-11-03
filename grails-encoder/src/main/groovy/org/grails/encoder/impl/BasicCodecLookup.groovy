@@ -55,13 +55,13 @@ class BasicCodecLookup implements CodecLookup, InitializingBean {
 
     @SuppressWarnings('unchecked')
     protected <T extends CodecIdentifierProvider> T lookupCodec(String codecName, ConcurrentMap<String, T> map, Class<T> returnType) {
-        if (codecName != null && codecName.length() > 0) {
+        if (codecName != null && !codecName.isEmpty()) {
             if (NONE_CODEC_NAME.equalsIgnoreCase(codecName)) {
                 if (returnType == Encoder) {
                     return (T) NONE_ENCODER
                 }
             } else {
-                T resultObject = map.get(codecName)
+                T resultObject = map[codecName]
                 if (resultObject == null) {
                     resultObject = createCodec(codecName, map, returnType)
                 }
@@ -73,7 +73,7 @@ class BasicCodecLookup implements CodecLookup, InitializingBean {
 
     @SuppressWarnings('unchecked')
     protected <T extends CodecIdentifierProvider> T createCodec(String codecName, ConcurrentMap<String, T> map, Class<T> returnType) {
-        if (codecName.indexOf((int) (',' as char)) > -1) {
+        if (codecName.contains(',')) {
             T createdInstance = createChainedCodecInstance(codecName, map, returnType)
             if (createdInstance != null) {
                 createdInstance = putChainedCodecInstance(codecName, map, createdInstance)
@@ -97,7 +97,7 @@ class BasicCodecLookup implements CodecLookup, InitializingBean {
         String[] codecs = codecName.split(',')
         List<T> codecInstances = new ArrayList<>(codecs.length)
         for (int i = 0; i < codecs.length; i++) {
-            T codecInstance = map.get(codecs[i])
+            T codecInstance = map[codecs[i]]
             if (codecInstance != null) {
                 codecInstances.add(codecInstance)
             }
@@ -111,16 +111,16 @@ class BasicCodecLookup implements CodecLookup, InitializingBean {
             }
         } else {
             Collections.reverse(codecInstances)
-            return (T) new ChainedDecoder(codecInstances.toArray(new Decoder[codecInstances.size()]))
+            return (T) new ChainedDecoder((codecInstances as Decoder[]))
         }
     }
 
     protected synchronized <T extends CodecIdentifierProvider> void registerWithNameVaritions(Map<String, T> destinationMap, T target) {
-        String name = target.getCodecIdentifier().getCodecName()
+        String name = target.codecIdentifier.codecName
         registerVariationsOfName(destinationMap, target, name)
-        Set<String> aliases = target.getCodecIdentifier().getCodecAliases()
+        Set<String> aliases = target.codecIdentifier.codecAliases
         if (aliases != null) {
-            for (String alias : aliases) {
+            for (String alias in aliases) {
                 registerVariationsOfName(destinationMap, target, alias)
             }
         }
@@ -128,7 +128,7 @@ class BasicCodecLookup implements CodecLookup, InitializingBean {
 
     protected <T extends CodecIdentifierProvider> void registerVariationsOfName(Map<String, T> destinationMap, T target, String name) {
         Collection<String> nameVariations = createNameVariations(name, target)
-        for (String nameVariation : nameVariations) {
+        for (String nameVariation in nameVariations) {
             destinationMap.put(nameVariation, target)
         }
     }
@@ -143,11 +143,11 @@ class BasicCodecLookup implements CodecLookup, InitializingBean {
     }
 
     void registerCodecFactory(CodecFactory codecFactory) {
-        Encoder encoder = codecFactory.getEncoder()
+        Encoder encoder = codecFactory.encoder
         if (encoder != null) {
             registerEncoder(encoder)
         }
-        Decoder decoder = codecFactory.getDecoder()
+        Decoder decoder = codecFactory.decoder
         if (decoder != null) {
             registerDecoder(decoder)
         }

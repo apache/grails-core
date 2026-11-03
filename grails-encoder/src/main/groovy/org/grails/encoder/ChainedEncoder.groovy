@@ -73,13 +73,13 @@ class ChainedEncoder implements Encoder, StreamingEncoder {
     static StreamingEncoder createFor(List<StreamingEncoder> encoders, Boolean safe) {
         if (encoders == null) {
             return null
-        } else if (encoders.size() == 0) {
+        } else if (encoders.isEmpty()) {
             return DefaultEncodingStateRegistry.NONE_ENCODER
         } else if (encoders.size() == 1) {
-            return encoders.get(0)
+            return encoders[0]
         } else {
             if (safe == null) {
-                for (StreamingEncoder encoder : encoders) {
+                for (StreamingEncoder encoder in encoders) {
                     if (encoder.isSafe()) {
                         safe = true
                         break
@@ -104,10 +104,10 @@ class ChainedEncoder implements Encoder, StreamingEncoder {
             EncodedAppender appender, EncodingState encodingState) throws IOException {
         EncodedAppender target = chainEncodersAndCachePerThread(appender)
         StreamingEncoder encoder = encoders[0]
-        if (appender.shouldEncode(encoder, encodingState.getPreviousEncodingState())) {
-            encoder.encodeToStream(encoder, source, offset, len, target, encodingState.getPreviousEncodingState())
+        if (appender.shouldEncode(encoder, encodingState.previousEncodingState)) {
+            encoder.encodeToStream(encoder, source, offset, len, target, encodingState.previousEncodingState)
         } else {
-            target.appendEncoded(encoder, encodingState.getPreviousEncodingState(), source, offset, len)
+            target.appendEncoded(encoder, encodingState.previousEncodingState, source, offset, len)
         }
     }
 
@@ -136,7 +136,7 @@ class ChainedEncoder implements Encoder, StreamingEncoder {
     Object encode(Object o) {
         if (o == null) return o
         Object encoded = o
-        for (StreamingEncoder encoder : encoders) {
+        for (StreamingEncoder encoder in encoders) {
             encoded = encoder.encode(encoded)
         }
         return encoded

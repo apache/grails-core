@@ -62,10 +62,10 @@ abstract class AbstractCharReplacementEncoder implements Encoder, StreamingEncod
 
         CharSequence str = null
         if (o instanceof CharSequence) {
-            str = (CharSequence) o
+            str = o
         }
         else if (o instanceof Character) {
-            String escaped = escapeCharacter((Character) o, (char) 0)
+            String escaped = escapeCharacter(o, (char) 0)
             if (escaped != null) {
                 return escaped
             }

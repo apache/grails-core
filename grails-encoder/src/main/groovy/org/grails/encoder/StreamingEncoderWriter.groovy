@@ -61,11 +61,7 @@ class StreamingEncoderWriter extends FilterWriter implements EncodedAppenderFact
     }
 
     protected EncodingState lookupEncodingState(String str, int off, int len) {
-        if (encodingStateRegistry != null) {
-            return encodingStateRegistry.getEncodingStateFor(str)
-        } else {
-            return null
-        }
+        return encodingStateRegistry?.getEncodingStateFor(str)
     }
 
     @Override
@@ -76,7 +72,7 @@ class StreamingEncoderWriter extends FilterWriter implements EncodedAppenderFact
     @Override
     EncodedAppender getEncodedAppender() {
         EncodedAppender encodedAppender = new WriterEncodedAppender(out)
-        encodedAppender.setIgnoreEncodingState(encodingStateRegistry == null)
+        encodedAppender.ignoreEncodingState = encodingStateRegistry == null
         return encodedAppender
     }
 

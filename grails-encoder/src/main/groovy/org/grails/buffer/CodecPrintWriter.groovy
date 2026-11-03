@@ -16,58 +16,55 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-@SuppressWarnings('UnnecessarySemicolon')
-package org.grails.buffer;
+package org.grails.buffer
 
-import groovy.transform.CompileStatic;
-import groovy.transform.stc.POJO;
+import groovy.transform.CompileStatic
+import groovy.transform.stc.POJO
 
-import org.grails.encoder.EncodedAppender;
-import org.grails.encoder.EncodedAppenderFactory;
-import org.grails.encoder.Encoder;
-import org.grails.encoder.EncoderAware;
-import org.grails.encoder.EncodingStateRegistry;
+import org.grails.encoder.EncodedAppender
+import org.grails.encoder.EncodedAppenderFactory
+import org.grails.encoder.Encoder
+import org.grails.encoder.EncoderAware
+import org.grails.encoder.EncodingStateRegistry
 
-// TODO(groovyism-cleanup): semicolons kept to preserve rename-similarity against the original .java (see matrei's review on #16576). Removed by the stacked groovyism-cleanup PR.
-@SuppressWarnings('UnnecessarySemicolon')
 @CompileStatic
 @POJO
 class CodecPrintWriter extends GrailsPrintWriter implements EncoderAware, EncodedAppenderFactory {
 
-    private final Encoder encoder;
-    private final StreamCharBuffer buffer;
-    private boolean ignoreEncodingState;
+    private final Encoder encoder
+    private final StreamCharBuffer buffer
+    private boolean ignoreEncodingState
 
     CodecPrintWriter(Writer out, Encoder encoder, EncodingStateRegistry encodingStateRegistry) {
-        this(out, encoder, encodingStateRegistry, false);
+        this(out, encoder, encodingStateRegistry, false)
     }
 
     CodecPrintWriter(Writer out, Encoder encoder, EncodingStateRegistry encodingStateRegistry, boolean ignoreEncodingState) {
-        super(null);
-        this.encoder = encoder;
-        buffer = new StreamCharBuffer();
-        buffer.setNotifyParentBuffersEnabled(false);
-        this.@allowUnwrappingOut = false;
-        buffer.connectTo(out, false);
+        super(null)
+        this.encoder = encoder
+        buffer = new StreamCharBuffer()
+        buffer.notifyParentBuffersEnabled = false
+        this.@allowUnwrappingOut = false
+        buffer.connectTo(out, false)
         if (out instanceof EncodedAppenderFactory) {
-            buffer.setWriteDirectlyToConnectedMinSize(0);
-            buffer.setChunkMinSize(0);
+            buffer.writeDirectlyToConnectedMinSize = 0
+            buffer.chunkMinSize = 0
         }
-        setOut(buffer.getWriterForEncoder(encoder, encodingStateRegistry, ignoreEncodingState));
+        setOut(buffer.getWriterForEncoder(encoder, encodingStateRegistry, ignoreEncodingState))
     }
 
     Encoder getEncoder() {
-        return encoder;
+        return encoder
     }
 
     EncodedAppender getEncodedAppender() {
-        EncodedAppender encodedAppender = ((EncodedAppenderFactory) buffer.getWriter()).getEncodedAppender();
-        encodedAppender.setIgnoreEncodingState(ignoreEncodingState);
-        return encodedAppender;
+        EncodedAppender encodedAppender = ((EncodedAppenderFactory) buffer.writer).encodedAppender
+        encodedAppender.ignoreEncodingState = ignoreEncodingState
+        return encodedAppender
     }
 
     @Override
     Writer getWriterForEncoder(Encoder encoder, EncodingStateRegistry encodingStateRegistry) {
-        return buffer.getWriterForEncoder(encoder, encodingStateRegistry, ignoreEncodingState);
+        return buffer.getWriterForEncoder(encoder, encodingStateRegistry, ignoreEncodingState)
     }
 }

@@ -38,7 +38,7 @@ class JavaScriptEncoder extends AbstractCharReplacementEncoder {
     public static final CodecIdentifier JAVASCRIPT_CODEC_IDENTIFIER = new DefaultCodecIdentifier(
             'JavaScript', 'Js') {
         boolean isEquivalent(CodecIdentifier other) {
-            return super.isEquivalent(other) || BasicJSONEncoder.JSON_CODEC_IDENTIFIER.getCodecName().equals(other.getCodecName())
+            return super.isEquivalent(other) || BasicJSONEncoder.JSON_CODEC_IDENTIFIER.codecName == other.codecName
         }
     }
 

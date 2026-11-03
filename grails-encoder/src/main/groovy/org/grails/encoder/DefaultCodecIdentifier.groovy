@@ -111,13 +111,13 @@ class DefaultCodecIdentifier implements CodecIdentifier {
      * @see CodecIdentifier#isEquivalent(CodecIdentifier)
      */
     boolean isEquivalent(CodecIdentifier other) {
-        if (this.codecName.equals(other.getCodecName())) {
+        if (codecName == other.codecName) {
             return true
         }
-        if (this.codecAliases != null && this.codecAliases.contains(other.getCodecName())) {
+        if (codecAliases != null && other.codecName in codecAliases) {
             return true
         }
-        if (other.getCodecAliases() != null && other.getCodecAliases().contains(this.codecName)) {
+        if (other.codecAliases != null && codecName in other.codecAliases) {
             return true
         }
         return false

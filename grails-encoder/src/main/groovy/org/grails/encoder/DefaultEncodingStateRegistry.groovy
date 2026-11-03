@@ -49,7 +49,7 @@ final class DefaultEncodingStateRegistry implements EncodingStateRegistry {
     }
 
     private Map<Long, WeakReference<CharSequence>> getEncodedCharSequencesForEncoder(Encoder encoder) {
-        Map<Long, WeakReference<CharSequence>> encodedCharSequences = encodedCharSequencesForEncoder.get(encoder)
+        Map<Long, WeakReference<CharSequence>> encodedCharSequences = encodedCharSequencesForEncoder[encoder]
         if (encodedCharSequences == null) {
             encodedCharSequences = new HashMap<>()
             encodedCharSequencesForEncoder.put(encoder, encodedCharSequences)
@@ -63,16 +63,16 @@ final class DefaultEncodingStateRegistry implements EncodingStateRegistry {
     EncodingState getEncodingStateFor(CharSequence string) {
         Long key = calculateKey(string)
         Set<Encoder> result = null
-        for (Map.Entry<Encoder, Map<Long, WeakReference<CharSequence>>> entry : encodedCharSequencesForEncoder.entrySet()) {
-            WeakReference<CharSequence> charSequenceReference = entry.getValue().get(key)
+        for (Map.Entry<Encoder, Map<Long, WeakReference<CharSequence>>> entry in encodedCharSequencesForEncoder.entrySet()) {
+            WeakReference<CharSequence> charSequenceReference = entry.value[key]
             if (charSequenceReference != null && string.is(charSequenceReference.get())) {
                 if (result == null) {
-                    result = Collections.singleton(entry.getKey())
+                    result = Collections.singleton(entry.key)
                 } else {
                     if (result.size() == 1) {
                         result = new HashSet<>(result)
                     }
-                    result.add(entry.getKey())
+                    result.add(entry.key)
                 }
             }
         }
@@ -114,8 +114,8 @@ final class DefaultEncodingStateRegistry implements EncodingStateRegistry {
      */
     static boolean shouldEncodeWith(Encoder encoderToApply, EncodingState currentEncodingState) {
         if (isNoneEncoder(encoderToApply)) return false
-        if (currentEncodingState != null && currentEncodingState.getEncoders() != null) {
-            for (Encoder encoder : currentEncodingState.getEncoders()) {
+        if (currentEncodingState != null && currentEncodingState.encoders != null) {
+            for (Encoder encoder in currentEncodingState.encoders) {
                 if (isPreviousEncoderSafeOrEqual(encoderToApply, encoder)) {
                     return false
                 }
@@ -136,7 +136,7 @@ final class DefaultEncodingStateRegistry implements EncodingStateRegistry {
      * @return true, if previous encoder is already "safe", equal or equivalent
      */
     static boolean isPreviousEncoderSafeOrEqual(Encoder encoderToApply, Encoder previousEncoder) {
-        return previousEncoder.is(encoderToApply) || !encoderToApply.isApplyToSafelyEncoded() && previousEncoder.isSafe() && encoderToApply.isSafe() ||
-                previousEncoder.getCodecIdentifier().isEquivalent(encoderToApply.getCodecIdentifier())
+        return previousEncoder.is(encoderToApply) || !encoderToApply.applyToSafelyEncoded && previousEncoder.safe && encoderToApply.safe ||
+                previousEncoder.codecIdentifier.isEquivalent(encoderToApply.codecIdentifier)
     }
 }

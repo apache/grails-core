@@ -51,7 +51,7 @@ class FastStringWriter extends GrailsPrintWriter {
     }
 
     protected void initOut() {
-        setOut(streamBuffer.getWriter())
+        setOut(streamBuffer.writer)
     }
 
     StreamCharBuffer getBuffer() {
@@ -68,6 +68,6 @@ class FastStringWriter extends GrailsPrintWriter {
     }
 
     Reader getReader() {
-        return streamBuffer.getReader()
+        return streamBuffer.reader
     }
 }

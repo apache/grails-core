@@ -64,7 +64,7 @@ class HTML4Encoder extends AbstractCharReplacementEncoder {
     @Override
     protected String escapeCharacter(char ch, char previousChar) {
         Character key = Character.valueOf(ch)
-        String replacement = replacements.get(key)
+        String replacement = replacements[key]
         if (replacement == null) {
             replacement = StreamingHTMLEncoderHelper.convertToReference(ch)
             replacements.put(key, replacement != null ? replacement : NULL_MARKER)
@@ -108,7 +108,7 @@ class HTML4Encoder extends AbstractCharReplacementEncoder {
 
             String charAsString = String.valueOf(c)
             String replacement = HtmlUtils.htmlEscape(charAsString)
-            if (charAsString.equals(replacement)) {
+            if (charAsString == replacement) {
                 return null
             }
             return replacement

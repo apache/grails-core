@@ -40,7 +40,7 @@ class BasicJSONEncoder extends AbstractCharReplacementEncoder {
     public static final CodecIdentifier JSON_CODEC_IDENTIFIER = new DefaultCodecIdentifier(
             'JSON', 'Json') {
         boolean isEquivalent(CodecIdentifier other) {
-            return super.isEquivalent(other) || JavaScriptEncoder.JAVASCRIPT_CODEC_IDENTIFIER.getCodecName().equals(other.getCodecName())
+            return super.isEquivalent(other) || JavaScriptEncoder.JAVASCRIPT_CODEC_IDENTIFIER.codecName == other.codecName
         }
     }
 

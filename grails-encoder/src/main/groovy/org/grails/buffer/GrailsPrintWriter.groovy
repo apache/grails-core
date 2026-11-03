@@ -16,29 +16,27 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-@SuppressWarnings('UnnecessarySemicolon')
-package org.grails.buffer;
+package org.grails.buffer
 
-import groovy.transform.CompileStatic;
-import groovy.transform.stc.POJO;
+import groovy.transform.CompileStatic
+import groovy.transform.stc.POJO
+import org.codehaus.groovy.runtime.FormatHelper
+import org.codehaus.groovy.runtime.GStringImpl
+import org.codehaus.groovy.runtime.InvokerHelper
+import org.codehaus.groovy.runtime.typehandling.DefaultTypeTransformation
 
-import org.codehaus.groovy.runtime.FormatHelper;
-import org.codehaus.groovy.runtime.GStringImpl;
-import org.codehaus.groovy.runtime.InvokerHelper;
-import org.codehaus.groovy.runtime.typehandling.DefaultTypeTransformation;
+import org.apache.commons.logging.Log
+import org.apache.commons.logging.LogFactory
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-
-import org.grails.charsequences.CharSequences;
-import org.grails.encoder.EncodedAppender;
-import org.grails.encoder.EncodedAppenderFactory;
-import org.grails.encoder.EncodedAppenderWriter;
-import org.grails.encoder.EncodedAppenderWriterFactory;
-import org.grails.encoder.Encoder;
-import org.grails.encoder.EncodingStateRegistry;
-import org.grails.encoder.StreamingEncoder;
-import org.grails.encoder.StreamingEncoderWriter;
+import org.grails.charsequences.CharSequences
+import org.grails.encoder.EncodedAppender
+import org.grails.encoder.EncodedAppenderFactory
+import org.grails.encoder.EncodedAppenderWriter
+import org.grails.encoder.EncodedAppenderWriterFactory
+import org.grails.encoder.Encoder
+import org.grails.encoder.EncodingStateRegistry
+import org.grails.encoder.StreamingEncoder
+import org.grails.encoder.StreamingEncoderWriter
 
 /**
  * PrintWriter implementation that doesn't have synchronization. null object
@@ -46,57 +44,55 @@ import org.grails.encoder.StreamingEncoderWriter;
  *
  * @author Lari Hotari, Sagire Software Oy
  */
-// TODO(groovyism-cleanup): semicolons kept to preserve rename-similarity against the original .java (see matrei's review on #16576). Removed by the stacked groovyism-cleanup PR.
-@SuppressWarnings('UnnecessarySemicolon')
 @CompileStatic
 @POJO
 class GrailsPrintWriter extends Writer implements GrailsWrappedWriter, EncodedAppenderWriterFactory, GroovyObject {
 
-    protected static final Log LOG = LogFactory.getLog(GrailsPrintWriter);
-    protected static final char[] CRLF = ['\r', '\n'] as char[];
-    protected boolean trouble = false;
-    protected Writer out;
-    protected boolean allowUnwrappingOut = true;
-    protected boolean usageFlag = false;
-    protected Writer streamCharBufferTarget = null;
-    protected Writer previousOut = null;
+    protected static final Log LOG = LogFactory.getLog(GrailsPrintWriter)
+    protected static final char[] CRLF = ['\r', '\n'] as char[]
+    protected boolean trouble = false
+    protected Writer out
+    protected boolean allowUnwrappingOut = true
+    protected boolean usageFlag = false
+    protected Writer streamCharBufferTarget = null
+    protected Writer previousOut = null
 
     GrailsPrintWriter(Writer out) {
-        this.metaClass = InvokerHelper.getMetaClass(this.getClass());
-        setOut(out);
+        this.metaClass = InvokerHelper.getMetaClass(getClass())
+        setOut(out)
     }
 
     boolean isAllowUnwrappingOut() {
-        return allowUnwrappingOut;
+        return allowUnwrappingOut
     }
 
     Writer unwrap() {
         if (isAllowUnwrappingOut()) {
-            return getOut();
+            return getOut()
         }
-        return this;
+        return this
     }
 
     boolean isDestinationActivated() {
-        return out != null;
+        return out != null
     }
 
     Writer getOut() {
-        return out;
+        return out
     }
 
     void setOut(Writer newOut) {
-        this.out = unwrapWriter(newOut);
-        this.@lock = this.out != null ? this.out : this;
-        this.streamCharBufferTarget = null;
-        this.previousOut = null;
+        this.out = unwrapWriter(newOut)
+        this.@lock = this.out != null ? this.out : this
+        this.streamCharBufferTarget = null
+        this.previousOut = null
     }
 
     protected Writer unwrapWriter(Writer writer) {
         if (writer instanceof GrailsWrappedWriter) {
-            return ((GrailsWrappedWriter) writer).unwrap();
+            return ((GrailsWrappedWriter) writer).unwrap()
         }
-        return writer;
+        return writer
     }
 
     /**
@@ -109,41 +105,41 @@ class GrailsPrintWriter extends Writer implements GrailsWrappedWriter, EncodedAp
      */
     GrailsPrintWriter leftShift(Object obj) throws IOException {
         if (trouble || obj == null) {
-            usageFlag = true;
-            return this;
+            usageFlag = true
+            return this
         }
 
-        Class<?> clazz = obj.getClass();
+        Class<?> clazz = obj.getClass()
         if (clazz == String) {
-            write((String) obj);
+            write((String) obj)
         }
         else if (clazz == StreamCharBuffer) {
-            write((StreamCharBuffer) obj);
+            write((StreamCharBuffer) obj)
         }
         else if (clazz == GStringImpl) {
-            write((Writable) obj);
+            write((Writable) obj)
         }
         else if (obj instanceof Writable) {
-            write((Writable) obj);
+            write(obj)
         }
         else if (obj instanceof CharSequence) {
             try {
-                usageFlag = true;
-                CharSequences.writeCharSequence(getOut(), (CharSequence) obj);
+                usageFlag = true
+                CharSequences.writeCharSequence(getOut(), obj)
             }
             catch (IOException e) {
-                handleIOException(e);
+                handleIOException(e)
             }
         }
         else {
-            FormatHelper.write(this, obj);
+            FormatHelper.write(this, obj)
         }
-        return this;
+        return this
     }
 
     GrailsPrintWriter plus(Object value) throws IOException {
-        usageFlag = true;
-        return leftShift(value);
+        usageFlag = true
+        return leftShift(value)
     }
 
     /**
@@ -155,11 +151,11 @@ class GrailsPrintWriter extends Writer implements GrailsWrappedWriter, EncodedAp
      *         underlying output stream or during a format conversion.
      */
     boolean checkError() {
-        return trouble;
+        return trouble
     }
 
     void setError() {
-        trouble = true;
+        trouble = true
     }
 
     /**
@@ -170,33 +166,33 @@ class GrailsPrintWriter extends Writer implements GrailsWrappedWriter, EncodedAp
     @Override
     synchronized void flush() {
         if (trouble) {
-            return;
+            return
         }
 
         if (isDestinationActivated()) {
             try {
-                getOut().flush();
+                getOut().flush()
             }
             catch (IOException e) {
-                handleIOException(e);
+                handleIOException(e)
             }
         }
     }
 
     boolean isTrouble() {
-        return trouble;
+        return trouble
     }
 
     void handleIOException(IOException e) {
         if (trouble) {
-            return;
+            return
         }
 
         if (LOG.isDebugEnabled()) {
-            LOG.debug('I/O exception in GrailsPrintWriter: ' + e.getMessage(), e);
+            LOG.debug('I/O exception in GrailsPrintWriter: ' + e.getMessage(), e)
         }
-        trouble = true;
-        setError();
+        trouble = true
+        setError()
     }
 
     /**
@@ -211,34 +207,34 @@ class GrailsPrintWriter extends Writer implements GrailsWrappedWriter, EncodedAp
      */
     void print(final Object obj) {
         if (trouble || obj == null) {
-            usageFlag = true;
-            return;
+            usageFlag = true
+            return
         }
 
-        Class<?> clazz = obj.getClass();
+        Class<?> clazz = obj.getClass()
         if (clazz == String) {
-            write((String) obj);
+            write((String) obj)
         }
         else if (clazz == StreamCharBuffer) {
-            write((StreamCharBuffer) obj);
+            write((StreamCharBuffer) obj)
         }
         else if (clazz == GStringImpl) {
-            write((Writable) obj);
+            write((Writable) obj)
         }
         else if (obj instanceof Writable) {
-            write((Writable) obj);
+            write(obj)
         }
         else if (obj instanceof CharSequence) {
             try {
-                usageFlag = true;
-                CharSequences.writeCharSequence(getOut(), (CharSequence) obj);
+                usageFlag = true
+                CharSequences.writeCharSequence(getOut(), obj)
             }
             catch (IOException e) {
-                handleIOException(e);
+                handleIOException(e)
             }
         }
         else {
-            write(String.valueOf(obj));
+            write(String.valueOf(obj))
         }
     }
 
@@ -253,10 +249,10 @@ class GrailsPrintWriter extends Writer implements GrailsWrappedWriter, EncodedAp
      */
     void print(final String s) {
         if (s == null) {
-            usageFlag = true;
-            return;
+            usageFlag = true
+            return
         }
-        write(s);
+        write(s)
     }
 
     /**
@@ -267,16 +263,16 @@ class GrailsPrintWriter extends Writer implements GrailsWrappedWriter, EncodedAp
      */
     @Override
     void write(final String s) {
-        usageFlag = true;
+        usageFlag = true
         if (trouble || s == null) {
-            return;
+            return
         }
 
         try {
-            getOut().write(s);
+            getOut().write(s)
         }
         catch (IOException e) {
-            handleIOException(e);
+            handleIOException(e)
         }
     }
 
@@ -287,15 +283,15 @@ class GrailsPrintWriter extends Writer implements GrailsWrappedWriter, EncodedAp
      */
     @Override
     void write(final int c) {
-        usageFlag = true;
+        usageFlag = true
         if (trouble)
-            return;
+            return
 
         try {
-            getOut().write(c);
+            getOut().write(c)
         }
         catch (IOException e) {
-            handleIOException(e);
+            handleIOException(e)
         }
     }
 
@@ -308,14 +304,14 @@ class GrailsPrintWriter extends Writer implements GrailsWrappedWriter, EncodedAp
      */
     @Override
     void write(final char[] buf, final int off, final int len) {
-        usageFlag = true;
+        usageFlag = true
         if (trouble || buf == null || len == 0)
-            return;
+            return
         try {
-            getOut().write(buf, off, len);
+            getOut().write(buf, off, len)
         }
         catch (IOException e) {
-            handleIOException(e);
+            handleIOException(e)
         }
     }
 
@@ -328,384 +324,383 @@ class GrailsPrintWriter extends Writer implements GrailsWrappedWriter, EncodedAp
      */
     @Override
     void write(final String s, final int off, final int len) {
-        usageFlag = true;
-        if (trouble || s == null || s.length() == 0)
-            return;
+        usageFlag = true
+        if (trouble || s == null || s.isEmpty())
+            return
 
         try {
-            getOut().write(s, off, len);
+            getOut().write(s, off, len)
         }
         catch (IOException e) {
-            handleIOException(e);
+            handleIOException(e)
         }
     }
 
     @Override
     void write(final char[] buf) {
-        write(buf, 0, buf.length);
+        write(buf, 0, buf.length)
     }
 
     /** delegate methods, not synchronized **/
 
     void print(final boolean b) {
         if (b) {
-            write('true');
+            write('true')
         }
         else {
-            write('false');
+            write('false')
         }
     }
 
     void print(final char c) {
-        write(c);
+        write(c)
     }
 
     void print(final int i) {
-        write(String.valueOf(i));
+        write(String.valueOf(i))
     }
 
     void print(final long l) {
-        write(String.valueOf(l));
+        write(String.valueOf(l))
     }
 
     void print(final float f) {
-        write(String.valueOf(f));
+        write(String.valueOf(f))
     }
 
     void print(final double d) {
-        write(String.valueOf(d));
+        write(String.valueOf(d))
     }
 
     void print(final char[] s) {
-        write(s);
+        write(s)
     }
 
     void println() {
-        usageFlag = true;
-        write(CRLF);
+        usageFlag = true
+        write(CRLF)
     }
 
     void println(final boolean b) {
-        print(b);
-        println();
+        print(b)
+        println()
     }
 
     void println(final char c) {
-        print(c);
-        println();
+        print(c)
+        println()
     }
 
     void println(final int i) {
-        print(i);
-        println();
+        print(i)
+        println()
     }
 
     void println(final long l) {
-        print(l);
-        println();
+        print(l)
+        println()
     }
 
     void println(final float f) {
-        print(f);
-        println();
+        print(f)
+        println()
     }
 
     void println(final double d) {
-        print(d);
-        println();
+        print(d)
+        println()
     }
 
     void println(final char[] c) {
-        print(c);
-        println();
+        print(c)
+        println()
     }
 
     void println(final String s) {
-        print(s);
-        println();
+        print(s)
+        println()
     }
 
     void println(final Object o) {
-        print(o);
-        println();
+        print(o)
+        println()
     }
 
     @Override
     GrailsPrintWriter append(final char c) {
         try {
-            usageFlag = true;
-            getOut().append(c);
+            usageFlag = true
+            getOut().append(c)
         }
         catch (IOException e) {
-            handleIOException(e);
+            handleIOException(e)
         }
-        return this;
+        return this
     }
 
     @Override
     GrailsPrintWriter append(final CharSequence csq, final int start, final int end) {
         try {
-            usageFlag = true;
+            usageFlag = true
             if (csq == null)
-                appendNullCharSequence();
+                appendNullCharSequence()
             else
-                CharSequences.writeCharSequence(getOut(), csq, start, end);
+                CharSequences.writeCharSequence(getOut(), csq, start, end)
         }
         catch (IOException e) {
-            handleIOException(e);
+            handleIOException(e)
         }
-        return this;
+        return this
     }
 
     protected void appendNullCharSequence() throws IOException {
-        getOut().append(null);
+        getOut().append(null)
     }
 
     @Override
     GrailsPrintWriter append(final CharSequence csq) {
         try {
-            usageFlag = true;
+            usageFlag = true
             if (csq == null)
-                appendNullCharSequence();
+                appendNullCharSequence()
             else
-                CharSequences.writeCharSequence(getOut(), csq);
+                CharSequences.writeCharSequence(getOut(), csq)
         }
         catch (IOException e) {
-            handleIOException(e);
+            handleIOException(e)
         }
-        return this;
+        return this
     }
 
     GrailsPrintWriter append(final Object obj) {
-        print(obj);
-        return this;
+        print(obj)
+        return this
     }
 
     @Override
     protected Object clone() throws CloneNotSupportedException {
-        throw new CloneNotSupportedException();
+        throw new CloneNotSupportedException()
     }
 
     void write(final StreamCharBuffer otherBuffer) {
-        usageFlag = true;
+        usageFlag = true
         if (trouble)
-            return;
+            return
 
         try {
-            otherBuffer.writeTo(findStreamCharBufferTarget(true));
+            otherBuffer.writeTo(findStreamCharBufferTarget(true))
         }
         catch (IOException e) {
-            handleIOException(e);
+            handleIOException(e)
         }
     }
 
     protected Writer findStreamCharBufferTarget(boolean markUsed) {
-        boolean allowCaching = markUsed;
+        boolean allowCaching = markUsed
 
-        Writer currentOut = getOut();
+        Writer currentOut = getOut()
         if (allowCaching && streamCharBufferTarget != null && previousOut == currentOut) {
-            return streamCharBufferTarget;
+            return streamCharBufferTarget
         }
 
-        Writer target = currentOut;
+        Writer target = currentOut
         while (target instanceof GrailsWrappedWriter) {
-            GrailsWrappedWriter gpr = ((GrailsWrappedWriter) target);
-            if (gpr.isAllowUnwrappingOut()) {
+            if (target.isAllowUnwrappingOut()) {
                 if (markUsed) {
-                    gpr.markUsed();
+                    target.markUsed()
                 }
-                target = gpr.unwrap();
+                target = target.unwrap()
             }
             else {
-                break;
+                break
             }
         }
 
-        Writer result;
+        Writer result
         if (target instanceof StreamCharBuffer.StreamCharBufferWriter) {
-            result = target;
+            result = target
         }
         else {
-            result = currentOut;
+            result = currentOut
         }
 
         if (allowCaching) {
-            streamCharBufferTarget = result;
-            previousOut = currentOut;
+            streamCharBufferTarget = result
+            previousOut = currentOut
         }
 
-        return result;
+        return result
     }
 
     void print(final StreamCharBuffer otherBuffer) {
-        write(otherBuffer);
+        write(otherBuffer)
     }
 
     void append(final StreamCharBuffer otherBuffer) {
-        write(otherBuffer);
+        write(otherBuffer)
     }
 
     void println(final StreamCharBuffer otherBuffer) {
-        write(otherBuffer);
-        println();
+        write(otherBuffer)
+        println()
     }
 
     GrailsPrintWriter leftShift(final StreamCharBuffer otherBuffer) {
         if (otherBuffer != null) {
-            write(otherBuffer);
+            write(otherBuffer)
         }
-        return this;
+        return this
     }
 
     void write(final Writable writable) {
-        writeWritable(writable);
+        writeWritable(writable)
     }
 
     protected void writeWritable(final Writable writable) {
         if (writable.getClass() == StreamCharBuffer) {
-            write((StreamCharBuffer) writable);
-            return;
+            write((StreamCharBuffer) writable)
+            return
         }
 
-        usageFlag = true;
+        usageFlag = true
         if (trouble)
-            return;
+            return
 
         try {
-            writable.writeTo(getOut());
+            writable.writeTo(getOut())
         }
         catch (IOException e) {
-            handleIOException(e);
+            handleIOException(e)
         }
     }
 
     void print(final Writable writable) {
-        writeWritable(writable);
+        writeWritable(writable)
     }
 
     GrailsPrintWriter leftShift(final Writable writable) {
-        writeWritable(writable);
-        return this;
+        writeWritable(writable)
+        return this
     }
 
     void print(final GStringImpl gstring) {
-        writeWritable(gstring);
+        writeWritable(gstring)
     }
 
     GrailsPrintWriter leftShift(final GStringImpl gstring) {
-        writeWritable(gstring);
-        return this;
+        writeWritable(gstring)
+        return this
     }
 
     GrailsPrintWriter leftShift(final String string) {
-        print(string);
-        return this;
+        print(string)
+        return this
     }
 
     boolean isUsed() {
         if (usageFlag) {
-            return true;
+            return true
         }
 
-        Writer target = findStreamCharBufferTarget(false);
+        Writer target = findStreamCharBufferTarget(false)
         if (target instanceof StreamCharBuffer.StreamCharBufferWriter) {
-            StreamCharBuffer buffer = ((StreamCharBuffer.StreamCharBufferWriter) target).getBuffer();
+            StreamCharBuffer buffer = target.buffer
             if (!buffer.isEmpty()) {
-                return true;
+                return true
             }
         }
-        return usageFlag;
+        return usageFlag
     }
 
     void setUsed(boolean newUsed) {
-        usageFlag = newUsed;
+        usageFlag = newUsed
     }
 
     boolean resetUsed() {
-        boolean prevUsed = usageFlag;
-        usageFlag = false;
-        return prevUsed;
+        boolean prevUsed = usageFlag
+        usageFlag = false
+        return prevUsed
     }
 
     @Override
     void close() {
         if (isDestinationActivated()) {
             try {
-                getOut().close();
+                getOut().close()
             }
             catch (IOException e) {
-                handleIOException(e);
+                handleIOException(e)
             }
         }
     }
 
     void markUsed() {
-        setUsed(true);
+        setUsed(true)
     }
 
     Object asType(Class<?> clazz) {
         if (clazz == PrintWriter) {
-            return asPrintWriter();
+            return asPrintWriter()
         }
         if (clazz == Writer) {
-            return this;
+            return this
         }
-        return DefaultTypeTransformation.castToType(this, clazz);
+        return DefaultTypeTransformation.castToType(this, clazz)
     }
 
     PrintWriter asPrintWriter() {
-        return GrailsPrintWriterAdapter.newInstance(this);
+        return GrailsPrintWriterAdapter.newInstance(this)
     }
 
     Writer getWriterForEncoder(Encoder encoder, EncodingStateRegistry encodingStateRegistry) {
-        Writer target = null;
+        Writer target = null
         if (getOut() instanceof EncodedAppenderWriterFactory && !this.is(getOut())) {
-            target = getOut();
+            target = getOut()
         } else {
-            target = findStreamCharBufferTarget(false);
+            target = findStreamCharBufferTarget(false)
         }
         if (target instanceof EncodedAppenderWriterFactory && !this.is(target)) {
-            return ((EncodedAppenderWriterFactory) target).getWriterForEncoder(encoder, encodingStateRegistry);
+            return target.getWriterForEncoder(encoder, encodingStateRegistry)
         } else if (target instanceof EncodedAppenderFactory) {
-            EncodedAppender encodedAppender = ((EncodedAppenderFactory) target).getEncodedAppender();
+            EncodedAppender encodedAppender = target.encodedAppender
             if (encodedAppender != null) {
-                return new EncodedAppenderWriter(encodedAppender, encoder, encodingStateRegistry);
+                return new EncodedAppenderWriter(encodedAppender, encoder, encodingStateRegistry)
             }
         }
         if (target != null) {
             if (encoder instanceof StreamingEncoder) {
-                return new StreamingEncoderWriter(target, (StreamingEncoder) encoder, encodingStateRegistry);
+                return new StreamingEncoderWriter(target, (StreamingEncoder) encoder, encodingStateRegistry)
             } else {
-                return new CodecPrintWriter(target, encoder, encodingStateRegistry);
+                return new CodecPrintWriter(target, encoder, encodingStateRegistry)
             }
         } else {
-            return null;
+            return null
         }
     }
 
     // GroovyObject interface implementation to speed up metaclass operations
-    private transient MetaClass metaClass;
+    private transient MetaClass metaClass
 
     Object getProperty(String property) {
-        return getMetaClass().getProperty(this, property);
+        return getMetaClass().getProperty(this, property)
     }
 
     void setProperty(String property, Object newValue) {
-        getMetaClass().setProperty(this, property, newValue);
+        getMetaClass().setProperty(this, property, newValue)
     }
 
     Object invokeMethod(String name, Object args) {
-        return getMetaClass().invokeMethod(this, name, args);
+        return getMetaClass().invokeMethod(this, name, args)
     }
 
     MetaClass getMetaClass() {
         if (metaClass == null) {
-            metaClass = InvokerHelper.getMetaClass(getClass());
+            metaClass = InvokerHelper.getMetaClass(getClass())
         }
-        return metaClass;
+        return metaClass
     }
 
     void setMetaClass(MetaClass metaClass) {
-        this.metaClass = metaClass;
+        this.metaClass = metaClass
     }
 }

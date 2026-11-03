@@ -16,36 +16,33 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-@SuppressWarnings('UnnecessarySemicolon')
-package org.grails.buffer;
+package org.grails.buffer
 
-import groovy.transform.CompileStatic;
+import groovy.transform.CompileStatic
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 
-import org.springframework.objenesis.ObjenesisStd;
-import org.springframework.objenesis.instantiator.ObjectInstantiator;
+import org.springframework.objenesis.ObjenesisStd
+import org.springframework.objenesis.instantiator.ObjectInstantiator
 
 /**
  * @author Lari Hotari
  * @since 2.0
  */
-// TODO(groovyism-cleanup): semicolons kept to preserve rename-similarity against the original .java (see matrei's review on #16576). Removed by the stacked groovyism-cleanup PR.
-@SuppressWarnings('UnnecessarySemicolon')
 @CompileStatic
 class GrailsPrintWriterAdapter extends PrintWriter implements GrailsWrappedWriter {
 
-    private static final Logger LOG = LoggerFactory.getLogger(GrailsPrintWriterAdapter);
-    protected GrailsPrintWriter target;
+    private static final Logger LOG = LoggerFactory.getLogger(GrailsPrintWriterAdapter)
+    protected GrailsPrintWriter target
 
-    private static ObjectInstantiator instantiator;
+    private static ObjectInstantiator instantiator
 
     static {
         try {
-            instantiator = new ObjenesisStd(false).getInstantiatorOf(GrailsPrintWriterAdapter);
+            instantiator = new ObjenesisStd(false).getInstantiatorOf(GrailsPrintWriterAdapter)
         } catch (Exception e) {
-            LOG.debug("Couldn't get direct performance optimized instantiator for GrailsPrintWriterAdapter. Using default instantiation.", e);
+            LOG.debug("Couldn't get direct performance optimized instantiator for GrailsPrintWriterAdapter. Using default instantiation.", e)
         }
     }
 
@@ -65,270 +62,270 @@ class GrailsPrintWriterAdapter extends PrintWriter implements GrailsWrappedWrite
             void close() throws IOException {
                 // no-op
             }
-        });
-        setTarget(wrapped);
+        })
+        setTarget(wrapped)
     }
 
     static GrailsPrintWriterAdapter newInstance(Writer wrapped) {
         if (instantiator != null) {
-            GrailsPrintWriterAdapter instance = (GrailsPrintWriterAdapter) instantiator.newInstance();
-            instance.setTarget(wrapped);
-            return instance;
+            GrailsPrintWriterAdapter instance = (GrailsPrintWriterAdapter) instantiator.newInstance()
+            instance.setTarget(wrapped)
+            return instance
         }
-        return new GrailsPrintWriterAdapter(wrapped);
+        return new GrailsPrintWriterAdapter(wrapped)
     }
 
     void setTarget(Writer wrapped) {
         if (wrapped instanceof GrailsPrintWriter) {
-            this.target = ((GrailsPrintWriter) wrapped);
+            this.target = wrapped
         }
         else {
-            this.target = new GrailsPrintWriter(wrapped);
+            this.target = new GrailsPrintWriter(wrapped)
         }
-        this.@out = this.target;
-        this.@lock = this.@out != null ? this.@out : this;
+        this.@out = this.target
+        this.@lock = this.@out ?: this
     }
 
     boolean isAllowUnwrappingOut() {
-        return true;
+        return true
     }
 
     GrailsPrintWriter getTarget() {
-        return target;
+        return target
     }
 
     Writer getOut() {
-        return target.getOut();
+        return target.getOut()
     }
 
     Writer unwrap() {
-        return target.unwrap();
+        return target.unwrap()
     }
 
     GrailsPrintWriter leftShift(Object value) throws IOException {
-        return target.leftShift(value);
+        return target.leftShift(value)
     }
 
     GrailsPrintWriter plus(Object value) throws IOException {
-        return target.plus(value);
+        return target.plus(value)
     }
 
     @Override
     boolean checkError() {
-        return target.checkError();
+        return target.checkError()
     }
 
     @Override
     void setError() {
-        target.setError();
+        target.setError()
     }
 
     @Override
     void flush() {
-        target.flush();
+        target.flush()
     }
 
     @Override
     void print(Object obj) {
-        target.print(obj);
+        target.print(obj)
     }
 
     @Override
     void print(String s) {
-        target.print(s);
+        target.print(s)
     }
 
     @Override
     void write(String s) {
-        target.write(s);
+        target.write(s)
     }
 
     @Override
     void write(int c) {
-        target.write(c);
+        target.write(c)
     }
 
     @Override
     void write(char[] buf, int off, int len) {
-        target.write(buf, off, len);
+        target.write(buf, off, len)
     }
 
     @Override
     void write(String s, int off, int len) {
-        target.write(s, off, len);
+        target.write(s, off, len)
     }
 
     @Override
     void write(char[] buf) {
-        target.write(buf);
+        target.write(buf)
     }
 
     @Override
     void print(boolean b) {
-        target.print(b);
+        target.print(b)
     }
 
     @Override
     void print(char c) {
-        target.print(c);
+        target.print(c)
     }
 
     @Override
     void print(int i) {
-        target.print(i);
+        target.print(i)
     }
 
     @Override
     void print(long l) {
-        target.print(l);
+        target.print(l)
     }
 
     @Override
     void print(float f) {
-        target.print(f);
+        target.print(f)
     }
 
     @Override
     void print(double d) {
-        target.print(d);
+        target.print(d)
     }
 
     @Override
     void print(char[] s) {
-        target.print(s);
+        target.print(s)
     }
 
     @Override
     void println() {
-        target.println();
+        target.println()
     }
 
     @Override
     void println(boolean b) {
-        target.println(b);
+        target.println(b)
     }
 
     @Override
     void println(char c) {
-        target.println(c);
+        target.println(c)
     }
 
     @Override
     void println(int i) {
-        target.println(i);
+        target.println(i)
     }
 
     @Override
     void println(long l) {
-        target.println(l);
+        target.println(l)
     }
 
     @Override
     void println(float f) {
-        target.println(f);
+        target.println(f)
     }
 
     @Override
     void println(double d) {
-        target.println(d);
+        target.println(d)
     }
 
     @Override
     void println(char[] c) {
-        target.println(c);
+        target.println(c)
     }
 
     @Override
     void println(String s) {
-        target.println(s);
+        target.println(s)
     }
 
     @Override
     void println(Object o) {
-        target.println(o);
+        target.println(o)
     }
 
     @Override
     PrintWriter append(char c) {
-        target.append(c);
-        return this;
+        target.append(c)
+        return this
     }
 
     @Override
     PrintWriter append(CharSequence csq, int start, int end) {
-        target.append(csq, start, end);
-        return this;
+        target.append(csq, start, end)
+        return this
     }
 
     @Override
     PrintWriter append(CharSequence csq) {
-        target.append(csq);
-        return this;
+        target.append(csq)
+        return this
     }
 
     PrintWriter append(Object obj) {
-        target.append(obj);
-        return this;
+        target.append(obj)
+        return this
     }
 
     void write(StreamCharBuffer otherBuffer) {
-        target.write(otherBuffer);
+        target.write(otherBuffer)
     }
 
     void print(StreamCharBuffer otherBuffer) {
-        target.print(otherBuffer);
+        target.print(otherBuffer)
     }
 
     void append(StreamCharBuffer otherBuffer) {
-        target.append(otherBuffer);
+        target.append(otherBuffer)
     }
 
     void println(StreamCharBuffer otherBuffer) {
-        target.println(otherBuffer);
+        target.println(otherBuffer)
     }
 
     GrailsPrintWriter leftShift(StreamCharBuffer otherBuffer) {
-        return target.leftShift(otherBuffer);
+        return target.leftShift(otherBuffer)
     }
 
     void write(Writable writable) {
-        target.write(writable);
+        target.write(writable)
     }
 
     void print(Writable writable) {
-        target.print(writable);
+        target.print(writable)
     }
 
     GrailsPrintWriter leftShift(Writable writable) {
-        return target.leftShift(writable);
+        return target.leftShift(writable)
     }
 
     boolean isUsed() {
-        return target.isUsed();
+        return target.used
     }
 
     void setUsed(boolean newUsed) {
-        target.setUsed(newUsed);
+        target.used = newUsed
     }
 
     boolean resetUsed() {
-        return target.resetUsed();
+        return target.resetUsed()
     }
 
     @Override
     void close() {
-        target.close();
+        target.close()
     }
 
     void markUsed() {
-        target.markUsed();
+        target.markUsed()
     }
 
     protected boolean isTrouble() {
-        return target.isTrouble();
+        return target.trouble
     }
 
     protected void handleIOException(IOException e) {
-        target.handleIOException(e);
+        target.handleIOException(e)
     }
 }

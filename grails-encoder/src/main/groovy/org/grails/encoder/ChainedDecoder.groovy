@@ -44,7 +44,7 @@ class ChainedDecoder implements Decoder {
     Object decode(Object o) {
         if (o == null) return o
         Object decoded = o
-        for (Decoder decoder : decoders) {
+        for (Decoder decoder in decoders) {
             decoded = decoder.decode(decoded)
         }
         return decoded

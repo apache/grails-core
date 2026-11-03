@@ -81,8 +81,8 @@ class EncodesToWriterAdapter implements EncodesToWriter {
 
     @Override
     EncodesToWriter createChainingEncodesToWriter(List<StreamingEncoder> additionalEncoders, boolean applyAdditionalFirst) {
-        EncodesToWriterAdapter chained = createChainingEncodesToWriter(getStreamingEncoder(), additionalEncoders, applyAdditionalFirst)
-        chained.setIgnoreEncodingState(isIgnoreEncodingState())
+        EncodesToWriterAdapter chained = createChainingEncodesToWriter(streamingEncoder, additionalEncoders, applyAdditionalFirst)
+        chained.ignoreEncodingState = ignoreEncodingState
         return chained
     }
 
@@ -92,7 +92,7 @@ class EncodesToWriterAdapter implements EncodesToWriter {
         if (!applyAdditionalFirst && baseEncoderShouldBeApplied) {
             allEncoders.add(baseEncoder)
         }
-        for (StreamingEncoder additional : additionalEncoders) {
+        for (StreamingEncoder additional in additionalEncoders) {
             if (ChainedEncoders.shouldApplyEncoder(additional)) {
                 allEncoders.add(additional)
             }
