@@ -451,8 +451,15 @@ abstract class AbstractHibernateGormInstanceApi<D> extends GormInstanceApi<D> {
     }
 
     protected D performMerge(final D target, final boolean flush) {
+        // Hibernate copies the state of a detached instance onto the managed one without GORM's change tracking
+        // seeing it, so the properties the detached instance changed are marked on the managed one; otherwise
+        // the dirtiness strategy finds nothing to flush.
+        List<String> changed = target instanceof DirtyCheckable ? ((DirtyCheckable) target).listDirtyPropertyNames() : []
         hibernateTemplate.execute { Session session ->
             Object merged = session.merge(target)
+            if (merged instanceof DirtyCheckable && !merged.is(target)) {
+                changed.each { String name -> ((DirtyCheckable) merged).markDirty(name) }
+            }
             session.lock(merged, LockMode.NONE)
             if (flush) {
                 flushSession(session)
