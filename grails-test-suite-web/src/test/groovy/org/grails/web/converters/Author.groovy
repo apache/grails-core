@@ -23,27 +23,11 @@ package org.grails.web.converters
  * Created by jameskleeh on 2/7/17.
  */
 class Author {
-    private String name
-    private Integer age
+    String name
+    Integer age
 
     Author(String name, Integer age) {
         this.name = name
-        this.age = age
-    }
-
-    String getName() {
-        return name
-    }
-
-    void setName(String name) {
-        this.name = name
-    }
-
-    Integer getAge() {
-        return age
-    }
-
-    void setAge(Integer age) {
         this.age = age
     }
 }

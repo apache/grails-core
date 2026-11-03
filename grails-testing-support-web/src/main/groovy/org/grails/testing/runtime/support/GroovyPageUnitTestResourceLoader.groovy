@@ -60,11 +60,11 @@ class GroovyPageUnitTestResourceLoader extends DefaultResourceLoader implements 
             location = location.substring(WEB_INF_PREFIX.length())
         }
         if (groovyPages.containsKey(location)) {
-            return new ByteArrayResource(groovyPages.get(location).getBytes(StandardCharsets.UTF_8), location)
+            return new ByteArrayResource(groovyPages[location].getBytes(StandardCharsets.UTF_8), location)
         }
 
         if (basePath == null) {
-            String basedir = BuildSettings.BASE_DIR.getAbsolutePath()
+            String basedir = BuildSettings.BASE_DIR.absolutePath
             basePath = basedir + File.separatorChar + GrailsResourceUtils.VIEWS_DIR_PATH
         }
 
@@ -75,7 +75,7 @@ class GroovyPageUnitTestResourceLoader extends DefaultResourceLoader implements 
 
     private String makeCanonical(String path) {
         try {
-            return new File(path).getCanonicalPath()
+            return new File(path).canonicalPath
         } catch (IOException e) {
             return path
         }
@@ -88,8 +88,8 @@ class GroovyPageUnitTestResourceLoader extends DefaultResourceLoader implements 
 
     @Override
     void afterPropertiesSet() throws Exception {
-        if (grailsApplication != null) {
-            Config config = grailsApplication.getConfig()
+        if (grailsApplication) {
+            Config config = grailsApplication.config
             String viewDir = config.getProperty(Settings.GSP_VIEWS_DIR)
             if (viewDir != null) {
                 basePath = viewDir

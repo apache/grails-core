@@ -16,53 +16,52 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-@SuppressWarnings('UnnecessarySemicolon')
-package org.grails.support;
+package org.grails.support
 
-import jakarta.servlet.ServletContext;
-import java.lang.annotation.Annotation;
-import java.nio.charset.StandardCharsets;
-import groovy.transform.CompileStatic;
-import org.jspecify.annotations.NonNull;
-import org.springframework.beans.BeansException;
-import org.springframework.beans.factory.BeanCreationException;
-import org.springframework.beans.factory.BeanFactory;
-import org.springframework.beans.factory.NoSuchBeanDefinitionException;
-import org.springframework.beans.factory.ObjectProvider;
-import org.springframework.beans.factory.config.AutowireCapableBeanFactory;
-import org.springframework.beans.factory.support.DefaultListableBeanFactory;
-import org.springframework.context.ApplicationContext;
-import org.springframework.context.ApplicationEvent;
-import org.springframework.context.MessageSource;
-import org.springframework.context.MessageSourceResolvable;
-import org.springframework.context.NoSuchMessageException;
-import org.springframework.core.ParameterizedTypeReference;
-import org.springframework.core.ResolvableType;
-import org.springframework.core.env.Environment;
-import org.springframework.core.io.AbstractResource;
-import org.springframework.core.io.ClassPathResource;
-import org.springframework.core.io.Resource;
-import org.springframework.mock.web.MockServletContext;
-import org.springframework.util.AntPathMatcher;
-import org.springframework.util.PathMatcher;
-import org.springframework.web.context.WebApplicationContext;
-import org.springframework.web.context.support.StandardServletEnvironment;
-import grails.util.GrailsStringUtils;
+import jakarta.servlet.ServletContext
+import java.lang.annotation.Annotation
+import java.nio.charset.StandardCharsets
 
-// TODO(groovyism-cleanup): semicolons + double-quoted strings kept to preserve rename-similarity against the original .java (see matrei's review on #16576). Removed by the stacked groovyism-cleanup PR.
-@SuppressWarnings(['UnnecessarySemicolon', 'UnnecessaryGString'])
+import groovy.transform.CompileStatic
+import org.jspecify.annotations.NonNull
+import org.springframework.beans.BeansException
+import org.springframework.beans.factory.BeanCreationException
+import org.springframework.beans.factory.BeanFactory
+import org.springframework.beans.factory.NoSuchBeanDefinitionException
+import org.springframework.beans.factory.ObjectProvider
+import org.springframework.beans.factory.config.AutowireCapableBeanFactory
+import org.springframework.beans.factory.support.DefaultListableBeanFactory
+import org.springframework.context.ApplicationContext
+import org.springframework.context.ApplicationEvent
+import org.springframework.context.MessageSource
+import org.springframework.context.MessageSourceResolvable
+import org.springframework.context.NoSuchMessageException
+import org.springframework.core.ParameterizedTypeReference
+import org.springframework.core.ResolvableType
+import org.springframework.core.env.Environment
+import org.springframework.core.io.AbstractResource
+import org.springframework.core.io.ClassPathResource
+import org.springframework.core.io.Resource
+import org.springframework.mock.web.MockServletContext
+import org.springframework.util.AntPathMatcher
+import org.springframework.util.PathMatcher
+import org.springframework.web.context.WebApplicationContext
+import org.springframework.web.context.support.StandardServletEnvironment
+
+import grails.util.GrailsStringUtils
+
 @CompileStatic
 class MockApplicationContext extends GroovyObjectSupport implements WebApplicationContext {
 
-    Date startupDate = new Date();
-    Map<String, Object> beans = new HashMap<>();
-    List<Resource> resources = new ArrayList<>();
-    List<String> ignoredClassLocations = new ArrayList<>();
-    PathMatcher pathMatcher = new AntPathMatcher();
-    ServletContext servletContext = new MockServletContext();
+    Date startupDate = new Date()
+    Map<String, Object> beans = new HashMap<>()
+    List<Resource> resources = new ArrayList<>()
+    List<String> ignoredClassLocations = new ArrayList<>()
+    PathMatcher pathMatcher = new AntPathMatcher()
+    ServletContext servletContext = new MockServletContext()
 
     void registerMockBean(String name, Object instance) {
-        beans.put(name, instance);
+        beans.put(name, instance)
     }
 
     /**
@@ -70,7 +69,7 @@ class MockApplicationContext extends GroovyObjectSupport implements WebApplicati
      * @param location the location of the resource. Example: /WEB-INF/grails-app/i18n/messages.properties
      */
     void registerMockResource(String location) {
-        resources.add(new ClassPathResource(GrailsStringUtils.trimStart(location, "/")));
+        resources.add(new ClassPathResource(GrailsStringUtils.trimStart(location, '/')))
     }
 
     /**
@@ -78,7 +77,7 @@ class MockApplicationContext extends GroovyObjectSupport implements WebApplicati
      * @param location the location of the resource. Example: /WEB-INF/grails-app/i18n/messages.properties
      */
     void registerMockResource(String location, String contents) {
-        resources.add(new MockResource(GrailsStringUtils.trimStart(location, "/"), contents));
+        resources.add(new MockResource(GrailsStringUtils.trimStart(location, '/'), contents))
     }
 
     /**
@@ -87,9 +86,9 @@ class MockApplicationContext extends GroovyObjectSupport implements WebApplicati
      */
     void unregisterMockResource(String location) {
         for (Iterator<Resource> it = resources.iterator(); it.hasNext();) {
-            MockResource mockResource = (MockResource) it.next();
-            if (mockResource.location.equals(location)) {
-                it.remove();
+            MockResource mockResource = (MockResource) it.next()
+            if (mockResource.location == location) {
+                it.remove()
             }
         }
     }
@@ -99,7 +98,7 @@ class MockApplicationContext extends GroovyObjectSupport implements WebApplicati
      * @param location the location of the resource. Example: /WEB-INF/grails-app/i18n/messages.properties
      */
     void registerIgnoredClassPathLocation(String location) {
-        ignoredClassLocations.add(location);
+        ignoredClassLocations.add(location)
     }
 
     /**
@@ -107,27 +106,27 @@ class MockApplicationContext extends GroovyObjectSupport implements WebApplicati
      * @param location the location of the resource. Example: /WEB-INF/grails-app/i18n/messages.properties
      */
     void unregisterIgnoredClassPathLocation(String location) {
-        ignoredClassLocations.remove(location);
+        ignoredClassLocations.remove(location)
     }
 
     ApplicationContext getParent() {
-        throw new UnsupportedOperationException("Method not supported by implementation");
+        throw new UnsupportedOperationException('Method not supported by implementation')
     }
 
     String getId() {
-        return "MockApplicationContext";
+        return 'MockApplicationContext'
     }
 
     String getApplicationName() {
-        return getId();
+        return getId()
     }
 
     String getDisplayName() {
-        return getId();
+        return getId()
     }
 
     long getStartupDate() {
-        return startupDate.getTime();
+        return startupDate.getTime()
     }
 
     void publishEvent(ApplicationEvent event) {
@@ -140,96 +139,90 @@ class MockApplicationContext extends GroovyObjectSupport implements WebApplicati
     }
 
     boolean containsBeanDefinition(String beanName) {
-        return beans.containsKey(beanName);
+        return beans.containsKey(beanName)
     }
 
     int getBeanDefinitionCount() {
-        return beans.size();
+        return beans.size()
     }
 
     String[] getBeanDefinitionNames() {
-        return beans.keySet().toArray(new String[beans.keySet().size()]);
+        return beans.keySet() as String[]
     }
 
     @Override
     def <T> ObjectProvider<T> getBeanProvider(Class<T> requiredType, boolean allowEagerInit) {
-        return getBeanProvider(requiredType);
+        return getBeanProvider(requiredType)
     }
 
     @Override
     def <T> ObjectProvider<T> getBeanProvider(ResolvableType requiredType, boolean allowEagerInit) {
-        return getBeanProvider(requiredType);
+        return getBeanProvider(requiredType)
     }
 
     @Override
     String[] getBeanNamesForType(ResolvableType type) {
-        return new String[0];
+        return new String[0]
     }
 
     @Override
     String[] getBeanNamesForType(ResolvableType type, boolean includeNonSingletons, boolean allowEagerInit) {
-        return new String[0];
+        return new String[0]
     }
 
-    @SuppressWarnings([ "unchecked", "rawtypes" ])
+    @SuppressWarnings([ 'unchecked', 'rawtypes' ])
     String[] getBeanNamesForType(Class type) {
-        List<String> beanNames = new ArrayList<>();
+        List<String> beanNames = []
         for (String beanName in beans.keySet()) {
-            if (type.isAssignableFrom(beans.get(beanName).getClass())) {
-                beanNames.add(beanName);
+            if (type.isAssignableFrom(beans[beanName].getClass())) {
+                beanNames << beanName
             }
         }
-        return beanNames.toArray(new String[beanNames.size()]);
+        return beanNames as String[]
     }
 
     @SuppressWarnings('rawtypes')
     String[] getBeanNamesForType(Class type, boolean includePrototypes, boolean includeFactoryBeans) {
-        return getBeanNamesForType(type);
+        return getBeanNamesForType(type)
     }
 
     @SuppressWarnings('unchecked')
     def <T> Map<String, T> getBeansOfType(Class<T> type) throws BeansException {
-        String[] beanNames = getBeanNamesForType(type);
-        Map<String, T> newMap = new HashMap<>();
-        for (int i = 0; i < beanNames.length; i++) {
-            String beanName = beanNames[i];
-            newMap.put(beanName, (T) getBean(beanName));
-        }
-        return newMap;
+        String[] beanNames = getBeanNamesForType(type)
+        Map<String, T> newMap = [:]
+        beanNames.each { String beanName -> newMap.put(beanName, (T) getBean(beanName)) }
+        return newMap
     }
 
     def <T> Map<String, T> getBeansOfType(Class<T> type, boolean includeNonSingletons, boolean allowEagerInit) throws BeansException {
-        return getBeansOfType(type);
+        return getBeansOfType(type)
     }
 
     def <A extends Annotation> A findAnnotationOnBean(String name, Class<A> annotation) {
-        Object o = getBean(name);
-        if (o != null) {
-            return o.getClass().getAnnotation(annotation);
-        }
-        return null;
+        Object o = getBean(name)
+        return o?.getClass()?.getAnnotation(annotation)
     }
 
     @Override
     def <A extends Annotation> A findAnnotationOnBean(String beanName, Class<A> annotationType, boolean allowFactoryBeanInit) throws NoSuchBeanDefinitionException {
-        return findAnnotationOnBean(beanName, annotationType);
+        return findAnnotationOnBean(beanName, annotationType)
     }
 
     Map<String, Object> getBeansWithAnnotation(Class<? extends Annotation> annotation) throws BeansException {
-        Map<String, Object> submap = new HashMap<>();
+        Map<String, Object> submap = [:]
         for (Object beanName in beans.keySet()) {
-            Object bean = beans.get(beanName);
+            Object bean = beans[beanName]
             if (bean != null && bean.getClass().getAnnotation(annotation) != null) {
-                submap.put(beanName.toString(), bean);
+                submap.put(beanName.toString(), bean)
             }
         }
-        return submap;
+        return submap
     }
 
     @NonNull
     @Override
     def <A extends Annotation> Set<A> findAllAnnotationsOnBean(@NonNull String beanName, @NonNull Class<A> annotationType, boolean allowFactoryBeanInit) throws NoSuchBeanDefinitionException {
-        throw new UnsupportedOperationException("This method was added in Spring 6 API but has not yet been implemented in Grails MockApplicationContext");
+        throw new UnsupportedOperationException('This method was added in Spring 6 API but has not yet been implemented in Grails MockApplicationContext')
     }
 
     /**
@@ -240,221 +233,220 @@ class MockApplicationContext extends GroovyObjectSupport implements WebApplicati
      * @since 2.4
      */
     String[] getBeanNamesForAnnotation(Class<? extends Annotation> annotationType) {
-        List<String> beanNamesList = new ArrayList<>();
+        List<String> beanNamesList = []
         for (Object beanName in beans.keySet()) {
-            Object bean = beans.get(beanName);
+            Object bean = beans[beanName]
             if (bean != null && bean.getClass().getAnnotation(annotationType) != null) {
-                beanNamesList.add(beanName.toString());
+                beanNamesList << beanName.toString()
             }
         }
-        return beanNamesList.toArray(new String[beanNamesList.size()]);
+        return beanNamesList as String[]
     }
 
     Object getBean(String name) throws BeansException {
         if (!beans.containsKey(name)) {
-            throw new NoSuchBeanDefinitionException(name);
+            throw new NoSuchBeanDefinitionException(name)
         }
-        return beans.get(name);
+        return beans[name]
     }
 
     @SuppressWarnings('unchecked')
     def <T> T getBean(String name, Class<T> requiredType) throws BeansException {
         if (!beans.containsKey(name)) {
-            throw new NoSuchBeanDefinitionException(name);
+            throw new NoSuchBeanDefinitionException(name)
         }
 
-        if (requiredType != null && !requiredType.isAssignableFrom(beans.get(name).getClass())) {
-            throw new NoSuchBeanDefinitionException(name);
+        if (requiredType != null && !requiredType.isAssignableFrom(beans[name].getClass())) {
+            throw new NoSuchBeanDefinitionException(name)
         }
 
-        return (T) beans.get(name);
+        return (T) beans[name]
     }
 
     @Override
-    @SuppressWarnings('unchecked')
     def <T> T getBean(String name, ParameterizedTypeReference<T> requiredType) throws BeansException {
-        return (T) getBean(name, ResolvableType.forType(requiredType.getType()).toClass());
+        return (T) getBean(name, ResolvableType.forType(requiredType.getType()).toClass())
     }
 
     def <T> T getBean(Class<T> tClass) throws BeansException {
-        final Map<String, T> map = getBeansOfType(tClass);
+        final Map<String, T> map = getBeansOfType(tClass)
         if (map.isEmpty()) {
-            throw new NoSuchBeanDefinitionException(tClass, "No bean found for type: " + tClass.getName());
+            throw new NoSuchBeanDefinitionException(tClass, 'No bean found for type: ' + tClass.getName())
         }
-        return map.values().iterator().next();
+        return map.values().iterator().next()
     }
 
     Object getBean(String name, Object... args) throws BeansException {
-        return getBean(name);
+        return getBean(name)
     }
 
     @Override
     Object getProperty(String name) {
         if (beans.containsKey(name)) {
-            return beans.get(name);
+            return beans.get(name)
         }
 
-        return super.getProperty(name);
+        return super.getProperty(name)
     }
 
     boolean containsBean(String name) {
-        return beans.containsKey(name);
+        return beans.containsKey(name)
     }
 
     boolean isSingleton(String name) {
-        throw new UnsupportedOperationException("Method not supported by implementation");
+        throw new UnsupportedOperationException('Method not supported by implementation')
     }
 
     boolean isPrototype(String s) {
-        throw new UnsupportedOperationException("Method not supported by implementation");
+        throw new UnsupportedOperationException('Method not supported by implementation')
     }
 
     @Override
     boolean isTypeMatch(String name, ResolvableType typeToMatch) throws NoSuchBeanDefinitionException {
-        return isTypeMatch(name, typeToMatch.getRawClass());
+        return isTypeMatch(name, typeToMatch.getRawClass())
     }
 
     @SuppressWarnings('rawtypes')
     boolean isTypeMatch(String name, Class aClass) {
-        return aClass.isInstance(getBean(name));
+        return aClass.isInstance(getBean(name))
     }
 
-    @SuppressWarnings([ "unchecked", "rawtypes" ])
+    @SuppressWarnings([ 'unchecked', 'rawtypes' ])
     Class getType(String name) throws NoSuchBeanDefinitionException {
         if (!beans.containsKey(name)) {
-            throw new NoSuchBeanDefinitionException(name);
+            throw new NoSuchBeanDefinitionException(name)
         }
 
-        return beans.get(name).getClass();
+        return beans[name].getClass()
     }
 
     @Override
     Class<?> getType(String name, boolean allowFactoryBeanInit) throws NoSuchBeanDefinitionException {
-        return getType(name);
+        return getType(name)
     }
 
     String[] getAliases(String name) {
-        return new String[0];
+        return new String[0]
     }
 
     BeanFactory getParentBeanFactory() {
-        return null;
+        return null
     }
 
     String getMessage(String code, Object[] args, String defaultMessage, Locale locale) {
-        MessageSource messageSource = (MessageSource) getBean("messageSource");
+        MessageSource messageSource = (MessageSource) getBean('messageSource')
         if (messageSource == null) {
-            throw new BeanCreationException("No bean [messageSource] found in MockApplicationContext");
+            throw new BeanCreationException('No bean [messageSource] found in MockApplicationContext')
         }
-        return messageSource.getMessage(code, args, defaultMessage, locale);
+        return messageSource.getMessage(code, args, defaultMessage, locale)
     }
 
     String getMessage(String code, Object[] args, Locale locale) throws NoSuchMessageException {
-        MessageSource messageSource = (MessageSource) getBean("messageSource");
+        MessageSource messageSource = (MessageSource) getBean('messageSource')
         if (messageSource == null) {
-            throw new BeanCreationException("No bean [messageSource] found in MockApplicationContext");
+            throw new BeanCreationException('No bean [messageSource] found in MockApplicationContext')
         }
-        return messageSource.getMessage(code, args, locale);
+        return messageSource.getMessage(code, args, locale)
     }
 
     String getMessage(MessageSourceResolvable resolvable, Locale locale) throws NoSuchMessageException {
-        MessageSource messageSource = (MessageSource) getBean("messageSource");
+        MessageSource messageSource = (MessageSource) getBean('messageSource')
         if (messageSource == null) {
-            throw new BeanCreationException("No bean [messageSource] found in MockApplicationContext");
+            throw new BeanCreationException('No bean [messageSource] found in MockApplicationContext')
         }
-        return messageSource.getMessage(resolvable, locale);
+        return messageSource.getMessage(resolvable, locale)
     }
 
     Resource[] getResources(String locationPattern) throws IOException {
-        if (locationPattern.startsWith("classpath:") || locationPattern.startsWith("file:")) {
-            throw new UnsupportedOperationException("Location patterns 'classpath:' and 'file:' not supported by implementation");
+        if (locationPattern.startsWith('classpath:') || locationPattern.startsWith('file:')) {
+            throw new UnsupportedOperationException("Location patterns 'classpath:' and 'file:' not supported by implementation")
         }
 
-        locationPattern = GrailsStringUtils.trimStart(locationPattern, "/"); // starting with "**/" is OK
-        List<Resource> result = new ArrayList<>();
+        locationPattern = GrailsStringUtils.trimStart(locationPattern, '/') // starting with "**/" is OK
+        List<Resource> result = []
         for (Resource res in resources) {
-            String path = res instanceof ClassPathResource ? ((ClassPathResource) res).getPath() : res.getDescription();
+            String path = res instanceof ClassPathResource ? ((ClassPathResource) res).path : res.description
             if (pathMatcher.match(locationPattern, path)) {
-                result.add(res);
+                result << res
             }
         }
-        return result.toArray(new Resource[0]);
+        return result as Resource[]
     }
 
     Resource getResource(String location) {
         for (Resource mockResource in resources) {
-            if (pathMatcher.match(mockResource.getDescription(), GrailsStringUtils.trimStart(location, "/"))) {
-                return mockResource;
+            if (pathMatcher.match(mockResource.description, GrailsStringUtils.trimStart(location, '/'))) {
+                return mockResource
             }
         }
         // Check for ignored resources and return null instead of a classpath resource in that case.
         for (String resourceLocation in ignoredClassLocations) {
             if (pathMatcher.match(
-                    GrailsStringUtils.trimStart(location, "/"),
-                    GrailsStringUtils.trimStart(resourceLocation, "/"))) {
-                return null;
+                    GrailsStringUtils.trimStart(location, '/'),
+                    GrailsStringUtils.trimStart(resourceLocation, '/'))) {
+                return null
             }
         }
 
-        return new ClassPathResource(location);
+        return new ClassPathResource(location)
     }
 
     boolean containsLocalBean(String arg0) {
-        throw new UnsupportedOperationException("Method not supported by implementation");
+        throw new UnsupportedOperationException('Method not supported by implementation')
     }
 
     AutowireCapableBeanFactory getAutowireCapableBeanFactory() throws IllegalStateException {
-        return new DefaultListableBeanFactory();
+        return new DefaultListableBeanFactory()
     }
 
     ClassLoader getClassLoader() {
-        return getClass().getClassLoader();
+        return getClass().getClassLoader()
     }
 
     ServletContext getServletContext() {
-        return servletContext;
+        return servletContext
     }
 
     void setServletContext(ServletContext servletContext) {
-        this.servletContext = servletContext;
+        this.servletContext = servletContext
     }
 
     Environment getEnvironment() {
-        return new StandardServletEnvironment();
+        return new StandardServletEnvironment()
     }
 
     class MockResource extends AbstractResource {
 
-        private String contents = "";
-        private String location;
+        private String contents = ''
+        private String location
 
         MockResource(String location) {
-            this.location = location;
+            this.location = location
         }
 
         MockResource(String location, String contents) {
-            this(location);
-            this.contents = contents;
+            this(location)
+            this.contents = contents
         }
 
         @Override
         boolean exists() {
-            return true;
+            return true
         }
 
         String getDescription() {
-            return location;
+            return location
         }
 
         InputStream getInputStream() throws IOException {
-            return new ByteArrayInputStream(contents.getBytes(StandardCharsets.UTF_8));
+            return new ByteArrayInputStream(contents.getBytes(StandardCharsets.UTF_8))
         }
     }
 
     @Override
     def <T> T getBean(Class<T> requiredType, Object... args)
             throws BeansException {
-        return getBean(requiredType);
+        return getBean(requiredType)
     }
 
     @Override
@@ -462,24 +454,24 @@ class MockApplicationContext extends GroovyObjectSupport implements WebApplicati
         return new ObjectProvider<T>() {
             @Override
             T getObject(Object... args) throws BeansException {
-                return (T) getBean(requiredType);
+                return (T) getBean(requiredType)
             }
 
             @Override
             T getIfAvailable() throws BeansException {
-                return (T) getBean(requiredType);
+                return (T) getBean(requiredType)
             }
 
             @Override
             T getIfUnique() throws BeansException {
-                return (T) getBean(requiredType);
+                return (T) getBean(requiredType)
             }
 
             @Override
             T getObject() throws BeansException {
-                return (T) getBean(requiredType);
+                return (T) getBean(requiredType)
             }
-        };
+        }
     }
 
     @Override
@@ -487,28 +479,29 @@ class MockApplicationContext extends GroovyObjectSupport implements WebApplicati
         return new ObjectProvider<T>() {
             @Override
             T getObject(Object... args) throws BeansException {
-                return (T) getBean(requiredType.toClass());
+                return (T) getBean(requiredType.toClass())
             }
 
             @Override
             T getIfAvailable() throws BeansException {
-                return (T) getBean(requiredType.toClass());
+                return (T) getBean(requiredType.toClass())
             }
 
             @Override
             T getIfUnique() throws BeansException {
-                return (T) getBean(requiredType.toClass());
+                return (T) getBean(requiredType.toClass())
             }
 
             @Override
             T getObject() throws BeansException {
-                return (T) getBean(requiredType.toClass());
+                return (T) getBean(requiredType.toClass())
             }
-        };
+        }
     }
 
     @Override
     def <T> ObjectProvider<T> getBeanProvider(ParameterizedTypeReference<T> requiredType) {
-        return getBeanProvider(ResolvableType.forType(requiredType.getType()));
+        return getBeanProvider(ResolvableType.forType(requiredType.getType()))
     }
+
 }

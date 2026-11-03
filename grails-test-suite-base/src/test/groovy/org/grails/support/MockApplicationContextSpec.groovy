@@ -142,6 +142,19 @@ class MockApplicationContextSpec extends Specification {
         thrown(UnsupportedOperationException)
     }
 
+    void 'annotated beans are found by name and listed, unannotated beans are not'() {
+        given:
+        def annotatedBean = new AnnotatedMockBean()
+        ctx.registerMockBean('annotated', annotatedBean)
+        ctx.registerMockBean('plain', 'plainBean')
+
+        expect:
+        ctx.findAnnotationOnBean('annotated', Deprecated) != null
+        ctx.findAnnotationOnBean('plain', Deprecated) == null
+        ctx.getBeansWithAnnotation(Deprecated) == [annotated: annotatedBean]
+        ctx.getBeanNamesForAnnotation(Deprecated) == ['annotated'] as String[]
+    }
+
     void 'identity and environment accessors report the mock defaults'() {
         expect:
         ctx.id == 'MockApplicationContext'
@@ -161,4 +174,8 @@ class MockApplicationContextSpec extends Specification {
         noExceptionThrown()
     }
 
+}
+
+@Deprecated
+class AnnotatedMockBean {
 }

@@ -41,20 +41,20 @@ class LazyTagLibraryLookup extends TagLibraryLookup {
     private Map<String, GrailsTagLibClass> lazyLoadableTagLibs = new HashMap<>()
 
     LazyTagLibraryLookup() {
-        List<Class> mockedClasses = new ArrayList<>((List<Class>) new GroovyPagesGrailsPlugin().getProvidedArtefacts())
+        List<Class> mockedClasses = new ArrayList<>((List<Class>) new GroovyPagesGrailsPlugin().providedArtefacts)
         ClassLoader classLoader = LazyTagLibraryLookup.getClassLoader()
         if (ClassUtils.isPresent('org.apache.grails.web.layout.LayoutGrailsPlugin', classLoader)) {
             // sitemesh2 support
             try {
-                mockedClasses.add(Class.forName('org.grails.plugins.web.taglib.GrailsLayoutTagLib'))
-                mockedClasses.add(Class.forName('org.grails.plugins.web.taglib.RenderGrailsLayoutTagLib'))
+                mockedClasses << Class.forName('org.grails.plugins.web.taglib.GrailsLayoutTagLib')
+                mockedClasses << Class.forName('org.grails.plugins.web.taglib.RenderGrailsLayoutTagLib')
             }
             catch (Exception ignored) {
             }
         }
         if (ClassUtils.isPresent('org.grails.plugins.sitemesh3.Sitemesh3GrailsPlugin', classLoader)) {
             try {
-                mockedClasses.add(Class.forName('org.grails.plugins.web.taglib.RenderSitemeshTagLib'))
+                mockedClasses << Class.forName('org.grails.plugins.web.taglib.RenderSitemeshTagLib')
             }
             catch (Exception ignored) {
             }
@@ -99,11 +99,11 @@ class LazyTagLibraryLookup extends TagLibraryLookup {
         } catch (Exception ignored) {
         }
 
-        if (!hasNamespace(grailsTagLibClass.getNamespace())) {
-            registerNamespaceDispatcher(grailsTagLibClass.getNamespace())
+        if (!hasNamespace(grailsTagLibClass.namespace)) {
+            registerNamespaceDispatcher(grailsTagLibClass.namespace)
         }
-        for (String tagName in grailsTagLibClass.getTagNames()) {
-            String tagKey = tagNameKey(grailsTagLibClass.getNamespace(), tagName)
+        for (String tagName in grailsTagLibClass.tagNames) {
+            String tagKey = tagNameKey(grailsTagLibClass.namespace, tagName)
             lazyLoadableTagLibs.put(tagKey, grailsTagLibClass)
         }
     }
@@ -113,14 +113,14 @@ class LazyTagLibraryLookup extends TagLibraryLookup {
         GroovyObject tagLibrary = super.lookupTagLibrary(namespace, tagName)
         if (tagLibrary == null) {
             String tagKey = tagNameKey(namespace, tagName)
-            GrailsTagLibClass taglibClass = lazyLoadableTagLibs.get(tagKey)
-            if (taglibClass != null) {
-                if (!applicationContext.containsBean(taglibClass.getFullName())) {
+            GrailsTagLibClass taglibClass = lazyLoadableTagLibs[tagKey]
+            if (taglibClass) {
+                if (!applicationContext.containsBean(taglibClass.fullName)) {
                     GenericBeanDefinition bd = new GenericBeanDefinition()
-                    bd.setBeanClass(taglibClass.getClazz())
-                    bd.setAutowireCandidate(true)
-                    bd.setAutowireMode(AbstractBeanDefinition.AUTOWIRE_BY_NAME)
-                    ((GenericApplicationContext) applicationContext).getDefaultListableBeanFactory().registerBeanDefinition(taglibClass.getFullName(), bd)
+                    bd.beanClass = taglibClass.clazz
+                    bd.autowireCandidate = true
+                    bd.autowireMode = AbstractBeanDefinition.AUTOWIRE_BY_NAME
+                    ((GenericApplicationContext) applicationContext).defaultListableBeanFactory.registerBeanDefinition(taglibClass.fullName, bd)
                 }
                 registerTagLib(taglibClass)
                 tagLibrary = super.lookupTagLibrary(namespace, tagName)
@@ -130,12 +130,12 @@ class LazyTagLibraryLookup extends TagLibraryLookup {
     }
 
     protected String tagNameKey(String namespace, String tagName) {
-        return namespace + ':' + tagName
+        return "${namespace}:${tagName}"
     }
 
     @Override
     protected void putTagLib(Map<String, Object> tags, String name, GrailsTagLibClass taglib) {
-        if (applicationContext.containsBean(taglib.getFullName())) {
+        if (applicationContext.containsBean(taglib.fullName)) {
             super.putTagLib(tags, name, taglib)
         }
     }

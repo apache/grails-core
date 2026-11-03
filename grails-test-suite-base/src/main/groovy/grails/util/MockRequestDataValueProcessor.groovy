@@ -17,51 +17,48 @@
  *  under the License.
  */
 
-@SuppressWarnings('UnnecessarySemicolon')
-package grails.util;
+package grails.util
 
-import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletRequest
 
-import groovy.transform.CompileStatic;
-import org.springframework.web.servlet.support.RequestDataValueProcessor;
+import groovy.transform.CompileStatic
+import org.springframework.web.servlet.support.RequestDataValueProcessor
 
-// TODO(groovyism-cleanup): semicolons + double-quoted strings kept to preserve rename-similarity against the original .java (see matrei's review on #16576). Removed by the stacked groovyism-cleanup PR.
-@SuppressWarnings(['UnnecessarySemicolon', 'UnnecessaryGString'])
 @CompileStatic
 class MockRequestDataValueProcessor implements RequestDataValueProcessor {
 
     Map<String, String> getExtraHiddenFields(HttpServletRequest request) {
-        Map<String, String> extraHiddenFields = new HashMap<>();
-        extraHiddenFields.put("requestDataValueProcessorHiddenName", "hiddenValue");
-        return extraHiddenFields;
+        Map<String, String> extraHiddenFields = [:]
+        extraHiddenFields.put('requestDataValueProcessorHiddenName', 'hiddenValue')
+        return extraHiddenFields
     }
 
     String processAction(HttpServletRequest request, String action, String httpMethod) {
-        if (action.indexOf("requestDataValueProcessorParamName=paramValue") > -1) {
-            action = action.replace("?requestDataValueProcessorParamName=paramValue&", "?");
-            action = action.replace("?requestDataValueProcessorParamName=paramValue", "");
-            action = action.replace("&requestDataValueProcessorParamName=paramValue", "");
+        if (action.indexOf('requestDataValueProcessorParamName=paramValue') > -1) {
+            action = action.replace('?requestDataValueProcessorParamName=paramValue&', '?')
+            action = action.replace('?requestDataValueProcessorParamName=paramValue', '')
+            action = action.replace('&requestDataValueProcessorParamName=paramValue', '')
         }
-        return action;
+        return action
     }
 
     String processFormFieldValue(HttpServletRequest request, String name, String value, String type) {
-        return value + "_PROCESSED_";
+        return "${value}_PROCESSED_"
     }
 
     String processUrl(HttpServletRequest request, String url) {
-        String toAppend;
-        if (url.indexOf("?") > -1) {
-            toAppend = "&requestDataValueProcessorParamName=paramValue";
+        String toAppend
+        if (url.indexOf('?') > -1) {
+            toAppend = '&requestDataValueProcessorParamName=paramValue'
         } else {
-            toAppend = "?requestDataValueProcessorParamName=paramValue";
+            toAppend = '?requestDataValueProcessorParamName=paramValue'
         }
-        if (url.indexOf("#") > -1) {
-            url = url.replace("#", toAppend + "#");
+        if (url.indexOf('#') > -1) {
+            url = url.replace('#', "${toAppend}#")
         } else {
-            url = url + toAppend;
+            url = url + toAppend
         }
-        return url;
+        return url
     }
 
 }
