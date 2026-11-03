@@ -4,7 +4,7 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
@@ -18,13 +18,7 @@
  */
 package org.grails.spring;
 
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
-
-import groovy.lang.GroovyObjectSupport;
-
+import groovy.transform.CompileStatic;
 import org.springframework.beans.BeanWrapper;
 import org.springframework.beans.BeanWrapperImpl;
 import org.springframework.beans.PropertyValue;
@@ -46,19 +40,32 @@ import org.springframework.util.Assert;
  * @author Graeme
  * @since 0.3
  */
-public class DefaultBeanConfiguration extends GroovyObjectSupport implements BeanConfiguration {
+// Whole-class @CompileStatic: every method body here is plain typed Java-equivalent logic (only
+// getProperty()/setProperty() override GroovyObjectSupport for the builder DSL). Annotating only
+// those two override methods left calls like setParent() from within setProperty() still routed
+// through Groovy's indy machinery -- the static compiler, with the enclosing class left dynamic,
+// keeps sibling calls going through the metaclass to preserve possible overrides -- which hit a
+// Groovy indy/reflective call-site NPE ("MetaClass.initialize() because mc is null") when
+// setProperty() itself is invoked cold via reflection (as it is, being a GroovyObject override)
+// and then makes that further dynamic self-call. External dynamic callers (BeanBuilder, the
+// property-assignment DSL) are unaffected: Groovy always routes `obj.prop = x` through the
+// overridden getProperty()/setProperty() below regardless of this class's own compile mode.
+// TODO(groovyism-cleanup): semicolons kept to preserve rename-similarity against the original .java (see matrei's review on #16576). Removed by the stacked groovyism-cleanup PR.
+@SuppressWarnings('UnnecessarySemicolon')
+@CompileStatic
+class DefaultBeanConfiguration extends GroovyObjectSupport implements BeanConfiguration {
 
-    private static final String AUTOWIRE = "autowire";
-    private static final String SINGLETON = "singleton";
-    private static final String CONSTRUCTOR_ARGS = "constructorArgs";
-    private static final String DESTROY_METHOD = "destroyMethod";
-    private static final String FACTORY_BEAN = "factoryBean";
-    private static final String FACTORY_METHOD = "factoryMethod";
-    private static final String INIT_METHOD = "initMethod";
-    private static final String BY_NAME = "byName";
-    private static final String PARENT = "parent";
-    private static final String BY_TYPE = "byType";
-    private static final String BY_CONSTRUCTOR = "constructor";
+    private static final String AUTOWIRE = 'autowire';
+    private static final String SINGLETON = 'singleton';
+    private static final String CONSTRUCTOR_ARGS = 'constructorArgs';
+    private static final String DESTROY_METHOD = 'destroyMethod';
+    private static final String FACTORY_BEAN = 'factoryBean';
+    private static final String FACTORY_METHOD = 'factoryMethod';
+    private static final String INIT_METHOD = 'initMethod';
+    private static final String BY_NAME = 'byName';
+    private static final String PARENT = 'parent';
+    private static final String BY_TYPE = 'byType';
+    private static final String BY_CONSTRUCTOR = 'constructor';
     private static final List<String> DYNAMIC_PROPS = Arrays.asList(
         AUTOWIRE,
         CONSTRUCTOR_ARGS,
@@ -73,8 +80,8 @@ public class DefaultBeanConfiguration extends GroovyObjectSupport implements Bea
     private String parentName;
 
     @Override
-    public Object getProperty(String property) {
-        @SuppressWarnings("unused")
+    Object getProperty(String property) {
+        @SuppressWarnings('unused')
         AbstractBeanDefinition bd = getBeanDefinition();
         if (wrapper.isReadableProperty(property)) {
             return wrapper.getPropertyValue(property);
@@ -86,9 +93,9 @@ public class DefaultBeanConfiguration extends GroovyObjectSupport implements Bea
     }
 
     @Override
-    public void setProperty(String property, Object newValue) {
+    void setProperty(String property, Object newValue) {
         if (PARENT.equals(property)) {
-            setParent(newValue);
+            this.setParent(newValue);
             return;
         }
 
@@ -193,22 +200,22 @@ public class DefaultBeanConfiguration extends GroovyObjectSupport implements Bea
         constructorArgs = constructorArguments;
     }
 
-    public String getName() {
+    String getName() {
         return name;
     }
 
-    public boolean isSingleton() {
+    boolean isSingleton() {
         return singleton;
     }
 
-    public AbstractBeanDefinition getBeanDefinition() {
+    AbstractBeanDefinition getBeanDefinition() {
         if (definition == null) {
             definition = createBeanDefinition();
         }
         return definition;
     }
 
-    public void setBeanDefinition(BeanDefinition definition) {
+    void setBeanDefinition(BeanDefinition definition) {
         this.definition = (AbstractBeanDefinition) definition;
     }
 
@@ -222,7 +229,7 @@ public class DefaultBeanConfiguration extends GroovyObjectSupport implements Bea
             bd.setConstructorArgumentValues(cav);
         }
         if (clazz != null) {
-            bd.setLazyInit(clazz.getAnnotation(Lazy.class) != null);
+            bd.setLazyInit(clazz.getAnnotation(Lazy) != null);
             bd.setBeanClass(clazz);
         }
         bd.setScope(singleton ? AbstractBeanDefinition.SCOPE_SINGLETON : AbstractBeanDefinition.SCOPE_PROTOTYPE);
@@ -233,7 +240,7 @@ public class DefaultBeanConfiguration extends GroovyObjectSupport implements Bea
         return bd;
     }
 
-    public BeanConfiguration addProperty(String propertyName, Object propertyValue) {
+    BeanConfiguration addProperty(String propertyName, Object propertyValue) {
         if (propertyValue instanceof BeanConfiguration) {
             propertyValue = ((BeanConfiguration) propertyValue).getBeanDefinition();
         }
@@ -244,41 +251,41 @@ public class DefaultBeanConfiguration extends GroovyObjectSupport implements Bea
         return this;
     }
 
-    public BeanConfiguration setDestroyMethod(String methodName) {
+    BeanConfiguration setDestroyMethod(String methodName) {
         getBeanDefinition().setDestroyMethodName(methodName);
         return this;
     }
 
-    public BeanConfiguration setDependsOn(String[] dependsOn) {
+    BeanConfiguration setDependsOn(String[] dependsOn) {
         getBeanDefinition().setDependsOn(dependsOn);
         return this;
     }
 
-    public BeanConfiguration setFactoryBean(String beanName) {
+    BeanConfiguration setFactoryBean(String beanName) {
         getBeanDefinition().setFactoryBeanName(beanName);
         return this;
     }
 
-    public BeanConfiguration setFactoryMethod(String methodName) {
+    BeanConfiguration setFactoryMethod(String methodName) {
         getBeanDefinition().setFactoryMethodName(methodName);
         return this;
     }
 
-    public BeanConfiguration setAutowire(String type) {
-        if ("byName".equals(type)) {
+    BeanConfiguration setAutowire(String type) {
+        if ('byName'.equals(type)) {
             getBeanDefinition().setAutowireMode(AbstractBeanDefinition.AUTOWIRE_BY_NAME);
         }
-        else if ("byType".equals(type)) {
+        else if ('byType'.equals(type)) {
             getBeanDefinition().setAutowireMode(AbstractBeanDefinition.AUTOWIRE_BY_TYPE);
         }
         return this;
     }
 
-    public void setName(String beanName) {
+    void setName(String beanName) {
         name = beanName;
     }
 
-    public Object getPropertyValue(String propName) {
+    Object getPropertyValue(String propName) {
         PropertyValue propertyValue = getBeanDefinition()
             .getPropertyValues()
             .getPropertyValue(propName);
@@ -289,21 +296,21 @@ public class DefaultBeanConfiguration extends GroovyObjectSupport implements Bea
         return propertyValue.getValue();
     }
 
-    public boolean hasProperty(String propName) {
+    boolean hasProperty(String propName) {
         return getBeanDefinition().getPropertyValues().contains(propName);
     }
 
-    public void setPropertyValue(String property, Object newValue) {
+    void setPropertyValue(String property, Object newValue) {
         getBeanDefinition().getPropertyValues().addPropertyValue(property, newValue);
     }
 
-    public BeanConfiguration setAbstract(boolean isAbstract) {
+    BeanConfiguration setAbstract(boolean isAbstract) {
         getBeanDefinition().setAbstract(isAbstract);
         return this;
     }
 
-    public void setParent(Object obj) {
-        Assert.notNull(obj, "Parent bean cannot be set to a null runtime bean reference!");
+    void setParent(Object obj) {
+        Assert.notNull(obj, 'Parent bean cannot be set to a null runtime bean reference!');
 
         if (obj instanceof String) {
             parentName = (String) obj;

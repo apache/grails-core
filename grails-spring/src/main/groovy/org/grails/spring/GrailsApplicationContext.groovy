@@ -4,7 +4,7 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
@@ -18,9 +18,8 @@
  */
 package org.grails.spring;
 
-import groovy.lang.GroovyObject;
-import groovy.lang.GroovySystem;
-import groovy.lang.MetaClass;
+import groovy.transform.CompileStatic;
+import groovy.transform.stc.POJO;
 
 import org.springframework.beans.BeanWrapper;
 import org.springframework.beans.BeanWrapperImpl;
@@ -39,12 +38,23 @@ import org.springframework.context.support.GenericApplicationContext;
  *
  * @author Graeme Rocher
  * @since 1.0
+ *
+ * <p>Not a synthesized GroovyObject: the Groovy compiler's own metaClass scaffolding for a class
+ * implementing GroovyObject conflicts with this class's own explicit {@code metaClass} field and
+ * hand-rolled getMetaClass()/setMetaClass(), causing a NullPointerException during construction
+ * (the synthetic initializer races the explicit field assignment in the constructor body). @POJO
+ * keeps this class a plain object as far as the compiler is concerned; the manual GroovyObject
+ * method implementations below still satisfy the interface for callers.</p>
  */
-public class GrailsApplicationContext extends GenericApplicationContext implements GroovyObject {
+// TODO(groovyism-cleanup): semicolons kept to preserve rename-similarity against the original .java (see matrei's review on #16576). Removed by the stacked groovyism-cleanup PR.
+@SuppressWarnings('UnnecessarySemicolon')
+@POJO
+@CompileStatic
+class GrailsApplicationContext extends GenericApplicationContext implements GroovyObject {
 
     protected MetaClass metaClass;
     private BeanWrapper ctxBean = new BeanWrapperImpl(this);
-    private static final String GRAILS_ENVIRONMENT_BEAN_NAME = "springEnvironment";
+    private static final String GRAILS_ENVIRONMENT_BEAN_NAME = 'springEnvironment';
 
     public GrailsApplicationContext(DefaultListableBeanFactory defaultListableBeanFactory) {
         super(defaultListableBeanFactory);
@@ -66,15 +76,15 @@ public class GrailsApplicationContext extends GenericApplicationContext implemen
     }
 
     @Override
-    public boolean containsBeanDefinition(String beanName) {
+    boolean containsBeanDefinition(String beanName) {
         return super.containsBeanDefinition(beanName);
     }
 
-    public MetaClass getMetaClass() {
+    MetaClass getMetaClass() {
         return metaClass;
     }
 
-    public Object getProperty(String property) {
+    Object getProperty(String property) {
         if (containsBean(property)) {
             return getBean(property);
         }
@@ -84,15 +94,15 @@ public class GrailsApplicationContext extends GenericApplicationContext implemen
         return null;
     }
 
-    public Object invokeMethod(String name, Object args) {
+    Object invokeMethod(String name, Object args) {
         return metaClass.invokeMethod(this, name, args);
     }
 
-    public void setMetaClass(MetaClass metaClass) {
+    void setMetaClass(MetaClass metaClass) {
         this.metaClass = metaClass;
     }
 
-    public void setProperty(String property, Object newValue) {
+    void setProperty(String property, Object newValue) {
         if (newValue instanceof BeanDefinition) {
             if (containsBean(property)) {
                 removeBeanDefinition(property);
@@ -110,7 +120,7 @@ public class GrailsApplicationContext extends GenericApplicationContext implemen
      * <p>For more advanced needs, register with the underlying BeanFactory directly.
      * @see #getDefaultListableBeanFactory
      */
-    public void registerSingleton(String name, Class<?> clazz) throws BeansException {
+    void registerSingleton(String name, Class<?> clazz) throws BeansException {
         GenericBeanDefinition bd = new GenericBeanDefinition();
         bd.setBeanClass(clazz);
         getDefaultListableBeanFactory().registerBeanDefinition(name, bd);
@@ -121,7 +131,7 @@ public class GrailsApplicationContext extends GenericApplicationContext implemen
      * <p>For more advanced needs, register with the underlying BeanFactory directly.
      * @see #getDefaultListableBeanFactory
      */
-    public void registerSingleton(String name, Class<?> clazz, MutablePropertyValues pvs) throws BeansException {
+    void registerSingleton(String name, Class<?> clazz, MutablePropertyValues pvs) throws BeansException {
         GenericBeanDefinition bd = new GenericBeanDefinition();
         bd.setBeanClass(clazz);
         bd.setPropertyValues(pvs);
@@ -133,7 +143,7 @@ public class GrailsApplicationContext extends GenericApplicationContext implemen
      * <p>For more advanced needs, register with the underlying BeanFactory directly.
      * @see #getDefaultListableBeanFactory
      */
-    public void registerPrototype(String name, Class<?> clazz) throws BeansException {
+    void registerPrototype(String name, Class<?> clazz) throws BeansException {
         GenericBeanDefinition bd = new GenericBeanDefinition();
         bd.setScope(GenericBeanDefinition.SCOPE_PROTOTYPE);
         bd.setBeanClass(clazz);
@@ -145,7 +155,7 @@ public class GrailsApplicationContext extends GenericApplicationContext implemen
      * <p>For more advanced needs, register with the underlying BeanFactory directly.
      * @see #getDefaultListableBeanFactory
      */
-    public void registerPrototype(String name, Class<?> clazz, MutablePropertyValues pvs) throws BeansException {
+    void registerPrototype(String name, Class<?> clazz, MutablePropertyValues pvs) throws BeansException {
         GenericBeanDefinition bd = new GenericBeanDefinition();
         bd.setScope(GenericBeanDefinition.SCOPE_PROTOTYPE);
         bd.setBeanClass(clazz);
