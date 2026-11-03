@@ -1740,6 +1740,16 @@ public class GrailsDomainBinder implements MetadataContributor {
 
         String schemaName = getSchemaName(mappings);
         String catalogName = getCatalogName(mappings);
+        // the table the subclass declares itself wins over the default, as it does for its root class
+        Mapping subMapping = getMapping(sub);
+        if (subMapping != null && subMapping.getTable() != null) {
+            if (subMapping.getTable().getSchema() != null) {
+                schemaName = subMapping.getTable().getSchema();
+            }
+            if (subMapping.getTable().getCatalog() != null) {
+                catalogName = subMapping.getTable().getCatalog();
+            }
+        }
 
         Table mytable = mappings.addTable(
                 schemaName, catalogName,
