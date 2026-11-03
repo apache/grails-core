@@ -4,30 +4,23 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
  */
+@SuppressWarnings('UnnecessarySemicolon')
 package org.grails.datastore.gorm.neo4j;
 
-import java.math.BigDecimal;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.LinkedHashMap;
-import java.util.Map;
-import java.util.Set;
-
-import groovy.lang.Closure;
+import groovy.transform.CompileStatic;
+import groovy.transform.PackageScope;
 
 import org.springframework.core.convert.ConversionService;
 
@@ -51,64 +44,67 @@ import org.grails.datastore.mapping.proxy.ProxyFactory;
  *
  * @since 1.0
  */
-public class Neo4jMappingContext extends AbstractMappingContext {
+// TODO(groovyism-cleanup): semicolons kept to preserve rename-similarity against the original .java (see matrei's review on #16576). Removed by the stacked groovyism-cleanup PR.
+@SuppressWarnings(['UnnecessarySemicolon'])
+@CompileStatic
+class Neo4jMappingContext extends AbstractMappingContext {
 
-    private static final Class<Long> LONG_TYPE = long.class;
-    private static final Class<Double> DOUBLE_TYPE = double.class;
-    private static final Class<String> STRING_TYPE = String.class;
+    private static final Class LONG_TYPE = long;
+    private static final Class DOUBLE_TYPE = double;
+    private static final Class STRING_TYPE = String;
     public static final Set<Class> BASIC_TYPES = Collections.unmodifiableSet(new HashSet<Class>(Arrays.asList(
         STRING_TYPE,
-        Long.class,
-        Float.class,
-        Integer.class,
-        Double.class,
-        Short.class,
-        Boolean.class,
-        Byte.class,
+        Long,
+        Float,
+        Integer,
+        Double,
+        Short,
+        Boolean,
+        Byte,
         // primitives
-        byte.class,
-        int.class,
+        byte,
+        int,
         LONG_TYPE,
-        float.class,
+        float,
         DOUBLE_TYPE,
-        short.class,
-        boolean.class,
+        short,
+        boolean,
         // primitive arrays
-        byte[].class,
-        int[].class,
-        long[].class,
-        float[].class,
-        double[].class,
-        short[].class,
-        boolean[].class,
-        String[].class
-    )));
+        byte[],
+        int[],
+        long[],
+        float[],
+        double[],
+        short[],
+        boolean[],
+        String[]
+    ) as List<Class>));
     protected Map<Iterable<String>, GraphPersistentEntity> entitiesByLabel = new LinkedHashMap<>();
     // default id generator strategy is native
     protected IdGenerator idGenerator = null;
     protected SnowflakeIdGenerator snowflakeIdGenerator = null;
-    GraphGormMappingFactory mappingFactory = new GraphGormMappingFactory();
-    MappingConfigurationStrategy mappingSyntaxStrategy = new GormMappingConfigurationStrategy(mappingFactory);
+    @PackageScope GraphGormMappingFactory mappingFactory = new GraphGormMappingFactory();
+    @PackageScope MappingConfigurationStrategy mappingSyntaxStrategy = new GormMappingConfigurationStrategy(mappingFactory);
 
-    public Neo4jMappingContext() {
+    Neo4jMappingContext() {
         super();
     }
 
     @Deprecated
-    public Neo4jMappingContext(Closure defaultMapping) {
+    Neo4jMappingContext(Closure defaultMapping) {
         super();
         setProxyFactory(new HashcodeEqualsAwareProxyFactory());
         mappingFactory.setDefaultMapping(defaultMapping);
     }
 
     @Deprecated
-    public Neo4jMappingContext(Closure defaultMapping, Class... classes) {
+    Neo4jMappingContext(Closure defaultMapping, Class... classes) {
         super();
         mappingFactory.setDefaultMapping(defaultMapping);
         addPersistentEntities(classes);
     }
 
-    public Neo4jMappingContext(Neo4jConnectionSourceSettings settings, Class... classes) {
+    Neo4jMappingContext(Neo4jConnectionSourceSettings settings, Class... classes) {
         super();
         mappingFactory.setDefaultMapping(settings.getDefault().getMapping());
         mappingFactory.setDefaultConstraints(settings.getDefault().getConstraints());
@@ -116,11 +112,11 @@ public class Neo4jMappingContext extends AbstractMappingContext {
         addPersistentEntities(classes);
     }
 
-    public IdGenerator getIdGenerator() {
+    IdGenerator getIdGenerator() {
         return idGenerator;
     }
 
-    public SnowflakeIdGenerator getSnowflakeIdGenerator() {
+    SnowflakeIdGenerator getSnowflakeIdGenerator() {
         if (snowflakeIdGenerator == null) {
             snowflakeIdGenerator = new SnowflakeIdGenerator();
         }
@@ -128,12 +124,12 @@ public class Neo4jMappingContext extends AbstractMappingContext {
     }
 
     @Override
-    public MappingConfigurationStrategy getMappingSyntaxStrategy() {
+    MappingConfigurationStrategy getMappingSyntaxStrategy() {
         return mappingSyntaxStrategy;
     }
 
     @Override
-    public MappingFactory getMappingFactory() {
+    MappingFactory getMappingFactory() {
         return mappingFactory;
     }
 
@@ -144,7 +140,7 @@ public class Neo4jMappingContext extends AbstractMappingContext {
 
     @Override
     protected PersistentEntity createPersistentEntity(Class javaClass, boolean external) {
-        final GraphPersistentEntity entity = Relationship.class.isAssignableFrom(javaClass) ?
+        final GraphPersistentEntity entity = Relationship.isAssignableFrom(javaClass) ?
             new RelationshipPersistentEntity(javaClass, this, external) :
             new GraphPersistentEntity(javaClass, this, external);
         final Collection<String> labels = entity.getLabels();
@@ -158,7 +154,7 @@ public class Neo4jMappingContext extends AbstractMappingContext {
      * @param labels The labels
      * @return The entity or null if it is not found
      */
-    public GraphPersistentEntity findPersistentEntityForLabels(Iterable<String> labels) {
+    GraphPersistentEntity findPersistentEntityForLabels(Iterable<String> labels) {
         final GraphPersistentEntity entity = entitiesByLabel.get(labels);
         return entity;
     }
@@ -169,10 +165,10 @@ public class Neo4jMappingContext extends AbstractMappingContext {
      * @param value The value
      * @return The value converted to a native Neo4j type
      */
-    public Object convertToNative(Object value) {
+    Object convertToNative(Object value) {
         if (value != null) {
             final Class<?> type = value.getClass();
-            if (type.equals(byte[].class)) {
+            if (type.equals(byte[])) {
                 // workaround for https://github.com/neo4j/neo4j-java-driver/issues/182, remove when fixed
                 byte[] bytes = (byte[]) value;
                 int[] intArray = new int[bytes.length];
@@ -192,7 +188,7 @@ public class Neo4jMappingContext extends AbstractMappingContext {
             } else {
                 final ConversionService conversionService = getConversionService();
                 if (value instanceof byte[]) {
-                    return conversionService.convert(value, String.class);
+                    return conversionService.convert(value, String);
                 } else {
                     if (conversionService.canConvert(type, LONG_TYPE)) {
                         return conversionService.convert(value, LONG_TYPE);
@@ -211,11 +207,10 @@ public class Neo4jMappingContext extends AbstractMappingContext {
     }
 
     @Override
-    public ProxyFactory getProxyFactory() {
-        if (!(this.proxyFactory instanceof Neo4jProxyFactory)) {
-            this.proxyFactory = new Neo4jProxyFactory();
+    ProxyFactory getProxyFactory() {
+        if (!(this.@proxyFactory instanceof Neo4jProxyFactory)) {
+            this.@proxyFactory = new Neo4jProxyFactory();
         }
-        return proxyFactory;
+        return this.@proxyFactory;
     }
-
 }

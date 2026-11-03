@@ -4,26 +4,22 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
  */
+@SuppressWarnings('UnnecessarySemicolon')
 package org.grails.datastore.gorm.neo4j.parsers;
 
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
+import groovy.transform.CompileStatic;
 
 /**
  * <p>
@@ -71,7 +67,10 @@ import java.util.Set;
  * The PlingStemmer uses material from <A HREF=http://wordnet.princeton.edu/>WordNet</A>.
  * </p>
  */
-public class PlingStemmer {
+// TODO(groovyism-cleanup): semicolons and double-quoted strings kept to preserve rename-similarity against the original .java (see matrei's review on #16576). Removed by the stacked groovyism-cleanup PR.
+@SuppressWarnings(['UnnecessarySemicolon', 'UnnecessaryGString'])
+@CompileStatic
+class PlingStemmer {
 
     /**
      * Words that end in "-se" in their plural forms (like "nurse" etc.)
@@ -717,37 +716,35 @@ public class PlingStemmer {
     /**
      * Maps irregular Germanic English plural nouns to their singular form
      */
-    private static final Map<String, String> irregular = Collections.unmodifiableMap(new HashMap<String, String>() {
-        {
-            put("beefs", "beef");
-            put("beeves", "beef");
-            put("brethren", "brother");
-            put("busses", "bus");
-            put("cattle", "cattlebeast");
-            put("children", "child");
-            put("corpora", "corpus");
-            put("ephemerides", "ephemeris");
-            put("firemen", "fireman");
-            put("genera", "genus");
-            put("genies", "genie");
-            put("genii", "genie");
-            put("kine", "cow");
-            put("lice", "louse");
-            put("men", "man");
-            put("mice", "mouse");
-            put("mongooses", "mongoose");
-            put("monies", "money");
-            put("mythoi", "mythos");
-            put("octopodes", "octopus");
-            put("octopuses", "octopus");
-            put("oxen", "ox");
-            put("people", "person");
-            put("soliloquies", "soliloquy");
-            put("throes", "throes");
-            put("trilbys", "trilby");
-            put("women", "woman");
-        }
-    });
+    private static final Map<String, String> irregular = Collections.unmodifiableMap([
+        "beefs": "beef",
+        "beeves": "beef",
+        "brethren": "brother",
+        "busses": "bus",
+        "cattle": "cattlebeast",
+        "children": "child",
+        "corpora": "corpus",
+        "ephemerides": "ephemeris",
+        "firemen": "fireman",
+        "genera": "genus",
+        "genies": "genie",
+        "genii": "genie",
+        "kine": "cow",
+        "lice": "louse",
+        "men": "man",
+        "mice": "mouse",
+        "mongooses": "mongoose",
+        "monies": "money",
+        "mythoi": "mythos",
+        "octopodes": "octopus",
+        "octopuses": "octopus",
+        "oxen": "ox",
+        "people": "person",
+        "soliloquies": "soliloquy",
+        "throes": "throes",
+        "trilbys": "trilby",
+        "women": "woman"
+    ] as Map<String, String>);
     /**
      * Contains word forms that can either be plural or singular
      */
@@ -788,14 +785,14 @@ public class PlingStemmer {
      * Tells whether a word form is plural. This method just checks whether the
      * stem method alters the word
      */
-    public static boolean isPlural(String s) {
+    static boolean isPlural(String s) {
         return (!s.equals(stem(s)));
     }
 
     /**
      * Tells whether a word form is singular. Note that a word can be both plural and singular
      */
-    public static boolean isSingular(String s) {
+    static boolean isSingular(String s) {
         return (singAndPlur.contains(s.toLowerCase()) || !isPlural(s));
     }
 
@@ -803,14 +800,14 @@ public class PlingStemmer {
      * Tells whether a word form is the singular form of one word and at
      * the same time the plural form of another.
      */
-    public static boolean isSingularAndPlural(String s) {
+    static boolean isSingularAndPlural(String s) {
         return (singAndPlur.contains(s.toLowerCase()));
     }
 
     /**
      * Stems an English noun
      */
-    public static String stem(String s) {
+    static String stem(String s) {
         String stem = s;
 
         // Handle irregular ones

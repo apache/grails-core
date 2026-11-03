@@ -4,24 +4,22 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
  */
+@SuppressWarnings('UnnecessarySemicolon')
 package org.grails.datastore.gorm.neo4j.engine;
 
-import java.io.Serializable;
-import java.util.Collection;
-import java.util.LinkedHashMap;
-import java.util.Map;
+import groovy.transform.CompileStatic;
 
 import org.neo4j.driver.Transaction;
 import org.slf4j.Logger;
@@ -45,16 +43,19 @@ import static org.grails.datastore.gorm.neo4j.engine.RelationshipPendingInsert.T
  * @author Stefan
  * @author Graeme Rocher
  */
-public class RelationshipPendingDelete extends PendingOperationAdapter<Object, Serializable> {
+// TODO(groovyism-cleanup): semicolons kept to preserve rename-similarity against the original .java (see matrei's review on #16576). Removed by the stacked groovyism-cleanup PR.
+@SuppressWarnings(['UnnecessarySemicolon'])
+@CompileStatic
+class RelationshipPendingDelete extends PendingOperationAdapter<Object, Serializable> {
 
-    private static final Logger log = LoggerFactory.getLogger(RelationshipPendingDelete.class);
+    private static final Logger log = LoggerFactory.getLogger(RelationshipPendingDelete);
 
     private final Transaction boltTransaction;
     private final Association association;
     private final Collection<Serializable> targetIdentifiers;
     private final EntityAccess entityAccess;
 
-    public RelationshipPendingDelete(EntityAccess parent, Association association, Collection<Serializable> pendingInserts, Transaction boltTransaction) {
+    RelationshipPendingDelete(EntityAccess parent, Association association, Collection<Serializable> pendingInserts, Transaction boltTransaction) {
         super(parent.getPersistentEntity(), (Serializable) parent.getIdentifier(), parent.getEntity());
         this.targetIdentifiers = pendingInserts;
         this.boltTransaction = boltTransaction;
@@ -63,7 +64,7 @@ public class RelationshipPendingDelete extends PendingOperationAdapter<Object, S
     }
 
     @Override
-    public void run() {
+    void run() {
         GraphPersistentEntity graphParent = (GraphPersistentEntity) getEntity();
 
         Serializable parentId = getNativeKey();
@@ -97,7 +98,7 @@ public class RelationshipPendingDelete extends PendingOperationAdapter<Object, S
         String cypher = graphParent.formatAssociationDelete(association, entityAccess.getEntity());
         if (cypher != null) {
             if (log.isDebugEnabled()) {
-                log.debug("DELETE Cypher [{}] for parameters [{}]", cypher, params);
+                log.debug('DELETE Cypher [{}] for parameters [{}]', cypher, params);
             }
             boltTransaction.run(cypher, params);
         }

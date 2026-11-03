@@ -4,53 +4,59 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
  */
+@SuppressWarnings('UnnecessarySemicolon')
 package org.grails.datastore.gorm.neo4j;
+
+import groovy.transform.CompileStatic;
 
 /**
  * combination of relationship type and direction to be used a key in a map
  */
-public class TypeDirectionPair {
+// TODO(groovyism-cleanup): semicolons kept to preserve rename-similarity against the original .java (see matrei's review on #16576). Removed by the stacked groovyism-cleanup PR.
+@SuppressWarnings(['UnnecessarySemicolon'])
+@CompileStatic
+class TypeDirectionPair {
 
     private String type;
     private boolean outgoing;
     private String targetType;
 
-    public TypeDirectionPair(String type, boolean outgoing) {
+    TypeDirectionPair(String type, boolean outgoing) {
         this.type = type;
         this.outgoing = outgoing;
     }
 
-    public String getType() {
+    String getType() {
         return type;
     }
 
-    public void setType(String type) {
+    void setType(String type) {
         this.type = type;
     }
 
-    public boolean isOutgoing() {
+    boolean isOutgoing() {
         return outgoing;
     }
 
-    public void setOutgoing(boolean outgoing) {
+    void setOutgoing(boolean outgoing) {
         this.outgoing = outgoing;
     }
 
     @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
+    boolean equals(Object o) {
+        if (this.is(o)) return true;
         if (o == null || getClass() != o.getClass()) return false;
 
         TypeDirectionPair that = (TypeDirectionPair) o;
@@ -60,25 +66,25 @@ public class TypeDirectionPair {
     }
 
     @Override
-    public int hashCode() {
+    int hashCode() {
         int result = type.hashCode();
         result = 31 * result + (outgoing ? 1 : 0);
         return result;
     }
 
     @Override
-    public String toString() {
-        return "TypeDirectionPair{" +
+    String toString() {
+        return 'TypeDirectionPair{' +
             "type='" + type + '\'' +
-            ", outgoing=" + outgoing +
+            ', outgoing=' + outgoing +
             '}';
     }
 
-    public String getTargetType() {
+    String getTargetType() {
         return targetType;
     }
 
-    public void setTargetType(String targetType) {
+    void setTargetType(String targetType) {
         this.targetType = targetType;
     }
 }
