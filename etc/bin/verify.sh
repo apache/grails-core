@@ -94,6 +94,7 @@ group_end
 echo "✅ KEYS Verified"
 
 group_start "Downloading Artifacts ..."
+GRAILS_DISTRIBUTION_BASE_URL="${GRAILS_DISTRIBUTION_BASE_URL:-}" \
 "${SCRIPT_DIR}/download-release-artifacts.sh" "${RELEASE_TAG}" "${DOWNLOAD_LOCATION}"
 group_end
 echo "✅ Artifacts Downloaded"
