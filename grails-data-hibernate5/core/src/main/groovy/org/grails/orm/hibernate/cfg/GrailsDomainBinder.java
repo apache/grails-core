@@ -1523,6 +1523,12 @@ public class GrailsDomainBinder implements MetadataContributor {
         bindClass(entity, root, mappings);
 
         Mapping m = getMapping(entity);
+        if (m != null && entity.isAbstract() && m.getTablePerHierarchy() && hasTablePerSubclassChild(children)) {
+            // an abstract base class that says nothing about its strategy follows a subclass that sets
+            // tablePerHierarchy false: the hierarchy is joined, as the subclass would be unable to be
+            // joined to a base class that keeps a discriminator column
+            m.setTablePerHierarchy(false);
+        }
 
         bindRootPersistentClassCommonValues(entity, root, mappings, sessionFactoryBeanName);
 
@@ -1539,6 +1545,16 @@ public class GrailsDomainBinder implements MetadataContributor {
         addMultiTenantFilterIfNecessary(entity, root, mappings, sessionFactoryBeanName);
 
         mappings.addEntityBinding(root);
+    }
+
+    private boolean hasTablePerSubclassChild(java.util.Collection<PersistentEntity> children) {
+        for (PersistentEntity child : children) {
+            Mapping childMapping = evaluateMapping(child, defaultMapping);
+            if (childMapping != null && !childMapping.getTablePerHierarchy() && !childMapping.isTablePerConcreteClass()) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
