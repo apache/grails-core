@@ -80,6 +80,21 @@ class DomainClassArtefactHandlerSpec extends Specification {
         DomainClassArtefactHandler.isDomainClass(DomainProxy$$EnhancerByProxy, true)
     }
 
+    void 'isDomainClass walks every generated layer when proxies are allowed'() {
+        expect:
+        DomainClassArtefactHandler.isDomainClass(DomainClassArtefactProxyEntity)
+        DomainClassArtefactHandler.isDomainClass(DomainClassArtefactProxyEntity, true)
+        DomainClassArtefactHandler.isDomainClass(DomainClassArtefactProxyEntity, false)
+        !DomainClassArtefactHandler.isDomainClass(DomainClassArtefactProxyEntity$Proxy)
+        !DomainClassArtefactHandler.isDomainClass(DomainClassArtefactProxyEntity$Proxy$Wrapper)
+        DomainClassArtefactHandler.isDomainClass(DomainClassArtefactProxyEntity$Proxy, true)
+        DomainClassArtefactHandler.isDomainClass(DomainClassArtefactProxyEntity$Proxy$Wrapper, true)
+        !DomainClassArtefactHandler.isDomainClass(DomainClassArtefactProxyEntity$Proxy, false)
+        !DomainClassArtefactHandler.isDomainClass(DomainClassArtefactProxyEntity$Proxy$Wrapper, false)
+        !DomainClassArtefactHandler.isDomainClass(DomainClassArtefactProxyPlain, true)
+        !DomainClassArtefactHandler.isDomainClass(null, true)
+    }
+
     static class PlainDomain {
 
     }
@@ -104,4 +119,17 @@ class DomainClassArtefactHandlerSpec extends Specification {
 // Top-level so getSimpleName() reflects the literal "$$" rather than a nested-class separator.
 class DomainProxy$$EnhancerByProxy extends DomainClassArtefactHandlerSpec.GrailsEntity {
 
+}
+
+@grails.persistence.Entity
+class DomainClassArtefactProxyEntity {
+}
+
+class DomainClassArtefactProxyEntity$Proxy extends DomainClassArtefactProxyEntity {
+}
+
+class DomainClassArtefactProxyEntity$Proxy$Wrapper extends DomainClassArtefactProxyEntity$Proxy {
+}
+
+class DomainClassArtefactProxyPlain {
 }

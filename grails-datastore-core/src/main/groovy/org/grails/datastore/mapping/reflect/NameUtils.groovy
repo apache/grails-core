@@ -99,15 +99,16 @@ class NameUtils {
     }
 
     /**
-     * Get the class name, taking into account proxies
+     * Get the class name, taking into account proxies.
+     * A {@code $} in the simple name marks a generated subclass; a nested class
+     * is unaffected, since its simple name carries no {@code $}.
      *
      * @param clazz The class
      * @return The class name
      */
-    static String getClassName(Class clazz) {
-        final String sn = clazz.getSimpleName();
-        if (sn.contains(DOLLAR_SEPARATOR)) {
-            return clazz.getSuperclass().getName();
+    static String getClassName(Class<?> clazz) {
+        while (clazz.getSimpleName().contains(DOLLAR_SEPARATOR) && clazz.getSuperclass() != null) {
+            clazz = clazz.getSuperclass();
         }
         return clazz.getName();
     }
