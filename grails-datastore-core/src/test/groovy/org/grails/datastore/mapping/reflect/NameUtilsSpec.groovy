@@ -24,6 +24,16 @@ import spock.lang.Unroll
 class NameUtilsSpec extends Specification {
 
     @Unroll
+    void "getClassName unwraps every proxy layer for #type.simpleName"() {
+        expect:
+        NameUtils.getClassName(type) == NameUtilsEntity.name
+
+        where:
+        type << [NameUtilsEntity, NameUtilsEntity$Proxy, NameUtilsEntity$Proxy$Wrapper,
+                 NameUtilsEntity$Proxy$Wrapper$Outer]
+    }
+
+    @Unroll
     void "decapitalizeFirstChar for #name should be #expected"(String name, String expected) {
         expect:
         NameUtils.decapitalizeFirstChar(name) == expected
@@ -188,4 +198,16 @@ class NameUtilsSpecProxied {
 }
 
 class NameUtilsSpecProxied$$Enhanced extends NameUtilsSpecProxied {
+}
+
+class NameUtilsEntity {
+}
+
+class NameUtilsEntity$Proxy extends NameUtilsEntity {
+}
+
+class NameUtilsEntity$Proxy$Wrapper extends NameUtilsEntity$Proxy {
+}
+
+class NameUtilsEntity$Proxy$Wrapper$Outer extends NameUtilsEntity$Proxy$Wrapper {
 }
