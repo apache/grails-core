@@ -44,7 +44,7 @@ Once you have the JAR resolved you need to get familiar with how Grails manages 
 * `readOnly` - If `true` makes the DataSource read-only, which results in the connection pool calling `setReadOnly(true)` on each `Connection`
 * `transactional` - If `false` leaves the DataSource's transactionManager bean outside the chained BE1PC transaction manager implementation. This only applies to additional datasources.
 * `persistenceInterceptor` - The default datasource is automatically wired up to the persistence interceptor, other datasources are not wired up automatically unless this is set to `true`
-* `properties` - Extra properties to set on the DataSource bean. The supported properties depend on the connection pool implementation. See the https://github.com/brettwooldridge/HikariCP#configuration-knobs-baby[HikariCP configuration documentation] for HikariCP, or the https://tomcat.apache.org/tomcat-9.0-doc/jdbc-pool.html#Common_Attributes[Tomcat JDBC Pool documentation] for Tomcat JDBC Pool.
+* `properties` - Extra properties to set on the DataSource bean. The supported properties depend on the connection pool implementation. See the https://github.com/brettwooldridge/HikariCP#gear-configuration-knobs-baby[HikariCP configuration documentation] for HikariCP, or the https://tomcat.apache.org/tomcat-10.1-doc/jdbc-pool.html#Common_Attributes[Tomcat JDBC Pool documentation] for Tomcat JDBC Pool.
 * `jmxExport` - If `true`, registers JMX MBeans for Tomcat JDBC Pool DataSources with `jmxEnabled = true` in their properties (defaults to false). For HikariCP, use `properties.registerMbeans = true` instead.
 * `type` - The connection pool class if you want to force Grails to use it when there are more than one available.
 
