@@ -186,4 +186,61 @@ class CriteriaSubqueryScenarioSpec extends Specification {
         then:
         thrown(DataException)
     }
+
+    void "criteria builder: a count subquery compares with an integer property"() {
+        given:
+        seed()
+        def newCount = new DetachedCriteria(ScenarioItem).build {
+            eq 'status', ScenarioStatus.NEW
+            projections { count() }
+        }
+
+        when:
+        def rows = ScenarioItem.createCriteria().list { gt 'qty', newCount }
+
+        then:
+        names(rows) == ['c']
+    }
+
+    void "criteria builder: a countDistinct subquery compares with an integer property"() {
+        given:
+        seed()
+        def statuses = new DetachedCriteria(ScenarioItem).build { projections { countDistinct 'status' } }
+
+        when:
+        def rows = ScenarioItem.createCriteria().list { gt 'qty', statuses }
+
+        then:
+        names(rows) == ['c']
+    }
+
+    void "criteria builder: an id subquery selects the row it names"() {
+        given:
+        seed()
+        def idOfA = new DetachedCriteria(ScenarioItem).build {
+            eq 'name', 'a'
+            projections { id() }
+        }
+
+        when:
+        def rows = ScenarioItem.createCriteria().list { eq 'id', idOfA }
+
+        then:
+        names(rows) == ['a']
+    }
+
+    void "criteria builder: a property subquery selects the rows with that value"() {
+        given:
+        seed()
+        def qtyOfC = new DetachedCriteria(ScenarioItem).build {
+            eq 'name', 'c'
+            projections { property 'qty' }
+        }
+
+        when:
+        def rows = ScenarioItem.createCriteria().list { eq 'qty', qtyOfC }
+
+        then:
+        names(rows) == ['c']
+    }
 }
