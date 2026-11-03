@@ -50,7 +50,7 @@ Once you have the JAR resolved you need to get familiar with how Grails manages 
 
 The following examples explicitly select HikariCP. Pool properties are not portable between implementations: Grails does not translate Tomcat JDBC Pool settings such as `maxActive`, `minIdle`, `maxWait`, or `jdbcInterceptors` into HikariCP settings, and properties that the selected pool does not have are ignored without a warning. For HikariCP, use `maximumPoolSize`, `minimumIdle`, and `connectionTimeout` (in milliseconds); there is no direct equivalent for Tomcat's `maxIdle` or `jdbcInterceptors`.
 
-To use Tomcat-specific properties instead, select `type = "org.apache.tomcat.jdbc.pool.DataSource"` and ensure Tomcat JDBC Pool is on the classpath.
+To use Tomcat-specific properties instead, add `runtimeOnly 'org.apache.tomcat:tomcat-jdbc'` to your dependencies (the Grails BOM manages its version) and select `type = "org.apache.tomcat.jdbc.pool.DataSource"`.
 
 A typical configuration for MySQL with HikariCP in `application.groovy` may be something like:
 
