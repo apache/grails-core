@@ -16,26 +16,30 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.commons;
+package org.grails.commons
 
-import grails.core.ArtefactHandlerAdapter;
-import org.grails.core.artefact.DomainClassArtefactHandler;
+import groovy.transform.CompileStatic
+
+import grails.core.ArtefactHandlerAdapter
+import org.grails.core.artefact.DomainClassArtefactHandler
 
 /**
  * @author Marc Palmer (marc@anyware.co.uk)
  */
-public class CodecArtefactHandler extends ArtefactHandlerAdapter {
+@CompileStatic
+class CodecArtefactHandler extends ArtefactHandlerAdapter {
 
-    public static final String TYPE = "Codec";
+    public static final String TYPE = 'Codec'
 
-    public CodecArtefactHandler() {
-        super(TYPE, GrailsCodecClass.class, DefaultGrailsCodecClass.class, TYPE);
+    CodecArtefactHandler() {
+        super(TYPE, GrailsCodecClass, DefaultGrailsCodecClass, TYPE)
     }
 
     @Override
-    public boolean isArtefactClass(@SuppressWarnings("rawtypes") Class clazz) {
-        if (clazz == null) return false;
+    boolean isArtefactClass(@SuppressWarnings('rawtypes') Class clazz) {
+        if (clazz == null) return false
 
-        return clazz.getName().endsWith(DefaultGrailsCodecClass.CODEC) && !DomainClassArtefactHandler.isDomainClass(clazz);
+        return clazz.getName().endsWith(DefaultGrailsCodecClass.CODEC) && !DomainClassArtefactHandler.isDomainClass(clazz)
     }
+
 }

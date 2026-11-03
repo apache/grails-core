@@ -16,10 +16,10 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
+@SuppressWarnings('UnnecessarySemicolon')
 package org.grails.plugins.codecs;
 
-import java.util.Locale;
-
+import groovy.transform.CompileStatic;
 import org.springframework.beans.factory.InitializingBean;
 
 import grails.core.GrailsApplication;
@@ -39,7 +39,11 @@ import org.grails.encoder.impl.HTMLEncoder;
  * @author Lari Hotari
  * @since 1.1
  */
-public final class HTMLCodec implements CodecFactory, GrailsApplicationAware, InitializingBean {
+// TODO(groovyism-cleanup): semicolons + double-quoted strings kept to preserve rename-similarity against the original .java (see matrei's review on #16576). Removed by the stacked groovyism-cleanup PR.
+@SuppressWarnings(['UnnecessarySemicolon', 'UnnecessaryGString'])
+@CompileStatic
+final class HTMLCodec implements CodecFactory, GrailsApplicationAware, InitializingBean {
+
     public static final String CONFIG_PROPERTY_GSP_HTMLCODEC = "grails.views.gsp.htmlcodec";
     static final String CODEC_NAME = "HTML";
     private GrailsApplication grailsApplication;
@@ -47,34 +51,34 @@ public final class HTMLCodec implements CodecFactory, GrailsApplicationAware, In
     static final Encoder xml_encoder = new HTMLEncoder();
     static final Encoder html4_encoder = new HTML4Encoder() {
         @Override
-        public CodecIdentifier getCodecIdentifier() {
+        CodecIdentifier getCodecIdentifier() {
             return HTMLEncoder.HTML_CODEC_IDENTIFIER;
         }
     };
     static final Decoder decoder = new HTML4Decoder() {
         @Override
-        public CodecIdentifier getCodecIdentifier() {
+        CodecIdentifier getCodecIdentifier() {
             return HTMLEncoder.HTML_CODEC_IDENTIFIER;
         }
     };
 
-    public HTMLCodec() {
+    HTMLCodec() {
         setUseLegacyEncoder(false);
     }
 
-    public Encoder getEncoder() {
+    Encoder getEncoder() {
         return encoder;
     }
 
-    public Decoder getDecoder() {
+    Decoder getDecoder() {
         return decoder;
     }
 
-    public void setGrailsApplication(GrailsApplication grailsApplication) {
+    void setGrailsApplication(GrailsApplication grailsApplication) {
         this.grailsApplication = grailsApplication;
     }
 
-    public void afterPropertiesSet() {
+    void afterPropertiesSet() {
         if (grailsApplication == null || grailsApplication.getConfig() == null) {
             return;
         }
@@ -88,7 +92,8 @@ public final class HTMLCodec implements CodecFactory, GrailsApplicationAware, In
         setUseLegacyEncoder("html4".equals(htmlCodecSettingStr) || "html".equals(htmlCodecSettingStr));
     }
 
-    public void setUseLegacyEncoder(boolean useLegacyEncoder) {
+    void setUseLegacyEncoder(boolean useLegacyEncoder) {
         encoder = useLegacyEncoder ? html4_encoder : xml_encoder;
     }
+
 }

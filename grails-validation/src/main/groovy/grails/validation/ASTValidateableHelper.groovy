@@ -16,27 +16,12 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.plugins.codecs;
+package grails.validation
 
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Primary;
+import org.codehaus.groovy.ast.ClassNode
 
-import grails.core.GrailsApplication;
-import org.grails.encoder.CodecLookup;
+interface ASTValidateableHelper {
 
-/**
- * Beans for Codecs
- *
- * @author graemerocher
- * @since 4.0
- */
-@Configuration
-public class CodecsConfiguration {
+    void injectValidateableCode(ClassNode classNode, boolean defaultNullable)
 
-    @Bean("codecLookup")
-    @Primary
-    public CodecLookup codecLookup(GrailsApplication grailsApplication) {
-        return new DefaultCodecLookup(grailsApplication);
-    }
 }

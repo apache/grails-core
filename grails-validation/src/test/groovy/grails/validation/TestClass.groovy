@@ -16,13 +16,12 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
+@SuppressWarnings('UnnecessarySemicolon')
 package grails.validation;
 
-import java.math.BigDecimal;
-import java.util.Collection;
-import java.util.Date;
-
-public class TestClass {
+// TODO(groovyism-cleanup): semicolons kept to preserve rename-similarity against the original .java (see matrei's review on #16576). Removed by the stacked groovyism-cleanup PR.
+@SuppressWarnings(['UnnecessarySemicolon'])
+class TestClass {
     private Object[] testArray;
     private BigDecimal testBigDecimal;
     private Collection testCollection;
@@ -35,91 +34,91 @@ public class TestClass {
     private Long testLong;
     private String testURL;
 
-    public Object[] getTestArray() {
+    Object[] getTestArray() {
         return testArray;
     }
 
-    public void setTestArray(Object[] testArray) {
+    void setTestArray(Object[] testArray) {
         this.testArray = testArray;
     }
 
-    public BigDecimal getTestBigDecimal() {
+    BigDecimal getTestBigDecimal() {
         return testBigDecimal;
     }
 
-    public void setTestBigDecimal(BigDecimal testBigDecimal) {
+    void setTestBigDecimal(BigDecimal testBigDecimal) {
         this.testBigDecimal = testBigDecimal;
     }
 
-    public Collection getTestCollection() {
+    Collection getTestCollection() {
         return testCollection;
     }
 
-    public void setTestCollection(Collection testCollection) {
+    void setTestCollection(Collection testCollection) {
         this.testCollection = testCollection;
     }
 
-    public Date getTestDate() {
+    Date getTestDate() {
         return testDate;
     }
 
-    public void setTestDate(Date testDate) {
+    void setTestDate(Date testDate) {
         this.testDate = testDate;
     }
 
-    public Double getTestDouble() {
+    Double getTestDouble() {
         return testDouble;
     }
 
-    public void setTestDouble(Double testDouble) {
+    void setTestDouble(Double testDouble) {
         this.testDouble = testDouble;
     }
 
-    public String getTestEmail() {
+    String getTestEmail() {
         return testEmail;
     }
 
-    public void setTestEmail(String testEmail) {
+    void setTestEmail(String testEmail) {
         this.testEmail = testEmail;
     }
 
-    public Float getTestFloat() {
+    Float getTestFloat() {
         return testFloat;
     }
 
-    public void setTestFloat(Float testFloat) {
+    void setTestFloat(Float testFloat) {
         this.testFloat = testFloat;
     }
 
-    public Integer getTestInteger() {
+    Integer getTestInteger() {
         return testInteger;
     }
 
-    public void setTestInteger(Integer testInteger) {
+    void setTestInteger(Integer testInteger) {
         this.testInteger = testInteger;
     }
 
-    public String getTestURL() {
+    String getTestURL() {
         return testURL;
     }
 
-    public void setTestURL(String testURL) {
+    void setTestURL(String testURL) {
         this.testURL = testURL;
     }
 
-    public String getTestString() {
+    String getTestString() {
         return testString;
     }
 
-    public void setTestString(String testString) {
+    void setTestString(String testString) {
         this.testString = testString;
     }
 
-    public Long getTestLong() {
+    Long getTestLong() {
         return testLong;
     }
 
-    public void setTestLong(Long testLong) {
+    void setTestLong(Long testLong) {
         this.testLong = testLong;
     }
 }

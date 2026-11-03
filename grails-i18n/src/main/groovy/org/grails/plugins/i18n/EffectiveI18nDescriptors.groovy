@@ -16,16 +16,10 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.grails.plugins.i18n;
+package org.grails.plugins.i18n
 
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-
-import org.apache.grails.core.plugins.PluginUtils;
+import groovy.transform.CompileStatic
+import org.apache.grails.core.plugins.PluginUtils
 
 /**
  * The message bundles that actually participate, in the order Spring Boot should consult them.
@@ -53,15 +47,16 @@ import org.apache.grails.core.plugins.PluginUtils;
  *
  * @since 8.0
  */
-public final class EffectiveI18nDescriptors {
+@CompileStatic
+final class EffectiveI18nDescriptors {
 
-    private final List<String> basenames;
+    private final List<String> basenames
 
-    private final List<String> locales;
+    private final List<String> locales
 
     private EffectiveI18nDescriptors(List<String> basenames, List<String> locales) {
-        this.basenames = List.copyOf(basenames);
-        this.locales = List.copyOf(locales);
+        this.basenames = List.copyOf(basenames)
+        this.locales = List.copyOf(locales)
     }
 
     /**
@@ -73,50 +68,50 @@ public final class EffectiveI18nDescriptors {
      * @param includePluginBundles whether plugin bundles participate at all
      * @return the effective base names and locales
      */
-    public static EffectiveI18nDescriptors of(List<I18nDescriptor> descriptors,
+    static EffectiveI18nDescriptors of(List<I18nDescriptor> descriptors,
             List<String> pluginNamesInTopologicalOrder, boolean includePluginBundles) {
 
-        Map<String, I18nDescriptor> pluginDescriptors = new LinkedHashMap<>();
-        List<I18nDescriptor> applications = new ArrayList<>();
+        Map<String, I18nDescriptor> pluginDescriptors = new LinkedHashMap<>()
+        List<I18nDescriptor> applications = new ArrayList<>()
         for (I18nDescriptor descriptor : descriptors) {
             if (descriptor.isApplication()) {
-                applications.add(descriptor);
+                applications.add(descriptor)
             }
             else {
                 // Descriptors record the hyphenated plugin name, matching the bundle base-name
                 // convention (spring-security-core), while a discovered plugin reports the logical
                 // camel-case form (springSecurityCore). Normalising both sides is what lets the two
                 // meet; comparing them raw silently drops every multi-word plugin's bundles.
-                pluginDescriptors.put(PluginUtils.normalizePluginName(descriptor.name()), descriptor);
+                pluginDescriptors.put(PluginUtils.normalizePluginName(descriptor.name()), descriptor)
             }
         }
 
-        List<I18nDescriptor> effectivePlugins = new ArrayList<>();
+        List<I18nDescriptor> effectivePlugins = new ArrayList<>()
         if (includePluginBundles) {
             for (String pluginName : pluginNamesInTopologicalOrder) {
-                I18nDescriptor descriptor = pluginDescriptors.get(PluginUtils.normalizePluginName(pluginName));
+                I18nDescriptor descriptor = pluginDescriptors.get(PluginUtils.normalizePluginName(pluginName))
                 if (descriptor != null) {
-                    effectivePlugins.add(descriptor);
+                    effectivePlugins.add(descriptor)
                 }
             }
         }
 
-        Set<String> basenames = new LinkedHashSet<>();
-        Set<String> locales = new LinkedHashSet<>();
+        Set<String> basenames = new LinkedHashSet<>()
+        Set<String> locales = new LinkedHashSet<>()
         for (I18nDescriptor application : applications) {
-            basenames.addAll(application.basenames());
-            locales.addAll(application.locales());
+            basenames.addAll(application.basenames())
+            locales.addAll(application.locales())
         }
         for (int i = effectivePlugins.size() - 1; i >= 0; i--) {
-            basenames.addAll(effectivePlugins.get(i).basenames());
+            basenames.addAll(effectivePlugins.get(i).basenames())
         }
         for (I18nDescriptor plugin : effectivePlugins) {
-            locales.addAll(plugin.locales());
+            locales.addAll(plugin.locales())
         }
 
-        List<String> sortedLocales = new ArrayList<>(locales);
-        sortedLocales.sort(null);
-        return new EffectiveI18nDescriptors(new ArrayList<>(basenames), sortedLocales);
+        List<String> sortedLocales = new ArrayList<>(locales)
+        Collections.sort(sortedLocales)
+        return new EffectiveI18nDescriptors(new ArrayList<>(basenames), sortedLocales)
     }
 
     /**
@@ -125,8 +120,8 @@ public final class EffectiveI18nDescriptors {
      *
      * @return the base names, never {@code null}
      */
-    public List<String> basenames() {
-        return this.basenames;
+    List<String> basenames() {
+        return this.basenames
     }
 
     /**
@@ -135,7 +130,8 @@ public final class EffectiveI18nDescriptors {
      *
      * @return the locale identifiers, never {@code null}
      */
-    public List<String> locales() {
-        return this.locales;
+    List<String> locales() {
+        return this.locales
     }
+
 }
