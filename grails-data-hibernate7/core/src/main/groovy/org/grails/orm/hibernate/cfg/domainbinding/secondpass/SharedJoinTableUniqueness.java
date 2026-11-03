@@ -71,6 +71,7 @@ public enum SharedJoinTableUniqueness {
             // non-null columns of a row, so a row collides only with a row of its own collection for the same element,
             // and a plain key per collection would reject the rows of the other collections, null in that collection's
             // columns and equal in the ones they have in common
+            boolean widened = false;
             for (UniqueKey uniqueKey : table.getUniqueKeys().values()) {
                 if (uniqueKey.isExplicit() || own.stream().noneMatch(uniqueKey::containsColumn)) {
                     continue;
@@ -80,6 +81,15 @@ public enum SharedJoinTableUniqueness {
                         uniqueKey.addColumn(column);
                     }
                 }
+                widened = true;
+            }
+            // a list or a map has no implicit unique key to widen (Hibernate keyed it with a primary key instead), so
+            // the first one gets a key of its own, which the next one that shares a column with it widens
+            if (!widened) {
+                UniqueKey uniqueKey = new UniqueKey(table);
+                uniqueKey.setName(naming.uniqueKeyName(own));
+                own.forEach(uniqueKey::addColumn);
+                table.addUniqueKey(uniqueKey);
             }
         }
     },

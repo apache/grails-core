@@ -45,31 +45,25 @@ configurations {
 dependencies {
     implementation platform(project(':grails-hibernate7-bom'))
 
+    api 'org.apache.groovy:groovy'
     implementation("org.liquibase:liquibase-core")
     implementation("org.hibernate.orm:hibernate-core")
     implementation("org.hibernate.models:hibernate-models")
+    // hibernate-core's Gradle metadata exposes jboss-logging at runtime only, but Groovydoc
+    // resolves the documented Hibernate types with Class.forName and needs it on the compile classpath.
+    compileOnly("org.jboss.logging:jboss-logging")
     compileOnly("org.hibernate.orm:hibernate-envers")
     testCompileOnly("org.hibernate.orm:hibernate-envers")
-
-    compileOnly "org.projectlombok:lombok"
-    annotationProcessor platform(project(':grails-hibernate7-bom'))
-    annotationProcessor 'org.projectlombok:lombok'
 
     testFixturesApi platform(project(':grails-hibernate7-bom'))
     testFixturesApi("org.hibernate.orm:hibernate-core")
     testFixturesApi("org.hibernate.orm:hibernate-envers")
-    testFixturesCompileOnly "org.projectlombok:lombok"
-    testFixturesAnnotationProcessor platform(project(':grails-hibernate7-bom'))
-    testFixturesAnnotationProcessor 'org.projectlombok:lombok'
 
     compileOnly 'org.springframework:spring-beans'
     compileOnly 'org.springframework:spring-context'
     compileOnly 'org.springframework:spring-orm'
 
     testImplementation platform(project(':grails-hibernate7-bom'))
-    testCompileOnly "org.projectlombok:lombok"
-    testAnnotationProcessor platform(project(':grails-hibernate7-bom'))
-    testAnnotationProcessor "org.projectlombok:lombok"
 
     testImplementation 'com.h2database:h2'
     testImplementation 'org.hsqldb:hsqldb'
