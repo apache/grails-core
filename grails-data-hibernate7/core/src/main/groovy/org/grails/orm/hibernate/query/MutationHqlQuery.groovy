@@ -55,9 +55,9 @@ class MutationHqlQuery extends Query implements HqlQueryMethods {
     }
 
     protected void applyQuerySettings(HqlQueryDelegate d) {
-        populateQuerySettings(d, queryContext.querySettings())
-        populateHints(d, queryContext.hints())
-        HqlQueryMethods.populateParameters(d, queryContext)
+        populateQuerySettings(d, queryContext.settings().settings())
+        populateHints(d, queryContext.settings().hints())
+        HqlQueryMethods.populateParameters(d, queryContext.parameters())
     }
 
     @Override

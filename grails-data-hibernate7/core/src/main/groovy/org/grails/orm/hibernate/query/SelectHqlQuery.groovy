@@ -67,9 +67,9 @@ class SelectHqlQuery extends Query implements HqlQueryMethods, Serializable {
         if (o != null && o > -1) {
             d.setFirstResult(o)
         }
-        populateQuerySettings(d, queryContext.querySettings())
-        populateHints(d, queryContext.hints())
-        HqlQueryMethods.populateParameters(d, queryContext)
+        populateQuerySettings(d, queryContext.settings().settings())
+        populateHints(d, queryContext.settings().hints())
+        HqlQueryMethods.populateParameters(d, queryContext.parameters())
     }
 
     int executeUpdate() {
@@ -100,7 +100,7 @@ class SelectHqlQuery extends Query implements HqlQueryMethods, Serializable {
         if (m != null && m > -1) {
             return m
         }
-        Object value = queryContext.querySettings().get(HibernateQueryArgument.MAX.value())
+        Object value = queryContext.settings().getSetting(HibernateQueryArgument.MAX)
         return value == null ? -1 : HqlQueryMethods.toInteger(value)
     }
 
@@ -110,7 +110,7 @@ class SelectHqlQuery extends Query implements HqlQueryMethods, Serializable {
         if (o != null && o > -1) {
             return o
         }
-        Object value = queryContext.querySettings().get(HibernateQueryArgument.OFFSET.value())
+        Object value = queryContext.settings().getSetting(HibernateQueryArgument.OFFSET)
         return value == null ? 0 : HqlQueryMethods.toInteger(value)
     }
 
