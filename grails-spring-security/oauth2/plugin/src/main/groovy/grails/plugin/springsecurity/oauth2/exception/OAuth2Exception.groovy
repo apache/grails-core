@@ -16,7 +16,9 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package grails.plugin.springsecurity.oauth2.exception;
+package grails.plugin.springsecurity.oauth2.exception
+
+import groovy.transform.CompileStatic
 
 /**
  * Always code as if the guy who ends up maintaining your code
@@ -27,13 +29,15 @@ package grails.plugin.springsecurity.oauth2.exception;
  * <p>
  * Created by Johannes on 06.04.2016.
  */
-public class OAuth2Exception extends RuntimeException {
+@CompileStatic
+class OAuth2Exception extends RuntimeException {
 
-    public OAuth2Exception(String message) {
-        super(message);
+    OAuth2Exception(String message) {
+        super(message)
     }
 
-    public OAuth2Exception(String message, Throwable cause) {
-        super(message, cause);
+    OAuth2Exception(String message, Throwable cause) {
+        super(message, cause)
     }
+
 }

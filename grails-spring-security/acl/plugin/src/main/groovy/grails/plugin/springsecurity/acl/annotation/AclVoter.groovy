@@ -16,14 +16,14 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package grails.plugin.springsecurity.acl.annotation;
+package grails.plugin.springsecurity.acl.annotation
 
-import java.lang.annotation.Documented;
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Inherited;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
+import java.lang.annotation.Documented
+import java.lang.annotation.ElementType
+import java.lang.annotation.Inherited
+import java.lang.annotation.Retention
+import java.lang.annotation.RetentionPolicy
+import java.lang.annotation.Target
 
 /**
  * Annotation for Controllers or Services at the class level or per-action/per-method,
@@ -31,23 +31,23 @@ import java.lang.annotation.Target;
  *
  * @author <a href='mailto:burt@burtbeckwith.com'>Burt Beckwith</a>
  */
-@Target({ElementType.FIELD, ElementType.METHOD, ElementType.TYPE})
+@Target([ElementType.FIELD, ElementType.METHOD, ElementType.TYPE])
 @Retention(RetentionPolicy.RUNTIME)
 @Inherited
 @Documented
-public @interface AclVoter {
+@interface AclVoter {
 
     /**
      * The bean name of the associated Voter.
      * @return  the name
      */
-    String name();
+    String name()
 
     /**
      * The config attribute, e.g. <code>ACL_REPORT_WRITE</code>.
      * @return  the attribute
      */
-    String configAttribute();
+    String configAttribute()
 
     /**
      * The {@link org.springframework.security.acls.domain.BasePermission} constant names that are required.
@@ -55,5 +55,6 @@ public @interface AclVoter {
      *
      * @return  the names
      */
-    String[] permissions() default {"READ"};
+    String[] permissions() default ['READ']
+
 }

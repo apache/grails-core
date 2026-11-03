@@ -16,7 +16,9 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package grails.plugin.springsecurity;
+package grails.plugin.springsecurity
+
+import groovy.transform.CompileStatic
 
 /**
  * Stores the default order numbers of all Spring Security filters for use in configuration.
@@ -25,7 +27,8 @@ package grails.plugin.springsecurity;
  * unfortunately is package-default.
  *
  */
-public enum SecurityFilterPosition {
+@CompileStatic
+enum SecurityFilterPosition {
 
     FIRST(Integer.MIN_VALUE),
 
@@ -108,22 +111,22 @@ public enum SecurityFilterPosition {
 
     SWITCH_USER_FILTER,
 
-    LAST(Integer.MAX_VALUE);
+    LAST(Integer.MAX_VALUE)
 
-    private static final int INTERVAL = 100;
+    private static final int INTERVAL = 100
 
-    private final int order;
+    private final int order
 
     SecurityFilterPosition() {
-        this.order = ordinal() * INTERVAL;
+        this.order = ordinal() * INTERVAL
     }
 
     SecurityFilterPosition(int order) {
-        this.order = order;
+        this.order = order
     }
 
-    public int getOrder() {
-        return this.order;
+    int getOrder() {
+        return this.order
     }
 
 }
