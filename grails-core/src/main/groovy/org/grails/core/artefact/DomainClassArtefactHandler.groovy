@@ -111,8 +111,11 @@ class DomainClassArtefactHandler extends ArtefactHandlerAdapter implements Grail
 
     static boolean isDomainClass(Class<?> clazz, boolean allowProxyClass) {
         boolean retval = isDomainClass(clazz);
-        if (!retval && allowProxyClass && clazz != null && clazz.getSimpleName().contains('\$')) {
-            retval = isDomainClass(clazz.getSuperclass());
+        if (!retval && allowProxyClass && clazz != null) {
+            while (!retval && clazz.getSimpleName().contains('\$') && clazz.getSuperclass() != null) {
+                clazz = clazz.getSuperclass();
+                retval = isDomainClass(clazz);
+            }
         }
         return retval;
     }
