@@ -239,7 +239,8 @@ public class GrailsHibernateTemplate implements IHibernateTemplate {
             sessionHolder = new SessionHolder(newSession);
             txResources.bindResource(sessionFactory, sessionHolder);
 
-            return execute(callable::call);
+            final Session scopedSession = newSession;
+            return doExecute(callable::call, false, scopedSession);
         } finally {
             cleanupNewSession(newSession);
             strategy.restore();
@@ -352,7 +353,16 @@ public class GrailsHibernateTemplate implements IHibernateTemplate {
 
         Assert.notNull(action, "Callback object must not be null");
 
-        Session session = getSession();
+        return doExecute(action, enforceNativeSession, getSession());
+    }
+
+    /**
+     * Runs the callback against the given session. {@link #getSession()} is not called for a session the caller
+     * has just bound itself: it would register the holder with the surrounding synchronization, and a transaction
+     * manager that begins inside the callback would then open a second session instead of using this one.
+     */
+    private <T> T doExecute(HibernateCallback<T> action, boolean enforceNativeSession, Session session)
+            throws DataAccessException {
         boolean existingTransaction = isSessionTransactional(session);
         if (existingTransaction) {
             LOG.debug("Found thread-bound Session for HibernateTemplate");
