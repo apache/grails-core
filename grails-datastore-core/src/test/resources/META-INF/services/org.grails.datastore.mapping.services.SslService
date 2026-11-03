@@ -1,0 +1,5 @@
+# services used by SoftServiceLoaderSpec
+org.grails.datastore.mapping.services.SslServiceA
+
+org.grails.datastore.mapping.services.SslMissing#not on the classpath
+org.grails.datastore.mapping.services.SslServiceB

@@ -24,6 +24,16 @@ import spock.lang.Unroll
 class NameUtilsSpec extends Specification {
 
     @Unroll
+    void "getClassName unwraps every proxy layer for #type.simpleName"() {
+        expect:
+        NameUtils.getClassName(type) == NameUtilsEntity.name
+
+        where:
+        type << [NameUtilsEntity, NameUtilsEntity$Proxy, NameUtilsEntity$Proxy$Wrapper,
+                 NameUtilsEntity$Proxy$Wrapper$Outer]
+    }
+
+    @Unroll
     void "decapitalizeFirstChar for #name should be #expected"(String name, String expected) {
         expect:
         NameUtils.decapitalizeFirstChar(name) == expected
@@ -33,6 +43,101 @@ class NameUtilsSpec extends Specification {
         'Name'  | 'name'
         'name'  | 'name'
         'IName' | 'iName'
+        ''      | ''
+        null    | null
+    }
+
+    @Unroll
+    void "decapitalize follows the JavaBean convention for #name"() {
+        expect:
+        NameUtils.decapitalize(name) == expected
+
+        where:
+        name    | expected
+        'Name'  | 'name'
+        'URL'   | 'URL'
+        'name'  | 'name'
+        ''      | ''
+        null    | null
+    }
+
+    @Unroll
+    void "capitalize follows the JavaBean convention for #name"() {
+        expect:
+        NameUtils.capitalize(name) == expected
+
+        where:
+        name   | expected
+        'name' | 'Name'
+        'Name' | 'Name'
+        'uRL'  | 'uRL'
+        ''     | ''
+    }
+
+    void "getter and setter names are derived from the property name"() {
+        expect:
+        NameUtils.getSetterName('name') == 'setName'
+        NameUtils.getGetterName('name') == 'getName'
+        NameUtils.getGetterName('name', false) == 'getName'
+        NameUtils.getGetterName('active', true) == 'isActive'
+    }
+
+    @Unroll
+    void "getPropertyNameForGetterOrSetter(#accessor) == #expected"() {
+        expect:
+        NameUtils.getPropertyNameForGetterOrSetter(accessor) == expected
+
+        where:
+        accessor   | expected
+        'getName'  | 'name'
+        'setName'  | 'name'
+        'isActive' | 'active'
+        'getURL'   | 'URL'
+        'name'     | null
+        ''         | null
+        null       | null
+    }
+
+    void "getClassName unwraps proxy classes by simple name"() {
+        expect:
+        NameUtils.getClassName(String) == 'java.lang.String'
+        NameUtils.getClassName(NameUtilsSpecProxied$$Enhanced) == NameUtilsSpecProxied.name
+    }
+
+    @Unroll
+    void "isConfigurational(#name) == #expected"() {
+        expect:
+        NameUtils.isConfigurational(name) == expected
+        NameUtils.isNotConfigurational(name) == !expected
+
+        where:
+        name                 | expected
+        'metaClass'          | true
+        'class'              | true
+        'transients'         | true
+        'attached'           | true
+        'dirty'              | true
+        'dirtyPropertyNames' | true
+        'hasMany'            | true
+        'constraints'        | true
+        'mapWith'            | true
+        'mapping'            | false
+        'mappedBy'           | true
+        'belongsTo'          | true
+        'errors'             | true
+        'transactionManager' | true
+        'dataSource'         | true
+        'sessionFactory'     | true
+        'messageSource'      | true
+        'applicationContext' | true
+        'properties'         | true
+        'name'               | false
+        'id'                 | false
+    }
+
+    void "the dollar separator marks generated classes"() {
+        expect:
+        NameUtils.DOLLAR_SEPARATOR == '$'
     }
 
     @Unroll
@@ -86,4 +191,23 @@ class NameUtilsSpec extends Specification {
         'na\u200Bme'        | 'zero-width space'
         'name\n'            | 'newline'
     }
+
+}
+
+class NameUtilsSpecProxied {
+}
+
+class NameUtilsSpecProxied$$Enhanced extends NameUtilsSpecProxied {
+}
+
+class NameUtilsEntity {
+}
+
+class NameUtilsEntity$Proxy extends NameUtilsEntity {
+}
+
+class NameUtilsEntity$Proxy$Wrapper extends NameUtilsEntity$Proxy {
+}
+
+class NameUtilsEntity$Proxy$Wrapper$Outer extends NameUtilsEntity$Proxy$Wrapper {
 }
