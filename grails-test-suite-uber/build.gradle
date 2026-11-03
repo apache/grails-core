@@ -81,6 +81,7 @@ dependencies {
     testRuntimeOnly 'org.aspectj:aspectjweaver'
     testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine'
     testRuntimeOnly 'org.springframework:spring-aspects'
+    testRuntimeOnly project(':grails-test-listener')
 }
 
 def isolatedTestPatterns = [

@@ -31,6 +31,9 @@ dependencies {
     add('testRuntimeOnly', 'org.junit.platform:junit-platform-launcher')
     add('testRuntimeOnly', 'net.bytebuddy:byte-buddy')
     add('testRuntimeOnly', 'org.objenesis:objenesis')
+    if (project.path != ':grails-test-listener') {
+        add('testRuntimeOnly', project(':grails-test-listener'))
+    }
 }
 
 // Disable build cache for Groovy compilation in CI to ensure AST transformations are always applied.
