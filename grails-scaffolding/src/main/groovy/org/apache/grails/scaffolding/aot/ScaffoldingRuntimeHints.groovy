@@ -16,13 +16,13 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.apache.grails.scaffolding.aot;
+package org.apache.grails.scaffolding.aot
 
-import org.jspecify.annotations.Nullable;
-
-import org.springframework.aot.hint.MemberCategory;
-import org.springframework.aot.hint.RuntimeHints;
-import org.springframework.aot.hint.RuntimeHintsRegistrar;
+import groovy.transform.CompileStatic
+import org.jspecify.annotations.Nullable
+import org.springframework.aot.hint.MemberCategory
+import org.springframework.aot.hint.RuntimeHints
+import org.springframework.aot.hint.RuntimeHintsRegistrar
 
 /**
  * Registers the controller a scaffolded resource is served by, and the templates its pages are
@@ -38,25 +38,27 @@ import org.springframework.aot.hint.RuntimeHintsRegistrar;
  *
  * @since 8.0
  */
-public class ScaffoldingRuntimeHints implements RuntimeHintsRegistrar {
+@CompileStatic
+class ScaffoldingRuntimeHints implements RuntimeHintsRegistrar {
 
-    private static final String[] DISPATCHED_TYPES = {
-        "grails.plugin.scaffolding.RestfulServiceController",
-        "grails.plugin.scaffolding.ScaffoldingViewResolver",
-        "grails.plugin.scaffolding.annotation.Scaffold"
-    };
+    private static final String[] DISPATCHED_TYPES = [
+        'grails.plugin.scaffolding.RestfulServiceController',
+        'grails.plugin.scaffolding.ScaffoldingViewResolver',
+        'grails.plugin.scaffolding.annotation.Scaffold'
+    ] as String[]
 
-    private static final String TEMPLATES = "META-INF/templates/scaffolding/**/*.gsp";
+    private static final String TEMPLATES = 'META-INF/templates/scaffolding/**/*.gsp'
 
     @Override
-    public void registerHints(RuntimeHints hints, @Nullable ClassLoader classLoader) {
-        for (String type : DISPATCHED_TYPES) {
+    void registerHints(RuntimeHints hints, @Nullable ClassLoader classLoader) {
+        for (String type in DISPATCHED_TYPES) {
             hints.reflection().registerTypeIfPresent(classLoader, type,
                     MemberCategory.INVOKE_DECLARED_METHODS,
                     MemberCategory.INVOKE_PUBLIC_METHODS,
                     MemberCategory.INVOKE_DECLARED_CONSTRUCTORS,
-                    MemberCategory.ACCESS_DECLARED_FIELDS);
+                    MemberCategory.ACCESS_DECLARED_FIELDS)
         }
-        hints.resources().registerPattern(TEMPLATES);
+        hints.resources().registerPattern(TEMPLATES)
     }
+
 }

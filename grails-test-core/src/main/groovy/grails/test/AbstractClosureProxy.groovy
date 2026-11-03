@@ -16,28 +16,30 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package grails.test;
+package grails.test
 
-import groovy.lang.Closure;
+import groovy.transform.CompileStatic
+import org.codehaus.groovy.runtime.InvokerHelper
 
 /**
  * Skeleton implementation of a wrapper class for closures that allows
  * you to intercept invocations of the closure. The wrapper can be used
  * anywhere that the target closure can be used.
  */
-@SuppressWarnings({ "serial", "rawtypes" })
-public abstract class AbstractClosureProxy extends Closure {
+@SuppressWarnings([ 'serial', 'rawtypes' ])
+@CompileStatic
+abstract class AbstractClosureProxy extends Closure {
 
-    private Closure<?> target;
+    private Closure<?> target
 
     /**
      * Creates a new instance that wraps the target closure and sends
      * profiling events to the given profiler log.
      * @param closure The target closure to wrap.
      */
-    public AbstractClosureProxy(Closure<?> closure) {
-        super(closure.getOwner(), closure.getThisObject());
-        target = closure;
+    AbstractClosureProxy(Closure<?> closure) {
+        super(closure.getOwner(), closure.getThisObject())
+        target = closure
     }
 
     /**
@@ -48,7 +50,7 @@ public abstract class AbstractClosureProxy extends Closure {
      * what you're doing.
      * @param args The arguments passed to the closure.
      */
-    protected abstract void doBeforeCall(Object[] args);
+    protected abstract void doBeforeCall(Object[] args)
 
     /**
      * This method is called after the target closure is invoked.
@@ -56,7 +58,7 @@ public abstract class AbstractClosureProxy extends Closure {
      * by the target closure.
      * @param args The arguments passed to the closure.
      */
-    protected abstract void doAfterCall(Object[] args);
+    protected abstract void doAfterCall(Object[] args)
 
     /**
      * Called when a new instance of the proxy needs to be created for
@@ -68,20 +70,20 @@ public abstract class AbstractClosureProxy extends Closure {
      * </pre>
      * @param c The closure to wrap/proxy.
      */
-    protected abstract Closure<?> createWrapper(Closure<?> c);
+    protected abstract Closure<?> createWrapper(Closure<?> c)
 
     /**
      * This is the important one: logs entry and exit of the closure call.
      */
     @Override
-    public Object call(Object... objects) {
-        doBeforeCall(objects);
+    Object call(Object... objects) {
+        doBeforeCall(objects)
 
         try {
-            return target.call(objects);
+            return InvokerHelper.invokeClosure(target, objects)
         }
         finally {
-            doAfterCall(objects);
+            doAfterCall(objects)
         }
     }
 
@@ -91,77 +93,78 @@ public abstract class AbstractClosureProxy extends Closure {
      * target closure for this wrapper as well.
      */
     @Override
-    public boolean equals(Object obj) {
-        return this == obj || target == obj;
+    boolean equals(Object obj) {
+        return this.is(obj) || target.is(obj)
     }
 
     @Override
-    public int hashCode() {
-        return target.hashCode();
+    int hashCode() {
+        return target.hashCode()
     }
 
     @Override
-    public Closure<?> curry(Object... objects) {
-        return createWrapper(target.curry(objects));
+    Closure<?> curry(Object... objects) {
+        return createWrapper(target.curry(objects))
     }
 
     @Override
-    public boolean isCase(Object o) {
-        return target.isCase(o);
+    boolean isCase(Object o) {
+        return target.isCase(o)
     }
 
     @Override
-    public Closure<?> asWritable() {
-        return target.asWritable();
+    Closure<?> asWritable() {
+        return target.asWritable()
     }
 
     @Override
-    public Object getProperty(String property) {
-        return target.getProperty(property);
+    Object getProperty(String property) {
+        return target.getProperty(property)
     }
 
     @Override
-    public void setProperty(String s, Object o) {
-        target.setProperty(s, o);
+    void setProperty(String s, Object o) {
+        target.setProperty(s, o)
     }
 
     @Override
-    public int getMaximumNumberOfParameters() {
-        return target.getMaximumNumberOfParameters();
+    int getMaximumNumberOfParameters() {
+        return target.getMaximumNumberOfParameters()
     }
 
     @Override
-    public Class<?>[] getParameterTypes() {
-        return target.getParameterTypes();
+    Class<?>[] getParameterTypes() {
+        return target.getParameterTypes()
     }
 
     @Override
-    public Object getDelegate() {
-        return target.getDelegate();
+    Object getDelegate() {
+        return target.getDelegate()
     }
 
     @Override
-    public void setDelegate(Object o) {
-        target.setDelegate(o);
+    void setDelegate(Object o) {
+        target.setDelegate(o)
     }
 
     @Override
-    public int getDirective() {
-        return target.getDirective();
+    int getDirective() {
+        return target.getDirective()
     }
 
     @Override
-    public void setDirective(int i) {
-        target.setDirective(i);
+    void setDirective(int i) {
+        target.setDirective(i)
     }
 
     @Override
-    public int getResolveStrategy() {
-        return target.getResolveStrategy();
+    int getResolveStrategy() {
+        return target.getResolveStrategy()
     }
 
     @Override
-    public void setResolveStrategy(int i) {
-        target.setResolveStrategy(i);
+    void setResolveStrategy(int i) {
+        target.setResolveStrategy(i)
     }
+
 }

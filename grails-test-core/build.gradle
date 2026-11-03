@@ -66,8 +66,11 @@ dependencies {
     // Logging
     api 'org.slf4j:slf4j-api'
     api 'org.slf4j:jcl-over-slf4j'
+
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine'
 }
 
 apply {
     from rootProject.layout.projectDirectory.file('gradle/docs-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/test-config.gradle')
 }

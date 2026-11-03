@@ -16,21 +16,24 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
+@SuppressWarnings('UnnecessarySemicolon')
 package grails.plugin.cache;
 
-import java.io.Serializable;
-import java.util.Collection;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentMap;
 
 import com.googlecode.concurrentlinkedhashmap.ConcurrentLinkedHashMap;
+import groovy.transform.CompileStatic;
 
 import org.springframework.cache.support.SimpleValueWrapper;
 
 /**
  * @author Jakob Drangmeister
  */
-public class GrailsConcurrentLinkedMapCache implements GrailsCache {
+// TODO(groovyism-cleanup): semicolons + double-quoted strings kept to preserve rename-similarity against the original .java (see matrei's review on #16576). Removed by the stacked groovyism-cleanup PR.
+@SuppressWarnings(['UnnecessarySemicolon', 'UnnecessaryGString'])
+@CompileStatic
+class GrailsConcurrentLinkedMapCache implements GrailsCache {
 
     private static final Object NULL_HOLDER = new NullHolder();
     private String name;
@@ -45,13 +48,13 @@ public class GrailsConcurrentLinkedMapCache implements GrailsCache {
     * @param capacity of the map
     * @param allowNullValues null values (default is true)
     */
-    public GrailsConcurrentLinkedMapCache(String name, long capacity, boolean allowNullValues) {
+    GrailsConcurrentLinkedMapCache(String name, long capacity, boolean allowNullValues) {
         this.name = name;
         this.capacity = capacity;
         this.allowNullValues = allowNullValues;
         // Workaround: using explicit type arguments to prevent groovydoc error (#53)
         // Replace with diamond operator once a fix for GROOVY-8628 is included in groovy dependency
-        this.store = new ConcurrentLinkedHashMap.Builder<>()
+        this.store = new ConcurrentLinkedHashMap.Builder<Object, Object>()
             .maximumWeightedCapacity(capacity)
             .build();
     }
@@ -62,40 +65,40 @@ public class GrailsConcurrentLinkedMapCache implements GrailsCache {
     * @param name the name of the cache
     * @param capacity of the map
     */
-    public GrailsConcurrentLinkedMapCache(String name, long capacity) {
+    GrailsConcurrentLinkedMapCache(String name, long capacity) {
         this(name, capacity, true);
     }
 
-    public final long getCapacity() {
+    final long getCapacity() {
         return this.store.capacity();
     }
 
     @Override
-    public final String getName() {
+    final String getName() {
         return this.name;
     }
 
     @Override
-    public final ConcurrentMap<Object, Object> getNativeCache() {
+    final ConcurrentMap<Object, Object> getNativeCache() {
         return this.store;
     }
 
-    public final int getSize() {
+    final int getSize() {
         return this.store.size();
     }
 
-    public final boolean isAllowNullValues() {
+    final boolean isAllowNullValues() {
         return this.allowNullValues;
     }
 
     @Override
-    public GrailsValueWrapper get(Object key) {
+    GrailsValueWrapper get(Object key) {
         Object value = getNativeCache().get(key);
         return value == null ? null : new GrailsValueWrapper(fromStoreValue(value), null);
     }
 
     @Override
-    public <T> T get(Object key, Class<T> type) {
+    def <T> T get(Object key, Class<T> type) {
         Object value = getNativeCache().get(key);
         if (value != null && type != null && !type.isInstance(value)) {
             throw new IllegalStateException("Cached value is not of required type [" + type.getName() + "]: " + value);
@@ -104,36 +107,36 @@ public class GrailsConcurrentLinkedMapCache implements GrailsCache {
     }
 
     @Override
-    public <T> T get(Object key, Callable<T> valueLoader) {
+    def <T> T get(Object key, Callable<T> valueLoader) {
         throw new UnsupportedOperationException();
     }
 
     @SuppressWarnings("unchecked")
-    public Collection<Object> getAllKeys() {
+    Collection<Object> getAllKeys() {
         return getNativeCache().keySet();
     }
 
-    public Collection<Object> getHottestKeys() {
+    Collection<Object> getHottestKeys() {
         return this.store.descendingKeySet();
     }
 
     @Override
-    public void put(Object key, Object value) {
+    void put(Object key, Object value) {
         this.store.put(key, toStoreValue(value));
     }
 
-    public ValueWrapper putIfAbsent(Object key, Object value) {
+    ValueWrapper putIfAbsent(Object key, Object value) {
         Object existing = this.store.putIfAbsent(key, value);
         return toWrapper(existing);
     }
 
     @Override
-    public void evict(Object key) {
+    void evict(Object key) {
         this.store.remove(key);
     }
 
     @Override
-    public void clear() {
+    void clear() {
         this.store.clear();
     }
 
@@ -144,7 +147,7 @@ public class GrailsConcurrentLinkedMapCache implements GrailsCache {
     * @return the value to return to the user
     */
     protected Object fromStoreValue(Object storeValue) {
-        if (this.allowNullValues && storeValue == NULL_HOLDER) {
+        if (this.allowNullValues && storeValue.is(NULL_HOLDER)) {
             return null;
         }
         return storeValue;
@@ -168,7 +171,8 @@ public class GrailsConcurrentLinkedMapCache implements GrailsCache {
     }
 
     @SuppressWarnings("serial")
-
     private static class NullHolder implements Serializable {
+
     }
+
 }

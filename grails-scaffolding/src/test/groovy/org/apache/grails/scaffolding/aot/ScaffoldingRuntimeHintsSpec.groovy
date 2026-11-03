@@ -48,4 +48,32 @@ class ScaffoldingRuntimeHintsSpec extends Specification {
         then:
         RuntimeHintsPredicates.reflection().onType(grails.plugin.scaffolding.RestfulServiceController).test(hints)
     }
+
+    void 'every dispatched type is kept for reflection'() {
+        given:
+        RuntimeHints hints = new RuntimeHints()
+
+        when:
+        new ScaffoldingRuntimeHints().registerHints(hints, getClass().classLoader)
+
+        then:
+        RuntimeHintsPredicates.reflection().onType(type).test(hints)
+
+        where:
+        type << [grails.plugin.scaffolding.ScaffoldingViewResolver, grails.plugin.scaffolding.annotation.Scaffold]
+    }
+
+    void 'a type the class loader cannot see is left out while the templates are still registered'() {
+        given:
+        RuntimeHints hints = new RuntimeHints()
+        ClassLoader blind = new ClassLoader(null) { }
+
+        when:
+        new ScaffoldingRuntimeHints().registerHints(hints, blind)
+
+        then:
+        !RuntimeHintsPredicates.reflection().onType(grails.plugin.scaffolding.RestfulServiceController).test(hints)
+        RuntimeHintsPredicates.resource().forResource('META-INF/templates/scaffolding/show.gsp').test(hints)
+    }
+
 }

@@ -16,55 +16,50 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package grails.plugin.cache;
+package grails.plugin.cache
 
-import java.lang.annotation.Documented;
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Inherited;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
+import java.lang.annotation.Documented
+import java.lang.annotation.ElementType
+import java.lang.annotation.Inherited
+import java.lang.annotation.Retention
+import java.lang.annotation.RetentionPolicy
+import java.lang.annotation.Target
 
-import org.codehaus.groovy.transform.GroovyASTTransformationClass;
+import org.codehaus.groovy.transform.GroovyASTTransformationClass
 
 /**
- * Indicates that a method (or all methods on a class) trigger(s)
- * a cache invalidate operation.
+ * Indicates that a method (or all the methods on a class) can be cached.
+ *
+ * <p>The method arguments and signature are used for computing the key while the
+ * returned instance is used as the cache value.
  *
  * @author Jeff Brown
  * @author Graeme Rocher
  */
-@Target({ElementType.METHOD, ElementType.TYPE})
+@Target([ElementType.METHOD, ElementType.TYPE])
 @Retention(RetentionPolicy.RUNTIME)
 @Inherited
 @Documented
-@GroovyASTTransformationClass("org.grails.plugin.cache.compiler.CacheEvictTransformation")
-public @interface CacheEvict {
+@GroovyASTTransformationClass('org.grails.plugin.cache.compiler.CacheableTransformation')
+@interface Cacheable {
 
     /**
-     * Qualifier value for the specified cached operation.
-     * <p>May be used to determine the target cache (or caches), matching the qualifier
-     * value.
+     * Name of the caches in which the update takes place.
+     * <p>May be used to determine the target cache (or caches), matching the
+     * qualifier value.
      */
-    String[] value();
+    String[] value()
 
     /**
      * A closure for computing the key dynamically.
      * <p>Default is null, meaning all method parameters are considered as a key.
      */
-    Class[] key() default {};
+    Class[] key() default []
 
     /**
      * A closure used for conditioning the method caching.
      * <p>Default is null, meaning the method is always cached.
      */
-    Class[] condition() default {};
+    Class[] condition() default []
 
-    /**
-     * Whether or not all the entries inside the cache(s) are removed or not. By
-     * default, only the value under the associated key is removed.
-     * <p>Note that specifying setting this parameter to true and specifying a
-     * CacheKey is not allowed.
-     */
-    boolean allEntries() default false;
 }

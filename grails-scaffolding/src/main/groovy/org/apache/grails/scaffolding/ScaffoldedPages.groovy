@@ -16,18 +16,14 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.apache.grails.scaffolding;
+package org.apache.grails.scaffolding
 
-import java.io.IOException;
-import java.io.StringWriter;
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
-import java.util.HexFormat;
-import java.util.Map;
-import java.util.TreeSet;
+import java.nio.charset.StandardCharsets
+import java.security.MessageDigest
+import java.security.NoSuchAlgorithmException
 
-import groovy.text.GStringTemplateEngine;
+import groovy.text.GStringTemplateEngine
+import groovy.transform.CompileStatic
 
 /**
  * Expands a scaffolding template into a page, and names the page the build compiles from it so
@@ -45,14 +41,15 @@ import groovy.text.GStringTemplateEngine;
  *
  * @since 8.0
  */
-public final class ScaffoldedPages {
+@CompileStatic
+final class ScaffoldedPages {
 
     /**
      * The directory under the views root that holds the compiled pages. A controller's views are
      * resolved from a directory named after a Java identifier, which cannot contain a hyphen, so no
      * request for a controller's view reaches a page here.
      */
-    public static final String DIRECTORY = "grails-scaffolded";
+    public static final String DIRECTORY = 'grails-scaffolded'
 
     /**
      * Bytes of the digest kept in a page's name. The name already carries the domain class and the
@@ -61,7 +58,7 @@ public final class ScaffoldedPages {
      * compiled page's class names - which carry the domain class and the digest both - short of the
      * path lengths some tools stumble on.
      */
-    private static final int KEY_BYTES = 8;
+    private static final int KEY_BYTES = 8
 
     private ScaffoldedPages() {
     }
@@ -75,8 +72,8 @@ public final class ScaffoldedPages {
      * @param template the template exactly as it is read
      * @return the URI a page locator resolves the page by
      */
-    public static String uri(String templatePath, Map<String, ?> model, byte[] template) {
-        return "/" + DIRECTORY + "/" + model.get("fullName") + "/" + templatePath + "-" + key(model, template) + ".gsp";
+    static String uri(String templatePath, Map<String, ?> model, byte[] template) {
+        return '/' + DIRECTORY + '/' + model.get('fullName') + '/' + templatePath + '-' + key(model, template) + '.gsp'
     }
 
     /**
@@ -88,43 +85,43 @@ public final class ScaffoldedPages {
      * @param model the names the template is expanded with
      * @return the page
      */
-    public static String expand(byte[] template, Map<String, ?> model) {
-        StringWriter page = new StringWriter();
+    static String expand(byte[] template, Map<String, ?> model) {
+        StringWriter page = new StringWriter()
         try {
             new GStringTemplateEngine()
                     .createTemplate(new String(template, StandardCharsets.UTF_8))
                     .make(model)
-                    .writeTo(page);
+                    .writeTo(page)
         }
         catch (IOException | ClassNotFoundException e) {
-            throw new IllegalStateException("Could not expand the scaffolding template for " + model.get("fullName"), e);
+            throw new IllegalStateException('Could not expand the scaffolding template for ' + model.get('fullName'), e)
         }
-        return page.toString();
+        return page.toString()
     }
 
     private static String key(Map<String, ?> model, byte[] template) {
-        String text = new String(template, StandardCharsets.UTF_8);
-        MessageDigest digest = sha256();
-        digest.update(template);
-        digest.update((byte) 0);
-        for (String name : new TreeSet<>(model.keySet())) {
+        String text = new String(template, StandardCharsets.UTF_8)
+        MessageDigest digest = sha256()
+        digest.update(template)
+        digest.update((byte) 0)
+        for (String name in new TreeSet<>(model.keySet())) {
             if (!text.contains(name)) {
-                continue;
+                continue
             }
-            digest.update(name.getBytes(StandardCharsets.UTF_8));
-            digest.update((byte) 0);
-            digest.update(String.valueOf(model.get(name)).getBytes(StandardCharsets.UTF_8));
-            digest.update((byte) 0);
+            digest.update(name.getBytes(StandardCharsets.UTF_8))
+            digest.update((byte) 0)
+            digest.update(String.valueOf(model.get(name)).getBytes(StandardCharsets.UTF_8))
+            digest.update((byte) 0)
         }
-        return HexFormat.of().formatHex(digest.digest(), 0, KEY_BYTES);
+        return HexFormat.of().formatHex(digest.digest(), 0, KEY_BYTES)
     }
 
     private static MessageDigest sha256() {
         try {
-            return MessageDigest.getInstance("SHA-256");
+            return MessageDigest.getInstance('SHA-256')
         }
         catch (NoSuchAlgorithmException e) {
-            throw new IllegalStateException("SHA-256 is required of every Java platform", e);
+            throw new IllegalStateException('SHA-256 is required of every Java platform', e)
         }
     }
 }

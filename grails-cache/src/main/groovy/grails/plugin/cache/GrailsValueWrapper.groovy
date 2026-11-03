@@ -16,19 +16,28 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package grails.plugin.cache;
+package grails.plugin.cache
 
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
+import groovy.transform.CompileStatic
+import org.springframework.cache.support.SimpleValueWrapper
 
 /**
- * An annotation added to all methods or types that produce a cache operation.
+ * Extends the standard implementation to also include the native wrapper instance.
  *
- * @author Graeme Rocher
+ * @author Burt Beckwith
  */
-@Target({ElementType.METHOD, ElementType.TYPE})
-@Retention(RetentionPolicy.RUNTIME)
-public @interface CacheOperation {
+@CompileStatic
+class GrailsValueWrapper extends SimpleValueWrapper {
+
+    protected Object nativeWrapper
+
+    GrailsValueWrapper(Object value, Object nativeWrapper) {
+        super(value)
+        this.nativeWrapper = nativeWrapper
+    }
+
+    Object getNativeWrapper() {
+        nativeWrapper
+    }
+
 }

@@ -16,27 +16,16 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.plugin.cache;
+package grails.plugin.cache
 
-import org.springframework.cache.CacheManager;
+import org.springframework.cache.Cache
 
 /**
  * @author Burt Beckwith
+ * @since 1.0
  */
-public interface GrailsCacheManager extends CacheManager {
+interface GrailsCache extends Cache {
 
-    /**
-     * Whether the cache for the given name exits
-     *
-     * @param name The name of the cache
-     * @return True if it does
-     */
-    boolean cacheExists(String name);
+    Collection<Object> getAllKeys()
 
-    /**
-     * Destroys the given named cache
-     * @param name The name of the cache
-     * @return True if it was destroyed
-     */
-    boolean destroyCache(String name);
 }
