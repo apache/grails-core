@@ -4,7 +4,7 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
@@ -16,24 +16,22 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.spring;
+package org.grails.spring
 
-import groovy.transform.CompileStatic;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-
-import org.springframework.aot.AotDetector;
-import org.springframework.beans.PropertyValue;
-import org.springframework.beans.factory.ListableBeanFactory;
-import org.springframework.beans.factory.config.BeanDefinition;
-import org.springframework.beans.factory.config.BeanFactoryPostProcessor;
-import org.springframework.beans.factory.support.AbstractBeanDefinition;
-import org.springframework.beans.factory.support.BeanDefinitionRegistry;
-import org.springframework.beans.factory.support.DefaultListableBeanFactory;
-import org.springframework.context.ApplicationContext;
-import org.springframework.context.support.GenericApplicationContext;
-import org.springframework.util.Assert;
+import groovy.transform.CompileStatic
+import org.apache.commons.logging.Log
+import org.apache.commons.logging.LogFactory
+import org.springframework.aot.AotDetector
+import org.springframework.beans.PropertyValue
+import org.springframework.beans.factory.ListableBeanFactory
+import org.springframework.beans.factory.config.BeanDefinition
+import org.springframework.beans.factory.config.BeanFactoryPostProcessor
+import org.springframework.beans.factory.support.AbstractBeanDefinition
+import org.springframework.beans.factory.support.BeanDefinitionRegistry
+import org.springframework.beans.factory.support.DefaultListableBeanFactory
+import org.springframework.context.ApplicationContext
+import org.springframework.context.support.GenericApplicationContext
+import org.springframework.util.Assert
 
 /**
  * A programmable runtime Spring configuration that allows a spring ApplicationContext
@@ -45,20 +43,18 @@ import org.springframework.util.Assert;
  * @author Graeme
  * @since 0.3
  */
-// TODO(groovyism-cleanup): semicolons kept to preserve rename-similarity against the original .java (see matrei's review on #16576). Removed by the stacked groovyism-cleanup PR.
-@SuppressWarnings('UnnecessarySemicolon')
 @CompileStatic
 class DefaultRuntimeSpringConfiguration implements RuntimeSpringConfiguration {
 
-    private static final Log LOG = LogFactory.getLog(DefaultRuntimeSpringConfiguration);
-    protected GenericApplicationContext context;
-    private Map<String, BeanConfiguration> beanConfigs = new HashMap<>();
-    private Map<String, BeanDefinition> beanDefinitions = new HashMap<>();
-    private Set<String> beanNames = new LinkedHashSet<>();
-    protected ApplicationContext parent;
-    protected ClassLoader classLoader;
-    protected Map<String, List<String>> aliases = new HashMap<>();
-    protected ListableBeanFactory beanFactory;
+    private static final Log LOG = LogFactory.getLog(DefaultRuntimeSpringConfiguration)
+    protected GenericApplicationContext context
+    private Map<String, BeanConfiguration> beanConfigs = [:]
+    private Map<String, BeanDefinition> beanDefinitions = [:]
+    private Set<String> beanNames = [] as Set
+    protected ApplicationContext parent
+    protected ClassLoader classLoader
+    protected Map<String, List<String>> aliases = [:]
+    protected ListableBeanFactory beanFactory
 
     /**
      * Creates the ApplicationContext instance. Subclasses can override to customise the used ApplicationContext
@@ -70,50 +66,50 @@ class DefaultRuntimeSpringConfiguration implements RuntimeSpringConfiguration {
     protected GenericApplicationContext createApplicationContext(ApplicationContext parentCtx) {
         if (parentCtx != null && beanFactory != null) {
             Assert.isInstanceOf(DefaultListableBeanFactory, beanFactory,
-                    'ListableBeanFactory set must be a subclass of DefaultListableBeanFactory');
+                    'ListableBeanFactory set must be a subclass of DefaultListableBeanFactory')
 
-            return new GrailsApplicationContext((DefaultListableBeanFactory) beanFactory, parentCtx);
+            return new GrailsApplicationContext((DefaultListableBeanFactory) beanFactory, parentCtx)
         }
 
         if (beanFactory != null) {
             Assert.isInstanceOf(DefaultListableBeanFactory, beanFactory,
-                    'ListableBeanFactory set must be a subclass of DefaultListableBeanFactory');
+                    'ListableBeanFactory set must be a subclass of DefaultListableBeanFactory')
 
-            return new GrailsApplicationContext((DefaultListableBeanFactory) beanFactory);
+            return new GrailsApplicationContext((DefaultListableBeanFactory) beanFactory)
         }
 
         if (parentCtx != null) {
-            return new GrailsApplicationContext(parentCtx);
+            return new GrailsApplicationContext(parentCtx)
         }
 
-        return new GrailsApplicationContext();
+        return new GrailsApplicationContext()
     }
 
-    public DefaultRuntimeSpringConfiguration() {
-        super();
+    DefaultRuntimeSpringConfiguration() {
+        super()
     }
 
-    public DefaultRuntimeSpringConfiguration(ApplicationContext parent) {
-        this(parent, null);
+    DefaultRuntimeSpringConfiguration(ApplicationContext parent) {
+        this(parent, null)
     }
 
-    public DefaultRuntimeSpringConfiguration(ApplicationContext parent, ClassLoader cl) {
-        this.parent = parent;
-        classLoader = cl;
+    DefaultRuntimeSpringConfiguration(ApplicationContext parent, ClassLoader cl) {
+        this.parent = parent
+        classLoader = cl
     }
 
     private void trySettingClassLoaderOnContextIfFoundInParent(ApplicationContext parentCtx) {
         if (parentCtx.containsBean('classLoader')) {
-            Object cl = parentCtx.getBean('classLoader');
+            Object cl = parentCtx.getBean('classLoader')
             if (cl instanceof ClassLoader) {
-                setClassLoaderOnContext((ClassLoader) cl);
+                setClassLoaderOnContext(cl)
             }
         }
     }
 
     private void setClassLoaderOnContext(ClassLoader cl) {
-        context.setClassLoader(cl);
-        context.getBeanFactory().setBeanClassLoader(cl);
+        context.classLoader = cl
+        context.beanFactory.beanClassLoader = cl
     }
 
     /**
@@ -121,145 +117,145 @@ class DefaultRuntimeSpringConfiguration implements RuntimeSpringConfiguration {
      */
     protected void initialiseApplicationContext() {
         if (context != null) {
-            return;
+            return
         }
 
-        context = createApplicationContext(parent);
+        context = createApplicationContext(parent)
 
         if (parent != null && classLoader == null) {
-            trySettingClassLoaderOnContextIfFoundInParent(parent);
+            trySettingClassLoaderOnContextIfFoundInParent(parent)
         }
         else if (classLoader != null) {
-            setClassLoaderOnContext(classLoader);
+            setClassLoaderOnContext(classLoader)
         }
 
-        Assert.notNull(context, 'ApplicationContext cannot be null');
+        Assert.notNull(context, 'ApplicationContext cannot be null')
     }
 
     BeanConfiguration addSingletonBean(String name, @SuppressWarnings('rawtypes') Class clazz) {
-        BeanConfiguration bc = new DefaultBeanConfiguration(name, clazz);
-        registerBeanConfiguration(name, bc);
-        return bc;
+        BeanConfiguration bc = new DefaultBeanConfiguration(name, clazz)
+        registerBeanConfiguration(name, bc)
+        return bc
     }
 
     BeanConfiguration addPrototypeBean(String name, @SuppressWarnings('rawtypes') Class clazz) {
-        BeanConfiguration bc = new DefaultBeanConfiguration(name, clazz, true);
-        registerBeanConfiguration(name, bc);
-        return bc;
+        BeanConfiguration bc = new DefaultBeanConfiguration(name, clazz, true)
+        registerBeanConfiguration(name, bc)
+        return bc
     }
 
     ApplicationContext getApplicationContext() {
-        long now = LOG.isDebugEnabled() ? System.currentTimeMillis() : 0;
-        initialiseApplicationContext();
-        registerBeansWithContext(context);
-        context.refresh();
+        long now = LOG.isDebugEnabled() ? System.currentTimeMillis() : 0
+        initialiseApplicationContext()
+        registerBeansWithContext(context)
+        context.refresh()
         if (LOG.isDebugEnabled()) {
-            LOG.debug('Created ApplicationContext in ' + (System.currentTimeMillis() - now) + 'ms');
+            LOG.debug('Created ApplicationContext in ' + (System.currentTimeMillis() - now) + 'ms')
         }
-        return context;
+        return context
     }
 
     ApplicationContext getUnrefreshedApplicationContext() {
-        initialiseApplicationContext();
-        return context;
+        initialiseApplicationContext()
+        return context
     }
 
     BeanConfiguration addSingletonBean(String name) {
-        BeanConfiguration bc = new DefaultBeanConfiguration(name);
-        registerBeanConfiguration(name, bc);
-        return bc;
+        BeanConfiguration bc = new DefaultBeanConfiguration(name)
+        registerBeanConfiguration(name, bc)
+        return bc
     }
 
     BeanConfiguration createSingletonBean(@SuppressWarnings('rawtypes') Class clazz) {
-        return new DefaultBeanConfiguration(clazz);
+        return new DefaultBeanConfiguration(clazz)
     }
 
     @SuppressWarnings('rawtypes')
     BeanConfiguration addSingletonBean(String name, Class clazz, Collection args) {
-        BeanConfiguration bc = new DefaultBeanConfiguration(name, clazz, args);
-        registerBeanConfiguration(name, bc);
-        return bc;
+        BeanConfiguration bc = new DefaultBeanConfiguration(name, clazz, args)
+        registerBeanConfiguration(name, bc)
+        return bc
     }
 
     BeanConfiguration addPrototypeBean(String name) {
-        BeanConfiguration bc = new DefaultBeanConfiguration(name, true);
-        registerBeanConfiguration(name, bc);
-        return bc;
+        BeanConfiguration bc = new DefaultBeanConfiguration(name, true)
+        registerBeanConfiguration(name, bc)
+        return bc
     }
 
     private void registerBeanConfiguration(String name, BeanConfiguration bc) {
-        beanConfigs.put(name, bc);
-        beanNames.add(name);
+        beanConfigs.put(name, bc)
+        beanNames << name
     }
 
     @SuppressWarnings('rawtypes')
     BeanConfiguration createSingletonBean(Class clazz, Collection constructorArguments) {
-        return new DefaultBeanConfiguration(clazz, constructorArguments);
+        return new DefaultBeanConfiguration(clazz, constructorArguments)
     }
 
     BeanConfiguration createPrototypeBean(String name) {
-        return new DefaultBeanConfiguration(name, true);
+        return new DefaultBeanConfiguration(name, true)
     }
 
     BeanConfiguration createSingletonBean(String name) {
-        return new DefaultBeanConfiguration(name);
+        return new DefaultBeanConfiguration(name)
     }
 
     void addBeanConfiguration(String beanName, BeanConfiguration beanConfiguration) {
-        beanConfiguration.setName(beanName);
-        registerBeanConfiguration(beanName, beanConfiguration);
+        beanConfiguration.name = beanName
+        registerBeanConfiguration(beanName, beanConfiguration)
     }
 
     void addBeanDefinition(String name, BeanDefinition bd) {
-        beanDefinitions.put(name, bd);
-        beanConfigs.remove(name);
-        beanNames.add(name);
+        beanDefinitions.put(name, bd)
+        beanConfigs.remove(name)
+        beanNames << name
     }
 
     boolean containsBean(String name) {
-        return beanNames.contains(name);
+        return name in beanNames
     }
 
     BeanConfiguration getBeanConfig(String name) {
-        return beanConfigs.get(name);
+        return beanConfigs[name]
     }
 
     AbstractBeanDefinition createBeanDefinition(String name) {
         if (containsBean(name)) {
-            if (beanDefinitions.containsKey(name)) {
-                return (AbstractBeanDefinition) beanDefinitions.get(name);
+            if (name in beanDefinitions) {
+                return (AbstractBeanDefinition) beanDefinitions[name]
             }
-            if (beanConfigs.containsKey(name)) {
-                return beanConfigs.get(name).getBeanDefinition();
+            if (name in beanConfigs) {
+                return beanConfigs[name].beanDefinition
             }
         }
-        return null;
+        return null
     }
 
     void registerPostProcessor(BeanFactoryPostProcessor processor) {
-        initialiseApplicationContext();
-        context.addBeanFactoryPostProcessor(processor);
+        initialiseApplicationContext()
+        context.addBeanFactoryPostProcessor(processor)
     }
 
     List<String> getBeanNames() {
-        return Collections.unmodifiableList(new ArrayList<>(beanNames));
+        return Collections.unmodifiableList(new ArrayList<>(beanNames))
     }
 
     void registerBeansWithContext(GenericApplicationContext applicationContext) {
-        registerBeansWithRegistry(applicationContext);
+        registerBeansWithRegistry(applicationContext)
     }
 
     void registerBeansWithRegistry(BeanDefinitionRegistry registry) {
-        registerUnrefreshedBeansWithRegistry(registry);
-        registerBeanConfigsWithRegistry(registry);
-        registerBeanDefinitionsWithRegistry(registry);
-        registerBeanAliasesWithRegistry(registry);
+        registerUnrefreshedBeansWithRegistry(registry)
+        registerBeanConfigsWithRegistry(registry)
+        registerBeanDefinitionsWithRegistry(registry)
+        registerBeanAliasesWithRegistry(registry)
     }
 
     private void registerUnrefreshedBeansWithRegistry(BeanDefinitionRegistry registry) {
         if (context != null) {
-            for (String beanName : context.getBeanDefinitionNames()) {
-                register(registry, beanName, context.getBeanDefinition(beanName));
+            for (String beanName in context.beanDefinitionNames) {
+                register(registry, beanName, context.getBeanDefinition(beanName))
             }
         }
     }
@@ -282,105 +278,101 @@ class DefaultRuntimeSpringConfiguration implements RuntimeSpringConfiguration {
     private void register(BeanDefinitionRegistry registry, String beanName, BeanDefinition definition) {
         if (AotDetector.useGeneratedArtifacts() && registry.containsBeanDefinition(beanName)) {
             if (LOG.isDebugEnabled()) {
-                LOG.debug('[RuntimeConfiguration] Keeping the generated definition of bean [' + beanName + ']');
+                LOG.debug('[RuntimeConfiguration] Keeping the generated definition of bean [' + beanName + ']')
             }
-            return;
+            return
         }
-        registry.registerBeanDefinition(beanName, definition);
+        registry.registerBeanDefinition(beanName, definition)
     }
 
     private void registerBeanConfigsWithRegistry(BeanDefinitionRegistry registry) {
-        for (BeanConfiguration bc : beanConfigs.values()) {
-            String beanName = bc.getName();
+        for (BeanConfiguration bc in beanConfigs.values()) {
+            String beanName = bc.name
             if (LOG.isDebugEnabled()) {
-                LOG.debug('[RuntimeConfiguration] Registering bean [' + beanName + ']');
+                LOG.debug('[RuntimeConfiguration] Registering bean [' + beanName + ']')
                 if (LOG.isTraceEnabled()) {
-                    PropertyValue[] pvs = bc.getBeanDefinition()
+                    PropertyValue[] pvs = bc.beanDefinition
+                                            .propertyValues
                                             .getPropertyValues()
-                                            .getPropertyValues();
-                    for (PropertyValue pv : pvs) {
-                        LOG.trace('[RuntimeConfiguration] With property [' + pv.getName() + '] set to [' + pv.getValue() + ']');
+                    for (PropertyValue pv in pvs) {
+                        LOG.trace('[RuntimeConfiguration] With property [' + pv.name + '] set to [' + pv.value + ']')
                     }
                 }
             }
 
-            register(registry, beanName, bc.getBeanDefinition());
+            register(registry, beanName, bc.beanDefinition)
         }
     }
 
     private void registerBeanDefinitionsWithRegistry(BeanDefinitionRegistry registry) {
-        for (Object key : beanDefinitions.keySet()) {
-            BeanDefinition bd = beanDefinitions.get(key);
+        beanDefinitions.each { String beanName, BeanDefinition bd ->
             if (LOG.isDebugEnabled()) {
-                LOG.debug('[RuntimeConfiguration] Registering bean [' + key + ']');
+                LOG.debug('[RuntimeConfiguration] Registering bean [' + beanName + ']')
                 if (LOG.isTraceEnabled()) {
-                    PropertyValue[] pvs = bd.getPropertyValues().getPropertyValues();
-                    for (PropertyValue pv : pvs) {
-                        LOG.trace('[RuntimeConfiguration] With property [' + pv.getName() + '] set to [' + pv.getValue() + ']');
+                    PropertyValue[] pvs = bd.propertyValues.getPropertyValues()
+                    for (PropertyValue pv in pvs) {
+                        LOG.trace('[RuntimeConfiguration] With property [' + pv.name + '] set to [' + pv.value + ']')
                     }
                 }
             }
-            final String beanName = key.toString();
-            register(registry, beanName, bd);
+            register(registry, beanName, bd)
         }
     }
 
     void registerBeansWithConfig(RuntimeSpringConfiguration targetSpringConfig) {
         if (targetSpringConfig == null) {
-            return;
+            return
         }
 
-        ApplicationContext ctx = targetSpringConfig.getUnrefreshedApplicationContext();
+        ApplicationContext ctx = targetSpringConfig.unrefreshedApplicationContext
         if (ctx instanceof BeanDefinitionRegistry) {
-            final BeanDefinitionRegistry registry = (BeanDefinitionRegistry) ctx;
-            registerUnrefreshedBeansWithRegistry(registry);
-            registerBeansWithRegistry(registry);
+            registerUnrefreshedBeansWithRegistry(ctx)
+            registerBeansWithRegistry(ctx)
         }
-        for (Map.Entry<String, BeanConfiguration> beanEntry : beanConfigs.entrySet()) {
-            targetSpringConfig.addBeanConfiguration(beanEntry.getKey(), beanEntry.getValue());
+        beanConfigs.each { String beanName, BeanConfiguration beanConfiguration ->
+            targetSpringConfig.addBeanConfiguration(beanName, beanConfiguration)
         }
     }
 
     private void registerBeanAliasesWithRegistry(BeanDefinitionRegistry beanDefinitionRegistry) {
-        for (Map.Entry<String, List<String>> entry : aliases.entrySet()) {
-            String beanName = entry.getKey();
-            List<String> beanAliases = entry.getValue();
-            if (beanAliases != null && !beanAliases.isEmpty()) {
-                for (String alias : beanAliases) {
-                    beanDefinitionRegistry.registerAlias(beanName, alias);
+        aliases.each { String beanName, List<String> beanAliases ->
+            if (beanAliases) {
+                for (String alias in beanAliases) {
+                    beanDefinitionRegistry.registerAlias(beanName, alias)
                 }
             }
         }
     }
 
     private void removeBeanDefinition(BeanDefinitionRegistry registry, String beanName) {
-        MetaClass mc = GroovySystem.getMetaClassRegistry().getMetaClass(registry.getClass());
+        MetaClass mc = GroovySystem.getMetaClassRegistry().getMetaClass(registry.getClass())
         if (!mc.respondsTo(registry, 'removeBeanDefinition').isEmpty()) {
-            mc.invokeMethod(registry, 'removeBeanDefinition', new Object[] { beanName });
+            mc.invokeMethod(registry, 'removeBeanDefinition', [beanName] as Object[])
         }
     }
 
     BeanConfiguration addAbstractBean(String name) {
-        BeanConfiguration bc = new DefaultBeanConfiguration(name);
-        bc.setAbstract(true);
-        registerBeanConfiguration(name, bc);
-        return bc;
+        BeanConfiguration bc = new DefaultBeanConfiguration(name)
+        bc.setAbstract(true)
+        registerBeanConfiguration(name, bc)
+        return bc
     }
 
     void addAlias(String alias, String beanName) {
-        List<String> beanAliases = aliases.get(beanName);
+        List<String> beanAliases = aliases[beanName]
         if (beanAliases == null) {
-            beanAliases = new ArrayList<>();
-            aliases.put(beanName, beanAliases);
+            beanAliases = []
+            aliases.put(beanName, beanAliases)
         }
-        beanAliases.add(alias);
+        beanAliases << alias
     }
 
     BeanDefinition getBeanDefinition(String beanName) {
-        return beanDefinitions.get(beanName);
+        return beanDefinitions[beanName]
     }
 
     void setBeanFactory(ListableBeanFactory beanFactory) {
-        this.beanFactory = beanFactory;
+        this.beanFactory = beanFactory
     }
+
 }

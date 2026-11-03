@@ -43,11 +43,7 @@ class TypeSpecifyableTransactionProxyFactoryBean extends TransactionProxyFactory
 
     @Override
     Class<?> getObjectType() {
-        if (type != null) {
-            return type
-        }
-
-        return super.getObjectType()
+        return type ?: super.getObjectType()
     }
 
 }

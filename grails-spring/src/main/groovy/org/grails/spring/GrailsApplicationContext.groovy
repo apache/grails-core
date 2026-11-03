@@ -4,7 +4,7 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
@@ -16,28 +16,25 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.spring;
+package org.grails.spring
 
-import groovy.transform.CompileStatic;
-import groovy.transform.stc.POJO;
+import org.springframework.beans.BeanWrapper
+import org.springframework.beans.BeanWrapperImpl
+import org.springframework.beans.BeansException
+import org.springframework.beans.MutablePropertyValues
+import org.springframework.beans.factory.config.BeanDefinition
+import org.springframework.beans.factory.config.ConfigurableListableBeanFactory
+import org.springframework.beans.factory.support.DefaultListableBeanFactory
+import org.springframework.beans.factory.support.GenericBeanDefinition
+import org.springframework.context.ApplicationContext
+import org.springframework.context.support.GenericApplicationContext
 
-import org.springframework.beans.BeanWrapper;
-import org.springframework.beans.BeanWrapperImpl;
-import org.springframework.beans.BeansException;
-import org.springframework.beans.MutablePropertyValues;
-import org.springframework.beans.factory.config.BeanDefinition;
-import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
-import org.springframework.beans.factory.support.DefaultListableBeanFactory;
-import org.springframework.beans.factory.support.GenericBeanDefinition;
-import org.springframework.context.ApplicationContext;
-import org.springframework.context.support.GenericApplicationContext;
+import groovy.transform.CompileStatic
+import groovy.transform.stc.POJO
 
 /**
  * An ApplicationContext that extends StaticApplicationContext and implements GroovyObject such that
  * beans can be retrieved with the dot de-reference syntax instead of using getBean('name').
- *
- * @author Graeme Rocher
- * @since 1.0
  *
  * <p>Not a synthesized GroovyObject: the Groovy compiler's own metaClass scaffolding for a class
  * implementing GroovyObject conflicts with this class's own explicit {@code metaClass} field and
@@ -45,73 +42,74 @@ import org.springframework.context.support.GenericApplicationContext;
  * (the synthetic initializer races the explicit field assignment in the constructor body). @POJO
  * keeps this class a plain object as far as the compiler is concerned; the manual GroovyObject
  * method implementations below still satisfy the interface for callers.</p>
+ *
+ * @author Graeme Rocher
+ * @since 1.0
  */
-// TODO(groovyism-cleanup): semicolons kept to preserve rename-similarity against the original .java (see matrei's review on #16576). Removed by the stacked groovyism-cleanup PR.
-@SuppressWarnings('UnnecessarySemicolon')
 @POJO
 @CompileStatic
 class GrailsApplicationContext extends GenericApplicationContext implements GroovyObject {
 
-    protected MetaClass metaClass;
-    private BeanWrapper ctxBean = new BeanWrapperImpl(this);
-    private static final String GRAILS_ENVIRONMENT_BEAN_NAME = 'springEnvironment';
+    protected MetaClass metaClass
+    private BeanWrapper ctxBean = new BeanWrapperImpl(this)
+    private static final String GRAILS_ENVIRONMENT_BEAN_NAME = 'springEnvironment'
 
-    public GrailsApplicationContext(DefaultListableBeanFactory defaultListableBeanFactory) {
-        super(defaultListableBeanFactory);
-        metaClass = GroovySystem.getMetaClassRegistry().getMetaClass(getClass());
+    GrailsApplicationContext(DefaultListableBeanFactory defaultListableBeanFactory) {
+        super(defaultListableBeanFactory)
+        metaClass = GroovySystem.getMetaClassRegistry().getMetaClass(getClass())
     }
 
-    public GrailsApplicationContext(DefaultListableBeanFactory defaultListableBeanFactory, ApplicationContext applicationContext) {
-        super(defaultListableBeanFactory, applicationContext);
-        metaClass = GroovySystem.getMetaClassRegistry().getMetaClass(getClass());
+    GrailsApplicationContext(DefaultListableBeanFactory defaultListableBeanFactory, ApplicationContext applicationContext) {
+        super(defaultListableBeanFactory, applicationContext)
+        metaClass = GroovySystem.getMetaClassRegistry().getMetaClass(getClass())
     }
 
-    public GrailsApplicationContext(org.springframework.context.ApplicationContext parent) throws org.springframework.beans.BeansException {
-        super(parent);
-        metaClass = GroovySystem.getMetaClassRegistry().getMetaClass(getClass());
+    GrailsApplicationContext(org.springframework.context.ApplicationContext parent) throws org.springframework.beans.BeansException {
+        super(parent)
+        metaClass = GroovySystem.getMetaClassRegistry().getMetaClass(getClass())
     }
 
-    public GrailsApplicationContext() throws org.springframework.beans.BeansException {
-        metaClass = GroovySystem.getMetaClassRegistry().getMetaClass(getClass());
+    GrailsApplicationContext() throws org.springframework.beans.BeansException {
+        metaClass = GroovySystem.getMetaClassRegistry().getMetaClass(getClass())
     }
 
     @Override
     boolean containsBeanDefinition(String beanName) {
-        return super.containsBeanDefinition(beanName);
+        return super.containsBeanDefinition(beanName)
     }
 
     MetaClass getMetaClass() {
-        return metaClass;
+        return metaClass
     }
 
     Object getProperty(String property) {
         if (containsBean(property)) {
-            return getBean(property);
+            return getBean(property)
         }
         if (ctxBean.isReadableProperty(property)) {
-            return ctxBean.getPropertyValue(property);
+            return ctxBean.getPropertyValue(property)
         }
-        return null;
+        return null
     }
 
     Object invokeMethod(String name, Object args) {
-        return metaClass.invokeMethod(this, name, args);
+        return metaClass.invokeMethod(this, name, args)
     }
 
     void setMetaClass(MetaClass metaClass) {
-        this.metaClass = metaClass;
+        this.metaClass = metaClass
     }
 
     void setProperty(String property, Object newValue) {
         if (newValue instanceof BeanDefinition) {
             if (containsBean(property)) {
-                removeBeanDefinition(property);
+                removeBeanDefinition(property)
             }
 
-            registerBeanDefinition(property, (BeanDefinition) newValue);
+            registerBeanDefinition(property, (BeanDefinition) newValue)
         }
         else {
-            metaClass.setProperty(this, property, newValue);
+            metaClass.setProperty(this, property, newValue)
         }
     }
 
@@ -121,9 +119,9 @@ class GrailsApplicationContext extends GenericApplicationContext implements Groo
      * @see #getDefaultListableBeanFactory
      */
     void registerSingleton(String name, Class<?> clazz) throws BeansException {
-        GenericBeanDefinition bd = new GenericBeanDefinition();
-        bd.setBeanClass(clazz);
-        getDefaultListableBeanFactory().registerBeanDefinition(name, bd);
+        GenericBeanDefinition bd = new GenericBeanDefinition()
+        bd.setBeanClass(clazz)
+        getDefaultListableBeanFactory().registerBeanDefinition(name, bd)
     }
 
     /**
@@ -132,10 +130,10 @@ class GrailsApplicationContext extends GenericApplicationContext implements Groo
      * @see #getDefaultListableBeanFactory
      */
     void registerSingleton(String name, Class<?> clazz, MutablePropertyValues pvs) throws BeansException {
-        GenericBeanDefinition bd = new GenericBeanDefinition();
-        bd.setBeanClass(clazz);
-        bd.setPropertyValues(pvs);
-        getDefaultListableBeanFactory().registerBeanDefinition(name, bd);
+        GenericBeanDefinition bd = new GenericBeanDefinition()
+        bd.setBeanClass(clazz)
+        bd.setPropertyValues(pvs)
+        getDefaultListableBeanFactory().registerBeanDefinition(name, bd)
     }
 
     /**
@@ -144,10 +142,10 @@ class GrailsApplicationContext extends GenericApplicationContext implements Groo
      * @see #getDefaultListableBeanFactory
      */
     void registerPrototype(String name, Class<?> clazz) throws BeansException {
-        GenericBeanDefinition bd = new GenericBeanDefinition();
-        bd.setScope(GenericBeanDefinition.SCOPE_PROTOTYPE);
-        bd.setBeanClass(clazz);
-        getDefaultListableBeanFactory().registerBeanDefinition(name, bd);
+        GenericBeanDefinition bd = new GenericBeanDefinition()
+        bd.setScope(GenericBeanDefinition.SCOPE_PROTOTYPE)
+        bd.setBeanClass(clazz)
+        getDefaultListableBeanFactory().registerBeanDefinition(name, bd)
     }
 
     /**
@@ -156,24 +154,25 @@ class GrailsApplicationContext extends GenericApplicationContext implements Groo
      * @see #getDefaultListableBeanFactory
      */
     void registerPrototype(String name, Class<?> clazz, MutablePropertyValues pvs) throws BeansException {
-        GenericBeanDefinition bd = new GenericBeanDefinition();
-        bd.setScope(GenericBeanDefinition.SCOPE_PROTOTYPE);
-        bd.setBeanClass(clazz);
-        bd.setPropertyValues(pvs);
-        getDefaultListableBeanFactory().registerBeanDefinition(name, bd);
+        GenericBeanDefinition bd = new GenericBeanDefinition()
+        bd.setScope(GenericBeanDefinition.SCOPE_PROTOTYPE)
+        bd.setBeanClass(clazz)
+        bd.setPropertyValues(pvs)
+        getDefaultListableBeanFactory().registerBeanDefinition(name, bd)
     }
 
     @Override
     protected void prepareBeanFactory(ConfigurableListableBeanFactory beanFactory) {
-        super.prepareBeanFactory(beanFactory);
+        super.prepareBeanFactory(beanFactory)
 
         // workaround for GRAILS-7851, until Spring allows the environment bean name to be configurable
-        ((DefaultListableBeanFactory) beanFactory).destroySingleton(ENVIRONMENT_BEAN_NAME);
-        beanFactory.registerSingleton(GRAILS_ENVIRONMENT_BEAN_NAME, getEnvironment());
+        ((DefaultListableBeanFactory) beanFactory).destroySingleton(ENVIRONMENT_BEAN_NAME)
+        beanFactory.registerSingleton(GRAILS_ENVIRONMENT_BEAN_NAME, getEnvironment())
     }
 
     @Override
     protected void assertBeanFactoryActive() {
         // no-op to prevent excessive synchronization caused by SPR-10307 change
     }
+
 }

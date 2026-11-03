@@ -35,15 +35,11 @@ class GrailsContextEvent extends ApplicationEvent {
 
     public static final int DYNAMIC_METHODS_REGISTERED = 0
 
-    private int eventType
+    final int eventType
 
     GrailsContextEvent(WebApplicationContext ctx, int eventType) {
         super(ctx)
         this.eventType = eventType
-    }
-
-    int getEventType() {
-        return eventType
     }
 
 }
