@@ -140,7 +140,6 @@ tasks.withType(Test).configureEach {
     onlyIf { !testsSkipped }
     useJUnitPlatform()
     maxParallelForks = rootProject.ext.configuredTestParallel
-    forkEvery = isCiBuild ? 50 : 100
     maxHeapSize = "${rootProject.ext.testForkHeapMb}m"
     jvmArgs('--add-opens=java.base/java.lang=ALL-UNNAMED', '--add-opens=java.base/java.util=ALL-UNNAMED')
 }
