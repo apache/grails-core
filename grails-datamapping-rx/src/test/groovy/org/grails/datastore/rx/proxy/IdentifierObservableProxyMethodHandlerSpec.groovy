@@ -119,4 +119,21 @@ class IdentifierObservableProxyMethodHandlerSpec extends Specification {
         handler.invoke(new Object(), methodNamed('getProxyKey'), null, [] as Object[]) == 21L
         handler.invoke(new Object(), methodNamed('getId'), null, [] as Object[]) == 21L
     }
+
+    void "getTarget() performs a blocking read when there is no query state to consult"() {
+        given:
+        Widget loaded = new Widget(name: 'no query state')
+        RxDatastoreClientImplementor client = Stub(RxDatastoreClientImplementor) {
+            isAllowBlockingOperations() >> true
+            get(Widget, 23L, null) >> Observable.just(loaded)
+        }
+        IdentifierObservableProxyMethodHandler handler = new IdentifierObservableProxyMethodHandler(
+                Widget, Widget, 23L, client, null)
+
+        when:
+        Object target = handler.invoke(new Object(), methodNamed('getTarget'), null, [] as Object[])
+
+        then:
+        target.is(loaded)
+    }
 }

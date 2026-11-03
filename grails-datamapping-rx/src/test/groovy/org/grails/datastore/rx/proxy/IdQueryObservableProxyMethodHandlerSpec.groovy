@@ -150,4 +150,20 @@ class IdQueryObservableProxyMethodHandlerSpec extends Specification {
         then:
         thrown(BlockingOperationException)
     }
+
+    void "toObservable() fails when the query yields a null id because there is nothing to load"() {
+        given:
+        RxDatastoreClientImplementor client = Mock(RxDatastoreClientImplementor)
+        QueryState queryState = new QueryState()
+        IdQueryObservableProxyMethodHandler handler = new IdQueryObservableProxyMethodHandler(
+                Widget, newQuery(Observable.just(null)), queryState, client)
+
+        when:
+        Observable result = handler.invoke(new Object(), methodNamed('toObservable'), null, [] as Object[]) as Observable
+        result.toBlocking().first()
+
+        then:
+        thrown(NullPointerException)
+        0 * client.get(_, _, _)
+    }
 }

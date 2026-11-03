@@ -4,30 +4,25 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
  */
+@SuppressWarnings('UnnecessarySemicolon')
 package org.grails.datastore.rx.proxy;
 
-import java.io.Serializable;
 import java.lang.reflect.Method;
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
-import groovy.lang.GroovyObject;
-
+import groovy.transform.CompileStatic;
 import javassist.util.proxy.MethodFilter;
 import javassist.util.proxy.MethodHandler;
 import javassist.util.proxy.ProxyObject;
@@ -45,13 +40,17 @@ import org.grails.datastore.rx.query.QueryState;
  *
  * @since 6.0
  */
-public class RxJavassistProxyFactory implements ProxyFactory, org.grails.datastore.mapping.proxy.ProxyFactory {
+// TODO(groovyism-cleanup): semicolons kept to preserve rename-similarity against the original .java (see matrei's review on #16576). Removed by the stacked groovyism-cleanup PR.
+@SuppressWarnings('UnnecessarySemicolon')
+@CompileStatic
+class RxJavassistProxyFactory implements ProxyFactory, org.grails.datastore.mapping.proxy.ProxyFactory {
+
     private static final Map<Class, Class> PROXY_FACTORIES = new ConcurrentHashMap<Class, Class>();
-    private static final Set<String> EXCLUDES = new HashSet(Arrays.asList("$getStaticMetaClass"));
-    private static final Class[] EMPTY_CLASS_ARRAY = {};
+    private static final Set<String> EXCLUDES = new HashSet(Arrays.asList('$getStaticMetaClass'));
+    private static final Class[] EMPTY_CLASS_ARRAY = new Class[0];
 
     @Override
-    public <T> T createProxy(RxDatastoreClient client, QueryState queryState, Class<T> type, Serializable key) {
+    def <T> T createProxy(RxDatastoreClient client, QueryState queryState, Class<T> type, Serializable key) {
         Class proxyClass = getProxyClass(type);
         MethodHandler mi = createMethodHandler(client, type, proxyClass, key, queryState);
         Object proxy = ReflectionUtils.instantiate(proxyClass);
@@ -60,7 +59,7 @@ public class RxJavassistProxyFactory implements ProxyFactory, org.grails.datasto
     }
 
     @Override
-    public ObservableProxy createProxy(RxDatastoreClient client, QueryState queryState, Query query) {
+    ObservableProxy createProxy(RxDatastoreClient client, QueryState queryState, Query query) {
         Class proxyClass = getProxyClass(query.getEntity().getJavaClass());
         MethodHandler mi = createMethodHandler(proxyClass, client, query, queryState);
         Object proxy = ReflectionUtils.instantiate(proxyClass);
@@ -77,27 +76,27 @@ public class RxJavassistProxyFactory implements ProxyFactory, org.grails.datasto
     }
 
     @Override
-    public boolean isProxy(Object object) {
+    boolean isProxy(Object object) {
         return object instanceof ObservableProxy;
     }
 
     @Override
-    public boolean isInitialized(Object object) {
+    boolean isInitialized(Object object) {
         return !isProxy(object) || ((ObservableProxy) object).isInitialized();
     }
 
     @Override
-    public boolean isInitialized(Object object, String associationName) {
+    boolean isInitialized(Object object, String associationName) {
         return !isProxy(object) || ((ObservableProxy) object).isInitialized();
     }
 
     @Override
-    public Object unwrap(Object object) {
+    Object unwrap(Object object) {
         return isProxy(object) ? ((ObservableProxy) object).getTarget() : object;
     }
 
     @Override
-    public Serializable getIdentifier(Object o) {
+    Serializable getIdentifier(Object o) {
         if (isProxy(o)) {
             return ((ObservableProxy) o).getProxyKey();
         }
@@ -105,7 +104,7 @@ public class RxJavassistProxyFactory implements ProxyFactory, org.grails.datasto
     }
 
     @Override
-    public Class<?> getProxiedClass(Object o) {
+    Class<?> getProxiedClass(Object o) {
         if (isProxy(o)) {
             return o.getClass().getSuperclass();
         }
@@ -114,7 +113,7 @@ public class RxJavassistProxyFactory implements ProxyFactory, org.grails.datasto
     }
 
     @Override
-    public void initialize(Object o) {
+    void initialize(Object o) {
         if (isProxy(o)) {
             ((ObservableProxy) o).initialize();
         }
@@ -128,12 +127,12 @@ public class RxJavassistProxyFactory implements ProxyFactory, org.grails.datasto
             pf.setSuperclass(type);
             pf.setInterfaces(getProxyInterfaces());
             pf.setFilter(new MethodFilter() {
-                public boolean isHandled(Method method) {
+                boolean isHandled(Method method) {
                     final String methodName = method.getName();
-                    if (methodName.indexOf("super$") > -1) {
+                    if (methodName.indexOf('super$') > -1) {
                         return false;
                     }
-                    if (method.getParameterTypes().length == 0 && (methodName.equals("finalize"))) {
+                    if (method.getParameterTypes().length == 0 && (methodName.equals('finalize'))) {
                         return false;
                     }
                     if (EXCLUDES.contains(methodName) || method.isSynthetic() || method.isBridge()) {
@@ -149,16 +148,17 @@ public class RxJavassistProxyFactory implements ProxyFactory, org.grails.datasto
     }
 
     protected Class[] getProxyInterfaces() {
-        return new Class[]{ ObservableProxy.class, GroovyObject.class };
+        return [ObservableProxy, GroovyObject] as Class[];
     }
 
     @Override
-    public <T> T createProxy(Session session, Class<T> type, Serializable key) {
-        throw new UnsupportedOperationException("Cannot create proxy using session in stateless mode");
+    def <T> T createProxy(Session session, Class<T> type, Serializable key) {
+        throw new UnsupportedOperationException('Cannot create proxy using session in stateless mode');
     }
 
     @Override
-    public <T, K extends Serializable> T createProxy(Session session, AssociationQueryExecutor<K, T> executor, K associationKey) {
-        throw new UnsupportedOperationException("Cannot create proxy using session in stateless mode");
+    def <T, K extends Serializable> T createProxy(Session session, AssociationQueryExecutor<K, T> executor, K associationKey) {
+        throw new UnsupportedOperationException('Cannot create proxy using session in stateless mode');
     }
+
 }

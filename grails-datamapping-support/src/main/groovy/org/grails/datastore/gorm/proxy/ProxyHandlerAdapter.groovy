@@ -4,20 +4,23 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
  */
+@SuppressWarnings('UnnecessarySemicolon')
 
 package org.grails.datastore.gorm.proxy;
+
+import groovy.transform.CompileStatic;
 
 import grails.core.support.proxy.EntityProxyHandler;
 import org.grails.datastore.mapping.proxy.ProxyHandler;
@@ -28,46 +31,50 @@ import org.grails.datastore.mapping.proxy.ProxyHandler;
  * @author Graeme Rocher
  * @since 5.0
  */
-public class ProxyHandlerAdapter implements EntityProxyHandler {
+// TODO(groovyism-cleanup): semicolons kept to preserve rename-similarity against the original .java (see matrei's review on #16576). Removed by the stacked groovyism-cleanup PR.
+@SuppressWarnings('UnnecessarySemicolon')
+@CompileStatic
+class ProxyHandlerAdapter implements EntityProxyHandler {
 
     final ProxyHandler delegate;
 
-    public ProxyHandlerAdapter(ProxyHandler delegate) {
+    ProxyHandlerAdapter(ProxyHandler delegate) {
         this.delegate = delegate;
     }
 
     @Override
-    public Object getProxyIdentifier(Object o) {
+    Object getProxyIdentifier(Object o) {
         return delegate.getIdentifier(o);
     }
 
     @Override
-    public Class<?> getProxiedClass(Object o) {
+    Class<?> getProxiedClass(Object o) {
         return delegate.getProxiedClass(o);
     }
 
     @Override
-    public boolean isProxy(Object o) {
+    boolean isProxy(Object o) {
         return delegate.isProxy(o);
     }
 
     @Override
-    public Object unwrapIfProxy(Object instance) {
+    Object unwrapIfProxy(Object instance) {
         return delegate.unwrap(instance);
     }
 
     @Override
-    public boolean isInitialized(Object o) {
+    boolean isInitialized(Object o) {
         return delegate.isInitialized(o);
     }
 
     @Override
-    public void initialize(Object o) {
+    void initialize(Object o) {
         delegate.initialize(o);
     }
 
     @Override
-    public boolean isInitialized(Object obj, String associationName) {
+    boolean isInitialized(Object obj, String associationName) {
         return delegate.isInitialized(obj, associationName);
     }
+
 }

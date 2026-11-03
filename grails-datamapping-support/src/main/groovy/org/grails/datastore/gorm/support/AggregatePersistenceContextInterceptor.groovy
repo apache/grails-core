@@ -4,21 +4,22 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
  */
+@SuppressWarnings('UnnecessarySemicolon')
 package org.grails.datastore.gorm.support;
 
-import java.util.List;
+import groovy.transform.CompileStatic;
 
 import grails.persistence.support.PersistenceContextInterceptor;
 
@@ -26,7 +27,10 @@ import grails.persistence.support.PersistenceContextInterceptor;
  * @author Graeme Rocher
  * @since 1.0
  */
-public class AggregatePersistenceContextInterceptor implements PersistenceContextInterceptor {
+// TODO(groovyism-cleanup): semicolons kept to preserve rename-similarity against the original .java (see matrei's review on #16576). Removed by the stacked groovyism-cleanup PR.
+@SuppressWarnings('UnnecessarySemicolon')
+@CompileStatic
+class AggregatePersistenceContextInterceptor implements PersistenceContextInterceptor {
 
     private final List<PersistenceContextInterceptor> interceptors;
 
@@ -34,12 +38,12 @@ public class AggregatePersistenceContextInterceptor implements PersistenceContex
      * Constructor.
      * @param interceptors the real interceptors
      */
-    public AggregatePersistenceContextInterceptor(final List<PersistenceContextInterceptor> interceptors) {
+    AggregatePersistenceContextInterceptor(final List<PersistenceContextInterceptor> interceptors) {
         this.interceptors = interceptors;
     }
 
-    public boolean isOpen() {
-        for (PersistenceContextInterceptor interceptor : interceptors) {
+    boolean isOpen() {
+        for (PersistenceContextInterceptor interceptor in interceptors) {
             if (interceptor.isOpen()) {
                 // true at least one is true
                 return true;
@@ -48,57 +52,58 @@ public class AggregatePersistenceContextInterceptor implements PersistenceContex
         return false;
     }
 
-    public void reconnect() {
-        for (PersistenceContextInterceptor interceptor : interceptors) {
+    void reconnect() {
+        for (PersistenceContextInterceptor interceptor in interceptors) {
             interceptor.reconnect();
         }
     }
 
-    public void destroy() {
-        for (PersistenceContextInterceptor interceptor : interceptors) {
+    void destroy() {
+        for (PersistenceContextInterceptor interceptor in interceptors) {
             try {
                 if (interceptor.isOpen()) {
                     interceptor.destroy();
                 }
-            } catch (Exception e) {
+            } catch (Exception ignored) {
                 // ignore exception
             }
         }
     }
 
-    public void clear() {
-        for (PersistenceContextInterceptor interceptor : interceptors) {
+    void clear() {
+        for (PersistenceContextInterceptor interceptor in interceptors) {
             interceptor.clear();
         }
     }
 
-    public void disconnect() {
-        for (PersistenceContextInterceptor interceptor : interceptors) {
+    void disconnect() {
+        for (PersistenceContextInterceptor interceptor in interceptors) {
             interceptor.disconnect();
         }
     }
 
-    public void flush() {
-        for (PersistenceContextInterceptor interceptor : interceptors) {
+    void flush() {
+        for (PersistenceContextInterceptor interceptor in interceptors) {
             interceptor.flush();
         }
     }
 
-    public void init() {
-        for (PersistenceContextInterceptor interceptor : interceptors) {
+    void init() {
+        for (PersistenceContextInterceptor interceptor in interceptors) {
             interceptor.init();
         }
     }
 
-    public void setReadOnly() {
-        for (PersistenceContextInterceptor interceptor : interceptors) {
+    void setReadOnly() {
+        for (PersistenceContextInterceptor interceptor in interceptors) {
             interceptor.setReadOnly();
         }
     }
 
-    public void setReadWrite() {
-        for (PersistenceContextInterceptor interceptor : interceptors) {
+    void setReadWrite() {
+        for (PersistenceContextInterceptor interceptor in interceptors) {
             interceptor.setReadWrite();
         }
     }
+
 }
