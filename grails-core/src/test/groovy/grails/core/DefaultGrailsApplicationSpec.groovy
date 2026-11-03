@@ -20,6 +20,9 @@ package grails.core
 
 import spock.lang.Specification
 
+import org.grails.core.exceptions.GrailsConfigurationException
+import org.grails.datastore.mapping.model.MappingContext
+
 class DefaultGrailsApplicationSpec extends Specification {
 
     void 'setApplicationClass adopts the class once and rejects reassignment to a different class'() {
@@ -47,5 +50,26 @@ class DefaultGrailsApplicationSpec extends Specification {
         then: 'reassignment is rejected and the original is retained'
             thrown(IllegalStateException)
             application.applicationClass.is(first)
+    }
+
+    void 'the mapping context fails fast until GORM has initialized it, then delegates to it'() {
+        given: 'an application whose mapping context GORM has not set yet'
+            def application = new DefaultGrailsApplication()
+            MappingContext real = Mock(MappingContext)
+
+        when: 'the placeholder context is used'
+            application.mappingContext.getPersistentEntities()
+
+        then: 'it refuses rather than recursing into itself'
+            GrailsConfigurationException e = thrown()
+            e.message.contains('cannot be accessed before GORM has initialized')
+
+        when: 'GORM has set the real context'
+            application.mappingContext = real
+            application.mappingContext.getPersistentEntities()
+
+        then: 'the real context is what the application answers with'
+            1 * real.getPersistentEntities() >> []
+            application.mappingContext.is(real)
     }
 }

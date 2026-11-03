@@ -147,4 +147,21 @@ class StopWatchSpec extends Specification {
         then:
         thrown(IllegalStateException)
     }
+
+    void 'nested tasks are both tracked and totalled'() {
+        given:
+        def stopWatch = new StopWatch()
+
+        when:
+        stopWatch.start('outer')
+        stopWatch.start('inner')
+        stopWatch.stop()
+        stopWatch.stop()
+
+        then:
+        stopWatch.taskCount == 2
+        stopWatch.taskInfo.length == 2
+        // lastTaskInfo tracks the most recently *started* task, not the most recently stopped one
+        stopWatch.lastTaskName == 'inner'
+    }
 }

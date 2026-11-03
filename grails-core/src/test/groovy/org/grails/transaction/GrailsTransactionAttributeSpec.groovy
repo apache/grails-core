@@ -274,6 +274,29 @@ class GrailsTransactionAttributeSpec extends Specification {
         copy.isInheritRollbackOnly()
     }
 
+    void 'rolls back when the closest matching rule is a RollbackRuleAttribute'() {
+        given:
+        GrailsTransactionAttribute attribute = new GrailsTransactionAttribute()
+        attribute.rollbackRules = [new RollbackRuleAttribute(IllegalStateException)]
+
+        expect:
+        attribute.rollbackOn(new IllegalStateException())
+    }
+
+    void 'does not roll back when the closest matching rule is a NoRollbackRuleAttribute'() {
+        given:
+        GrailsTransactionAttribute attribute = new GrailsTransactionAttribute()
+        attribute.rollbackRules = [new NoRollbackRuleAttribute(IllegalStateException)]
+
+        expect:
+        !attribute.rollbackOn(new IllegalStateException())
+    }
+
+    void 'inheritRollbackOnly defaults to true'() {
+        expect:
+        new GrailsTransactionAttribute().inheritRollbackOnly
+    }
+
     @CompileStatic
     private static GrailsTransactionAttribute copyAsTransactionDefinition(TransactionDefinition source) {
         return new GrailsTransactionAttribute(source)

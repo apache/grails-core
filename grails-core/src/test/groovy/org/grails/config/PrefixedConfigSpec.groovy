@@ -134,6 +134,30 @@ class PrefixedConfigSpec extends Specification {
         ]
     }
 
+    void 'keySet strips and re-adds the prefix consistently'() {
+        given:
+        def delegate = new PropertySourcesConfig()
+        delegate.put('grails.foo.bar', 'baz')
+        def prefixed = new PrefixedConfig('grails', delegate)
+
+        expect:
+        prefixed.keySet().every { it.startsWith('grails.') }
+    }
+
+    void 'entrySet remaps each entry key with the prefix and preserves the value'() {
+        given:
+        def delegate = new PropertySourcesConfig(['bar': 'baz'])
+        def prefixed = new PrefixedConfig('grails', delegate)
+
+        when:
+        def entries = prefixed.entrySet()
+
+        then:
+        entries.size() == 1
+        entries.first().key == 'grails.bar'
+        entries.first().value == 'baz'
+    }
+
     @CompileStatic
     private static boolean configsEqual(PrefixedConfig config, Object other) {
         config.equals(other)

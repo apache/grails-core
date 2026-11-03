@@ -20,6 +20,7 @@ package grails.util
 
 import grails.artefact.Enhanced
 import spock.lang.Specification
+import spock.lang.Unroll
 
 class GrailsClassUtilsSpec extends Specification {
 
@@ -180,6 +181,161 @@ class GrailsClassUtilsSpec extends Specification {
         !GrailsClassUtils.hasBeenEnhancedForFeature(TestBean, 'controllers')
     }
 
+    @Unroll
+    void 'isMatchBetweenPrimitiveAndWrapperTypes(#left, #right) == #expected'() {
+        expect:
+        GrailsClassUtils.isMatchBetweenPrimitiveAndWrapperTypes(left, right) == expected
+
+        where:
+        left           | right          || expected
+        Integer        | int            || true
+        int            | Integer        || true
+        Integer        | long           || false
+        String         | String         || false
+    }
+
+    @Unroll
+    void 'isGroovyAssignableFrom(#left, #right) == #expected'() {
+        expect:
+        GrailsClassUtils.isGroovyAssignableFrom(left, right) == expected
+
+        where:
+        left    | right   || expected
+        Object  | String  || true
+        String  | String  || true
+        Number  | int     || true
+        int     | Integer || true
+        String  | Integer || false
+    }
+
+    void 'isGroovyAssignableFrom throws when either argument is null'() {
+        when:
+        GrailsClassUtils.isGroovyAssignableFrom(null, String)
+
+        then:
+        thrown(NullPointerException)
+
+        when:
+        GrailsClassUtils.isGroovyAssignableFrom(String, null)
+
+        then:
+        thrown(NullPointerException)
+    }
+
+    void 'isStaticProperty is true for a public static getter or a public static field'() {
+        expect:
+        GrailsClassUtils.isStaticProperty(GcuStaticHolder, 'value')
+        GrailsClassUtils.isStaticProperty(GcuStaticHolder, 'field')
+        !GrailsClassUtils.isStaticProperty(GcuStaticHolder, 'instanceValue')
+        !GrailsClassUtils.isStaticProperty(GcuStaticHolder, 'noSuchProperty')
+    }
+
+    void 'getStaticFieldValue reads a public static field and returns null when absent'() {
+        expect:
+        GrailsClassUtils.getStaticFieldValue(GcuStaticHolder, 'field') == 'fieldValue'
+        GrailsClassUtils.getStaticFieldValue(GcuStaticHolder, 'noSuchField') == null
+    }
+
+    void 'getStaticPropertyValue prefers a static getter and falls back to a static field'() {
+        expect:
+        GrailsClassUtils.getStaticPropertyValue(GcuStaticHolder, 'value') == 'getterValue'
+        GrailsClassUtils.getStaticPropertyValue(GcuStaticHolder, 'field') == 'fieldValue'
+        GrailsClassUtils.getStaticPropertyValue(GcuStaticHolder, 'noSuchProperty') == null
+    }
+
+    void 'getPropertyOrStaticPropertyOrFieldValue checks instance property, then public field, then static'() {
+        given:
+        GcuInstanceHolder holder = new GcuInstanceHolder(name: 'Bob')
+
+        expect:
+        GrailsClassUtils.getPropertyOrStaticPropertyOrFieldValue(holder, 'name') == 'Bob'
+        GrailsClassUtils.getPropertyOrStaticPropertyOrFieldValue(holder, 'publicField') == 'publicFieldValue'
+        GrailsClassUtils.getPropertyOrStaticPropertyOrFieldValue(holder, 'value') == 'getterValue'
+        GrailsClassUtils.getPropertyOrStaticPropertyOrFieldValue(holder, 'missing') == null
+    }
+
+    void 'getFieldValue and isPublicField reflect declared field visibility'() {
+        given:
+        GcuInstanceHolder holder = new GcuInstanceHolder(name: 'Bob')
+
+        expect:
+        GrailsClassUtils.isPublicField(holder, 'publicField')
+        !GrailsClassUtils.isPublicField(holder, 'noSuchField')
+        GrailsClassUtils.getFieldValue(holder, 'publicField') == 'publicFieldValue'
+        GrailsClassUtils.getFieldValue(holder, 'noSuchField') == null
+    }
+
+    void 'isPropertyInherited is true only for a property declared on a superclass'() {
+        expect:
+        GrailsClassUtils.isPropertyInherited(GcuChild, 'baseName')
+        !GrailsClassUtils.isPropertyInherited(GcuChild, 'childOnly')
+        !GrailsClassUtils.isPropertyInherited(null, 'anything')
+    }
+
+    void 'createConcreteCollection creates the conventional implementation for each interface'() {
+        expect:
+        GrailsClassUtils.createConcreteCollection(List) instanceof ArrayList
+        GrailsClassUtils.createConcreteCollection(Collection) instanceof ArrayList
+        GrailsClassUtils.createConcreteCollection(SortedSet) instanceof TreeSet
+        GrailsClassUtils.createConcreteCollection(Set) instanceof HashSet
+    }
+
+    @Unroll
+    void 'isSetter(#name, #args) == #expected'() {
+        expect:
+        GrailsClassUtils.isSetter(name, args as Class[]) == expected
+
+        where:
+        name        | args           || expected
+        'setName'   | [String]       || true
+        'setName'   | [String, Long] || false
+        'getName'   | [String]       || false
+        ''          | [String]       || false
+        'setName'   | null           || false
+    }
+
+    void 'isAssignableOrConvertibleFrom handles primitive conversion and plain assignability'() {
+        expect:
+        GrailsClassUtils.isAssignableOrConvertibleFrom(Number, int.class)
+        GrailsClassUtils.isAssignableOrConvertibleFrom(CharSequence, String)
+        !GrailsClassUtils.isAssignableOrConvertibleFrom(String, Integer)
+        !GrailsClassUtils.isAssignableOrConvertibleFrom(null, String)
+        !GrailsClassUtils.isAssignableOrConvertibleFrom(String, null)
+    }
+
+    void 'findPropertyNameForValue locates a property by reference equality of value'() {
+        given:
+        GcuInstanceHolder holder = new GcuInstanceHolder(name: 'Bob')
+
+        expect:
+        GrailsClassUtils.findPropertyNameForValue(holder, 'Bob') == 'name'
+        GrailsClassUtils.findPropertyNameForValue(holder, 'nope') == null
+    }
+
+    void 'getGetterName, getSetterName, isGetter, and the property-for-accessor helpers delegate to GrailsNameUtils'() {
+        expect:
+        GrailsClassUtils.getGetterName('name') == 'getName'
+        GrailsClassUtils.getSetterName('name') == 'setName'
+        GrailsClassUtils.isGetter('getName', String, [] as Class[])
+        GrailsClassUtils.getPropertyForGetter('getName', String) == 'name'
+        GrailsClassUtils.getPropertyForGetter('getName', 'java.lang.String') == 'name'
+        GrailsClassUtils.getPropertyForSetter('setName') == 'name'
+    }
+
+    void 'isPropertyGetter requires a public non-static getter shaped method'() {
+        expect:
+        GrailsClassUtils.isPropertyGetter(GcuInstanceHolder.getDeclaredMethod('getName'))
+        !GrailsClassUtils.isPropertyGetter(GcuStaticHolder.getDeclaredMethod('getValue'))
+    }
+
+    void 'fastClass builds a working CGLIB FastClass for the given type'() {
+        when:
+        def fastClass = GrailsClassUtils.fastClass(GcuInstanceHolder)
+
+        then:
+        fastClass.newInstance() instanceof GcuInstanceHolder
+    }
+
     static class TestBean {
         String name = 'Grails'
         CharSequence text = 'text'
@@ -188,5 +344,31 @@ class GrailsClassUtilsSpec extends Specification {
 
     @Enhanced(version = '7.0', enhancedFor = ['controllers'])
     static class EnhancedBean {
+    }
+}
+
+class GcuBase {
+    String baseName
+}
+
+class GcuChild extends GcuBase {
+    String childOnly
+}
+
+class GcuStaticHolder {
+    public static String field = 'fieldValue'
+    String instanceValue
+
+    static String getValue() {
+        'getterValue'
+    }
+}
+
+class GcuInstanceHolder {
+    public String publicField = 'publicFieldValue'
+    String name
+
+    static String getValue() {
+        'getterValue'
     }
 }

@@ -1021,15 +1021,23 @@ class StartupProgressSpec extends Specification {
     }
 
     private Response awaitStatus(String phase) {
-        long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(30)
+        long start = System.nanoTime()
+        long deadline = start + TimeUnit.SECONDS.toNanos(30)
+        List<String> polls = []
+        String previous = null
         while (System.nanoTime() < deadline) {
             Response response = status()
             if (response?.phase == phase) {
                 return response
             }
+            String seen = response?.phase ?: 'no answer'
+            if (seen != previous) {
+                polls << "${TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start)}ms: ${seen}".toString()
+                previous = seen
+            }
             Thread.sleep(50)
         }
-        throw new AssertionError("No ${phase} status within 30 seconds")
+        throw new AssertionError("No ${phase} status within 30 seconds; answers by change: ${polls}; runner alive: ${runner?.alive}; run failure: ${runFailure}")
     }
 
     private Response status(String contextPath = '') {
