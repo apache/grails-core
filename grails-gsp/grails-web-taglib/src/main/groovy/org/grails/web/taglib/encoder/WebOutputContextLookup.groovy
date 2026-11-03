@@ -59,28 +59,17 @@ class WebOutputContextLookup implements OutputContextLookup, Ordered {
 
         @Override
         EncodingStateRegistry getEncodingStateRegistry() {
-            GrailsWebRequest grailsWebRequest = lookupWebRequest()
-            if (grailsWebRequest != null) {
-                return grailsWebRequest.getEncodingStateRegistry()
-            }
-            return null
+            return lookupWebRequest()?.getEncodingStateRegistry()
         }
 
         @Override
         void setCurrentOutputEncodingStack(OutputEncodingStack outputEncodingStack) {
-            GrailsWebRequest grailsWebRequest = lookupWebRequest()
-            if (grailsWebRequest != null) {
-                grailsWebRequest.setAttribute(ATTRIBUTE_NAME_OUTPUT_STACK, outputEncodingStack, RequestAttributes.SCOPE_REQUEST)
-            }
+            lookupWebRequest()?.setAttribute(ATTRIBUTE_NAME_OUTPUT_STACK, outputEncodingStack, RequestAttributes.SCOPE_REQUEST)
         }
 
         @Override
         OutputEncodingStack getCurrentOutputEncodingStack() {
-            GrailsWebRequest grailsWebRequest = lookupWebRequest()
-            if (grailsWebRequest != null) {
-                return (OutputEncodingStack) grailsWebRequest.getAttribute(ATTRIBUTE_NAME_OUTPUT_STACK, RequestAttributes.SCOPE_REQUEST)
-            }
-            return null
+            return (OutputEncodingStack) lookupWebRequest()?.getAttribute(ATTRIBUTE_NAME_OUTPUT_STACK, RequestAttributes.SCOPE_REQUEST)
         }
 
         @Override
@@ -90,10 +79,7 @@ class WebOutputContextLookup implements OutputContextLookup, Ordered {
 
         @Override
         void setCurrentWriter(Writer currentWriter) {
-            GrailsWebRequest grailsWebRequest = lookupWebRequest()
-            if (grailsWebRequest != null) {
-                grailsWebRequest.setOut(currentWriter)
-            }
+            lookupWebRequest()?.setOut(currentWriter)
         }
 
         @Override
@@ -106,19 +92,12 @@ class WebOutputContextLookup implements OutputContextLookup, Ordered {
 
         @Override
         AbstractTemplateVariableBinding getBinding() {
-            GrailsWebRequest grailsWebRequest = lookupWebRequest()
-            if (grailsWebRequest == null) {
-                return null
-            }
-            return (AbstractTemplateVariableBinding) grailsWebRequest.getAttribute(GrailsApplicationAttributes.PAGE_SCOPE, RequestAttributes.SCOPE_REQUEST)
+            return (AbstractTemplateVariableBinding) lookupWebRequest()?.getAttribute(GrailsApplicationAttributes.PAGE_SCOPE, RequestAttributes.SCOPE_REQUEST)
         }
 
         @Override
         void setBinding(AbstractTemplateVariableBinding binding) {
-            GrailsWebRequest grailsWebRequest = lookupWebRequest()
-            if (grailsWebRequest != null) {
-                grailsWebRequest.setAttribute(GrailsApplicationAttributes.PAGE_SCOPE, binding, RequestAttributes.SCOPE_REQUEST)
-            }
+            lookupWebRequest()?.setAttribute(GrailsApplicationAttributes.PAGE_SCOPE, binding, RequestAttributes.SCOPE_REQUEST)
         }
 
         @Override
@@ -132,10 +111,7 @@ class WebOutputContextLookup implements OutputContextLookup, Ordered {
 
         @Override
         void setContentType(String contentType) {
-            HttpServletResponse httpServletResponse = lookupResponse()
-            if (httpServletResponse != null) {
-                httpServletResponse.setContentType(contentType)
-            }
+            lookupResponse()?.setContentType(contentType)
         }
 
         @Override
@@ -150,17 +126,7 @@ class WebOutputContextLookup implements OutputContextLookup, Ordered {
         }
 
         protected HttpServletResponse lookupResponse() {
-            HttpServletResponse wrapped = WrappedResponseHolder.getWrappedResponse()
-            if (wrapped != null) {
-                return wrapped
-            }
-            else {
-                GrailsWebRequest grailsWebRequest = lookupWebRequest()
-                if (grailsWebRequest != null) {
-                    return grailsWebRequest.getCurrentResponse()
-                }
-            }
-            return null
+            return WrappedResponseHolder.getWrappedResponse() ?: lookupWebRequest()?.getCurrentResponse()
         }
     }
 }

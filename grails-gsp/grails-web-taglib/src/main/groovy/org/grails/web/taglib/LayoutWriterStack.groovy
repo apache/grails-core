@@ -62,10 +62,10 @@ class LayoutWriterStack {
     static Writer currentWriter(String name) {
         Map<String, Object> writers = currentStack().stack.peek()
         if (writers != null) {
-            Writer result = (Writer) writers.get(name)
+            Writer result = (Writer) writers[name]
             if (result == null) {
                 result = new StringWriter()
-                writers.put(name, result)
+                writers[name] = result
             }
             return result
         }
@@ -89,15 +89,15 @@ class LayoutWriterStack {
     static Map<String, Object> writeParts(Closure<?> body) {
         LayoutWriterStack stack = LayoutWriterStack.currentStack()
         stack.push()
-        Map<String, Object> result = new HashMap<>()
-        result.put('body', body.call())
+        Map<String, Object> result = [:]
+        result['body'] = body.call()
         result.putAll(stack.pop())
         return result
     }
 
     private static LayoutWriterStack currentStack() {
         RequestAttributes attributes = RequestContextHolder.currentRequestAttributes()
-        if (attributes != null) {
+        if (attributes) {
             LayoutWriterStack stack = (LayoutWriterStack) attributes.getAttribute(ATTRIBUTE_NAME_WRITER_STACK, RequestAttributes.SCOPE_REQUEST)
             if (stack == null) {
                 stack = new LayoutWriterStack()
@@ -109,7 +109,7 @@ class LayoutWriterStack {
     }
 
     private void push() {
-        stack.push(new HashMap<>())
+        stack.push([:])
     }
 
     private Map<String, Object> pop() {

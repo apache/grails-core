@@ -16,178 +16,174 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-@SuppressWarnings('UnnecessarySemicolon')
-package org.grails.web.taglib;
+package org.grails.web.taglib
 
-import groovy.transform.CompileStatic;
+import groovy.transform.CompileStatic
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.apache.commons.logging.Log
+import org.apache.commons.logging.LogFactory
 
-import grails.util.Environment;
-import org.grails.taglib.AbstractTemplateVariableBinding;
-import org.grails.web.servlet.mvc.GrailsWebRequest;
+import grails.util.Environment
+import org.grails.taglib.AbstractTemplateVariableBinding
+import org.grails.web.servlet.mvc.GrailsWebRequest
 
 /**
  * Script binding to be used as the top-level binding in GSP evaluation.
  *
  * @author Lari Hotari
  */
-// TODO(groovyism-cleanup): semicolons kept to preserve rename-similarity against the original .java (see matrei's review on #16576). Removed by the stacked groovyism-cleanup PR.
-@SuppressWarnings(['UnnecessarySemicolon'])
 @CompileStatic
 class WebRequestTemplateVariableBinding extends AbstractTemplateVariableBinding {
 
-    private static Log log = LogFactory.getLog(WebRequestTemplateVariableBinding);
-    private GrailsWebRequest webRequest;
-    private boolean developmentMode = Environment.isDevelopmentMode();
-    private Set<String> requestAttributeVariables = new HashSet<>();
+    private static Log log = LogFactory.getLog(WebRequestTemplateVariableBinding)
+    private GrailsWebRequest webRequest
+    private boolean developmentMode = Environment.isDevelopmentMode()
+    private Set<String> requestAttributeVariables = [] as Set
 
-    private static Map<String, LazyRequestBasedValue> lazyRequestBasedValuesMap = new HashMap<>();
+    private static Map<String, LazyRequestBasedValue> lazyRequestBasedValuesMap = [:]
 
     static {
-        Map<String, LazyRequestBasedValue> m = lazyRequestBasedValuesMap;
-        m.put('webRequest', new LazyRequestBasedValue() {
+        Map<String, LazyRequestBasedValue> m = lazyRequestBasedValuesMap
+        m['webRequest'] = new LazyRequestBasedValue() {
             Object evaluate(GrailsWebRequest webRequest) {
-                return webRequest;
+                return webRequest
             }
-        });
-        m.put('request', new LazyRequestBasedValue() {
+        }
+        m['request'] = new LazyRequestBasedValue() {
             Object evaluate(GrailsWebRequest webRequest) {
-                return webRequest.getRequest();
+                return webRequest.getRequest()
             }
-        });
-        m.put('response', new LazyRequestBasedValue() {
+        }
+        m['response'] = new LazyRequestBasedValue() {
             Object evaluate(GrailsWebRequest webRequest) {
-                return webRequest.getCurrentResponse();
+                return webRequest.getCurrentResponse()
             }
-        });
-        m.put('flash', new LazyRequestBasedValue() {
+        }
+        m['flash'] = new LazyRequestBasedValue() {
             Object evaluate(GrailsWebRequest webRequest) {
-                return webRequest.getFlashScope();
+                return webRequest.getFlashScope()
             }
-        });
-        m.put('application', new LazyRequestBasedValue() {
+        }
+        m['application'] = new LazyRequestBasedValue() {
             Object evaluate(GrailsWebRequest webRequest) {
-                return webRequest.getServletContext();
+                return webRequest.getServletContext()
             }
-        });
+        }
         // The same object as `application`, under the name the servlet API calls it. A page reading
         // servletContext got nothing at all before, since nothing bound the name.
-        m.put('servletContext', new LazyRequestBasedValue() {
+        m['servletContext'] = new LazyRequestBasedValue() {
             Object evaluate(GrailsWebRequest webRequest) {
-                return webRequest.getServletContext();
+                return webRequest.getServletContext()
             }
-        });
-        m.put('applicationContext', new LazyRequestBasedValue() {
+        }
+        m['applicationContext'] = new LazyRequestBasedValue() {
             Object evaluate(GrailsWebRequest webRequest) {
-                return webRequest.getAttributes().getApplicationContext();
+                return webRequest.getAttributes().getApplicationContext()
             }
-        });
-        m.put('grailsApplication', new LazyRequestBasedValue() {
+        }
+        m['grailsApplication'] = new LazyRequestBasedValue() {
             Object evaluate(GrailsWebRequest webRequest) {
-                return webRequest.getAttributes().getGrailsApplication();
+                return webRequest.getAttributes().getGrailsApplication()
             }
-        });
-        m.put('session', new LazyRequestBasedValue() {
+        }
+        m['session'] = new LazyRequestBasedValue() {
             Object evaluate(GrailsWebRequest webRequest) {
-                return webRequest.getSession();
+                return webRequest.getSession()
             }
-        });
-        m.put('params', new LazyRequestBasedValue() {
+        }
+        m['params'] = new LazyRequestBasedValue() {
             Object evaluate(GrailsWebRequest webRequest) {
-                return webRequest.getParams();
+                return webRequest.getParams()
             }
-        });
-        m.put('actionName', new LazyRequestBasedValue() {
+        }
+        m['actionName'] = new LazyRequestBasedValue() {
             Object evaluate(GrailsWebRequest webRequest) {
-                return webRequest.getActionName();
+                return webRequest.getActionName()
             }
-        });
-        m.put('namespace', new LazyRequestBasedValue() {
+        }
+        m['namespace'] = new LazyRequestBasedValue() {
             Object evaluate(GrailsWebRequest webRequest) {
-                return webRequest.getControllerNamespace();
+                return webRequest.getControllerNamespace()
             }
-        });
-        m.put('controllerName', new LazyRequestBasedValue() {
+        }
+        m['controllerName'] = new LazyRequestBasedValue() {
             Object evaluate(GrailsWebRequest webRequest) {
-                return webRequest.getControllerName();
+                return webRequest.getControllerName()
             }
-        });
+        }
     }
 
     WebRequestTemplateVariableBinding(GrailsWebRequest webRequest) {
-        this.webRequest = webRequest;
+        this.webRequest = webRequest
     }
 
     Binding findBindingForVariable(String name) {
-        Binding binding = super.findBindingForVariable(name);
+        Binding binding = super.findBindingForVariable(name)
         if (binding == null) {
             if (webRequest.getRequest().getAttribute(name) != null) {
-                requestAttributeVariables.add(name);
-                binding = this;
+                requestAttributeVariables << name
+                binding = this
             }
         }
-        if (binding == null && lazyRequestBasedValuesMap.containsKey(name)) {
-            binding = this;
+        if (binding == null && name in lazyRequestBasedValuesMap) {
+            binding = this
         }
-        return binding;
+        return binding
     }
 
     boolean isRequestAttributeVariable(String name) {
-        return requestAttributeVariables.contains(name);
+        return name in requestAttributeVariables
     }
 
     boolean isVariableCachingAllowed(String name) {
-        return !isRequestAttributeVariable(name);
+        return !isRequestAttributeVariable(name)
     }
 
     @Override
     Object getVariable(String name) {
-        Object val = getVariablesMap().get(name);
-        if (val == null && !getVariablesMap().containsKey(name) && webRequest != null) {
-            val = webRequest.getRequest().getAttribute(name);
+        Object val = getVariablesMap()[name]
+        if (val == null && !(name in getVariablesMap()) && webRequest != null) {
+            val = webRequest.getRequest().getAttribute(name)
             if (val != null) {
-                requestAttributeVariables.add(name);
+                requestAttributeVariables << name
             }
             else {
-                LazyRequestBasedValue lazyValue = lazyRequestBasedValuesMap.get(name);
+                LazyRequestBasedValue lazyValue = lazyRequestBasedValuesMap[name]
                 if (lazyValue != null) {
-                    val = lazyValue.evaluate(webRequest);
+                    val = lazyValue.evaluate(webRequest)
                 }
                 else {
-                    val = resolveMissingVariable(name);
+                    val = resolveMissingVariable(name)
                 }
 
                 // warn about missing variables in development mode
                 if (val == null && developmentMode) {
                     if (log.isDebugEnabled()) {
-                        log.debug("Variable '$name' not found in binding or the value is null.");
+                        log.debug("Variable '$name' not found in binding or the value is null.")
                     }
                 }
             }
         }
-        return val;
+        return val
     }
 
     protected Object resolveMissingVariable(String name) {
-        return null;
+        return null
     }
 
     private static interface LazyRequestBasedValue {
-        Object evaluate(GrailsWebRequest webRequest);
+        Object evaluate(GrailsWebRequest webRequest)
     }
 
     @SuppressWarnings('unchecked')
     @Override
     Set<String> getVariableNames() {
         if (getVariablesMap().isEmpty()) {
-            return lazyRequestBasedValuesMap.keySet();
+            return lazyRequestBasedValuesMap.keySet()
         }
 
-        Set<String> variableNames = new HashSet<>(lazyRequestBasedValuesMap.keySet());
-        variableNames.addAll((Set<String>) getVariablesMap().keySet());
-        return variableNames;
+        Set<String> variableNames = new HashSet<>(lazyRequestBasedValuesMap.keySet())
+        variableNames.addAll((Set<String>) getVariablesMap().keySet())
+        return variableNames
     }
-
 }

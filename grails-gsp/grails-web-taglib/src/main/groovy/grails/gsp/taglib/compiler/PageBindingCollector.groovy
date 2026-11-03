@@ -16,20 +16,19 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-@SuppressWarnings('UnnecessarySemicolon')
-package grails.gsp.taglib.compiler;
+package grails.gsp.taglib.compiler
 
-import groovy.transform.CompileStatic;
+import groovy.transform.CompileStatic
 
-import org.codehaus.groovy.ast.ClassNode;
-import org.codehaus.groovy.ast.CodeVisitorSupport;
-import org.codehaus.groovy.ast.MethodNode;
-import org.codehaus.groovy.ast.expr.ConstantExpression;
-import org.codehaus.groovy.ast.expr.Expression;
-import org.codehaus.groovy.ast.expr.MapEntryExpression;
-import org.codehaus.groovy.ast.expr.MapExpression;
-import org.codehaus.groovy.ast.expr.MethodCallExpression;
-import org.codehaus.groovy.ast.expr.TupleExpression;
+import org.codehaus.groovy.ast.ClassNode
+import org.codehaus.groovy.ast.CodeVisitorSupport
+import org.codehaus.groovy.ast.MethodNode
+import org.codehaus.groovy.ast.expr.ConstantExpression
+import org.codehaus.groovy.ast.expr.Expression
+import org.codehaus.groovy.ast.expr.MapEntryExpression
+import org.codehaus.groovy.ast.expr.MapExpression
+import org.codehaus.groovy.ast.expr.MethodCallExpression
+import org.codehaus.groovy.ast.expr.TupleExpression
 
 /**
  * Collects the names a page puts into its own binding with {@code <g:set var="...">}.
@@ -41,16 +40,14 @@ import org.codehaus.groovy.ast.expr.TupleExpression;
  *
  * @since 8.0.0
  */
-// TODO(groovyism-cleanup): semicolons kept to preserve rename-similarity against the original .java (see matrei's review on #16576). Removed by the stacked groovyism-cleanup PR.
-@SuppressWarnings(['UnnecessarySemicolon'])
 @CompileStatic
 final class PageBindingCollector extends CodeVisitorSupport {
 
-    private static final String MARKUP_TAG_CALL = 'invokeTag';
-    private static final String SET_TAG = 'set';
-    private static final String VAR_ATTRIBUTE = 'var';
+    private static final String MARKUP_TAG_CALL = 'invokeTag'
+    private static final String SET_TAG = 'set'
+    private static final String VAR_ATTRIBUTE = 'var'
 
-    private final Set<String> names = new HashSet<>();
+    private final Set<String> names = [] as Set
 
     private PageBindingCollector() {
     }
@@ -60,42 +57,41 @@ final class PageBindingCollector extends CodeVisitorSupport {
      * @return the names the page sets, never {@code null}
      */
     static Set<String> collect(ClassNode classNode) {
-        PageBindingCollector collector = new PageBindingCollector();
+        PageBindingCollector collector = new PageBindingCollector()
         for (MethodNode method in classNode.getMethods()) {
             if (method.getCode() != null) {
-                method.getCode().visit(collector);
+                method.getCode().visit(collector)
             }
         }
-        return collector.names.isEmpty() ? Collections.emptySet() : collector.names;
+        return collector.names.isEmpty() ? Collections.emptySet() : collector.names
     }
 
     @Override
     void visitMethodCallExpression(MethodCallExpression call) {
         if (MARKUP_TAG_CALL == call.getMethodAsString() && call.getArguments() instanceof TupleExpression) {
-            TupleExpression tuple = (TupleExpression) call.getArguments();
+            TupleExpression tuple = (TupleExpression) call.getArguments()
             if (tuple.getExpressions().size() > 3 && tuple.getExpression(0) instanceof ConstantExpression) {
-                ConstantExpression tagName = (ConstantExpression) tuple.getExpression(0);
+                ConstantExpression tagName = (ConstantExpression) tuple.getExpression(0)
                 if (SET_TAG == tagName.getValue() && tuple.getExpression(3) instanceof MapExpression) {
-                    MapExpression attrs = (MapExpression) tuple.getExpression(3);
-                    addVariableName(attrs);
+                    MapExpression attrs = (MapExpression) tuple.getExpression(3)
+                    addVariableName(attrs)
                 }
             }
         }
-        super.visitMethodCallExpression(call);
+        super.visitMethodCallExpression(call)
     }
 
     private void addVariableName(MapExpression attrs) {
         for (MapEntryExpression entry in attrs.getMapEntryExpressions()) {
-            Expression key = entry.getKeyExpression();
-            Expression value = entry.getValueExpression();
+            Expression key = entry.getKeyExpression()
+            Expression value = entry.getValueExpression()
             if (key instanceof ConstantExpression && value instanceof ConstantExpression) {
-                ConstantExpression name = (ConstantExpression) key;
-                ConstantExpression variable = (ConstantExpression) value;
+                ConstantExpression name = (ConstantExpression) key
+                ConstantExpression variable = (ConstantExpression) value
                 if (VAR_ATTRIBUTE == name.getValue() && variable.getValue() != null) {
-                    this.names.add(variable.getValue().toString());
+                    this.names.add(variable.getValue().toString())
                 }
             }
         }
     }
-
 }

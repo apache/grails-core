@@ -151,7 +151,7 @@ class CompiledTagCallRewriter extends ClassCodeExpressionTransformer {
             // getMethods() reaches inherited methods, whose bodies belong to the class that declared
             // them. Rewriting one here would change a superclass through a subclass that happens to be
             // able to call tags. Trait methods are woven as declarations on this class and so remain.
-            if (method.getDeclaringClass() != null && !classNode.equals(method.getDeclaringClass())) {
+            if (method.getDeclaringClass() != null && classNode != method.getDeclaringClass()) {
                 continue
             }
             if (method.getCode() != null && !method.isAbstract()) {
@@ -164,7 +164,7 @@ class CompiledTagCallRewriter extends ClassCodeExpressionTransformer {
             }
         }
         for (FieldNode field in classNode.getFields()) {
-            if (field.getDeclaringClass() != null && !classNode.equals(field.getDeclaringClass())) {
+            if (field.getDeclaringClass() != null && classNode != field.getDeclaringClass()) {
                 continue
             }
             Expression initial = field.getInitialExpression()
@@ -439,7 +439,7 @@ class CompiledTagCallRewriter extends ClassCodeExpressionTransformer {
      * it are worth the same check as the ones written in an expression.
      */
     private void validateMarkupTagCall(MethodCallExpression call) {
-        if (!page || !MARKUP_TAG_CALL.equals(call.getMethodAsString()) ||
+        if (!page || MARKUP_TAG_CALL != call.getMethodAsString() ||
                 !(call.getArguments() instanceof TupleExpression)) {
             return
         }
@@ -493,8 +493,8 @@ class CompiledTagCallRewriter extends ClassCodeExpressionTransformer {
             // over code that is correct.
             return
         }
-        String message = "No such tag [$tagName] in namespace [$namespace]. Known tags: " +
-                String.join(', ', index.getTagNames(namespace))
+        String message = "No such tag [$tagName] in namespace [$namespace]. " +
+                "Known tags: ${String.join(', ', index.getTagNames(namespace))}"
         // Collected rather than fatal, so that every misspelling in a file is reported at once instead
         // of one per build.
         GrailsASTUtils.error(sourceUnit, call, message, false)
@@ -567,11 +567,11 @@ class CompiledTagCallRewriter extends ClassCodeExpressionTransformer {
      * return type is boolean, from {@code isX()} as well, so both forms claim the name.
      */
     private boolean hasGetter(String namespace) {
-        String capitalised = String.valueOf(Character.toUpperCase(namespace.charAt(0))) + namespace.substring(1)
-        if (!classNode.getMethods('get' + capitalised).isEmpty()) {
+        String capitalised = "${Character.toUpperCase(namespace.charAt(0))}${namespace.substring(1)}"
+        if (!classNode.getMethods("get$capitalised").isEmpty()) {
             return true
         }
-        for (MethodNode candidate in classNode.getMethods('is' + capitalised)) {
+        for (MethodNode candidate in classNode.getMethods("is$capitalised")) {
             ClassNode returnType = candidate.getReturnType()
             if (returnType != null && (ClassHelper.isPrimitiveBoolean(returnType) ||
                     ClassHelper.isWrapperBoolean(returnType))) {
@@ -607,7 +607,7 @@ class CompiledTagCallRewriter extends ClassCodeExpressionTransformer {
     private static boolean isGroovyPage(ClassNode classNode) {
         for (ClassNode current = classNode.getSuperClass(); current != null;
                 current = current.getSuperClass()) {
-            if (GROOVY_PAGE_TYPE.equals(current.getName())) {
+            if (GROOVY_PAGE_TYPE == current.getName()) {
                 return true
             }
         }
@@ -621,7 +621,7 @@ class CompiledTagCallRewriter extends ClassCodeExpressionTransformer {
     private static boolean isCompileStatic(ClassNode classNode) {
         for (AnnotationNode annotation in classNode.getAnnotations()) {
             String name = annotation.getClassNode().getName()
-            if (COMPILE_STATIC_TYPE.equals(name) || GRAILS_COMPILE_STATIC_TYPE.equals(name)) {
+            if (name == COMPILE_STATIC_TYPE || name == GRAILS_COMPILE_STATIC_TYPE) {
                 return true
             }
         }

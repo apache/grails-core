@@ -78,7 +78,7 @@ final class MissingPropertyClearer {
     }
 
     private static List expandWildcardIncludes(Object object, List include) {
-        List expandedInclude = new ArrayList()
+        List expandedInclude = []
         for (Object includedProperty in include) {
             if (!(includedProperty instanceof CharSequence)) {
                 expandedInclude.add(includedProperty)
@@ -102,13 +102,13 @@ final class MissingPropertyClearer {
         Object nestedObject = getPropertyValue(object, propertyPath)
         if (nestedObject instanceof Collection) {
             int index = 0
-            for (Object item in (Collection) nestedObject) {
+            for (Object item in nestedObject) {
                 expandObjectProperties(item, propertyPath + '[' + index + ']', expandedInclude)
                 index++
             }
         }
         else if (nestedObject instanceof Map) {
-            for (Object entryObject in ((Map) nestedObject).entrySet()) {
+            for (Object entryObject in nestedObject.entrySet()) {
                 Map.Entry entry = (Map.Entry) entryObject
                 expandObjectProperties(entry.getValue(), propertyPath + '[' + entry.getKey() + ']', expandedInclude)
             }
@@ -162,7 +162,7 @@ final class MissingPropertyClearer {
         Object nestedObject = getPropertyValue(object, propertyName.substring(0, separator))
         String nestedPropertyName = propertyName.substring(separator + 1)
         if (nestedObject instanceof Collection) {
-            for (Object item in (Collection) nestedObject) {
+            for (Object item in nestedObject) {
                 if (item != null && !isClearMissingPropertyBindable(item, nestedPropertyName, getNestedIncludeList(include, propertyName), null)) {
                     return false
                 }
@@ -170,7 +170,7 @@ final class MissingPropertyClearer {
             return true
         }
         if (nestedObject instanceof Map) {
-            for (Object value in ((Map) nestedObject).values()) {
+            for (Object value in nestedObject.values()) {
                 if (value != null && !isClearMissingPropertyBindable(value, nestedPropertyName, getNestedIncludeList(include, propertyName), null)) {
                     return false
                 }
@@ -188,7 +188,7 @@ final class MissingPropertyClearer {
         if (propertyNames == null) {
             return Collections.emptyList()
         }
-        List normalizedPropertyNames = new ArrayList(propertyNames.size())
+        List normalizedPropertyNames = []
         for (Object propertyName in propertyNames) {
             normalizedPropertyNames.add(propertyName instanceof CharSequence ? removePropertyIndexes(propertyName.toString()) : propertyName)
         }
@@ -205,12 +205,12 @@ final class MissingPropertyClearer {
             return Collections.emptyList()
         }
         String rootPropertyName = normalizedPropertyName.substring(0, separator)
-        List nestedIncludeList = new ArrayList()
+        List nestedIncludeList = []
         for (Object includedProperty in include) {
             if (includedProperty instanceof CharSequence) {
                 String includedPropertyName = removePropertyIndexes(includedProperty.toString())
                 int includedPropertySeparator = propertyPathSeparator(includedPropertyName)
-                if (includedPropertySeparator != -1 && rootPropertyName.equals(includedPropertyName.substring(0, includedPropertySeparator))) {
+                if (includedPropertySeparator != -1 && rootPropertyName == includedPropertyName.substring(0, includedPropertySeparator)) {
                     nestedIncludeList.add(includedPropertyName.substring(includedPropertySeparator + 1))
                 }
             }
@@ -223,8 +223,8 @@ final class MissingPropertyClearer {
             return false
         }
         for (Object item in excludeList) {
-            String excludeName = item == null ? null : item.toString()
-            if (excludeName != null && (excludeName.equals(propertyName) || propertyName.startsWith(excludeName + '.') ||
+            String excludeName = item?.toString()
+            if (excludeName != null && (excludeName == propertyName || propertyName.startsWith(excludeName + '.') ||
                     (excludeName.endsWith('.*') && propertyName.startsWith(excludeName.substring(0, excludeName.length() - 1))) ||
                     (excludeName.endsWith('_*') && propertyName.startsWith(excludeName.substring(0, excludeName.length() - 1))))) {
                 return true
@@ -244,7 +244,7 @@ final class MissingPropertyClearer {
     private static boolean isIntrinsicRuntimeProperty(String propertyName) {
         int separator = propertyPathSeparator(propertyName)
         String rootPropertyName = separator == -1 ? propertyName : propertyName.substring(0, separator)
-        return FrameworkPropertyNames.INTRINSIC_RUNTIME_PROPERTIES.contains(rootPropertyName)
+        return rootPropertyName in FrameworkPropertyNames.INTRINSIC_RUNTIME_PROPERTIES
     }
 
     private static boolean isClearMissingPropertyIncluded(String propertyName, List includeList) {
@@ -254,7 +254,7 @@ final class MissingPropertyClearer {
         for (Object includedProperty in includeList) {
             if (includedProperty instanceof CharSequence) {
                 String includedPropertyName = removePropertyIndexes(includedProperty.toString())
-                if (includedPropertyName.equals(propertyName)) {
+                if (includedPropertyName == propertyName) {
                     return true
                 }
                 if (includedPropertyName.endsWith('.*')) {
@@ -306,11 +306,11 @@ final class MissingPropertyClearer {
         if (containsSourceProperty(source, sourceRootPropertyName)) {
             Object nestedSource = getSourcePropertyValue(source, sourceRootPropertyName)
             if (nestedSource instanceof Collection) {
-                return assignNullToMissingCollectionProperties(object, (Collection) nestedSource, targetPathPrefix, targetRootPropertyName, nestedSourcePropertyName, nestedTargetPropertyName)
+                return assignNullToMissingCollectionProperties(object, nestedSource, targetPathPrefix, targetRootPropertyName, nestedSourcePropertyName, nestedTargetPropertyName)
             }
             Object targetObject = getTargetObject(object, targetPathPrefix)
-            if (nestedSource instanceof Map && hasNestedSourceEntries((Map) nestedSource) && shouldExpandMapEntries(targetObject, targetObject == null ? null : targetObject.getClass(), targetRootPropertyName)) {
-                return assignNullToMissingMapProperties(object, (Map) nestedSource, targetPathPrefix, targetRootPropertyName, nestedSourcePropertyName, nestedTargetPropertyName)
+            if (nestedSource instanceof Map && hasNestedSourceEntries(nestedSource) && shouldExpandMapEntries(targetObject, targetObject == null ? null : targetObject.getClass(), targetRootPropertyName)) {
+                return assignNullToMissingMapProperties(object, nestedSource, targetPathPrefix, targetRootPropertyName, nestedSourcePropertyName, nestedTargetPropertyName)
             }
         }
 
@@ -499,7 +499,7 @@ final class MissingPropertyClearer {
     }
 
     private static Set<String> getIndexedSourcePropertyNames(Object source, String indexedSourcePropertyPrefix) {
-        Set<String> indexedSourcePropertyNames = new LinkedHashSet<>()
+        Set<String> indexedSourcePropertyNames = [] as Set
         for (String propertyName in getSourcePropertyNames(source)) {
             if (propertyName.startsWith(indexedSourcePropertyPrefix)) {
                 int closingIndex = propertyName.indexOf(']', indexedSourcePropertyPrefix.length())
@@ -513,21 +513,21 @@ final class MissingPropertyClearer {
 
     private static boolean containsSourceProperty(Object source, String propertyName) {
         if (source instanceof DataBindingSource) {
-            return ((DataBindingSource) source).containsProperty(propertyName)
+            return source.containsProperty(propertyName)
         }
         if (source instanceof Map) {
-            return ((Map) source).containsKey(propertyName)
+            return propertyName in source
         }
         return false
     }
 
     private static Set<String> getSourcePropertyNames(Object source) {
-        Set<String> propertyNames = new LinkedHashSet<>()
+        Set<String> propertyNames = [] as Set
         if (source instanceof DataBindingSource) {
-            propertyNames.addAll(((DataBindingSource) source).getPropertyNames())
+            propertyNames.addAll(source.getPropertyNames())
         }
         else if (source instanceof Map) {
-            for (Object key in ((Map) source).keySet()) {
+            for (Object key in source.keySet()) {
                 propertyNames.add(key.toString())
             }
         }
@@ -536,9 +536,9 @@ final class MissingPropertyClearer {
 
     private static Object getSourcePropertyValue(Object source, String propertyName) {
         if (source instanceof DataBindingSource) {
-            return ((DataBindingSource) source).getPropertyValue(propertyName)
+            return source.getPropertyValue(propertyName)
         }
-        return ((Map) source).get(propertyName)
+        return ((Map) source)[propertyName]
     }
 
     private static String checkboxMarkerPropertyName(String propertyName) {
@@ -587,7 +587,7 @@ final class MissingPropertyClearer {
             !Enum.isAssignableFrom(valueType) &&
             !Map.isAssignableFrom(valueType) &&
             !Collection.isAssignableFrom(valueType) &&
-            !Object.equals(valueType)
+            valueType != Object
     }
 
     private static Class getMapValueType(Object target, Class targetType, String propertyName) {
@@ -614,16 +614,16 @@ final class MissingPropertyClearer {
             return null
         }
 
-        Type[] typeArguments = ((ParameterizedType) type).getActualTypeArguments()
+        Type[] typeArguments = type.getActualTypeArguments()
         if (typeArguments.length < 2) {
             return null
         }
         Type valueType = typeArguments[1]
         if (valueType instanceof Class) {
-            return (Class) valueType
+            return valueType
         }
-        if (valueType instanceof ParameterizedType && ((ParameterizedType) valueType).getRawType() instanceof Class) {
-            return (Class) ((ParameterizedType) valueType).getRawType()
+        if (valueType instanceof ParameterizedType && valueType.getRawType() instanceof Class) {
+            return (Class) valueType.getRawType()
         }
         return null
     }
@@ -642,7 +642,7 @@ final class MissingPropertyClearer {
     }
 
     private static Object getTargetObject(Object object, String targetPathPrefix) {
-        if (targetPathPrefix == null || targetPathPrefix.length() == 0) {
+        if (targetPathPrefix == null || targetPathPrefix.isEmpty()) {
             return object
         }
 
@@ -671,7 +671,7 @@ final class MissingPropertyClearer {
     }
 
     private static String appendPropertyPath(String parentPath, String propertyName) {
-        if (parentPath == null || parentPath.length() == 0) {
+        if (parentPath == null || parentPath.isEmpty()) {
             return propertyName
         }
         return parentPath + '.' + propertyName
@@ -720,12 +720,12 @@ final class MissingPropertyClearer {
 
     private static Object getIndexedValue(Object indexedProperty, String index) {
         if (indexedProperty instanceof List) {
-            List list = (List) indexedProperty
+            List list = indexedProperty
             Integer parsedIndex = parseIndex(index)
-            return parsedIndex != null && parsedIndex >= 0 && parsedIndex < list.size() ? list.get(parsedIndex) : null
+            return parsedIndex != null && parsedIndex >= 0 && parsedIndex < list.size() ? list[parsedIndex] : null
         }
         if (indexedProperty instanceof Map) {
-            return ((Map) indexedProperty).get(index)
+            return indexedProperty[index]
         }
         return null
     }
@@ -736,7 +736,7 @@ final class MissingPropertyClearer {
             if (bracket == -1) {
                 MetaClass mc = GroovySystem.getMetaClassRegistry().getMetaClass(object.getClass())
                 MetaProperty metaProperty = mc.hasProperty(object, propertyName)
-                if (metaProperty != null) {
+                if (metaProperty) {
                     mc.setProperty(object, propertyName,
                             metaProperty.getType().isPrimitive() ? primitiveDefault(metaProperty.getType()) : null)
                 }
@@ -747,14 +747,14 @@ final class MissingPropertyClearer {
             Object indexedProperty = mc.getProperty(object, propertyName.substring(0, bracket))
             String index = propertyName.substring(bracket + 1, propertyName.indexOf(']', bracket))
             if (indexedProperty instanceof List) {
-                List list = (List) indexedProperty
+                List list = indexedProperty
                 Integer parsedIndex = parseIndex(index)
                 if (parsedIndex != null && parsedIndex >= 0 && parsedIndex < list.size()) {
-                    list.set(parsedIndex, null)
+                    list[parsedIndex] = null
                 }
             }
             else if (indexedProperty instanceof Map) {
-                ((Map) indexedProperty).put(index, null)
+                indexedProperty[index] = null
             }
         }
         catch (RuntimeException e) {
@@ -775,28 +775,28 @@ final class MissingPropertyClearer {
     }
 
     private static Object primitiveDefault(Class primitiveType) {
-        if (Boolean.TYPE.equals(primitiveType)) {
+        if (Boolean.TYPE == primitiveType) {
             return false
         }
-        if (Character.TYPE.equals(primitiveType)) {
+        if (Character.TYPE == primitiveType) {
             return Character.valueOf('\0'.charAt(0))
         }
-        if (Byte.TYPE.equals(primitiveType)) {
+        if (Byte.TYPE == primitiveType) {
             return Byte.valueOf((byte) 0)
         }
-        if (Short.TYPE.equals(primitiveType)) {
+        if (Short.TYPE == primitiveType) {
             return Short.valueOf((short) 0)
         }
-        if (Integer.TYPE.equals(primitiveType)) {
+        if (Integer.TYPE == primitiveType) {
             return Integer.valueOf(0)
         }
-        if (Long.TYPE.equals(primitiveType)) {
+        if (Long.TYPE == primitiveType) {
             return Long.valueOf(0L)
         }
-        if (Float.TYPE.equals(primitiveType)) {
+        if (Float.TYPE == primitiveType) {
             return Float.valueOf(0F)
         }
-        if (Double.TYPE.equals(primitiveType)) {
+        if (Double.TYPE == primitiveType) {
             return Double.valueOf(0D)
         }
         return null

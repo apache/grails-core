@@ -50,7 +50,7 @@ final class LocalNameCollector extends CodeVisitorSupport {
      */
     private static final String IMPLICIT_CLOSURE_PARAMETER = 'it'
 
-    private final Set<String> names = new HashSet<>()
+    private final Set<String> names = [] as Set
 
     private LocalNameCollector() {
     }
@@ -84,8 +84,7 @@ final class LocalNameCollector extends CodeVisitorSupport {
             TupleExpression tuple = expression.getTupleExpression()
             for (Expression declared in tuple.getExpressions()) {
                 if (declared instanceof VariableExpression) {
-                    VariableExpression variable = (VariableExpression) declared
-                    names.add(variable.getName())
+                    names.add(declared.getName())
                 }
             }
         }

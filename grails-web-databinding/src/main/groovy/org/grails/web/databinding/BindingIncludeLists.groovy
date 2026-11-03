@@ -65,7 +65,7 @@ final class BindingIncludeLists {
                 // getter a superclass declares answers for the instance, so its map is the one to bind with.
                 final Traits.TraitBridge traitBridge = accessor.getAnnotation(Traits.TraitBridge)
                 return accessor.getDeclaringClass() != type && Modifier.isStatic(accessor.getModifiers()) &&
-                        traitBridge != null && 'grails.validation.Validateable'.equals(traitBridge.traitClass().getName())
+                        traitBridge != null && traitBridge.traitClass().getName() == 'grails.validation.Validateable'
             } catch (NoSuchMethodException | SecurityException ignored) {
                 return false
             }
@@ -102,7 +102,7 @@ final class BindingIncludeLists {
         List includeList = null
         try {
             if (includeListCache.containsKey(type)) {
-                includeList = includeListCache.get(type)
+                includeList = includeListCache[type]
                 if (includeList == NO_BINDING_INCLUDE_LIST) {
                     includeList = null
                 }
@@ -127,7 +127,7 @@ final class BindingIncludeLists {
                     }
                 } else if (defaultWhiteListField != null) {
                     final List generatedIncludeList = getStaticListFieldValue(defaultWhiteListField)
-                    final Collection combinedIncludeList = new LinkedHashSet()
+                    final Collection combinedIncludeList = [] as Set
                     if (generatedIncludeList != null) {
                         combinedIncludeList.addAll(generatedIncludeList)
                     }
@@ -140,7 +140,7 @@ final class BindingIncludeLists {
                     includeList = asGenerated(includeList)
                 }
                 if (!Environment.getCurrent().isReloadEnabled()) {
-                    includeListCache.put(type, includeList == null ? NO_BINDING_INCLUDE_LIST : includeList)
+                    includeListCache[type] = includeList == null ? NO_BINDING_INCLUDE_LIST : includeList
                 }
             }
         } catch (IllegalAccessException e) {
@@ -172,9 +172,9 @@ final class BindingIncludeLists {
         if (includeList == null) {
             return null
         }
-        final List<String> names = new ArrayList<>()
+        final List<String> names = []
         for (Object name in includeList) {
-            if (name != null && !DefaultASTDatabindingHelper.NO_BINDABLE_PROPERTIES.equals(name)) {
+            if (name != null && name != DefaultASTDatabindingHelper.NO_BINDABLE_PROPERTIES) {
                 names.add(name.toString())
             }
         }
@@ -190,7 +190,7 @@ final class BindingIncludeLists {
             return resolveDenyByDefault(
                     application.getConfig().getProperty(Settings.DATABINDING_DENY_BY_DEFAULT, Object, null))
         }
-        return resolveDenyByDefault(Holders.getFlatConfig().get(Settings.DATABINDING_DENY_BY_DEFAULT))
+        return resolveDenyByDefault(Holders.getFlatConfig()[Settings.DATABINDING_DENY_BY_DEFAULT])
     }
 
     /**
@@ -262,7 +262,7 @@ final class BindingIncludeLists {
      * explicit include list naming them.
      */
     static List<String> unbindablePropertyNames(final Class type) {
-        final List<String> names = new ArrayList<>()
+        final List<String> names = []
         for (Object name in propertyNamesWithBindableValue(constrainedProperties(type), Boolean.FALSE)) {
             names.add(name.toString())
         }
@@ -273,13 +273,13 @@ final class BindingIncludeLists {
         if (constrainedProperties == null || constrainedProperties.isEmpty()) {
             return Collections.emptyList()
         }
-        final List propertyNames = new ArrayList()
+        final List propertyNames = []
         for (Object entryObject in constrainedProperties.entrySet()) {
             Map.Entry entry = (Map.Entry) entryObject
-            if (bindableValue.equals(bindableConstraintValue(entry.getValue()))) {
+            if (bindableValue == bindableConstraintValue(entry.getValue())) {
                 String propertyName = String.valueOf(entry.getKey())
                 propertyNames.add(propertyName)
-                if (Boolean.TRUE.equals(bindableValue) && !isSimpleType(constrainedPropertyType(entry.getValue()))) {
+                if (Boolean.TRUE == bindableValue && !isSimpleType(constrainedPropertyType(entry.getValue()))) {
                     propertyNames.add(propertyName + '_*')
                     propertyNames.add(propertyName + '.*')
                 }
@@ -360,7 +360,7 @@ final class BindingIncludeLists {
         try {
             Object metaConstraints = metaClass.getProperty(constrainedProperty, 'metaConstraints')
             if (metaConstraints instanceof Map) {
-                return ((Map) metaConstraints).get(DefaultASTDatabindingHelper.BINDABLE_CONSTRAINT_NAME)
+                return metaConstraints[DefaultASTDatabindingHelper.BINDABLE_CONSTRAINT_NAME]
             }
         } catch (Exception ignored) {
         }

@@ -68,9 +68,7 @@ class TagLibArtefactTypeAstTransformation extends ArtefactTypeAstTransformation 
             // tags that nothing answers to at runtime.
             return
         }
-        File targetDirectory = sourceUnit.getConfiguration() != null ?
-                sourceUnit.getConfiguration().getTargetDirectory() :
-                null
+        File targetDirectory = sourceUnit.getConfiguration()?.getTargetDirectory()
         if (targetDirectory == null) {
             // In-memory compilation, as used by GSP unit tests and the shell, has nowhere to put the
             // descriptor; those callers resolve tags at runtime.
@@ -145,9 +143,9 @@ class TagLibArtefactTypeAstTransformation extends ArtefactTypeAstTransformation 
             if (field.isStatic()) {
                 continue
             }
-            if (field.getType() != null && CLOSURE_TYPE.equals(field.getType())) {
-                String message = "Closure-based tag definition [${field.getName()}] in TagLib [" +
-                        "${classNode.getName()}] is deprecated and is not resolved when a page is " +
+            if (field.getType() != null && CLOSURE_TYPE == field.getType()) {
+                String message = "Closure-based tag definition [${field.getName()}] in TagLib " +
+                        "[${classNode.getName()}] is deprecated and is not resolved when a page is " +
                         'compiled, so calls to it stay dynamic. Define the tag as a method instead: ' +
                         "def ${field.getName()}(Map attrs) { ... }"
                 GrailsASTUtils.warning(sourceUnit, field, message)
