@@ -16,31 +16,31 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.plugins.web.controllers;
+package org.grails.plugins.web.controllers
 
-import java.util.EnumSet;
+import jakarta.servlet.DispatcherType
 
-import jakarta.servlet.DispatcherType;
+import groovy.transform.CompileStatic
 
-import org.springframework.beans.factory.ListableBeanFactory;
-import org.springframework.boot.autoconfigure.AutoConfiguration;
-import org.springframework.boot.autoconfigure.condition.ConditionMessage;
-import org.springframework.boot.autoconfigure.condition.ConditionOutcome;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnBooleanProperty;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
-import org.springframework.boot.autoconfigure.condition.SpringBootCondition;
-import org.springframework.boot.cloud.CloudPlatform;
-import org.springframework.boot.context.properties.EnableConfigurationProperties;
-import org.springframework.boot.web.servlet.FilterRegistrationBean;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.ConditionContext;
-import org.springframework.context.annotation.Conditional;
-import org.springframework.core.ResolvableType;
-import org.springframework.core.env.Environment;
-import org.springframework.core.type.AnnotatedTypeMetadata;
+import org.springframework.beans.factory.ListableBeanFactory
+import org.springframework.boot.autoconfigure.AutoConfiguration
+import org.springframework.boot.autoconfigure.condition.ConditionMessage
+import org.springframework.boot.autoconfigure.condition.ConditionOutcome
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBooleanProperty
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
+import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication
+import org.springframework.boot.autoconfigure.condition.SpringBootCondition
+import org.springframework.boot.cloud.CloudPlatform
+import org.springframework.boot.context.properties.EnableConfigurationProperties
+import org.springframework.boot.web.servlet.FilterRegistrationBean
+import org.springframework.context.annotation.Bean
+import org.springframework.context.annotation.ConditionContext
+import org.springframework.context.annotation.Conditional
+import org.springframework.core.ResolvableType
+import org.springframework.core.env.Environment
+import org.springframework.core.type.AnnotatedTypeMetadata
 
-import org.grails.web.config.http.GrailsFilters;
+import org.grails.web.config.http.GrailsFilters
 
 /**
  * Registers {@link GrailsSecurityHeadersFilter} to apply baseline browser-hardening
@@ -75,18 +75,19 @@ import org.grails.web.config.http.GrailsFilters;
  */
 @AutoConfiguration
 @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
-@ConditionalOnBooleanProperty(name = "grails.security.headers.enabled", matchIfMissing = true)
-@EnableConfigurationProperties(GrailsSecurityHeadersProperties.class)
-public class GrailsSecurityHeadersAutoConfiguration {
+@ConditionalOnBooleanProperty(name = 'grails.security.headers.enabled', matchIfMissing = true)
+@EnableConfigurationProperties(GrailsSecurityHeadersProperties)
+@CompileStatic
+class GrailsSecurityHeadersAutoConfiguration {
 
-    static final String FORWARD_HEADERS_STRATEGY = "server.forward-headers-strategy";
+    static final String FORWARD_HEADERS_STRATEGY = 'server.forward-headers-strategy'
 
     @Bean
-    @ConditionalOnMissingBean(value = GrailsSecurityHeadersFilter.class, name = "grailsSecurityHeadersFilter")
-    @Conditional(OnMissingSecurityHeadersFilterRegistration.class)
-    public GrailsSecurityHeadersFilter securityHeadersFilter(GrailsSecurityHeadersProperties properties,
+    @ConditionalOnMissingBean(value = GrailsSecurityHeadersFilter, name = 'grailsSecurityHeadersFilter')
+    @Conditional(OnMissingSecurityHeadersFilterRegistration)
+    GrailsSecurityHeadersFilter securityHeadersFilter(GrailsSecurityHeadersProperties properties,
             Environment environment) {
-        return new GrailsSecurityHeadersFilter(properties, isReverseProxyConfigured(environment));
+        return new GrailsSecurityHeadersFilter(properties, isReverseProxyConfigured(environment))
     }
 
     /**
@@ -96,26 +97,26 @@ public class GrailsSecurityHeadersAutoConfiguration {
      * Spring Boot detected a cloud platform, where ingress through a proxy is the norm.
      */
     static boolean isReverseProxyConfigured(Environment environment) {
-        String strategy = environment.getProperty(FORWARD_HEADERS_STRATEGY);
-        if (strategy != null && !"none".equalsIgnoreCase(strategy.trim())) {
-            return true;
+        String strategy = environment.getProperty(FORWARD_HEADERS_STRATEGY)
+        if (strategy != null && !'none'.equalsIgnoreCase(strategy.trim())) {
+            return true
         }
-        CloudPlatform platform = CloudPlatform.getActive(environment);
-        return platform != null && platform != CloudPlatform.NONE;
+        CloudPlatform platform = CloudPlatform.getActive(environment)
+        return platform != null && platform != CloudPlatform.NONE
     }
 
     @Bean
-    @ConditionalOnMissingBean(name = "grailsSecurityHeadersFilter")
-    @Conditional(OnMissingSecurityHeadersFilterRegistration.class)
-    public FilterRegistrationBean<GrailsSecurityHeadersFilter> grailsSecurityHeadersFilter(
+    @ConditionalOnMissingBean(name = 'grailsSecurityHeadersFilter')
+    @Conditional(OnMissingSecurityHeadersFilterRegistration)
+    FilterRegistrationBean<GrailsSecurityHeadersFilter> grailsSecurityHeadersFilter(
             GrailsSecurityHeadersFilter securityHeadersFilter) {
-        FilterRegistrationBean<GrailsSecurityHeadersFilter> registrationBean = new FilterRegistrationBean<>();
-        registrationBean.setFilter(securityHeadersFilter);
+        FilterRegistrationBean<GrailsSecurityHeadersFilter> registrationBean = new FilterRegistrationBean<>()
+        registrationBean.setFilter(securityHeadersFilter)
         registrationBean.setDispatcherTypes(EnumSet.of(DispatcherType.REQUEST, DispatcherType.FORWARD,
-                DispatcherType.INCLUDE, DispatcherType.ERROR));
-        registrationBean.addUrlPatterns("/*");
-        registrationBean.setOrder(GrailsFilters.FIRST.getOrder());
-        return registrationBean;
+                DispatcherType.INCLUDE, DispatcherType.ERROR))
+        registrationBean.addUrlPatterns('/*')
+        registrationBean.setOrder(GrailsFilters.FIRST.getOrder())
+        return registrationBean
     }
 
     /**
@@ -126,25 +127,26 @@ public class GrailsSecurityHeadersAutoConfiguration {
      * instantiating the bean; a raw {@code FilterRegistrationBean} is recognised only by
      * the {@code grailsSecurityHeadersFilter} name.
      */
+    @CompileStatic
     static final class OnMissingSecurityHeadersFilterRegistration extends SpringBootCondition {
 
         private static final ResolvableType REGISTRATION_TYPE =
-                ResolvableType.forClassWithGenerics(FilterRegistrationBean.class, GrailsSecurityHeadersFilter.class);
+                ResolvableType.forClassWithGenerics(FilterRegistrationBean, GrailsSecurityHeadersFilter)
 
         @Override
-        public ConditionOutcome getMatchOutcome(ConditionContext context, AnnotatedTypeMetadata metadata) {
-            ConditionMessage.Builder message = ConditionMessage.forCondition("GrailsSecurityHeadersFilter registration");
-            ListableBeanFactory beanFactory = context.getBeanFactory();
+        ConditionOutcome getMatchOutcome(ConditionContext context, AnnotatedTypeMetadata metadata) {
+            ConditionMessage.Builder message = ConditionMessage.forCondition('GrailsSecurityHeadersFilter registration')
+            ListableBeanFactory beanFactory = context.getBeanFactory()
             if (beanFactory == null) {
-                return ConditionOutcome.match(message.because("no bean factory to inspect"));
+                return ConditionOutcome.match(message.because('no bean factory to inspect'))
             }
-            String[] registrations = beanFactory.getBeanNamesForType(REGISTRATION_TYPE, true, false);
+            String[] registrations = beanFactory.getBeanNamesForType(REGISTRATION_TYPE, true, false)
             if (registrations.length == 0) {
-                return ConditionOutcome.match(message.didNotFind("a FilterRegistrationBean for GrailsSecurityHeadersFilter")
-                        .atAll());
+                return ConditionOutcome.match(message.didNotFind('a FilterRegistrationBean for GrailsSecurityHeadersFilter')
+                        .atAll())
             }
-            return ConditionOutcome.noMatch(message.found("FilterRegistrationBean for GrailsSecurityHeadersFilter")
-                    .items(ConditionMessage.Style.QUOTE, (Object[]) registrations));
+            return ConditionOutcome.noMatch(message.found('FilterRegistrationBean for GrailsSecurityHeadersFilter')
+                    .items(ConditionMessage.Style.QUOTE, (Object[]) registrations))
         }
     }
 }

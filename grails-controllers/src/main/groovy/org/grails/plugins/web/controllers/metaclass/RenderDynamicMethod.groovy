@@ -16,7 +16,10 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
+@SuppressWarnings('UnnecessarySemicolon')
 package org.grails.plugins.web.controllers.metaclass;
+
+import groovy.transform.CompileStatic;
 
 /**
  * Allows rendering of text, views, and templates to the response
@@ -24,8 +27,11 @@ package org.grails.plugins.web.controllers.metaclass;
  * @author Graeme Rocher
  * @since 0.2
  */
-@SuppressWarnings({"unchecked", "rawtypes"})
-public class RenderDynamicMethod {
+// TODO(groovyism-cleanup): semicolons + double-quoted strings kept to preserve rename-similarity against the original .java (see matrei's review on #16576). Removed by the stacked groovyism-cleanup PR.
+@SuppressWarnings(['unchecked', 'rawtypes', 'UnnecessarySemicolon', 'UnnecessaryGString'])
+@CompileStatic
+class RenderDynamicMethod {
+
     public static final String METHOD_SIGNATURE = "render";
     public static final String ARGUMENT_TEXT = "text";
     public static final String ARGUMENT_STATUS = "status";
@@ -49,4 +55,5 @@ public class RenderDynamicMethod {
     public static final String DEFAULT_ENCODING = "utf-8";
     public static final String ARGUMENT_FILE = "file";
     public static final String ARGUMENT_FILE_NAME = "fileName";
+
 }

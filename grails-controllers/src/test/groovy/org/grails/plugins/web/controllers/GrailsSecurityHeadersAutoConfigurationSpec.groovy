@@ -33,7 +33,9 @@ import org.springframework.boot.test.context.runner.ApplicationContextRunner
 import org.springframework.boot.test.context.runner.WebApplicationContextRunner
 import org.springframework.boot.web.servlet.FilterRegistrationBean
 import org.springframework.context.annotation.Bean
+import org.springframework.context.annotation.ConditionContext
 import org.springframework.context.annotation.Configuration
+import org.springframework.core.type.AnnotatedTypeMetadata
 import org.springframework.mock.web.MockFilterChain
 import org.springframework.mock.web.MockHttpServletRequest
 import org.springframework.mock.web.MockHttpServletResponse
@@ -153,6 +155,21 @@ class GrailsSecurityHeadersAutoConfigurationSpec extends Specification {
                     assert context.getBeanNamesForType(GrailsSecurityHeadersFilter).length == 0
                     assert context.getBeanNamesForType(FilterRegistrationBean) == ['inlineSecurityHeadersRegistration'] as String[]
                 }
+    }
+
+    void 'the registration condition matches when there is no bean factory to inspect'() {
+        given:
+        def context = Stub(ConditionContext) {
+            getBeanFactory() >> null
+        }
+
+        when:
+        def outcome = new GrailsSecurityHeadersAutoConfiguration.OnMissingSecurityHeadersFilterRegistration()
+                .getMatchOutcome(context, Stub(AnnotatedTypeMetadata))
+
+        then:
+        outcome.match
+        outcome.message.contains('no bean factory to inspect')
     }
 
     void 'registrations for other filters do not make the security headers filter back off'() {

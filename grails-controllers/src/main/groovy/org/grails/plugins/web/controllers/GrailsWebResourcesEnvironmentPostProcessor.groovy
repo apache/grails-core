@@ -16,14 +16,13 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.plugins.web.controllers;
+package org.grails.plugins.web.controllers
 
-import java.util.Collections;
-
-import org.springframework.boot.EnvironmentPostProcessor;
-import org.springframework.boot.SpringApplication;
-import org.springframework.boot.env.DefaultPropertiesPropertySource;
-import org.springframework.core.env.ConfigurableEnvironment;
+import groovy.transform.CompileStatic
+import org.springframework.boot.EnvironmentPostProcessor
+import org.springframework.boot.SpringApplication
+import org.springframework.boot.env.DefaultPropertiesPropertySource
+import org.springframework.core.env.ConfigurableEnvironment
 
 /**
  * Defaults {@code spring.web.resources.add-mappings} to {@code false} for Grails servlet web
@@ -38,14 +37,16 @@ import org.springframework.core.env.ConfigurableEnvironment;
  * <p>Contributed as a Spring Boot default property (lowest precedence), so an application can restore
  * Boot's behavior with {@code spring.web.resources.add-mappings=true}.
  */
-public class GrailsWebResourcesEnvironmentPostProcessor implements EnvironmentPostProcessor {
+@CompileStatic
+class GrailsWebResourcesEnvironmentPostProcessor implements EnvironmentPostProcessor {
 
-    private static final String ADD_MAPPINGS_PROPERTY = "spring.web.resources.add-mappings";
+    private static final String ADD_MAPPINGS_PROPERTY = 'spring.web.resources.add-mappings'
 
     @Override
-    public void postProcessEnvironment(ConfigurableEnvironment environment, SpringApplication application) {
+    void postProcessEnvironment(ConfigurableEnvironment environment, SpringApplication application) {
         DefaultPropertiesPropertySource.addOrMerge(
-                Collections.<String, Object>singletonMap(ADD_MAPPINGS_PROPERTY, "false"),
-                environment.getPropertySources());
+                Collections.singletonMap(ADD_MAPPINGS_PROPERTY, (Object) 'false'),
+                environment.getPropertySources())
     }
+
 }

@@ -17,12 +17,11 @@
  *  under the License.
  */
 
+@SuppressWarnings('UnnecessarySemicolon')
 package grails.plugin.json.builder;
 
-import java.io.IOException;
-
 import groovy.json.JsonException;
-import groovy.lang.Writable;
+import groovy.transform.CompileStatic;
 
 import org.grails.buffer.FastStringWriter;
 
@@ -32,7 +31,10 @@ import org.grails.buffer.FastStringWriter;
  *
  * @since 1.8.0
  */
-public class JsonOutput extends groovy.json.JsonOutput {
+// TODO(groovyism-cleanup): semicolons + double-quoted strings kept to preserve rename-similarity against the original .java (see matrei's review on #16576). Removed by the stacked groovyism-cleanup PR.
+@SuppressWarnings(['UnnecessarySemicolon', 'UnnecessaryGString'])
+@CompileStatic
+class JsonOutput extends groovy.json.JsonOutput {
 
     public static final char OPEN_BRACE = '{';
     public static final char OPEN_BRACKET = '[';
@@ -46,43 +48,46 @@ public class JsonOutput extends groovy.json.JsonOutput {
     /**
      * Represents unescaped JSON
      */
-    public static abstract class JsonWritable implements Writable, CharSequence {
+    static abstract class JsonWritable implements Writable, CharSequence {
 
         protected boolean inline = false;
         protected boolean first = true;
 
-        public void setInline(boolean inline) {
+        void setInline(boolean inline) {
             this.inline = inline;
         }
 
-        public void setFirst(boolean first) {
+        void setFirst(boolean first) {
             this.first = first;
         }
 
         @Override
-        public String toString() {
+        String toString() {
             FastStringWriter out = new FastStringWriter();
             try {
                 writeTo(out);
-            } catch (IOException e) {
+            }
+            catch (IOException e) {
                 throw new JsonException("Error writing JSON writable: " + e.getMessage(), e);
             }
             return out.toString();
         }
 
         @Override
-        public int length() {
+        int length() {
             return toString().length();
         }
 
         @Override
-        public char charAt(int index) {
+        char charAt(int index) {
             return toString().charAt(index);
         }
 
         @Override
-        public CharSequence subSequence(int start, int end) {
+        CharSequence subSequence(int start, int end) {
             return toString().subSequence(start, end);
         }
+
     }
+
 }

@@ -16,15 +16,16 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.plugins.web.controllers;
+package org.grails.plugins.web.controllers
 
-import org.jspecify.annotations.NonNull;
+import groovy.transform.CompileStatic
+import org.jspecify.annotations.NonNull
 
-import org.springframework.boot.EnvironmentPostProcessor;
-import org.springframework.boot.SpringApplication;
-import org.springframework.boot.context.properties.bind.Bindable;
-import org.springframework.boot.context.properties.bind.Binder;
-import org.springframework.core.env.ConfigurableEnvironment;
+import org.springframework.boot.EnvironmentPostProcessor
+import org.springframework.boot.SpringApplication
+import org.springframework.boot.context.properties.bind.Bindable
+import org.springframework.boot.context.properties.bind.Binder
+import org.springframework.core.env.ConfigurableEnvironment
 
 /**
  * Environment post processor that checks for legacy multipart configuration properties.
@@ -36,25 +37,26 @@ import org.springframework.core.env.ConfigurableEnvironment;
  * @deprecated the guard is only needed while applications migrate to {@code spring.servlet.multipart},
  * it will be removed in Grails 9.0 without replacement
  */
-@Deprecated(forRemoval = true, since = "8.0")
-public class GrailsControllersEnvironmentPostProcessor implements EnvironmentPostProcessor {
+@CompileStatic
+@Deprecated(forRemoval = true, since = '8.0')
+class GrailsControllersEnvironmentPostProcessor implements EnvironmentPostProcessor {
 
-    private static final String LEGACY_MULTIPART_CONFIGURATION = "grails.controllers.upload";
+    private static final String LEGACY_MULTIPART_CONFIGURATION = 'grails.controllers.upload'
 
     private static final String LEGACY_MULTIPART_CONFIGURATION_ERROR =
             "Configuration properties under 'grails.controllers.upload' are no longer supported. " +
             "Use Spring Boot's 'spring.servlet.multipart' configuration instead. For example, set " +
             "'spring.servlet.multipart.maxFileSize=200MB' and " +
-            "'spring.servlet.multipart.maxRequestSize=200MB'.";
+            "'spring.servlet.multipart.maxRequestSize=200MB'."
 
     @Override
-    public void postProcessEnvironment(@NonNull ConfigurableEnvironment environment, @NonNull SpringApplication application) {
-        var legacyMultipartConfig = Binder.get(environment)
-                .bind(LEGACY_MULTIPART_CONFIGURATION, Bindable.mapOf(String.class, Object.class));
+    void postProcessEnvironment(@NonNull ConfigurableEnvironment environment, @NonNull SpringApplication application) {
+        def legacyMultipartConfig = Binder.get(environment)
+                .bind(LEGACY_MULTIPART_CONFIGURATION, Bindable.mapOf(String, Object))
         if (legacyMultipartConfig.isBound()) {
             throw new IllegalStateException(
                 LEGACY_MULTIPART_CONFIGURATION_ERROR +
-                    " Found: " + legacyMultipartConfig.get().keySet());
+                    ' Found: ' + legacyMultipartConfig.get().keySet())
         }
     }
 }

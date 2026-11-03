@@ -16,18 +16,17 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.plugins.web.controllers;
+package org.grails.plugins.web.controllers
 
-import java.io.IOException;
-import java.io.PrintWriter;
-import java.nio.CharBuffer;
-import java.nio.charset.Charset;
-import java.nio.charset.StandardCharsets;
+import java.nio.CharBuffer
+import java.nio.charset.Charset
+import java.nio.charset.StandardCharsets
 
-import jakarta.servlet.ServletOutputStream;
-import jakarta.servlet.WriteListener;
-import jakarta.servlet.http.HttpServletResponse;
-import jakarta.servlet.http.HttpServletResponseWrapper;
+import groovy.transform.CompileStatic
+import jakarta.servlet.ServletOutputStream
+import jakarta.servlet.WriteListener
+import jakarta.servlet.http.HttpServletResponse
+import jakarta.servlet.http.HttpServletResponseWrapper
 
 /**
  * Response wrapper that runs a callback exactly once, immediately before the response
@@ -53,32 +52,33 @@ import jakarta.servlet.http.HttpServletResponseWrapper;
  * Security's, and a header Spring Security only writes when it is absent then keeps the
  * value written here.</p>
  */
+@CompileStatic
 final class SecurityHeadersResponseWrapper extends HttpServletResponseWrapper {
 
-    private static final String CONTENT_LENGTH = "Content-Length";
+    private static final String CONTENT_LENGTH = 'Content-Length'
 
-    private final Runnable beforeCommit;
+    private final Runnable beforeCommit
 
-    private boolean fired;
+    private boolean fired
 
-    private long contentLength = -1;
+    private long contentLength = -1
 
-    private long contentWritten;
+    private long contentWritten
 
     /**
      * The container's buffer size, read once content is being written. The servlet API
      * forbids changing it after that point, so the value is cached and only refreshed by
      * {@link #setBufferSize(int)}, {@link #reset()} or {@link #resetBuffer()}.
      */
-    private int bufferSize = -1;
+    private int bufferSize = -1
 
-    private ServletOutputStream outputStream;
+    private ServletOutputStream outputStream
 
-    private PrintWriter writer;
+    private PrintWriter writer
 
     SecurityHeadersResponseWrapper(HttpServletResponse response, Runnable beforeCommit) {
-        super(response);
-        this.beforeCommit = beforeCommit;
+        super(response)
+        this.beforeCommit = beforeCommit
     }
 
     /**
@@ -86,51 +86,51 @@ final class SecurityHeadersResponseWrapper extends HttpServletResponseWrapper {
      */
     void beforeCommit() {
         if (!this.fired) {
-            this.fired = true;
-            this.beforeCommit.run();
+            this.fired = true
+            this.beforeCommit.run()
         }
     }
 
     @Override
-    public void sendError(int sc) throws IOException {
-        beforeCommit();
-        super.sendError(sc);
+    void sendError(int sc) throws IOException {
+        beforeCommit()
+        super.sendError(sc)
     }
 
     @Override
-    public void sendError(int sc, String msg) throws IOException {
-        beforeCommit();
-        super.sendError(sc, msg);
+    void sendError(int sc, String msg) throws IOException {
+        beforeCommit()
+        super.sendError(sc, msg)
     }
 
     @Override
-    public void sendRedirect(String location) throws IOException {
-        beforeCommit();
-        super.sendRedirect(location);
+    void sendRedirect(String location) throws IOException {
+        beforeCommit()
+        super.sendRedirect(location)
     }
 
     @Override
-    public void sendRedirect(String location, int sc) throws IOException {
-        beforeCommit();
-        super.sendRedirect(location, sc);
+    void sendRedirect(String location, int sc) throws IOException {
+        beforeCommit()
+        super.sendRedirect(location, sc)
     }
 
     @Override
-    public void sendRedirect(String location, boolean clearBuffer) throws IOException {
-        beforeCommit();
-        super.sendRedirect(location, clearBuffer);
+    void sendRedirect(String location, boolean clearBuffer) throws IOException {
+        beforeCommit()
+        super.sendRedirect(location, clearBuffer)
     }
 
     @Override
-    public void sendRedirect(String location, int sc, boolean clearBuffer) throws IOException {
-        beforeCommit();
-        super.sendRedirect(location, sc, clearBuffer);
+    void sendRedirect(String location, int sc, boolean clearBuffer) throws IOException {
+        beforeCommit()
+        super.sendRedirect(location, sc, clearBuffer)
     }
 
     @Override
-    public void flushBuffer() throws IOException {
-        beforeCommit();
-        super.flushBuffer();
+    void flushBuffer() throws IOException {
+        beforeCommit()
+        super.flushBuffer()
     }
 
     /**
@@ -140,73 +140,73 @@ final class SecurityHeadersResponseWrapper extends HttpServletResponseWrapper {
      * new one.
      */
     @Override
-    public void reset() {
-        super.reset();
-        this.fired = false;
-        this.contentLength = -1;
-        this.contentWritten = 0;
-        this.bufferSize = -1;
-        this.writer = null;
+    void reset() {
+        super.reset()
+        this.fired = false
+        this.contentLength = -1
+        this.contentWritten = 0
+        this.bufferSize = -1
+        this.writer = null
     }
 
     @Override
-    public void resetBuffer() {
-        super.resetBuffer();
-        this.contentWritten = 0;
-        this.bufferSize = -1;
+    void resetBuffer() {
+        super.resetBuffer()
+        this.contentWritten = 0
+        this.bufferSize = -1
     }
 
     @Override
-    public void setBufferSize(int size) {
-        super.setBufferSize(size);
-        this.bufferSize = -1;
+    void setBufferSize(int size) {
+        super.setBufferSize(size)
+        this.bufferSize = -1
     }
 
     @Override
-    public void setContentLength(int len) {
-        trackContentLength(len);
-        super.setContentLength(len);
+    void setContentLength(int len) {
+        trackContentLength(len)
+        super.setContentLength(len)
     }
 
     @Override
-    public void setContentLengthLong(long len) {
-        trackContentLength(len);
-        super.setContentLengthLong(len);
+    void setContentLengthLong(long len) {
+        trackContentLength(len)
+        super.setContentLengthLong(len)
     }
 
     @Override
-    public void setHeader(String name, String value) {
-        trackContentLengthHeader(name, value);
-        super.setHeader(name, value);
+    void setHeader(String name, String value) {
+        trackContentLengthHeader(name, value)
+        super.setHeader(name, value)
     }
 
     @Override
-    public void addHeader(String name, String value) {
-        trackContentLengthHeader(name, value);
-        super.addHeader(name, value);
+    void addHeader(String name, String value) {
+        trackContentLengthHeader(name, value)
+        super.addHeader(name, value)
     }
 
     @Override
-    public void setIntHeader(String name, int value) {
-        trackContentLengthHeader(name, value);
-        super.setIntHeader(name, value);
+    void setIntHeader(String name, int value) {
+        trackContentLengthHeader(name, value)
+        super.setIntHeader(name, value)
     }
 
     @Override
-    public void addIntHeader(String name, int value) {
-        trackContentLengthHeader(name, value);
-        super.addIntHeader(name, value);
+    void addIntHeader(String name, int value) {
+        trackContentLengthHeader(name, value)
+        super.addIntHeader(name, value)
     }
 
     /**
      * Returns the same stream on every call, as the container does.
      */
     @Override
-    public ServletOutputStream getOutputStream() throws IOException {
+    ServletOutputStream getOutputStream() throws IOException {
         if (this.outputStream == null) {
-            this.outputStream = new CommitAwareOutputStream(super.getOutputStream());
+            this.outputStream = new CommitAwareOutputStream(super.getOutputStream())
         }
-        return this.outputStream;
+        return this.outputStream
     }
 
     /**
@@ -214,17 +214,17 @@ final class SecurityHeadersResponseWrapper extends HttpServletResponseWrapper {
      * discards it.
      */
     @Override
-    public PrintWriter getWriter() throws IOException {
+    PrintWriter getWriter() throws IOException {
         if (this.writer == null) {
-            this.writer = new CommitAwareWriter(super.getWriter(), getCharacterEncoding());
+            this.writer = new CommitAwareWriter(super.getWriter(), getCharacterEncoding())
         }
-        return this.writer;
+        return this.writer
     }
 
     private void trackContentLengthHeader(String name, String value) {
         if (CONTENT_LENGTH.equalsIgnoreCase(name) && value != null) {
             try {
-                trackContentLength(Long.parseLong(value.trim()));
+                trackContentLength(Long.parseLong(value.trim()))
             }
             catch (NumberFormatException ignored) {
                 // The container rejects or ignores a malformed Content-Length; nothing to track.
@@ -234,7 +234,7 @@ final class SecurityHeadersResponseWrapper extends HttpServletResponseWrapper {
 
     private void trackContentLengthHeader(String name, int value) {
         if (CONTENT_LENGTH.equalsIgnoreCase(name)) {
-            trackContentLength(value);
+            trackContentLength(value)
         }
     }
 
@@ -243,110 +243,110 @@ final class SecurityHeadersResponseWrapper extends HttpServletResponseWrapper {
      * commit check runs immediately as well as on subsequent writes.
      */
     private void trackContentLength(long length) {
-        this.contentLength = length;
-        trackWritten(0);
+        this.contentLength = length
+        trackWritten(0)
     }
 
     private void trackWritten(long count) {
         if (this.fired) {
-            return;
+            return
         }
-        this.contentWritten += count;
-        boolean bodyComplete = this.contentLength >= 0 && this.contentWritten >= this.contentLength;
-        int size = bufferSize();
-        boolean bufferFull = size > 0 && this.contentWritten >= size;
+        this.contentWritten += count
+        boolean bodyComplete = this.contentLength >= 0 && this.contentWritten >= this.contentLength
+        int size = bufferSize()
+        boolean bufferFull = size > 0 && this.contentWritten >= size
         if (bodyComplete || bufferFull) {
-            beforeCommit();
+            beforeCommit()
         }
     }
 
     private int bufferSize() {
         if (this.bufferSize < 0) {
-            this.bufferSize = getBufferSize();
+            this.bufferSize = getBufferSize()
         }
-        return this.bufferSize;
+        return this.bufferSize
     }
 
     private final class CommitAwareOutputStream extends ServletOutputStream {
 
-        private final ServletOutputStream delegate;
+        private final ServletOutputStream delegate
 
         CommitAwareOutputStream(ServletOutputStream delegate) {
-            this.delegate = delegate;
+            this.delegate = delegate
         }
 
         @Override
-        public void write(int b) throws IOException {
-            trackWritten(1);
-            this.delegate.write(b);
+        void write(int b) throws IOException {
+            trackWritten(1)
+            this.delegate.write(b)
         }
 
         @Override
-        public void write(byte[] b) throws IOException {
-            trackWritten(b.length);
-            this.delegate.write(b);
+        void write(byte[] b) throws IOException {
+            trackWritten(b.length)
+            this.delegate.write(b)
         }
 
         @Override
-        public void write(byte[] b, int off, int len) throws IOException {
-            trackWritten(len);
-            this.delegate.write(b, off, len);
+        void write(byte[] b, int off, int len) throws IOException {
+            trackWritten(len)
+            this.delegate.write(b, off, len)
         }
 
         @Override
-        public void flush() throws IOException {
-            beforeCommit();
-            this.delegate.flush();
+        void flush() throws IOException {
+            beforeCommit()
+            this.delegate.flush()
         }
 
         @Override
-        public void close() throws IOException {
-            beforeCommit();
-            this.delegate.close();
+        void close() throws IOException {
+            beforeCommit()
+            this.delegate.close()
         }
 
         @Override
-        public boolean isReady() {
-            return this.delegate.isReady();
+        boolean isReady() {
+            return this.delegate.isReady()
         }
 
         @Override
-        public void setWriteListener(WriteListener listener) {
-            this.delegate.setWriteListener(listener);
+        void setWriteListener(WriteListener listener) {
+            this.delegate.setWriteListener(listener)
         }
     }
 
     private final class CommitAwareWriter extends PrintWriter {
 
-        private final boolean utf8;
+        private final boolean utf8
 
-        private final float maxBytesPerChar;
+        private final float maxBytesPerChar
 
         CommitAwareWriter(PrintWriter delegate, String characterEncoding) {
-            super(delegate, false);
-            Charset charset = encodingCharset(characterEncoding);
-            this.utf8 = StandardCharsets.UTF_8.equals(charset);
-            this.maxBytesPerChar = this.utf8 ? 0 : charset.newEncoder().maxBytesPerChar();
+            super(delegate, false)
+            Charset charset = encodingCharset(characterEncoding)
+            this.utf8 = StandardCharsets.UTF_8.equals(charset)
+            this.maxBytesPerChar = this.utf8 ? 0 : charset.newEncoder().maxBytesPerChar()
         }
 
         @Override
-        public void write(int c) {
-            if (!fired) {
-                trackWritten(this.utf8 ? utf8Length((char) c) : (long) Math.ceil(this.maxBytesPerChar));
+        void write(int c) {
+            if (!SecurityHeadersResponseWrapper.this.fired) {
+                trackWritten(this.utf8 ? utf8Length((char) c) : (long) Math.ceil(this.maxBytesPerChar))
             }
-            super.write(c);
+            super.write(c)
         }
 
         @Override
-        public void write(char[] buf, int off, int len) {
-            trackChars(CharBuffer.wrap(buf), off, len);
-            super.write(buf, off, len);
+        void write(char[] buf, int off, int len) {
+            trackChars(CharBuffer.wrap(buf), off, len)
+            super.write(buf, off, len)
         }
 
         @Override
-        public void write(String s, int off, int len) {
-            trackChars(s, off, len);
-            super.write(s, off, len);
+        void write(String s, int off, int len) {
+            trackChars(s, off, len)
+            super.write(s, off, len)
         }
 
         /**
@@ -355,49 +355,49 @@ final class SecurityHeadersResponseWrapper extends HttpServletResponseWrapper {
          * here. Every other {@code println} overload ends by calling this one.
          */
         @Override
-        public void println() {
-            String separator = System.lineSeparator();
-            trackChars(separator, 0, separator.length());
-            super.println();
+        void println() {
+            String separator = System.lineSeparator()
+            trackChars(separator, 0, separator.length())
+            super.println()
         }
 
         @Override
-        public void flush() {
-            beforeCommit();
-            super.flush();
+        void flush() {
+            beforeCommit()
+            super.flush()
         }
 
         @Override
-        public void close() {
-            beforeCommit();
-            super.close();
+        void close() {
+            beforeCommit()
+            super.close()
         }
 
         private void trackChars(CharSequence chars, int off, int len) {
-            if (fired) {
-                return;
+            if (SecurityHeadersResponseWrapper.this.fired) {
+                return
             }
             if (!this.utf8) {
-                trackWritten((long) Math.ceil(len * (double) this.maxBytesPerChar));
-                return;
+                trackWritten((long) Math.ceil(len * (double) this.maxBytesPerChar))
+                return
             }
-            long bytes = 0;
+            long bytes = 0
             for (int i = off; i < off + len; i++) {
-                bytes += utf8Length(chars.charAt(i));
+                bytes += utf8Length(chars.charAt(i))
             }
-            trackWritten(bytes);
+            trackWritten(bytes)
         }
     }
 
     private static int utf8Length(char c) {
         if (c < 0x80) {
-            return 1;
+            return 1
         }
         // Each half of a surrogate pair counts two bytes: four for the pair.
         if (c < 0x800 || Character.isSurrogate(c)) {
-            return 2;
+            return 2
         }
-        return 3;
+        return 3
     }
 
     /**
@@ -407,15 +407,15 @@ final class SecurityHeadersResponseWrapper extends HttpServletResponseWrapper {
     private static Charset encodingCharset(String characterEncoding) {
         if (characterEncoding != null) {
             try {
-                Charset charset = Charset.forName(characterEncoding);
+                Charset charset = Charset.forName(characterEncoding)
                 if (charset.canEncode()) {
-                    return charset;
+                    return charset
                 }
             }
-            catch (IllegalArgumentException unsupported) {
+            catch (IllegalArgumentException ignored) {
                 // Fall through to UTF-8.
             }
         }
-        return StandardCharsets.UTF_8;
+        return StandardCharsets.UTF_8
     }
 }

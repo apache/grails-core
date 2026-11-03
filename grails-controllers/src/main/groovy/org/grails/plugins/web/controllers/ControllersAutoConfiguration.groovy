@@ -17,15 +17,14 @@
  *  under the License.
  */
 
+@SuppressWarnings('UnnecessarySemicolon')
 package org.grails.plugins.web.controllers;
-
-import java.util.EnumSet;
-import java.util.Properties;
 
 import jakarta.servlet.DispatcherType;
 import jakarta.servlet.Filter;
 import jakarta.servlet.MultipartConfigElement;
 
+import groovy.transform.CompileStatic;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
@@ -55,34 +54,37 @@ import org.grails.web.servlet.mvc.GrailsDispatcherServlet;
 import org.grails.web.servlet.mvc.GrailsWebRequestFilter;
 import org.grails.web.util.HiddenHttpMethod;
 
+// TODO(groovyism-cleanup): semicolons kept to preserve rename-similarity against the original .java (see matrei's review on #16576). Removed by the stacked groovyism-cleanup PR.
+@SuppressWarnings(['UnnecessarySemicolon'])
 @AutoConfiguration(
-        before = {DispatcherServletAutoConfiguration.class, HttpEncodingAutoConfiguration.class, WebMvcAutoConfiguration.class},
-        after = {DomainClassAutoConfiguration.class}
+        before = [DispatcherServletAutoConfiguration, HttpEncodingAutoConfiguration, WebMvcAutoConfiguration],
+        after = [DomainClassAutoConfiguration]
 )
 @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
-public class ControllersAutoConfiguration {
+@CompileStatic
+class ControllersAutoConfiguration {
 
-    @Value("${" + Settings.FILTER_ENCODING + ":utf-8}")
+    @Value('\${' + Settings.FILTER_ENCODING + ':utf-8}')
     private String filtersEncoding;
 
-    @Value("${" + Settings.FILTER_FORCE_ENCODING + ":false}")
+    @Value('\${' + Settings.FILTER_FORCE_ENCODING + ':false}')
     private boolean filtersForceEncoding;
 
-    @Value("${" + Settings.RESOURCES_CACHE_PERIOD + ":0}")
+    @Value('\${' + Settings.RESOURCES_CACHE_PERIOD + ':0}')
     private int resourcesCachePeriod;
 
-    @Value("${" + Settings.RESOURCES_ENABLED + ":true}")
+    @Value('\${' + Settings.RESOURCES_ENABLED + ':true}')
     private boolean resourcesEnabled;
 
-    @Value("${" + Settings.RESOURCES_PATTERN + ":" + Settings.DEFAULT_RESOURCE_PATTERN + "}")
+    @Value('\${' + Settings.RESOURCES_PATTERN + ':' + Settings.DEFAULT_RESOURCE_PATTERN + '}')
     private String resourcesPattern;
 
-    @Value("${" + Settings.WEB_SERVLET_PATH + ":#{null}}")
+    @Value('\${' + Settings.WEB_SERVLET_PATH + ':#{null}}')
     String grailsServletPath;
 
     @Bean
-    @ConditionalOnMissingBean(CharacterEncodingFilter.class)
-    public CharacterEncodingFilter characterEncodingFilter() {
+    @ConditionalOnMissingBean(CharacterEncodingFilter)
+    CharacterEncodingFilter characterEncodingFilter() {
         FilterRegistrationBean<Filter> registrationBean = new FilterRegistrationBean<>();
         OrderedCharacterEncodingFilter characterEncodingFilter = new OrderedCharacterEncodingFilter();
         characterEncodingFilter.setEncoding(filtersEncoding);
@@ -95,10 +97,10 @@ public class ControllersAutoConfiguration {
     // plugin-defined 'exceptionHandler' backs this default off instead of overriding it.
     @Bean(GrailsApplication.EXCEPTION_HANDLER_BEAN)
     @ConditionalOnMissingBean(name = GrailsApplication.EXCEPTION_HANDLER_BEAN)
-    public GrailsExceptionResolver exceptionHandler() {
+    GrailsExceptionResolver exceptionHandler() {
         GrailsExceptionResolver exceptionResolver = new GrailsExceptionResolver();
         Properties exceptionMappings = new Properties();
-        exceptionMappings.setProperty("java.lang.Exception", "/error");
+        exceptionMappings.setProperty('java.lang.Exception', '/error');
         exceptionResolver.setExceptionMappings(exceptionMappings);
         return exceptionResolver;
     }
@@ -108,16 +110,16 @@ public class ControllersAutoConfiguration {
     // "grailsWebRequestFilter" registration bean name so an application overriding only that registration
     // makes this raw filter back off with it, rather than leaving a duplicate filter on the chain.
     @Bean
-    @ConditionalOnMissingBean(value = GrailsWebRequestFilter.class, name = "grailsWebRequestFilter")
-    public GrailsWebRequestFilter grailsWebRequest(ApplicationContext applicationContext) {
+    @ConditionalOnMissingBean(value = GrailsWebRequestFilter, name = 'grailsWebRequestFilter')
+    GrailsWebRequestFilter grailsWebRequest(ApplicationContext applicationContext) {
         GrailsWebRequestFilter grailsWebRequestFilter = new GrailsWebRequestFilter();
         grailsWebRequestFilter.setApplicationContext(applicationContext);
         return grailsWebRequestFilter;
     }
 
     @Bean
-    @ConditionalOnMissingBean(name = "grailsWebRequestFilter")
-    public FilterRegistrationBean<GrailsWebRequestFilter> grailsWebRequestFilter(GrailsWebRequestFilter grailsWebRequest) {
+    @ConditionalOnMissingBean(name = 'grailsWebRequestFilter')
+    FilterRegistrationBean<GrailsWebRequestFilter> grailsWebRequestFilter(GrailsWebRequestFilter grailsWebRequest) {
         FilterRegistrationBean<GrailsWebRequestFilter> registrationBean = new FilterRegistrationBean<>();
         registrationBean.setFilter(grailsWebRequest);
         registrationBean.setDispatcherTypes(EnumSet.of(
@@ -131,7 +133,7 @@ public class ControllersAutoConfiguration {
     }
 
     @Bean
-    public DispatcherServlet dispatcherServlet(Environment environment) {
+    DispatcherServlet dispatcherServlet(Environment environment) {
         GrailsDispatcherServlet dispatcherServlet = new GrailsDispatcherServlet();
         // Without a servlet filter doing the rewrite, the override is resolved here instead: after multipart
         // handling and after the filter chain, rather than ahead of both.
@@ -140,32 +142,32 @@ public class ControllersAutoConfiguration {
     }
 
     @Bean
-    public DispatcherServletRegistrationBean dispatcherServletRegistration(GrailsApplication application, DispatcherServlet dispatcherServlet, ObjectProvider<MultipartConfigElement> multipartConfigElement) {
+    DispatcherServletRegistrationBean dispatcherServletRegistration(GrailsApplication application, DispatcherServlet dispatcherServlet, ObjectProvider<MultipartConfigElement> multipartConfigElement) {
         if (grailsServletPath == null) {
-            boolean isTomcat = ClassUtils.isPresent("org.apache.catalina.startup.Tomcat", application.getClassLoader());
+            boolean isTomcat = ClassUtils.isPresent('org.apache.catalina.startup.Tomcat', application.getClassLoader());
             grailsServletPath = isTomcat ? Settings.DEFAULT_TOMCAT_SERVLET_PATH : Settings.DEFAULT_WEB_SERVLET_PATH;
         }
         DispatcherServletRegistrationBean dispatcherServletRegistration = new DispatcherServletRegistrationBean(dispatcherServlet, grailsServletPath);
         dispatcherServletRegistration.setLoadOnStartup(2);
         dispatcherServletRegistration.setAsyncSupported(true);
-        multipartConfigElement.ifAvailable(dispatcherServletRegistration::setMultipartConfig);
+        multipartConfigElement.ifAvailable({ MultipartConfigElement element -> dispatcherServletRegistration.setMultipartConfig(element) });
         return dispatcherServletRegistration;
     }
 
     @Bean
-    @ConditionalOnMissingBean(GrailsWebMvcConfigurer.class)
-    public GrailsWebMvcConfigurer webMvcConfig() {
+    @ConditionalOnMissingBean(GrailsWebMvcConfigurer)
+    GrailsWebMvcConfigurer webMvcConfig() {
         return new GrailsWebMvcConfigurer(resourcesCachePeriod, resourcesEnabled, resourcesPattern);
     }
 
     static class GrailsWebMvcConfigurer implements WebMvcConfigurer {
 
-        private static final String[] SERVLET_RESOURCE_LOCATIONS = new String[] { "/" };
+        private static final String[] SERVLET_RESOURCE_LOCATIONS = ['/'] as String[];
 
-        private static final String[] CLASSPATH_RESOURCE_LOCATIONS = new String[] {
-            "classpath:/META-INF/resources/", "classpath:/resources/",
-            "classpath:/static/", "classpath:/public/"
-        };
+        private static final String[] CLASSPATH_RESOURCE_LOCATIONS = [
+            'classpath:/META-INF/resources/', 'classpath:/resources/',
+            'classpath:/static/', 'classpath:/public/'
+        ] as String[];
 
         private static final String[] RESOURCE_LOCATIONS;
 
@@ -189,14 +191,14 @@ public class ControllersAutoConfiguration {
         }
 
         @Override
-        public void addResourceHandlers(ResourceHandlerRegistry registry) {
+        void addResourceHandlers(ResourceHandlerRegistry registry) {
             if (!addMappings) {
                 return;
             }
 
-            if (!registry.hasMappingForPattern("/webjars/**")) {
-                registry.addResourceHandler("/webjars/**")
-                        .addResourceLocations("classpath:/META-INF/resources/webjars/")
+            if (!registry.hasMappingForPattern('/webjars/**')) {
+                registry.addResourceHandler('/webjars/**')
+                        .addResourceLocations('classpath:/META-INF/resources/webjars/')
                         .setCachePeriod(cachePeriod);
             }
             if (!registry.hasMappingForPattern(resourcesPattern)) {
@@ -205,5 +207,7 @@ public class ControllersAutoConfiguration {
                         .setCachePeriod(cachePeriod);
             }
         }
+
     }
+
 }

@@ -16,19 +16,20 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.plugins.web.controllers;
+package org.grails.plugins.web.controllers
 
-import org.springframework.beans.factory.support.BeanDefinitionRegistry;
-import org.springframework.boot.autoconfigure.AutoConfiguration;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
-import org.springframework.boot.webmvc.autoconfigure.WebMvcAutoConfiguration;
-import org.springframework.context.EnvironmentAware;
-import org.springframework.context.annotation.Import;
-import org.springframework.context.annotation.ImportBeanDefinitionRegistrar;
-import org.springframework.core.env.Environment;
-import org.springframework.core.type.AnnotationMetadata;
+import groovy.transform.CompileStatic
+import org.springframework.beans.factory.support.BeanDefinitionRegistry
+import org.springframework.boot.autoconfigure.AutoConfiguration
+import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication
+import org.springframework.boot.webmvc.autoconfigure.WebMvcAutoConfiguration
+import org.springframework.context.EnvironmentAware
+import org.springframework.context.annotation.Import
+import org.springframework.context.annotation.ImportBeanDefinitionRegistrar
+import org.springframework.core.env.Environment
+import org.springframework.core.type.AnnotationMetadata
 
-import grails.config.Settings;
+import grails.config.Settings
 
 /**
  * Without the auto-injected {@code @EnableWebMvc}, Spring Boot's
@@ -46,36 +47,38 @@ import grails.config.Settings;
  * <p>Disable with {@code grails.web.removeWelcomePageMapping=false} to restore Boot's welcome-page
  * behavior.
  */
-@AutoConfiguration(after = WebMvcAutoConfiguration.class)
+@AutoConfiguration(after = WebMvcAutoConfiguration)
 @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
-@Import(GrailsWelcomePageAutoConfiguration.RemoveWelcomePageMappingRegistrar.class)
-public class GrailsWelcomePageAutoConfiguration {
+@Import(GrailsWelcomePageAutoConfiguration.RemoveWelcomePageMappingRegistrar)
+@CompileStatic
+class GrailsWelcomePageAutoConfiguration {
 
-    static final String REMOVE_PROPERTY = Settings.WEB_REMOVE_WELCOME_PAGE_MAPPING;
+    static final String REMOVE_PROPERTY = Settings.WEB_REMOVE_WELCOME_PAGE_MAPPING
 
     static class RemoveWelcomePageMappingRegistrar implements ImportBeanDefinitionRegistrar, EnvironmentAware {
 
-        private static final String[] WELCOME_PAGE_BEANS = {
-            "welcomePageHandlerMapping", "welcomePageNotAcceptableHandlerMapping"
-        };
+        private static final String[] WELCOME_PAGE_BEANS = [
+            'welcomePageHandlerMapping', 'welcomePageNotAcceptableHandlerMapping'
+        ] as String[]
 
-        private boolean removeWelcomePageMapping = true;
+        private boolean removeWelcomePageMapping = true
 
         @Override
-        public void registerBeanDefinitions(AnnotationMetadata importingClassMetadata, BeanDefinitionRegistry registry) {
+        void registerBeanDefinitions(AnnotationMetadata importingClassMetadata, BeanDefinitionRegistry registry) {
             if (!removeWelcomePageMapping) {
-                return;
+                return
             }
-            for (String beanName : WELCOME_PAGE_BEANS) {
+            for (String beanName in WELCOME_PAGE_BEANS) {
                 if (registry.containsBeanDefinition(beanName)) {
-                    registry.removeBeanDefinition(beanName);
+                    registry.removeBeanDefinition(beanName)
                 }
             }
         }
 
         @Override
-        public void setEnvironment(Environment environment) {
-            this.removeWelcomePageMapping = environment.getProperty(REMOVE_PROPERTY, Boolean.class, true);
+        void setEnvironment(Environment environment) {
+            this.removeWelcomePageMapping = environment.getProperty(REMOVE_PROPERTY, Boolean, true)
         }
     }
+
 }

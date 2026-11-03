@@ -81,4 +81,15 @@ class ControllerRuntimeHintsSpec extends Specification {
         and: 'while the types this module declares are registered whatever a class loader can find'
             empty.reflection().getTypeHint(TypeReference.of(AllowedMethodsHelper)) != null
     }
+
+    void 'a missing class loader still registers the types this module declares'() {
+        given:
+            RuntimeHints fresh = new RuntimeHints()
+
+        when:
+            new ControllerRuntimeHints().registerHints(fresh, null)
+
+        then:
+            fresh.reflection().getTypeHint(TypeReference.of(AllowedMethodsHelper)) != null
+    }
 }
