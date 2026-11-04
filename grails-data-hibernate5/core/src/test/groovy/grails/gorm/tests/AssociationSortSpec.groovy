@@ -111,6 +111,34 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManag
         results.totalCount == 4
     }
 
+    void 'a criteria query with pagination arguments sorted by a nested association property keeps a player whose team has no club'() {
+        when:
+        final results = Player.createCriteria().list(sort: 'team.club.name', max: 10) {
+            like('name', '%Player%')
+        }
+
+        then:
+        'Unattached Player' in results*.name
+        results*.name - 'Unattached Player' == ['Arsenal Player', 'Chelsea Player', 'MU Player']
+
+        and: 'the count joins the nested association as the list does'
+        results.totalCount == 4
+    }
+
+    void 'a criteria query with pagination arguments sorted by a nested association property reuses a join of the criteria'() {
+        when:
+        final results = Player.createCriteria().list(sort: 'team.club.name', order: 'desc', max: 10) {
+            team {
+                like('name', '%First%')
+            }
+        }
+
+        then:
+        'Unattached Player' in results*.name
+        results*.name - 'Unattached Player' == ['MU Player', 'Chelsea Player', 'Arsenal Player']
+        results.totalCount == 4
+    }
+
     void 'a dynamic finder sorted by an association property keeps a team without a club'() {
         when:
         final results = Team.findAllByNameLike('%First%', [sort: 'club.name'])

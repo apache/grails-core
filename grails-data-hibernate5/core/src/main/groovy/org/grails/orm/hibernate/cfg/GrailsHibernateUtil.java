@@ -18,6 +18,7 @@
  */
 package org.grails.orm.hibernate.cfg;
 
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
@@ -36,6 +37,7 @@ import org.hibernate.criterion.Order;
 import org.hibernate.engine.spi.EntityEntry;
 import org.hibernate.engine.spi.SessionImplementor;
 import org.hibernate.engine.spi.Status;
+import org.hibernate.internal.CriteriaImpl;
 import org.hibernate.internal.util.StringHelper;
 import org.hibernate.proxy.HibernateProxy;
 import org.hibernate.sql.JoinType;
@@ -218,24 +220,48 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
      * Add order to criteria, creating necessary subCriteria if nested sort property (ie. sort:'nested.property').
      */
     private static void addOrderPossiblyNested(AbstractHibernateDatastore datastore, Criteria c, Class<?> targetClass, String sort, String order, boolean ignoreCase) {
-        int firstDotPos = sort.indexOf(".");
-        if (firstDotPos == -1) {
-            addOrder(c, sort, order, ignoreCase);
-        } else { // nested property
-            String sortHead = sort.substring(0, firstDotPos);
-            String sortTail = sort.substring(firstDotPos + 1);
-            PersistentProperty property = getGrailsDomainClassProperty(datastore, targetClass, sortHead);
-            if (property instanceof Embedded) {
-                // embedded objects cannot reference entities (at time of writing), so no more recursion needed
-                addOrder(c, sort, order, ignoreCase);
-            } else if (property instanceof Association) {
-                // a left join, so that the sort keeps the rows where the association is null
-                Criteria subCriteria = c.createCriteria(sortHead, JoinType.LEFT_OUTER_JOIN);
-                Class<?> propertyTargetClass = ((Association) property).getAssociatedEntity().getJavaClass();
-                GrailsHibernateUtil.cacheCriteriaByMapping(datastore, propertyTargetClass, subCriteria);
-                addOrderPossiblyNested(datastore, subCriteria, propertyTargetClass, sortTail, order, ignoreCase); // Recurse on nested sort
+        Criteria criteria = c;
+        Class<?> currentClass = targetClass;
+        String associationPath = null;
+        String property = sort;
+        int firstDotPos;
+        while ((firstDotPos = property.indexOf('.')) != -1) {
+            String sortHead = property.substring(0, firstDotPos);
+            PersistentProperty persistentProperty = getGrailsDomainClassProperty(datastore, currentClass, sortHead);
+            if (persistentProperty instanceof Embedded) {
+                // embedded objects cannot reference entities (at time of writing), so the rest is a component path
+                break;
+            }
+            if (!(persistentProperty instanceof Association)) {
+                return;
+            }
+            associationPath = associationPath == null ? sortHead : associationPath + '.' + sortHead;
+            criteria = getOrCreateSortCriteria(c, associationPath);
+            currentClass = ((Association) persistentProperty).getAssociatedEntity().getJavaClass();
+            GrailsHibernateUtil.cacheCriteriaByMapping(datastore, currentClass, criteria);
+            property = property.substring(firstDotPos + 1);
+        }
+        addOrder(criteria, property, order, ignoreCase);
+    }
+
+    /**
+     * Returns the criteria that joins an association for a sort: the one the query already has for the
+     * association path or, failing that, a new one. A new one is created from the root criteria with its
+     * whole path, and not from the criteria of the association before it, because the count of a paged
+     * list recreates each join from the root criteria by its path. It is a left join, so that the sort
+     * keeps the rows where the association is null.
+     */
+    private static Criteria getOrCreateSortCriteria(Criteria root, String associationPath) {
+        if (root instanceof CriteriaImpl) {
+            Iterator<CriteriaImpl.Subcriteria> subcriteria = ((CriteriaImpl) root).iterateSubcriteria();
+            while (subcriteria.hasNext()) {
+                CriteriaImpl.Subcriteria existing = subcriteria.next();
+                if (existing.getParent() == root && associationPath.equals(existing.getPath())) {
+                    return existing;
+                }
             }
         }
+        return root.createCriteria(associationPath, JoinType.LEFT_OUTER_JOIN);
     }
 
     /**
