@@ -224,6 +224,19 @@ class WhereQueryWithAssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibe
         JoinType.INNER || false
     }
 
+    void 'sort by an association property leaves out a team without a club when a criterion requires a club'() {
+        given:
+        saveTeamWithoutClub()
+
+        when:
+        final results = Team.where {
+            club != null
+        }.list(sort: 'club.name')
+
+        then:
+        results*.name == ['Arsenal First Team', 'Chelsea First Team', 'MU First Team']
+    }
+
     void 'a paged list sorted by an association property counts the rows without the association'() {
         given:
         saveTeamWithoutClub()

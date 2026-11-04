@@ -27,6 +27,7 @@ import jakarta.persistence.criteria.CriteriaQuery;
 import jakarta.persistence.criteria.Expression;
 import jakarta.persistence.criteria.From;
 import jakarta.persistence.criteria.Join;
+import jakarta.persistence.criteria.JoinType;
 import jakarta.persistence.criteria.Root;
 
 import org.hibernate.Criteria;
@@ -277,7 +278,8 @@ public class GrailsHibernateQueryUtils {
                 addOrder(c, sort, order, ignoreCase);
             } else if (property instanceof Association) {
                 Association a = (Association) property;
-                Criteria subCriteria = c.createCriteria(sortHead);
+                // a left join, so that the sort keeps the rows where the association is null
+                Criteria subCriteria = c.createCriteria(sortHead, org.hibernate.sql.JoinType.LEFT_OUTER_JOIN);
                 PersistentEntity associatedEntity = a.getAssociatedEntity();
                 Class<?> propertyTargetClass = associatedEntity.getJavaClass();
                 cacheCriteriaByMapping(propertyTargetClass, subCriteria);
@@ -312,7 +314,8 @@ public class GrailsHibernateQueryUtils {
                 addOrder(entity, query, queryRoot, criteriaBuilder, sort, order, ignoreCase);
             } else if (property instanceof Association) {
                 final Association<? extends Property> a = (Association<? extends Property>) property;
-                final Join join = queryRoot.join(sortHead);
+                // a left join, so that the sort keeps the rows where the association is null
+                final Join join = queryRoot.join(sortHead, JoinType.LEFT);
                 PersistentEntity associatedEntity = a.getAssociatedEntity();
                 Class<?> propertyTargetClass = associatedEntity.getJavaClass();
                 addOrderPossiblyNested(query, join, criteriaBuilder, associatedEntity, sortTail, order, ignoreCase); // Recurse on nested sort

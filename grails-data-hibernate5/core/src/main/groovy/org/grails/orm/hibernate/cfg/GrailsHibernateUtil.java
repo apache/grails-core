@@ -38,6 +38,7 @@ import org.hibernate.engine.spi.SessionImplementor;
 import org.hibernate.engine.spi.Status;
 import org.hibernate.internal.util.StringHelper;
 import org.hibernate.proxy.HibernateProxy;
+import org.hibernate.sql.JoinType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -228,7 +229,8 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
                 // embedded objects cannot reference entities (at time of writing), so no more recursion needed
                 addOrder(c, sort, order, ignoreCase);
             } else if (property instanceof Association) {
-                Criteria subCriteria = c.createCriteria(sortHead);
+                // a left join, so that the sort keeps the rows where the association is null
+                Criteria subCriteria = c.createCriteria(sortHead, JoinType.LEFT_OUTER_JOIN);
                 Class<?> propertyTargetClass = ((Association) property).getAssociatedEntity().getJavaClass();
                 GrailsHibernateUtil.cacheCriteriaByMapping(datastore, propertyTargetClass, subCriteria);
                 addOrderPossiblyNested(datastore, subCriteria, propertyTargetClass, sortTail, order, ignoreCase); // Recurse on nested sort
