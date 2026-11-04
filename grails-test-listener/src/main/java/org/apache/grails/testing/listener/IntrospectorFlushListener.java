@@ -37,7 +37,8 @@ import org.junit.platform.launcher.TestIdentifier;
  *
  * <p>{@link Introspector#flushCaches()} clears the cache of the calling thread's thread group. The
  * launcher calls this listener on the thread that ran the class, which is the thread group the
- * class's tests built their MetaClasses in.</p>
+ * class's tests built their MetaClasses in. BeanInfo cached on threads of other thread groups, which
+ * some executors and servers create, is not released.</p>
  */
 public final class IntrospectorFlushListener implements TestExecutionListener {
 

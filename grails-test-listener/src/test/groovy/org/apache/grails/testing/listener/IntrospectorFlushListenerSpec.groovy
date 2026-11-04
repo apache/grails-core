@@ -27,6 +27,7 @@ import org.junit.platform.engine.TestSource
 import org.junit.platform.engine.UniqueId
 import org.junit.platform.engine.support.descriptor.AbstractTestDescriptor
 import org.junit.platform.engine.support.descriptor.ClassSource
+import org.junit.platform.engine.support.descriptor.EngineDescriptor
 import org.junit.platform.engine.support.descriptor.MethodSource
 import org.junit.platform.launcher.TestExecutionListener
 import org.junit.platform.launcher.TestIdentifier
@@ -69,6 +70,17 @@ class IntrospectorFlushListenerSpec extends Specification {
         TestDescriptor.Type.TEST         | MethodSource.from(Bean.name, 'getName')
         TestDescriptor.Type.CONTAINER    | MethodSource.from(Bean.name, 'getName')
         TestDescriptor.Type.TEST         | ClassSource.from(Bean)
+    }
+
+    void 'the cache is kept when the engine finishes'() {
+        given:
+        final cached = Introspector.getBeanInfo(Bean)
+
+        when:
+        new IntrospectorFlushListener().executionFinished(TestIdentifier.from(new EngineDescriptor(UniqueId.forEngine('probe'), 'probe')), TestExecutionResult.successful())
+
+        then:
+        Introspector.getBeanInfo(Bean).is(cached)
     }
 
     private static TestIdentifier identifier(TestDescriptor.Type type, TestSource source) {
