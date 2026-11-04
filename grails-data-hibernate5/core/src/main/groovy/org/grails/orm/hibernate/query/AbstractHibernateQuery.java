@@ -619,13 +619,22 @@ public abstract class AbstractHibernateQuery extends Query {
             String sortTail = property.substring(i + 1);
 
             if (createdAssociationPaths.containsKey(sortHead)) {
+                // sortHead may be either an explicit alias or an association path that
+                // was joined (with a generated alias) by a where query criterion.
+                // Hibernate can only resolve the property through the alias.
                 CriteriaAndAlias criteriaAndAlias = createdAssociationPaths.get(sortHead);
-                Criteria criteria = criteriaAndAlias.criteria;
+                String aliasedProperty = criteriaAndAlias.alias + '.' + sortTail;
                 org.hibernate.criterion.Order hibernateOrder = order.getDirection() == Order.Direction.ASC ?
-                        org.hibernate.criterion.Order.asc(property) :
-                        org.hibernate.criterion.Order.desc(property);
+                        org.hibernate.criterion.Order.asc(aliasedProperty) :
+                        org.hibernate.criterion.Order.desc(aliasedProperty);
+                hibernateOrder = order.isIgnoreCase() ? hibernateOrder.ignoreCase() : hibernateOrder;
 
-                criteria.addOrder(order.isIgnoreCase() ? hibernateOrder.ignoreCase() : hibernateOrder);
+                if (criteriaAndAlias.criteria != null) {
+                    criteriaAndAlias.criteria.addOrder(hibernateOrder);
+                }
+                else if (criteriaAndAlias.detachedCriteria != null) {
+                    criteriaAndAlias.detachedCriteria.addOrder(hibernateOrder);
+                }
             }
             else {
 
