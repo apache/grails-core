@@ -324,18 +324,7 @@ def results = Pet.where {
 
 The path can cross more than one association, such as `owner.employer.name` where both `owner` and `employer` are associations. An association that the `where` query already joins is reused for the sort, and any other association on the path is joined for it.
 
-An association is joined with an inner join unless the query requests another join type for it, so a sort by `owner.lastName` leaves out the pets that have no owner. To keep them, request a left join with the `fetch` argument:
-
-[source,groovy]
-----
-import jakarta.persistence.criteria.JoinType
-
-def results = Pet.where {
-    year(birthDate) == 2011
-}.list(sort: "owner.lastName", fetch: [owner: JoinType.LEFT])
-----
-
-A sort by the identifier of the last association on a longer path, such as `owner.employer.id`, does not join that association. It sorts by the foreign key that `owner` holds, and so keeps the pets whose owner has no employer. A `hasOne` association has no such foreign key and is joined.
+Sorting does not change which rows a query returns. An association that is joined only for the sort is joined with a left join, so a sort by `owner.lastName` keeps the pets that have no owner. Whether they come first or last depends on how the database sorts nulls. If the query requests a join type for the association, for example with `fetch: [owner: JoinType.INNER]`, the sort uses that join type instead.
 
 If the `where` query defines an explicit alias for the association, you can sort by the alias instead:
 
