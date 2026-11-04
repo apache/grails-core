@@ -153,10 +153,10 @@ public class JpaCriteriaQueryCreator<T> {
         Set<String> requestedFetches = new HashSet<>(hibernateQuery.getFetchJoinPaths());
         for (PersistentProperty<?> property : entity.getPersistentProperties()) {
             // The fetch: 'join' mapping of a to-one association applies to every full-entity query
-            if (property instanceof ToOne && !(property instanceof Embedded) && !requestedFetches.contains(property.getName())
-                    && property instanceof HibernatePersistentProperty hibernateProperty
-                    && hibernateProperty.getHibernateMappedForm() != null
-                    && hibernateProperty.getHibernateMappedForm().getFetchMode() == FetchMode.JOIN) {
+            if (property instanceof ToOne && !(property instanceof Embedded) && !requestedFetches.contains(property.getName()) &&
+                    property instanceof HibernatePersistentProperty hibernateProperty &&
+                    hibernateProperty.getHibernateMappedForm() != null &&
+                    hibernateProperty.getHibernateMappedForm().getFetchMode() == FetchMode.JOIN) {
                 root.fetch(property.getName(), JoinType.LEFT);
             }
         }

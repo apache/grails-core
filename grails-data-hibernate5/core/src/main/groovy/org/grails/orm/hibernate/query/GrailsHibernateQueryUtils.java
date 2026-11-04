@@ -161,9 +161,9 @@ public class GrailsHibernateQueryUtils {
     @SuppressWarnings("rawtypes")
     private static void fetchJoinMappedToOneAssociations(PersistentEntity entity, Root queryRoot, Set explicitFetches) {
         for (PersistentProperty property : entity.getPersistentProperties()) {
-            if (property instanceof ToOne && !(property instanceof Embedded) && !explicitFetches.contains(property.getName())
-                    && property.getMapping() != null && property.getMapping().getMappedForm() instanceof PropertyConfig
-                    && ((PropertyConfig) property.getMapping().getMappedForm()).getFetchMode() == FetchMode.JOIN) {
+            if (property instanceof ToOne && !(property instanceof Embedded) && !explicitFetches.contains(property.getName()) &&
+                    property.getMapping() != null && property.getMapping().getMappedForm() instanceof PropertyConfig &&
+                    ((PropertyConfig) property.getMapping().getMappedForm()).getFetchMode() == FetchMode.JOIN) {
                 queryRoot.fetch(property.getName(), JoinType.LEFT);
             }
         }

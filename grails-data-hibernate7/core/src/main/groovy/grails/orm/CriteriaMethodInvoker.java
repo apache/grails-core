@@ -442,8 +442,8 @@ public class CriteriaMethodInvoker {
 
         private void requireElements(String property) {
             if (!ELEMENTS.equals(property)) {
-                throw new IllegalArgumentException("Only the [" + ELEMENTS + "] property can be queried on the collection of basic values ["
-                        + collection + "], not [" + property + "]");
+                throw new IllegalArgumentException("Only the [" + ELEMENTS + "] property can be queried on the collection of basic values [" +
+                        collection + "], not [" + property + "]");
             }
         }
     }

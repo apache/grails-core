@@ -83,10 +83,10 @@ public class HqlListQueryBuilder {
      */
     private void appendMappedToOneFetchJoins(StringBuilder hql, Set<String> explicitFetches) {
         for (PersistentProperty<?> property : entity.getPersistentProperties()) {
-            if (property instanceof ToOne && !(property instanceof Embedded) && !explicitFetches.contains(property.getName())
-                    && property instanceof HibernatePersistentProperty hibernateProperty
-                    && hibernateProperty.getHibernateMappedForm() != null
-                    && hibernateProperty.getHibernateMappedForm().getFetchMode() == FetchMode.JOIN) {
+            if (property instanceof ToOne && !(property instanceof Embedded) && !explicitFetches.contains(property.getName()) &&
+                    property instanceof HibernatePersistentProperty hibernateProperty &&
+                    hibernateProperty.getHibernateMappedForm() != null &&
+                    hibernateProperty.getHibernateMappedForm().getFetchMode() == FetchMode.JOIN) {
                 hql.append(" left join fetch e.").append(property.getName());
             }
         }
