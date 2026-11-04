@@ -22,6 +22,8 @@ import org.apache.grails.data.hibernate5.core.GrailsDataHibernate5TckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import spock.lang.Issue
 
+import jakarta.persistence.criteria.JoinType
+
 class WhereQueryWithAssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManager> {
 
     void setupSpec() {
@@ -44,6 +46,10 @@ class WhereQueryWithAssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibe
         final player = new Player(name: name, team: team)
         player.contract = new Contract(salary: 1000G, player: player)
         player.save(failOnError: true, flush: true)
+    }
+
+    private static void saveTeamWithoutClub() {
+        savePlayer('Unattached Player', new Team(name: 'Unattached First Team').save(failOnError: true))
     }
 
     @Issue(['https://github.com/apache/grails-core/issues/9860', 'https://github.com/apache/grails-core/issues/15589'])
@@ -176,5 +182,94 @@ class WhereQueryWithAssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibe
 
         then:
         results*.name == ['Arsenal Player', 'Chelsea Player', 'MU Player']
+    }
+
+    void 'sort by an association property leaves out the rows without the association'() {
+        given:
+        saveTeamWithoutClub()
+
+        when:
+        final results = Team.where {
+            name ==~ '%First%'
+        }.list(sort: 'club.name')
+
+        then: 'the association is joined with an inner join'
+        results*.name == ['Arsenal First Team', 'Chelsea First Team', 'MU First Team']
+    }
+
+    void 'sort by an association property keeps the rows without the association when fetch requests a left join'() {
+        given:
+        saveTeamWithoutClub()
+
+        when:
+        final results = Team.where {
+            name ==~ '%First%'
+        }.list(sort: 'club.name', fetch: [club: JoinType.LEFT])
+
+        then: 'the team without a club is kept'
+        'Unattached First Team' in results*.name
+
+        and: 'the other teams are sorted by the name of their club'
+        results*.name - 'Unattached First Team' == ['Arsenal First Team', 'Chelsea First Team', 'MU First Team']
+    }
+
+    void 'sort by the id of a nested association keeps the rows without that association'() {
+        given:
+        saveTeamWithoutClub()
+
+        when:
+        final results = Player.where {
+            name ==~ '%Player%'
+        }.list(sort: 'team.club.id', order: direction)
+
+        then: 'the player whose team has no club is kept'
+        'Unattached Player' in results*.name
+
+        and: 'the other players are sorted by the id of the club of their team'
+        results*.name - 'Unattached Player' == expected
+
+        where:
+        direction || expected
+        'asc'     || ['MU Player', 'Arsenal Player', 'Chelsea Player']
+        'desc'    || ['Chelsea Player', 'Arsenal Player', 'MU Player']
+    }
+
+    void 'sort by the id of a nested association through an explicit alias keeps the rows without that association'() {
+        given:
+        saveTeamWithoutClub()
+
+        when:
+        final results = Player.where {
+            final t = team
+            t.name ==~ '%First%'
+        }.list(sort: 't.club.id')
+
+        then:
+        'Unattached Player' in results*.name
+        results*.name - 'Unattached Player' == ['MU Player', 'Arsenal Player', 'Chelsea Player']
+    }
+
+    void 'sort by the id of a nested association keeps the rows without that association when the where query uses the first association'() {
+        given:
+        saveTeamWithoutClub()
+
+        when:
+        final results = Player.where {
+            team.name ==~ '%First%'
+        }.list(sort: 'team.club.id')
+
+        then:
+        'Unattached Player' in results*.name
+        results*.name - 'Unattached Player' == ['MU Player', 'Arsenal Player', 'Chelsea Player']
+    }
+
+    void 'sort by the id of a nested hasOne association, which has no foreign key to sort by'() {
+        when:
+        final results = Contract.where {
+            salary > 0
+        }.list(sort: 'player.contract.id', order: 'desc')
+
+        then:
+        results*.player*.name == ['Chelsea Player', 'Arsenal Player', 'MU Player']
     }
 }
