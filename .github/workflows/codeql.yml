@@ -50,7 +50,7 @@ jobs:
       github.event_name != 'pull_request'
       || (!contains(github.event.pull_request.labels.*.name, 'no ci')
           && (!github.event.pull_request.draft || contains(github.event.pull_request.labels.*.name, 'run ci')))
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     permissions:
       actions: read
       contents: read
@@ -73,7 +73,7 @@ jobs:
         java-version: 21
     # Initializes the CodeQL tools for scanning.
     - name: Initialize CodeQL
-      uses: github/codeql-action/init@24c54180a607b1449ed407dd24f251e4e9147c8d # v4.38.3
+      uses: github/codeql-action/init@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
       with:
         languages: ${{ matrix.language }}
         # The autobuild action runs `./gradlew testClasses`, which compiles Groovy sample apps that are covered by regular CI.
@@ -84,4 +84,4 @@ jobs:
         # queries: ./path/to/local/query, your-org/your-repo/queries@main
 
     - name: Perform CodeQL Analysis
-      uses: github/codeql-action/analyze@24c54180a607b1449ed407dd24f251e4e9147c8d # v4.38.3
+      uses: github/codeql-action/analyze@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1

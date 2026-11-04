@@ -32,6 +32,9 @@
 # root .sdkmanrc - it has to run on whatever the core build it consumes runs on - and only the
 # fixture carries its own pin. The steps below read both out of those files rather than relying
 # on Gradle toolchain auto-detection.
+#
+# A third, GraalVM 25.2, builds the native-i18n image at the end of the job, from the same published
+# artifacts.
 name: "End to End"
 on:
   push:
@@ -109,6 +112,7 @@ jobs:
         working-directory: 'grails-gradle'
         run: ./gradlew publishAllPublicationsToTestCaseMavenRepoRepository -PskipTests --stacktrace
       - name: "📦 Setup: publish Grails to the local repository the tests resolve from"
+        id: publish-grails
         run: ./gradlew publishAllPublicationsToTestCaseMavenRepoRepository -PskipTests --stacktrace
       - name: "📦 Setup: build the precompiled Grails 7 / Groovy 4 fixture"
         working-directory: 'end-to-end/legacy-g7-command-plugin'
@@ -153,6 +157,37 @@ jobs:
         env:
           DO_NOT_CACHE_TESTS: '1'
         run: ./gradlew check --continue --stacktrace
+      - name: "☕️ Setup GraalVM for the native image"
+        # In this job rather than its own, so the image is built from the framework published above
+        # instead of publishing it a second time. It runs whether or not the tests above passed, and
+        # leaves JAVA_HOME alone: only the step below uses GraalVM.
+        if: ${{ !cancelled() && steps.publish-grails.outcome == 'success' }}
+        uses: graalvm/setup-graalvm@27b360dbb857524eaf0b4c4cef364d38e5b4f173 # v1.6.7
+        with:
+          distribution: graalvm-community
+          # The GraalVM release, not just the JDK: a java-version alone resolves to the last release tagged
+          # by JDK version, CE 25.0.2, which still cannot compile Groovy 4 or later. Releases since are
+          # tagged by GraalVM version, which is what this selects.
+          version: '25.2'
+          java-version: '25'
+          set-java-home: 'false'
+          check-for-updates: 'false'
+      - name: "🧪 Build and run the native-i18n image"
+        # The native half of native-i18n: compile the application to a binary with no recorded
+        # metadata and resolve every message bundle from it. GraalVM 25.2 or later, because GraalVM 21 and
+        # the first GraalVM 25 releases cannot compile Groovy 4 or later (oracle/graal#10200); see
+        # end-to-end/README.md.
+        if: ${{ !cancelled() && steps.publish-grails.outcome == 'success' }}
+        working-directory: 'end-to-end'
+        env:
+          JAVA_HOME: ${{ env.GRAALVM_HOME }}
+        run: |
+          set -euo pipefail
+          if [ -z "${JAVA_HOME:-}" ]; then
+            echo "setup-graalvm did not set GRAALVM_HOME; refusing to build the image on another JDK" >&2
+            exit 1
+          fi
+          ./gradlew :native-i18n:i18nCheckOnNative -PnativeTests --stacktrace
       - name: "📤 Upload test reports"
         if: failure()
         uses: actions/upload-artifact@v7.0.1

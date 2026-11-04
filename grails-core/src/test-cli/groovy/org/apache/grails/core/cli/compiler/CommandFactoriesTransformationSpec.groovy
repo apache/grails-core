@@ -19,9 +19,13 @@
 package org.apache.grails.core.cli.compiler
 
 import org.codehaus.groovy.ast.ClassHelper
+import org.codehaus.groovy.control.CompilationUnit
+import org.codehaus.groovy.control.CompilerConfiguration
+import org.codehaus.groovy.control.Phases
 
 import org.apache.grails.core.cli.ApplicationCommandTargetAware
 import spock.lang.Specification
+import spock.lang.TempDir
 import spock.lang.Unroll
 
 /**
@@ -49,6 +53,49 @@ class CommandFactoriesTransformationSpec extends Specification {
     def "does not register target-aware command adapters as command factories"() {
         expect:
         !CommandFactoriesTransformation.shouldRegisterCommand(ClassHelper.make(TargetAwareTestAdapter))
+    }
+
+    def "a command compiled again as a target-aware adapter leaves grails-cli.factories"() {
+        given: 'two commands compiled into the same output'
+        File sourceFile = new File(tempDir, 'src/cli/groovy/example/BackupCommand.groovy')
+        File targetDir = new File(tempDir, 'build/classes/groovy/cli')
+        compile(sourceFile, command('BackupCommand', ''), targetDir)
+        compile(new File(tempDir, 'src/cli/groovy/example/RestoreCommand.groovy'), command('RestoreCommand', ''), targetDir)
+
+        when: 'incremental compilation recompiles only the edited one, now an adapter'
+        compile(sourceFile, command('BackupCommand', ', org.apache.grails.core.cli.ApplicationCommandTargetAware',
+                'Object getTarget() { null }'), targetDir)
+
+        then:
+        cliFactories(targetDir).getProperty(CommandFactoriesTransformation.APPLICATION_COMMAND_CLASS.name) == 'example.RestoreCommand'
+    }
+
+    @TempDir
+    File tempDir
+
+    private static String command(String className, String extraInterfaces, String extraMembers = '') {
+        """
+            package example
+
+            class ${className} implements org.apache.grails.core.cli.ApplicationCommand${extraInterfaces} {
+                boolean handle(org.apache.grails.core.cli.ExecutionContext executionContext) { true }
+                ${extraMembers}
+            }
+        """
+    }
+
+    private static Properties cliFactories(File targetDirectory) {
+        Properties factories = new Properties()
+        new File(targetDirectory, CommandFactoriesTransformation.CLI_FACTORIES_LOCATION).withInputStream { factories.load(it) }
+        factories
+    }
+
+    private static void compile(File sourceFile, String source, File targetDirectory) {
+        sourceFile.parentFile.mkdirs()
+        sourceFile.text = source
+        CompilationUnit unit = new CompilationUnit(new CompilerConfiguration(targetDirectory: targetDirectory))
+        unit.addSource(sourceFile)
+        unit.compile(Phases.CANONICALIZATION)
     }
 }
 

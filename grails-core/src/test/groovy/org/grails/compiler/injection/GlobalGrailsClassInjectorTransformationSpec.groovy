@@ -767,6 +767,62 @@ class GlobalGrailsClassInjectorTransformationSpec extends Specification {
             factories.text.contains('TestHandler')
     }
 
+    void "an artefact handler compiled again as a plain class leaves grails.factories"() {
+        given: "two artefact handlers compiled into the same output"
+            def sourceFile = new File(tempDir, 'src/main/groovy/TestHandler.groovy')
+            def targetDir = new File(tempDir, 'build/classes/groovy/main')
+            compileToFile(sourceFile, artefactHandlerSource('TestHandler'), targetDir)
+            compileToFile(new File(tempDir, 'src/main/groovy/OtherHandler.groovy'), artefactHandlerSource('OtherHandler'), targetDir)
+
+        when: "incremental compilation recompiles only the edited one, which is no longer a handler"
+            compileToFile(sourceFile, 'class TestHandler {}', targetDir)
+
+        then:
+            factoriesIn(targetDir).getProperty('grails.core.ArtefactHandler') == 'OtherHandler'
+    }
+
+    void "a class that changes which factory type it implements is registered under the new one only"() {
+        given: "a trait injector"
+            def sourceFile = new File(tempDir, 'src/main/groovy/SwitchingType.groovy')
+            def targetDir = new File(tempDir, 'build/classes/groovy/main')
+            compileToFile(sourceFile, '''
+                class SwitchingType implements grails.compiler.traits.TraitInjector {
+                    Class getTrait() { null }
+                    String[] getArtefactTypes() { [] as String[] }
+                }
+            ''', targetDir)
+
+        when: "it is compiled again as an artefact handler"
+            compileToFile(sourceFile, artefactHandlerSource('SwitchingType'), targetDir)
+
+        then:
+            def factories = factoriesIn(targetDir)
+            factories.getProperty('grails.core.ArtefactHandler') == 'SwitchingType'
+            factories.getProperty('grails.compiler.traits.TraitInjector') == null
+    }
+
+    void "a class that is both an artefact handler and a trait injector is registered under both types"() {
+        given:
+            def sourceFile = new File(tempDir, 'src/main/groovy/BothTypes.groovy')
+            def targetDir = new File(tempDir, 'build/classes/groovy/main')
+
+        when:
+            compileToFile(sourceFile, '''
+                class BothTypes extends grails.core.ArtefactHandlerAdapter implements grails.compiler.traits.TraitInjector {
+                    BothTypes() {
+                        super('BothTypes', null, null, 'Handler')
+                    }
+                    Class getTrait() { null }
+                    String[] getArtefactTypes() { [] as String[] }
+                }
+            ''', targetDir)
+
+        then: "every type is checked, not only until one registers the class"
+            def factories = factoriesIn(targetDir)
+            factories.getProperty('grails.core.ArtefactHandler') == 'BothTypes'
+            factories.getProperty('grails.compiler.traits.TraitInjector') == 'BothTypes'
+    }
+
     void "the global transform skips classes whose source falls outside the Grails resource patterns"() {
         given: "a plain source under src/main/groovy, which is project source but not a Grails resource"
             def sourceFile = new File(tempDir, 'src/main/groovy/PlainClass.groovy')
@@ -1187,6 +1243,22 @@ class GlobalGrailsClassInjectorTransformationSpec extends Specification {
         cu.addSource(sourceFile)
         cu.compile(Phases.CANONICALIZATION)
         (cu.errorCollector.warnings ?: []).collect { it.message?.toString() ?: it.toString() }
+    }
+
+    private static String artefactHandlerSource(String className) {
+        """
+            class ${className} extends grails.core.ArtefactHandlerAdapter {
+                ${className}() {
+                    super('${className}', null, null, 'Handler')
+                }
+            }
+        """
+    }
+
+    private static Properties factoriesIn(File targetDirectory) {
+        Properties properties = new Properties()
+        new File(targetDirectory, 'META-INF/grails.factories').withInputStream { properties.load(it) }
+        properties
     }
 
     private static ClassNode compileToFile(File sourceFile, String source, File targetDirectory, Map<String, String> nodeMetaData = [:]) {

@@ -32,7 +32,7 @@ jobs:
   close:
     name: "Close Release"
     environment: release
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-22.04
     permissions:
       contents: write # required for gradle.properties revert
       issues: write # required for milestone closing

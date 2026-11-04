@@ -16,6 +16,7 @@
 package org.grails.orm.hibernate.query;
 
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 import jakarta.persistence.criteria.Expression;
@@ -26,7 +27,7 @@ import jakarta.persistence.criteria.Expression;
  * @since 8.0
  */
 public class AliasRegistry {
-    private final Map<String, HibernateAlias> definitions = new HashMap<>();
+    private final Map<String, HibernateAlias> definitions = new LinkedHashMap<>();
     private final Map<String, Expression<?>> realizedExpressions = new HashMap<>();
     private final AliasRegistry parent;
 
@@ -56,6 +57,13 @@ public class AliasRegistry {
         return false;
     }
 
+    /**
+     * Whether this query declares the alias, independently of any enclosing query.
+     */
+    boolean isOwnDefined(String alias) {
+        return definitions.containsKey(alias);
+    }
+
     public HibernateAlias getDefinition(String alias) {
         HibernateAlias def = definitions.get(alias);
         if (def == null && parent != null) {
@@ -64,15 +72,28 @@ public class AliasRegistry {
         return def;
     }
 
+    /**
+     * The first declared alias of an association path shares the path join. Further aliases
+     * have independent joins. Only declarations in this query participate.
+     */
+    HibernateAlias getAssociationAlias(String path) {
+        for (HibernateAlias definition : definitions.values()) {
+            if (definition != null && definition.explicit() && path.equals(definition.path())) {
+                return definition;
+            }
+        }
+        return null;
+    }
+
     public Expression<?> getRealized(String alias) {
         Expression<?> expr = realizedExpressions.get(alias);
-        if (expr == null && parent != null) {
+        if (expr == null && !isOwnDefined(alias) && parent != null) {
             return parent.getRealized(alias);
         }
         return expr;
     }
 
     public boolean hasRealized(String alias) {
-        return realizedExpressions.containsKey(alias) || (parent != null && parent.hasRealized(alias));
+        return getRealized(alias) != null;
     }
 }

@@ -23,6 +23,7 @@ import java.util.Map;
 
 import jakarta.persistence.criteria.Expression;
 import jakarta.persistence.criteria.From;
+import jakarta.persistence.criteria.JoinType;
 import jakarta.persistence.criteria.ParameterExpression;
 import jakarta.persistence.criteria.Path;
 
@@ -121,6 +122,12 @@ public class JpaQueryContext implements Cloneable, QueryPathContext {
 
     public From<?, ?> getFrom(String path) {
         return joinTracker.getJoin(path);
+    }
+
+    From<?, ?> resolveAssociation(String path) {
+        HibernateAlias definition = aliasRegistry.getDefinition(path);
+        JoinType joinType = definition != null && !definition.explicit() ? definition.joinType() : JoinType.INNER;
+        return resolver.resolveAssociation(path, joinType);
     }
 
     public void registerAlias(String alias, Expression<?> expression) {

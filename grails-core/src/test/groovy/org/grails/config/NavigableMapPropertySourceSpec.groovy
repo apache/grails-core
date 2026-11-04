@@ -18,7 +18,11 @@
  */
 package org.grails.config
 
+import org.springframework.boot.context.properties.bind.Bindable
+import org.springframework.boot.context.properties.bind.Binder
 import org.springframework.boot.origin.OriginTrackedValue
+import org.springframework.core.env.PropertySource
+import org.springframework.core.env.StandardEnvironment
 
 import spock.lang.Specification
 
@@ -177,5 +181,36 @@ class NavigableMapPropertySourceSpec extends Specification {
         and: "The list itself is still not"
         !ps.containsProperty('app.empty')
         !ps.containsProperty('app.items')
+    }
+
+    def "a list written by indexed keys is presented to Spring Boot element by element, and a map under its flat key, as before"() {
+        given: "a list and a map written by indexed keys"
+        def map = new NavigableMap()
+        map.merge(['app.rows[0].name': 'first', 'app.rows[0].db.url': 'jdbc:x', 'app.rows[1].name': 'second', 'app.mappings[foo].name': 'x'], true)
+
+        when:
+        def ps = new NavigableMapPropertySource("test", map)
+
+        then: "the list the subscripts wrote is presented under the indexed names of its elements, as every list is"
+        !ps.getPropertyNames().contains('app.rows')
+        ps.getProperty('app.rows') == null
+        ps.getProperty('app.rows[0].name') == 'first'
+        ps.getProperty('app.rows[0].db.url') == 'jdbc:x'
+        ps.getProperty('app.rows[1].name') == 'second'
+
+        and: "the flat key holds the plain map the subscripts wrote, while the nested maps hold their own"
+        ps.getPropertyNames().contains('app.mappings')
+        ps.getProperty('app.mappings') == [foo: [name: 'x']]
+        map.navigate('app', 'rows')*.name == ['first', 'second']
+
+        and: "Spring Boot binds them from those names"
+        binderOf(ps).bind('app.rows', Bindable.listOf(Map)).get() == [[name: 'first', db: [url: 'jdbc:x']], [name: 'second']]
+        binderOf(ps).bind('app.mappings', Bindable.mapOf(String, Object)).get() == [foo: [name: 'x']]
+    }
+
+    private static Binder binderOf(PropertySource source) {
+        def environment = new StandardEnvironment()
+        environment.propertySources.addFirst(source)
+        Binder.get(environment)
     }
 }

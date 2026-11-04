@@ -123,6 +123,6 @@ class EmbeddedDatabaseShutdownHook implements SmartLifecycle, ApplicationContext
             } finally {
                 try { connection?.close() } catch (ignored) {}
             }
-        } as Runnable
+        }
     }
 }

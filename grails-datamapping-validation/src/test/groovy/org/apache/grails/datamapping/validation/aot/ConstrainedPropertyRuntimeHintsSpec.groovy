@@ -23,6 +23,7 @@ import grails.gorm.validation.DefaultConstrainedProperty
 import org.springframework.aot.hint.MemberCategory
 import org.springframework.aot.hint.RuntimeHints
 import org.springframework.aot.hint.TypeReference
+import org.springframework.aot.hint.predicate.RuntimeHintsPredicates
 
 import spock.lang.Specification
 
@@ -60,6 +61,12 @@ class ConstrainedPropertyRuntimeHintsSpec extends Specification {
             setter != null
             hints.reflection().getTypeHint(TypeReference.of(DefaultConstrainedProperty))
                     .memberCategories.contains(MemberCategory.INVOKE_DECLARED_METHODS)
+    }
+
+    void 'the default error messages are registered as a bundle'() {
+        expect: 'ConstrainedProperty loads them with ResourceBundle.getBundle as it is initialized, which ' +
+                'an image answers only for a bundle it was asked to keep'
+            RuntimeHintsPredicates.resource().forBundle('grails.gorm.validation.DefaultErrorMessages').test(hints)
     }
 
     void 'the builder that applies them is registered'() {

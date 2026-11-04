@@ -35,6 +35,8 @@ gh workflow run gradle.yml --repo apache/grails-core --ref 7.0.x -f run-tests=tr
 
 The command line works on any branch whose `gradle.yml` has the input; the manual-run form in the GitHub UI offers it once the default branch has it.
 
+The manual run shares its concurrency group with the pushes to that branch, so a merge to the branch while it is in progress cancels its build and test jobs, and the run started by that push does not run the tests. If the manual run ends up cancelled, start it again once nothing else is being merged to the branch.
+
 ## 1. Staging 
 
 During the staging step, we must create a source distribution & stage any binary artifacts that end users will consume.

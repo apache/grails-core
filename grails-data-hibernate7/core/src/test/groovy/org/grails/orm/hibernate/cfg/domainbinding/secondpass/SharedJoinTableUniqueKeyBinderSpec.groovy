@@ -52,7 +52,7 @@ import spock.lang.Unroll
 class SharedJoinTableUniqueKeyBinderSpec extends HibernateGormDatastoreSpec {
 
     void setupSpec() {
-        manager.registerDomainClasses(SjtOwner, SjtSeparateOwner, SjtParent, SjtChild, SjtRole, SjtListOwner, SjtNote, SjtSharedKeyOwner)
+        manager.registerDomainClasses(SjtOwner, SjtSeparateOwner, SjtParent, SjtChild, SjtRole, SjtListOwner, SjtSharedListOwner, SjtNote, SjtSharedKeyOwner)
     }
 
     private Collection collectionOf(Class owner, String property) {
@@ -109,6 +109,16 @@ class SharedJoinTableUniqueKeyBinderSpec extends HibernateGormDatastoreSpec {
         expect: 'each association has its own key column, so it already separates its rows without where restrictions'
         collectionOf(SjtOwner, 'roles').where == null
         collectionOf(SjtOwner, 'denyRoles').where == null
+    }
+
+    void "two lists sharing key and element columns are restricted by their index column"() {
+        given:
+        Collection roles = collectionOf(SjtSharedListOwner, 'roles')
+        Collection denyRoles = collectionOf(SjtSharedListOwner, 'denyRoles')
+
+        expect:
+        roles.where == 'roles_idx is not null'
+        denyRoles.where == 'deny_roles_idx is not null'
     }
 
     void "a join table of one association is not restricted"() {
@@ -343,6 +353,49 @@ class SharedJoinTableUniqueKeyBinderSpec extends HibernateGormDatastoreSpec {
     }
 
     @Unroll
+    void "on #dialect.class.simpleName two lists sharing a join table #shape get #what"() {
+        given: 'a table with no unique key, as Hibernate leaves a list after its primary key is dropped'
+        Table table = new Table('orm', 'shared_roles')
+        Column firstKey = nullable(keys[0])
+        Column secondKey = keys[1] == keys[0] ? firstKey : nullable(keys[1])
+        Column firstIndex = nullable('roles_idx')
+        Column secondIndex = nullable('deny_roles_idx')
+        Column role = nullable('role_id')
+        ([firstKey, secondKey] as LinkedHashSet + [firstIndex, secondIndex, role]).each { table.addColumn(it) }
+        SharedJoinTableUniqueness.Naming naming = [
+                uniqueKeyName: { List<Column> columns -> 'uk_' + columns*.name.join('_') },
+                indexName    : { List<Column> columns -> 'ix_' + columns*.name.join('_') }
+        ] as SharedJoinTableUniqueness.Naming
+
+        when: 'each list is given its uniqueness over its key and index columns'
+        SharedJoinTableUniqueness uniqueness = SharedJoinTableUniqueness.forDialect(dialect)
+        uniqueness.apply(table, [firstKey], [firstIndex], naming)
+        uniqueness.apply(table, [secondKey], [secondIndex], naming)
+
+        then:
+        ddl(dialect, table) == statements
+
+        where:
+        dialect             | shape                          | keys                          | what                    | statements
+        new H2Dialect()     | 'with a key column each'       | ['roles_id', 'deny_roles_id'] | 'a unique key each'     | [
+                ', unique (roles_id, roles_idx), unique (deny_roles_id, deny_roles_idx)']
+        new OracleDialect() | 'with a key column each'       | ['roles_id', 'deny_roles_id'] | 'a unique key each'     | [
+                ', unique (roles_id, roles_idx), unique (deny_roles_id, deny_roles_idx)']
+        new H2Dialect()     | 'with one key column'          | ['owner_id', 'owner_id']      | 'a unique key each'     | [
+                ', unique (owner_id, roles_idx), unique (owner_id, deny_roles_idx)']
+        new OracleDialect() | 'with one key column'          | ['owner_id', 'owner_id']      | 'one unique key'        | [
+                ', unique (owner_id, roles_idx, deny_roles_idx)']
+        new DB2Dialect()    | 'with one key column'          | ['owner_id', 'owner_id']      | 'one unique index'      | [
+                'create unique index uk_owner_id_roles_idx on shared_roles (owner_id, roles_idx, deny_roles_idx) exclude null keys']
+        new DB2iDialect()   | 'with one key column'          | ['owner_id', 'owner_id']      | 'a unique index each'   | [
+                'create unique where not null index uk_owner_id_roles_idx on shared_roles (owner_id, roles_idx)',
+                'create unique where not null index uk_owner_id_deny_roles_idx on shared_roles (owner_id, deny_roles_idx)']
+        new SQLServerDialect() | 'with one key column'       | ['owner_id', 'owner_id']      | 'a filtered index each' | [
+                'create unique nonclustered index uk_owner_id_roles_idx on shared_roles (owner_id, roles_idx) where owner_id is not null and roles_idx is not null',
+                'create unique nonclustered index uk_owner_id_deny_roles_idx on shared_roles (owner_id, deny_roles_idx) where owner_id is not null and deny_roles_idx is not null']
+    }
+
+    @Unroll
     void "on #dialect.class.simpleName a set whose primary key covers its key and element is given nothing more"() {
         given: 'a table whose primary key is the key column and the element, as Hibernate makes it for non-null columns'
         Table table = new Table('orm', 'own_roles')
@@ -502,6 +555,18 @@ class SjtListOwner {
         roleList joinTable: 'sjt_list_owner_role_list'
         roleMap joinTable: 'sjt_list_owner_role_map'
         bagRoles joinTable: 'sjt_list_owner_bag_roles'
+    }
+}
+
+@Entity
+class SjtSharedListOwner {
+    Long id
+    List<SjtRole> roles
+    List<SjtRole> denyRoles
+    static hasMany = [roles: SjtRole, denyRoles: SjtRole]
+    static mapping = {
+        roles joinTable: [name: 'sjt_shared_lists', key: 'owner_id', column: 'role_id']
+        denyRoles joinTable: [name: 'sjt_shared_lists', key: 'owner_id', column: 'role_id']
     }
 }
 

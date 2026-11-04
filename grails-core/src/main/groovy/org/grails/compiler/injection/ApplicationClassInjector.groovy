@@ -24,9 +24,11 @@ import org.apache.groovy.ast.tools.AnnotatedNodeUtils
 import org.codehaus.groovy.ast.AnnotationNode
 import org.codehaus.groovy.ast.ClassHelper
 import org.codehaus.groovy.ast.ClassNode
+import org.codehaus.groovy.ast.MethodNode
 import org.codehaus.groovy.ast.Parameter
 import org.codehaus.groovy.ast.expr.ConstantExpression
 import org.codehaus.groovy.ast.expr.ListExpression
+import org.codehaus.groovy.ast.expr.MethodCallExpression
 import org.codehaus.groovy.ast.stmt.BlockStatement
 import org.codehaus.groovy.ast.stmt.ExpressionStatement
 import org.codehaus.groovy.ast.stmt.ReturnStatement
@@ -48,7 +50,6 @@ import static org.codehaus.groovy.ast.tools.GeneralUtils.args
 import static org.codehaus.groovy.ast.tools.GeneralUtils.callX
 import static org.codehaus.groovy.ast.tools.GeneralUtils.classX
 import static org.codehaus.groovy.ast.tools.GeneralUtils.constX
-import static org.codehaus.groovy.ast.tools.GeneralUtils.propX
 import static org.codehaus.groovy.ast.tools.GeneralUtils.stmt
 
 /**
@@ -116,9 +117,7 @@ class ApplicationClassInjector implements GrailsArtefactClassInjector {
             if (!transformedInstances.contains(objectId)) {
                 transformedInstances << objectId
 
-                List<Statement> statements = [
-                        stmt(callX(classX(System), 'setProperty', args(propX(classX(BuildSettings), 'MAIN_CLASS_NAME'), constX(classNode.name))))
-                ]
+                List<Statement> statements = [recordMainClassName(classNode)]
                 classNode.addStaticInitializerStatements(statements, true)
 
                 def packageNamesMethod = classNode.getMethod('packageNames', Parameter.EMPTY_ARRAY)
@@ -171,6 +170,27 @@ class ApplicationClassInjector implements GrailsArtefactClassInjector {
         if (url == null) return false
         def res = new UrlResource(url)
         return GrailsResourceUtils.isGrailsResource(res) && res.filename == 'Application.groovy'
+    }
+
+    /**
+     * {@code System.setProperty(BuildSettings.MAIN_CLASS_NAME, '<the application class>')}, written so that
+     * nothing in it is dispatched through a metaclass.
+     *
+     * <p>It runs in the application class's static initializer, which in a native image is before anything
+     * could register reflection metadata for {@link BuildSettings}. An application class that is not
+     * statically compiled would otherwise read the key as a dynamic property and fail there with
+     * {@code MissingPropertyException}. The key is a compile-time constant, so it is inlined, and the call is
+     * given its target, so it is compiled as a direct {@code invokestatic} whichever way the class is
+     * compiled.</p>
+     */
+    private static Statement recordMainClassName(ClassNode classNode) {
+        MethodCallExpression setProperty = callX(classX(System), 'setProperty',
+                args(constX(BuildSettings.MAIN_CLASS_NAME), constX(classNode.name)))
+        Parameter[] keyAndValue = [new Parameter(ClassHelper.STRING_TYPE, 'key'),
+                                   new Parameter(ClassHelper.STRING_TYPE, 'value')] as Parameter[]
+        MethodNode target = ClassHelper.make(System).getDeclaredMethod('setProperty', keyAndValue)
+        setProperty.methodTarget = target
+        stmt(setProperty)
     }
 
     private static boolean shouldExcludeConditionalAutoConfiguration(Map<String, String> target) {
