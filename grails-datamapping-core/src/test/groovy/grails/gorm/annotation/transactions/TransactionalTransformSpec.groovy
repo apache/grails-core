@@ -18,9 +18,13 @@
  */
 package grails.gorm.annotation.transactions
 
+import grails.gorm.multitenancy.CurrentTenantHolder
 import grails.gorm.transactions.NotTransactional
 import grails.gorm.transactions.Transactional
 import org.codehaus.groovy.control.MultipleCompilationErrorsException
+import org.grails.datastore.gorm.GormRegistry
+import org.grails.datastore.mapping.core.Datastore
+import org.grails.datastore.mapping.core.connections.ConnectionSource
 import org.grails.datastore.mapping.core.connections.MultipleConnectionSourceCapableDatastore
 import org.grails.datastore.mapping.transactions.TransactionCapableDatastore
 import org.springframework.beans.factory.InitializingBean
@@ -129,6 +133,95 @@ import grails.gorm.transactions.Transactional
 
         then:
         instance.targetDatastore == mockDatastore
+    }
+
+    @Issue('https://github.com/apache/grails-core/issues/16801')
+    void 'the transaction manager is the one of the tenant bound for the default datastore while another datastore has a different tenant'() {
+        given:
+        var testService = new GroovyShell().evaluate('''
+import grails.gorm.transactions.Transactional
+
+@Transactional
+class TestService {
+
+    void update() {
+    }
+}
+
+TestService
+''').getDeclaredConstructor().newInstance()
+        var defaultTransactionManager = Stub(PlatformTransactionManager)
+        var tenantTransactionManager = Stub(PlatformTransactionManager)
+        var defaultDatastore = Stub(TransactionCapableDatastore) {
+            getTransactionManager() >> defaultTransactionManager
+        }
+        var otherDatastore = Stub(Datastore)
+        GormRegistry.instance.initializeDatastore(defaultDatastore)
+        GormRegistry.instance.registerDatastore('test', Stub(TransactionCapableDatastore) {
+            getTransactionManager() >> tenantTransactionManager
+        })
+
+        expect:
+        CurrentTenantHolder.withTenant(defaultDatastore, 'test') {
+            CurrentTenantHolder.withTenant(otherDatastore, ConnectionSource.DEFAULT) {
+                testService.transactionManager
+            }
+        } == tenantTransactionManager
+
+        and: 'a tenant bound for another datastore only does not count'
+        CurrentTenantHolder.withTenant(otherDatastore, 'test') {
+            testService.transactionManager
+        } == defaultTransactionManager
+
+        cleanup:
+        GormRegistry.instance.reset()
+    }
+
+    @Issue('https://github.com/apache/grails-core/issues/16801')
+    void 'with a datastore attribute, the transaction manager is the one of the connection of the tenant bound for the datastore of that type'() {
+        given:
+        var testService = new GroovyShell().evaluate('''
+import grails.gorm.transactions.Transactional
+import org.grails.datastore.mapping.core.connections.MultipleConnectionSourceCapableDatastore
+
+@Transactional(datastore = MultipleConnectionSourceCapableDatastore)
+class TestService {
+
+    void update() {
+    }
+}
+
+TestService
+''').getDeclaredConstructor().newInstance()
+        var defaultTransactionManager = Stub(PlatformTransactionManager)
+        var tenantTransactionManager = Stub(PlatformTransactionManager)
+        var defaultDatastore = Stub(TransactionCapableDatastore) {
+            getTransactionManager() >> defaultTransactionManager
+        }
+        var connectionDatastore = Stub(TransactionCapableDatastore) {
+            getTransactionManager() >> tenantTransactionManager
+        }
+        var typedDatastore = Stub(MultipleConnectionSourceCapableDatastore) {
+            getDatastoreForConnection('test') >> connectionDatastore
+        }
+        GormRegistry.instance.initializeDatastore(defaultDatastore)
+        GormRegistry.instance.registerDatastoreByType(typedDatastore)
+        GormRegistry.instance.registerDatastore('test', Stub(TransactionCapableDatastore) {
+            getTransactionManager() >> Stub(PlatformTransactionManager)
+        })
+
+        expect: 'not the one of the connection of that name the registry has'
+        CurrentTenantHolder.withTenant(typedDatastore, 'test') {
+            testService.transactionManager
+        } == tenantTransactionManager
+
+        and: 'a tenant bound for the default datastore only does not count'
+        CurrentTenantHolder.withTenant(defaultDatastore, 'test') {
+            testService.transactionManager
+        } == defaultTransactionManager
+
+        cleanup:
+        GormRegistry.instance.reset()
     }
 
     @Issue('https://github.com/apache/grails-core/issues/9989')
