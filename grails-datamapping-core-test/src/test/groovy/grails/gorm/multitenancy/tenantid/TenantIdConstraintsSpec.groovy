@@ -98,6 +98,29 @@ class TenantIdConstraintsSpec extends Specification {
         customer.errors.getFieldError('firmId').code == 'maxSize.exceeded'
     }
 
+    void 'the constraints declared on a tenant id named tenantId are checked'() {
+        given:
+        System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, 'acme')
+
+        when:
+        def account = new Account(name: 'Main')
+        def saved = Account.withNewSession { account.save(flush: true) }
+
+        then:
+        saved
+        account.tenantId == 'acme'
+
+        when:
+        System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, 'a-tenant-too-long')
+        account = new Account(name: 'Second')
+        saved = Account.withNewSession { account.save(flush: true) }
+
+        then:
+        !saved
+        account.id == null
+        account.errors.getFieldError('tenantId').code == 'maxSize.exceeded'
+    }
+
     void 'a new associated object is given the current tenant id before it is validated and saved with its owner'() {
         given:
         System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, 'acme')
@@ -211,6 +234,17 @@ class Customer implements MultiTenant<Customer> {
 
     static mapping = {
         tenantId name: 'firmId'
+    }
+}
+
+@Entity
+class Account implements MultiTenant<Account> {
+
+    String name
+    String tenantId
+
+    static constraints = {
+        tenantId nullable: false, maxSize: 5
     }
 }
 

@@ -120,14 +120,45 @@ class DefaultConstraintEvaluatorSpec extends Specification {
         constraints.number.hasAppliedConstraint('blank')
     }
 
+    @Unroll
+    @Issue('https://github.com/apache/grails-core/issues/14365')
+    void 'a tenant id named tenantId keeps the constraints declared on it, and gets no default constraints, in #mode mode'() {
+        given:
+        def evaluator = new DefaultConstraintEvaluator(new DefaultConstraintRegistry(new StaticMessageSource()),
+                mappingContext(mode), ['*': [blank: false]])
+
+        when:
+        def constraints = evaluator.evaluate(TenantLedger)
+
+        then: 'it is the tenant id, as it is when nothing is declared on it'
+        !constraints.tenantId.nullable
+        constraints.tenantId.maxSize == 5
+        !constraints.tenantId.hasAppliedConstraint('blank')
+        constraints.number.hasAppliedConstraint('blank')
+
+        when:
+        constraints = evaluator.evaluate(TenantVoucher)
+
+        then:
+        constraints.tenantId.maxSize == 5
+        !constraints.tenantId.hasAppliedConstraint('nullable')
+        !constraints.tenantId.hasAppliedConstraint('blank')
+
+        where:
+        mode << MultiTenancyMode.values()
+    }
+
     private static KeyValueMappingContext mappingContext(MultiTenancyMode mode) {
         def settings = new ConnectionSourceSettings()
         settings.multiTenancy.mode = mode
         def mappingContext = new KeyValueMappingContext('test', settings)
-        mappingContext.addPersistentEntities(TenantCustomer, TenantOrder, TenantInvoice, TenantAccount)
+        mappingContext.addPersistentEntities(TenantCustomer, TenantOrder, TenantInvoice, TenantAccount, TenantLedger,
+                TenantVoucher)
         // The tenant id is mapped as one in every mode, though only discriminator mode assigns it
         assert mappingContext.getPersistentEntity(TenantCustomer.name).getPropertyByName('firmId') instanceof TenantId
         assert mappingContext.getPersistentEntity(TenantInvoice.name).getPropertyByName('tenantId') instanceof TenantId
+        assert mappingContext.getPersistentEntity(TenantLedger.name).getPropertyByName('tenantId') instanceof TenantId
+        assert mappingContext.getPersistentEntity(TenantVoucher.name).getPropertyByName('tenantId') instanceof TenantId
         return mappingContext
     }
 
@@ -195,5 +226,25 @@ class TenantAccount implements MultiTenant {
 
     static mapping = {
         tenantId name: 'firmId'
+    }
+}
+
+class TenantLedger implements MultiTenant {
+    Long id
+    String number
+    String tenantId
+
+    static constraints = {
+        tenantId nullable: false, maxSize: 5
+    }
+}
+
+class TenantVoucher implements MultiTenant {
+    Long id
+    String number
+    String tenantId
+
+    static constraints = {
+        tenantId maxSize: 5
     }
 }

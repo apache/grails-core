@@ -55,7 +55,7 @@ class TenantIdConstraintsSpec extends Specification {
                 'dataSource.url'                              : 'jdbc:h2:mem:tenantIdConstraintsDB;LOCK_TIMEOUT=10000',
                 'dataSource.dbCreate'                         : 'create-drop',
                 'dataSource.dialect'                          : H2Dialect.name,
-        ]), TenantCustomer, TenantOwner, TenantPet)
+        ]), TenantCustomer, TenantAccount, TenantOwner, TenantPet)
     }
 
     void 'a tenant id the listener assigns passes the constraints declared on it'() {
@@ -119,6 +119,30 @@ class TenantIdConstraintsSpec extends Specification {
         valid.firmId == 'abc'
         tooLong.id == null
         tooLong.errors.getFieldError('firmId').code == 'maxSize.exceeded'
+    }
+
+    void 'the constraints declared on a tenant id named tenantId are checked'() {
+        given:
+        System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, 'acme')
+
+        when:
+        def account = new TenantAccount(name: 'Main')
+        account.save(flush: true)
+
+        then:
+        !account.hasErrors()
+        account.tenantId == 'acme'
+        TenantAccount.count() == 1
+
+        when:
+        System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, 'a-tenant-too-long')
+        account = new TenantAccount(name: 'Second')
+        def saved = account.save(flush: true)
+
+        then:
+        !saved
+        account.id == null
+        account.errors.getFieldError('tenantId').code == 'maxSize.exceeded'
     }
 
     void 'a new associated object is given the current tenant id before it is validated and saved with its owner'() {
@@ -207,6 +231,17 @@ class TenantCustomer implements MultiTenant<TenantCustomer> {
 
     static mapping = {
         tenantId name: 'firmId'
+    }
+}
+
+@Entity
+class TenantAccount implements MultiTenant<TenantAccount> {
+
+    String name
+    String tenantId
+
+    static constraints = {
+        tenantId nullable: false, maxSize: 5
     }
 }
 

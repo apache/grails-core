@@ -38,7 +38,7 @@ class UnassignedTenantIdConstraintsSpec extends Specification {
 
     @Shared
     @AutoCleanup
-    SimpleMapDatastore datastore = new SimpleMapDatastore(Customer, Invoice, Receipt, Owner, Pet)
+    SimpleMapDatastore datastore = new SimpleMapDatastore(Customer, Invoice, Receipt, Voucher, Owner, Pet)
 
     void setupSpec() {
         datastore.mappingContext.validatorRegistry = new DefaultValidatorRegistry(datastore.mappingContext,
@@ -109,6 +109,26 @@ class UnassignedTenantIdConstraintsSpec extends Specification {
         receipt.errors.getFieldError('firmId').code == 'maxSize.exceeded'
     }
 
+    void 'a tenant id named tenantId is constrained as one named in the mapping is'() {
+        when: 'only maxSize is declared on it'
+        def voucher = new Voucher(number: 'V-1')
+        def saved = Voucher.withNewSession { voucher.save(flush: true) }
+
+        then: 'it may be left unset'
+        saved
+        voucher.id != null
+        voucher.tenantId == null
+
+        when:
+        voucher = new Voucher(number: 'V-2', tenantId: 'a-tenant-too-long')
+        saved = Voucher.withNewSession { voucher.save(flush: true) }
+
+        then:
+        !saved
+        voucher.id == null
+        voucher.errors.getFieldError('tenantId').code == 'maxSize.exceeded'
+    }
+
     void 'a tenant id without declared constraints may be left unset'() {
         when:
         def invoice = new Invoice(number: 'INV-1')
@@ -155,6 +175,17 @@ class Receipt implements MultiTenant<Receipt> {
 
     static mapping = {
         tenantId name: 'firmId'
+    }
+}
+
+@Entity
+class Voucher implements MultiTenant<Voucher> {
+
+    String number
+    String tenantId
+
+    static constraints = {
+        tenantId maxSize: 5
     }
 }
 

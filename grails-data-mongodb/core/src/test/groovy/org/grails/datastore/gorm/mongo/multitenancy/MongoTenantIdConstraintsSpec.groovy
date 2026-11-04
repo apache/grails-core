@@ -34,9 +34,10 @@ import org.grails.datastore.mapping.mongo.config.MongoSettings
 import org.grails.datastore.mapping.multitenancy.resolvers.SystemPropertyTenantResolver
 
 /**
- * GORM for MongoDB validates an instance again as it is inserted and cancels the insert when that fails, without an
- * error. An associated object is therefore given its tenant id before its owner is validated, so that a tenant id
- * that breaks a constraint declared on it fails the save of the owner instead.
+ * The constraints declared on a tenant id are checked through GORM for MongoDB, which validates an instance again as
+ * it is inserted and cancels the insert when that fails, without an error. An associated object is therefore given
+ * its tenant id before its owner is validated, so that a tenant id that breaks a constraint declared on it fails the
+ * save of the owner instead.
  */
 @Issue(['https://github.com/apache/grails-core/issues/14365', 'https://github.com/apache/grails-core/issues/16855'])
 @RestoreSystemProperties
@@ -57,11 +58,35 @@ class MongoTenantIdConstraintsSpec extends AutoStartedMongoSpec {
                 'grails.gorm.multiTenancy.tenantResolverClass': SystemPropertyTenantResolver,
                 (MongoSettings.SETTING_URL)                   : "mongodb://${mongoHost}:${mongoPort}/tenantIdConstraintsDb" as String,
         ]
-        this.datastore = new MongoDatastore(config, TenantOwner, TenantPet)
+        this.datastore = new MongoDatastore(config, TenantAccount, TenantOwner, TenantPet)
     }
 
     void setup() {
         TenantOwner.DB.drop()
+    }
+
+    void 'the constraints declared on a tenant id named tenantId are checked'() {
+        given:
+        System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, 'acme')
+
+        when:
+        def account = new TenantAccount(name: 'Main')
+        def saved = TenantAccount.withNewSession { account.save(flush: true) }
+
+        then:
+        saved
+        account.tenantId == 'acme'
+        TenantAccount.collection.countDocuments() == 1L
+
+        when:
+        System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, 'toolongtenant')
+        account = new TenantAccount(name: 'Second')
+        saved = TenantAccount.withNewSession { account.save(flush: true) }
+
+        then:
+        !saved
+        account.errors.getFieldError('tenantId').code == 'maxSize.exceeded'
+        TenantAccount.collection.countDocuments() == 1L
     }
 
     void 'a new associated object is saved with its owner for the current tenant'() {
@@ -135,6 +160,17 @@ class MongoTenantIdConstraintsSpec extends AutoStartedMongoSpec {
 
     private static Map<String, Long> storedCounts() {
         [owners: TenantOwner.collection.countDocuments(), pets: TenantPet.collection.countDocuments()]
+    }
+}
+
+@Entity
+class TenantAccount implements MultiTenant<TenantAccount>, MongoEntity<TenantAccount> {
+    ObjectId id
+    String name
+    String tenantId
+
+    static constraints = {
+        tenantId nullable: false, maxSize: 5
     }
 }
 
