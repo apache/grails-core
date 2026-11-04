@@ -322,6 +322,8 @@ def results = Pet.where {
 }.list(sort: "owner.lastName")
 ----
 
+The path can cross more than one association, such as `owner.employer.name` where both `owner` and `employer` are associations. An association that the `where` query already joins is reused for the sort, and any other association on the path is joined for it.
+
 If the `where` query defines an explicit alias for the association, you can sort by the alias instead:
 
 [source,groovy]

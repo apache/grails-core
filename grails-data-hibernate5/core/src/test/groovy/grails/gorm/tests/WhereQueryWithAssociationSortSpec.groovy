@@ -25,16 +25,25 @@ import spock.lang.Issue
 class WhereQueryWithAssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManager> {
 
     void setupSpec() {
-        manager.domainClasses.addAll([Club, Team])
+        manager.domainClasses.addAll([Club, Team, Player, Contract])
     }
 
     void setup() {
         final manUtd = new Club(name: 'Manchester United').save()
         final arsenal = new Club(name: 'Arsenal').save()
         final chelsea = new Club(name: 'Chelsea').save()
-        new Team(club: manUtd, name: 'MU First Team').save()
-        new Team(club: arsenal, name: 'Arsenal First Team').save()
-        new Team(club: chelsea, name: 'Chelsea First Team').save(flush: true)
+        final manUtdTeam = new Team(club: manUtd, name: 'MU First Team').save()
+        final arsenalTeam = new Team(club: arsenal, name: 'Arsenal First Team').save()
+        final chelseaTeam = new Team(club: chelsea, name: 'Chelsea First Team').save()
+        savePlayer('MU Player', manUtdTeam)
+        savePlayer('Arsenal Player', arsenalTeam)
+        savePlayer('Chelsea Player', chelseaTeam)
+    }
+
+    private static void savePlayer(String name, Team team) {
+        final player = new Player(name: name, team: team)
+        player.contract = new Contract(salary: 1000G, player: player)
+        player.save(failOnError: true, flush: true)
     }
 
     @Issue(['https://github.com/apache/grails-core/issues/9860', 'https://github.com/apache/grails-core/issues/15589'])
@@ -111,5 +120,61 @@ class WhereQueryWithAssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibe
 
         then:
         results*.name == ['MU First Team', 'Chelsea First Team', 'Arsenal First Team']
+    }
+
+    void 'sort by two properties of the same association when the where query does not use it'() {
+        when:
+        final results = Team.where {
+            name ==~ '%First%'
+        }.list(sort: ['club.name': 'desc', 'club.id': 'asc'])
+
+        then:
+        results*.name == ['MU First Team', 'Chelsea First Team', 'Arsenal First Team']
+    }
+
+    void 'sort by a nested association property when the where query uses the nested association'() {
+        when:
+        final results = Player.where {
+            team.club.name ==~ '%e%'
+        }.list(sort: 'team.club.name', order: direction)
+
+        then:
+        results*.name == expected
+
+        where:
+        direction || expected
+        'asc'     || ['Arsenal Player', 'Chelsea Player', 'MU Player']
+        'desc'    || ['MU Player', 'Chelsea Player', 'Arsenal Player']
+    }
+
+    void 'sort by a nested association property when the where query uses only the first association'() {
+        when:
+        final results = Player.where {
+            team.name ==~ '%First%'
+        }.list(sort: 'team.club.name', order: 'desc')
+
+        then:
+        results*.name == ['MU Player', 'Chelsea Player', 'Arsenal Player']
+    }
+
+    void 'sort by a nested association property when the where query does not use the association'() {
+        when:
+        final results = Player.where {
+            name ==~ '%Player%'
+        }.list(sort: 'team.club.name')
+
+        then:
+        results*.name == ['Arsenal Player', 'Chelsea Player', 'MU Player']
+    }
+
+    void 'sort by a nested association property through an explicit alias'() {
+        when:
+        final results = Player.where {
+            final t = team
+            t.name ==~ '%First%'
+        }.list(sort: 't.club.name')
+
+        then:
+        results*.name == ['Arsenal Player', 'Chelsea Player', 'MU Player']
     }
 }
