@@ -106,6 +106,20 @@ A native image needs every Groovy class compiled with invokedynamic. A classic c
 
 An application that applies GraalVM's plugin compiles every Groovy class with invokedynamic. Setting `grails { indy = false }` in such an application fails the build with the reason as soon as it is evaluated, and a compile task whose `indy` compiler option is `false` when it starts, however it was set, fails the same way, rather than building an image that fails on its first dynamic call.
 
+==== What the framework registers for you
+
+Starting an application needs reflection the framework does on its own behalf, and an image keeps none of it unless asked. The framework asks while the code is being generated, so an image starts without anything having to be recorded first. It registers:
+
+* the plugin descriptors and the plugin classes they name, which is how the plugins are found at all;
+* each plugin's own configuration, its `plugin.yml`, which is otherwise read from beside the plugin's classes, in its JAR -- and an image has no JARs, so it is copied under the plugin's name while the code is generated;
+* the classes listed in `META-INF/grails.factories`, such as the artefact handlers;
+* the beans the plugins declare, through a `BeanRegistrar` or the bean DSL, which are declared again as the application starts and created and wired from there;
+* the artefacts the application holds -- including ones it did not write, such as the default URL mappings -- and the artefacts the plugins provide, such as the codecs;
+* what Groovy does reflectively even for statically compiled classes, in the framework and in the application's own packages: creating a Groovy enum's constants, initializing a trait from a class that implements it, and turning a closure or a map into an interface, wherever statically compiled code passes or assigns a closure to one and wherever any code names the interface with `as`, whatever it knows about the value;
+* the build information that says which environment the application was packaged for, and the default validation messages.
+
+The list covers starting the application. What a request reaches is still recorded, as described below, and that covers two things: the framework's own reflection along the request's path, and the reflection the application's own dynamically compiled code does. A call written without static compilation is resolved where it is made, against whatever it is made on, and only a run shows what that is. That includes a closure such code passes to a method taking an interface: the closure becomes that interface through a proxy, and nothing in the compiled call names which. Compiling the application's code statically, as a generated application's `Application` class is, takes its own calls out of what has to be recorded, but not the framework's reflection on a request's path.
+
 ==== Recording reflection for a native image
 
 Some of that metadata is written for you. The build reads its own output — the compiled artefacts, and the manifest naming each compiled page — and registers them, so a controller, a domain class or a GSP survives into an image without anything having to run.

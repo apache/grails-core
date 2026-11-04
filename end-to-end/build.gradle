@@ -22,6 +22,10 @@ plugins {
     // workflow bumps, so the suite always resolves the version the core build just published.
     // Every subproject inherits it from here.
     id 'org.apache.grails.buildsrc.properties'
+    // Applied only by native-i18n, and only with -PnativeTests. Declared here rather than in that
+    // project, because a plugin only one project declares gives it a classloader of its own, and the
+    // vulnerability scan's shared build service cannot then be handed to its task there.
+    id 'org.graalvm.buildtools.native' version "$graalvmBuildtoolsVersion" apply false
 }
 
 def localMavenRepo = rootProject.layout.projectDirectory.dir('../build/local-maven')

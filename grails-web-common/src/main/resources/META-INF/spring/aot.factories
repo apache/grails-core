@@ -1,2 +1,3 @@
 org.springframework.aot.hint.RuntimeHintsRegistrar=\
-org.apache.grails.web.http.aot.ContentSecurityPolicyRuntimeHints
+org.apache.grails.web.http.aot.ContentSecurityPolicyRuntimeHints,\
+org.apache.grails.web.common.aot.ServletContextHolderRuntimeHints

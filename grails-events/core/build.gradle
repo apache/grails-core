@@ -44,6 +44,7 @@ dependencies {
     implementation 'org.slf4j:slf4j-api'
 
     testImplementation 'org.spockframework:spock-core'
+    testImplementation project(':grails-async-core') // the promise factories whose executor the event bus reads
 
     testRuntimeOnly 'org.slf4j:slf4j-nop' // Get rid of warning about missing slf4j implementation during test task
 

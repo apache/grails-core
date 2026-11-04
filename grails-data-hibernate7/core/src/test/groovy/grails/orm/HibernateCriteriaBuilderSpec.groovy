@@ -252,15 +252,27 @@ class HibernateCriteriaBuilderSpec extends HibernateGormDatastoreSpec {
         results[0].firstName == "Fred"
     }
 
-    void "createAlias defines an explicit join with an alias"() {
+    void "createAlias defines an explicit join with an alias using explicit inner join #explicitInner"() {
         when:
         def results = c.list {
-            createAlias("transactions", "t")
+            if (explicitInner) {
+                createAlias('transactions', 't', 0)
+            } else {
+                createAlias('transactions', 't')
+            }
+            createAlias('transactions', 'other')
             gt("t.amount", BigDecimal.valueOf(40))
+            gt('other.amount', BigDecimal.valueOf(40))
         }
         then:
         results.size() == 1
         results[0].firstName == "Barney"
+
+        and: 'the next list does not retain either association alias'
+        c.list { }.size() == 5
+
+        where:
+        explicitInner << [false, true]
     }
 
     // ─── logical combinators ───────────────────────────────────────────────

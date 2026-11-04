@@ -20,11 +20,14 @@
 package org.grails.plugins.web.controllers
 
 import org.springframework.boot.autoconfigure.AutoConfigurations
+import org.springframework.boot.servlet.filter.OrderedFormContentFilter
 import org.springframework.boot.test.context.runner.WebApplicationContextRunner
 import org.springframework.boot.webmvc.autoconfigure.WebMvcAutoConfiguration
 import org.springframework.web.filter.FormContentFilter
 
 import spock.lang.Specification
+
+import org.grails.web.config.http.GrailsFilters
 
 class GrailsFormContentFilterAutoConfigurationSpec extends Specification {
 
@@ -43,6 +46,21 @@ class GrailsFormContentFilterAutoConfigurationSpec extends Specification {
                 .withConfiguration(AutoConfigurations.of(GrailsFormContentFilterAutoConfiguration))
                 .run { context ->
                     assert context.getBeanNamesForType(FormContentFilter).length == 1
+                }
+    }
+
+    void 'Boot and the Grails fallback both register the filter at GrailsFilters.FORM_CONTENT_FILTER'() {
+        expect: 'the order GrailsFilters gives the filter is the default order of Spring Boot\'s'
+        GrailsFilters.FORM_CONTENT_FILTER.order == OrderedFormContentFilter.DEFAULT_ORDER
+        new WebApplicationContextRunner()
+                .withConfiguration(AutoConfigurations.of(WebMvcAutoConfiguration))
+                .run { context ->
+                    assert context.getBean(OrderedFormContentFilter).order == GrailsFilters.FORM_CONTENT_FILTER.order
+                }
+        new WebApplicationContextRunner()
+                .withConfiguration(AutoConfigurations.of(GrailsFormContentFilterAutoConfiguration))
+                .run { context ->
+                    assert context.getBean(OrderedFormContentFilter).order == GrailsFilters.FORM_CONTENT_FILTER.order
                 }
     }
 

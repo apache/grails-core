@@ -1,6 +1,6 @@
 ---
 name: grails-9-upgrade
-description: Guide for upgrading Grails applications from Grails 8.x to Grails 9, covering the Groovy 6 baseline, the GPars deprecation in favour of groovy.concurrent, invokedynamic compilation, the separate grails-xml module, the opt-in settings for Spring JSON rendering, Jackson request binding, Spring MVC exception handlers and response bodies, the Jackson-backed JSON converter and domain class rendering, named JSON configurations, RFC 9457 validation problems, format resolution, web unit tests, generated GORM id and version properties, RxGORM on RxJava 3 (imports, blocking calls, subscribers, empty results), and the deprecated RxJava 1 and RxJava 2 async and events modules
+description: Guide for upgrading Grails applications from Grails 8.x to Grails 9, covering the Groovy 6 baseline, the GPars deprecation in favour of groovy.concurrent, invokedynamic compilation, the separate grails-xml module, the opt-in settings for Spring JSON rendering, Jackson request binding, Spring MVC exception handlers and response bodies, the Jackson-backed JSON converter and domain class rendering, named JSON configurations, RFC 9457 validation problems, format resolution, web unit tests, generated GORM id and version properties, RxGORM on RxJava 3 (imports, blocking calls, subscribers, empty results), the deprecated RxJava 1 and RxJava 2 async and events modules, and the character encoding filter Spring Boot now registers
 license: Apache-2.0
 ---
 
@@ -14,7 +14,7 @@ Licensed to the Apache Software Foundation (ASF) under one or more contributor l
 
 - Guide upgrades of Grails applications from Grails 8.x to Grails 9.
 - Turn the Grails 9 upgrade guide into a practical migration checklist.
-- Identify the Groovy 6, GPars, invokedynamic, XML, JSON rendering and binding, REST error, content negotiation, unit test, GORM, RxGORM, and RxJava changes that can break an application.
+- Identify the Groovy 6, GPars, invokedynamic, XML, JSON rendering and binding, REST error, content negotiation, unit test, GORM, RxGORM, RxJava, and character encoding changes that can break an application.
 - Prepare an application for the defaults Grails 10 changes, by checking each Grails 9 opt-in setting while the Grails 8 behaviour is still the default.
 - Keep migration work focused on public application behavior, not internal Grails framework implementation details.
 
@@ -31,6 +31,7 @@ Activate this skill when:
 - Fixing web unit tests (`ControllerUnitTest`, `TagLibUnitTest`, `UrlMappingsUnitTest`, `JsonViewUnitTest`) that fail after the upgrade.
 - Porting code that uses RxGORM, `grails-async-rxjava`, `grails-async-rxjava2`, `grails-events-rxjava`, or `grails-events-rxjava2` to RxJava 3.
 - Replacing GPars (`grails-async-gpars`, `grails-events-gpars`, or direct `GParsPool` use) with Groovy's `groovy.concurrent` toolkit.
+- Fixing form input or request bodies decoded in the wrong charset, or moving `grails.filter.encoding` and `grails.filter.forceEncoding` to `spring.servlet.encoding`.
 
 For an application still on Grails 7, apply the `grails-8-upgrade` skill first and move to Grails 8 before using this one.
 
@@ -426,6 +427,17 @@ A datastore implementation of RxGORM compiled for Grails 8 or earlier, such as t
 - Code that hands RxJava types to the Grails ones, such as the `rx.Scheduler` given to the `RxEventBus` constructor, moves to the RxJava 3 types as described above.
 - Configure RxJava 3 scheduling through `io.reactivex.rxjava3.plugins.RxJavaPlugins` instead of RxJava 1 `RxJavaHooks` or RxJava 2 `RxJavaPlugins`.
 
+## Spring Boot Registers the Character Encoding Filter
+
+Grails no longer registers a character encoding filter of its own. Spring Boot's runs at `Ordered.HIGHEST_PRECEDENCE`, ahead of every other filter, and `spring.servlet.encoding` configures it. In Grails 8, Grails' filter made Spring Boot's back off, so `spring.servlet.encoding` had no effect.
+
+- The request encoding is now forced by default, as in any Spring Boot application: a request that declares another charset is decoded as UTF-8 anyway, for its parameters, a body read through `getReader()`, `request.JSON` and `request.XML`, and a JSON or XML body bound to a command object or domain class. A PUT, PATCH or DELETE form is still decoded with the charset it declares, as in Grails 8, because `FormContentFilter` parses it. Set `spring.servlet.encoding.force-request: false` to keep the charset a request declares, as Grails 8 did.
+- `grails.filter.encoding` and `grails.filter.forceEncoding` are deprecated. Grails translates them into `spring.servlet.encoding.charset` and `spring.servlet.encoding.force` with a warning, also from files named by `grails.config.locations`, and the application's own `spring.servlet.encoding` setting wins over them. Move to the Spring Boot properties.
+- `GrailsFilters.CHARACTER_ENCODING_FILTER` is deprecated, and its order is now `Ordered.HIGHEST_PRECEDENCE`, the order of Spring Boot's encoding filter, where Grails 8.0 had -180, so a filter at `CHARACTER_ENCODING_FILTER.order + 1` runs right after the encoding filter, ahead of `FormContentFilter` and of Grails' security headers filter at `GrailsFilters.FIRST`: it no longer sees the parameters of a PUT, PATCH or DELETE form, and a response it sends without continuing the chain gets no security headers. Use `Ordered.HIGHEST_PRECEDENCE + 1` instead, or `GrailsFilters.ASSET_PIPELINE_FILTER.order + 1` to keep the place it had in Grails 8.0.
+- `spring.servlet.encoding.enabled: false` turns the filter off.
+- Grails 8.1 already registers its encoding filter at `Ordered.HIGHEST_PRECEDENCE`, so coming from 8.1 the encoding filter runs where it did. Coming from 8.0, filters ordered between `Ordered.HIGHEST_PRECEDENCE + 1` and -181 now run after the encoding filter, with the request encoding set. In a packaged application, asset-pipeline's filter then declares that charset on every asset response, for example `text/css;charset=UTF-8`.
+- A filter that reads request parameters needs a later order than `Ordered.HIGHEST_PRECEDENCE`. The CAS plugin registers its single sign-out filter at `Ordered.HIGHEST_PRECEDENCE + 1`.
+
 ## Verification Checklist
 
 - [ ] `gradle.properties` names the Grails 9 version and the wrapper is Gradle 9.8 or later
@@ -447,6 +459,10 @@ A datastore implementation of RxGORM compiled for Grails 8 or earlier, such as t
 - [ ] Web unit tests set `grails.mime.*` and `grails.i18n.localeResolver` in `doWithConfig`, and no longer reset static MIME state
 - [ ] `@ControllerAdvice` beans meant only for Spring MVC controllers are scoped, and no Grails controller that renders views carries `@ResponseBody` or `@RestController`
 - [ ] No plain superclass of a domain class refers to the generated `id` or `version` in `@CompileStatic` code, `@ToString` or `@EqualsAndHashCode`
+- [ ] No configuration sets `grails.filter.encoding` or `grails.filter.forceEncoding`
+- [ ] Clients that send a charset other than UTF-8 still work now that UTF-8 decoding is forced, or `spring.servlet.encoding.force-request: false` is set
+- [ ] No application filter that reads request parameters is registered at `Ordered.HIGHEST_PRECEDENCE`
+- [ ] No filter is ordered from `GrailsFilters.CHARACTER_ENCODING_FILTER`, which is deprecated
 - [ ] The application starts with no `deprecated` warning from the Grails async or events modules
 - [ ] The full test suite passes on Groovy 6
 
@@ -465,3 +481,4 @@ A datastore implementation of RxGORM compiled for Grails 8 or earlier, such as t
 - Do not exclude `grails-xml` from an application that reads `request.XML` or renders XML; the failures appear only at run time.
 - Do not rely on an incremental build after the upgrade; classes compiled by Grails 8 keep the generated `id` and `version` on a plain superclass until rebuilt.
 - Do not define a `ValidationProblemDetailFactory` that includes rejected values without reviewing what they can expose.
+- Do not register a filter that reads request parameters at exactly `Ordered.HIGHEST_PRECEDENCE`. A `FilterRegistrationBean` with the same order runs before Spring Boot's encoding filter, so form input arrives decoded as ISO-8859-1.

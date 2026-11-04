@@ -77,6 +77,12 @@
       "group": "grails.plugin.springsecurity.general"
     },
     {
+      "name": "grails.plugin.springsecurity.rejectRequestsDuringStartup",
+      "type": "java.lang.Boolean",
+      "description": "Whether to respond with 503 to requests received before the application has started.",
+      "group": "grails.plugin.springsecurity.general"
+    },
+    {
       "name": "grails.plugin.springsecurity.excludeSpringSecurityAutoConfiguration",
       "type": "java.lang.Boolean",
       "description": "Whether to automatically exclude Spring Boot security auto-configuration classes that conflict with the plugin.",
