@@ -165,9 +165,19 @@ To read a whole list, use `grailsApplication.config.getProperty('grails.cors.all
 `@ConfigurationProperties`. Spring's `Environment` exposes non-empty YAML lists through indexed properties such as
 `grails.cors.allowedOrigins[0]`. A list nested in a list uses one index per level, such as `app.groups[0][1]`.
 
-Because the list itself is not a property of the `Environment`, a `@Value('${grails.cors.allowedOrigins}')` placeholder
-cannot inject it, just as in a plain Spring Boot application. Bind the list with `@ConfigurationProperties` or with Spring Boot's
-`Binder`, or write the value as one comma-separated string where a `@Value` placeholder must read it.
+The list itself is not a property of the `Environment`, so `environment.getProperty('grails.cors.allowedOrigins')`
+returns `null`, as in a plain Spring Boot application. A `@Value('${grails.cors.allowedOrigins}')` placeholder, or any
+other `${...}` placeholder that names a list of plain values, still reads it: it resolves to the elements of the list
+joined by commas, with the placeholders in the elements resolved, and Spring converts that value to the `List` or array
+the placeholder is injected into. The list is read as `@ConfigurationProperties` binding reads it, from the property
+source of the highest priority that sets it, and its name is matched as that binding matches it, so
+`${grails.cors.allowed-origins}` reads the same list. A value set under the name of the list itself, in any property
+source, is used instead of the list. The conversion splits an element that contains a comma in two, so bind a list
+whose elements can contain commas.
+
+A placeholder that names a list of objects has nothing to resolve to. Grails leaves a placeholder it cannot resolve as
+written, so the injection point receives the placeholder text, or the placeholder's default when it has one. Bind such
+a list, or read it through `grailsApplication.config`.
 
 === Configuration Metadata
 

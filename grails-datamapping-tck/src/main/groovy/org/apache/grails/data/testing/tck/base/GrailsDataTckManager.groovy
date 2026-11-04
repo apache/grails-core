@@ -65,12 +65,15 @@ abstract class GrailsDataTckManager {
     }
 
     /**
-     * Runs once after the features of a spec. Releases the BeanInfo the JDK Introspector cached for the classes the
-     * spec used: Groovy reads the BeanInfo of a class when it builds its MetaClass, and the JDK keeps it in a cache
-     * keyed by the class that releases an entry only when the class is unloaded, which the classes of a test JVM never
-     * are. A domain class costs a few hundred method descriptors and each closure of a spec an entry of its own, so
-     * over the several hundred specs of a module the cache grows to hundreds of megabytes and runs the suite out of
-     * heap. A class a later spec builds a MetaClass for is introspected again.
+     * Runs once after the features of a spec. Flushes the JDK Introspector's caches for the current thread group:
+     * Groovy reads the BeanInfo of a class when it builds its MetaClass, and the JDK keeps it in a cache keyed by the
+     * class that releases an entry only when the class is unloaded, which the classes of a test JVM never are. A
+     * domain class costs a few hundred method descriptors and each closure of a spec an entry of its own, so over the
+     * several hundred specs of a module the cache grows to hundreds of megabytes and runs the suite out of heap. The
+     * flush drops every entry of the thread group, those of earlier specs in the same fork included; a class a later
+     * spec builds a MetaClass for is introspected again.
+     * <p>
+     * A manager that overrides this method must call {@code super.cleanupSpec()}, or its suite keeps the cache.
      */
     void cleanupSpec() {
         Introspector.flushCaches()
