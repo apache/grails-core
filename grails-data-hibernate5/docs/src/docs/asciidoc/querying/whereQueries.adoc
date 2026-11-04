@@ -313,34 +313,28 @@ This sorts results first by `firstName` ascending and then by `lastName` descend
 
 ===== Sorting with Associations
 
-When sorting by properties of associated entities, you must define an explicit alias within the `where` query.
-Without an explicit alias, sorting on association properties may fail due to dynamically generated aliases.
-
-For example the following query will fail:
+To sort by a property of an associated entity, use the association path. This also works when the `where` query uses the same association:
 
 [source,groovy]
 ----
-// fails because a dynamic alias is used
-Pet.where {
+def results = Pet.where {
     owner.firstName == "Fred"
 }.list(sort: "owner.lastName")
 ----
 
-In this case GORM will generate an alias for the `owner` association such as `owner_alias_0`. These generated aliases are internal and are not suitable for later reference in sorting or projections.
-
-To avoid this problem, define an explicit alias:
+If the `where` query defines an explicit alias for the association, you can sort by the alias instead:
 
 [source,groovy]
 ----
-// 1. Define alias
 def query = Pet.where {
     def o = owner
     o.firstName == "Fred"
 }
 
-// 2. Execute query using alias for sorting
 def results = query.list(sort: "o.lastName")
 ----
+
+An alias exists only in a query that defines it, and a sort by an alias that the query does not define is ignored. When the same sort is applied to queries with different criteria, for example from a sortable table with optional filters, sort by the association path.
 
 
 ==== Subqueries

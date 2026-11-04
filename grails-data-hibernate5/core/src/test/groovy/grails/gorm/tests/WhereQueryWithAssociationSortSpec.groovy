@@ -20,44 +20,96 @@ package grails.gorm.tests
 
 import org.apache.grails.data.hibernate5.core.GrailsDataHibernate5TckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
-import org.hibernate.QueryException
 import spock.lang.Issue
 
-/**
- * Created by graemerocher on 03/11/16.
- */
 class WhereQueryWithAssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManager> {
+
     void setupSpec() {
         manager.domainClasses.addAll([Club, Team])
     }
 
+    void setup() {
+        final manUtd = new Club(name: 'Manchester United').save()
+        final arsenal = new Club(name: 'Arsenal').save()
+        final chelsea = new Club(name: 'Chelsea').save()
+        new Team(club: manUtd, name: 'MU First Team').save()
+        new Team(club: arsenal, name: 'Arsenal First Team').save()
+        new Team(club: chelsea, name: 'Chelsea First Team').save(flush: true)
+    }
+
+    @Issue(['https://github.com/apache/grails-core/issues/9860', 'https://github.com/apache/grails-core/issues/15589'])
+    void 'sort by an association property that is also used in the where query'() {
+        when:
+        final results = Team.where {
+            club.name ==~ '%e%'
+        }.list(sort: 'club.name', order: direction)
+
+        then:
+        results*.name == expected
+
+        where:
+        direction || expected
+        'asc'     || ['Arsenal First Team', 'Chelsea First Team', 'MU First Team']
+        'desc'    || ['MU First Team', 'Chelsea First Team', 'Arsenal First Team']
+    }
+
+    @Issue('https://github.com/apache/grails-core/issues/15589')
+    void 'sort by an association property using a sort map when the where query uses the association'() {
+        when:
+        final results = Team.where {
+            club.name != 'Chelsea'
+        }.list(sort: ['club.name': 'desc'])
+
+        then:
+        results*.name == ['MU First Team', 'Arsenal First Team']
+    }
+
+    @Issue('https://github.com/apache/grails-core/issues/15589')
+    void 'sort by an association property when a chained where query uses the association'() {
+        given:
+        var query = Team.where {}
+        query = query.where { club.name != 'Chelsea' }
+
+        when:
+        final results = query.list(sort: 'club.name', fetch: [club: 'join'])
+
+        then:
+        results*.name == ['Arsenal First Team', 'MU First Team']
+    }
+
+    @Issue('https://github.com/apache/grails-core/issues/15589')
+    void 'sort by an association id when the where query uses the association'() {
+        given:
+        final expected = Team.list().sort { it.club.id }.reverse()*.name
+
+        when:
+        final results = Team.where {
+            club.name ==~ '%e%'
+        }.list(sort: 'club.id', order: 'desc')
+
+        then:
+        results*.name == expected
+    }
+
     @Issue('https://github.com/apache/grails-core/issues/9860')
-    void "Test sort with where query that queries association"() {
-        given:"some test data"
-        def c = new Club(name: "Manchester United").save()
-        def t = new Team(club: c, name: "MU First Team").save()
-        def c2 = new Club(name: "Arsenal").save()
-        def t2 = new Team(club: c2, name: "Arsenal First Team").save(flush:true)
-
-        when:"a where query uses a sort on an association"
-        def results = Team.where {
-            club.name == "Manchester United"
-        }.list(sort:'club.name')
-
-
-        then:"an exception is thrown because no alias is specified"
-        thrown QueryException
-
-
-        when:"a where query uses a sort on an association"
-        results = Team.where {
-            def c1 = club
+    void 'sort by an explicit association alias defined in the where query'() {
+        when:
+        final results = Team.where {
+            final c1 = club
             c1.name ==~ '%e%'
-        }.list(sort:'c1.name')
+        }.list(sort: 'c1.name')
 
+        then:
+        results*.name == ['Arsenal First Team', 'Chelsea First Team', 'MU First Team']
+    }
 
-        then:"an exception is thrown because no alias is specified"
-        results.size() == 2
-        results.first().name == "Arsenal First Team"
+    void 'sort by an association property when the where query does not use the association'() {
+        when:
+        final results = Team.where {
+            name ==~ '%First%'
+        }.list(sort: 'club.name', order: 'desc')
+
+        then:
+        results*.name == ['MU First Team', 'Chelsea First Team', 'Arsenal First Team']
     }
 }
