@@ -313,7 +313,7 @@ This sorts results first by `firstName` ascending and then by `lastName` descend
 
 ===== Sorting with Associations
 
-To sort by a property of an associated entity, use the association path. This also works when the `where` query uses the same association:
+To sort by a property of an associated entity, use the association path, such as `owner.lastName`. This also works when the `where` query uses the same association:
 
 [source,groovy]
 ----
@@ -335,6 +335,8 @@ def results = query.list(sort: "o.lastName")
 ----
 
 An alias exists only in a query that defines it, and a sort by an alias that the query does not define is ignored. When the same sort is applied to queries with different criteria, for example from a sortable table with optional filters, sort by the association path.
+
+NOTE: A sort can only reach one association away from the queried entity. A sort by a path through more than one association, such as `owner.employer.name`, where both `owner` and `employer` are associations, is not supported.
 
 
 ==== Subqueries
