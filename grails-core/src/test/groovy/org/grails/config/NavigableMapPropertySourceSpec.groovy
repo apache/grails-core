@@ -18,6 +18,10 @@
  */
 package org.grails.config
 
+import org.springframework.boot.context.properties.bind.Bindable
+import org.springframework.boot.context.properties.bind.Binder
+import org.springframework.core.env.PropertySource
+import org.springframework.core.env.StandardEnvironment
 import spock.lang.Specification
 
 /**
@@ -52,5 +56,31 @@ class NavigableMapPropertySourceSpec extends Specification {
         ps.getProperty('foo') == null
         ps.getNavigableProperty('foo') instanceof NavigableMap
 
+    }
+
+    def "a list and a map written by indexed keys are presented to Spring Boot under their flat keys, as before"() {
+        given: "a list and a map written by indexed keys"
+        def map = new NavigableMap()
+        map.merge(['app.rows[0].name': 'first', 'app.rows[0].db.url': 'jdbc:x', 'app.rows[1].name': 'second', 'app.mappings[foo].name': 'x'], true)
+
+        when:
+        def ps = new NavigableMapPropertySource("test", map)
+
+        then: "the flat keys hold the plain list and map the subscripts wrote, while the nested maps hold their own"
+        ps.getPropertyNames().contains('app.rows')
+        ps.getProperty('app.rows') == [[name: 'first', 'db.url': 'jdbc:x'], [name: 'second']]
+        ps.getPropertyNames().contains('app.mappings')
+        ps.getProperty('app.mappings') == [foo: [name: 'x']]
+        map.navigate('app', 'rows')*.name == ['first', 'second']
+
+        and: "Spring Boot binds them from the flat keys"
+        binderOf(ps).bind('app.rows', Bindable.listOf(Map)).get() == [[name: 'first', 'db.url': 'jdbc:x'], [name: 'second']]
+        binderOf(ps).bind('app.mappings', Bindable.mapOf(String, Object)).get() == [foo: [name: 'x']]
+    }
+
+    private static Binder binderOf(PropertySource source) {
+        def environment = new StandardEnvironment()
+        environment.propertySources.addFirst(source)
+        Binder.get(environment)
     }
 }
