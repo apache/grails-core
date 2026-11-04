@@ -81,6 +81,7 @@ import org.grails.datastore.mapping.core.Session;
 import org.grails.datastore.mapping.core.connections.ConnectionSource;
 import org.grails.datastore.mapping.core.connections.ConnectionSources;
 import org.grails.datastore.mapping.core.connections.ConnectionSourcesInitializer;
+import org.grails.datastore.mapping.core.connections.ConnectionSourcesSupport;
 import org.grails.datastore.mapping.core.connections.DefaultConnectionSource;
 import org.grails.datastore.mapping.core.connections.SingletonConnectionSources;
 import org.grails.datastore.mapping.core.exceptions.ConfigurationException;
@@ -183,6 +184,11 @@ public class HibernateDatastore extends AbstractHibernateDatastore implements Me
             });
 
             if (multiTenantMode == MultiTenancySettings.MultiTenancyMode.SCHEMA) {
+                List<String> unmapped = ConnectionSourcesSupport.findAssociationsToEntitiesMissingFromTenantSchemas(mappingContext.getPersistentEntities());
+                if (!unmapped.isEmpty()) {
+                    throw new ConfigurationException("Multi-tenancy mode SCHEMA cannot map an association from a MultiTenant entity to an entity that is not MultiTenant: "
+                            + String.join(", ", unmapped) + ". Make the target MultiTenant, or use the DISCRIMINATOR multi-tenancy mode.");
+                }
                 if (this.tenantResolver instanceof AllTenantsResolver) {
                     AllTenantsResolver allTenantsResolver = (AllTenantsResolver) tenantResolver;
                     Iterable<Serializable> tenantIds = allTenantsResolver.resolveTenantIds();
