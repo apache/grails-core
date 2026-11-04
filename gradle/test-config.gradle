@@ -85,7 +85,10 @@ tasks.withType(Test).configureEach {
         showCauses = true
         showStackTraces = true
     }
-    excludes = ['**/*TestCase.class', '**/*$*.class']
+    // Keeps any patterns the module excluded before applying this script.
+    exclude('**/*TestCase.class', '**/*$*.class')
+    // These replace any values the module set before applying this script. A module that needs
+    // its own values sets them after applying it.
     maxParallelForks = rootProject.ext.configuredTestParallel
     maxHeapSize = "${rootProject.ext.testForkHeapMb}m"
     forkEvery = hasProperty('forkEveryUnitTest') ? getProperty('forkEveryUnitTest') as long : 0

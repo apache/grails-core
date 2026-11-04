@@ -86,7 +86,6 @@ dependencies {
 
 def isolatedTestPatterns = [
         isolatedTestsOne: [
-                'org.grails.core.DefaultGrailsControllerClassSpec',
                 'org.grails.web.util.WebUtilsTests'
         ],
         isolatedTestsTwo: [
