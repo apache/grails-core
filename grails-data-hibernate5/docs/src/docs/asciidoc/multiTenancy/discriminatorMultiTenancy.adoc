@@ -66,7 +66,9 @@ class Book implements MultiTenant<Book> {
 }
 ----
 
-Constraints declared on the tenant identifier, such as `nullable` or `maxSize`, are checked when an instance is validated, after the current tenant id has been assigned to it. See <<tenantIdConstraints,Validating the Tenant Id>>, also for the cases where no tenant id is assigned, as inside `withoutId`. The tenant id column is not nullable unless `nullable: true` applies to the tenant identifier, declared on it or in `grails.gorm.default.constraints`, so the database rejects an instance saved without a tenant id that validation lets through.
+Constraints declared on the tenant identifier, such as `nullable` or `maxSize`, are checked when an instance is validated, after the current tenant id has been assigned to it. See <<tenantIdConstraints,Validating the Tenant Id>>, which also covers the cases where no tenant id is assigned, such as inside `withoutId`.
+
+The tenant id column is not nullable unless the tenant identifier is constrained with `nullable: true`, either on the property or in `grails.gorm.default.constraints`. Validation does not give the tenant id a default `nullable: false`, so an instance saved without a tenant id can pass validation and still be rejected by the database.
 
 ==== Querying and Caveats
 

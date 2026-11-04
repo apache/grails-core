@@ -132,6 +132,7 @@ class TenantIdConstraintsSpec extends Specification {
         !owner.hasErrors()
         owner.id != null
         owner.pets*.firmId == ['acme']
+        TenantPet.count() == 1
     }
 
     void 'a tenant id an associated object already has is checked as it is saved with its owner'() {

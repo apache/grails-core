@@ -110,6 +110,7 @@ class TenantIdConstraintsSpec extends Specification {
         saved
         !owner.hasErrors()
         owner.pets*.firmId == ['acme']
+        Pet.withNewSession { Pet.count() } == 1
     }
 
     void 'the other properties of a new associated object are still checked as it is saved with its owner'() {

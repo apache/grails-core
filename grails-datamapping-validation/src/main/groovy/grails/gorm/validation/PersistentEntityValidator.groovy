@@ -294,9 +294,9 @@ class PersistentEntityValidator implements CascadingValidator, ConstrainedEntity
         }
     }
 
-    // In discriminator mode, the only mode in which an entity has its tenant id set, multi-tenancy assigns the tenant id
-    // of an associated object as it is inserted, after this cascade, so one that is still unset is not checked here.
-    // Inside Tenants.withoutId it is not assigned then, which this module cannot tell
+    // PersistentEntity.getTenantId() is only set in DISCRIMINATOR mode, where multi-tenancy assigns the tenant id of an
+    // associated object as it is inserted, after this cascade. An unset tenant id is therefore not checked here. Inside
+    // Tenants.withoutId nothing assigns it, which this module cannot tell.
     private static boolean isUnassignedTenantId(PersistentEntity entity, PersistentProperty property, EntityReflector reflector,
                                                 Object object) {
         TenantId tenantId = entity.getTenantId()
