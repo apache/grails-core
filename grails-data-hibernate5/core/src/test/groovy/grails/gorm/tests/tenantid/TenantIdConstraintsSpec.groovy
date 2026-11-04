@@ -18,6 +18,7 @@
  */
 package grails.gorm.tests.tenantid
 
+import org.hibernate.Hibernate
 import org.hibernate.dialect.H2Dialect
 import spock.lang.AutoCleanup
 import spock.lang.Issue
@@ -120,12 +121,19 @@ class TenantIdConstraintsSpec extends Specification {
         tooLong.errors.getFieldError('firmId').code == 'maxSize.exceeded'
     }
 
-    void 'a new associated object is saved with its owner, though its tenant id is assigned only as it is inserted'() {
+    void 'a new associated object is given the current tenant id before it is validated and saved with its owner'() {
         given:
         System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, 'acme')
 
         when:
         def owner = new TenantOwner(name: 'Dave').addToPets(new TenantPet(name: 'Rex'))
+        boolean valid = owner.validate()
+
+        then: 'validate() is given the current tenant id for the pet as well'
+        valid
+        owner.pets*.firmId == ['acme']
+
+        when:
         owner.save(flush: true)
 
         then:
@@ -133,6 +141,46 @@ class TenantIdConstraintsSpec extends Specification {
         owner.id != null
         owner.pets*.firmId == ['acme']
         TenantPet.count() == 1
+    }
+
+    void 'saving an owner fails validation when the current tenant id breaks a constraint declared on the tenant id of a new associated object'() {
+        given:
+        System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, 'a-tenant-too-long')
+
+        when:
+        def owner = new TenantOwner(name: 'Dave').addToPets(new TenantPet(name: 'Rex'))
+        def saved = owner.save(flush: true)
+
+        then: 'the owner, which declares nothing on its own tenant id, reports the tenant id of the pet'
+        !saved
+        owner.id == null
+        owner.errors.getFieldError('pets[0].firmId').code == 'maxSize.exceeded'
+    }
+
+    void 'without a current tenant, saving an owner fails validation when a new associated object has no tenant id'() {
+        when: 'nothing assigns the tenant id of the pet, which is declared nullable: false'
+        def owner = new TenantOwner(name: 'Dave', tenantId: 'abc').addToPets(new TenantPet(name: 'Rex'))
+        def saved = Tenants.withoutId(datastore) { owner.save(flush: true) }
+
+        then:
+        !saved
+        owner.id == null
+        owner.errors.getFieldError('pets[0].firmId').code == 'nullable'
+    }
+
+    void 'validating an owner does not load the associated objects it has not loaded yet'() {
+        given:
+        System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, 'acme')
+        Long id = new TenantOwner(name: 'Dave').addToPets(new TenantPet(name: 'Rex')).save(flush: true).id
+        datastore.sessionFactory.currentSession.clear()
+
+        when:
+        def owner = TenantOwner.get(id)
+        boolean valid = owner.validate()
+
+        then:
+        valid
+        !Hibernate.isInitialized(owner.pets)
     }
 
     void 'a tenant id an associated object already has is checked as it is saved with its owner'() {

@@ -20,6 +20,7 @@
 package org.grails.orm.hibernate.multitenancy;
 
 import java.io.Serializable;
+import java.util.List;
 
 import org.springframework.context.ApplicationEvent;
 
@@ -58,6 +59,19 @@ public class MultiTenantEventListener implements PersistenceEventListener {
 
     @Override
     public void onApplicationEvent(ApplicationEvent event) {
+        handleEvent(event);
+        if (event instanceof ValidationEvent && supportsSourceType(event.getSource().getClass())) {
+            // The associated objects that are validated with this one get no event of their own, so each is given
+            // the tenant id it is inserted or updated with here, before it is validated
+            List<ValidationEvent> cascadedEvents = org.grails.datastore.gorm.multitenancy.MultiTenantEventListener
+                    .cascadedValidationEvents((ValidationEvent) event);
+            for (ValidationEvent cascaded : cascadedEvents) {
+                handleEvent(cascaded);
+            }
+        }
+    }
+
+    private void handleEvent(ApplicationEvent event) {
         if (supportsEventType(event.getClass())) {
             Datastore hibernateDatastore = (Datastore) event.getSource();
             if (event instanceof PreQueryEvent) {

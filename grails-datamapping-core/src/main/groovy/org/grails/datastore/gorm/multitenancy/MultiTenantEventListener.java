@@ -20,8 +20,14 @@
 package org.grails.datastore.gorm.multitenancy;
 
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.IdentityHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 import org.springframework.context.ApplicationEvent;
 
@@ -33,12 +39,18 @@ import org.grails.datastore.mapping.engine.event.PersistenceEventListener;
 import org.grails.datastore.mapping.engine.event.PreInsertEvent;
 import org.grails.datastore.mapping.engine.event.PreUpdateEvent;
 import org.grails.datastore.mapping.engine.event.ValidationEvent;
+import org.grails.datastore.mapping.model.MappingContext;
 import org.grails.datastore.mapping.model.PersistentEntity;
+import org.grails.datastore.mapping.model.types.Association;
 import org.grails.datastore.mapping.model.types.TenantId;
+import org.grails.datastore.mapping.model.types.ToMany;
+import org.grails.datastore.mapping.model.types.ToOne;
 import org.grails.datastore.mapping.multitenancy.MultiTenantCapableDatastore;
 import org.grails.datastore.mapping.multitenancy.exceptions.TenantException;
+import org.grails.datastore.mapping.proxy.ProxyHandler;
 import org.grails.datastore.mapping.query.Query;
 import org.grails.datastore.mapping.query.event.PreQueryEvent;
+import org.grails.datastore.mapping.reflect.EntityReflector;
 
 /**
  * An event listener that hooks into persistence events to enable discriminator based multi tenancy (ie {@link org.grails.datastore.mapping.multitenancy.MultiTenancySettings.MultiTenancyMode#DISCRIMINATOR}
@@ -66,6 +78,17 @@ public class MultiTenantEventListener implements PersistenceEventListener {
 
     @Override
     public void onApplicationEvent(ApplicationEvent event) {
+        handleEvent(event);
+        if (event instanceof ValidationEvent && this.datastore.equals(event.getSource())) {
+            // The associated objects that are validated with this one get no event of their own, so each is given
+            // the tenant id it is inserted or updated with here, before it is validated
+            for (ValidationEvent cascaded : cascadedValidationEvents((ValidationEvent) event)) {
+                handleEvent(cascaded);
+            }
+        }
+    }
+
+    private void handleEvent(ApplicationEvent event) {
         Class<? extends ApplicationEvent> eventClass = event.getClass();
         if (supportsEventType(eventClass)) {
             Datastore datastore = (Datastore) event.getSource();
@@ -130,6 +153,81 @@ public class MultiTenantEventListener implements PersistenceEventListener {
     @Override
     public int getOrder() {
         return DEFAULT_ORDER;
+    }
+
+    /**
+     * Finds the associated objects that the validation of the object of the given event cascades to, directly or
+     * through another associated object. They are validated with that object, without a {@link ValidationEvent}
+     * of their own, so a listener that assigns the tenant id of an object before it is validated handles the
+     * returned events as well.
+     *
+     * @param event The event of the object that is validated
+     * @return An event for each associated entity instance that is validated with that object
+     * @since 7.0.18
+     */
+    public static List<ValidationEvent> cascadedValidationEvents(ValidationEvent event) {
+        PersistentEntity entity = event.getEntity();
+        Object source = event.getSource();
+        if (entity == null || !(source instanceof Datastore)) {
+            return Collections.emptyList();
+        }
+        Object entityObject = event.getEntityObject();
+        Set<Object> visited = Collections.newSetFromMap(new IdentityHashMap<>());
+        visited.add(entityObject);
+        List<Object> associatedObjects = new ArrayList<>();
+        collectCascadedObjects(entity, entityObject, null, visited, associatedObjects);
+
+        List<ValidationEvent> events = new ArrayList<>(associatedObjects.size());
+        for (Object associatedObject : associatedObjects) {
+            ValidationEvent cascaded = new ValidationEvent((Datastore) source, associatedObject);
+            if (cascaded.getEntity() != null) {
+                events.add(cascaded);
+            }
+        }
+        return events;
+    }
+
+    // Follows the associations that PersistentEntityValidator cascades validation to. An association or an object
+    // that is not loaded yet is left alone.
+    private static void collectCascadedObjects(PersistentEntity entity, Object object, Association inverseSide,
+                                               Set<Object> visited, List<Object> associatedObjects) {
+        List<Association> associations = entity.getAssociations();
+        if (associations == null || associations.isEmpty()) {
+            return;
+        }
+        MappingContext mappingContext = entity.getMappingContext();
+        ProxyHandler proxyHandler = mappingContext.getProxyHandler();
+        if (proxyHandler == null) {
+            return;
+        }
+        EntityReflector reflector = mappingContext.getEntityReflector(entity);
+        for (Association association : associations) {
+            PersistentEntity associatedEntity = association.getAssociatedEntity();
+            if (associatedEntity == null || association == inverseSide) {
+                continue;
+            }
+            Collection<?> values = Collections.emptyList();
+            if (association instanceof ToOne) {
+                values = Collections.singletonList(reflector.getProperty(object, association.getName()));
+            }
+            else if (association instanceof ToMany && association.doesCascadeValidate(null)) {
+                Object value = reflector.getProperty(object, association.getName());
+                if (value instanceof Collection && proxyHandler.isInitialized(value)) {
+                    values = (Collection<?>) value;
+                }
+                else if (value instanceof Map && proxyHandler.isInitialized(value)) {
+                    values = ((Map<?, ?>) value).values();
+                }
+            }
+            Association nextInverseSide = association.isBidirectional() ? association.getInverseSide() : null;
+            for (Object associatedObject : values) {
+                if (associatedObject != null && proxyHandler.isInitialized(associatedObject) && visited.add(associatedObject) &&
+                        association.doesCascadeValidate(associatedObject)) {
+                    associatedObjects.add(associatedObject);
+                    collectCascadedObjects(associatedEntity, associatedObject, nextInverseSide, visited, associatedObjects);
+                }
+            }
+        }
     }
 }
 

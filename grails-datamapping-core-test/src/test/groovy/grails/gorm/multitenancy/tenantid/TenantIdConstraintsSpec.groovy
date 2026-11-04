@@ -98,7 +98,7 @@ class TenantIdConstraintsSpec extends Specification {
         customer.errors.getFieldError('firmId').code == 'maxSize.exceeded'
     }
 
-    void 'a new associated object is saved with its owner, though its tenant id is assigned only as it is inserted'() {
+    void 'a new associated object is given the current tenant id before it is validated and saved with its owner'() {
         given:
         System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, 'acme')
 
@@ -111,6 +111,75 @@ class TenantIdConstraintsSpec extends Specification {
         !owner.hasErrors()
         owner.pets*.firmId == ['acme']
         Pet.withNewSession { Pet.count() } == 1
+    }
+
+    void 'validating an owner assigns the current tenant id to each associated object that is validated with it'() {
+        given:
+        System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, 'acme')
+
+        when: 'a pet and the tag of that pet are validated with the owner'
+        def pet = new Pet(name: 'Rex', tag: new Tag(code: 'T-1'))
+        def owner = new Owner(name: 'Dave').addToPets(pet)
+        boolean valid = Owner.withNewSession { owner.validate() }
+
+        then:
+        valid
+        owner.tenantId == 'acme'
+        pet.firmId == 'acme'
+        pet.tag.firmId == 'acme'
+    }
+
+    void 'the current tenant id replaces a tenant id an associated object has before it is validated with its owner'() {
+        given:
+        System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, 'acme')
+
+        when: 'the pet has a tenant id that breaks its maxSize, as an insert replaces it too'
+        def owner = new Owner(name: 'Dave').addToPets(new Pet(name: 'Rex', firmId: 'a-tenant-too-long'))
+        def saved = Owner.withNewSession { owner.save(flush: true) }
+
+        then:
+        saved
+        owner.pets*.firmId == ['acme']
+    }
+
+    void 'saving an owner fails when the current tenant id breaks a constraint declared on the tenant id of an associated object'() {
+        given:
+        System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, 'a-tenant-too-long')
+
+        when:
+        def owner = new Owner(name: 'Dave').addToPets(new Pet(name: 'Rex'))
+        def saved = Owner.withNewSession { owner.save(flush: true) }
+
+        then: 'the owner, which declares nothing on its own tenant id, reports the tenant id of the pet'
+        !saved
+        owner.id == null
+        owner.errors.getFieldError('pets[0].firmId').code == 'maxSize.exceeded'
+        Owner.withNewSession { Owner.count() } == 0
+        Pet.withNewSession { Pet.count() } == 0
+    }
+
+    void 'the associated objects of an owner that is not multi-tenant are given the current tenant id before they are validated'() {
+        given:
+        System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, 'acme')
+
+        when: 'a guest in a collection and a guest in a map are validated with the kennel'
+        def kennel = new Kennel(name: 'North', guestsByName: [Tom: new Guest(name: 'Tom')]).addToGuests(new Guest(name: 'Rex'))
+        boolean valid = Kennel.withNewSession { kennel.validate() }
+
+        then:
+        valid
+        kennel.guests*.firmId == ['acme']
+        kennel.guestsByName.Tom.firmId == 'acme'
+
+        when:
+        kennel = new Kennel(name: 'South').addToGuests(new Guest(name: 'Rex'))
+        def saved = Kennel.withNewSession { kennel.save(flush: true) }
+
+        then:
+        saved
+        !kennel.hasErrors()
+        kennel.guests*.firmId == ['acme']
+        Guest.withNewSession { Guest.count() } == 1
     }
 
     void 'the other properties of a new associated object are still checked as it is saved with its owner'() {
@@ -159,11 +228,58 @@ class Pet implements MultiTenant<Pet> {
 
     String name
     String firmId
+    Tag tag
 
     static belongsTo = [owner: Owner]
 
     static constraints = {
         name nullable: false
+        firmId nullable: false, maxSize: 5
+        tag nullable: true
+    }
+
+    static mapping = {
+        tenantId name: 'firmId'
+    }
+}
+
+@Entity
+class Tag implements MultiTenant<Tag> {
+
+    String code
+    String firmId
+
+    static belongsTo = Pet
+
+    static constraints = {
+        firmId nullable: false
+    }
+
+    static mapping = {
+        tenantId name: 'firmId'
+    }
+}
+
+@Entity
+class Kennel {
+
+    String name
+    Map<String, Guest> guestsByName
+
+    static hasMany = [guests: Guest, guestsByName: Guest]
+
+    static constraints = {
+        guestsByName nullable: true
+    }
+}
+
+@Entity
+class Guest implements MultiTenant<Guest> {
+
+    String name
+    String firmId
+
+    static constraints = {
         firmId nullable: false
     }
 
