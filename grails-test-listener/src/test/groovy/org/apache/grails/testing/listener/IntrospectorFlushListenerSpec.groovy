@@ -18,7 +18,6 @@
  */
 package org.apache.grails.testing.listener
 
-import java.beans.BeanInfo
 import java.beans.Introspector
 
 import org.junit.platform.engine.TestDescriptor
@@ -36,6 +35,7 @@ import spock.lang.Specification
 class IntrospectorFlushListenerSpec extends Specification {
 
     static class Bean {
+
         String name
     }
 
@@ -46,7 +46,7 @@ class IntrospectorFlushListenerSpec extends Specification {
 
     void 'the BeanInfo cached during a test class is released when the class finishes'() {
         given:
-        BeanInfo cached = Introspector.getBeanInfo(Bean)
+        final cached = Introspector.getBeanInfo(Bean)
 
         when:
         new IntrospectorFlushListener().executionFinished(identifier(TestDescriptor.Type.CONTAINER, ClassSource.from(Bean)), TestExecutionResult.successful())
@@ -57,7 +57,7 @@ class IntrospectorFlushListenerSpec extends Specification {
 
     void 'the cache is kept when a #type with a #source.class.simpleName finishes'() {
         given:
-        BeanInfo cached = Introspector.getBeanInfo(Bean)
+        final cached = Introspector.getBeanInfo(Bean)
 
         when:
         new IntrospectorFlushListener().executionFinished(identifier(type, source), TestExecutionResult.successful())
@@ -85,6 +85,7 @@ class IntrospectorFlushListenerSpec extends Specification {
 
     private static TestIdentifier identifier(TestDescriptor.Type type, TestSource source) {
         TestIdentifier.from(new AbstractTestDescriptor(UniqueId.forEngine('probe'), 'probe', source) {
+
             @Override
             TestDescriptor.Type getType() {
                 type
