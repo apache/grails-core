@@ -1215,3 +1215,4 @@ With GORM for Hibernate, a sort by a property of an association, such as `Book.l
 
 * The instances whose association is `null` are now returned. Whether they come first or last depends on how the database sorts nulls. To leave them out as before, add a criterion that the association is not `null`, such as `Book.where { author != null }.list(sort: 'author.name')`.
 * A where query or a detached criteria that has criteria on the association still joins it for those criteria, with an inner join by default, and the sort uses that join. A join type that such a query requests for the association, as `fetch: [author: JoinType.INNER]` does, is used for the sort as well.
+* `list` with a `Map` of sort properties, such as `Book.list(sort: [title: 'asc', 'author.name': 'desc'])`, now sorts by every entry of the map, in its order. It sorted by the last entry only.

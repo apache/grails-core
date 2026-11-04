@@ -19,6 +19,8 @@
 
 package org.grails.orm.hibernate.query;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
 import jakarta.persistence.LockModeType;
@@ -345,9 +347,9 @@ public class GrailsHibernateQueryUtils {
                 path = criteriaBuilder.upper(path);
             }
             if (DynamicFinder.ORDER_DESC.equals(order)) {
-                query.orderBy(criteriaBuilder.desc(path));
+                addOrder(query, criteriaBuilder.desc(path));
             } else {
-                query.orderBy(criteriaBuilder.asc(path));
+                addOrder(query, criteriaBuilder.asc(path));
             }
         } else {
             Expression path = queryRoot.get(sort);
@@ -356,11 +358,22 @@ public class GrailsHibernateQueryUtils {
                 path = criteriaBuilder.upper(path);
             }
             if (DynamicFinder.ORDER_DESC.equals(order)) {
-                query.orderBy(criteriaBuilder.desc(path));
+                addOrder(query, criteriaBuilder.desc(path));
             } else {
-                query.orderBy(criteriaBuilder.asc(path));
+                addOrder(query, criteriaBuilder.asc(path));
             }
         }
+    }
+
+    /**
+     * Adds an order to the orders the query already has: <code>orderBy</code> replaces them, so a sort
+     * by more than one property would otherwise sort by the last one only.
+     */
+    @SuppressWarnings("unchecked")
+    private static void addOrder(CriteriaQuery query, jakarta.persistence.criteria.Order order) {
+        List<jakarta.persistence.criteria.Order> orders = new ArrayList<>(query.getOrderList());
+        orders.add(order);
+        query.orderBy(orders);
     }
 
     /**

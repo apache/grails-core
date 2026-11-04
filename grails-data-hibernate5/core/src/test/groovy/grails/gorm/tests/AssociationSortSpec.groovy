@@ -71,6 +71,17 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManag
         results*.name - 'Unattached Player' == ['MU Player', 'Chelsea Player', 'Arsenal Player']
     }
 
+    void 'list sorted by a map sorts by every entry of the map'() {
+        given:
+        new Team(club: Club.findByName('Arsenal'), name: 'Arsenal Second Team').save(failOnError: true, flush: true)
+
+        when:
+        final results = Team.list(sort: ['club.name': 'asc', name: 'desc'])
+
+        then:
+        results*.name - 'Unattached First Team' == ['Arsenal Second Team', 'Arsenal First Team', 'Chelsea First Team', 'MU First Team']
+    }
+
     void 'a paged list sorted by an association property counts a team without a club'() {
         when:
         final results = Team.list(sort: 'club.name', max: 2)
