@@ -40,20 +40,20 @@ import org.grails.orm.hibernate.query.HibernateQuery;
  */
 @SuppressWarnings({"unchecked", "rawtypes"})
 @Deprecated
-public class PagedResultList extends grails.gorm.PagedResultList {
+public class PagedResultList extends org.grails.orm.hibernate.query.PagedResultList {
 
     private transient GrailsHibernateTemplate hibernateTemplate;
     private final Criteria criteria;
 
     public PagedResultList(GrailsHibernateTemplate template, Criteria crit) {
-        super(null);
+        super(template, null, null, null, null, null);
         resultList = crit.list();
         criteria = crit;
         hibernateTemplate = template;
     }
 
     public PagedResultList(GrailsHibernateTemplate template, HibernateQuery query) {
-        super(null);
+        super(template, null, null, null, null, null);
         resultList = query.listForCriteria();
         criteria = query.getHibernateCriteria();
         hibernateTemplate = template;
