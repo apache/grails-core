@@ -15,10 +15,14 @@
  */
 package org.grails.orm.hibernate.query;
 
+import java.util.Arrays;
+
 import jakarta.persistence.criteria.Expression;
 import jakarta.persistence.criteria.From;
+import jakarta.persistence.criteria.Join;
 import jakarta.persistence.criteria.JoinType;
 import jakarta.persistence.criteria.Path;
+import jakarta.persistence.metamodel.Attribute;
 import jakarta.persistence.metamodel.Attribute.PersistentAttributeType;
 import jakarta.persistence.metamodel.PluralAttribute;
 
@@ -92,6 +96,81 @@ public class ExpressionResolver {
 
         // 6. Fallback to Root path resolution
         return getPath(joinTracker.getRoot(), cleanPath);
+    }
+
+    /**
+     * Resolves the property that an order sorts by. A path that crosses associations is not resolved as a plain
+     * path, because Hibernate joins such a path with an implicit inner join, which leaves out the rows where an
+     * association is {@code null}. Each association on the path is joined explicitly instead: a join that the
+     * query already has for the association is reused, and any other is a left join, unless a join type was
+     * requested for the association.
+     *
+     * @param path the property path of the order
+     * @return the expression to sort by, or {@code null} if the path cannot be resolved
+     */
+    Expression<?> resolveSort(String path) {
+        String cleanPath = path != null && path.startsWith("root.") ? path.substring(5) : path;
+        if (cleanPath == null || cleanPath.indexOf('.') < 0 || cleanPath.startsWith("{alias}") ||
+                cleanPath.contains(grails.orm.HibernateCriteriaBuilder.ALIAS_SEPARATOR) ||
+                aliasRegistry.isDefined(cleanPath)) {
+            return resolve(path);
+        }
+
+        String[] tokens = cleanPath.split("\\.");
+        From<?, ?> from = joinTracker.getRoot();
+        // the path of the association from the root, by which a join type is requested for it
+        String associationPath = "";
+        int first = 0;
+        if (aliasRegistry.isDefined(tokens[0])) {
+            if (!(resolveFromAlias(tokens[0], null) instanceof From<?, ?> aliased)) {
+                return resolve(path);
+            }
+            from = aliased;
+            HibernateAlias definition = aliasRegistry.getDefinition(tokens[0]);
+            associationPath = definition != null ? definition.path() : null;
+            first = 1;
+        }
+
+        for (int i = first; i < tokens.length - 1; i++) {
+            if (associationPath != null) {
+                associationPath = associationPath.isEmpty() ? tokens[i] : associationPath + '.' + tokens[i];
+            }
+            From<?, ?> join = sortJoin(from, tokens[i], associationPath);
+            if (join == null) {
+                // the rest of the path is a component path or a property, which resolves as it is
+                return getPath(from, String.join(".", Arrays.copyOfRange(tokens, i, tokens.length)));
+            }
+            from = join;
+        }
+        return getPath(from, tokens[tokens.length - 1]);
+    }
+
+    /**
+     * Returns the join through which an order sorts by a property of an association, or {@code null} if the
+     * attribute is not an association.
+     */
+    private From<?, ?> sortJoin(From<?, ?> from, String attributeName, String associationPath) {
+        Path<?> attribute = getPath(from, attributeName);
+        if (attribute == null || !isAssociation(attribute)) {
+            return null;
+        }
+        for (Join<?, ?> join : from.getJoins()) {
+            if (attributeName.equals(join.getAttribute().getName())) {
+                return join;
+            }
+        }
+        HibernateAlias requested = associationPath != null ? aliasRegistry.getDefinition(associationPath) : null;
+        JoinType joinType = requested != null && !requested.explicit() ? requested.joinType() : JoinType.LEFT;
+        return from.join(attributeName, joinType);
+    }
+
+    private static boolean isAssociation(Path<?> path) {
+        if (!(path.getModel() instanceof Attribute<?, ?> attribute)) {
+            return false;
+        }
+        PersistentAttributeType type = attribute.getPersistentAttributeType();
+        return type == PersistentAttributeType.MANY_TO_ONE || type == PersistentAttributeType.ONE_TO_ONE ||
+                type == PersistentAttributeType.ONE_TO_MANY || type == PersistentAttributeType.MANY_TO_MANY;
     }
 
     private Expression<?> resolveFromAlias(String alias, String subPath) {

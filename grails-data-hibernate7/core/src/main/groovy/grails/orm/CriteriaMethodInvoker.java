@@ -234,6 +234,13 @@ public class CriteriaMethodInvoker {
                     } finally {
                         hibernateQuery.setDetachedCriteria(oldDetachedCriteria);
                     }
+                    // an order inside the block sorts the query by a property of the association, so it moves
+                    // to the enclosing criteria: only the orders of the root criteria reach the query
+                    for (Query.Order order : associationCriteria.getOrders()) {
+                        Query.Order qualified = new Query.Order(name + '.' + order.getProperty(), order.getDirection());
+                        hibernateQuery.order(order.isIgnoreCase() ? qualified.ignoreCase() : qualified);
+                    }
+                    associationCriteria.getOrders().clear();
                     hibernateQuery.add((Query.Criterion) associationCriteria);
                 } else {
                     // Fallback for non-GORM associations if any

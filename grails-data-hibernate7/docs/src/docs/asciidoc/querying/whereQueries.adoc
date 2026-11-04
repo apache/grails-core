@@ -275,6 +275,8 @@ def results = Pet.where {
 
 The path can go through more than one association, such as `owner.employer.name`, where both `owner` and `employer` are associations.
 
+Sorting does not change which rows a query returns. An association that is joined only for the sort is joined with a left join, so a sort by `owner.lastName` keeps the pets that have no owner. Whether they come first or last depends on how the database sorts nulls. If the query requests a join type for the association, for example with `fetch: [owner: JoinType.INNER]`, the sort uses that join type instead.
+
 You can also define an explicit alias for an association by declaring a variable in the `where` query, and sort by the alias:
 
 [source,groovy]

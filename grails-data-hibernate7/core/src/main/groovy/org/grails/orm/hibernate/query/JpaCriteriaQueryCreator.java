@@ -109,8 +109,9 @@ public class JpaCriteriaQueryCreator<T> {
         new JpaProjectionAdapter(criteriaBuilder, context, entity).adapt(projections, (AbstractQuery<?>) cq);
         assignGroupBy(cq, context);
 
-        assignOrderBy(cq, context);
+        // the criteria come first, so that an order reuses the join the criteria have for an association
         assignCriteria(cq, root, context, entity);
+        assignOrderBy(cq, context);
         return cq;
     }
 
@@ -261,7 +262,7 @@ public class JpaCriteriaQueryCreator<T> {
                         SqlProjection sqlProjection = findSqlProjection(propertyName, false);
                         Expression<?> expression = sqlProjection != null ?
                                 context.getSelectionAlias(sqlProjection.getColumnAlias()) :
-                                context.getFullyQualifiedExpression(propertyName);
+                                context.getSortExpression(propertyName);
                         if (order.isIgnoreCase() && expression.getJavaType().equals(String.class)) {
                             return order.getDirection().equals(Query.Order.Direction.ASC) ?
                                     criteriaBuilder.asc(criteriaBuilder.lower((Expression<String>) expression)) :

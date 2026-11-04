@@ -20,10 +20,15 @@ package org.grails.orm.hibernate.query;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
 import org.grails.datastore.gorm.finders.DynamicFinder;
+import org.grails.datastore.mapping.model.PersistentEntity;
+import org.grails.datastore.mapping.model.PersistentProperty;
+import org.grails.datastore.mapping.model.types.Association;
+import org.grails.datastore.mapping.model.types.Embedded;
 import org.grails.datastore.mapping.reflect.NameUtils;
 import org.grails.orm.hibernate.cfg.HibernateMappingContext;
 import org.grails.orm.hibernate.cfg.Mapping;
@@ -40,6 +45,8 @@ public class HqlListQueryBuilder {
 
     private final GrailsHibernatePersistentEntity entity;
     private final Map<String, Object> params;
+    // the joins of the associations that the query sorts through, by the path they join
+    private final Map<String, String> sortJoins = new LinkedHashMap<>();
 
     public HqlListQueryBuilder(GrailsHibernatePersistentEntity entity, Map<String, Object> params) {
         this.entity = entity;
@@ -62,6 +69,7 @@ public class HqlListQueryBuilder {
         }
 
         String sortHql = buildSortClause();
+        sortJoins.forEach((path, alias) -> hql.append(" left join ").append(path).append(' ').append(alias));
         if (!sortHql.isEmpty()) {
             hql.append(" order by ").append(sortHql);
         }
@@ -117,11 +125,36 @@ public class HqlListQueryBuilder {
     private String buildSortPart(String propertyName, String direction, boolean ignoreCase) {
         HibernatePersistentProperty prop = requireMappedProperty(propertyName, HibernateQueryArgument.SORT.value());
         String normalizedDirection = DynamicFinder.normalizeDirection(direction);
-        String path = "e." + propertyName;
+        String path = sortPath(propertyName);
         if (prop.getType() == String.class && ignoreCase) {
             return "upper(" + path + ") " + normalizedDirection;
         }
         return path + " " + normalizedDirection;
+    }
+
+    /**
+     * Qualifies a sort property with the alias it is read from. A property of an association is read from a left
+     * join of the association and not from the path through it, which Hibernate joins with an implicit inner join
+     * that leaves out the rows where the association is {@code null}.
+     *
+     * @param propertyName The property path, already checked against the mapping
+     * @return The path to sort by
+     */
+    private String sortPath(String propertyName) {
+        String[] tokens = propertyName.split("\\.");
+        PersistentEntity current = entity;
+        String alias = "e";
+        for (int i = 0; i < tokens.length - 1; i++) {
+            PersistentProperty<?> property = current != null ? current.getPropertyByName(tokens[i]) : null;
+            if (!(property instanceof Association<?> association) || property instanceof Embedded) {
+                // the rest of the path is a component path, which resolves as it is
+                return alias + '.' + String.join(".", List.of(tokens).subList(i, tokens.length));
+            }
+            String joined = alias + '.' + tokens[i];
+            alias = sortJoins.computeIfAbsent(joined, path -> "s" + sortJoins.size());
+            current = association.getAssociatedEntity();
+        }
+        return alias + '.' + tokens[tokens.length - 1];
     }
 
     /**

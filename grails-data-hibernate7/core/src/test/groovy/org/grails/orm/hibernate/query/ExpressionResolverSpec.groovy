@@ -20,6 +20,8 @@ import jakarta.persistence.criteria.Path
 import jakarta.persistence.criteria.Join
 import jakarta.persistence.criteria.JoinType
 import jakarta.persistence.criteria.Expression
+import jakarta.persistence.metamodel.Attribute
+import jakarta.persistence.metamodel.SingularAttribute
 import spock.lang.Specification
 
 /**
@@ -174,5 +176,157 @@ class ExpressionResolverSpec extends Specification {
         true          | true
         false         | true
         false         | false
+    }
+
+    private Path attributePath(Attribute.PersistentAttributeType type) {
+        def attribute = Mock(SingularAttribute)
+        attribute.getPersistentAttributeType() >> type
+        def path = Mock(Path)
+        path.getModel() >> attribute
+        path
+    }
+
+    private Join joinOf(String attributeName) {
+        def attribute = Mock(SingularAttribute)
+        attribute.getName() >> attributeName
+        def join = Mock(Join)
+        join.getAttribute() >> attribute
+        join
+    }
+
+    def 'a sort by a property of an association joins the association with a left join'() {
+        given:
+        def root = Mock(From)
+        def clubJoin = Mock(Join)
+        def namePath = Mock(Path)
+        def resolver = new ExpressionResolver(new AliasRegistry(), new JoinTracker(root))
+
+        when:
+        def result = resolver.resolveSort('club.name')
+
+        then: 'the path is not resolved as it is, which would make Hibernate join it with an inner join'
+        _ * root.get('club') >> attributePath(Attribute.PersistentAttributeType.MANY_TO_ONE)
+        _ * root.getJoins() >> ([] as Set)
+        1 * root.join('club', JoinType.LEFT) >> clubJoin
+        1 * clubJoin.get('name') >> namePath
+        result == namePath
+    }
+
+    def 'a sort by a nested association property joins every association on the path'() {
+        given:
+        def root = Mock(From)
+        def teamJoin = Mock(Join)
+        def clubJoin = Mock(Join)
+        def namePath = Mock(Path)
+        def resolver = new ExpressionResolver(new AliasRegistry(), new JoinTracker(root))
+
+        when:
+        def result = resolver.resolveSort('team.club.name')
+
+        then:
+        _ * root.get('team') >> attributePath(Attribute.PersistentAttributeType.MANY_TO_ONE)
+        _ * root.getJoins() >> ([] as Set)
+        1 * root.join('team', JoinType.LEFT) >> teamJoin
+        _ * teamJoin.get('club') >> attributePath(Attribute.PersistentAttributeType.ONE_TO_ONE)
+        _ * teamJoin.getJoins() >> ([] as Set)
+        1 * teamJoin.join('club', JoinType.LEFT) >> clubJoin
+        1 * clubJoin.get('name') >> namePath
+        result == namePath
+    }
+
+    def 'a sort reuses a join that the query already has for the association'() {
+        given:
+        def root = Mock(From)
+        def clubJoin = joinOf('club')
+        def namePath = Mock(Path)
+        def resolver = new ExpressionResolver(new AliasRegistry(), new JoinTracker(root))
+
+        when:
+        def result = resolver.resolveSort('club.name')
+
+        then:
+        _ * root.get('club') >> attributePath(Attribute.PersistentAttributeType.MANY_TO_ONE)
+        _ * root.getJoins() >> ([clubJoin] as Set)
+        0 * root.join(_, _)
+        1 * clubJoin.get('name') >> namePath
+        result == namePath
+    }
+
+    def 'a sort joins a nested association with the join type requested for its path'() {
+        given:
+        def root = Mock(From)
+        def teamJoin = Mock(Join)
+        def clubJoin = Mock(Join)
+        def namePath = Mock(Path)
+        def aliasRegistry = new AliasRegistry()
+        aliasRegistry.define('team.club', new HibernateAlias('team.club', 'team.club', JoinType.INNER, false))
+        def resolver = new ExpressionResolver(aliasRegistry, new JoinTracker(root))
+
+        when:
+        def result = resolver.resolveSort('team.club.name')
+
+        then:
+        _ * root.get('team') >> attributePath(Attribute.PersistentAttributeType.MANY_TO_ONE)
+        _ * root.getJoins() >> ([] as Set)
+        1 * root.join('team', JoinType.LEFT) >> teamJoin
+        _ * teamJoin.get('club') >> attributePath(Attribute.PersistentAttributeType.MANY_TO_ONE)
+        _ * teamJoin.getJoins() >> ([] as Set)
+        1 * teamJoin.join('club', JoinType.INNER) >> clubJoin
+        1 * clubJoin.get('name') >> namePath
+        result == namePath
+    }
+
+    def 'a sort through an alias starts from the join of the alias'() {
+        given:
+        def root = Mock(From)
+        def teamJoin = Mock(Join)
+        def clubJoin = Mock(Join)
+        def namePath = Mock(Path)
+        def aliasRegistry = new AliasRegistry()
+        aliasRegistry.define('t', new HibernateAlias('team', 't', JoinType.INNER))
+        def resolver = new ExpressionResolver(aliasRegistry, new JoinTracker(root))
+
+        when:
+        def result = resolver.resolveSort('t.club.name')
+
+        then:
+        1 * root.join('team', JoinType.INNER) >> teamJoin
+        _ * teamJoin.get('club') >> attributePath(Attribute.PersistentAttributeType.MANY_TO_ONE)
+        _ * teamJoin.getJoins() >> ([] as Set)
+        1 * teamJoin.join('club', JoinType.LEFT) >> clubJoin
+        1 * clubJoin.get('name') >> namePath
+        result == namePath
+    }
+
+    def 'a sort by a property of an embedded component is resolved as a plain path'() {
+        given:
+        def root = Mock(From)
+        def addressPath = attributePath(Attribute.PersistentAttributeType.EMBEDDED)
+        def cityPath = Mock(Path)
+        def resolver = new ExpressionResolver(new AliasRegistry(), new JoinTracker(root))
+
+        when:
+        def result = resolver.resolveSort('address.city')
+
+        then:
+        _ * root.get('address') >> addressPath
+        _ * addressPath.get('city') >> cityPath
+        0 * root.join(_, _)
+        result == cityPath
+    }
+
+    def 'a sort by a simple property is resolved as any other path'() {
+        given:
+        def root = Mock(From)
+        def namePath = Mock(Path)
+        def resolver = new ExpressionResolver(new AliasRegistry(), new JoinTracker(root))
+
+        when:
+        def result = resolver.resolveSort('name')
+
+        then:
+        1 * root.get('name') >> namePath
+        0 * root.join(_, _)
+        result == namePath
     }
 }

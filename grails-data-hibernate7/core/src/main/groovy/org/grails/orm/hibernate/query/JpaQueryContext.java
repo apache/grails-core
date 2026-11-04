@@ -192,6 +192,21 @@ public class JpaQueryContext implements Cloneable {
         return resolver.resolve(path);
     }
 
+    /**
+     * Returns the expression that an order of this query sorts by. Unlike
+     * {@link #getFullyQualifiedExpression(String)}, an association on the path that the query does not join is
+     * joined with a left join, so that the sort keeps the rows where the association is {@code null}.
+     *
+     * @param path the property path of the order
+     * @return the expression to sort by
+     */
+    public Expression<?> getSortExpression(String path) {
+        if (parent != null && path != null && path.startsWith("{alias}")) {
+            return getFullyQualifiedExpression(path);
+        }
+        return resolver.resolveSort(path);
+    }
+
     public Path<?> getFullyQualifiedPath(String path) {
         if (parent != null) {
             if ("{alias}".equals(path)) {
