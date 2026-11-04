@@ -25,7 +25,7 @@ plugins {
 // phases are aggregated alongside the ordinary ones - otherwise their results would be invisible
 // to the aggregate reports and to CI
 //
-// the test-suite projects also run some classes in their own Test tasks, to keep a class that
+// grails-test-suite-uber also runs some classes in its own Test tasks, to keep a class that
 // pollutes static state away from the rest of the fork. A phase is matched by task name, so those
 // task names have to be named here too, or their results are invisible in exactly the same way -
 // which is how they came to run nothing at all without anyone noticing.
