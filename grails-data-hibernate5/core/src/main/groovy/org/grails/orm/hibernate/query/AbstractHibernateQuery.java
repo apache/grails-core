@@ -44,6 +44,8 @@ import org.hibernate.dialect.Dialect;
 import org.hibernate.dialect.function.SQLFunction;
 import org.hibernate.persister.entity.PropertyMapping;
 import org.hibernate.type.BasicType;
+import org.hibernate.type.ManyToOneType;
+import org.hibernate.type.Type;
 import org.hibernate.type.TypeResolver;
 
 import org.springframework.context.ApplicationEventPublisher;
@@ -644,6 +646,8 @@ public abstract class AbstractHibernateQuery extends Query {
      * through the alias of the join. The head of the path is either an alias defined by a where
      * query or an association of the entity. An association that this query has already joined, for
      * example for a where query criterion, is reused; one it has not joined yet is joined for the sort.
+     * The exception is the identifier of an association that follows another one on the path, which is
+     * sorted by its foreign key instead, as a join would leave out the rows where the association is null.
      */
     private String calculateSortPropertyName(String property) {
         String[] tokens = property.split("\\.");
@@ -679,14 +683,36 @@ public abstract class AbstractHibernateQuery extends Query {
                 associationPath.append('.');
             }
             associationPath.append(token);
+            Association association = (Association) persistentProperty;
+            // the first association of a path is joined even for its identifier, as it always has been
+            if (currentAlias != null && i == tokens.length - 2 && isForeignKeyIdentifier(currentEntity, association, tokens[i + 1])) {
+                return currentAlias + '.' + token + '.' + tokens[i + 1];
+            }
             CriteriaAndAlias criteriaAndAlias = getOrCreateAlias(associationPath.toString(), generateAlias(token));
             if (criteriaAndAlias == null) {
                 return null;
             }
             currentAlias = criteriaAndAlias.alias;
-            currentEntity = ((Association) persistentProperty).getAssociatedEntity();
+            currentEntity = association.getAssociatedEntity();
         }
         return currentAlias + '.' + tokens[tokens.length - 1];
+    }
+
+    /**
+     * Whether a property is the identifier of an association that the given entity maps to a foreign key
+     * of its own. Hibernate then reads the identifier from the foreign key, without a join. That is not
+     * the case for a <code>hasOne</code> or for the inverse side of a one-to-one, where the foreign key
+     * is on the other side.
+     */
+    private boolean isForeignKeyIdentifier(PersistentEntity owner, Association association, String property) {
+        PersistentEntity associatedEntity = association.getAssociatedEntity();
+        PersistentProperty identity = associatedEntity != null ? associatedEntity.getIdentity() : null;
+        if (session == null || identity == null || !identity.getName().equals(property)) {
+            return false;
+        }
+        SessionFactory sessionFactory = ((IHibernateTemplate) session.getNativeInterface()).getSessionFactory();
+        Type type = getEntityPersister(owner.getJavaClass().getName(), sessionFactory).toType(association.getName());
+        return type instanceof ManyToOneType && ((ManyToOneType) type).isReferenceToPrimaryKey();
     }
 
     /**
