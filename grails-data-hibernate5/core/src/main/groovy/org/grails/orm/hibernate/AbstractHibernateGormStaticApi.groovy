@@ -43,6 +43,7 @@ import org.springframework.transaction.PlatformTransactionManager
 import org.grails.datastore.gorm.GormStaticApi
 import org.grails.datastore.gorm.finders.DynamicFinder
 import org.grails.datastore.gorm.finders.FinderMethod
+import org.grails.datastore.mapping.multitenancy.MultiTenancySettings.MultiTenancyMode
 import org.grails.datastore.mapping.proxy.ProxyHandler
 import org.grails.datastore.mapping.reflect.ClassUtils
 import org.grails.orm.hibernate.cfg.AbstractGrailsDomainBinder
@@ -178,9 +179,9 @@ abstract class AbstractHibernateGormStaticApi<D> extends GormStaticApi<D> {
 
     @Override
     D load(Serializable id) {
-        if (persistentEntity.isMultiTenant()) {
-            // Hibernate's tenant filter does not apply to a load by identifier, so a multi-tenant entity is loaded
-            // through a query, as get(id) does, rather than handed to whichever tenant asks for the id
+        if (persistentEntity.isMultiTenant() && multiTenancyMode == MultiTenancyMode.DISCRIMINATOR) {
+            // Hibernate's discriminator tenant filter does not apply to a load by identifier, so use a query,
+            // as get(id) does, rather than handing out another tenant's row.
             return get(id)
         }
         id = convertIdentifier(id)
