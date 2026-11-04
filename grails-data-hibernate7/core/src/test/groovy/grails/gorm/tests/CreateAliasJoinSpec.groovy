@@ -1246,6 +1246,139 @@ class CreateAliasJoinSpec extends HibernateGormDatastoreSpec {
             projections { property('name') }
         } == ['y']
     }
+
+    void 'nested alias path #declarations joins each association once'() {
+        given:
+        def a = new CreateAliasTag(name: 'a').save(failOnError: true)
+        def b = new CreateAliasTag(name: 'b').save(failOnError: true)
+        def likeA = new CreateAliasLike(label: 'a', tag: a).save(failOnError: true)
+        def likeB = new CreateAliasLike(label: 'b', tag: b).save(failOnError: true)
+        new CreateAliasTeam(name: 'matching', favorite: likeA, tag: b).save(failOnError: true)
+        new CreateAliasTeam(name: 'wrong favorite tag', favorite: likeB, tag: a).save(failOnError: true)
+        new CreateAliasTeam(name: 'no favorite', tag: a).save(flush: true, failOnError: true)
+
+        when:
+        def names = CreateAliasTeam.withCriteria {
+            for (declaration in declarations) {
+                createAlias(declaration[0], declaration[1])
+            }
+            eq('favorite.label', 'a')
+            eq('t.name', 'a')
+            projections { property('name') }
+        }
+
+        then:
+        names == ['matching']
+        sqlCapture.statements.last().findAll(/(?i)\bjoin create_alias_like\b/).size() == 1
+        sqlCapture.statements.last().findAll(/(?i)\bjoin create_alias_tag\b/).size() == 1
+
+        where:
+        declarations << [
+                [['favorite.tag', 't']],
+                [['favorite', 'f'], ['favorite.tag', 't']],
+                [['favorite.tag', 't'], ['favorite', 'f']]
+        ]
+    }
+
+    void 'nested alias path #declarations keeps the join type of each alias'() {
+        given:
+        def tag = new CreateAliasTag(name: 'tag').save(failOnError: true)
+        def tagged = new CreateAliasLike(label: 'tagged', tag: tag).save(failOnError: true)
+        def untagged = new CreateAliasLike(label: 'untagged').save(failOnError: true)
+        new CreateAliasTeam(name: 'tagged', favorite: tagged).save(failOnError: true)
+        new CreateAliasTeam(name: 'untagged', favorite: untagged).save(failOnError: true)
+        new CreateAliasTeam(name: 'no favorite').save(flush: true, failOnError: true)
+
+        expect:
+        CreateAliasTeam.withCriteria {
+            for (declaration in declarations) {
+                createAlias(declaration[0], declaration[1], declaration[2])
+            }
+            projections { property('name') }
+            order('name', 'asc')
+        } == expected
+
+        where:
+        declarations                                     || expected
+        [['favorite.tag', 't', 0]]                       || ['tagged']
+        [['favorite.tag', 't', 1]]                       || ['no favorite', 'tagged', 'untagged']
+        [['favorite', 'f', 0], ['favorite.tag', 't', 1]] || ['tagged', 'untagged']
+        [['favorite', 'f', 1], ['favorite.tag', 't', 0]] || ['tagged']
+    }
+
+    void 'nested alias path does not change the join type of a restricted first association'() {
+        given:
+        def tag = new CreateAliasTag(name: 'tag').save(failOnError: true)
+        def tagged = new CreateAliasLike(label: 'tagged', tag: tag).save(failOnError: true)
+        def untagged = new CreateAliasLike(label: 'untagged').save(failOnError: true)
+        new CreateAliasTeam(name: 'tagged', favorite: tagged).save(failOnError: true)
+        new CreateAliasTeam(name: 'untagged', favorite: untagged).save(failOnError: true)
+        new CreateAliasTeam(name: 'no favorite').save(flush: true, failOnError: true)
+
+        expect:
+        CreateAliasTeam.withCriteria {
+            createAlias('favorite.tag', 't', 1)
+            or {
+                eq('favorite.label', 'tagged')
+                eq('name', 'no favorite')
+            }
+            projections { property('name') }
+            order('name', 'asc')
+        } == CreateAliasTeam.withCriteria {
+            or {
+                eq('favorite.label', 'tagged')
+                eq('name', 'no favorite')
+            }
+            projections { property('name') }
+            order('name', 'asc')
+        }
+    }
+
+    void 'detached nested alias path uses the configured join types'() {
+        given:
+        def tag = new CreateAliasTag(name: 'tag').save(failOnError: true)
+        def tagged = new CreateAliasLike(label: 'tagged', tag: tag).save(failOnError: true)
+        def untagged = new CreateAliasLike(label: 'untagged').save(failOnError: true)
+        new CreateAliasTeam(name: 'tagged', favorite: tagged).save(failOnError: true)
+        new CreateAliasTeam(name: 'untagged', favorite: untagged).save(failOnError: true)
+        new CreateAliasTeam(name: 'no favorite').save(flush: true, failOnError: true)
+        def criteria = new DetachedCriteria(CreateAliasTeam).build {
+            join('favorite', JoinType.INNER)
+            join('favorite.tag', JoinType.LEFT)
+            createAlias('favorite.tag', 't')
+        }
+
+        expect:
+        criteria.list()*.name.sort() == ['tagged', 'untagged']
+    }
+
+    void 'nested alias path #innerAlias in a subquery joins from its own root'() {
+        given:
+        def a = new CreateAliasTag(name: 'a').save(failOnError: true)
+        def b = new CreateAliasTag(name: 'b').save(failOnError: true)
+        def likeA = new CreateAliasLike(label: 'a', tag: a).save(failOnError: true)
+        def likeB = new CreateAliasLike(label: 'b', tag: b).save(failOnError: true)
+        def teamA = new CreateAliasTeam(name: 'A', favorite: likeA).save(failOnError: true)
+        new CreateAliasTeam(name: 'B', favorite: likeB).save(flush: true, failOnError: true)
+        def teamsWithFavoriteTagB = new DetachedCriteria(CreateAliasTeam).build {
+            createAlias('favorite.tag', innerAlias)
+            eq("${innerAlias}.name", 'b')
+        }
+
+        when:
+        def rows = CreateAliasTeam.withCriteria {
+            createAlias('favorite.tag', 'outside')
+            eq('favorite.label', 'a')
+            eq('outside.name', 'a')
+            exists(teamsWithFavoriteTagB)
+        }
+
+        then:
+        rows*.id == [teamA.id]
+
+        where:
+        innerAlias << ['inside', 'outside']
+    }
 }
 
 @Entity

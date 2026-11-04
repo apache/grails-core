@@ -245,6 +245,29 @@ class SubqueryAssociationCorrelationSpec extends HibernateGormDatastoreSpec {
         results[0].owner.firstName == "Homer"
     }
 
+    void "createAlias on a path through two associations joins each of them"() {
+        given:
+        def usa = new SubqueryCorrCountry(name: "USA").save(failOnError: true)
+        def canada = new SubqueryCorrCountry(name: "Canada").save(failOnError: true)
+        def springfield = new SubqueryCorrAddress(city: "Springfield", country: usa).save(failOnError: true)
+        def vancouver = new SubqueryCorrAddress(city: "Vancouver", country: canada).save(failOnError: true)
+        def marge = new SubqueryCorrPerson(firstName: "Marge", homeAddress: springfield, workAddress: vancouver).save(failOnError: true)
+        def lisa = new SubqueryCorrPerson(firstName: "Lisa", homeAddress: vancouver, workAddress: springfield).save(failOnError: true)
+        new SubqueryCorrPet(name: "Snowball", owner: marge).save(failOnError: true)
+        new SubqueryCorrPet(name: "Coltrane", owner: lisa).save(failOnError: true, flush: true)
+
+        when:
+        // The country is reached through the owner and then the owner's home address.
+        // Lisa works in the USA but lives in Canada, so only Marge's pet matches.
+        def results = SubqueryCorrPet.createCriteria().list {
+            createAlias('owner.homeAddress.country', 'c')
+            eq('c.name', 'USA')
+        }
+
+        then:
+        results*.name == ["Snowball"]
+    }
+
     void "sibling association blocks querying the same association name retain independent joins"() {
         given:
         def usa = new SubqueryCorrCountry(name: "USA").save(failOnError: true)

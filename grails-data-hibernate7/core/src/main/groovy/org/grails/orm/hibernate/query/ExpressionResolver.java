@@ -120,7 +120,7 @@ public class ExpressionResolver {
             boolean sharesPath = !elementCollection && def.equals(aliasRegistry.getAssociationAlias(def.path()));
             From<?, ?> join = sharesPath ? joinTracker.getOwnJoin(def.path()) : null;
             if (join == null) {
-                join = joinTracker.getRoot().join(def.path(), def.joinType());
+                join = joinAliasPath(def);
                 if (sharesPath) {
                     joinTracker.addJoin(def.path(), join);
                 }
@@ -129,6 +129,27 @@ public class ExpressionResolver {
         }
         aliasRegistry.realize(alias, aliased);
         return subPath != null ? getPath((From<?, ?>) aliased, subPath) : aliased;
+    }
+
+    /**
+     * Joins the path of an explicit alias. A nested path such as {@code owner.address} is joined one association
+     * at a time, as a JPA join takes a single attribute. The first association is relative to this query's root
+     * and shares the join of that association, with the join type this query configured for it, if any. The
+     * associations after it use the join type of the alias.
+     */
+    private From<?, ?> joinAliasPath(HibernateAlias def) {
+        String[] segments = def.path().split("\\.");
+        From<?, ?> from = joinTracker.getRoot();
+        if (segments.length > 1) {
+            String first = segments[0];
+            HibernateAlias configured = aliasRegistry.isOwnDefined(first) ? aliasRegistry.getDefinition(first) : null;
+            from = resolveAssociation(first, configured != null && !configured.explicit() ?
+                    configured.joinType() : def.joinType());
+            for (int i = 1; i < segments.length - 1; i++) {
+                from = from.join(segments[i], def.joinType());
+            }
+        }
+        return from.join(segments[segments.length - 1], def.joinType());
     }
 
     /**
