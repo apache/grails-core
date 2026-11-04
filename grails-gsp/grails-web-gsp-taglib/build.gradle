@@ -44,6 +44,8 @@ dependencies {
     implementation platform(project(':grails-bom'))
     api project(':grails-web-jsp')
 
+    compileOnly 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation
+
 //    api project(':grails-taglib'), { // GrailsTagLibClass
 //        // API dependencies in grails-taglib
 //        exclude group: 'org.apache.grails', module: 'grails-core'

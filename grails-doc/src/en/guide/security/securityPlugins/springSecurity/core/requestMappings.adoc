@@ -148,7 +148,7 @@ In addition, when you enable the switch-user feature, you'll have to specify acc
 
 === URLs and Authorities
 
-In each approach you configure a mapping for a URL pattern to the role(s) that are required to access those URLs, for example, `/admin/user/pass:[**]` requires `ROLE_ADMIN`. In addition, you can combine the role(s) with SpEL expressions and/or tokens such as IS_AUTHENTICATED_ANONYMOUSLY, IS_AUTHENTICATED_REMEMBERED, and IS_AUTHENTICATED_FULLY. One or more voters (<<voters>>) will process any tokens and enforce a rule based on them:
+In each approach you configure a mapping for a URL pattern to the role(s) that are required to access those URLs, for example, `/admin/user/pass:[**]` requires `ROLE_ADMIN`. In addition, you can combine the role(s) with SpEL expressions and/or tokens such as IS_AUTHENTICATED_ANONYMOUSLY, IS_AUTHENTICATED_REMEMBERED, and IS_AUTHENTICATED_FULLY. One or more voters (<<core-voters,Voters>>) will process any tokens and enforce a rule based on them:
 
 * IS_AUTHENTICATED_ANONYMOUSLY
 ** signifies that anyone can access this URL. By default the `AnonymousAuthenticationFilter` ensures an "`anonymous`" `Authentication` with no roles so that every user has an authentication. The token accepts any authentication, even anonymous.

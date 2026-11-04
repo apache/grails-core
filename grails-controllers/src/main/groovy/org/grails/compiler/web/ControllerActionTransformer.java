@@ -19,6 +19,7 @@
 package org.grails.compiler.web;
 
 import java.io.File;
+import java.io.Serializable;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.net.URL;
@@ -42,6 +43,7 @@ import org.codehaus.groovy.ast.MethodNode;
 import org.codehaus.groovy.ast.ModuleNode;
 import org.codehaus.groovy.ast.Parameter;
 import org.codehaus.groovy.ast.PropertyNode;
+import org.codehaus.groovy.ast.Variable;
 import org.codehaus.groovy.ast.expr.ArgumentListExpression;
 import org.codehaus.groovy.ast.expr.BinaryExpression;
 import org.codehaus.groovy.ast.expr.BooleanExpression;
@@ -93,6 +95,7 @@ import grails.validation.Validateable;
 import grails.web.Action;
 import grails.web.RequestParameter;
 import grails.web.controllers.ControllerMethod;
+import grails.web.databinding.BindAllowed;
 import org.grails.compiler.injection.GrailsASTUtils;
 import org.grails.compiler.injection.TraitInjectionUtils;
 import org.grails.core.DefaultGrailsControllerClass;
@@ -185,6 +188,9 @@ public class ControllerActionTransformer implements GrailsArtefactClassInjector,
             GrailsResourceUtils.GRAILS_APP_DIR + "/controllers/(.+)Controller\\.groovy");
     private static final String ALLOWED_METHODS_HANDLED_ATTRIBUTE_NAME = "ALLOWED_METHODS_HANDLED";
     private static final ClassNode OBJECT_CLASS = new ClassNode(Object.class);
+    private static final ClassNode STRING_CLASS = new ClassNode(String.class);
+    private static final ClassNode SERIALIZABLE_CLASS = new ClassNode(Serializable.class);
+    private static final ClassNode BIND_ALLOWED_CLASS_NODE = new ClassNode(BindAllowed.class);
     public static final AnnotationNode ACTION_ANNOTATION_NODE = new AnnotationNode(
             new ClassNode(Action.class));
     private static final String ACTION_MEMBER_TARGET = "commandObjects";
@@ -401,11 +407,9 @@ public class ControllerActionTransformer implements GrailsArtefactClassInjector,
         if (methodNode.getParameters().length > 0) {
             final BlockStatement methodCode = new BlockStatement();
 
-            final BlockStatement codeToHandleAllowedMethods = getCodeToHandleAllowedMethods(classNode, methodNode.getName());
             final Statement codeToCallOriginalMethod = addOriginalMethodCall(methodNode, initializeActionParameters(
                     classNode, methodNode, methodNode.getName(), parameters, source, context));
 
-            methodCode.addStatement(codeToHandleAllowedMethods);
             methodCode.addStatement(codeToCallOriginalMethod);
 
             method = new MethodNode(
@@ -525,48 +529,36 @@ public class ControllerActionTransformer implements GrailsArtefactClassInjector,
 
     protected BlockStatement getCodeToHandleAllowedMethods(ClassNode controllerClass, String methodName) {
         GrailsASTUtils.addEnhancedAnnotation(controllerClass, DefaultGrailsControllerClass.ALLOWED_HTTP_METHODS_PROPERTY);
+
+        final BlockStatement code = new BlockStatement();
+
+        // The ALLOWED_METHODS_HANDLED request attribute records that an action has begun handling the request,
+        // so that an action invoked programmatically from another one does not check the original request
+        // method against its own allowedMethods. Every action writes it, restricted or not: the action that
+        // reads it is in whichever controller is entered second, which is not knowable from this one.
+        final MapExpression allowedMethodsMapExpression = getAllowedMethodsMapExpression(controllerClass);
+
         final BlockStatement checkAllowedMethodsBlock = new BlockStatement();
 
         final PropertyExpression requestPropertyExpression = new PropertyExpression(new VariableExpression("this"), "request");
 
-        final FieldNode allowedMethodsField = controllerClass.getField(DefaultGrailsControllerClass.ALLOWED_HTTP_METHODS_PROPERTY);
+        if (allowedMethodsMapExpression != null && isActionRestricted(allowedMethodsMapExpression, methodName)) {
+            final PropertyExpression responsePropertyExpression = new PropertyExpression(new VariableExpression("this"), "response");
 
-        if (allowedMethodsField != null) {
-            final Expression initialAllowedMethodsExpression = allowedMethodsField.getInitialExpression();
-            if (initialAllowedMethodsExpression instanceof MapExpression) {
-                boolean actionIsRestricted = false;
-                final MapExpression allowedMethodsMapExpression = (MapExpression) initialAllowedMethodsExpression;
-                final List<MapEntryExpression> allowedMethodsMapEntryExpressions = allowedMethodsMapExpression.getMapEntryExpressions();
-                for (MapEntryExpression allowedMethodsMapEntryExpression : allowedMethodsMapEntryExpressions) {
-                    final Expression allowedMethodsMapEntryKeyExpression = allowedMethodsMapEntryExpression.getKeyExpression();
-                    if (allowedMethodsMapEntryKeyExpression instanceof ConstantExpression) {
-                        final ConstantExpression allowedMethodsMapKeyConstantExpression = (ConstantExpression) allowedMethodsMapEntryKeyExpression;
-                        final Object allowedMethodsMapKeyValue = allowedMethodsMapKeyConstantExpression.getValue();
-                        if (methodName.equals(allowedMethodsMapKeyValue)) {
-                            actionIsRestricted = true;
-                            break;
-                        }
-                    }
-                }
-                if (actionIsRestricted) {
-                    final PropertyExpression responsePropertyExpression = new PropertyExpression(new VariableExpression("this"), "response");
+            final ArgumentListExpression isAllowedArgumentList = new ArgumentListExpression();
+            isAllowedArgumentList.addExpression(new ConstantExpression(methodName));
+            isAllowedArgumentList.addExpression(new PropertyExpression(new VariableExpression("this"), "request"));
+            isAllowedArgumentList.addExpression(new PropertyExpression(new VariableExpression("this"), DefaultGrailsControllerClass.ALLOWED_HTTP_METHODS_PROPERTY));
+            final Expression isAllowedMethodCall = new StaticMethodCallExpression(ClassHelper.make(AllowedMethodsHelper.class), "isAllowed", isAllowedArgumentList);
+            final BooleanExpression isValidRequestMethod = new BooleanExpression(isAllowedMethodCall);
+            final MethodCallExpression sendErrorMethodCall = new MethodCallExpression(responsePropertyExpression, "sendError", new ConstantExpression(WebUtils.SC_METHOD_NOT_ALLOWED));
+            final ReturnStatement returnStatement = new ReturnStatement(new ConstantExpression(null));
+            final BlockStatement blockToSendError = new BlockStatement();
+            blockToSendError.addStatement(new ExpressionStatement(sendErrorMethodCall));
+            blockToSendError.addStatement(returnStatement);
+            final IfStatement ifIsValidRequestMethodStatement = new IfStatement(isValidRequestMethod, new ExpressionStatement(new EmptyExpression()), blockToSendError);
 
-                    final ArgumentListExpression isAllowedArgumentList = new ArgumentListExpression();
-                    isAllowedArgumentList.addExpression(new ConstantExpression(methodName));
-                    isAllowedArgumentList.addExpression(new PropertyExpression(new VariableExpression("this"), "request"));
-                    isAllowedArgumentList.addExpression(new PropertyExpression(new VariableExpression("this"), DefaultGrailsControllerClass.ALLOWED_HTTP_METHODS_PROPERTY));
-                    final Expression isAllowedMethodCall = new StaticMethodCallExpression(ClassHelper.make(AllowedMethodsHelper.class), "isAllowed", isAllowedArgumentList);
-                    final BooleanExpression isValidRequestMethod = new BooleanExpression(isAllowedMethodCall);
-                    final MethodCallExpression sendErrorMethodCall = new MethodCallExpression(responsePropertyExpression, "sendError", new ConstantExpression(WebUtils.SC_METHOD_NOT_ALLOWED));
-                    final ReturnStatement returnStatement = new ReturnStatement(new ConstantExpression(null));
-                    final BlockStatement blockToSendError = new BlockStatement();
-                    blockToSendError.addStatement(new ExpressionStatement(sendErrorMethodCall));
-                    blockToSendError.addStatement(returnStatement);
-                    final IfStatement ifIsValidRequestMethodStatement = new IfStatement(isValidRequestMethod, new ExpressionStatement(new EmptyExpression()), blockToSendError);
-
-                    checkAllowedMethodsBlock.addStatement(ifIsValidRequestMethodStatement);
-                }
-            }
+            checkAllowedMethodsBlock.addStatement(ifIsValidRequestMethodStatement);
         }
 
         final ArgumentListExpression argumentListExpression = new ArgumentListExpression();
@@ -582,10 +574,46 @@ public class ControllerActionTransformer implements GrailsArtefactClassInjector,
         final BooleanExpression attributeIsSetBooleanExpression = new BooleanExpression(new MethodCallExpression(requestPropertyExpression, "getAttribute", new ArgumentListExpression(new ConstantExpression(ALLOWED_METHODS_HANDLED_ATTRIBUTE_NAME))));
         final Statement ifAttributeIsAlreadySetStatement = new IfStatement(attributeIsSetBooleanExpression, new EmptyStatement(), codeToExecuteIfAttributeIsNotSet);
 
-        final BlockStatement code = new BlockStatement();
         code.addStatement(ifAttributeIsAlreadySetStatement);
 
         return code;
+    }
+
+    /**
+     * Retrieves the map literal assigned to the controller's <code>allowedMethods</code> property.
+     *
+     * @param controllerClass the controller class
+     * @return the map literal, or null if the controller does not declare a non empty map literal
+     */
+    private MapExpression getAllowedMethodsMapExpression(final ClassNode controllerClass) {
+        final FieldNode allowedMethodsField = controllerClass.getField(DefaultGrailsControllerClass.ALLOWED_HTTP_METHODS_PROPERTY);
+        if (allowedMethodsField == null) {
+            return null;
+        }
+        final Expression initialAllowedMethodsExpression = allowedMethodsField.getInitialExpression();
+        if (!(initialAllowedMethodsExpression instanceof MapExpression)) {
+            return null;
+        }
+        final MapExpression allowedMethodsMapExpression = (MapExpression) initialAllowedMethodsExpression;
+        return allowedMethodsMapExpression.getMapEntryExpressions().isEmpty() ? null : allowedMethodsMapExpression;
+    }
+
+    /**
+     * @param allowedMethodsMapExpression the map literal assigned to the controller's <code>allowedMethods</code> property
+     * @param methodName the name of an action
+     * @return true if the action is a key in the allowedMethods map and is therefore restricted to specific request methods
+     */
+    private boolean isActionRestricted(final MapExpression allowedMethodsMapExpression, final String methodName) {
+        for (MapEntryExpression allowedMethodsMapEntryExpression : allowedMethodsMapExpression.getMapEntryExpressions()) {
+            final Expression allowedMethodsMapEntryKeyExpression = allowedMethodsMapEntryExpression.getKeyExpression();
+            if (allowedMethodsMapEntryKeyExpression instanceof ConstantExpression) {
+                final ConstantExpression allowedMethodsMapKeyConstantExpression = (ConstantExpression) allowedMethodsMapEntryKeyExpression;
+                if (methodName.equals(allowedMethodsMapKeyConstantExpression.getValue())) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     /**
@@ -634,8 +662,9 @@ public class ControllerActionTransformer implements GrailsArtefactClassInjector,
         final CatchStatement catchStatement = new CatchStatement(new Parameter(new ClassNode(Exception.class), caughtExceptionArgumentName), catchBlockCode);
         final Statement methodBody = methodNode.getCode();
 
+        final BlockStatement codeToHandleAllowedMethods = getCodeToHandleAllowedMethods(controllerClassNode, methodNode.getName());
+
         BlockStatement tryBlock = new BlockStatement();
-        BlockStatement codeToHandleAllowedMethods = getCodeToHandleAllowedMethods(controllerClassNode, methodNode.getName());
         tryBlock.addStatement(codeToHandleAllowedMethods);
         tryBlock.addStatement(methodBody);
 
@@ -722,6 +751,7 @@ public class ControllerActionTransformer implements GrailsArtefactClassInjector,
         String requestParameterName = paramName;
         List<AnnotationNode> requestParameters = param.getAnnotations(
                 new ClassNode(RequestParameter.class));
+        List<AnnotationNode> bindAllowedAnnotations = param.getAnnotations(BIND_ALLOWED_CLASS_NODE);
 
         //Check to see if the method was inherited from a trait
         if (actionNode instanceof MethodNode && paramName.startsWith("arg")) {
@@ -743,6 +773,7 @@ public class ControllerActionTransformer implements GrailsArtefactClassInjector,
                             //Set the request parameter name based off of the parameter in the trait helper method
                             requestParameterName = helperParam.getName();
                             requestParameters = helperParam.getAnnotations(new ClassNode(RequestParameter.class));
+                            bindAllowedAnnotations = helperParam.getAnnotations(BIND_ALLOWED_CLASS_NODE);
                         }
                     }
                 }
@@ -756,17 +787,23 @@ public class ControllerActionTransformer implements GrailsArtefactClassInjector,
         if ((PRIMITIVE_CLASS_NODES.contains(paramTypeClassNode) ||
                 TYPE_WRAPPER_CLASS_TO_CONVERSION_METHOD_NAME.containsKey(paramTypeClassNode))) {
             initializePrimitiveOrTypeWrapperParameter(classNode, wrapper, param, requestParameterName);
-        } else if (paramTypeClassNode.equals(new ClassNode(String.class))) {
+        } else if (paramTypeClassNode.equals(STRING_CLASS) || paramTypeClassNode.equals(SERIALIZABLE_CLASS)) {
+            // Serializable is bound like String - it is the type a domain class identifier is declared
+            // as when the type itself is not known to the action (Long under Hibernate, String under
+            // MongoDB), and it is what GormEntity.get(Serializable) accepts. The comparison is on the
+            // declared type exactly, never assignability, so a command object that happens to
+            // implement Serializable - as many do - is still data bound as a command object.
             initializeStringParameter(classNode, wrapper, param, requestParameterName);
         } else if (!paramTypeClassNode.equals(OBJECT_CLASS)) {
+            final Expression bindAllowedExpression = getBindAllowedExpression(source, param, bindAllowedAnnotations);
             initializeAndValidateCommandObjectParameter(wrapper, classNode, paramTypeClassNode,
-                    actionNode, actionName, paramName, source, context);
+                    actionNode, actionName, paramName, bindAllowedExpression, source, context);
         }
     }
 
     protected void initializeAndValidateCommandObjectParameter(final BlockStatement wrapper,
             final ClassNode controllerNode, final ClassNode commandObjectNode,
-            final ASTNode actionNode, final String actionName, final String paramName,
+            final ASTNode actionNode, final String actionName, final String paramName, final Expression bindAllowedExpression,
             final SourceUnit source, final GeneratorContext context) {
         final DeclarationExpression declareCoExpression = declX(localVarX(paramName, commandObjectNode), new EmptyExpression());
         wrapper.addStatement(stmt(declareCoExpression));
@@ -778,7 +815,7 @@ public class ControllerActionTransformer implements GrailsArtefactClassInjector,
                     "].  Interface types and abstract class types are not supported as command objects.  This parameter will be ignored.";
             GrailsASTUtils.warning(source, actionNode, warningMessage);
         } else {
-            initializeCommandObjectParameter(wrapper, commandObjectNode, paramName, source);
+            initializeCommandObjectParameter(wrapper, commandObjectNode, paramName, bindAllowedExpression, source);
 
             @SuppressWarnings("unchecked")
             boolean argumentIsValidateable = GrailsASTUtils.hasAnyAnnotations(
@@ -854,12 +891,100 @@ public class ControllerActionTransformer implements GrailsArtefactClassInjector,
     }
 
     protected void initializeCommandObjectParameter(final BlockStatement wrapper,
-            final ClassNode commandObjectNode, final String paramName, SourceUnit source) {
+            final ClassNode commandObjectNode, final String paramName, final Expression bindAllowedExpression, SourceUnit source) {
         final ArgumentListExpression initializeCommandObjectArguments = args(classX(commandObjectNode), constX(paramName));
+        if (bindAllowedExpression != null) {
+            initializeCommandObjectArguments.addExpression(bindAllowedExpression);
+        }
         final MethodCallExpression initializeCommandObjectMethodCall = callThisX("initializeCommandObject", initializeCommandObjectArguments);
         applyDefaultMethodTarget(initializeCommandObjectMethodCall, commandObjectNode);
         final Expression assignCommandObjectToParameter = assignX(varX(paramName), initializeCommandObjectMethodCall);
         wrapper.addStatement(stmt(assignCommandObjectToParameter));
+    }
+
+    private Expression getBindAllowedExpression(final SourceUnit source, final Parameter param, final List<AnnotationNode> bindAllowedAnnotations) {
+        if (bindAllowedAnnotations == null || bindAllowedAnnotations.isEmpty()) {
+            return null;
+        }
+        final AnnotationNode bindAllowedAnnotation = bindAllowedAnnotations.get(0);
+        final Expression valueExpression = bindAllowedAnnotation.getMember("value");
+        final ListExpression allowedProperties = resolveBindAllowedProperties(valueExpression);
+        if (allowedProperties == null) {
+            GrailsASTUtils.error(source, param, "@BindAllowed requires a literal list of property names or a static final constant list.");
+            return new ListExpression();
+        }
+        return allowedProperties;
+    }
+
+    private ListExpression resolveBindAllowedProperties(final Expression expression) {
+        if (expression instanceof ConstantExpression) {
+            final Object value = ((ConstantExpression) expression).getValue();
+            if (value instanceof String) {
+                final ListExpression listExpression = new ListExpression();
+                listExpression.addExpression(new ConstantExpression(value));
+                return listExpression;
+            }
+        }
+        if (expression instanceof ListExpression) {
+            return copyStringLiteralList((ListExpression) expression);
+        }
+        final FieldNode constantField = resolveStaticFinalField(expression);
+        if (constantField != null) {
+            return resolveBindAllowedProperties(constantField.getInitialExpression());
+        }
+        return null;
+    }
+
+    private ListExpression copyStringLiteralList(final ListExpression sourceList) {
+        final ListExpression listExpression = new ListExpression();
+        for (Expression element : sourceList.getExpressions()) {
+            final Object value = resolveBindAllowedStringValue(element);
+            if (!(value instanceof String)) {
+                return null;
+            }
+            listExpression.addExpression(new ConstantExpression(value));
+        }
+        return listExpression;
+    }
+
+    private Object resolveBindAllowedStringValue(final Expression expression) {
+        if (expression instanceof ConstantExpression) {
+            return ((ConstantExpression) expression).getValue();
+        }
+        final FieldNode constantField = resolveStaticFinalField(expression);
+        if (constantField != null && constantField.getInitialExpression() instanceof ConstantExpression) {
+            return ((ConstantExpression) constantField.getInitialExpression()).getValue();
+        }
+        return null;
+    }
+
+    private FieldNode resolveStaticFinalField(final Expression expression) {
+        if (expression instanceof VariableExpression) {
+            final Variable accessedVariable = ((VariableExpression) expression).getAccessedVariable();
+            if (accessedVariable instanceof FieldNode) {
+                return staticFinalFieldOrNull((FieldNode) accessedVariable);
+            }
+        }
+        if (expression instanceof PropertyExpression) {
+            final PropertyExpression propertyExpression = (PropertyExpression) expression;
+            final Expression objectExpression = propertyExpression.getObjectExpression();
+            if (objectExpression instanceof ClassExpression) {
+                final FieldNode fieldNode = ((ClassExpression) objectExpression).getType().getField(propertyExpression.getPropertyAsString());
+                return staticFinalFieldOrNull(fieldNode);
+            }
+        }
+        return null;
+    }
+
+    private FieldNode staticFinalFieldOrNull(final FieldNode fieldNode) {
+        if (fieldNode == null) {
+            return null;
+        }
+        final int modifiers = fieldNode.getModifiers();
+        if (Modifier.isStatic(modifiers) && Modifier.isFinal(modifiers)) {
+            return fieldNode;
+        }
+        return null;
     }
 
     /**

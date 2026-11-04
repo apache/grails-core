@@ -76,6 +76,7 @@ import org.grails.datastore.gorm.GormEntity;
 import org.grails.datastore.gorm.jdbc.connections.DataSourceSettings;
 import org.grails.datastore.mapping.core.connections.ConnectionSource;
 import org.grails.datastore.mapping.model.PersistentEntity;
+import org.grails.datastore.mapping.reflect.DevToolsClassLoaders;
 import org.grails.orm.hibernate.EventListenerIntegrator;
 import org.grails.orm.hibernate.GrailsSessionContext;
 import org.grails.orm.hibernate.HibernateEventListeners;
@@ -117,14 +118,25 @@ public class HibernateMappingContextConfiguration extends Configuration implemen
     @Override
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
         resourcePatternResolver = ResourcePatternUtils.getResourcePatternResolver(applicationContext);
-        String dsName = ConnectionSource.DEFAULT.equals(dataSourceName) ? "dataSource" : "dataSource_" + dataSourceName;
+        String dsName = ConnectionSource.DEFAULT.equals(dataSourceName) ?
+                Settings.SETTING_DATASOURCE :
+                Settings.SETTING_DATASOURCE + "_" + dataSourceName;
         Properties properties = getProperties();
 
-        if (applicationContext.containsBean(dsName)) {
+        // A DataSource already configured (by setDataSourceConnectionSource) is the one the
+        // datastore's connection source and transaction manager use, so it stays authoritative.
+        if (!properties.containsKey(Environment.DATASOURCE) && applicationContext.containsBean(dsName)) {
             properties.put(Environment.DATASOURCE, applicationContext.getBean(dsName));
         }
         properties.put(Environment.CURRENT_SESSION_CONTEXT_CLASS, currentSessionContext.getName());
-        properties.put(AvailableSettings.CLASSLOADERS, applicationContext.getClassLoader());
+        ClassLoader applicationClassLoader = applicationContext.getClassLoader();
+        // Keep CLASSLOADERS absent when the context loader is null and DevTools restart is not
+        // active so buildSessionFactory can fall back to this class's loader.
+        if (applicationClassLoader != null ||
+                DevToolsClassLoaders.isRestartClassLoaderOrDescendant(Thread.currentThread().getContextClassLoader())) {
+            properties.put(AvailableSettings.CLASSLOADERS,
+                    DevToolsClassLoaders.preferRestartClassLoader(applicationClassLoader));
+        }
     }
 
     /**
@@ -137,12 +149,8 @@ public class HibernateMappingContextConfiguration extends Configuration implemen
         DataSource source = connectionSource.getSource();
         getProperties().put(Environment.DATASOURCE, source);
         getProperties().put(Environment.CURRENT_SESSION_CONTEXT_CLASS, GrailsSessionContext.class.getName());
-        final ClassLoader contextClassLoader = Thread.currentThread().getContextClassLoader();
-        if (contextClassLoader != null && contextClassLoader.getClass().getSimpleName().equalsIgnoreCase("RestartClassLoader")) {
-            getProperties().put(AvailableSettings.CLASSLOADERS, contextClassLoader);
-        } else {
-            getProperties().put(AvailableSettings.CLASSLOADERS, connectionSource.getClass().getClassLoader());
-        }
+        getProperties().put(AvailableSettings.CLASSLOADERS,
+                DevToolsClassLoaders.preferRestartClassLoader(connectionSource.getClass().getClassLoader()));
     }
 
     /**
@@ -238,15 +246,7 @@ public class HibernateMappingContextConfiguration extends Configuration implemen
         // work around for HHH-2624
         SessionFactory sessionFactory;
 
-        Object classLoaderObject = getProperties().get(AvailableSettings.CLASSLOADERS);
-        ClassLoader appClassLoader;
-
-        if (classLoaderObject instanceof ClassLoader) {
-            appClassLoader = (ClassLoader) classLoaderObject;
-        }
-        else {
-            appClassLoader = getClass().getClassLoader();
-        }
+        ClassLoader appClassLoader = resolveSessionFactoryClassLoader();
 
         ConfigurationHelper.resolvePlaceHolders(getProperties());
 
@@ -325,10 +325,27 @@ public class HibernateMappingContextConfiguration extends Configuration implemen
                 new GrailsBytecodeProvider().getProxyFactoryFactory());
 
         StandardServiceRegistry serviceRegistry = standardServiceRegistryBuilder.build();
-        sessionFactory = super.buildSessionFactory(serviceRegistry);
+        ClassLoader previous = Thread.currentThread().getContextClassLoader();
+        try {
+            Thread.currentThread().setContextClassLoader(appClassLoader);
+            sessionFactory = super.buildSessionFactory(serviceRegistry);
+        }
+        finally {
+            Thread.currentThread().setContextClassLoader(previous);
+        }
         this.serviceRegistry = serviceRegistry;
 
         return sessionFactory;
+    }
+
+    ClassLoader resolveSessionFactoryClassLoader() {
+        Object classLoaderObject = getProperties().get(AvailableSettings.CLASSLOADERS);
+        ClassLoader storedClassLoader = classLoaderObject instanceof ClassLoader ?
+                (ClassLoader) classLoaderObject : getClass().getClassLoader();
+        // addProperties() or a custom configClass may have replaced CLASSLOADERS after the
+        // setters ran. GrailsDomainBinder binds entities by class name and Hibernate resolves
+        // them through this loader, so it has to see the restarted application classes.
+        return DevToolsClassLoaders.preferRestartClassLoader(storedClassLoader);
     }
 
     /**

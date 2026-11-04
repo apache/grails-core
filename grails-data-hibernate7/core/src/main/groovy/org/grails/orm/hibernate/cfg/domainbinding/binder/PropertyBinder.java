@@ -31,7 +31,6 @@ import org.grails.datastore.mapping.reflect.EntityReflector;
 import org.grails.orm.hibernate.access.TraitPropertyAccessStrategy;
 import org.grails.orm.hibernate.cfg.PropertyConfig;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateAssociation;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEnumProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.util.CascadeBehaviorFetcher;
 
@@ -65,13 +64,14 @@ public class PropertyBinder {
             config = new PropertyConfig();
         }
 
-        if (persistentProperty instanceof HibernateAssociation assoc &&
-                assoc.isBidirectionalManyToOneWithListMapping(prop)) {
-            prop.setInsertable(false);
-            prop.setUpdatable(false);
-        } else {
-            prop.setInsertable(config.getInsertable());
-            prop.setUpdatable(config.getUpdatable());
+        // The mapping's insertable/updatable flags; the value's columns can only narrow them further, below. The
+        // many-to-one side of a bidirectional list mapping is left to its columns, as it always was.
+        boolean insertable = true;
+        boolean updatable = true;
+        if (!(persistentProperty instanceof HibernateAssociation assoc &&
+                assoc.isBidirectionalManyToOneWithListMapping(prop))) {
+            insertable = config.getInsertable();
+            updatable = config.getUpdatable();
         }
 
         var accessType = AccessType.getAccessStrategy(config.getAccessType());
@@ -86,16 +86,21 @@ public class PropertyBinder {
         prop.setPropertyAccessorName(accessorName);
 
         prop.setOptional(persistentProperty.isNullable());
-        if (persistentProperty instanceof Association<?> association &&
-                !(persistentProperty instanceof HibernateEnumProperty)) {
+        // No enum type is excluded here on its own account: a plain scalar enum property is never an
+        // Association, so instanceof Association<?> already excludes it. A hasMany-of-enum collection IS
+        // an Association (Basic), and CascadeBehaviorFetcher already dispatches Basic -> ALL correctly,
+        // so it must go through the same path as every other collection type.
+        if (persistentProperty instanceof Association<?> association) {
             prop.setCascade(cascadeBehaviorFetcher.getCascadeBehaviour(association));
         }
 
         // Use centralized laziness determination
         prop.setLazy(persistentProperty.isLazy());
 
-        prop.setInsertable(value.hasAnyInsertableColumns());
-        prop.setUpdatable(value.hasAnyUpdatableColumns());
+        // An explicit false in the mapping is honoured, and a value without insertable/updatable columns
+        // (a formula, a collection, an inverse side) is never written.
+        prop.setInsertable(insertable && value.hasAnyInsertableColumns());
+        prop.setUpdatable(updatable && value.hasAnyUpdatableColumns());
 
         return prop;
     }

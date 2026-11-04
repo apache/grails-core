@@ -77,26 +77,6 @@ preflight() {
     missing=1
   fi
 
-  # verify-reproducible.sh recompiles the Grails-Micronaut island under JDK 25,
-  # which must be provided out-of-band via JDK_25_HOME (see release.yml
-  # JAVA_VERSION_MICRONAUT). Validate it here so the run fails before downloading.
-  if [ -z "${JDK_25_HOME:-}" ]; then
-    echo "❌ JDK_25_HOME is not set; the reproducible-build check needs a separate Liberica JDK 25 install."
-    echo "   Install the JDK matching JAVA_VERSION_MICRONAUT in .github/workflows/release.yml"
-    echo "   and export JDK_25_HOME=/path/to/jdk before running this script."
-    missing=1
-  elif [ ! -x "${JDK_25_HOME}/bin/java" ]; then
-    echo "❌ JDK_25_HOME=${JDK_25_HOME} does not contain an executable bin/java."
-    missing=1
-  else
-    local jdk25_version
-    jdk25_version=$("${JDK_25_HOME}/bin/java" -version 2>&1 | head -n1)
-    if ! printf '%s' "${jdk25_version}" | grep -q 'version "25'; then
-      echo "❌ JDK_25_HOME=${JDK_25_HOME} is not a JDK 25 (reports: ${jdk25_version})."
-      missing=1
-    fi
-  fi
-
   if [ "${missing}" -ne 0 ]; then
     echo "❌ Preflight checks failed. Resolve the issues above before running verification."
     exit 1
@@ -132,6 +112,11 @@ group_start "Verifying CLI Distribution ..."
 "${SCRIPT_DIR}/verify-cli-distribution.sh" "${RELEASE_TAG}" "${DOWNLOAD_LOCATION}"
 group_end
 echo "✅ CLI Distribution Verified"
+
+group_start "Verifying Documentation Distribution ..."
+"${SCRIPT_DIR}/verify-docs-distribution.sh" "${RELEASE_TAG}" "${DOWNLOAD_LOCATION}"
+group_end
+echo "✅ Documentation Distribution Verified"
 
 group_start "Verifying JAR Artifacts ..."
 "${SCRIPT_DIR}/verify-jar-artifacts.sh" "${RELEASE_TAG}" "${DOWNLOAD_LOCATION}"
@@ -188,6 +173,19 @@ else
   VERIFY_FAILED=1
 fi
 
+group_start "Verifying Reproducible Documentation ..."
+set +e
+"${SCRIPT_DIR}/verify-docs-reproducible.sh" "${RELEASE_TAG}" "${DOWNLOAD_LOCATION}"
+DOCS_REPRODUCIBLE_STATUS=$?
+set -e
+group_end
+if [ "${DOCS_REPRODUCIBLE_STATUS}" -eq 0 ]; then
+  echo "✅ Reproducible Documentation Verified"
+else
+  echo "❌ Reproducible Documentation verification failed (exit ${DOCS_REPRODUCIBLE_STATUS})"
+  VERIFY_FAILED=1
+fi
+
 echo "Manual verification steps:"
 echo
 echo "☑️ 1 | Verify that the generated applications start correctly"
@@ -204,6 +202,9 @@ echo "☑️ 2 | Verify Grails command resolution"
 echo "     2.1 | Run './grailsw help' inside any of the app directories above."
 echo "     2.2 | Confirm that scaffolding commands (e.g. 'generate-*') are listed."
 echo "           This verifies that dynamic command resolution is working correctly."
+echo
+echo "☑️ 3 | Review the documentation"
+echo "     3.1 | Open ${DOWNLOAD_LOCATION}/apache-grails-${VERSION}-docs/html/index.html and browse the guide, reference and API pages."
 echo
 
 if [ "${VERIFY_FAILED}" -ne 0 ]; then

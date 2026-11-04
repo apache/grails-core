@@ -28,8 +28,9 @@ class GrailsDependencyValidatorPluginSpec extends Specification {
     private static Project rootWithBoms() {
         Project root = ProjectBuilder.builder().withName('root').build()
         ProjectBuilder.builder().withName('grails-bom').withParent(root).build()
-        ProjectBuilder.builder().withName('grails-micronaut-bom').withParent(root).build()
+        ProjectBuilder.builder().withName('grails-hibernate5-bom').withParent(root).build()
         ProjectBuilder.builder().withName('grails-hibernate7-bom').withParent(root).build()
+        ProjectBuilder.builder().withName('grails-neo4j-bom').withParent(root).build()
         root
     }
 
@@ -40,14 +41,14 @@ class GrailsDependencyValidatorPluginSpec extends Specification {
     }
 
     void "detectBomPath ignores the documentation configuration when a variant BOM is used elsewhere"() {
-        given: "a project that selects grails-micronaut-bom but inherits grails-bom on the shared documentation config"
+        given: "a project that selects grails-hibernate7-bom but inherits grails-bom on the shared documentation config"
         Project root = rootWithBoms()
-        Project project = ProjectBuilder.builder().withName('grails-micronaut').withParent(root).build()
-        addBomPlatform(project, 'api', ':grails-micronaut-bom')
+        Project project = ProjectBuilder.builder().withName('grails-data-hibernate7').withParent(root).build()
+        addBomPlatform(project, 'api', ':grails-hibernate7-bom')
         addBomPlatform(project, 'documentation', ':grails-bom')
 
         expect: "the variant BOM wins and no conflict is reported"
-        GrailsDependencyValidatorPlugin.detectBomPath(project) == ':grails-micronaut-bom'
+        GrailsDependencyValidatorPlugin.detectBomPath(project) == ':grails-hibernate7-bom'
     }
 
     void "detectBomPath returns the single declared BOM"() {
@@ -85,8 +86,33 @@ class GrailsDependencyValidatorPluginSpec extends Specification {
         given: "a genuine misconfiguration layering two variant BOMs on real dependency configurations"
         Project root = rootWithBoms()
         Project project = ProjectBuilder.builder().withName('misconfigured').withParent(root).build()
-        addBomPlatform(project, 'api', ':grails-micronaut-bom')
+        addBomPlatform(project, 'api', ':grails-hibernate5-bom')
         addBomPlatform(project, 'implementation', ':grails-hibernate7-bom')
+
+        when:
+        GrailsDependencyValidatorPlugin.detectBomPath(project)
+
+        then:
+        GradleException e = thrown(GradleException)
+        e.message.contains('declares more than one Grails BOM')
+    }
+
+    void "detectBomPath recognizes grails-neo4j-bom as the project's single declared BOM"() {
+        given: "a grails-data-neo4j consumer that selects grails-neo4j-bom instead of the default grails-bom"
+        Project root = rootWithBoms()
+        Project project = ProjectBuilder.builder().withName('grails-data-neo4j-core').withParent(root).build()
+        addBomPlatform(project, 'implementation', ':grails-neo4j-bom')
+
+        expect:
+        GrailsDependencyValidatorPlugin.detectBomPath(project) == ':grails-neo4j-bom'
+    }
+
+    void "detectBomPath fails when grails-neo4j-bom is layered alongside the default grails-bom"() {
+        given: "a misconfiguration declaring both grails-bom and grails-neo4j-bom on real configurations"
+        Project root = rootWithBoms()
+        Project project = ProjectBuilder.builder().withName('misconfigured-neo4j').withParent(root).build()
+        addBomPlatform(project, 'api', ':grails-bom')
+        addBomPlatform(project, 'implementation', ':grails-neo4j-bom')
 
         when:
         GrailsDependencyValidatorPlugin.detectBomPath(project)

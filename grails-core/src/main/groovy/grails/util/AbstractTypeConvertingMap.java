@@ -38,6 +38,27 @@ import org.apache.grails.core.internal.util.TypeConverters;
  * Type converting maps have no inherent ordering. Two maps with identical entries
  * but arranged in a different order internally are considered equal.
  *
+ * <h2>Subclasses must not declare JavaBean accessors</h2>
+ *
+ * A subclass must not declare a no-argument {@code getX()} or {@code isX()} method, because this
+ * class implements {@link Map} and Groovy resolves a JavaBean accessor ahead of the map entry of
+ * the same name. Such an accessor makes the entry {@code x} unreadable through
+ * {@code map.x} and {@code map['x']}, and makes assignment to it fail with
+ * {@code ReadOnlyPropertyException}. It applies to statically compiled callers too: the static
+ * compiler binds to the declared accessor and never reaches {@code getProperty}/{@code setProperty},
+ * so the collision cannot be worked around at runtime.
+ *
+ * Expose such a value under a name that is not a JavaBean accessor - for example
+ * {@code GrailsParameterMap.request()} - or under a method that takes an argument.
+ *
+ * A setter is a weaker case and is allowed: it leaves reads addressing the map, but dotted
+ * assignment to that one name invokes the setter instead of storing an entry, so such an entry
+ * must be written with {@link Map#put} or by subscript. Subscript assignment stores an entry only
+ * where the class declares a {@code putAt(String, Object)} that calls {@link Map#put}: Groovy 6
+ * routes it through {@link Map#put} on its own, but Groovy 5 invokes the setter.
+ * {@code GroovyPageAttributes.setGspTagSyntaxCall(boolean)} is the only one, and that class
+ * declares {@code putAt}.
+ *
  * @author Graeme Rocher
  * @author Lari Hotari
  * @since 1.2

@@ -34,7 +34,7 @@ import org.bson.types.ObjectId
 class TextIndexViaAttributesSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
 
     void setupSpec() {
-        manager.registerDomainClasses(TextThing)
+        manager.registerDomainClasses(TextThing, RepeatedTextThing)
     }
 
     private void initIndexes() {
@@ -67,6 +67,22 @@ class TextIndexViaAttributesSpec extends GrailsDataTckSpec<GrailsDataMongoTckMan
         texts.size() == 1
         texts[0].name == 'body_text'
     }
+
+    void "Test repeated text declarations reconcile against the latest index name"() {
+        given:
+        def collection = RepeatedTextThing.collection
+        collection.dropIndexes()
+        collection.createIndex(new Document('body', 'text'), new IndexOptions().name('legacy_text_idx'))
+
+        when:
+        manager.mongoDatastore.buildIndex()
+
+        then:
+        def textIndexes = collection.listIndexes().findAll { it.key._fts == 'text' }
+        textIndexes.size() == 1
+        textIndexes.first().name == 'final_text_idx'
+    }
+
 }
 
 
@@ -80,5 +96,18 @@ class TextThing {
         version false
         collection 'textthing'
         body index: true, indexAttributes: [type: 'text', recreateOnConflict: true]
+    }
+}
+
+@Entity
+class RepeatedTextThing {
+    ObjectId id
+    Long version
+    String body
+
+    static mapping = {
+        version false
+        index([body: 'text'], [name: 'intermediate_text_idx', recreateOnConflict: true])
+        body index: true, indexAttributes: [type: 'text', name: 'final_text_idx', recreateOnConflict: true]
     }
 }

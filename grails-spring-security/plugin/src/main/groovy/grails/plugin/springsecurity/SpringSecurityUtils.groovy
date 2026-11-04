@@ -51,6 +51,7 @@ import grails.core.GrailsApplication
 import grails.plugin.springsecurity.web.GrailsSecurityFilterChain
 import grails.plugin.springsecurity.web.SecurityRequestHolder
 import grails.util.Environment
+import org.grails.web.util.WebUtils
 
 import static org.springframework.security.web.context.HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY
 
@@ -63,6 +64,8 @@ import static org.springframework.security.web.context.HttpSessionSecurityContex
 @Slf4j
 final class SpringSecurityUtils {
 
+    // TODO gh-16145 follow-up: the SavedRequest branch of isAjax() compares Ajax header values against
+    // this class name, which looks unintended - it is most likely meant to be XML_HTTP_REQUEST.
     private static final String MULTIPART_HTTP_SERVLET_REQUEST_KEY = MultipartHttpServletRequest.name
 
     private static ConfigObject _securityConfig
@@ -298,13 +301,16 @@ final class SpringSecurityUtils {
         }
 
         // look for an ajax=true parameter
-        if ('true' == request.getParameter('ajax')) {
+        // Read tolerantly: this runs inside the security filter chain, ahead of the dispatcher, so a
+        // multipart body the container refuses to parse would otherwise fail here rather than reaching
+        // the application's error handling.
+        if ('true' == WebUtils.readParameter(request, 'ajax')) {
             return true
         }
 
         // process multipart requests
-        MultipartHttpServletRequest multipart = (MultipartHttpServletRequest) request.getAttribute(MULTIPART_HTTP_SERVLET_REQUEST_KEY)
-        if ('true' == multipart?.getParameter('ajax')) {
+        MultipartHttpServletRequest multipart = WebUtils.resolveMultipartRequest(request)
+        if (multipart != null && 'true' == WebUtils.readParameter(multipart, 'ajax')) {
             return true
         }
 

@@ -99,6 +99,35 @@ switch (testconfig) {
 		grails.web.url.converter = 'hyphenated'
 		break
 
+	case 'noAnonymous':
+		// chains without anonymousAuthenticationFilter: a request without credentials carries no
+		// Authentication, and the chain's exception translation filter must still answer it (#16632)
+		grails.plugin.springsecurity.securityConfigType = 'Annotation'
+		grails.plugin.springsecurity.useBasicAuth = true
+		grails.plugin.springsecurity.basic.realmName = 'Grails Spring Security Basic Test Realm'
+		grails.plugin.springsecurity.filterChain.chainMap = [
+			[pattern: '/secureclassannotated/**', filters: 'JOINED_FILTERS,-exceptionTranslationFilter,-anonymousAuthenticationFilter'],
+			[pattern: '/secureannotated/**',      filters: 'JOINED_FILTERS,-basicAuthenticationFilter,-basicExceptionTranslationFilter,-anonymousAuthenticationFilter'],
+			[pattern: '/**',                      filters: 'JOINED_FILTERS,-basicAuthenticationFilter,-basicExceptionTranslationFilter']
+		]
+		break
+
+	case 'oncePerRequest':
+		// no rule permits /error: the ERROR dispatch that renders an error page must pass through the filter
+		// security interceptor without being authorized again (#16739); Basic Auth lets a request carry credentials.
+		// Without an access-denied error page, an ERROR dispatch that is denied again answers an empty 403
+		// through sendError instead of the 403 error view, so the specs can tell the two apart.
+		grails.plugin.springsecurity.securityConfigType = 'Annotation'
+		grails.plugin.springsecurity.controllerAnnotations.staticRules = grails.plugin.springsecurity.controllerAnnotations.staticRules.findAll { it.pattern != '/error' }
+		grails.plugin.springsecurity.adh.errorPage = null
+		grails.plugin.springsecurity.useBasicAuth = true
+		grails.plugin.springsecurity.basic.realmName = 'Grails Spring Security Basic Test Realm'
+		grails.plugin.springsecurity.filterChain.chainMap = [
+			[pattern: '/secureclassannotated/**', filters: 'JOINED_FILTERS,-exceptionTranslationFilter'],
+			[pattern: '/**',                      filters: 'JOINED_FILTERS,-basicAuthenticationFilter,-basicExceptionTranslationFilter']
+		]
+		break
+
 	case 'requestmap':
 		grails.plugin.springsecurity.securityConfigType = 'Requestmap'
 		break

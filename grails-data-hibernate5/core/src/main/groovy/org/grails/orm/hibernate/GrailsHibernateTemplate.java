@@ -116,7 +116,22 @@ public class GrailsHibernateTemplate implements IHibernateTemplate {
     }
 
     public GrailsHibernateTemplate(SessionFactory sessionFactory, HibernateDatastore datastore) {
-        this(sessionFactory, datastore, datastore.getDefaultFlushMode());
+        this(sessionFactory, datastore, flushModeNameToConstant(datastore.getDefaultFlushModeName()));
+    }
+
+    /**
+     * Maps the name of a Hibernate {@link FlushMode} to one of the {@code FLUSH_*} constants of this class.
+     *
+     * @param flushModeName the name of the flush mode, such as {@link AbstractHibernateDatastore#getDefaultFlushModeName()}
+     * @return the {@code FLUSH_*} constant
+     */
+    static int flushModeNameToConstant(String flushModeName) {
+        return switch (FlushMode.valueOf(flushModeName)) {
+            case MANUAL -> FLUSH_NEVER;
+            case COMMIT -> FLUSH_COMMIT;
+            case ALWAYS -> FLUSH_ALWAYS;
+            default -> FLUSH_AUTO;
+        };
     }
 
     public GrailsHibernateTemplate(SessionFactory sessionFactory, HibernateDatastore datastore, int defaultFlushMode) {

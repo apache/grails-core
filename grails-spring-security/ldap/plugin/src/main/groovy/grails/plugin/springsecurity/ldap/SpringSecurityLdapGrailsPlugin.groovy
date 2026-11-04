@@ -49,11 +49,11 @@ class SpringSecurityLdapGrailsPlugin extends Plugin {
     String authorEmail = ''
     String title = 'LDAP authentication support for the Spring Security plugin.'
     String description = 'LDAP authentication support for the Spring Security plugin.'
-    String documentation = 'https://apache.github.io/grails-spring-security'
+    String documentation = 'https://grails.apache.org/documentation.html'
     String license = 'APACHE'
-    def organization = [name: 'Grails', url: 'https://www.grails.org']
-    def issueManagement = [url: 'https://github.com/apache/grails-spring-security/issues']
-    def scm = [url: 'https://github.com/apache/grails-spring-security']
+    def organization = [name: 'Apache Grails', url: 'https://grails.apache.org']
+    def issueManagement = [url: 'https://github.com/apache/grails-core/issues']
+    def scm = [url: 'https://github.com/apache/grails-core']
 
     Closure doWithSpring() {
         { ->

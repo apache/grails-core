@@ -32,6 +32,7 @@ apply plugin: 'org.apache.grails.gradle.grails-gsp'
 
 dependencies {
     implementation platform(project(':grails-bom'))
+    testImplementation platform(project(':grails-bom'))
 
     implementation 'org.apache.grails:grails-dependencies-starter-web'
     implementation 'com.h2database:h2'
@@ -58,9 +59,9 @@ dependencies {
     testImplementation 'org.apache.grails:grails-testing-support-web'
     testImplementation 'org.apache.grails:grails-testing-support-datamapping'
 
-
-    integrationTestImplementation testFixtures('org.apache.grails:grails-geb')
     integrationTestImplementation project(':grails-testing-support-http-client')
+    integrationTestImplementation testFixtures('org.apache.grails:grails-geb')
+    integrationTestImplementation testFixtures('org.apache.grails.web:grails-web-common')
 }
 
 apply {

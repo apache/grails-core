@@ -36,5 +36,11 @@ class LoginPage extends Page {
         usernameInputField << username
         passwordInputField << password
         loginButton.click()
+        // Submitting the form is a navigation, and the browser goes on showing this page until the
+        // response lands. Returning before that leaves whatever the specification asserts next
+        // reading the login form rather than the page it logged in to. The url says the browser has
+        // left, where the title would only say the page reads differently - and a page reads
+        // differently in another language.
+        waitFor { !browser.currentUrl.contains('/login/') }
     }
 }

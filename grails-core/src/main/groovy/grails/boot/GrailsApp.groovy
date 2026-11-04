@@ -22,6 +22,7 @@ package grails.boot
 import java.util.concurrent.ConcurrentLinkedQueue
 
 import groovy.transform.CompileStatic
+import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import org.codehaus.groovy.control.CompilationFailedException
 import org.codehaus.groovy.control.CompilationUnit
@@ -38,6 +39,7 @@ import grails.boot.config.GrailsEarlyPluginRegistrationPostProcessor
 import grails.compiler.ast.ClassInjector
 import grails.config.Settings
 import grails.core.GrailsApplication
+import grails.core.GrailsApplicationClass
 import grails.io.IOUtils
 import grails.plugins.GrailsPlugin
 import grails.plugins.GrailsPluginManager
@@ -80,6 +82,21 @@ class GrailsApp extends SpringApplication {
     ConfigurableEnvironment configuredEnvironment
 
     /**
+     * Whether this application is one context of a parent/child hierarchy, which {@link GrailsAppBuilder}
+     * records on every application it places in one with {@code child()}, {@code parent()} or
+     * {@code sibling()}.
+     *
+     * <p>A standalone {@code GrailsApp} runs the Grails plugin lifecycle whatever its sources are. A
+     * hierarchy member runs it only when one of its sources is a Grails application class, that is a
+     * {@link GrailsApplicationClass} such as a {@code GrailsAutoConfiguration} subclass, so the
+     * other contexts of the hierarchy stay plain Spring contexts and share the Grails beans through
+     * their parent rather than each starting a plugin manager of its own. A member that skips the
+     * lifecycle says so in its log.</p>
+     */
+    @PackageScope
+    boolean contextHierarchyMember = false
+
+    /**
      * Create a new {@link GrailsApp} instance. The application context will load
      * beans from the specified sources (see {@link SpringApplication class-level}
      * documentation for details. The instance can be customized before calling
@@ -117,7 +134,9 @@ class GrailsApp extends SpringApplication {
         log.debug('Application directory discovered as: {}', IOUtils.findApplicationDirectory())
         log.debug('Current base directory is [{}]. Reloading base directory is [{}]', new File('.'), BuildSettings.BASE_DIR)
 
-        if (environment.isReloadEnabled()) {
+        // the watch recompiles into the context that owns the plugin manager; in a hierarchy that is
+        // the one Grails application, and the plain contexts around it have nothing to watch
+        if (environment.isReloadEnabled() && applicationContext.containsLocalBean(GrailsPluginManager.BEAN_NAME)) {
             log.debug('Reloading status: {}', environment.isReloadEnabled())
             enableDevelopmentModeWatch(environment, applicationContext)
             environment.isDevtoolsRestart()
@@ -148,6 +167,12 @@ class GrailsApp extends SpringApplication {
      * {@code GrailsEarlyPluginRegistrationPostProcessor} can perform artefact discovery before
      * Spring Boot auto-configuration is processed. Runs before the context initializers are
      * applied, so the singleton is available by the time the early registration phase executes.
+     *
+     * <p>The stash is also what marks the context as launched by Grails, which is what selects the
+     * plugin lifecycle for a context whose sources are plain configuration classes. A
+     * {@link #contextHierarchyMember hierarchy member} stashes its sources only when one of them
+     * is a Grails application class, leaving the plain contexts of the hierarchy without the
+     * lifecycle, and logs that it did so.</p>
      */
     @Override
     protected void postProcessApplicationContext(ConfigurableApplicationContext applicationContext) {
@@ -170,11 +195,23 @@ class GrailsApp extends SpringApplication {
                 }
             }
         }
+        if (contextHierarchyMember && !containsApplicationClass(sourceClasses)) {
+            // said out loud, because the same sources standing alone would run the lifecycle, and a
+            // context missing its plugin beans is otherwise hard to trace back to this decision
+            log.info('Context hierarchy member with sources {} has no Grails application class, so it starts as a plain ' +
+                    'Spring context and leaves the plugin lifecycle to the context of the hierarchy that has one',
+                    sourceClasses*.name)
+            return
+        }
         if (!sourceClasses.isEmpty()) {
             applicationContext.beanFactory.registerSingleton(
                     GrailsEarlyPluginRegistrationPostProcessor.APPLICATION_SOURCE_CLASSES_BEAN_NAME,
                     sourceClasses.toArray(new Class<?>[0]))
         }
+    }
+
+    private static boolean containsApplicationClass(Collection<Class<?>> sources) {
+        return sources.any { Class<?> source -> GrailsApplicationClass.isAssignableFrom(source) }
     }
 
     @Override

@@ -41,7 +41,6 @@ import org.springframework.web.multipart.MultipartHttpServletRequest;
 
 import grails.databinding.DataBinder;
 import grails.util.TypeConvertingMap;
-import org.grails.datastore.mapping.model.config.GormProperties;
 import org.grails.web.binding.StructuredDateEditor;
 import org.grails.web.servlet.mvc.GrailsWebRequest;
 import org.grails.web.servlet.mvc.exceptions.ControllerExecutionException;
@@ -92,10 +91,30 @@ public class GrailsParameterMap extends TypeConvertingMap implements Cloneable {
         this.request = request;
         // Request parameters (including form-encoded PUT/PATCH/DELETE bodies parsed at the servlet
         // layer by Spring's FormContentFilter) are read straight from the request parameter map.
-        final Map requestMap = new LinkedHashMap(request.getParameterMap());
+        // updateNestedKeys only reads this map, so the servlet's own is used directly and copied only when
+        // there is something to merge into it. Read tolerantly because a multipart body the container
+        // refuses to parse fails every parameter read - see WebUtils.readParameterMap.
+        Map requestMap = WebUtils.readParameterMap(request);
 
-        if (request instanceof MultipartHttpServletRequest) {
-            MultiValueMap<String, MultipartFile> fileMap = ((MultipartHttpServletRequest) request).getMultiFileMap();
+        // This is the outermost request, so the multipart request is found through its wrapper chain.
+        MultipartHttpServletRequest multipartRequest = WebUtils.resolveMultipartRequest(request);
+        if (multipartRequest != null) {
+            // A container need not publish a multipart body's text fields through the request's own
+            // parameter map, which is why Spring's wrapper merges them into its. This request need not be
+            // that wrapper, so the same merge happens here, without displacing the request's own values.
+            Map<String, String[]> multipartParameters = WebUtils.readParameterMap(multipartRequest);
+            boolean mergeParameters = !multipartParameters.isEmpty() &&
+                    !requestMap.keySet().containsAll(multipartParameters.keySet());
+
+            MultiValueMap<String, MultipartFile> fileMap = multipartRequest.getMultiFileMap();
+            if (mergeParameters || !fileMap.isEmpty()) {
+                requestMap = new LinkedHashMap(requestMap);
+            }
+            if (mergeParameters) {
+                for (Entry<String, String[]> entry : multipartParameters.entrySet()) {
+                    requestMap.putIfAbsent(entry.getKey(), entry.getValue());
+                }
+            }
             for (Entry<String, List<MultipartFile>> entry : fileMap.entrySet()) {
                 List<MultipartFile> value = entry.getValue();
                 if (value.size() == 1) {
@@ -132,9 +151,17 @@ public class GrailsParameterMap extends TypeConvertingMap implements Cloneable {
     }
 
     /**
-     * @return Returns the request.
+     * Returns the request this map was populated from.
+     *
+     * <p>Deliberately not named {@code getRequest()}. This class implements {@link Map}, and a
+     * JavaBean accessor on a map shadows the map entry of the same name, which made a request
+     * parameter named {@code request} unreadable and unwritable. See
+     * {@link grails.util.AbstractTypeConvertingMap} for the rule.
+     *
+     * @return the request, never {@code null} for a map created from a request
+     * @since 8.0
      */
-    public HttpServletRequest getRequest() {
+    public HttpServletRequest request() {
         return request;
     }
 
@@ -231,13 +258,6 @@ public class GrailsParameterMap extends TypeConvertingMap implements Cloneable {
             throw new ControllerExecutionException("Unable to convert parameter map [" + this +
                  "] to a query string: " + e.getMessage(), e);
         }
-    }
-
-    /**
-     * @return The identifier in the request
-     */
-    public Object getIdentifier() {
-        return get(GormProperties.IDENTITY);
     }
 
     private String lookupFormat(String name) {

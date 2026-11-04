@@ -30,6 +30,9 @@ security {
         filterProcessesUrl = '/login/cas'
         proxyCallbackUrl = null // should be set, e.g. 'http://localhost:8080/myapp/secure/receptor'
         proxyReceptorUrl = null // should be set, e.g. '/secure/receptor'
-        useSingleSignout = true
+        // Opt-in: enabling it disables session fixation prevention, because CAS maps the
+        // service ticket to the session id and single signout cannot work if the session
+        // is replaced when the user authenticates.
+        useSingleSignout = false
     }
 }

@@ -30,7 +30,8 @@ if (!rootProject.ext.has('substitutableFunctionalTestProjectsCache')) {
                         name: subproject.name,
                         group: subproject.group,
                         artifactId: subproject.findProperty('pomArtifactId') ?: subproject.name,
-                        cliArtifactId: subproject.findProperty('cliArtifactId')
+                        cliArtifactId: subproject.findProperty('cliArtifactId'),
+                        hasTestFixtures: subproject.plugins.hasPlugin('java-test-fixtures')
                 ]
             }
     )
@@ -42,12 +43,9 @@ configurations.configureEach {
         // included will be substituted with the local projects in this repository instead of pulling upstream.
         for (def substitutionInfo : substitutableProjects) {
             def substitutedArtifact = "${substitutionInfo.group}:${substitutionInfo.artifactId}" as String
-            //TODO: This does not handle libraries that are both test fixtures & a libraries like grails-data-mongodb,
-            // see grails-test-examples-mongodb-base, & grails-test-examples-mongodb-hibernate5 for project() workaround
             if (substitutionInfo.name == 'grails-bom') {
                 substitute module(substitutedArtifact) using platform(project(':grails-bom'))
-            }
-            else if(substitutionInfo.name == 'grails-geb') {
+            } else if (substitutionInfo.hasTestFixtures) {
                 def selector = substitution.variant(module(substitutedArtifact)) { details ->
                     details.capabilities { handler ->
                         handler.requireCapability("${substitutedArtifact}-test-fixtures" as String)
@@ -59,8 +57,7 @@ configurations.configureEach {
                     }
                 }
                 substitute selector using replacement
-            }
-            else {
+            } else {
                 substitute module(substitutedArtifact) using project(":${substitutionInfo.name}")
             }
 
@@ -83,19 +80,21 @@ List<String> debugArguments = [
         '-Xmx2g', '-Xdebug', '-Xnoagent', '-Djava.compiler=NONE',
         '-Xrunjdwp:transport=dt_socket,server=y,suspend=y,address=5005'
 ]
+boolean cacheTests = !doNotCacheTests
 tasks.withType(Test).configureEach { Test task ->
     boolean isHibernate5 = project.name.startsWith('grails-test-examples-hibernate5')
     boolean isHibernate7 = project.name.startsWith('grails-test-examples-hibernate7')
     boolean isMongo = project.name.startsWith('grails-test-examples-mongodb')
     boolean isSpringSecurity = project.name.startsWith('grails-test-examples-spring-security')
     boolean isRedis = project.name.startsWith('grails-test-examples-redis')
+    boolean isNeo4j = project.name.startsWith('grails-test-examples-neo4j')
 
     // Honor DO_NOT_CACHE_TESTS=1 so developers can repeatedly invoke the same test command
     // without --rerun-tasks (and without recompiling everything else).
-    task.outputs.cacheIf { !doNotCacheTests }
-    task.outputs.upToDateWhen { !doNotCacheTests }
+    task.outputs.cacheIf { cacheTests }
+    task.outputs.upToDateWhen { cacheTests }
 
-    onlyIf {
+    boolean enabled = {
         if (['skipFunctionalTests', 'onlyCoreTests', 'skipTests'].any { project.hasProperty(it) }) {
             return false
         }
@@ -105,6 +104,10 @@ tasks.withType(Test).configureEach { Test task ->
         }
 
         if (!isHibernate7 && project.hasProperty('onlyHibernate7Tests')) {
+            return false
+        }
+
+        if (!isNeo4j && project.hasProperty('onlyNeo4jTests')) {
             return false
         }
 
@@ -140,8 +143,13 @@ tasks.withType(Test).configureEach { Test task ->
             return false
         }
 
+        if (isNeo4j && project.hasProperty('skipNeo4jTests')) {
+            return false
+        }
+
         return true
-    }
+    }()
+    onlyIf { enabled }
 
     if (isMongo && project.hasProperty('serializeMongoTests')) {
         // if the developer decides to run a local mongo instance, the tests must be serialized instead of launching containers as needed
@@ -170,7 +178,7 @@ tasks.withType(Test).configureEach { Test task ->
         showStackTraces = true
     }
     if (findProperty('testForked')) {
-        task.maxParallelForks = configuredTestParallel
+        task.maxParallelForks = rootProject.ext.configuredTestParallel
         task.forkEvery = (findProperty('testForkEvery') ?: 0)
     }
     if (findProperty('testJvmArgs')) {
@@ -190,6 +198,13 @@ tasks.withType(Test).configureEach { Test task ->
     systemProperty('geb.build.reportsDir', reporting.file("$projectDir/build/geb-reports"))
     systemProperty('grails.geb.reporting.directory', reporting.file("$projectDir/build/geb-reports").canonicalFile.absolutePath)
     systemProperty('TESTCONFIG', System.getProperty('TESTCONFIG'))
+
+    if (isMongo && rootProject.hasProperty('mongodbContainerVersion')) {
+        // The version the build asks for reaches the Gradle JVM as a project property and stops
+        // there, while the application under test reads a system property: without this a matrix
+        // asking for one version and an application defaulting to another agree only by accident.
+        systemProperty('mongodbContainerVersion', rootProject.property('mongodbContainerVersion'))
+    }
 }
 
 tasks.named('groovydoc').configure {

@@ -42,7 +42,7 @@ class TestInterceptorSpec extends Specification implements InterceptorUnitTest<T
     // tag::with_interceptors[]
     void "Test controller execution with interceptors"() {
         given:
-        def controller = (TestController)mockController(TestController)
+        def controller = mockController(TestController)
 
         when:
         withInterceptors([controller: "test"]) {

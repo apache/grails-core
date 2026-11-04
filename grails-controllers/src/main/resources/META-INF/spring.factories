@@ -16,4 +16,6 @@
 #  specific language governing permissions and limitations
 #  under the License.
 #
-org.springframework.boot.EnvironmentPostProcessor=org.grails.plugins.web.controllers.GrailsWebResourcesEnvironmentPostProcessor
+org.springframework.boot.EnvironmentPostProcessor=\
+  org.grails.plugins.web.controllers.GrailsWebResourcesEnvironmentPostProcessor,\
+  org.grails.plugins.web.controllers.GrailsControllersEnvironmentPostProcessor

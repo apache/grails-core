@@ -193,6 +193,23 @@ class MyUrlMappingsSpec extends Specification implements UrlMappingsUnitTest<MyU
         then:
         controller == null
     }
+
+    void 'verifyUrlMapping with a controller checks the forward and the reverse mapping'() {
+        expect: 'both directions match'
+        verifyUrlMapping('/action1', controller: 'grailsUrlMappingsTestCaseFake', action: 'action1')
+
+        and: 'the forward mapping matches but the reverse mapping creates another URL'
+        verifyForwardUrlMapping('/default', controller: 'grailsUrlMappingsTestCaseFake', action: 'action1')
+        !verifyUrlMapping('/default', controller: 'grailsUrlMappingsTestCaseFake', action: 'action1')
+    }
+
+    void 'assertUrlMapping with a controller fails when the reverse mapping creates another URL'() {
+        when:
+        assertUrlMapping('/default', controller: 'grailsUrlMappingsTestCaseFake', action: 'action1')
+
+        then:
+        thrown(ComparisonFailure)
+    }
 }
 
 class GRAILS5222UrlMappings {

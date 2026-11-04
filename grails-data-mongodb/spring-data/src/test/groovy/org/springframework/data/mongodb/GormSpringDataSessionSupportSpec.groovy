@@ -22,7 +22,7 @@ import com.mongodb.client.ClientSession
 import com.mongodb.client.MongoClient
 import com.mongodb.client.MongoClients
 
-import org.apache.grails.testing.mongo.AutoStartedMongoSpec
+import org.apache.grails.testing.mongo.EmbeddedReplicaSetSpec
 import org.springframework.data.mongodb.core.SimpleMongoClientDatabaseFactory
 import org.springframework.transaction.support.TransactionSynchronizationManager
 import spock.lang.AutoCleanup
@@ -34,7 +34,7 @@ import spock.lang.Shared
  * future Spring Data version changes the holder's construction or shape, this test (and the module
  * compilation) fails loudly rather than silently disabling the shared transaction.
  */
-class GormSpringDataSessionSupportSpec extends AutoStartedMongoSpec {
+class GormSpringDataSessionSupportSpec extends EmbeddedReplicaSetSpec {
 
     @Shared
     @AutoCleanup
@@ -43,13 +43,8 @@ class GormSpringDataSessionSupportSpec extends AutoStartedMongoSpec {
     @Shared
     MongoDatabaseFactory factory
 
-    @Override
-    boolean shouldInitializeDatastore() {
-        false
-    }
-
     void setupSpec() {
-        mongoClient = MongoClients.create(dbContainer.getReplicaSetUrl('myDb'))
+        mongoClient = MongoClients.create(mongoUrl)
         factory = new SimpleMongoClientDatabaseFactory(mongoClient, 'myDb')
     }
 

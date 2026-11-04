@@ -144,10 +144,6 @@ class NavigableMap implements Map<String, Object>, Cloneable {
                            Map sourceMap,
                            boolean parseFlatKeys) {
 
-        if (isSourceMapExcludedBySpringProfile(sourceMap, path)) {
-            return
-        }
-
         for (Entry entry in sourceMap) {
             Object sourceKeyObject = entry.key
             Object sourceValue = entry.value
@@ -159,7 +155,9 @@ class NavigableMap implements Map<String, Object>, Cloneable {
                     def pathParts = keyParts[0..-2]
                     Map actualTarget = targetMap.navigateSubMap(pathParts as List, true)
                     sourceKey = keyParts[-1]
-                    mergeMapEntry(rootMap, pathParts.join('.'), actualTarget, sourceKey, sourceValue, parseFlatKeys)
+                    // the flat key of the entry is its full path: that of the map holding the dotted key, then the key
+                    String nestedPath = path ? "${path}.${pathParts.join('.')}" : pathParts.join('.')
+                    mergeMapEntry(rootMap, nestedPath, actualTarget, sourceKey, sourceValue, parseFlatKeys)
                 } else {
                     mergeMapEntry(rootMap, path, targetMap, sourceKey, sourceValue, parseFlatKeys)
                 }
@@ -169,51 +167,6 @@ class NavigableMap implements Map<String, Object>, Cloneable {
         }
     }
 
-    private static Object resolveConfigMapValue(Map map, Object... keys) {
-        // Groovy 5: indexing a ConfigObject with a missing key inserts an empty ConfigObject,
-        // which then recurses infinitely via isSourceMapExcludedBySpringProfile. Use containsKey/get.
-        keys.inject(map) { acc, key -> acc instanceof Map && acc.containsKey(key) ? acc.get(key) : null }
-    }
-
-    private static Object readWithoutCreating(Map map, Object key) {
-        // As in resolveConfigMapValue, avoid `[]` on a ConfigObject (it creates entries for missing keys).
-        map.containsKey(key) ? map.get(key) : null
-    }
-
-    private static boolean isSourceMapExcludedBySpringProfile(Map configSource, String path) {
-
-        // get the active spring profile: treat empty string as null
-        def active = System.getProperty('spring.profiles.active')?.trim() ?: null
-
-        // lookup 'spring.config.activate.on-profile' in this config source
-        def onProfile =
-                resolveConfigMapValue(configSource, 'spring', 'config', 'activate', 'on-profile') ?:
-                        (path == 'spring.config.activate' ? readWithoutCreating(configSource, 'on-profile') : null) ?:
-                                readWithoutCreating(configSource, 'spring.config.activate.on-profile')
-
-        // no active profile is set but 'spring.config.activate.on-profile' is set in this config source -> exclude it
-        if (!active && onProfile) return true
-        // active profile is set and matches 'spring.config.activate.on-profile' in this config source -> include it
-        if (active && onProfile == active) return false
-
-        // lookup (legacy) 'spring.profiles' in this config source
-        def profiles =
-                resolveConfigMapValue(configSource, 'spring', 'profiles') ?:
-                        (path == 'spring' ? readWithoutCreating(configSource, 'profiles') : null) ?:
-                                readWithoutCreating(configSource, 'spring.profiles')
-
-        // no active profile is set but 'spring.profiles' is set in this config source -> exclude it
-        if (!active && profiles) return true
-        // active profile is set and matches 'spring.profiles' in this config source -> include it
-        if (active && profiles == active) return false
-
-        // active profile is not required for this this source map -> include it
-        if (!onProfile && !profiles) return false
-
-        // a profile constraint exists but doesn't match the active profile -> exclude
-        return true
-    }
-
     protected void mergeMapEntry(NavigableMap rootMap, String path, NavigableMap targetMap, String sourceKey, Object sourceValue, boolean parseFlatKeys, boolean isNestedSet = false) {
         int subscriptStart = sourceKey.indexOf('[')
         int subscriptEnd = sourceKey.indexOf(']')
@@ -221,61 +174,11 @@ class NavigableMap implements Map<String, Object>, Cloneable {
             if (subscriptStart > -1) {
                 String k = sourceKey[0..<subscriptStart]
                 String index = sourceKey[subscriptStart + 1..<subscriptEnd]
-                String remainder = subscriptEnd != sourceKey.length() - 1 ? sourceKey[subscriptEnd + 2..-1] : null
-                if (remainder) {
-
-                    boolean isNumber = index.isNumber()
-                    if (isNumber) {
-                        int i = index.toInteger()
-                        def currentValue = targetMap.get(k)
-                        List list = currentValue instanceof List ? currentValue : []
-                        if (list.size() > i) {
-                            def v = list.get(i)
-                            if (v instanceof Map) {
-                                ((Map) v).put(remainder, sourceValue)
-                            } else {
-                                Map newMap = [:]
-                                newMap.put(remainder, sourceValue)
-                                fill(list, i, null)
-                                list.set(i, newMap)
-                            }
-                        } else {
-                            Map newMap = [:]
-                            newMap.put(remainder, sourceValue)
-                            fill(list, i, null)
-                            list.set(i, newMap)
-                        }
-                        targetMap.put(k, list)
-                    } else {
-                        def currentValue = targetMap.get(k)
-                        Map nestedMap = currentValue instanceof Map ? currentValue : [:]
-                        targetMap.put(k, nestedMap)
-
-                        def v = nestedMap.get(index)
-                        if (v instanceof Map) {
-                            ((Map) v).put(remainder, sourceValue)
-                        } else {
-                            Map newMap = [:]
-                            newMap.put(remainder, sourceValue)
-                            nestedMap.put(index, newMap)
-                        }
-                    }
-                } else {
-                    def currentValue = targetMap.get(k)
-                    if (index.isNumber()) {
-                        List list = currentValue instanceof List ? currentValue : []
-                        int i = index.toInteger()
-                        fill(list, i, null)
-                        list.set(i, sourceValue)
-                        targetMap.put(k, list)
-                    } else {
-                        Map nestedMap = currentValue instanceof Map ? currentValue : [:]
-                        targetMap.put(k, nestedMap)
-                        nestedMap.put(index, sourceValue)
-                    }
+                String rest = sourceKey.substring(subscriptEnd + 1)
+                targetMap.put(k, setSubscriptValue(targetMap.get(k), index, rest, sourceValue))
+                if (isSubscriptChain(rest)) {
                     targetMap.put(sourceKey, sourceValue)
                 }
-
             }
         } else {
             Object currentValue = targetMap.containsKey(sourceKey) ? targetMap.get(sourceKey) : null
@@ -316,10 +219,12 @@ class NavigableMap implements Map<String, Object>, Cloneable {
                 }
                 targetMap.remove(sourceKey)
             } else {
-                if (path) {
-                    rootMap.put("${path}.${sourceKey}".toString(), newValue)
-                }
                 mergeMapEntry(targetMap, sourceKey, newValue)
+                if (path) {
+                    // the flat key holds the value the nested entry holds, as the hook stored it, so a placeholder in it
+                    // is resolved once, for both
+                    rootMap.put("${path}.${sourceKey}".toString(), targetMap.get(sourceKey))
+                }
             }
         }
     }
@@ -365,6 +270,44 @@ class NavigableMap implements Map<String, Object>, Cloneable {
             }
             return submap
         }
+    }
+
+    /**
+     * Sets a value in a list (numeric index) or map (other index) at the given subscript, creating
+     * the container when the current value is not one. The text following the subscript is either
+     * empty, further subscripts such as {@code [1]} for a list nested in a list, or a {@code .name}
+     * remainder stored as a key of a map element.
+     */
+    private Object setSubscriptValue(Object currentValue, String index, String rest, Object sourceValue) {
+        if (index.isNumber()) {
+            List list = currentValue instanceof List ? (List) currentValue : []
+            int i = index.toInteger()
+            fill(list, i, null)
+            list.set(i, subscriptElementValue(list.get(i), rest, sourceValue))
+            return list
+        }
+        Map nestedMap = currentValue instanceof Map ? (Map) currentValue : [:]
+        nestedMap.put(index, subscriptElementValue(nestedMap.get(index), rest, sourceValue))
+        return nestedMap
+    }
+
+    private Object subscriptElementValue(Object currentValue, String rest, Object sourceValue) {
+        if (!rest) {
+            return sourceValue
+        }
+        if (rest.startsWith('[')) {
+            int end = rest.indexOf(']')
+            if (end > 0) {
+                return setSubscriptValue(currentValue, rest[1..<end], rest.substring(end + 1), sourceValue)
+            }
+        }
+        Map element = currentValue instanceof Map ? (Map) currentValue : [:]
+        element.put(rest.substring(1), sourceValue)
+        return element
+    }
+
+    private static boolean isSubscriptChain(String rest) {
+        rest ==~ /(\[[^\]]*\])*/
     }
 
     private void fill(List list, Integer toIndex, Object value) {

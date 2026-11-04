@@ -17,8 +17,14 @@
  *  under the License.
  */
 
+import functionaltests.interceptors.StaticInitFailureFilter
 import org.example.MyBean
+import org.springframework.boot.web.servlet.FilterRegistrationBean
 // Place your Spring DSL code here
 beans = {
 	myBean(MyBean)
+	staticInitFailureFilter(FilterRegistrationBean) {
+		filter = new StaticInitFailureFilter()
+		urlPatterns = ['/staticInitFailure/*']
+	}
 }

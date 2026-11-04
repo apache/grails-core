@@ -28,6 +28,7 @@ import spock.util.environment.RestoreSystemProperties
 import grails.gorm.MultiTenant
 import grails.gorm.annotation.Entity
 import org.grails.datastore.gorm.GormEnhancer
+import org.grails.datastore.gorm.GormRegistry
 import org.grails.datastore.gorm.GormEntity
 import org.grails.datastore.mapping.core.DatastoreUtils
 import org.grails.datastore.mapping.core.connections.ConnectionSource
@@ -59,6 +60,15 @@ class GormApiAllocationSpec extends Specification {
         then:
         result
         !hasAnyApis(H5AllocationDefaultTenant, 'tenantA')
+    }
+
+    void "instance API mirrors the datastore markDirty and defaults to false, not the enhancer default of true"() {
+        when: "a datastore is created without explicit grails.gorm.markDirty configuration"
+        datastore = newDatastore(MultiTenancySettings.MultiTenancyMode.DISCRIMINATOR, [], H5AllocationDefaultTenant)
+
+        then: "Hibernate manages its own dirty checking, so the instance API must not force-mark entities dirty"
+        !datastore.markDirty
+        !GormEnhancer.findInstanceApi(H5AllocationDefaultTenant, ConnectionSource.DEFAULT).markDirty
     }
 
     void "DISCRIMINATOR multi tenant default datasource with multiple configured datasources creates non-default APIs lazily"() {
@@ -100,7 +110,10 @@ class GormApiAllocationSpec extends Specification {
         then:
         hasAllApis(H5AllocationSchemaTenant, 'tenantA')
         !hasAnyApis(H5AllocationSchemaTenant, 'tenantB')
-        !staticApi.is(GormEnhancer.findStaticApi(H5AllocationSchemaTenant, ConnectionSource.DEFAULT))
+        // Strict-mode (SCHEMA) entities have no tenant-less DEFAULT API to resolve (that requires a
+        // bound tenant); verify the tenant API is a stable, distinct per-tenant allocation via its
+        // cached identity instead.
+        staticApi.is(GormEnhancer.findStaticApi(H5AllocationSchemaTenant, 'tenantA'))
         instanceApi.is(GormEnhancer.findInstanceApi(H5AllocationSchemaTenant, 'tenantA'))
         validationApi.is(GormEnhancer.findValidationApi(H5AllocationSchemaTenant, 'tenantA'))
     }
@@ -122,7 +135,10 @@ class GormApiAllocationSpec extends Specification {
         then:
         hasAllApis(H5AllocationDatabaseTenant, 'tenantA')
         !hasAnyApis(H5AllocationDatabaseTenant, 'tenantB')
-        !staticApi.is(GormEnhancer.findStaticApi(H5AllocationDatabaseTenant, ConnectionSource.DEFAULT))
+        // Strict-mode (DATABASE) entities have no tenant-less DEFAULT API to resolve (that requires a
+        // bound tenant); verify the tenant API is a stable, distinct per-tenant allocation via its
+        // cached identity instead.
+        staticApi.is(GormEnhancer.findStaticApi(H5AllocationDatabaseTenant, 'tenantA'))
         instanceApi.is(GormEnhancer.findInstanceApi(H5AllocationDatabaseTenant, 'tenantA'))
         validationApi.is(GormEnhancer.findValidationApi(H5AllocationDatabaseTenant, 'tenantA'))
     }
@@ -224,15 +240,15 @@ class GormApiAllocationSpec extends Specification {
     }
 
     private static boolean hasStaticApi(Class<?> type, String qualifier) {
-        GormEnhancer.@STATIC_APIS.get(qualifier).containsKey(type.name)
+        GormRegistry.instance.staticApiRegistry.isAllocated(type.name, qualifier)
     }
 
     private static boolean hasInstanceApi(Class<?> type, String qualifier) {
-        GormEnhancer.@INSTANCE_APIS.get(qualifier).containsKey(type.name)
+        GormRegistry.instance.instanceApiRegistry.isAllocated(type.name, qualifier)
     }
 
     private static boolean hasValidationApi(Class<?> type, String qualifier) {
-        GormEnhancer.@VALIDATION_APIS.get(qualifier).containsKey(type.name)
+        GormRegistry.instance.validationApiRegistry.isAllocated(type.name, qualifier)
     }
 }
 

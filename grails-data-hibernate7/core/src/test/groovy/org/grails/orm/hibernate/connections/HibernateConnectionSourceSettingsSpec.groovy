@@ -91,10 +91,31 @@ class HibernateConnectionSourceSettingsSpec extends Specification {
     void "test toHibernateEventListeners"() {
         given:
         def interceptor = Mock(org.grails.orm.hibernate.support.ClosureEventTriggeringInterceptor)
+        def onFlushListener = Mock(org.hibernate.event.spi.PersistEventListener)
+        interceptor.persistOnFlushEventListener >> onFlushListener
 
         expect:
         HibernateConnectionSourceSettings.HibernateSettings.toHibernateEventListeners(null).isEmpty()
-        HibernateConnectionSourceSettings.HibernateSettings.toHibernateEventListeners(interceptor).size() == 8
+
+        when:
+        def listeners = HibernateConnectionSourceSettings.HibernateSettings.toHibernateEventListeners(interceptor)
+
+        then:
+        // merge, create (Hibernate's internal event name for PERSIST), create-onflush, pre/post-load,
+        // pre/post-insert, pre/post-update, pre/post-delete: 11 entries. See issue #16349 - merge/persist
+        // were previously left unregistered here, so GORM dirty-check tracking was never activated before
+        // Hibernate's flush-time dirty check for entities using a pre-insert id generator.
+        listeners.size() == 11
+        listeners.keySet() == [
+                'merge', 'create', 'create-onflush',
+                'pre-load', 'post-load',
+                'pre-insert', 'post-insert',
+                'pre-update', 'post-update',
+                'pre-delete', 'post-delete',
+        ] as Set
+        listeners['merge'].is(interceptor)
+        listeners['create'].is(interceptor)
+        listeners['create-onflush'].is(onFlushListener)
     }
 
     void "test toProperties with dirty checking and custom config"() {

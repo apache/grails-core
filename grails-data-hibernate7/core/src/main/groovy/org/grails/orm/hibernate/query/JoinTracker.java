@@ -23,8 +23,7 @@ import jakarta.persistence.criteria.From;
 /**
  * Tracks physical JPA Joins and Roots to ensure consistency and avoid duplicate joins.
  *
- * @author walterduquedeestrada
- * @since 7.0.0
+ * @since 8.0
  */
 public class JoinTracker {
     private final Map<String, From<?, ?>> joinsByPath = new HashMap<>();

@@ -23,7 +23,7 @@ NOTE: Although GORM executes persistence operations asynchronously, these operat
 
 === The AsyncEntity Trait
 
-Since Grails 3.3, the asynchronous part of GORM is optional. To enable it you first need to add the `grails-datastore-gorm-async` dependency to `build.gradle`:
+Since Grails 3.3, the asynchronous part of GORM is optional. To enable it you first need to add the `grails-datamapping-async` dependency to `build.gradle`:
 
 [source,groovy]
 .build.gradle

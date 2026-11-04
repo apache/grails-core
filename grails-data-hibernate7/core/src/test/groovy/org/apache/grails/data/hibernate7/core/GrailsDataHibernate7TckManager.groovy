@@ -95,32 +95,47 @@ class GrailsDataHibernate7TckManager extends GrailsDataTckManager {
     void destroy() {
         super.destroy()
 
-        if (transactionStatus != null) {
-            def tx = transactionStatus
-            transactionStatus = null
-            transactionManager.rollback(tx)
-        }
-        if (hibernateSession != null) {
-            TransactionSynchronizationManager.unbindResourceIfPossible(sessionFactory)
-            SessionFactoryUtils.closeSession((org.hibernate.Session) hibernateSession)
-        }
-
-        if (hibernateConfig != null) {
+        try {
+            if (transactionStatus != null) {
+                def tx = transactionStatus
+                transactionStatus = null
+                rebindTransactionSession()
+                transactionManager.rollback(tx)
+            }
+            if (hibernateSession != null) {
+                TransactionSynchronizationManager.unbindResourceIfPossible(sessionFactory)
+                SessionFactoryUtils.closeSession((org.hibernate.Session) hibernateSession)
+            }
+        } finally {
+            // GrailsDataTckManager.cleanup() swallows whatever destroy() throws, so a failed rollback
+            // must not skip this: the datastore's SessionFactory and its GORM registrations would
+            // otherwise stay reachable for the rest of the test JVM.
             hibernateConfig = null
+            if (hibernateDatastore != null) {
+                hibernateDatastore.destroy()
+            }
+            grailsApplication = null
+            hibernateDatastore = null
+            hibernateSession = null
+            transactionManager = null
+            sessionFactory = null
+            if (applicationContext instanceof DisposableBean) {
+                applicationContext.destroy()
+            }
+            applicationContext = null
+            shutdownInMemDb()
         }
-        if (hibernateDatastore != null) {
-            hibernateDatastore.destroy()
+    }
+
+    /**
+     * Specs that exercise code with no current session unbind the session this transaction bound.
+     * Bind it again so the rollback can unbind it: when that unbind fails, the transaction manager
+     * stops before unbinding its JDBC connection holder and leaves it on the thread.
+     */
+    private void rebindTransactionSession() {
+        if (hibernateSession != null && !TransactionSynchronizationManager.hasResource(sessionFactory)) {
+            TransactionSynchronizationManager.bindResource(sessionFactory, new SessionHolder(hibernateSession))
         }
-        grailsApplication = null
-        hibernateDatastore = null
-        hibernateSession = null
-        transactionManager = null
-        sessionFactory = null
-        if (applicationContext instanceof DisposableBean) {
-            applicationContext.destroy()
-        }
-        applicationContext = null
-        shutdownInMemDb()
     }
 
     @Override

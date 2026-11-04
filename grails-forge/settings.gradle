@@ -36,14 +36,19 @@ plugins {
     id 'com.gradle.develocity' version '4.5.0'
     id 'com.gradle.common-custom-user-data-gradle-plugin' version '2.4.0'
     id 'org.apache.grails.buildsrc.repo'
+    id 'com.autonomousapps.build-health' version '3.19.2' apply false
 }
+
+apply from: file('../gradle/dependency-analysis.settings.gradle')
 
 def isCI = System.getenv().containsKey('CI')
 def isLocal = !isCI
+def hasDevelocityAccessKey = System.getenv('DEVELOCITY_ACCESS_KEY') != null
 def isReproducibleBuild = System.getenv('SOURCE_DATE_EPOCH') != null
 
 develocity {
     server = 'https://develocity.apache.org'
+    projectId = 'grails'
     buildScan {
         tag('grails')
         tag('grails-forge')
@@ -55,7 +60,7 @@ develocity {
 buildCache {
     local { enabled = (isLocal && !isReproducibleBuild) || (isCI && isReproducibleBuild) }
     remote(develocity.buildCache) {
-        push = isCI
+        push = hasDevelocityAccessKey
         enabled = !isReproducibleBuild
     }
 }

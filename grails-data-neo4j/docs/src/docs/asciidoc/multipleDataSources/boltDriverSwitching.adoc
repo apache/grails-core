@@ -26,6 +26,6 @@ Book.withConnection("moreBooks") {
 }
 ----
 
-NOTE: The call to `list()` should not be prefixed with `Book.` as this will use the default connection
+Every operation on `Book` in the closure, on the thread that calls `withConnection`, uses the alternate connection: the methods the closure calls without naming the class, as above, static methods called on the class, such as `Book.list()` or a dynamic finder, and instance methods such as `book.save()`. An operation that names its own connection keeps it, so ``Book.'default'.list()`` inside the block still reads from the default connection. For a multi-tenant domain class the block's connection takes precedence over the current tenant, as a connection named explicitly does. Once the closure finishes, including by throwing an exception, GORM switches back to the default connection automatically.
 
-Any logic executed within the body of the closure will use the alternate connection. Once the close finishes execution GORM will switch back to the default connection automatically.
+A session or transaction opened through a connection covers its block in the same way. Inside `Book.moreBooks.withTransaction { }` or `Book.moreBooks.withNewSession { }`, `Book.list()` and `book.save()` use `moreBooks`, whose session and transaction are the ones open. Other domain classes are not affected. A method annotated `@Transactional(connection = 'moreBooks')` routes in the same way, for every domain class that declares `moreBooks` in its `connections` mapping, `ALL` included, and leaves a multi-tenant class to its tenant. A class that declares no connection is reachable through `Book.moreBooks` but is not routed by the annotation.

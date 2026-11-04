@@ -36,15 +36,17 @@ class GrailsCompileStaticOptionsSpec extends Specification {
         project.objects.newInstance(GrailsCompileStaticOptions)
     }
 
-    void 'all, controllers, services and tagLibs default to false'() {
+    void 'all defaults to false and the artefact types say nothing until they are set'() {
         when:
         GrailsCompileStaticOptions compileStatic = options()
 
         then:
         !compileStatic.all.get()
-        !compileStatic.controllers.get()
-        !compileStatic.services.get()
-        !compileStatic.tagLibs.get()
+
+        and: 'left unset, so that setting one to false can be told apart from never setting it'
+        !compileStatic.controllers.present
+        !compileStatic.services.present
+        !compileStatic.tagLibs.present
     }
 
     void 'each flag is an independent lazy property'() {
@@ -57,8 +59,8 @@ class GrailsCompileStaticOptionsSpec extends Specification {
         then:
         compileStatic.controllers.get()
         !compileStatic.all.get()
-        !compileStatic.services.get()
-        !compileStatic.tagLibs.get()
+        !compileStatic.services.present
+        !compileStatic.tagLibs.present
     }
 
     void 'the property = value DSL convenience assigns the lazy property'() {

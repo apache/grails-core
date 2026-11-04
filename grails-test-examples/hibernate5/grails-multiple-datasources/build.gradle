@@ -42,6 +42,8 @@ dependencies {
     implementation 'org.apache.grails:grails-core'
     implementation 'org.apache.grails:grails-domain-class'
 
+    compileOnly 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation
+
     runtimeOnly 'com.h2database:h2'
     runtimeOnly 'com.zaxxer:HikariCP'
     runtimeOnly 'org.apache.grails:grails-databinding'

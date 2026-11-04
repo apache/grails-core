@@ -157,6 +157,13 @@ class TestControllerSpec extends Specification implements ControllerUnitTest<Tes
 
         then:
         "Good" == response.text
+
+        when:
+        response.reset()
+        controller.renderWithForm()
+
+        then:
+        "Bad" == response.text
     }
 
     void 'test file upload'() {

@@ -19,7 +19,10 @@
 
 package gorm
 
+import org.hibernate.proxy.HibernateProxy
+
 import grails.testing.mixin.integration.Integration
+import grails.web.databinding.DataBindingUtils
 import spock.lang.Issue
 import spock.lang.Specification
 import spock.lang.Tag
@@ -29,7 +32,8 @@ import org.apache.grails.testing.http.client.HttpClientSupport
 /**
  * Functional test reproducing issue 15681 end-to-end: a real Grails application binds request parameters
  * (including {@code id} and {@code version}) to a domain class that extends an abstract {@code @DirtyCheck}
- * base. The framework must not bind {@code id} or {@code version} by default.
+ * base. The framework must not bind {@code id} or {@code version} by default, including to a proxy of a persisted
+ * record.
  */
 @Integration
 @Tag('http-client')
@@ -100,5 +104,66 @@ class DirtyCheckBindingSpec extends Specification implements HttpClientSupport {
 
         and: 'version remains unbound as no constraint opts it in'
         response.assertContains('version=null')
+    }
+
+    void 'bindData over HTTP does not bind id or version on a proxy of the domain class'() {
+        given: 'a persisted record, which a new request loads as a proxy'
+        Long recordId = persistRecord()
+
+        when: 'a form submission posts id, version and a regular property to bind to the proxy'
+        def response = httpPostForm(
+                '/dirtyCheckBinding/bindProxy',
+                [
+                        recordId: recordId,
+                        id: recordId + 100,
+                        version: 5,
+                        description: 'Rebound'
+                ]
+        )
+
+        then: 'the proxy is bound as the domain class it stands for'
+        with(response) {
+            assertStatus(200)
+            assertContains('proxy=true')
+            assertContains("id=${recordId}|")
+            assertContains('version=0|')
+            assertContains('description=Rebound')
+        }
+
+        cleanup:
+        deleteRecord(recordId)
+    }
+
+    void 'DataBindingUtils does not bind id or version on a proxy of the domain class'() {
+        given:
+        Long recordId = persistRecord()
+
+        when: 'a session that holds nothing yet loads the record as a proxy, which is then bound'
+        Map bound = DirtyCheckedRecord.withNewSession { session ->
+            def record = DirtyCheckedRecord.load(recordId)
+            boolean proxy = record instanceof HibernateProxy
+            DataBindingUtils.bindObjectToInstance(record, [id: recordId + 100, version: 5, description: 'Rebound'])
+            Map values = [proxy: proxy, id: record.id, version: record.version, description: record.description]
+            session.clear()
+            values
+        }
+
+        then:
+        bound == [proxy: true, id: recordId, version: 0L, description: 'Rebound']
+
+        cleanup:
+        deleteRecord(recordId)
+    }
+
+    private static Long persistRecord() {
+        DirtyCheckedRecord.withNewTransaction {
+            new DirtyCheckedRecord(description: 'Persisted').save(flush: true, failOnError: true).id
+        }
+    }
+
+    private static void deleteRecord(Long recordId) {
+        DirtyCheckedRecord.withNewTransaction {
+            DirtyCheckedRecord.get(recordId)?.delete(flush: true)
+        }
     }
 }

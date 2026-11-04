@@ -135,9 +135,11 @@ class GrailsExtensionSpec extends Specification {
 
         then:
         !extension.compileStatic.all.get()
-        !extension.compileStatic.controllers.get()
-        !extension.compileStatic.services.get()
-        !extension.compileStatic.tagLibs.get()
+
+        and: 'the artefact types say nothing of their own, so they follow all'
+        !extension.compileStatic.controllers.present
+        !extension.compileStatic.services.present
+        !extension.compileStatic.tagLibs.present
     }
 
     def "the compileStatic all flag can be enabled as a shortcut for all artefact types"() {
@@ -182,7 +184,38 @@ class GrailsExtensionSpec extends Specification {
 
         then:
         extension.compileStatic.controllers.get()
-        !extension.compileStatic.services.get()
-        !extension.compileStatic.tagLibs.get()
+        !extension.compileStatic.services.present
+        !extension.compileStatic.tagLibs.present
+    }
+
+    def "compileStatic gsp defaults to false and is not turned on by the all shortcut"() {
+        given:
+        Project project = ProjectBuilder.builder().build()
+        GrailsExtension extension = new GrailsExtension(project)
+
+        expect:
+        !extension.compileStatic.gsp.get()
+
+        when:
+        extension.compileStatic {
+            all = true
+        }
+
+        then: 'pages are a migration rather than a switch, so asking for everything leaves them alone'
+        !extension.compileStatic.gsp.get()
+    }
+
+    def "compileStatic gsp can be enabled on its own"() {
+        given:
+        Project project = ProjectBuilder.builder().build()
+        GrailsExtension extension = new GrailsExtension(project)
+
+        when:
+        extension.compileStatic {
+            gsp = true
+        }
+
+        then:
+        extension.compileStatic.gsp.get()
     }
 }

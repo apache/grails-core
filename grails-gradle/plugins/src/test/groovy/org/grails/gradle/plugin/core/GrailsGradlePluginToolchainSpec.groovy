@@ -184,6 +184,61 @@ class GrailsGradlePluginToolchainSpec extends GradleSpecification {
         !result.output.contains(cliPidFile.absolutePath)
     }
 
+    def "bootRun tells development reloading where the build compiles its classes and puts its resources"() {
+        given:
+        setupTestResourceProject('bootrun-classes-dir')
+
+        when:
+        def result = executeTask('inspectBootRunClassesDir')
+
+        then:
+        result.output.contains('CLASSES_DIR=build/classes/groovy/main')
+        result.output.contains('RESOURCES_DIR=build/resources/main')
+        result.output.readLines().contains('TARGET_DIR=build')
+    }
+
+    def "bootRun with a build directory of its own points reloading at that directory's classes and resources"() {
+        given: 'a second instance of one checkout, built where the first one does not run from'
+        setupTestResourceProject('bootrun-classes-dir')
+
+        when:
+        def result = executeTask('inspectBootRunClassesDir', ['-PownBuildDir=build-parent/build-8070'])
+
+        then: 'relative to the project, as GrailsApp.recompile joins it to the application directory, with / on every platform'
+        result.output.contains('CLASSES_DIR=build-parent/build-8070/classes/groovy/main')
+        result.output.contains('RESOURCES_DIR=build-parent/build-8070/resources/main')
+
+        and: 'the build directory itself, where development keeps its restart marker, as a path and not just its name'
+        result.output.readLines().contains('TARGET_DIR=build-parent/build-8070')
+    }
+
+    def "bootRun keeps a grails.project.class.dir that the build sets on the task itself"() {
+        given:
+        setupTestResourceProject('bootrun-classes-dir')
+
+        when:
+        def result = executeTask('inspectBootRunClassesDir', ['-PownClassDir=user/chosen/dir'])
+
+        then:
+        result.output.contains('CLASSES_DIR=user/chosen/dir')
+
+        and: 'the resources directory, which the build did not set, is still passed'
+        result.output.contains('RESOURCES_DIR=build/resources/main')
+    }
+
+    def "bootRun with a build directory outside the project passes a path that climbs out of it"() {
+        given:
+        setupTestResourceProject('bootrun-classes-dir')
+
+        when:
+        def result = executeTask('inspectBootRunClassesDir', ['-PownBuildDir=../outside-build'])
+
+        then:
+        result.output.contains('CLASSES_DIR=../outside-build/classes/groovy/main')
+        result.output.contains('RESOURCES_DIR=../outside-build/resources/main')
+        result.output.readLines().contains('TARGET_DIR=../outside-build')
+    }
+
     private static File pidFileFromOutput(String output) {
         String line = output.readLines().find { it.startsWith('PID_FILE=') }
         line ? new File(line.substring('PID_FILE='.length())) : null

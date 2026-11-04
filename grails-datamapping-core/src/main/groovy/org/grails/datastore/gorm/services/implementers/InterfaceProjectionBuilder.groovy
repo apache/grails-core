@@ -60,26 +60,39 @@ trait InterfaceProjectionBuilder {
     @Generated
     boolean isInterfaceProjection(ClassNode domainClass, MethodNode methodNode, ClassNode returnType) {
         if (returnType.isInterface() && !returnType.packageName?.startsWith('java.')) {
-            List<String> interfacePropertyNames = AstPropertyResolveUtils.getPropertyNames(returnType)
-
-            for (prop in interfacePropertyNames) {
-                ClassNode existingType = AstPropertyResolveUtils.getPropertyType(domainClass, prop)
-                ClassNode propertyType = AstPropertyResolveUtils.getPropertyType(returnType, prop)
-                if (existingType == null) {
-                    return false
-                }
-                else if (!AstUtils.isSubclassOfOrImplementsInterface(existingType, propertyType)) {
-                    return false
-                }
-            }
-            return true
+            return hasCompatibleProperties(domainClass, returnType)
         }
         return false
     }
 
+    /**
+     * Whether every property declared by the candidate interface has a compatible
+     * property of the same name on the domain class
+     *
+     * @param domainClass The domain class
+     * @param candidateType The interface being considered as a projection
+     * @return True if every property is compatible
+     */
+    @Generated
+    boolean hasCompatibleProperties(ClassNode domainClass, ClassNode candidateType) {
+        List<String> interfacePropertyNames = AstPropertyResolveUtils.getPropertyNames(candidateType)
+
+        for (prop in interfacePropertyNames) {
+            ClassNode existingType = AstPropertyResolveUtils.getPropertyType(domainClass, prop)
+            ClassNode propertyType = AstPropertyResolveUtils.getPropertyType(candidateType, prop)
+            if (existingType == null) {
+                return false
+            }
+            else if (!AstUtils.isSubclassOfOrImplementsInterface(existingType, propertyType)) {
+                return false
+            }
+        }
+        return true
+    }
+
     @Generated
     MethodNode buildInterfaceImpl(ClassNode interfaceNode, ClassNode declaringClass, ClassNode targetDomainClass, MethodNode abstractMethodNode) {
-        List<Expression> getterNames = (List<Expression>) AstPropertyResolveUtils.getPropertyNames(interfaceNode)
+        List<Expression> getterNames = (List<Expression>) (List) AstPropertyResolveUtils.getPropertyNames(interfaceNode)
                 .collect() {
                     new ConstantExpression(NameUtils.getGetterName(it))
                 }

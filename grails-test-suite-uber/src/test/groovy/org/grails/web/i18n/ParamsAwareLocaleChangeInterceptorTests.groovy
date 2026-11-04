@@ -22,6 +22,8 @@ import grails.util.GrailsWebMockUtil
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Test
 import org.springframework.mock.web.MockHttpServletRequest
+import org.springframework.mock.web.MockHttpServletResponse
+import org.springframework.mock.web.MockServletContext
 import org.springframework.web.context.request.RequestContextHolder
 import org.springframework.web.servlet.DispatcherServlet
 import org.springframework.web.servlet.i18n.AcceptHeaderLocaleResolver
@@ -29,6 +31,7 @@ import org.springframework.web.servlet.i18n.SessionLocaleResolver
 
 import static org.junit.jupiter.api.Assertions.assertEquals
 import static org.junit.jupiter.api.Assertions.assertNotEquals
+import static org.junit.jupiter.api.Assertions.assertThrows
 
 /**
  * @author Graeme Rocher
@@ -157,5 +160,53 @@ class ParamsAwareLocaleChangeInterceptorTests {
 
         assertEquals "de", locale.getLanguage()
         assertEquals "DE", locale.getCountry()
+    }
+
+    @Test
+    void testMultipartRequestWithUnreadableParametersIsNotIntercepted() {
+        // This interceptor runs on the error dispatch too, so it meets the oversized upload whose parts
+        // the container refused to parse. Throwing here would replace the error being rendered.
+        def request = unreadableParameterRequest('multipart/form-data; boundary=test')
+        def webRequest = GrailsWebMockUtil.bindMockWebRequest(new MockServletContext(), request,
+                new MockHttpServletResponse())
+
+        def localeChangeInterceptor = new ParamsAwareLocaleChangeInterceptor()
+        localeChangeInterceptor.paramName = "lang"
+
+        assert localeChangeInterceptor.preHandle(request, webRequest.getCurrentResponse(), null)
+    }
+
+    @Test
+    void testUnreadableParametersStillThrowForANonMultipartRequest() {
+        def request = unreadableParameterRequest('application/x-www-form-urlencoded')
+        def webRequest = GrailsWebMockUtil.bindMockWebRequest(new MockServletContext(), request,
+                new MockHttpServletResponse())
+
+        def localeChangeInterceptor = new ParamsAwareLocaleChangeInterceptor()
+        localeChangeInterceptor.paramName = "lang"
+
+        def e = assertThrows(IllegalStateException) {
+            localeChangeInterceptor.preHandle(request, webRequest.getCurrentResponse(), null)
+        }
+
+        assertEquals 'parameters are unreadable', e.message
+    }
+
+    private static MockHttpServletRequest unreadableParameterRequest(String contentType) {
+        def request = new MockHttpServletRequest() {
+
+            @Override
+            Map<String, String[]> getParameterMap() {
+                throw new IllegalStateException('parameters are unreadable')
+            }
+
+            @Override
+            String getParameter(String name) {
+                throw new IllegalStateException('parameters are unreadable')
+            }
+        }
+        request.contentType = contentType
+        request.method = 'POST'
+        request
     }
 }

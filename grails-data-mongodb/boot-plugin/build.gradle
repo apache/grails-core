@@ -100,11 +100,14 @@ dependencies {
     compileOnly 'org.slf4j:slf4j-api', {
         // "optional" compile dependency in mongodb-driver-core
     }
+    compileOnly 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation
 
+    testImplementation project(':grails-testing-support-mongodb')
     testImplementation 'org.spockframework:spock-core'
 
+    testCompileOnly 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation
+
     testRuntimeOnly 'org.slf4j:slf4j-nop'
-    testImplementation project(':grails-testing-support-mongodb')
 }
 
 apply {

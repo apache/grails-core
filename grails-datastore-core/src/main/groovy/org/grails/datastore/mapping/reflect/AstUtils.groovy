@@ -23,7 +23,6 @@ import java.lang.reflect.Modifier
 import java.util.regex.Pattern
 
 import groovy.transform.CompileStatic
-import groovy.transform.Memoized
 import groovy.transform.TypeChecked
 import org.codehaus.groovy.ast.ASTNode
 import org.codehaus.groovy.ast.AnnotatedNode
@@ -357,15 +356,34 @@ class AstUtils {
     }
 
     static void copyAnnotations(final AnnotatedNode from, final AnnotatedNode to) {
-        copyAnnotations(from, to, null, null)
+        copyAnnotations(from, to, null, null, false)
     }
 
     static void copyAnnotations(final AnnotatedNode from, final AnnotatedNode to, final Set<String> included, final Set<String> excluded) {
+        copyAnnotations(from, to, included, excluded, false)
+    }
+
+    /**
+     * Copies the annotations of one node onto another.
+     *
+     * @param from The node to copy the annotations from
+     * @param to The node to copy the annotations to
+     * @param included If non-null, only annotations whose class name appears here are copied
+     * @param excluded If non-null, annotations whose class name appears here are not copied
+     * @param skipExisting When {@code true} an annotation is not copied if {@code to} already carries one of the
+     *        same type. Callers that may write onto a node they have already annotated themselves should opt in.
+     *        The default is {@code false}, because repeatable annotations legitimately occur more than once on the
+     *        same node and skipping them would silently produce an incomplete set.
+     */
+    static void copyAnnotations(final AnnotatedNode from, final AnnotatedNode to, final Set<String> included, final Set<String> excluded, final boolean skipExisting) {
         final List<AnnotationNode> annotationsToCopy = from.getAnnotations()
         for (final AnnotationNode node : annotationsToCopy) {
             String annotationClassName = node.getClassNode().getName()
             if ((excluded == null || !excluded.contains(annotationClassName)) &&
                     (included == null || included.contains(annotationClassName))) {
+                if (skipExisting && !to.getAnnotations(node.getClassNode()).isEmpty()) {
+                    continue
+                }
                 final AnnotationNode copyOfAnnotationNode = cloneAnnotation(node)
                 to.addAnnotation(copyOfAnnotationNode)
             }
@@ -425,8 +443,40 @@ class AstUtils {
         }
         return pn
     }
-    @Memoized
+    /** The node metadata key the verdict of {@link #isDomainClass(ClassNode)} is kept under, on the node it describes. */
+    private static final String DOMAIN_CLASS_VERDICT = AstUtils.name + '.isDomainClass'
+
+    /**
+     * Whether a class node represents a domain class, as {@link #isDomainClassUncached(ClassNode)}
+     * decides, remembered on the node itself. The verdict is kept as node metadata of the node's
+     * {@link ClassNode#redirect() redirect}, so it lives exactly as long as the node: nothing outside
+     * the compilation holds on to it, and two same-named nodes from different compilations, such as
+     * test fixtures compiled from strings, each get their own answer. A JVM-wide cache keyed by the
+     * node pinned every node it had seen, and with it the node's module, its compile unit and the
+     * class loader of its compilation, for the life of the compiler process.
+     *
+     * @param classNode the class node to inspect
+     * @return whether the node represents a domain class
+     */
     static boolean isDomainClass(ClassNode classNode) {
+        if (classNode == null) return false
+        ClassNode node = classNode.redirect()
+        Boolean verdict = node.getNodeMetaData(DOMAIN_CLASS_VERDICT) as Boolean
+        if (verdict == null) {
+            verdict = isDomainClassUncached(classNode)
+            node.putNodeMetaData(DOMAIN_CLASS_VERDICT, verdict)
+        }
+        return verdict
+    }
+
+    /**
+     * Checks the current node without reusing answers for same-named classes from
+     * other compilations. ClassNode equality is based on the class name.
+     *
+     * @param classNode the class node to inspect
+     * @return whether the node represents a domain class
+     */
+    static boolean isDomainClassUncached(ClassNode classNode) {
         if (classNode == null) return false
         if (classNode.isArray()) return false
         if (implementsInterface(classNode, 'org.grails.datastore.gorm.GormEntity')) {
@@ -802,10 +852,12 @@ class AstUtils {
                 return anInterface
             }
             ClassNode[] childInterfaces = anInterface.getInterfaces()
-            if (childInterfaces != null && childInterfaces.length > 0) {
-                return implementsInterfaceInternal(childInterfaces, interfaceName)
+            if (childInterfaces != null) {
+                ClassNode found = implementsInterfaceInternal(childInterfaces, interfaceName)
+                if (found != null) {
+                    return found
+                }
             }
-
         }
         return null
     }

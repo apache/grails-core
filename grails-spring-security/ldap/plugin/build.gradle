@@ -51,9 +51,13 @@ dependencies {
 		 'spring-core', 'spring-data-commons', 'spring-test', 'spring-tx'].each { exclude module: it }
 	}
 
+    compileOnly 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation
+
 	runtimeOnly project(':grails-web-boot')
 
 	testImplementation project(':grails-testing-support-web')
+
+    testCompileOnly 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation
 }
 
 apply {

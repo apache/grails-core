@@ -20,6 +20,10 @@ package org.grails.gsp.jsp
 
 import grails.core.DefaultGrailsApplication
 import org.codehaus.groovy.tools.RootLoader
+import org.grails.config.yaml.YamlPropertySourceLoader
+import org.springframework.core.env.PropertiesPropertySource
+import org.springframework.core.env.StandardEnvironment
+import org.springframework.core.env.SystemEnvironmentPropertySource
 import org.springframework.core.io.ByteArrayResource
 import org.springframework.core.io.DefaultResourceLoader
 import org.springframework.core.io.Resource
@@ -71,6 +75,92 @@ class TagLibraryResolverTests extends Specification {
         then:
         tagLib
         tagLib.getTag('javascript')
+    }
+
+    void 'the scan patterns are read from a list in application.yml with environment #variables'() {
+        given:
+        def resolver = resolverConfiguredWith('''\
+            grails:
+              gsp:
+                tldScanPattern:
+                  - classpath*:/META-INF/fmt.tld
+                  - "${EXAMPLE_TLD_PATTERN:classpath*:/META-INF/c.tld}"
+            '''.stripIndent(), variables)
+
+        expect:
+        resolver.tldScanPatterns as List == ['classpath*:/META-INF/fmt.tld', pattern]
+        resolver.resolveTagLibrary('jakarta.tags.fmt')?.getTag('message')
+        resolver.resolveTagLibrary(uri)
+
+        where:
+        variables                                                       | pattern                              | uri
+        [:]                                                             | 'classpath*:/META-INF/c.tld'         | 'jakarta.tags.core'
+        [EXAMPLE_TLD_PATTERN: 'classpath*:/META-INF/c-1_0-rt.tld']      | 'classpath*:/META-INF/c-1_0-rt.tld'  | 'http://java.sun.com/jstl/core_rt'
+    }
+
+    void 'a comma-separated scan pattern is split into trimmed patterns'() {
+        given:
+        def resolver = resolverConfiguredWith('''\
+            grails:
+              gsp:
+                tldScanPattern: "classpath*:/META-INF/fmt.tld, classpath*:/META-INF/c.tld"
+            '''.stripIndent())
+
+        expect:
+        resolver.tldScanPatterns as List == ['classpath*:/META-INF/fmt.tld', 'classpath*:/META-INF/c.tld']
+        resolver.resolveTagLibrary('jakarta.tags.core')
+    }
+
+    void 'a list in application.yml replaces the default scan patterns GSP registers'() {
+        given: 'the defaults GSP adds after every other property source'
+        def environment = environment('''\
+            grails:
+              gsp:
+                tldScanPattern: [classpath*:/META-INF/fmt.tld]
+            '''.stripIndent())
+        def defaults = new Properties()
+        defaults.setProperty('grails.gsp.tldScanPattern', 'classpath*:/META-INF/fmt.tld,classpath*:/META-INF/c.tld')
+        environment.propertySources.addLast(new PropertiesPropertySource('gspDefaults', defaults))
+        def resolver = resolver()
+
+        when:
+        resolver.environment = environment
+
+        then:
+        resolver.tldScanPatterns as List == ['classpath*:/META-INF/fmt.tld']
+        resolver.resolveTagLibrary('jakarta.tags.fmt')
+        !resolver.resolveTagLibrary('jakarta.tags.core')
+    }
+
+    void 'no scan patterns are configured when the setting is absent'() {
+        given:
+        def resolver = resolverConfiguredWith('grails.gsp.enable.reload: true')
+
+        expect:
+        resolver.tldScanPatterns.length == 0
+        !resolver.resolveTagLibrary('jakarta.tags.fmt')
+    }
+
+    private TagLibraryResolverImpl resolverConfiguredWith(String yaml, Map<String, Object> variables = [:]) {
+        def environment = environment(yaml)
+        environment.propertySources.addFirst(new SystemEnvironmentPropertySource('testEnvironment', variables))
+        def resolver = resolver()
+        resolver.environment = environment
+        resolver
+    }
+
+    private TagLibraryResolverImpl resolver() {
+        def resolver = new TagLibraryResolverImpl()
+        resolver.servletContext = new MockServletContext()
+        resolver.grailsApplication = new DefaultGrailsApplication()
+        resolver.resourceLoader = new DefaultResourceLoader(this.class.classLoader)
+        resolver
+    }
+
+    private static StandardEnvironment environment(String yaml) {
+        def environment = new StandardEnvironment()
+        environment.propertySources.addFirst(new YamlPropertySourceLoader().load('application.yml', new ByteArrayResource(yaml.bytes)).first())
+        environment
     }
 }
 

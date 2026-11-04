@@ -23,27 +23,28 @@ dependencies {
 }
 
 tasks.withType(Test).configureEach {
-    onlyIf {
-        ![
-                'skipRedisTests',
-                'onlyFunctionalTests',
-                'onlyHibernate5Tests',
-                'onlyHibernate7Tests',
-                'onlyMongodbTests',
-                'onlySpringSecurityTests',
-                'onlyCoreTests',
-                'skipTests'
-        ].find {
-            project.hasProperty(it)
-        }
-    }
+    boolean skipped = [
+            'skipRedisTests',
+            'onlyFunctionalTests',
+            'onlyHibernate5Tests',
+            'onlyHibernate7Tests',
+            'onlyMongodbTests',
+            'onlyNeo4jTests',
+            'onlySpringSecurityTests',
+            'onlyCoreTests',
+            'skipTests'
+    ].any { project.hasProperty(it) }
+    onlyIf { !skipped }
 
     useJUnitPlatform()
     testLogging {
         exceptionFormat = 'full'
         events 'passed', 'skipped', 'failed'
     }
-    beforeTest { descriptor -> logger.quiet(" -- $descriptor") }
+    Logger testLogger = logger
+    addTestListener([
+        beforeTest: { descriptor -> testLogger.quiet(" -- $descriptor") }
+    ] as TestListener)
 
     // Forwarded to org.apache.grails.testing.redis extensions to control the Testcontainers Redis image version
     if (project.hasProperty('redisContainerVersion')) {

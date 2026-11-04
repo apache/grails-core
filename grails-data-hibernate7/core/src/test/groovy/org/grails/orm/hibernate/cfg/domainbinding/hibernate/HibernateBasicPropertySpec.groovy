@@ -31,7 +31,7 @@ import java.lang.annotation.RetentionPolicy
 class HibernateBasicPropertySpec extends HibernateGormDatastoreSpec {
 
     def setupSpec() {
-        manager.registerDomainClasses(HBPPerson)
+        manager.registerDomainClasses(HBPPerson, HBPStatusPerson)
     }
 
     def "test getCollection throws exception if not initialized"() {
@@ -70,6 +70,36 @@ class HibernateBasicPropertySpec extends HibernateGormDatastoreSpec {
         mockCollection.getRole() == "${HBPPerson.name}.foo.bar.tags".toString()
         mockCollection.getFetchMode() == property.getFetchMode()
         mockCollection.getBatchSize() == property.getBatchSize()
+    }
+
+    def "getTable on an enum collection element switches from owner table to collection table"() {
+        given:
+        def entity = (HibernatePersistentEntity) getMappingContext().getPersistentEntity(HBPStatusPerson.name)
+        def property = (HibernateBasicEnumProperty) entity.getPropertyByName("statuses")
+        def original = property.getHibernateCollection()
+
+        expect: "after binding, the property's table is the collection's join table, not the owner's"
+        property.getTable() == original.getCollectionTable()
+        property.getTable() != property.getPersistentClass().getTable()
+
+        when: "the collection has not been assigned yet"
+        property.setHibernateCollection(null)
+
+        then: "getTable falls back to the owning entity's table"
+        property.getTable() == property.getPersistentClass().getTable()
+
+        cleanup:
+        property.setHibernateCollection(original)
+    }
+
+    def "getTable on a non-enum basic collection element stays the owning entity's table"() {
+        given:
+        def personEntity = (HibernatePersistentEntity) getMappingContext().getPersistentEntity(HBPPerson.name)
+        def property = (HibernateBasicProperty) personEntity.getPropertyByName("tags")
+
+        expect: "the plain basic property does not redirect getTable to the collection table"
+        !(property instanceof HibernateBasicEnumProperty)
+        property.getTable() == property.getPersistentClass().getTable()
     }
 
     def "getElementTypeName returns the Hibernate type name for the element type"() {
@@ -184,4 +214,12 @@ class HBPPerson {
     String name
     Set<String> tags
     static hasMany = [tags: String]
+}
+
+@Entity
+class HBPStatusPerson {
+    Long id
+    String name
+    Set<RetentionPolicy> statuses
+    static hasMany = [statuses: RetentionPolicy]
 }

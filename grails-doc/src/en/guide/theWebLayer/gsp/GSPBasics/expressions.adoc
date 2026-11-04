@@ -30,4 +30,16 @@ In GSP the `<%= %>` syntax introduced earlier is rarely used due to the support 
 
 However, unlike JSP EL you can have any Groovy expression within the `${..}` block.
 
+A backslash immediately before an expression escapes it: the expression is not evaluated, and the page renders a literal `${..}` without the backslash. This matters most for JavaScript template literals, whose interpolation placeholders share the `${..}` syntax and would otherwise be evaluated on the server:
+
+[source,xml]
+----
+<script>
+    const name = 'Grails';
+    console.log(`Hello \${name}`);
+</script>
+----
+
+The browser receives the template literal with its `${name}` placeholder intact, to be interpolated by JavaScript. Only the backslash performing the escape is removed, and each expression must be escaped individually. Expressions in the attributes of GSP tags cannot be escaped this way.
+
 WARNING: Embedding data received from user input has the risk of making your application vulnerable to a Cross Site Scripting (XSS) attack. Please read the documentation under link:security.html#xssPrevention[XSS prevention] for information on how to prevent XSS attacks.

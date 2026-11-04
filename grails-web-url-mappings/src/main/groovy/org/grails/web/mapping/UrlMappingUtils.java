@@ -34,7 +34,9 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
 import org.springframework.web.context.WebApplicationContext;
+import org.springframework.web.context.request.RequestAttributes;
 import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.context.support.WebApplicationContextUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
@@ -64,6 +66,25 @@ import org.grails.web.util.WebUtils;
  */
 public class UrlMappingUtils {
     private UrlMappingUtils() {
+    }
+
+    /**
+     * Finds the {@link GrailsWebRequest} of the current request. A {@code DispatcherServlet} other than the
+     * Grails one - the one MockMvc runs, for example - binds a plain {@link ServletRequestAttributes} over
+     * the {@code GrailsWebRequest} that {@code GrailsWebRequestFilter} bound, so when the bound attributes
+     * are not a {@code GrailsWebRequest}, the one the filter stored on the request is used.
+     *
+     * @return The GrailsWebRequest, or null if the current request has none
+     */
+    static GrailsWebRequest lookupWebRequest() {
+        RequestAttributes attributes = RequestContextHolder.getRequestAttributes();
+        if (attributes instanceof GrailsWebRequest webRequest) {
+            return webRequest;
+        }
+        if (attributes instanceof ServletRequestAttributes servletAttributes) {
+            return GrailsWebRequest.lookup(servletAttributes.getRequest());
+        }
+        return null;
     }
 
     /**
@@ -249,6 +270,7 @@ public class UrlMappingUtils {
         // responsibility for rendering the response.
         final GrailsWebRequest webRequest = GrailsWebRequest.lookup(request);
         webRequest.removeAttribute(GrailsApplicationAttributes.MODEL_AND_VIEW, 0);
+        webRequest.removeAttribute(GrailsApplicationAttributes.TEMPLATE_MODEL, 0);
         info.configure(webRequest);
         webRequest.removeAttribute(GrailsApplicationAttributes.GRAILS_CONTROLLER_CLASS_AVAILABLE, WebRequest.SCOPE_REQUEST);
         webRequest.removeAttribute(UrlMappingsHandlerMapping.MATCHED_REQUEST, WebRequest.SCOPE_REQUEST);
@@ -304,6 +326,7 @@ public class UrlMappingUtils {
         String currentAction = null;
         String currentId = null;
         ModelAndView currentMv = null;
+        Map currentTemplateModel = null;
         Binding currentPageBinding = null;
         Map currentParams = null;
         Object currentLayoutAttribute = null;
@@ -325,6 +348,7 @@ public class UrlMappingUtils {
             currentParams = new HashMap();
             currentParams.putAll(webRequest.getParameterMap());
             currentMv = (ModelAndView) webRequest.getAttribute(GrailsApplicationAttributes.MODEL_AND_VIEW, 0);
+            currentTemplateModel = (Map) webRequest.getAttribute(GrailsApplicationAttributes.TEMPLATE_MODEL, 0);
         }
         try {
             if (webRequest != null) {
@@ -332,6 +356,7 @@ public class UrlMappingUtils {
                 info.configure(webRequest);
                 webRequest.getParameterMap().putAll(info.getParameters());
                 webRequest.removeAttribute(GrailsApplicationAttributes.MODEL_AND_VIEW, 0);
+                webRequest.removeAttribute(GrailsApplicationAttributes.TEMPLATE_MODEL, 0);
             }
             return includeForUrl(includeUrl, request, response, model);
         }
@@ -353,6 +378,11 @@ public class UrlMappingUtils {
                     webRequest.setActionName(currentAction);
                     if (currentMv != null) {
                         webRequest.setAttribute(GrailsApplicationAttributes.MODEL_AND_VIEW, currentMv, 0);
+                    }
+                    if (currentTemplateModel != null) {
+                        webRequest.setAttribute(GrailsApplicationAttributes.TEMPLATE_MODEL, currentTemplateModel, 0);
+                    } else {
+                        webRequest.removeAttribute(GrailsApplicationAttributes.TEMPLATE_MODEL, 0);
                     }
                 } else {
                     RequestContextHolder.setRequestAttributes(null);

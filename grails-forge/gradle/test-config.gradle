@@ -24,19 +24,15 @@ dependencies {
     testImplementation "net.bytebuddy:byte-buddy"
 }
 
+boolean cacheTests = !doNotCacheTests
 tasks.withType(Test).configureEach {
     // Honor DO_NOT_CACHE_TESTS=1 so developers can repeatedly invoke the same test command
     // without --rerun-tasks (and without recompiling everything else).
-    outputs.cacheIf { !doNotCacheTests }
-    outputs.upToDateWhen { !doNotCacheTests }
+    outputs.cacheIf { cacheTests }
+    outputs.upToDateWhen { cacheTests }
 
-    onlyIf {
-        ![
-                'skipTests'
-        ].find {
-            project.hasProperty(it)
-        }
-    }
+    boolean skipped = project.hasProperty('skipTests')
+    onlyIf { !skipped }
     testLogging {
         events('passed', 'skipped', 'failed')
         showExceptions = true
@@ -49,7 +45,7 @@ tasks.withType(Test).configureEach {
     jvmArgs('-Duser.country=US', '-Duser.language=en',
             '--add-opens', 'java.base/java.lang=ALL-UNNAMED')
     forkEvery = 100
-    maxParallelForks = Runtime.runtime.availableProcessors().intdiv(2) ?: 1
+    maxParallelForks = rootProject.ext.configuredTestParallel
     maxHeapSize = '2G'
 
     useJUnitPlatform()

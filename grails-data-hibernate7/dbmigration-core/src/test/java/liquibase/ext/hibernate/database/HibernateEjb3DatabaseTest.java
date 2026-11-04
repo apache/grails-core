@@ -73,7 +73,8 @@ public class HibernateEjb3DatabaseTest {
                 hasProperty("name", is("DTYPE"))
         ));
 
-        assertTrue(bidTable.getColumn("id").isAutoIncrement());
+        assertFalse("HSQL AUTO uses a sequence generator, not an identity column",
+                bidTable.getColumn("id").isAutoIncrement());
         assertFalse(auctionInfoTable.getColumn("id").isAutoIncrement());
         assertFalse(bidTable.getColumn("datetime").isNullable());
         assertTrue(auctionItemTable.getColumn("ends").isNullable());

@@ -15,9 +15,11 @@
  */
 package org.grails.orm.hibernate.query
 
+import jakarta.persistence.criteria.Expression
 import jakarta.persistence.criteria.From
 import jakarta.persistence.criteria.Join
 import jakarta.persistence.criteria.JoinType
+import jakarta.persistence.criteria.ParameterExpression
 import jakarta.persistence.criteria.Path
 import spock.lang.Specification
 
@@ -95,5 +97,170 @@ class JpaQueryContextSpec extends Specification {
         then:
         context.getFrom("nicknames") == join
         context.getFullyQualifiedExpression("nicknames") == join
+    }
+
+    def "test aliases-only and parent-only constructor overloads"() {
+        given:
+        def root = Mock(From)
+        def alias = new HibernateAlias("face", "f", JoinType.INNER)
+
+        when: "constructed with aliases and root but no parent"
+        def aliasesContext = new JpaQueryContext([alias], root)
+
+        then:
+        aliasesContext.hasAlias("f")
+        aliasesContext.getRoot() == root
+
+        when: "constructed with a parent and root but no aliases"
+        def parentContext = new JpaQueryContext(root)
+        def childRoot = Mock(From)
+        def childContext = new JpaQueryContext(parentContext, childRoot)
+
+        then:
+        childContext.getRoot() == childRoot
+        childContext.getFullyQualifiedExpression("{alias}") == root
+    }
+
+    def "test forRoot with aliases static factory"() {
+        given:
+        def root = Mock(From)
+        def alias = new HibernateAlias("face", "f", JoinType.INNER)
+
+        when:
+        def context = JpaQueryContext.forRoot([alias], root)
+
+        then:
+        context.hasAlias("f")
+        context.getRoot() == root
+    }
+
+    def "test setParent reparents an existing context"() {
+        given:
+        def parentRoot = Mock(From)
+        def parentContext = new JpaQueryContext(parentRoot)
+        def faceJoin = Mock(Join)
+        parentContext.registerAlias("f", faceJoin)
+        def orphanContext = new JpaQueryContext(Mock(From))
+
+        expect:
+        !orphanContext.hasAlias("f")
+
+        when:
+        orphanContext.setParent(parentContext)
+
+        then:
+        orphanContext.hasAlias("f")
+    }
+
+    def "test getAliasedExpression delegates to the parent when not realized locally"() {
+        given:
+        def parentRoot = Mock(From)
+        def parentContext = new JpaQueryContext(parentRoot)
+        def faceJoin = Mock(Join)
+        parentContext.registerAlias("f", faceJoin)
+        def subContext = JpaQueryContext.forSubquery(parentContext, Mock(From))
+
+        expect:
+        subContext.getAliasedExpression("f") == faceJoin
+    }
+
+    def "test alias-token resolution delegates to the parent root and path"() {
+        given:
+        def parentRoot = Mock(From)
+        def parentContext = new JpaQueryContext(parentRoot)
+        def subRoot = Mock(From)
+        def subContext = JpaQueryContext.forSubquery(parentContext, subRoot)
+        def namePath = Mock(Path)
+
+        expect:
+        subContext.getFullyQualifiedExpression("{alias}") == parentRoot
+        subContext.getFullyQualifiedPath("{alias}") == parentRoot
+
+        when:
+        def resolved = subContext.getFullyQualifiedPath("{alias}.name")
+
+        then:
+        1 * parentRoot.get("name") >> namePath
+        resolved == namePath
+    }
+
+    def "test clone produces a distinct context instance"() {
+        given:
+        def root = Mock(From)
+        def context = new JpaQueryContext(root)
+
+        when:
+        def cloned = context.clone()
+
+        then:
+        !cloned.is(context)
+        cloned.getRoot() == root
+    }
+
+    def "test parameter values are recorded in order"() {
+        given:
+        def context = new JpaQueryContext(Mock(From))
+        def first = Mock(ParameterExpression)
+        def second = Mock(ParameterExpression)
+
+        when:
+        context.bindParameter(first, 'a')
+        context.bindParameter(second, 'b')
+
+        then:
+        context.getParameterValues().keySet().toList() == [first, second]
+        context.getParameterValues().values().toList() == ['a', 'b']
+    }
+
+    def "test subquery parameter values are recorded in the parent context"() {
+        given:
+        def parentContext = new JpaQueryContext(Mock(From))
+        def subContext = JpaQueryContext.forSubquery(parentContext, Mock(From))
+        def parentParameter = Mock(ParameterExpression)
+        def subParameter = Mock(ParameterExpression)
+
+        when:
+        parentContext.bindParameter(parentParameter, 'outer')
+        subContext.bindParameter(subParameter, 'inner')
+
+        then:
+        parentContext.getParameterValues() == [(parentParameter): 'outer', (subParameter): 'inner']
+        subContext.getParameterValues() == parentContext.getParameterValues()
+    }
+
+    def "test a selection alias names the selection but does not resolve a property path"() {
+        given:
+        def root = Mock(From)
+        def context = new JpaQueryContext(root)
+        def nested = new JpaQueryContext(context, Mock(From))
+        def selection = Mock(Expression)
+        def heightPath = Mock(Path)
+
+        when:
+        context.registerSelectionAlias('height', selection)
+
+        then:
+        context.getSelectionAlias('height') == selection
+        context.getSelectionAlias('other') == null
+        nested.getSelectionAlias('height') == null
+        !context.hasAlias('height')
+
+        when:
+        def resolved = context.getFullyQualifiedExpression('height')
+
+        then:
+        1 * root.get('height') >> heightPath
+        resolved == heightPath
+    }
+
+    def "test parameter values cannot be changed through the returned map"() {
+        given:
+        def context = new JpaQueryContext(Mock(From))
+
+        when:
+        context.getParameterValues().put(Mock(ParameterExpression), 'value')
+
+        then:
+        thrown(UnsupportedOperationException)
     }
 }

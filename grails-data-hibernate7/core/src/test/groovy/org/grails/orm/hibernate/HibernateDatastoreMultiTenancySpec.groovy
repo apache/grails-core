@@ -18,6 +18,8 @@
  */
 package org.grails.orm.hibernate
 
+import jakarta.persistence.LockModeType
+
 import grails.gorm.MultiTenant
 import grails.gorm.annotation.Entity
 import grails.gorm.multitenancy.Tenants
@@ -71,6 +73,52 @@ class HibernateDatastoreMultiTenancySpec extends HibernateGormDatastoreSpec {
 
         cleanup:
         System.clearProperty(SystemPropertyTenantResolver.PROPERTY_NAME)
+    }
+
+    void "static lock(#description) does not hand out another tenant's row"() {
+        given: 'a row that belongs to tenant1'
+        System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, "tenant1")
+        Long id = MultiTenantBook.withNewSession {
+            MultiTenantBook.withTransaction {
+                new MultiTenantBook(title: "Tenant one book").save(flush: true, failOnError: true).id
+            }
+        }
+
+        when: 'tenant2 locks by that identifier, with the row not already in its session'
+        System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, "tenant2")
+        def outcome = MultiTenantBook.withNewSession { session ->
+            MultiTenantBook.withTransaction {
+                session.clear()
+                [get: MultiTenantBook.get(id), locked: MultiTenantBook.lock(args, id)]
+            }
+        }
+
+        then: 'the tenant filter applies to the locked load exactly as it does to get(id)'
+        outcome.get == null
+        outcome.locked == null
+
+        when: 'its owner locks the same identifier'
+        System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, "tenant1")
+        def owned = MultiTenantBook.withNewSession { session ->
+            MultiTenantBook.withTransaction {
+                session.clear()
+                MultiTenantBook.lock(args, id)
+            }
+        }
+
+        then:
+        owned != null
+        owned.title == "Tenant one book"
+
+        cleanup:
+        System.clearProperty(SystemPropertyTenantResolver.PROPERTY_NAME)
+
+        where:
+        description               | args
+        'type: PESSIMISTIC_READ'  | [type: LockModeType.PESSIMISTIC_READ]
+        'refresh: true'           | [refresh: true]
+        'no arguments'            | [:]
+        'type: PESSIMISTIC_WRITE' | [type: LockModeType.PESSIMISTIC_WRITE]
     }
 
     void "test getDatastoreForConnection throws exception for invalid connection"() {

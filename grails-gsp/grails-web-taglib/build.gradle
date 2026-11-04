@@ -46,6 +46,7 @@ dependencies {
     api project(':grails-web-common')
     api project(':grails-taglib')
     compileOnly project(':grails-gsp-core')
+    compileOnly 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation
 
 //    compileOnlyApi 'jakarta.annotation:jakarta.annotation-api'
 //    compileOnlyApi 'jakarta.servlet:jakarta.servlet-api' // Needed downstream to compile for TagLibrary trait
@@ -103,11 +104,11 @@ dependencies {
 //    }
 //
     testImplementation project(':grails-gsp-core')
+    testImplementation 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation and tests
     testImplementation 'org.spockframework:spock-core'
     testImplementation 'org.springframework:spring-test'
 
     testRuntimeOnly 'jakarta.servlet:jakarta.servlet-api'
-    testRuntimeOnly 'org.slf4j:slf4j-nop' // Get rid of warning about missing slf4j implementation during tests
 }
 
 // The `grails.factories` resources file will be "copied" into the generated one, so do not also copy the original to prevent a copy conflict (see issue #10118)

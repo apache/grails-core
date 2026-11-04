@@ -45,7 +45,7 @@ Once you have the JAR resolved you need to get familiar with how Grails manages 
 * `transactional` - If `false` leaves the DataSource's transactionManager bean outside the chained BE1PC transaction manager implementation. This only applies to additional datasources.
 * `persistenceInterceptor` - The default datasource is automatically wired up to the persistence interceptor, other datasources are not wired up automatically unless this is set to `true`
 * `properties` - Extra properties to set on the DataSource bean. See the https://tomcat.apache.org/tomcat-7.0-doc/jdbc-pool.html#Common_Attributes[Tomcat Pool] documentation. There is also a Javadoc format https://tomcat.apache.org/tomcat-7.0-doc/api/org/apache/tomcat/jdbc/pool/PoolConfiguration.html[documentation of the properties].
-* `jmxExport` - If `false`, will disable registration of JMX MBeans for all DataSources. By default JMX MBeans are added for DataSources with `jmxEnabled = true` in properties.
+* `jmxExport` - If `true`, registers JMX MBeans for the Tomcat JDBC pool DataSources that have `jmxEnabled = true` in their properties (defaults to false)
 * `type` - The connection pool class if you want to force Grails to use it when there are more than one available.
 
 A typical configuration for MySQL in `application.groovy` may be something like:
@@ -81,6 +81,17 @@ dataSource {
        defaultTransactionIsolation = java.sql.Connection.TRANSACTION_READ_COMMITTED
     }
 }
+----
+
+When GORM for Hibernate is applied, it always creates a default data source, and that data source is available as the `dataSource` bean, to inject by name or by type, even when the application has no `dataSource` block. Without a `dataSource` block, it connects to the in-memory H2 database `jdbc:h2:mem:grailsDB`, which requires the H2 driver on the classpath.
+
+To run without this default data source, exclude GORM for Hibernate by its plugin name, `hibernate`, with the `grails.plugin.excludes` setting. None of its beans, such as `hibernateDatastore`, `sessionFactory` and `transactionManager`, are registered then, and the application has a `dataSource` bean only when it has a `dataSource` block:
+
+[source,yaml]
+----
+grails:
+    plugin:
+        excludes: hibernate
 ----
 
 WARNING: When configuring the DataSource do not include the type or the def keyword before any of the configuration settings as Groovy will treat these as local variable definitions and they will not be processed. For example the following is invalid:

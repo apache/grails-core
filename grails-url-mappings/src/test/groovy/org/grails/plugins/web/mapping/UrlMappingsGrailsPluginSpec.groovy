@@ -108,4 +108,39 @@ class UrlMappingsGrailsPluginSpec extends Specification {
         def registrar = plugin.beanRegistrar()
         new BeanRegistryAdapter(beanFactory, new StandardEnvironment(), registrar.getClass()).register(registrar)
     }
+    void "an eager by-type lookup finds the reload-mode holder without creating anything"() {
+        given: 'the definitions as the post-processor registers them in reload mode'
+        DefaultListableBeanFactory registry = new DefaultListableBeanFactory()
+        new UrlMappingsBeanDefinitionsPostProcessor(true, true).postProcessBeanDefinitionRegistry(registry)
+
+        when: "a by-type scan runs with eager initialisation, as GrailsApplicationPostProcessor's \
+constructor does while bean definition registry post-processors are still running"
+        String[] names = registry.getBeanNamesForType(UrlMappings, true, true)
+
+        then: 'by-type autowiring of UrlMappings still resolves the holder'
+        names.contains('grailsUrlMappingsHolder')
+
+        and: "nothing was created in order to answer that. Without the produced type declared on the \
+definition, Spring builds a constructor-only ProxyFactoryBean whose getObjectType() returns null, \
+then falls back to creating the factory bean in full - which resolves the target source, the inner \
+holder factory and the constraints machinery, creating @ConfigurationProperties beans before their \
+binding post-processor exists"
+        !registry.containsSingleton('grailsUrlMappingsHolder')
+        !registry.containsSingleton('urlMappingsTargetSource')
+    }
+
+    void "an eager by-type lookup finds the non-reload holder without creating anything"() {
+        given:
+        DefaultListableBeanFactory registry = new DefaultListableBeanFactory()
+        new UrlMappingsBeanDefinitionsPostProcessor(false, true).postProcessBeanDefinitionRegistry(registry)
+
+        when:
+        String[] names = registry.getBeanNamesForType(UrlMappings, true, true)
+
+        then:
+        names.contains('grailsUrlMappingsHolder')
+
+        and:
+        !registry.containsSingleton('grailsUrlMappingsHolder')
+    }
 }

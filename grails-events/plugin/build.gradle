@@ -46,14 +46,15 @@ dependencies {
 
     // As this is a plugin these dependencies will be provided by the Grails application
     // This removes circular dependencies
-    compileOnly 'org.apache.grails.gradle:grails-gradle-model'
     compileOnly project(':grails-core')
+    compileOnly 'org.apache.grails.gradle:grails-gradle-model'
+    compileOnly 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation
 
-    testImplementation 'org.spockframework:spock-core'
     testImplementation project(':grails-core')
+    testImplementation 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation and tests
+    testImplementation 'org.spockframework:spock-core'
 
     testRuntimeOnly 'org.apache.grails.gradle:grails-gradle-model'
-    testRuntimeOnly 'org.slf4j:slf4j-nop' // Get rid of warning about missing slf4j implementation during test task
 }
 
 apply {

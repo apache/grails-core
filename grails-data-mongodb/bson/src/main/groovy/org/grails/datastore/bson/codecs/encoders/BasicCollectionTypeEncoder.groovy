@@ -29,7 +29,6 @@ import org.bson.conversions.Bson
 
 import org.grails.datastore.bson.codecs.PropertyEncoder
 import org.grails.datastore.mapping.dirty.checking.DirtyCheckable
-import org.grails.datastore.mapping.dirty.checking.DirtyCheckingMap
 import org.grails.datastore.mapping.dirty.checking.DirtyCheckingSupport
 import org.grails.datastore.mapping.engine.EntityAccess
 import org.grails.datastore.mapping.engine.internal.MappingUtils
@@ -75,7 +74,7 @@ class BasicCollectionTypeEncoder implements PropertyEncoder<Basic> {
                     def propertyName = property.name
                     parentAccess.setPropertyNoConversion(
                             propertyName,
-                            new DirtyCheckingMap(value, parent, propertyName)
+                            DirtyCheckingSupport.wrap(value, parent, propertyName)
                     )
                 }
             }

@@ -1,13 +1,10 @@
 package liquibase.ext.hibernate.diff;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.function.Predicate;
 
 import liquibase.change.Change;
 import liquibase.database.Database;
-import liquibase.diff.Difference;
 import liquibase.diff.ObjectDifferences;
 import liquibase.diff.output.DiffOutputControl;
 import liquibase.ext.hibernate.database.HibernateDatabase;
@@ -41,22 +38,20 @@ public class HibernateChangedColumnChangeGenerator extends liquibase.diff.output
     private void handleHibernateTypeDifferences(Column column, ObjectDifferences differences, DiffOutputControl control, List<Change> changes, Database refDb, Database compDb) {
         if (shouldIgnoreSize(column)) return;
 
-        Optional.ofNullable(differences.getDifference("type")).ifPresent(diff -> {
-            filterIrrelevantDifferences(differences);
+        Optional.ofNullable(differences.getDifference("type")).ifPresent(typeDifference -> {
+            // Only the "type" difference is dropped when the size is unchanged; unrelated differences for the same
+            // column (e.g. remarks) must survive.
+            if (typeDifference.getReferenceValue() instanceof DataType referenceType) {
+                Integer comparedSize = null;
+                if (typeDifference.getComparedValue() instanceof DataType comparedType) {
+                    comparedSize = comparedType.getColumnSize();
+                }
+                if (isSizeEqualOrNull(referenceType.getColumnSize(), comparedSize)) {
+                    differences.removeDifference("type");
+                }
+            }
             super.handleTypeDifferences(column, differences, control, changes, refDb, compDb);
         });
-    }
-
-    private void filterIrrelevantDifferences(ObjectDifferences differences) {
-        new ArrayList<>(differences.getDifferences()).stream()
-                .filter(Predicate.not(this::isMeaningfulDifference))
-                .forEach(diff -> differences.removeDifference(diff.getField()));
-    }
-
-    private boolean isMeaningfulDifference(Difference diff) {
-        return diff.getReferenceValue() instanceof DataType refType && 
-               diff.getComparedValue() instanceof DataType compType &&
-               !isSizeEqualOrNull(refType.getColumnSize(), compType.getColumnSize());
     }
 
     @Override

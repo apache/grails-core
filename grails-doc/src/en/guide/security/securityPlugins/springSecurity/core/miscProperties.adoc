@@ -37,6 +37,10 @@ under the License.
 |`true`
 |"`strict`" mode where a request mapping is required for all resources; if `true` make sure to allow `permitAll` for "`/`", "`/js/pass:[**]`", "`/css/pass:[**]`", "`/images/pass:[**]`", "`/login/pass:[**]`", "`/logout/pass:[**]`", and so on
 
+|rejectRequestsDuringStartup
+|`true`
+|If `true`, respond with 503 to every request, including a static resource, until the application has started. Set to `false` to allow those requests. See <<core-filters>>
+
 |anon.key
 |"`foo`"
 |anonymousProcessingFilter key
@@ -75,7 +79,7 @@ under the License.
 
 |voterNames
 |`['authenticatedVoter', 'roleVoter', 'closureVoter']`
-|Bean names of voters. See <<voters>>
+|Bean names of voters. See <<core-voters,Voters>>
 
 |providerNames
 |`['daoAuthenticationProvider', 'anonymousAuthenticationProvider', 'rememberMeAuthenticationProvider']`
@@ -131,6 +135,6 @@ under the License.
 
 |excludeSpringSecurityAutoConfiguration
 |`true`
-|Whether to automatically exclude Spring Boot security auto-configuration classes that conflict with the plugin. Set to `false` to allow Spring Boot's security auto-configurations to load alongside the plugin. See <<installation>>
+|Whether to automatically exclude Spring Boot security auto-configuration classes that conflict with the plugin. Set to `false` to allow Spring Boot's security auto-configurations to load alongside the plugin. See <<core-installation,Installation>>
 
 |====================

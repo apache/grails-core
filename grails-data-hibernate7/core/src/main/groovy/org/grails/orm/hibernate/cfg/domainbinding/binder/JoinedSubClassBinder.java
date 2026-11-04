@@ -36,7 +36,7 @@ import org.grails.orm.hibernate.cfg.domainbinding.util.ColumnNameForPropertyAndP
 /**
  * Binds a joined sub-class mapping using table-per-subclass
  *
- * @since 7.0
+ * @since 8.0
  */
 public class JoinedSubClassBinder {
 

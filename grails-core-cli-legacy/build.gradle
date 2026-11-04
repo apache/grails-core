@@ -47,6 +47,8 @@ dependencies {
     api 'org.apache.groovy:groovy'
     implementation 'org.apache.groovy:groovy-templates'
 
+    compileOnly 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation
+
     testImplementation 'org.apache.groovy:groovy-test-junit5'
     testImplementation 'org.junit.jupiter:junit-jupiter-api'
     testImplementation 'org.junit.platform:junit-platform-suite'

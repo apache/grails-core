@@ -22,15 +22,11 @@ import com.mongodb.client.MongoClient
 
 import org.springframework.beans.factory.support.BeanDefinitionRegistry
 import org.springframework.context.ApplicationContext
-import org.springframework.context.ApplicationEventPublisher
-import org.springframework.context.ConfigurableApplicationContext
 import org.springframework.context.support.GenericApplicationContext
 import org.springframework.util.ClassUtils
 
 import grails.mongodb.MongoEntity
 import org.grails.datastore.gorm.bootstrap.AbstractDatastoreInitializer
-import org.grails.datastore.gorm.events.ConfigurableApplicationContextEventPublisher
-import org.grails.datastore.gorm.events.DefaultApplicationEventPublisher
 import org.grails.datastore.gorm.plugin.support.PersistenceContextInterceptorAggregator
 import org.grails.datastore.gorm.support.AbstractDatastorePersistenceContextInterceptor
 import org.grails.datastore.gorm.support.DatastorePersistenceContextInterceptor
@@ -89,25 +85,26 @@ class MongoDbDataStoreSpringInitializer extends AbstractDatastoreInitializer {
             def callable = getCommonConfiguration(beanDefinitionRegistry, 'mongo')
             callable.delegate = delegate
             callable.call()
-            ApplicationEventPublisher eventPublisher
-            if (beanDefinitionRegistry instanceof ConfigurableApplicationContext) {
-                eventPublisher = new ConfigurableApplicationContextEventPublisher((ConfigurableApplicationContext) beanDefinitionRegistry)
-            }
-            else if (resourcePatternResolver.resourceLoader instanceof ConfigurableApplicationContext) {
-                eventPublisher = new ConfigurableApplicationContextEventPublisher((ConfigurableApplicationContext) resourcePatternResolver.resourceLoader)
-            }
-            else {
-                eventPublisher = new DefaultApplicationEventPublisher()
-            }
+            // The publisher is registered as a definition rather than constructed here so that the
+            // datastore holds a reference the container can build, which is what lets the context
+            // be processed ahead of time. Outside an application context there is nothing to
+            // publish through, so the no-op publisher stands in as it did before.
+            grailsDatastoreEventPublisher(findEventPublisherClass(beanDefinitionRegistry))
+            // The configuration is referenced rather than passed. Passing it puts the resolver
+            // itself in the definition, and generating code for a definition means writing out
+            // whatever it holds: an environment carries the machine's own variables, so the
+            // generated source ends up containing the build machine's environment, and the
+            // application reads its settings from wherever it was built rather than where it runs.
+            Object configurationReference = configurationReference(beanDefinitionRegistry)
             if (mongo == null) {
                 mongoConnectionSourceFactory(MongoConnectionSourceFactory) { bean ->
                     bean.autowire = true
                 }
-                mongoDatastore(MongoDatastore, configuration, ref('mongoConnectionSourceFactory'), eventPublisher, collectMappedClasses(DATASTORE_TYPE))
+                mongoDatastore(MongoDatastore, configurationReference, ref('mongoConnectionSourceFactory'), ref('grailsDatastoreEventPublisher'), mappedClasses(DATASTORE_TYPE))
                 mongo(mongoDatastore: 'getMongoClient')
             }
             else {
-                mongoDatastore(MongoDatastore, mongo, configuration, eventPublisher, collectMappedClasses(DATASTORE_TYPE))
+                mongoDatastore(MongoDatastore, mongo, configurationReference, ref('grailsDatastoreEventPublisher'), mappedClasses(DATASTORE_TYPE))
             }
 
             mongoMappingContext(mongoDatastore: 'getMappingContext')

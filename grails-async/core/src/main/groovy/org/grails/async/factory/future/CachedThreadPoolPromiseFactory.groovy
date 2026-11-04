@@ -41,7 +41,9 @@ import org.grails.async.factory.BoundPromise
  *
  * @author Graeme Rocher
  * @since 3.3
+ * @deprecated Use {@link CompletableFuturePromiseFactory}. This legacy executor implementation will be removed in a future release.
  */
+@Deprecated(since = '8.0', forRemoval = true)
 @AutoFinal
 @CompileStatic
 class CachedThreadPoolPromiseFactory extends AbstractPromiseFactory implements Closeable, ExecutorPromiseFactory {

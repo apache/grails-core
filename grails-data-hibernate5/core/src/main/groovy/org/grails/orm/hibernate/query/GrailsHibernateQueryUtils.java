@@ -86,7 +86,9 @@ public class GrailsHibernateQueryUtils {
         if (argMap.containsKey(DynamicFinder.ARGUMENT_READ_ONLY)) {
             c.setReadOnly(ClassUtils.getBooleanFromMap(DynamicFinder.ARGUMENT_READ_ONLY, argMap));
         }
-        String orderParam = (String) argMap.get(DynamicFinder.ARGUMENT_ORDER);
+        // checked before looking at the sort key, so an invalid direction is rejected even when
+        // there is nothing to sort by rather than being silently ignored
+        final String orderParam = DynamicFinder.normalizeDirection((String) argMap.get(DynamicFinder.ARGUMENT_ORDER));
         Object fetchObj = argMap.get(DynamicFinder.ARGUMENT_FETCH);
         if (fetchObj instanceof Map) {
             Map fetch = (Map) fetchObj;
@@ -124,14 +126,16 @@ public class GrailsHibernateQueryUtils {
             }
             if (sortObj instanceof Map) {
                 Map sortMap = (Map) sortObj;
-                for (Object sort : sortMap.keySet()) {
-                    final String order = DynamicFinder.ORDER_DESC.equalsIgnoreCase((String) sortMap.get(sort)) ? DynamicFinder.ORDER_DESC : DynamicFinder.ORDER_ASC;
-                    addOrderPossiblyNested(c, entity, (String) sort, order, ignoreCase);
+                for (Object sortKey : sortMap.keySet()) {
+                    final String sort = (String) sortKey;
+                    DynamicFinder.validateSortProperty(entity, sort);
+                    final String order = DynamicFinder.normalizeDirection((String) sortMap.get(sortKey));
+                    addOrderPossiblyNested(c, entity, sort, order, ignoreCase);
                 }
             } else {
                 final String sort = (String) sortObj;
-                final String order = DynamicFinder.ORDER_DESC.equalsIgnoreCase(orderParam) ? DynamicFinder.ORDER_DESC : DynamicFinder.ORDER_ASC;
-                addOrderPossiblyNested(c, entity, sort, order, ignoreCase);
+                DynamicFinder.validateSortProperty(entity, sort);
+                addOrderPossiblyNested(c, entity, sort, orderParam, ignoreCase);
             }
         } else if (useDefaultMapping) {
             Mapping m = AbstractGrailsDomainBinder.getMapping(entity.getJavaClass());
@@ -161,7 +165,9 @@ public class GrailsHibernateQueryUtils {
             Map argMap,
             ConversionService conversionService,
             boolean useDefaultMapping) {
-        String orderParam = (String) argMap.get(DynamicFinder.ARGUMENT_ORDER);
+        // checked before looking at the sort key, so an invalid direction is rejected even when
+        // there is nothing to sort by rather than being silently ignored
+        final String orderParam = DynamicFinder.normalizeDirection((String) argMap.get(DynamicFinder.ARGUMENT_ORDER));
         Object fetchObj = argMap.get(DynamicFinder.ARGUMENT_FETCH);
         if (fetchObj instanceof Map) {
             Map fetch = (Map) fetchObj;
@@ -184,14 +190,16 @@ public class GrailsHibernateQueryUtils {
             }
             if (sortObj instanceof Map) {
                 Map sortMap = (Map) sortObj;
-                for (Object sort : sortMap.keySet()) {
-                    final String order = DynamicFinder.ORDER_DESC.equalsIgnoreCase((String) sortMap.get(sort)) ? DynamicFinder.ORDER_DESC : DynamicFinder.ORDER_ASC;
-                    addOrderPossiblyNested(query, queryRoot, criteriaBuilder, entity, (String) sort, order, ignoreCase);
+                for (Object sortKey : sortMap.keySet()) {
+                    final String sort = (String) sortKey;
+                    DynamicFinder.validateSortProperty(entity, sort);
+                    final String order = DynamicFinder.normalizeDirection((String) sortMap.get(sortKey));
+                    addOrderPossiblyNested(query, queryRoot, criteriaBuilder, entity, sort, order, ignoreCase);
                 }
             } else {
                 final String sort = (String) sortObj;
-                final String order = DynamicFinder.ORDER_DESC.equalsIgnoreCase(orderParam) ? DynamicFinder.ORDER_DESC : DynamicFinder.ORDER_ASC;
-                addOrderPossiblyNested(query, queryRoot, criteriaBuilder, entity, sort, order, ignoreCase);
+                DynamicFinder.validateSortProperty(entity, sort);
+                addOrderPossiblyNested(query, queryRoot, criteriaBuilder, entity, sort, orderParam, ignoreCase);
             }
         } else if (useDefaultMapping) {
             Mapping m = AbstractGrailsDomainBinder.getMapping(entity.getJavaClass());

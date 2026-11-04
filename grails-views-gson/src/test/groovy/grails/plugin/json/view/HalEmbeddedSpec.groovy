@@ -20,6 +20,9 @@ package grails.plugin.json.view
 
 import tools.jackson.databind.json.JsonMapper
 import grails.gorm.annotation.Entity
+import grails.plugin.json.view.halembedded.Person
+import grails.plugin.json.view.halembedded.Player
+import grails.plugin.json.view.halembedded.Team
 import grails.plugin.json.view.test.JsonViewTest
 import spock.lang.Shared
 import spock.lang.Specification
@@ -48,10 +51,10 @@ class HalEmbeddedSpec extends Specification implements JsonViewTest {
 
         when: 'hal.embedded(..) is used with a map'
         def result = render('''
-            import grails.plugin.json.view.*
-            
+            import grails.plugin.json.view.halembedded.Team
+
             @Field Team team
-            
+
             json {
                 hal.links(self: team, captain: team.captain)
                 hal.inline(team)
@@ -91,10 +94,10 @@ class HalEmbeddedSpec extends Specification implements JsonViewTest {
 
         when: 'hal.embedded(..) is used with a map'
         def result = render('''
-            import grails.plugin.json.view.*
-            
+            import grails.plugin.json.view.halembedded.Team
+
             @Field Team team
-            
+
             json {
                 hal.links(self: team, captain: team.captain)
             }
@@ -131,10 +134,10 @@ class HalEmbeddedSpec extends Specification implements JsonViewTest {
 
         when: 'hal.embedded(..) is used with a map'
         def result = render('''
-            import grails.plugin.json.view.*
-            
+            import grails.plugin.json.view.halembedded.Team
+
             @Field Team team
-            
+
             json {
                 hal.embedded(players:team.players)
                 hal.inline(team)
@@ -183,10 +186,10 @@ class HalEmbeddedSpec extends Specification implements JsonViewTest {
 
         when: 'hal.embedded(..) is used with a map'
         def result = render('''
-            import grails.plugin.json.view.*
-            
+            import grails.plugin.json.view.halembedded.Team
+
             @Field Team team
-            
+
             json {
                 hal.embedded(players:team.players)
             }
@@ -232,10 +235,10 @@ class HalEmbeddedSpec extends Specification implements JsonViewTest {
 
         when: 'hal.embedded(..) is used with a map'
         def result = render('''
-            import grails.plugin.json.view.*
-            
+            import grails.plugin.json.view.halembedded.Player
+
             @Field List<Player> players
-            
+
             json {
                 hal.embedded(players:players)
                 total 1
@@ -280,7 +283,7 @@ class HalEmbeddedSpec extends Specification implements JsonViewTest {
         def team = new Team(captain: captain, name: 'Manchester United', players: [player])
         team.id = 1L
         def result = render('''
-            import grails.plugin.json.view.*
+            import grails.plugin.json.view.halembedded.Team
             model {
                 Team team
             }
@@ -333,11 +336,10 @@ class HalEmbeddedSpec extends Specification implements JsonViewTest {
         def player = new Player(id: 1L, name: 'Cantona')
         player.id = 1L
         def captain = new Player(name: 'Keane')
-        captain.id == 1L
         def team = new Team(captain: captain, name: 'Manchester United', players: [player])
         team.id = 1L
         def result = render('''
-            import grails.plugin.json.view.*
+            import grails.plugin.json.view.halembedded.Team
             model {
                 Team team
             }
@@ -388,7 +390,7 @@ class HalEmbeddedSpec extends Specification implements JsonViewTest {
         player.id = 1L
         team.id = 1L
         def result = render('''
-            import grails.plugin.json.view.*
+            import grails.plugin.json.view.halembedded.Player
             model {
                 Player player
             }
@@ -423,14 +425,18 @@ class HalEmbeddedSpec extends Specification implements JsonViewTest {
         given: 'A domain class with embedded associations'
         mappingContext.addPersistentEntities(Person, Parent)
         def p = new Person(name: 'Robert')
-        p.homeAddress = new Address(postCode: '12345')
-        p.otherAddresses = [new Address(postCode: '6789'), new Address(postCode: '54321')]
+        p.homeAddress = new grails.plugin.json.view.halembedded.Address(postCode: '12345')
+        p.otherAddresses = [
+                new grails.plugin.json.view.halembedded.Address(postCode: '6789'),
+                new grails.plugin.json.view.halembedded.Address(postCode: '54321')
+        ]
         p.nickNames = ['Rob', 'Bob']
         def parent = new Parent(name: 'Joe', person: p)
 
         when: 'hal.render(..) is used'
         def result = render('''
-            import grails.plugin.json.view.*
+            import grails.plugin.json.view.Parent
+
             model {
                 Parent parent
             }

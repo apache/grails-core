@@ -26,6 +26,8 @@ import org.apache.grails.core.plugins.PluginMetadata
 import org.springframework.boot.bootstrap.ConfigurableBootstrapContext
 import org.springframework.boot.SpringApplication
 import org.springframework.core.env.StandardEnvironment
+import org.springframework.core.env.MapPropertySource
+import org.springframework.core.io.ByteArrayResource
 import org.springframework.core.io.Resource
 import spock.lang.Specification
 import spock.util.environment.RestoreSystemProperties
@@ -87,6 +89,23 @@ class GrailsEnvironmentPostProcessorSpec extends Specification {
 
         expect:
         processor.order < 0  // Should run early (HIGHEST_PRECEDENCE + 15 is still negative)
+    }
+
+    def "build properties supply low-precedence application defaults"() {
+        given:
+        def processor = new GrailsEnvironmentPostProcessor(Mock(ConfigurableBootstrapContext))
+        def environment = new StandardEnvironment()
+        environment.propertySources.addFirst(new MapPropertySource('applicationConfig', [
+                'grails.gorm.defaultIdType': 'long'
+        ]))
+        def buildInfo = new ByteArrayResource('grails.gorm.defaultIdType=native'.bytes)
+
+        when:
+        processor.loadBuildProperties(environment, buildInfo)
+
+        then:
+        environment.getProperty('grails.gorm.defaultIdType') == 'long'
+        environment.propertySources.get('grailsBuildInfo').getProperty('grails.gorm.defaultIdType') == 'native'
     }
 
     def "postProcessEnvironment handles IOException from yml configuration gracefully"() {

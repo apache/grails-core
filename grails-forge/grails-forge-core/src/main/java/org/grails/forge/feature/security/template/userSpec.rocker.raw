@@ -28,13 +28,42 @@ import spock.lang.Specification
 
 class UserSpec extends Specification implements DomainUnitTest<User> {
 
-    void 'username and password are required'() {
+    void 'a user without a username and a password is rejected'() {
+        given:
+        User user = new User()
+
         expect:
-        !new User(username: '', password: '').validate()
+        !user.validate()
+
+        and:
+        with(user.errors) {
+            getFieldError('username').code == 'nullable'
+            getFieldError('password').code == 'nullable'
+        }
+    }
+
+    void 'a user whose username and password are blank is rejected'() {
+        given: 'the values are assigned directly, since the map constructor binds an empty string to null'
+        User user = new User()
+        user.username = ''
+        user.password = ''
+
+        expect:
+        !user.validate()
+
+        and:
+        with(user.errors) {
+            getFieldError('username').code == 'blank'
+            getFieldError('password').code == 'blank'
+        }
+    }
+
+    void 'a user with a username and a password is accepted'() {
+        expect:
         new User(username: 'admin', password: 'secret', roles: ['ROLE_ADMIN']).validate()
     }
 
-    void 'authorities derive from the roles'() {
+    void 'the authorities derive from the roles'() {
         expect:
         new User(username: 'admin', password: 'secret', roles: ['ROLE_ADMIN']).authorities*.authority == ['ROLE_ADMIN']
     }

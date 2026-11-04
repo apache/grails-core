@@ -30,6 +30,28 @@ import spock.lang.Specification
  */
 class HibernateEntityTransformationSpec extends Specification {
 
+    void "the transformation applies to an entity whose mapWith is #mapWith"() {
+        when:
+        Class cls = new GroovyClassLoader().parseClass("""
+import grails.gorm.hibernate.annotation.ManagedEntity
+@ManagedEntity
+class MapWithEntity {
+    static mapWith = '${mapWith}'
+    String name
+}
+""")
+
+        then:
+        ManagedEntity.isAssignableFrom(cls) == transformed
+        PersistentAttributeInterceptable.isAssignableFrom(cls) == transformed
+
+        where:
+        mapWith     || transformed
+        'hibernate' || true
+        'GORM'      || true
+        'mongo'     || false
+    }
+
     void "test hibernate entity transformation"() {
         when:"A hibernate interceptor is set"
         Class cls = new GroovyClassLoader().parseClass('''

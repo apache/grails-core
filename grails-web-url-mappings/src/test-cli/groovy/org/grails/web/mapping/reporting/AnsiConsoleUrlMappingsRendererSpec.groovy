@@ -56,6 +56,7 @@ class AnsiConsoleUrlMappingsRendererSpec extends Specification {
  |   GET    | /books/${bookId}/authors                                   | Action: index            |
  |  DELETE  | /books/${bookId}/authors/${id}                             | Action: delete           |
  |  PATCH   | /books/${bookId}/authors/${id}                             | Action: patch            |
+ |   POST   | /books/${bookId}/authors/${id}                             | Action: update           |
  |   PUT    | /books/${bookId}/authors/${id}                             | Action: update           |
  |   GET    | /books/${bookId}/authors/${id}                             | Action: show             |
 
@@ -66,6 +67,7 @@ Controller: book
  |   GET    | /books                                                     | Action: index            |
  |  DELETE  | /books/${id}                                               | Action: delete           |
  |  PATCH   | /books/${id}                                               | Action: patch            |
+ |   POST   | /books/${id}                                               | Action: update           |
  |   PUT    | /books/${id}                                               | Action: update           |
  |   GET    | /books/${id}                                               | Action: show             |
 
@@ -114,6 +116,7 @@ Controller: foo
  |   GET    | /foo                                              | Action: index            |
  |  DELETE  | /foo/${id}                                        | Action: delete           |
  |  PATCH   | /foo/${id}                                        | Action: patch            |
+ |   POST   | /foo/${id}                                        | Action: update           |
  |   PUT    | /foo/${id}                                        | Action: update           |
  |   GET    | /foo/${id}                                        | Action: show             |
 

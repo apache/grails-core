@@ -1,0 +1,12 @@
+// A project whose JSON views are compiled by a stand-in for the view compiler, which the test puts
+// in the compiler directory, so that what the compile task starts the compiler with can be read back.
+// Spring Boot is applied because the views plugin wires its task to Boot's main class resolution.
+plugins {
+    id 'groovy'
+    id 'org.springframework.boot'
+    id 'org.apache.grails.gradle.grails-gson'
+}
+
+dependencies {
+    implementation files('compiler')
+}

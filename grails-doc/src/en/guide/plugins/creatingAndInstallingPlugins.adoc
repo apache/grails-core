@@ -87,7 +87,7 @@ You can also provide additional information about your plugin using several spec
 * `issueManagement` - Issue Tracker of the plugin
 * `scm` - Source code management location of the plugin
 
-Here is a slimmed down example from the https://github.com/apache/grails-quartz[Quartz Grails plugin]:
+Here is a slimmed down example from the Quartz Grails plugin:
 
 [source,groovy]
 ----
@@ -102,7 +102,7 @@ class QuartzGrailsPlugin extends Plugin {
             "grails-app/views/error.gsp"
     ]
     def title = "Quartz" // Headline display name of the plugin
-    def author = "Jeff Brown"
+    def author = 'Apache Grails Team'
     def authorEmail = "zzz@yyy.com"
     def description = '''\
 Adds Quartz job scheduling features
@@ -111,9 +111,9 @@ Adds Quartz job scheduling features
     List loadAfter = ['hibernate3', 'hibernate4', 'hibernate5', 'services']
     def documentation = "https://apache.github.io/grails-quartz/latest/"
     def license = "APACHE"
-    def issueManagement = [ system: "Github Issues", url: "https://github.com/apache/grails-quartzissues" ]
+    def issueManagement = [ system: "Github Issues", url: "https://github.com/apache/grails-quartz/issues" ]
     def developers = [
-            [ name: "Joe Dev", email: "joedev@gmail.com" ]
+            [ name: "Joe Dev", email: "joedev@example.com" ]
     ]
     def scm = [ url: "https://github.com/apache/grails-quartz" ]
 
@@ -458,7 +458,7 @@ class QuartzGrailsPlugin extends Plugin {
             "grails-app/views/error.gsp"
     ]
     def title = "Quartz" // Headline display name of the plugin
-    def author = "Jeff Brown"
+    def author = 'Apache Grails Team'
     def authorEmail = "zzz@yyy.com"
     def description = '''\
 Adds Quartz job scheduling features
@@ -469,7 +469,7 @@ Adds Quartz job scheduling features
     def license = "APACHE"
     def issueManagement = [ system: "Github Issues", url: "https://github.com/apache/grails-quartzissues" ]
     def developers = [
-            [ name: "Joe Dev", email: "joedev@gmail.com" ]
+            [ name: "Joe Dev", email: "joedev@example.com" ]
     ]
     def scm = [ url: "https://github.com/apache/grails-quartz" ]
 

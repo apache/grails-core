@@ -28,5 +28,7 @@ import grails.async.PromiseFactory
  *
  * @author Graeme Rocher
  * @since 3.3
+ * @deprecated Use {@link CompletableFuturePromiseFactory}. Promise factories no longer expose their executor as an {@link ExecutorService}.
  */
+@Deprecated(since = '8.0', forRemoval = true)
 interface ExecutorPromiseFactory extends PromiseFactory, ExecutorService {}

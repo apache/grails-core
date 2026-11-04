@@ -33,6 +33,8 @@ import org.springframework.boot.test.context.runner.ApplicationContextRunner
 import org.springframework.boot.test.context.runner.WebApplicationContextRunner
 import org.springframework.context.MessageSource
 import org.springframework.context.support.GenericApplicationContext
+import org.springframework.boot.autoconfigure.context.MessageSourceAutoConfiguration
+import org.springframework.context.support.ResourceBundleMessageSource
 import org.springframework.context.support.StaticMessageSource
 import org.springframework.web.servlet.LocaleResolver
 import org.springframework.web.servlet.i18n.AcceptHeaderLocaleResolver
@@ -41,16 +43,22 @@ import org.springframework.web.servlet.i18n.FixedLocaleResolver
 import org.springframework.web.servlet.i18n.LocaleChangeInterceptor
 import org.springframework.web.servlet.i18n.SessionLocaleResolver
 
-import org.grails.spring.context.support.PluginAwareResourceBundleMessageSource
 import org.grails.web.i18n.ParamsAwareLocaleChangeInterceptor
 
 import spock.lang.Specification
 
 class I18nAutoConfigurationSpec extends Specification {
 
+    private static AvailableLocaleResolver testResolver(Locale defaultLocale = Locale.forLanguageTag('en')) {
+        ClassLoader classLoader = AvailableLocaleResolver.classLoader
+        Supplier<EffectiveI18nDescriptors> descriptors = {
+            EffectiveI18nDescriptors.of(I18nDescriptors.load(classLoader), [], true)
+        } as Supplier<EffectiveI18nDescriptors>
+        new AvailableLocaleResolver(descriptors, defaultLocale)
+    }
+
+
     private WebApplicationContextRunner contextRunner() {
-        // A real instance: PluginAwareResourceBundleMessageSource casts its GrailsApplication
-        // to DefaultGrailsApplication, so an interface mock (JDK proxy) fails at startup.
         GrailsApplication grailsApplication = new DefaultGrailsApplication()
         GrailsPluginManager pluginManager = Mock(GrailsPluginManager) {
             getAllPlugins() >> ([] as GrailsPlugin[])
@@ -68,7 +76,24 @@ class I18nAutoConfigurationSpec extends Specification {
         contextRunner().run { context ->
             assert context.getBean('localeResolver') instanceof SessionLocaleResolver
             assert context.getBean(LocaleChangeInterceptor) instanceof ParamsAwareLocaleChangeInterceptor
-            assert context.getBean('messageSource') instanceof PluginAwareResourceBundleMessageSource
+            assert context.getBean(AvailableLocaleResolver) != null
+        }
+    }
+
+    void 'Spring Boot owns the messageSource bean'() {
+        expect: "Grails contributes no messageSource of its own, so Boot's auto-configuration wins its " +
+                '@ConditionalOnMissingBean and supplies a stock ResourceBundleMessageSource'
+        contextRunner()
+                .withConfiguration(AutoConfigurations.of(MessageSourceAutoConfiguration))
+                .run { context ->
+                    assert context.getBean('messageSource') instanceof ResourceBundleMessageSource
+                }
+    }
+
+    void 'the Grails i18n auto-configuration contributes no message source on its own'() {
+        expect: 'without Boot\'s auto-configuration only the container\'s empty fallback remains'
+        contextRunner().run { context ->
+            assert !(context.getBean('messageSource') instanceof ResourceBundleMessageSource)
         }
     }
 
@@ -93,7 +118,7 @@ class I18nAutoConfigurationSpec extends Specification {
                     assert !context.containsBean('availableLocaleResolver')
                     // every ApplicationContext registers a fallback DelegatingMessageSource under this
                     // name if nothing else defines one, so check the bean's type rather than presence
-                    assert !(context.getBean('messageSource') instanceof PluginAwareResourceBundleMessageSource)
+                    assert !(context.getBean('messageSource') instanceof ResourceBundleMessageSource)
                 }
     }
 
@@ -163,7 +188,6 @@ class I18nAutoConfigurationSpec extends Specification {
     void 'beans in a parent context do not suppress the Grails i18n beans'() {
         given: 'a parent context that already has i18n beans (SearchStrategy.CURRENT contract)'
         GenericApplicationContext parent = new GenericApplicationContext()
-        parent.beanFactory.registerSingleton('messageSource', new StaticMessageSource())
         parent.beanFactory.registerSingleton('localeResolver', new FixedLocaleResolver(Locale.CANADA))
         parent.beanFactory.registerSingleton('localeChangeInterceptor', new LocaleChangeInterceptor())
         parent.refresh()
@@ -172,7 +196,6 @@ class I18nAutoConfigurationSpec extends Specification {
         contextRunner()
                 .withParent(parent)
                 .run { context ->
-                    assert context.getBeanNamesForType(PluginAwareResourceBundleMessageSource).length == 1
                     assert context.getBean('localeResolver') instanceof SessionLocaleResolver
                     assert context.getBean(LocaleChangeInterceptor) instanceof ParamsAwareLocaleChangeInterceptor
                 }
@@ -181,7 +204,7 @@ class I18nAutoConfigurationSpec extends Specification {
         parent.close()
     }
 
-    void 'the availableLocaleResolver bean registers by default and includes plugin bundles'() {
+    void 'the availableLocaleResolver bean registers by default from the descriptors'() {
         expect:
         contextRunner().run { context ->
             // bean(AvailableLocaleResolver) has no explicit name in the DSL - pins down that
@@ -191,31 +214,30 @@ class I18nAutoConfigurationSpec extends Specification {
 
             def resolver = context.getBean(AvailableLocaleResolver)
             // without grails.i18n.default.locale the JVM default is included (same fallback the
-            // fixed localeResolver uses), and includePlugins defaults to true so the
-            // plugin-namespaced spring-security-core_zu.properties fixture is discovered
+            // fixed localeResolver uses), alongside every locale the application descriptor records
             assert resolver.availableLocales.contains(Locale.getDefault())
-            assert resolver.availableLocales.contains(Locale.forLanguageTag('zu'))
+            assert resolver.availableLocales.contains(Locale.forLanguageTag('fr'))
         }
     }
 
-    void 'grails.i18n.default.locale and availableLocales.includePlugins drive the availableLocaleResolver'() {
+    void 'grails.i18n.default.locale and include-plugin-bundles drive the availableLocaleResolver'() {
         expect:
         contextRunner()
                 .withPropertyValues(
                         'grails.i18n.default.locale=pt_BR',
-                        'grails.i18n.availableLocales.includePlugins=false')
+                        'grails.i18n.include-plugin-bundles=false')
                 .run { context ->
                     def resolver = context.getBean(AvailableLocaleResolver)
                     // the underscore form is normalised to a language tag
                     assert resolver.availableLocales.contains(Locale.forLanguageTag('pt-BR'))
-                    // plugin-namespaced bundles are excluded when includePlugins=false
-                    assert !resolver.availableLocales.contains(Locale.forLanguageTag('zu'))
+                    // the application's own locales still participate; only plugin bundles are excluded
+                    assert resolver.availableLocales.contains(Locale.forLanguageTag('fr'))
                 }
     }
 
     void 'a user-defined AvailableLocaleResolver bean makes the Grails availableLocaleResolver back off'() {
         given:
-        AvailableLocaleResolver userResolver = new AvailableLocaleResolver(getClass().classLoader, Locale.forLanguageTag('en'))
+        AvailableLocaleResolver userResolver = testResolver()
         Supplier<AvailableLocaleResolver> userResolverSupplier = () -> userResolver
 
         expect:
@@ -227,17 +249,4 @@ class I18nAutoConfigurationSpec extends Specification {
                 }
     }
 
-    void 'a user-defined messageSource bean makes the Grails messageSource back off'() {
-        given:
-        MessageSource userMessageSource = new StaticMessageSource()
-        Supplier<MessageSource> userMessageSourceSupplier = () -> userMessageSource
-
-        expect:
-        contextRunner()
-                .withBean('messageSource', MessageSource, userMessageSourceSupplier)
-                .run { context ->
-                    assert context.getBean('messageSource').is(userMessageSource)
-                    assert context.getBeanNamesForType(PluginAwareResourceBundleMessageSource).length == 0
-                }
-    }
 }

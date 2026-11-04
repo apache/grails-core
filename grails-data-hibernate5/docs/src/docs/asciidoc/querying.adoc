@@ -29,7 +29,7 @@ In addition, Groovy's ability to manipulate collections with https://groovy.code
 However, let's start with the basics.
 
 
-==== Listing instances
+=== Listing instances
 
 
 Use the link:../api/org/grails/datastore/gorm/GormEntity.html#list()[list()] method to obtain all instances of a given class:
@@ -56,7 +56,7 @@ def books = Book.list(sort:"title", order:"asc")
 Here, the `sort` argument is the name of the domain class property that you wish to sort on, and the `order` argument is either `asc` for *asc*ending or `desc` for *desc*ending.
 
 
-==== Retrieval by Database  Identifier
+=== Retrieval by Database  Identifier
 
 
 The second basic form of retrieval is by database identifier using the link:../api/org/grails/datastore/gorm/GormEntity.html#get(java.io.Serializable)[get(id)] method:

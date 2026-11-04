@@ -418,14 +418,63 @@ public class DefaultPluginDiscovery implements PluginDiscovery {
                     delayedLoadPlugins.add(plugin);
                 } else {
                     failedPlugins.put(plugin.getName(), plugin);
-                    LOG.error(
-                            "ERROR: Plugin [{}] cannot be loaded because its dependencies [{}}] cannot be resolved",
-                            plugin.getName(),
-                            plugin.getDependsOnNames()
-                    );
+                    logUnresolvedDependencies(plugin);
                 }
             }
         }
+    }
+
+    private void logUnresolvedDependencies(PluginInfo plugin) {
+        var unresolvedDependencies = new ArrayList<String>();
+        for (var name : plugin.getDependsOnNames()) {
+            var requiredVersion = plugin.getMetadata().getDependentVersion(name);
+            var dependency = findPlugin(name);
+            var delayedDependency = dependency == null ? findDelayedPlugin(name) : null;
+            if (dependency != null) {
+                if (!GrailsVersionUtils.isValidVersion(dependency.getPluginVersion(), requiredVersion)) {
+                    unresolvedDependencies.add(
+                            "dependency [" + name + "] has version [" + dependency.getPluginVersion() +
+                                    "] but requires [" + requiredVersion + "]"
+                    );
+                }
+            } else if (getFailedPlugin(name) != null) {
+                unresolvedDependencies.add(
+                        "dependency [" + name + "] with required version [" + requiredVersion + "] failed to load"
+                );
+            } else if (delayedDependency != null) {
+                unresolvedDependencies.add(
+                        "dependency [" + name + "] with required version [" + requiredVersion +
+                                "] is still pending load and only version [" + delayedDependency.getPluginVersion() +
+                                "] was found"
+                );
+            } else {
+                unresolvedDependencies.add(
+                        "dependency [" + name + "] with required version [" + requiredVersion + "] is missing"
+                );
+            }
+        }
+        LOG.error(
+                "Grails plug-in [{}] with version [{}] cannot be loaded: {}",
+                plugin.getName(),
+                plugin.getPluginVersion(),
+                String.join("; ", unresolvedDependencies)
+        );
+    }
+
+    /**
+     * Finds a plugin of the given name that is still waiting to be resolved.
+     *
+     * @param name the plugin name to look for
+     * @return the matching plugin currently in {@link #delayedLoadPlugins}, or {@code null} if there is none
+     */
+    private PluginInfo findDelayedPlugin(String name) {
+        var normalizedName = PluginUtils.normalizePluginName(name);
+        for (var delayed : delayedLoadPlugins) {
+            if (PluginUtils.normalizePluginName(delayed.getName()).equals(normalizedName)) {
+                return delayed;
+            }
+        }
+        return null;
     }
 
     /**

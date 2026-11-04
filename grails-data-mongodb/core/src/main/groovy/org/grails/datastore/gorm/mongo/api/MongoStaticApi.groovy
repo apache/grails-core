@@ -41,6 +41,8 @@ import org.springframework.transaction.PlatformTransactionManager
 
 import grails.gorm.multitenancy.Tenants
 import grails.mongodb.api.MongoAllOperations
+import org.grails.datastore.gorm.DatastoreResolver
+import org.grails.datastore.gorm.GormRegistry
 import org.grails.datastore.gorm.GormStaticApi
 import org.grails.datastore.gorm.finders.FinderMethod
 import org.grails.datastore.gorm.mongo.MongoCriteriaBuilder
@@ -48,6 +50,8 @@ import org.grails.datastore.mapping.core.Datastore
 import org.grails.datastore.mapping.core.Session
 import org.grails.datastore.mapping.engine.EntityPersister
 import org.grails.datastore.mapping.engine.internal.MappingUtils
+import org.grails.datastore.mapping.model.MappingContext
+import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.mongo.AbstractMongoSession
 import org.grails.datastore.mapping.mongo.MongoCodecSession
 import org.grails.datastore.mapping.mongo.MongoDatastore
@@ -63,8 +67,13 @@ import org.grails.datastore.mapping.multitenancy.MultiTenancySettings
 @CompileStatic
 class MongoStaticApi<D> extends GormStaticApi<D> implements MongoAllOperations<D> {
 
+    @Deprecated
     MongoStaticApi(Class<D> persistentClass, Datastore datastore, List<FinderMethod> finders, PlatformTransactionManager transactionManager) {
         super(persistentClass, datastore, finders, transactionManager)
+    }
+
+    MongoStaticApi(Class<D> persistentClass, MappingContext mappingContext, List<FinderMethod> finders, DatastoreResolver resolver, String qualifier, GormRegistry registry) {
+        super(persistentClass, mappingContext, finders, resolver, qualifier, registry)
     }
 
     FindIterable<D> find(Bson filter) {
@@ -284,9 +293,10 @@ class MongoStaticApi<D> extends GormStaticApi<D> implements MongoAllOperations<D
     }
 
     protected Bson wrapFilterWithMultiTenancy(Bson filter) {
-        if (multiTenancyMode == MultiTenancySettings.MultiTenancyMode.DISCRIMINATOR && persistentEntity.isMultiTenant()) {
+        PersistentEntity entity = getGormPersistentEntity()
+        if (multiTenancyMode == MultiTenancySettings.MultiTenancyMode.DISCRIMINATOR && entity.isMultiTenant()) {
             filter = Filters.and(
-                    Filters.eq(MappingUtils.getTargetKey(persistentEntity.tenantId), Tenants.currentId((Class<Datastore>) datastore.getClass())),
+                    Filters.eq(MappingUtils.getTargetKey(entity.tenantId), Tenants.currentId((Class<Datastore>) datastore.getClass())),
                     filter
             )
         }
@@ -295,9 +305,10 @@ class MongoStaticApi<D> extends GormStaticApi<D> implements MongoAllOperations<D
 
     private List<Bson> preparePipeline(List pipeline) {
         List<Bson> newPipeline = new ArrayList<Bson>()
-        if (multiTenancyMode == MultiTenancySettings.MultiTenancyMode.DISCRIMINATOR && persistentEntity.isMultiTenant()) {
+        PersistentEntity entity = getGormPersistentEntity()
+        if (multiTenancyMode == MultiTenancySettings.MultiTenancyMode.DISCRIMINATOR && entity.isMultiTenant()) {
             newPipeline.add(
-                    Aggregates.match(Filters.eq(MappingUtils.getTargetKey(persistentEntity.tenantId), Tenants.currentId((Class<Datastore>) datastore.getClass())))
+                    Aggregates.match(Filters.eq(MappingUtils.getTargetKey(entity.tenantId), Tenants.currentId((Class<Datastore>) datastore.getClass())))
             )
         }
         for (o in pipeline) {

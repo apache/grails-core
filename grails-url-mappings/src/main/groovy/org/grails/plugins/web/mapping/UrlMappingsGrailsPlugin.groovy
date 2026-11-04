@@ -21,6 +21,7 @@ package org.grails.plugins.web.mapping
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 
+import org.springframework.aot.AotDetector
 import org.springframework.aop.target.HotSwappableTargetSource
 import org.springframework.beans.factory.BeanRegistrar
 import org.springframework.beans.factory.BeanRegistry
@@ -51,6 +52,7 @@ import org.grails.web.mapping.DefaultLinkGenerator
 import org.grails.web.mapping.UrlMappingsHolderFactoryBean
 import org.grails.web.mapping.mvc.UrlMappingsInfoHandlerAdapter
 import org.grails.web.mapping.servlet.UrlMappingsErrorPageCustomizer
+import org.grails.web.util.HiddenHttpMethod
 
 /**
  * Handles the configuration of URL mappings.
@@ -117,17 +119,24 @@ class UrlMappingsGrailsPlugin extends Plugin {
                 grailsApplication.addArtefact(UrlMappingsArtefactHandler.TYPE, DefaultUrlMappings)
             }
 
-            boolean reloadEnabled = GrailsEnvironment.developmentMode ||
-                    GrailsEnvironment.current.reloadEnabled
+            // Never proxy for hot-swapping when the bean definitions are the generated ones: AOT
+            // code generation drops the custom definition attributes that tell Spring what a factory
+            // bean produces, and hot-swapping mappings is meaningless in an image anyway.
+            boolean reloadEnabled = !AotDetector.useGeneratedArtifacts() &&
+                    (GrailsEnvironment.developmentMode || GrailsEnvironment.current.reloadEnabled)
             boolean corsFilterEnabled = environment.getProperty(Settings.SETTING_CORS_FILTER, Boolean, true)
+            // With no servlet filter rewriting the request method, the handler mapping resolves "_method"
+            // itself so browser forms still reach the PUT, PATCH and DELETE routes of a 'resources' mapping.
+            boolean resolveHiddenHttpMethod = !HiddenHttpMethod.isServletFilterMode(environment)
 
             // The url-mapping holder is a ProxyFactoryBean (reload mode) whose produced UrlMappings
-            // type must stay visible to Spring's factory-bean type prediction for by-type autowiring
-            // of UrlMappingsHolder — which an instance supplier would hide — so the definitions are
-            // contributed by a dedicated post-processor instead.
+            // type must stay answerable from the bean definition for by-type autowiring of
+            // UrlMappingsHolder — which an instance supplier would hide — so the definitions are
+            // contributed by a dedicated post-processor that declares the produced type through
+            // FactoryBean.OBJECT_TYPE_ATTRIBUTE. See that class for why the attribute is load-bearing.
             registry.registerBean('urlMappingsBeanDefinitionsPostProcessor', UrlMappingsBeanDefinitionsPostProcessor) {
                 it.infrastructure().supplier {
-                    new UrlMappingsBeanDefinitionsPostProcessor(reloadEnabled, corsFilterEnabled)
+                    new UrlMappingsBeanDefinitionsPostProcessor(reloadEnabled, corsFilterEnabled, resolveHiddenHttpMethod)
                 }
             }
         }

@@ -62,4 +62,5 @@ dependencies {
 
 apply {
     from rootProject.layout.projectDirectory.file('gradle/docs-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/test-config.gradle')
 }

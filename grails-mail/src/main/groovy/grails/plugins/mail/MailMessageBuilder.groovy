@@ -52,6 +52,8 @@ class MailMessageBuilder {
     final String defaultFrom
     final String defaultTo
     final String overrideAddress
+    final String overrideToAddress
+    final String overrideFromAddress
 
     private MailMessage message
     private MimeMessageHelper helper
@@ -77,8 +79,10 @@ class MailMessageBuilder {
         this.mailSender = mailSender
         this.mailMessageContentRenderer = mailMessageContentRenderer
         this.overrideAddress = properties.overrideAddress
-        this.defaultFrom = overrideAddress ?: properties.default.from
-        this.defaultTo = overrideAddress ?: properties.default.to
+        this.overrideToAddress = properties.overrideToAddress ?: overrideAddress
+        this.overrideFromAddress = properties.overrideFromAddress ?: overrideAddress
+        this.defaultFrom = overrideFromAddress ?: properties.default.from
+        this.defaultTo = overrideToAddress ?: properties.default.to
     }
 
     private MailMessage getMessage() {
@@ -234,7 +238,7 @@ class MailMessageBuilder {
     void from(CharSequence from) {
         def value = from.toString()
         Assert.hasText(value, 'from cannot be null or 0 length')
-        getMessage().from = value
+        getMessage().from = overrideFromAddress ?: value
     }
 
     void envelopeFrom(CharSequence envFrom) {
@@ -390,8 +394,8 @@ class MailMessageBuilder {
     }
 
     protected String[] toDestinationAddresses(addresses) {
-        if (overrideAddress) {
-            addresses = addresses.collect { overrideAddress }
+        if (overrideToAddress) {
+            addresses = addresses.collect { overrideToAddress }
         }
         addresses.collect { it?.toString() } as String[]
     }

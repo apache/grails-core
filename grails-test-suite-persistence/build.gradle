@@ -62,6 +62,8 @@ dependencies {
         exclude module:'grails-testing-support-core'
     }
     testImplementation project(':grails-testing-support-core')
+    testImplementation testFixtures(project(':grails-core'))
+    testImplementation testFixtures(project(':grails-web-common'))
 
     compileOnly 'jakarta.servlet:jakarta.servlet-api'
     compileOnly 'org.springframework:spring-test', {
@@ -88,7 +90,7 @@ dependencies {
 }
 
 test {
-    maxParallelForks = configuredTestParallel
+    maxParallelForks = rootProject.ext.configuredTestParallel
     forkEvery = isCiBuild ? 25 : 100
     if(!isCiBuild) {
         maxHeapSize = '2048m'

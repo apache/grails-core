@@ -115,6 +115,7 @@ dependencies {
     compileOnly 'jakarta.servlet:jakarta.servlet-api', { // Provided by Tomcat
         // api: FilterChain, HttpServletResponse, HttpServletRequest, ServletException, ServletRequest, ServletResponse
     }
+    compileOnly 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation
 
     testImplementation "org.pac4j:pac4j-oauth", {
         // impl: CasOAuthWrapperClient
@@ -122,6 +123,8 @@ dependencies {
     testImplementation project(':grails-testing-support-datamapping')
     testImplementation project(':grails-testing-support-web')
     testImplementation 'org.spockframework:spock-core'
+
+    testCompileOnly 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation
 
     testRuntimeOnly 'net.bytebuddy:byte-buddy'
 }

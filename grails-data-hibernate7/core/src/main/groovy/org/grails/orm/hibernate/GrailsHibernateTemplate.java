@@ -32,7 +32,6 @@ import javax.sql.DataSource;
 import groovy.lang.Closure;
 import org.codehaus.groovy.runtime.DefaultGroovyMethods;
 
-import jakarta.persistence.LockModeType;
 import jakarta.persistence.PersistenceException;
 import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.CriteriaQuery;
@@ -533,7 +532,7 @@ public class GrailsHibernateTemplate implements IHibernateTemplate {
     public void lock(final Object entity, final LockMode lockMode) throws DataAccessException {
         doExecute(
                 session -> {
-                    session.lock(entity, LockModeType.PESSIMISTIC_WRITE);
+                    session.lock(entity, lockMode);
                     return null;
                 },
                 true);

@@ -20,7 +20,7 @@ dependencies {
 }
 
 tasks.register('resolveCliTier') {
-    def files = configurations.cliTier
+    def files = configurations.cliTier.incoming.files
     doLast {
         files.files.each { println "RESOLVED: ${it.name}" }
     }

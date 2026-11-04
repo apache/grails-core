@@ -156,7 +156,7 @@ CAUTION: When changing the name of a property, you must also account for the cha
 
 [source,groovy]
 ----
-include::{sourcedir}/examples/grails-test-app/src/main/groovy/grails/test/app/RoleDataBinder.groovy[tags=wholeFile]
+include::{sourcedir}/grails-test-examples/graphql/grails-test-app/src/main/groovy/grails/test/app/RoleDataBinder.groovy[tags=wholeFile]
 ----
 
 The data binding implementation is removing the `name` property and assigning it back to `authority` so it can be correctly bound to the domain object.

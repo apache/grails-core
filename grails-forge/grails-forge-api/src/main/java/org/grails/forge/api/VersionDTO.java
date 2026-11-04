@@ -19,9 +19,11 @@
 package org.grails.forge.api;
 
 import io.micronaut.core.annotation.Introspected;
+import io.micronaut.core.annotation.Nullable;
 import org.grails.forge.util.VersionInfo;
 import io.swagger.v3.oas.annotations.media.Schema;
 
+import java.time.LocalDate;
 import java.util.Map;
 
 /**
@@ -39,6 +41,15 @@ public class VersionDTO extends Linkable {
      */
     public Map<String, String> getVersions() {
         return VersionInfo.getDependencyVersions();
+    }
+
+    /**
+     * @return The last day this Grails release line is supported (ISO-8601 date), or null when none is configured
+     */
+    @Nullable
+    @Schema(description = "The last day this Grails release line is supported. Not present when none is configured.", format = "date")
+    public String getEndOfSupport() {
+        return VersionInfo.getEndOfSupport().map(LocalDate::toString).orElse(null);
     }
 
     @Override

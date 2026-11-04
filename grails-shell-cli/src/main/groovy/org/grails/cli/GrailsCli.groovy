@@ -30,6 +30,8 @@ import org.jline.reader.EndOfFileException
 import org.jline.reader.UserInterruptException
 import org.jline.reader.impl.completer.ArgumentCompleter
 import org.jline.terminal.Terminal
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 import org.gradle.tooling.BuildActionExecuter
 import org.gradle.tooling.BuildCancelledException
 import org.gradle.tooling.ProjectConnection
@@ -79,6 +81,8 @@ import org.grails.exceptions.ExceptionUtils
 @CompileStatic
 class GrailsCli {
 
+    private static final Logger LOG = LoggerFactory.getLogger(GrailsCli)
+
     static final String ARG_SPLIT_PATTERN = /(?<!\\)\s+/
     public static final String DEFAULT_PROFILE_NAME = ProfileRepository.DEFAULT_PROFILE_NAME
     private static final String USAGE_MESSAGE = 'create-app [NAME] --profile=web'
@@ -98,7 +102,7 @@ class GrailsCli {
             try {
                 SETTINGS_MAP.merge(new ConfigSlurper().parse(BuildSettings.SHARED_SETTINGS_FILE.toURI().toURL()))
             } catch (Throwable e) {
-                e.printStackTrace()
+                LOG.error("Problem loading $BuildSettings.SHARED_SETTINGS_FILE", e)
                 System.err.println("ERROR: Problem loading $BuildSettings.SHARED_SETTINGS_FILE: ${e.message}")
             }
 

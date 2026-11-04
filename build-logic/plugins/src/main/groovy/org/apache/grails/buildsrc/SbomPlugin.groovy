@@ -35,10 +35,12 @@ import org.cyclonedx.model.OrganizationalEntity
 import org.gradle.api.GradleException
 import org.gradle.api.Plugin
 import org.gradle.api.Project
+import org.gradle.api.Task
 import org.gradle.api.file.CopySpec
 import org.gradle.api.file.Directory
 import org.gradle.api.file.RegularFile
 import org.gradle.api.java.archives.Manifest
+import org.gradle.api.logging.Logger
 import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.bundling.Jar
 
@@ -107,20 +109,26 @@ class SbomPlugin implements Plugin<Project> {
             'pkg:maven/jline/jline@2.14.6?type=jar'                           : 'BSD-2-Clause', // maps incorrectly because of https://github.com/CycloneDX/cyclonedx-core-java/issues/205
             'pkg:maven/opensymphony/sitemesh@2.6.0?type=jar'                  : 'OpenSymphony', // custom license approved by legal LEGAL-707
             'pkg:maven/org.antlr/antlr4-runtime@4.7.2?type=jar'               : 'BSD-3-Clause', // maps incorrectly because of https://github.com/CycloneDX/cyclonedx-core-java/issues/205
+            // mongo-java-server declares only "The BSD License" so it maps to BSD-4-Clause for the same
+            // reason as the org.jline group below. https://github.com/bwaldvogel/mongo-java-server/blob/main/LICENSE
+            // has three numbered clauses and no advertising clause, making it BSD-3-Clause.
+            'pkg:maven/de.bwaldvogel/mongo-java-server@1.47.0?type=jar'       : 'BSD-3-Clause',
+            'pkg:maven/de.bwaldvogel/mongo-java-server-core@1.47.0?type=jar'  : 'BSD-3-Clause',
+            'pkg:maven/de.bwaldvogel/mongo-java-server-memory-backend@1.47.0?type=jar': 'BSD-3-Clause',
             // The whole org.jline group declares "The BSD License", which maps incorrectly because of
             // https://github.com/CycloneDX/cyclonedx-core-java/issues/205 - the POMs point at BSD-3-Clause.
             // jline.version tracks the JLine version Groovy ships, so every module resolves to one version.
-            'pkg:maven/org.jline/jansi@3.30.9?type=jar'                       : 'BSD-3-Clause',
-            'pkg:maven/org.jline/jline@3.30.9?type=jar'                       : 'BSD-3-Clause',
-            'pkg:maven/org.jline/jline-builtins@3.30.9?type=jar'              : 'BSD-3-Clause',
-            'pkg:maven/org.jline/jline-console@3.30.9?type=jar'               : 'BSD-3-Clause',
-            'pkg:maven/org.jline/jline-native@3.30.9?type=jar'                : 'BSD-3-Clause',
-            'pkg:maven/org.jline/jline-reader@3.30.9?type=jar'                : 'BSD-3-Clause',
-            'pkg:maven/org.jline/jline-style@3.30.9?type=jar'                 : 'BSD-3-Clause',
-            'pkg:maven/org.jline/jline-terminal@3.30.9?type=jar'              : 'BSD-3-Clause',
-            'pkg:maven/org.jline/jline-terminal-jansi@3.30.9?type=jar'        : 'BSD-3-Clause',
-            'pkg:maven/org.jline/jline-terminal-jna@3.30.9?type=jar'          : 'BSD-3-Clause',
-            'pkg:maven/org.jline/jline-terminal-jni@3.30.9?type=jar'          : 'BSD-3-Clause',
+            'pkg:maven/org.jline/jansi@3.30.16?type=jar'                       : 'BSD-3-Clause',
+            'pkg:maven/org.jline/jline@3.30.16?type=jar'                       : 'BSD-3-Clause',
+            'pkg:maven/org.jline/jline-builtins@3.30.16?type=jar'              : 'BSD-3-Clause',
+            'pkg:maven/org.jline/jline-console@3.30.16?type=jar'               : 'BSD-3-Clause',
+            'pkg:maven/org.jline/jline-native@3.30.16?type=jar'                : 'BSD-3-Clause',
+            'pkg:maven/org.jline/jline-reader@3.30.16?type=jar'                : 'BSD-3-Clause',
+            'pkg:maven/org.jline/jline-style@3.30.16?type=jar'                 : 'BSD-3-Clause',
+            'pkg:maven/org.jline/jline-terminal@3.30.16?type=jar'              : 'BSD-3-Clause',
+            'pkg:maven/org.jline/jline-terminal-jansi@3.30.16?type=jar'        : 'BSD-3-Clause',
+            'pkg:maven/org.jline/jline-terminal-jna@3.30.16?type=jar'          : 'BSD-3-Clause',
+            'pkg:maven/org.jline/jline-terminal-jni@3.30.16?type=jar'          : 'BSD-3-Clause',
             'pkg:maven/org.jruby/jzlib@1.1.5?type=jar'                        : 'BSD-3-Clause', // https://web.archive.org/web/20240822213507/http://www.jcraft.com/jzlib/LICENSE.txt shows it's a 3 clause
             'pkg:maven/org.liquibase.ext/liquibase-hibernate5@4.27.0?type=jar': 'Apache-2.0', // maps incorrectly because of https://github.com/liquibase/liquibase/issues/2445 & the base pom does not define a license
             'pkg:maven/org.json/json@20251224?type=jar'                       : 'Public-Domain', // required due to jedis, https://issues.apache.org/jira/browse/LEGAL-666 approves this usage
@@ -288,7 +296,8 @@ class SbomPlugin implements Plugin<Project> {
                 Provider<String> sbomComponent = componentName
                 Provider<Boolean> isReproducibleBuildProvider = project.provider { lookupProperty(project, 'isReproducibleBuild') as boolean }
                 Provider<ZonedDateTime> buildDateProvider = project.provider { lookupProperty(project, 'buildDate') as ZonedDateTime }
-                doLast {
+                doLast { Task t ->
+                    Logger logger = t.logger
                     // json schema is documented here: https://cyclonedx.org/docs/1.6/json/
                     def rewriteSbom = { File f ->
                         def bom = new JsonSlurper().parse(f)
@@ -430,10 +439,10 @@ class SbomPlugin implements Plugin<Project> {
                 manifest.attributes('Sbom-Location': 'META-INF/sbom.json')
                 manifest.attributes('Sbom-Format': 'CycloneDX')
             }
-            jar.doFirst {
+            jar.doFirst { Task t ->
                 if (!publishesJavaComponent.get()) {
-                    jar.manifest.attributes.remove('Sbom-Location')
-                    jar.manifest.attributes.remove('Sbom-Format')
+                    ((Jar) t).manifest.attributes.remove('Sbom-Location')
+                    ((Jar) t).manifest.attributes.remove('Sbom-Format')
                 }
             }
         }
@@ -469,7 +478,7 @@ class SbomPlugin implements Plugin<Project> {
             // There are several reasons that cyclone will get the license wrong, usually due to upstream not publishing information or publishing it incorrectly
             // see the licenseMapping map above for details
             def licenseId = LICENSE_MAPPING[bomRef]
-            logger.lifecycle('Forcing license for {} to {}', bomRef, licenseId)
+            logger.info('Forcing license for {} to {}', bomRef, licenseId)
 
             def licenseBlock = LICENSES[licenseId]
             if (!licenseBlock) {

@@ -19,6 +19,7 @@
 
 package org.grails.orm.hibernate.cfg.domainbinding
 
+import org.hibernate.Length
 import org.hibernate.mapping.Column
 import org.grails.datastore.mapping.config.Property
 import spock.lang.Specification
@@ -44,7 +45,7 @@ class StringColumnConstraintsBinderSpec extends Specification {
         def originalLength = column.length
 
         when:
-        binder.bindStringColumnConstraints(column, mappedForm)
+        binder.bindStringColumnConstraints(column, mappedForm, null)
 
         then:
         column.length == originalLength
@@ -57,7 +58,7 @@ class StringColumnConstraintsBinderSpec extends Specification {
         def originalLength = column.length
 
         when:
-        binder.bindStringColumnConstraints(column, mappedForm)
+        binder.bindStringColumnConstraints(column, mappedForm, null)
 
         then:
         column.length == originalLength
@@ -69,7 +70,7 @@ class StringColumnConstraintsBinderSpec extends Specification {
         mappedForm.getInList() >> null
 
         when:
-        binder.bindStringColumnConstraints(column, mappedForm)
+        binder.bindStringColumnConstraints(column, mappedForm, null)
 
         then:
         column.length == 255
@@ -81,7 +82,7 @@ class StringColumnConstraintsBinderSpec extends Specification {
         mappedForm.getInList() >> ["1","2","3","4"]
 
         when:
-        binder.bindStringColumnConstraints(column, mappedForm)
+        binder.bindStringColumnConstraints(column, mappedForm, null)
 
         then:
         column.length == 4 // length of "very long string" - preserving original expectation
@@ -93,7 +94,7 @@ class StringColumnConstraintsBinderSpec extends Specification {
         mappedForm.getInList() >> ["4","string",Long.MAX_VALUE.toString(), null]
 
         when:
-        binder.bindStringColumnConstraints(column, mappedForm)
+        binder.bindStringColumnConstraints(column, mappedForm, null)
 
         then:
         column.length == 4 // length of "very long string" - preserving original expectation
@@ -106,7 +107,7 @@ class StringColumnConstraintsBinderSpec extends Specification {
         mappedForm.getInList() >> ["3"]
 
         when:
-        binder.bindStringColumnConstraints(column, mappedForm)
+        binder.bindStringColumnConstraints(column, mappedForm, null)
 
         then:
         column.length == 1
@@ -119,7 +120,7 @@ class StringColumnConstraintsBinderSpec extends Specification {
         def originalLength = column.length
 
         when:
-        binder.bindStringColumnConstraints(column, mappedForm)
+        binder.bindStringColumnConstraints(column, mappedForm, null)
 
         then:
         column.length == originalLength
@@ -132,9 +133,70 @@ class StringColumnConstraintsBinderSpec extends Specification {
         mappedForm.getInList() >> null
 
         when:
-        binder.bindStringColumnConstraints(column, mappedForm)
+        binder.bindStringColumnConstraints(column, mappedForm, null)
 
         then:
         column.length == 50
+    }
+
+    def "should default column length to Length.LONG32 for an unbounded text type when neither maxSize nor inList is provided"() {
+        given:
+        mappedForm.getMaxSize() >> null
+        mappedForm.getInList() >> null
+
+        when:
+        binder.bindStringColumnConstraints(column, mappedForm, 'text')
+
+        then:
+        column.length == Length.LONG32
+    }
+
+    def "should match the text type name case-insensitively"() {
+        given:
+        mappedForm.getMaxSize() >> null
+        mappedForm.getInList() >> null
+
+        when:
+        binder.bindStringColumnConstraints(column, mappedForm, 'TEXT')
+
+        then:
+        column.length == Length.LONG32
+    }
+
+    def "should prioritize an explicit maxSize over defaulting a text type to Length.LONG32"() {
+        given:
+        mappedForm.getMaxSize() >> 500
+        mappedForm.getInList() >> null
+
+        when:
+        binder.bindStringColumnConstraints(column, mappedForm, 'text')
+
+        then:
+        column.length == 500
+    }
+
+    def "should prioritize inList over defaulting a text type to Length.LONG32"() {
+        given:
+        mappedForm.getMaxSize() >> null
+        mappedForm.getInList() >> ["1", "22", "333"]
+
+        when:
+        binder.bindStringColumnConstraints(column, mappedForm, 'text')
+
+        then:
+        column.length == 333
+    }
+
+    def "should not default column length when typeName is not text"() {
+        given:
+        mappedForm.getMaxSize() >> null
+        mappedForm.getInList() >> null
+        def originalLength = column.length
+
+        when:
+        binder.bindStringColumnConstraints(column, mappedForm, 'custom.Type')
+
+        then:
+        column.length == originalLength
     }
 }

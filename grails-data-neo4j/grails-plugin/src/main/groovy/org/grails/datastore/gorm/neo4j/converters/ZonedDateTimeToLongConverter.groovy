@@ -32,4 +32,5 @@ import java.time.ZonedDateTime
  */
 @CompileStatic
 class ZonedDateTimeToLongConverter implements Converter<ZonedDateTime, Long>, ZonedDateTimeConverter {
+
 }

@@ -16,16 +16,29 @@ limitations under the License.
 
 # GORM for Neo4j
 
-This project has not been updated for the current Grails release yet and is not included in the build.
-
 This project implements [GORM](https://grails.apache.org/docs/latest/grails-data/) for the Neo4j 3.x Graph Database using the Bolt Java Driver.
 
 For more information see the following links:
 
-* [Documentation](https://gorm.grails.org/latest/neo4j/manual)
-* [API](https://gorm.grails.org/latest/neo4j/api)
+* [Documentation](https://grails.apache.org/docs/latest/grails-data/neo4j/manual/)
+* [API](https://grails.apache.org/docs/latest/api)
 
 For the current development version see the following links:
 
-* [Snapshot Documentation](https://gorm.grails.org/snapshot/neo4j/manual)
-* [Snapshot API](https://gorm.grails.org/snapshot/neo4j/api)
+* [Snapshot Documentation](https://grails.apache.org/docs/snapshot/grails-data/neo4j/manual/)
+* [Snapshot API](https://grails.apache.org/docs/snapshot/api)
+
+## Modules
+
+This project is part of the main Grails monorepo build. The modules are wired into the root
+`settings.gradle`:
+
+| Module         | Gradle path                    | Maven coordinates                                |
+| -------------- | ------------------------------- | ------------------------------------------------- |
+| Core           | `:grails-data-neo4j-core`      | `org.apache.grails.data:grails-data-neo4j-core`    |
+| Spring Boot    | `:grails-data-neo4j-spring-boot` | `org.apache.grails:grails-data-neo4j-spring-boot` |
+| Grails plugin  | `:grails-data-neo4j`           | `org.apache.grails:grails-data-neo4j`              |
+| Docs           | `:grails-data-neo4j-docs`      | (not published)                                    |
+
+Example apps live under `grails-test-examples/neo4j/` (`base`, `hibernate5`, `spring-boot`,
+`neo4j-standalone`, `test-data-service`), matching the layout used by the other datastores.

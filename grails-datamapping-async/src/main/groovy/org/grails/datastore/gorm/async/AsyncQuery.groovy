@@ -32,8 +32,8 @@ class AsyncQuery<E> implements PromiseDecoratorProvider {
     /**
      * Wraps each promise in a new persistence session
      */
-    private List<PromiseDecorator> decorators = [ { Closure callable ->
-        return { args ->
+    private List<PromiseDecorator> decorators = [ { Closure<?> callable ->
+        return { Object[] args ->
             gormOperations.persistentClass.withNewSession {
                 callable.call(*args)
             }

@@ -53,6 +53,7 @@ dependencies {
 
 
     integrationTestImplementation testFixtures('org.apache.grails:grails-geb')
+    integrationTestImplementation 'org.apache.grails:grails-testing-support-http-client'
 }
 
 apply {

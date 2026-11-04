@@ -34,6 +34,13 @@ import java.util.Set;
 @Singleton
 public class GrailsDataMongoDB extends GormOneOfFeature {
 
+    /**
+     * The host that asks grails-data-mongodb-embedded for a server rather than naming one to
+     * reach, so an environment says which database it wants in the one place it already says
+     * where the database is.
+     */
+    private static final String EMBEDDED_HOST = "mongodb://embedded/";
+
     private final TestContainers testContainers;
 
     public GrailsDataMongoDB(TestContainers testContainers) {
@@ -67,11 +74,31 @@ public class GrailsDataMongoDB extends GormOneOfFeature {
     public void apply(GeneratorContext generatorContext) {
         applyDefaultGormConfig(generatorContext.getConfiguration());
         Map<String, Object> config = generatorContext.getConfiguration();
-        config.put("grails.mongodb.url", "mongodb://${MONGO_HOST:localhost}:${MONGO_PORT:27017}/foo");
+        config.put("grails.mongodb.url", MongoFeature.externalUrl(MongoFeature.PROD_DATABASE));
         generatorContext.addDependency(Dependency.builder()
                 .groupId("org.apache.grails")
                 .artifactId("grails-data-mongodb")
                 .implementation());
+        applyEmbeddedMongo(generatorContext, config);
+    }
+
+    /**
+     * Without this a generated application only starts when a MongoDB happens to be listening on
+     * the url above, so it is wired in by default rather than offered as a separate feature.
+     *
+     * <p>Development and test name the embedded server where they would name a host, the way a
+     * generated JPA application names an in-memory H2 there. Production keeps the url above, so
+     * deploying with MONGO_HOST and MONGO_PORT set reaches that database. An application that
+     * wants an embedded one in production says so the same way, by naming it in that url.
+     */
+    private void applyEmbeddedMongo(GeneratorContext generatorContext, Map<String, Object> config) {
+        generatorContext.addDependency(Dependency.builder()
+                .groupId("org.apache.grails")
+                .artifactId("grails-data-mongodb-embedded")
+                .implementation());
+
+        config.put("environments.development.grails.mongodb.url", EMBEDDED_HOST + MongoFeature.DEV_DATABASE);
+        config.put("environments.test.grails.mongodb.url", EMBEDDED_HOST + MongoFeature.TEST_DATABASE);
     }
 
     @Override

@@ -19,6 +19,8 @@
 package grails.plugin.json.view
 
 import tools.jackson.databind.json.JsonMapper
+import grails.plugin.json.view.iterable.Player
+import grails.plugin.json.view.iterable.Team
 import grails.views.ViewException
 import grails.views.json.test.JsonViewUnitTest
 import spock.lang.Shared
@@ -40,10 +42,10 @@ class IterableRenderSpec extends Specification implements JsonViewUnitTest {
         when: 'A collection type is rendered'
         def renderResult = render('''
             import groovy.transform.*
-            import grails.plugin.json.view.*
-            
+            import grails.plugin.json.view.iterable.Player
+
             @Field Collection<Player> players
-            
+
             json g.render(players)
         ''', [players: players])
 
@@ -58,10 +60,10 @@ class IterableRenderSpec extends Specification implements JsonViewUnitTest {
         when: 'A collection type is rendered'
         def renderResult = render('''
             import groovy.transform.*
-            import grails.plugin.json.view.*
-            
+            import grails.plugin.json.view.iterable.Player
+
             @Field Collection<Player> players
-            
+
             json hal.render(players)
         ''', [players: players])
 
@@ -102,10 +104,10 @@ class IterableRenderSpec extends Specification implements JsonViewUnitTest {
         when: 'A collection type is rendered'
         def renderResult = render('''
             import groovy.transform.*
-            import grails.plugin.json.view.*
-            
+            import grails.plugin.json.view.iterable.Player
+
             @Field Collection<Player> players
-            
+
             json jsonapi.render(players)
         ''', [players: players]) {
             uri = '/foo'
@@ -147,10 +149,10 @@ class IterableRenderSpec extends Specification implements JsonViewUnitTest {
         when: 'A collection type is rendered'
         def renderResult = render('''
             import groovy.transform.*
-            import grails.plugin.json.view.*
-            
+            import grails.plugin.json.view.iterable.Player
+
             @Field Collection<Player> players
-            
+
             json jsonapi.render(players)
         ''', [players: players]) {
             uri = '/foo'
@@ -204,10 +206,10 @@ class IterableRenderSpec extends Specification implements JsonViewUnitTest {
         when: 'A collection type is rendered total must be greater than max (10)'
         def renderResult = render('''
             import groovy.transform.*
-            import grails.plugin.json.view.*
-            
+            import grails.plugin.json.view.iterable.Player
+
             @Field Collection<Player> players
-            
+
             json jsonapi.render(players, [pagination: [resource: Player, total: 11]])
         ''', [players: players], {
             uri = '/foo'
@@ -252,6 +254,30 @@ class IterableRenderSpec extends Specification implements JsonViewUnitTest {
         ''')
     }
 
+    void 'Test render a collection type with JSON API and a total above Integer.MAX_VALUE'() {
+        given: 'A collection'
+        mappingContext.addPersistentEntities(Player, Team)
+        Player player = new Player(name: 'Cantona')
+        player.id = 1
+        def players = [player]
+
+        when: 'the total exceeds Integer.MAX_VALUE, as a large table count does'
+        def renderResult = render('''
+            import groovy.transform.*
+            import grails.plugin.json.view.iterable.Player
+
+            @Field Collection<Player> players
+
+            json jsonapi.render(players, [pagination: [resource: Player, total: 3_000_000_000L]])
+        ''', [players: players], {
+            uri = '/foo'
+        })
+
+        then: 'the last link keeps the 64-bit offset instead of wrapping negative'
+        renderResult.jsonText.contains('offset=2999999990')
+        !renderResult.jsonText.contains('offset=-')
+    }
+
     void 'Test render a collection type with JSON API and pagination override max'() {
         given: 'A collection'
         mappingContext.addPersistentEntities(Player, Team)
@@ -264,10 +290,10 @@ class IterableRenderSpec extends Specification implements JsonViewUnitTest {
         when: 'A collection type is rendered total must be greater than max (10)'
         def renderResult = render('''
             import groovy.transform.*
-            import grails.plugin.json.view.*
-            
+            import grails.plugin.json.view.iterable.Player
+
             @Field Collection<Player> players
-            
+
             json jsonapi.render(players, [pagination: [resource: Player, total: 11, max: 5]])
         ''', [players: players]) {
             uri = '/foo'
@@ -324,10 +350,10 @@ class IterableRenderSpec extends Specification implements JsonViewUnitTest {
         when: 'A collection type is rendered total must be greater than max (10)'
         render('''
             import groovy.transform.*
-            import grails.plugin.json.view.*
-            
+            import grails.plugin.json.view.iterable.Player
+
             @Field Collection<Player> players
-            
+
             json jsonapi.render(players, [pagination: [total: 11]])
         ''', [players: players]) {
             uri = '/foo'

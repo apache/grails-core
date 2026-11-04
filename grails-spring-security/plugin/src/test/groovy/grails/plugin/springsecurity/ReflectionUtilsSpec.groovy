@@ -19,6 +19,14 @@
 package grails.plugin.springsecurity
 
 import org.springframework.http.HttpMethod
+import org.springframework.mock.web.MockHttpServletRequest
+import org.springframework.mock.web.MockHttpServletResponse
+
+import grails.web.mapping.UrlMappingInfo
+import grails.web.mapping.UrlMappingsHolder
+import grails.web.mime.MimeType
+import org.grails.web.mime.HttpServletResponseExtension
+import org.grails.web.servlet.mvc.GrailsWebRequest
 
 /**
  * @author Burt Beckwith
@@ -212,5 +220,45 @@ class ReflectionUtilsSpec extends AbstractUnitSpec {
         interceptedUrls.first()?.pattern == '/secure/**'
         interceptedUrls.first().configAttributes?.size() == 1
         interceptedUrls.first().configAttributes.first().attribute == 'IS_AUTHENTICATED_ANONYMOUSLY'
+    }
+
+    void 'url mappings are matched on the method the request will be routed as'() {
+        given: 'a browser form POST asking to be treated as a DELETE'
+        def request = new MockHttpServletRequest(method: 'POST', requestURI: '/book/1')
+        request.addParameter('_method', 'DELETE')
+        def grailsRequest = new GrailsWebRequest(request, new MockHttpServletResponse(), servletContext)
+
+        and: 'a holder that records the method it was asked to match'
+        String matchedWith = null
+        def holder = [matchAll: { String uri, String httpMethod, String version ->
+            matchedWith = httpMethod
+            new UrlMappingInfo[0]
+        }] as UrlMappingsHolder
+
+        when: 'the security chain resolves the request to a mapping, before the dispatcher has run'
+        ReflectionUtils.matchAllUrlMappings(holder, '/book/1', grailsRequest,
+                [getMimeTypeForRequest: { Object... a -> MimeType.HTML }] as HttpServletResponseExtension)
+
+        then: 'it matches on DELETE, so it authorizes the action the dispatcher is about to run'
+        matchedWith == 'DELETE'
+    }
+
+    void 'url mappings are matched on the request method when nothing asked for an override'() {
+        given:
+        def request = new MockHttpServletRequest(method: 'POST', requestURI: '/book')
+        def grailsRequest = new GrailsWebRequest(request, new MockHttpServletResponse(), servletContext)
+
+        String matchedWith = null
+        def holder = [matchAll: { String uri, String httpMethod, String version ->
+            matchedWith = httpMethod
+            new UrlMappingInfo[0]
+        }] as UrlMappingsHolder
+
+        when:
+        ReflectionUtils.matchAllUrlMappings(holder, '/book', grailsRequest,
+                [getMimeTypeForRequest: { Object... a -> MimeType.HTML }] as HttpServletResponseExtension)
+
+        then:
+        matchedWith == 'POST'
     }
 }

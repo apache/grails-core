@@ -17,6 +17,13 @@
  *  under the License.
  */
 
-// Place your Spring DSL code here
+import org.springframework.boot.web.servlet.FilterRegistrationBean
+
+import undertowapp.StaticInitFailureFilter
+
 beans = {
+    staticInitFailureFilter(FilterRegistrationBean) {
+        filter = new StaticInitFailureFilter()
+        urlPatterns = ['/staticInitFailure/*']
+    }
 }

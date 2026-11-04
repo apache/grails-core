@@ -20,13 +20,19 @@ package org.apache.grails.undertow.core.servlet;
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import javax.net.ssl.SSLContext;
 
 import io.undertow.Undertow.Builder;
+import io.undertow.servlet.api.Deployment;
 
+import jakarta.servlet.ServletContext;
+import jakarta.servlet.ServletContextEvent;
+import jakarta.servlet.ServletContextListener;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -50,10 +56,13 @@ import org.apache.grails.undertow.core.UndertowBuilderCustomizer;
 
 import org.springframework.boot.web.server.Ssl;
 import org.springframework.boot.web.server.WebServer;
+import org.springframework.boot.web.server.WebServerException;
+import org.springframework.boot.web.servlet.ServletContextInitializer;
 import org.springframework.boot.web.servlet.ServletRegistrationBean;
 import org.springframework.util.FileCopyUtils;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
 /**
  * Tests for {@link UndertowServletWebServerFactory}.
@@ -141,6 +150,122 @@ class UndertowServletWebServerFactoryTests {
         this.webServer.start();
         assertThat(getHttpsResponse("https://localhost:" + this.webServer.getPort() + "/hello"))
             .isEqualTo("Hello World");
+    }
+
+    @Test
+    void temporaryDirectoriesAreDeletedWhenTheServerStops() throws Exception {
+        UndertowServletWebServerFactory factory = new UndertowServletWebServerFactory(0);
+        UndertowServletWebServer webServer = (UndertowServletWebServer) factory
+            .getWebServer(helloWorldServletRegistration());
+        this.webServer = webServer;
+        webServer.start();
+        Deployment deployment = webServer.getDeploymentManager().getDeployment();
+        Path tempDir = deployment.getDeploymentInfo().getTempDir().toPath();
+        Path documentRoot = Path.of(deployment.getServletContext().getRealPath("/"));
+        Files.writeString(tempDir.resolve("upload.tmp"), "upload");
+        assertThat(tempDir).isDirectory();
+        assertThat(documentRoot).isDirectory();
+        webServer.stop();
+        assertThat(tempDir).doesNotExist();
+        assertThat(documentRoot).doesNotExist();
+    }
+
+    @Test
+    void aServerThatNeverStartedIsUndeployedWhenItIsDestroyed() {
+        UndertowServletWebServerFactory factory = new UndertowServletWebServerFactory(-1);
+        AtomicBoolean contextDestroyed = new AtomicBoolean();
+        ServletContextInitializer listenerRegistration = (servletContext) -> servletContext
+            .addListener(new ServletContextListener() {
+
+                @Override
+                public void contextDestroyed(ServletContextEvent event) {
+                    contextDestroyed.set(true);
+                }
+
+            });
+        UndertowServletWebServer webServer = (UndertowServletWebServer) factory
+            .getWebServer(helloWorldServletRegistration(), listenerRegistration);
+        this.webServer = webServer;
+        webServer.start();
+        Deployment deployment = webServer.getDeploymentManager().getDeployment();
+        Path tempDir = deployment.getDeploymentInfo().getTempDir().toPath();
+        Path documentRoot = Path.of(deployment.getServletContext().getRealPath("/"));
+        assertThat(tempDir).isDirectory();
+        assertThat(documentRoot).isDirectory();
+        webServer.destroy();
+        assertThat(contextDestroyed).isTrue();
+        assertThat(tempDir).doesNotExist();
+        assertThat(documentRoot).doesNotExist();
+    }
+
+    @Test
+    void theApplicationsListenersStillFindTheTemporaryDirectoryWhenTheContextIsDestroyed() {
+        UndertowServletWebServerFactory factory = new UndertowServletWebServerFactory(0);
+        AtomicBoolean tempDirExisted = new AtomicBoolean();
+        ServletContextInitializer listenerRegistration = (servletContext) -> servletContext
+            .addListener(new ServletContextListener() {
+
+                @Override
+                public void contextDestroyed(ServletContextEvent event) {
+                    File tempDir = (File) event.getServletContext().getAttribute(ServletContext.TEMPDIR);
+                    tempDirExisted.set(tempDir.isDirectory());
+                }
+
+            });
+        UndertowServletWebServer webServer = (UndertowServletWebServer) factory
+            .getWebServer(helloWorldServletRegistration(), listenerRegistration);
+        this.webServer = webServer;
+        webServer.start();
+        Path tempDir = webServer.getDeploymentManager().getDeployment().getDeploymentInfo().getTempDir().toPath();
+        webServer.stop();
+        assertThat(tempDirExisted).as("the temporary directory while the application's listener is destroyed")
+            .isTrue();
+        assertThat(tempDir).doesNotExist();
+    }
+
+    @Test
+    void aServerWhoseHandlersFailedToBuildIsUndeployedWhenItIsDestroyed(@TempDir File parent) throws Exception {
+        UndertowServletWebServerFactory factory = new UndertowServletWebServerFactory(0);
+        File regularFile = new File(parent, "file");
+        Files.writeString(regularFile.toPath(), "not a directory");
+        factory.setAccessLogEnabled(true);
+        factory.setAccessLogDirectory(new File(regularFile, "logs"));
+        AtomicBoolean contextDestroyed = new AtomicBoolean();
+        ServletContextInitializer listenerRegistration = (servletContext) -> servletContext
+            .addListener(new ServletContextListener() {
+
+                @Override
+                public void contextDestroyed(ServletContextEvent event) {
+                    contextDestroyed.set(true);
+                }
+
+            });
+        UndertowServletWebServer webServer = (UndertowServletWebServer) factory
+            .getWebServer(helloWorldServletRegistration(), listenerRegistration);
+        this.webServer = webServer;
+        Path tempDir = webServer.getDeploymentManager().getDeployment().getDeploymentInfo().getTempDir().toPath();
+        assertThatExceptionOfType(WebServerException.class).isThrownBy(webServer::start);
+        // what Spring Boot does with a server that failed to start
+        webServer.stop();
+        webServer.destroy();
+        assertThat(contextDestroyed).isTrue();
+        assertThat(tempDir).doesNotExist();
+    }
+
+    @Test
+    void aConfiguredDocumentRootIsKeptWhenTheServerStops(@TempDir File documentRoot) throws Exception {
+        UndertowServletWebServerFactory factory = new UndertowServletWebServerFactory(0);
+        factory.setDocumentRoot(documentRoot);
+        Files.writeString(documentRoot.toPath().resolve("index.html"), "Hello World");
+        UndertowServletWebServer webServer = (UndertowServletWebServer) factory
+            .getWebServer(helloWorldServletRegistration());
+        this.webServer = webServer;
+        webServer.start();
+        Path tempDir = webServer.getDeploymentManager().getDeployment().getDeploymentInfo().getTempDir().toPath();
+        assertThat(getResponse("http://localhost:" + webServer.getPort() + "/index.html")).isEqualTo("Hello World");
+        webServer.stop();
+        assertThat(tempDir).doesNotExist();
+        assertThat(documentRoot.toPath().resolve("index.html")).hasContent("Hello World");
     }
 
     private ServletRegistrationBean<HttpServlet> helloWorldServletRegistration() {

@@ -1,105 +1,65 @@
 /*
- *  Licensed to the Apache Software Foundation (ASF) under one
- *  or more contributor license agreements.  See the NOTICE file
- *  distributed with this work for additional information
- *  regarding copyright ownership.  The ASF licenses this file
- *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
- *  with the License.  You may obtain a copy of the License at
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
  *
- *    https://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
- *  Unless required by applicable law or agreed to in writing,
- *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- *  KIND, either express or implied.  See the License for the
- *  specific language governing permissions and limitations
- *  under the License.
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
  */
 package org.grails.plugins.i18n;
 
-import java.io.IOException;
 import java.text.Collator;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import org.springframework.core.io.Resource;
-import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
-import org.springframework.core.io.support.ResourcePatternResolver;
+import java.util.function.Supplier;
 
 /**
- * Discovers the locales an application is actually translated into by scanning the
- * classpath for {@code <basename>_<locale>.properties} resource bundles.
+ * The locales an application is actually translated into, for driving a language selector.
  *
- * <p>Unlike {@link java.util.Locale#getAvailableLocales()} (which returns every locale
- * the JVM knows about), this returns only the locales that have a matching message
- * bundle plus the configured default locale, making it suitable for driving a language
- * selector. The result is sorted by each locale's display name in its own language and
- * cached; {@link #clearCache()} forces a re-scan (used when bundles change in development).
+ * <p>Unlike {@link java.util.Locale#getAvailableLocales()}, which lists every locale the JVM knows,
+ * this lists only locales that have a message bundle, plus the configured default locale.</p>
  *
- * <p>By default only the application's own {@code messages_*.properties} bundles are
- * scanned. When {@code includePluginBundles} is enabled, every {@code *.properties}
- * bundle on the classpath is considered, so locales contributed by plugins &mdash; whose
- * bundles are namespaced (e.g. {@code spring-security-core_fr.properties}) &mdash; are
- * included too. Candidate suffixes are validated against the ISO language codes (and the ISO
- * country codes when a country is present), so non-i18n properties files (e.g.
- * {@code application.properties} or {@code foo_en_prod.properties}) are ignored. See
- * {@code grails.i18n.availableLocales.includePlugins}.
+ * <p>The locales come from the same {@link EffectiveI18nDescriptors} that produce
+ * {@code spring.messages.basename}, so a plugin excluded from message resolution — evicted, filtered
+ * out by environment, or failed to load — cannot advertise its language here either. Offering a
+ * translation whose messages do not resolve would be worse than not offering it.</p>
  *
  * @since 8.0.0
  */
 public class AvailableLocaleResolver {
 
-    private static final Logger log = LoggerFactory.getLogger(AvailableLocaleResolver.class);
-
     /** The base name of an application's own message bundles ({@code messages.properties}). */
     public static final String DEFAULT_BASE_NAME = "messages";
 
-    private static final String PROPERTIES_SUFFIX = ".properties";
-
-    private static final Set<String> ISO_LANGUAGES = new HashSet<>(Arrays.asList(Locale.getISOLanguages()));
-
-    private static final Set<String> ISO_COUNTRIES = new HashSet<>(Arrays.asList(Locale.getISOCountries()));
-
-    private final ResourcePatternResolver resourcePatternResolver;
+    private final Supplier<EffectiveI18nDescriptors> descriptors;
 
     private final Locale defaultLocale;
-
-    private final boolean includePluginBundles;
 
     private volatile List<Locale> cachedLocales;
 
     /**
-     * Scans only the application's own {@code messages_*.properties} bundles.
-     *
-     * @param classLoader the class loader whose classpath is scanned for message bundles
-     * @param defaultLocale the locale of the base {@code messages.properties} bundle,
-     * always included in the result (may be {@code null} to include none)
-     */
-    public AvailableLocaleResolver(ClassLoader classLoader, Locale defaultLocale) {
-        this(classLoader, defaultLocale, false);
-    }
-
-    /**
-     * @param classLoader the class loader whose classpath is scanned for message bundles
+     * @param descriptors supplies the effective descriptors; re-invoked after {@link #clearCache()}
+     * so that a descriptor regenerated during development is picked up
      * @param defaultLocale the locale of the base bundle, always included (may be {@code null})
-     * @param includePluginBundles whether to also consider plugin-contributed bundles (every
-     * {@code *.properties} on the classpath) rather than only the application's {@code messages}
      */
-    public AvailableLocaleResolver(ClassLoader classLoader, Locale defaultLocale, boolean includePluginBundles) {
-        this.resourcePatternResolver = new PathMatchingResourcePatternResolver(classLoader);
+    public AvailableLocaleResolver(Supplier<EffectiveI18nDescriptors> descriptors, Locale defaultLocale) {
+        this.descriptors = descriptors;
         this.defaultLocale = defaultLocale;
-        this.includePluginBundles = includePluginBundles;
     }
 
     /**
@@ -121,7 +81,10 @@ public class AvailableLocaleResolver {
     }
 
     /**
-     * Discards the cached list so the next {@link #getAvailableLocales()} re-scans the classpath.
+     * Discards the cached list so the next {@link #getAvailableLocales()} re-reads the descriptors.
+     *
+     * <p>During development the Grails Gradle plugin regenerates the descriptor when a bundle is
+     * added or removed, so a re-read picks up a newly translated language without a restart.</p>
      */
     public void clearCache() {
         this.cachedLocales = null;
@@ -132,20 +95,11 @@ public class AvailableLocaleResolver {
         if (this.defaultLocale != null && !this.defaultLocale.getLanguage().isEmpty()) {
             locales.add(this.defaultLocale);
         }
-        String pattern = "classpath*:" + DEFAULT_BASE_NAME + "_*" + PROPERTIES_SUFFIX;
-        if (this.includePluginBundles) {
-            pattern = "classpath*:*" + PROPERTIES_SUFFIX;
-        }
-        try {
-            for (Resource resource : this.resourcePatternResolver.getResources(pattern)) {
-                Locale locale = localeFromBundleFilename(resource.getFilename());
-                if (locale != null) {
-                    locales.add(locale);
-                }
+        for (String identifier : this.descriptors.get().locales()) {
+            Locale locale = parseLocale(identifier);
+            if (locale != null) {
+                locales.add(locale);
             }
-        }
-        catch (IOException ex) {
-            log.warn("Unable to resolve available locales from message bundles: {}", ex.getMessage());
         }
         List<Locale> sorted = new ArrayList<>(locales);
         // Sort by each locale's autonym (its name in its own language) using a fixed ROOT
@@ -159,35 +113,20 @@ public class AvailableLocaleResolver {
     }
 
     /**
-     * Extracts the locale a bundle filename encodes, or {@code null} if it is not a locale-specific
-     * message bundle. The base name ends at the first underscore (matching Grails' own message-source
-     * convention, where plugin base names use hyphens). The suffix follows the resource-bundle
-     * convention {@code language(_COUNTRY(_variant))} &mdash; not BCP 47 &mdash; so the language must
-     * be an ISO language and, when present, the country an ISO country; anything else (e.g.
-     * {@code foo_en_prod.properties}) is rejected rather than misparsed as a script or region.
+     * Builds a {@link Locale} from a descriptor identifier such as {@code de}, {@code pt_BR} or
+     * {@code de_AT_oo}. The identifiers follow the {@link java.util.ResourceBundle} convention
+     * {@code language(_COUNTRY(_variant))} and were already validated against the ISO codes when the
+     * descriptor was generated, so no validation is repeated here.
      */
-    private static Locale localeFromBundleFilename(String filename) {
-        if (filename == null || !filename.endsWith(PROPERTIES_SUFFIX)) {
+    private static Locale parseLocale(String identifier) {
+        if (identifier == null || identifier.isBlank()) {
             return null;
         }
-        String base = filename.substring(0, filename.length() - PROPERTIES_SUFFIX.length());
-        int underscore = base.indexOf('_');
-        if (underscore < 0) {
-            return null;
-        }
-        String[] parts = base.substring(underscore + 1).split("_", 3);
-        String language = parts[0];
-        if (!ISO_LANGUAGES.contains(language)) {
-            return null;
-        }
-        if (parts.length == 1) {
-            return Locale.of(language);
-        }
-        String country = parts[1];
-        if (!ISO_COUNTRIES.contains(country)) {
-            return null;
-        }
-        return (parts.length == 2) ? Locale.of(language, country) : Locale.of(language, country, parts[2]);
+        String[] parts = identifier.split("_", 3);
+        return switch (parts.length) {
+            case 1 -> Locale.of(parts[0]);
+            case 2 -> Locale.of(parts[0], parts[1]);
+            default -> Locale.of(parts[0], parts[1], parts[2]);
+        };
     }
-
 }

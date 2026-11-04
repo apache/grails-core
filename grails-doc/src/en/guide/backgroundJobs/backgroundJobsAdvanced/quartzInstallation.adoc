@@ -1,0 +1,74 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+Add the plugin to the `dependencies` block of your `build.gradle`. The version is managed by the Grails BOM, so it does not need to be specified:
+
+[source,groovy]
+----
+dependencies {
+    implementation 'org.apache.grails:grails-quartz'
+}
+----
+
+No further setup is required. By default the plugin uses Quartz's in-memory `RAMJobStore`, so jobs are registered from your source at startup and require no database. See <<quartzConfiguration,Configuration>> for the available options, including JDBC-backed persistence.
+
+===== Creating your first job
+
+Use the link:{commandLineRef}create-job.html[create-job] command to generate a job under `grails-app/jobs`:
+
+[source,bash]
+----
+grails create-job MyJob
+----
+
+That produces:
+
+[source,groovy]
+----
+package com.mycompany.myapp
+
+class MyJob {
+
+    static triggers = {
+        simple repeatInterval: 5000L // execute the job every 5 seconds
+    }
+
+    void execute() {
+        println 'Job run!'
+    }
+}
+----
+
+Jobs are Spring beans and are autowired by name, so you can inject services and other beans into them:
+
+[source,groovy]
+----
+class MyJob {
+
+    MyService myService
+
+    static triggers = {
+        cron cronExpression: '0 0 6 * * ?'
+    }
+
+    void execute() {
+        myService.doSomething()
+    }
+}
+----

@@ -18,165 +18,107 @@
  */
 package org.grails.plugins.i18n
 
+import java.util.function.Supplier
+
 import spock.lang.Specification
 
-import java.text.Collator
-
 /**
- * Tests {@link AvailableLocaleResolver} against the {@code messages_*.properties} bundles on the
- * test classpath ({@code src/test/resources}: cs, es, fr, pt_BR, plus the base {@code messages.properties}).
+ * Locale discovery reads the build-time descriptors rather than scanning the classpath, so file-name
+ * interpretation is no longer exercised here — it happens once in the Grails Gradle plugin and is
+ * covered by {@code I18nBundleIndexSpec}.
  */
 class AvailableLocaleResolverSpec extends Specification {
 
-    private AvailableLocaleResolver newResolver(Locale defaultLocale = Locale.forLanguageTag('en')) {
-        new AvailableLocaleResolver(getClass().classLoader, defaultLocale)
+    private static AvailableLocaleResolver resolver(List<String> locales, Locale defaultLocale) {
+        Supplier<EffectiveI18nDescriptors> descriptors = {
+            EffectiveI18nDescriptors.of(
+                    [new I18nDescriptor(I18nDescriptor.TYPE_APPLICATION, 'app', '1.0', ['messages'], locales)],
+                    [], true)
+        } as Supplier<EffectiveI18nDescriptors>
+        new AvailableLocaleResolver(descriptors, defaultLocale)
     }
 
-    void 'discovers the locales that have a messages bundle plus the default locale'() {
+    void 'the default locale is always offered even without a locale-specific bundle'() {
+        expect:
+        resolver([], Locale.forLanguageTag('en')).availableLocales == [Locale.of('en')]
+    }
+
+    void 'each descriptor locale becomes an offered locale'() {
         when:
-        List<Locale> locales = newResolver().availableLocales
+        List<Locale> locales = resolver(['de', 'fr'], Locale.forLanguageTag('en')).availableLocales
 
         then:
-        locales.contains(Locale.forLanguageTag('en'))
-        locales.contains(Locale.forLanguageTag('es'))
-        locales.contains(Locale.forLanguageTag('fr'))
-        locales.contains(Locale.forLanguageTag('pt-BR'))
+        locales.containsAll([Locale.of('en'), Locale.of('de'), Locale.of('fr')])
+        locales.size() == 3
     }
 
-    void 'plugin-namespaced bundles are discovered only when plugin bundles are included'() {
-        given: 'a plugin ships spring-security-core_zu.properties (a locale no messages bundle has)'
-        Locale zulu = Locale.forLanguageTag('zu')
-
-        expect: 'a host-only scan does not see the plugin-namespaced locale'
-        !new AvailableLocaleResolver(getClass().classLoader, Locale.forLanguageTag('en'), false)
-                .availableLocales.contains(zulu)
-
-        when: 'plugin bundles are included'
-        List<Locale> locales = new AvailableLocaleResolver(getClass().classLoader,
-                Locale.forLanguageTag('en'), true).availableLocales
-
-        then: 'the plugin locale is discovered, alongside the host messages locales'
-        locales.contains(zulu)
-        locales.contains(Locale.forLanguageTag('es'))
-    }
-
-    void 'non-i18n properties files on the classpath are ignored'() {
-        given:
-        List<String> isoLanguages = Locale.getISOLanguages() as List
-
-        expect: 'application.properties / logback.properties etc. never contribute a bogus locale'
-        new AvailableLocaleResolver(getClass().classLoader, Locale.forLanguageTag('en'), true)
-                .availableLocales.every { it.language in isoLanguages }
-    }
-
-    void 'sorts the discovered locales by their autonym using a ROOT collator'() {
-        given:
-        Collator collator = Collator.getInstance(Locale.ROOT)
-        List<Locale> expectedKnown = [
-                Locale.forLanguageTag('cs'),
-                Locale.forLanguageTag('en'),
-                Locale.forLanguageTag('es'),
-                Locale.forLanguageTag('fr'),
-                Locale.forLanguageTag('pt-BR')
-        ].sort(false) { a, b -> collator.compare(a.getDisplayName(a), b.getDisplayName(b)) }
-
-        when: 'the discovered list is narrowed to the bundles this test controls'
-        List<Locale> actualKnown = newResolver().availableLocales.findAll { it in expectedKnown }
-
-        then: 'their relative order matches a collator sort of the autonyms'
-        actualKnown == expectedKnown
-    }
-
-    void 'orders accented autonyms by base letter, not Unicode code point'() {
-        given: 'čeština (cs) begins with č, which sorts after every ASCII letter by code point'
-        List<Locale> locales = newResolver().availableLocales
-
-        expect: 'a collator keeps it with the c-names, before español (es); a code-point sort would push it last'
-        locales.indexOf(Locale.forLanguageTag('cs')) < locales.indexOf(Locale.forLanguageTag('es'))
-    }
-
-    void 'always includes the configured default locale even without a matching bundle'() {
+    void 'a language_COUNTRY identifier becomes a locale with that country'() {
         expect:
-        newResolver(Locale.forLanguageTag('de')).availableLocales.contains(Locale.forLanguageTag('de'))
+        resolver(['pt_BR'], null).availableLocales == [Locale.of('pt', 'BR')]
     }
 
-    void 'returns an unmodifiable list'() {
+    void 'locales are ordered by their own display name, keeping accented letters with their base letter'() {
         when:
-        newResolver().availableLocales.add(Locale.forLanguageTag('zz'))
+        List<Locale> locales = resolver(['cs', 'de', 'da'], null).availableLocales
+
+        then: "čeština sorts near 'c' rather than after 'z', and the order is identical in every UI language"
+        locales*.toString() == ['cs', 'da', 'de']
+    }
+
+    void 'a null default locale simply contributes nothing'() {
+        expect:
+        resolver(['de'], null).availableLocales == [Locale.of('de')]
+    }
+
+    void 'the ROOT locale is not offered as a language'() {
+        expect:
+        resolver([], Locale.ROOT).availableLocales == []
+    }
+
+    void 'the result is unmodifiable'() {
+        when:
+        resolver(['de'], null).availableLocales << Locale.FRENCH
 
         then:
         thrown(UnsupportedOperationException)
     }
 
-    void 'a null default locale is simply not added'() {
-        when:
-        List<Locale> locales = newResolver(null).availableLocales
-
-        then: 'the scanned bundles are still discovered'
-        locales.contains(Locale.forLanguageTag('es'))
-        locales.contains(Locale.forLanguageTag('fr'))
-
-        and: 'no null or language-less entry is present'
-        locales.every { it != null && it.language }
-    }
-
-    void 'a language-less default locale (Locale.ROOT) is simply not added'() {
-        expect:
-        !newResolver(Locale.ROOT).availableLocales.contains(Locale.ROOT)
-    }
-
-    void 'falls back to just the default locale when classpath scanning fails'() {
-        given: 'a class loader whose resource enumeration always fails'
-        ClassLoader failingClassLoader = new ClassLoader(null) {
-
-            @Override
-            Enumeration<URL> getResources(String name) throws IOException {
-                throw new IOException('simulated classpath failure')
-            }
-        }
+    void 'the locale list is cached until the cache is cleared'() {
+        given: 'a supplier that reports how often the descriptors were read'
+        int reads = 0
+        Supplier<EffectiveI18nDescriptors> descriptors = {
+            reads++
+            EffectiveI18nDescriptors.of(
+                    [new I18nDescriptor(I18nDescriptor.TYPE_APPLICATION, 'app', '1.0', ['messages'], ['de'])],
+                    [], true)
+        } as Supplier<EffectiveI18nDescriptors>
+        AvailableLocaleResolver resolver = new AvailableLocaleResolver(descriptors, null)
 
         when:
-        List<Locale> locales = new AvailableLocaleResolver(failingClassLoader, Locale.forLanguageTag('en')).availableLocales
+        resolver.availableLocales
+        resolver.availableLocales
 
-        then: 'no exception escapes and only the default locale is offered'
-        locales == [Locale.forLanguageTag('en')]
-    }
+        then:
+        reads == 1
 
-    void 'bundles with a malformed locale suffix never contribute a locale'() {
-        given: 'deliberate fixtures: standalone.properties (no suffix), messages_.properties (empty), bogus-plugin_zz.properties (non-ISO language) and report_en_prod.properties (non-ISO country)'
-        List<Locale> locales = new AvailableLocaleResolver(getClass().classLoader, null, true).availableLocales
-
-        expect: 'the scan saw sibling fixtures (a valid plugin-namespaced bundle is discovered)'
-        locales.contains(Locale.forLanguageTag('zu'))
-
-        and: 'none of the malformed fixtures produced a locale'
-        locales.every { it.language && it.language in Locale.getISOLanguages() }
-        !locales.any { it.language == 'zz' }
-
-        and: 'a non-ISO country is rejected rather than misparsed as a script or region (no en-Prod)'
-        !locales.any { it.toLanguageTag().toLowerCase().contains('prod') }
-    }
-
-    void 'a language_COUNTRY suffix is parsed by resource-bundle convention'() {
-        expect: 'the pt_BR fixture yields the pt-BR locale, with BR as the country'
-        Locale brazilian = newResolver().availableLocales.find { it.language == 'pt' }
-        brazilian.country == 'BR'
-    }
-
-    void 'caches the computed list until the cache is cleared'() {
-        given:
-        AvailableLocaleResolver resolver = newResolver()
-
-        expect: 'the same instance is returned while cached'
-        resolver.availableLocales.is(resolver.availableLocales)
-
-        when: 'the cache is cleared'
-        List<Locale> before = resolver.availableLocales
+        when: 'a bundle was added during development and the descriptor regenerated'
         resolver.clearCache()
-        List<Locale> after = resolver.availableLocales
+        resolver.availableLocales
 
-        then: 'a freshly computed list is returned with equal contents'
-        !before.is(after)
-        before == after
+        then: 'the descriptors are re-read rather than the stale list being reused'
+        reads == 2
+    }
+
+    void 'a plugin excluded from message resolution does not advertise its locales'() {
+        given: 'a plugin descriptor whose plugin the application never discovered'
+        Supplier<EffectiveI18nDescriptors> descriptors = {
+            EffectiveI18nDescriptors.of([
+                    new I18nDescriptor(I18nDescriptor.TYPE_APPLICATION, 'app', '1.0', ['messages'], ['de']),
+                    new I18nDescriptor(I18nDescriptor.TYPE_PLUGIN, 'evicted', '1.0', ['evicted'], ['ja'])],
+                    [], true)
+        } as Supplier<EffectiveI18nDescriptors>
+
+        expect: 'offering Japanese would promise a translation whose messages cannot resolve'
+        new AvailableLocaleResolver(descriptors, null).availableLocales == [Locale.of('de')]
     }
 }

@@ -48,22 +48,23 @@ class GrailsCompileStaticArtefactsProvider implements CommandLineArgumentProvide
         this.compileStatic = compileStatic
     }
 
-    // The effective values fold in the compileStatic.all shortcut so that toggling it both emits the
-    // flags and invalidates the compile task (it is the @Input getters that Gradle snapshots).
+    // An artefact type that states a value keeps it; one that says nothing follows compileStatic.all.
+    // Folding the shortcut in here rather than at the call sites means toggling it both emits the flags
+    // and invalidates the compile task (it is the @Input getters that Gradle snapshots).
 
     @Input
     boolean isCompileStaticControllers() {
-        compileStatic.all.getOrElse(false) || compileStatic.controllers.getOrElse(false)
+        compileStatic.controllers.getOrElse(compileStatic.all.getOrElse(false))
     }
 
     @Input
     boolean isCompileStaticServices() {
-        compileStatic.all.getOrElse(false) || compileStatic.services.getOrElse(false)
+        compileStatic.services.getOrElse(compileStatic.all.getOrElse(false))
     }
 
     @Input
     boolean isCompileStaticTagLibs() {
-        compileStatic.all.getOrElse(false) || compileStatic.tagLibs.getOrElse(false)
+        compileStatic.tagLibs.getOrElse(compileStatic.all.getOrElse(false))
     }
 
     @Override

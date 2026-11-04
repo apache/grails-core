@@ -40,31 +40,31 @@ dependencies {
 // - compileGroovy
 // - compileTestGroovy
 // - compileGroovyPlugins (if present)
+boolean ciBuild = isCiBuild
+boolean cacheTests = !doNotCacheTests
 tasks.withType(GroovyCompile).configureEach {
-    outputs.cacheIf { !isCiBuild }
+    outputs.cacheIf { !ciBuild }
 }
 
 tasks.withType(Test).configureEach {
     // Disable build cache for tests in CI to ensure they always run.
     // Also honor DO_NOT_CACHE_TESTS=1 so developers can repeatedly invoke the same test
     // command without --rerun-tasks (and without recompiling everything else).
-    outputs.cacheIf { !isCiBuild && !doNotCacheTests }
-    outputs.upToDateWhen { !doNotCacheTests }
+    outputs.cacheIf { !ciBuild && cacheTests }
+    outputs.upToDateWhen { cacheTests }
 
-    onlyIf {
-        ![
-                'onlyFunctionalTests',
-                'onlyHibernate5Tests',
-                'onlyHibernate7Tests',
-                'onlyMongodbTests',
-                'onlyRedisTests',
-                'onlySpringSecurityTests',
-                'skipCoreTests',
-                'skipTests'
-        ].find {
-            project.hasProperty(it)
-        }
-    }
+    boolean skipped = [
+            'onlyFunctionalTests',
+            'onlyHibernate5Tests',
+            'onlyHibernate7Tests',
+            'onlyMongodbTests',
+            'onlyNeo4jTests',
+            'onlyRedisTests',
+            'onlySpringSecurityTests',
+            'skipCoreTests',
+            'skipTests'
+    ].any { project.hasProperty(it) }
+    onlyIf { !skipped }
 
     useJUnitPlatform()
     jvmArgs += java17moduleReflectionCompatibilityArguments
@@ -83,16 +83,18 @@ tasks.withType(Test).configureEach {
         showStackTraces = true
     }
     excludes = ['**/*TestCase.class', '**/*$*.class']
-    maxParallelForks = configuredTestParallel
-    maxHeapSize = isCiBuild ? '768m' : '1024m'
+    maxParallelForks = rootProject.ext.configuredTestParallel
+    maxHeapSize = "${rootProject.ext.testForkHeapMb}m"
     forkEvery = hasProperty('forkEveryUnitTest') ? getProperty('forkEveryUnitTest') as long : (isCiBuild ? 50 : 100)
     if (System.getProperty('debug.tests')) {
         jvmArgs += debugArguments
     }
-    afterSuite {
-        System.out.print('.')
-        System.out.flush()
-    }
+    addTestListener([
+        afterSuite: { desc, result ->
+            System.out.print('.')
+            System.out.flush()
+        }
+    ] as TestListener)
     // Bridge Geb-specific properties (e.g. from local.properties) to the Test JVM
     // to allow local overrides of Docker images and other settings.
     project.properties.each { key, value ->
@@ -119,15 +121,20 @@ if (hasProperty('testBisect')) {
             }
         }
 
-        beforeTest { testDescriptor ->
-            logger.info('STARTED TEST: {} > {}', testDescriptor.className, testDescriptor.name)
-        }
-
-        afterSuite { desc, result ->
-            if (!desc.parent) {
-                def testStatus = result.failedTestCount == 0 && result.testCount > 1 ? 'PASSED' : 'FAILED'
-                logger.info('FINISHED - {} - {} tests executed, {} failed', testStatus, result.testCount, result.failedTestCount)
-            }
-        }
+        Logger testLogger = logger
+        addTestListener([
+                beforeTest: { testDescriptor ->
+                    testLogger.info('STARTED TEST: {} > {}', testDescriptor.className, testDescriptor.name)
+                },
+                afterSuite: { suite, result ->
+                    if (!suite.parent) {
+                        def testStatus = result.failedTestCount == 0 && result.testCount > 1 ? 'PASSED' : 'FAILED'
+                        testLogger.info(
+                                'FINISHED - {} - {} tests executed, {} failed',
+                                testStatus, result.testCount, result.failedTestCount
+                        )
+                    }
+                }
+        ] as TestListener)
     }
 }

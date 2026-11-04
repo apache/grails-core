@@ -59,11 +59,9 @@ dependencies {
     testImplementation project(':grails-testing-support-datamapping')
     testImplementation project(':grails-testing-support-web')
 
-    implementation 'org.ehcache:ehcache', {
-        capabilities {
-            requireCapability('org.ehcache:ehcache-jakarta')
-        }
-    }
+    // the ACL cache is built on the JSR-107 API; the provider (ehcache) reaches the runtime
+    // classpath through grails-spring-security
+    implementation 'javax.cache:cache-api'
 
     api project(':grails-spring-security')
     api project(':grails-spring-security-compat')

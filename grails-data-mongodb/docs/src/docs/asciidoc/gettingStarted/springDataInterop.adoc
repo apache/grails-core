@@ -29,7 +29,7 @@ implementation "org.apache.grails:grails-data-mongodb-spring-data:{version}"
 
 When the module and Spring Data MongoDB are on the classpath of a Spring Boot application that already has a GORM `MongoDatastore`, it auto-configures, over GORM's existing connection:
 
-* a `MongoDatabaseFactory` bound to GORM's `MongoClient` and default database (GORM keeps ownership of the client; the factory will not close it),
+* a `MongoDatabaseFactory` bound to GORM's `MongoClient` and default database (GORM keeps ownership of the client; the factory will not close it, and it goes on working across a <<advancedConfig,CRaC checkpoint and restore>>),
 * a `MongoTemplate` (named `mongoTemplate`) and its `MappingMongoConverter`, sharing the driver-level codec registry,
 * a primary `transactionManager` that lets GORM and Spring Data participate in a single MongoDB transaction.
 
@@ -64,7 +64,9 @@ The unified manager is registered as the primary `transactionManager` (it has to
 
 WARNING: Because it is primary, in an application that mixes this with another persistence stack (for example Hibernate/JPA), an unqualified `@Transactional` resolves to this MongoDB manager. If you run multiple persistence stacks, define your own primary `transactionManager` (or qualify every `@Transactional` explicitly) so each method targets the intended manager.
 
-NOTE: Like GORM's own transaction manager, the unified manager supports a single flat transaction (`PROPAGATION_REQUIRED`). Spring-native suspension propagations such as `REQUIRES_NEW` and `NESTED` are not supported — a nested transactional call joins the surrounding transaction rather than starting an independent one.
+NOTE: On the unified manager, `readOnly` only governs GORM's flush. A GORM write queued inside a read-only transaction is not flushed (see <<readOnlyTransactions,Read-Only Transactions>>), but a Spring Data write such as `mongoTemplate.insert(...)` is still persisted: a read-only transaction has no server-side transaction, so the write is applied on its own. A read-only transaction does not prevent Spring Data writes.
+
+NOTE: Propagation is as for GORM's own transaction manager (see <<nestedTransactions,Nested Transactions>>), for Spring Data as for GORM: a transactional call inside another joins it, and `REQUIRES_NEW` suspends it and runs in a GORM session and `ClientSession` of its own, which its `MongoTemplate` calls use. A transaction begun inside `withNewSession` likewise runs its `MongoTemplate` calls in its own `ClientSession`, or without one if it is read-only, and the surrounding transaction's calls go back to that transaction's when it completes. `NESTED` is not supported.
 
 ==== Boundary
 

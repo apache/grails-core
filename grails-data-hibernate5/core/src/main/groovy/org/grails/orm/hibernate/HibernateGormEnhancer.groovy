@@ -24,6 +24,7 @@ import org.springframework.transaction.PlatformTransactionManager
 
 import org.grails.datastore.gorm.GormEnhancer
 import org.grails.datastore.gorm.GormInstanceApi
+import org.grails.datastore.gorm.GormRegistry
 import org.grails.datastore.gorm.GormStaticApi
 import org.grails.datastore.gorm.GormValidationApi
 import org.grails.datastore.mapping.core.Datastore
@@ -57,7 +58,8 @@ class HibernateGormEnhancer extends GormEnhancer {
                 datastoreForConnection,
                 createDynamicFinders(datastoreForConnection),
                 Thread.currentThread().contextClassLoader,
-                datastoreForConnection.getTransactionManager()
+                datastoreForConnection.getTransactionManager(),
+                qualifier
         )
     }
 
@@ -74,7 +76,7 @@ class HibernateGormEnhancer extends GormEnhancer {
     }
 
     @Override
-    protected void registerConstraints(Datastore datastore) {
-        // no-op
+    protected void registerApiFactories() {
+        GormRegistry.instance.registerApiFactory(HibernateDatastore, new HibernateGormApiFactory(Thread.currentThread().contextClassLoader))
     }
 }

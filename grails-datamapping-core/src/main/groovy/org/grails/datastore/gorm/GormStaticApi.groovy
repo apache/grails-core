@@ -19,1019 +19,1067 @@
 package org.grails.datastore.gorm
 
 import groovy.transform.CompileDynamic
-import groovy.transform.CompileStatic
-import groovy.transform.TypeCheckingMode
-import org.codehaus.groovy.runtime.InvokerHelper
+import groovy.util.logging.Slf4j
 
-import org.springframework.beans.PropertyAccessorFactory
-import org.springframework.beans.factory.config.AutowireCapableBeanFactory
+import jakarta.persistence.FlushModeType
+import jakarta.persistence.LockModeType
+
+import org.springframework.core.convert.ConversionFailedException
+import org.springframework.core.convert.ConversionService
 import org.springframework.transaction.PlatformTransactionManager
 import org.springframework.transaction.TransactionDefinition
 import org.springframework.transaction.support.DefaultTransactionDefinition
-import org.springframework.util.Assert
 
 import grails.gorm.CriteriaBuilder
 import grails.gorm.DetachedCriteria
-import grails.gorm.MultiTenant
-import grails.gorm.PagedResultList
 import grails.gorm.api.GormAllOperations
+import grails.gorm.api.GormInstanceOperations
+import grails.gorm.api.GormStaticOperations
+import grails.gorm.multitenancy.CurrentTenantHolder
 import grails.gorm.multitenancy.Tenants
 import grails.gorm.transactions.GrailsTransactionTemplate
-import org.grails.datastore.gorm.finders.DynamicFinder
 import org.grails.datastore.gorm.finders.FinderMethod
-import org.grails.datastore.gorm.multitenancy.TenantDelegatingGormOperations
-
+import org.grails.datastore.gorm.internal.RefreshLockArguments
+import org.grails.datastore.gorm.transactions.DefaultTransactionTemplateFactory
+import org.grails.datastore.gorm.transactions.TransactionTemplateFactory
 import org.grails.datastore.mapping.core.Datastore
 import org.grails.datastore.mapping.core.DatastoreUtils
 import org.grails.datastore.mapping.core.Session
 import org.grails.datastore.mapping.core.SessionCallback
+import org.grails.datastore.mapping.core.SessionImplementor
 import org.grails.datastore.mapping.core.StatelessDatastore
 import org.grails.datastore.mapping.core.connections.ConnectionSource
-import org.grails.datastore.mapping.core.connections.ConnectionSourceSettings
 import org.grails.datastore.mapping.core.connections.ConnectionSources
 import org.grails.datastore.mapping.core.connections.ConnectionSourcesProvider
+import org.grails.datastore.mapping.core.impl.PendingInsert
+import org.grails.datastore.mapping.engine.AssociationQueryExecutor
+import org.grails.datastore.mapping.model.MappingContext
 import org.grails.datastore.mapping.model.PersistentEntity
-import org.grails.datastore.mapping.model.PersistentProperty
-import org.grails.datastore.mapping.model.types.Association
 import org.grails.datastore.mapping.multitenancy.MultiTenancySettings.MultiTenancyMode
+import org.grails.datastore.mapping.multitenancy.MultiTenantCapableDatastore
 import org.grails.datastore.mapping.query.Query
 import org.grails.datastore.mapping.query.api.BuildableCriteria
-import org.grails.datastore.mapping.query.api.Criteria
+import org.grails.datastore.mapping.transactions.TransactionCapableDatastore
 
 /**
- * Static methods of the GORM API.
+ * Static methods for GORM
  *
  * @author Graeme Rocher
- * @param <D> the entity/domain class
  */
-@CompileStatic
+@CompileDynamic
+@Slf4j
 class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D> {
 
-    protected final List<FinderMethod> gormDynamicFinders
+    private static final TransactionTemplateFactory DEFAULT_TRANSACTION_TEMPLATE_FACTORY = new DefaultTransactionTemplateFactory()
 
-    protected final PlatformTransactionManager transactionManager
-    protected final String defaultQualifier
+    protected final List<FinderMethod> finders
+
+    /**
+     * The multi-tenancy mode of the datastore this API was created for, resolved once at
+     * construction time. Retained for source/binary compatibility with out-of-tree
+     * {@code GormStaticApi} subclasses that reference this field directly.
+     */
     protected final MultiTenancyMode multiTenancyMode
-    protected final ConnectionSources connectionSources
 
+    @Deprecated
     GormStaticApi(Class<D> persistentClass, Datastore datastore, List<FinderMethod> finders) {
-        this(persistentClass, datastore, finders, null)
+        this(persistentClass, datastore?.mappingContext, finders, datastore != null ? ({ datastore } as DatastoreResolver) : null, ConnectionSource.DEFAULT, null)
     }
 
+    @Deprecated
     GormStaticApi(Class<D> persistentClass, Datastore datastore, List<FinderMethod> finders, PlatformTransactionManager transactionManager) {
-        super(persistentClass, datastore)
-        gormDynamicFinders = finders
-        this.transactionManager = transactionManager
-        String qualifier = ConnectionSource.DEFAULT
-        if (datastore instanceof ConnectionSourcesProvider) {
-            this.connectionSources = ((ConnectionSourcesProvider) datastore).connectionSources
-            ConnectionSource<?, ? extends ConnectionSourceSettings> defaultConnectionSource = connectionSources.defaultConnectionSource
-            qualifier = defaultConnectionSource.name
-            multiTenancyMode = defaultConnectionSource.settings.multiTenancy.mode
+        this(persistentClass, datastore?.mappingContext, finders, datastore != null ? ({ datastore } as DatastoreResolver) : null, ConnectionSource.DEFAULT, null)
+    }
 
-        }
-        else {
-            connectionSources = null
-            multiTenancyMode = MultiTenancyMode.NONE
-        }
-        this.defaultQualifier = qualifier
+    GormStaticApi(Class<D> persistentClass, MappingContext mappingContext, List<FinderMethod> finders) {
+        this(persistentClass, mappingContext, finders, null, ConnectionSource.DEFAULT, null)
+    }
+
+    GormStaticApi(Class<D> persistentClass, MappingContext mappingContext, List<FinderMethod> finders, String qualifier) {
+        this(persistentClass, mappingContext, finders, null, qualifier, null)
+    }
+
+    GormStaticApi(Class<D> persistentClass, MappingContext mappingContext, List<FinderMethod> finders, DatastoreResolver resolver, String qualifier) {
+        this(persistentClass, mappingContext, finders, resolver, qualifier, null)
+    }
+
+    GormStaticApi(Class<D> persistentClass, MappingContext mappingContext, List<FinderMethod> finders, DatastoreResolver resolver, String qualifier, GormRegistry registry) {
+        super(persistentClass, mappingContext, resolver, qualifier, registry)
+        this.finders = finders
+        this.multiTenancyMode = resolveMultiTenancyMode(resolver)
     }
 
     /**
-     * @return The PersistentEntity for this class
+     * Resolves the multi-tenancy mode from the datastore this API is bound to. Safe to call at
+     * construction time: every code path that constructs a {@code GormStaticApi} passes either
+     * {@code null} or a resolver already bound to a concrete, already-registered datastore (see
+     * {@code GormRegistry.createStaticApi}) — never a tenant-resolving resolver that could throw
+     * before a tenant context is bound.
      */
+    private static MultiTenancyMode resolveMultiTenancyMode(DatastoreResolver resolver) {
+        Datastore ds = resolver?.resolve()
+        if (ds instanceof ConnectionSourcesProvider) {
+            def defaultConnectionSource = ((ConnectionSourcesProvider) ds).connectionSources.defaultConnectionSource
+            return defaultConnectionSource.settings.multiTenancy.mode
+        }
+        return MultiTenancyMode.NONE
+    }
+
+    @Override
+    PlatformTransactionManager getTransactionManager() {
+        Datastore ds = getDatastore()
+        if (ds instanceof TransactionCapableDatastore) {
+            return ((TransactionCapableDatastore)ds).getTransactionManager()
+        }
+        return null
+    }
+
+    @Override
+    protected <T1> T1 executeQualified(String qualifier, SessionCallback<T1> callback) {
+        GormStaticApi<D> qualifiedApi = registry.findStaticApi(persistentClass, qualifier)
+        if (qualifiedApi != null && qualifiedApi != this) {
+            return (T1) qualifiedApi.execute(callback)
+        }
+        return DatastoreUtils.execute(getDatastore(), callback)
+    }
+
+    @Override
     PersistentEntity getGormPersistentEntity() {
-        persistentEntity
+        PersistentEntity entity = qualifier != null ? registry.apiResolver.findEntity(persistentClass, qualifier) : null
+        if (entity == null) {
+            entity = super.getGormPersistentEntity()
+        }
+        if (entity == null) {
+            entity = registry.apiResolver.findEntity(persistentClass)
+        }
+        // Final fallback: resolve from the mapping context captured when this API was constructed.
+        // Entity metadata is identical across tenants/connections (only the datastore/session differs),
+        // so this stable reference is the most reliable source and avoids a null entity when runtime
+        // registry resolution is disturbed by cross-spec state — e.g. a qualified API created by
+        // withTenant(tenantId) for DISCRIMINATOR/SCHEMA multi-tenancy.
+        if (entity == null && mappingContext != null) {
+            entity = mappingContext.getPersistentEntity(persistentClass.name)
+        }
+        entity
     }
 
+    @Override
     List<FinderMethod> getGormDynamicFinders() {
-        gormDynamicFinders
+        return finders
     }
 
-    /**
-     * Property missing handler
-     *
-     * @param name The name of the property
-     */
-    def propertyMissing(String name) {
-        if (datastore instanceof ConnectionSourcesProvider) {
-            return GormEnhancer.findStaticApi(persistentClass, name)
+    GormStaticApi<D> forQualifier(String qualifier) {
+        Datastore ds = getDatastore()
+        DatastoreResolver resolver = new DatastoreResolver() {
+            @Override Datastore resolve() { registry.apiResolver.findDatastore(persistentClass, qualifier) }
         }
-        else {
-            throw new MissingPropertyException(name, persistentClass)
-        }
+        List<FinderMethod> qualifiedFinders = registry.createDynamicFinders(resolver, ds.mappingContext)
+        createStaticApi(persistentClass, ds.mappingContext, qualifiedFinders, resolver, qualifier)
     }
 
-    /**
-     * Property missing handler
-     *
-     * @param name The name of the property
-     */
-    void propertyMissing(String name, value) {
+    protected GormStaticApi<D> createStaticApi(Class<D> persistentClass, MappingContext mappingContext, List<FinderMethod> finders, DatastoreResolver resolver, String qualifier) {
+        new GormStaticApi<D>(persistentClass, mappingContext, finders, resolver, qualifier, registry)
+    }
+
+    @Override
+    Object methodMissing(String name, Object args) {
+        Object[] argsArray = (args instanceof Object[]) ? (Object[]) args : ([args] as Object[])
+        for (FinderMethod fm : finders) {
+            if (fm.isMethodMatch(name)) {
+                return execute({ Session session ->
+                    fm.invoke(persistentClass, name, argsArray)
+                } as SessionCallback)
+            }
+        }
+        throw new MissingMethodException(name, persistentClass, argsArray)
+    }
+
+    @Override
+    Object propertyMissing(String name) {
+        for (FinderMethod fm : finders) {
+            if (fm.isMethodMatch(name)) {
+                return { Object... args ->
+                    Object[] finderArgs = args == null ? ([null] as Object[]) : args
+                    execute({ Session session ->
+                        fm.invoke(persistentClass, name, finderArgs)
+                    } as SessionCallback)
+                }
+            }
+        }
+        
+        Datastore ds = getDatastore()
+        if (ds instanceof ConnectionSourcesProvider) {
+            ConnectionSources sources = ((ConnectionSourcesProvider) ds).connectionSources
+            if (sources != null) {
+                if (sources.getConnectionSource(name) != null) {
+                    return registry.findStaticApi(persistentClass, name)
+                }
+                if (name.equalsIgnoreCase(ConnectionSource.DEFAULT) || name.equalsIgnoreCase(ConnectionSource.OLD_DEFAULT)) {
+                    return registry.findStaticApi(persistentClass, ConnectionSource.DEFAULT)
+                }
+            }
+        }
+        // Fallback: the preferred/transactional datastore may be a single-datasource datastore
+        // that doesn't expose the named qualifier in its connectionSources. Check the registry
+        // directly so that entities mapped to multiple datasources (e.g. datasource 'ALL') can
+        // still be accessed via the qualifier even when a single-datasource transaction is active.
+        if (registry.getDatastoreByString(persistentClass.name, name) != null) {
+            return registry.findStaticApi(persistentClass, name)
+        }
         throw new MissingPropertyException(name, persistentClass)
     }
 
-    /**
-     * Method missing handler that deals with the invocation of dynamic finders
-     *
-     * @param methodName The method name
-     * @param args The arguments
-     * @return The result of the method call
-     */
-    @CompileDynamic
-    def methodMissing(String methodName, Object args) {
-        FinderMethod method = gormDynamicFinders.find { FinderMethod f -> f.isMethodMatch(methodName) }
-        if (!method) {
-            throw new MissingMethodException(methodName, persistentClass, args)
-        }
-
-        // if the class is multi tenant, don't cache the method because the tenant will need to be resolved
-        // for each method call
-        if (!MultiTenant.isAssignableFrom(persistentClass)) {
-
-            def mc = persistentClass.getMetaClass()
-
-            // register the method invocation for next time
-            mc.static."$methodName" = { Object[] varArgs ->
-                // FYI... This is relevant to http://jira.grails.org/browse/GRAILS-3463 and may
-                // become problematic if http://jira.codehaus.org/browse/GROOVY-5876 is addressed...
-                final argumentsForMethod
-                if (varArgs == null) {
-                    argumentsForMethod = [null] as Object[]
-                }
-                // if the argument component type is not an Object then we have an array passed that is the actual argument
-                else if (varArgs.getClass().componentType != Object) {
-                    // so we wrap it in an object array
-                    argumentsForMethod = [varArgs] as Object[]
-                }
-                else {
-
-                    if (varArgs.length == 1 && varArgs[0].getClass().isArray()) {
-                        argumentsForMethod = varArgs[0]
-                    } else {
-
-                        argumentsForMethod = varArgs
-                    }
-                }
-                method.invoke(delegate, methodName, argumentsForMethod)
-            }
-        }
-
-        return method.invoke(persistentClass, methodName, args)
+    @Override
+    void propertyMissing(String name, Object val) {
+        throw new MissingPropertyException(name, persistentClass)
     }
 
-    /**
-     *
-     * @param callable Callable closure containing detached criteria definition
-     * @return The DetachedCriteria instance
-     */
-    DetachedCriteria<D> where(Closure callable) {
-        new DetachedCriteria<D>(persistentClass).build(callable)
+    // GormInstanceOperations delegation
+    @Override
+    def propertyMissing(D instance, String name) {
+        registry.findInstanceApi(persistentClass, qualifier).propertyMissing(instance, name)
     }
 
-    /**
-     *
-     * @param callable Callable closure containing detached criteria definition
-     * @return The DetachedCriteria instance that is lazily initialized
-     */
-    DetachedCriteria<D> whereLazy(Closure callable) {
-        new DetachedCriteria<D>(persistentClass).buildLazy(callable)
-    }
-    /**
-     *
-     * @param callable Callable closure containing detached criteria definition
-     * @return The DetachedCriteria instance
-     */
-    DetachedCriteria<D> whereAny(Closure callable) {
-        (DetachedCriteria<D>) new DetachedCriteria<D>(persistentClass).or(callable)
+    @Override
+    boolean instanceOf(D instance, Class cls) {
+        registry.findInstanceApi(persistentClass, qualifier).instanceOf(instance, cls)
     }
 
-    /**
-     * Uses detached criteria to build a query and then execute it returning a list
-     *
-     * @param callable The callable
-     * @return A List of entities
-     */
-    List<D> findAll(Closure callable) {
-        def criteria = new DetachedCriteria<D>(persistentClass).build(callable)
-        return criteria.list()
+    @Override
+    D lock(D instance) {
+        registry.findInstanceApi(persistentClass, qualifier).lock(instance)
     }
 
-    /**
-     * Uses detached criteria to build a query and then execute it returning a list
-     *
-     * @param args pagination parameters
-     * @param callable The callable
-     * @return A List of entities
-     */
-    List<D> findAll(Map args, Closure callable) {
-        def criteria = new DetachedCriteria<D>(persistentClass).build(callable)
-        return criteria.list(args)
+    @Override
+    def <T1> T1 mutex(D instance, Closure<T1> callable) {
+        registry.findInstanceApi(persistentClass, qualifier).mutex(instance, callable)
     }
 
-    /**
-     * Uses detached criteria to build a query and then execute it returning a list
-     *
-     * @param callable The callable
-     * @return A single entity
-     */
-    D find(Closure callable) {
-        def criteria = new DetachedCriteria<D>(persistentClass).build(callable)
-        return criteria.find()
+    @Override
+    D refresh(D instance) {
+        registry.findInstanceApi(persistentClass, qualifier).refresh(instance)
     }
 
-    /**
-     * Saves a list of objects in one go
-     * @param objectsToSave The objects to save
-     * @return A list of object identifiers
-     */
-    List<Serializable> saveAll(Object... objectsToSave) {
-        (List<Serializable>) execute({ Session session ->
-            session.persist(Arrays.asList(objectsToSave))
-        } as SessionCallback)
+    @Override
+    D refresh(D instance, Map args) {
+        registry.findInstanceApi(persistentClass, qualifier).refresh(instance, args)
     }
 
-    /**
-     * Saves a list of objects in one go
-     * @param objectToSave Collection of objects to save
-     * @return A list of object identifiers
-     */
-    List<Serializable> saveAll(Iterable<?> objectsToSave) {
-        (List<Serializable>) execute({ Session session ->
-            session.persist(objectsToSave)
-        } as SessionCallback)
+    @Override
+    D save(D instance) {
+        registry.findInstanceApi(persistentClass, qualifier).save(instance)
     }
 
-    /**
-     * Deletes a list of objects in one go
-     * @param objectsToDelete The objects to delete
-     */
-    void deleteAll(Object... objectsToDelete) {
-        execute({ Session session ->
-            session.delete(Arrays.asList(objectsToDelete))
-        } as SessionCallback)
+    @Override
+    D insert(D instance) {
+        registry.findInstanceApi(persistentClass, qualifier).insert(instance)
     }
 
-    /**
-     * Deletes a list of objects in one go and flushes when param is set
-     * @param objectsToDelete The objects to delete
-     */
-    void deleteAll(Map params, Object... objectsToDelete) {
-        execute({ Session session ->
-            session.delete(Arrays.asList(objectsToDelete))
-            if (params?.flush) {
-                session.flush()
-            }
-        } as SessionCallback)
+    @Override
+    D insert(D instance, Map params) {
+        registry.findInstanceApi(persistentClass, qualifier).insert(instance, params)
     }
 
-    /**
-     * Deletes a list of objects in one go
-     * @param objectsToDelete Collection of objects to delete
-     */
-    void deleteAll(Iterable objectToDelete) {
-        execute({ Session session ->
-            session.delete(objectToDelete)
-        } as SessionCallback)
+    @Override
+    D merge(D instance) {
+        registry.findInstanceApi(persistentClass, qualifier).merge(instance)
     }
 
-    /**
-     * Deletes a list of objects in one go and flushes when param is set
-     * @param objectsToDelete Collection of objects to delete
-     */
-    void deleteAll(Map params, Iterable objectToDelete) {
-        execute({ Session session ->
-            session.delete(objectToDelete)
-            if (params?.flush) {
-                session.flush()
-            }
-        } as SessionCallback)
+    @Override
+    D merge(D instance, Map params) {
+        registry.findInstanceApi(persistentClass, qualifier).merge(instance, params)
     }
 
-    /**
-     * Creates an instance of this class
-     * @return The created instance
-     */
-    @CompileStatic(TypeCheckingMode.SKIP)
-    D create() {
-        D d = persistentClass.newInstance()
-
-        def applicationContext = datastore.applicationContext
-
-        if (applicationContext != null) {
-            applicationContext.autowireCapableBeanFactory.autowireBeanProperties(
-                    d, AutowireCapableBeanFactory.AUTOWIRE_BY_NAME, false)
-        }
-
-        return d
+    @Override
+    D save(D instance, boolean validate) {
+        registry.findInstanceApi(persistentClass, qualifier).save(instance, validate)
     }
 
-    /**
-     * Retrieves an object from the datastore. eg. Book.get(1)
-     */
+    @Override
+    D save(D instance, Map params) {
+        registry.findInstanceApi(persistentClass, qualifier).save(instance, params)
+    }
+
+    @Override
+    Serializable ident(D instance) {
+        registry.findInstanceApi(persistentClass, qualifier).ident(instance)
+    }
+
+    @Override
+    D attach(D instance) {
+        registry.findInstanceApi(persistentClass, qualifier).attach(instance)
+    }
+
+    @Override
+    boolean isAttached(D instance) {
+        registry.findInstanceApi(persistentClass, qualifier).isAttached(instance)
+    }
+
+    @Override
+    void discard(D instance) {
+        registry.findInstanceApi(persistentClass, qualifier).discard(instance)
+    }
+
+    @Override
+    void delete(D instance) {
+        registry.findInstanceApi(persistentClass, qualifier).delete(instance)
+    }
+
+    @Override
+    void delete(D instance, Map params) {
+        registry.findInstanceApi(persistentClass, qualifier).delete(instance, params)
+    }
+
+    // GormStaticOperations
+    @Override
     D get(Serializable id) {
-        (D) execute({ Session session ->
-            session.retrieve((Class)persistentClass, id)
-        } as SessionCallback)
+        execute({ Session session ->
+            if (id != null && isRetrievedByQuery(session)) {
+                return retrieveAllByQuery(session, [id], false)[0]
+            }
+            session.retrieve(persistentClass, id)
+        } as SessionCallback<D>)
     }
 
-    /**
-     * Retrieves an object from the datastore. eg. Book.read(1)
-     *
-     * Since the datastore abstraction doesn't support dirty checking yet this
-     * just delegates to {@link #get(Serializable)}
-     */
+    @Override
     D read(Serializable id) {
-        (D) execute({ Session session ->
-            session.retrieve((Class)persistentClass, id)
-        } as SessionCallback)
+        get(id)
     }
 
-    /**
-     * Retrieves an object from the datastore as a proxy. eg. Book.load(1)
-     */
+    @Override
     D load(Serializable id) {
-        (D) execute({ Session session ->
-            session.proxy((Class)persistentClass, id)
-        } as SessionCallback)
+        execute({ Session session ->
+            if (id != null && isRetrievedByQuery(session)) {
+                return proxyByQuery(session, id)
+            }
+            session.proxy(persistentClass, id)
+        } as SessionCallback<D>)
     }
 
-    /**
-     * Retrieves an object from the datastore as a proxy. eg. Book.proxy(1)
-     */
+    @Override
     D proxy(Serializable id) {
         load(id)
     }
 
-    /**
-     * Retrieve all the objects for the given identifiers
-     * @param ids The identifiers to operate against
-     * @return A list of identifiers
-     */
-    List<D> getAll(Iterable<Serializable> ids) {
-        return getAll(ids as Serializable[])
-    }
-
-    /**
-     * Retrieve all the objects for the given identifiers
-     * @param ids The identifiers to operate against
-     * @return A list of identifiers
-     */
+    @Override
     List<D> getAll(Serializable... ids) {
-        (List<D>) execute({ Session session ->
-            session.retrieveAll(persistentClass, ids.flatten())
-        } as SessionCallback)
+        execute({ Session session ->
+            if (isRetrievedByQuery(session)) {
+                List<Serializable> keys = (List<Serializable>) ids.flatten()
+                if (keys) {
+                    return retrieveAllByQuery(session, keys, true)
+                }
+            }
+            session.retrieveAll(persistentClass, ids)
+        } as SessionCallback<List<D>>)
     }
 
     /**
-     * @return Synonym for {@link #list()}
+     * Passes the identifiers on to {@link #getAll(Serializable...)}, so that a subclass that overrides it handles
+     * both.
      */
+    @Override
+    List<D> getAll(Iterable<Serializable> ids) {
+        getAll(ids.toList() as Serializable[])
+    }
+
+    @Override
     List<D> getAll() {
         list()
     }
 
     /**
-     * Creates a criteria builder instance
+     * Whether instances are retrieved by id through a query. In {@link MultiTenancyMode#DISCRIMINATOR} mode the
+     * multi-tenant event listener restricts a query to the current tenant, but a lookup by key bypasses it, so the
+     * instances of a multi-tenant entity are retrieved through a query instead. Inside
+     * {@link Tenants#withoutId(groovy.lang.Closure)} a lookup by id is not restricted to a tenant and stays a lookup by
+     * key. This is decided inside the session callback, as the listener decides it, so that a tenant that a qualifier
+     * binds for the callback, as {@code withTenant(tenantId).get(id)} binds it, restricts the lookup inside
+     * {@code withoutId} as well. Protected rather than private because the session callbacks of this class call it.
+     *
+     * @param session The session
+     * @return Whether instances are retrieved by id through a query
      */
-    BuildableCriteria createCriteria() {
-        new CriteriaBuilder(persistentClass, datastore.currentSession)
+    protected boolean isRetrievedByQuery(Session session) {
+        if (multiTenancyMode != MultiTenancyMode.DISCRIMINATOR) {
+            return false
+        }
+        PersistentEntity entity = getGormPersistentEntity()
+        if (entity?.isMultiTenant() != true || entity.identity == null || entity.tenantId == null) {
+            return false
+        }
+        return !Tenants.isWithoutId(session.datastore)
     }
 
     /**
-     * Creates a criteria builder instance
+     * The current tenant id of the datastore this API is bound to. Protected rather than private because the session
+     * callbacks of this class call it, and a call from a closure does not reach a private method when the API is a
+     * subclass instance.
+     *
+     * @return The current tenant id
+     * @throws org.grails.datastore.mapping.multitenancy.exceptions.TenantNotFoundException if there is no current tenant
      */
-    def withCriteria(@DelegatesTo(Criteria) Closure callable) {
-        execute({ Session session ->
-            InvokerHelper.invokeMethod(createCriteria(), 'call', callable)
-        } as SessionCallback)
+    protected Serializable currentTenantId() {
+        Datastore ds = getDatastore()
+        ds instanceof MultiTenantCapableDatastore
+                ? Tenants.currentId((MultiTenantCapableDatastore) ds)
+                : Tenants.currentId(ds.getClass())
     }
 
     /**
-     * Creates a criteria builder instance
+     * Retrieves the instances for the given identifiers through a query, which the multi-tenant event listener
+     * restricts to the current tenant. Protected rather than private because the session callbacks of this class call
+     * it.
+     *
+     * @param session The session
+     * @param ids The identifiers
+     * @param strict Whether an identifier that cannot be converted to the type of the identity throws
+     * @return The instances in the order of the identifiers, with {@code null} for an identifier no instance was found for
      */
-    def withCriteria(Map builderArgs, @DelegatesTo(Criteria) Closure callable) {
-        def criteriaBuilder = createCriteria()
-        def builderBean = PropertyAccessorFactory.forBeanPropertyAccess(criteriaBuilder)
-        for (entry in builderArgs.entrySet()) {
-            String propertyName = entry.key.toString()
-            if (builderBean.isWritableProperty(propertyName)) {
-                builderBean.setPropertyValue(propertyName, entry.value)
+    protected List<D> retrieveAllByQuery(Session session, Collection<Serializable> ids, boolean strict) {
+        findAllByKeys(session, ids.collect { Serializable id -> convertIdentifier(session, id, strict) })
+    }
+
+    /**
+     * Finds the instances of the current tenant for the given keys. An instance the session already holds is returned
+     * without a query, as the lookup by key returns it, and the others are queried without flushing the session.
+     * Protected rather than private because the session callbacks of this class call it.
+     *
+     * @param session The session
+     * @param keys The keys, already converted to the type of the identity
+     * @return The instances in the order of the keys, with {@code null} for a key no instance was found for
+     * @throws org.grails.datastore.mapping.multitenancy.exceptions.TenantNotFoundException if there is no current tenant
+     */
+    protected List<D> findAllByKeys(Session session, List<Serializable> keys) {
+        Map<Object, Object> found = [:]
+        Set<Serializable> missing = new LinkedHashSet<>()
+        if (keys.any { Serializable key -> key != null }) {
+            Serializable tenantId = currentTenantId()
+            for (Serializable key in keys) {
+                if (key == null || found.containsKey(key) || missing.contains(key)) {
+                    continue
+                }
+                Object cached = findCachedInstance(session, key, tenantId)
+                if (cached != null) {
+                    found.put(key, cached)
+                }
+                else {
+                    missing.add(key)
+                }
             }
         }
-
-        if (builderArgs?.uniqueResult) {
-            execute({ Session session ->
-                InvokerHelper.invokeMethod(criteriaBuilder, 'get', callable)
-            } as SessionCallback)
-
-        }
-        else {
-            execute({ Session session ->
-                InvokerHelper.invokeMethod(criteriaBuilder, 'list', callable)
-            } as SessionCallback)
-        }
-
-    }
-
-    /**
-     * Locks an instance for an update
-     * @param id The identifier
-     * @return The instance
-     */
-    D lock(Serializable id) {
-        (D) execute({ Session session ->
-            session.lock((Class)persistentClass, id)
-        } as SessionCallback)
-    }
-
-    /**
-     * Merges an instance with the current session
-     * @param d The object to merge
-     * @return The instance
-     */
-    @Override
-    def propertyMissing(D instance, String name) {
-        GormEnhancer.findInstanceApi(persistentClass, defaultQualifier).propertyMissing(instance, name)
-    }
-
-    @Override
-    boolean instanceOf(D instance, Class cls) {
-        GormEnhancer.findInstanceApi(persistentClass, defaultQualifier).instanceOf(instance, cls)
-    }
-
-    @Override
-    D lock(D instance) {
-        GormEnhancer.findInstanceApi(persistentClass, defaultQualifier).lock(instance)
-    }
-
-    @Override
-    def <T> T mutex(D instance, Closure<T> callable) {
-        GormEnhancer.findInstanceApi(persistentClass, defaultQualifier).mutex(instance, callable)
-    }
-
-    @Override
-    D refresh(D instance) {
-        GormEnhancer.findInstanceApi(persistentClass, defaultQualifier).refresh(instance)
-    }
-
-    @Override
-    D save(D instance) {
-        GormEnhancer.findInstanceApi(persistentClass, defaultQualifier).save(instance)
-    }
-
-    @Override
-    D insert(D instance) {
-        GormEnhancer.findInstanceApi(persistentClass, defaultQualifier).insert(instance)
-    }
-
-    @Override
-    D insert(D instance, Map params) {
-        GormEnhancer.findInstanceApi(persistentClass, defaultQualifier).insert(instance, params)
-    }
-
-    D merge(D d) {
-        execute({ Session session ->
-            session.persist(d)
-            return d
-        } as SessionCallback)
-    }
-
-    @Override
-    D merge(D instance, Map params) {
-        GormEnhancer.findInstanceApi(persistentClass, defaultQualifier).merge(instance, params)
-    }
-
-    @Override
-    D save(D instance, boolean validate) {
-        GormEnhancer.findInstanceApi(persistentClass, defaultQualifier).save(instance, validate)
-    }
-
-    @Override
-    D save(D instance, Map params) {
-        GormEnhancer.findInstanceApi(persistentClass, defaultQualifier).save(instance, params)
-    }
-
-    @Override
-    Serializable ident(D instance) {
-        GormEnhancer.findInstanceApi(persistentClass, defaultQualifier).ident(instance)
-    }
-
-    @Override
-    D attach(D instance) {
-        GormEnhancer.findInstanceApi(persistentClass, defaultQualifier).attach(instance)
-    }
-
-    @Override
-    boolean isAttached(D instance) {
-        GormEnhancer.findInstanceApi(persistentClass, defaultQualifier).isAttached(instance)
-    }
-
-    @Override
-    void discard(D instance) {
-        GormEnhancer.findInstanceApi(persistentClass, defaultQualifier).discard(instance)
-    }
-
-    @Override
-    void delete(D instance) {
-        GormEnhancer.findInstanceApi(persistentClass, defaultQualifier).delete(instance)
-    }
-
-    @Override
-    void delete(D instance, Map params) {
-        GormEnhancer.findInstanceApi(persistentClass, defaultQualifier).delete(instance, params)
-    }
-    /**
-     * Counts the number of persisted entities
-     * @return The number of persisted entities
-     */
-    Integer count() {
-        (Integer) execute({ Session session ->
-
-            def q = session.createQuery(persistentClass)
-            q.projections().count()
-            def result = q.singleResult()
-            if (!(result instanceof Number)) {
-                result = result.toString()
-            }
+        if (missing) {
+            PersistentEntity entity = getGormPersistentEntity()
+            FlushModeType flushMode = session.flushMode
+            session.flushMode = FlushModeType.COMMIT
             try {
-                return result as Integer
+                Query query = session.createQuery(persistentClass)
+                if (missing.size() == 1) {
+                    query.idEq(missing.first())
+                }
+                else {
+                    query.in(entity.identity.name, missing.toList())
+                }
+                for (Object instance in query.list()) {
+                    found.put(entity.reflector.getIdentifier(instance), instance)
+                }
             }
-            catch (NumberFormatException e) {
-                return 0
+            finally {
+                session.flushMode = flushMode
             }
-        } as SessionCallback)
+        }
+        (List<D>) keys.collect { Serializable key -> key == null ? null : found.get(key) }
     }
 
     /**
-     * Same as {@link #count()} but allows property-style syntax (Foo.count)
+     * Returns the instance the session holds for the given key if it belongs to the given tenant. An instance that is
+     * waiting to be inserted and has no tenant id yet belongs to it as well, because the multi-tenant event listener
+     * assigns the current tenant when it inserts the instance. Protected rather than private because the session
+     * callbacks of this class call it.
+     *
+     * @param session The session
+     * @param key The key, already converted to the type of the identity
+     * @param tenantId The current tenant id
+     * @return The instance, or {@code null} if the session holds none for the key or it belongs to another tenant
      */
-    Integer getCount() {
+    protected Object findCachedInstance(Session session, Serializable key, Serializable tenantId) {
+        if (!(session instanceof SessionImplementor)) {
+            return null
+        }
+        SessionImplementor implementor = (SessionImplementor) session
+        Object instance = implementor.getCachedInstance(persistentClass, key)
+        if (instance == null) {
+            return null
+        }
+        PersistentEntity entity = getGormPersistentEntity()
+        Object instanceTenantId = entity.reflector.getProperty(instance, entity.tenantId.name)
+        if (instanceTenantId == null) {
+            return isPendingInsert(implementor, instance) ? instance : null
+        }
+        return isSameTenant(session, instanceTenantId, tenantId) ? instance : null
+    }
+
+    private static boolean isPendingInsert(SessionImplementor session, Object instance) {
+        session.pendingInserts.values().any { Collection<PendingInsert> inserts ->
+            inserts.any { PendingInsert insert -> insert.object.is(instance) }
+        }
+    }
+
+    private static boolean isSameTenant(Session session, Object instanceTenantId, Serializable tenantId) {
+        if (instanceTenantId == tenantId) {
+            return true
+        }
+        ConversionService conversionService = session.mappingContext.conversionService
+        Class tenantIdType = instanceTenantId.getClass()
+        if (!conversionService.canConvert(tenantId.getClass(), tenantIdType)) {
+            return false
+        }
+        try {
+            return instanceTenantId == conversionService.convert(tenantId, tenantIdType)
+        }
+        catch (ConversionFailedException ignored) {
+            return false
+        }
+    }
+
+    /**
+     * Returns the instance the session holds for the given id if it belongs to the current tenant, and otherwise a
+     * proxy that is initialized through a query by id, which the multi-tenant event listener restricts to the tenant
+     * that is current when the proxy is initialized. A proxy for an instance of another tenant then fails to
+     * initialize, as a proxy for an instance that does not exist does. A proxy initialized inside
+     * {@link Tenants#withoutId(groovy.lang.Closure)} looks the instance up by key, so it is not restricted to a tenant.
+     * Protected rather than private because the session callbacks of this class call it.
+     *
+     * @param session The session
+     * @param id The identifier
+     * @return The instance or the proxy
+     */
+    protected D proxyByQuery(Session session, Serializable id) {
+        Serializable key = convertIdentifier(session, id, true)
+        Object cached = findCachedInstance(session, key, currentTenantId())
+        if (cached != null) {
+            return (D) cached
+        }
+        try {
+            return (D) session.mappingContext.proxyFactory.createProxy(session, new IdQueryExecutor(this, session), key)
+        }
+        catch (UnsupportedOperationException ignored) {
+            // a proxy factory that cannot initialize a proxy through a query gets the instance itself
+            return findAllByKeys(session, [key])[0]
+        }
+    }
+
+    /**
+     * Converts an identifier to the type of the identity as the lookup by key converts it: {@code getAll} and
+     * {@code load} throw for an identifier that cannot be converted, and {@code get} finds no instance for it.
+     * Protected rather than private because the session callbacks of this class call it.
+     *
+     * @param session The session
+     * @param id The identifier
+     * @param strict Whether an identifier that cannot be converted throws
+     * @return The converted identifier, or {@code null} for an identifier that cannot be converted if not strict
+     */
+    protected Serializable convertIdentifier(Session session, Serializable id, boolean strict) {
+        Class identityType = getGormPersistentEntity().identity.type
+        if (id == null || identityType.isInstance(id)) {
+            return id
+        }
+        ConversionService conversionService = session.mappingContext.conversionService
+        if (strict) {
+            return (Serializable) conversionService.convert(id, identityType)
+        }
+        if (!conversionService.canConvert(id.getClass(), identityType)) {
+            return null
+        }
+        try {
+            return (Serializable) conversionService.convert(id, identityType)
+        }
+        catch (ConversionFailedException ignored) {
+            return null
+        }
+    }
+
+    @Override
+    List<D> list() {
+        list(Collections.emptyMap())
+    }
+
+    @Override
+    List<D> list(Map params) {
+        execute({ Session session ->
+            org.grails.datastore.mapping.query.Query q = session.createQuery(persistentClass)
+            org.grails.datastore.gorm.finders.DynamicFinder.populateArgumentsForCriteria(persistentClass, q, params)
+            if (params?.containsKey('max')) {
+                return new grails.gorm.PagedResultList(q)
+            }
+            q.list()
+        } as SessionCallback<List<D>>)
+    }
+
+    @Override
+    Long count() {
+        // Capture the @Slf4j logger before entering the SessionCallback. With
+        // invokedynamic off (Grails 8 default), log.debug(...) inside that
+        // closure is dispatched through methodMissing as a dynamic finder on
+        // the persistent class (MissingMethodException: debug).
+        def logger = log
+        logger.debug('GormStaticApi.count() called for {}', persistentClass.name)
+        Long result = execute({ Session session ->
+            def query = session.createQuery(persistentClass)
+            query.projections().count()
+            def res = query.singleResult()
+            logger.debug('Query singleResult returned {}', res)
+            res instanceof Number ? ((Number)res).longValue() : 0L
+        } as SessionCallback<Long>)
+        logger.debug('count() result is {}', result)
+        return result
+    }
+
+    @Override
+    Long getCount() {
         count()
     }
 
-    /**
-     * Checks whether an entity exists
-     */
+    @Override
     boolean exists(Serializable id) {
         get(id) != null
     }
 
-    /**
-     * Lists objects in the datastore. eg. Book.list(max:10)
-     *
-     * @param params Any parameters such as offset, max etc.
-     * @return A list of results
-     */
-    List<D> list(Map params) {
-        (List<D>) execute({ Session session ->
-            Query q = session.createQuery(persistentClass)
-            DynamicFinder.populateArgumentsForCriteria(persistentClass, q, params)
-            if (params?.max) {
-                return new PagedResultList(q)
-            }
-            return q.list()
-        } as SessionCallback)
-    }
-
-    /**
-     * List all entities
-     *
-     * @return The list of all entities
-     */
-    List<D> list() {
-        (List<D>) execute({ Session session ->
-            session.createQuery(persistentClass).list()
-        } as SessionCallback)
-    }
-
-    /**
-     * The same as {@link #list()}
-     *
-     * @return The list of all entities
-     */
-    List<D> findAll(Map params = Collections.emptyMap()) {
-        list(params)
-    }
-
-    /**
-     * Finds an object by example
-     *
-     * @param example The example
-     * @return A list of matching results
-     */
-    List<D> findAll(D example) {
-        findAll(example, Collections.emptyMap())
-    }
-
-    /**
-     * Finds an object by example using the given arguments for pagination
-     *
-     * @param example The example
-     * @param args The arguments
-     *
-     * @return A list of matching results
-     */
-    List<D> findAll(D example, Map args) {
-        if (!persistentEntity.isInstance(example)) {
-            return Collections.emptyList()
-        }
-
-        def queryMap = createQueryMapForExample(persistentEntity, example)
-        return findAllWhere(queryMap, args)
-    }
-
-    /**
-     * Finds the first object using the natural sort order
-     *
-     * @return the first object in the datastore, null if none exist
-     */
+    @Override
     D first() {
         first([:])
     }
 
-    /**
-     * Finds the first object sorted by propertyName
-     *
-     * @param propertyName the name of the property to sort by
-     *
-     * @return the first object in the datastore sorted by propertyName, null if none exist
-     */
+    @Override
     D first(String propertyName) {
         first(sort: propertyName)
     }
 
-    /**
-     * Finds the first object.  If queryParams includes 'sort', that will
-     * dictate the sort order, otherwise natural sort order will be used.
-     * queryParams may include any of the same parameters that might be passed
-     * to the list(Map) method.  This method will ignore 'order' and 'max' as
-     * those are always 'asc' and 1, respectively.
-     *
-     * @return the first object in the datastore, null if none exist
-     */
-    D first(Map queryParams) {
-        queryParams.max = 1
-        queryParams.order = 'asc'
+    @Override
+    D first(Map params) {
+        Map queryParams = new LinkedHashMap(params ?: [:])
         if (!queryParams.containsKey('sort')) {
-            def idPropertyName = persistentEntity.identity?.name
+            String idPropertyName = getGormPersistentEntity()?.identity?.name
             if (idPropertyName) {
                 queryParams.sort = idPropertyName
             }
         }
-        def resultList = list(queryParams)
+        if (queryParams.containsKey('sort')) {
+            queryParams.max = 1
+            queryParams.order = queryParams.order ?: 'asc'
+            List<D> resultList = list(queryParams)
+            return resultList ? resultList[0] : null
+        }
+        // No identifier or explicit sort to order by (e.g. a composite-key entity) — take the
+        // first element of the naturally-ordered result instead of forcing a database-level
+        // LIMIT with no ORDER BY, which would return an arbitrary row.
+        List<D> resultList = list(queryParams)
         resultList ? resultList[0] : null
     }
 
-    /**
-     * Finds the last object using the natural sort order
-     *
-     * @return the last object in the datastore, null if none exist
-     */
+    @Override
     D last() {
         last([:])
     }
 
-    /**
-     * Finds the last object sorted by propertyName
-     *
-     * @param propertyName the name of the property to sort by
-     *
-     * @return the last object in the datastore sorted by propertyName, null if none exist
-     */
+    @Override
     D last(String propertyName) {
-        last(sort: propertyName)
+        last(sort: propertyName, order: 'desc')
     }
 
-/**
- * Finds the last object.  If queryParams includes 'sort', that will
- * dictate the sort order, otherwise natural sort order will be used.
- * queryParams may include any of the same parameters that might be passed
- * to the list(Map) method.  This method will ignore 'order' and 'max' as
- * those are always 'asc' and 1, respectively.
- *
- * @return the last object in the datastore, null if none exist
- */
-    D last(Map queryParams) {
-        queryParams.max = 1
-        queryParams.order = 'desc'
+    @Override
+    D last(Map params) {
+        Map queryParams = new LinkedHashMap(params ?: [:])
         if (!queryParams.containsKey('sort')) {
-            def idPropertyName = persistentEntity.identity?.name
+            String idPropertyName = getGormPersistentEntity()?.identity?.name
             if (idPropertyName) {
                 queryParams.sort = idPropertyName
             }
         }
-        def resultList = list(queryParams)
-        resultList ? resultList[0] : null
+        if (queryParams.containsKey('sort')) {
+            queryParams.max = 1
+            queryParams.order = queryParams.order ?: 'desc'
+            List<D> resultList = list(queryParams)
+            return resultList ? resultList[0] : null
+        }
+        // No identifier or explicit sort to order by (e.g. a composite-key entity) — take the
+        // last element of the naturally-ordered result instead of forcing a database-level
+        // LIMIT with no ORDER BY, which would return an arbitrary row.
+        List<D> resultList = list(queryParams)
+        resultList ? resultList[-1] : null
     }
 
-    /**
-     * Finds all results matching all of the given conditions. Eg. Book.findAllWhere(author:"Stephen King", title:"The Stand")
-     *
-     * @param queryMap The map of conditions
-     * @return A list of results
-     */
-    List<D> findAllWhere(Map queryMap) {
-        findAllWhere(queryMap, Collections.emptyMap())
+    @Override
+    BuildableCriteria createCriteria() {
+        execute({ Session session ->
+            new CriteriaBuilder(persistentClass, session)
+        } as SessionCallback<BuildableCriteria>)
     }
 
-    /**
-     * Finds all results matching all of the given conditions. Eg. Book.findAllWhere(author:"Stephen King", title:"The Stand")
-     *
-     * @param queryMap The map of conditions
-     * @param args The Query arguments
-     *
-     * @return A list of results
-     */
-    List<D> findAllWhere(Map queryMap, Map args) {
-        (List<D>) execute({ Session session ->
-            Query q = session.createQuery(persistentClass)
-
-            Map<String, Object> processedQueryMap = [:]
-            queryMap.each { key, value -> processedQueryMap[key.toString()] = value }
-            q.allEq(processedQueryMap)
-
-            DynamicFinder.populateArgumentsForCriteria(persistentClass, q, args)
-            q.list()
-        } as SessionCallback<List>)
+    @Override
+    def <T1> T1 withCriteria(Closure<T1> callable) {
+        createCriteria().list(callable)
     }
 
-    /**
-     * Finds an object by example
-     *
-     * @param example The example
-     * @return A list of matching results
-     */
+    @Override
+    def <T1> T1 withCriteria(Map builderArgs, Closure callable) {
+        createCriteria().list(builderArgs, callable)
+    }
+
+    @Override
+    D lock(Serializable id) {
+        execute({ Session session ->
+            session.lock(persistentClass, id)
+        } as SessionCallback<D>)
+    }
+
+    @Override
+    D lock(Map args, Serializable id) {
+        if (RefreshLockArguments.lockTypeFrom(args) != LockModeType.PESSIMISTIC_WRITE) {
+            throw new UnsupportedOperationException(RefreshLockArguments.UNSUPPORTED_TYPE)
+        }
+        if (!RefreshLockArguments.refreshRequested(args)) {
+            return lock(id)
+        }
+        GormInstanceApi<D> instanceApi = registry.findInstanceApi(persistentClass, qualifier)
+        // Reject an unsupported request before reading anything, as the type check above does. A datastore
+        // that cannot reload under a lock cannot do so for any identifier, so the identifier is irrelevant
+        // to the outcome.
+        if (!instanceApi.supportsLockedRefresh()) {
+            throw new UnsupportedOperationException(RefreshLockArguments.UNSUPPORTED)
+        }
+        // Resolve the managed instance first (no query when it is already in the session), then let the
+        // instance api reload state and version under the lock instead of checking the loaded version.
+        D instance = get(id)
+        if (instance == null) {
+            return null
+        }
+        instanceApi.refresh(instance, [(RefreshLockArguments.LOCK): true])
+    }
+
+    @Override
+    boolean supportsLockedRefresh() {
+        registry.findInstanceApi(persistentClass, qualifier).supportsLockedRefresh()
+    }
+
+    @Override
+    grails.gorm.DetachedCriteria<D> where(Closure callable) {
+        new grails.gorm.DetachedCriteria<D>(persistentClass).withConnection(qualifier).where(callable)
+    }
+
+    @Override
+    grails.gorm.DetachedCriteria<D> whereLazy(Closure callable) {
+        where(callable)
+    }
+
+    @Override
+    grails.gorm.DetachedCriteria<D> whereAny(Closure callable) {
+        new grails.gorm.DetachedCriteria<D>(persistentClass).or(callable)
+    }
+
+    @Override
+    List<Serializable> saveAll(Iterable<?> objectsToSave) {
+        execute({ Session session ->
+            session.persist(objectsToSave)
+        } as SessionCallback<List<Serializable>>)
+    }
+
+    @Override
+    List<Serializable> saveAll(Object... objectsToSave) {
+        saveAll(Arrays.asList(objectsToSave))
+    }
+
+    @Override
+    Number deleteAll() {
+        deleteAll(Collections.emptyMap())
+    }
+
+    @Override
+    Number deleteAll(Map params) {
+        execute({ Session session ->
+            Number deleted = session.deleteAll(new DetachedCriteria(persistentClass))
+            if (params?.flush) {
+                session.flush()
+            }
+            return deleted
+        } as SessionCallback<Number>)
+    }
+
+    @Override
+    void deleteAll(Iterable objectsToDelete) {
+        execute({ Session session ->
+            for (obj in objectsToDelete) {
+                session.delete(obj)
+            }
+        } as SessionCallback<Void>)
+    }
+
+    @Override
+    void deleteAll(Object... objectsToDelete) {
+        deleteAll(Arrays.asList(objectsToDelete))
+    }
+
+    @Override
+    void deleteAll(Map params, Iterable objectsToDelete) {
+        execute({ Session session ->
+            for (obj in objectsToDelete) {
+                session.delete(obj)
+            }
+            if (params?.flush) {
+                session.flush()
+            }
+        } as SessionCallback<Void>)
+    }
+
+    @Override
+    void deleteAll(Map params, Object... objectsToDelete) {
+        deleteAll(params, Arrays.asList(objectsToDelete))
+    }
+
+    @Override
+    D create() {
+        persistentClass.newInstance()
+    }
+
+    @Override
+    List<D> findAll() {
+        list()
+    }
+
+    @Override
+    List<D> findAll(Map params) {
+        list(params)
+    }
+
+    @Override
+    List<D> findAll(D example) {
+        findAll(example, Collections.emptyMap())
+    }
+
+    @Override
+    List<D> findAll(D example, Map args) {
+        findAllWhere(createQueryMapForExample(example), args)
+    }
+
+    @Override
+    List<D> findAll(Closure callable) {
+        where(callable).list()
+    }
+
+    @Override
+    List<D> findAll(Map args, Closure callable) {
+        where(callable).list(args)
+    }
+
+    @Override
     D find(D example) {
         find(example, Collections.emptyMap())
     }
 
-    /**
-     * Finds an object by example using the given arguments for pagination
-     *
-     * @param example The example
-     * @param args The arguments
-     *
-     * @return A list of matching results
-     */
+    @Override
     D find(D example, Map args) {
-        if (persistentEntity.isInstance(example)) {
-            def queryMap = createQueryMapForExample(persistentEntity, example)
-            return findWhere(queryMap, args)
-        }
-        return null
+        findWhere(createQueryMapForExample(example), args)
     }
 
-    /**
-     * Finds a single result matching all of the given conditions. Eg. Book.findWhere(author:"Stephen King", title:"The Stand")
-     *
-     * @param queryMap The map of conditions
-     * @return A single result
-     */
-    D findWhere(Map queryMap) {
-        findWhere(queryMap, Collections.emptyMap())
-    }
-
-    /**
-     * Finds a single result matching all of the given conditions. Eg. Book.findWhere(author:"Stephen King", title:"The Stand")
-     *
-     * @param queryMap The map of conditions
-     * @param args The Query arguments
-     *
-     * @return A single result
-     */
-    D findWhere(Map queryMap, Map args) {
-        execute({ Session session ->
-            Query q = session.createQuery(persistentClass)
-            if (queryMap) {
-                Map<String, Object> processedQueryMap = [:]
-                queryMap.each { key, value -> processedQueryMap[key.toString()] = value }
-                q.allEq(processedQueryMap)
+    protected Map createQueryMapForExample(D example) {
+        def pe = getGormPersistentEntity()
+        Map queryMap = [:]
+        def identity = pe.identity
+        if (identity != null) {
+            def id = org.codehaus.groovy.runtime.InvokerHelper.getProperty(example, identity.name)
+            if (id != null) {
+                queryMap.put(identity.name, id)
+                return queryMap
             }
-            DynamicFinder.populateArgumentsForCriteria(persistentClass, q, args)
-            q.singleResult()
-        } as SessionCallback)
+        }
+        for (prop in pe.persistentProperties) {
+            if (prop instanceof org.grails.datastore.mapping.model.types.Simple || prop instanceof org.grails.datastore.mapping.model.types.Basic) {
+                def val = org.codehaus.groovy.runtime.InvokerHelper.getProperty(example, prop.name)
+                if (val != null) {
+                    queryMap.put(prop.name, val)
+                }
+            }
+        }
+        return queryMap
     }
 
-    /**
-     * Finds a single result matching all of the given conditions. Eg. Book.findWhere(author:"Stephen King", title:"The Stand").  If
-     * a matching persistent entity is not found a new entity is created and returned.
-     *
-     * @param queryMap The map of conditions
-     * @return A single result
-     */
+    @Override
+    D find(Closure callable) {
+        where(callable).find()
+    }
+
+    @Override
+    D findWhere(Map queryMap) {
+        findWhere(queryMap, [:])
+    }
+
+    @Override
+    D findWhere(Map queryMap, Map args) {
+        where {
+            for (entry in queryMap) {
+                eq(entry.key.toString(), entry.value)
+            }
+        }.find(args)
+    }
+
+    @Override
+    List<D> findAllWhere(Map queryMap) {
+        findAllWhere(queryMap, [:])
+    }
+
+    @Override
+    List<D> findAllWhere(Map queryMap, Map args) {
+        where {
+            for (entry in queryMap) {
+                eq(entry.key.toString(), entry.value)
+            }
+        }.list(args)
+    }
+
+    @Override
     D findOrCreateWhere(Map queryMap) {
-        internalFindOrCreate(queryMap, false)
+        D instance = findWhere(queryMap)
+        if (instance == null) {
+            instance = persistentClass.newInstance(queryMap)
+        }
+        return instance
     }
 
-    /**
-     * Finds a single result matching all of the given conditions. Eg. Book.findWhere(author:"Stephen King", title:"The Stand").  If
-     * a matching persistent entity is not found a new entity is created, saved and returned.
-     *
-     * @param queryMap The map of conditions
-     * @return A single result
-     */
+    @Override
     D findOrSaveWhere(Map queryMap) {
-        internalFindOrCreate(queryMap, true)
+        D instance = findWhere(queryMap)
+        if (instance == null) {
+            instance = persistentClass.newInstance(queryMap)
+            ((GormEntity<D>)instance).save(flush: true)
+        }
+        return instance
     }
 
     /**
-     * Execute a closure whose first argument is a reference to the current session.
+     * Runs the callable with the entity's unqualified operations routed to this API's connection, when this API
+     * belongs to a named connection, as {@code Book.moreBooks} does. Inside
+     * {@code Book.moreBooks.withTransaction { }} a {@code book.save()} or a {@code Book.list()} then reaches
+     * {@code moreBooks}, whose session and transaction are the ones open, rather than the default connection.
+     * The default connection's API undoes an enclosing block for another connection in the same way. A qualifier
+     * that names no connection, such as a DISCRIMINATOR tenant id, is left alone.
      *
-     * @param callable the closure
-     * @return The result of the closure
+     * @param callable What to run
+     * @return What the callable returns
      */
-    <T> T  withSession(Closure<T> callable) {
+    protected <T1> T1 inConnectionScope(Closure<T1> callable) {
+        String currentQualifier = getQualifier()
+        if (currentQualifier == null || ConnectionSource.DEFAULT == currentQualifier) {
+            return GormRegistry.withConnectionScope(persistentClass, ConnectionSource.DEFAULT, callable)
+        }
+        if (!ConnectionSourceNameResolver.isConnectionSourceName(getDatastore(), currentQualifier)) {
+            return callable.call()
+        }
+        return GormRegistry.withConnectionScope(persistentClass, currentQualifier, callable)
+    }
+
+    @Override
+    def <T1> T1 withSession(Closure<T1> callable) {
+        inConnectionScope {
+            execute({ Session session ->
+                callable.call(session)
+            } as SessionCallback<T1>)
+        }
+    }
+
+    @Override
+    def <T1> T1 withDatastoreSession(Closure<T1> callable) {
+        // Always execute the callback with the GORM datastore Session. This must NOT delegate to
+        // withSession(): persistence adapters (e.g. Hibernate) override withSession() to expose the
+        // native session (a raw org.hibernate.Session), whereas withDatastoreSession() must hand
+        // back the GORM Session that callers such as DetachedCriteria rely on.
         execute({ Session session ->
             callable.call(session)
-        } as SessionCallback)
-    }
-
-    /**
-     * Same as withSession, but present for the case where withSession is overridden to use the Hibernate session
-     *
-     * @param callable the closure
-     * @return The result of the closure
-     */
-    <T> T  withDatastoreSession(Closure<T> callable) {
-        execute({ Session session ->
-            callable.call(session)
-        } as SessionCallback)
-    }
-
-    /**
-     * Executes the closure within the context of a transaction, creating one if none is present or joining
-     * an existing transaction if one is already present.
-     *
-     * @param callable The closure to call
-     * @return The result of the closure execution
-     * @see #withTransaction(Map, Closure)
-     * @see #withNewTransaction(Closure)
-     * @see #withNewTransaction(Map, Closure)
-     */
-    <T> T withTransaction(Closure<T> callable) {
-        withTransaction(new DefaultTransactionDefinition(), callable)
+        } as SessionCallback<T1>)
     }
 
     @Override
-    def <T> T withTenant(Serializable tenantId, Closure<T> callable) {
-        if (multiTenancyMode == MultiTenancyMode.DATABASE) {
-            Tenants.withId((Class<Datastore>) GormEnhancer.findDatastore(persistentClass, tenantId.toString()).getClass(), tenantId, callable)
-        }
-        else if (multiTenancyMode.isSharedConnection()) {
-            Tenants.withId((Class<Datastore>) GormEnhancer.findDatastore(persistentClass, ConnectionSource.DEFAULT).getClass(), tenantId, callable)
-        }
-        else {
-            throw new UnsupportedOperationException("Method not supported in multi tenancy mode $multiTenancyMode")
+    def <T1> T1 withTransaction(Closure<T1> callable) {
+        inConnectionScope {
+            createTransactionTemplate().execute(callable)
         }
     }
 
     @Override
-    GormAllOperations<D> eachTenant(Closure callable) {
-        if (multiTenancyMode != MultiTenancyMode.NONE) {
-            Tenants.eachTenant(callable)
-            return this
-        }
-        else {
-            throw new UnsupportedOperationException("Method not supported in multi tenancy mode $multiTenancyMode")
-        }
+    def <T1> T1 withNewTransaction(Closure<T1> callable) {
+        DefaultTransactionDefinition definition = new DefaultTransactionDefinition()
+        definition.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW)
+        withTransaction(definition, callable)
     }
 
     @Override
-    GormAllOperations<D> withTenant(Serializable tenantId) {
-        if (multiTenancyMode == MultiTenancyMode.DATABASE) {
-            return GormEnhancer.findStaticApi(persistentClass, tenantId.toString())
-        }
-        else if (multiTenancyMode.isSharedConnection()) {
-            def staticApi = GormEnhancer.findStaticApi(persistentClass, ConnectionSource.DEFAULT)
-            return new TenantDelegatingGormOperations<D>(datastore, tenantId, staticApi)
-        }
-        else {
-            throw new UnsupportedOperationException("Method not supported in multi tenancy mode $multiTenancyMode")
-        }
-    }
-    /**
-     * Executes the closure within the context of a new transaction
-     *
-     * @param callable The closure to call
-     * @return The result of the closure execution
-     * @see #withTransaction(Closure)
-     * @see #withTransaction(Map, Closure)
-     * @see #withNewTransaction(Map, Closure)
-     */
-    <T> T  withNewTransaction(Closure<T> callable) {
-        withTransaction([propagationBehavior: TransactionDefinition.PROPAGATION_REQUIRES_NEW], callable)
-    }
-
-    /**
-     * Executes the closure within the context of a transaction which is
-     * configured with the properties contained in transactionProperties.
-     * transactionProperties may contain any properties supported by
-     * {@link DefaultTransactionDefinition}.
-     *
-     * <blockquote>
-     * <pre>
-     * SomeEntity.withTransaction([propagationBehavior: TransactionDefinition.PROPAGATION_REQUIRES_NEW,
-     *                             isolationLevel: TransactionDefinition.ISOLATION_REPEATABLE_READ]) {
-     *     // ...
-     * }
-     * </pre>
-     * </blockquote>
-     *
-     * @param transactionProperties properties to configure the transaction properties
-     * @param callable The closure to call
-     * @return The result of the closure execution
-     * @see DefaultTransactionDefinition
-     * @see #withNewTransaction(Closure)
-     * @see #withNewTransaction(Map, Closure)
-     * @see #withTransaction(Closure)
-     */
-    <T> T  withTransaction(Map transactionProperties, Closure<T> callable) {
-        def transactionDefinition = new DefaultTransactionDefinition()
+    def <T1> T1 withTransaction(Map transactionProperties, Closure<T1> callable) {
+        DefaultTransactionDefinition definition = new DefaultTransactionDefinition()
         transactionProperties.each { k, v ->
             if (v instanceof CharSequence && !(v instanceof String)) {
                 v = v.toString()
             }
             try {
-                transactionDefinition[k as String] = v
+                definition[k as String] = v
             } catch (MissingPropertyException mpe) {
                 throw new IllegalArgumentException("[${k}] is not a valid transaction property.")
             }
         }
-
-        withTransaction(transactionDefinition, callable)
+        withTransaction(definition, callable)
     }
 
-    /**
-     * Executes the closure within the context of a new transaction which is
-     * configured with the properties contained in transactionProperties.
-     * transactionProperties may contain any properties supported by
-     * {@link DefaultTransactionDefinition}.  Note that if transactionProperties
-     * includes entries for propagationBehavior or propagationName, those values
-     * will be ignored.  This method always sets the propagation level to
-     * TransactionDefinition.REQUIRES_NEW.
-     *
-     * <blockquote>
-     * <pre>
-     * SomeEntity.withNewTransaction([isolationLevel: TransactionDefinition.ISOLATION_REPEATABLE_READ]) {
-     *     // ...
-     * }
-     * </pre>
-     * </blockquote>
-     *
-     * @param transactionProperties properties to configure the transaction properties
-     * @param callable The closure to call
-     * @return The result of the closure execution
-     * @see DefaultTransactionDefinition
-     * @see #withNewTransaction(Closure)
-     * @see #withTransaction(Closure)
-     * @see #withTransaction(Map, Closure)
-     */
-    <T> T withNewTransaction(Map transactionProperties, Closure<T> callable) {
-        def props = new HashMap(transactionProperties)
-        props.remove('propagationName')
-        props.propagationBehavior = TransactionDefinition.PROPAGATION_REQUIRES_NEW
-        withTransaction(props, callable)
-    }
-
-    /**
-     * Executes the closure within the context of a transaction for the given {@link TransactionDefinition}
-     *
-     * @param callable The closure to call
-     * @return The result of the closure execution
-     */
-    <T> T withTransaction(TransactionDefinition definition, Closure<T> callable) {
-        Assert.notNull(transactionManager, 'No transactionManager bean configured')
-
-        if (!callable) {
-            return
-        }
-
-        new GrailsTransactionTemplate(transactionManager, definition).execute(callable)
-    }
-
-    /**
-     * Creates and binds a new session for the scope of the given closure
-     */
-    <T> T withNewSession(Closure<T> callable) {
-        def session = datastore.connect()
-        try {
-            DatastoreUtils.bindNewSession(session)
-            return callable?.call(session)
-        }
-        finally {
-            DatastoreUtils.unbindSession(session)
-        }
-    }
-
-    /**
-     * Creates and binds a new session for the scope of the given closure
-     */
-    <T> T  withStatelessSession(Closure<T> callable) {
-        if (datastore instanceof StatelessDatastore) {
-            def session = datastore.connectStateless()
+    @Override
+    def <T1> T1 withNewTransaction(Map transactionProperties, Closure<T1> callable) {
+        DefaultTransactionDefinition definition = new DefaultTransactionDefinition()
+        transactionProperties.each { k, v ->
+            if (v instanceof CharSequence && !(v instanceof String)) {
+                v = v.toString()
+            }
             try {
-                DatastoreUtils.bindNewSession(session)
-                return callable?.call(session)
+                definition[k as String] = v
+            } catch (MissingPropertyException mpe) {
+                throw new IllegalArgumentException("[${k}] is not a valid transaction property.")
+            }
+        }
+        definition.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW)
+        withTransaction(definition, callable)
+    }
+
+    @Override
+    def <T1> T1 withTransaction(org.springframework.transaction.TransactionDefinition definition, Closure<T1> callable) {
+        inConnectionScope {
+            createTransactionTemplate(definition).execute(callable)
+        }
+    }
+
+    protected GrailsTransactionTemplate createTransactionTemplate() {
+        getTransactionTemplateFactory().createTransactionTemplate(getTransactionManager())
+    }
+
+    protected GrailsTransactionTemplate createTransactionTemplate(org.springframework.transaction.TransactionDefinition definition) {
+        getTransactionTemplateFactory().createTransactionTemplate(getTransactionManager(), definition)
+    }
+
+    protected TransactionTemplateFactory getTransactionTemplateFactory() {
+        DEFAULT_TRANSACTION_TEMPLATE_FACTORY
+    }
+
+    @Override
+    def <T1> T1 withNewSession(Closure<T1> callable) {
+        Datastore ds = getDatastore()
+        inConnectionScope {
+            DatastoreUtils.executeWithNewSession(ds, { Session session ->
+                callable.call(session)
+            } as SessionCallback<T1>)
+        }
+    }
+
+    @Override
+    def <T1> T1 withStatelessSession(Closure<T1> callable) {
+        Datastore ds = getDatastore()
+        if (ds instanceof StatelessDatastore) {
+            Session session = DatastoreUtils.bindNewSession(ds.connectStateless())
+            try {
+                return inConnectionScope { callable.call(session) }
             }
             finally {
                 DatastoreUtils.unbindSession(session)
@@ -1064,7 +1112,7 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
     }
 
     @Override
-    List executeQuery(CharSequence query, Object...params) {
+    List executeQuery(CharSequence query, Object... params) {
         executeQuery(query, params.toList(), Collections.emptyMap())
     }
 
@@ -1096,7 +1144,7 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
     }
 
     @Override
-    Integer executeUpdate(CharSequence query, Object...params) {
+    Integer executeUpdate(CharSequence query, Object... params) {
         executeUpdate(query, params.toList(), Collections.emptyMap())
     }
 
@@ -1174,30 +1222,120 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
         throw new UnsupportedOperationException("String-based queries like [$method] are currently not supported in this implementation of GORM. Use criteria instead.")
     }
 
-    private Map createQueryMapForExample(PersistentEntity persistentEntity, D example) {
-        def props = persistentEntity.persistentProperties.findAll { PersistentProperty prop ->
-            !(prop instanceof Association)
-        }
-
-        def queryMap = [:]
-        for (PersistentProperty prop in props) {
-            def val = example[prop.name]
-            if (val != null) {
-                queryMap[prop.name] = val
-            }
-        }
-        return queryMap
+    @Override
+    grails.gorm.api.GormAllOperations<D> withTenant(Serializable tenantId) {
+        return (grails.gorm.api.GormAllOperations<D>) forQualifier(tenantId.toString())
     }
 
-    private D internalFindOrCreate(Map queryMap, boolean shouldSave) {
-        D result = findWhere(queryMap)
-        if (!result) {
-            def persistentMetaClass = GroovySystem.metaClassRegistry.getMetaClass(persistentClass)
-            result = (D) persistentMetaClass.invokeConstructor(queryMap)
-            if (shouldSave) {
-                InvokerHelper.invokeMethod(result, 'save', null)
+    @Override
+    def <T1> T1 withTenant(Serializable tenantId, Closure<T1> callable) {
+        withId(tenantId, callable)
+    }
+
+    @Override
+    grails.gorm.api.GormAllOperations<D> eachTenant(Closure callable) {
+        Datastore ds = registry.getDatastore(persistentClass.name, ConnectionSource.DEFAULT)
+        if (ds instanceof MultiTenantCapableDatastore) {
+            Tenants.eachTenant((MultiTenantCapableDatastore) ds, callable)
+            return this
+        }
+        throw new UnsupportedOperationException("eachTenant not supported for datastore: ${ds?.class?.simpleName}")
+    }
+
+    def <T1> T1 withTenantTransaction(Serializable tenantId, Closure<T1> callable) {
+        withId(tenantId, callable)
+    }
+
+    def <T1> T1 withTenantTransaction(Serializable tenantId, org.springframework.transaction.TransactionDefinition definition, Closure<T1> callable) {
+        withId(tenantId, callable)
+    }
+
+    def <T1> T1 withId(Serializable tenantId, Closure<T1> callable) {
+        // For multi-tenancy, always resolve via the DEFAULT (root/parent) datastore.
+        // Resolving the tenant-specific datastore and then calling withNewSession() on it
+        // would fail because child datastores have empty datastoresByConnectionSource maps.
+        Datastore defaultDs = registry.getDatastore(persistentClass.name, ConnectionSource.DEFAULT)
+        if (defaultDs instanceof MultiTenantCapableDatastore) {
+            return (T1) Tenants.withId((MultiTenantCapableDatastore) defaultDs, tenantId, callable)
+        }
+        // Non-multi-tenant path: resolve the specific datastore for this connection/tenant key
+        Datastore tenantDatastore = registry.apiResolver.findDatastore(persistentClass, tenantId.toString())
+        return DatastoreUtils.execute(tenantDatastore, (Session session) -> {
+            return (T1) callable.call(session)
+        } as SessionCallback<T1>)
+    }
+
+    def <T1> T1 withoutId(Closure<T1> callable) {
+        Datastore defaultDs = registry.getDatastore(persistentClass.name, ConnectionSource.DEFAULT)
+        if (defaultDs instanceof MultiTenantCapableDatastore) {
+            MultiTenantCapableDatastore multiTenantDs = (MultiTenantCapableDatastore) defaultDs
+            // Bound rather than entered through Tenants.withoutId, which passes a closure with parameters the session
+            // only, so that the closure gets the tenant id and the session, as it does with withId.
+            return (T1) CurrentTenantHolder.withoutTenant(multiTenantDs) {
+                Tenants.withCurrent(multiTenantDs, callable)
             }
         }
-        result
+        withId(ConnectionSource.DEFAULT, callable)
+    }
+
+    /**
+     * Runs the callable in a new session for the tenant, with the tenant bound, so that the calls it makes on the
+     * class reach the tenant named here rather than the one that resolving would find.
+     *
+     * @param tenantId The tenant
+     * @param callable What to run
+     * @return What the callable returns
+     */
+    def <T1> T1 withNewSession(Serializable tenantId, Closure<T1> callable) {
+        DatastoreResolver resolver = new DatastoreResolver() {
+            @Override Datastore resolve() { registry.apiResolver.findDatastore(persistentClass, tenantId.toString()) }
+        }
+        Datastore tenantDatastore = resolver.resolve()
+        Closure<T1> inNewSession = { Serializable boundTenantId ->
+            DatastoreUtils.executeWithNewSession(tenantDatastore, { Session session ->
+                return (T1) callable.call(session)
+            } as SessionCallback<T1>)
+        }
+        Datastore defaultDatastore = registry.getDatastore(persistentClass.name, ConnectionSource.DEFAULT)
+        if (defaultDatastore instanceof MultiTenantCapableDatastore) {
+            // Bound rather than entered through Tenants.withId, which would open a session of its own for the
+            // tenant in the modes that give it a connection, leaving the one opened here unused.
+            return (T1) CurrentTenantHolder.withTenant(defaultDatastore, tenantId, inNewSession)
+        }
+        return inNewSession.call(tenantId)
+    }
+
+    /**
+     * Finds an instance by id for a proxy created by {@link GormStaticApi#load(Serializable)}, as
+     * {@link GormStaticApi#get(Serializable)} finds it. Inside {@link Tenants#withoutId(groovy.lang.Closure)} the
+     * instance is looked up by key instead, as {@code load} looks it up there.
+     */
+    private static class IdQueryExecutor implements AssociationQueryExecutor<Serializable, Object> {
+
+        private final GormStaticApi<?> api
+        private final Session session
+
+        IdQueryExecutor(GormStaticApi<?> api, Session session) {
+            this.api = api
+            this.session = session
+        }
+
+        @Override
+        List<Object> query(Serializable id) {
+            Object instance = Tenants.isWithoutId(session.datastore)
+                    ? session.retrieve(api.gormPersistentEntity.javaClass, id)
+                    : api.findAllByKeys(session, [id])[0]
+            instance == null ? [] : [instance]
+        }
+
+        @Override
+        PersistentEntity getIndexedEntity() {
+            api.gormPersistentEntity
+        }
+
+        @Override
+        boolean doesReturnKeys() {
+            false
+        }
     }
 }

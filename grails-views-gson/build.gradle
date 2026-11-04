@@ -18,10 +18,12 @@
  */
 
 plugins {
+    id 'java-test-fixtures'
     id 'org.apache.grails.buildsrc.properties'
     id 'org.apache.grails.buildsrc.dependency-validator'
     id 'org.apache.grails.gradle.grails-plugin'
     id 'org.apache.grails.buildsrc.compile'
+    id 'org.apache.grails.buildsrc.configuration-metadata'
     id 'org.apache.grails.buildsrc.publish'
     id 'org.apache.grails.buildsrc.sbom'
     id 'org.apache.grails.buildsrc.vulnerability-scan'
@@ -38,6 +40,7 @@ ext {
 
 dependencies {
     implementation platform(project(':grails-bom'))
+    testFixturesImplementation platform(project(':grails-bom'))
 
     api project(':grails-views-core') // Used in public API
     api project(':grails-rest-transforms') // Used in public API
@@ -46,20 +49,26 @@ dependencies {
         // impl: GrailsMessageSourceUtils
     }
     implementation project(':grails-encoder')
+    implementation project(':grails-web-common'), {
+        // impl: JsonDateFormat
+    }
     implementation 'org.apache.groovy:groovy'
     implementation 'org.apache.groovy:groovy-json'
     implementation 'jakarta.validation:jakarta.validation-api'
+
+    compileOnly 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation
 
     testImplementation project(':grails-testing-support-views-gson')
     testImplementation project(':grails-testing-support-core')
     testImplementation project(':grails-testing-support-datamapping')
     testImplementation project(':grails-data-hibernate5-core')
-    testImplementation 'org.spockframework:spock-core'
-    testImplementation 'tools.jackson.core:jackson-databind'
     testImplementation 'jakarta.servlet:jakarta.servlet-api'
+    testImplementation 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation and tests
+    testImplementation 'org.spockframework:spock-core'
+    testImplementation testFixtures(project(':grails-web-common')) // DateTimeValues
+    testImplementation 'tools.jackson.core:jackson-databind'
 
     testRuntimeOnly 'org.objenesis:objenesis' // Required by Spock for mocking classes without default constructor
-    testRuntimeOnly 'org.slf4j:slf4j-nop' // Get rid of warning about missing slf4j implementation during test task
 }
 
 def testArtifacts = ['*.gson', 'circular/**']

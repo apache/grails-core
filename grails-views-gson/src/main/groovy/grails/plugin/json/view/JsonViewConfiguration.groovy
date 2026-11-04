@@ -25,6 +25,7 @@ import groovy.transform.CompileStatic
 
 import org.springframework.beans.BeanUtils
 import org.springframework.boot.context.properties.ConfigurationProperties
+import org.springframework.boot.context.properties.NestedConfigurationProperty
 
 import grails.views.GenericViewConfiguration
 import grails.web.mime.MimeType
@@ -43,6 +44,7 @@ class JsonViewConfiguration implements GenericViewConfiguration {
 
     List<String> mimeTypes = [MimeType.JSON.name, MimeType.HAL_JSON.name]
 
+    @NestedConfigurationProperty
     JsonViewGeneratorConfiguration generator = new JsonViewGeneratorConfiguration()
 
     JsonViewConfiguration() {

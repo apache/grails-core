@@ -15,28 +15,88 @@
  */
 package org.grails.orm.hibernate.query;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.Expression;
 
+import org.hibernate.metamodel.model.domain.ReturnableType;
 import org.hibernate.query.criteria.JpaExpression;
+import org.hibernate.query.sqm.NodeBuilder;
+import org.hibernate.query.sqm.function.SqmFunctionDescriptor;
+import org.hibernate.query.sqm.tree.SqmTypedNode;
+import org.hibernate.type.BasicType;
+import org.hibernate.type.BasicTypeReference;
 
 import org.grails.datastore.mapping.query.Query;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
 
 /**
  * A class that translates GORM projections to JPA expressions.
  *
- * @author burt
- * @author graemerocher
- * @since 7.0.0
+ * @since 8.0
  */
 public class JpaProjectionTranslator {
 
     private final CriteriaBuilder criteriaBuilder;
     private final JpaQueryContext context;
+    private final GrailsHibernatePersistentEntity entity;
 
     public JpaProjectionTranslator(CriteriaBuilder criteriaBuilder, JpaQueryContext context) {
+        this(criteriaBuilder, context, null);
+    }
+
+    /**
+     * @param entity the queried entity, whose table alias replaces {@code {alias}} in a SQL projection
+     */
+    public JpaProjectionTranslator(
+            CriteriaBuilder criteriaBuilder, JpaQueryContext context, GrailsHibernatePersistentEntity entity) {
         this.criteriaBuilder = criteriaBuilder;
         this.context = context;
+        this.entity = entity;
+    }
+
+    /**
+     * Translates the SQL an expression of a {@link SqlProjection} or {@link SqlGroupProjection} renders as is.
+     *
+     * @param sql the SQL
+     * @param type the type of its value: an {@code org.hibernate.type.StandardBasicTypes} constant or an
+     *     {@code org.hibernate.type.Type}, which also tell how the value is read, a Java class or {@code null}
+     * @return the expression
+     */
+    public JpaExpression<?> translateSql(String sql, Object type) {
+        if (entity == null && sql.contains(GrailsSqlRestrictionFunction.ALIAS_PLACEHOLDER)) {
+            throw new IllegalStateException("Cannot replace {alias} in a SQL projection without the queried entity: " + sql);
+        }
+        List<Expression<?>> arguments = PredicateGenerator.nativeSqlArguments(criteriaBuilder, sql, context.getRoot(), entity);
+        if (criteriaBuilder instanceof NodeBuilder nodeBuilder && basicType(nodeBuilder, type) instanceof ReturnableType<?> returnType) {
+            // criteriaBuilder.function only takes the Java class, which would read a DATE as a TIMESTAMP, or a
+            // YES_NO without its conversion
+            SqmFunctionDescriptor function = nodeBuilder.getQueryEngine().getSqmFunctionRegistry()
+                    .findFunctionDescriptor(GrailsSqlProjectionFunction.NAME);
+            if (function != null) {
+                List<SqmTypedNode<?>> sqmArguments = new ArrayList<>(arguments.size());
+                for (Expression<?> argument : arguments) {
+                    sqmArguments.add((SqmTypedNode<?>) argument);
+                }
+                return function.generateSqmExpression(sqmArguments, returnType, nodeBuilder.getQueryEngine());
+            }
+        }
+        return (JpaExpression<?>) criteriaBuilder.function(
+                GrailsSqlProjectionFunction.NAME, SqlProjection.javaType(type), arguments.toArray(new Expression<?>[0]));
+    }
+
+    /**
+     * Returns the Hibernate type a {@code StandardBasicTypes} constant or a basic {@code org.hibernate.type.Type}
+     * stands for, whose JDBC type and value conversion its Java class alone does not tell, such as {@code DATE} and
+     * {@code TIMESTAMP}, or {@code YES_NO} and {@code BOOLEAN}. Returns {@code null} for any other type.
+     */
+    private static ReturnableType<?> basicType(NodeBuilder nodeBuilder, Object type) {
+        if (type instanceof BasicTypeReference<?> reference) {
+            return nodeBuilder.getTypeConfiguration().getBasicTypeRegistry().resolve(reference);
+        }
+        return type instanceof BasicType<?> basicType ? basicType : null;
     }
 
     @SuppressWarnings("unchecked")
@@ -44,6 +104,17 @@ public class JpaProjectionTranslator {
         JpaExpression<?> jpaExpression;
         String propertyName = null;
         String alias = null;
+
+        if (projection instanceof SqlGroupProjection) {
+            return null;
+        } else if (projection instanceof SqlProjection sqlProjection) {
+            jpaExpression = translateSql(sqlProjection.getSql(), sqlProjection.getDeclaredType());
+            if (sqlProjection.getColumnAlias() != null) {
+                jpaExpression.alias(sqlProjection.getColumnAlias());
+                context.registerSelectionAlias(sqlProjection.getColumnAlias(), jpaExpression);
+            }
+            return jpaExpression;
+        }
 
         if (projection instanceof Hibernate7CountProjection countProjection) {
             propertyName = countProjection.getPropertyName();

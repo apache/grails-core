@@ -32,6 +32,8 @@ on:
       - '[4-9]+.[0-9]+.x'
       - '8.0.x-hibernate7.*'
   pull_request:
+    # ready_for_review is not a default type: a draft runs nothing until it is ready or labelled "run ci".
+    types: [ opened, synchronize, reopened, ready_for_review ]
     # The branches below must be a subset of the branches above
     branches:
       - '[4-9]+.[0-9]+.x'
@@ -41,9 +43,14 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 jobs:
+  # A pull request labelled "no ci", or a draft without the "run ci" label, skips every job of this workflow.
   analyze:
     name: Analyze
-    runs-on: ubuntu-latest
+    if: >-
+      github.event_name != 'pull_request'
+      || (!contains(github.event.pull_request.labels.*.name, 'no ci')
+          && (!github.event.pull_request.draft || contains(github.event.pull_request.labels.*.name, 'run ci')))
+    runs-on: ubuntu-22.04
     permissions:
       actions: read
       contents: read
@@ -58,15 +65,15 @@ jobs:
 
     steps:
     - name: Checkout repository
-      uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      uses: actions/checkout@v7.0.1
     - name: "☕️ Setup JDK"
-      uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
+      uses: actions/setup-java@v6.1.0
       with:
         distribution: liberica
         java-version: 21
     # Initializes the CodeQL tools for scanning.
     - name: Initialize CodeQL
-      uses: github/codeql-action/init@7211b7c8077ea37d8641b6271f6a365a22a5fbfa # v4.36.0
+      uses: github/codeql-action/init@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
       with:
         languages: ${{ matrix.language }}
         # The autobuild action runs `./gradlew testClasses`, which compiles Groovy sample apps that are covered by regular CI.
@@ -77,4 +84,4 @@ jobs:
         # queries: ./path/to/local/query, your-org/your-repo/queries@main
 
     - name: Perform CodeQL Analysis
-      uses: github/codeql-action/analyze@7211b7c8077ea37d8641b6271f6a365a22a5fbfa # v4.36.0
+      uses: github/codeql-action/analyze@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1

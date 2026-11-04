@@ -17,12 +17,11 @@
  *  under the License.
  */
 
-import org.asciidoctor.gradle.jvm.AsciidoctorTask
+import grails.doc.gradle.ConvertAsciidocTask
 
 plugins {
     id 'groovy'
     id 'org.apache.grails.buildsrc.dependency-validator'
-    id 'org.asciidoctor.jvm.convert'
 }
 
 version = projectVersion
@@ -55,22 +54,9 @@ dependencies {
             .each { documentation project(":$it.name") }
 }
 
-tasks.named('asciidoctor', AsciidoctorTask) { AsciidoctorTask it ->
-    it.inputs.dir(layout.projectDirectory.dir('src/docs/asciidoc')).withPropertyName('docsSrcDir').withPathSensitivity(PathSensitivity.RELATIVE)
-    it.outputs.dir layout.buildDirectory.dir('asciidoc/manual')
-
-    it.jvm {
-        jvmArgs('--add-opens', 'java.base/sun.nio.ch=ALL-UNNAMED', '--add-opens', 'java.base/java.io=ALL-UNNAMED')
-    }
-    it.baseDirFollowsSourceFile()
-    it.sourceDir layout.projectDirectory.dir('src/docs/asciidoc')
+tasks.register('asciidoctor', ConvertAsciidocTask) { ConvertAsciidocTask it ->
+    it.sourceDir = layout.projectDirectory.dir('src/docs/asciidoc')
     it.outputDir = layout.buildDirectory.dir('asciidoc/manual')
-
-    resources {
-        from(project.layout.projectDirectory.dir("src/docs/asciidoc/images"))
-        into './images'
-    }
-
     it.attributes = [
             'experimental'              : 'true',
             'compat-mode'               : 'true',
@@ -85,8 +71,8 @@ tasks.named('asciidoctor', AsciidoctorTask) { AsciidoctorTask it ->
             'migrationPluginExamplesDir': project.layout.projectDirectory.dir('src/docs/asciidoc/databaseMigration').asFile.relativePath(rootProject.findProject(':grails-data-hibernate7-dbmigration').layout.projectDirectory.asFile),
             'migrationPluginGroupId'    : rootProject.findProject(':grails-data-hibernate7-dbmigration').group,
             'migrationPluginArtifactId' : rootProject.findProject(':grails-data-hibernate7-dbmigration').name,
-
     ]
+    it.includedFiles.from(rootProject.findProject(':grails-data-hibernate7-dbmigration').layout.projectDirectory.dir('src/integration-test/resources'))
 }
 
 tasks.withType(Groovydoc).configureEach {

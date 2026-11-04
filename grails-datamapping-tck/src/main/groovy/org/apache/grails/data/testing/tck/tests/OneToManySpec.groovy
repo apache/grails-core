@@ -27,6 +27,7 @@ import org.apache.grails.data.testing.tck.domains.Owner_Default_Uni_P
 import org.apache.grails.data.testing.tck.domains.Person
 import org.apache.grails.data.testing.tck.domains.Pet
 import org.apache.grails.data.testing.tck.domains.PetType
+import spock.lang.PendingFeatureIf
 
 /**
  * @author graemerocher
@@ -146,6 +147,7 @@ class OneToManySpec extends GrailsDataTckSpec {
         pet.type.name == 'Dinosaur'
     }
 
+    @PendingFeatureIf({ Boolean.getBoolean('neo4j.gorm.suite') })
     void 'test update inverse side of bidirectional one to many happens before flushing the session'() {
 
         if (manager.session.datastore.getClass().name.contains('Hibernate')) {

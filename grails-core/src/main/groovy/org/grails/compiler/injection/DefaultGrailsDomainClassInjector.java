@@ -59,6 +59,13 @@ import org.grails.io.support.GrailsResourceUtils;
  * Default implementation of domain class injector interface that adds the 'id'
  * and 'version' properties and other previously boilerplate code.
  *
+ * <p>Where a GORM implementation is on the classpath its own transformation runs first and has
+ * already added these properties, which makes every injection here a no-op - each is guarded on the
+ * property not already being present. That order matters: only GORM's transformation knows which
+ * implementation an entity is mapped with, so only it can honour a build that has asked for native
+ * identity types. This injector always adds a {@code Long} id, and is what an entity gets where GORM
+ * is absent or did not process it.</p>
+ *
  * @author Graeme Rocher
  * @since 0.2
  */

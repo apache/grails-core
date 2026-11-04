@@ -39,15 +39,14 @@ The `<g:localeSelect available="true"/>` tag renders a `<select>` limited to tho
 
 Alternatively, iterate the published `availableLocales` list directly.
 
-By default every `&#42;.properties` bundle on the classpath is considered, so locales contributed by plugins &mdash; whose bundles are namespaced (for example `spring-security-core_fr.properties`) &mdash; are listed alongside your application's own. Candidate suffixes are validated against the ISO language codes (and the ISO country codes when a country is present), so non-i18n properties files (such as `application.properties`) are ignored. To restrict discovery to your application's own `messages_&#42;.properties` bundles, set `grails.i18n.availableLocales.includePlugins=false`:
+The list is drawn from the message bundles your application and its plugins actually ship, recorded at build time, so it offers only real translations. It follows exactly the same set of plugins that message resolution uses: a plugin that was evicted, excluded, or failed to load contributes neither messages nor a language entry, so the selector can never offer a language whose messages will not resolve. To list only your application's own translations, set `grails.i18n.include-plugin-bundles=false`:
 
 [source,yaml]
 .grails-app/conf/application.yml
 ----
 grails:
     i18n:
-        availableLocales:
-            includePlugins: false   # list only the application's own translations
+        include-plugin-bundles: false   # list only the application's own translations
 ----
 
 Applications created with `grails create-app` include a ready-made Bootstrap language dropdown in the default layout, built with the `g:localeSelect` body form shown above.

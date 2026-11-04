@@ -53,6 +53,13 @@ abstract class GradleSpecification extends Specification {
     void setupSpec() {
         basePath = Files.createTempDirectory('gradle-projects')
         Path testKitDir = Files.createDirectories(basePath.resolve('.gradle'))
+        // The TestKit directory is the Gradle user home of the builds, so every test project runs with the
+        // configuration cache, as generated applications do, and fails on any configuration cache problem.
+        // A test passes --no-configuration-cache to run a build without it.
+        Files.writeString(testKitDir.resolve('gradle.properties'), '''\
+            org.gradle.configuration-cache=true
+            org.gradle.configuration-cache.problems=fail
+            '''.stripIndent())
         gradleRunner = GradleRunner.create()
                 .withPluginClasspath()
                 .withTestKitDir(testKitDir.toFile())

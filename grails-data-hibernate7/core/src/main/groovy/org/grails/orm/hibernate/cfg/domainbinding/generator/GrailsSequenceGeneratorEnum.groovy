@@ -99,9 +99,9 @@ enum GrailsSequenceGeneratorEnum {
             case [TABLE, ENHANCED_TABLE]:
                 return new GrailsTableGenerator(context, mappedId, jdbcEnvironment)
             case NATIVE:
-                return new GrailsNativeGenerator(context)
+                return new GrailsNativeGenerator(context, jdbcEnvironment)
             default:
-                return new GrailsNativeGenerator(context)
+                return new GrailsNativeGenerator(context, jdbcEnvironment)
         }
     }
 }

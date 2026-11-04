@@ -119,6 +119,47 @@ class HibernateProxyHandler7Spec extends HibernateGormDatastoreSpec {
         !proxyHandler.isInitialized(proxy)
     }
 
+    void "test createProxy returns a proxy attached to the current session"() {
+        given:
+        Long savedId = 1L
+        Location.withTransaction {
+            savedId = new Location(name: "Test", code: "T1").save(flush: true).id
+        }
+        manager.session.clear()
+        manager.hibernateSession.clear()
+
+        when:
+        Location proxy = proxyHandler.createProxy(manager.session, Location, savedId)
+
+        then:
+        manager.hibernateSession.contains(proxy)
+
+        and: "the proxy can be initialized on first access"
+        proxy.name == "Test"
+        proxyHandler.isInitialized(proxy)
+    }
+
+    void "test proxy() returns a proxy that can be initialized on first access"() {
+        given:
+        Long savedId = 1L
+        Location.withTransaction {
+            savedId = new Location(name: "Test", code: "T1").save(flush: true).id
+        }
+        manager.session.clear()
+        manager.hibernateSession.clear()
+
+        when:
+        Location proxy = Location.proxy(savedId)
+
+        then:
+        proxy instanceof HibernateProxy
+        !proxyHandler.isInitialized(proxy)
+
+        and:
+        proxy.name == "Test"
+        proxyHandler.isInitialized(proxy)
+    }
+
     void "test getAssociationProxy"() {
         given:
         Long petId

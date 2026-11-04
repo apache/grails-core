@@ -1,6 +1,6 @@
 rootProject.name = 'cli-companion-autodiscovery'
 
-include 'my-plugin', 'renamed-plugin', 'app'
+include 'my-plugin', 'renamed-plugin', 'plain-library', 'app'
 
 includeBuild('included-digit-bearing-plugin') {
     dependencySubstitution {
