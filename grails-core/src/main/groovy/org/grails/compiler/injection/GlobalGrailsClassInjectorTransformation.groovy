@@ -543,9 +543,9 @@ class GlobalGrailsClassInjectorTransformation implements ASTTransformation, Comp
 
     /**
      * Adds the compiled class to the {@code META-INF/grails.factories} entry for the supplied type
-     * when it is a concrete subtype of that type. Existing generated entries and matching
-     * project-source entries are preserved, and the resulting factory file is written to the
-     * compilation target directory.
+     * when it is a concrete subtype of that type, and otherwise drops it from that entry. Existing
+     * generated entries and matching project-source entries are preserved, and the resulting
+     * factory file is written to the compilation target directory.
      *
      * @param classNode the class being compiled
      * @param superType the factory interface or superclass whose implementations are registered
@@ -564,9 +564,13 @@ class GlobalGrailsClassInjectorTransformation implements ASTTransformation, Comp
     }
 
     private static boolean updateGrailsFactoriesWithTypes(ClassNode classNode, Collection<ClassNode> superTypes, File compilationTargetDirectory) {
-        superTypes.any {
-            updateGrailsFactoriesWithType(classNode, it, compilationTargetDirectory)
+        // every type is visited rather than stopping at the first that registers the class: one it
+        // is no longer a subtype of has to drop it
+        boolean registered = false
+        for (ClassNode superType : superTypes) {
+            registered = updateGrailsFactoriesWithType(classNode, superType, compilationTargetDirectory) || registered
         }
+        registered
     }
 
     /**

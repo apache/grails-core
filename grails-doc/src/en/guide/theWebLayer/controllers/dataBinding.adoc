@@ -1089,6 +1089,8 @@ def p = new Person()
 bindData(p, params, [exclude: 'dateOfBirth'])
 ----
 
+The properties the class itself keeps out of binding, through a `bindable: false` constraint, its `transients` or a `transient` field, stay excluded: `exclude` narrows the list of bindable properties described below, it does not replace it.
+
 Or include only certain properties:
 
 [source,groovy]
@@ -1100,3 +1102,9 @@ bindData(p, params, [include: ['firstName', 'lastName']])
 NOTE: If an empty List is provided as a value for the `include` parameter then no fields will be bound.
 
 Grails 8 retains permissive request data binding by default for compatibility, so properties without a `bindable` constraint continue to bind.  Properties marked link:{constraintsRef}bindable.html[`bindable: false`] remain non-bindable in either mode.  Applications can opt into deny-by-default binding allowlists by setting `grails.databinding.denyByDefault=true`.  In secure mode, add `bindable: true`, an explicit `include` list, or `@BindAllowed` for each intended property; only in this mode does `bindable: true` act as a restrictive allowlist.
+
+When no `include` list is given, binding is restricted to a list of bindable properties that Grails generates for the class when it is compiled. In the permissive mode the list holds the class's statically typed instance properties and those it inherits, less the properties its `constraints` mark `bindable: false`, the properties named in its `transients` list and its `transient` fields, plus any property its `constraints` mark `bindable: true`; under `grails.databinding.denyByDefault` it holds the properties marked `bindable: true`. Domain classes, command objects and any other class that implements `grails.validation.Validateable` or declares `constraints` or `transients` get these lists, as do the classes that extend them, wherever they are compiled, in the application, in a plugin, or in another module of a multi-project build, provided the data binding library, `grails-web-databinding`, is on that compilation's classpath, as it is in a Grails application or plugin. A library module that compiles against GORM alone generates no lists. In the permissive mode, a class with none of these is bound without restriction.
+
+A class compiled against an already compiled parent, such as a parent in a plugin or in another module, takes the parent's bindable properties from the compiled parent. If the parent was compiled by an earlier version of Grails, or without the data binding library on its compile classpath, the compiler warns that the lists of the subclass are derived from the parent's bytecode, which does not carry the parent's `bindable` constraints or its `transients`, and asks for the parent to be recompiled.
+
+A property that holds a validation result, of type `org.springframework.validation.Errors`, such as the `errors` property of a domain class or of a `Validateable` object, is never bound from request data.

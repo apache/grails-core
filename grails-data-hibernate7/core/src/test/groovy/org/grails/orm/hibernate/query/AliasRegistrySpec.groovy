@@ -95,54 +95,48 @@ class AliasRegistrySpec extends Specification {
         parent.getRealized("f") == parentExpr
     }
 
-    def "test implicit aliases are delegated to child registry in same query but not subquery"() {
+    def 'a local definition shadows an inherited realized alias until it is realized locally'() {
         given:
         def parent = new AliasRegistry()
-        def child = new AliasRegistry(parent, false)
-        def subquery = new AliasRegistry(parent, true)
-        def implicitDef = new HibernateAlias("owner", "owner", JoinType.INNER, false)
+        def child = new AliasRegistry(parent)
+        def parentExpression = Mock(Expression)
+        def childExpression = Mock(Expression)
+        parent.realize('f', parentExpression)
 
         when:
-        parent.define("owner", implicitDef)
+        child.define('f', new HibernateAlias('face', 'f'))
 
-        then: "locally defined in parent"
-        parent.isDefined("owner")
-        !parent.isExplicit("owner")
-        parent.getDefinition("owner") == implicitDef
+        then:
+        child.isDefined('f')
+        !child.hasRealized('f')
+        child.getRealized('f') == null
+        parent.getRealized('f') == parentExpression
 
-        and: "visible to child in same query"
-        child.isDefined("owner")
-        child.getDefinition("owner") == implicitDef
+        when:
+        child.realize('f', childExpression)
 
-        and: "not visible across subquery boundary"
-        !subquery.isDefined("owner")
-        !subquery.isExplicit("owner")
-        subquery.getDefinition("owner") == null
+        then:
+        child.getRealized('f') == childExpression
+        parent.getRealized('f') == parentExpression
     }
 
-    def "test implicit alias realization is delegated to child registry in same query but not subquery"() {
+    def 'association alias selection follows local declaration order, not alias spelling'() {
         given:
         def parent = new AliasRegistry()
-        def child = new AliasRegistry(parent, false)
-        def subquery = new AliasRegistry(parent, true)
-        def implicitDef = new HibernateAlias("owner", "owner", JoinType.INNER, false)
-        def expr = Mock(Expression)
+        parent.define('outer', new HibernateAlias('likes', 'outer'))
+        def registry = new AliasRegistry(parent)
+        registry.define('likes', new HibernateAlias('likes', 'likes', JoinType.INNER, false))
+
+        expect:
+        registry.getAssociationAlias('likes') == null
 
         when:
-        parent.define("owner", implicitDef)
-        parent.realize("owner", expr)
+        def first = new HibernateAlias('likes', 'likes')
+        registry.define('likes', first)
+        registry.define('other', new HibernateAlias('likes', 'other'))
 
-        then: "realized in parent"
-        parent.hasRealized("owner")
-        parent.getRealized("owner") == expr
-
-        and: "visible to child in same query"
-        child.hasRealized("owner")
-        child.getRealized("owner") == expr
-
-        and: "not visible across subquery boundary"
-        !subquery.isDefined("owner")
-        !subquery.hasRealized("owner")
-        subquery.getRealized("owner") == null
+        then:
+        registry.getAssociationAlias('likes') == first
+        registry.getAssociationAlias('favorite') == null
     }
 }

@@ -23,7 +23,7 @@ import jakarta.persistence.criteria.JoinType;
 import org.grails.datastore.mapping.query.Query;
 
 /**
- * A internal criterion used to represent an alias for a basic collection join.
+ * An internal criterion used to represent an explicit alias or an implicit association-path join.
  *
  * @author walterduquedeestrada
  */
@@ -35,6 +35,6 @@ public record HibernateAlias(String path, String alias, JoinType joinType, boole
     }
 
     public HibernateAlias(String path, String alias) {
-        this(path, alias, JoinType.INNER, true);
+        this(path, alias, JoinType.INNER);
     }
 }

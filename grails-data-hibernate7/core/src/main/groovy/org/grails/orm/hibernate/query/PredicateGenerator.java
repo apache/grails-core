@@ -35,7 +35,6 @@ import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.Expression;
 import jakarta.persistence.criteria.From;
 import jakarta.persistence.criteria.Join;
-import jakarta.persistence.criteria.JoinType;
 import jakarta.persistence.criteria.ParameterExpression;
 import jakarta.persistence.criteria.Path;
 import jakarta.persistence.criteria.Predicate;
@@ -306,24 +305,17 @@ public class PredicateGenerator {
         JpaQueryContext fromsByProvider,
         DetachedAssociationCriteria<?> associationCriteria) {
         String associationName = associationCriteria.getAssociationPath();
-        From<?, ?> associationRoot = fromsByProvider.getFrom(associationName);
-        if (associationRoot == null) {
-            // Check if we already have it in our parent or alias map
-            Expression<?> expr = fromsByProvider.getFullyQualifiedExpression(associationName);
-            if (expr instanceof From<?, ?> from) {
-                associationRoot = from;
-            } else {
-                associationRoot = fromsByProvider.getRoot().join(associationName);
-                fromsByProvider.addFrom(associationName, associationRoot);
-            }
-        }
+        From<?, ?> associationRoot = fromsByProvider.resolveAssociation(associationName);
 
         // Create a nested context for this association
-        JpaQueryContext nestedContext = new JpaQueryContext(fromsByProvider, null, associationRoot);
-        List<Query.Criterion> criteriaList = associationCriteria.getCriteria();
-        JpaCriteriaQueryCreator.discoverAliases(criteriaList, nestedContext);
+        JpaQueryContext nestedContext = new QueryAliasRegistrar(associationCriteria, null)
+                .createContext(fromsByProvider, associationRoot);
 
         GrailsHibernatePersistentEntity associatedEntity = (GrailsHibernatePersistentEntity) associationCriteria.getAssociation().getAssociatedEntity();
+        List<Query.Criterion> criteriaList = associationCriteria.getCriteria();
+        if (criteriaList.isEmpty()) {
+            return null;
+        }
         return criteriaBuilder.and(getPredicates(criteriaQuery, associationRoot, criteriaList, nestedContext, associatedEntity));
     }
 
@@ -332,23 +324,13 @@ public class PredicateGenerator {
         JpaQueryContext fromsByProvider,
         HibernateAssociationQuery associationQuery) {
         String associationName = associationQuery.associationPath;
-        From<?, ?> associationRoot = fromsByProvider.getFrom(associationName);
-        if (associationRoot == null) {
-            Expression<?> expr = fromsByProvider.getFullyQualifiedExpression(associationName);
-            if (expr instanceof From<?, ?> from) {
-                associationRoot = from;
-            } else {
-                associationRoot = fromsByProvider.getRoot().join(associationName, JoinType.INNER);
-                fromsByProvider.addFrom(associationName, associationRoot);
-            }
-        }
+        From<?, ?> associationRoot = fromsByProvider.resolveAssociation(associationName);
 
         // Create a nested context for this association
         JpaQueryContext nestedContext = new JpaQueryContext(fromsByProvider, null, associationRoot);
-        List<Query.Criterion> criteriaList = associationQuery.getAssociationCriteria();
-        JpaCriteriaQueryCreator.discoverAliases(criteriaList, nestedContext);
 
         GrailsHibernatePersistentEntity associatedEntity = associationQuery.getEntity();
+        List<Query.Criterion> criteriaList = associationQuery.getAssociationCriteria();
         return criteriaBuilder.and(getPredicates(criteriaQuery, associationRoot, criteriaList, nestedContext, associatedEntity));
     }
 

@@ -99,6 +99,32 @@ class JpaQueryContextSpec extends Specification {
         context.getFullyQualifiedExpression("nicknames") == join
     }
 
+    def 'association paths and named aliases have independent caches'() {
+        given:
+        def root = Mock(From)
+        def favoriteJoin = Mock(Join)
+        def likesJoin = Mock(Join)
+        def context = new JpaQueryContext([
+                new HibernateAlias('favorite', 'f'),
+                new HibernateAlias('likes', 'favorite')
+        ], root)
+
+        when:
+        def aliasJoin = context.getFullyQualifiedExpression('favorite')
+        def pathJoin = context.resolveAssociation('favorite')
+
+        then:
+        1 * root.join('likes', JoinType.INNER) >> likesJoin
+        1 * root.join('favorite', JoinType.INNER) >> favoriteJoin
+        aliasJoin == likesJoin
+        pathJoin == favoriteJoin
+        context.getFrom('favorite') == favoriteJoin
+        context.getFrom('likes') == likesJoin
+        context.getFrom('f') == null
+        context.getFullyQualifiedExpression('f') == favoriteJoin
+        context.getFullyQualifiedExpression('favorite') == likesJoin
+    }
+
     def "test aliases-only and parent-only constructor overloads"() {
         given:
         def root = Mock(From)
@@ -262,31 +288,5 @@ class JpaQueryContextSpec extends Specification {
 
         then:
         thrown(UnsupportedOperationException)
-    }
-
-    def "test subquery context does not inherit implicit joins or aliases from parent"() {
-        given:
-        def parentRoot = Mock(From)
-        def parentContext = new JpaQueryContext(parentRoot)
-        def ownerJoin = Mock(Join)
-        parentContext.registerAlias("owner", new HibernateAlias("owner", "owner", JoinType.INNER, false))
-        parentContext.addFrom("owner", ownerJoin)
-
-        def subRoot = Mock(From)
-        def subContext = JpaQueryContext.forSubquery(parentContext, subRoot)
-
-        expect:
-        parentContext.hasAlias("owner")
-        parentContext.getFrom("owner") == ownerJoin
-        !subContext.hasAlias("owner")
-        subContext.getFrom("owner") == null
-        subContext.getAliasedExpression("owner") == null
-
-        when:
-        parentContext.registerAlias("owner", ownerJoin)
-
-        then:
-        parentContext.getAliasedExpression("owner") == ownerJoin
-        subContext.getAliasedExpression("owner") == null
     }
 }
