@@ -228,6 +228,9 @@ include(
         // Test Report
         'grails-test-report',
 
+        // JUnit Platform listeners for the test JVMs of this repository (not published)
+        'grails-test-listener',
+
         // wrapper
         'grails-wrapper',
 

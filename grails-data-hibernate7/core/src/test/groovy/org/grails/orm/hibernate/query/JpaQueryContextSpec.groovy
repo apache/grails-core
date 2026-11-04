@@ -99,6 +99,32 @@ class JpaQueryContextSpec extends Specification {
         context.getFullyQualifiedExpression("nicknames") == join
     }
 
+    def 'association paths and named aliases have independent caches'() {
+        given:
+        def root = Mock(From)
+        def favoriteJoin = Mock(Join)
+        def likesJoin = Mock(Join)
+        def context = new JpaQueryContext([
+                new HibernateAlias('favorite', 'f'),
+                new HibernateAlias('likes', 'favorite')
+        ], root)
+
+        when:
+        def aliasJoin = context.getFullyQualifiedExpression('favorite')
+        def pathJoin = context.resolveAssociation('favorite')
+
+        then:
+        1 * root.join('likes', JoinType.INNER) >> likesJoin
+        1 * root.join('favorite', JoinType.INNER) >> favoriteJoin
+        aliasJoin == likesJoin
+        pathJoin == favoriteJoin
+        context.getFrom('favorite') == favoriteJoin
+        context.getFrom('likes') == likesJoin
+        context.getFrom('f') == null
+        context.getFullyQualifiedExpression('f') == favoriteJoin
+        context.getFullyQualifiedExpression('favorite') == likesJoin
+    }
+
     def "test aliases-only and parent-only constructor overloads"() {
         given:
         def root = Mock(From)

@@ -72,6 +72,19 @@ class GroovyPagePluginFunctionalSpec extends GradleSpecification {
         result.output.contains('WEBAPP_HAS_CLASSES_DIR=true')
     }
 
+    def "the GSP compile classpath is put together without deprecated Gradle features"() {
+        given:
+        setupTestResourceProject('gsp-compile-classpath')
+
+        when: 'the build fails on any deprecation, such as a Provider used where a boolean is expected'
+        def result = executeTask('inspectGspCompileClasspath', ['--warning-mode=fail'])
+
+        then: 'the classpath still has everything it needs to compile a GSP'
+        result.output.contains('MAIN_HAS_COMPILE_CLASSPATH=true')
+        result.output.contains('MAIN_HAS_PROVIDED_COMPILE=true')
+        result.output.contains('MAIN_HAS_CLASSES_DIR=true')
+    }
+
     def "the page opt-in reaches both the build's page compiler and the JVM running the application"() {
         given:
         setupTestResourceProject('gsp-compile-static')
