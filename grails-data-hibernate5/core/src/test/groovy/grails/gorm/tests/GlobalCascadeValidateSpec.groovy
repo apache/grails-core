@@ -1,0 +1,93 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ */
+package grails.gorm.tests
+
+import grails.gorm.annotation.Entity
+import org.grails.datastore.mapping.core.DatastoreUtils
+import org.grails.orm.hibernate.HibernateDatastore
+import org.grails.orm.hibernate.cfg.Settings
+import spock.lang.AutoCleanup
+import spock.lang.Issue
+import spock.lang.Shared
+import spock.lang.Specification
+
+@Issue('https://github.com/apache/grails-core/issues/14426')
+class GlobalCascadeValidateSpec extends Specification {
+
+    @Shared
+    @AutoCleanup
+    HibernateDatastore dirtyDefault = new HibernateDatastore(DatastoreUtils.createPropertyResolver(
+            (Settings.SETTING_DB_CREATE): 'create-drop',
+            'dataSource.url'             : 'jdbc:h2:mem:globalCascadeValidateDirty;LOCK_TIMEOUT=10000',
+            'grails.gorm.default.mapping': {
+                '*'(cascadeValidate: 'dirty')
+            }
+    ), CvOwner, CvPart)
+
+    @Shared
+    @AutoCleanup
+    HibernateDatastore plainDefault = new HibernateDatastore(DatastoreUtils.createPropertyResolver(
+            (Settings.SETTING_DB_CREATE): 'create-drop',
+            'dataSource.url'             : 'jdbc:h2:mem:globalCascadeValidatePlain;LOCK_TIMEOUT=10000'
+    ), PlainCvOwner, PlainCvPart)
+
+    private static Object cascadeValidateOf(HibernateDatastore datastore, Class owner) {
+        datastore.mappingContext.getPersistentEntity(owner.name).getPropertyByName('parts').mapping.mappedForm.cascadeValidate
+    }
+
+    void "a global cascadeValidate of dirty reaches the association mappings"() {
+        expect:
+        cascadeValidateOf(dirtyDefault, CvOwner) == 'dirty'
+    }
+
+    void "the association mappings have no cascadeValidate without the global setting"() {
+        expect:
+        cascadeValidateOf(plainDefault, PlainCvOwner) == null
+    }
+}
+
+@Entity
+class CvOwner {
+    String name
+    static hasMany = [parts: CvPart]
+}
+
+@Entity
+class CvPart {
+    String label
+    static belongsTo = [owner: CvOwner]
+    static constraints = {
+        label blank: false
+    }
+}
+
+@Entity
+class PlainCvOwner {
+    String name
+    static hasMany = [parts: PlainCvPart]
+}
+
+@Entity
+class PlainCvPart {
+    String label
+    static belongsTo = [owner: PlainCvOwner]
+    static constraints = {
+        label blank: false
+    }
+}
