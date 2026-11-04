@@ -71,7 +71,7 @@ class GrailsDataTckManagerSpec extends Specification {
         classes << [null, []]
     }
 
-    void "cleanupSpec releases the BeanInfo the Introspector cached for the classes the spec used"() {
+    void "cleanupSpec flushes the Introspector's caches for the current thread group"() {
         given: 'a class whose BeanInfo the Introspector has cached'
         def manager = new MinimalTckManager()
         BeanInfo cached = Introspector.getBeanInfo(MinimalTckManager)
