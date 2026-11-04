@@ -346,8 +346,8 @@ public class HibernateDatastore extends AbstractDatastore
             if (multiTenantMode == MultiTenancySettings.MultiTenancyMode.SCHEMA) {
                 List<String> unmapped = ConnectionSourcesSupport.findAssociationsToEntitiesMissingFromTenantSchemas(mappingContext.getPersistentEntities());
                 if (!unmapped.isEmpty()) {
-                    throw new ConfigurationException("Multi-tenancy mode SCHEMA cannot map an association from a MultiTenant entity to an entity that is not MultiTenant: "
-                            + String.join(", ", unmapped) + ". Make the target MultiTenant, or use the DISCRIMINATOR multi-tenancy mode.");
+                    throw new ConfigurationException("Multi-tenancy mode SCHEMA cannot map an association from a MultiTenant entity to an entity that is not MultiTenant: " +
+                            String.join(", ", unmapped) + ". Make the target MultiTenant, or use the DISCRIMINATOR multi-tenancy mode.");
                 }
                 if (this.tenantResolver instanceof AllTenantsResolver allTenantsResolver) {
                     Iterable<Serializable> tenantIds = allTenantsResolver.resolveTenantIds();
