@@ -780,11 +780,13 @@ class GrailsWebDataBinderSpec extends Specification implements DataTest {
         binder.bind(new ConstraintsCountingWidget(), new SimpleMapDataBindingSource([name: 'First']))
         int evaluations = ConstraintsCountingWidget.CONSTRAINTS_EVALUATIONS.get()
 
-        when: 'more instances are bound through the binder, the binding utilities and the map constructor'
+        when: 'more instances are bound through the binder and the binding utilities with an include list that names secret, so only bindable: false keeps it out'
         def boundByBinder = new ConstraintsCountingWidget()
-        binder.bind(boundByBinder, new SimpleMapDataBindingSource([name: 'Binder', secret: 'Binder']))
+        binder.bind(boundByBinder, new SimpleMapDataBindingSource([name: 'Binder', secret: 'Binder']), ['name', 'secret'])
         def boundByUtils = new ConstraintsCountingWidget()
-        DataBindingUtils.bindObjectToInstance(boundByUtils, [name: 'Utils', secret: 'Utils'])
+        DataBindingUtils.bindObjectToInstance(boundByUtils, [name: 'Utils', secret: 'Utils'], ['name', 'secret'], [], null)
+
+        and: 'through the map constructor'
         def boundByConstructor = new ConstraintsCountingWidget(name: 'Constructor', secret: 'Constructor')
 
         then: 'the property constrained bindable: false is not bound'
@@ -804,12 +806,12 @@ class GrailsWebDataBinderSpec extends Specification implements DataTest {
         given:
         def child = new UnbindableChildEntity()
 
-        when:
+        when: 'bound with an include list that names every property, so only bindable: false keeps the secrets out'
         binder.bind(child, new SimpleMapDataBindingSource([
             name: 'Bound',
             parentSecret: 'Parent Secret',
             childSecret: 'Child Secret'
-        ]))
+        ]), ['name', 'parentSecret', 'childSecret'])
 
         then:
         child.name == 'Bound'

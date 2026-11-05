@@ -29,7 +29,6 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import groovy.lang.GroovySystem;
 import groovy.lang.MetaClass;
-import groovy.lang.MetaMethod;
 import groovy.lang.MetaProperty;
 
 import jakarta.servlet.ServletRequest;
@@ -80,9 +79,7 @@ public class DataBindingUtils {
     public static final String DATA_BINDER_BEAN_NAME = "grailsWebDataBinder";
     private static final String BLANK = "";
     private static final String CONSTRAINTS_MAP_PROPERTY = "constraintsMap";
-    private static final String CONSTRAINTS_MAP_ACCESSOR = "getConstraintsMap";
     private static final String CONSTRAINTS_PROPERTY = "constraints";
-    private static final Object[] NO_ARGUMENTS = new Object[0];
     private static final Map<Class, List> CLASS_TO_UNBINDABLE_PROPERTY_NAMES = new ConcurrentHashMap<>();
 
     /**
@@ -289,25 +286,14 @@ public class DataBindingUtils {
             return BindingIncludeLists.constrainedProperties(object.getClass());
         }
         // Each accessor is looked up before it is read, so an object that has none of them does not throw
-        // and catch a missing property or method exception on every bind.
+        // and catch a missing property exception on every bind. A getConstraintsMap() method, static or not, is
+        // found as the constraintsMap property. An accessor that only propertyMissing or methodMissing provides
+        // is not found.
         MetaClass metaClass = GroovySystem.getMetaClassRegistry().getMetaClass(object.getClass());
         try {
             MetaProperty constraintsMapProperty = metaClass.hasProperty(object, CONSTRAINTS_MAP_PROPERTY);
             if (constraintsMapProperty != null) {
                 Object constrainedProperties = constraintsMapProperty.getProperty(object);
-                if (constrainedProperties instanceof Map) {
-                    return (Map) constrainedProperties;
-                }
-            }
-        } catch (Exception ignored) {
-        }
-        try {
-            MetaMethod constraintsMapAccessor = metaClass.getMetaMethod(CONSTRAINTS_MAP_ACCESSOR, NO_ARGUMENTS);
-            if (constraintsMapAccessor == null) {
-                constraintsMapAccessor = metaClass.getStaticMetaMethod(CONSTRAINTS_MAP_ACCESSOR, NO_ARGUMENTS);
-            }
-            if (constraintsMapAccessor != null) {
-                Object constrainedProperties = constraintsMapAccessor.invoke(object, NO_ARGUMENTS);
                 if (constrainedProperties instanceof Map) {
                     return (Map) constrainedProperties;
                 }

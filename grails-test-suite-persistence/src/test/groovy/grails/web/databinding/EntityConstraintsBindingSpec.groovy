@@ -115,8 +115,8 @@ class EntityConstraintsBindingSpec extends Specification {
         mappingContext.addPersistentEntity(SelfConstrainedRecord)
         def record = new SelfConstrainedRecord()
 
-        when:
-        DataBindingUtils.bindObjectToInstance(record, [name: 'Grails', secret: 'Hidden'])
+        when: 'bound with an include list that names secret, so only bindable: false keeps it out'
+        DataBindingUtils.bindObjectToInstance(record, [name: 'Grails', secret: 'Hidden'], ['name', 'secret'], [], null)
 
         then:
         record.name == 'Grails'
@@ -132,8 +132,8 @@ class EntityConstraintsBindingSpec extends Specification {
         def probe = new ValidatedRecord_$$_Probe()
         assert mappingContext.getPersistentEntity(ValidatedRecord_$$_Probe.name).is(entity)
 
-        when:
-        DataBindingUtils.bindObjectToInstance(probe, [name: 'Grails', secret: 'Shown'])
+        when: 'bound with an include list that names both, so only bindable: false keeps one out'
+        DataBindingUtils.bindObjectToInstance(probe, [name: 'Grails', secret: 'Shown'], ['name', 'secret'], [], null)
 
         then: 'the constraints of the class were used, not those of the entity'
         probe.name == null

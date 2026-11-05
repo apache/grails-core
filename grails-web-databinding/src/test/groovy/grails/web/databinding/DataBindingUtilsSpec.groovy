@@ -206,6 +206,44 @@ class DataBindingUtilsSpec extends Specification {
     }
 
     @Issue('https://github.com/apache/grails-core/issues/16558')
+    void 'test a constraints map an accessor added through the metaclass returns keeps its bindable: false'() {
+        given:
+        MetaClassConstraintsCommand.metaClass.static.getConstraintsMap = { ->
+            [secret: [metaConstraints: [bindable: false]]]
+        }
+        def command = new MetaClassConstraintsCommand()
+
+        when:
+        DataBindingUtils.bindObjectToInstance(command, [name: 'Grails', secret: 'Hidden'])
+
+        then:
+        command.name == 'Grails'
+        command.secret == null
+
+        cleanup:
+        GroovySystem.metaClassRegistry.removeMetaClass(MetaClassConstraintsCommand)
+    }
+
+    @Issue('https://github.com/apache/grails-core/issues/16558')
+    void 'test a constraints accessor that only #provider provides is not read'() {
+        given:
+        def command = type.getDeclaredConstructor().newInstance()
+
+        when:
+        DataBindingUtils.bindObjectToInstance(command, [name: 'Grails', secret: 'Bound'])
+
+        then:
+        command.name == 'Grails'
+        command.secret == 'Bound'
+
+        where:
+        provider                                               | type
+        'propertyMissing'                                      | PropertyMissingConstraintsCommand
+        'methodMissing'                                        | MethodMissingConstraintsCommand
+        'methodMissing of the constrained property it returns' | MethodMissingMetaConstraintsCommand
+    }
+
+    @Issue('https://github.com/apache/grails-core/issues/16558')
     void 'test a map-backed constrained property that wraps another is read through the one it wraps'() {
         given:
         def command = new MapWrappedConstraintsCommand()
@@ -483,6 +521,59 @@ class MapWrappedConstraintsCommand {
 
     static Map getConstraintsMap() {
         [secret: [property: new MetaConstrainedProperty(bindable: false)]]
+    }
+}
+
+class MetaClassConstraintsCommand {
+
+    String name
+    String secret
+}
+
+class PropertyMissingConstraintsCommand {
+
+    String name
+    String secret
+
+    Object propertyMissing(String propertyName) {
+        if (propertyName == 'constraintsMap') {
+            return [secret: [metaConstraints: [bindable: false]]]
+        }
+        throw new MissingPropertyException(propertyName, PropertyMissingConstraintsCommand)
+    }
+}
+
+class MethodMissingConstraintsCommand {
+
+    String name
+    String secret
+
+    Object methodMissing(String methodName, Object args) {
+        if (methodName == 'getConstraintsMap') {
+            return [secret: [metaConstraints: [bindable: false]]]
+        }
+        throw new MissingMethodException(methodName, MethodMissingConstraintsCommand, args as Object[])
+    }
+}
+
+class MethodMissingMetaConstraintsCommand {
+
+    String name
+    String secret
+
+    static Map getConstraintsMap() {
+        [secret: new MethodMissingMetaConstrainedProperty()]
+    }
+}
+
+// Answers getMetaConstraintValue only through methodMissing.
+class MethodMissingMetaConstrainedProperty {
+
+    Object methodMissing(String methodName, Object args) {
+        if (methodName == 'getMetaConstraintValue' && (args as Object[])[0] == 'bindable') {
+            return false
+        }
+        throw new MissingMethodException(methodName, MethodMissingMetaConstrainedProperty, args as Object[])
     }
 }
 

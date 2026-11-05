@@ -73,7 +73,7 @@ class DomainProxyBindingSpec extends Specification implements ControllerUnitTest
     @Issue('https://github.com/apache/grails-core/issues/16558')
     @Unroll
     void 'a proxy of a domain class does not bind a property its class constrains bindable: false, through #binding'() {
-        given: 'compatibility mode, where only the bindable: false constraint keeps the property from being bound'
+        given: 'compatibility mode'
         grailsApplication.config.grails.databinding.denyByDefault = false
         def persisted = new ProxiedBindingRecord()
         persisted.description = 'Persisted'
@@ -83,8 +83,8 @@ class DomainProxyBindingSpec extends Specification implements ControllerUnitTest
         params.putAll(recordId: recordId, description: 'Rebound', secret: 'Rebound')
         int evaluations = ProxiedBindingRecord.CONSTRAINTS_EVALUATIONS.get()
 
-        when:
-        Map bound = binding == 'bindData' ? controller.bindProxy() : bindProxy(recordId)
+        when: 'bound with an include list that names secret, so only bindable: false keeps it out'
+        Map bound = binding == 'bindData' ? controller.bindProxyIncludingSecret() : bindProxyIncludingSecret(recordId)
 
         then: 'the record was loaded as a proxy'
         bound.proxy
@@ -104,7 +104,14 @@ class DomainProxyBindingSpec extends Specification implements ControllerUnitTest
         def record = ProxiedBindingRecord.load(recordId)
         boolean proxy = record instanceof EntityProxy
         DataBindingUtils.bindObjectToInstance(record, params)
-        [proxy: proxy, id: record.id, version: record.version, description: record.description, secret: record.secret]
+        [proxy: proxy, id: record.id, version: record.version, description: record.description]
+    }
+
+    private Map bindProxyIncludingSecret(Long recordId) {
+        def record = ProxiedBindingRecord.load(recordId)
+        boolean proxy = record instanceof EntityProxy
+        DataBindingUtils.bindObjectToInstance(record, params, ['description', 'secret'], [], null)
+        [proxy: proxy, description: record.description, secret: record.secret]
     }
 }
 
@@ -115,7 +122,14 @@ class DomainProxyBindingController {
         def record = ProxiedBindingRecord.load(recordId)
         boolean proxy = record instanceof EntityProxy
         bindData(record, params)
-        [proxy: proxy, id: record.id, version: record.version, description: record.description, secret: record.secret]
+        [proxy: proxy, id: record.id, version: record.version, description: record.description]
+    }
+
+    def bindProxyIncludingSecret(Long recordId) {
+        def record = ProxiedBindingRecord.load(recordId)
+        boolean proxy = record instanceof EntityProxy
+        bindData(record, params, [include: ['description', 'secret']])
+        [proxy: proxy, description: record.description, secret: record.secret]
     }
 }
 
