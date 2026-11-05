@@ -233,28 +233,20 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
     }
 
     public Criteria createAlias(String associationPath, String alias) {
-        var prop = hibernateQuery.getEntity().getPropertyByName(associationPath);
-        if (prop instanceof Basic) {
-            hibernateQuery.addAlias(
-                    new HibernateAlias(associationPath, alias, JoinType.INNER));
-            return this;
-        }
-        hibernateQuery.getDetachedCriteria().createAlias(associationPath, alias);
-        hibernateQuery.getDetachedCriteria().join(associationPath, JoinType.INNER);
-        return this;
+        return createAlias(associationPath, alias, 0);
     }
 
     public Criteria createAlias(
             String associationPath, String alias, int joinType) {
-        var prop = hibernateQuery.getEntity().getPropertyByName(associationPath);
+        var criteria = hibernateQuery.getDetachedCriteria();
+        var prop = criteria.getPersistentEntity().getPropertyByName(associationPath);
         JoinType convertedJoinType = convertFromInt(joinType);
+        criteria.getCriteria().add(new HibernateAlias(associationPath, alias, convertedJoinType));
         if (prop instanceof Basic) {
-            hibernateQuery.addAlias(
-                    new HibernateAlias(associationPath, alias, convertedJoinType));
             return this;
         }
-        hibernateQuery.getDetachedCriteria().createAlias(associationPath, alias);
-        hibernateQuery.getDetachedCriteria().join(associationPath, convertedJoinType);
+        criteria.createAlias(associationPath, alias);
+        criteria.join(associationPath, convertedJoinType);
         return this;
     }
 

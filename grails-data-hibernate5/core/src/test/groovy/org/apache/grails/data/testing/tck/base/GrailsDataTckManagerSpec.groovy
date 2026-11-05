@@ -18,6 +18,9 @@
  */
 package org.apache.grails.data.testing.tck.base
 
+import java.beans.BeanInfo
+import java.beans.Introspector
+
 import org.grails.datastore.mapping.core.Session
 import spock.lang.Specification
 
@@ -66,5 +69,20 @@ class GrailsDataTckManagerSpec extends Specification {
 
         where:
         classes << [null, []]
+    }
+
+    void "cleanupSpec flushes the Introspector's caches for the current thread group"() {
+        given: 'a class whose BeanInfo the Introspector has cached'
+        def manager = new MinimalTckManager()
+        BeanInfo cached = Introspector.getBeanInfo(MinimalTckManager)
+
+        expect: 'the cache answers the next lookup'
+        Introspector.getBeanInfo(MinimalTckManager).is(cached)
+
+        when:
+        manager.cleanupSpec()
+
+        then: 'the lookup after the cleanup reads the class again'
+        !Introspector.getBeanInfo(MinimalTckManager).is(cached)
     }
 }

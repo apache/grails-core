@@ -170,7 +170,7 @@ class GormApiResolverSpec extends Specification {
         ex.message.contains('Datastore')
     }
 
-    void "findSingleDatastore delegates to findDatastore when more than one qualifier is registered"() {
+    void "findSingleDatastore returns the default-qualified datastore when more than one qualifier is registered"() {
         given:
         def registry = new GormRegistry()
         def resolver = new GormApiResolver(registry)
@@ -181,6 +181,40 @@ class GormApiResolverSpec extends Specification {
 
         expect:
         resolver.findSingleDatastore() == defaultDs
+    }
+
+    void 'findSingleDatastore returns the default-qualified datastore, not the one of the tenant bound for it, in DATABASE mode'() {
+        given:
+        final registry = new GormRegistry()
+        final resolver = new GormApiResolver(registry)
+        final defaultDs = Stub(MultiTenantCapableDatastore) {
+            getMultiTenancyMode() >> MultiTenancySettings.MultiTenancyMode.DATABASE
+        }
+        final tenantDs = Stub(Datastore)
+        registry.datastoresByQualifier.put(ConnectionSource.DEFAULT, defaultDs)
+        registry.datastoresByQualifier.put('tenant1', tenantDs)
+
+        expect:
+        CurrentTenantHolder.withTenant(defaultDs, 'tenant1') { resolver.findSingleDatastore() }.is(defaultDs)
+    }
+
+    void 'findSingleDatastore returns the default-qualified datastore while a session of another qualifier is bound'() {
+        given:
+        var registry = new GormRegistry()
+        var resolver = new GormApiResolver(registry)
+        var defaultDs = Stub(Datastore)
+        var secondaryDs = Stub(Datastore) {
+            hasCurrentSession() >> true
+        }
+        registry.datastoresByQualifier.put(ConnectionSource.DEFAULT, defaultDs)
+        registry.datastoresByQualifier.put('secondary', secondaryDs)
+        TransactionSynchronizationManager.bindResource(secondaryDs, new Object())
+
+        expect:
+        resolver.findSingleDatastore().is(defaultDs)
+
+        cleanup:
+        TransactionSynchronizationManager.unbindResource(secondaryDs)
     }
 
     void "findSingleDatastore returns the default-qualified datastore when exactly one is registered under DEFAULT"() {
