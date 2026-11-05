@@ -276,6 +276,37 @@ class AssociationJoinTypeSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckM
         squad.players.size() == 3
     }
 
+    void 'a join type requested for an association of a collection returns and counts each instance once'() {
+        given: 'a team with two players that have a contract'
+        saveTeamWithAPlayerWithoutContract()
+        final query = Team.where {
+            name ==~ '%Team%'
+        }
+
+        when:
+        final results = query.list(max: 10, fetch: ['players.contract': joinType])
+
+        then:
+        results*.name.sort() == (TEAMS_WITH_PLAYERS + 'Squad Team').sort()
+        results.totalCount == 5
+        query.join('players.contract', joinType).count() == 5
+
+        where:
+        joinType << [JoinType.INNER, JoinType.RIGHT]
+    }
+
+    void 'an inner join requested for an association of a collection of an association counts each instance once'() {
+        given:
+        saveTeamWithAPlayerWithoutContract()
+        final query = Player.where {
+            name ==~ '%Player%'
+        }.join('team.players.contract', JoinType.INNER)
+
+        expect: 'every player is in a team that has a player with a contract'
+        query.list().size() == 7
+        query.count() == 7
+    }
+
     void 'an inner join requested for a collection and for an association of that collection applies to both'() {
         given:
         saveTeamWithAPlayerWithoutContract()
@@ -288,6 +319,9 @@ class AssociationJoinTypeSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckM
 
         then:
         results*.name.sort() == (TEAMS_WITH_PLAYERS + 'Squad Team').sort()
+
+        and: 'the collection is fetched, with the player that has no contract'
+        Hibernate.isInitialized(squad.players)
         squad.players.size() == 3
     }
 
@@ -532,14 +566,25 @@ class AssociationJoinTypeSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckM
         saveTeamWithAPlayerWithoutContract()
 
         when:
-        final results = Team.createCriteria().listDistinct {
+        final results = Team.createCriteria().list {
             like('name', '%Team%')
             join('players.contract', JoinType.INNER)
         }
+        final count = Team.createCriteria().count {
+            like('name', '%Team%')
+            join('players.contract', JoinType.INNER)
+        }
+        final paged = Team.createCriteria().list(max: 10, fetch: ['players.contract': JoinType.INNER]) {
+            like('name', '%Team%')
+        }
         final squad = results.find { it.name == 'Squad Team' }
 
-        then:
+        then: 'each team is returned and counted once'
         results*.name.sort() == (TEAMS_WITH_PLAYERS + 'Squad Team').sort()
+        count == 5
+        paged.totalCount == 5
+
+        and:
         !Hibernate.isInitialized(squad.players)
         squad.players.size() == 3
     }

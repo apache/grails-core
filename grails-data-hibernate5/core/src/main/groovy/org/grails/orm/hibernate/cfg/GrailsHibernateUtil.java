@@ -34,8 +34,11 @@ import org.hibernate.LockMode;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 import org.hibernate.criterion.Criterion;
+import org.hibernate.criterion.DetachedCriteria;
 import org.hibernate.criterion.Order;
+import org.hibernate.criterion.Projections;
 import org.hibernate.criterion.Restrictions;
+import org.hibernate.criterion.Subqueries;
 import org.hibernate.engine.spi.EntityEntry;
 import org.hibernate.engine.spi.SessionImplementor;
 import org.hibernate.engine.spi.Status;
@@ -291,11 +294,10 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
      * Returns the condition for a left join of a collection that must not fetch the collection.
      * <p>
      * Hibernate initializes a collection from the rows of a left join that has no condition of its
-     * own. It does so also when a row limit, or the join of an association further down the path,
-     * leaves elements out of those rows, and the collection then lacks those elements. A left join
-     * that is made for a sort, or on the way to another association, is therefore given this
-     * condition, which is always true: the join returns the same rows, and the collection is loaded
-     * on its own, when it is read.
+     * own. It does so also when a row limit leaves elements out of those rows, and the collection then
+     * lacks those elements. A left join that is made for a sort is therefore given this condition,
+     * which is always true: the join returns the same rows, and the collection is loaded on its own,
+     * when it is read.
      *
      * @return The join condition
      */
@@ -363,8 +365,8 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
      * Hibernate fetches a collection only through a left join. An inner or a right join requested for
      * a collection therefore keeps the left join of the fetch mode, and the criteria are restricted to
      * the rows whose collection is not empty, which are the instances that either join returns. A
-     * collection that lies on the way to the requested association is joined, but not fetched: the
-     * join of the requested association leaves out the elements that do not have it.
+     * path that passes through a collection that the criteria do not join is joined in a subquery:
+     * see {@link #joinedInSubquery(String, String, String)}.
      *
      * @param datastore The datastore
      * @param targetClass The class that the criteria query
@@ -390,42 +392,75 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
             currentEntity = associations[i].getAssociatedEntity();
         }
 
+        int last = tokens.length - 1;
+        String[] paths = new String[tokens.length];
+        CriteriaImpl.Subcriteria[] joined = new CriteriaImpl.Subcriteria[tokens.length];
+        int unjoinedCollection = -1;
+        for (int i = 0; i < tokens.length; i++) {
+            paths[i] = i == 0 ? tokens[i] : paths[i - 1] + '.' + tokens[i];
+            joined[i] = findCriteria(root, paths[i]);
+            if (unjoinedCollection < 0 && joined[i] == null && associations[i] instanceof ToMany) {
+                unjoinedCollection = i;
+            }
+        }
+        if (unjoinedCollection >= 0 && unjoinedCollection < last) {
+            root.add(joinedInSubquery(targetClass.getName(), root.getAlias(), associationPath));
+            return;
+        }
+
         JoinType lastJoinType = joinType == jakarta.persistence.criteria.JoinType.INNER ? JoinType.INNER_JOIN : JoinType.RIGHT_OUTER_JOIN;
         Criteria parent = root;
         String parentAlias = null;
-        String currentPath = null;
         for (int i = 0; i < tokens.length; i++) {
-            String token = tokens[i];
-            boolean last = i == tokens.length - 1;
-            currentPath = currentPath == null ? token : currentPath + '.' + token;
-            CriteriaImpl.Subcriteria existing = findCriteria(root, currentPath);
-            if (existing != null) {
-                parent = existing;
-                parentAlias = existing.getAlias();
+            if (joined[i] != null) {
+                parent = joined[i];
+                parentAlias = joined[i].getAlias();
             }
-            else if (last && associations[i] instanceof ToMany) {
+            else if (i == unjoinedCollection) {
                 if (parentAlias != null) {
-                    root.add(Restrictions.isNotEmpty(parentAlias + '.' + token));
+                    root.add(Restrictions.isNotEmpty(parentAlias + '.' + tokens[i]));
                 }
                 else {
-                    parent.add(Restrictions.isNotEmpty(token));
+                    parent.add(Restrictions.isNotEmpty(tokens[i]));
                 }
             }
             else {
                 // joined from the root criteria with the whole path, as the count of a paged list recreates it
-                parentAlias = currentPath.replace('.', '_') + "_join";
-                if (last) {
-                    root.createAlias(currentPath, parentAlias, lastJoinType);
-                }
-                else if (associations[i] instanceof ToMany) {
-                    root.createAlias(currentPath, parentAlias, JoinType.LEFT_OUTER_JOIN, unfetchedJoinCondition());
-                }
-                else {
-                    root.createAlias(currentPath, parentAlias, JoinType.LEFT_OUTER_JOIN);
-                }
+                parentAlias = paths[i].replace('.', '_') + "_join";
+                root.createAlias(paths[i], parentAlias, i == last ? lastJoinType : JoinType.LEFT_OUTER_JOIN);
                 parent = root;
             }
         }
+    }
+
+    /**
+     * Returns a restriction to the instances of an entity for which an inner join of an association
+     * path returns a row. The path is joined in a subquery, which is correlated with the query by the
+     * identifier of the entity.
+     * <p>
+     * A join through a collection returns an instance once for each element of the collection. That
+     * multiplies the rows that a row limit and a count work on, and a collection that is fetched from
+     * those rows lacks the elements that the rest of the path leaves out. A subquery restricts the
+     * query to the same instances without either effect.
+     *
+     * @param entityName The name of the entity that the query returns
+     * @param rootAlias The alias of the root of the query
+     * @param associationPath The path of the association from the entity
+     * @return The restriction
+     */
+    public static Criterion joinedInSubquery(String entityName, String rootAlias, String associationPath) {
+        String subqueryAlias = associationPath.replace('.', '_') + "_subquery";
+        DetachedCriteria subquery = DetachedCriteria.forEntityName(entityName, subqueryAlias);
+        String parentAlias = subqueryAlias;
+        int level = 0;
+        for (String association : associationPath.split("\\.")) {
+            String alias = subqueryAlias + level++;
+            subquery.createAlias(parentAlias + '.' + association, alias, JoinType.INNER_JOIN);
+            parentAlias = alias;
+        }
+        subquery.add(Restrictions.eqProperty(subqueryAlias + ".id", rootAlias + ".id"));
+        subquery.setProjection(Projections.id());
+        return Subqueries.exists(subquery);
     }
 
     /**

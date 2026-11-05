@@ -123,6 +123,12 @@ public abstract class AbstractHibernateQuery extends Query {
      */
     private final Set<String> unfetchedCollections = new HashSet<>();
     /**
+     * The association paths that the query requests an inner or a right join for and that it is
+     * restricted to with a subquery, because they pass through a collection. See
+     * {@link #applyDeferredJoins()}.
+     */
+    private final Set<String> subqueryJoinedPaths = new HashSet<>();
+    /**
      * The association paths that the query asks to be fetched with a join.
      */
     private final Set<String> joinFetchedPaths = new HashSet<>();
@@ -811,8 +817,13 @@ public abstract class AbstractHibernateQuery extends Query {
      * collection needs, and the query is restricted to the rows whose collection is not empty, which
      * are the instances that either join returns.
      * <p>
-     * A collection that lies on the way to the requested association is joined, but not fetched: the
-     * join of the requested association leaves out the elements that do not have it.
+     * A join through a collection returns an instance once for each element of the collection. A
+     * path that passes through a collection that nothing else in the query joins is therefore joined
+     * in a subquery, which restricts the query to the instances that the join returns a row for
+     * without changing the number of its rows: see
+     * {@link GrailsHibernateUtil#joinedInSubquery(String, String, String)}. A collection on the path
+     * that the query does join is not fetched: the join of the requested association leaves out the
+     * elements that do not have it.
      */
     private void applyRequestedJoin(String associationPath, JoinType joinType) {
         String[] tokens = associationPath.split("\\.");
@@ -828,6 +839,22 @@ public abstract class AbstractHibernateQuery extends Query {
         }
 
         int last = tokens.length - 1;
+        StringBuilder collectionPath = new StringBuilder();
+        for (int i = 0; i < last; i++) {
+            if (collectionPath.length() > 0) {
+                collectionPath.append('.');
+            }
+            collectionPath.append(tokens[i]);
+            String path = collectionPath.toString();
+            if (associations[i] instanceof ToMany && !createdAssociationPaths.containsKey(path) && !deferredJoins.containsKey(path)) {
+                if (subqueryJoinedPaths.add(associationPath)) {
+                    String rootAlias = criteria != null ? criteria.getAlias() : detachedCriteria.getAlias();
+                    addToCriteria(GrailsHibernateUtil.joinedInSubquery(entity.getName(), rootAlias, associationPath));
+                }
+                return;
+            }
+        }
+
         boolean fetchedCollection = joinType != JoinType.LEFT && associations[last] instanceof ToMany &&
                 !createdAssociationPaths.containsKey(associationPath);
         StringBuilder currentPath = new StringBuilder();
