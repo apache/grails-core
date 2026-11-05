@@ -211,9 +211,9 @@ class ActionExceptionProblemDetailsSpec extends Specification {
         response.status == 500
     }
 
-    void 'the exception handlers of the advice go first, with both settings'() {
+    void 'the exception handlers of the advice go first, with #settings'() {
         given:
-        def resolver = resolver([springHandlers: true, problemDetails: true])
+        def resolver = resolver(settings)
 
         when:
         resolver.resolveException(request, response, action(new ProblemController()), new IllegalArgumentException('advised'))
@@ -225,6 +225,21 @@ class ActionExceptionProblemDetailsSpec extends Specification {
         when: 'none of them handles it'
         response = new MockHttpServletResponse()
         resolver.resolveException(request, response, action(new ProblemController()), new IllegalStateException('secret'))
+
+        then:
+        response.status == 500
+        problem() == [title: 'Internal Server Error', status: 500]
+
+        where:
+        settings << [[problemDetails: true], [springHandlers: true, problemDetails: true]]
+    }
+
+    void 'an application that turns the exception handlers off gets the problem without them'() {
+        given:
+        def resolver = resolver([springHandlers: false, problemDetails: true])
+
+        when:
+        resolver.resolveException(request, response, action(new ProblemController()), new IllegalArgumentException('advised'))
 
         then:
         response.status == 500

@@ -417,7 +417,8 @@ interface Settings {
      * Whether an exception a controller action throws, that no {@code @ExceptionHandler} method handles, is written as an
      * RFC 9457 problem, as Spring MVC writes one with {@code ProblemDetailsConfigurer.renderUnhandledExceptions}, except
      * to a client that prefers HTML or where a URL mapping names the exception, which the Grails exception resolver
-     * resolves as without it. Defaults to {@code false}.
+     * resolves as without it. It turns on {@link #SETTING_EXCEPTION_RESOLVER_SPRING_HANDLERS} unless the application sets
+     * that, since a problem is the last resort after those methods. Defaults to {@code false}.
      *
      * @since 9.1
      */

@@ -81,7 +81,8 @@ class ActionExceptionHandlerResolver implements HandlerExceptionResolver, Ordere
 
     /**
      * Whether it resolves exceptions, as {@code grails.exceptionresolver.springHandlers} says, which it reads from the
-     * environment of its application context where it is not set.
+     * environment of its application context where it is not set, and which {@code grails.exceptionresolver.problemDetails}
+     * turns on unless the application sets it.
      */
     Boolean enabled
 
@@ -105,13 +106,14 @@ class ActionExceptionHandlerResolver implements HandlerExceptionResolver, Ordere
     @Override
     void setApplicationContext(ApplicationContext applicationContext) {
         this.applicationContext = applicationContext
-        if (enabled == null) {
-            enabled = applicationContext.environment.getProperty(Settings.SETTING_EXCEPTION_RESOLVER_SPRING_HANDLERS, Boolean,
-                    Boolean.valueOf(Settings.SETTING_EXCEPTION_RESOLVER_SPRING_HANDLERS_DEFAULT))
-        }
         if (problemDetails == null) {
             problemDetails = applicationContext.environment.getProperty(Settings.SETTING_EXCEPTION_RESOLVER_PROBLEM_DETAILS,
                     Boolean, false)
+        }
+        if (enabled == null) {
+            // a problem is the last resort after the exception handler methods, as it is in Spring MVC
+            enabled = applicationContext.environment.getProperty(Settings.SETTING_EXCEPTION_RESOLVER_SPRING_HANDLERS, Boolean,
+                    problemDetails || Boolean.valueOf(Settings.SETTING_EXCEPTION_RESOLVER_SPRING_HANDLERS_DEFAULT))
         }
         returnValues = new ActionReturnValues(applicationContext)
         problemDetailHandler = new ProblemDetailExceptionHandler(applicationContext)

@@ -253,7 +253,7 @@
         {
             "name": "grails.exceptionresolver.problemDetails",
             "type": "java.lang.Boolean",
-            "description": "Whether an exception a controller action throws, that no @ExceptionHandler method handles, is written as an RFC 9457 problem, as Spring MVC writes one with ProblemDetailsConfigurer.renderUnhandledExceptions, except to a client that prefers HTML or where a URL mapping names the exception, which the Grails exception resolver resolves as without it.",
+            "description": "Whether an exception a controller action throws, that no @ExceptionHandler method handles, is written as an RFC 9457 problem, as Spring MVC writes one with ProblemDetailsConfigurer.renderUnhandledExceptions, except to a client that prefers HTML or where a URL mapping names the exception, which the Grails exception resolver resolves as without it. It turns on grails.exceptionresolver.springHandlers unless the application sets that.",
             "defaultValue": false
         },
         {

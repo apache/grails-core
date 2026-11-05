@@ -149,7 +149,7 @@ class BookExceptionAdvice {
 
 Declare the advice as a bean, in `grails-app/conf/spring/resources.groovy` or as a `@Bean` of a configuration class.
 
-With `grails.exceptionresolver.problemDetails: true`, an exception an action throws that no exception handler method handles is written as an https://www.rfc-editor.org/rfc/rfc9457.html[RFC 9457] problem to a client that does not prefer HTML, using the translation Spring Framework 7.1 adds, and the application's error page stays for browsers:
+With `grails.exceptionresolver.problemDetails: true`, an exception an action throws that no exception handler method handles is written as an https://www.rfc-editor.org/rfc/rfc9457.html[RFC 9457] problem to a client that does not prefer HTML, using the translation Spring Framework 7.1 adds, and the application's error page stays for browsers. A problem is the last resort after those methods, so the setting turns on `grails.exceptionresolver.springHandlers` unless the application sets that to `false`:
 
 [source,yaml]
 .grails-app/conf/application.yml
