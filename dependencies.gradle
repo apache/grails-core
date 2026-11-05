@@ -262,8 +262,8 @@ ext {
             // Drift tripwire for extended-scalars compatibility on later Boot graphql-java bumps,
             // not an equal-version upgrade of extended-scalars - see graphql-java.version.
             'graphql-java.version',
-            // The Hibernate 7 BOM strictly re-declares the version so enforcedPlatform consumers are
-            // forced to it, so the pin stays even when it matches the version Spring Boot manages.
+            // The Hibernate 7 BOM strictly re-declares the version Spring Boot manages, so that
+            // enforcedPlatform consumers are forced to it - see hibernate7VersionOverride.
             'hibernate.version',
     ]
 
@@ -317,16 +317,23 @@ ext {
         ]
         combinedDependencies += customBomDependencies
     } else if (project.name in ['grails-hibernate7-bom'] || project.name.startsWith('grails-data-hibernate7')) {
+        // Hibernate ORM follows the version spring-boot-dependencies manages. grails-hibernate7-bom reads it
+        // from there and re-declares these modules at it, strictly, under Spring Boot's hibernate.version.
+        hibernateOrmModules = ['hibernate-core', 'hibernate-envers', 'hibernate-jcache']
+        // A Hibernate ORM 7 release to manage instead, for when Spring Boot lags behind one Grails needs.
+        // It must be newer than the version Spring Boot manages, so the build fails once Spring Boot
+        // catches up with it: remove it then.
+        hibernate7VersionOverride = null
         customBomVersions = [
                 'cache-ri-impl.version'         : '1.1.1',
                 'derby.version'                 : '10.17.1.0',
                 // Spring Boot 4.2 can select Hibernate ORM 7.4.x through Spring Dependency
                 // Management, and Hibernate ORM 7.4.x requires hibernate-models 1.1.x. This BOM
                 // strictly re-declares the version so enforcedPlatform consumers are forced to it; a
-                // platform() import is not enforced.
+                // platform() import is not enforced. grails-hibernate7-bom fails the build when it
+                // differs from the version the managed Hibernate ORM release depends on.
                 'hibernate-models.version'      : '1.1.2',
                 'hibernate-tools.version'       : '7.3.13.Final',
-                'hibernate.version'             : '7.4.14.Final',
                 'jandex.version'                : '3.6.0',
                 'liquibase-test-harness.version': '1.0.11',
                 'liquibase.version'             : '4.27.0', // liquibase-hibernate5 stops at 4.27.0, and Spring Boot's Liquibase 5.0.4 is a new major.
@@ -339,9 +346,6 @@ ext {
                 'derbyclient'           : "org.apache.derby:derbyclient:${combinedVersions['derby.version']}",
                 'derbyshared'           : "org.apache.derby:derbyshared:${combinedVersions['derby.version']}",
                 'derbytools'            : "org.apache.derby:derbytools:${combinedVersions['derby.version']}",
-                'hibernate-core'        : "org.hibernate.orm:hibernate-core:${combinedVersions['hibernate.version']}",
-                'hibernate-envers'      : "org.hibernate.orm:hibernate-envers:${combinedVersions['hibernate.version']}",
-                'hibernate-jcache'      : "org.hibernate.orm:hibernate-jcache:${combinedVersions['hibernate.version']}",
                 'hibernate-models'      : "org.hibernate.models:hibernate-models:${combinedVersions['hibernate-models.version']}",
                 'hibernate-tools-orm'   : "org.hibernate.tool:hibernate-tools-orm:${combinedVersions['hibernate-tools.version']}",
                 'hibernate-tools-utils' : "org.hibernate.tool:hibernate-tools-utils:${combinedVersions['hibernate-tools.version']}",

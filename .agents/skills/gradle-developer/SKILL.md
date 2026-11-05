@@ -366,6 +366,7 @@ A module the parent manages through an imported BOM belongs to the property the 
 3. Use the unversioned coordinate in module `dependencies {}`.
 4. Run `./gradlew :that-module:validateDependencyVersions` (and affected consumers).
 5. Security overrides: comment with CVE and previous Boot version (see existing httpcore5/jackson/logback pins).
+6. Hibernate ORM 7 has no pin: `grails-hibernate7-bom` reads the version `spring-boot-dependencies` manages and strictly re-declares `hibernateOrmModules` at it. To move ahead of a Spring Boot that lags behind, set `hibernate7VersionOverride` in `dependencies.gradle`; the build fails while it is not newer than Spring Boot's version, so a Boot bump that catches up forces its removal. The build also fails when `hibernate-models.version` differs from the version the managed Hibernate ORM release depends on.
 
 ### Exclusions
 
