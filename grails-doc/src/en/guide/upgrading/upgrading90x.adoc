@@ -51,6 +51,7 @@ The ones most likely to affect a Grails application are:
 Spring Framework 7.1's `ForwardedHeaderFilter` reads either the RFC 7239 `Forwarded` header or the `+X-Forwarded-*+` headers, and Spring Boot 4.2 configures it for `+X-Forwarded-*+`.
 Before, it read `Forwarded` when the request carried one and `+X-Forwarded-*+` otherwise.
 If your reverse proxy sends `Forwarded`, set `spring.mvc.forwarded-headers.header-format: standard`.
+The filter also ignores `X-Forwarded-Prefix` now, where it used to add it to the context path, so if your proxy strips a path prefix and sends that header, absolute links and redirects lose the prefix until you set `spring.mvc.forwarded-headers.use-forwarded-prefix: true`.
 Spring Boot 4.2 also registers the filter from its Spring MVC auto-configuration, which backs off when the application declares `@EnableWebMvc`; such an application must now register a `ForwardedHeaderFilter` itself.
 
 * *Embedded Tomcat keeps relative redirect locations relative.*
@@ -107,6 +108,11 @@ A Spring MVC `@RestController` that returns JAXB-annotated objects needs the con
 The Spring TestContext Framework used to ignore such a class unless its class hierarchy declared `@ContextConfiguration`, and now adds it to the test's application context.
 Grails 8 already logs a warning for each one it ignores, so a test run on Grails 8 shows the affected tests.
 Remove the `@Configuration` annotation, or move the class to a top-level class, if the test should not load it.
+
+* *`bootBuildImage` builds on Ubuntu 26.04.*
+The default builder is `paketobuildpacks/ubuntu-resolute-builder`, in place of `paketobuildpacks/builder-noble-java-tiny`, and images are based on Ubuntu 26.04 instead of 24.04.
+With no `builder` configured, the run image is `paketobuildpacks/ubuntu-resolute-run-tiny:latest`, which still has no shell; with one configured, it is the run image of the builder, which for `ubuntu-resolute-builder` has a shell.
+The builder no longer pins the version of the run image, so set both `builder` and `runImage` to specific versions for repeatable images, or set `builder` to `paketobuildpacks/builder-noble-java-tiny` to keep the previous one.
 
 * *The Spring Security plugin no longer saves the requests browsers send on their own.*
 A denied request for `/apple-touch-icon.png`, `/manifest.json` or the `/.well-known/appspecific/com.chrome.devtools.json` that Chrome DevTools sends used to be saved, so a login redirected to it instead of to the page the user asked for.
