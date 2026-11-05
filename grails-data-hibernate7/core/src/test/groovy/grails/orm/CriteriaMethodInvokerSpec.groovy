@@ -194,6 +194,70 @@ class CriteriaMethodInvokerSpec extends Specification {
         1 * builder.not(closure)
     }
 
+    void "moveOrdersOutOfJunction moves the orders of the association blocks inside the junction that was added last"() {
+        given:
+        def club = new DetachedAssociationCriteria(Object, associationTo('club', ['name']))
+        club.order('name')
+        def team = new DetachedAssociationCriteria(Object, associationTo('team', ['club']))
+        team.add(club)
+        team.order('unknown')
+        def disjunction = new Query.Disjunction()
+        disjunction.add(team)
+        def conjunction = new Query.Conjunction()
+        conjunction.add(disjunction)
+        def criteria = new DetachedCriteria(Object)
+        criteria.add(new Query.Conjunction())
+        criteria.add(conjunction)
+
+        when:
+        invoker.moveOrdersOutOfJunction()
+
+        then: 'the order of the nested block is qualified with each association on its way out'
+        1 * query.getDetachedCriteria() >> criteria
+        1 * query.order({ Query.Order order -> order.property == 'team.club.name' })
+        0 * query.order(_)
+        club.orders.empty
+
+        and: 'an order that names no property of its association stays in its block'
+        team.orders*.property == ['unknown']
+    }
+
+    void "moveOrdersOutOfJunction leaves the criteria alone when the last criterion is not a junction"() {
+        given:
+        def club = new DetachedAssociationCriteria(Object, associationTo('club', ['name']))
+        club.order('name')
+        def criteria = new DetachedCriteria(Object)
+        criteria.add(club)
+
+        when:
+        invoker.moveOrdersOutOfJunction()
+
+        then:
+        1 * query.getDetachedCriteria() >> criteria
+        0 * query.order(_)
+        club.orders*.property == ['name']
+    }
+
+    void "moveOrdersOutOfJunction does nothing without criteria"() {
+        when:
+        invoker.moveOrdersOutOfJunction()
+
+        then:
+        1 * query.getDetachedCriteria() >> new DetachedCriteria(Object)
+        0 * query.order(_)
+    }
+
+    private org.grails.datastore.mapping.model.types.Association associationTo(String name, List<String> properties) {
+        def entity = Mock(org.grails.datastore.mapping.model.PersistentEntity)
+        properties.each { String property ->
+            entity.getPropertyByName(property) >> Mock(org.grails.datastore.mapping.model.PersistentProperty)
+        }
+        def association = Mock(org.grails.datastore.mapping.model.types.Association)
+        association.getName() >> name
+        association.getAssociatedEntity() >> entity
+        association
+    }
+
     void "test invokeMethod throws MissingMethodException"() {
         when:
         invoker.invokeMethod("nonExistent", [] as Object[])

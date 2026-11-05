@@ -182,6 +182,77 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate7TckManag
         'desc'    || ['Manchester United First Team', 'Chelsea First Team', 'Arsenal First Team']
     }
 
+    void 'an order inside an association block of #junction sorts by the property of the association'() {
+        when:
+        final results = Team.withCriteria {
+            "$junction" {
+                club {
+                    like('name', pattern)
+                    order('name', 'desc')
+                }
+            }
+        }
+
+        then: 'the closure of a junction is evaluated by the criteria, and the order still reaches the query'
+        results*.name == ['Manchester United First Team', 'Chelsea First Team', 'Arsenal First Team']
+
+        where:
+        junction | pattern
+        'and'    | '%'
+        'or'     | '%'
+        'not'    | 'no club has this name'
+    }
+
+    void 'an order inside a nested association block of a junction sorts by the property of the association'() {
+        when:
+        final results = Player.withCriteria {
+            or {
+                team {
+                    club {
+                        like('name', '%')
+                        order('name', 'desc')
+                    }
+                }
+            }
+        }
+
+        then:
+        results*.name == ['Bruno', 'Cole', 'Bukayo']
+    }
+
+    void 'an order by an alias inside an association block of a junction sorts by that alias'() {
+        when:
+        final results = Player.withCriteria {
+            and {
+                team {
+                    createAlias('club', 'c')
+                    like('c.name', '%')
+                    order('c.name', 'desc')
+                }
+            }
+        }
+
+        then:
+        results*.name == ['Bruno', 'Cole', 'Bukayo']
+    }
+
+    void 'an order inside a junction of an association block sorts by the property of the association'() {
+        when:
+        final results = Player.withCriteria {
+            team {
+                or {
+                    club {
+                        like('name', '%')
+                        order('name', 'desc')
+                    }
+                }
+            }
+        }
+
+        then:
+        results*.name == ['Bruno', 'Cole', 'Bukayo']
+    }
+
     void 'a dynamic finder sorted by an association property keeps a team without a club'() {
         when:
         final results = Team.findAllByNameLike('%First%', [sort: 'club.name'])

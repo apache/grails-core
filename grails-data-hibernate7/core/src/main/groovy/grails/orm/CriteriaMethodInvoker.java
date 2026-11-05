@@ -21,7 +21,9 @@ package grails.orm;
 import java.beans.PropertyDescriptor;
 import java.util.Collection;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
+import java.util.function.Consumer;
 
 import groovy.lang.Closure;
 import groovy.lang.MetaMethod;
@@ -176,12 +178,15 @@ public class CriteriaMethodInvoker {
             switch (method) {
                 case AND:
                     hibernateQuery.and(callable);
+                    moveOrdersOutOfJunction();
                     return name;
                 case OR:
                     hibernateQuery.or(callable);
+                    moveOrdersOutOfJunction();
                     return name;
                 case NOT:
                     hibernateQuery.not(callable);
+                    moveOrdersOutOfJunction();
                     return name;
                 case PROJECTIONS:
                     if (args.length == 1 && (args[0] instanceof Closure)) {
@@ -237,7 +242,7 @@ public class CriteriaMethodInvoker {
                     } finally {
                         hibernateQuery.setDetachedCriteria(oldDetachedCriteria);
                     }
-                    moveOrdersToEnclosingCriteria(hibernateQuery, name, associationCriteria);
+                    moveOrdersToEnclosingCriteria(name, associationCriteria, hibernateQuery::order);
                     hibernateQuery.add((Query.Criterion) associationCriteria);
                 } else {
                     // Fallback for non-GORM associations if any
@@ -253,17 +258,47 @@ public class CriteriaMethodInvoker {
     }
 
     /**
+     * Moves the orders of the association blocks inside the junction that the query has just added to the
+     * criteria that enclose the junction. The closure of {@code and}, {@code or} and {@code not} is evaluated by
+     * the criteria themselves and not by the builder, so the orders of the blocks inside it are still in their
+     * blocks.
+     */
+    void moveOrdersOutOfJunction() {
+        HibernateQuery hibernateQuery = builder.getHibernateQuery();
+        List<Query.Criterion> criteria = hibernateQuery.getDetachedCriteria().getCriteria();
+        if (!criteria.isEmpty() && criteria.get(criteria.size() - 1) instanceof Query.Junction junction) {
+            moveOrdersOutOfBlocks(junction.getCriteria(), hibernateQuery::order);
+        }
+    }
+
+    /**
+     * Moves the orders of the association blocks among the criteria, at any depth and inside any junction, to
+     * the enclosing criteria.
+     */
+    private static void moveOrdersOutOfBlocks(List<Query.Criterion> criteria, Consumer<Query.Order> enclosingCriteria) {
+        for (Query.Criterion criterion : criteria) {
+            if (criterion instanceof Query.Junction junction) {
+                moveOrdersOutOfBlocks(junction.getCriteria(), enclosingCriteria);
+            } else if (criterion instanceof DetachedAssociationCriteria<?> block) {
+                // the blocks inside this one first, whose orders become orders of this block
+                moveOrdersOutOfBlocks(block.getCriteria(), order -> block.order(order));
+                moveOrdersToEnclosingCriteria(block.getAssociationPath(), block, enclosingCriteria);
+            }
+        }
+    }
+
+    /**
      * Moves the orders of an association block to the enclosing criteria, since only the orders of the root
      * criteria reach the query. An order by a property of the association is qualified with the name of the
      * association. An alias exists only in the block that declares it, so an order by such an alias keeps its
      * block and is resolved against it. Any other order stays in the block.
      */
     private static void moveOrdersToEnclosingCriteria(
-            HibernateQuery hibernateQuery, String associationName, DetachedAssociationCriteria<?> associationCriteria) {
+            String associationName, DetachedAssociationCriteria<?> associationCriteria, Consumer<Query.Order> enclosingCriteria) {
         for (Iterator<Query.Order> orders = associationCriteria.getOrders().iterator(); orders.hasNext();) {
             Query.Order order = orderOfEnclosingCriteria(orders.next(), associationName, associationCriteria);
             if (order != null) {
-                hibernateQuery.order(order);
+                enclosingCriteria.accept(order);
                 orders.remove();
             }
         }
@@ -285,8 +320,9 @@ public class CriteriaMethodInvoker {
         Query.Order moved = null;
         if (dot > 0) {
             for (Query.Criterion criterion : associationCriteria.getCriteria()) {
-                if (criterion instanceof HibernateAlias alias && head.equals(alias.alias())) {
-                    moved = new AssociationAliasOrder(associationName + '.' + alias.path() + property.substring(dot),
+                String aliasPath = pathOfAlias(criterion, head);
+                if (aliasPath != null) {
+                    moved = new AssociationAliasOrder(associationName + '.' + aliasPath + property.substring(dot),
                             order.getDirection(), associationCriteria, property);
                     break;
                 }
@@ -298,6 +334,19 @@ public class CriteriaMethodInvoker {
             moved = new Query.Order(associationName + '.' + property, order.getDirection());
         }
         return moved != null && order.isIgnoreCase() ? moved.ignoreCase() : moved;
+    }
+
+    /**
+     * Returns the path of the association that a criterion of a block declares the alias for, or {@code null}.
+     * The builder declares an alias with a {@link HibernateAlias}. In the closure of a junction, which the
+     * criteria evaluate themselves, {@code createAlias} declares it with association criteria that have the alias.
+     */
+    private static String pathOfAlias(Query.Criterion criterion, String alias) {
+        if (criterion instanceof HibernateAlias declared) {
+            return alias.equals(declared.alias()) ? declared.path() : null;
+        }
+        return criterion instanceof DetachedAssociationCriteria<?> aliased && alias.equals(aliased.getAlias()) ?
+                aliased.getAssociationPath() : null;
     }
 
     @SuppressWarnings("PMD.DataflowAnomalyAnalysis")
