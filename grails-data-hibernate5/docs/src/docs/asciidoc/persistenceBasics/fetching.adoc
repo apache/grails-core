@@ -105,7 +105,7 @@ Author.where {
  .list()
 ----
 
-A <<whereQueries, Where Query>>, a detached criteria or a dynamic finder can also be given the type of the join, as a `jakarta.persistence.criteria.JoinType`. Pass it in the `fetch` argument, or to a where query or a detached criteria as the second argument of the `join` method:
+A <<whereQueries, Where Query>>, a detached criteria, a dynamic finder or a criteria query can also be given the type of the join, as a `jakarta.persistence.criteria.JoinType`. Pass it in the `fetch` argument, or as the second argument of the `join` method of a where query, a detached criteria or a criteria query:
 
 [source,groovy]
 ----
@@ -120,9 +120,14 @@ Author.where {
     name ==~ "Stephen%"
 }.join('location', JoinType.INNER)
  .list()
+
+Author.withCriteria {
+    like('name', "Stephen%")
+    join('location', JoinType.INNER)
+}
 ----
 
-`'join'` and `JoinType.LEFT` fetch the association with an outer join, so the query returns every instance that it matches. `JoinType.INNER` fetches the association as well, but leaves out the instances whose association is `null`, or whose collection is empty. This applies whether or not the query has criteria or a sort on the association, and also to `count`, to the `totalCount` of a paged list and to a query that is used as a subquery. Only these queries use a `JoinType`: the static `list` method, `findWhere`, `findAllWhere` and the criteria builder ignore it.
+`'join'` and `JoinType.LEFT` fetch the association with an outer join, so the query returns every instance that it matches. `JoinType.INNER` fetches the association as well, but leaves out the instances whose association is `null`, or whose collection is empty. This applies whether or not the query has a sort on the association, and also to `count`, to the `totalCount` of a paged list and to a query that is used as a subquery. An association that the query has criteria on is joined for those criteria: in a where query or a detached criteria the requested join type is used for that join, and in a criteria query the association keeps the join of its criteria.
 
 
 === Using Batch Fetching

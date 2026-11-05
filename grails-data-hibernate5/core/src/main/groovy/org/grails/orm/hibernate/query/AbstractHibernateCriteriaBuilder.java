@@ -24,6 +24,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -75,6 +76,7 @@ import org.grails.datastore.mapping.query.api.BuildableCriteria;
 import org.grails.datastore.mapping.query.api.QueryableCriteria;
 import org.grails.datastore.mapping.reflect.NameUtils;
 import org.grails.orm.hibernate.AbstractHibernateDatastore;
+import org.grails.orm.hibernate.cfg.GrailsHibernateUtil;
 
 /**
  * Abstract super class for sharing code between Hibernate 3 and 4 implementations of HibernateCriteriaBuilder
@@ -137,6 +139,11 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
     protected List<String> aliasStack = new ArrayList<>();
     protected List<Criteria> aliasInstanceStack = new ArrayList<>();
     protected Map<String, String> aliasMap = new HashMap<>();
+    /**
+     * The join types requested with {@link #join(String, JoinType)}, by association path. They are
+     * applied once the criteria are built, see {@link #applyRequestedJoinTypes()}.
+     */
+    private final Map<String, JoinType> requestedJoinTypes = new LinkedHashMap<>();
     protected static final String ALIAS = "_alias";
     protected ResultTransformer resultTransformer;
     protected int aliasCount;
@@ -319,9 +326,28 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
         return this;
     }
 
+    /**
+     * Use a join query with the given type of join
+     *
+     * @param property The path of the association
+     * @param joinType The type of join
+     */
     public BuildableCriteria join(String property, JoinType joinType) {
         criteria.setFetchMode(calculatePropertyName(property), FetchMode.JOIN);
+        String associationPath = getAssociationPath();
+        requestedJoinTypes.put(associationPath.isEmpty() ? property : associationPath + '.' + property, joinType);
         return this;
+    }
+
+    /**
+     * Applies the join types requested with {@link #join(String, JoinType)}. This happens once the
+     * criteria are built, so that an association that the criteria join themselves keeps that join.
+     */
+    private void applyRequestedJoinTypes() {
+        for (Map.Entry<String, JoinType> requestedJoinType : requestedJoinTypes.entrySet()) {
+            GrailsHibernateUtil.applyJoinType(datastore, targetClass, criteria, requestedJoinType.getKey(), requestedJoinType.getValue());
+        }
+        requestedJoinTypes.clear();
     }
 
     /**
@@ -1716,6 +1742,7 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
             else {
                 invokeClosureNode(args[0]);
             }
+            applyRequestedJoinTypes();
 
             if (resultTransformer != null) {
                 criteria.setResultTransformer(resultTransformer);
@@ -2023,6 +2050,7 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
         createCriteriaInstance();
         criteriaClosure.setDelegate(this);
         criteriaClosure.call();
+        applyRequestedJoinTypes();
         return criteria;
     }
 

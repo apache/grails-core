@@ -221,6 +221,130 @@ class AssociationJoinTypeSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckM
         results.sort() == TEAMS_WITH_A_CLUB
     }
 
+    void 'a criteria query joins an association with the join type that join requests'() {
+        when:
+        final results = Team.createCriteria().list {
+            like('name', '%First%')
+            join('club', joinType)
+        }
+
+        then:
+        results*.name.sort() == expected
+
+        and: 'the association is fetched'
+        results.findAll { it.club != null }.every { Hibernate.isInitialized(it.club) }
+
+        where:
+        joinType       || expected
+        JoinType.LEFT  || ALL_TEAMS
+        JoinType.INNER || TEAMS_WITH_A_CLUB
+    }
+
+    void 'count and get apply an inner join that a criteria query requests'() {
+        when:
+        final count = Team.createCriteria().count {
+            like('name', '%First%')
+            join('club', JoinType.INNER)
+        }
+        final team = Team.createCriteria().get {
+            eq('name', 'Unattached First Team')
+            join('club', JoinType.INNER)
+        }
+
+        then:
+        count == 4
+        team == null
+    }
+
+    void 'a criteria query joins an association with the join type that the fetch argument requests'() {
+        when:
+        final results = Team.createCriteria().list(fetch: [club: joinType]) {
+            like('name', '%First%')
+        }
+
+        then:
+        results*.name.sort() == expected
+
+        and: 'the association is fetched'
+        results.findAll { it.club != null }.every { Hibernate.isInitialized(it.club) }
+
+        where:
+        joinType       || expected
+        JoinType.LEFT  || ALL_TEAMS
+        JoinType.INNER || TEAMS_WITH_A_CLUB
+    }
+
+    void 'the total count of a paged criteria query counts the rows of an inner join that fetch requests'() {
+        when:
+        final results = Team.createCriteria().list(max: 2, fetch: [club: JoinType.INNER]) {
+            like('name', '%First%')
+        }
+
+        then:
+        results.size() == 2
+        results.totalCount == 4
+    }
+
+    void 'a criteria query with an inner join that fetch requests returns the same rows with a sort'() {
+        when:
+        final results = Team.createCriteria().list(sort: 'club.name', fetch: [club: JoinType.INNER]) {
+            like('name', '%First%')
+        }
+
+        then:
+        results*.name.sort() == TEAMS_WITH_A_CLUB
+    }
+
+    void 'a criteria query joins a collection with the join type that join requests'() {
+        when:
+        final results = Team.createCriteria().list {
+            like('name', '%First%')
+            join('players', joinType)
+        }
+        final count = Team.createCriteria().count {
+            like('name', '%First%')
+            join('players', joinType)
+        }
+
+        then:
+        results*.name.sort() == expected
+        count == expected.size()
+
+        and: 'the collection is fetched'
+        results.every { Hibernate.isInitialized(it.players) }
+
+        where:
+        joinType       || expected
+        JoinType.LEFT  || ALL_TEAMS
+        JoinType.INNER || TEAMS_WITH_PLAYERS
+    }
+
+    void 'an inner join that a criteria query requests for a nested association joins every association on the path'() {
+        when:
+        final results = Player.createCriteria().list {
+            join('team.club', JoinType.INNER)
+        }
+
+        then: 'the player whose team has no club is left out'
+        results*.name.sort() == ['Arsenal Player', 'Chelsea Player', 'MU Player']
+
+        and: 'the associations on the path are fetched'
+        results.every { Hibernate.isInitialized(it.team) && Hibernate.isInitialized(it.team.club) }
+    }
+
+    void 'an association that a criteria query has criteria on keeps its join when join requests a join type'() {
+        when:
+        final results = Team.createCriteria().list {
+            join('club', JoinType.INNER)
+            club {
+                like('name', '%e%')
+            }
+        }
+
+        then:
+        results*.name.sort() == TEAMS_WITH_A_CLUB
+    }
+
     void 'a join type requested for a property that is not an association is ignored'() {
         when:
         final results = Team.where {
