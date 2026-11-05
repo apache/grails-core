@@ -84,9 +84,6 @@ class ActionReturnValues {
     /** The request attribute that holds the action whose asynchronous value the request completes. */
     private static final String ASYNC_ACTION = ActionReturnValues.name + '.ASYNC_ACTION'
 
-    /** The method an error response is written as the return value of, where it is not the value of an action. */
-    private static final Method RETURNED_ERROR_RESPONSE = ActionReturnValues.getDeclaredMethod('returnedErrorResponse')
-
     /** The method of each action of each controller class, by its name. */
     private static final Map<Class<?>, Map<String, ActionMethod>> ACTIONS = new ConcurrentReferenceHashMap<>()
 
@@ -206,7 +203,8 @@ class ActionReturnValues {
      * @since 9.1
      */
     ModelAndView writeErrorResponse(ErrorResponse errorResponse, Object controller, HttpServletRequest request, HttpServletResponse response) {
-        MethodParameter returnType = new MethodParameter(RETURNED_ERROR_RESPONSE, -1)
+        // looked up here rather than when the class loads, so that an application that writes none never needs it
+        MethodParameter returnType = new MethodParameter(ActionReturnValues.getDeclaredMethod('returnedErrorResponse'), -1)
                 .withContainingClass(controller?.getClass() ?: ActionReturnValues)
         ModelAndViewContainer container = new ModelAndViewContainer()
         adapter().returnValueHandlers.handleReturnValue(errorResponse, returnType, container, new ServletWebRequest(request, response))
@@ -215,6 +213,7 @@ class ActionReturnValues {
         return container.requestHandled ? new ModelAndView() : viewOf(container)
     }
 
+    /** The method an error response is written as the return value of, where it is not the value of an action. */
     private static ErrorResponse returnedErrorResponse() {
         return null
     }
