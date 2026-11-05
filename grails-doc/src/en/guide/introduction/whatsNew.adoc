@@ -79,6 +79,19 @@ The Grails 8 upgrade guide calls out the major application-impacting changes and
 For the changes since Spring Boot 4.1, see the https://github.com/spring-projects/spring-boot/wiki/Spring-Boot-4.2-Release-Notes[Spring Boot 4.2 Release Notes] and the https://github.com/spring-projects/spring-framework/wiki/Spring-Framework-7.1-Release-Notes[Spring Framework 7.1 Release Notes].
 The xref:upgrading#upgrading90x[Upgrading from Grails 8 to Grails {grailsMajorVersion}] section covers the upgrade, including the graphql-java 26 changes that affect GraphQL applications.
 
+==== The HTTP QUERY Method
+
+Spring Framework 7.1 supports the `QUERY` method of https://www.rfc-editor.org/info/rfc10008/[RFC 10008], a safe, idempotent request with a body. URL mappings gain a `query` prefix for it, next to `get`, `post` and the others, and an action binds the body of a `QUERY` as it binds that of a `POST`:
+
+[source,groovy]
+----
+static mappings = {
+    query "/books/search"(controller: 'book', action: 'search')
+}
+----
+
+See xref:theWebLayer#mappingHTTP[Mapping to HTTP methods].
+
 ==== JSON Dates and Times Render as Spring Boot Renders Them
 
 `render ... as JSON`, `respond` and JSON views now write `Date`, `Calendar`, `TimeZone`, the `java.sql` date types,

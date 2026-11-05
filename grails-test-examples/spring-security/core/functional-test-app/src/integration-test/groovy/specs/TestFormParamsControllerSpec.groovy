@@ -127,6 +127,15 @@ class TestFormParamsControllerSpec extends Specification implements HttpClientSu
         response.body() == "username: ${USERNAME}, password: ${PASSWORD}"
     }
 
+    void 'QUERY request with parameters as x-www-form-urlencoded'() {
+        when: "A QUERY request with form params is made"
+        TestHttpResponse response = exchange('QUERY', '/testFormParams/permitAll', "username=${USERNAME}&password=${PASSWORD}", FORM)
+
+        then: "the firewall lets it through, and the controller responds with the correct status and parameters are extracted"
+        response.statusCode() == 200
+        response.body() == "username: ${USERNAME}, password: ${PASSWORD}"
+    }
+
     void 'PUT request to secured endpoint with parameters as x-www-form-urlencoded'() {
         when: "A PUT request with form params is made to a secured endpoint"
         TestHttpResponse response = exchange('PUT', '/testFormParams/permitAdmin', "username=${USERNAME}&password=${PASSWORD}", FORM)

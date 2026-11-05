@@ -872,7 +872,7 @@ listing. Its other actions are described as any controller's are.
 
 * A mapping that accepts any HTTP method for an action `allowedMethods` does not restrict is
   documented as `GET`, because OpenAPI requires a concrete operation.
-* A mapping declared for an HTTP method OpenAPI has no operation for is skipped, and logged.
+* A mapping declared for an HTTP method OpenAPI has no operation for, such as `QUERY`, is skipped, and logged.
 * A `RestfulController` is known to be read only, and the resource it serves where it declares no
   type argument, from the controller the application serves requests with, which is not created to
   be described. So one in a scope other than singleton is described with its write actions, and one
