@@ -215,7 +215,7 @@ class UniqueNullsHibernate7Spec extends HibernateGormDatastoreSpec {
         given:
         manager.destroy()
         manager.grailsConfig = [
-                'dataSource.url'            : "jdbc:h2:mem:uniqueNullsH2Mode${h2Mode};MODE=${h2Mode};LOCK_TIMEOUT=10000".toString(),
+                'dataSource.url'            : "jdbc:h2:mem:uniqueNullsH2Mode${h2Mode}${modeSetting.hashCode().abs()};${modeSetting};LOCK_TIMEOUT=10000".toString(),
                 'dataSource.driverClassName': 'org.h2.Driver',
                 'dataSource.username'       : 'sa',
                 'dataSource.password'       : '',
@@ -249,13 +249,18 @@ class UniqueNullsHibernate7Spec extends HibernateGormDatastoreSpec {
         indexRejects == (reading == UniqueNulls.VALUE)
 
         where:
-        h2Mode        || reading             | allNullExempt
-        'Oracle'      || UniqueNulls.VALUE   | true
-        'MSSQLServer' || UniqueNulls.VALUE   | false
-        'Derby'       || UniqueNulls.VALUE   | false
-        'PostgreSQL'  || UniqueNulls.SKIP    | false
-        'MySQL'       || UniqueNulls.SKIP    | false
-        'REGULAR'     || UniqueNulls.SKIP    | false
+        h2Mode        | modeSetting                || reading             | allNullExempt
+        'Oracle'      | 'MODE=Oracle'              || UniqueNulls.VALUE   | true
+        'MSSQLServer' | 'MODE=MSSQLServer'         || UniqueNulls.VALUE   | false
+        'Derby'       | 'MODE=Derby'               || UniqueNulls.VALUE   | false
+        'PostgreSQL'  | 'MODE=PostgreSQL'          || UniqueNulls.SKIP    | false
+        'MySQL'       | 'MODE=MySQL'               || UniqueNulls.SKIP    | false
+        'REGULAR'     | 'MODE=REGULAR'             || UniqueNulls.SKIP    | false
+        // H2's DB2 mode keeps nulls distinct in a unique index, as the regular mode does
+        'DB2'         | 'MODE=DB2'                 || UniqueNulls.SKIP    | false
+        // a mode the URL pattern cannot see: only the query of the database settings finds it
+        'Oracle'      | 'INIT=SET MODE Oracle'     || UniqueNulls.VALUE   | true
+        'MSSQLServer' | 'INIT=SET MODE MSSQLServer' || UniqueNulls.VALUE  | false
     }
 
     void 'a unique constraint with a Set group generates a composite unique index'() {

@@ -130,7 +130,7 @@ import org.grails.orm.hibernate.cfg.Settings;
 import org.grails.orm.hibernate.connections.HibernateConnectionSource;
 import org.grails.orm.hibernate.connections.HibernateConnectionSourceFactory;
 import org.grails.orm.hibernate.connections.HibernateConnectionSourceSettings;
-import org.grails.orm.hibernate.dialect.UniqueNullsPerDialect;
+import org.grails.orm.hibernate.dialect.SupportedDatabase;
 import org.grails.orm.hibernate.event.listener.HibernateEventListener;
 import org.grails.orm.hibernate.multitenancy.MultiTenantCollectionEventListener;
 import org.grails.orm.hibernate.multitenancy.MultiTenantEventListener;
@@ -183,7 +183,7 @@ public class HibernateDatastore extends AbstractDatastore
     public static final String PUBLIC_SCHEMA = "PUBLIC";
 
     protected SessionFactory sessionFactory;
-    protected volatile UniqueNullsPerDialect uniqueNullsPerDialect;
+    protected volatile SupportedDatabase.UniqueKeyNulls uniqueKeyNulls;
 
     /** The hibernate template. */
     protected IHibernateTemplate hibernateTemplate;
@@ -1004,7 +1004,7 @@ public class HibernateDatastore extends AbstractDatastore
 
     /**
      * How the unique index Hibernate creates for the database of this datastore treats a {@code null} in a composite
-     * key; see {@link UniqueNullsPerDialect}.
+     * key; see {@link SupportedDatabase}.
      */
     @Override
     public UniqueNulls getDatabaseUniqueNulls() {
@@ -1013,14 +1013,14 @@ public class HibernateDatastore extends AbstractDatastore
 
     @Override
     public boolean isEntirelyNullKeyExempt() {
-        return getResolvedUniqueNulls().isEntirelyNullKeyExempt();
+        return getResolvedUniqueNulls().entirelyNullKeyExempt();
     }
 
-    protected UniqueNullsPerDialect getResolvedUniqueNulls() {
-        UniqueNullsPerDialect cached = this.uniqueNullsPerDialect;
+    protected SupportedDatabase.UniqueKeyNulls getResolvedUniqueNulls() {
+        SupportedDatabase.UniqueKeyNulls cached = this.uniqueKeyNulls;
         if (cached == null) {
             synchronized (this) {
-                cached = this.uniqueNullsPerDialect;
+                cached = this.uniqueKeyNulls;
                 if (cached == null) {
                     Dialect dialect = null;
                     try {
@@ -1030,11 +1030,11 @@ public class HibernateDatastore extends AbstractDatastore
                     } catch (Exception ignored) {
                     }
                     String h2Mode = null;
-                    if (isH2Dialect(dialect)) {
+                    if (SupportedDatabase.isH2(dialect)) {
                         h2Mode = queryH2Mode();
                     }
-                    cached = UniqueNullsPerDialect.forDialect(dialect, getJdbcUrl(), h2Mode);
-                    this.uniqueNullsPerDialect = cached;
+                    cached = SupportedDatabase.uniqueKeyNulls(dialect, h2Mode, getJdbcUrl());
+                    this.uniqueKeyNulls = cached;
                 }
             }
         }
@@ -1058,11 +1058,6 @@ public class HibernateDatastore extends AbstractDatastore
             LOG.debug("Could not determine H2 MODE from information_schema.settings: {}", e.getMessage());
         }
         return null;
-    }
-
-    private static boolean isH2Dialect(Dialect dialect) {
-        return dialect != null && (dialect instanceof org.hibernate.dialect.H2Dialect ||
-                dialect.getClass().getSimpleName().startsWith("H2"));
     }
 
     protected String getJdbcUrl() {
