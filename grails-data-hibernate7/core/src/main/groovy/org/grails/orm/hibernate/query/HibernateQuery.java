@@ -107,29 +107,6 @@ public class HibernateQuery extends Query {
         this.detachedCriteria = detachedCriteria;
     }
 
-    /**
-     * Discards everything an earlier call put into this query: the criteria, projections, aliases,
-     * joins, orders and paging. Options that are not part of the query shape (fetch size, timeout,
-     * flush mode, read-only, cache and lock settings) are kept.
-     */
-    public void resetQueryState() {
-        this.detachedCriteria = new DetachedCriteria<>(entity.getJavaClass());
-        this.jpaProjectionList = new JpaProjectionList();
-        this.projections = jpaProjectionList;
-        this.criteria = new Query.Conjunction();
-        this.aliases.clear();
-        this.createdAssociationPaths.clear();
-        this.fetchJoinPaths.clear();
-        this.fetchStrategies.clear();
-        this.joinTypes.clear();
-        this.entityStack.clear();
-        this.associationStack.clear();
-        this.aliasCount = 0;
-        this.max = null;
-        this.offset = null;
-        this.orderBy.clear();
-    }
-
     public List<HibernateAlias> getAliases() {
         return Collections.unmodifiableList(aliases);
     }
