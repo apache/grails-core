@@ -22,6 +22,7 @@ import grails.gorm.annotation.Entity
 import org.grails.datastore.mapping.core.Session
 import org.grails.datastore.mapping.keyvalue.mapping.config.KeyValueMappingContext
 import org.grails.datastore.mapping.model.MappingContext
+import org.grails.datastore.mapping.model.types.Basic
 import spock.lang.Specification
 
 import jakarta.validation.ElementKind
@@ -252,6 +253,31 @@ class MappingContextTraversableResolverSpec extends Specification {
         GormValidatorAdapter.CASCADE_VALIDATION.remove()
     }
 
+    void "test isCascadeable returns true for a basic collection of the root bean when CASCADE_VALIDATION is explicitly disabled"() {
+        given: "a basic collection, a persistent association without an associated entity, of the root bean"
+        MappingContext mappingContext = new KeyValueMappingContext("test")
+        mappingContext.addPersistentEntities(Reader)
+        mappingContext.initialize()
+        MappingContextTraversableResolver resolver = new MappingContextTraversableResolver(mappingContext)
+        Reader reader = new Reader(name: "Annie Wilkes", genres: [Genre.HORROR] as Set)
+        Path.Node node = Mock(Path.Node)
+        node.getName() >> "genres"
+        Path path = Mock(Path)
+        path.iterator() >> [].iterator()
+
+        expect:
+        mappingContext.getPersistentEntity(Reader.name).getPropertyByName("genres") instanceof Basic
+
+        when:
+        GormValidatorAdapter.CASCADE_VALIDATION.set(Boolean.FALSE)
+
+        then: "the GORM validator has no entity to validate the elements with, so Bean Validation cascades to them"
+        resolver.isCascadable(reader, node, Reader, path, ElementType.FIELD)
+
+        cleanup:
+        GormValidatorAdapter.CASCADE_VALIDATION.remove()
+    }
+
     void "test isCascadeable for initialized entity owning side"() {
         given:
         MappingContext mappingContext = new KeyValueMappingContext("test")
@@ -294,4 +320,16 @@ class Author {
     String name
 
     static hasMany = [books:Book]
+}
+
+@Entity
+class Reader {
+    String name
+    Set<Genre> genres
+
+    static hasMany = [genres: Genre]
+}
+
+enum Genre {
+    HORROR, FANTASY
 }

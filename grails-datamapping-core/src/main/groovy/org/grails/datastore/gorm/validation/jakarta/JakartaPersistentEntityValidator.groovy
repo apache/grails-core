@@ -49,9 +49,9 @@ import org.grails.datastore.mapping.model.types.Association
  * of the validated groups declares ({@code @NotNull}, {@code @NotBlank}, {@code @NotEmpty} or {@code @Null}), so a
  * null value is reported once. The GORM validator cascades to the persistent associations as it does for any
  * entity, and validates an annotated associated entity both ways through {@link #validateBeyondConstraints};
- * Bean Validation cascades only through the other properties marked {@code @Valid}, such as a transient one, and
- * from the objects it reaches that way through every property marked {@code @Valid}. An object is validated in the
- * default group, or in the groups given as validation hints to
+ * Bean Validation cascades only through the other properties marked {@code @Valid}, such as a transient one or a
+ * basic collection, whose elements are no entities, and from the objects it reaches that way through every property
+ * marked {@code @Valid}. An object is validated in the default group, or in the groups given as validation hints to
  * {@link #validate(Object, Errors, Object...)}, and an object associated through a property marked {@code @Valid}
  * in the groups of the object owning it, converted as the {@code @ConvertGroup} annotations of the property
  * declare, as Bean Validation cascades, see {@link #getAssociationValidationHints}. Any other associated object is
@@ -209,8 +209,8 @@ class JakartaPersistentEntityValidator extends PersistentEntityValidator {
 
     /**
      * Validates the Bean Validation annotations of the object in the groups among its hints, cascading only through
-     * the properties marked {@code @Valid} that are not persistent associations, as the GORM validator cascades to
-     * those, and from the objects reached that way through every property marked {@code @Valid}. The violations of
+     * the properties marked {@code @Valid} that are not associations with an entity, as the GORM validator cascades
+     * to those, and from the objects reached that way through every property marked {@code @Valid}. The violations of
      * the groups the object is not validated in, see {@link ExcludedGroups}, are left out, on the object and on the
      * objects the provider cascades to, whose groups the {@code @ConvertGroup} annotations of the properties convert.
      */

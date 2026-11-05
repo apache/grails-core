@@ -39,8 +39,9 @@ import org.grails.datastore.mapping.reflect.ClassPropertyFetcher
  * While the GORM validator cascades to the persistent associations of the entity it validates
  * ({@link GormValidatorAdapter#CASCADE_VALIDATION} is {@code false}), Bean Validation cascades from that instance,
  * the root bean of its validation, only through the properties marked {@code @Valid} that are not persistent
- * associations, such as a transient property, and from a bean it reaches that way, which the GORM validator does not
- * reach, through every property marked {@code @Valid}.
+ * associations with an entity, such as a transient property or a basic collection, whose elements are no entities,
+ * and from a bean it reaches that way, which the GORM validator does not reach, through every property marked
+ * {@code @Valid}.
  *
  * @author Graeme Rocher
  * @since 6.1
@@ -83,9 +84,9 @@ class MappingContextTraversableResolver implements TraversableResolver {
         Class type = proxyHandler.getProxiedClass(traversableObject)
         PersistentEntity entity = mappingContext.getPersistentEntity(type.name)
         if (GormValidatorAdapter.CASCADE_VALIDATION.get() == Boolean.FALSE) {
-            // the GORM validator cascades to the persistent associations of the root bean, Bean Validation to every
+            // the GORM validator cascades to the associations of the root bean with an entity, Bean Validation to every
             // other @Valid property of it, and to every @Valid property of a bean reached through one of those
-            return !isRootBean(pathToTraversableObject) || !(entity?.getPropertyByName(traversableProperty.name) instanceof Association)
+            return !isRootBean(pathToTraversableObject) || !isAssociationWithEntity(entity?.getPropertyByName(traversableProperty.name))
         }
         if (entity != null) {
             PersistentEntity currentEntity = entity
@@ -110,6 +111,15 @@ class MappingContextTraversableResolver implements TraversableResolver {
             }
         }
         return false
+    }
+
+    /**
+     * @return Whether the property is an association the GORM validator cascades to: one with an associated entity,
+     * whose validator validates the associated objects. A basic collection has none, so its elements are validated
+     * only if Bean Validation cascades to them
+     */
+    private static boolean isAssociationWithEntity(PersistentProperty property) {
+        return property instanceof Association && ((Association) property).associatedEntity != null
     }
 
     /**

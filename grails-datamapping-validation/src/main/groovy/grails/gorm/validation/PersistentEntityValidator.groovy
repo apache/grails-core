@@ -195,7 +195,8 @@ class PersistentEntityValidator implements CascadingValidator, ConstrainedEntity
      * subclass also describes rules it validates by other means in them, such as Bean Validation annotations.
      *
      * @param obj The object to validate, the instance a proxy stands for, for a subclass whose rules depend on the
-     * instance, such as the groups a Bean Validation group sequence provider chooses for it
+     * instance, such as the groups a Bean Validation group sequence provider chooses for it; an associated object
+     * is given once its {@code beforeValidate} callback has run, in the state the callback leaves it in
      * @param hints The validation hints the object is validated with, {@link #NO_VALIDATION_HINTS} for the object
      * {@link #validate} is called with, see {@link #getAssociationValidationHints}
      * @return The constraints to validate
@@ -433,9 +434,11 @@ class PersistentEntityValidator implements CascadingValidator, ConstrainedEntity
      * validated again, whatever hints it is reached with. Any other associated object is validated with the hints
      * the validator of the owning entity gives for the association: its constraints once, with the hints given for
      * all the hints of the owner, and, once for each distinct hints it is reached with, its associations and its
-     * rules beyond the constraints, through {@link #validateAssociationsAndBeyond} of its own validator. An instance
-     * of a subclass entity of the declared type of the association has the rules of that entity, and is validated
-     * with its constraints and by its validator, as {@link #validate} validates it.
+     * rules beyond the constraints, through {@link #validateAssociationsAndBeyond} of its own validator. Its
+     * {@code beforeValidate} callback is invoked before its constraints are chosen, with
+     * {@link #getValidatedConstrainedProperties}, so they are the ones of the state the callback leaves it in. An
+     * instance of a subclass entity of the declared type of the association has the rules of that entity, and is
+     * validated with its constraints and by its validator, as {@link #validate} validates it.
      *
      * @param errors The Errors instance
      * @param bean The original BeanWrapper
@@ -493,12 +496,9 @@ class PersistentEntityValidator implements CascadingValidator, ConstrainedEntity
         EntityReflector associatedReflector = mappingContext.getEntityReflector(associatedEntity)
 
         PersistentEntityValidator associatedValidator = null
-        Map<String, ConstrainedProperty> associatedConstrainedProperties = Collections.<String, ConstrainedProperty>emptyMap()
-
         def validator = mappingContext.getEntityValidator(associatedEntity)
         if (validator instanceof PersistentEntityValidator) {
             associatedValidator = (PersistentEntityValidator) validator
-            associatedConstrainedProperties = associatedValidator.getValidatedConstrainedProperties(instance, associatedAllHints)
         }
 
         String nestedPath = errors.getNestedPath()
@@ -509,8 +509,17 @@ class PersistentEntityValidator implements CascadingValidator, ConstrainedEntity
             // the constraints do not depend on the hints of a step, so they are validated once for all of them
             int errorCountBeforeConstraints = errors.errorCount
             if (validatedObjects.add(new ValidatedConstraints(instance, associatedAllHints))) {
-                // Invoke any beforeValidate callbacks on the associated object before validating
-                validateHelper.invokeBeforeValidate(instance, associatedConstrainedProperties.keySet() as List<String>)
+                // Invoke any beforeValidate callbacks on the associated object before validating, with the names of
+                // the constrained properties of its entity
+                List<String> constrainedPropertyNames = associatedValidator == null
+                        ? new ArrayList<String>()
+                        : new ArrayList<String>(associatedValidator.getConstrainedProperties().keySet())
+                validateHelper.invokeBeforeValidate(instance, constrainedPropertyNames)
+                // the constraints to validate may depend on the state of the instance, which the callback may have
+                // changed, so they are chosen once it has run
+                Map<String, ConstrainedProperty> associatedConstrainedProperties = associatedValidator == null
+                        ? Collections.<String, ConstrainedProperty>emptyMap()
+                        : associatedValidator.getValidatedConstrainedProperties(instance, associatedAllHints)
                 validateConstraints(instance, associatedEntity, errors, associatedReflector, associatedConstrainedProperties, association, false)
             }
 

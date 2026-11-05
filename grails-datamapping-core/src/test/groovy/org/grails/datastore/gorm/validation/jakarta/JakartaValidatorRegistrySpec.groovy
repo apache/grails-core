@@ -30,6 +30,7 @@ import jakarta.validation.GroupSequence
 import jakarta.validation.Payload
 import jakarta.validation.Valid
 import jakarta.validation.Validation
+import jakarta.validation.constraints.AssertTrue
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.NotNull
 import jakarta.validation.constraints.Null
@@ -55,6 +56,7 @@ import org.grails.datastore.mapping.core.Session
 import org.grails.datastore.mapping.core.connections.ConnectionSourceSettings
 import org.grails.datastore.mapping.keyvalue.mapping.config.KeyValueMappingContext
 import org.grails.datastore.mapping.model.MappingContext
+import org.grails.datastore.mapping.model.types.Basic
 import org.grails.datastore.mapping.validation.ValidationErrors
 import spock.lang.Specification
 
@@ -70,7 +72,8 @@ class JakartaValidatorRegistrySpec extends Specification {
                 ValidatedDocument, ValidatedReport, TitledBook, DetailedBook, ExtendedOwner, ExtendedChild, SequencedOwner, SequencedRoot,
                 SequencedChild, SequencedGrandchild, AuditedRecord, AuditedRecordAuditor, ProvidedMember, LinkedAccount, LinkedRegion,
                 LinkedOffice, FeaturedHolder, FeaturedItem, FeaturedAuthor, AnnotatedDocument, AnnotatedReport, AnnotatedFolder,
-                UnannotatedDocument, AnnotatedMemo, UnannotatedFolder, SequencedRecord)
+                UnannotatedDocument, AnnotatedMemo, UnannotatedFolder, SequencedRecord, TrackedBoard, TrackedTask, ProvidedRoster,
+                ReinstatedMember)
         mappingContext.initialize()
         registry = new JakartaValidatorRegistry(mappingContext, new ConnectionSourceSettings())
         mappingContext.validatorRegistry = registry
@@ -885,6 +888,81 @@ class JakartaValidatorRegistrySpec extends Specification {
         errors.errorCount == 2
     }
 
+    void "an element of a basic collection marked @Valid is cascaded to by Bean Validation"() {
+        given: "a task whose statuses, a basic collection of enums, hold one whose annotated getter fails"
+        TrackedTask task = new TrackedTask(name: 'task', statuses: [TaskStatus.OPEN, TaskStatus.UNKNOWN] as Set)
+        Errors errors = new ValidationErrors(task)
+        SpringValidator validator = registry.getValidator(mappingContext.getPersistentEntity(TrackedTask.name))
+
+        expect: "the statuses are a persistent association without an associated entity, which GORM has no validator for"
+        mappingContext.getPersistentEntity(TrackedTask.name).getPropertyByName('statuses') instanceof Basic
+        beanValidationPaths(task) == ['statuses[].supported']
+
+        when:
+        validator.validate(task, errors)
+
+        then: "the element is validated under its path"
+        errors.getFieldError('statuses[].supported').code == 'AssertTrue'
+        errors.errorCount == 1
+
+        when: "validation does not cascade to the associations"
+        errors = new ValidationErrors(task)
+        ((CascadingValidator) validator).validate(task, errors, false)
+
+        then: "the elements, which are no entities, are validated all the same"
+        errors.getFieldError('statuses[].supported').code == 'AssertTrue'
+        errors.errorCount == 1
+
+        when: "the task is reached through an association of a board"
+        TrackedBoard board = new TrackedBoard(name: 'board', tasks: [task] as List)
+        errors = new ValidationErrors(board)
+        registry.getValidator(mappingContext.getPersistentEntity(TrackedBoard.name)).validate(board, errors)
+
+        then: "the element is validated under the path of the association"
+        errors.getFieldError('tasks[0].statuses[].supported').code == 'AssertTrue'
+        errors.errorCount == 1
+
+        when: "every status is supported"
+        task.statuses = [TaskStatus.OPEN, TaskStatus.DONE] as Set
+        errors = new ValidationErrors(board)
+        registry.getValidator(mappingContext.getPersistentEntity(TrackedBoard.name)).validate(board, errors)
+
+        then:
+        !errors.hasErrors()
+    }
+
+    void "the constraints of an associated instance are chosen after its beforeValidate callback"() {
+        given: "a roster whose member, retired until its beforeValidate callback reinstates it, has no desk"
+        SpringValidator validator = registry.getValidator(mappingContext.getPersistentEntity(ProvidedRoster.name))
+        ProvidedRoster roster = new ProvidedRoster(name: 'roster', member: new ReinstatedMember(name: 'member', retired: true))
+        Errors errors = new ValidationErrors(roster)
+
+        when:
+        validator.validate(roster, errors)
+
+        then: "the member is validated as the active member the callback leaves, whose desk the block requires"
+        !roster.member.retired
+        errors.getFieldError('member.desk').code == 'nullable'
+        errors.errorCount == 1
+
+        when: "the roster is validated again"
+        errors = new ValidationErrors(roster)
+        validator.validate(roster, errors)
+
+        then: "the result is the same"
+        errors.getFieldError('member.desk').code == 'nullable'
+        errors.errorCount == 1
+
+        when: "the member has a desk"
+        roster.member.retired = true
+        roster.member.desk = 'A1'
+        errors = new ValidationErrors(roster)
+        validator.validate(roster, errors)
+
+        then: "the @Null of the group of retired members, which the callback leaves the member out of, is not validated"
+        !errors.hasErrors()
+    }
+
     private static List<String> beanValidationPaths(Object instance, Class<?>... groups) {
         def factory = Validation.buildDefaultValidatorFactory()
         try {
@@ -1528,5 +1606,85 @@ class SequencedRecord {
 
     static constraints = {
         code nullable: false
+    }
+}
+
+/**
+ * A board cascading to its tasks as GORM does
+ */
+@Entity
+class TrackedBoard {
+    String name
+    List<TrackedTask> tasks
+
+    static hasMany = [tasks: TrackedTask]
+}
+
+/**
+ * A task with a basic collection marked {@code @Valid}, a persistent association whose elements are no entities
+ */
+@Entity
+class TrackedTask {
+    String name
+
+    @Valid
+    Set<TaskStatus> statuses
+
+    static hasMany = [statuses: TaskStatus]
+
+    static belongsTo = [TrackedBoard]
+}
+
+enum TaskStatus {
+
+    OPEN, DONE, UNKNOWN
+
+    @AssertTrue
+    boolean isSupported() {
+        this != UNKNOWN
+    }
+}
+
+/**
+ * A roster cascading to a member whose {@code beforeValidate} callback changes the state its group sequence provider
+ * reads
+ */
+@Entity
+class ProvidedRoster {
+    String name
+    ReinstatedMember member
+}
+
+@Entity
+@GroupSequenceProvider(ReinstatedMemberSequenceProvider)
+class ReinstatedMember {
+    @NotBlank
+    String name
+
+    boolean retired
+
+    @Null(groups = RetiredChecks)
+    String desk
+
+    static belongsTo = [ProvidedRoster]
+
+    static constraints = {
+        desk nullable: false
+    }
+
+    def beforeValidate() {
+        retired = false
+    }
+}
+
+class ReinstatedMemberSequenceProvider implements DefaultGroupSequenceProvider<ReinstatedMember> {
+
+    @Override
+    List<Class<?>> getValidationGroups(Class<?> klass, ReinstatedMember member) {
+        List<Class<?>> sequence = [ReinstatedMember]
+        if (member?.retired) {
+            sequence.add(RetiredChecks)
+        }
+        return sequence
     }
 }

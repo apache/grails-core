@@ -261,6 +261,35 @@ class PersistentEntityValidatorSpec extends Specification {
         errors.getFieldError('books[0].name').code == 'beyond'
     }
 
+    def "the constraints of an associated object are chosen after its beforeValidate callback, which is given the names of its constrained properties"() {
+        given: "a validator recording the title a chapter has when the constraints to validate it with are chosen"
+        MappingContext mappingContext = new KeyValueMappingContext("test")
+        mappingContext.mappingFactory = new GormKeyValueMappingFactory("test")
+        mappingContext.syntaxStrategy = new GormMappingConfigurationStrategy(mappingContext.mappingFactory)
+        PersistentEntity volumeEntity = mappingContext.addPersistentEntity(CallbackVolume)
+        PersistentEntity chapterEntity = mappingContext.addPersistentEntity(CallbackChapter)
+        DefaultValidatorRegistry registry = new DefaultValidatorRegistry(mappingContext, new ConnectionSourceSettings())
+        ChoosingValidator chapterValidator = new ChoosingValidator(chapterEntity, registry.messageSource, registry.constraintsEvaluator)
+        mappingContext.addEntityValidator(chapterEntity, chapterValidator)
+        mappingContext.addEntityValidator(volumeEntity, registry.getValidator(volumeEntity))
+        CallbackChapter chapter = new CallbackChapter()
+        CallbackVolume volume = new CallbackVolume(name: 'volume', chapters: [chapter] as List)
+        Errors errors = new ValidationErrors(volume)
+
+        when:
+        mappingContext.getEntityValidator(volumeEntity).validate(volume, errors)
+
+        then: "the callback is given the names of the constrained properties of the chapter"
+        chapter.namesGiven == chapterValidator.constrainedProperties.keySet() as List
+        'title' in chapter.namesGiven
+
+        and: "the constraints are chosen for the chapter as the callback leaves it, once"
+        chapterValidator.titlesWhenChosen == ['callback']
+
+        and: "and validated: they require the title the callback sets"
+        !errors.hasErrors()
+    }
+
     def "the validation hints of an associated object are the ones the validator of the owner gives for the association, all the way down"() {
         given: "validators giving the hints of the owner followed by the name of the association"
         MappingContext mappingContext = new KeyValueMappingContext("test")
@@ -720,6 +749,50 @@ class HintingValidator extends PersistentEntityValidator {
         whileValidating = null
         action?.call()
         beyondHints.add(hints as List)
+    }
+}
+
+/**
+ * Records the title a chapter has when the constraints to validate it with are chosen, as a validator whose
+ * constraints depend on the state of the object reads it.
+ */
+class ChoosingValidator extends PersistentEntityValidator {
+
+    final List<String> titlesWhenChosen = []
+
+    ChoosingValidator(PersistentEntity entity, MessageSource messageSource, ConstraintsEvaluator constraintsEvaluator) {
+        super(entity, messageSource, constraintsEvaluator)
+    }
+
+    @Override
+    protected Map<String, ConstrainedProperty> getValidatedConstrainedProperties(Object obj, Object[] hints) {
+        titlesWhenChosen.add(((CallbackChapter) obj).title)
+        super.getValidatedConstrainedProperties(obj, hints)
+    }
+}
+
+@Entity
+class CallbackVolume {
+    String name
+    List<CallbackChapter> chapters
+    static hasMany = [chapters: CallbackChapter]
+}
+
+@Entity
+class CallbackChapter {
+    String title
+    List<String> namesGiven
+
+    static belongsTo = [volume: CallbackVolume]
+    static transients = ['namesGiven']
+
+    static constraints = {
+        title nullable: false
+    }
+
+    def beforeValidate(List<String> names) {
+        namesGiven = names
+        title = 'callback'
     }
 }
 

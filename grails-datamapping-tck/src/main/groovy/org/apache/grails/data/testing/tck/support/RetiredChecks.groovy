@@ -20,7 +20,7 @@
 package org.apache.grails.data.testing.tck.support
 
 /**
- * The Bean Validation group a retired {@link org.apache.grails.data.testing.tck.domains.BeanValidatedMember} is
- * validated in as well.
+ * The Bean Validation group a retired {@link org.apache.grails.data.testing.tck.domains.BeanValidatedMember} or
+ * {@link org.apache.grails.data.testing.tck.domains.BeanValidatedReturnee} is validated in as well.
  */
 interface RetiredChecks {}

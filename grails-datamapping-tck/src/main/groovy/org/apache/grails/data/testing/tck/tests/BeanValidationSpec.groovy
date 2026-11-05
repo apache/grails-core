@@ -55,15 +55,19 @@ import org.apache.grails.data.testing.tck.domains.BeanValidatedPost
 import org.apache.grails.data.testing.tck.domains.BeanValidatedRecall
 import org.apache.grails.data.testing.tck.domains.BeanValidatedRegion
 import org.apache.grails.data.testing.tck.domains.BeanValidatedReport
+import org.apache.grails.data.testing.tck.domains.BeanValidatedReturnee
 import org.apache.grails.data.testing.tck.domains.BeanValidatedReview
+import org.apache.grails.data.testing.tck.domains.BeanValidatedRoster
 import org.apache.grails.data.testing.tck.domains.BeanValidatedSection
 import org.apache.grails.data.testing.tck.domains.BeanValidatedShelf
 import org.apache.grails.data.testing.tck.domains.BeanValidatedShelfBook
 import org.apache.grails.data.testing.tck.domains.BeanValidatedShipment
+import org.apache.grails.data.testing.tck.domains.BeanValidatedTask
 import org.apache.grails.data.testing.tck.domains.BeanValidatedTeaser
 import org.apache.grails.data.testing.tck.support.BeanValidatedLedgerDetails
 import org.apache.grails.data.testing.tck.support.BeanValidatedLedgerLeaf
 import org.apache.grails.data.testing.tck.support.BeanValidatedOrderDetails
+import org.apache.grails.data.testing.tck.support.BeanValidatedTaskStatus
 import org.apache.grails.data.testing.tck.support.PublishChecks
 import org.apache.grails.data.testing.tck.support.PublishThenArchive
 import org.grails.datastore.mapping.validation.ValidationErrors
@@ -83,7 +87,7 @@ class BeanValidationSpec extends GrailsDataTckSpec {
                 BeanValidatedShelfBook, BeanValidatedBulletin, BeanValidatedManuscript, BeanValidatedChapter, BeanValidatedLedger,
                 BeanValidatedCounterpart, BeanValidatedMember, BeanValidatedAccount, BeanValidatedRegion, BeanValidatedOffice,
                 BeanValidatedHolder, BeanValidatedFeatured, BeanValidatedFeaturedAuthor, BeanValidatedDocument, BeanValidatedReport,
-                BeanValidatedFolder, BeanValidatedBrief)
+                BeanValidatedFolder, BeanValidatedBrief, BeanValidatedTask, BeanValidatedRoster, BeanValidatedReturnee)
     }
 
     void 'the annotations and the constraints block are validated, each violation once'() {
@@ -621,5 +625,46 @@ class BeanValidationSpec extends GrailsDataTckSpec {
         errors.errorCount == 2
         errors.getFieldErrors('heading')*.code == ['NotBlank']
         errors.getFieldError('tag').code == 'NotBlank'
+    }
+
+    void 'an element of a basic collection marked @Valid is validated by Bean Validation'() {
+        given: 'a task whose statuses, a basic collection of enums, hold one whose annotated getter fails'
+        def task = new BeanValidatedTask(name: 'task', statuses: [BeanValidatedTaskStatus.OPEN, BeanValidatedTaskStatus.UNKNOWN] as Set)
+
+        expect:
+        !task.validate()
+        task.errors.errorCount == 1
+        task.errors.getFieldError('statuses[].supported').code == 'AssertTrue'
+        task.save() == null
+
+        and: 'deepValidate: false leaves the associations out, not the statuses, which are part of the instance'
+        !task.validate(deepValidate: false)
+        task.errors.getFieldError('statuses[].supported').code == 'AssertTrue'
+
+        when: 'every status is supported'
+        task.statuses = [BeanValidatedTaskStatus.OPEN, BeanValidatedTaskStatus.DONE] as Set
+
+        then: 'the task is valid; it is not saved, as not every datastore persists a collection of enums'
+        task.validate()
+    }
+
+    void 'the rules of an associated instance are chosen after its beforeValidate callback'() {
+        given: 'a roster whose returnee, retired until its beforeValidate callback brings it back, has no desk'
+        def roster = new BeanValidatedRoster(name: 'roster', returnee: new BeanValidatedReturnee(name: 'returnee', retired: true))
+
+        expect: 'the returnee is validated as the active member the callback leaves, whose desk the block requires'
+        !roster.validate()
+        !roster.returnee.retired
+        roster.errors.errorCount == 1
+        roster.errors.getFieldError('returnee.desk').code == 'nullable'
+        roster.save() == null
+
+        when: 'the returnee has a desk'
+        roster.returnee.retired = true
+        roster.returnee.desk = 'A1'
+
+        then: 'the @Null of the group of retired members, which the callback leaves the returnee out of, is not validated'
+        roster.validate()
+        roster.save(flush: true) != null
     }
 }
