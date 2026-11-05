@@ -25,7 +25,6 @@ import jakarta.persistence.metamodel.Attribute
 import jakarta.persistence.metamodel.SingularAttribute
 import org.grails.datastore.gorm.query.criteria.DetachedAssociationCriteria
 import org.grails.datastore.mapping.model.types.Association
-import org.grails.datastore.mapping.query.Query
 import org.hibernate.query.sqm.tree.domain.SqmPath
 import org.hibernate.query.sqm.tree.from.SqmFrom
 import spock.lang.Specification
@@ -286,52 +285,23 @@ class JpaQueryContextSpec extends Specification {
         resolved == heightPath
     }
 
-    def "test an order by an alias of an association block is resolved against the context of the block"() {
+    def "test the context of an association block is recorded in the context of the query"() {
         given:
-        def root = Mock(From)
-        def context = new JpaQueryContext(root)
+        def context = new JpaQueryContext(Mock(From))
         def outerContext = new JpaQueryContext(context, Mock(From))
         def blockContext = new JpaQueryContext(outerContext, Mock(From))
-        def secondJoin = Mock(Join)
-        def scorePath = Mock(Path)
         def block = new DetachedAssociationCriteria(Object, Mock(Association))
-        blockContext.registerAlias('second', new HibernateAlias('scores', 'second'))
-        blockContext.registerAlias('second', secondJoin)
+        def other = new DetachedAssociationCriteria(Object, Mock(Association))
 
         when: 'the context of a nested block is recorded'
         outerContext.registerAssociationContext(block, blockContext)
 
-        then: 'the context of the query has it'
+        then: 'the context of the query has it, so that an order of the query finds the block at any depth'
         context.getAssociationContext(block).is(blockContext)
         outerContext.getAssociationContext(block).is(blockContext)
 
-        when:
-        def result = context.getSortExpression(
-                new AssociationAliasOrder('pet.owner.scores.score', Query.Order.Direction.ASC, block, 'second.score'))
-
-        then: 'the order sorts by the join of the alias that it names and not by its path'
-        1 * secondJoin.get('score') >> scorePath
-        0 * root._
-        result == scorePath
-    }
-
-    def "test an order by an alias of a block that the query has not built sorts by its path"() {
-        given:
-        def root = Mock(From)
-        def context = new JpaQueryContext(root)
-        def ownerPath = Mock(Path)
-        def namePath = Mock(Path)
-        def block = new DetachedAssociationCriteria(Object, Mock(Association))
-
-        when:
-        def result = context.getSortExpression(
-                new AssociationAliasOrder('owner.name', Query.Order.Direction.ASC, block, 'o.name'))
-
-        then:
-        context.getAssociationContext(block) == null
-        _ * root.get('owner') >> ownerPath
-        _ * ownerPath.get('name') >> namePath
-        result == namePath
+        and: 'a block that the query has not built has no context'
+        context.getAssociationContext(other) == null
     }
 
     def "test a path of the root or of one of its components is a column of the root"() {

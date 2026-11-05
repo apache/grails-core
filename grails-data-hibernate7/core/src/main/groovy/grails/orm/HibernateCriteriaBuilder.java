@@ -931,22 +931,19 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
 
     @Override
     public Criteria and(Closure<?> callable) {
-        hibernateQuery.and(callable);
-        criteriaMethodInvoker.moveOrdersOutOfJunction();
+        hibernateQuery.and(criteriaMethodInvoker.evaluatedByBuilder(callable));
         return this;
     }
 
     @Override
     public Criteria or(Closure<?> callable) {
-        hibernateQuery.or(callable);
-        criteriaMethodInvoker.moveOrdersOutOfJunction();
+        hibernateQuery.or(criteriaMethodInvoker.evaluatedByBuilder(callable));
         return this;
     }
 
     @Override
     public Criteria not(Closure<?> callable) {
-        hibernateQuery.not(callable);
-        criteriaMethodInvoker.moveOrdersOutOfJunction();
+        hibernateQuery.not(criteriaMethodInvoker.evaluatedByBuilder(callable));
         return this;
     }
 

@@ -189,7 +189,10 @@ public class ExpressionResolver {
         if (component ? last : !model.isAssociation()) {
             return null;
         }
-        Join<?, ?> existing = existingJoin(from, attributeName);
+        Join<?, ?> existing = ownJoin(from, associationPath);
+        if (existing == null) {
+            existing = existingJoin(from, attributeName);
+        }
         if (existing != null) {
             return existing;
         }
@@ -201,6 +204,17 @@ public class ExpressionResolver {
             return from.join(attributeName, requested.joinType());
         }
         return foreignKey ? null : from.join(attributeName, JoinType.LEFT);
+    }
+
+    /**
+     * Returns the join that the criteria of this query made from a source for an association, or {@code null}
+     * if they made none. Two blocks of the same association share the join of that association, and each joins
+     * what its criteria name inside it, so the source has a join of the inner association for each block. An
+     * order of a block sorts by the join of its own block, which is the one this query tracks for the path.
+     */
+    private Join<?, ?> ownJoin(From<?, ?> from, String associationPath) {
+        From<?, ?> own = associationPath != null ? joinTracker.getOwnJoin(associationPath) : null;
+        return own instanceof Join<?, ?> join && join.getParent() == from ? join : null;
     }
 
     /**

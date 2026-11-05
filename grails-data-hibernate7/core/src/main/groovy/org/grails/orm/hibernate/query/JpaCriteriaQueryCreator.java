@@ -290,25 +290,33 @@ public class JpaCriteriaQueryCreator<T> {
         for (Query.Order order : orders) {
             var propertyName = order.getProperty();
             SqlProjection sqlProjection = findSqlProjection(propertyName, false);
-            boolean selected = isSelectedProperty(propertyName);
+            boolean selected = isSelected(propertyName);
+            // an order of an association block, and the context that the criteria of its block were built against
+            AssociationOrder blockOrder = order instanceof AssociationOrder associationOrder ? associationOrder : null;
+            JpaQueryContext blockContext =
+                    blockOrder != null ? context.getAssociationContext(blockOrder.getAssociation()) : null;
             Expression<?> expression;
             if (sqlProjection != null) {
                 expression = context.getSelectionAlias(sqlProjection.getColumnAlias());
-            } else if (order instanceof AssociationOrder && orderedBySelection && !selected) {
+            } else if (blockOrder != null && orderedBySelection && !selected) {
                 // the order of an association block had no effect while it stayed in its block, and the
                 // database would reject it here, so it is left out as before
                 continue;
-            } else if (selected && (orderedBySelection || !(order instanceof AssociationAliasOrder))) {
+            } else if (selected && (orderedBySelection || blockOrder == null)) {
                 // a distinct or grouped query can only be ordered by what it selects, so the order
                 // sorts by the expression of the projection and not through a join of its own
                 expression = context.getFullyQualifiedExpression(propertyName);
-            } else if (order instanceof AssociationAliasOrder aliasOrder) {
-                expression = context.getSortExpression(aliasOrder);
+            } else if (blockContext != null) {
+                // the order sorts by the joins that its own block made, which its path from the root does not
+                // tell apart from the joins of another block of the same association
+                String property = blockOrder.getAssociationProperty();
+                PersistentEntity associated = blockOrder.getAssociation().getAssociation().getAssociatedEntity();
+                expression = blockContext.getSortExpression(property, endsWithForeignKey(associated, property));
             } else {
-                expression = context.getSortExpression(propertyName, endsWithForeignKey(propertyName));
+                expression = context.getSortExpression(propertyName, endsWithForeignKey(entity, propertyName));
             }
             if (expression == null) {
-                if (order instanceof AssociationOrder) {
+                if (blockOrder != null) {
                     // an order of an association block that names nothing has no effect, as before
                     continue;
                 }
@@ -357,12 +365,12 @@ public class JpaCriteriaQueryCreator<T> {
     }
 
     /**
-     * Whether a sort path from the entity of the query ends with a foreign key: the identifier of an association
-     * that has its key in the table before it on the path. A path that starts with an alias is not such a path.
+     * Whether a sort path from an entity ends with a foreign key: the identifier of an association that has its
+     * key in the table before it on the path. A path that starts with an alias is not such a path.
      */
-    private boolean endsWithForeignKey(String propertyName) {
+    private static boolean endsWithForeignKey(PersistentEntity from, String propertyName) {
         String[] tokens = propertyName.split("\\.");
-        PersistentEntity current = entity;
+        PersistentEntity current = from;
         for (int i = 0; i < tokens.length - 1 && current != null; i++) {
             if (!(current.getPropertyByName(tokens[i]) instanceof Association<?> association)) {
                 return false;
@@ -373,6 +381,17 @@ public class JpaCriteriaQueryCreator<T> {
             current = association.getAssociatedEntity();
         }
         return false;
+    }
+
+    /**
+     * Whether the query selects what an order by the property sorts by: the property itself, or the association
+     * or component that the property belongs to, as {@code distinct('club')} does for an order by
+     * {@code club.name}. Such an order sorts by the expression of the projection, which is read from the join
+     * that the projection has made.
+     */
+    private boolean isSelected(String propertyName) {
+        int owner = propertyName.lastIndexOf('.');
+        return isSelectedProperty(propertyName) || owner > 0 && isSelectedProperty(propertyName.substring(0, owner));
     }
 
     /**

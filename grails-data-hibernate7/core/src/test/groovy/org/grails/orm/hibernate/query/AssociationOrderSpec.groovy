@@ -23,27 +23,27 @@ import org.grails.datastore.mapping.model.types.Association
 import org.grails.datastore.mapping.query.Query
 import spock.lang.Specification
 
-class AssociationAliasOrderSpec extends Specification {
+class AssociationOrderSpec extends Specification {
 
     def 'an order keeps its block and the property as the block names it'() {
         given:
         def block = new DetachedAssociationCriteria(Object, Mock(Association))
 
         when:
-        def order = new AssociationAliasOrder('owner.scores.score', Query.Order.Direction.DESC, block, 'second.score')
+        def order = new AssociationOrder('owner.scores.score', Query.Order.Direction.DESC, block, 'second.score')
 
         then:
         order.property == 'owner.scores.score'
         order.direction == Query.Order.Direction.DESC
         order.association.is(block)
-        order.aliasedProperty == 'second.score'
+        order.associationProperty == 'second.score'
         !order.ignoreCase
     }
 
     def 'an order qualified with an enclosing association is still resolved against its own block'() {
         given:
         def block = new DetachedAssociationCriteria(Object, Mock(Association))
-        def order = new AssociationAliasOrder('owner.scores.score', Query.Order.Direction.DESC, block, 'second.score')
+        def order = new AssociationOrder('owner.scores.score', Query.Order.Direction.DESC, block, 'second.score')
         if (ignoreCase) {
             order.ignoreCase()
         }
@@ -55,7 +55,7 @@ class AssociationAliasOrderSpec extends Specification {
         qualified.property == 'pet.owner.scores.score'
         qualified.direction == Query.Order.Direction.DESC
         qualified.association.is(block)
-        qualified.aliasedProperty == 'second.score'
+        qualified.associationProperty == 'second.score'
         qualified.ignoreCase == ignoreCase
 
         where:

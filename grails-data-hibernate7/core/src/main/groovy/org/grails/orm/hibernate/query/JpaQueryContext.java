@@ -229,24 +229,10 @@ public class JpaQueryContext implements Cloneable {
     }
 
     /**
-     * Returns the expression that an order by an alias of an association block sorts by. The order is resolved
-     * against the context of its block, where the alias is declared, so it sorts by the join of the alias that it
-     * names. An order whose block is not among the criteria of the query sorts by its path.
-     *
-     * @param order the order by an alias of an association block
-     * @return the expression to sort by
-     */
-    public Expression<?> getSortExpression(AssociationAliasOrder order) {
-        JpaQueryContext associationContext = getAssociationContext(order.getAssociation());
-        return associationContext != null ?
-                associationContext.getSortExpression(order.getAliasedProperty()) :
-                getSortExpression(order.getProperty());
-    }
-
-    /**
      * Records the context that the criteria of an association block are built against, in which the aliases of
-     * the block are declared and joined. A context nested in another records it in the context of the query, so
-     * that an order of the query finds the context of a block at any depth.
+     * the block are declared and its joins are made. An order of the block is resolved against it, so that it
+     * sorts by the joins of its own block. A context nested in another records it in the context of the query,
+     * so that an order of the query finds the context of a block at any depth.
      *
      * @param association the criteria of the association block
      * @param context the context of the block

@@ -20,7 +20,6 @@ package grails.orm;
 
 import java.beans.PropertyDescriptor;
 import java.util.Collection;
-import java.util.List;
 import java.util.Map;
 
 import groovy.lang.Closure;
@@ -174,16 +173,13 @@ public class CriteriaMethodInvoker {
         if (method != null) {
             switch (method) {
                 case AND:
-                    hibernateQuery.and(callable);
-                    moveOrdersOutOfJunction();
+                    hibernateQuery.and(evaluatedByBuilder(callable));
                     return name;
                 case OR:
-                    hibernateQuery.or(callable);
-                    moveOrdersOutOfJunction();
+                    hibernateQuery.or(evaluatedByBuilder(callable));
                     return name;
                 case NOT:
-                    hibernateQuery.not(callable);
-                    moveOrdersOutOfJunction();
+                    hibernateQuery.not(evaluatedByBuilder(callable));
                     return name;
                 case PROJECTIONS:
                     if (args.length == 1 && (args[0] instanceof Closure)) {
@@ -262,17 +258,26 @@ public class CriteriaMethodInvoker {
     }
 
     /**
-     * Moves the orders of the association blocks inside the junction that the query has just added to the
-     * criteria that enclose the junction. The closure of {@code and}, {@code or} and {@code not} is evaluated by
-     * the criteria themselves and not by the builder, so the orders of the blocks inside it are still in their
-     * blocks.
+     * Returns a closure that has the builder evaluate the closure of {@code and}, {@code or} or {@code not}.
+     * The criteria that open the junction evaluate the closure that they are given themselves. An association
+     * block inside the junction would then not be a block of the builder: a join type given to it would be
+     * ignored, and its orders would stay in the block and reach the query after every other order, and not in
+     * the place they were declared in.
+     *
+     * @param callable the closure of the junction
+     * @return the closure to open the junction with
      */
-    protected void moveOrdersOutOfJunction() {
-        HibernateQuery hibernateQuery = builder.getHibernateQuery();
-        List<Query.Criterion> criteria = hibernateQuery.getDetachedCriteria().getCriteria();
-        if (!criteria.isEmpty() && criteria.get(criteria.size() - 1) instanceof Query.Junction junction) {
-            AssociationOrders.moveOutOfBlocks(junction.getCriteria(), hibernateQuery::order);
-        }
+    protected Closure<?> evaluatedByBuilder(Closure<?> callable) {
+        return new Closure<Object>(builder) {
+
+            private static final long serialVersionUID = 1L;
+
+            @SuppressWarnings("unused") // called reflectively by the Groovy runtime as the closure body
+            public Object doCall() {
+                invokeClosureNode(callable);
+                return null;
+            }
+        };
     }
 
     @SuppressWarnings("PMD.DataflowAnomalyAnalysis")

@@ -196,7 +196,7 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate7TckManag
             }
         }
 
-        then: 'the closure of a junction is evaluated by the criteria, and the order still reaches the query'
+        then:
         results*.name == ['Manchester United First Team', 'Chelsea First Team', 'Arsenal First Team']
 
         where:
@@ -254,6 +254,76 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate7TckManag
 
         then:
         results*.name == ['Bruno', 'Cole', 'Bukayo']
+    }
+
+    void 'an order inside an association block of #junction comes before an order that is declared after the block'() {
+        when:
+        final results = Team.withCriteria {
+            "$junction" {
+                club {
+                    like('name', pattern)
+                    order('name', 'desc')
+                }
+                order('name')
+            }
+        }
+
+        then: 'the orders keep the place they were declared in, as they do outside a junction'
+        results*.name == ['Manchester United First Team', 'Chelsea First Team', 'Arsenal First Team']
+
+        where:
+        junction | pattern
+        'and'    | '%'
+        'or'     | '%'
+        'not'    | 'no club has this name'
+    }
+
+    void 'an order inside an association block of a junction comes after an order that is declared before the block'() {
+        when:
+        final results = Team.withCriteria {
+            and {
+                order('name')
+                club {
+                    like('name', '%')
+                    order('name', 'desc')
+                }
+            }
+        }
+
+        then:
+        results*.name == ['Arsenal First Team', 'Chelsea First Team', 'Manchester United First Team']
+    }
+
+    void 'the orders of nested association blocks of a junction keep the place they were declared in'() {
+        when:
+        final results = Player.withCriteria {
+            or {
+                team {
+                    club {
+                        like('name', '%')
+                        order('name', 'desc')
+                    }
+                    order('name')
+                }
+                order('name')
+            }
+        }
+
+        then:
+        results*.name == ['Bruno', 'Cole', 'Bukayo']
+    }
+
+    void 'a junction restricts by an association and by a property next to it'() {
+        expect: 'the builder evaluates the closure of a junction as it evaluates any other closure'
+        Team.withCriteria {
+            or {
+                club {
+                    eq('name', 'Arsenal')
+                }
+                eq('name', 'Chelsea First Team')
+            }
+            order('name')
+        }*.name == ['Arsenal First Team', 'Chelsea First Team']
     }
 
     void 'a #api sorted by #sort keeps a player without a contract'() {
@@ -629,6 +699,119 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate7TckManag
         'desc'    || ["Bob's pet", "Ann's pet"]
     }
 
+    void 'an order in the second of two blocks of an association sorts #direction by the joins of its own block'() {
+        when:
+        final results = AssociationSortPet.withCriteria {
+            owner {
+                scores {
+                    eq('round', 'first')
+                }
+            }
+            owner {
+                scores {
+                    eq('round', 'second')
+                }
+                order('scores.score', direction)
+            }
+        }
+
+        then: 'the order does not sort by the scores that the first block joins'
+        results*.name == expected
+
+        where:
+        direction || expected
+        'asc'     || ["Bob's pet", "Ann's pet"]
+        'desc'    || ["Ann's pet", "Bob's pet"]
+    }
+
+    void 'an order in the first of two blocks of an association sorts by the joins of its own block'() {
+        when:
+        final results = AssociationSortPet.withCriteria {
+            owner {
+                scores {
+                    eq('round', 'first')
+                }
+                order('scores.score')
+            }
+            owner {
+                scores {
+                    eq('round', 'second')
+                }
+            }
+        }
+
+        then:
+        results*.name == ["Ann's pet", "Bob's pet"]
+    }
+
+    void 'an order in a nested block of the second of two blocks of an association sorts by the join of its own block'() {
+        when:
+        final results = AssociationSortPet.withCriteria {
+            owner {
+                scores {
+                    eq('round', 'first')
+                }
+            }
+            owner {
+                scores {
+                    eq('round', 'second')
+                    order('score')
+                }
+            }
+        }
+
+        then:
+        results*.name == ["Bob's pet", "Ann's pet"]
+    }
+
+    void 'an order by a path in the second of two blocks that each declare an alias for it sorts by the join of its own block'() {
+        when:
+        final results = AssociationSortPet.withCriteria {
+            owner {
+                createAlias('scores', 'first')
+                eq('first.round', 'first')
+            }
+            owner {
+                createAlias('scores', 'second')
+                eq('second.round', 'second')
+                order('scores.score')
+            }
+        }
+
+        then:
+        results*.name == ["Bob's pet", "Ann's pet"]
+    }
+
+    void 'an order in a block that joins nothing itself sorts by the join that the query has for the association'() {
+        when:
+        final results = AssociationSortPet.withCriteria {
+            owner {
+                scores {
+                    eq('round', 'second')
+                }
+            }
+            owner {
+                order('scores.score')
+            }
+        }
+
+        then:
+        results*.name == ["Bob's pet", "Ann's pet"]
+    }
+
+    void 'an order by the identifier of an association in an association block keeps the instances without it'() {
+        when:
+        final results = Player.withCriteria {
+            team {
+                order('club.id', 'desc')
+            }
+        }
+
+        then: 'the foreign key is read from the table of the block, so the club is not joined'
+        'Unattached Player' in results*.name
+        results*.name - 'Unattached Player' == ['Cole', 'Bukayo', 'Bruno']
+    }
+
     void 'an order by an alias of an association block sorts by that alias when a projection selects the path of the alias'() {
         when:
         final results = AssociationSortPet.withCriteria {
@@ -783,6 +966,83 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate7TckManag
 
         then:
         results == ['Arsenal', 'Chelsea', 'Manchester United']
+    }
+
+    void 'a criteria query that selects distinct associations is ordered by a property of the association'() {
+        when:
+        final results = Team.withCriteria {
+            projections {
+                distinct('club')
+            }
+            order('club.name', direction)
+        }
+
+        then: 'the order sorts by the association that the projection selects and not through a join of its own'
+        results*.name == expected
+
+        where:
+        direction || expected
+        'asc'     || ['Arsenal', 'Chelsea', 'Manchester United']
+        'desc'    || ['Manchester United', 'Chelsea', 'Arsenal']
+    }
+
+    void 'a criteria query that selects distinct nested associations is ordered by a property of the association'() {
+        when:
+        final results = Player.withCriteria {
+            projections {
+                distinct('team.club')
+            }
+            order('team.club.name')
+        }
+
+        then:
+        results*.name == ['Arsenal', 'Chelsea', 'Manchester United']
+    }
+
+    void 'a where query that selects distinct associations is sorted by a property of the association'() {
+        when:
+        final results = Team.where {
+            name ==~ '%First%'
+        }.distinct('club').sort('club.name').list()
+
+        then:
+        results*.name == ['Arsenal', 'Chelsea', 'Manchester United']
+    }
+
+    void 'a criteria query that selects #selection is ordered by a property of the association'() {
+        when:
+        final results = Team.withCriteria {
+            projections {
+                "$projection"('club')
+                if (grouped) {
+                    count()
+                }
+            }
+            order('club.name', 'desc')
+        }
+
+        then:
+        results.collect { grouped ? it[0].name : it.name } == ['Manchester United', 'Chelsea', 'Arsenal']
+
+        where:
+        selection                 | projection      | grouped
+        'an association'          | 'property'      | false
+        'a grouped association'   | 'groupProperty' | true
+    }
+
+    void 'an order in an association block sorts a query that selects distinct instances of the association'() {
+        when:
+        final results = Team.withCriteria {
+            projections {
+                distinct('club')
+            }
+            club {
+                order('name', 'desc')
+            }
+        }
+
+        then:
+        results*.name == ['Manchester United', 'Chelsea', 'Arsenal']
     }
 
     void 'a #api sorted through an embedded component keeps a book whose component has no author'() {

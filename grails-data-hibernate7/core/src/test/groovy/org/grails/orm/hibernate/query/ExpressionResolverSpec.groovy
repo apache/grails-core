@@ -290,6 +290,51 @@ class ExpressionResolverSpec extends Specification {
         result == scorePath
     }
 
+    def 'a sort uses the join that the criteria of the query made for the association'() {
+        given: 'two blocks of the owner each join its scores, and the query of the second block tracks its own'
+        def owner = Mock(SqmFrom)
+        def firstJoin = joinOf('scores')
+        def secondJoin = joinOf('scores')
+        secondJoin.getParent() >> owner
+        def scorePath = Mock(SqmPath)
+        def joinTracker = new JoinTracker(owner)
+        joinTracker.addJoin('scores', secondJoin)
+        def resolver = new ExpressionResolver(new AliasRegistry(), joinTracker)
+
+        when:
+        def result = resolver.resolveSort('scores.score')
+
+        then: 'the join of the block comes before the first join that the source has for the association'
+        _ * owner.get('scores') >> attributePath(Attribute.PersistentAttributeType.ONE_TO_MANY)
+        _ * owner.getSqmJoins() >> [firstJoin, secondJoin]
+        0 * owner.join(_, _)
+        0 * firstJoin.get(_)
+        1 * secondJoin.get('score') >> scorePath
+        result == scorePath
+    }
+
+    def 'a sort does not use a tracked join that is made from another source'() {
+        given:
+        def root = Mock(SqmFrom)
+        def firstJoin = joinOf('scores')
+        def elsewhere = joinOf('scores')
+        elsewhere.getParent() >> Mock(SqmFrom)
+        def scorePath = Mock(SqmPath)
+        def joinTracker = new JoinTracker(root)
+        joinTracker.addJoin('scores', elsewhere)
+        def resolver = new ExpressionResolver(new AliasRegistry(), joinTracker)
+
+        when:
+        def result = resolver.resolveSort('scores.score')
+
+        then:
+        _ * root.get('scores') >> attributePath(Attribute.PersistentAttributeType.ONE_TO_MANY)
+        _ * root.getSqmJoins() >> [firstJoin]
+        0 * elsewhere.get(_)
+        1 * firstJoin.get('score') >> scorePath
+        result == scorePath
+    }
+
     def 'a sort uses the fetch of the association when the query has no other join of it'() {
         given:
         def root = Mock(SqmFrom)

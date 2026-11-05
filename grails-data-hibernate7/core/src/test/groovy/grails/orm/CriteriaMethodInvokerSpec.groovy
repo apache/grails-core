@@ -25,9 +25,7 @@ import groovy.lang.MetaClass
 import groovy.lang.MetaMethod
 import org.grails.datastore.gorm.query.criteria.DetachedAssociationCriteria
 import org.grails.datastore.mapping.query.Query
-import org.grails.orm.hibernate.query.AssociationAliasOrder
 import org.grails.orm.hibernate.query.AssociationOrder
-import org.grails.orm.hibernate.query.HibernateAlias
 import org.grails.orm.hibernate.query.HibernateQuery
 
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
@@ -197,123 +195,65 @@ class CriteriaMethodInvokerSpec extends Specification {
         1 * builder.not(closure)
     }
 
-    void "moveOrdersOutOfJunction moves the orders of the association blocks inside the junction that was added last"() {
+    void "the closure of a junction is evaluated by the builder"() {
         given:
-        def club = new DetachedAssociationCriteria(Object, associationTo('club', ['name']))
-        club.order('name')
-        def team = new DetachedAssociationCriteria(Object, associationTo('team', ['club']))
-        team.add(club)
-        team.order('unknown')
-        def disjunction = new Query.Disjunction()
-        disjunction.add(team)
-        def conjunction = new Query.Conjunction()
-        conjunction.add(disjunction)
-        def criteria = new DetachedCriteria(Object)
-        criteria.add(new Query.Conjunction())
-        criteria.add(conjunction)
+        def seen = []
+        def callable = { seen << delegate << resolveStrategy }
 
-        when:
-        invoker.moveOrdersOutOfJunction()
+        when: 'the criteria that open the junction evaluate the closure they are given themselves'
+        Closure junction = invoker.evaluatedByBuilder(callable)
+        junction.delegate = new DetachedCriteria(Object)
+        junction.resolveStrategy = Closure.DELEGATE_FIRST
+        junction.call()
 
-        then: 'the order of the nested block is qualified with each association on its way out'
-        1 * query.getDetachedCriteria() >> criteria
-        1 * query.order({ Query.Order order -> order.property == 'team.club.name' })
-        0 * query.order(_)
-        club.orders.empty
-
-        and: 'an order that names no property of its association stays in its block'
-        team.orders*.property == ['unknown']
+        then: 'which hands the closure of the junction to the builder, as any other closure of the criteria'
+        seen.size() == 2
+        seen[0].is(builder)
+        seen[1] == Closure.DELEGATE_FIRST
     }
 
-    void "moveOrdersOutOfJunction moves an order by an alias of a block as an order that keeps its block"() {
+    void "the orders of an association block move to the enclosing criteria when the block ends"() {
         given:
-        def team = new DetachedAssociationCriteria(Object, associationTo('team', ['name']))
-        team.add(declaration)
-        team.order(new Query.Order('c.name', Query.Order.Direction.DESC).ignoreCase())
-        def player = new DetachedAssociationCriteria(Object, associationTo('player', ['team']))
-        player.add(team)
-        def junction = new Query.Disjunction()
-        junction.add(player)
-        def criteria = new DetachedCriteria(Object)
-        criteria.add(junction)
+        DetachedAssociationCriteria block = null
+        def closure = { block.order('amount') }
+        def persistentEntity = Mock(GrailsHibernatePersistentEntity)
         Query.Order moved = null
 
         when:
-        invoker.moveOrdersOutOfJunction()
+        invoker.invokeMethod("transactions", [closure] as Object[])
 
         then:
-        1 * query.getDetachedCriteria() >> criteria
+        _ * builder.getTargetClass() >> InvokerAccount
+        1 * builder.getSessionFactory() >> Mock(SessionFactory) {
+            getMetamodel() >> Mock(jakarta.persistence.metamodel.Metamodel) {
+                managedType(InvokerAccount) >> Mock(jakarta.persistence.metamodel.ManagedType) {
+                    getAttribute("transactions") >> Mock(jakarta.persistence.metamodel.Attribute) {
+                        isAssociation() >> true
+                    }
+                }
+            }
+        }
+        1 * builder.getClassForAssociationType(_) >> InvokerTransaction
+        1 * mappingContext.getPersistentEntity(InvokerAccount.name) >> persistentEntity
+        1 * persistentEntity.getPropertyByName("transactions") >> associationTo('transactions', ['amount'])
+        1 * query.getDetachedCriteria() >> Mock(DetachedCriteria)
+        1 * query.setDetachedCriteria(_ as DetachedAssociationCriteria) >> { DetachedAssociationCriteria criteria ->
+            block = criteria
+        }
+
+        then: 'the order is an order of the enclosing criteria before the block is added to them'
         1 * query.order(_) >> { Query.Order order ->
             moved = order
             query
         }
-        team.orders.empty
-        player.orders.empty
-
-        and: 'the path is qualified with each association on the way out, while the block and its alias are kept'
-        moved instanceof AssociationAliasOrder
-        moved.property == 'player.team.club.name'
-        moved.association.is(team)
-        moved.aliasedProperty == 'c.name'
-        moved.direction == Query.Order.Direction.DESC
-        moved.ignoreCase
-
-        where: 'the builder declares an alias with a HibernateAlias, the criteria with association criteria'
-        declaration << [
-                new HibernateAlias('club', 'c'),
-                new DetachedAssociationCriteria(Object, Stub(org.grails.datastore.mapping.model.types.Association), 'club', 'c')
-        ]
-    }
-
-    void "moveOrdersOutOfJunction moves an order by a property of a block as an order of an association block"() {
-        given:
-        def club = new DetachedAssociationCriteria(Object, associationTo('club', ['name']))
-        club.order(new Query.Order('name').ignoreCase())
-        def junction = new Query.Negation()
-        junction.add(club)
-        def criteria = new DetachedCriteria(Object)
-        criteria.add(junction)
-        Query.Order moved = null
-
-        when:
-        invoker.moveOrdersOutOfJunction()
 
         then:
-        1 * query.getDetachedCriteria() >> criteria
-        1 * query.order(_) >> { Query.Order order ->
-            moved = order
-            query
-        }
+        1 * query.add(_ as DetachedAssociationCriteria)
         moved instanceof AssociationOrder
-        !(moved instanceof AssociationAliasOrder)
-        moved.property == 'club.name'
-        moved.direction == Query.Order.Direction.ASC
-        moved.ignoreCase
-    }
-
-    void "moveOrdersOutOfJunction leaves the criteria alone when the last criterion is not a junction"() {
-        given:
-        def club = new DetachedAssociationCriteria(Object, associationTo('club', ['name']))
-        club.order('name')
-        def criteria = new DetachedCriteria(Object)
-        criteria.add(club)
-
-        when:
-        invoker.moveOrdersOutOfJunction()
-
-        then:
-        1 * query.getDetachedCriteria() >> criteria
-        0 * query.order(_)
-        club.orders*.property == ['name']
-    }
-
-    void "moveOrdersOutOfJunction does nothing without criteria"() {
-        when:
-        invoker.moveOrdersOutOfJunction()
-
-        then:
-        1 * query.getDetachedCriteria() >> new DetachedCriteria(Object)
-        0 * query.order(_)
+        moved.property == 'transactions.amount'
+        moved.association.is(block)
+        moved.associationProperty == 'amount'
+        block.orders.empty
     }
 
     private org.grails.datastore.mapping.model.types.Association associationTo(String name, List<String> properties) {

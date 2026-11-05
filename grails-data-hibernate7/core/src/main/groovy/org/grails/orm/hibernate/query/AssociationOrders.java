@@ -28,13 +28,14 @@ import org.grails.datastore.mapping.query.Query;
 
 /**
  * Turns the orders that criteria declare inside association blocks into orders of the criteria that enclose
- * the blocks, since only the orders of the root criteria reach the query.
+ * the blocks, since only the orders of the root criteria reach the query. Each becomes an
+ * {@link AssociationOrder}, which keeps its block and is resolved against it.
  * <ul>
- * <li>An order by a property of the association becomes an {@link AssociationOrder} by the path of the property
- * through the association.</li>
- * <li>An order by an alias, {@code alias.property}, becomes an {@link AssociationAliasOrder}, which keeps its
- * block and is resolved against it. The alias is one that the block declares or one of the criteria around the
- * block, which the block sees as well.</li>
+ * <li>An order by a property of the association has the path of the property through the association.</li>
+ * <li>An order by an alias that the block declares, {@code alias.property}, has the path that the alias stands
+ * for.</li>
+ * <li>An order by any other dotted name may be an order by an alias of the criteria around the block, which the
+ * block sees as well. Its path is the name, qualified with the association.</li>
  * <li>An order by a single name that is no property of the association is not an order of the enclosing
  * criteria. It stays in its block and has no effect.</li>
  * </ul>
@@ -61,25 +62,6 @@ public final class AssociationOrders {
             if (order != null) {
                 enclosingCriteria.accept(order);
                 orders.remove();
-            }
-        }
-    }
-
-    /**
-     * Moves the orders of the association blocks among the criteria, at any depth and inside any junction, to
-     * the criteria that enclose them.
-     *
-     * @param criteria the criteria that may hold association blocks
-     * @param enclosingCriteria takes each order of the enclosing criteria
-     */
-    public static void moveOutOfBlocks(List<Query.Criterion> criteria, Consumer<Query.Order> enclosingCriteria) {
-        for (Query.Criterion criterion : criteria) {
-            if (criterion instanceof Query.Junction junction) {
-                moveOutOfBlocks(junction.getCriteria(), enclosingCriteria);
-            } else if (criterion instanceof DetachedAssociationCriteria<?> block) {
-                // the blocks inside this one first, whose orders become orders of this block
-                moveOutOfBlocks(block.getCriteria(), order -> block.order(order));
-                moveOutOf(block, enclosingCriteria);
             }
         }
     }
@@ -115,38 +97,40 @@ public final class AssociationOrders {
      * Returns an order of an association block as an order of the criteria that enclose the block, or
      * {@code null} if it is a single name that is no property of the association.
      */
-    private static Query.Order ofEnclosingCriteria(Query.Order order, DetachedAssociationCriteria<?> block) {
+    private static AssociationOrder ofEnclosingCriteria(Query.Order order, DetachedAssociationCriteria<?> block) {
         String associationName = block.getAssociationPath();
-        if (order instanceof AssociationAliasOrder aliasOrder) {
-            // an order by an alias of a block inside this one, which is still resolved against that block
-            return aliasOrder.qualifiedWith(associationName);
+        if (order instanceof AssociationOrder inner) {
+            // an order of a block inside this one, which is still resolved against that block
+            return inner.qualifiedWith(associationName);
         }
         String property = order.getProperty();
         int dot = property.indexOf('.');
         String head = dot < 0 ? property : property.substring(0, dot);
         String aliasPath = dot > 0 ? pathOfAlias(block, head) : null;
-        Query.Order enclosing;
+        String path;
         if (aliasPath != null) {
-            enclosing = new AssociationAliasOrder(
-                    associationName + '.' + aliasPath + property.substring(dot), order.getDirection(), block, property);
-        } else if (block.getAssociation().getAssociatedEntity().getPropertyByName(head) != null) {
-            // the entity of the association, which is also there for an embedded component: the class of a
-            // component is not a domain class, so the criteria of its block have no entity to look the property up on
-            enclosing = new AssociationOrder(associationName + '.' + property, order.getDirection());
-        } else if (dot > 0) {
-            // an alias that the block does not declare can be one of the criteria around it; the block
-            // resolves it, and an alias that nothing declares leaves the order without an effect
-            enclosing = new AssociationAliasOrder(associationName + '.' + property, order.getDirection(), block, property);
+            path = aliasPath + property.substring(dot);
+        } else if (dot > 0 || block.getAssociation().getAssociatedEntity().getPropertyByName(head) != null) {
+            // the property is looked up on the entity of the association, which is also there for an embedded
+            // component: the class of a component is not a domain class, so the criteria of its block have no
+            // entity. A dotted name that starts with no property can be an alias of the criteria around the
+            // block; the block resolves it, and an alias that nothing declares leaves the order without an effect
+            path = property;
         } else {
             return null;
         }
-        return order.isIgnoreCase() ? enclosing.ignoreCase() : enclosing;
+        AssociationOrder enclosing =
+                new AssociationOrder(associationName + '.' + path, order.getDirection(), block, property);
+        if (order.isIgnoreCase()) {
+            enclosing.ignoreCase();
+        }
+        return enclosing;
     }
 
     /**
      * Returns the path of the association that a block declares the alias for, or {@code null}. The criteria
-     * builder declares an alias with a {@link HibernateAlias}. Criteria that are built in any other way, such as
-     * the closure of a junction, declare it with association criteria that have the alias.
+     * builder declares an alias with a {@link HibernateAlias}. Criteria that are built in any other way declare
+     * it with association criteria that have the alias.
      */
     private static String pathOfAlias(DetachedAssociationCriteria<?> block, String alias) {
         for (Query.Criterion criterion : block.getCriteria()) {
