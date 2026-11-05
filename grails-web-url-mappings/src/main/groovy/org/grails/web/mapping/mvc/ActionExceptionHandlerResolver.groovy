@@ -36,14 +36,17 @@ import org.springframework.web.ErrorResponse
 import org.springframework.web.HttpMediaTypeNotAcceptableException
 import org.springframework.web.accept.ContentNegotiationManager
 import org.springframework.web.context.request.ServletWebRequest
+import org.springframework.web.context.request.async.AsyncRequestTimeoutException
 import org.springframework.web.filter.ServerHttpObservationFilter
 import org.springframework.web.method.HandlerMethod
 import org.springframework.web.method.annotation.ProblemDetailExceptionHandler
 import org.springframework.web.servlet.HandlerExceptionResolver
+import org.springframework.web.servlet.HandlerMapping
 import org.springframework.web.servlet.ModelAndView
 import org.springframework.web.servlet.handler.HandlerExceptionResolverComposite
 import org.springframework.web.servlet.mvc.method.annotation.ExceptionHandlerExceptionResolver
 import org.springframework.web.servlet.support.RequestContextUtils
+import org.springframework.web.util.DisconnectedClientHelper
 
 import grails.config.Settings
 import grails.web.mapping.UrlMappingsHolder
@@ -53,6 +56,7 @@ import org.grails.exceptions.ExceptionUtils
 import org.grails.web.servlet.mvc.GrailsWebRequest
 import org.grails.web.servlet.mvc.exceptions.GrailsMVCException
 import org.grails.web.util.GrailsApplicationAttributes
+import org.grails.web.util.WebUtils
 
 /**
  * Resolves an exception a controller action throws with the {@code @ExceptionHandler} methods Spring MVC resolves those
@@ -75,6 +79,10 @@ class ActionExceptionHandlerResolver implements HandlerExceptionResolver, Ordere
 
     /** The name of the bean Spring MVC's content negotiation manager is. */
     private static final String MVC_CONTENT_NEGOTIATION_MANAGER = 'mvcContentNegotiationManager'
+
+    /** Logs a client that went away while a problem was written, in a category of its own, as Spring MVC does. */
+    private static final DisconnectedClientHelper DISCONNECTED_CLIENTS =
+            new DisconnectedClientHelper(ActionExceptionHandlerResolver.name + '.DisconnectedClient')
 
     /** Ahead of Spring MVC's resolvers, which its configuration orders at 0, behind Spring Boot's error attributes. */
     int order = -1
@@ -138,31 +146,50 @@ class ActionExceptionHandlerResolver implements HandlerExceptionResolver, Ordere
     /**
      * Writes an exception as Spring MVC writes one no handler method handles, with Spring MVC's translation of it, which
      * logs an unexpected one and never exposes its message. A failure to write it leaves the exception to the other
-     * resolvers, as a failure of an exception handler method leaves it in Spring MVC.
+     * resolvers, as a failure of an exception handler method leaves it in Spring MVC. An action a page includes is left
+     * to them too, since a problem written into the page is no answer to the client.
      */
     private ModelAndView resolveAsProblem(HttpServletRequest request, HttpServletResponse response, Exception thrown) {
         Exception ex = unwrap(thrown)
         try {
-            if (response.committed || !returnValues.writesErrorResponses() || prefersHtml(request) || isMappedToErrorHandler(ex)) {
+            if (response.committed || WebUtils.isIncludeRequest(request) || !returnValues.writesErrorResponses() ||
+                    prefersHtml(request) || isMappedToErrorHandler(ex)) {
                 return null
             }
             ErrorResponse errorResponse = problemDetailHandler.handleException(ex, RequestContextUtils.getLocale(request))
+            // what an exception handler method that failed produces, as Spring MVC removes it for its own last resort
+            request.removeAttribute(HandlerMapping.PRODUCIBLE_MEDIA_TYPES_ATTRIBUTE)
             ModelAndView written = errorResponse == null ? new ModelAndView() : returnValues.writeErrorResponse(errorResponse,
                     request.getAttribute(GrailsApplicationAttributes.CONTROLLER), request, response)
-            if (HttpStatusCode.valueOf(response.status).is5xxServerError()) {
+            if (isServerError(response)) {
                 recordServerError(request, ex)
                 // Spring MVC's translation logs an unexpected exception without the request it failed
-                if (!(ex instanceof ErrorResponse)) {
-                    log.error('{} occurred when processing request: [{}] {}', ex.class.simpleName, request.method, request.requestURI)
+                if (!(ex instanceof ErrorResponse) && !DisconnectedClientHelper.isClientDisconnectedException(ex)) {
+                    log.error('{} occurred when processing request: [{}] {}', ex.class.simpleName, request.method, requestUri(request))
                 }
             }
             return written
         }
         catch (Exception e) {
+            if (DISCONNECTED_CLIENTS.checkAndLogClientDisconnectedException(e)) {
+                if (isServerError(response)) {
+                    recordServerError(request, ex)
+                }
+                return new ModelAndView()
+            }
             log.warn('Could not write a problem for an exception of [{}], so leaving it to the other exception resolvers',
-                    request.requestURI, e)
+                    requestUri(request), e)
             return null
         }
+    }
+
+    private static boolean isServerError(HttpServletResponse response) {
+        return HttpStatusCode.valueOf(response.status).is5xxServerError()
+    }
+
+    /** The URI the client asked for, where the action was forwarded to, as the Grails exception resolver logs it. */
+    private static Object requestUri(HttpServletRequest request) {
+        return request.getAttribute(WebUtils.FORWARD_REQUEST_URI_ATTRIBUTE) ?: request.requestURI
     }
 
     /** As the Grails exception resolver finds the exception an action threw. */
@@ -205,13 +232,17 @@ class ActionExceptionHandlerResolver implements HandlerExceptionResolver, Ordere
                 new ContentNegotiationManager()
     }
 
-    /** Whether the application maps the exception, as a {@code "500"} mapping with an {@code exception} names it. */
+    /**
+     * Whether the application maps the exception, as a {@code "500"} mapping with an {@code exception} names it, under
+     * the status the Grails exception resolver looks for it with, which for an asynchronous timeout is its own.
+     */
     private boolean isMappedToErrorHandler(Exception ex) {
         if (!applicationContext.containsBean(UrlMappingsHolder.BEAN_ID)) {
             return false
         }
         UrlMappingsHolder urlMappings = applicationContext.getBean(UrlMappingsHolder.BEAN_ID, UrlMappingsHolder)
-        int status = HttpStatus.INTERNAL_SERVER_ERROR.value()
+        int status = ex instanceof AsyncRequestTimeoutException ?
+                ((AsyncRequestTimeoutException) ex).statusCode.value() : HttpStatus.INTERNAL_SERVER_ERROR.value()
         return urlMappings.matchStatusCode(status, ex) != null || urlMappings.matchStatusCode(status, ExceptionUtils.getRootCause(ex)) != null
     }
 

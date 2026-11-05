@@ -206,11 +206,12 @@ class ActionReturnValues {
      * @since 9.1
      */
     ModelAndView writeErrorResponse(ErrorResponse errorResponse, Object controller, HttpServletRequest request, HttpServletResponse response) {
-        GrailsWebRequest.lookup(request)?.renderView = false
         MethodParameter returnType = new MethodParameter(RETURNED_ERROR_RESPONSE, -1)
                 .withContainingClass(controller?.getClass() ?: ActionReturnValues)
         ModelAndViewContainer container = new ModelAndViewContainer()
         adapter().returnValueHandlers.handleReturnValue(errorResponse, returnType, container, new ServletWebRequest(request, response))
+        // only once it is written: a failure leaves the response to the error page, which an action can answer
+        GrailsWebRequest.lookup(request)?.renderView = false
         return container.requestHandled ? new ModelAndView() : viewOf(container)
     }
 

@@ -21,6 +21,8 @@ package org.grails.web.mapping.mvc
 import groovy.json.JsonSlurper
 import org.codehaus.groovy.runtime.InvokerInvocationException
 
+import ch.qos.logback.classic.Level
+
 import org.springframework.core.env.MapPropertySource
 import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpStatus
@@ -37,6 +39,7 @@ import org.springframework.web.bind.annotation.ControllerAdvice
 import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.ResponseStatus
 import org.springframework.web.context.request.async.AsyncRequestNotUsableException
+import org.springframework.web.context.request.async.AsyncRequestTimeoutException
 import org.springframework.web.context.support.GenericWebApplicationContext
 import org.springframework.web.filter.ServerHttpObservationFilter
 import org.springframework.web.server.ResponseStatusException
@@ -47,13 +50,14 @@ import grails.core.DefaultGrailsApplication
 import grails.core.GrailsApplication
 import grails.web.mapping.UrlMappingInfo
 import grails.web.mapping.UrlMappingsHolder
+import org.apache.grails.core.testing.support.LogCapture
 import org.grails.core.DefaultGrailsControllerClass
 import org.grails.support.MockApplicationContext
 import org.grails.web.mapping.DefaultUrlMappingEvaluator
 import org.grails.web.mapping.DefaultUrlMappingsHolder
 import org.grails.web.servlet.mvc.GrailsWebRequest
 import org.grails.web.util.GrailsApplicationAttributes
-import org.apache.grails.core.testing.support.LogCapture
+import org.grails.web.util.WebUtils
 import spock.lang.Specification
 
 /**
@@ -68,13 +72,16 @@ class ActionExceptionProblemDetailsSpec extends Specification {
 
     private MockHttpServletResponse response
 
+    private GrailsWebRequest webRequest
+
     private List<ErrorResponse.Interceptor> interceptors = []
 
     void setup() {
         request = new MockHttpServletRequest(new MockServletContext())
         request.requestURI = '/problem/index'
         response = new MockHttpServletResponse()
-        new GrailsWebRequest(request, response, request.servletContext)
+        webRequest = new GrailsWebRequest(request, response, request.servletContext)
+        request.setAttribute(GrailsApplicationAttributes.WEB_REQUEST, webRequest)
     }
 
     void cleanup() {
@@ -98,6 +105,9 @@ class ActionExceptionProblemDetailsSpec extends Specification {
         response.contentType == 'application/problem+json'
         problem() == [title: 'Internal Server Error', status: 500]
         !response.contentAsString.contains('secret')
+
+        and: 'no view is rendered after it'
+        !webRequest.renderView
 
         where:
         client               | accept
@@ -324,7 +334,7 @@ class ActionExceptionProblemDetailsSpec extends Specification {
         problem().instance == 'urn:problem:1'
     }
 
-    void 'a failure to write the problem leaves the exception to the other resolvers'() {
+    void 'a failure to write the problem leaves the exception to the other resolvers, which can still render a view'() {
         given:
         def resolver = resolver([problemDetails: true])
         def failing = Spy(response) {
@@ -333,6 +343,103 @@ class ActionExceptionProblemDetailsSpec extends Specification {
 
         expect:
         resolver.resolveException(request, failing, action(new ProblemController()), new IllegalStateException('secret')) == null
+        webRequest.renderView
+    }
+
+    void 'a client that disconnects while the problem is written gets nothing more, and nothing is logged as a failure'() {
+        given:
+        def resolver = resolver([problemDetails: true])
+        def logCapture = new LogCapture(ActionExceptionHandlerResolver)
+        def disconnected = Spy(response) {
+            getOutputStream() >> { throw new IOException('Broken pipe') }
+        }
+
+        when:
+        def modelAndView = resolver.resolveException(request, disconnected, action(new ProblemController()), new IllegalStateException('secret'))
+
+        then:
+        modelAndView.empty
+        !logCapture.events.any { it.level.isGreaterOrEqual(Level.WARN) && !it.formattedMessage.contains('occurred when processing request') }
+
+        cleanup:
+        logCapture.close()
+    }
+
+    void 'a disconnected client is not logged as a request that failed'() {
+        given:
+        def resolver = resolver([problemDetails: true])
+        def logCapture = new LogCapture(ActionExceptionHandlerResolver)
+
+        when:
+        resolver.resolveException(request, response, action(new ProblemController()), new IOException('Broken pipe'))
+
+        then:
+        response.status == 500
+        !logCapture.events.any { it.level.isGreaterOrEqual(Level.WARN) }
+
+        cleanup:
+        logCapture.close()
+    }
+
+    void 'the request of a forwarded action is logged by the URI the client asked for'() {
+        given:
+        def resolver = resolver([problemDetails: true])
+        def logCapture = new LogCapture(ActionExceptionHandlerResolver)
+        request.method = 'GET'
+        request.setAttribute(WebUtils.FORWARD_REQUEST_URI_ATTRIBUTE, '/asked/for')
+
+        when:
+        resolver.resolveException(request, response, action(new ProblemController()), new IllegalStateException('secret'))
+
+        then:
+        logCapture.events*.formattedMessage == ['IllegalStateException occurred when processing request: [GET] /asked/for']
+
+        cleanup:
+        logCapture.close()
+    }
+
+    void 'an action a page includes is left to the other resolvers, so that a problem is not written into the page'() {
+        given:
+        def resolver = resolver([problemDetails: true])
+        request.setAttribute(WebUtils.INCLUDE_REQUEST_URI_ATTRIBUTE, '/problem/index')
+
+        expect:
+        resolver.resolveException(request, response, action(new ProblemController()), new IllegalStateException('secret')) == null
+        !response.contentAsString
+    }
+
+    void 'an exception handler method that fails does not stop the problem being written in another type'() {
+        given:
+        def resolver = resolver([problemDetails: true])
+
+        when:
+        resolver.resolveException(request, response, action(new ProblemController()), new UnsupportedOperationException('csv'))
+
+        then:
+        response.status == 500
+        response.contentType == 'application/problem+json'
+    }
+
+    void 'an asynchronous timeout a URL mapping names under its own status is left to the Grails exception resolver'() {
+        given:
+        def resolver = resolver([problemDetails: true]) {
+            "503"(controller: 'errors', action: 'timedOut', exception: AsyncRequestTimeoutException)
+        }
+
+        expect:
+        resolver.resolveException(request, response, action(new ProblemController()), new AsyncRequestTimeoutException()) == null
+    }
+
+    void 'an asynchronous timeout no URL mapping names is written as a problem'() {
+        given:
+        def resolver = resolver([problemDetails: true])
+
+        when:
+        resolver.resolveException(request, response, action(new ProblemController()), new AsyncRequestTimeoutException())
+
+        then:
+        response.status == 503
+        problem().status == 503
     }
 
     private Map problem() {
@@ -384,5 +491,10 @@ class ProblemControllerAdvice {
     @ExceptionHandler(IllegalArgumentException)
     ProblemDetail unprocessable(IllegalArgumentException e) {
         ProblemDetail.forStatusAndDetail(HttpStatus.UNPROCESSABLE_CONTENT, e.message)
+    }
+
+    @ExceptionHandler(value = UnsupportedOperationException, produces = 'text/csv')
+    String failing(UnsupportedOperationException e) {
+        throw e
     }
 }
