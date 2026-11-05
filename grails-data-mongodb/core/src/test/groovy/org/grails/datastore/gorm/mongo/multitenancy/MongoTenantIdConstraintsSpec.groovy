@@ -18,6 +18,7 @@
  */
 package org.grails.datastore.gorm.mongo.multitenancy
 
+import org.bson.Document
 import org.bson.types.ObjectId
 import spock.lang.AutoCleanup
 import spock.lang.Issue
@@ -221,6 +222,30 @@ class MongoTenantIdConstraintsSpec extends AutoStartedMongoSpec {
         TenantCat.collection.find().first().home.city == 'Rome'
     }
 
+    void 'saving an owner fails when the current tenant id breaks a constraint of an associated object that the beforeValidate callback of its embedded object changes'() {
+        given: 'a shelter and a cat of one tenant, whose home changes itself when it is validated in Oslo'
+        System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, 'acme')
+        ObjectId id = TenantShelter.withNewSession {
+            new TenantShelter(name: 'North').addToCats(new TenantCat(name: 'Tom', home: new TenantHome(city: 'Rome'))).save(flush: true).id
+        }
+        TenantCat.collection.updateMany(new Document(), new Document('$set', new Document('home.city', 'Oslo')))
+
+        when: 'they are loaded, and the shelter is saved while a tenant that breaks the maxSize of the cat is current'
+        Map<String, Object> result = TenantShelter.withNewSession {
+            def shelter = TenantShelter.get(id)
+            def cat = shelter.cats.first()
+            System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, 'toolongtenant')
+            def saved = shelter.save(flush: true)
+            [city: cat.home.city, changed: cat.hasChanged(), saved: saved != null, error: shelter.errors.getFieldError('cats[0].firmId')?.code]
+        }
+
+        then: 'the cat, which the callback has run after, is updated with the current tenant id, and is validated with it'
+        result == [city: 'Bergen', changed: false, saved: false, error: 'maxSize.exceeded']
+
+        and: 'the cat is stored as it was'
+        TenantCat.collection.find().first().home.city == 'Oslo'
+    }
+
     void 'saving an owner inside withoutId fails when a new associated object is not given a tenant id'() {
         when:
         def owner = new TenantOwner(name: 'Dave', tenantId: 'acme').addToPets(new TenantPet(name: 'Rex'))
@@ -386,4 +411,10 @@ class TenantChip implements MultiTenant<TenantChip>, MongoEntity<TenantChip> {
 @DirtyCheck
 class TenantHome {
     String city
+
+    def beforeValidate() {
+        if (city == 'Oslo') {
+            setCity('Bergen')
+        }
+    }
 }

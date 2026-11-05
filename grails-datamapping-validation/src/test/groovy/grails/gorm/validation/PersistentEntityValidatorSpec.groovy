@@ -181,18 +181,9 @@ class PersistentEntityValidatorSpec extends Specification {
     }
 
     def "a cascade listener is called with each associated object after its beforeValidate callback and before its constraints are checked"() {
-        given: 'a mapping context whose validators check the constraints of an associated object'
-        MappingContext mappingContext = new KeyValueMappingContext("test")
-        mappingContext.mappingFactory = new GormKeyValueMappingFactory("test")
-        mappingContext.syntaxStrategy = new GormMappingConfigurationStrategy(mappingContext.mappingFactory)
-        PersistentEntity shelfEntity = mappingContext.addPersistentEntity(Shelf)
-        mappingContext.addPersistentEntity(Volume)
-        mappingContext.validatorRegistry = new DefaultValidatorRegistry(mappingContext, new ConnectionSourceSettings())
-        Validator shelfValidator = mappingContext.getEntityValidator(shelfEntity)
-
-        and:
-        Volume volume = new Volume()
-        Shelf shelf = new Shelf(name: 'Top', volume: volume)
+        given:
+        Validator shelfValidator = shelfValidator()
+        Shelf shelf = new Shelf(name: 'Top', volume: new Volume())
         Errors errors = new ValidationErrors(shelf)
         List<String> titles = []
 
@@ -200,13 +191,72 @@ class PersistentEntityValidatorSpec extends Specification {
         shelfValidator.validate(shelf, errors, true) { Object associatedObject ->
             titles << associatedObject.title
             associatedObject.title = null
+            true
         }
 
-        then: 'it is called after the beforeValidate callback of that object'
+        then: 'it is called once, after the beforeValidate callback of that object'
         titles == ['untitled']
 
         and: 'before the constraints of that object are checked'
         errors.getFieldError('volume.title').code == 'nullable'
+    }
+
+    def "an associated object that a cascade listener has left alone is passed to it again once all of them are validated"() {
+        given:
+        Validator shelfValidator = shelfValidator()
+        Shelf shelf = new Shelf(name: 'Top', volume: new Volume())
+        Errors errors = new ValidationErrors(shelf)
+        int calls = 0
+
+        when: 'the listener leaves the object alone each time'
+        shelfValidator.validate(shelf, errors, true) { Object associatedObject ->
+            calls++
+            false
+        }
+
+        then: 'it is called a second time, and then no more'
+        calls == 2
+        !errors.hasErrors()
+
+        when: 'the listener changes the object the second time'
+        calls = 0
+        shelfValidator.validate(shelf, errors, true) { Object associatedObject ->
+            if (++calls == 1) {
+                return false
+            }
+            associatedObject.title = null
+            true
+        }
+
+        then: 'the constraints of that object are checked again'
+        calls == 2
+        errors.getFieldError('volume.title').code == 'nullable'
+    }
+
+    def "a cascade listener is asked about the objects it has left alone until it leaves them all alone"() {
+        given:
+        Validator shelfValidator = shelfValidator()
+        Shelf shelf = new Shelf(name: 'Top', volume: new Volume(), spare: new Volume())
+        Errors errors = new ValidationErrors(shelf)
+        List<Object> passed = []
+        List<Object> changed = []
+
+        when: 'the listener changes the object it was passed first, and the other one only once the first is changed'
+        shelfValidator.validate(shelf, errors, true) { Object associatedObject ->
+            if (!passed.any { it.is(associatedObject) }) {
+                passed << associatedObject
+                return false
+            }
+            boolean change = associatedObject.is(passed[0]) || changed.any { it.is(passed[0]) }
+            if (change) {
+                changed << associatedObject
+            }
+            change
+        }
+
+        then: 'both are changed, whichever of them the listener is asked about first'
+        passed.size() == 2
+        changed.size() == 2
     }
 
     def "a cascade listener is not called when validation does not cascade, and validation runs without one"() {
@@ -216,7 +266,10 @@ class PersistentEntityValidatorSpec extends Specification {
         List<Object> seen = []
 
         when:
-        authorValidator.validate(author, errors, false) { Object associatedObject -> seen << associatedObject }
+        authorValidator.validate(author, errors, false) { Object associatedObject ->
+            seen << associatedObject
+            true
+        }
 
         then:
         seen.empty
@@ -240,7 +293,8 @@ class PersistentEntityValidatorSpec extends Specification {
         when: 'the listener of one validation runs another validation, which has no listener, each time it is called'
         authorValidator.validate(author, new ValidationErrors(author), true) { Object associatedObject ->
             seen << associatedObject
-            authorValidator.validate(other, new ValidationErrors(other), true, null)
+            authorValidator.validate(other, new ValidationErrors(other))
+            true
         }
         authorValidator.validate(other, new ValidationErrors(other))
 
@@ -248,6 +302,17 @@ class PersistentEntityValidatorSpec extends Specification {
         seen.size() == 2
         seen.contains(book)
         seen.contains(author.publisher)
+    }
+
+    private static Validator shelfValidator() {
+        // A mapping context whose validators check the constraints of an associated object
+        MappingContext mappingContext = new KeyValueMappingContext("test")
+        mappingContext.mappingFactory = new GormKeyValueMappingFactory("test")
+        mappingContext.syntaxStrategy = new GormMappingConfigurationStrategy(mappingContext.mappingFactory)
+        PersistentEntity shelfEntity = mappingContext.addPersistentEntity(Shelf)
+        mappingContext.addPersistentEntity(Volume)
+        mappingContext.validatorRegistry = new DefaultValidatorRegistry(mappingContext, new ConnectionSourceSettings())
+        mappingContext.getEntityValidator(shelfEntity)
     }
 }
 
@@ -325,6 +390,11 @@ class Publisher implements DirtyCheckable {
 class Shelf {
     String name
     Volume volume
+    Volume spare
+
+    static constraints = {
+        spare nullable: true
+    }
 }
 
 @Entity

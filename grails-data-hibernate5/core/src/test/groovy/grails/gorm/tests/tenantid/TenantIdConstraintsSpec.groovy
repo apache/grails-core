@@ -317,6 +317,26 @@ class TenantIdConstraintsSpec extends Specification {
         cat.chip.firmId == 'beta'
     }
 
+    void 'an associated object that the beforeValidate callback of its embedded object changes is given the current tenant id'() {
+        given: 'a shelter and a cat of one tenant, loaded inside withoutId, whose home changes itself when it is validated in Oslo'
+        TenantShelter shelter = shelterLoadedWithoutTenant('beta', 'Oslo')
+        def cat = shelter.cats.first()
+
+        when: 'the shelter is validated while a tenant that breaks the maxSize of the cat is current'
+        System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, 'a-tenant-too-long')
+        boolean valid = shelter.validate()
+
+        then: 'the cat, which the callback has run after, is updated with the current tenant id, and is validated with it'
+        cat.home.city == 'Bergen'
+        !cat.hasChanged()
+        !valid
+        cat.firmId == 'a-tenant-too-long'
+        shelter.errors.getFieldError('cats[0].firmId').code == 'maxSize.exceeded'
+
+        and: 'its chip, which is not updated, is left alone'
+        cat.chip.firmId == 'beta'
+    }
+
     void 'an associated object whose only change is in a collection is given the current tenant id'() {
         given: 'a shelter and a cat of one tenant, loaded inside withoutId'
         TenantShelter shelter = shelterLoadedWithoutTenant('beta')
@@ -362,10 +382,14 @@ class TenantIdConstraintsSpec extends Specification {
         }
     }
 
-    private TenantShelter shelterLoadedWithoutTenant(String tenantId) {
+    private TenantShelter shelterLoadedWithoutTenant(String tenantId, String storedCity = null) {
         System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, tenantId)
         def cat = new TenantCat(name: 'Tom', home: new TenantHome(city: 'Rome'), nicknames: ['Tom'] as Set)
         Long id = new TenantShelter(name: 'North').addToCats(cat).save(flush: true).id
+        if (storedCity) {
+            // Stored directly, so that the beforeValidate callback of the home has not seen it yet
+            TenantCat.executeUpdate('update TenantCat c set c.home.city = :city', [city: storedCity])
+        }
         datastore.sessionFactory.currentSession.clear()
         Tenants.withoutId(datastore) {
             def shelter = TenantShelter.get(id)
@@ -498,4 +522,10 @@ class TenantChip implements MultiTenant<TenantChip> {
 class TenantHome {
 
     String city
+
+    def beforeValidate() {
+        if (city == 'Oslo') {
+            setCity('Bergen')
+        }
+    }
 }

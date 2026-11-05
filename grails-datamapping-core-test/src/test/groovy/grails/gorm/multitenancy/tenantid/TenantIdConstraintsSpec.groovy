@@ -32,6 +32,7 @@ import org.grails.datastore.mapping.config.Settings
 import org.grails.datastore.mapping.multitenancy.MultiTenancySettings
 import org.grails.datastore.mapping.multitenancy.resolvers.SystemPropertyTenantResolver
 import org.grails.datastore.mapping.simple.SimpleMapDatastore
+import org.grails.datastore.mapping.validation.ValidationErrors
 
 /**
  * The constraints declared on a tenant id are checked once multi-tenancy has assigned the current tenant id.
@@ -323,6 +324,65 @@ class TenantIdConstraintsSpec extends Specification {
         cat.chip.firmId == 'acme'
     }
 
+    void 'an associated object that the beforeValidate callback of its embedded object changes is given the current tenant id'() {
+        given: 'a cat of another tenant without changes, whose basket changes itself as it is validated'
+        System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, 'acme')
+        def cat = new Cat(name: 'Tom', firmId: 'other', chip: new Chip(code: 'C-1', firmId: 'other'), basket: new Basket(colour: 'fading'))
+        def shelter = new Shelter(name: 'North').addToCats(cat)
+        [cat, cat.chip, cat.basket]*.trackChanges()
+
+        when:
+        boolean valid = Shelter.withNewSession { shelter.validate() }
+
+        then: 'the cat, which the callback has run after, is updated, and is given the tenant id its update gives it'
+        valid
+        cat.basket.colour == 'faded'
+        !cat.hasChanged()
+        cat.firmId == 'acme'
+
+        and: 'its chip, which is not updated, is left alone'
+        cat.chip.firmId == 'other'
+    }
+
+    void 'an associated object whose own associated object changes in its beforeValidate callback is given the current tenant id'() {
+        given: 'a cat of another tenant without changes, whose chip changes itself as it is validated'
+        System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, 'acme')
+        def cat = new Cat(name: 'Tom', firmId: 'other', chip: new Chip(code: 'worn', firmId: 'other'))
+        def shelter = new Shelter(name: 'North').addToCats(cat)
+        [cat, cat.chip]*.trackChanges()
+
+        when:
+        boolean valid = Shelter.withNewSession { shelter.validate() }
+
+        then: 'the chip and the cat that owns it, which this datastore updates with it, are given the current tenant id'
+        valid
+        cat.chip.code == 'renewed'
+        !cat.hasChanged()
+        cat.chip.firmId == 'acme'
+        cat.firmId == 'acme'
+    }
+
+    void 'a validation that a beforeValidate callback runs with a validator assigns no tenant ids for the validation around it'() {
+        given: 'a cat whose beforeValidate callback validates another owner with the validator of that owner'
+        System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, 'acme')
+        def other = new Owner(name: 'Other').addToPets(new Pet(name: 'Rex'))
+        def otherErrors = new ValidationErrors(other)
+        def ownerValidator = datastore.mappingContext.getEntityValidator(datastore.mappingContext.getPersistentEntity(Owner.name))
+        def cat = new Cat(name: 'Tom', duringValidation: { ownerValidator.validate(other, otherErrors) })
+        def shelter = new Shelter(name: 'North').addToCats(cat)
+
+        when:
+        boolean valid = Shelter.withNewSession { shelter.validate() }
+
+        then: 'the cat is given the current tenant id'
+        valid
+        cat.firmId == 'acme'
+
+        and: 'the pet of the other owner is not, and its tenant id, which is declared nullable: false, is reported'
+        other.pets*.firmId == [null]
+        otherErrors.getFieldError('pets[0].firmId').code == 'nullable'
+    }
+
     void 'an associated object whose only change is inside an embedded object is given the current tenant id'() {
         given: 'a cat of another tenant without changes, as a cat a datastore has loaded'
         System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, 'acme')
@@ -491,10 +551,13 @@ class Cat implements MultiTenant<Cat> {
     String firmId
     Chip chip
     Basket basket
+    Closure duringValidation
 
     static belongsTo = [shelter: Shelter]
 
     static embedded = ['basket']
+
+    static transients = ['duringValidation']
 
     static constraints = {
         firmId nullable: false, maxSize: 5
@@ -507,6 +570,7 @@ class Cat implements MultiTenant<Cat> {
     }
 
     def beforeValidate() {
+        duringValidation?.call()
         chip = chip ?: new Chip(code: "chip of ${name}")
     }
 }
@@ -526,12 +590,24 @@ class Chip implements MultiTenant<Chip> {
     static mapping = {
         tenantId name: 'firmId'
     }
+
+    def beforeValidate() {
+        if (code == 'worn') {
+            setCode('renewed')
+        }
+    }
 }
 
 @DirtyCheck
 class Basket {
 
     String colour
+
+    def beforeValidate() {
+        if (colour == 'fading') {
+            setColour('faded')
+        }
+    }
 }
 
 @Entity

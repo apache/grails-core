@@ -18,7 +18,7 @@
  */
 package org.grails.orm.hibernate
 
-import java.util.function.Consumer
+import java.util.function.Predicate
 
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
@@ -131,7 +131,7 @@ abstract class AbstractHibernateGormInstanceApi<D> extends GormInstanceApi<D> {
                 event.setDeepValidate(deepValidate)
                 datastore.applicationEventPublisher?.publishEvent(event)
 
-                Consumer<Object> cascadeListener = event.cascadeListener
+                Predicate<Object> cascadeListener = event.cascadeListener
                 if (cascadeListener != null && validator instanceof PersistentEntityValidator) {
                     ((PersistentEntityValidator) validator).validate(target, errors, deepValidate, cascadeListener)
                 } else if (validator instanceof CascadingValidator) {

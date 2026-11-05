@@ -72,26 +72,29 @@ public class MultiTenantEventListener implements PersistenceEventListener {
             ValidationEvent validationEvent = (ValidationEvent) event;
             if (validationEvent.isDeepValidate()) {
                 // The associated objects that are validated with this one get no event of their own, so the
-                // validator calls back with each of them as it comes to it
-                validationEvent.addCascadeListener(this::assignTenantIdBeforeValidation);
+                // validator calls back with each of them
+                validationEvent.addCascadeListener(this::assignTenantIdOfAssociatedObject);
             }
         }
     }
 
     // Called with an associated object once its beforeValidate callback has run, and before its constraints are
     // checked. The object is given the tenant id it is inserted or updated with. One that has a tenant id and is
-    // not saved with its owner keeps it.
-    private void assignTenantIdBeforeValidation(Object associatedObject) {
+    // not saved with its owner keeps it, and is passed again once every callback of the validation has run, as one
+    // of them may have changed it. Returns whether the object was given a tenant id.
+    private boolean assignTenantIdOfAssociatedObject(Object associatedObject) {
         ValidationEvent cascaded = new ValidationEvent(this.datastore, associatedObject);
         PersistentEntity entity = cascaded.getEntity();
         if (entity == null || !entity.isMultiTenant()) {
-            return;
+            return false;
         }
         TenantId tenantId = entity.getTenantId();
         boolean hasTenantId = tenantId != null && cascaded.getEntityAccess().getProperty(tenantId.getName()) != null;
-        if (!hasTenantId || isSaved(cascaded.getEntityObject())) {
-            handleEvent(cascaded);
+        if (hasTenantId && !isSaved(cascaded.getEntityObject())) {
+            return false;
         }
+        handleEvent(cascaded);
+        return true;
     }
 
     // Whether the object is inserted or updated with its owner. For an object that tracks its changes this is the

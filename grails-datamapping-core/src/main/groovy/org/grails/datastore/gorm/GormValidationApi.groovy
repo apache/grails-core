@@ -18,7 +18,7 @@
  */
 package org.grails.datastore.gorm
 
-import java.util.function.Consumer
+import java.util.function.Predicate
 
 import groovy.transform.CompileStatic
 
@@ -129,7 +129,7 @@ class GormValidationApi<D> extends AbstractGormApi<D> {
                 }
             }
 
-            Consumer<Object> cascadeListener = event.cascadeListener
+            Predicate<Object> cascadeListener = event.cascadeListener
             if (cascadeListener != null && validator instanceof PersistentEntityValidator) {
                 ((PersistentEntityValidator) validator).validate(instance, localErrors, deepValidate, cascadeListener)
             } else if (validator instanceof CascadingValidator) {

@@ -18,7 +18,7 @@
  */
 package org.grails.orm.hibernate
 
-import java.util.function.Consumer
+import java.util.function.Predicate
 
 import groovy.transform.CompileStatic
 
@@ -79,7 +79,7 @@ abstract class AbstractHibernateGormValidationApi<D> extends GormValidationApi<D
 
         evict = ClassUtils.getBooleanFromMap(ARGUMENT_EVICT, arguments)
 
-        Consumer<Object> cascadeListener = fireEvent(instance, validatedFieldsList, deepValidate).cascadeListener
+        Predicate<Object> cascadeListener = fireEvent(instance, validatedFieldsList, deepValidate).cascadeListener
 
         hibernateTemplate.execute { Session session ->
 
