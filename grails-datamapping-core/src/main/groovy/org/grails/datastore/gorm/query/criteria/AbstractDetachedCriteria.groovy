@@ -158,6 +158,8 @@ abstract class AbstractDetachedCriteria<T> implements Criteria, Cloneable {
      */
     Criteria join(String property) {
         fetchStrategies[property] = FetchType.EAGER
+        // replaces a join type that was requested for the association before
+        joinTypes.remove(property)
         return this
     }
 
@@ -182,6 +184,7 @@ abstract class AbstractDetachedCriteria<T> implements Criteria, Cloneable {
      */
     Criteria select(String property) {
         fetchStrategies[property] = FetchType.LAZY
+        joinTypes.remove(property)
         return this
     }
 

@@ -150,6 +150,48 @@ class AssociationJoinTypeSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckM
         fetch << ['lazy', 'join']
     }
 
+    void 'a fetch mode that a where query requests with #method replaces a join type that it requested before'() {
+        given:
+        final query = Team.where {
+            name ==~ '%First%'
+        }.join('club', JoinType.INNER)
+
+        expect:
+        query."$method"('club').list()*.name.sort() == ALL_TEAMS
+
+        where:
+        method << ['join', 'select']
+    }
+
+    void 'a fetch mode that a criteria query requests with #method replaces a join type that it requested before'() {
+        when:
+        final results = Team.createCriteria().list {
+            like('name', '%First%')
+            join('club', JoinType.INNER)
+            "$method"('club')
+        }
+
+        then:
+        results*.name.sort() == ALL_TEAMS
+
+        where:
+        method << ['join', 'select']
+    }
+
+    void 'the fetch argument of a criteria query replaces a join type that the criteria requested'() {
+        when:
+        final results = Team.createCriteria().list(max: 10, fetch: [club: fetch]) {
+            like('name', '%First%')
+            join('club', JoinType.INNER)
+        }
+
+        then:
+        results*.name.sort() == ALL_TEAMS
+
+        where:
+        fetch << ['lazy', 'join', JoinType.LEFT]
+    }
+
     void '#method leaves out a team without a club when fetch requests an inner join'() {
         given:
         final query = Team.where {
@@ -323,6 +365,21 @@ class AssociationJoinTypeSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckM
         and: 'the collection is fetched, with the player that has no contract'
         Hibernate.isInitialized(squad.players)
         squad.players.size() == 3
+    }
+
+    void 'a fetch requested for a collection is kept when an inner join is requested for an association of the collection'() {
+        given:
+        saveTeamWithAPlayerWithoutContract()
+
+        when:
+        final results = Team.where {
+            name == 'Squad Team'
+        }.list(fetch: [players: 'join', 'players.contract': JoinType.INNER])
+
+        then: 'the collection is fetched, with the player that has no contract'
+        results*.name == ['Squad Team']
+        Hibernate.isInitialized(results.first().players)
+        results.first().players.size() == 3
     }
 
     void 'a join type that fetch requests is used for the join that the criteria of the query make'() {
@@ -620,6 +677,23 @@ class AssociationJoinTypeSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckM
 
         and: 'the associations on the path are fetched'
         results.every { Hibernate.isInitialized(it.team) && Hibernate.isInitialized(it.team.club) }
+    }
+
+    void 'a fetch that a criteria query requests for a collection is kept when it requests an inner join for an association of the collection'() {
+        given:
+        saveTeamWithAPlayerWithoutContract()
+
+        when:
+        final results = Team.createCriteria().list {
+            like('name', '%Team%')
+            join('players')
+            join('players.contract', JoinType.INNER)
+        }
+        final squad = results.find { it.name == 'Squad Team' }
+
+        then: 'the collection is fetched, with the player that has no contract'
+        Hibernate.isInitialized(squad.players)
+        squad.players.size() == 3
     }
 
     void 'an inner join that a criteria query requests for an association of a collection does not fetch the collection'() {

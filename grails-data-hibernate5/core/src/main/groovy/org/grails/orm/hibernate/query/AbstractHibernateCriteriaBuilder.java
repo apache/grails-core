@@ -323,6 +323,8 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
      */
     public BuildableCriteria join(String associationPath) {
         criteria.setFetchMode(calculatePropertyName(associationPath), FetchMode.JOIN);
+        // the fetch mode alone replaces a join type that was requested for the association before
+        requestedJoinTypes.remove(getRequestedJoinPath(associationPath));
         return this;
     }
 
@@ -334,9 +336,17 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
      */
     public BuildableCriteria join(String property, JoinType joinType) {
         criteria.setFetchMode(calculatePropertyName(property), FetchMode.JOIN);
-        String associationPath = getAssociationPath();
-        requestedJoinTypes.put(associationPath.isEmpty() ? property : associationPath + '.' + property, joinType);
+        requestedJoinTypes.put(getRequestedJoinPath(property), joinType);
         return this;
+    }
+
+    /**
+     * Returns the path from the queried class of an association that a join or a fetch mode is
+     * requested for, which is relative to the association that the criteria are being built for.
+     */
+    private String getRequestedJoinPath(String property) {
+        String associationPath = getAssociationPath();
+        return associationPath.isEmpty() ? property : associationPath + '.' + property;
     }
 
     /**
@@ -383,6 +393,7 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
      */
     public BuildableCriteria select(String associationPath) {
         criteria.setFetchMode(calculatePropertyName(associationPath), FetchMode.SELECT);
+        requestedJoinTypes.remove(getRequestedJoinPath(associationPath));
         return this;
     }
 
@@ -621,6 +632,7 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
     public void fetchMode(String associationPath, FetchMode fetchMode) {
         if (criteria != null) {
             criteria.setFetchMode(associationPath, fetchMode);
+            requestedJoinTypes.remove(associationPath);
         }
     }
 
@@ -1738,6 +1750,12 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
                 paginationEnabledList = true;
                 orderEntries = new ArrayList<>();
                 invokeClosureNode(args[1]);
+                // the fetch argument, which is applied with the other arguments, replaces a join type
+                // that the criteria request for the same association
+                Object fetch = ((Map) args[0]).get(HibernateQueryConstants.ARGUMENT_FETCH);
+                if (fetch instanceof Map) {
+                    requestedJoinTypes.keySet().removeAll(((Map) fetch).keySet());
+                }
             }
             else {
                 invokeClosureNode(args[0]);
