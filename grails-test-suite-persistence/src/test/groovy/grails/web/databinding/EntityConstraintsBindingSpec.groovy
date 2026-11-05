@@ -91,6 +91,25 @@ class EntityConstraintsBindingSpec extends Specification {
         proxy.secret == null
     }
 
+    void 'an entity whose instance declares its constraints through #accessor is bound with those, not those its validator holds'() {
+        given: 'a validator that constrains name bindable: false, and an instance that constrains secret bindable: false'
+        PersistentEntity entity = mappingContext.addPersistentEntity(type)
+        mappingContext.addEntityValidator(entity, new HeldConstraintsValidator(type, 'name'))
+        def record = type.getDeclaredConstructor().newInstance()
+
+        when:
+        DataBindingUtils.bindObjectToInstance(record, [name: 'Grails', secret: 'Hidden'])
+
+        then:
+        record.name == 'Grails'
+        record.secret == null
+
+        where:
+        accessor              | type
+        'getConstraintsMap()' | AccessorRecord
+        'constraintsMap'      | ConstraintsMapRecord
+    }
+
     void 'an entity without a validator is bound with the constraints its class declares'() {
         given:
         mappingContext.addPersistentEntity(SelfConstrainedRecord)
@@ -131,6 +150,25 @@ class ValidatedRecord {
 
 // Stands for the subclass a datastore generates at runtime to proxy an instance of the entity it extends.
 class ProxyOfValidatedRecord extends ValidatedRecord {
+}
+
+class AccessorRecord {
+
+    Long id
+    String name
+    String secret
+
+    Map getConstraintsMap() {
+        [secret: [metaConstraints: [bindable: false]]]
+    }
+}
+
+class ConstraintsMapRecord {
+
+    Long id
+    String name
+    String secret
+    Map constraintsMap = [secret: [metaConstraints: [bindable: false]]]
 }
 
 class SelfConstrainedRecord {

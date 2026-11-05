@@ -18,6 +18,8 @@
  */
 package grails.test.mixin
 
+import java.util.concurrent.atomic.AtomicInteger
+
 import spock.lang.Issue
 import spock.lang.Specification
 import spock.lang.Unroll
@@ -79,6 +81,7 @@ class DomainProxyBindingSpec extends Specification implements ControllerUnitTest
         Long recordId = persisted.save(flush: true, failOnError: true).id
         ProxiedBindingRecord.withSession { session -> session.clear() }
         params.putAll(recordId: recordId, description: 'Rebound', secret: 'Rebound')
+        int evaluations = ProxiedBindingRecord.CONSTRAINTS_EVALUATIONS.get()
 
         when:
         Map bound = binding == 'bindData' ? controller.bindProxy() : bindProxy(recordId)
@@ -89,6 +92,9 @@ class DomainProxyBindingSpec extends Specification implements ControllerUnitTest
         and:
         bound.description == 'Rebound'
         bound.secret == 'Persisted'
+
+        and: 'the proxy was bound with the constraints of its entity, so the constraints closure did not run again'
+        ProxiedBindingRecord.CONSTRAINTS_EVALUATIONS.get() == evaluations
 
         where:
         binding << ['bindData', 'DataBindingUtils']
@@ -115,10 +121,14 @@ class DomainProxyBindingController {
 
 @Entity
 class ProxiedBindingRecord {
+
+    static final AtomicInteger CONSTRAINTS_EVALUATIONS = new AtomicInteger()
+
     String description
     String secret
 
     static constraints = {
+        ProxiedBindingRecord.CONSTRAINTS_EVALUATIONS.incrementAndGet()
         secret nullable: true, bindable: false
     }
 }

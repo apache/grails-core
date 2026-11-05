@@ -213,9 +213,8 @@ public class DataBindingUtils {
             if (entity == null || entity.getJavaClass() != type) {
                 return null;
             }
-            // Discovery wraps each constraint the validator holds in a new delegate on every call. Binding 4
-            // properties of a domain class with 24 constraints took about 17 microseconds through it, against
-            // about 13 reading the map the validator holds directly and about 80 evaluating the closure again.
+            // Discovery wraps each constraint the validator holds in a new delegate on every call. Binding accepts
+            // that cost to read the constraints through the SPI rather than from the validator's own map.
             final Map constrainedProperties = constrainedDiscovery.findConstrainedProperties(entity);
             // An entity whose validator does not hold its constraints, such as the one an entity annotated
             // @Validated has, or that has no validator, is discovered to have none, so the constraints of its class
@@ -289,10 +288,6 @@ public class DataBindingUtils {
         if (BindingIncludeLists.inheritsConstraintsMap(object.getClass())) {
             return BindingIncludeLists.constrainedProperties(object.getClass());
         }
-        final Map entityConstrainedProperties = getEntityConstrainedProperties(object, application);
-        if (entityConstrainedProperties != null) {
-            return entityConstrainedProperties;
-        }
         // Each accessor is looked up before it is read, so an object that has none of them does not throw
         // and catch a missing property or method exception on every bind.
         MetaClass metaClass = GroovySystem.getMetaClassRegistry().getMetaClass(object.getClass());
@@ -328,6 +323,13 @@ public class DataBindingUtils {
                 }
             }
         } catch (Exception ignored) {
+        }
+        // An object gets here when none of its accessors holds a map, as for a domain class, whose constraints are a
+        // closure. The validator of an entity holds the constraints its closure declares, so they are read there
+        // rather than evaluated again.
+        final Map entityConstrainedProperties = getEntityConstrainedProperties(object, application);
+        if (entityConstrainedProperties != null) {
+            return entityConstrainedProperties;
         }
         try {
             Map constrainedProperties = evaluateConstrainedProperties(object.getClass());
