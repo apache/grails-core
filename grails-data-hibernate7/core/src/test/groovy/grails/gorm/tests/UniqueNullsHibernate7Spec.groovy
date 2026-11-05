@@ -371,6 +371,5 @@ class UnqLanguageSetGroup {
 
     static mapping = {
         version false
-        language unique: (['country'] as Set)
     }
 }
