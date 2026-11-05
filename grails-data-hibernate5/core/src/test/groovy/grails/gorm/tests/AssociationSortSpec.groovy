@@ -18,6 +18,7 @@
  */
 package grails.gorm.tests
 
+import grails.gorm.annotation.Entity
 import org.apache.grails.data.hibernate5.core.GrailsDataHibernate5TckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 
@@ -27,7 +28,7 @@ import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManager> {
 
     void setupSpec() {
-        manager.domainClasses.addAll([Club, Team, Player, Contract])
+        manager.domainClasses.addAll([Club, Team, Player, Contract, AssociationSortLeague])
     }
 
     void setup() {
@@ -170,5 +171,26 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManag
         then:
         'Unattached First Team' in results*.name
         results*.name - 'Unattached First Team' == ['Arsenal First Team', 'Chelsea First Team', 'MU First Team']
+    }
+
+    void 'list sorts by every property of the default sort of the mapping'() {
+        given:
+        [['Second', 'B'], ['First', 'B'], ['First', 'A'], ['Second', 'C']].each { String league, String name ->
+            new AssociationSortLeague(league: league, name: name).save(failOnError: true)
+        }
+        manager.session.flush()
+
+        expect:
+        AssociationSortLeague.list().collect { it.league + ' ' + it.name } == ['First B', 'First A', 'Second C', 'Second B']
+    }
+}
+
+@Entity
+class AssociationSortLeague {
+    String league
+    String name
+
+    static mapping = {
+        sort league: 'asc', name: 'desc'
     }
 }
