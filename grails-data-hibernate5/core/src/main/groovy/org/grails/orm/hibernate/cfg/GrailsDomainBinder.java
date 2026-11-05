@@ -1549,6 +1549,10 @@ public class GrailsDomainBinder implements MetadataContributor {
 
     private boolean hasTablePerSubclassChild(java.util.Collection<PersistentEntity> children) {
         for (PersistentEntity child : children) {
+            if (!ConnectionSourcesSupport.usesConnectionSource(child, dataSourceName)) {
+                // a subclass mapped to another datasource is not part of this session factory's hierarchy
+                continue;
+            }
             Mapping childMapping = evaluateMapping(child, defaultMapping);
             if (childMapping != null && !childMapping.getTablePerHierarchy() && !childMapping.isTablePerConcreteClass()) {
                 return true;
