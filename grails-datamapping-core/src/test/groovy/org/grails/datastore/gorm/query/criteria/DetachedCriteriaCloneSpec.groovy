@@ -18,11 +18,20 @@
  */
 package org.grails.datastore.gorm.query.criteria
 
+import java.util.concurrent.Callable
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
+import java.util.concurrent.Future
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicInteger
+
+import spock.lang.Specification
+
 import grails.gorm.DetachedCriteria
 import org.grails.datastore.mapping.core.connections.ConnectionSource
 import org.grails.datastore.mapping.model.types.Association
 import org.grails.datastore.mapping.query.Query
-import spock.lang.Specification
 
 class DetachedCriteriaCloneSpec extends Specification {
 
@@ -38,17 +47,29 @@ class DetachedCriteriaCloneSpec extends Specification {
         cloned.@connectionName == 'secondary'
     }
 
-    void "clone preserves lazyQuery"() {
+    void "clone carries the result of the deferred query and no query"() {
         given:
-        def lazy = { -> }
-        def criteria = new DetachedCriteria(TestEntity)
-        criteria.@lazyQuery = lazy
+        def criteria = new DetachedCriteria(TestEntity).buildLazy {
+            add(new Query.Equals('name', 'A'))
+        }
 
         when:
         def cloned = criteria.clone()
 
         then:
-        cloned.@lazyQuery.is(lazy)
+        cloned.@lazyQuery == null
+        cloned.@criteria*.property == ['name']
+        criteria.@lazyQuery == null
+    }
+
+    void "a clone owns its projection list"() {
+        given:
+        def criteria = new DetachedCriteria(TestEntity)
+        def cloned = criteria.clone()
+
+        expect:
+        !cloned.projectionList.is(criteria.projectionList)
+        cloned.projectionList.projections.is(cloned.@projections)
     }
 
     void "clone preserves associationCriteriaMap"() {
@@ -195,7 +216,7 @@ class DetachedCriteriaCloneSpec extends Specification {
         innerCopy.alias == 'a'
     }
 
-    void "materializeLazyCriteria evaluates lazy alias on cloned instance without mutating original"() {
+    void "materializeLazyCriteria applies the deferred alias once and hands out a copy"() {
         given:
         def criteria = new DetachedCriteria(TestEntity).buildLazy {
             setAlias('lazyAlias')
@@ -206,10 +227,14 @@ class DetachedCriteriaCloneSpec extends Specification {
 
         then:
         materialized.alias == 'lazyAlias'
-        criteria.alias == null
+        !materialized.is(criteria)
+
+        and: 'what the closure added is part of the criteria, which has no deferred query left'
+        criteria.alias == 'lazyAlias'
+        criteria.@lazyQuery == null
     }
 
-    void "materializing a deferred closure that changes an association node leaves the original untouched"() {
+    void "materializing a deferred closure that changes an association node leaves the criteria it was built from untouched"() {
         given:
         def node = associationNode('books', 'b')
         def base = new DetachedCriteria(TestEntity)
@@ -225,12 +250,13 @@ class DetachedCriteriaCloneSpec extends Specification {
         def first = lazy.materializeLazyCriteria()
         def second = lazy.materializeLazyCriteria()
 
-        then: 'each materialization applies the deferred closure once to its own copy'
+        then: 'the deferred closure ran once, and each materialization has its own copy of the result'
         first.@associationCriteriaMap['books'].criteria.size() == 1
         second.@associationCriteriaMap['books'].criteria.size() == 1
         !first.@associationCriteriaMap['books'].is(second.@associationCriteriaMap['books'])
+        lazy.@associationCriteriaMap['books'].criteria.size() == 1
 
-        and: 'the original node is never changed'
+        and: 'the node of the criteria it was built from is never changed'
         node.alias == 'b'
         node.criteria.isEmpty()
     }
@@ -323,9 +349,9 @@ class DetachedCriteriaCloneSpec extends Specification {
         first.alias == 'deferred'
         second.alias == 'deferred'
 
-        and: 'the original keeps its deferred query and is not changed'
-        criteria.alias == null
-        criteria.@lazyQuery != null
+        and: 'what the closure added stays in the criteria, and the deferred query is spent'
+        criteria.alias == 'deferred'
+        criteria.@lazyQuery == null
     }
 
     void "changing a materialized copy does not change the next materialization"() {
@@ -343,6 +369,114 @@ class DetachedCriteriaCloneSpec extends Specification {
         then:
         second.alias == 'deferred'
         second.@criteria.isEmpty()
+    }
+
+    void "a restriction added to an association of the criteria after the first query reaches the next query"() {
+        given:
+        def node = associationNode('books', 'b')
+        def base = new DetachedCriteria(TestEntity)
+        base.@criteria << node
+        base.@associationCriteriaMap['books'] = node
+        def lazy = base.buildLazy {
+            setAlias('deferred')
+        }
+        lazy.materializeLazyCriteria()
+
+        when: 'the existing association is extended after the first query has run'
+        lazy.@associationCriteriaMap['books'].add(new Query.Equals('title', 'x'))
+        lazy.setAlias('changed')
+        def second = lazy.materializeLazyCriteria()
+
+        then:
+        second.@associationCriteriaMap['books'].criteria.size() == 1
+        second.alias == 'changed'
+    }
+
+    void "a restriction added to the criteria after the first query reaches the next query"() {
+        given:
+        def lazy = new DetachedCriteria(TestEntity).buildLazy {
+            add(new Query.Equals('name', 'A'))
+        }
+        lazy.materializeLazyCriteria()
+
+        when:
+        lazy.add(new Query.Equals('id', 1L))
+
+        then:
+        lazy.materializeLazyCriteria().@criteria*.property == ['name', 'id']
+    }
+
+    void "a criteria derived after the first query keeps what the closure added and does not run it again"() {
+        given: 'a closure that reads a value that changes'
+        int runs = 0
+        def wanted = [name: 'A']
+        def lazy = new DetachedCriteria(TestEntity).buildLazy {
+            runs++
+            add(new Query.Equals('name', wanted.name))
+        }
+        lazy.materializeLazyCriteria()
+
+        when: 'the value changes and the criteria is extended'
+        wanted.name = 'B'
+        def derived = lazy.clone()
+        derived.add(new Query.NotEquals('name', 'Z'))
+        def derivedQuery = derived.materializeLazyCriteria()
+
+        then: 'the derived criteria has the restriction of the first run and the new one'
+        runs == 1
+        derivedQuery.@criteria.collect { [it.class.simpleName, it.property, it.value] } ==
+                [['Equals', 'name', 'A'], ['NotEquals', 'name', 'Z']]
+
+        and: 'the original still has what the first run added'
+        lazy.materializeLazyCriteria().@criteria.collect { it.value } == ['A']
+    }
+
+    void "threads that use a deferred criteria for the first time at once see the closure run once"() {
+        given:
+        int threads = 8
+        AtomicInteger runs = new AtomicInteger()
+        def lazy = new DetachedCriteria(TestEntity).buildLazy {
+            runs.incrementAndGet()
+            add(new Query.Equals('name', 'first'))
+            Thread.sleep(50)
+            add(new Query.Equals('id', 1L))
+        }
+        CountDownLatch start = new CountDownLatch(1)
+        ExecutorService pool = Executors.newFixedThreadPool(threads)
+
+        when:
+        List<Future<Integer>> sizes = (1..threads).collect {
+            pool.submit({
+                start.await()
+                lazy.materializeLazyCriteria().@criteria.size()
+            } as Callable<Integer>)
+        }
+        start.countDown()
+        List<Integer> seen = sizes*.get(10, TimeUnit.SECONDS)
+
+        then: 'every thread read the finished criteria, built by one run'
+        runs.get() == 1
+        seen == [2] * threads
+
+        cleanup:
+        pool.shutdownNow()
+    }
+
+    void "the calls a deferred closure makes on its criteria do not run it again"() {
+        given:
+        int runs = 0
+        def lazy = new DetachedCriteria(TestEntity).buildLazy {
+            runs++
+            add(new Query.Equals('name', 'A'))
+            add(new Query.Equals('id', 1L))
+        }
+
+        when:
+        lazy.add(new Query.Equals('version', 2L))
+
+        then:
+        runs == 1
+        lazy.@criteria*.property == ['name', 'id', 'version']
     }
 
     private DetachedAssociationCriteria associationNode(String path, String alias) {

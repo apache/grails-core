@@ -39,7 +39,16 @@ import org.grails.datastore.mapping.query.api.ProjectionList
 import org.grails.datastore.mapping.query.api.QueryableCriteria
 
 /**
- * Abstract super class for DetachedCriteria implementations
+ * Abstract super class for DetachedCriteria implementations.
+ *
+ * <p>A criteria built with {@code buildLazy} holds a deferred query. The invariant: <strong>the deferred query runs
+ * once, under a lock, before anything reads, changes, copies or derives from the criteria, and what it added is part
+ * of the criteria from then on.</strong> Every method that touches state therefore calls
+ * {@link #applyLazyCriteria()} first: the methods that change state, the getters, and {@link #clone()}, which the
+ * clone-and-modify methods ({@code max}, {@code offset}, {@code withConnection}, {@code buildLazy}) use. A query reads
+ * the criteria through {@link #materializeLazyCriteria()}, which returns a copy, so a translator that extends the
+ * result never changes the criteria it was given. A method added to this class that reads or writes state must
+ * follow the same rule; {@code DetachedCriteriaDeferredQuerySpec} lists the ways in and fails for one that does not.</p>
  *
  * @author Graeme Rocher
  * @since 6.0
@@ -59,10 +68,13 @@ abstract class AbstractDetachedCriteria<T> implements Criteria, Cloneable {
     protected PersistentEntity persistentEntity
     protected Map<String, FetchType> fetchStrategies = [:]
     protected Map<String, JoinType> joinTypes = [:]
-    protected Closure lazyQuery
+    protected volatile Closure lazyQuery
 
-    /** The deferred query applied once, kept private to this criteria; see {@link #materializeLazyCriteria()}. */
-    private volatile AbstractDetachedCriteria<T> materializedTemplate
+    /** Set once the deferred query has run, so that a query reads this criteria through a copy; see {@link #materializeLazyCriteria()}. */
+    private volatile boolean lazyApplied
+
+    /** The thread that is running the deferred query, so that the calls the query makes do not run it again. */
+    private volatile Thread lazyApplyingThread
     protected String alias
     protected String connectionName = ConnectionSource.DEFAULT
     protected Map<String, DetachedAssociationCriteria> associationCriteriaMap = [:]
@@ -83,6 +95,7 @@ abstract class AbstractDetachedCriteria<T> implements Criteria, Cloneable {
      * @return Obtain the fetch strategies for each property
      */
     Map<String, FetchType> getFetchStrategies() {
+        applyLazyCriteria()
         return Collections.unmodifiableMap(fetchStrategies)
     }
 
@@ -90,12 +103,14 @@ abstract class AbstractDetachedCriteria<T> implements Criteria, Cloneable {
      * @return Obtain the join types
      */
     Map<String, JoinType> getJoinTypes() {
+        applyLazyCriteria()
         return Collections.unmodifiableMap(joinTypes)
     }
     /**
      * @return The root alias to be used for the query
      */
     String getAlias() {
+        applyLazyCriteria()
         return this.alias
     }
 
@@ -105,6 +120,7 @@ abstract class AbstractDetachedCriteria<T> implements Criteria, Cloneable {
      * @return The alias
      */
     Criteria setAlias(String alias) {
+        applyLazyCriteria()
         this.alias = alias
         return this
     }
@@ -117,6 +133,7 @@ abstract class AbstractDetachedCriteria<T> implements Criteria, Cloneable {
      * @return This create
      */
     Criteria createAlias(String associationPath, String alias) {
+        applyLazyCriteria()
         initialiseIfNecessary(targetClass)
         PersistentProperty prop
         if (associationPath.contains('.')) {
@@ -159,6 +176,7 @@ abstract class AbstractDetachedCriteria<T> implements Criteria, Cloneable {
      * @return The query
      */
     Criteria join(String property) {
+        applyLazyCriteria()
         fetchStrategies[property] = FetchType.EAGER
         return this
     }
@@ -171,6 +189,7 @@ abstract class AbstractDetachedCriteria<T> implements Criteria, Cloneable {
      * @return The query
      */
     Criteria join(String property, JoinType joinType) {
+        applyLazyCriteria()
         fetchStrategies[property] = FetchType.EAGER
         joinTypes[property] = joinType
         return this
@@ -183,6 +202,7 @@ abstract class AbstractDetachedCriteria<T> implements Criteria, Cloneable {
      * @return The query
      */
     Criteria select(String property) {
+        applyLazyCriteria()
         fetchStrategies[property] = FetchType.LAZY
         return this
     }
@@ -225,11 +245,20 @@ abstract class AbstractDetachedCriteria<T> implements Criteria, Cloneable {
         }
     }
 
-    List<Query.Criterion> getCriteria() { criteria }
+    List<Query.Criterion> getCriteria() {
+        applyLazyCriteria()
+        criteria
+    }
 
-    List<Query.Projection> getProjections() { projections }
+    List<Query.Projection> getProjections() {
+        applyLazyCriteria()
+        projections
+    }
 
-    List<Query.Order> getOrders() { orders }
+    List<Query.Order> getOrders() {
+        applyLazyCriteria()
+        orders
+    }
 
     /**
      * Evaluate projections within the context of the given closure
@@ -329,12 +358,14 @@ abstract class AbstractDetachedCriteria<T> implements Criteria, Cloneable {
      * @see Criteria
      */
     Criteria order(String propertyName) {
+        applyLazyCriteria()
         orders << new Query.Order(propertyName)
         return this
     }
 
     @Override
     Criteria order(Query.Order o) {
+        applyLazyCriteria()
         orders << o
         return this
     }
@@ -343,6 +374,7 @@ abstract class AbstractDetachedCriteria<T> implements Criteria, Cloneable {
      * @see Criteria
      */
     Criteria order(String propertyName, String direction) {
+        applyLazyCriteria()
         orders << new Query.Order(propertyName, Query.Order.Direction.valueOf(direction.toUpperCase()))
         return this
     }
@@ -745,62 +777,74 @@ abstract class AbstractDetachedCriteria<T> implements Criteria, Cloneable {
         }
 
         ProjectionList avg(String name) {
+            AbstractDetachedCriteria.this.applyLazyCriteria()
             projections << Projections.avg(name)
             return this
         }
 
         ProjectionList max(String name) {
+            AbstractDetachedCriteria.this.applyLazyCriteria()
             projections << Projections.max(name)
             return this
         }
 
         ProjectionList min(String name) {
+            AbstractDetachedCriteria.this.applyLazyCriteria()
             projections << Projections.min(name)
             return this
         }
 
         ProjectionList sum(String name) {
+            AbstractDetachedCriteria.this.applyLazyCriteria()
             projections << Projections.sum(name)
             return this
         }
 
         ProjectionList property(String name) {
+            AbstractDetachedCriteria.this.applyLazyCriteria()
             projections << Projections.property(name)
             return this
         }
 
         ProjectionList rowCount() {
+            AbstractDetachedCriteria.this.applyLazyCriteria()
             projections << Projections.count()
             return this
         }
 
         ProjectionList distinct(String property) {
+            AbstractDetachedCriteria.this.applyLazyCriteria()
             projections << Projections.distinct(property)
             return this
         }
 
         ProjectionList distinct() {
+            AbstractDetachedCriteria.this.applyLazyCriteria()
             projections << Projections.distinct()
             return this
         }
 
         ProjectionList countDistinct(String property) {
+            AbstractDetachedCriteria.this.applyLazyCriteria()
             projections << Projections.countDistinct(property)
             return this
         }
 
         @Override
         ProjectionList groupProperty(String property) {
+            AbstractDetachedCriteria.this.applyLazyCriteria()
             projections << Projections.groupProperty(property)
             return this
         }
 
         ProjectionList count() {
+            AbstractDetachedCriteria.this.applyLazyCriteria()
             projections << Projections.count()
             return this
         }
 
         ProjectionList id() {
+            AbstractDetachedCriteria.this.applyLazyCriteria()
             projections << Projections.id()
             return this
         }
@@ -845,8 +889,10 @@ abstract class AbstractDetachedCriteria<T> implements Criteria, Cloneable {
 
     /**
      * Enable the builder syntax for constructing Criteria, deferring the closure until the criteria is first used.
-     * The closure runs once, on first use; a later change to a value it reads does not change the criteria.
-     * The criteria itself is never changed by being used, so it can be shared between threads.
+     * The closure runs once, on first use, and what it adds becomes part of this criteria: a later change to a
+     * value it reads does not change the criteria, and a criteria extended afterwards, or derived from it, keeps
+     * what the closure added. A query reads the criteria through a copy, so translating it never changes it, and
+     * the closure runs under a lock, so threads that use the criteria for the first time at once see it run once.
      *
      * @param callable The callable closure
      * @return A new criteria instance
@@ -876,31 +922,36 @@ abstract class AbstractDetachedCriteria<T> implements Criteria, Cloneable {
     @Override
     @CompileStatic
     AbstractDetachedCriteria<T> clone() {
-        AbstractDetachedCriteria criteria = newInstance()
-        Map<DetachedAssociationCriteria, DetachedAssociationCriteria> associationCopies = new IdentityHashMap<>()
-        List<Query.Criterion> clonedCriteria = new ArrayList<>(this.criteria.size())
-        for (Query.Criterion criterion : this.criteria) {
-            clonedCriteria.add(copyCriterion(criterion, associationCopies))
+        // a copy carries the result of the deferred query, never the query: it runs once, here or earlier, and
+        // waits for a run on another thread, so that a copy is never half built
+        applyLazyCriteria()
+        synchronized (this) {
+            AbstractDetachedCriteria criteria = newInstance()
+            Map<DetachedAssociationCriteria, DetachedAssociationCriteria> associationCopies = new IdentityHashMap<>()
+            List<Query.Criterion> clonedCriteria = new ArrayList<>(this.criteria.size())
+            for (Query.Criterion criterion : this.criteria) {
+                clonedCriteria.add(copyCriterion(criterion, associationCopies))
+            }
+            criteria.@criteria = clonedCriteria
+            criteria.@alias = this.alias
+            final projections = new ArrayList(this.projections)
+            criteria.@projections = projections
+            criteria.projectionList = criteria.newProjectionList(projections)
+            criteria.@orders = new ArrayList(this.orders)
+            criteria.defaultMax = defaultMax
+            criteria.defaultOffset = defaultOffset
+            criteria.@fetchStrategies = new HashMap<>(this.fetchStrategies)
+            criteria.@joinTypes = new HashMap<>(this.joinTypes)
+            criteria.@junctions = new ArrayList(this.junctions)
+            criteria.@connectionName = this.connectionName
+            criteria.@lazyQuery = this.lazyQuery
+            Map<String, DetachedAssociationCriteria> clonedAssociations = new LinkedHashMap<>()
+            for (Map.Entry<String, DetachedAssociationCriteria> entry : this.associationCriteriaMap.entrySet()) {
+                clonedAssociations.put(entry.key, copyAssociationCriteria(entry.value, associationCopies))
+            }
+            criteria.@associationCriteriaMap = clonedAssociations
+            return criteria
         }
-        criteria.@criteria = clonedCriteria
-        criteria.@alias = this.alias
-        final projections = new ArrayList(this.projections)
-        criteria.@projections = projections
-        criteria.projectionList = new DetachedProjections(projections)
-        criteria.@orders = new ArrayList(this.orders)
-        criteria.defaultMax = defaultMax
-        criteria.defaultOffset = defaultOffset
-        criteria.@fetchStrategies = new HashMap<>(this.fetchStrategies)
-        criteria.@joinTypes = new HashMap<>(this.joinTypes)
-        criteria.@junctions = new ArrayList(this.junctions)
-        criteria.@connectionName = this.connectionName
-        criteria.@lazyQuery = this.lazyQuery
-        Map<String, DetachedAssociationCriteria> clonedAssociations = new LinkedHashMap<>()
-        for (Map.Entry<String, DetachedAssociationCriteria> entry : this.associationCriteriaMap.entrySet()) {
-            clonedAssociations.put(entry.key, copyAssociationCriteria(entry.value, associationCopies))
-        }
-        criteria.@associationCriteriaMap = clonedAssociations
-        return criteria
     }
 
     /**
@@ -947,6 +998,15 @@ abstract class AbstractDetachedCriteria<T> implements Criteria, Cloneable {
             copies.put(source, copy)
         }
         return copy
+    }
+
+    /**
+     * The projection list over the given list, owned by this criteria: its methods run the deferred query of this
+     * criteria first. A copy must build its own through this method, because an inner class belongs to the
+     * criteria whose code creates it.
+     */
+    protected ProjectionList newProjectionList(List<Query.Projection> projections) {
+        new DetachedProjections(projections)
     }
 
     protected abstract AbstractDetachedCriteria newInstance()
@@ -1169,44 +1229,45 @@ abstract class AbstractDetachedCriteria<T> implements Criteria, Cloneable {
     protected abstract QueryableCriteria buildQueryableCriteria(Closure queryClosure)
 
     /**
-     * Applies a pending {@code buildLazy} closure to this criteria, if any, and clears it. Used when this
-     * criteria is itself extended; a query reads a deferred criteria through {@link #materializeLazyCriteria()}.
+     * Runs the pending {@code buildLazy} closure on this criteria, once, and clears it. Used when this criteria is
+     * extended, and by {@link #materializeLazyCriteria()}. The closure runs under a lock, and the pending query is
+     * cleared only after it has run, so a thread that finds it pending waits for the result instead of reading
+     * a criteria that is half built. The calls the closure makes on this criteria reach here again on the same
+     * thread, and return.
      */
     protected void applyLazyCriteria() {
-        if (lazyQuery == null) {
+        if (lazyQuery == null || lazyApplyingThread == Thread.currentThread()) {
             return
         }
-
-        def criteria = lazyQuery
-        lazyQuery = null
-        materializedTemplate = null
-        this.with(criteria)
+        synchronized (this) {
+            Closure pending = lazyQuery
+            if (pending == null) {
+                return
+            }
+            lazyApplyingThread = Thread.currentThread()
+            try {
+                this.with(pending)
+            }
+            finally {
+                lazyApplied = true
+                lazyQuery = null
+                lazyApplyingThread = null
+            }
+        }
     }
 
     /**
-     * Returns this criteria with its deferred query applied, without mutating it. The deferred closure runs
-     * once, on a private template that is never handed out; every call returns a fresh copy of that template, so
-     * a criteria shared between threads is never changed by a query that reads or extends the result.
-     * A criteria without a deferred query returns itself.
+     * Returns the criteria a query reads. A criteria with a deferred query runs it once, on this criteria, and
+     * every call returns a fresh copy of the result, so the query can extend or translate the copy without changing
+     * this criteria, which stays as it is, including what was added to it after the first query. A criteria without
+     * a deferred query returns itself.
      */
     AbstractDetachedCriteria<T> materializeLazyCriteria() {
-        if (lazyQuery == null) {
+        if (lazyQuery == null && !lazyApplied) {
             return this
         }
-        AbstractDetachedCriteria<T> template = materializedTemplate
-        if (template == null) {
-            synchronized (this) {
-                template = materializedTemplate
-                if (template == null) {
-                    template = clone()
-                    Closure pending = lazyQuery
-                    template.lazyQuery = null
-                    template.with(pending)
-                    materializedTemplate = template
-                }
-            }
-        }
-        return template.clone()
+        applyLazyCriteria()
+        return clone()
     }
 
     @Override
