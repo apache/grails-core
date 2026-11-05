@@ -235,6 +235,116 @@ class DetachedCriteriaCloneSpec extends Specification {
         node.criteria.isEmpty()
     }
 
+    void "clone copies an association node inside #junctionClass.simpleName through the same map as the association map"() {
+        given:
+        def node = associationNode('books', 'b')
+        Query.Junction junction = junctionClass.getDeclaredConstructor().newInstance()
+        Query.Criterion plain = new Query.Equals('title', 'x')
+        junction.add(node)
+        junction.add(plain)
+        def criteria = new DetachedCriteria(TestEntity)
+        criteria.@criteria << junction
+        criteria.@associationCriteriaMap['books'] = node
+
+        when:
+        def cloned = criteria.clone()
+        Query.Junction junctionCopy = cloned.@criteria[0]
+        DetachedAssociationCriteria copy = cloned.@associationCriteriaMap['books']
+
+        then: 'the junction is a copy of the same kind and holds the copied node, the one the association map holds'
+        !junctionCopy.is(junction)
+        junctionCopy.class == junctionClass
+        junctionCopy.criteria[0].is(copy)
+        !copy.is(node)
+
+        and: 'a criterion that cannot change is shared'
+        junctionCopy.criteria[1].is(plain)
+
+        and: 'the original junction still holds the original node'
+        junction.criteria[0].is(node)
+
+        where:
+        junctionClass << [Query.Conjunction, Query.Disjunction, Query.Negation]
+    }
+
+    void "a restriction added to the association map copy reaches the node inside the junction copy"() {
+        given:
+        def node = associationNode('books', 'b')
+        def criteria = new DetachedCriteria(TestEntity)
+        criteria.@criteria << new Query.Disjunction().add(node)
+        criteria.@associationCriteriaMap['books'] = node
+
+        when:
+        def cloned = criteria.clone()
+        cloned.@associationCriteriaMap['books'].add(new Query.Equals('title', 'wanted'))
+        DetachedAssociationCriteria inTree = ((Query.Junction) cloned.@criteria[0]).criteria[0]
+
+        then:
+        inTree.criteria.size() == 1
+        node.criteria.isEmpty()
+    }
+
+    void "clone copies junctions nested in junctions"() {
+        given:
+        def node = associationNode('books', 'b')
+        def inner = new Query.Negation().add(node)
+        def outer = new Query.Conjunction().add(inner)
+        def criteria = new DetachedCriteria(TestEntity)
+        criteria.@criteria << outer
+        criteria.@associationCriteriaMap['books'] = node
+
+        when:
+        def cloned = criteria.clone()
+        Query.Junction outerCopy = cloned.@criteria[0]
+        Query.Junction innerCopy = outerCopy.criteria[0]
+
+        then:
+        !outerCopy.is(outer)
+        !innerCopy.is(inner)
+        innerCopy instanceof Query.Negation
+        innerCopy.criteria[0].is(cloned.@associationCriteriaMap['books'])
+    }
+
+    void "the deferred closure runs once and each materialization is a distinct copy"() {
+        given:
+        int runs = 0
+        def criteria = new DetachedCriteria(TestEntity).buildLazy {
+            runs++
+            setAlias('deferred')
+        }
+
+        when:
+        def first = criteria.materializeLazyCriteria()
+        def second = criteria.materializeLazyCriteria()
+
+        then:
+        runs == 1
+        !first.is(second)
+        first.alias == 'deferred'
+        second.alias == 'deferred'
+
+        and: 'the original keeps its deferred query and is not changed'
+        criteria.alias == null
+        criteria.@lazyQuery != null
+    }
+
+    void "changing a materialized copy does not change the next materialization"() {
+        given:
+        def criteria = new DetachedCriteria(TestEntity).buildLazy {
+            setAlias('deferred')
+        }
+
+        when:
+        def first = criteria.materializeLazyCriteria()
+        first.@criteria << new Query.Equals('title', 'x')
+        first.setAlias('changed')
+        def second = criteria.materializeLazyCriteria()
+
+        then:
+        second.alias == 'deferred'
+        second.@criteria.isEmpty()
+    }
+
     private DetachedAssociationCriteria associationNode(String path, String alias) {
         Association association = Stub(Association) {
             getName() >> path

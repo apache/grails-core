@@ -246,16 +246,40 @@ class DetachCriteriaSubquerySpec extends HibernateGormDatastoreSpec {
         deleteCriteria.criteria.isEmpty()
     }
 
-    void "test applyLazyCriteria mutates in place idempotently when called directly"() {
+    void "test a lazy criteria runs its deferred closure once however often it is executed"() {
         setup:
-        DetachedCriteria<Organisation> criteria = Organisation.whereLazy { eq('name', 'A') }
+        new Organisation(name: 'A').save(flush: true)
+        new Organisation(name: 'B').save(flush: true)
+        Map wanted = [name: 'A']
 
         when:
-        criteria.applyLazyCriteria()
-        criteria.applyLazyCriteria()
+        DetachedCriteria<Organisation> criteria = Organisation.whereLazy { eq('name', wanted.name) }
+        List<String> first = criteria.list()*.name
+        wanted.name = 'B'
+        List<String> second = criteria.list()*.name
+
+        then: 'a later change to what the closure reads does not change the criteria'
+        first == ['A']
+        second == ['A']
+    }
+
+    void "test a lazy subquery without a projection can be translated twice and is never changed"() {
+        setup:
+        new Organisation(name: 'A').save(flush: true)
+        new Organisation(name: 'B').save(flush: true)
+        DetachedCriteria<Organisation> subquery = Organisation.whereLazy { eq('name', 'A') }
+
+        when:
+        List<String> first = Organisation.where { inList('name', subquery) }.list()*.name
+        List<String> second = Organisation.where { inList('name', subquery) }.list()*.name
 
         then:
-        criteria.criteria.size() == 1
+        first == ['A']
+        second == ['A']
+
+        and: 'translating the subquery added no projection or restriction to the shared criteria'
+        subquery.projections.isEmpty()
+        subquery.criteria.isEmpty()
     }
 
     void "test a not-equals subquery materializes a lazy criteria"() {

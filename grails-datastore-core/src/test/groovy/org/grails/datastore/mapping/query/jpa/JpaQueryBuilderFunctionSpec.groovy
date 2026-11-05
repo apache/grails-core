@@ -141,12 +141,34 @@ class JpaQueryBuilderFunctionSpec extends Specification {
         info.parameters == ['Alice']
     }
 
-    void "QueryableCriteria default methods return self and do nothing"() {
+    void "an In subquery that is deferred is materialized before its restriction is read"() {
+        given:
+        QueryableCriteria materializedSubquery = Stub(QueryableCriteria) {
+            getPersistentEntity() >> entity
+            getProjections() >> [Projections.property('name')]
+            getCriteria() >> [new Query.Equals('name', 'Alice')]
+        }
+        QueryableCriteria deferredSubquery = Stub(QueryableCriteria) {
+            getPersistentEntity() >> entity
+            getProjections() >> []
+            getCriteria() >> []
+            materializeLazyCriteria() >> materializedSubquery
+        }
+        def criteria = [new Query.In('name', deferredSubquery)]
+
+        when:
+        def info = new JpaQueryBuilder(entity, criteria).buildDelete()
+
+        then: 'the subquery carries the restriction and projection of the materialized criteria'
+        info.query == "DELETE FROM ${JpaFunctionTestPerson.name} jpaFunctionTestPerson WHERE (jpaFunctionTestPerson.name IN (SELECT jpaFunctionTestPerson0.name FROM ${JpaFunctionTestPerson.name} jpaFunctionTestPerson0 WHERE jpaFunctionTestPerson0.name=:p1))"
+        info.parameters == ['Alice']
+    }
+
+    void "QueryableCriteria materializeLazyCriteria returns self by default"() {
         given:
         QueryableCriteria criteria = [:] as QueryableCriteria
 
         when:
-        criteria.applyLazyCriteria()
         QueryableCriteria materialized = criteria.materializeLazyCriteria()
 
         then:

@@ -115,6 +115,58 @@ class DetachCriteriaSubquerySpec extends GrailsDataTckSpec<GrailsDataHibernate5T
         result.size() == 1
     }
 
+    void "a deferred criteria used as an inList subquery keeps its restriction"() {
+        setup:
+        new Organisation(name: 'A').save(flush: true)
+        new Organisation(name: 'B').save(flush: true)
+
+        when:
+        def subquery = new DetachedCriteria<>(Organisation).buildLazy { eq('name', 'A') }.property('name')
+
+        then:
+        Organisation.where { inList('name', subquery) }.list()*.name == ['A']
+        Organisation.where { 'in'('name', subquery) }.list()*.name == ['A']
+    }
+
+    void "a deferred criteria used as a notIn subquery keeps its restriction"() {
+        setup:
+        new Organisation(name: 'A').save(flush: true)
+        new Organisation(name: 'B').save(flush: true)
+
+        when:
+        def subquery = new DetachedCriteria<>(Organisation).buildLazy { eq('name', 'A') }.property('name')
+
+        then:
+        Organisation.where { notIn('name', subquery) }.list()*.name == ['B']
+    }
+
+    void "a deferred criteria used as an exists subquery that matches nothing selects no row"() {
+        setup:
+        new Organisation(name: 'A').save(flush: true)
+
+        when:
+        def subquery = new DetachedCriteria<>(Organisation).buildLazy { eq('name', 'Z') }.id()
+
+        then:
+        Organisation.where { exists(subquery) }.list().isEmpty()
+    }
+
+    void "the same where query with a deferred subquery selects the same rows for list and deleteAll"() {
+        setup:
+        new Organisation(name: 'A').save(flush: true)
+        new Organisation(name: 'B').save(flush: true)
+        def subquery = new DetachedCriteria<>(Organisation).buildLazy { eq('name', 'A') }.property('name')
+
+        when:
+        List<String> listed = Organisation.where { inList('name', subquery) }.list()*.name
+        Number deleted = Organisation.where { inList('name', subquery) }.deleteAll()
+
+        then:
+        listed == ['A']
+        deleted == 1
+        Organisation.list()*.name == ['B']
+    }
+
     private User createUser(String email) {
         User user = new User(email: email)
         Organisation defaultOrg = Organisation.findOrCreateByName("default")

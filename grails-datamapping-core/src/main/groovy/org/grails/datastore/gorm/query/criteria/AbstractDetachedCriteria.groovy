@@ -60,6 +60,9 @@ abstract class AbstractDetachedCriteria<T> implements Criteria, Cloneable {
     protected Map<String, FetchType> fetchStrategies = [:]
     protected Map<String, JoinType> joinTypes = [:]
     protected Closure lazyQuery
+
+    /** The deferred query applied once, kept private to this criteria; see {@link #materializeLazyCriteria()}. */
+    private volatile AbstractDetachedCriteria<T> materializedTemplate
     protected String alias
     protected String connectionName = ConnectionSource.DEFAULT
     protected Map<String, DetachedAssociationCriteria> associationCriteriaMap = [:]
@@ -841,7 +844,9 @@ abstract class AbstractDetachedCriteria<T> implements Criteria, Cloneable {
     }
 
     /**
-     * Enable the builder syntax for constructing Criteria
+     * Enable the builder syntax for constructing Criteria, deferring the closure until the criteria is first used.
+     * The closure runs once, on first use; a later change to a value it reads does not change the criteria.
+     * The criteria itself is never changed by being used, so it can be shared between threads.
      *
      * @param callable The callable closure
      * @return A new criteria instance
@@ -875,8 +880,7 @@ abstract class AbstractDetachedCriteria<T> implements Criteria, Cloneable {
         Map<DetachedAssociationCriteria, DetachedAssociationCriteria> associationCopies = new IdentityHashMap<>()
         List<Query.Criterion> clonedCriteria = new ArrayList<>(this.criteria.size())
         for (Query.Criterion criterion : this.criteria) {
-            clonedCriteria.add(criterion instanceof DetachedAssociationCriteria ?
-                    copyAssociationCriteria((DetachedAssociationCriteria) criterion, associationCopies) : criterion)
+            clonedCriteria.add(copyCriterion(criterion, associationCopies))
         }
         criteria.@criteria = clonedCriteria
         criteria.@alias = this.alias
@@ -897,6 +901,37 @@ abstract class AbstractDetachedCriteria<T> implements Criteria, Cloneable {
         }
         criteria.@associationCriteriaMap = clonedAssociations
         return criteria
+    }
+
+    /**
+     * Copies a criterion for a clone. An association node is copied once per clone, and a junction ({@code and},
+     * {@code or}, {@code not}) is copied with its children through the same map, so the criteria tree and the
+     * association map of the copy always refer to the same nodes. Any other criterion is immutable and is shared.
+     */
+    @CompileStatic
+    private static Query.Criterion copyCriterion(Query.Criterion source,
+            Map<DetachedAssociationCriteria, DetachedAssociationCriteria> copies) {
+        if (source instanceof DetachedAssociationCriteria) {
+            return copyAssociationCriteria((DetachedAssociationCriteria) source, copies)
+        }
+        if (source instanceof Query.Junction) {
+            Query.Junction junction = (Query.Junction) source
+            Query.Junction copy
+            if (junction instanceof Query.Disjunction) {
+                copy = new Query.Disjunction()
+            }
+            else if (junction instanceof Query.Negation) {
+                copy = new Query.Negation()
+            }
+            else {
+                copy = new Query.Conjunction()
+            }
+            for (Query.Criterion child : junction.criteria) {
+                copy.add(copyCriterion(child, copies))
+            }
+            return copy
+        }
+        return source
     }
 
     /**
@@ -1134,36 +1169,44 @@ abstract class AbstractDetachedCriteria<T> implements Criteria, Cloneable {
     protected abstract QueryableCriteria buildQueryableCriteria(Closure queryClosure)
 
     /**
-     * Applies a pending {@code buildLazy} closure, if any, so the criteria can be read by a query
-     * implementation. Query implementations call this before they translate a criteria that only
-     * appears as a subquery value; the executed root criteria is materialized by
-     * {@link grails.gorm.DetachedCriteria}. Idempotent: once applied, the deferred closure is
-     * cleared. The public contract is declared by {@code QueryableCriteria}.
+     * Applies a pending {@code buildLazy} closure to this criteria, if any, and clears it. Used when this
+     * criteria is itself extended; a query reads a deferred criteria through {@link #materializeLazyCriteria()}.
      */
-    void applyLazyCriteria() {
+    protected void applyLazyCriteria() {
         if (lazyQuery == null) {
             return
         }
 
         def criteria = lazyQuery
         lazyQuery = null
+        materializedTemplate = null
         this.with(criteria)
     }
 
     /**
-     * Returns this criteria with its deferred query applied, without mutating it: the original keeps the
-     * deferred query, so a criteria shared between threads materializes a copy each time and no deferred
-     * definition is applied twice.
+     * Returns this criteria with its deferred query applied, without mutating it. The deferred closure runs
+     * once, on a private template that is never handed out; every call returns a fresh copy of that template, so
+     * a criteria shared between threads is never changed by a query that reads or extends the result.
+     * A criteria without a deferred query returns itself.
      */
     AbstractDetachedCriteria<T> materializeLazyCriteria() {
-        Closure pending = lazyQuery
-        if (pending == null) {
+        if (lazyQuery == null) {
             return this
         }
-        AbstractDetachedCriteria<T> materialized = clone()
-        materialized.lazyQuery = null
-        materialized.with(pending)
-        return materialized
+        AbstractDetachedCriteria<T> template = materializedTemplate
+        if (template == null) {
+            synchronized (this) {
+                template = materializedTemplate
+                if (template == null) {
+                    template = clone()
+                    Closure pending = lazyQuery
+                    template.lazyQuery = null
+                    template.with(pending)
+                    materializedTemplate = template
+                }
+            }
+        }
+        return template.clone()
     }
 
     @Override
