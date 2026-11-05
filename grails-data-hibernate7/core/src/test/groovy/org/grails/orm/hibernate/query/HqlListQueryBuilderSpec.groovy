@@ -414,4 +414,21 @@ class HqlListQueryBuilderSpec extends Specification {
         expect:
         builder.buildListHql() == "from Person e order by upper(e.address.city) asc"
     }
+
+    void "test buildListHql sorts by a property of an association inside an embedded component through a left join"() {
+        given:
+        def prop = Mock(HibernatePersistentProperty)
+        prop.getType() >> String
+        def detailsEntity = Mock(PersistentEntity)
+        def details = Mock(Embedded)
+        details.getAssociatedEntity() >> detailsEntity
+        detailsEntity.getPropertyByName("author") >> Mock(Association)
+        entity.getPropertyByName("details") >> details
+        entity.getHibernatePropertyByPath("details.author.name") >> prop
+
+        def builder = new HqlListQueryBuilder(entity, [(HibernateQueryArgument.SORT.value()): "details.author.name"])
+
+        expect: "the component has no join of its own, and the association is joined through its path"
+        builder.buildListHql() == "from Person e left join e.details.author s0 order by upper(s0.name) asc"
+    }
 }

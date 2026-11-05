@@ -18,6 +18,7 @@
  */
 package grails.gorm.tests
 
+import grails.gorm.annotation.Entity
 import grails.gorm.tests.entities.Club
 import grails.gorm.tests.entities.Contract
 import grails.gorm.tests.entities.Player
@@ -31,7 +32,7 @@ import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate7TckManager> {
 
     void setupSpec() {
-        manager.registerDomainClasses(Club, Team, Player, Contract)
+        manager.registerDomainClasses(Club, Team, Player, Contract, AssociationSortBook, AssociationSortAuthor)
     }
 
     void setup() {
@@ -42,6 +43,11 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate7TckManag
         }
         final team = new Team(name: 'Unattached First Team').save(failOnError: true)
         new Player(name: 'Unattached Player', team: team, contract: new Contract(salary: 1)).save(failOnError: true)
+        final king = new AssociationSortAuthor(name: 'King').save(failOnError: true)
+        final adams = new AssociationSortAuthor(name: 'Adams').save(failOnError: true)
+        new AssociationSortBook(title: 'It', details: new AssociationSortBookDetails(isbn: '1', author: king)).save(failOnError: true)
+        new AssociationSortBook(title: 'Guide', details: new AssociationSortBookDetails(isbn: '2', author: adams)).save(failOnError: true)
+        new AssociationSortBook(title: 'Anonymous', details: new AssociationSortBookDetails(isbn: '3')).save(failOnError: true)
         manager.session.flush()
         manager.session.clear()
     }
@@ -176,4 +182,168 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate7TckManag
         'Unattached First Team' in results*.name
         results*.name - 'Unattached First Team' == ['Arsenal First Team', 'Chelsea First Team', 'Manchester United First Team']
     }
+
+    void 'an order by an alias that an association block declares sorts by the association of the alias'() {
+        when:
+        final results = Player.withCriteria {
+            team {
+                createAlias('club', 'c')
+                order('c.name', direction)
+            }
+        }
+
+        then: 'the alias joins the club with an inner join'
+        results*.name == expected
+
+        where:
+        direction || expected
+        'asc'     || ['Bukayo', 'Cole', 'Bruno']
+        'desc'    || ['Bruno', 'Cole', 'Bukayo']
+    }
+
+    void 'an order in an association block that names neither a property nor an alias of the block stays in the block'() {
+        when:
+        final results = Player.withCriteria {
+            team {
+                order('unknown.name')
+            }
+        }
+
+        then: 'it does not reach the query, as no order of a block did before'
+        results.size() == 4
+    }
+
+    void 'a criteria query that selects a distinct association property is ordered by that property'() {
+        when:
+        final results = Team.withCriteria {
+            projections {
+                distinct('club.name')
+            }
+            order('club.name', direction)
+        }
+
+        then: 'the order sorts by the selected expression and not through a join of its own'
+        results == expected
+
+        where:
+        direction || expected
+        'asc'     || ['Arsenal', 'Chelsea', 'Manchester United']
+        'desc'    || ['Manchester United', 'Chelsea', 'Arsenal']
+    }
+
+    void 'a criteria query that selects a distinct nested association property is ordered by that property'() {
+        when:
+        final results = Player.withCriteria {
+            projections {
+                distinct('team.club.name')
+            }
+            order('team.club.name')
+        }
+
+        then:
+        results == ['Arsenal', 'Chelsea', 'Manchester United']
+    }
+
+    void 'a criteria query that groups by an association property is ordered by that property'() {
+        when:
+        final results = Team.withCriteria {
+            projections {
+                groupProperty('club.name')
+                count()
+            }
+            order('club.name', 'desc')
+        }
+
+        then:
+        results.collect { it[0] } == ['Manchester United', 'Chelsea', 'Arsenal']
+    }
+
+    void 'a criteria query with pagination arguments that selects a distinct association property is sorted by that property'() {
+        when:
+        final results = Team.createCriteria().list(max: 10, sort: 'club.name') {
+            projections {
+                distinct('club.name')
+            }
+        }
+
+        then:
+        results.toList() == ['Arsenal', 'Chelsea', 'Manchester United']
+    }
+
+    void 'a where query that selects a distinct association property is sorted by that property'() {
+        when:
+        final results = Team.where {
+            name ==~ '%First%'
+        }.distinct('club.name').sort('club.name').list()
+
+        then:
+        results == ['Arsenal', 'Chelsea', 'Manchester United']
+    }
+
+    void 'a #api sorted through an embedded component keeps a book whose component has no author'() {
+        when:
+        final results = booksSortedByAuthor(api)
+
+        then: 'the association inside the component is joined with a left join'
+        'Anonymous' in results*.title
+
+        and: 'the other books are sorted by their author'
+        results*.title - 'Anonymous' == ['Guide', 'It']
+
+        where:
+        api << ['where query', 'list', 'criteria query', 'dynamic finder']
+    }
+
+    void 'a paged list sorted through an embedded component returns the books that it counts'() {
+        when:
+        final results = AssociationSortBook.where {
+            title ==~ '%'
+        }.list(sort: 'details.author.name', max: 10)
+
+        then:
+        results.size() == 3
+        results.totalCount == 3
+    }
+
+    void 'a sort by a property of an embedded component sorts by that property'() {
+        expect:
+        AssociationSortBook.list(sort: 'details.isbn', order: 'desc')*.title == ['Anonymous', 'Guide', 'It']
+    }
+
+    private static List<AssociationSortBook> booksSortedByAuthor(String api) {
+        switch (api) {
+            case 'where query':
+                return AssociationSortBook.where {
+                    title ==~ '%'
+                }.list(sort: 'details.author.name')
+            case 'list':
+                return AssociationSortBook.list(sort: 'details.author.name')
+            case 'criteria query':
+                return AssociationSortBook.withCriteria {
+                    order('details.author.name')
+                }
+            default:
+                return AssociationSortBook.findAllByTitleLike('%', [sort: 'details.author.name'])
+        }
+    }
+}
+
+@Entity
+class AssociationSortBook {
+    String title
+    AssociationSortBookDetails details
+    static embedded = ['details']
+}
+
+class AssociationSortBookDetails {
+    String isbn
+    AssociationSortAuthor author
+    static constraints = {
+        author nullable: true
+    }
+}
+
+@Entity
+class AssociationSortAuthor {
+    String name
 }

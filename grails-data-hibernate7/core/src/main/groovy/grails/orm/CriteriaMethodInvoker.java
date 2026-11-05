@@ -20,6 +20,7 @@ package grails.orm;
 
 import java.beans.PropertyDescriptor;
 import java.util.Collection;
+import java.util.Iterator;
 import java.util.Map;
 
 import groovy.lang.Closure;
@@ -39,6 +40,7 @@ import org.grails.datastore.mapping.model.PersistentProperty;
 import org.grails.datastore.mapping.model.types.Association;
 import org.grails.datastore.mapping.query.Query;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
+import org.grails.orm.hibernate.query.HibernateAlias;
 import org.grails.orm.hibernate.query.HibernatePagedResultList;
 import org.grails.orm.hibernate.query.HibernateQuery;
 import org.grails.orm.hibernate.query.HibernateQueryArgument;
@@ -234,13 +236,7 @@ public class CriteriaMethodInvoker {
                     } finally {
                         hibernateQuery.setDetachedCriteria(oldDetachedCriteria);
                     }
-                    // an order inside the block sorts the query by a property of the association, so it moves
-                    // to the enclosing criteria: only the orders of the root criteria reach the query
-                    for (Query.Order order : associationCriteria.getOrders()) {
-                        Query.Order qualified = new Query.Order(name + '.' + order.getProperty(), order.getDirection());
-                        hibernateQuery.order(order.isIgnoreCase() ? qualified.ignoreCase() : qualified);
-                    }
-                    associationCriteria.getOrders().clear();
+                    moveOrdersToEnclosingCriteria(hibernateQuery, name, associationCriteria);
                     hibernateQuery.add((Query.Criterion) associationCriteria);
                 } else {
                     // Fallback for non-GORM associations if any
@@ -253,6 +249,42 @@ public class CriteriaMethodInvoker {
             }
         }
         return UNHANDLED;
+    }
+
+    /**
+     * Moves the orders of an association block to the enclosing criteria, since only the orders of the root
+     * criteria reach the query. An order by a property of the association is qualified with the name of the
+     * association. An alias exists only in the block that declares it, so an order by such an alias is moved as
+     * an order by the path that the alias stands for. Any other order stays in the block.
+     */
+    private static void moveOrdersToEnclosingCriteria(
+            HibernateQuery hibernateQuery, String associationName, DetachedAssociationCriteria<?> associationCriteria) {
+        for (Iterator<Query.Order> orders = associationCriteria.getOrders().iterator(); orders.hasNext();) {
+            Query.Order order = orders.next();
+            String property = pathFromAssociation(order.getProperty(), associationCriteria);
+            if (property != null) {
+                Query.Order qualified = new Query.Order(associationName + '.' + property, order.getDirection());
+                hibernateQuery.order(order.isIgnoreCase() ? qualified.ignoreCase() : qualified);
+                orders.remove();
+            }
+        }
+    }
+
+    /**
+     * Returns the property of an order in an association block as a path of properties from the association, or
+     * {@code null} if it starts with neither a property of the association nor an alias that the block declares.
+     */
+    private static String pathFromAssociation(String property, DetachedAssociationCriteria<?> associationCriteria) {
+        int dot = property.indexOf('.');
+        String head = dot < 0 ? property : property.substring(0, dot);
+        if (dot > 0) {
+            for (Query.Criterion criterion : associationCriteria.getCriteria()) {
+                if (criterion instanceof HibernateAlias alias && head.equals(alias.alias())) {
+                    return alias.path() + property.substring(dot);
+                }
+            }
+        }
+        return associationCriteria.getPersistentEntity().getPropertyByName(head) != null ? property : null;
     }
 
     @SuppressWarnings("PMD.DataflowAnomalyAnalysis")

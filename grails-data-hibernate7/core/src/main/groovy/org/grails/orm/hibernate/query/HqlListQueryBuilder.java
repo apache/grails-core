@@ -146,8 +146,14 @@ public class HqlListQueryBuilder {
         String alias = "e";
         for (int i = 0; i < tokens.length - 1; i++) {
             PersistentProperty<?> property = current != null ? current.getPropertyByName(tokens[i]) : null;
-            if (!(property instanceof Association<?> association) || property instanceof Embedded) {
-                // the rest of the path is a component path, which resolves as it is
+            if (property instanceof Embedded<?> component) {
+                // a component has no join of its own: an association inside it is joined through its path
+                alias = alias + '.' + tokens[i];
+                current = component.getAssociatedEntity();
+                continue;
+            }
+            if (!(property instanceof Association<?> association)) {
+                // the rest of the path is a property, which resolves as it is
                 return alias + '.' + String.join(".", List.of(tokens).subList(i, tokens.length));
             }
             String joined = alias + '.' + tokens[i];

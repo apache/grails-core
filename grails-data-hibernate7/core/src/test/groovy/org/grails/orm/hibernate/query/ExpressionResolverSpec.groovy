@@ -311,8 +311,53 @@ class ExpressionResolverSpec extends Specification {
         then:
         _ * root.get('address') >> addressPath
         _ * addressPath.get('city') >> cityPath
+        0 * root.join(_)
         0 * root.join(_, _)
         result == cityPath
+    }
+
+    def 'a sort through an embedded component joins an association inside the component with a left join'() {
+        given:
+        def root = Mock(From)
+        def detailsJoin = Mock(Join)
+        def authorJoin = Mock(Join)
+        def namePath = Mock(Path)
+        def resolver = new ExpressionResolver(new AliasRegistry(), new JoinTracker(root))
+
+        when:
+        def result = resolver.resolveSort('details.author.name')
+
+        then: 'the component is joined, so that the association is not left to an implicit inner join'
+        _ * root.get('details') >> attributePath(Attribute.PersistentAttributeType.EMBEDDED)
+        _ * root.getJoins() >> ([] as Set)
+        1 * root.join('details') >> detailsJoin
+        _ * detailsJoin.get('author') >> attributePath(Attribute.PersistentAttributeType.MANY_TO_ONE)
+        _ * detailsJoin.getJoins() >> ([] as Set)
+        1 * detailsJoin.join('author', JoinType.LEFT) >> authorJoin
+        1 * authorJoin.get('name') >> namePath
+        result == namePath
+    }
+
+    def 'a sort through an embedded component reuses the join that the query has for the component'() {
+        given:
+        def root = Mock(From)
+        def detailsJoin = joinOf('details')
+        def authorJoin = Mock(Join)
+        def namePath = Mock(Path)
+        def resolver = new ExpressionResolver(new AliasRegistry(), new JoinTracker(root))
+
+        when:
+        def result = resolver.resolveSort('details.author.name')
+
+        then:
+        _ * root.get('details') >> attributePath(Attribute.PersistentAttributeType.EMBEDDED)
+        _ * root.getJoins() >> ([detailsJoin] as Set)
+        0 * root.join(_)
+        _ * detailsJoin.get('author') >> attributePath(Attribute.PersistentAttributeType.MANY_TO_ONE)
+        _ * detailsJoin.getJoins() >> ([] as Set)
+        1 * detailsJoin.join('author', JoinType.LEFT) >> authorJoin
+        1 * authorJoin.get('name') >> namePath
+        result == namePath
     }
 
     def 'a sort by a simple property is resolved as any other path'() {

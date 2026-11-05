@@ -260,9 +260,16 @@ public class JpaCriteriaQueryCreator<T> {
                     .map(order -> {
                         var propertyName = order.getProperty();
                         SqlProjection sqlProjection = findSqlProjection(propertyName, false);
-                        Expression<?> expression = sqlProjection != null ?
-                                context.getSelectionAlias(sqlProjection.getColumnAlias()) :
-                                context.getSortExpression(propertyName);
+                        Expression<?> expression;
+                        if (sqlProjection != null) {
+                            expression = context.getSelectionAlias(sqlProjection.getColumnAlias());
+                        } else if (isSelectedProperty(propertyName)) {
+                            // a distinct or grouped query can only be ordered by what it selects, so the order
+                            // sorts by the expression of the projection and not through a join of its own
+                            expression = context.getFullyQualifiedExpression(propertyName);
+                        } else {
+                            expression = context.getSortExpression(propertyName);
+                        }
                         if (order.isIgnoreCase() && expression.getJavaType().equals(String.class)) {
                             return order.getDirection().equals(Query.Order.Direction.ASC) ?
                                     criteriaBuilder.asc(criteriaBuilder.lower((Expression<String>) expression)) :
@@ -276,6 +283,26 @@ public class JpaCriteriaQueryCreator<T> {
                     .toArray(jakarta.persistence.criteria.Order[]::new);
             cq.orderBy(jpaOrders);
         }
+    }
+
+    /**
+     * Whether a projection of the query selects the property as it is, as {@code property()}, {@code distinct()}
+     * and {@code groupProperty()} do, and not an aggregate of it.
+     */
+    private boolean isSelectedProperty(String propertyName) {
+        for (Query.Projection projection : projections.getProjectionList()) {
+            if (projection instanceof Query.PropertyProjection selected &&
+                    !(projection instanceof Query.CountDistinctProjection || projection instanceof Query.AvgProjection ||
+                            projection instanceof Query.MaxProjection || projection instanceof Query.MinProjection ||
+                            projection instanceof Query.SumProjection)) {
+                String selectedName = selected.getPropertyName();
+                int separator = selectedName.indexOf(grails.orm.HibernateCriteriaBuilder.ALIAS_SEPARATOR);
+                if (propertyName.equals(separator < 0 ? selectedName : selectedName.substring(separator + 1))) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     /**

@@ -135,7 +135,8 @@ public class ExpressionResolver {
             if (associationPath != null) {
                 associationPath = associationPath.isEmpty() ? tokens[i] : associationPath + '.' + tokens[i];
             }
-            From<?, ?> join = sortJoin(from, tokens[i], associationPath);
+            // a component is only joined when the path goes on to an association inside it
+            From<?, ?> join = sortJoin(from, tokens[i], associationPath, i < tokens.length - 2);
             if (join == null) {
                 // the rest of the path is a component path or a property, which resolves as it is
                 return getPath(from, String.join(".", Arrays.copyOfRange(tokens, i, tokens.length)));
@@ -147,11 +148,21 @@ public class ExpressionResolver {
 
     /**
      * Returns the join through which an order sorts by a property of an association, or {@code null} if the
-     * attribute is not an association.
+     * attribute is neither an association nor a component that is to be joined.
+     * <p>
+     * A component has no table of its own, so its join adds nothing to the query. It is the source that an
+     * association inside the component is joined from: read as a plain path, such an association would be joined
+     * with an implicit inner join like any other.
+     *
+     * @param joinComponent whether a component is joined, which is the case when the path goes on to an attribute
+     *     inside it that may be an association
      */
-    private From<?, ?> sortJoin(From<?, ?> from, String attributeName, String associationPath) {
+    private From<?, ?> sortJoin(From<?, ?> from, String attributeName, String associationPath, boolean joinComponent) {
         Path<?> attribute = getPath(from, attributeName);
-        if (attribute == null || !isAssociation(attribute)) {
+        PersistentAttributeType type = attribute != null && attribute.getModel() instanceof Attribute<?, ?> model ?
+                model.getPersistentAttributeType() : null;
+        boolean component = type == PersistentAttributeType.EMBEDDED;
+        if (component ? !joinComponent : !isAssociation(type)) {
             return null;
         }
         for (Join<?, ?> join : from.getJoins()) {
@@ -159,16 +170,15 @@ public class ExpressionResolver {
                 return join;
             }
         }
+        if (component) {
+            return from.join(attributeName);
+        }
         HibernateAlias requested = associationPath != null ? aliasRegistry.getDefinition(associationPath) : null;
         JoinType joinType = requested != null && !requested.explicit() ? requested.joinType() : JoinType.LEFT;
         return from.join(attributeName, joinType);
     }
 
-    private static boolean isAssociation(Path<?> path) {
-        if (!(path.getModel() instanceof Attribute<?, ?> attribute)) {
-            return false;
-        }
-        PersistentAttributeType type = attribute.getPersistentAttributeType();
+    private static boolean isAssociation(PersistentAttributeType type) {
         return type == PersistentAttributeType.MANY_TO_ONE || type == PersistentAttributeType.ONE_TO_ONE ||
                 type == PersistentAttributeType.ONE_TO_MANY || type == PersistentAttributeType.MANY_TO_MANY;
     }
