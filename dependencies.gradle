@@ -86,17 +86,20 @@ ext {
             'groovy.version'                : '5.1.3',
             // Security: 33.7.2 addresses CVE-2026-102554 (uncontrolled resource consumption).
             'guava.version'                 : '33.7.2-jre',
-            // Groovy YAML 5.1.0 requires a minimum of Jackson 2.22.1, and 2.22.3 also overrides the
+            // Groovy YAML 5.1.0 requires a minimum of Jackson 2.22.1, and 2.22.4 also overrides the
             // 2.21.7 Spring Boot 4.1.2 manages: it adds the StreamReadConstraints length limit to
             // GregorianCalendar/Duration (CVE-2026-68497) and restricts the URI schemes
             // java.nio.file.Path deserialization accepts (CVE-2026-19032). Jackson 2 only releases
             // jackson-annotations on the minor, hence the separate 2.22 below. 2.22.3 also fixes
-            // CVE-2026-89425, CVE-2026-89407, CVE-2026-91777 and CVE-2026-91776.
-            'jackson-2-bom.version'         : '2.22.3',
+            // CVE-2026-89425, CVE-2026-89407, CVE-2026-91777 and CVE-2026-91776, and 2.22.4 fixes
+            // CVE-2026-110879 (type id validation in jackson-databind), which 2.21.7 does not carry.
+            'jackson-2-bom.version'         : '2.22.4',
             'jackson2-annotations.version'  : '2.22',
-            // Security: overrides Jackson 3.1.7 from Spring Boot 4.1.2. The 3.2.3 BOM aligns the family
-            // and fixes CVE-2026-89425, CVE-2026-89407, CVE-2026-91777 and CVE-2026-91776.
-            'jackson-bom.version'           : '3.2.3',
+            // Security: overrides Jackson 3.1.7 from Spring Boot 4.1.2. The 3.2.4 BOM aligns the family
+            // and fixes CVE-2026-89425, CVE-2026-89407, CVE-2026-91777, CVE-2026-91776 and
+            // CVE-2026-110879, which 3.1.7 does not carry, and CVE-2026-110729, which affects only
+            // jackson-core 3.2.0 to 3.2.3.
+            'jackson-bom.version'           : '3.2.4',
             'jquery.version'                : '4.0.0',
             // Security: overrides the 1.5.38 Spring Boot 4.1.2 manages. 1.6.3 strips slashes from MDC
             // values before SiftingAppender uses them as discriminating keys (CVE-2026-19880), and
