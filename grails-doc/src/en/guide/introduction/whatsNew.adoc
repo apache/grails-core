@@ -603,6 +603,14 @@ A view renders the request's nonce with the new `<g:cspNonce/>` tag, as in `<scr
 which Spring Security's nonce filter uses as well, so the header and the page carry the same nonce whichever
 generated it. See the xref:security[Security] section of the user guide.
 
+==== Logins Redirect to the Page the User Asked For
+
+Browsers and their tools request paths such as `/apple-touch-icon.png`, `/manifest.json` and
+`/.well-known/appspecific/com.chrome.devtools.json` on their own. With the Spring Security plugin, a denied request for
+one of them was saved like any other, so a login could redirect there instead of to the page the user asked for. As
+Spring Security 7.2's configuration DSL does, the plugin now leaves these requests out of the request cache. The list is
+the `grails.plugin.springsecurity.requestCache.ignoredPatterns` setting.
+
 ==== Agent Skills Published with Grails
 
 Grails now publishes its app-facing https://agentskills.io[Agent Skills] with every release: `org.apache.grails.skills:grails-developer`, for building Grails applications, `org.apache.grails.skills:grails-8-upgrade`, for upgrading an application from Grails 7, and `org.apache.grails.skills:grails-9-upgrade`, for upgrading an application from Grails 8. The jars use the https://www.skillsjars.com[SkillsJars] layout and the Grails BOM manages them, so an application applies the SkillsJars Gradle plugin, declares the skills without a version, and runs `./gradlew extractSkillsJars` to write the skills for its Grails version to the directory its AI coding agent reads. See xref:gettingStarted#agentSkills[Agent Skills].

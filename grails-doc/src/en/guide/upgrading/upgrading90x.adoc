@@ -108,6 +108,11 @@ The Spring TestContext Framework used to ignore such a class unless its class hi
 Grails 8 already logs a warning for each one it ignores, so a test run on Grails 8 shows the affected tests.
 Remove the `@Configuration` annotation, or move the class to a top-level class, if the test should not load it.
 
+* *The Spring Security plugin no longer saves the requests browsers send on their own.*
+A denied request for `/apple-touch-icon.png`, `/manifest.json` or the `/.well-known/appspecific/com.chrome.devtools.json` that Chrome DevTools sends used to be saved, so a login redirected to it instead of to the page the user asked for.
+Spring Security 7.2's configuration DSL ignores these paths, which the plugin does not use, so the plugin now ignores them too, with `grails.plugin.springsecurity.requestCache.ignoredPatterns`.
+An application that secures a page at one of these paths and wants a login to return to it can leave the path out of that list.
+
 [TIP]
 ====
 The Spring Boot properties migrator, described in the link:upgrading.html#upgrading80x[Grails 8 upgrade guide], finds the configuration properties Spring Boot 4.2 renames, such as `server.tomcat.use-relative-redirects`.

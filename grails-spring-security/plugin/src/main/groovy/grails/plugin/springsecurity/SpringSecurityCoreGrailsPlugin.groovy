@@ -32,6 +32,7 @@ import grails.plugin.springsecurity.userdetails.GormUserDetailsService
 import grails.plugin.springsecurity.userdetails.NoStackUsernameNotFoundException
 import grails.plugin.springsecurity.web.GrailsRedirectStrategy
 import grails.plugin.springsecurity.web.NullFilterChainValidator
+import grails.plugin.springsecurity.web.SavedRequestMatcher
 import grails.plugin.springsecurity.web.SecurityRequestHolderFilter
 import grails.plugin.springsecurity.web.UpdateRequestContextHolderExceptionTranslationFilter
 import grails.plugin.springsecurity.web.access.AjaxAwareAccessDeniedHandler
@@ -135,7 +136,6 @@ import org.springframework.security.web.savedrequest.HttpSessionRequestCache
 import org.springframework.security.web.savedrequest.NullRequestCache
 import org.springframework.security.web.servletapi.SecurityContextHolderAwareRequestFilter
 import org.springframework.security.web.session.HttpSessionEventPublisher
-import org.springframework.security.web.util.matcher.AnyRequestMatcher
 
 import jakarta.servlet.DispatcherType
 
@@ -1106,7 +1106,13 @@ class SpringSecurityCoreGrailsPlugin extends Plugin {
 
         authenticationDetailsSource(classFor('authenticationDetailsSource', WebAuthenticationDetailsSource))
 
-        requestMatcher(classFor('requestMatcher', AnyRequestMatcher))
+        Class requestMatcherClass = classFor('requestMatcher', SavedRequestMatcher)
+        requestMatcher(requestMatcherClass) {
+            // a class the application configures in its place need not have this property
+            if (SavedRequestMatcher.isAssignableFrom(requestMatcherClass)) {
+                ignoredPatterns = conf.requestCache.ignoredPatterns ?: []
+            }
+        }
 
         requestCache(classFor('requestCache', HttpSessionRequestCache)) {
             createSessionAllowed = conf.requestCache.createSession // true
