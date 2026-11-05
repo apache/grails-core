@@ -83,6 +83,16 @@ public class CriteriaMethodInvoker {
             return UNHANDLED;
         }
 
+        builder.resetQueryState();
+        try {
+            return runCriteriaConstruction(method, args);
+        } catch (RuntimeException | Error e) {
+            builder.resetQueryState();
+            throw e;
+        }
+    }
+
+    private Object runCriteriaConstruction(CriteriaMethods method, Object... args) {
         HibernateQuery hibernateQuery = builder.getHibernateQuery();
         switch (method) {
             case GET_CALL -> builder.setUniqueResult(true);

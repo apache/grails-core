@@ -1314,7 +1314,6 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
 
     @Override
     public Object list(@DelegatesTo(Criteria.class) Closure<?> c) {
-        hibernateQuery.setDetachedCriteria(new DetachedCriteria<>(targetClass));
         return invokeMethod(CriteriaMethods.LIST_CALL.getName(), new Object[] {c});
     }
 
@@ -1328,7 +1327,6 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
 
     @Override
     public Object list(Map<String, ?> params, @DelegatesTo(Criteria.class) Closure<?> c) {
-        hibernateQuery.setDetachedCriteria(new DetachedCriteria<>(targetClass));
         return invokeMethod(CriteriaMethods.LIST_CALL.getName(), new Object[] {params, c});
     }
 
@@ -1389,6 +1387,21 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
      */
     public CriteriaQuery<?> getInstance() {
         return criteriaQuery;
+    }
+
+    /**
+     * Starts a new query: drops the criteria, projections, aliases and paging of an earlier call
+     * together with the result mode it selected. Every list, listDistinct, get, count and scroll
+     * call runs this first, and again if the call throws, so a reused builder never carries state
+     * from one call into the next.
+     */
+    void resetQueryState() {
+        hibernateQuery.resetQueryState();
+        uniqueResult = false;
+        scroll = false;
+        count = false;
+        distinct = false;
+        paginationEnabledList = false;
     }
 
     /** Set whether a unique result should be returned */
