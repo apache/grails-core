@@ -57,6 +57,6 @@ A JSON body is bound to the command object the action takes, and a form-encoded 
 
 Other things to know about `QUERY`:
 
-* An HTML form cannot send it, and `<g:form method="QUERY">` submits a `POST`. Call it from JavaScript or another HTTP client.
-* `grails-openapi` leaves these mappings out of the document it generates, and logs each one, because OpenAPI has no operation for the method.
+* A browser cannot send it from an HTML form. Call it from JavaScript or another HTTP client.
+* `grails-openapi` leaves these mappings out of the document it generates, and logs each one, because the OpenAPI versions it writes have no operation for the method.
 * The Spring Security plugin accepts `QUERY` requests. An application that configures Spring Security with its own configuration DSL instead gets a `StrictHttpFirewall`, which rejects the method until it is added with `setAllowedHttpMethods`, and whichever one it uses, `CsrfFilter` asks a `QUERY` for a token where CSRF protection is on.

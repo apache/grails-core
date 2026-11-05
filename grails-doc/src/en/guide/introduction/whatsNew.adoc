@@ -81,7 +81,7 @@ The xref:upgrading#upgrading90x[Upgrading from Grails 8 to Grails {grailsMajorVe
 
 ==== The HTTP QUERY Method
 
-Spring Framework 7.1 supports the `QUERY` method of https://www.rfc-editor.org/info/rfc10008/[RFC 10008], a safe, idempotent request with a body. URL mappings gain a `query` prefix for it, next to `get`, `post` and the others, and an action binds the body of a `QUERY` as it binds that of a `POST`:
+Spring Framework 7.1 supports the `QUERY` method of https://www.rfc-editor.org/info/rfc10008/[RFC 10008], a safe, idempotent request with a body. URL mappings gain a `query` prefix for it, next to `get`, `post` and the others, and a command object is bound to the body of a `QUERY`, which is JSON or form-encoded:
 
 [source,groovy]
 ----
