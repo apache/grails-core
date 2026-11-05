@@ -21,6 +21,7 @@ package grails.gorm.tests
 import grails.gorm.annotation.Entity
 import org.apache.grails.data.hibernate5.core.GrailsDataHibernate5TckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
+import org.grails.datastore.mapping.query.Query
 import org.hibernate.Hibernate
 
 /**
@@ -217,6 +218,100 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManag
 
         then:
         results.count { it.name == 'Squad' } == 3
+    }
+
+    void 'a criteria query ordered by an association property #direction keeps a team without a club'() {
+        when:
+        final results = Team.createCriteria().list {
+            like('name', '%First%')
+            order('club.name', direction)
+        }
+
+        then:
+        'Unattached First Team' in results*.name
+        results*.name - 'Unattached First Team' == expected
+
+        where:
+        direction || expected
+        'asc'     || ['Arsenal First Team', 'Chelsea First Team', 'MU First Team']
+        'desc'    || ['MU First Team', 'Chelsea First Team', 'Arsenal First Team']
+    }
+
+    void 'a criteria query can be ordered by an association property with #description'() {
+        when:
+        final results = Team.createCriteria().list {
+            like('name', '%First%')
+            order(sortOrder)
+        }
+
+        then:
+        'Unattached First Team' in results*.name
+        results*.name - 'Unattached First Team' == expected
+
+        where:
+        description             | sortOrder                     || expected
+        'the name of the path'  | 'club.name'                   || ['Arsenal First Team', 'Chelsea First Team', 'MU First Team']
+        'an order for the path' | Query.Order.desc('club.name') || ['MU First Team', 'Chelsea First Team', 'Arsenal First Team']
+    }
+
+    void 'a criteria query ordered by a nested association property keeps a player whose team has no club'() {
+        when:
+        final fromRoot = Player.createCriteria().list {
+            order('team.club.name', 'desc')
+        }
+        final fromAssociation = Player.createCriteria().list {
+            team {
+                order('club.name', 'desc')
+            }
+        }
+
+        then:
+        'Unattached Player' in fromRoot*.name
+        fromRoot*.name - 'Unattached Player' == ['MU Player', 'Chelsea Player', 'Arsenal Player']
+
+        and: 'an order inside the criteria of an association is relative to that association'
+        fromAssociation*.name - 'Unattached Player' == ['MU Player', 'Chelsea Player', 'Arsenal Player']
+    }
+
+    void 'a paged criteria query ordered by an association property counts a team without a club'() {
+        when:
+        final results = Team.createCriteria().list(max: 10) {
+            like('name', '%First%')
+            order('club.name')
+        }
+
+        then:
+        results*.name - 'Unattached First Team' == ['Arsenal First Team', 'Chelsea First Team', 'MU First Team']
+        results.totalCount == 4
+    }
+
+    void 'a criteria query ordered by an association property uses the join that the criteria make #description'() {
+        when:
+        final results = Player.createCriteria().list(criteria)
+
+        then:
+        results*.name == ['MU Player', 'Chelsea Player', 'Arsenal Player']
+
+        where:
+        description           | criteria
+        'for the association' | { team { club { like('name', '%e%') } }; order('team.club.name', 'desc') }
+        'through an alias'    | { createAlias('team', 't'); createAlias('t.club', 'c'); like('c.name', '%e%'); order('team.club.name', 'desc') }
+    }
+
+    void 'a criteria query ordered by a property of a collection does not fetch the collection'() {
+        given:
+        saveSquad()
+
+        when:
+        final results = Team.createCriteria().list {
+            eq('name', 'Squad')
+            order('players.name')
+            maxResults(2)
+        }
+
+        then: 'the row limit does not leave players out of the collection'
+        !Hibernate.isInitialized(results.first().players)
+        results.first().players.size() == 3
     }
 
     void 'list sorts by every property of the default sort of the mapping'() {

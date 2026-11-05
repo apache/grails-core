@@ -21,6 +21,7 @@ package org.grails.orm.hibernate.query;
 
 import java.beans.PropertyDescriptor;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -69,7 +70,10 @@ import org.springframework.core.convert.ConversionService;
 
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.PersistentProperty;
+import org.grails.datastore.mapping.model.types.Association;
 import org.grails.datastore.mapping.model.types.Basic;
+import org.grails.datastore.mapping.model.types.Embedded;
+import org.grails.datastore.mapping.model.types.ToMany;
 import org.grails.datastore.mapping.multitenancy.MultiTenancySettings;
 import org.grails.datastore.mapping.query.Query;
 import org.grails.datastore.mapping.query.api.BuildableCriteria;
@@ -661,8 +665,28 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
      * @throws org.hibernate.HibernateException Indicates a problem creating the sub criteria
      */
     public Criteria createAlias(String associationPath, String alias) {
-        aliasMap.put(associationPath, alias);
+        aliasMap.put(getWholeAssociationPath(associationPath), alias);
         return criteria.createAlias(associationPath, alias);
+    }
+
+    /**
+     * Returns the path of an association from the queried class. The path that an alias is created
+     * with can start with the alias of another join.
+     *
+     * @param associationPath The path that the alias is created with
+     * @return The path from the queried class
+     */
+    protected String getWholeAssociationPath(String associationPath) {
+        int firstDotPos = associationPath.indexOf('.');
+        if (firstDotPos > 0) {
+            String qualifier = associationPath.substring(0, firstDotPos);
+            for (Map.Entry<String, String> aliased : aliasMap.entrySet()) {
+                if (qualifier.equals(aliased.getValue())) {
+                    return aliased.getKey() + associationPath.substring(firstDotPos);
+                }
+            }
+        }
+        return associationPath;
     }
 
     /**
@@ -1426,7 +1450,7 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
             throwRuntimeException(new IllegalArgumentException("Call to [order] with propertyName [" +
                     propertyName + "]not allowed here."));
         }
-        propertyName = calculatePropertyName(propertyName);
+        propertyName = calculateOrderPropertyName(propertyName);
         Order o = Order.asc(propertyName);
         addOrderInternal(this.criteria, o);
         return this;
@@ -1466,19 +1490,51 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
     }
 
     private void addOrderInternal(Criteria criteria, Query.Order o, String property) {
-        final int i = property.indexOf('.');
-        if (i == -1) {
+        Order order = convertOrder(o, property.indexOf('.') == -1 ? property : calculateOrderPropertyName(property));
+        addOrderInternal(criteria, order);
+    }
 
-            Order order = convertOrder(o, property);
-            addOrderInternal(criteria, order);
+    /**
+     * Qualifies the property of an order with the alias that Hibernate resolves it through. A property
+     * of an association is resolved through the alias of the join of the association: a join that the
+     * criteria already have for the association is used, and an association that they do not join is
+     * joined for the order. It is joined with a left join, so that the order keeps the rows where the
+     * association is null, and a collection is joined without being fetched, since a row limit would
+     * leave elements out of it.
+     */
+    private String calculateOrderPropertyName(String propertyName) {
+        String[] tokens = propertyName.split("\\.");
+        if (tokens.length == 1 || datastore == null || aliasMap.containsValue(tokens[0])) {
+            // a property of the queried class, or a path from an alias
+            return calculatePropertyName(propertyName);
         }
-        else {
-            String sortHead = property.substring(0, i);
-            String sortTail = property.substring(i + 1);
-            createAliasIfNeccessary(sortHead, sortHead, org.hibernate.sql.JoinType.INNER_JOIN.getJoinTypeValue());
-            final Criteria sub = aliasInstanceStack.get(aliasInstanceStack.size() - 1);
-            addOrderInternal(sub, o, sortTail);
+
+        PersistentEntity entity = datastore.getMappingContext().getPersistentEntity(targetClass.getName());
+        String associationPath = getAssociationPath();
+        String alias = getLastAlias();
+        for (int i = 0; i < tokens.length - 1; i++) {
+            PersistentProperty property = entity != null ? entity.getPropertyByName(tokens[i]) : null;
+            if (!(property instanceof Association) || property instanceof Embedded) {
+                // the rest of the path is a component path or a property, which Hibernate resolves itself
+                String rest = String.join(".", Arrays.copyOfRange(tokens, i, tokens.length));
+                return alias != null ? alias + '.' + rest : rest;
+            }
+            associationPath = associationPath.isEmpty() ? tokens[i] : associationPath + '.' + tokens[i];
+            alias = aliasMap.get(associationPath);
+            if (alias == null) {
+                aliasCount++;
+                alias = tokens[i] + ALIAS + aliasCount;
+                aliasMap.put(associationPath, alias);
+                if (property instanceof ToMany) {
+                    criteria.createAlias(associationPath, alias, org.hibernate.sql.JoinType.LEFT_OUTER_JOIN, GrailsHibernateUtil.unfetchedJoinCondition());
+                }
+                else {
+                    criteria.createAlias(associationPath, alias, org.hibernate.sql.JoinType.LEFT_OUTER_JOIN);
+                }
+            }
+            entity = ((Association) property).getAssociatedEntity();
         }
+        return alias + '.' + tokens[tokens.length - 1];
     }
 
     protected Order convertOrder(Query.Order o, String property) {
@@ -1510,7 +1566,7 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
             throwRuntimeException(new IllegalArgumentException("Call to [order] with propertyName [" +
                     propertyName + "]not allowed here."));
         }
-        propertyName = calculatePropertyName(propertyName);
+        propertyName = calculateOrderPropertyName(propertyName);
         Order o;
         if (direction.equals(ORDER_DESCENDING)) {
             o = Order.desc(propertyName);
