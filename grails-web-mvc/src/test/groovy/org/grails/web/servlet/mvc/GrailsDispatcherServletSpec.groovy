@@ -18,19 +18,38 @@
  */
 package org.grails.web.servlet.mvc
 
+import java.util.concurrent.Callable
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
+
+import jakarta.servlet.DispatcherType
+import jakarta.servlet.FilterChain
 import jakarta.servlet.http.HttpServletRequest
+import jakarta.servlet.http.HttpServletRequestWrapper
+import jakarta.servlet.http.HttpServletResponseWrapper
 
 import org.springframework.mock.web.MockHttpServletRequest
+import org.springframework.mock.web.MockHttpServletResponse
 import org.springframework.mock.web.MockMultipartFile
 import org.springframework.mock.web.MockMultipartHttpServletRequest
 import org.springframework.mock.web.MockServletConfig
 import org.springframework.mock.web.MockServletContext
+import org.springframework.core.task.SimpleAsyncTaskExecutor
 import org.springframework.web.context.WebApplicationContext
+import org.springframework.web.context.request.RequestAttributes
+import org.springframework.web.context.request.RequestContextHolder
+import org.springframework.web.context.request.ServletRequestAttributes
+import org.springframework.web.context.request.async.WebAsyncUtils
 import org.springframework.web.context.support.StaticWebApplicationContext
+import org.springframework.web.filter.RequestContextFilter
 import org.springframework.web.multipart.MultipartResolver
+import org.springframework.web.servlet.handler.SimpleUrlHandlerMapping
+import org.springframework.web.servlet.mvc.Controller
 
+import org.grails.web.util.GrailsApplicationAttributes
 import org.grails.web.util.WebUtils
 
+import spock.lang.Issue
 import spock.lang.Specification
 
 class GrailsDispatcherServletSpec extends Specification {
@@ -106,6 +125,251 @@ class GrailsDispatcherServletSpec extends Specification {
 
         where:
         attribute << [WebUtils.FORWARD_REQUEST_URI_ATTRIBUTE, WebUtils.INCLUDE_REQUEST_URI_ATTRIBUTE]
+    }
+
+    @Issue('https://github.com/apache/grails-core/issues/15819')
+    void 'service selects an active request and restores the previous binding for #binding with #dispatchType'() {
+        given:
+        def context = new StaticWebApplicationContext()
+        context.servletContext = servletContext
+        def request = new MockHttpServletRequest(servletContext, 'GET', '/test')
+        request.dispatcherType = dispatchType
+        def response = new MockHttpServletResponse()
+        def existing = new GrailsWebRequest(request, response, servletContext)
+        existing.params['retained'] = 'value'
+        if (binding != 'missing' && binding != 'threadOnly') {
+            request.setAttribute(GrailsApplicationAttributes.WEB_REQUEST, existing)
+        }
+        if (binding == 'completed' || binding == 'completedAttribute') {
+            existing.requestCompleted()
+        }
+        def previous = binding in ['thread', 'threadOnly', 'completed']
+                ? existing
+                : (binding in ['plain', 'completedAttribute'] ? new ServletRequestAttributes(request, response) : null)
+        RequestContextHolder.setRequestAttributes(previous)
+        GrailsWebRequest seen
+        int completed = 0
+        def controller = { req, res ->
+            seen = GrailsWebRequest.lookup()
+            if (previous != null && binding != 'threadOnly') {
+                assert seen.is(GrailsWebRequest.lookup(req))
+            }
+            assert seen.active
+            seen.registerDestructionCallback('completion', { completed++ } as Runnable, RequestAttributes.SCOPE_REQUEST)
+            null
+        } as Controller
+        def mapping = new SimpleUrlHandlerMapping(['/test': controller], 0)
+        context.beanFactory.registerSingleton('handlerMapping', mapping)
+        context.refresh()
+        mapping.setApplicationContext(context)
+        def servlet = new GrailsDispatcherServlet(context)
+        servlet.init(new MockServletConfig(servletContext))
+
+        when:
+        servlet.service(request, response)
+
+        then:
+        seen != null
+        seen.is(existing) == reuse
+        !reuse || seen.params.retained == 'value'
+        !seen.active
+        completed == 1
+        RequestContextHolder.requestAttributes.is(previous)
+        previous != null || GrailsWebRequest.lookup(request).is(binding == 'attribute' ? existing : null)
+
+        cleanup:
+        RequestContextHolder.resetRequestAttributes()
+        servlet?.destroy()
+        context.close()
+
+        where:
+        binding              | dispatchType           | reuse
+        'missing'            | DispatcherType.REQUEST | false
+        'attribute'          | DispatcherType.REQUEST | false
+        'thread'             | DispatcherType.REQUEST | true
+        'threadOnly'         | DispatcherType.REQUEST | true
+        'plain'              | DispatcherType.REQUEST | false
+        'completed'          | DispatcherType.REQUEST | false
+        'completed'          | DispatcherType.ASYNC   | false
+        'completed'          | DispatcherType.ERROR   | false
+        'completedAttribute' | DispatcherType.ASYNC   | false
+        'completedAttribute' | DispatcherType.ERROR   | false
+    }
+
+    @Issue('https://github.com/apache/grails-core/issues/15819')
+    void 'nested #dispatchType through a late filter restores the enclosing Grails request'() {
+        given:
+        def context = new StaticWebApplicationContext()
+        context.servletContext = servletContext
+        def request = new MockHttpServletRequest(servletContext, 'GET', '/test')
+        request.dispatcherType = dispatchType
+        request.setAttribute(dispatchAttribute, '/test')
+        def response = new MockHttpServletResponse()
+        def outer = new GrailsWebRequest(request, response, servletContext)
+        outer.renderView = false
+        WebUtils.storeGrailsWebRequest(outer)
+        GrailsWebRequest inner
+        def controller = { req, res ->
+            inner = GrailsWebRequest.lookup()
+            assert inner.is(GrailsWebRequest.lookup(req))
+            assert inner.active
+            assert !inner.is(outer)
+            null
+        } as Controller
+        def mapping = new SimpleUrlHandlerMapping(['/test': controller], 0)
+        context.beanFactory.registerSingleton('handlerMapping', mapping)
+        context.refresh()
+        mapping.setApplicationContext(context)
+        def servlet = new GrailsDispatcherServlet(context)
+        servlet.init(new MockServletConfig(servletContext))
+        def filter = new GrailsWebRequestFilter()
+        filter.setServletContext(servletContext)
+        filter.setApplicationContext(context)
+
+        when:
+        filter.doFilter(request, response, { req, res ->
+            new RequestContextFilter().doFilter(req, res, { nestedRequest, nestedResponse ->
+                servlet.service(nestedRequest, nestedResponse)
+            } as FilterChain)
+        } as FilterChain)
+
+        then:
+        inner != null
+        !inner.active
+        GrailsWebRequest.lookup().is(outer)
+        GrailsWebRequest.lookup(request).is(outer)
+        outer.active
+        !outer.renderView
+
+        cleanup:
+        RequestContextHolder.resetRequestAttributes()
+        servlet?.destroy()
+        context.close()
+
+        where:
+        dispatchType           | dispatchAttribute
+        DispatcherType.INCLUDE | WebUtils.INCLUDE_REQUEST_URI_ATTRIBUTE
+        DispatcherType.FORWARD | WebUtils.FORWARD_REQUEST_URI_ATTRIBUTE
+    }
+
+    @Issue('https://github.com/apache/grails-core/issues/15819')
+    void 'a late filter preserves the request and response wrappers seen by the dispatcher'() {
+        given:
+        def context = new StaticWebApplicationContext()
+        context.servletContext = servletContext
+        def request = new MockHttpServletRequest(servletContext, 'GET', '/test')
+        def response = new MockHttpServletResponse()
+        def wrappedRequest = new HttpServletRequestWrapper(request) {
+            @Override
+            boolean isUserInRole(String role) {
+                role == 'ADMIN'
+            }
+        }
+        def wrappedResponse = new HttpServletResponseWrapper(response)
+        GrailsWebRequest filterRequest
+        GrailsWebRequest dispatchRequest
+        def controller = { req, res ->
+            dispatchRequest = GrailsWebRequest.lookup()
+            assert dispatchRequest.request.is(wrappedRequest)
+            assert dispatchRequest.response.is(wrappedResponse)
+            assert dispatchRequest.request.isUserInRole('ADMIN')
+            assert req.getAttribute(GrailsApplicationAttributes.WEB_REQUEST).is(dispatchRequest)
+            null
+        } as Controller
+        def mapping = new SimpleUrlHandlerMapping(['/test': controller], 0)
+        context.beanFactory.registerSingleton('handlerMapping', mapping)
+        context.refresh()
+        mapping.setApplicationContext(context)
+        def servlet = new GrailsDispatcherServlet(context)
+        servlet.init(new MockServletConfig(servletContext))
+        def filter = new GrailsWebRequestFilter()
+        filter.setServletContext(servletContext)
+        filter.setApplicationContext(context)
+
+        when:
+        filter.doFilter(request, response, { req, res ->
+            filterRequest = GrailsWebRequest.lookup()
+            new RequestContextFilter().doFilter(wrappedRequest, wrappedResponse, { lateRequest, lateResponse ->
+                servlet.service(lateRequest, lateResponse)
+            } as FilterChain)
+        } as FilterChain)
+
+        then:
+        dispatchRequest != null
+        !dispatchRequest.is(filterRequest)
+        RequestContextHolder.requestAttributes == null
+
+        cleanup:
+        RequestContextHolder.resetRequestAttributes()
+        servlet?.destroy()
+        context.close()
+    }
+
+    @Issue('https://github.com/apache/grails-core/issues/15819')
+    void 'a Callable keeps an active request binding after the initial dispatch returns'() {
+        given:
+        def context = new StaticWebApplicationContext()
+        context.servletContext = servletContext
+        def started = new CountDownLatch(1)
+        def proceed = new CountDownLatch(1)
+        def done = new CountDownLatch(1)
+        RequestAttributes dispatchAttributes = null
+        RequestAttributes callableAttributes = null
+        Object probe = null
+        Throwable failure = null
+        def controller = { req, res ->
+            dispatchAttributes = RequestContextHolder.requestAttributes
+            def asyncManager = WebAsyncUtils.getAsyncManager(req)
+            asyncManager.taskExecutor = new SimpleAsyncTaskExecutor()
+            asyncManager.asyncWebRequest = WebAsyncUtils.createAsyncWebRequest(req, res)
+            asyncManager.startCallableProcessing({ ->
+                try {
+                    callableAttributes = RequestContextHolder.requestAttributes
+                    assert req.getAttribute(GrailsApplicationAttributes.WEB_REQUEST).is(dispatchAttributes)
+                    started.countDown()
+                    proceed.await(5, TimeUnit.SECONDS)
+                    probe = RequestContextHolder.currentRequestAttributes().getAttribute('probe', RequestAttributes.SCOPE_REQUEST)
+                }
+                catch (Throwable t) {
+                    failure = t
+                }
+                finally {
+                    done.countDown()
+                }
+                'ok'
+            } as Callable)
+            assert started.await(5, TimeUnit.SECONDS)
+            null
+        } as Controller
+        def mapping = new SimpleUrlHandlerMapping(['/test': controller], 0)
+        context.beanFactory.registerSingleton('handlerMapping', mapping)
+        context.refresh()
+        mapping.setApplicationContext(context)
+        def servlet = new GrailsDispatcherServlet(context)
+        servlet.init(new MockServletConfig(servletContext))
+        def filter = new GrailsWebRequestFilter()
+        filter.setServletContext(servletContext)
+        filter.setApplicationContext(context)
+        def request = new MockHttpServletRequest(servletContext, 'GET', '/test')
+        request.asyncSupported = true
+        request.setAttribute('probe', 'value')
+
+        when:
+        filter.doFilter(request, new MockHttpServletResponse(), { req, res -> servlet.service(req, res) } as FilterChain)
+        proceed.countDown()
+        def finished = done.await(5, TimeUnit.SECONDS)
+
+        then:
+        finished
+        failure == null
+        probe == 'value'
+        !callableAttributes.is(dispatchAttributes)
+
+        cleanup:
+        proceed.countDown()
+        RequestContextHolder.resetRequestAttributes()
+        servlet?.destroy()
+        context.close()
     }
 
     private MockHttpServletRequest multipartRequest() {
