@@ -20,6 +20,7 @@
 package org.grails.orm.hibernate.query;
 
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
@@ -37,6 +38,7 @@ import org.hibernate.FetchMode;
 import org.hibernate.FlushMode;
 import org.hibernate.LockMode;
 import org.hibernate.criterion.Order;
+import org.hibernate.internal.CriteriaImpl;
 import org.hibernate.query.Query;
 
 import org.springframework.core.convert.ConversionService;
@@ -282,17 +284,40 @@ public class GrailsHibernateQueryUtils {
                 addOrder(c, sort, order, ignoreCase);
             } else if (property instanceof Association) {
                 Association a = (Association) property;
-                // a left join, so that the sort keeps the rows where the association is null; a collection
-                // is joined without being fetched, since a row limit would leave elements out of it
-                Criteria subCriteria = a instanceof ToMany ?
-                        c.createCriteria(sortHead, null, org.hibernate.sql.JoinType.LEFT_OUTER_JOIN, GrailsHibernateUtil.unfetchedJoinCondition()) :
-                        c.createCriteria(sortHead, org.hibernate.sql.JoinType.LEFT_OUTER_JOIN);
                 PersistentEntity associatedEntity = a.getAssociatedEntity();
-                Class<?> propertyTargetClass = associatedEntity.getJavaClass();
-                cacheCriteriaByMapping(propertyTargetClass, subCriteria);
+                Criteria subCriteria = findSortCriteria(c, sortHead);
+                if (subCriteria == null) {
+                    // a left join, so that the sort keeps the rows where the association is null; a collection
+                    // is joined without being fetched, since a row limit would leave elements out of it
+                    subCriteria = a instanceof ToMany ?
+                            c.createCriteria(sortHead, null, org.hibernate.sql.JoinType.LEFT_OUTER_JOIN, GrailsHibernateUtil.unfetchedJoinCondition()) :
+                            c.createCriteria(sortHead, org.hibernate.sql.JoinType.LEFT_OUTER_JOIN);
+                    cacheCriteriaByMapping(associatedEntity.getJavaClass(), subCriteria);
+                }
                 addOrderPossiblyNested(subCriteria, associatedEntity, sortTail, order, ignoreCase); // Recurse on nested sort
             }
         }
+    }
+
+    /**
+     * Returns the criteria that an earlier sort property created for an association of the given
+     * criteria, so that a sort by several properties of an association joins it once.
+     */
+    private static Criteria findSortCriteria(Criteria parent, String associationName) {
+        Criteria root = parent;
+        while (root instanceof CriteriaImpl.Subcriteria) {
+            root = ((CriteriaImpl.Subcriteria) root).getParent();
+        }
+        if (root instanceof CriteriaImpl) {
+            Iterator<CriteriaImpl.Subcriteria> subcriteria = ((CriteriaImpl) root).iterateSubcriteria();
+            while (subcriteria.hasNext()) {
+                CriteriaImpl.Subcriteria existing = subcriteria.next();
+                if (existing.getParent() == parent && associationName.equals(existing.getPath())) {
+                    return existing;
+                }
+            }
+        }
+        return null;
     }
 
     /**
@@ -321,13 +346,27 @@ public class GrailsHibernateQueryUtils {
                 addOrder(entity, query, queryRoot, criteriaBuilder, sort, order, ignoreCase);
             } else if (property instanceof Association) {
                 final Association<? extends Property> a = (Association<? extends Property>) property;
-                // a left join, so that the sort keeps the rows where the association is null
-                final Join join = queryRoot.join(sortHead, JoinType.LEFT);
+                final Join join = getOrCreateSortJoin(queryRoot, sortHead);
                 PersistentEntity associatedEntity = a.getAssociatedEntity();
-                Class<?> propertyTargetClass = associatedEntity.getJavaClass();
                 addOrderPossiblyNested(query, join, criteriaBuilder, associatedEntity, sortTail, order, ignoreCase); // Recurse on nested sort
             }
         }
+    }
+
+    /**
+     * Returns the join of an association for a sort: the left join that an earlier sort property made
+     * for it or, failing that, a new one, so that a sort by several properties of an association joins
+     * it once. It is a left join, so that the sort keeps the rows where the association is null.
+     */
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    private static Join getOrCreateSortJoin(From from, String associationName) {
+        for (Object existing : from.getJoins()) {
+            Join join = (Join) existing;
+            if (join.getJoinType() == JoinType.LEFT && associationName.equals(join.getAttribute().getName())) {
+                return join;
+            }
+        }
+        return from.join(associationName, JoinType.LEFT);
     }
 
     private static boolean isIgnoreCaseProperty(boolean ignoreCase, PersistentProperty<? extends Property> persistentProperty) {

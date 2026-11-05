@@ -181,6 +181,44 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManag
         results*.name - 'Unattached First Team' == ['Arsenal First Team', 'Chelsea First Team', 'MU First Team']
     }
 
+    void '#api sorted by two properties of an association joins the association once'() {
+        when:
+        final List<Team> results = query.call()
+
+        then:
+        results*.name - 'Unattached First Team' == ['MU First Team', 'Chelsea First Team', 'Arsenal First Team']
+
+        where:
+        api                  | query
+        'list'               | { Team.list(sort: ['club.name': 'desc', 'club.id': 'asc']) }
+        'findAll by example' | { Team.findAll(new Team(), [sort: ['club.name': 'desc', 'club.id': 'asc']]) }
+    }
+
+    void 'findAllWhere and findWhere can be sorted by two properties of an association'() {
+        expect:
+        Team.findAllWhere([name: 'Arsenal First Team'], [sort: ['club.name': 'asc', 'club.id': 'desc']])*.name == ['Arsenal First Team']
+        Team.findWhere([name: 'Arsenal First Team'], [sort: ['club.name': 'asc', 'club.id': 'desc']])?.name == 'Arsenal First Team'
+    }
+
+    void 'findAll by example can be sorted by two paths through the same association'() {
+        when:
+        final results = Player.findAll(new Player(), [sort: ['team.club.name': 'desc', 'team.name': 'asc']])
+
+        then:
+        results*.name - 'Unattached Player' == ['MU Player', 'Chelsea Player', 'Arsenal Player']
+    }
+
+    void 'list sorted by two properties of a collection returns a team once for each of its players'() {
+        given:
+        saveSquad()
+
+        when:
+        final results = Team.list(sort: ['players.name': 'asc', 'players.id': 'asc'])
+
+        then:
+        results.count { it.name == 'Squad' } == 3
+    }
+
     void 'list sorts by every property of the default sort of the mapping'() {
         given:
         [['Second', 'B'], ['First', 'B'], ['First', 'A'], ['Second', 'C']].each { String league, String name ->
