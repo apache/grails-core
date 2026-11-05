@@ -21,9 +21,11 @@ package grails.gorm.tests
 import grails.gorm.annotation.Entity
 import org.apache.grails.data.hibernate5.core.GrailsDataHibernate5TckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
+import org.hibernate.Hibernate
 
 /**
- * A sort by a property of an association must not leave out the instances whose association is null.
+ * A sort by a property of an association must not leave out the instances whose association is null,
+ * and must not change what the query fetches.
  */
 class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManager> {
 
@@ -45,6 +47,12 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManag
         final player = new Player(name: name, team: team)
         player.contract = new Contract(salary: 1000G, player: player)
         player.save(failOnError: true, flush: true)
+    }
+
+    private void saveSquad() {
+        final squad = new Team(club: Club.findByName('Arsenal'), name: 'Squad').save(failOnError: true)
+        ['Squad Player A', 'Squad Player B', 'Squad Player C'].each { savePlayer(it, squad) }
+        manager.session.clear()
     }
 
     void 'list sorted by #sort keeps a team without a club'() {
@@ -182,6 +190,48 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManag
 
         expect:
         AssociationSortLeague.list().collect { it.league + ' ' + it.name } == ['First B', 'First A', 'Second C', 'Second B']
+    }
+
+    void '#api sorted by a property of a collection keeps a team without players'() {
+        given:
+        new Team(club: Club.findByName('Arsenal'), name: 'Playerless First Team').save(failOnError: true, flush: true)
+
+        when:
+        final List<Team> results = query.call()
+
+        then:
+        'Playerless First Team' in results*.name
+        results*.name - 'Playerless First Team' == ['Arsenal First Team', 'Chelsea First Team', 'MU First Team', 'Unattached First Team']
+
+        where:
+        api                                | query
+        'list'                             | { Team.list(sort: 'players.name') }
+        'a dynamic finder'                 | { Team.findAllByNameLike('%First%', [sort: 'players.name']) }
+        'findAll by example'               | { Team.findAll(new Team(), [sort: 'players.name']) }
+        'a criteria query with pagination' | { Team.createCriteria().list(sort: 'players.name', max: 10) { like('name', '%First%') } }
+    }
+
+    void '#api sorted by a property of a collection does not fetch the collection'() {
+        given:
+        saveSquad()
+
+        when:
+        final Team team = query.call()
+
+        then: 'a row limit does not leave players out of the collection'
+        team.name == 'Squad'
+        !Hibernate.isInitialized(team.players)
+        team.players.size() == 3
+
+        where:
+        api                                | query
+        'a dynamic finder with a limit'    | { Team.findAllByName('Squad', [sort: 'players.name', max: 2]).first() }
+        'a dynamic finder for one result'  | { Team.findByName('Squad', [sort: 'players.name']) }
+        'findAll by example with a limit'  | { Team.findAll(new Team(name: 'Squad'), [sort: 'players.name', max: 2]).first() }
+        'find by example'                  | { Team.find(new Team(name: 'Squad'), [sort: 'players.name']) }
+        'findAllWhere with a limit'        | { Team.findAllWhere([name: 'Squad'], [sort: 'players.name', max: 2]).first() }
+        'findWhere'                        | { Team.findWhere([name: 'Squad'], [sort: 'players.name']) }
+        'a criteria query with pagination' | { Team.createCriteria().list(sort: 'players.name', max: 2) { eq('name', 'Squad') }.first() }
     }
 }
 

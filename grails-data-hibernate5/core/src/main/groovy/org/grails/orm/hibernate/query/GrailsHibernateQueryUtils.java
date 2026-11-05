@@ -47,8 +47,10 @@ import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.PersistentProperty;
 import org.grails.datastore.mapping.model.types.Association;
 import org.grails.datastore.mapping.model.types.Embedded;
+import org.grails.datastore.mapping.model.types.ToMany;
 import org.grails.datastore.mapping.reflect.ClassUtils;
 import org.grails.orm.hibernate.cfg.AbstractGrailsDomainBinder;
+import org.grails.orm.hibernate.cfg.GrailsHibernateUtil;
 import org.grails.orm.hibernate.cfg.Mapping;
 
 /**
@@ -280,8 +282,11 @@ public class GrailsHibernateQueryUtils {
                 addOrder(c, sort, order, ignoreCase);
             } else if (property instanceof Association) {
                 Association a = (Association) property;
-                // a left join, so that the sort keeps the rows where the association is null
-                Criteria subCriteria = c.createCriteria(sortHead, org.hibernate.sql.JoinType.LEFT_OUTER_JOIN);
+                // a left join, so that the sort keeps the rows where the association is null; a collection
+                // is joined without being fetched, since a row limit would leave elements out of it
+                Criteria subCriteria = a instanceof ToMany ?
+                        c.createCriteria(sortHead, null, org.hibernate.sql.JoinType.LEFT_OUTER_JOIN, GrailsHibernateUtil.unfetchedJoinCondition()) :
+                        c.createCriteria(sortHead, org.hibernate.sql.JoinType.LEFT_OUTER_JOIN);
                 PersistentEntity associatedEntity = a.getAssociatedEntity();
                 Class<?> propertyTargetClass = associatedEntity.getJavaClass();
                 cacheCriteriaByMapping(propertyTargetClass, subCriteria);

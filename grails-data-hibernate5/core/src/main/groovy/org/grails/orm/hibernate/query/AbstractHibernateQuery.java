@@ -75,6 +75,7 @@ import org.grails.datastore.mapping.query.event.PreQueryEvent;
 import org.grails.orm.hibernate.AbstractHibernateSession;
 import org.grails.orm.hibernate.IHibernateTemplate;
 import org.grails.orm.hibernate.cfg.AbstractGrailsDomainBinder;
+import org.grails.orm.hibernate.cfg.GrailsHibernateUtil;
 import org.grails.orm.hibernate.cfg.Mapping;
 import org.grails.orm.hibernate.proxy.HibernateProxyHandler;
 
@@ -114,6 +115,17 @@ public abstract class AbstractHibernateQuery extends Query {
      * the query requests an inner or a right join for them. See {@link #applyDeferredJoins()}.
      */
     private final Set<String> nonEmptyCollections = new HashSet<>();
+    /**
+     * The collections, by association path, that lie on the way to an association that the query
+     * requests an inner or a right join for. The join of that association leaves elements out of the
+     * rows of the collection, so the collection is joined without being fetched. See
+     * {@link #applyDeferredJoins()}.
+     */
+    private final Set<String> unfetchedCollections = new HashSet<>();
+    /**
+     * The association paths that the query asks to be fetched with a join.
+     */
+    private final Set<String> joinFetchedPaths = new HashSet<>();
     protected LinkedList<String> aliasStack = new LinkedList<>();
     protected LinkedList<PersistentEntity> entityStack = new LinkedList<>();
     protected LinkedList<Association> associationStack = new LinkedList<>();
@@ -552,13 +564,22 @@ public abstract class AbstractHibernateQuery extends Query {
     }
 
     private CriteriaAndAlias createAlias(Criteria parentCriteria, String associationPath, String alias, JoinType joinType) {
+        return createAlias(parentCriteria, associationPath, alias, joinType, null);
+    }
+
+    private CriteriaAndAlias createAlias(Criteria parentCriteria, String associationPath, String alias, JoinType joinType, org.hibernate.criterion.Criterion joinCondition) {
         CriteriaAndAlias subCriteria = null;
+        org.hibernate.sql.JoinType hibernateJoinType = resolveJoinType(joinType);
         if (parentCriteria != null) {
-            Criteria sc = parentCriteria.createAlias(associationPath, alias, resolveJoinType(joinType));
+            Criteria sc = joinCondition != null ?
+                    parentCriteria.createAlias(associationPath, alias, hibernateJoinType, joinCondition) :
+                    parentCriteria.createAlias(associationPath, alias, hibernateJoinType);
             subCriteria = new CriteriaAndAlias(sc, alias, associationPath);
         }
         else if (detachedCriteria != null) {
-            DetachedCriteria sc = detachedCriteria.createAlias(associationPath, alias, resolveJoinType(joinType));
+            DetachedCriteria sc = joinCondition != null ?
+                    detachedCriteria.createAlias(associationPath, alias, hibernateJoinType, joinCondition) :
+                    detachedCriteria.createAlias(associationPath, alias, hibernateJoinType);
             subCriteria = new CriteriaAndAlias(sc, alias, associationPath);
         }
         if (subCriteria != null) {
@@ -744,6 +765,12 @@ public abstract class AbstractHibernateQuery extends Query {
      * therefore joined with a left join unless the query requests another join type for it, and a
      * requested join type other than a left join is applied whether or not the query has a sort: a
      * fetch mode alone always joins with an outer join.
+     * <p>
+     * A sort must not change what the query fetches either. Hibernate initializes a collection from
+     * the rows of a left join that has no condition of its own, also when a row limit or a join
+     * further down the path leaves elements out of those rows. A collection that is joined here is
+     * therefore only fetched when the query asks for it to be fetched; otherwise it is joined with a
+     * condition that is always true and loaded on its own, when it is read.
      */
     protected void applyDeferredJoins() {
         for (Map.Entry<String, JoinType> requestedJoin : joinTypes.entrySet()) {
@@ -753,10 +780,25 @@ public abstract class AbstractHibernateQuery extends Query {
         }
         for (Map.Entry<String, String> deferredJoin : deferredJoins.entrySet()) {
             String associationPath = deferredJoin.getKey();
-            JoinType joinType = joinTypes.get(associationPath);
-            createAlias(criteria, associationPath, deferredJoin.getValue(), joinType != null ? joinType : JoinType.LEFT);
+            // a collection that is restricted to those that are not empty is fetched, through a left join
+            JoinType joinType = nonEmptyCollections.contains(associationPath) ? JoinType.LEFT : joinTypes.get(associationPath);
+            if (joinType == null) {
+                joinType = JoinType.LEFT;
+            }
+            boolean unfetchedCollection = joinType == JoinType.LEFT && getAssociation(associationPath) instanceof ToMany &&
+                    !isCollectionFetchRequested(associationPath);
+            createAlias(criteria, associationPath, deferredJoin.getValue(), joinType,
+                    unfetchedCollection ? GrailsHibernateUtil.unfetchedJoinCondition() : null);
         }
         deferredJoins.clear();
+    }
+
+    /**
+     * Whether the query asks for the collection at the given association path to be fetched with a
+     * join, and nothing in the query leaves elements out of the rows of that join.
+     */
+    private boolean isCollectionFetchRequested(String associationPath) {
+        return joinFetchedPaths.contains(associationPath) && !unfetchedCollections.contains(associationPath);
     }
 
     /**
@@ -765,28 +807,34 @@ public abstract class AbstractHibernateQuery extends Query {
      * entities is left as it is.
      * <p>
      * Hibernate fetches a collection only through a left join. An inner or a right join requested for
-     * a collection therefore keeps the left join of its fetch mode, and the query is restricted to the
-     * rows whose collection is not empty, which are the instances that either join returns.
+     * a collection therefore keeps the left join of its fetch mode, or the left join that a sort by the
+     * collection needs, and the query is restricted to the rows whose collection is not empty, which
+     * are the instances that either join returns.
+     * <p>
+     * A collection that lies on the way to the requested association is joined, but not fetched: the
+     * join of the requested association leaves out the elements that do not have it.
      */
     private void applyRequestedJoin(String associationPath, JoinType joinType) {
         String[] tokens = associationPath.split("\\.");
+        Association[] associations = new Association[tokens.length];
         PersistentEntity currentEntity = entity;
-        PersistentProperty lastProperty = null;
-        for (String token : tokens) {
-            lastProperty = currentEntity != null ? currentEntity.getPropertyByName(token) : null;
-            if (!(lastProperty instanceof Association) || lastProperty instanceof Embedded || lastProperty instanceof Basic) {
+        for (int i = 0; i < tokens.length; i++) {
+            PersistentProperty persistentProperty = currentEntity != null ? currentEntity.getPropertyByName(tokens[i]) : null;
+            if (!(persistentProperty instanceof Association) || persistentProperty instanceof Embedded || persistentProperty instanceof Basic) {
                 return;
             }
-            currentEntity = ((Association) lastProperty).getAssociatedEntity();
+            associations[i] = (Association) persistentProperty;
+            currentEntity = associations[i].getAssociatedEntity();
         }
 
-        boolean fetchedCollection = joinType != JoinType.LEFT && lastProperty instanceof ToMany &&
-                !createdAssociationPaths.containsKey(associationPath) && !deferredJoins.containsKey(associationPath);
+        int last = tokens.length - 1;
+        boolean fetchedCollection = joinType != JoinType.LEFT && associations[last] instanceof ToMany &&
+                !createdAssociationPaths.containsKey(associationPath);
         StringBuilder currentPath = new StringBuilder();
         String currentAlias = null;
         for (int i = 0; i < tokens.length; i++) {
             String token = tokens[i];
-            if (fetchedCollection && i == tokens.length - 1) {
+            if (fetchedCollection && i == last) {
                 if (nonEmptyCollections.add(associationPath)) {
                     addToCriteria(Restrictions.isNotEmpty(currentAlias != null ? currentAlias + '.' + token : calculatePropertyName(token)));
                 }
@@ -796,6 +844,9 @@ public abstract class AbstractHibernateQuery extends Query {
                 currentPath.append('.');
             }
             currentPath.append(token);
+            if (i < last && associations[i] instanceof ToMany) {
+                unfetchedCollections.add(currentPath.toString());
+            }
             currentAlias = getOrDeferAlias(currentPath.toString(), token);
         }
     }
@@ -805,19 +856,30 @@ public abstract class AbstractHibernateQuery extends Query {
      * the path does not consist of associations only.
      */
     private PersistentEntity getAssociatedEntity(String associationPath) {
+        Association association = getAssociation(associationPath);
+        return association != null ? association.getAssociatedEntity() : null;
+    }
+
+    /**
+     * Returns the association at the end of an association path from the root entity, or null when
+     * the path does not consist of associations only.
+     */
+    private Association getAssociation(String associationPath) {
         String path = associationPath;
         if (alias != null && path.startsWith(alias + '.')) {
             path = path.substring(alias.length() + 1);
         }
         PersistentEntity currentEntity = entity;
+        Association association = null;
         for (String token : path.split("\\.")) {
             PersistentProperty persistentProperty = currentEntity != null ? currentEntity.getPropertyByName(token) : null;
             if (!(persistentProperty instanceof Association)) {
                 return null;
             }
-            currentEntity = ((Association) persistentProperty).getAssociatedEntity();
+            association = (Association) persistentProperty;
+            currentEntity = association.getAssociatedEntity();
         }
-        return currentEntity;
+        return association;
     }
 
     private void addAliasedOrder(Order order, String aliasedProperty) {
@@ -944,6 +1006,7 @@ public abstract class AbstractHibernateQuery extends Query {
         this.hasJoins = true;
         // the fetch mode alone replaces a join type that was requested for the association before
         this.joinTypes.remove(property);
+        this.joinFetchedPaths.add(property);
         if (criteria != null)
             criteria.setFetchMode(property, FetchMode.JOIN);
         else if (detachedCriteria != null)
@@ -955,6 +1018,7 @@ public abstract class AbstractHibernateQuery extends Query {
     public Query join(String property, JoinType joinType) {
         this.hasJoins = true;
         this.joinTypes.put(property, joinType);
+        this.joinFetchedPaths.add(property);
         if (criteria != null)
             criteria.setFetchMode(property, FetchMode.JOIN);
         else if (detachedCriteria != null)
@@ -966,6 +1030,7 @@ public abstract class AbstractHibernateQuery extends Query {
     public Query select(String property) {
         this.hasJoins = true;
         this.joinTypes.remove(property);
+        this.joinFetchedPaths.remove(property);
         if (criteria != null)
             criteria.setFetchMode(property, FetchMode.SELECT);
         else if (detachedCriteria != null)
@@ -1033,12 +1098,14 @@ public abstract class AbstractHibernateQuery extends Query {
         for (Map.Entry<String, FetchType> entry : fetchStrategies.entrySet()) {
             switch (entry.getValue()) {
                 case EAGER:
+                    joinFetchedPaths.add(entry.getKey());
                     if (criteria != null)
                         criteria.setFetchMode(entry.getKey(), FetchMode.JOIN);
                     else if (detachedCriteria != null)
                         detachedCriteria.setFetchMode(entry.getKey(), FetchMode.JOIN);
                     break;
                 case LAZY:
+                    joinFetchedPaths.remove(entry.getKey());
                     if (criteria != null)
                         criteria.setFetchMode(entry.getKey(), FetchMode.SELECT);
                     else if (detachedCriteria != null)

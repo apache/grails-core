@@ -33,6 +33,7 @@ import org.hibernate.Hibernate;
 import org.hibernate.LockMode;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
+import org.hibernate.criterion.Criterion;
 import org.hibernate.criterion.Order;
 import org.hibernate.criterion.Restrictions;
 import org.hibernate.engine.spi.EntityEntry;
@@ -245,7 +246,7 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
                 return;
             }
             associationPath = associationPath == null ? sortHead : associationPath + '.' + sortHead;
-            criteria = getOrCreateSortCriteria(c, associationPath);
+            criteria = getOrCreateSortCriteria(c, associationPath, persistentProperty instanceof ToMany);
             currentClass = ((Association) persistentProperty).getAssociatedEntity().getJavaClass();
             GrailsHibernateUtil.cacheCriteriaByMapping(datastore, currentClass, criteria);
             property = property.substring(firstDotPos + 1);
@@ -258,11 +259,48 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
      * association path or, failing that, a new one. A new one is created from the root criteria with its
      * whole path, and not from the criteria of the association before it, because the count of a paged
      * list recreates each join from the root criteria by its path. It is a left join, so that the sort
-     * keeps the rows where the association is null.
+     * keeps the rows where the association is null. A collection is joined without being fetched, unless
+     * the criteria ask for it to be fetched: see {@link #unfetchedJoinCondition()}.
      */
-    private static Criteria getOrCreateSortCriteria(Criteria root, String associationPath) {
+    private static Criteria getOrCreateSortCriteria(Criteria root, String associationPath, boolean collection) {
         Criteria existing = findCriteria(root, associationPath);
-        return existing != null ? existing : root.createCriteria(associationPath, JoinType.LEFT_OUTER_JOIN);
+        if (existing != null) {
+            return existing;
+        }
+        if (collection && !isFetchRequested(root, associationPath)) {
+            return root.createCriteria(associationPath, null, JoinType.LEFT_OUTER_JOIN, unfetchedJoinCondition());
+        }
+        return root.createCriteria(associationPath, JoinType.LEFT_OUTER_JOIN);
+    }
+
+    /**
+     * Whether the criteria ask for the association at the given path to be fetched with a join.
+     */
+    private static boolean isFetchRequested(Criteria root, String associationPath) {
+        if (!(root instanceof CriteriaImpl)) {
+            return false;
+        }
+        CriteriaImpl criteria = (CriteriaImpl) root;
+        // Hibernate records a fetch mode under the path from the alias of the root criteria
+        String rootAlias = criteria.getAlias();
+        String path = rootAlias != null && !associationPath.startsWith(rootAlias + '.') ? rootAlias + '.' + associationPath : associationPath;
+        return criteria.getFetchMode(path) == FetchMode.JOIN;
+    }
+
+    /**
+     * Returns the condition for a left join of a collection that must not fetch the collection.
+     * <p>
+     * Hibernate initializes a collection from the rows of a left join that has no condition of its
+     * own. It does so also when a row limit, or the join of an association further down the path,
+     * leaves elements out of those rows, and the collection then lacks those elements. A left join
+     * that is made for a sort, or on the way to another association, is therefore given this
+     * condition, which is always true: the join returns the same rows, and the collection is loaded
+     * on its own, when it is read.
+     *
+     * @return The join condition
+     */
+    public static Criterion unfetchedJoinCondition() {
+        return Restrictions.sqlRestriction("1=1");
     }
 
     /**
@@ -324,7 +362,9 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
      * <p>
      * Hibernate fetches a collection only through a left join. An inner or a right join requested for
      * a collection therefore keeps the left join of the fetch mode, and the criteria are restricted to
-     * the rows whose collection is not empty, which are the instances that either join returns.
+     * the rows whose collection is not empty, which are the instances that either join returns. A
+     * collection that lies on the way to the requested association is joined, but not fetched: the
+     * join of the requested association leaves out the elements that do not have it.
      *
      * @param datastore The datastore
      * @param targetClass The class that the criteria query
@@ -339,14 +379,15 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
         }
 
         String[] tokens = associationPath.split("\\.");
+        Association[] associations = new Association[tokens.length];
         PersistentEntity currentEntity = datastore.getMappingContext().getPersistentEntity(targetClass.getName());
-        PersistentProperty lastProperty = null;
-        for (String token : tokens) {
-            lastProperty = currentEntity != null ? currentEntity.getPropertyByName(token) : null;
-            if (!(lastProperty instanceof Association) || lastProperty instanceof Embedded || lastProperty instanceof Basic) {
+        for (int i = 0; i < tokens.length; i++) {
+            PersistentProperty persistentProperty = currentEntity != null ? currentEntity.getPropertyByName(tokens[i]) : null;
+            if (!(persistentProperty instanceof Association) || persistentProperty instanceof Embedded || persistentProperty instanceof Basic) {
                 return;
             }
-            currentEntity = ((Association) lastProperty).getAssociatedEntity();
+            associations[i] = (Association) persistentProperty;
+            currentEntity = associations[i].getAssociatedEntity();
         }
 
         JoinType lastJoinType = joinType == jakarta.persistence.criteria.JoinType.INNER ? JoinType.INNER_JOIN : JoinType.RIGHT_OUTER_JOIN;
@@ -362,7 +403,7 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
                 parent = existing;
                 parentAlias = existing.getAlias();
             }
-            else if (last && lastProperty instanceof ToMany) {
+            else if (last && associations[i] instanceof ToMany) {
                 if (parentAlias != null) {
                     root.add(Restrictions.isNotEmpty(parentAlias + '.' + token));
                 }
@@ -373,7 +414,15 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
             else {
                 // joined from the root criteria with the whole path, as the count of a paged list recreates it
                 parentAlias = currentPath.replace('.', '_') + "_join";
-                root.createAlias(currentPath, parentAlias, last ? lastJoinType : JoinType.LEFT_OUTER_JOIN);
+                if (last) {
+                    root.createAlias(currentPath, parentAlias, lastJoinType);
+                }
+                else if (associations[i] instanceof ToMany) {
+                    root.createAlias(currentPath, parentAlias, JoinType.LEFT_OUTER_JOIN, unfetchedJoinCondition());
+                }
+                else {
+                    root.createAlias(currentPath, parentAlias, JoinType.LEFT_OUTER_JOIN);
+                }
                 parent = root;
             }
         }

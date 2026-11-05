@@ -20,6 +20,7 @@ package grails.gorm.tests
 
 import org.apache.grails.data.hibernate5.core.GrailsDataHibernate5TckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
+import org.hibernate.Hibernate
 import spock.lang.Issue
 
 import jakarta.persistence.criteria.JoinType
@@ -50,6 +51,12 @@ class WhereQueryWithAssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibe
 
     private static void saveTeamWithoutClub() {
         savePlayer('Unattached Player', new Team(name: 'Unattached First Team').save(failOnError: true))
+    }
+
+    private void saveSquad() {
+        final squad = new Team(club: Club.findByName('Arsenal'), name: 'Squad').save(failOnError: true)
+        ['Squad Player A', 'Squad Player B', 'Squad Player C'].each { savePlayer(it, squad) }
+        manager.session.clear()
     }
 
     @Issue(['https://github.com/apache/grails-core/issues/9860', 'https://github.com/apache/grails-core/issues/15589'])
@@ -454,5 +461,90 @@ class WhereQueryWithAssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibe
 
         then:
         results*.player*.name == ['Chelsea Player', 'Arsenal Player', 'MU Player']
+    }
+
+    void 'sort by a property of a collection keeps a team without players'() {
+        given:
+        new Team(club: Club.findByName('Arsenal'), name: 'Playerless First Team').save(failOnError: true, flush: true)
+
+        when:
+        final results = Team.where {
+            name ==~ '%First%'
+        }.list(sort: 'players.name')
+
+        then:
+        'Playerless First Team' in results*.name
+        results*.name - 'Playerless First Team' == ['Arsenal First Team', 'Chelsea First Team', 'MU First Team']
+    }
+
+    void 'a paged list sorted by a property of a collection does not fetch the collection'() {
+        given:
+        saveSquad()
+
+        when:
+        final results = Team.where {
+            name == 'Squad'
+        }.list(sort: 'players.name', max: 2)
+
+        then: 'the row limit does not leave players out of the collection'
+        results*.name == ['Squad']
+        !Hibernate.isInitialized(results.first().players)
+        results.first().players.size() == 3
+    }
+
+    void 'a sort by a property of a collection that is stored on the query does not fetch the collection'() {
+        given:
+        saveSquad()
+        final query = Team.where {
+            name == 'Squad'
+        }.sort('players.name')
+
+        when:
+        final listed = query.list(max: 2).first()
+
+        then:
+        !Hibernate.isInitialized(listed.players)
+        listed.players.size() == 3
+
+        when:
+        manager.session.clear()
+        final found = query.find()
+
+        then:
+        !Hibernate.isInitialized(found.players)
+        found.players.size() == 3
+    }
+
+    void 'sort by a property of a collection fetches the collection when fetch requests #fetch'() {
+        given:
+        saveSquad()
+
+        when:
+        final results = Team.where {
+            name == 'Squad'
+        }.list(sort: 'players.name', fetch: [players: fetch])
+
+        then:
+        results*.name == ['Squad']
+        Hibernate.isInitialized(results.first().players)
+        results.first().players.size() == 3
+
+        where:
+        fetch << ['join', JoinType.LEFT, JoinType.INNER, JoinType.RIGHT]
+    }
+
+    void 'sort by a property of a collection of an association does not fetch the collection'() {
+        given:
+        saveSquad()
+
+        when:
+        final results = Player.where {
+            name == 'Squad Player A'
+        }.list(sort: 'team.players.name', max: 2)
+
+        then:
+        results*.name == ['Squad Player A']
+        !Hibernate.isInitialized(results.first().team.players)
+        results.first().team.players.size() == 3
     }
 }
