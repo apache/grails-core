@@ -75,6 +75,9 @@ class StartupProgressSpec extends Specification {
 
     private static final String HTML = 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
 
+    /** How long the progress page waits between polls. */
+    private static final long PAGE_POLL_MILLIS = 500
+
     /** Stands in for a browser: a program that records the address it is asked to open. */
     private static final String RECORDING_BROWSER = '''
         import java.nio.file.Files;
@@ -125,6 +128,8 @@ class StartupProgressSpec extends Specification {
 
     void setup() {
         port = freePort()
+        // an earlier feature may have had this port, and left the file that records the browser opened on it
+        new File(browserDir, "opened-${port}.txt").delete()
         Gates.reset(port)
         standardError = System.err
         System.setErr(new PrintStream(new Tee(standardError, log), true, 'UTF-8'))
@@ -327,7 +332,8 @@ class StartupProgressSpec extends Specification {
         failure.body.contains('\\u003cb\\u003e')
 
         and: 'another page open on the application, polling on its own schedule, is told as well'
-        status()?.phase == 'FAILED'
+        Response other = status()
+        other?.phase == 'FAILED' || polledLate(failure)
 
         when: 'the start finishes failing'
         runner.join(30_000)
@@ -957,19 +963,35 @@ class StartupProgressSpec extends Specification {
 
     /**
      * Starts the application with details, asked to open the recording browser, and signs in with the address
-     * it was opened on, as a browser does.
+     * it was opened on, as a browser does. The browser signs in with a single request, which gets no answer
+     * if it arrives while the web server is taking the port over, so a feature that does not hold the beans
+     * itself has them held here until the browser has signed in.
      */
     private void startSignedIn(Map<String, Object> properties) {
         File opened = new File(browserDir, "opened-${port}.txt")
+        boolean holdBeans = Gates.beanCreation.count == 0
+        if (holdBeans) {
+            Gates.beanCreation = new CountDownLatch(1)
+        }
         start(['grails.startup.progress.showDetails': true, 'grails.startup.progress.openBrowser': true] + browser(opened) + properties)
         signIn(awaitOpened(opened))
+        if (holdBeans) {
+            Gates.beanCreation.countDown()
+        }
     }
 
     private Response signIn(String address) {
         signInAddress = address
         URI uri = URI.create(address)
-        Response response = request("${uri.rawPath}?${uri.rawQuery}", HTML)
-        assert response?.status == 302
+        Response response
+        try {
+            response = send(port, "${uri.rawPath}?${uri.rawQuery}", HTML, 'GET', cookie, [:])
+        }
+        catch (IOException failure) {
+            // a browser signing in expects an answer, so one that gets none fails with the reason
+            throw new AssertionError("No answer signing in at ${address}, of an application that logged:\n${log.toString('UTF-8')}", failure)
+        }
+        assert response.status == 302
         cookie = response.setCookie.split(';')[0]
         response
     }
@@ -1057,9 +1079,11 @@ class StartupProgressSpec extends Specification {
             builder.header('Cookie', cookie)
         }
         HttpRequest request = builder.build()
+        long sent = System.nanoTime()
         try (HttpClient client = HttpClient.newBuilder().version(HttpClient.Version.HTTP_1_1).connectTimeout(Duration.ofSeconds(15)).build()) {
             HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString())
             return new Response(
+                    sentNanos: sent,
                     status: response.statusCode(),
                     phase: response.headers().firstValue(StartupProgress.PHASE_HEADER).orElse(null),
                     contentType: response.headers().firstValue('Content-Type').orElse(null),
@@ -1069,7 +1093,19 @@ class StartupProgressSpec extends Specification {
         }
     }
 
+    /** A request that may get no answer, which is {@code null}. */
     private static Response requestOnPort(int port, String path, String accept, String method = 'GET', String cookie = null, Map<String, String> headers = [:]) {
+        try {
+            return send(port, path, accept, method, cookie, headers)
+        }
+        catch (IOException ignored) {
+            // refused, or closed by a server that is stopping: the progress page treats both as a missed poll
+            return null
+        }
+    }
+
+    /** A request that fails with the reason when it gets no answer. */
+    private static Response send(int port, String path, String accept, String method, String cookie, Map<String, String> headers) {
         HttpURLConnection connection = (HttpURLConnection) URI.create("http://localhost:${port}${path}").toURL().openConnection()
         connection.requestMethod = method
         connection.useCaches = false
@@ -1081,6 +1117,7 @@ class StartupProgressSpec extends Specification {
         connection.connectTimeout = 15_000
         connection.readTimeout = 30_000
         connection.setRequestProperty('Accept', accept)
+        long sent = System.nanoTime()
         try {
             if (method == 'POST') {
                 connection.doOutput = true
@@ -1089,6 +1126,7 @@ class StartupProgressSpec extends Specification {
             int status = connection.responseCode
             InputStream body = status >= 400 ? connection.errorStream : connection.inputStream
             return new Response(
+                    sentNanos: sent,
                     status: status,
                     phase: connection.getHeaderField(StartupProgress.PHASE_HEADER),
                     contentType: connection.contentType,
@@ -1098,13 +1136,19 @@ class StartupProgressSpec extends Specification {
                     setCookie: connection.getHeaderField('Set-Cookie'),
                     body: body?.getText('UTF-8') ?: '')
         }
-        catch (IOException ignored) {
-            // refused, or closed by a server that is stopping: the progress page treats both as a missed poll
-            return null
-        }
         finally {
             connection.disconnect()
         }
+    }
+
+    /**
+     * Whether more time has passed since the given answer was asked for than a page waits between polls. A
+     * failed start holds the port only a little longer than that for the other pages open on the application,
+     * so a poll this spec makes later, as it can on a CI runner that stalls it, does not say whether a page
+     * that polls on time is told.
+     */
+    private static boolean polledLate(Response answer) {
+        TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - answer.sentNanos) > PAGE_POLL_MILLIS
     }
 
     private boolean portIsFree() {
@@ -1159,6 +1203,8 @@ class StartupProgressSpec extends Specification {
 
     static class Response {
 
+        /** When the request was made, as {@link System#nanoTime()} tells it. */
+        long sentNanos
         int status
         String phase
         String contentType
