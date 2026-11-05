@@ -139,6 +139,79 @@ class ExpressionResolverSpec extends Specification {
         joinTracker.getJoin('likes') == likesJoin
     }
 
+    def 'nested alias paths resolved in the order #order share the join of each association before their last'() {
+        given:
+        def root = Mock(From)
+        def teamJoin = Mock(Join)
+        def likesJoin = Mock(Join)
+        def tagJoin = Mock(Join)
+        def aliasRegistry = new AliasRegistry()
+        aliasRegistry.define('l', new HibernateAlias('team.likes', 'l'))
+        aliasRegistry.define('t', new HibernateAlias('team.likes.tag', 't'))
+        def resolver = new ExpressionResolver(aliasRegistry, new JoinTracker(root))
+
+        when:
+        def resolved = order.collectEntries { [it, resolver.resolve(it)] }
+
+        then:
+        1 * root.join('team', JoinType.INNER) >> teamJoin
+        1 * teamJoin.join('likes', JoinType.INNER) >> likesJoin
+        1 * likesJoin.join('tag', JoinType.INNER) >> tagJoin
+        resolved == [l: likesJoin, t: tagJoin]
+
+        where:
+        order << [['l', 't'], ['t', 'l']]
+    }
+
+    def 'an association before the last of a nested alias path is joined with #expected when its configured join type is #configured'() {
+        given:
+        def root = Mock(From)
+        def favoriteJoin = Mock(Join)
+        def tagJoin = Mock(Join)
+        def aliasRegistry = new AliasRegistry()
+        if (configured) {
+            aliasRegistry.define('favorite', new HibernateAlias('favorite', 'favorite', configured, false))
+        }
+        aliasRegistry.define('t', new HibernateAlias('favorite.tag', 't', JoinType.LEFT))
+        def resolver = new ExpressionResolver(aliasRegistry, new JoinTracker(root))
+
+        when:
+        def result = resolver.resolve('t')
+
+        then:
+        1 * root.join('favorite', expected) >> favoriteJoin
+        1 * favoriteJoin.join('tag', JoinType.LEFT) >> tagJoin
+        result == tagJoin
+
+        where:
+        configured     || expected
+        null           || JoinType.LEFT
+        JoinType.INNER || JoinType.INNER
+        JoinType.RIGHT || JoinType.RIGHT
+    }
+
+    def 'a nested association path without an alias is joined one association at a time'() {
+        given:
+        def root = Mock(From)
+        def favoriteJoin = Mock(Join)
+        def tagJoin = Mock(Join)
+        def aliasRegistry = new AliasRegistry()
+        aliasRegistry.define('favorite.tag', new HibernateAlias('favorite.tag', 'favorite.tag', JoinType.LEFT, false))
+        def joinTracker = new JoinTracker(root)
+        def resolver = new ExpressionResolver(aliasRegistry, joinTracker)
+
+        when:
+        def result = resolver.resolve('favorite.tag')
+
+        then:
+        1 * root.join('favorite', JoinType.LEFT) >> favoriteJoin
+        1 * favoriteJoin.join('tag', JoinType.LEFT) >> tagJoin
+        0 * root.join('favorite.tag', _)
+        result == tagJoin
+        joinTracker.getJoin('favorite') == favoriteJoin
+        joinTracker.getJoin('favorite.tag') == tagJoin
+    }
+
     def "test resolve with parent context using explicit alias #explicitAlias and realized expression #realized"() {
         given:
         // Parent context

@@ -29,6 +29,7 @@ import org.grails.datastore.gorm.query.criteria.DetachedAssociationCriteria;
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.types.Association;
 import org.grails.datastore.mapping.model.types.Basic;
+import org.grails.datastore.mapping.model.types.Embedded;
 import org.grails.datastore.mapping.query.Query;
 
 /**
@@ -37,7 +38,9 @@ import org.grails.datastore.mapping.query.Query;
  *
  * <p>An alias comes from three places: one created explicitly with {@code createAlias}, an association
  * criterion that names an alias, and a dotted property name whose first segment is an implicit alias. A join
- * type configured on the {@link DetachedCriteria} is applied to the alias of the same path.</p>
+ * type configured on the {@link DetachedCriteria} is applied to the alias of the same path. An association
+ * block without an alias is registered as an implicit alias of its path, so that its join keeps its join type
+ * when an alias on a nested path goes through the same association.</p>
  *
  * @since 8.0.1
  */
@@ -129,10 +132,17 @@ final class QueryAliasRegistrar {
                 }
             }
             else if (criterion instanceof DetachedAssociationCriteria<?> dac) {
+                String associationPath = dac.getAssociationPath();
                 if (dac.getAlias() != null) {
-                    String associationPath = dac.getAssociationPath();
                     JoinType joinType = detachedCriteria.getJoinTypes().getOrDefault(associationPath, JoinType.INNER);
                     context.registerAlias(dac.getAlias(), new HibernateAlias(associationPath, dac.getAlias(), joinType));
+                }
+                else if (!(dac.getAssociation() instanceof Embedded) &&
+                        !context.getAliasRegistry().isOwnDefined(associationPath)) {
+                    // The block joins its association with an inner join, whichever part of the query
+                    // joins the association first. A configured join type is already registered.
+                    context.registerAlias(associationPath,
+                            new HibernateAlias(associationPath, associationPath, JoinType.INNER, false));
                 }
             }
             else if (criterion instanceof Query.PropertyNameCriterion pnc) {
