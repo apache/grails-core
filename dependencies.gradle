@@ -86,15 +86,15 @@ ext {
             'groovy.version'                : '6.0.0',
             // Security: 33.7.2 addresses CVE-2026-102554 (uncontrolled resource consumption).
             'guava.version'                 : '33.7.2-jre',
-            // Groovy YAML 6.0.0 depends on Jackson 2.22.2, which wins over the 2.21.7 Spring Boot 4.2
+            // Groovy YAML 6.0.0 depends on Jackson 2.22.2, which wins over the 2.21.8 Spring Boot 4.2
             // manages, so the BOM must manage at least that. Jackson 2 only releases
             // jackson-annotations on the minor, hence the separate 2.22 below.
             'jackson-2-bom.version'         : '2.22.3',
             'jackson2-annotations.version'  : '2.22',
-            // Overrides the 3.1.7 Spring Boot 4.2 manages. Pinned first as a security override of
+            // Overrides the 3.1.8 Spring Boot 4.2 manages. Pinned first as a security override of
             // 3.1.6 (CVE-2026-89425, CVE-2026-89407, CVE-2026-91777 and CVE-2026-91776), which 3.1.7
-            // also fixes; kept so that moving to Spring Boot 4.2 does not take Jackson 3 from the 3.2
-            // line Grails 8 and 9.0 manage back to 3.1.
+            // and later also fix; kept so that moving to Spring Boot 4.2 does not take Jackson 3 from
+            // the 3.2 line Grails 8 and 9.0 manage back to 3.1.
             'jackson-bom.version'           : '3.2.3',
             'jquery.version'                : '4.0.0',
             'nimbus-jose-jwt.version'       : '10.10',
@@ -187,7 +187,7 @@ ext {
             'groovy-xml'               : "org.apache.groovy:groovy-xml:${bomDependencyVersions['groovy.version']}",
             'groovy-yaml'              : "org.apache.groovy:groovy-yaml:${bomDependencyVersions['groovy.version']}",
             'guava'                       : "com.google.guava:guava:${bomDependencyVersions['guava.version']}",
-            // Overrides the 2.21.7 spring-boot-dependencies imports through
+            // Overrides the 2.21.8 spring-boot-dependencies imports through
             // com.fasterxml.jackson:jackson-bom - see jackson-2-bom.version. groovy-yaml 6.0.0
             // also pulls jackson-dataformat-yaml, so the BOM must manage it at >= the resolved version.
             'jackson2-annotations'     : "com.fasterxml.jackson.core:jackson-annotations:${bomDependencyVersions['jackson2-annotations.version']}",
@@ -195,7 +195,7 @@ ext {
             'jackson-2-bom-databind'   : "com.fasterxml.jackson.core:jackson-databind:${bomDependencyVersions['jackson-2-bom.version']}",
             'jackson-2-bom-dataformat-yaml': "com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:${bomDependencyVersions['jackson-2-bom.version']}",
             'jackson-2-bom-datatype-jsr310': "com.fasterxml.jackson.datatype:jackson-datatype-jsr310:${bomDependencyVersions['jackson-2-bom.version']}",
-            // Override of the 3.1.7 spring-boot-dependencies imports through
+            // Override of the 3.1.8 spring-boot-dependencies imports through
             // tools.jackson:jackson-bom - see jackson-bom.version
             'jackson-bom-core'         : "tools.jackson.core:jackson-core:${bomDependencyVersions['jackson-bom.version']}",
             'jackson-bom-databind'     : "tools.jackson.core:jackson-databind:${bomDependencyVersions['jackson-bom.version']}",
