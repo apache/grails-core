@@ -74,6 +74,7 @@ export GRADLE_OPTS="-Dorg.gradle.jvmargs=-Xmx4G"
 > - Writing or changing Gradle builds → Read `.agents/skills/gradle-developer/SKILL.md`
 > - Upgrading applications to Grails 8 → Read `.agents/skills/grails-8-upgrade/SKILL.md`
 > - Writing Hibernate code → Read `.agents/skills/hibernate-developer/SKILL.md`
+> - Changing the Grails Data layer (datastore core, datamapping core, datastore modules) → Read `.agents/skills/grails-datastore-developer/SKILL.md`
 > - Fixing style/analysis violations → Read `.agents/skills/violation-fixer/SKILL.md`
 > - Fixing broken test → Read `.agents/skills/test-fixer/SKILL.md`
 > - Integrating a standalone repository -> Read `.agents/skills/mono-repo-integration/SKILL.md`
@@ -88,6 +89,7 @@ export GRADLE_OPTS="-Dorg.gradle.jvmargs=-Xmx4G"
 | **grails-8-upgrade** | `.agents/skills/grails-8-upgrade/SKILL.md` | Upgrading Grails applications from 7.x to 8 |
 | **java-developer** | `.agents/skills/java-developer/SKILL.md` | Java 21 features, Groovy interop |
 | **hibernate-developer** | `.agents/skills/hibernate-developer/SKILL.md` | Hibernate 7 mapping, binders, generators |
+| **grails-datastore-developer** | `.agents/skills/grails-datastore-developer/SKILL.md` | Grails Data layer changes with the whole surface in view: layering, database variance, stateful builders, parity, testing |
 | **violation-fixer** | `.agents/skills/violation-fixer/SKILL.md` | Fix style/analysis violations (CodeNarc, Checkstyle, PMD, SpotBugs) |
 | **test-fixer** | `.agents/skills/test-fixer/SKILL.md` | Aggregate and fix test failures |
 | **mono-repo-integration** | `.agents/skills/mono-repo-integration/SKILL.md` | Merge a standalone Grails plugin repository into this monorepo |
