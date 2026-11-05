@@ -22,10 +22,12 @@ import java.lang.reflect.Field;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 import jakarta.persistence.FetchType;
@@ -60,7 +62,9 @@ import org.grails.datastore.mapping.core.Datastore;
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.PersistentProperty;
 import org.grails.datastore.mapping.model.types.Association;
+import org.grails.datastore.mapping.model.types.Basic;
 import org.grails.datastore.mapping.model.types.Embedded;
+import org.grails.datastore.mapping.model.types.ToMany;
 import org.grails.datastore.mapping.proxy.ProxyHandler;
 import org.grails.datastore.mapping.query.AssociationQuery;
 import org.grails.datastore.mapping.query.Query;
@@ -101,10 +105,15 @@ public abstract class AbstractHibernateQuery extends Query {
     protected int aliasCount;
     protected Map<String, CriteriaAndAlias> createdAssociationPaths = new HashMap<>();
     /**
-     * The associations that only a sort uses so far, by association path, with the alias that the
-     * orders of the sort refer to. They are joined by {@link #applySortJoins()}.
+     * The associations that are joined when the query is executed, by association path, with the
+     * alias of their join. They are joined by {@link #applyDeferredJoins()}.
      */
-    private final Map<String, String> sortJoins = new LinkedHashMap<>();
+    private final Map<String, String> deferredJoins = new LinkedHashMap<>();
+    /**
+     * The collections, by association path, that are restricted to those that are not empty because
+     * the query requests an inner join for them. See {@link #applyDeferredJoins()}.
+     */
+    private final Set<String> innerJoinedCollections = new HashSet<>();
     protected LinkedList<String> aliasStack = new LinkedList<>();
     protected LinkedList<PersistentEntity> entityStack = new LinkedList<>();
     protected LinkedList<Association> associationStack = new LinkedList<>();
@@ -531,11 +540,11 @@ public abstract class AbstractHibernateQuery extends Query {
             subCriteria = createdAssociationPaths.get(associationName);
         }
         else {
-            // An association that only a sort has used so far is joined here, with the join type of the
-            // caller and under the alias that the orders of the sort already refer to.
-            String sortAlias = sortJoins.remove(associationPath);
-            if (sortAlias != null) {
-                alias = sortAlias;
+            // An association whose join is deferred is joined here, with the join type of the caller
+            // and under the alias that was given out for it, which the orders of a sort refer to.
+            String deferredAlias = deferredJoins.remove(associationPath);
+            if (deferredAlias != null) {
+                alias = deferredAlias;
             }
             subCriteria = createAlias(parentCriteria, associationPath, alias, joinTypes.get(associationName));
         }
@@ -649,6 +658,10 @@ public abstract class AbstractHibernateQuery extends Query {
         }
 
         addAliasedOrder(order, calculateSortPropertyName(property));
+        if (criteria == null) {
+            // a detached criteria is executed by the query that embeds it, so its joins cannot wait
+            applyDeferredJoins();
+        }
         return this;
     }
 
@@ -658,7 +671,7 @@ public abstract class AbstractHibernateQuery extends Query {
      * through the alias of the join. The head of the path is either an alias defined by a where
      * query or an association of the entity. An association that this query has already joined, for
      * example for a where query criterion, is reused; one it has not joined yet is joined for the sort
-     * when the query is executed, see {@link #applySortJoins()}.
+     * when the query is executed, see {@link #applyDeferredJoins()}.
      */
     private String calculateSortPropertyName(String property) {
         String[] tokens = property.split("\\.");
@@ -694,49 +707,95 @@ public abstract class AbstractHibernateQuery extends Query {
                 associationPath.append('.');
             }
             associationPath.append(token);
-            currentAlias = getSortAlias(associationPath.toString(), token);
+            currentAlias = getOrDeferAlias(associationPath.toString(), token);
             currentEntity = ((Association) persistentProperty).getAssociatedEntity();
         }
         return currentAlias + '.' + tokens[tokens.length - 1];
     }
 
     /**
-     * Returns the alias through which a sort reaches the association at the given path. A join that
-     * this query has already made for the path is reused. An association that only the sort uses is
-     * given an alias here and joined later, by {@link #applySortJoins()}.
+     * Returns the alias of the join of the association at the given path. A join that this query has
+     * already made for the path is reused. An association that it has not joined is given an alias
+     * here and joined later, by {@link #applyDeferredJoins()}.
      */
-    private String getSortAlias(String associationPath, String associationName) {
+    private String getOrDeferAlias(String associationPath, String associationName) {
         CriteriaAndAlias joined = createdAssociationPaths.get(associationPath);
         if (joined != null) {
             return joined.alias;
         }
-        String sortAlias = sortJoins.get(associationPath);
-        if (sortAlias == null) {
-            sortAlias = generateAlias(associationName);
-            sortJoins.put(associationPath, sortAlias);
+        String deferredAlias = deferredJoins.get(associationPath);
+        if (deferredAlias == null) {
+            deferredAlias = generateAlias(associationName);
+            deferredJoins.put(associationPath, deferredAlias);
         }
-        if (criteria == null) {
-            // a detached criteria is executed by the query that embeds it, so its joins cannot wait
-            applySortJoins();
-        }
-        return sortAlias;
+        return deferredAlias;
     }
 
     /**
-     * Joins the associations that only a sort uses. This happens when the query is executed and not
-     * when the sort is added, because the rest of the query can still change after that: the
-     * {@code fetch} argument of {@code list} requests a join type after a sort stored on a where query
-     * has been applied, and criteria passed to {@code list} are added after it too. A sort must not
-     * change which rows the query returns, so an association is joined with a left join unless the
-     * query requests another join type for it.
+     * Joins the associations that nothing in the query has joined so far, but that a sort uses or that
+     * the query requests a join type for. This happens when the query is executed, because the rest of
+     * the query can still change before that: the {@code fetch} argument of {@code list} requests a
+     * join type after a sort stored on a where query has been applied, and criteria passed to
+     * {@code list} are added after it too.
+     * <p>
+     * A sort must not change which rows the query returns. An association that only a sort uses is
+     * therefore joined with a left join unless the query requests another join type for it, and a
+     * requested join type other than a left join is applied whether or not the query has a sort: a
+     * fetch mode alone always joins with an outer join.
      */
-    protected void applySortJoins() {
-        for (Map.Entry<String, String> sortJoin : sortJoins.entrySet()) {
-            String associationPath = sortJoin.getKey();
-            JoinType joinType = joinTypes.get(associationPath);
-            createAlias(criteria, associationPath, sortJoin.getValue(), joinType != null ? joinType : JoinType.LEFT);
+    protected void applyDeferredJoins() {
+        for (Map.Entry<String, JoinType> requestedJoin : joinTypes.entrySet()) {
+            if (requestedJoin.getValue() != JoinType.LEFT) {
+                applyRequestedJoin(requestedJoin.getKey(), requestedJoin.getValue());
+            }
         }
-        sortJoins.clear();
+        for (Map.Entry<String, String> deferredJoin : deferredJoins.entrySet()) {
+            String associationPath = deferredJoin.getKey();
+            JoinType joinType = joinTypes.get(associationPath);
+            createAlias(criteria, associationPath, deferredJoin.getValue(), joinType != null ? joinType : JoinType.LEFT);
+        }
+        deferredJoins.clear();
+    }
+
+    /**
+     * Applies a join type that the query requests for an association it has not joined, by deferring
+     * the join of each association on the path. A path that does not consist of associations to other
+     * entities is left as it is.
+     * <p>
+     * Hibernate fetches a collection only through an outer join. An inner join requested for a
+     * collection therefore keeps the outer join of its fetch mode, and the query is restricted to the
+     * rows whose collection is not empty, which are the rows an inner join returns.
+     */
+    private void applyRequestedJoin(String associationPath, JoinType joinType) {
+        String[] tokens = associationPath.split("\\.");
+        PersistentEntity currentEntity = entity;
+        PersistentProperty lastProperty = null;
+        for (String token : tokens) {
+            lastProperty = currentEntity != null ? currentEntity.getPropertyByName(token) : null;
+            if (!(lastProperty instanceof Association) || lastProperty instanceof Embedded || lastProperty instanceof Basic) {
+                return;
+            }
+            currentEntity = ((Association) lastProperty).getAssociatedEntity();
+        }
+
+        boolean fetchedCollection = joinType == JoinType.INNER && lastProperty instanceof ToMany &&
+                !createdAssociationPaths.containsKey(associationPath) && !deferredJoins.containsKey(associationPath);
+        StringBuilder currentPath = new StringBuilder();
+        String currentAlias = null;
+        for (int i = 0; i < tokens.length; i++) {
+            String token = tokens[i];
+            if (fetchedCollection && i == tokens.length - 1) {
+                if (innerJoinedCollections.add(associationPath)) {
+                    addToCriteria(Restrictions.isNotEmpty(currentAlias != null ? currentAlias + '.' + token : calculatePropertyName(token)));
+                }
+                return;
+            }
+            if (currentPath.length() > 0) {
+                currentPath.append('.');
+            }
+            currentPath.append(token);
+            currentAlias = getOrDeferAlias(currentPath.toString(), token);
+        }
     }
 
     /**
@@ -894,8 +953,11 @@ public abstract class AbstractHibernateQuery extends Query {
         this.joinTypes.put(property, joinType);
         if (criteria != null)
             criteria.setFetchMode(property, FetchMode.JOIN);
-        else if (detachedCriteria != null)
+        else if (detachedCriteria != null) {
             detachedCriteria.setFetchMode(property, FetchMode.JOIN);
+            // a detached criteria is executed by the query that embeds it, so its joins cannot wait
+            applyDeferredJoins();
+        }
         return this;
     }
 
@@ -939,7 +1001,7 @@ public abstract class AbstractHibernateQuery extends Query {
             publisher.publishEvent(new PreQueryEvent(datastore, this));
         }
 
-        applySortJoins();
+        applyDeferredJoins();
         List results = criteria.list();
         if (publisher != null) {
             publisher.publishEvent(new PostQueryEvent(datastore, this, results));
@@ -1005,7 +1067,7 @@ public abstract class AbstractHibernateQuery extends Query {
         if (publisher != null) {
             publisher.publishEvent(new PreQueryEvent(datastore, this));
         }
-        applySortJoins();
+        applyDeferredJoins();
 
         Object result;
         if (hasJoins) {
