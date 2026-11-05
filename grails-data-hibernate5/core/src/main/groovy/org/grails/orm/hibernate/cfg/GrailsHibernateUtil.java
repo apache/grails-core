@@ -288,9 +288,9 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
      * other than a left join is applied by joining each association on the path that the criteria do
      * not join already; one that they join keeps its join.
      * <p>
-     * Hibernate fetches a collection only through an outer join. An inner join requested for a
-     * collection therefore keeps the outer join of the fetch mode, and the criteria are restricted to
-     * the rows whose collection is not empty, which are the rows an inner join returns.
+     * Hibernate fetches a collection only through a left join. An inner or a right join requested for
+     * a collection therefore keeps the left join of the fetch mode, and the criteria are restricted to
+     * the rows whose collection is not empty, which are the instances that either join returns.
      *
      * @param datastore The datastore
      * @param targetClass The class that the criteria query
@@ -328,7 +328,7 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
                 parent = existing;
                 parentAlias = existing.getAlias();
             }
-            else if (last && joinType == jakarta.persistence.criteria.JoinType.INNER && lastProperty instanceof ToMany) {
+            else if (last && lastProperty instanceof ToMany) {
                 if (parentAlias != null) {
                     root.add(Restrictions.isNotEmpty(parentAlias + '.' + token));
                 }

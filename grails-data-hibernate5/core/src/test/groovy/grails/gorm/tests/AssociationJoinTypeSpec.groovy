@@ -71,6 +71,7 @@ class AssociationJoinTypeSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckM
         'join'         || ALL_TEAMS
         JoinType.LEFT  || ALL_TEAMS
         JoinType.INNER || TEAMS_WITH_A_CLUB
+        JoinType.RIGHT || TEAMS_WITH_A_CLUB
     }
 
     void 'an inner join that fetch requests returns the same rows with and without a sort'() {
@@ -113,6 +114,21 @@ class AssociationJoinTypeSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckM
         query.count() == 4
     }
 
+    void 'a right join has a row without a team for a club that no team refers to'() {
+        given:
+        new Club(name: 'Teamless').save(flush: true)
+        manager.session.clear()
+
+        when:
+        final query = new DetachedCriteria(Team).join('club', JoinType.RIGHT)
+        final results = query.list()
+
+        then: 'the team without a club is left out, and the club without a team adds a row without a team'
+        results.findAll { it != null }*.name.sort() == TEAMS_WITH_A_CLUB
+        results.count { it == null } == 1
+        query.count() == 5
+    }
+
     void '#method leaves out a team without a club when fetch requests an inner join'() {
         given:
         final query = Team.where {
@@ -138,6 +154,7 @@ class AssociationJoinTypeSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckM
         fetch          || expected
         JoinType.LEFT  || ALL_TEAMS
         JoinType.INNER || TEAMS_WITH_A_CLUB
+        JoinType.RIGHT || TEAMS_WITH_A_CLUB
     }
 
     void 'an inner join that fetch requests for a nested association joins every association on the path'() {
@@ -170,21 +187,54 @@ class AssociationJoinTypeSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckM
         'join'         || ALL_TEAMS
         JoinType.LEFT  || ALL_TEAMS
         JoinType.INNER || TEAMS_WITH_PLAYERS
+        JoinType.RIGHT || TEAMS_WITH_PLAYERS
     }
 
-    void 'an inner join requested for a collection applies to the total count and to count'() {
+    void 'a join type requested for a collection with the join method fetches the collection'() {
+        when:
+        final results = Team.where {
+            name ==~ '%First%'
+        }.join('players', joinType).list()
+
+        then:
+        results*.name.sort() == TEAMS_WITH_PLAYERS
+        results.every { Hibernate.isInitialized(it.players) }
+
+        where:
+        joinType << [JoinType.INNER, JoinType.RIGHT]
+    }
+
+    void 'a join type requested for a collection applies to the total count and to count'() {
         given:
         final query = Team.where {
             name ==~ '%First%'
         }
 
         when:
-        final results = query.list(max: 2, fetch: [players: JoinType.INNER])
+        final results = query.list(max: 2, fetch: [players: joinType])
 
         then:
         results.size() == 2
         results.totalCount == 4
-        query.join('players', JoinType.INNER).count() == 4
+        results.every { Hibernate.isInitialized(it.players) }
+        query.join('players', joinType).count() == 4
+
+        where:
+        joinType << [JoinType.INNER, JoinType.RIGHT]
+    }
+
+    void 'a join type requested for a collection at the end of a path fetches the collection'() {
+        when:
+        final results = Player.where {
+            name ==~ '%Player%'
+        }.list(fetch: ['team.players': joinType])
+
+        then:
+        results*.name.sort() == ['Arsenal Player', 'Chelsea Player', 'MU Player', 'Unattached Player']
+        results.every { Hibernate.isInitialized(it.team) && Hibernate.isInitialized(it.team.players) }
+
+        where:
+        joinType << [JoinType.INNER, JoinType.RIGHT]
     }
 
     void 'an inner join requested for an association and for a collection applies to both'() {
@@ -292,6 +342,7 @@ class AssociationJoinTypeSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckM
         joinType       || expected
         JoinType.LEFT  || ALL_TEAMS
         JoinType.INNER || TEAMS_WITH_A_CLUB
+        JoinType.RIGHT || TEAMS_WITH_A_CLUB
     }
 
     void 'count and get apply an inner join that a criteria query requests'() {
@@ -326,6 +377,7 @@ class AssociationJoinTypeSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckM
         joinType       || expected
         JoinType.LEFT  || ALL_TEAMS
         JoinType.INNER || TEAMS_WITH_A_CLUB
+        JoinType.RIGHT || TEAMS_WITH_A_CLUB
     }
 
     void 'the total count of a paged criteria query counts the rows of an inner join that fetch requests'() {
@@ -371,6 +423,27 @@ class AssociationJoinTypeSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckM
         joinType       || expected
         JoinType.LEFT  || ALL_TEAMS
         JoinType.INNER || TEAMS_WITH_PLAYERS
+        JoinType.RIGHT || TEAMS_WITH_PLAYERS
+    }
+
+    void 'a criteria query joins a collection with the join type that the fetch argument requests'() {
+        when:
+        final results = Team.createCriteria().list(max: 2, fetch: [players: joinType]) {
+            like('name', '%First%')
+        }
+
+        then:
+        results.size() == 2
+        results.totalCount == expectedTotal
+
+        and: 'the collection is fetched'
+        results.every { Hibernate.isInitialized(it.players) }
+
+        where:
+        joinType       || expectedTotal
+        JoinType.LEFT  || 5
+        JoinType.INNER || 4
+        JoinType.RIGHT || 4
     }
 
     void 'an inner join that a criteria query requests for a nested association joins every association on the path'() {

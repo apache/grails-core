@@ -111,9 +111,9 @@ public abstract class AbstractHibernateQuery extends Query {
     private final Map<String, String> deferredJoins = new LinkedHashMap<>();
     /**
      * The collections, by association path, that are restricted to those that are not empty because
-     * the query requests an inner join for them. See {@link #applyDeferredJoins()}.
+     * the query requests an inner or a right join for them. See {@link #applyDeferredJoins()}.
      */
-    private final Set<String> innerJoinedCollections = new HashSet<>();
+    private final Set<String> nonEmptyCollections = new HashSet<>();
     protected LinkedList<String> aliasStack = new LinkedList<>();
     protected LinkedList<PersistentEntity> entityStack = new LinkedList<>();
     protected LinkedList<Association> associationStack = new LinkedList<>();
@@ -764,9 +764,9 @@ public abstract class AbstractHibernateQuery extends Query {
      * the join of each association on the path. A path that does not consist of associations to other
      * entities is left as it is.
      * <p>
-     * Hibernate fetches a collection only through an outer join. An inner join requested for a
-     * collection therefore keeps the outer join of its fetch mode, and the query is restricted to the
-     * rows whose collection is not empty, which are the rows an inner join returns.
+     * Hibernate fetches a collection only through a left join. An inner or a right join requested for
+     * a collection therefore keeps the left join of its fetch mode, and the query is restricted to the
+     * rows whose collection is not empty, which are the instances that either join returns.
      */
     private void applyRequestedJoin(String associationPath, JoinType joinType) {
         String[] tokens = associationPath.split("\\.");
@@ -780,14 +780,14 @@ public abstract class AbstractHibernateQuery extends Query {
             currentEntity = ((Association) lastProperty).getAssociatedEntity();
         }
 
-        boolean fetchedCollection = joinType == JoinType.INNER && lastProperty instanceof ToMany &&
+        boolean fetchedCollection = joinType != JoinType.LEFT && lastProperty instanceof ToMany &&
                 !createdAssociationPaths.containsKey(associationPath) && !deferredJoins.containsKey(associationPath);
         StringBuilder currentPath = new StringBuilder();
         String currentAlias = null;
         for (int i = 0; i < tokens.length; i++) {
             String token = tokens[i];
             if (fetchedCollection && i == tokens.length - 1) {
-                if (innerJoinedCollections.add(associationPath)) {
+                if (nonEmptyCollections.add(associationPath)) {
                     addToCriteria(Restrictions.isNotEmpty(currentAlias != null ? currentAlias + '.' + token : calculatePropertyName(token)));
                 }
                 return;
