@@ -27,7 +27,7 @@ import org.springframework.core.env.StandardEnvironment
 import grails.core.DefaultGrailsApplication
 import grails.core.GrailsApplication
 import grails.web.mapping.UrlMappingsHolder
-import org.grails.datastore.gorm.validation.constraints.registry.DefaultValidatorRegistry
+import org.grails.datastore.gorm.validation.registry.support.ValidatorRegistries
 import org.grails.datastore.mapping.core.connections.ConnectionSourceSettings
 import org.grails.datastore.mapping.keyvalue.mapping.config.KeyValueMappingContext
 import org.grails.datastore.mapping.model.MappingContext
@@ -86,8 +86,9 @@ class OpenApiFixture {
     static MappingContext context(List<Class<?>> entities) {
         MappingContext context = new KeyValueMappingContext('test')
         entities.each { context.addPersistentEntity(it) }
-        // Constraints are only available once a validator registry has evaluated them.
-        context.setValidatorRegistry(new DefaultValidatorRegistry(context, new ConnectionSourceSettings()))
+        // Constraints are only available once a validator registry has evaluated them; the registry the
+        // datastores create also validates Bean Validation annotations.
+        context.setValidatorRegistry(ValidatorRegistries.createValidatorRegistry(context, new ConnectionSourceSettings()))
         context
     }
 

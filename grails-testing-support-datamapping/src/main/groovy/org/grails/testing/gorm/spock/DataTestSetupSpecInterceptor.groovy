@@ -38,6 +38,7 @@ import org.grails.datastore.mapping.core.DatastoreUtils
 import org.grails.datastore.mapping.model.MappingContext
 import org.grails.datastore.mapping.simple.SimpleMapDatastore
 import org.grails.datastore.mapping.transactions.DatastoreTransactionManager
+import org.grails.datastore.gorm.validation.jakarta.JakartaValidatorRegistry
 import org.grails.validation.ConstraintEvalUtils
 
 @CompileStatic
@@ -45,6 +46,7 @@ class DataTestSetupSpecInterceptor implements IMethodInterceptor {
 
     public static Boolean IS_OLD_SETUP = false
     public static final BEAN_NAME = 'validateableConstraintsEvaluator'
+    public static final String VALIDATOR_FACTORY_BEAN_NAME = 'jakartaValidatorFactory'
     private static Class constraintsEvaluator = DefaultConstraintEvaluator
 
     @Override
@@ -71,6 +73,11 @@ class DataTestSetupSpecInterceptor implements IMethodInterceptor {
 
                 "${BEAN_NAME}"(constraintsEvaluator, constraintRegistry, grailsDomainClassMappingContext,
                         ConstraintEvalUtils.getDefaultConstraints(application.config), true, ConstraintEvalUtils.getDefaultNullable(application.config))
+                if (JakartaValidatorRegistry.isAvailable()) {
+                    "${VALIDATOR_FACTORY_BEAN_NAME}"(JakartaValidatorRegistry, grailsDomainClassMappingContext, ref('messageSource')) { bean ->
+                        bean.factoryMethod = 'createValidatorFactory'
+                    }
+                }
 
             transactionManager(DatastoreTransactionManager) {
                 datastore = ref('grailsDatastore')

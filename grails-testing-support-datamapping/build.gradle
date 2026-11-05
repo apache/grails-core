@@ -142,6 +142,7 @@ dependencies {
     compileOnly 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation
 
     testImplementation project(':grails-validation')
+    testImplementation 'jakarta.validation:jakarta.validation-api'
 }
 
 apply {

@@ -22,8 +22,10 @@ import grails.gorm.annotation.Entity
 import org.grails.datastore.mapping.core.Session
 import org.grails.datastore.mapping.keyvalue.mapping.config.KeyValueMappingContext
 import org.grails.datastore.mapping.model.MappingContext
+import org.grails.datastore.mapping.model.types.Basic
 import spock.lang.Specification
 
+import jakarta.validation.ElementKind
 import jakarta.validation.Path
 import java.lang.annotation.ElementType
 
@@ -46,6 +48,36 @@ class MappingContextTraversableResolverSpec extends Specification {
         Path path = Mock(Path)
 
         expect:
+        resolver.isReachable(book, node, Book, path, ElementType.TYPE)
+    }
+
+    void "test isReachable for a null property value"() {
+        given:
+        MappingContext mappingContext = new KeyValueMappingContext("test")
+        mappingContext.addPersistentEntities(Book, Author)
+        mappingContext.initialize()
+        MappingContextTraversableResolver resolver = new MappingContextTraversableResolver(mappingContext)
+        Book book = new Book(title: "The Stand")
+        Path.Node node = Mock(Path.Node)
+        node.getName() >> "author"
+        Path path = Mock(Path)
+
+        expect: "a null value has to be reachable for @NotNull to report it"
+        resolver.isReachable(book, node, Book, path, ElementType.FIELD)
+    }
+
+    void "test isReachable for a node without a property name"() {
+        given:
+        MappingContext mappingContext = new KeyValueMappingContext("test")
+        mappingContext.addPersistentEntities(Book, Author)
+        mappingContext.initialize()
+        MappingContextTraversableResolver resolver = new MappingContextTraversableResolver(mappingContext)
+        Book book = new Book(title: "The Stand")
+        Path.Node node = Mock(Path.Node)
+        node.getName() >> null
+        Path path = Mock(Path)
+
+        expect: "there is nothing to read, so the node is reachable"
         resolver.isReachable(book, node, Book, path, ElementType.TYPE)
     }
 
@@ -110,8 +142,8 @@ class MappingContextTraversableResolverSpec extends Specification {
         !resolver.isCascadable(book, node, Book, path, ElementType.TYPE)
     }
 
-    void "test isCascadeable returns false when CASCADE_VALIDATION is explicitly disabled"() {
-        given: "the owning-side scenario that would otherwise cascade"
+    void "test isCascadeable returns false for a persistent association of the root bean when CASCADE_VALIDATION is explicitly disabled"() {
+        given: "the owning-side scenario that would otherwise cascade, on the root bean, whose path has no node"
         MappingContext mappingContext = new KeyValueMappingContext("test")
         mappingContext.addPersistentEntities(Book, Author)
         mappingContext.initialize()
@@ -126,13 +158,121 @@ class MappingContextTraversableResolverSpec extends Specification {
         Path.Node node = Mock(Path.Node)
         node.getName() >> "books"
         Path path = Mock(Path)
-        path.iterator() >> [node].iterator()
+        path.iterator() >> [].iterator()
 
         when:
         GormValidatorAdapter.CASCADE_VALIDATION.set(Boolean.FALSE)
 
-        then: "cascading is short-circuited regardless of the owning-side/association state"
+        then: "cascading is short-circuited regardless of the owning-side/association state, the GORM validator cascading to the association"
         !resolver.isCascadable(author, node, Author, path, ElementType.TYPE)
+
+        cleanup:
+        GormValidatorAdapter.CASCADE_VALIDATION.remove()
+    }
+
+    void "test isCascadeable returns false for a persistent association of the root bean given as a nameless bean node when CASCADE_VALIDATION is explicitly disabled"() {
+        given: "the root bean, whose path Hibernate Validator 9 gives as its own node, a bean node without a name"
+        MappingContext mappingContext = new KeyValueMappingContext("test")
+        mappingContext.addPersistentEntities(Book, Author)
+        mappingContext.initialize()
+
+        MappingContextTraversableResolver resolver = new MappingContextTraversableResolver(mappingContext)
+
+        def author = new Author(name: "Stephen King")
+        author.books = new HashSet<>()
+        author.books.add(new Book(author: author, title: "The Stand"))
+
+        Path.Node rootNode = Mock(Path.Node)
+        rootNode.getName() >> null
+        rootNode.getKind() >> ElementKind.BEAN
+        Path.Node node = Mock(Path.Node)
+        node.getName() >> "books"
+        Path path = Mock(Path)
+        path.iterator() >> [rootNode].iterator()
+
+        when:
+        GormValidatorAdapter.CASCADE_VALIDATION.set(Boolean.FALSE)
+
+        then: "the path names no property, so the bean is the root bean, whose associations the GORM validator cascades to"
+        !resolver.isCascadable(author, node, Author, path, ElementType.TYPE)
+
+        cleanup:
+        GormValidatorAdapter.CASCADE_VALIDATION.remove()
+    }
+
+    void "test isCascadeable returns true for a persistent association of a bean the provider reached when CASCADE_VALIDATION is explicitly disabled"() {
+        given: "an author the provider reached through a transient property of the root bean, whose path has that node"
+        MappingContext mappingContext = new KeyValueMappingContext("test")
+        mappingContext.addPersistentEntities(Book, Author)
+        mappingContext.initialize()
+
+        MappingContextTraversableResolver resolver = new MappingContextTraversableResolver(mappingContext)
+
+        def author = new Author(name: "Stephen King")
+        author.books = new HashSet<>()
+        author.books.add(new Book(author: author, title: "The Stand"))
+
+        Path.Node reachedThrough = Mock(Path.Node)
+        reachedThrough.getName() >> "featuredAuthor"
+        Path.Node node = Mock(Path.Node)
+        node.getName() >> "books"
+        Path path = Mock(Path)
+        path.iterator() >> [reachedThrough].iterator()
+
+        when:
+        GormValidatorAdapter.CASCADE_VALIDATION.set(Boolean.FALSE)
+
+        then: "the GORM validator does not reach the author, so the provider cascades to its association"
+        resolver.isCascadable(author, node, Book, path, ElementType.TYPE)
+
+        cleanup:
+        GormValidatorAdapter.CASCADE_VALIDATION.remove()
+    }
+
+    void "test isCascadeable returns true for a property that is not a persistent association when CASCADE_VALIDATION is explicitly disabled"() {
+        given: "a transient property of an entity, and a property of an object that is no entity"
+        MappingContext mappingContext = new KeyValueMappingContext("test")
+        mappingContext.addPersistentEntities(Book, Author)
+        mappingContext.initialize()
+        MappingContextTraversableResolver resolver = new MappingContextTraversableResolver(mappingContext)
+        Book book = new Book(title: "The Stand", blurb: new Blurb(text: "A novel"))
+        Path.Node transientNode = Mock(Path.Node)
+        transientNode.getName() >> "blurb"
+        Path.Node otherNode = Mock(Path.Node)
+        otherNode.getName() >> "text"
+        Path path = Mock(Path)
+
+        when:
+        GormValidatorAdapter.CASCADE_VALIDATION.set(Boolean.FALSE)
+
+        then: "the GORM validator does not cascade to them, so Bean Validation does"
+        resolver.isCascadable(book, transientNode, Book, path, ElementType.FIELD)
+        resolver.isCascadable(book.blurb, otherNode, Book, path, ElementType.FIELD)
+
+        cleanup:
+        GormValidatorAdapter.CASCADE_VALIDATION.remove()
+    }
+
+    void "test isCascadeable returns true for a basic collection of the root bean when CASCADE_VALIDATION is explicitly disabled"() {
+        given: "a basic collection, a persistent association without an associated entity, of the root bean"
+        MappingContext mappingContext = new KeyValueMappingContext("test")
+        mappingContext.addPersistentEntities(Reader)
+        mappingContext.initialize()
+        MappingContextTraversableResolver resolver = new MappingContextTraversableResolver(mappingContext)
+        Reader reader = new Reader(name: "Annie Wilkes", genres: [Genre.HORROR] as Set)
+        Path.Node node = Mock(Path.Node)
+        node.getName() >> "genres"
+        Path path = Mock(Path)
+        path.iterator() >> [].iterator()
+
+        expect:
+        mappingContext.getPersistentEntity(Reader.name).getPropertyByName("genres") instanceof Basic
+
+        when:
+        GormValidatorAdapter.CASCADE_VALIDATION.set(Boolean.FALSE)
+
+        then: "the GORM validator has no entity to validate the elements with, so Bean Validation cascades to them"
+        resolver.isCascadable(reader, node, Reader, path, ElementType.FIELD)
 
         cleanup:
         GormValidatorAdapter.CASCADE_VALIDATION.remove()
@@ -165,8 +305,14 @@ class MappingContextTraversableResolverSpec extends Specification {
 class Book {
     String title
     Author author
+    Blurb blurb
 
     static belongsTo = [author:Author]
+    static transients = ['blurb']
+}
+
+class Blurb {
+    String text
 }
 
 @Entity
@@ -174,4 +320,16 @@ class Author {
     String name
 
     static hasMany = [books:Book]
+}
+
+@Entity
+class Reader {
+    String name
+    Set<Genre> genres
+
+    static hasMany = [genres: Genre]
+}
+
+enum Genre {
+    HORROR, FANTASY
 }

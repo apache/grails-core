@@ -31,6 +31,7 @@ import grails.core.GrailsClass
 import grails.gorm.validation.PersistentEntityValidator
 import org.grails.core.artefact.DomainClassArtefactHandler
 import org.grails.datastore.gorm.GormEnhancer
+import org.grails.datastore.gorm.validation.jakarta.JakartaValidatorRegistry
 import org.grails.datastore.mapping.config.Settings
 import org.grails.datastore.mapping.core.AbstractDatastore
 import org.grails.datastore.mapping.core.Session
@@ -136,6 +137,12 @@ trait DataTest extends GrailsUnitTest {
                     delegate.domainClass = grailsDomain
                     delegate.grailsApplication = grailsApplication
                 }
+            } else if (isBeanValidated(domain)) {
+                // validates the Bean Validation annotations as well as the constraints block, like GORM does at runtime
+                "$validationBeanName"(JakartaValidatorRegistry, domain, ref('messageSource'), ref(DataTestSetupSpecInterceptor.BEAN_NAME),
+                        ref('constraintRegistry'), ref(DataTestSetupSpecInterceptor.VALIDATOR_FACTORY_BEAN_NAME)) { bean ->
+                    bean.factoryMethod = 'createEntityValidator'
+                }
             } else {
                 "$validationBeanName"(PersistentEntityValidator, domain, ref('messageSource'), ref(DataTestSetupSpecInterceptor.BEAN_NAME))
             }
@@ -143,6 +150,18 @@ trait DataTest extends GrailsUnitTest {
         }
 
         applicationContext.getBean(validationBeanName, Validator)
+    }
+
+    /**
+     * Whether the domain class is validated with Bean Validation, as the provider of the test context sees it
+     */
+    @CompileDynamic
+    private boolean isBeanValidated(PersistentEntity domain) {
+        if (!applicationContext.containsBean(DataTestSetupSpecInterceptor.VALIDATOR_FACTORY_BEAN_NAME)) {
+            return false
+        }
+        def validatorFactory = applicationContext.getBean(DataTestSetupSpecInterceptor.VALIDATOR_FACTORY_BEAN_NAME)
+        JakartaValidatorRegistry.isBeanValidated(domain, validatorFactory.validator)
     }
 
     private void initialMockDomainSetup() {
