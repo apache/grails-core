@@ -113,6 +113,76 @@ class CreateAliasJoinSpec extends HibernateGormDatastoreSpec {
         rows*.id == [matching.id]
     }
 
+    void 'an association block does not hide an explicit alias of the same name declared outside it'() {
+        given: 'one team whose favorite has the team tag, and one whose favorite has another'
+        def a = new CreateAliasTag(name: 'a').save(failOnError: true)
+        def b = new CreateAliasTag(name: 'b').save(failOnError: true)
+        def likeA = new CreateAliasLike(label: 'first', tag: a).save(failOnError: true)
+        def likeB = new CreateAliasLike(label: 'second', tag: b).save(failOnError: true)
+        new CreateAliasTeam(name: 'same', tag: a, favorite: likeA).save(failOnError: true)
+        new CreateAliasTeam(name: 'different', tag: a, favorite: likeB).save(flush: true, failOnError: true)
+
+        when: 'the block compares its own tag with the tag the outer alias names'
+        def rows = CreateAliasTeam.withCriteria {
+            createAlias('tag', 'tag')
+            favorite {
+                tag {
+                    eqProperty('name', 'tag.name')
+                }
+            }
+        }
+
+        then: 'tag.name is the outer tag, not the tag of the favorite'
+        rows*.name == ['same']
+    }
+
+    void 'an association block inside a junction does not hide an explicit alias of the same name declared outside it'() {
+        given:
+        def a = new CreateAliasTag(name: 'a').save(failOnError: true)
+        def b = new CreateAliasTag(name: 'b').save(failOnError: true)
+        def likeA = new CreateAliasLike(label: 'first', tag: a).save(failOnError: true)
+        def likeB = new CreateAliasLike(label: 'second', tag: b).save(failOnError: true)
+        new CreateAliasTeam(name: 'same', tag: a, favorite: likeA).save(failOnError: true)
+        new CreateAliasTeam(name: 'different', tag: a, favorite: likeB).save(flush: true, failOnError: true)
+
+        when:
+        def rows = CreateAliasTeam.withCriteria {
+            createAlias('tag', 'tag')
+            favorite {
+                or {
+                    tag {
+                        eqProperty('name', 'tag.name')
+                    }
+                }
+            }
+        }
+
+        then:
+        rows*.name == ['same']
+    }
+
+    void 'an association block still joins its association when no alias of that name is declared outside'() {
+        given:
+        def a = new CreateAliasTag(name: 'a').save(failOnError: true)
+        def b = new CreateAliasTag(name: 'b').save(failOnError: true)
+        def likeA = new CreateAliasLike(label: 'first', tag: a).save(failOnError: true)
+        def likeB = new CreateAliasLike(label: 'second', tag: b).save(failOnError: true)
+        new CreateAliasTeam(name: 'with a', tag: b, favorite: likeA).save(failOnError: true)
+        new CreateAliasTeam(name: 'with b', tag: a, favorite: likeB).save(flush: true, failOnError: true)
+
+        when:
+        def rows = CreateAliasTeam.withCriteria {
+            favorite {
+                tag {
+                    eq('name', 'a')
+                }
+            }
+        }
+
+        then:
+        rows*.name == ['with a']
+    }
+
     void 'association aliases stay local with root tag #rootTag and explicit join type #explicitJoinType'() {
         given:
         def a = new CreateAliasTag(name: 'a').save(failOnError: true)
