@@ -39,7 +39,7 @@ import org.grails.orm.hibernate.query.HibernateQuery;
  * @deprecated Use {@link org.grails.orm.hibernate.query.PagedResultList} instead.
  */
 @SuppressWarnings({"unchecked", "rawtypes"})
-@Deprecated
+@Deprecated(forRemoval = true)
 public class PagedResultList extends org.grails.orm.hibernate.query.PagedResultList {
 
     private transient GrailsHibernateTemplate hibernateTemplate;
