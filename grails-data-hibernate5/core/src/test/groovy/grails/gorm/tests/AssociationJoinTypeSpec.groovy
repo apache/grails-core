@@ -129,6 +129,19 @@ class AssociationJoinTypeSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckM
         query.count() == 5
     }
 
+    void 'a fetch mode that list requests replaces a join type that the query requested before'() {
+        given:
+        final query = Team.where {
+            name ==~ '%First%'
+        }.join('club', JoinType.INNER)
+
+        expect:
+        query.list(fetch: [club: fetch])*.name.sort() == ALL_TEAMS
+
+        where:
+        fetch << ['lazy', 'join']
+    }
+
     void '#method leaves out a team without a club when fetch requests an inner join'() {
         given:
         final query = Team.where {

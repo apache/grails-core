@@ -942,6 +942,8 @@ public abstract class AbstractHibernateQuery extends Query {
     @Override
     public Query join(String property) {
         this.hasJoins = true;
+        // the fetch mode alone replaces a join type that was requested for the association before
+        this.joinTypes.remove(property);
         if (criteria != null)
             criteria.setFetchMode(property, FetchMode.JOIN);
         else if (detachedCriteria != null)
@@ -963,6 +965,7 @@ public abstract class AbstractHibernateQuery extends Query {
     @Override
     public Query select(String property) {
         this.hasJoins = true;
+        this.joinTypes.remove(property);
         if (criteria != null)
             criteria.setFetchMode(property, FetchMode.SELECT);
         else if (detachedCriteria != null)
