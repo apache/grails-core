@@ -325,6 +325,67 @@ class AssociationJoinTypeSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckM
         squad.players.size() == 3
     }
 
+    void 'a join type that fetch requests is used for the join that the criteria of the query make'() {
+        given:
+        final query = Team.where {
+            club.name == 'Chelsea' || name == 'Unattached First Team'
+        }
+
+        when:
+        final results = query.list(fetch: [club: fetch], sort: 'club.name', max: 10)
+
+        then:
+        results*.name.sort() == expected
+        results.totalCount == expected.size()
+
+        where:
+        fetch          || expected
+        JoinType.INNER || ['Chelsea First Team']
+        JoinType.LEFT  || ['Chelsea First Team', 'Unattached First Team']
+    }
+
+    void 'an inner join that fetch requests is used for the join that a projection of the query makes'() {
+        when:
+        final results = Team.where {
+            name ==~ '%First%'
+        }.property('club.name').list(fetch: [club: fetch])
+
+        then:
+        results.contains(null) == containsNull
+        results.findAll { it != null }.sort() == ['Arsenal', 'Chelsea', 'Manchester United']
+
+        where:
+        fetch          || containsNull
+        JoinType.LEFT  || true
+        JoinType.INNER || false
+    }
+
+    void 'a join type requested for a nested association is used for the join that the criteria of the query make'() {
+        given:
+        final query = Player.where {
+            team.club.name == 'Arsenal' || name == 'Unattached Player'
+        }
+
+        expect:
+        query.list(fetch: ['team.club': joinType])*.name.sort() == expected
+        query.join('team.club', joinType).list()*.name.sort() == expected
+
+        where:
+        joinType       || expected
+        JoinType.INNER || ['Arsenal Player']
+        JoinType.LEFT  || ['Arsenal Player', 'Unattached Player']
+    }
+
+    void 'a join type requested for an association is not used for a nested association of the same name'() {
+        when:
+        final results = Player.where {
+            team.club.name == 'Arsenal' || name == 'Unattached Player'
+        }.join('club', JoinType.LEFT).list()
+
+        then:
+        results*.name == ['Arsenal Player']
+    }
+
     void 'a join type requested for a collection at the end of a path fetches the collection'() {
         when:
         final results = Player.where {

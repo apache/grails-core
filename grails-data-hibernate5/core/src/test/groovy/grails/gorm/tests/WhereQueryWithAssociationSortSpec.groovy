@@ -463,6 +463,37 @@ class WhereQueryWithAssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibe
         results*.player*.name == ['Chelsea Player', 'Arsenal Player', 'MU Player']
     }
 
+    void 'a sort stored on the query can be combined with criteria that list adds through an alias'() {
+        given:
+        final query = Team.where {
+            name ==~ '%First%'
+        }
+
+        when: 'the sort is by the association path, and by the alias that the criteria define'
+        final byPath = query.sort('club.name').list {
+            createAlias('club', 'c')
+            like('c.name', '%e%')
+        }
+        final byAlias = query.sort('c.name', 'desc').list {
+            createAlias('club', 'c')
+            like('c.name', '%e%')
+        }
+
+        then: 'the sort uses the join of the alias'
+        byPath*.name == ['Arsenal First Team', 'Chelsea First Team', 'MU First Team']
+        byAlias*.name == ['MU First Team', 'Chelsea First Team', 'Arsenal First Team']
+    }
+
+    void 'criteria on a nested association can be used more than once'() {
+        when:
+        final results = Player.where {
+            team.club.name ==~ '%e%' && team.club.name != 'Chelsea'
+        }.list(sort: 'team.club.name')
+
+        then:
+        results*.name == ['Arsenal Player', 'MU Player']
+    }
+
     void 'sort by a property of a collection keeps a team without players'() {
         given:
         new Team(club: Club.findByName('Arsenal'), name: 'Playerless First Team').save(failOnError: true, flush: true)
