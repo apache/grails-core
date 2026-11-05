@@ -1243,6 +1243,13 @@ grails:
         springHandlers: true
 ----
 
+Spring Framework 7.1 adds `ProblemDetailsConfigurer.renderUnhandledExceptions`, which renders any exception no exception
+handler method handles as a problem. Turned on in a `WebMvcConfigurer`, it applies to Grails actions whatever
+`grails.exceptionresolver.springHandlers` says, and answers every exception, a browser's included, ahead of the Grails
+exception resolver, so `"500"` URL mappings no longer apply. Set `grails.exceptionresolver.problemDetails: true` instead,
+which writes the same problems and leaves the error page to the clients that prefer HTML. See
+<<controllerExceptionHandling,Declarative Controller Exception Handling>>.
+
 ==== 18. Actions Can Return Spring MVC Responses
 
 An action that returns a `ResponseEntity` or another `HttpEntity`, a `ProblemDetail`, an `ErrorResponse`,

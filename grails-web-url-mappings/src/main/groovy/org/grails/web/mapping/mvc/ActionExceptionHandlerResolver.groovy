@@ -19,6 +19,8 @@
 package org.grails.web.mapping.mvc
 
 import groovy.transform.CompileStatic
+import groovy.util.logging.Slf4j
+import org.codehaus.groovy.runtime.InvokerInvocationException
 
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
@@ -26,14 +28,30 @@ import jakarta.servlet.http.HttpServletResponse
 import org.springframework.context.ApplicationContext
 import org.springframework.context.ApplicationContextAware
 import org.springframework.core.Ordered
+import org.springframework.http.HttpStatus
+import org.springframework.http.HttpStatusCode
+import org.springframework.http.MediaType
+import org.springframework.http.server.observation.ServerRequestObservationContext
+import org.springframework.web.ErrorResponse
+import org.springframework.web.HttpMediaTypeNotAcceptableException
+import org.springframework.web.accept.ContentNegotiationManager
+import org.springframework.web.context.request.ServletWebRequest
+import org.springframework.web.filter.ServerHttpObservationFilter
 import org.springframework.web.method.HandlerMethod
+import org.springframework.web.method.annotation.ProblemDetailExceptionHandler
 import org.springframework.web.servlet.HandlerExceptionResolver
 import org.springframework.web.servlet.ModelAndView
 import org.springframework.web.servlet.handler.HandlerExceptionResolverComposite
 import org.springframework.web.servlet.mvc.method.annotation.ExceptionHandlerExceptionResolver
+import org.springframework.web.servlet.support.RequestContextUtils
 
 import grails.config.Settings
+import grails.web.mapping.UrlMappingsHolder
+import grails.web.mime.MimeType
+import grails.web.mime.MimeTypeResolver
+import org.grails.exceptions.ExceptionUtils
 import org.grails.web.servlet.mvc.GrailsWebRequest
+import org.grails.web.servlet.mvc.exceptions.GrailsMVCException
 import org.grails.web.util.GrailsApplicationAttributes
 
 /**
@@ -44,10 +62,19 @@ import org.grails.web.util.GrailsApplicationAttributes
  * ordered ahead of Spring MVC's resolvers, as that resolver is ahead of Spring MVC's others, so that an exception none of
  * those methods handles is resolved by them and by the Grails exception resolver, as without it.
  *
+ * <p>With {@code grails.exceptionresolver.problemDetails}, it writes an exception none of those methods handles as an
+ * RFC 9457 problem, as Spring MVC writes one with {@code ProblemDetailsConfigurer.renderUnhandledExceptions}, except to
+ * a client that prefers HTML, or where a URL mapping names the exception. Those are left to the Grails exception
+ * resolver and the application's error page, which turning on that switch of Spring MVC would take every exception from.
+ *
  * @since 9.0
  */
 @CompileStatic
+@Slf4j
 class ActionExceptionHandlerResolver implements HandlerExceptionResolver, Ordered, ApplicationContextAware {
+
+    /** The name of the bean Spring MVC's content negotiation manager is. */
+    private static final String MVC_CONTENT_NEGOTIATION_MANAGER = 'mvcContentNegotiationManager'
 
     /** Ahead of Spring MVC's resolvers, which its configuration orders at 0, behind Spring Boot's error attributes. */
     int order = -1
@@ -58,9 +85,22 @@ class ActionExceptionHandlerResolver implements HandlerExceptionResolver, Ordere
      */
     Boolean enabled
 
+    /**
+     * Whether it writes an exception no handler method handles as a problem, as
+     * {@code grails.exceptionresolver.problemDetails} says, which it reads from the environment of its application
+     * context where it is not set.
+     *
+     * @since 9.1
+     */
+    Boolean problemDetails
+
     private ApplicationContext applicationContext
 
     private volatile ExceptionHandlerExceptionResolver resolver
+
+    private ActionReturnValues returnValues
+
+    private ProblemDetailExceptionHandler problemDetailHandler
 
     @Override
     void setApplicationContext(ApplicationContext applicationContext) {
@@ -69,16 +109,115 @@ class ActionExceptionHandlerResolver implements HandlerExceptionResolver, Ordere
             enabled = applicationContext.environment.getProperty(Settings.SETTING_EXCEPTION_RESOLVER_SPRING_HANDLERS, Boolean,
                     Boolean.valueOf(Settings.SETTING_EXCEPTION_RESOLVER_SPRING_HANDLERS_DEFAULT))
         }
+        if (problemDetails == null) {
+            problemDetails = applicationContext.environment.getProperty(Settings.SETTING_EXCEPTION_RESOLVER_PROBLEM_DETAILS,
+                    Boolean, false)
+        }
+        returnValues = new ActionReturnValues(applicationContext)
+        problemDetailHandler = new ProblemDetailExceptionHandler(applicationContext)
     }
 
     @Override
     ModelAndView resolveException(HttpServletRequest request, HttpServletResponse response, Object handler, Exception ex) {
-        if (!enabled || !(handler instanceof GrailsControllerUrlMappingInfo)) {
+        if (!(handler instanceof GrailsControllerUrlMappingInfo)) {
             return null
         }
-        HandlerMethod action = action(request, (GrailsControllerUrlMappingInfo) handler)
+        ModelAndView resolved = enabled ? resolveWithHandlerMethods(request, response, (GrailsControllerUrlMappingInfo) handler, ex) : null
+        return resolved == null && problemDetails ? resolveAsProblem(request, response, ex) : resolved
+    }
+
+    private ModelAndView resolveWithHandlerMethods(HttpServletRequest request, HttpServletResponse response,
+                                                   GrailsControllerUrlMappingInfo handler, Exception ex) {
+        HandlerMethod action = action(request, handler)
         ExceptionHandlerExceptionResolver springResolver = action != null ? exceptionHandlerResolver() : null
         return springResolver?.resolveException(request, response, action, ex)
+    }
+
+    /**
+     * Writes an exception as Spring MVC writes one no handler method handles, with Spring MVC's translation of it, which
+     * logs an unexpected one and never exposes its message. A failure to write it leaves the exception to the other
+     * resolvers, as a failure of an exception handler method leaves it in Spring MVC.
+     */
+    private ModelAndView resolveAsProblem(HttpServletRequest request, HttpServletResponse response, Exception thrown) {
+        Exception ex = unwrap(thrown)
+        try {
+            if (response.committed || !returnValues.writesErrorResponses() || prefersHtml(request) || isMappedToErrorHandler(ex)) {
+                return null
+            }
+            ErrorResponse errorResponse = problemDetailHandler.handleException(ex, RequestContextUtils.getLocale(request))
+            ModelAndView written = errorResponse == null ? new ModelAndView() : returnValues.writeErrorResponse(errorResponse,
+                    request.getAttribute(GrailsApplicationAttributes.CONTROLLER), request, response)
+            if (HttpStatusCode.valueOf(response.status).is5xxServerError()) {
+                recordServerError(request, ex)
+                // Spring MVC's translation logs an unexpected exception without the request it failed
+                if (!(ex instanceof ErrorResponse)) {
+                    log.error('{} occurred when processing request: [{}] {}', ex.class.simpleName, request.method, request.requestURI)
+                }
+            }
+            return written
+        }
+        catch (Exception e) {
+            log.warn('Could not write a problem for an exception of [{}], so leaving it to the other exception resolvers',
+                    request.requestURI, e)
+            return null
+        }
+    }
+
+    /** As the Grails exception resolver finds the exception an action threw. */
+    private static Exception unwrap(Exception ex) {
+        if (ex instanceof InvokerInvocationException || ex instanceof GrailsMVCException) {
+            Throwable rootCause = ExceptionUtils.getRootCause(ex)
+            if (rootCause instanceof Exception) {
+                return (Exception) rootCause
+            }
+        }
+        return ex
+    }
+
+    /**
+     * Whether the application's error page is what the client asks for: the format Grails resolves for the response,
+     * from a {@code format} parameter or the {@code Accept} header, or else, where that is any format, as for a browser
+     * whose {@code Accept} header {@code grails.mime.disable.accept.header.userAgents} disregards, whether the first
+     * concrete type of the {@code Accept} header is HTML, as Spring MVC decides to render a problem as a view.
+     */
+    private boolean prefersHtml(HttpServletRequest request) {
+        GrailsWebRequest webRequest = GrailsWebRequest.lookup(request)
+        MimeType format = webRequest != null ? applicationContext.getBeanProvider(MimeTypeResolver).getIfAvailable()
+                ?.resolveResponseMimeType(webRequest) : null
+        if (format != null && format.extension != MimeType.ALL.extension) {
+            return format.extension == MimeType.HTML.extension
+        }
+        try {
+            MediaType first = contentNegotiationManager().resolveMediaTypes(new ServletWebRequest(request))
+                    .find { MediaType type -> type.concrete }
+            return first != null && MediaType.TEXT_HTML.isCompatibleWith(first)
+        }
+        catch (HttpMediaTypeNotAcceptableException ignored) {
+            return false
+        }
+    }
+
+    private ContentNegotiationManager contentNegotiationManager() {
+        return applicationContext.containsBean(MVC_CONTENT_NEGOTIATION_MANAGER) ?
+                applicationContext.getBean(MVC_CONTENT_NEGOTIATION_MANAGER, ContentNegotiationManager) :
+                new ContentNegotiationManager()
+    }
+
+    /** Whether the application maps the exception, as a {@code "500"} mapping with an {@code exception} names it. */
+    private boolean isMappedToErrorHandler(Exception ex) {
+        if (!applicationContext.containsBean(UrlMappingsHolder.BEAN_ID)) {
+            return false
+        }
+        UrlMappingsHolder urlMappings = applicationContext.getBean(UrlMappingsHolder.BEAN_ID, UrlMappingsHolder)
+        int status = HttpStatus.INTERNAL_SERVER_ERROR.value()
+        return urlMappings.matchStatusCode(status, ex) != null || urlMappings.matchStatusCode(status, ExceptionUtils.getRootCause(ex)) != null
+    }
+
+    /** As Spring MVC records an exception it translates to a server error, which the observation would not see otherwise. */
+    private static void recordServerError(HttpServletRequest request, Exception ex) {
+        ServerHttpObservationFilter.findObservationContext(request).ifPresent { ServerRequestObservationContext context ->
+            context.error = ex
+        }
     }
 
     /** The action as a handler method: the controller that handles the request, and its method of the action. */

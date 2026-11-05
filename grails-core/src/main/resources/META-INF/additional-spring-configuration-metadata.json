@@ -251,6 +251,12 @@
             "defaultValue": false
         },
         {
+            "name": "grails.exceptionresolver.problemDetails",
+            "type": "java.lang.Boolean",
+            "description": "Whether an exception a controller action throws, that no @ExceptionHandler method handles, is written as an RFC 9457 problem, as Spring MVC writes one with ProblemDetailsConfigurer.renderUnhandledExceptions, except to a client that prefers HTML or where a URL mapping names the exception, which the Grails exception resolver resolves as without it.",
+            "defaultValue": false
+        },
+        {
             "name": "grails.controllers.responseBody",
             "type": "java.lang.Boolean",
             "description": "Whether Spring MVC writes any value of a controller action annotated @ResponseBody, or of an action of a controller annotated so, directly or with an annotation such as @RestController, as the body of the response, as it writes the value of a handler method annotated so, rather than Grails rendering the action's view for a model. A ResponseEntity, a ProblemDetail and the other values Spring MVC writes whatever a handler method is annotated with are written whatever it says. Grails 10 makes it the default.",

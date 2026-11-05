@@ -141,6 +141,11 @@ of the controller and of the `@ControllerAdvice` beans that apply to it, Spring 
 `spring.mvc.problemdetails.enabled` among them, which answers the exceptions of Spring MVC with RFC 9457 problems. See
 xref:theWebLayer#controllerExceptionHandling[Declarative Controller Exception Handling].
 
+With `grails.exceptionresolver.problemDetails: true`, an exception no such method handles is written as a problem to a
+client that does not prefer HTML, with the translation Spring Framework 7.1 adds, which keeps the status and detail of an
+`ErrorResponse` or a `@ResponseStatus` exception and never exposes the message of any other. The application's error page
+stays for browsers, and for an exception a URL mapping names.
+
 An action can return what a Spring MVC handler method returns to write the response, such as a `ResponseEntity`, a
 `ProblemDetail` or a `StreamingResponseBody`, and Spring MVC writes it with the return value handlers of its handler
 adapter, the `ResponseBodyAdvice` beans that apply to the controller, and the action's `@JsonView` and

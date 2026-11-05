@@ -352,6 +352,8 @@ The Grails HAL JSON renderers remain available through explicit renderer registr
 
 With `grails.exceptionresolver.springHandlers: true`, the `@ExceptionHandler` methods of the controller and of the `@ControllerAdvice` beans that apply to it, Spring Boot's `spring.mvc.problemdetails.enabled` handler among them, resolve the exceptions actions throw before the Grails exception resolver. An exception none of them handles is resolved as before. Grails 10 makes it the default, so scope `@ControllerAdvice` beans meant only for Spring MVC controllers by `assignableTypes`, `basePackages` or `annotations` before then.
 
+Do not turn on Spring Framework 7.1's `ProblemDetailsConfigurer.renderUnhandledExceptions` in a `WebMvcConfigurer`: it answers every exception of every action with a problem, a browser's included, ahead of the Grails exception resolver, so `"500"` URL mappings no longer apply. Set `grails.exceptionresolver.problemDetails: true` instead, which writes the same problems and leaves the error page to the clients that prefer HTML and to an exception a URL mapping names.
+
 ## Actions Can Return Spring MVC Responses
 
 - Whatever the settings, an action that returns a `ResponseEntity` or another `HttpEntity`, a `ProblemDetail`, an `ErrorResponse`, `HttpHeaders`, a `StreamingResponseBody` or a `ResponseBodyEmitter` has it written as Spring MVC writes a handler method's return value, where Grails 8 did not write it. An action that returns `null`, renders with `render`, `respond` or `redirect`, or forwards, is unaffected. Look for actions that return one of these types.

@@ -29,6 +29,7 @@ import jakarta.servlet.http.HttpServletResponse
 
 import org.springframework.context.ApplicationContext
 import org.springframework.context.MessageSource
+import org.springframework.core.MethodParameter
 import org.springframework.core.annotation.AnnotatedElementUtils
 import org.springframework.core.task.AsyncTaskExecutor
 import org.springframework.http.HttpEntity
@@ -82,6 +83,9 @@ class ActionReturnValues {
 
     /** The request attribute that holds the action whose asynchronous value the request completes. */
     private static final String ASYNC_ACTION = ActionReturnValues.name + '.ASYNC_ACTION'
+
+    /** The method an error response is written as the return value of, where it is not the value of an action. */
+    private static final Method RETURNED_ERROR_RESPONSE = ActionReturnValues.getDeclaredMethod('returnedErrorResponse')
 
     /** The method of each action of each controller class, by its name. */
     private static final Map<Class<?>, Map<String, ActionMethod>> ACTIONS = new ConcurrentReferenceHashMap<>()
@@ -178,6 +182,42 @@ class ActionReturnValues {
         return write(value, action, request, response)
     }
 
+    /**
+     * Whether Spring MVC's handler adapter is there to write an error response.
+     *
+     * @return whether it is
+     * @since 9.1
+     */
+    boolean writesErrorResponses() {
+        return adapter() != null
+    }
+
+    /**
+     * Writes an error response with the return value handler Spring MVC's handler adapter selects for one, as Spring MVC
+     * writes what an exception handler method returns: with its content negotiation, its {@code ErrorResponse.Interceptor}
+     * beans and the {@code ResponseBodyAdvice} beans that apply to the controller, which the action of the exception may
+     * not have got as far as creating.
+     *
+     * @param errorResponse the error response
+     * @param controller the controller, or {@code null}
+     * @param request the request
+     * @param response the response
+     * @return the view a handler selected, or an empty one where it wrote the response
+     * @since 9.1
+     */
+    ModelAndView writeErrorResponse(ErrorResponse errorResponse, Object controller, HttpServletRequest request, HttpServletResponse response) {
+        GrailsWebRequest.lookup(request)?.renderView = false
+        MethodParameter returnType = new MethodParameter(RETURNED_ERROR_RESPONSE, -1)
+                .withContainingClass(controller?.getClass() ?: ActionReturnValues)
+        ModelAndViewContainer container = new ModelAndViewContainer()
+        adapter().returnValueHandlers.handleReturnValue(errorResponse, returnType, container, new ServletWebRequest(request, response))
+        return container.requestHandled ? new ModelAndView() : viewOf(container)
+    }
+
+    private static ErrorResponse returnedErrorResponse() {
+        return null
+    }
+
     private ModelAndView write(Object value, ActionHandlerMethod action, HttpServletRequest request, HttpServletResponse response) {
         MvcAdapter adapter = adapter()
         GrailsWebRequest.lookup(request)?.renderView = false
@@ -210,7 +250,11 @@ class ActionReturnValues {
         if (container.requestHandled) {
             return null
         }
-        // a value Spring MVC renders a view for, such as a ModelAndView an action annotated @ResponseBody returns
+        return viewOf(container)
+    }
+
+    /** A value Spring MVC renders a view for, such as a ModelAndView an action annotated @ResponseBody returns. */
+    private static ModelAndView viewOf(ModelAndViewContainer container) {
         ModelAndView modelAndView = container.viewReference ? new ModelAndView(container.viewName, container.model) :
                 new ModelAndView((View) container.view, container.model)
         if (container.status != null) {

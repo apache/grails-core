@@ -30,6 +30,7 @@ import org.springframework.http.ProblemDetail
 import org.springframework.http.ResponseEntity
 import org.springframework.web.ErrorResponseException
 import org.springframework.web.bind.MissingServletRequestParameterException
+import org.springframework.web.server.ResponseStatusException
 import org.springframework.web.bind.annotation.ResponseBody
 import org.springframework.web.bind.annotation.ResponseStatus
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody
@@ -73,6 +74,14 @@ class BookController {
 
     def broken() {
         throw new IllegalStateException('Not handled by any exception handler')
+    }
+
+    def gone() {
+        throw new ResponseStatusException(HttpStatus.GONE, 'The book was withdrawn')
+    }
+
+    def archived() {
+        throw new BookArchivedException('Handled by the URL mapping that names it')
     }
 
     def search() {
