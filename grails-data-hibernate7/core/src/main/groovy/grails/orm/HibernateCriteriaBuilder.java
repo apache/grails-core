@@ -45,6 +45,7 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 import grails.gorm.DetachedCriteria;
 import grails.gorm.MultiTenant;
 import org.grails.datastore.gorm.query.criteria.DetachedAssociationCriteria;
+import org.grails.datastore.mapping.model.types.Basic;
 import org.grails.datastore.mapping.model.types.Embedded;
 import org.grails.datastore.mapping.multitenancy.MultiTenancySettings;
 import org.grails.datastore.mapping.query.Query;
@@ -56,6 +57,7 @@ import org.grails.orm.hibernate.GrailsHibernateTemplate;
 import org.grails.orm.hibernate.HibernateDatastore;
 import org.grails.orm.hibernate.HibernateSession;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
+import org.grails.orm.hibernate.query.Hibernate7CountProjection;
 import org.grails.orm.hibernate.query.HibernateAlias;
 import org.grails.orm.hibernate.query.HibernateQuery;
 import org.grails.orm.hibernate.query.SqlGroupProjection;
@@ -118,7 +120,7 @@ import org.grails.orm.hibernate.support.hibernate7.SessionHolder;
  *
  * <p>Closure method calls in the DSL are dispatched through {@code invokeMethod} → {@code
  * CriteriaMethodInvoker} → {@link HibernateQuery}, which translates each GORM constraint into the
- * equivalent JPA Criteria predicate. {@link grails.gorm.DetachedCriteria} can also be passed in
+ * equivalent JPA Criteria predicate. {@link DetachedCriteria} can also be passed in
  * place of a closure to support multi-tenant and reusable query fragments.
  *
  * To customise which methods are handled, either extend {@link CriteriaMethodInvoker} and inject it
@@ -126,7 +128,7 @@ import org.grails.orm.hibernate.support.hibernate7.SessionHolder;
  *
  * @author Graeme Rocher
  * @see HibernateQuery
- * @see grails.gorm.DetachedCriteria
+ * @see DetachedCriteria
  */
 @Slf4j
 @SuppressWarnings("PMD.AvoidDuplicateLiterals")
@@ -162,7 +164,7 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
             this.participate = true;
         } else {
             this.participate = false;
-            org.hibernate.Session session = sessionFactory.openSession();
+            var session = sessionFactory.openSession();
             TransactionSynchronizationManager.bindResource(sessionFactory, new SessionHolder(session));
         }
         HibernateSession session = (HibernateSession) datastore.connect();
@@ -217,12 +219,12 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
         return (Objects.nonNull(alias) ? alias + ALIAS_SEPARATOR : "") + propertyName;
     }
 
-    public org.grails.datastore.mapping.query.api.Criteria exists(Closure subquery) {
-        return exists(new grails.gorm.DetachedCriteria(targetClass).build(subquery));
+    public Criteria exists(Closure subquery) {
+        return exists(new DetachedCriteria(targetClass).build(subquery));
     }
 
-    public org.grails.datastore.mapping.query.api.Criteria notExists(Closure subquery) {
-        return notExists(new grails.gorm.DetachedCriteria(targetClass).build(subquery));
+    public Criteria notExists(Closure subquery) {
+        return notExists(new DetachedCriteria(targetClass).build(subquery));
     }
 
     public final void setDatastore(HibernateDatastore datastore) {
@@ -232,11 +234,11 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
         }
     }
 
-    public org.grails.datastore.mapping.query.api.Criteria createAlias(String associationPath, String alias) {
+    public Criteria createAlias(String associationPath, String alias) {
         return createAlias(associationPath, alias, 0);
     }
 
-    public org.grails.datastore.mapping.query.api.Criteria createAlias(
+    public Criteria createAlias(
             String associationPath, String alias, int joinType) {
         var criteria = hibernateQuery.getDetachedCriteria();
         // the block of an embedded component has the entity of the component, while its criteria have none:
@@ -247,7 +249,7 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
         var prop = entity.getPropertyByName(associationPath);
         JoinType convertedJoinType = convertFromInt(joinType);
         criteria.getCriteria().add(new HibernateAlias(associationPath, alias, convertedJoinType));
-        if (prop instanceof org.grails.datastore.mapping.model.types.Basic) {
+        if (prop instanceof Basic) {
             return this;
         }
         if (!embeddedBlock) {
@@ -383,7 +385,7 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
      * @param alias The alias to use
      */
     public void count(String propertyName, String alias) {
-        hibernateQuery.projections().add(new org.grails.orm.hibernate.query.Hibernate7CountProjection(getFullyQualifiedColumn(propertyName, alias)));
+        hibernateQuery.projections().add(new Hibernate7CountProjection(getFullyQualifiedColumn(propertyName, alias)));
     }
 
     @Override
@@ -624,7 +626,7 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
     @Override
     @SuppressWarnings({"unchecked", "rawtypes"})
     public Criteria eqAll(String propertyName, Closure<?> propertyValue) {
-        return eqAll(propertyName, new grails.gorm.DetachedCriteria(targetClass).build(propertyValue));
+        return eqAll(propertyName, new DetachedCriteria(targetClass).build(propertyValue));
     }
 
     /**
@@ -638,7 +640,7 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
     @Override
     @SuppressWarnings({"unchecked", "rawtypes"})
     public Criteria gtAll(String propertyName, Closure<?> propertyValue) {
-        return gtAll(propertyName, new grails.gorm.DetachedCriteria(targetClass).build(propertyValue));
+        return gtAll(propertyName, new DetachedCriteria(targetClass).build(propertyValue));
     }
 
     /**
@@ -652,7 +654,7 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
     @Override
     @SuppressWarnings({"unchecked", "rawtypes"})
     public Criteria ltAll(String propertyName, Closure<?> propertyValue) {
-        return ltAll(propertyName, new grails.gorm.DetachedCriteria(targetClass).build(propertyValue));
+        return ltAll(propertyName, new DetachedCriteria(targetClass).build(propertyValue));
     }
 
     /**
@@ -666,7 +668,7 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
     @Override
     @SuppressWarnings({"unchecked", "rawtypes"})
     public Criteria geAll(String propertyName, Closure<?> propertyValue) {
-        return geAll(propertyName, new grails.gorm.DetachedCriteria(targetClass).build(propertyValue));
+        return geAll(propertyName, new DetachedCriteria(targetClass).build(propertyValue));
     }
 
     /**
@@ -680,7 +682,7 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
     @Override
     @SuppressWarnings({"unchecked", "rawtypes"})
     public Criteria leAll(String propertyName, Closure<?> propertyValue) {
-        return leAll(propertyName, new grails.gorm.DetachedCriteria(targetClass).build(propertyValue));
+        return leAll(propertyName, new DetachedCriteria(targetClass).build(propertyValue));
     }
 
     /**
@@ -1239,7 +1241,7 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
      * @param sqlRestriction the SQL condition
      * @return this criteria
      */
-    public org.grails.datastore.mapping.query.api.Criteria sqlRestriction(String sqlRestriction) {
+    public Criteria sqlRestriction(String sqlRestriction) {
         return sqlRestriction(sqlRestriction, Collections.emptyList());
     }
 
@@ -1253,7 +1255,7 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
      * @throws IllegalArgumentException if the number of {@code ?} placeholders differs from the number of values,
      *     or a value is {@code null}
      */
-    public org.grails.datastore.mapping.query.api.Criteria sqlRestriction(String sqlRestriction, List<?> values) {
+    public Criteria sqlRestriction(String sqlRestriction, List<?> values) {
         hibernateQuery.add(closingSessionOnError(() -> SqlRestriction.of(sqlRestriction, values, sqlSyntax())));
         return this;
     }
@@ -1272,7 +1274,7 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
      * @return A Criterion instance
      */
     @Override
-    public org.grails.datastore.mapping.query.api.Criteria rlike(String propertyName, Object propertyValue) {
+    public Criteria rlike(String propertyName, Object propertyValue) {
         hibernateQuery.rlike(propertyName, propertyValue.toString());
         return this;
     }
