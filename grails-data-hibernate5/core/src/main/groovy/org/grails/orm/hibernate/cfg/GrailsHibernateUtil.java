@@ -270,12 +270,46 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
      */
     private static CriteriaImpl.Subcriteria findCriteria(Criteria root, String associationPath) {
         if (root instanceof CriteriaImpl) {
-            Iterator<CriteriaImpl.Subcriteria> subcriteria = ((CriteriaImpl) root).iterateSubcriteria();
+            CriteriaImpl criteria = (CriteriaImpl) root;
+            Iterator<CriteriaImpl.Subcriteria> subcriteria = criteria.iterateSubcriteria();
             while (subcriteria.hasNext()) {
                 CriteriaImpl.Subcriteria existing = subcriteria.next();
-                if (existing.getParent() == root && associationPath.equals(existing.getPath())) {
+                if (associationPath.equals(getWholePath(criteria, existing))) {
                     return existing;
                 }
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Returns the path of a criteria from the root criteria. The path that a criteria is created with
+     * is relative to the criteria it is created from, or starts with the alias of another criteria.
+     */
+    private static String getWholePath(CriteriaImpl root, CriteriaImpl.Subcriteria subcriteria) {
+        String path = subcriteria.getPath();
+        Criteria parent = subcriteria.getParent();
+        int firstDotPos = path.indexOf('.');
+        if (firstDotPos > 0) {
+            String qualifier = path.substring(0, firstDotPos);
+            Criteria qualified = qualifier.equals(subcriteria.getAlias()) ? null : findCriteriaByAlias(root, qualifier);
+            if (qualified != null) {
+                parent = qualified;
+                path = path.substring(firstDotPos + 1);
+            }
+        }
+        return parent instanceof CriteriaImpl.Subcriteria ? getWholePath(root, (CriteriaImpl.Subcriteria) parent) + '.' + path : path;
+    }
+
+    private static Criteria findCriteriaByAlias(CriteriaImpl root, String alias) {
+        if (alias.equals(root.getAlias())) {
+            return root;
+        }
+        Iterator<CriteriaImpl.Subcriteria> subcriteria = root.iterateSubcriteria();
+        while (subcriteria.hasNext()) {
+            CriteriaImpl.Subcriteria existing = subcriteria.next();
+            if (alias.equals(existing.getAlias())) {
+                return existing;
             }
         }
         return null;

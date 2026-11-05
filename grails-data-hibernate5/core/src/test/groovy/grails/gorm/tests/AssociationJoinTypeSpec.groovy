@@ -459,6 +459,19 @@ class AssociationJoinTypeSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckM
         results.every { Hibernate.isInitialized(it.team) && Hibernate.isInitialized(it.team.club) }
     }
 
+    void 'an association that a criteria query joins through an alias keeps its join when join requests a join type'() {
+        when:
+        final results = Player.createCriteria().list {
+            createAlias('team', 't')
+            createAlias('t.club', 'c')
+            like('c.name', '%e%')
+            join('team.club', JoinType.INNER)
+        }
+
+        then:
+        results*.name.sort() == ['Arsenal Player', 'Chelsea Player', 'MU Player']
+    }
+
     void 'an association that a criteria query has criteria on keeps its join when join requests a join type'() {
         when:
         final results = Team.createCriteria().list {
