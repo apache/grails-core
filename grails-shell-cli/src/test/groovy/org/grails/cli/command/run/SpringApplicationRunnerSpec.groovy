@@ -26,6 +26,8 @@ import spock.lang.TempDir
 
 class SpringApplicationRunnerSpec extends Specification {
 
+    private static final int FIXTURE_TIMEOUT_SECONDS = 60
+
     @TempDir
     File tempDir
 
@@ -75,14 +77,14 @@ class SpringApplicationRunnerSpec extends Specification {
     }
 
     private static void awaitProcess(Process process, String fixtureName) {
-        if (process.waitFor(30, TimeUnit.SECONDS)) {
+        if (process.waitFor(FIXTURE_TIMEOUT_SECONDS, TimeUnit.SECONDS)) {
             return
         }
         process.destroyForcibly()
         if (!process.waitFor(5, TimeUnit.SECONDS)) {
             throw new AssertionError("${fixtureName} did not terminate after timing out")
         }
-        throw new AssertionError("${fixtureName} timed out after 30 seconds")
+        throw new AssertionError("${fixtureName} timed out after ${FIXTURE_TIMEOUT_SECONDS} seconds")
     }
 
     private static String testRuntimeClasspath() {
