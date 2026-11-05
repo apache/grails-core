@@ -18,6 +18,8 @@
  */
 package org.grails.datastore.gorm
 
+import java.util.function.Consumer
+
 import groovy.transform.CompileStatic
 
 import jakarta.persistence.FlushModeType
@@ -29,6 +31,7 @@ import org.springframework.validation.ObjectError
 import org.springframework.validation.Validator
 
 import grails.gorm.validation.CascadingValidator
+import grails.gorm.validation.PersistentEntityValidator
 import org.grails.datastore.gorm.support.BeforeValidateHelper
 import org.grails.datastore.gorm.validation.ValidatorProvider
 import org.grails.datastore.mapping.core.Datastore
@@ -105,7 +108,7 @@ class GormValidationApi<D> extends AbstractGormApi<D> {
         }
         try {
             beforeValidateHelper.invokeBeforeValidate(instance, fields)
-            fireEvent(instance, fields, deepValidate)
+            ValidationEvent event = fireEvent(instance, fields, deepValidate)
 
             Validator validator = getValidator()
             if (validator == null) {
@@ -126,7 +129,10 @@ class GormValidationApi<D> extends AbstractGormApi<D> {
                 }
             }
 
-            if (validator instanceof CascadingValidator) {
+            Consumer<Object> cascadeListener = event.cascadeListener
+            if (cascadeListener != null && validator instanceof PersistentEntityValidator) {
+                ((PersistentEntityValidator) validator).validate(instance, localErrors, deepValidate, cascadeListener)
+            } else if (validator instanceof CascadingValidator) {
                 ((CascadingValidator) validator).validate(instance, localErrors, deepValidate)
             } else if (validator instanceof org.grails.datastore.gorm.validation.CascadingValidator) {
                 ((org.grails.datastore.gorm.validation.CascadingValidator) validator).validate(instance, localErrors, deepValidate)
@@ -193,12 +199,14 @@ class GormValidationApi<D> extends AbstractGormApi<D> {
      * @param target The target instance.
      * @param fields The list of fields being validated, or null.
      * @param deepValidate Whether the associated objects are validated with the target instance.
+     * @return The event, with the listeners that its listeners have registered for the associated objects.
      */
-    private void fireEvent(target, List fields, boolean deepValidate) {
+    private ValidationEvent fireEvent(target, List fields, boolean deepValidate) {
         ValidationEvent event = createValidationEvent(target)
         event.validatedFields = fields
         event.deepValidate = deepValidate
         eventPublisher?.publishEvent(event)
+        event
     }
 
     protected ValidationEvent createValidationEvent(target) {

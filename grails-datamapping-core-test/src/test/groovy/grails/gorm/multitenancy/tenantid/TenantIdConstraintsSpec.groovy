@@ -26,6 +26,7 @@ import spock.util.environment.RestoreSystemProperties
 
 import grails.gorm.MultiTenant
 import grails.gorm.annotation.Entity
+import grails.gorm.dirty.checking.DirtyCheck
 import org.grails.datastore.gorm.validation.constraints.registry.DefaultValidatorRegistry
 import org.grails.datastore.mapping.config.Settings
 import org.grails.datastore.mapping.multitenancy.MultiTenancySettings
@@ -290,6 +291,58 @@ class TenantIdConstraintsSpec extends Specification {
         pet.firmId == 'acme'
     }
 
+    void 'an associated object that a beforeValidate callback creates as its owner is validated is given the current tenant id'() {
+        given:
+        System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, 'acme')
+
+        when: 'the beforeValidate callback of the cat gives it a chip, whose tenant id is declared nullable: false'
+        def cat = new Cat(name: 'Tom')
+        def shelter = new Shelter(name: 'North').addToCats(cat)
+        def saved = Shelter.withNewSession { shelter.save(flush: true) }
+
+        then:
+        saved
+        !shelter.hasErrors()
+        cat.chip.firmId == 'acme'
+        Chip.withNewSession { Chip.count() } == 1
+    }
+
+    void 'an associated object that its own beforeValidate callback changes is given the current tenant id'() {
+        given: 'a cat of another tenant without changes and without a chip, as a cat a datastore has loaded'
+        System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, 'acme')
+        def cat = new Cat(name: 'Tom', firmId: 'other')
+        def shelter = new Shelter(name: 'North').addToCats(cat)
+        cat.trackChanges()
+
+        when: 'the shelter is validated, and the beforeValidate callback of the cat gives it a chip'
+        boolean valid = Shelter.withNewSession { shelter.validate() }
+
+        then: 'the cat, which is updated with its new chip, is given the tenant id its update gives it'
+        valid
+        cat.firmId == 'acme'
+        cat.chip.firmId == 'acme'
+    }
+
+    void 'an associated object whose only change is inside an embedded object is given the current tenant id'() {
+        given: 'a cat of another tenant without changes, as a cat a datastore has loaded'
+        System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, 'acme')
+        def cat = new Cat(name: 'Tom', firmId: 'other', chip: new Chip(code: 'C-1', firmId: 'other'), basket: new Basket(colour: 'red'))
+        def shelter = new Shelter(name: 'North').addToCats(cat)
+        [cat, cat.chip, cat.basket]*.trackChanges()
+
+        when: 'only its embedded basket is changed, and the shelter is validated'
+        cat.basket.colour = 'blue'
+        boolean valid = Shelter.withNewSession { shelter.validate() }
+
+        then: 'the cat, which is updated, is given the tenant id its update gives it'
+        !cat.hasChanged()
+        valid
+        cat.firmId == 'acme'
+
+        and: 'its chip, which is not, is left alone'
+        cat.chip.firmId == 'other'
+    }
+
     void 'the other properties of a new associated object are still checked as it is saved with its owner'() {
         given:
         System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, 'acme')
@@ -420,6 +473,65 @@ class Leash implements MultiTenant<Leash> {
     static mapping = {
         tenantId name: 'firmId'
     }
+}
+
+@Entity
+class Shelter implements MultiTenant<Shelter> {
+
+    String name
+    String tenantId
+
+    static hasMany = [cats: Cat]
+}
+
+@Entity
+class Cat implements MultiTenant<Cat> {
+
+    String name
+    String firmId
+    Chip chip
+    Basket basket
+
+    static belongsTo = [shelter: Shelter]
+
+    static embedded = ['basket']
+
+    static constraints = {
+        firmId nullable: false, maxSize: 5
+        chip nullable: true
+        basket nullable: true
+    }
+
+    static mapping = {
+        tenantId name: 'firmId'
+    }
+
+    def beforeValidate() {
+        chip = chip ?: new Chip(code: "chip of ${name}")
+    }
+}
+
+@Entity
+class Chip implements MultiTenant<Chip> {
+
+    String code
+    String firmId
+
+    static belongsTo = Cat
+
+    static constraints = {
+        firmId nullable: false
+    }
+
+    static mapping = {
+        tenantId name: 'firmId'
+    }
+}
+
+@DirtyCheck
+class Basket {
+
+    String colour
 }
 
 @Entity

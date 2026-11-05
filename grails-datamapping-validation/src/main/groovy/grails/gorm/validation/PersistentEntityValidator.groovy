@@ -19,6 +19,8 @@
 
 package grails.gorm.validation
 
+import java.util.function.Consumer
+
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 
@@ -51,6 +53,9 @@ class PersistentEntityValidator implements CascadingValidator, ConstrainedEntity
                                                             GormProperties.IDENTITY,
                                                             GormProperties.VERSION)
 
+    // The listener of the validation that the current thread runs, which the cascade tells about each associated object
+    private static final ThreadLocal<Consumer<Object>> CASCADE_LISTENER = new ThreadLocal<>()
+
     final PersistentEntity entity
     final EntityReflector entityReflector
     final MessageSource messageSource
@@ -72,6 +77,32 @@ class PersistentEntityValidator implements CascadingValidator, ConstrainedEntity
         this.constrainedProperties = Collections.unmodifiableMap(evaluated)
         if (constrainedProperties == null) {
             throw new IllegalStateException("Constraint evaluator returned null for class: $targetClass")
+        }
+    }
+
+    /**
+     * Validates the given object, and calls the given listener with each associated object that the validation
+     * cascades to, once the beforeValidate callback of that object has run and before its constraints are checked.
+     *
+     * @param obj The object to validate
+     * @param errors The errors
+     * @param cascade Whether the validation cascades to the associated objects
+     * @param cascadeListener The listener, which may be null
+     * @since 7.0.18
+     */
+    void validate(Object obj, Errors errors, boolean cascade, Consumer<Object> cascadeListener) {
+        Consumer<Object> previous = CASCADE_LISTENER.get()
+        CASCADE_LISTENER.set(cascadeListener)
+        try {
+            validate(obj, errors, cascade)
+        }
+        finally {
+            if (previous == null) {
+                CASCADE_LISTENER.remove()
+            }
+            else {
+                CASCADE_LISTENER.set(previous)
+            }
         }
     }
 
@@ -249,6 +280,9 @@ class PersistentEntityValidator implements CascadingValidator, ConstrainedEntity
 
         // Invoke any beforeValidate callbacks on the associated object before validating
         validateHelper.invokeBeforeValidate(associatedObject, associatedConstrainedProperties.keySet() as List<String>)
+
+        // Tell the listener of this validation, which may complete the associated object before it is validated
+        CASCADE_LISTENER.get()?.accept(associatedObject)
 
         List<PersistentProperty> associatedPersistentProperties = associatedEntity.getPersistentProperties()
         String nestedPath = errors.getNestedPath()

@@ -25,6 +25,7 @@ import spock.lang.Shared
 import spock.util.environment.RestoreSystemProperties
 
 import grails.gorm.MultiTenant
+import grails.gorm.dirty.checking.DirtyCheck
 import grails.gorm.multitenancy.Tenants
 import grails.mongodb.MongoEntity
 import grails.persistence.Entity
@@ -58,7 +59,8 @@ class MongoTenantIdConstraintsSpec extends AutoStartedMongoSpec {
                 'grails.gorm.multiTenancy.tenantResolverClass': SystemPropertyTenantResolver,
                 (MongoSettings.SETTING_URL)                   : "mongodb://${mongoHost}:${mongoPort}/tenantIdConstraintsDb" as String,
         ]
-        this.datastore = new MongoDatastore(config, TenantAccount, TenantOwner, TenantPet, TenantWalker, TenantJogger, TenantLeash)
+        this.datastore = new MongoDatastore(config, TenantAccount, TenantOwner, TenantPet, TenantWalker, TenantJogger, TenantLeash,
+                TenantShelter, TenantCat, TenantChip)
     }
 
     void setup() {
@@ -177,6 +179,48 @@ class MongoTenantIdConstraintsSpec extends AutoStartedMongoSpec {
         tenantIds == [owner: 'beta', Rex: 'acme', Tim: 'beta']
     }
 
+    void 'an associated object that a beforeValidate callback creates as its owner is validated is saved for the current tenant'() {
+        given:
+        System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, 'acme')
+
+        when: 'the beforeValidate callback of the cat gives it a chip, whose tenant id is declared nullable: false'
+        def cat = new TenantCat(name: 'Tom')
+        def shelter = new TenantShelter(name: 'North').addToCats(cat)
+        def saved = TenantShelter.withNewSession { shelter.save(flush: true) }
+
+        then:
+        saved
+        !shelter.hasErrors()
+        cat.chip.firmId == 'acme'
+        TenantCat.collection.countDocuments() == 1L
+        TenantChip.collection.countDocuments() == 1L
+    }
+
+    void 'saving an owner fails when the current tenant id breaks a constraint of an associated object whose only change is inside an embedded object'() {
+        given: 'a shelter and a cat of one tenant'
+        System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, 'acme')
+        ObjectId id = TenantShelter.withNewSession {
+            new TenantShelter(name: 'North').addToCats(new TenantCat(name: 'Tom', home: new TenantHome(city: 'Rome'))).save(flush: true).id
+        }
+
+        when: 'they are loaded, only the embedded home of the cat is changed, and the shelter is saved while a tenant that breaks the maxSize of the cat is current'
+        Map<String, Object> result = TenantShelter.withNewSession {
+            def shelter = TenantShelter.get(id)
+            def cat = shelter.cats.first()
+            cat.home.city = 'Paris'
+            boolean changed = cat.hasChanged()
+            System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, 'toolongtenant')
+            def saved = shelter.save(flush: true)
+            [changed: changed, saved: saved != null, error: shelter.errors.getFieldError('cats[0].firmId')?.code, chip: cat.chip.firmId]
+        }
+
+        then: 'the cat, which is updated with the current tenant id, is validated with it, and its chip, which is not, is left alone'
+        result == [changed: false, saved: false, error: 'maxSize.exceeded', chip: 'acme']
+
+        and: 'the cat is stored as it was'
+        TenantCat.collection.find().first().home.city == 'Rome'
+    }
+
     void 'saving an owner inside withoutId fails when a new associated object is not given a tenant id'() {
         when:
         def owner = new TenantOwner(name: 'Dave', tenantId: 'acme').addToPets(new TenantPet(name: 'Rex'))
@@ -284,4 +328,62 @@ class TenantLeash implements MultiTenant<TenantLeash>, MongoEntity<TenantLeash> 
     static mapping = {
         tenantId name: 'firmId'
     }
+}
+
+@Entity
+class TenantShelter implements MultiTenant<TenantShelter>, MongoEntity<TenantShelter> {
+    ObjectId id
+    String name
+    String tenantId
+
+    static hasMany = [cats: TenantCat]
+}
+
+@Entity
+class TenantCat implements MultiTenant<TenantCat>, MongoEntity<TenantCat> {
+    ObjectId id
+    String name
+    String firmId
+    TenantChip chip
+    TenantHome home
+
+    static belongsTo = [shelter: TenantShelter]
+
+    static embedded = ['home']
+
+    static constraints = {
+        firmId nullable: false, maxSize: 5
+        chip nullable: true
+        home nullable: true
+    }
+
+    static mapping = {
+        tenantId name: 'firmId'
+    }
+
+    def beforeValidate() {
+        chip = chip ?: new TenantChip(code: "chip of ${name}")
+    }
+}
+
+@Entity
+class TenantChip implements MultiTenant<TenantChip>, MongoEntity<TenantChip> {
+    ObjectId id
+    String code
+    String firmId
+
+    static belongsTo = TenantCat
+
+    static constraints = {
+        firmId nullable: false
+    }
+
+    static mapping = {
+        tenantId name: 'firmId'
+    }
+}
+
+@DirtyCheck
+class TenantHome {
+    String city
 }

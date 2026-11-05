@@ -20,24 +20,30 @@
 package org.grails.orm.hibernate.multitenancy;
 
 import java.io.Serializable;
-import java.util.List;
+
+import org.hibernate.collection.spi.PersistentCollection;
 
 import org.springframework.context.ApplicationEvent;
 
 import grails.gorm.multitenancy.Tenants;
 import org.grails.datastore.gorm.GormEnhancer;
 import org.grails.datastore.mapping.core.Datastore;
+import org.grails.datastore.mapping.dirty.checking.DirtyCheckable;
+import org.grails.datastore.mapping.dirty.checking.DirtyCheckingSupport;
 import org.grails.datastore.mapping.engine.event.AbstractPersistenceEvent;
 import org.grails.datastore.mapping.engine.event.PersistenceEventListener;
 import org.grails.datastore.mapping.engine.event.PreInsertEvent;
 import org.grails.datastore.mapping.engine.event.PreUpdateEvent;
 import org.grails.datastore.mapping.engine.event.ValidationEvent;
 import org.grails.datastore.mapping.model.PersistentEntity;
+import org.grails.datastore.mapping.model.types.Association;
 import org.grails.datastore.mapping.model.types.TenantId;
+import org.grails.datastore.mapping.model.types.ToMany;
 import org.grails.datastore.mapping.multitenancy.MultiTenantCapableDatastore;
 import org.grails.datastore.mapping.multitenancy.exceptions.TenantException;
 import org.grails.datastore.mapping.query.Query;
 import org.grails.datastore.mapping.query.event.PreQueryEvent;
+import org.grails.datastore.mapping.reflect.EntityReflector;
 import org.grails.orm.hibernate.AbstractHibernateDatastore;
 
 /**
@@ -61,14 +67,57 @@ public class MultiTenantEventListener implements PersistenceEventListener {
     public void onApplicationEvent(ApplicationEvent event) {
         handleEvent(event);
         if (event instanceof ValidationEvent && supportsSourceType(event.getSource().getClass())) {
-            // The associated objects that are validated with this one get no event of their own, so each is given
-            // the tenant id it is inserted or updated with here, before it is validated
-            List<ValidationEvent> cascadedEvents = org.grails.datastore.gorm.multitenancy.MultiTenantEventListener
-                    .cascadedValidationEvents((ValidationEvent) event);
-            for (ValidationEvent cascaded : cascadedEvents) {
-                handleEvent(cascaded);
+            ValidationEvent validationEvent = (ValidationEvent) event;
+            if (validationEvent.isDeepValidate()) {
+                // The associated objects that are validated with this one get no event of their own, so the
+                // validator calls back with each of them as it comes to it
+                Datastore hibernateDatastore = (Datastore) event.getSource();
+                validationEvent.addCascadeListener(associatedObject ->
+                        assignTenantIdBeforeValidation(hibernateDatastore, associatedObject));
             }
         }
+    }
+
+    // Called with an associated object once its beforeValidate callback has run, and before its constraints are
+    // checked. The object is given the tenant id it is inserted or updated with. One that has a tenant id and is
+    // not saved with its owner keeps it.
+    private void assignTenantIdBeforeValidation(Datastore hibernateDatastore, Object associatedObject) {
+        ValidationEvent cascaded = new ValidationEvent(hibernateDatastore, associatedObject);
+        PersistentEntity entity = cascaded.getEntity();
+        if (entity == null || !entity.isMultiTenant()) {
+            return;
+        }
+        TenantId tenantId = entity.getTenantId();
+        boolean hasTenantId = tenantId != null && cascaded.getEntityAccess().getProperty(tenantId.getName()) != null;
+        if (!hasTenantId || isSaved(entity, cascaded.getEntityObject())) {
+            handleEvent(cascaded);
+        }
+    }
+
+    // Whether Hibernate inserts or updates the object with its owner. For an object that tracks its changes this is
+    // the check of GrailsEntityDirtinessStrategy, with which Hibernate decides whether to update an object of the
+    // session, and the check for a changed collection. An object without a tenant id is not asked: Hibernate tracks
+    // the changes of a new object from the save on, before it is inserted.
+    private static boolean isSaved(PersistentEntity entity, Object object) {
+        return !(object instanceof DirtyCheckable) || ((DirtyCheckable) object).hasChanged() ||
+                DirtyCheckingSupport.areEmbeddedDirty(entity, object) || hasDirtyCollection(entity, object);
+    }
+
+    // Hibernate updates a versioned object when one of its collections has changed, to increment its version
+    private static boolean hasDirtyCollection(PersistentEntity entity, Object object) {
+        if (!entity.isVersioned()) {
+            return false;
+        }
+        EntityReflector reflector = entity.getReflector();
+        for (Association association : entity.getAssociations()) {
+            if (association instanceof ToMany) {
+                Object value = reflector.getProperty(object, association.getName());
+                if (value instanceof PersistentCollection && ((PersistentCollection) value).isDirty()) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     private void handleEvent(ApplicationEvent event) {

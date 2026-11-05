@@ -28,6 +28,7 @@ import spock.util.environment.RestoreSystemProperties
 
 import grails.gorm.MultiTenant
 import grails.gorm.annotation.Entity
+import grails.gorm.dirty.checking.DirtyCheck
 import grails.gorm.multitenancy.Tenants
 import grails.gorm.transactions.Rollback
 import org.grails.datastore.mapping.core.DatastoreUtils
@@ -55,7 +56,7 @@ class TenantIdConstraintsSpec extends Specification {
                 'dataSource.url'                              : 'jdbc:h2:mem:tenantIdConstraintsDB;LOCK_TIMEOUT=10000',
                 'dataSource.dbCreate'                         : 'create-drop',
                 'dataSource.dialect'                          : H2Dialect.name,
-        ]), TenantCustomer, TenantAccount, TenantOwner, TenantPet)
+        ]), TenantCustomer, TenantAccount, TenantOwner, TenantPet, TenantShelter, TenantCat, TenantChip)
     }
 
     void 'a tenant id the listener assigns passes the constraints declared on it'() {
@@ -272,6 +273,67 @@ class TenantIdConstraintsSpec extends Specification {
         storedTenantIds() == [Rex: 'beta', Tim: 'acme']
     }
 
+    void 'an associated object that a beforeValidate callback creates as its owner is validated is given the current tenant id'() {
+        given:
+        System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, 'acme')
+
+        when: 'the beforeValidate callback of the cat gives it a chip, whose tenant id is declared nullable: false'
+        def cat = new TenantCat(name: 'Tom')
+        def shelter = new TenantShelter(name: 'North').addToCats(cat)
+        shelter.save(flush: true)
+
+        then:
+        !shelter.hasErrors()
+        cat.chip.firmId == 'acme'
+        TenantChip.count() == 1
+
+        when: 'the beforeValidate callback of the shelter gives it a cat'
+        shelter = new TenantShelter(name: 'South')
+        shelter.save(flush: true)
+
+        then:
+        !shelter.hasErrors()
+        shelter.cats*.firmId == ['acme']
+        shelter.cats*.chip*.firmId == ['acme']
+    }
+
+    void 'an associated object whose only change is inside an embedded object is given the current tenant id'() {
+        given: 'a shelter and a cat of one tenant, loaded inside withoutId'
+        TenantShelter shelter = shelterLoadedWithoutTenant('beta')
+        def cat = shelter.cats.first()
+
+        when: 'only its embedded home is changed, and the shelter is validated while a tenant that breaks the maxSize of the cat is current'
+        cat.home.city = 'Paris'
+        System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, 'a-tenant-too-long')
+        boolean valid = shelter.validate()
+
+        then: 'the cat, which is updated with the current tenant id, is validated with it'
+        !cat.hasChanged()
+        !valid
+        cat.firmId == 'a-tenant-too-long'
+        shelter.errors.getFieldError('cats[0].firmId').code == 'maxSize.exceeded'
+
+        and: 'its chip, which is not updated, is left alone'
+        cat.chip.firmId == 'beta'
+    }
+
+    void 'an associated object whose only change is in a collection is given the current tenant id'() {
+        given: 'a shelter and a cat of one tenant, loaded inside withoutId'
+        TenantShelter shelter = shelterLoadedWithoutTenant('beta')
+        def cat = shelter.cats.first()
+
+        when: 'a nickname is added, and the shelter is validated while a tenant that breaks the maxSize of the cat is current'
+        cat.nicknames << 'Tommy'
+        System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, 'a-tenant-too-long')
+        boolean valid = shelter.validate()
+
+        then: 'the cat, which Hibernate updates to increment its version, is validated with the current tenant id'
+        !cat.hasChanged()
+        !valid
+        cat.firmId == 'a-tenant-too-long'
+        shelter.errors.getFieldError('cats[0].firmId').code == 'maxSize.exceeded'
+    }
+
     void 'a tenant id an associated object already has is checked as it is saved with its owner'() {
         when:
         def owner = new TenantOwner(name: 'Dave', tenantId: 'abc').addToPets(new TenantPet(name: 'Rex', firmId: 'a-tenant-too-long'))
@@ -297,6 +359,19 @@ class TenantIdConstraintsSpec extends Specification {
             def owner = TenantOwner.get(id)
             owner.pets.size()
             owner
+        }
+    }
+
+    private TenantShelter shelterLoadedWithoutTenant(String tenantId) {
+        System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, tenantId)
+        def cat = new TenantCat(name: 'Tom', home: new TenantHome(city: 'Rome'), nicknames: ['Tom'] as Set)
+        Long id = new TenantShelter(name: 'North').addToCats(cat).save(flush: true).id
+        datastore.sessionFactory.currentSession.clear()
+        Tenants.withoutId(datastore) {
+            def shelter = TenantShelter.get(id)
+            shelter.cats*.chip*.code
+            shelter.cats*.nicknames*.size()
+            shelter
         }
     }
 
@@ -356,4 +431,71 @@ class TenantPet implements MultiTenant<TenantPet> {
     static mapping = {
         tenantId name: 'firmId'
     }
+}
+
+@Entity
+class TenantShelter implements MultiTenant<TenantShelter> {
+
+    String name
+    String tenantId
+
+    static hasMany = [cats: TenantCat]
+
+    def beforeValidate() {
+        if (!cats) {
+            addToCats(new TenantCat(name: 'Stray'))
+        }
+    }
+}
+
+@Entity
+class TenantCat implements MultiTenant<TenantCat> {
+
+    String name
+    String firmId
+    TenantChip chip
+    TenantHome home
+
+    static belongsTo = [shelter: TenantShelter]
+
+    static hasMany = [nicknames: String]
+
+    static embedded = ['home']
+
+    static constraints = {
+        firmId nullable: false, maxSize: 5
+        chip nullable: true
+        home nullable: true
+    }
+
+    static mapping = {
+        tenantId name: 'firmId'
+    }
+
+    def beforeValidate() {
+        chip = chip ?: new TenantChip(code: "chip of ${name}")
+    }
+}
+
+@Entity
+class TenantChip implements MultiTenant<TenantChip> {
+
+    String code
+    String firmId
+
+    static belongsTo = TenantCat
+
+    static constraints = {
+        firmId nullable: false
+    }
+
+    static mapping = {
+        tenantId name: 'firmId'
+    }
+}
+
+@DirtyCheck
+class TenantHome {
+
+    String city
 }

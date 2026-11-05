@@ -179,6 +179,76 @@ class PersistentEntityValidatorSpec extends Specification {
         !errors.hasErrors()
         !author.dirtyPublisher.validateCalled
     }
+
+    def "a cascade listener is called with each associated object after its beforeValidate callback and before its constraints are checked"() {
+        given: 'a mapping context whose validators check the constraints of an associated object'
+        MappingContext mappingContext = new KeyValueMappingContext("test")
+        mappingContext.mappingFactory = new GormKeyValueMappingFactory("test")
+        mappingContext.syntaxStrategy = new GormMappingConfigurationStrategy(mappingContext.mappingFactory)
+        PersistentEntity shelfEntity = mappingContext.addPersistentEntity(Shelf)
+        mappingContext.addPersistentEntity(Volume)
+        mappingContext.validatorRegistry = new DefaultValidatorRegistry(mappingContext, new ConnectionSourceSettings())
+        Validator shelfValidator = mappingContext.getEntityValidator(shelfEntity)
+
+        and:
+        Volume volume = new Volume()
+        Shelf shelf = new Shelf(name: 'Top', volume: volume)
+        Errors errors = new ValidationErrors(shelf)
+        List<String> titles = []
+
+        when: 'the listener unsets the title that beforeValidate has given the associated object'
+        shelfValidator.validate(shelf, errors, true) { Object associatedObject ->
+            titles << associatedObject.title
+            associatedObject.title = null
+        }
+
+        then: 'it is called after the beforeValidate callback of that object'
+        titles == ['untitled']
+
+        and: 'before the constraints of that object are checked'
+        errors.getFieldError('volume.title').code == 'nullable'
+    }
+
+    def "a cascade listener is not called when validation does not cascade, and validation runs without one"() {
+        given:
+        Author author = new Author(name: 'Author', books: [new Book()], publisher: new Publisher())
+        Errors errors = new ValidationErrors(author)
+        List<Object> seen = []
+
+        when:
+        authorValidator.validate(author, errors, false) { Object associatedObject -> seen << associatedObject }
+
+        then:
+        seen.empty
+        !errors.hasErrors()
+
+        when:
+        authorValidator.validate(author, errors, true, null)
+
+        then:
+        !errors.hasErrors()
+        author.publisher.validateCalled
+    }
+
+    def "a cascade listener is called for its own validation only"() {
+        given:
+        Book book = new Book()
+        Author author = new Author(name: 'Author', publisher: new Publisher(), books: [book])
+        Author other = new Author(name: 'Other', publisher: new Publisher())
+        Set<Object> seen = Collections.newSetFromMap(new IdentityHashMap<>())
+
+        when: 'the listener of one validation runs another validation, which has no listener, each time it is called'
+        authorValidator.validate(author, new ValidationErrors(author), true) { Object associatedObject ->
+            seen << associatedObject
+            authorValidator.validate(other, new ValidationErrors(other), true, null)
+        }
+        authorValidator.validate(other, new ValidationErrors(other))
+
+        then: 'it is called with the associated objects of its own validation, before and after the other one'
+        seen.size() == 2
+        seen.contains(book)
+        seen.contains(author.publisher)
+    }
 }
 
 @Entity
@@ -248,5 +318,26 @@ class Publisher implements DirtyCheckable {
             errors = new ValidationErrors(this)
         }
         errors
+    }
+}
+
+@Entity
+class Shelf {
+    String name
+    Volume volume
+}
+
+@Entity
+class Volume {
+    String title
+
+    static belongsTo = Shelf
+
+    static constraints = {
+        title nullable: false
+    }
+
+    def beforeValidate() {
+        title = 'untitled'
     }
 }

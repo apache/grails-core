@@ -18,6 +18,8 @@
  */
 package org.grails.orm.hibernate
 
+import java.util.function.Consumer
+
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 
@@ -34,6 +36,7 @@ import org.springframework.validation.Errors
 import org.springframework.validation.Validator
 
 import grails.gorm.validation.CascadingValidator
+import grails.gorm.validation.PersistentEntityValidator
 import org.grails.datastore.gorm.GormInstanceApi
 import org.grails.datastore.gorm.GormValidateable
 import org.grails.datastore.mapping.core.Datastore
@@ -128,7 +131,10 @@ abstract class AbstractHibernateGormInstanceApi<D> extends GormInstanceApi<D> {
                 event.setDeepValidate(deepValidate)
                 datastore.applicationEventPublisher?.publishEvent(event)
 
-                if (validator instanceof CascadingValidator) {
+                Consumer<Object> cascadeListener = event.cascadeListener
+                if (cascadeListener != null && validator instanceof PersistentEntityValidator) {
+                    ((PersistentEntityValidator) validator).validate(target, errors, deepValidate, cascadeListener)
+                } else if (validator instanceof CascadingValidator) {
                     ((CascadingValidator) validator).validate(target, errors, deepValidate)
                 } else if (validator instanceof org.grails.datastore.gorm.validation.CascadingValidator) {
                     ((org.grails.datastore.gorm.validation.CascadingValidator) validator).validate(target, errors, deepValidate)
