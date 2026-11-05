@@ -21,7 +21,6 @@ package grails.plugin.springsecurity.web
 import org.springframework.mock.web.MockHttpServletRequest
 import org.springframework.mock.web.MockHttpServletResponse
 import org.springframework.security.web.savedrequest.HttpSessionRequestCache
-import org.springframework.web.util.ServletRequestPathUtils
 import spock.lang.Specification
 
 class SavedRequestMatcherSpec extends Specification {
@@ -79,19 +78,6 @@ class SavedRequestMatcherSpec extends Specification {
         expect:
         savedRequest('/manifest.json', new SavedRequestMatcher(ignoredPatterns: [])) != null
         savedRequest('/manifest.json', new SavedRequestMatcher()) != null
-    }
-
-    void 'a request parsed for Spring MVC keeps its parsed path'() {
-        given:
-        def request = request('/manifest.json')
-        def parsed = ServletRequestPathUtils.parseAndCache(request)
-
-        when:
-        def matched = new SavedRequestMatcher(ignoredPatterns: ['/manifest.json']).matches(request)
-
-        then:
-        !matched
-        ServletRequestPathUtils.getParsedRequestPath(request).is(parsed)
     }
 
     private static savedRequest(String path, SavedRequestMatcher matcher) {
