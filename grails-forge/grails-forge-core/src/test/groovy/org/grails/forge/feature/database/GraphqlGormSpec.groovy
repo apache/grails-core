@@ -19,13 +19,13 @@
 
 package org.grails.forge.feature.database
 
-import io.micronaut.inject.qualifiers.Qualifiers
 import org.grails.forge.ApplicationContextSpec
 import org.grails.forge.BuildBuilder
 import org.grails.forge.application.ApplicationType
 import org.grails.forge.application.generator.GeneratorContext
 import org.grails.forge.feature.AvailableFeatures
 import org.grails.forge.feature.Category
+import org.grails.forge.feature.FeatureRegistry
 import org.grails.forge.feature.Features
 import org.grails.forge.fixture.CommandOutputFixture
 import org.grails.forge.options.DevelopmentReloading
@@ -109,7 +109,7 @@ class GraphqlGormSpec extends ApplicationContextSpec implements CommandOutputFix
     @Unroll
     void "test gorm-graphql is listed in the available features of the #applicationType application type: #listed"() {
         when:
-        AvailableFeatures availableFeatures = beanContext.getBean(AvailableFeatures, Qualifiers.byName(applicationType.name))
+        AvailableFeatures availableFeatures = beanContext.getBean(FeatureRegistry).availableFeatures(applicationType)
 
         then:
         availableFeatures.findFeature('gorm-graphql').isPresent() == listed
@@ -155,7 +155,7 @@ class GraphqlGormSpec extends ApplicationContextSpec implements CommandOutputFix
         then:
         readme
         readme.contains('## Feature gorm-graphql documentation')
-        readme.contains("[Grails GORM for GraphQL documentation](https://grails.apache.org/docs/${VersionInfo.documentationVersion}/grails-data/graphql/manual/)")
+        readme.contains("[Grails Data for GraphQL documentation](https://grails.apache.org/docs/${VersionInfo.documentationVersion}/grails-data/graphql/manual/)")
         readme.contains('[https://graphql.org](https://graphql.org)')
     }
 
