@@ -233,8 +233,9 @@ public class HibernateCriteriaBuilder extends AbstractHibernateCriteriaBuilder {
         else {
             detachedCriteria = org.hibernate.criterion.DetachedCriteria.forClass(targetClass);
         }
-        populateHibernateDetachedCriteria(new HibernateQuery(detachedCriteria, persistentEntity), detachedCriteria, queryableCriteria);
-        return detachedCriteria;
+        HibernateQuery subquery = new HibernateQuery(detachedCriteria, persistentEntity);
+        populateHibernateDetachedCriteria(subquery, detachedCriteria, queryableCriteria);
+        return subquery.getHibernateDetachedCriteria();
     }
 
     private static void populateHibernateDetachedCriteria(AbstractHibernateQuery query, org.hibernate.criterion.DetachedCriteria detachedCriteria, QueryableCriteria<?> queryableCriteria) {

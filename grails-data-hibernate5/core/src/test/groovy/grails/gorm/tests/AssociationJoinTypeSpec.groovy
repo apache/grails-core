@@ -211,6 +211,60 @@ class AssociationJoinTypeSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckM
         results*.name.sort() == TEAMS_WITH_A_CLUB
     }
 
+    void 'a subquery can have criteria on an association that it requests a join type for'() {
+        given:
+        final arsenalPlayers = Player.where {
+            team {
+                club {
+                    name == 'Arsenal'
+                }
+            }
+        }.join('team.club', joinType).id()
+
+        when:
+        final results = new DetachedCriteria(Player).inList('id', arsenalPlayers).list()
+
+        then:
+        results*.name == ['Arsenal Player']
+
+        where:
+        joinType << [JoinType.LEFT, JoinType.INNER, JoinType.RIGHT]
+    }
+
+    void 'a subquery applies a requested inner join to the associations that its criteria do not join'() {
+        given:
+        final playersOfATeamWithAClub = Player.where {
+            team {
+                name ==~ '%First%'
+            }
+        }.join('team.club', JoinType.INNER).id()
+
+        when:
+        final results = new DetachedCriteria(Player).inList('id', playersOfATeamWithAClub).list()
+
+        then: 'the player whose team has no club is left out'
+        results*.name.sort() == ['Arsenal Player', 'Chelsea Player', 'MU Player']
+    }
+
+    void 'a criteria query can embed a subquery that has criteria on an association that it requests a join type for'() {
+        given:
+        final arsenalPlayers = Player.where {
+            team {
+                club {
+                    name == 'Arsenal'
+                }
+            }
+        }.join('team.club', JoinType.INNER).id()
+
+        when:
+        final results = Player.createCriteria().list {
+            inList('id', arsenalPlayers)
+        }
+
+        then:
+        results*.name == ['Arsenal Player']
+    }
+
     void 'an inner join that fetch requests applies to a projection'() {
         when:
         final results = Team.where {

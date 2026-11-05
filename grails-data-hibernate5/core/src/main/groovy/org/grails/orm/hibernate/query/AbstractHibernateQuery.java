@@ -736,7 +736,9 @@ public abstract class AbstractHibernateQuery extends Query {
      * the query requests a join type for. This happens when the query is executed, because the rest of
      * the query can still change before that: the {@code fetch} argument of {@code list} requests a
      * join type after a sort stored on a where query has been applied, and criteria passed to
-     * {@code list} are added after it too.
+     * {@code list} are added after it too. A query that is used as a subquery is not executed itself:
+     * the join types that it requests are applied once its criteria have been added, when its detached
+     * criteria are handed to the query that embeds them.
      * <p>
      * A sort must not change which rows the query returns. An association that only a sort uses is
      * therefore joined with a left join unless the query requests another join type for it, and a
@@ -953,11 +955,8 @@ public abstract class AbstractHibernateQuery extends Query {
         this.joinTypes.put(property, joinType);
         if (criteria != null)
             criteria.setFetchMode(property, FetchMode.JOIN);
-        else if (detachedCriteria != null) {
+        else if (detachedCriteria != null)
             detachedCriteria.setFetchMode(property, FetchMode.JOIN);
-            // a detached criteria is executed by the query that embeds it, so its joins cannot wait
-            applyDeferredJoins();
-        }
         return this;
     }
 

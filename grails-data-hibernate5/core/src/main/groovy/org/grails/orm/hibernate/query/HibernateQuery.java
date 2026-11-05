@@ -75,6 +75,16 @@ public class HibernateQuery extends AbstractHibernateQuery {
         return this.criteria;
     }
 
+    /**
+     * @return The hibernate detached criteria of a query that is used as a subquery. The join types
+     * that the subquery requests are applied here, once its criteria have been added, so that an
+     * association that the criteria join keeps that join.
+     */
+    public DetachedCriteria getHibernateDetachedCriteria() {
+        applyDeferredJoins();
+        return this.detachedCriteria;
+    }
+
     @Override
     protected AbstractHibernateCriterionAdapter createHibernateCriterionAdapter() {
         return HIBERNATE_CRITERION_ADAPTER;
