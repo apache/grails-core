@@ -20,17 +20,15 @@ package grails.orm;
 
 import java.beans.PropertyDescriptor;
 import java.util.Collection;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Consumer;
 
 import groovy.lang.Closure;
 import groovy.lang.MetaMethod;
 
 import jakarta.persistence.criteria.JoinType;
 import jakarta.persistence.metamodel.Attribute;
-import jakarta.persistence.metamodel.EntityType;
+import jakarta.persistence.metamodel.ManagedType;
 import jakarta.persistence.metamodel.Metamodel;
 
 import org.springframework.beans.BeanUtils;
@@ -38,13 +36,11 @@ import org.springframework.beans.BeanUtils;
 import grails.gorm.DetachedCriteria;
 import org.grails.datastore.gorm.finders.DynamicFinder;
 import org.grails.datastore.gorm.query.criteria.DetachedAssociationCriteria;
+import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.PersistentProperty;
 import org.grails.datastore.mapping.model.types.Association;
 import org.grails.datastore.mapping.query.Query;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
-import org.grails.orm.hibernate.query.AssociationAliasOrder;
-import org.grails.orm.hibernate.query.AssociationOrder;
-import org.grails.orm.hibernate.query.HibernateAlias;
+import org.grails.orm.hibernate.query.AssociationOrders;
 import org.grails.orm.hibernate.query.HibernatePagedResultList;
 import org.grails.orm.hibernate.query.HibernateQuery;
 import org.grails.orm.hibernate.query.HibernateQueryArgument;
@@ -203,8 +199,10 @@ public class CriteriaMethodInvoker {
         final PropertyDescriptor pd = BeanUtils.getPropertyDescriptor(builder.getTargetClass(), name);
         if (pd != null && pd.getReadMethod() != null) {
             final Metamodel metamodel = builder.getSessionFactory().getMetamodel();
-            final EntityType<?> entityType = metamodel.entity(builder.getTargetClass());
-            final Attribute<?, ?> attribute = entityType.getAttribute(name);
+            // the target is the class of an embedded component inside the block of that component, which is a
+            // managed type but not an entity
+            final ManagedType<?> managedType = metamodel.managedType(builder.getTargetClass());
+            final Attribute<?, ?> attribute = managedType.getAttribute(name);
             // The JPA metamodel does not consider an embedded component an association, but the
             // GORM model does - an embedded block must build a DetachedAssociationCriteria so its
             // properties resolve against the component. It needs no join: its columns live in the
@@ -230,20 +228,25 @@ public class CriteriaMethodInvoker {
                     hibernateQuery.join(name, joinType);
                 }
 
-                GrailsHibernatePersistentEntity parentEntity = (GrailsHibernatePersistentEntity)
+                DetachedCriteria<?> oldDetachedCriteria = hibernateQuery.getDetachedCriteria();
+                // inside the block of an embedded component the entity is the one of the component, which the
+                // mapping context does not know by the class of the component
+                PersistentEntity parentEntity = oldDetachedCriteria instanceof DetachedAssociationCriteria<?> enclosing ?
+                        enclosing.getAssociation().getAssociatedEntity() :
                         hibernateQuery.getSession().getMappingContext().getPersistentEntity(oldTargetClass.getName());
                 PersistentProperty<?> property = parentEntity.getPropertyByName(name);
                 if (property instanceof Association<?> association) {
                     DetachedAssociationCriteria<?> associationCriteria =
                             new DetachedAssociationCriteria<>(associationClass, association);
-                    DetachedCriteria<?> oldDetachedCriteria = hibernateQuery.getDetachedCriteria();
                     hibernateQuery.setDetachedCriteria(associationCriteria);
                     try {
                         invokeClosureNode(callable);
                     } finally {
                         hibernateQuery.setDetachedCriteria(oldDetachedCriteria);
                     }
-                    moveOrdersToEnclosingCriteria(name, associationCriteria, hibernateQuery::order);
+                    // the orders of the block become orders of the enclosing criteria, in the place they
+                    // were declared in, since only the orders of the root criteria reach the query
+                    AssociationOrders.moveOutOf(associationCriteria, hibernateQuery::order);
                     hibernateQuery.add((Query.Criterion) associationCriteria);
                 } else {
                     // Fallback for non-GORM associations if any
@@ -264,90 +267,12 @@ public class CriteriaMethodInvoker {
      * the criteria themselves and not by the builder, so the orders of the blocks inside it are still in their
      * blocks.
      */
-    void moveOrdersOutOfJunction() {
+    protected void moveOrdersOutOfJunction() {
         HibernateQuery hibernateQuery = builder.getHibernateQuery();
         List<Query.Criterion> criteria = hibernateQuery.getDetachedCriteria().getCriteria();
         if (!criteria.isEmpty() && criteria.get(criteria.size() - 1) instanceof Query.Junction junction) {
-            moveOrdersOutOfBlocks(junction.getCriteria(), hibernateQuery::order);
+            AssociationOrders.moveOutOfBlocks(junction.getCriteria(), hibernateQuery::order);
         }
-    }
-
-    /**
-     * Moves the orders of the association blocks among the criteria, at any depth and inside any junction, to
-     * the enclosing criteria.
-     */
-    private static void moveOrdersOutOfBlocks(List<Query.Criterion> criteria, Consumer<Query.Order> enclosingCriteria) {
-        for (Query.Criterion criterion : criteria) {
-            if (criterion instanceof Query.Junction junction) {
-                moveOrdersOutOfBlocks(junction.getCriteria(), enclosingCriteria);
-            } else if (criterion instanceof DetachedAssociationCriteria<?> block) {
-                // the blocks inside this one first, whose orders become orders of this block
-                moveOrdersOutOfBlocks(block.getCriteria(), order -> block.order(order));
-                moveOrdersToEnclosingCriteria(block.getAssociationPath(), block, enclosingCriteria);
-            }
-        }
-    }
-
-    /**
-     * Moves the orders of an association block to the enclosing criteria, since only the orders of the root
-     * criteria reach the query. An order by a property of the association is qualified with the name of the
-     * association. An alias exists only in the block that declares it, so an order by such an alias keeps its
-     * block and is resolved against it. Any other order stays in the block.
-     */
-    private static void moveOrdersToEnclosingCriteria(
-            String associationName, DetachedAssociationCriteria<?> associationCriteria, Consumer<Query.Order> enclosingCriteria) {
-        for (Iterator<Query.Order> orders = associationCriteria.getOrders().iterator(); orders.hasNext();) {
-            Query.Order order = orderOfEnclosingCriteria(orders.next(), associationName, associationCriteria);
-            if (order != null) {
-                enclosingCriteria.accept(order);
-                orders.remove();
-            }
-        }
-    }
-
-    /**
-     * Returns an order of an association block as an order of the enclosing criteria, or {@code null} if it
-     * starts with neither a property of the association nor an alias that the block declares.
-     */
-    private static Query.Order orderOfEnclosingCriteria(
-            Query.Order order, String associationName, DetachedAssociationCriteria<?> associationCriteria) {
-        if (order instanceof AssociationAliasOrder aliasOrder) {
-            // an order by an alias of a block inside this one, which is still resolved against that block
-            return aliasOrder.qualifiedWith(associationName);
-        }
-        String property = order.getProperty();
-        int dot = property.indexOf('.');
-        String head = dot < 0 ? property : property.substring(0, dot);
-        Query.Order moved = null;
-        if (dot > 0) {
-            for (Query.Criterion criterion : associationCriteria.getCriteria()) {
-                String aliasPath = pathOfAlias(criterion, head);
-                if (aliasPath != null) {
-                    moved = new AssociationAliasOrder(associationName + '.' + aliasPath + property.substring(dot),
-                            order.getDirection(), associationCriteria, property);
-                    break;
-                }
-            }
-        }
-        // the entity of the association, which is also there for an embedded component: the class of a
-        // component is not a domain class, so the criteria of its block have no entity to look the property up on
-        if (moved == null && associationCriteria.getAssociation().getAssociatedEntity().getPropertyByName(head) != null) {
-            moved = new AssociationOrder(associationName + '.' + property, order.getDirection());
-        }
-        return moved != null && order.isIgnoreCase() ? moved.ignoreCase() : moved;
-    }
-
-    /**
-     * Returns the path of the association that a criterion of a block declares the alias for, or {@code null}.
-     * The builder declares an alias with a {@link HibernateAlias}. In the closure of a junction, which the
-     * criteria evaluate themselves, {@code createAlias} declares it with association criteria that have the alias.
-     */
-    private static String pathOfAlias(Query.Criterion criterion, String alias) {
-        if (criterion instanceof HibernateAlias declared) {
-            return alias.equals(declared.alias()) ? declared.path() : null;
-        }
-        return criterion instanceof DetachedAssociationCriteria<?> aliased && alias.equals(aliased.getAlias()) ?
-                aliased.getAssociationPath() : null;
     }
 
     @SuppressWarnings("PMD.DataflowAnomalyAnalysis")

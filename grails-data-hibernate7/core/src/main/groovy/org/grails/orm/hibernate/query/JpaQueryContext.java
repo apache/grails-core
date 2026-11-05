@@ -24,9 +24,11 @@ import java.util.Map;
 
 import jakarta.persistence.criteria.Expression;
 import jakarta.persistence.criteria.From;
+import jakarta.persistence.criteria.Join;
 import jakarta.persistence.criteria.JoinType;
 import jakarta.persistence.criteria.ParameterExpression;
 import jakarta.persistence.criteria.Path;
+import jakarta.persistence.metamodel.Attribute;
 
 import org.grails.datastore.gorm.query.criteria.DetachedAssociationCriteria;
 
@@ -219,7 +221,7 @@ public class JpaQueryContext implements Cloneable {
      *     identifier, with the foreign key on the side of the path
      * @return the expression to sort by
      */
-    Expression<?> getSortExpression(String path, boolean endsWithForeignKey) {
+    public Expression<?> getSortExpression(String path, boolean endsWithForeignKey) {
         if (parent != null && path != null && path.startsWith("{alias}")) {
             return getFullyQualifiedExpression(path);
         }
@@ -234,7 +236,7 @@ public class JpaQueryContext implements Cloneable {
      * @param order the order by an alias of an association block
      * @return the expression to sort by
      */
-    Expression<?> getSortExpression(AssociationAliasOrder order) {
+    public Expression<?> getSortExpression(AssociationAliasOrder order) {
         JpaQueryContext associationContext = getAssociationContext(order.getAssociation());
         return associationContext != null ?
                 associationContext.getSortExpression(order.getAliasedProperty()) :
@@ -249,7 +251,7 @@ public class JpaQueryContext implements Cloneable {
      * @param association the criteria of the association block
      * @param context the context of the block
      */
-    void registerAssociationContext(DetachedAssociationCriteria<?> association, JpaQueryContext context) {
+    public void registerAssociationContext(DetachedAssociationCriteria<?> association, JpaQueryContext context) {
         if (parent != null) {
             parent.registerAssociationContext(association, context);
         } else {
@@ -267,11 +269,38 @@ public class JpaQueryContext implements Cloneable {
      * @param association the criteria of the association block
      * @return the context of the block, or {@code null} if the query has built no criteria of that block
      */
-    JpaQueryContext getAssociationContext(DetachedAssociationCriteria<?> association) {
+    public JpaQueryContext getAssociationContext(DetachedAssociationCriteria<?> association) {
         if (parent != null) {
             return parent.getAssociationContext(association);
         }
         return associationContexts != null ? associationContexts.get(association) : null;
+    }
+
+    /**
+     * Whether an expression is read from the table of the root of this query: a property of the root, of one of
+     * its embedded components, or one of its foreign keys. Anything that is read through a join of an
+     * association is not.
+     *
+     * @param expression the expression
+     * @return whether the expression is a column of the root
+     */
+    public boolean isColumnOfRoot(Expression<?> expression) {
+        if (!(expression instanceof Path<?> path)) {
+            return false;
+        }
+        Path<?> parent = path.getParentPath();
+        while (parent != null && parent != getRoot()) {
+            if (parent instanceof Join<?, ?> join) {
+                // the join of a component has no table of its own
+                if (join.getAttribute().getPersistentAttributeType() != Attribute.PersistentAttributeType.EMBEDDED) {
+                    return false;
+                }
+                parent = join.getParent();
+            } else {
+                parent = parent.getParentPath();
+            }
+        }
+        return parent != null;
     }
 
     public Path<?> getFullyQualifiedPath(String path) {

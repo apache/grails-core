@@ -17,9 +17,11 @@ package org.grails.orm.hibernate.query;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 
 import jakarta.persistence.criteria.AbstractQuery;
 import jakarta.persistence.criteria.CriteriaBuilder;
@@ -38,6 +40,8 @@ import org.springframework.core.convert.ConversionService;
 import grails.gorm.DetachedCriteria;
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.types.Association;
+import org.grails.datastore.mapping.model.types.Embedded;
+import org.grails.datastore.mapping.model.types.ToOne;
 import org.grails.datastore.mapping.query.Query;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
 
@@ -57,6 +61,7 @@ public class JpaCriteriaQueryCreator<T> {
     private final QueryAliasRegistrar aliasRegistrar;
     private JpaQueryContext parentContext;
     private JpaQueryContext context;
+    private boolean distinctInMemory;
 
     public JpaCriteriaQueryCreator(
             Query.ProjectionList projections,
@@ -98,7 +103,19 @@ public class JpaCriteriaQueryCreator<T> {
         return context != null ? context.getParameterValues() : Collections.emptyMap();
     }
 
+    /**
+     * Whether the query last built by {@link #createQuery()} selects distinct entities without the SQL keyword,
+     * because it is ordered by a value that is not among the columns of the entity. Its results are then to be
+     * made distinct once they are read, as Hibernate 5 did for a distinct list.
+     *
+     * @return whether the entities of the result are to be made distinct in memory
+     */
+    public boolean isDistinctInMemory() {
+        return distinctInMemory;
+    }
+
     public JpaCriteriaQuery<?> createQuery() {
+        distinctInMemory = false;
         var projectionList = collectProjections();
         var cq = createCriteriaQuery(projectionList);
         Class<?> javaClass = entity.getJavaClass();
@@ -106,7 +123,7 @@ public class JpaCriteriaQueryCreator<T> {
 
         context = aliasRegistrar.createContext(parentContext, root);
 
-        applyEagerFetchJoins(root, projectionList);
+        applyRequestedJoins(root, projectionList);
 
         new JpaProjectionAdapter(criteriaBuilder, context, entity).adapt(projections, (AbstractQuery<?>) cq);
         assignGroupBy(cq, context);
@@ -124,29 +141,37 @@ public class JpaCriteriaQueryCreator<T> {
      * joins (or, when not referenced in a predicate, not materialized at all), leaving the
      * association uninitialized. Only applied to full-entity selects - a fetch join on a projection
      * query (for example {@code count}) is invalid.
+     * <p>
+     * An inner join that is requested for a to-one association decides which rows the query has, whether or not
+     * anything refers to the association. A fetch join does that for a full-entity select. A count or another
+     * projection query has no fetch join, so the association is joined with a plain join there, and a paged list
+     * counts the rows that it returns.
      */
-    private void applyEagerFetchJoins(Root<?> root, List<Query.Projection> projectionList) {
-        if (hibernateQuery == null) {
-            return;
-        }
+    private void applyRequestedJoins(Root<?> root, List<Query.Projection> projectionList) {
+        Map<String, JoinType> joinTypes = detachedCriteria.getJoinTypes();
+        Set<String> fetched = new HashSet<>();
         boolean entitySelect = projectionList.stream().noneMatch(p -> !(p instanceof Query.DistinctProjection));
-        if (!entitySelect) {
-            return;
-        }
-        Map<String, ?> joinTypes = detachedCriteria.getJoinTypes();
-        for (String fetchPath : hibernateQuery.getFetchJoinPaths()) {
-            if (fetchPath == null || fetchPath.indexOf('.') >= 0) {
-                continue;
-            }
-            Object configured = (joinTypes != null) ? joinTypes.get(fetchPath) : null;
-            JoinType joinType = (configured instanceof JoinType jt) ? jt : JoinType.LEFT;
-            try {
-                root.fetch(fetchPath, joinType);
-            }
-            catch (IllegalArgumentException ignored) {
-                // Not a fetchable association on this root; the plain join handling remains in place.
+        if (entitySelect && hibernateQuery != null) {
+            for (String fetchPath : hibernateQuery.getFetchJoinPaths()) {
+                if (fetchPath == null || fetchPath.indexOf('.') >= 0) {
+                    continue;
+                }
+                JoinType joinType = joinTypes.getOrDefault(fetchPath, JoinType.LEFT);
+                try {
+                    root.fetch(fetchPath, joinType);
+                    fetched.add(fetchPath);
+                }
+                catch (IllegalArgumentException ignored) {
+                    // Not a fetchable association on this root; the plain join handling remains in place.
+                }
             }
         }
+        joinTypes.forEach((path, joinType) -> {
+            if (joinType == JoinType.INNER && !fetched.contains(path) && path.indexOf('.') < 0 &&
+                    entity.getPropertyByName(path) instanceof ToOne<?> toOne && !(toOne instanceof Embedded)) {
+                context.resolveAssociation(path);
+            }
+        });
     }
 
     @SuppressWarnings("unchecked")
@@ -256,9 +281,13 @@ public class JpaCriteriaQueryCreator<T> {
             // on H2 and most other databases, so a count query leaves the criteria's orders out
             return;
         }
-        boolean orderedBySelection = isOrderedBySelection();
+        // the orders that are still in an association block come after the orders of the criteria
+        List<Query.Order> orders = new ArrayList<>(detachedCriteria.getOrders());
+        orders.addAll(AssociationOrders.inBlocks(detachedCriteria.getCriteria()));
+        boolean distinctEntities = isDistinctEntities();
+        boolean orderedBySelection = !distinctEntities && isOrderedBySelection();
         List<jakarta.persistence.criteria.Order> jpaOrders = new ArrayList<>();
-        for (Query.Order order : detachedCriteria.getOrders()) {
+        for (Query.Order order : orders) {
             var propertyName = order.getProperty();
             SqlProjection sqlProjection = findSqlProjection(propertyName, false);
             boolean selected = isSelectedProperty(propertyName);
@@ -278,6 +307,16 @@ public class JpaCriteriaQueryCreator<T> {
             } else {
                 expression = context.getSortExpression(propertyName, endsWithForeignKey(propertyName));
             }
+            if (expression == null) {
+                if (order instanceof AssociationOrder) {
+                    // an order of an association block that names nothing has no effect, as before
+                    continue;
+                }
+                throw new IllegalArgumentException("Invalid " + HibernateQueryArgument.SORT.value() + " property");
+            }
+            if (distinctEntities && !context.isColumnOfRoot(expression)) {
+                distinctInMemory = true;
+            }
             boolean ascending = order.getDirection().equals(Query.Order.Direction.ASC);
             if (order.isIgnoreCase() && expression.getJavaType().equals(String.class)) {
                 Expression<String> lower = criteriaBuilder.lower((Expression<String>) expression);
@@ -286,9 +325,22 @@ public class JpaCriteriaQueryCreator<T> {
                 jpaOrders.add(ascending ? criteriaBuilder.asc(expression) : criteriaBuilder.desc(expression));
             }
         }
+        if (distinctInMemory) {
+            // SQL only orders a distinct query by what it selects, and an order through a join is not among
+            // the columns of the entity; without the keyword the entities are made distinct once they are read
+            cq.distinct(false);
+        }
         if (!jpaOrders.isEmpty()) {
             cq.orderBy(jpaOrders);
         }
+    }
+
+    /**
+     * Whether the query selects distinct entities and nothing else, as {@code listDistinct} does.
+     */
+    private boolean isDistinctEntities() {
+        List<Query.Projection> projectionList = projections.getProjectionList();
+        return !projectionList.isEmpty() && projectionList.stream().allMatch(Query.DistinctProjection.class::isInstance);
     }
 
     /**

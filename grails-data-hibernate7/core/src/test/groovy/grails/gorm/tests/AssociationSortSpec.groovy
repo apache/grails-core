@@ -18,6 +18,7 @@
  */
 package grails.gorm.tests
 
+import grails.gorm.DetachedCriteria
 import grails.gorm.annotation.Entity
 import grails.gorm.tests.entities.Club
 import grails.gorm.tests.entities.Contract
@@ -25,6 +26,8 @@ import grails.gorm.tests.entities.Player
 import grails.gorm.tests.entities.Team
 import org.apache.grails.data.hibernate7.core.GrailsDataHibernate7TckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
+
+import jakarta.persistence.criteria.JoinType
 
 /**
  * A sort by a property of an association must not leave out the instances whose association is null.
@@ -285,6 +288,218 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate7TckManag
         }*.name.sort() == ['Bruno', 'Bukayo', 'Cole', 'Unattached Player']
     }
 
+    void 'an order inside an association block of a detached criteria sorts by the property of the association'() {
+        when:
+        final results = new DetachedCriteria(Team).build {
+            club {
+                order('name', 'desc')
+            }
+        }.list()
+
+        then:
+        results*.name == ['Manchester United First Team', 'Chelsea First Team', 'Arsenal First Team']
+    }
+
+    void 'an order inside an association block of a detached criteria comes after the orders of the criteria'() {
+        given:
+        new Team(club: Club.findByName('Arsenal'), name: 'Arsenal Second Team').save(failOnError: true, flush: true)
+
+        when:
+        final results = new DetachedCriteria(Team).build {
+            club {
+                order('name')
+            }
+            order('name', 'desc')
+        }.list()
+
+        then: 'the criteria keep their own orders in front, since the block is only read when the query is built'
+        results*.name == ['Manchester United First Team', 'Chelsea First Team', 'Arsenal Second Team', 'Arsenal First Team']
+    }
+
+    void 'an order by an alias inside an association block of a detached criteria sorts by that alias'() {
+        when:
+        final results = new DetachedCriteria(Player).build {
+            team {
+                createAlias('club', 'c')
+                order('c.name', 'desc')
+            }
+        }.list()
+
+        then:
+        results*.name == ['Bruno', 'Cole', 'Bukayo']
+    }
+
+    void 'an order in an association block by an alias of the enclosing criteria sorts by that alias'() {
+        when:
+        final results = Player.withCriteria {
+            createAlias('team', 't')
+            contract {
+                order('t.name', 'desc')
+            }
+        }
+
+        then:
+        results*.name == ['Unattached Player', 'Bruno', 'Cole', 'Bukayo']
+    }
+
+    void 'an order in a nested association block by an alias of the root criteria sorts by that alias'() {
+        when:
+        final results = Contract.withCriteria {
+            createAlias('player', 'p')
+            player {
+                team {
+                    order('p.name', 'desc')
+                }
+            }
+        }
+
+        then:
+        results*.player*.name == ['Unattached Player', 'Cole', 'Bukayo', 'Bruno']
+    }
+
+    void 'a distinct list is ordered by a property of an association'() {
+        when:
+        final results = Team.createCriteria().listDistinct {
+            order('club.name', 'desc')
+        }
+
+        then: 'the query is not rejected for an order that is not in its select list'
+        results.size() == 4
+        results*.name - 'Unattached First Team' == ['Manchester United First Team', 'Chelsea First Team', 'Arsenal First Team']
+    }
+
+    void 'a distinct list is ordered by an order in an association block'() {
+        when:
+        final byClub = Team.createCriteria().listDistinct {
+            club {
+                order('name', 'desc')
+            }
+        }
+        final byPlayer = Team.createCriteria().listDistinct {
+            players {
+                order('name')
+            }
+        }
+
+        then:
+        byClub*.name == ['Manchester United First Team', 'Chelsea First Team', 'Arsenal First Team']
+
+        and: 'a team is listed once, although the players are joined'
+        byPlayer*.name == ['Manchester United First Team', 'Arsenal First Team', 'Chelsea First Team', 'Unattached First Team']
+    }
+
+    void 'a distinct list ordered by a collection lists an instance once'() {
+        given:
+        new Player(name: 'Aaron', team: Team.findByName('Chelsea First Team')).save(failOnError: true, flush: true)
+        manager.session.clear()
+
+        when:
+        final results = Team.createCriteria().listDistinct {
+            order('players.name')
+        }
+
+        then:
+        results*.name == ['Chelsea First Team', 'Manchester United First Team', 'Arsenal First Team', 'Unattached First Team']
+    }
+
+    void 'an order by #property that does not resolve is rejected'() {
+        when:
+        Team.withCriteria {
+            order(property)
+        }
+
+        then:
+        final e = thrown(IllegalArgumentException)
+        e.message == 'Invalid sort property'
+
+        where:
+        property << ['bogus', 'club.bogus', 'bogus.name']
+    }
+
+    void 'a criteria query restricts by an association inside an embedded component'() {
+        expect:
+        AssociationSortBook.withCriteria {
+            details {
+                author {
+                    eq('name', 'King')
+                }
+            }
+        }*.title == ['It']
+    }
+
+    void 'an order inside an association block of an embedded component sorts by the property of the association'() {
+        when:
+        final results = AssociationSortBook.withCriteria {
+            details {
+                author {
+                    order('name', 'desc')
+                }
+            }
+        }
+
+        then: 'the block joins the author with an inner join'
+        results*.title == ['It', 'Guide']
+    }
+
+    void 'an order by an alias that the block of an embedded component declares sorts by that alias'() {
+        when:
+        final results = AssociationSortBook.withCriteria {
+            details {
+                createAlias('author', 'a', joinType)
+                order('a.name', 'desc')
+            }
+        }
+
+        then:
+        results*.title - 'Anonymous' == ['It', 'Guide']
+        ('Anonymous' in results*.title) == kept
+
+        where:
+        joinType || kept
+        0        || false
+        1        || true
+    }
+
+    void 'a paged list with a join type requested for an association counts the rows that it returns'() {
+        when:
+        final results = Team.where {
+            name ==~ '%First%'
+        }.list(sort: 'club.name', fetch: [club: JoinType.INNER], max: 10)
+
+        then:
+        results.size() == 3
+        results.totalCount == 3
+    }
+
+    void 'a #query with an inner join requested for an association leaves out a team without a club'() {
+        expect:
+        resultOf(query) == expected
+
+        where:
+        query                  || expected
+        'count'                || 3
+        'property projection'  || ['Arsenal First Team', 'Chelsea First Team', 'Manchester United First Team']
+        'criteria count'       || 3
+    }
+
+    private static Object resultOf(String query) {
+        switch (query) {
+            case 'count':
+                return Team.where {
+                    name ==~ '%First%'
+                }.join('club', JoinType.INNER).count()
+            case 'property projection':
+                return Team.where {
+                    name ==~ '%First%'
+                }.join('club', JoinType.INNER).property('name').list().sort()
+            default:
+                return Team.createCriteria().count {
+                    like('name', '%First%')
+                    join('club', JoinType.INNER)
+                }
+        }
+    }
+
     void 'a dynamic finder sorted by an association property keeps a team without a club'() {
         when:
         final results = Team.findAllByNameLike('%First%', [sort: 'club.name'])
@@ -435,12 +650,6 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate7TckManag
 
     void 'an order in an association block is left out of a query that can only be ordered by what it selects'() {
         when: 'the database would reject an order by the name of the club in each of these queries'
-        final distinctTeams = Team.createCriteria().listDistinct {
-            club {
-                like('name', '%')
-                order('name', 'desc')
-            }
-        }
         final distinctNames = Team.withCriteria {
             projections {
                 distinct('name')
@@ -461,7 +670,6 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate7TckManag
         }
 
         then: 'they run as they did when no order of a block reached the query'
-        distinctTeams*.name.sort() == ['Arsenal First Team', 'Chelsea First Team', 'Manchester United First Team']
         distinctNames.sort() == ['Arsenal First Team', 'Chelsea First Team', 'Manchester United First Team']
         lastName == ['Manchester United First Team']
     }
@@ -498,7 +706,7 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate7TckManag
         results.totalCount == 2
     }
 
-    void 'an order in an association block that names neither a property nor an alias of the block stays in the block'() {
+    void 'an order in an association block that names neither a property nor an alias has no effect'() {
         when:
         final results = Player.withCriteria {
             team {
@@ -506,7 +714,7 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate7TckManag
             }
         }
 
-        then: 'it does not reach the query, as no order of a block did before'
+        then: 'it is left out of the query, as every order of a block was before'
         results.size() == 4
     }
 

@@ -46,6 +46,34 @@ class HqlListQueryBuilderSpec extends Specification {
         mappingContext.getMappingCacheHolder() >> cacheHolder
     }
 
+    /** Stubs an association of the owner and returns the entity that it refers to. */
+    private PersistentEntity associated(PersistentEntity owner, String name, Association kind = null) {
+        Association association = kind ?: Mock(Association)
+        def associatedEntity = Mock(PersistentEntity)
+        association.getAssociatedEntity() >> associatedEntity
+        owner.getPropertyByName(name) >> association
+        associatedEntity
+    }
+
+    /** Stubs a property of the owner that has the given type. */
+    private void property(PersistentEntity owner, String name, Class type) {
+        def prop = Mock(HibernatePersistentProperty)
+        prop.getType() >> type
+        owner.getPropertyByName(name) >> prop
+    }
+
+    private HibernateManyToOneProperty manyToOne() {
+        def association = Mock(HibernateManyToOneProperty)
+        association.isValidHibernateManyToOne() >> true
+        association
+    }
+
+    private PersistentProperty identity(String name = "id") {
+        def identity = Mock(PersistentProperty)
+        identity.getName() >> name
+        identity
+    }
+
     void "test buildCountHql"() {
         given:
         def builder = new HqlListQueryBuilder(entity, [:])
@@ -66,7 +94,7 @@ class HqlListQueryBuilderSpec extends Specification {
         given:
         def prop = Mock(HibernatePersistentProperty)
         prop.getType() >> String
-        entity.getHibernatePropertyByPath("name") >> prop
+        entity.getPropertyByName("name") >> prop
         
         def builder = new HqlListQueryBuilder(entity, [
                 (HibernateQueryArgument.SORT.value()) : "name",
@@ -81,7 +109,7 @@ class HqlListQueryBuilderSpec extends Specification {
         given:
         def prop = Mock(HibernatePersistentProperty)
         prop.getType() >> Integer
-        entity.getHibernatePropertyByPath("age") >> prop
+        entity.getPropertyByName("age") >> prop
 
         def builder = new HqlListQueryBuilder(entity, [
                 (HibernateQueryArgument.SORT.value()) : "age",
@@ -96,7 +124,7 @@ class HqlListQueryBuilderSpec extends Specification {
         given:
         def prop = Mock(HibernatePersistentProperty)
         prop.getType() >> String
-        entity.getHibernatePropertyByPath("name") >> prop
+        entity.getPropertyByName("name") >> prop
 
         def builder = new HqlListQueryBuilder(entity, [
                 (HibernateQueryArgument.SORT.value())       : "name",
@@ -114,8 +142,8 @@ class HqlListQueryBuilderSpec extends Specification {
         def ageProp = Mock(HibernatePersistentProperty)
         ageProp.getType() >> Integer
         
-        entity.getHibernatePropertyByPath("name") >> nameProp
-        entity.getHibernatePropertyByPath("age") >> ageProp
+        entity.getPropertyByName("name") >> nameProp
+        entity.getPropertyByName("age") >> ageProp
 
         // Use LinkedHashMap to ensure deterministic order in HQL generation
         def builder = new HqlListQueryBuilder(entity, [
@@ -129,16 +157,28 @@ class HqlListQueryBuilderSpec extends Specification {
         builder.buildListHql() == "from Person e order by upper(e.name) asc, e.age desc"
     }
 
-    void "test buildListHql with nested property sort"() {
+    void "test buildListHql rejects a sort path through a property that is not an association"() {
         given:
-        def prop = Mock(HibernatePersistentProperty)
-        prop.getType() >> String
-        entity.getHibernatePropertyByPath("author.name") >> prop
+        property(entity, "name", String)
 
-        def builder = new HqlListQueryBuilder(entity, [(HibernateQueryArgument.SORT.value()): "author.name"])
+        when:
+        new HqlListQueryBuilder(entity, [(HibernateQueryArgument.SORT.value()): "name.length"]).buildListHql()
 
-        expect:
-        builder.buildListHql() == "from Person e order by upper(e.author.name) asc"
+        then: "the one walk of the path finds nothing to go on from"
+        def e = thrown(IllegalArgumentException)
+        e.message == "Invalid sort property"
+    }
+
+    void "test buildListHql rejects a sort path that ends with a property the associated entity does not have"() {
+        given:
+        associated(entity, "author")
+
+        when:
+        new HqlListQueryBuilder(entity, [(HibernateQueryArgument.SORT.value()): "author.unknown"]).buildListHql()
+
+        then:
+        def e = thrown(IllegalArgumentException)
+        e.message == "Invalid sort property"
     }
 
     void "test buildListHql with join fetch"() {
@@ -171,7 +211,7 @@ class HqlListQueryBuilderSpec extends Specification {
         
         def prop = Mock(HibernatePersistentProperty)
         prop.getType() >> String
-        entity.getHibernatePropertyByPath("lastName") >> prop
+        entity.getPropertyByName("lastName") >> prop
 
         def builder = new HqlListQueryBuilder(entity, [:])
 
@@ -195,8 +235,8 @@ class HqlListQueryBuilderSpec extends Specification {
         def firstProp = Mock(HibernatePersistentProperty)
         firstProp.getType() >> String
         
-        entity.getHibernatePropertyByPath("lastName") >> lastProp
-        entity.getHibernatePropertyByPath("firstName") >> firstProp
+        entity.getPropertyByName("lastName") >> lastProp
+        entity.getPropertyByName("firstName") >> firstProp
 
         def builder = new HqlListQueryBuilder(entity, [:])
 
@@ -240,7 +280,7 @@ class HqlListQueryBuilderSpec extends Specification {
         given:
         def prop = Mock(HibernatePersistentProperty)
         prop.getType() >> String
-        entity.getHibernatePropertyByPath("name") >> prop
+        entity.getPropertyByName("name") >> prop
 
         when:
         new HqlListQueryBuilder(entity, [(HibernateQueryArgument.SORT.value()): ["": "asc", name: "asc"]]).buildListHql()
@@ -254,7 +294,7 @@ class HqlListQueryBuilderSpec extends Specification {
         given:
         def prop = Mock(HibernatePersistentProperty)
         prop.getType() >> Integer
-        entity.getHibernatePropertyByPath('total$amount') >> prop
+        entity.getPropertyByName('total$amount') >> prop
 
         expect:
         new HqlListQueryBuilder(entity, [(HibernateQueryArgument.SORT.value()): 'total$amount']).buildListHql() ==
@@ -265,7 +305,7 @@ class HqlListQueryBuilderSpec extends Specification {
         given:
         def prop = Mock(HibernatePersistentProperty)
         prop.getType() >> String
-        entity.getHibernatePropertyByPath("name") >> prop
+        entity.getPropertyByName("name") >> prop
 
         when:
         new HqlListQueryBuilder(entity, [
@@ -283,7 +323,7 @@ class HqlListQueryBuilderSpec extends Specification {
         given:
         def prop = Mock(HibernatePersistentProperty)
         prop.getType() >> Integer
-        entity.getHibernatePropertyByPath("age") >> prop
+        entity.getPropertyByName("age") >> prop
 
         expect:
         new HqlListQueryBuilder(entity, [
@@ -342,10 +382,7 @@ class HqlListQueryBuilderSpec extends Specification {
 
     void "test buildListHql sorts by a property of an association through a left join"() {
         given:
-        def prop = Mock(HibernatePersistentProperty)
-        prop.getType() >> String
-        entity.getHibernatePropertyByPath("author.name") >> prop
-        entity.getPropertyByName("author") >> Mock(Association)
+        property(associated(entity, "author"), "name", String)
 
         def builder = new HqlListQueryBuilder(entity, [(HibernateQueryArgument.SORT.value()): "author.name"])
 
@@ -355,14 +392,8 @@ class HqlListQueryBuilderSpec extends Specification {
 
     void "test buildListHql joins every association of a nested sort path"() {
         given:
-        def prop = Mock(HibernatePersistentProperty)
-        prop.getType() >> Long
-        def authorEntity = Mock(PersistentEntity)
-        def author = Mock(Association)
-        author.getAssociatedEntity() >> authorEntity
-        authorEntity.getPropertyByName("publisher") >> Mock(Association)
-        entity.getPropertyByName("author") >> author
-        entity.getHibernatePropertyByPath("author.publisher.id") >> prop
+        def authorEntity = associated(entity, "author")
+        property(associated(authorEntity, "publisher"), "id", Long)
 
         def builder = new HqlListQueryBuilder(entity, [(HibernateQueryArgument.SORT.value()): "author.publisher.id"])
 
@@ -372,17 +403,9 @@ class HqlListQueryBuilderSpec extends Specification {
 
     void "test buildListHql sorts by the identifier of a many-to-one association without a join"() {
         given:
-        def prop = Mock(HibernatePersistentProperty)
-        prop.getType() >> Long
-        def identity = Mock(PersistentProperty)
-        identity.getName() >> "id"
-        def authorEntity = Mock(PersistentEntity)
-        authorEntity.getIdentity() >> identity
-        def author = Mock(HibernateManyToOneProperty)
-        author.isValidHibernateManyToOne() >> true
-        author.getAssociatedEntity() >> authorEntity
-        entity.getPropertyByName("author") >> author
-        entity.getHibernatePropertyByPath("author.id") >> prop
+        def authorEntity = associated(entity, "author", manyToOne())
+        authorEntity.getIdentity() >> identity()
+        property(authorEntity, "id", Long)
 
         def builder = new HqlListQueryBuilder(entity, [(HibernateQueryArgument.SORT.value()): "author.id"])
 
@@ -392,23 +415,11 @@ class HqlListQueryBuilderSpec extends Specification {
 
     void "test buildListHql joins only the associations before the identifier of a nested many-to-one association"() {
         given:
-        def prop = Mock(HibernatePersistentProperty)
-        prop.getType() >> Long
-        def identity = Mock(PersistentProperty)
-        identity.getName() >> "id"
-        def publisherEntity = Mock(PersistentEntity)
-        publisherEntity.getIdentity() >> identity
-        def publisher = Mock(HibernateManyToOneProperty)
-        publisher.isValidHibernateManyToOne() >> true
-        publisher.getAssociatedEntity() >> publisherEntity
-        def authorEntity = Mock(PersistentEntity)
-        authorEntity.getIdentity() >> identity
-        authorEntity.getPropertyByName("publisher") >> publisher
-        def author = Mock(HibernateManyToOneProperty)
-        author.isValidHibernateManyToOne() >> true
-        author.getAssociatedEntity() >> authorEntity
-        entity.getPropertyByName("author") >> author
-        entity.getHibernatePropertyByPath("author.publisher.id") >> prop
+        def authorEntity = associated(entity, "author", manyToOne())
+        authorEntity.getIdentity() >> identity()
+        def publisherEntity = associated(authorEntity, "publisher", manyToOne())
+        publisherEntity.getIdentity() >> identity()
+        property(publisherEntity, "id", Long)
 
         def builder = new HqlListQueryBuilder(entity, [(HibernateQueryArgument.SORT.value()): "author.publisher.id"])
 
@@ -418,17 +429,11 @@ class HqlListQueryBuilderSpec extends Specification {
 
     void "test buildListHql joins an association whose foreign key is not in the table of the entity for its identifier"() {
         given:
-        def prop = Mock(HibernatePersistentProperty)
-        prop.getType() >> Long
-        def identity = Mock(PersistentProperty)
-        identity.getName() >> "id"
-        def passportEntity = Mock(PersistentEntity)
-        passportEntity.getIdentity() >> identity
         def passport = Mock(HibernateOneToOneProperty)
         passport.isValidHibernateManyToOne() >> false
-        passport.getAssociatedEntity() >> passportEntity
-        entity.getPropertyByName("passport") >> passport
-        entity.getHibernatePropertyByPath("passport.id") >> prop
+        def passportEntity = associated(entity, "passport", passport)
+        passportEntity.getIdentity() >> identity()
+        property(passportEntity, "id", Long)
 
         def builder = new HqlListQueryBuilder(entity, [(HibernateQueryArgument.SORT.value()): "passport.id"])
 
@@ -438,17 +443,9 @@ class HqlListQueryBuilderSpec extends Specification {
 
     void "test buildListHql joins a many-to-one association for a property other than its identifier"() {
         given:
-        def prop = Mock(HibernatePersistentProperty)
-        prop.getType() >> Long
-        def identity = Mock(PersistentProperty)
-        identity.getName() >> "id"
-        def authorEntity = Mock(PersistentEntity)
-        authorEntity.getIdentity() >> identity
-        def author = Mock(HibernateManyToOneProperty)
-        author.isValidHibernateManyToOne() >> true
-        author.getAssociatedEntity() >> authorEntity
-        entity.getPropertyByName("author") >> author
-        entity.getHibernatePropertyByPath("author.age") >> prop
+        def authorEntity = associated(entity, "author", manyToOne())
+        authorEntity.getIdentity() >> identity()
+        property(authorEntity, "age", Long)
 
         def builder = new HqlListQueryBuilder(entity, [(HibernateQueryArgument.SORT.value()): "author.age"])
 
@@ -458,13 +455,9 @@ class HqlListQueryBuilderSpec extends Specification {
 
     void "test buildListHql joins an association once for two sort properties"() {
         given:
-        def nameProp = Mock(HibernatePersistentProperty)
-        nameProp.getType() >> String
-        def ageProp = Mock(HibernatePersistentProperty)
-        ageProp.getType() >> Integer
-        entity.getHibernatePropertyByPath("author.name") >> nameProp
-        entity.getHibernatePropertyByPath("author.age") >> ageProp
-        entity.getPropertyByName("author") >> Mock(Association)
+        def authorEntity = associated(entity, "author")
+        property(authorEntity, "name", String)
+        property(authorEntity, "age", Integer)
 
         def builder = new HqlListQueryBuilder(entity, [
                 (HibernateQueryArgument.SORT.value()): ["author.name": "asc", "author.age": "desc"]
@@ -474,29 +467,53 @@ class HqlListQueryBuilderSpec extends Specification {
         builder.buildListHql() == "from Person e left join e.author s0 order by upper(s0.name) asc, s0.age desc"
     }
 
-    void "test buildListHql keeps the sort join apart from a fetch join of the same association"() {
+    void "test buildListHql sorts through the fetch join of the same association"() {
         given:
-        def prop = Mock(HibernatePersistentProperty)
-        prop.getType() >> String
         entity.getHibernatePropertyByPath("author") >> Mock(HibernatePersistentProperty)
-        entity.getHibernatePropertyByPath("author.name") >> prop
-        entity.getPropertyByName("author") >> Mock(Association)
+        entity.getHibernatePropertyByPath("books") >> Mock(HibernatePersistentProperty)
+        property(associated(entity, "author"), "name", String)
 
         def builder = new HqlListQueryBuilder(entity, [
-                (HibernateQueryArgument.FETCH.value()): [author: HibernateQueryArgument.JOIN.value()],
+                (HibernateQueryArgument.FETCH.value()): [books: HibernateQueryArgument.JOIN.value(), author: HibernateQueryArgument.JOIN.value()],
+                (HibernateQueryArgument.SORT.value()) : "author.name"
+        ])
+
+        expect: "the association is not joined a second time, and a fetch that is not sorted through has no alias"
+        builder.buildListHql() == "from Person e join fetch e.books join fetch e.author f0 order by upper(f0.name) asc"
+    }
+
+    void "test buildListHql joins the associations after a fetch join from the alias of the fetch"() {
+        given:
+        entity.getHibernatePropertyByPath("author") >> Mock(HibernatePersistentProperty)
+        def authorEntity = associated(entity, "author")
+        property(associated(authorEntity, "publisher"), "name", String)
+
+        def builder = new HqlListQueryBuilder(entity, [
+                (HibernateQueryArgument.FETCH.value()): [author: HibernateQueryArgument.EAGER.value()],
+                (HibernateQueryArgument.SORT.value()) : ["author.publisher.name": "desc"]
+        ])
+
+        expect:
+        builder.buildListHql() == "from Person e join fetch e.author f0 left join f0.publisher s0 order by upper(s0.name) desc"
+    }
+
+    void "test buildListHql keeps the sort join of an association that is not fetched"() {
+        given:
+        entity.getHibernatePropertyByPath("books") >> Mock(HibernatePersistentProperty)
+        property(associated(entity, "author"), "name", String)
+
+        def builder = new HqlListQueryBuilder(entity, [
+                (HibernateQueryArgument.FETCH.value()): [books: HibernateQueryArgument.JOIN.value()],
                 (HibernateQueryArgument.SORT.value()) : "author.name"
         ])
 
         expect:
-        builder.buildListHql() == "from Person e join fetch e.author left join e.author s0 order by upper(s0.name) asc"
+        builder.buildListHql() == "from Person e join fetch e.books left join e.author s0 order by upper(s0.name) asc"
     }
 
     void "test buildListHql sorts by a property of an embedded component without a join"() {
         given:
-        def prop = Mock(HibernatePersistentProperty)
-        prop.getType() >> String
-        entity.getHibernatePropertyByPath("address.city") >> prop
-        entity.getPropertyByName("address") >> Mock(Embedded)
+        property(associated(entity, "address", Mock(Embedded)), "city", String)
 
         def builder = new HqlListQueryBuilder(entity, [(HibernateQueryArgument.SORT.value()): "address.city"])
 
@@ -506,14 +523,8 @@ class HqlListQueryBuilderSpec extends Specification {
 
     void "test buildListHql sorts by a property of an association inside an embedded component through a left join"() {
         given:
-        def prop = Mock(HibernatePersistentProperty)
-        prop.getType() >> String
-        def detailsEntity = Mock(PersistentEntity)
-        def details = Mock(Embedded)
-        details.getAssociatedEntity() >> detailsEntity
-        detailsEntity.getPropertyByName("author") >> Mock(Association)
-        entity.getPropertyByName("details") >> details
-        entity.getHibernatePropertyByPath("details.author.name") >> prop
+        def detailsEntity = associated(entity, "details", Mock(Embedded))
+        property(associated(detailsEntity, "author"), "name", String)
 
         def builder = new HqlListQueryBuilder(entity, [(HibernateQueryArgument.SORT.value()): "details.author.name"])
 

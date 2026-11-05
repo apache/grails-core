@@ -47,6 +47,8 @@ public class HqlListQueryBuilder {
     private final Map<String, Object> params;
     // the joins of the associations that the query sorts through, by the path they join
     private final Map<String, String> sortJoins = new LinkedHashMap<>();
+    // the paths that the query fetches, with the alias of a fetch that the query also sorts through
+    private final Map<String, String> fetchJoins = new LinkedHashMap<>();
 
     public HqlListQueryBuilder(GrailsHibernatePersistentEntity entity, Map<String, Object> params) {
         this.entity = entity;
@@ -63,12 +65,19 @@ public class HqlListQueryBuilder {
             fetchMap.forEach((prop, type) -> {
                 if (HibernateQueryArgument.JOIN.value().equals(type) || HibernateQueryArgument.EAGER.value().equals(type)) {
                     requireMappedProperty(prop, HibernateQueryArgument.FETCH.value());
-                    hql.append(" join fetch e.").append(prop);
+                    fetchJoins.putIfAbsent("e." + prop, "");
                 }
             });
         }
 
+        // the sort comes first: it gives an alias to a fetch that it sorts through
         String sortHql = buildSortClause();
+        fetchJoins.forEach((path, alias) -> {
+            hql.append(" join fetch ").append(path);
+            if (!alias.isEmpty()) {
+                hql.append(' ').append(alias);
+            }
+        });
         sortJoins.forEach((path, alias) -> hql.append(" left join ").append(path).append(' ').append(alias));
         if (!sortHql.isEmpty()) {
             hql.append(" order by ").append(sortHql);
@@ -122,49 +131,60 @@ public class HqlListQueryBuilder {
         return "";
     }
 
-    private String buildSortPart(String propertyName, String direction, boolean ignoreCase) {
-        HibernatePersistentProperty prop = requireMappedProperty(propertyName, HibernateQueryArgument.SORT.value());
-        String normalizedDirection = DynamicFinder.normalizeDirection(direction);
-        String path = sortPath(propertyName);
-        if (prop.getType() == String.class && ignoreCase) {
-            return "upper(" + path + ") " + normalizedDirection;
-        }
-        return path + " " + normalizedDirection;
-    }
-
     /**
-     * Qualifies a sort property with the alias it is read from. A property of an association is read from a left
-     * join of the association and not from the path through it, which Hibernate joins with an implicit inner join
-     * that leaves out the rows where the association is {@code null}.
+     * Builds one part of the order clause from a caller-supplied property path. The path is resolved against the
+     * mapping before it is interpolated into HQL, in the one walk that also decides where it is read from: a path
+     * that the mapping does not know is rejected, and a property of an association is read from a left join of
+     * the association and not from the path through it, which Hibernate joins with an implicit inner join that
+     * leaves out the rows where the association is {@code null}.
      *
-     * @param propertyName The property path, already checked against the mapping
-     * @return The path to sort by
+     * @param propertyName The property path
+     * @param direction The direction of the sort
+     * @param ignoreCase Whether a string is sorted without regard to its case
+     * @return The order part
      */
-    private String sortPath(String propertyName) {
+    private String buildSortPart(String propertyName, String direction, boolean ignoreCase) {
+        String argument = HibernateQueryArgument.SORT.value();
+        if (!NameUtils.isValidPropertyPath(propertyName)) {
+            throw new IllegalArgumentException("Invalid " + argument + " property");
+        }
         String[] tokens = propertyName.split("\\.");
         PersistentEntity current = entity;
         String alias = "e";
         for (int i = 0; i < tokens.length - 1; i++) {
-            PersistentProperty<?> property = current != null ? current.getPropertyByName(tokens[i]) : null;
-            if (property instanceof Embedded<?> component) {
-                // a component has no join of its own: an association inside it is joined through its path
-                alias = alias + '.' + tokens[i];
-                current = component.getAssociatedEntity();
-                continue;
-            }
-            if (!(property instanceof Association<?> association)) {
-                // the rest of the path is a property, which resolves as it is
-                return alias + '.' + String.join(".", List.of(tokens).subList(i, tokens.length));
+            if (!(current.getPropertyByName(tokens[i]) instanceof Association<?> association) ||
+                    association.getAssociatedEntity() == null) {
+                throw new IllegalArgumentException("Invalid " + argument + " property");
             }
             String joined = alias + '.' + tokens[i];
-            if (i == tokens.length - 2 && isForeignKey(association, tokens[i + 1])) {
+            if (association instanceof Embedded<?>) {
+                // a component has no join of its own: an association inside it is joined through its path
+                alias = joined;
+            } else if (i == tokens.length - 2 && isForeignKey(association, tokens[i + 1])) {
                 // Hibernate reads the foreign key without a join, which keeps the rows where it is null
-                return joined + '.' + tokens[i + 1];
+                alias = joined;
+            } else if (fetchJoins.containsKey(joined)) {
+                // the query already joins the association to fetch it, and the sort uses that join
+                alias = fetchJoins.get(joined);
+                if (alias.isEmpty()) {
+                    alias = "f" + fetchJoins.values().stream().filter(fetchAlias -> !fetchAlias.isEmpty()).count();
+                    fetchJoins.put(joined, alias);
+                }
+            } else {
+                alias = sortJoins.computeIfAbsent(joined, path -> "s" + sortJoins.size());
             }
-            alias = sortJoins.computeIfAbsent(joined, path -> "s" + sortJoins.size());
             current = association.getAssociatedEntity();
         }
-        return alias + '.' + tokens[tokens.length - 1];
+        PersistentProperty<?> property = current.getPropertyByName(tokens[tokens.length - 1]);
+        if (property == null) {
+            throw new IllegalArgumentException("Invalid " + argument + " property");
+        }
+        String normalizedDirection = DynamicFinder.normalizeDirection(direction);
+        String path = alias + '.' + tokens[tokens.length - 1];
+        if (property.getType() == String.class && ignoreCase) {
+            return "upper(" + path + ") " + normalizedDirection;
+        }
+        return path + " " + normalizedDirection;
     }
 
     /**

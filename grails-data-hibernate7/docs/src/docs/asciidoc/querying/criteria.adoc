@@ -162,9 +162,11 @@ Aliases declared inside an association block are relative to that association. F
 
 An unused entity alias inside an association block still creates its requested join in that association's scope. For example, `likes { createAlias('tag', 't') }` excludes likes with no tag, even without a restriction on `t`. Using join type `1` retains those likes. These join semantics also apply to counts and paginated totals.
 
-An `order` inside an association block sorts the query by a property of that association, as in `favorite { order('label') }`, also when the block is inside `and`, `or` or `not`. The block of an embedded component sorts by a property of the component in the same way. An order by an alias that the block declares sorts by the join of that alias, as it does outside a block. For example, when a block declares two aliases of one collection with `createAlias('likes', 'a')` and `createAlias('likes', 'b')`, `order('b.label')` sorts by the like that `b` joins and not by the one that `a` joins.
+An `order` inside an association block sorts the query by a property of that association, as in `favorite { order('label') }`, also when the block is inside `and`, `or` or `not`. The block of an embedded component sorts by a property of the component in the same way. An order by an alias sorts by the join of that alias, as it does outside a block, whether the block or the criteria around it declare the alias. For example, when a block declares two aliases of one collection with `createAlias('likes', 'a')` and `createAlias('likes', 'b')`, `order('b.label')` sorts by the like that `b` joins and not by the one that `a` joins.
 
-A query that selects distinct or grouped values or aggregates, such as `listDistinct` or a query with a `distinct`, `groupProperty` or `max` projection, can only be ordered by what it selects. In such a query an `order` inside an association block is left out, unless the query selects the property of the order.
+A query that selects distinct values of a property, grouped values or aggregates, such as a query with a `distinct`, `groupProperty` or `max` projection, can only be ordered by what it selects. In such a query an `order` inside an association block is left out, unless the query selects the property of the order.
+
+`listDistinct` selects distinct entities and can be ordered by a property of an association, inside an association block or not. The entities are then made distinct after they are read, so a limit set with `maxResults` counts the rows of the join.
 
 ===== Collection Aliases
 

@@ -265,7 +265,7 @@ class ExpressionResolverSpec extends Specification {
         result == namePath
     }
 
-    def 'a sort reuses the first join that the query made for the association and no fetch'() {
+    def 'a sort reuses the first join that the query made for the association'() {
         given:
         def root = Mock(SqmFrom)
         def fetch = joinOf('scores', true)
@@ -284,8 +284,28 @@ class ExpressionResolverSpec extends Specification {
         0 * root.join(_, _)
         1 * firstJoin.get('score') >> scorePath
         0 * secondJoin.get(_)
+
+        and: 'a fetch is passed over for a join that the criteria of the query apply to'
         0 * fetch.get(_)
         result == scorePath
+    }
+
+    def 'a sort uses the fetch of the association when the query has no other join of it'() {
+        given:
+        def root = Mock(SqmFrom)
+        def fetch = joinOf('club', true)
+        def namePath = Mock(SqmPath)
+        def resolver = new ExpressionResolver(new AliasRegistry(), new JoinTracker(root))
+
+        when:
+        def result = resolver.resolveSort('club.name')
+
+        then: 'the association is not joined a second time'
+        _ * root.get('club') >> attributePath(Attribute.PersistentAttributeType.MANY_TO_ONE)
+        _ * root.getSqmJoins() >> [joinOf('owner'), fetch]
+        0 * root.join(_, _)
+        1 * fetch.get('name') >> namePath
+        result == namePath
     }
 
     def 'a sort joins a nested association with the join type requested for its path'() {

@@ -21,16 +21,17 @@ package org.grails.orm.hibernate.query;
 import org.grails.datastore.gorm.query.criteria.DetachedAssociationCriteria;
 
 /**
- * An order by an alias that an association block of a criteria query declares.
+ * An order by an alias that criteria declare inside an association block.
  * <p>
  * Only the orders of the root criteria reach the query, so the order is listed with them, but an alias exists
- * only in the block that declares it. The order therefore keeps its block and the property as the block names
- * it, and is resolved against that block, which gives the join of the alias that the order names. A collection
- * can have several aliases in one block, each with a join of its own, so the path of the alias does not tell
- * them apart.
+ * only in the block that declares it and in the blocks inside that one. The order therefore keeps its block and
+ * the property as the block names it, and is resolved against that block, which gives the join of the alias
+ * that the order names. A collection can have several aliases in one block, each with a join of its own, so the
+ * path of the alias does not tell them apart.
  * <p>
  * The {@link #getProperty() property} of the order is the path that the alias stands for, from the root of the
- * query.
+ * query, when the block of the order declares the alias. For an alias of the criteria around the block, which
+ * only the query can resolve, it is the property as the block names it, qualified with the association.
  *
  * @since 8.0.1
  */

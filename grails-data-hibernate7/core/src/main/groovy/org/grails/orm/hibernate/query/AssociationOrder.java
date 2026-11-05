@@ -21,13 +21,14 @@ package org.grails.orm.hibernate.query;
 import org.grails.datastore.mapping.query.Query;
 
 /**
- * An order that a criteria query declares inside an association block. Only the orders of the root criteria
- * reach the query, so the order is moved to the criteria that enclose its block, and its
+ * An order that criteria declare inside an association block. Only the orders of the root criteria reach the
+ * query, so the order becomes an order of the criteria that enclose its block, and its
  * {@link #getProperty() property} is the path from the root of the query.
  * <p>
- * An order that stayed in its block had no effect. A query that selects distinct or grouped values, or
- * aggregates, can only be ordered by what it selects, and most databases reject any other order. In such a
- * query an order of a block is therefore still left out, unless the query selects its property.
+ * An order that stayed in its block had no effect. A query that selects distinct values of a property, grouped
+ * values or aggregates can only be ordered by what it selects, and most databases reject any other order. In
+ * such a query an order of a block is therefore still left out, unless the query selects its property. So is an
+ * order of a block that names nothing the query can resolve.
  *
  * @since 8.0.1
  */

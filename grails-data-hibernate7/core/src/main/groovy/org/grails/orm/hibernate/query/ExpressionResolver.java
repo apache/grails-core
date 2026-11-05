@@ -112,7 +112,7 @@ public class ExpressionResolver {
      * @param path the property path of the order
      * @return the expression to sort by, or {@code null} if the path cannot be resolved
      */
-    Expression<?> resolveSort(String path) {
+    public Expression<?> resolveSort(String path) {
         return resolveSort(path, false);
     }
 
@@ -128,7 +128,7 @@ public class ExpressionResolver {
      *     identifier, with the foreign key on the side of the path
      * @return the expression to sort by, or {@code null} if the path cannot be resolved
      */
-    Expression<?> resolveSort(String path, boolean endsWithForeignKey) {
+    public Expression<?> resolveSort(String path, boolean endsWithForeignKey) {
         String cleanPath = path != null && path.startsWith("root.") ? path.substring(5) : path;
         if (cleanPath == null || cleanPath.indexOf('.') < 0 || cleanPath.startsWith("{alias}") ||
                 cleanPath.contains(grails.orm.HibernateCriteriaBuilder.ALIAS_SEPARATOR) ||
@@ -204,20 +204,28 @@ public class ExpressionResolver {
     }
 
     /**
-     * Returns the first join that a source has for an attribute, or {@code null} if it has none. An association
+     * Returns the join that a source already has for an attribute, or {@code null} if it has none. An association
      * has a join for each of its aliases, and the first of them is the join that the path of the association
      * shares, so that is the one a sort by the path uses. Hibernate keeps the joins of a source in the order in
      * which they were made, while {@link From#getJoins()} returns them as a set, which has no order.
+     * <p>
+     * A fetch of the association is a join as well. It is only used when the query has no other join of the
+     * association, since the criteria of the query apply to the other join.
      */
     private static Join<?, ?> existingJoin(From<?, ?> from, String attributeName) {
+        Join<?, ?> fetch = null;
         for (SqmJoin<?, ?> join : ((SqmFrom<?, ?>) from).getSqmJoins()) {
-            // the joins that getJoins() has: a fetch is not a join to sort through
-            if (join instanceof SqmAttributeJoin<?, ?> attributeJoin && !attributeJoin.isFetched() &&
+            if (join instanceof SqmAttributeJoin<?, ?> attributeJoin &&
                     attributeName.equals(attributeJoin.getAttribute().getName())) {
-                return attributeJoin;
+                if (!attributeJoin.isFetched()) {
+                    return attributeJoin;
+                }
+                if (fetch == null) {
+                    fetch = attributeJoin;
+                }
             }
         }
-        return null;
+        return fetch;
     }
 
     private Expression<?> resolveFromAlias(String alias, String subPath) {

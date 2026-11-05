@@ -165,7 +165,7 @@ class CriteriaMethodInvokerSpec extends Specification {
         _ * builder.getTargetClass() >> InvokerAccount
         1 * builder.getSessionFactory() >> Mock(SessionFactory) {
             getMetamodel() >> Mock(jakarta.persistence.metamodel.Metamodel) {
-                entity(InvokerAccount) >> Mock(jakarta.persistence.metamodel.EntityType) {
+                managedType(InvokerAccount) >> Mock(jakarta.persistence.metamodel.ManagedType) {
                     getAttribute("transactions") >> Mock(jakarta.persistence.metamodel.Attribute) {
                         isAssociation() >> true
                     }
@@ -766,7 +766,7 @@ class CriteriaMethodInvokerSpec extends Specification {
         _ * builder.getTargetClass() >> CBEmployee
         1 * builder.getSessionFactory() >> Mock(SessionFactory) {
             getMetamodel() >> Mock(jakarta.persistence.metamodel.Metamodel) {
-                entity(CBEmployee) >> Mock(jakarta.persistence.metamodel.EntityType) {
+                managedType(CBEmployee) >> Mock(jakarta.persistence.metamodel.ManagedType) {
                     getAttribute("parent") >> Mock(jakarta.persistence.metamodel.Attribute) {
                         isAssociation() >> true
                     }
