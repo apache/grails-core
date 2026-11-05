@@ -224,6 +224,149 @@ class WhereQueryWithAssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibe
         JoinType.INNER || false
     }
 
+    void 'a sort stored on the query keeps a team without a club'() {
+        given:
+        saveTeamWithoutClub()
+
+        when:
+        final results = Team.where {
+            name ==~ '%First%'
+        }.sort('club.name').list()
+
+        then:
+        'Unattached First Team' in results*.name
+        results*.name - 'Unattached First Team' == ['Arsenal First Team', 'Chelsea First Team', 'MU First Team']
+    }
+
+    void 'a sort stored on the query joins the association with the join type that fetch requests'() {
+        given:
+        saveTeamWithoutClub()
+
+        when: 'the join type is requested after the sort is stored'
+        final results = Team.where {
+            name ==~ '%First%'
+        }.sort('club.name').list(fetch: [club: joinType])
+
+        then:
+        ('Unattached First Team' in results*.name) == kept
+        results*.name - 'Unattached First Team' == ['Arsenal First Team', 'Chelsea First Team', 'MU First Team']
+
+        where:
+        joinType       || kept
+        JoinType.LEFT  || true
+        JoinType.INNER || false
+    }
+
+    void 'a sort stored on the query leaves out the only match when fetch requests an inner join'() {
+        given:
+        saveTeamWithoutClub()
+
+        when:
+        final results = Team.where {
+            name == 'Unattached First Team'
+        }.sort('club.name').list(fetch: [club: JoinType.INNER])
+
+        then:
+        results.empty
+    }
+
+    void 'a paged list with a sort stored on the query counts the rows of the join type that fetch requests'() {
+        given:
+        saveTeamWithoutClub()
+
+        when:
+        final results = Team.where {
+            name ==~ '%First%'
+        }.sort('club.name').list(max: 2, fetch: [club: joinType])
+
+        then:
+        results.size() == 2
+        results.totalCount == totalCount
+
+        where:
+        joinType       || totalCount
+        JoinType.LEFT  || 4
+        JoinType.INNER || 3
+    }
+
+    void 'find with a sort stored on the query joins the association with the join type that fetch requests'() {
+        given:
+        saveTeamWithoutClub()
+
+        when:
+        final result = Team.where {
+            name == 'Unattached First Team'
+        }.sort('club.name').find(arguments)
+
+        then:
+        (result != null) == found
+
+        where:
+        arguments                      || found
+        [:]                            || true
+        [fetch: [club: JoinType.LEFT]] || true
+        [fetch: [club: JoinType.INNER]] || false
+    }
+
+    void 'a nested sort stored on the query joins the association with the join type that fetch requests'() {
+        given:
+        saveTeamWithoutClub()
+
+        when:
+        final results = Player.where {
+            name ==~ '%Player%'
+        }.sort('team.club.name').list(fetch: ['team.club': joinType])
+
+        then:
+        ('Unattached Player' in results*.name) == kept
+        results*.name - 'Unattached Player' == ['Arsenal Player', 'Chelsea Player', 'MU Player']
+
+        where:
+        joinType       || kept
+        JoinType.LEFT  || true
+        JoinType.INNER || false
+    }
+
+    void 'a sort stored on the query does not change the join of a criterion that list adds'() {
+        given:
+        saveTeamWithoutClub()
+
+        when: 'a left join would let the criterion match the team without a club'
+        final query = Team.where {
+            name ==~ '%First%'
+        }
+        final additionalCriteria = {
+            club {
+                isNull('name')
+            }
+        }
+
+        then: 'the criterion joins the club with an inner join, with and without the sort'
+        query.list(additionalCriteria).empty
+        query.sort('club.name').list(additionalCriteria).empty
+    }
+
+    void 'a nested sort stored on the query does not change the joins of criteria that list adds'() {
+        given:
+        saveTeamWithoutClub()
+
+        when: 'left joins would let the criterion match the player whose team has no club'
+        final query = Player.where {
+            name ==~ '%Player%'
+        }
+        final additionalCriteria = {
+            team {
+                club {
+                    isNull('name')
+                }
+            }
+        }
+
+        then: 'the criteria join the team and the club with inner joins, with and without the sort'
+        query.list(additionalCriteria).empty
+        query.sort('team.club.name').list(additionalCriteria).empty
+    }
+
     void 'sort by an association property leaves out a team without a club when a criterion requires a club'() {
         given:
         saveTeamWithoutClub()

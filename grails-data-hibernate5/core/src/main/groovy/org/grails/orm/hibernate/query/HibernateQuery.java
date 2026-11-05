@@ -71,6 +71,7 @@ public class HibernateQuery extends AbstractHibernateQuery {
      * @return The hibernate criteria
      */
     public Criteria getHibernateCriteria() {
+        applySortJoins();
         return this.criteria;
     }
 
@@ -108,6 +109,7 @@ public class HibernateQuery extends AbstractHibernateQuery {
 
     @Override
     public Object clone() {
+        applySortJoins();
         final CriteriaImpl impl = (CriteriaImpl) criteria;
         final HibernateSession hibernateSession = (HibernateSession) getSession();
         final GrailsHibernateTemplate hibernateTemplate = (GrailsHibernateTemplate) hibernateSession.getNativeInterface();

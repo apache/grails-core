@@ -22,6 +22,7 @@ import java.lang.reflect.Field;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -99,6 +100,11 @@ public abstract class AbstractHibernateQuery extends Query {
     protected String alias;
     protected int aliasCount;
     protected Map<String, CriteriaAndAlias> createdAssociationPaths = new HashMap<>();
+    /**
+     * The associations that only a sort uses so far, by association path, with the alias that the
+     * orders of the sort refer to. They are joined by {@link #applySortJoins()}.
+     */
+    private final Map<String, String> sortJoins = new LinkedHashMap<>();
     protected LinkedList<String> aliasStack = new LinkedList<>();
     protected LinkedList<PersistentEntity> entityStack = new LinkedList<>();
     protected LinkedList<Association> associationStack = new LinkedList<>();
@@ -525,20 +531,31 @@ public abstract class AbstractHibernateQuery extends Query {
             subCriteria = createdAssociationPaths.get(associationName);
         }
         else {
-            JoinType joinType = joinTypes.get(associationName);
-            if (parentCriteria != null) {
-                Criteria sc = parentCriteria.createAlias(associationPath, alias, resolveJoinType(joinType));
-                subCriteria = new CriteriaAndAlias(sc, alias, associationPath);
+            // An association that only a sort has used so far is joined here, with the join type of the
+            // caller and under the alias that the orders of the sort already refer to.
+            String sortAlias = sortJoins.remove(associationPath);
+            if (sortAlias != null) {
+                alias = sortAlias;
             }
-            else if (detachedCriteria != null) {
-                DetachedCriteria sc = detachedCriteria.createAlias(associationPath, alias, resolveJoinType(joinType));
-                subCriteria = new CriteriaAndAlias(sc, alias, associationPath);
-            }
-            if (subCriteria != null) {
+            subCriteria = createAlias(parentCriteria, associationPath, alias, joinTypes.get(associationName));
+        }
+        return subCriteria;
+    }
 
-                createdAssociationPaths.put(associationPath, subCriteria);
-                createdAssociationPaths.put(alias, subCriteria);
-            }
+    private CriteriaAndAlias createAlias(Criteria parentCriteria, String associationPath, String alias, JoinType joinType) {
+        CriteriaAndAlias subCriteria = null;
+        if (parentCriteria != null) {
+            Criteria sc = parentCriteria.createAlias(associationPath, alias, resolveJoinType(joinType));
+            subCriteria = new CriteriaAndAlias(sc, alias, associationPath);
+        }
+        else if (detachedCriteria != null) {
+            DetachedCriteria sc = detachedCriteria.createAlias(associationPath, alias, resolveJoinType(joinType));
+            subCriteria = new CriteriaAndAlias(sc, alias, associationPath);
+        }
+        if (subCriteria != null) {
+
+            createdAssociationPaths.put(associationPath, subCriteria);
+            createdAssociationPaths.put(alias, subCriteria);
         }
         return subCriteria;
     }
@@ -631,10 +648,7 @@ public abstract class AbstractHibernateQuery extends Query {
             }
         }
 
-        String aliasedProperty = calculateSortPropertyName(property);
-        if (aliasedProperty != null) {
-            addAliasedOrder(order, aliasedProperty);
-        }
+        addAliasedOrder(order, calculateSortPropertyName(property));
         return this;
     }
 
@@ -643,8 +657,8 @@ public abstract class AbstractHibernateQuery extends Query {
      * association on its path, since Hibernate resolves a property of a joined association only
      * through the alias of the join. The head of the path is either an alias defined by a where
      * query or an association of the entity. An association that this query has already joined, for
-     * example for a where query criterion, is reused; one it has not joined yet is joined for the sort,
-     * with a left join so that the rows where the association is null are kept.
+     * example for a where query criterion, is reused; one it has not joined yet is joined for the sort
+     * when the query is executed, see {@link #applySortJoins()}.
      */
     private String calculateSortPropertyName(String property) {
         String[] tokens = property.split("\\.");
@@ -680,18 +694,49 @@ public abstract class AbstractHibernateQuery extends Query {
                 associationPath.append('.');
             }
             associationPath.append(token);
-            String path = associationPath.toString();
-            // A sort must not change which rows the query returns, so an association that is joined only
-            // for the sort is joined with a left join, unless the query requests another join type for it.
-            joinTypes.putIfAbsent(path, JoinType.LEFT);
-            CriteriaAndAlias criteriaAndAlias = getOrCreateAlias(path, generateAlias(token));
-            if (criteriaAndAlias == null) {
-                return null;
-            }
-            currentAlias = criteriaAndAlias.alias;
+            currentAlias = getSortAlias(associationPath.toString(), token);
             currentEntity = ((Association) persistentProperty).getAssociatedEntity();
         }
         return currentAlias + '.' + tokens[tokens.length - 1];
+    }
+
+    /**
+     * Returns the alias through which a sort reaches the association at the given path. A join that
+     * this query has already made for the path is reused. An association that only the sort uses is
+     * given an alias here and joined later, by {@link #applySortJoins()}.
+     */
+    private String getSortAlias(String associationPath, String associationName) {
+        CriteriaAndAlias joined = createdAssociationPaths.get(associationPath);
+        if (joined != null) {
+            return joined.alias;
+        }
+        String sortAlias = sortJoins.get(associationPath);
+        if (sortAlias == null) {
+            sortAlias = generateAlias(associationName);
+            sortJoins.put(associationPath, sortAlias);
+        }
+        if (criteria == null) {
+            // a detached criteria is executed by the query that embeds it, so its joins cannot wait
+            applySortJoins();
+        }
+        return sortAlias;
+    }
+
+    /**
+     * Joins the associations that only a sort uses. This happens when the query is executed and not
+     * when the sort is added, because the rest of the query can still change after that: the
+     * {@code fetch} argument of {@code list} requests a join type after a sort stored on a where query
+     * has been applied, and criteria passed to {@code list} are added after it too. A sort must not
+     * change which rows the query returns, so an association is joined with a left join unless the
+     * query requests another join type for it.
+     */
+    protected void applySortJoins() {
+        for (Map.Entry<String, String> sortJoin : sortJoins.entrySet()) {
+            String associationPath = sortJoin.getKey();
+            JoinType joinType = joinTypes.get(associationPath);
+            createAlias(criteria, associationPath, sortJoin.getValue(), joinType != null ? joinType : JoinType.LEFT);
+        }
+        sortJoins.clear();
     }
 
     /**
@@ -894,6 +939,7 @@ public abstract class AbstractHibernateQuery extends Query {
             publisher.publishEvent(new PreQueryEvent(datastore, this));
         }
 
+        applySortJoins();
         List results = criteria.list();
         if (publisher != null) {
             publisher.publishEvent(new PostQueryEvent(datastore, this, results));
@@ -959,6 +1005,7 @@ public abstract class AbstractHibernateQuery extends Query {
         if (publisher != null) {
             publisher.publishEvent(new PreQueryEvent(datastore, this));
         }
+        applySortJoins();
 
         Object result;
         if (hasJoins) {
