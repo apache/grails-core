@@ -19,7 +19,6 @@
 package org.grails.orm.hibernate.query;
 
 import org.grails.datastore.gorm.query.criteria.DetachedAssociationCriteria;
-import org.grails.datastore.mapping.query.Query;
 
 /**
  * An order by an alias that an association block of a criteria query declares.
@@ -35,7 +34,7 @@ import org.grails.datastore.mapping.query.Query;
  *
  * @since 8.0.1
  */
-public class AssociationAliasOrder extends Query.Order {
+public class AssociationAliasOrder extends AssociationOrder {
 
     private static final long serialVersionUID = 1L;
 

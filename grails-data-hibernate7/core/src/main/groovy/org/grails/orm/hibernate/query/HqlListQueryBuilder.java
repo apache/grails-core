@@ -157,10 +157,33 @@ public class HqlListQueryBuilder {
                 return alias + '.' + String.join(".", List.of(tokens).subList(i, tokens.length));
             }
             String joined = alias + '.' + tokens[i];
+            if (i == tokens.length - 2 && isForeignKey(association, tokens[i + 1])) {
+                // Hibernate reads the foreign key without a join, which keeps the rows where it is null
+                return joined + '.' + tokens[i + 1];
+            }
             alias = sortJoins.computeIfAbsent(joined, path -> "s" + sortJoins.size());
             current = association.getAssociatedEntity();
         }
         return alias + '.' + tokens[tokens.length - 1];
+    }
+
+    /**
+     * Whether a property of the entity that an association refers to is the foreign key of the association: the
+     * association is mapped as a many-to-one, which has its key in the table of the entity that declares it, and
+     * the property is the identifier that the key holds. An association with its key in the other table, as
+     * {@code hasOne} declares, has no such column.
+     *
+     * @param association the association
+     * @param propertyName the name of a property of the associated entity
+     * @return whether a path through the association to the property is read from the foreign key column
+     */
+    static boolean isForeignKey(Association<?> association, String propertyName) {
+        if (!(association instanceof HibernatePersistentProperty mapped && mapped.isValidHibernateManyToOne())) {
+            return false;
+        }
+        PersistentEntity associated = association.getAssociatedEntity();
+        PersistentProperty<?> identity = associated != null ? associated.getIdentity() : null;
+        return identity != null && propertyName.equals(identity.getName());
     }
 
     /**

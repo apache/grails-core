@@ -183,27 +183,35 @@ class ExpressionResolverSpec extends Specification {
         false         | false
     }
 
-    private Path attributePath(Attribute.PersistentAttributeType type) {
+    private static final List<Attribute.PersistentAttributeType> ASSOCIATIONS = [
+            Attribute.PersistentAttributeType.MANY_TO_ONE, Attribute.PersistentAttributeType.ONE_TO_ONE,
+            Attribute.PersistentAttributeType.ONE_TO_MANY, Attribute.PersistentAttributeType.MANY_TO_MANY
+    ]
+
+    private SqmPath attributePath(Attribute.PersistentAttributeType type) {
         def attribute = Mock(SingularAttribute)
         attribute.getPersistentAttributeType() >> type
-        def path = Mock(Path)
+        attribute.isAssociation() >> (type in ASSOCIATIONS)
+        def path = Mock(SqmPath)
         path.getModel() >> attribute
         path
     }
 
-    private Join joinOf(String attributeName) {
-        def attribute = Mock(SingularAttribute)
+    private SqmAttributeJoin joinOf(String attributeName, boolean fetched = false) {
+        def attribute = Mock(PersistentAttribute)
         attribute.getName() >> attributeName
-        def join = Mock(Join)
+        def join = Mock(SqmAttributeJoin)
         join.getAttribute() >> attribute
+        join.isFetched() >> fetched
+        join.getSqmJoins() >> []
         join
     }
 
     def 'a sort by a property of an association joins the association with a left join'() {
         given:
-        def root = Mock(From)
-        def clubJoin = Mock(Join)
-        def namePath = Mock(Path)
+        def root = Mock(SqmFrom)
+        def clubJoin = Mock(SqmAttributeJoin)
+        def namePath = Mock(SqmPath)
         def resolver = new ExpressionResolver(new AliasRegistry(), new JoinTracker(root))
 
         when:
@@ -211,7 +219,7 @@ class ExpressionResolverSpec extends Specification {
 
         then: 'the path is not resolved as it is, which would make Hibernate join it with an inner join'
         _ * root.get('club') >> attributePath(Attribute.PersistentAttributeType.MANY_TO_ONE)
-        _ * root.getJoins() >> ([] as Set)
+        _ * root.getSqmJoins() >> []
         1 * root.join('club', JoinType.LEFT) >> clubJoin
         1 * clubJoin.get('name') >> namePath
         result == namePath
@@ -219,10 +227,10 @@ class ExpressionResolverSpec extends Specification {
 
     def 'a sort by a nested association property joins every association on the path'() {
         given:
-        def root = Mock(From)
-        def teamJoin = Mock(Join)
-        def clubJoin = Mock(Join)
-        def namePath = Mock(Path)
+        def root = Mock(SqmFrom)
+        def teamJoin = Mock(SqmAttributeJoin)
+        def clubJoin = Mock(SqmAttributeJoin)
+        def namePath = Mock(SqmPath)
         def resolver = new ExpressionResolver(new AliasRegistry(), new JoinTracker(root))
 
         when:
@@ -230,10 +238,10 @@ class ExpressionResolverSpec extends Specification {
 
         then:
         _ * root.get('team') >> attributePath(Attribute.PersistentAttributeType.MANY_TO_ONE)
-        _ * root.getJoins() >> ([] as Set)
+        _ * root.getSqmJoins() >> []
         1 * root.join('team', JoinType.LEFT) >> teamJoin
         _ * teamJoin.get('club') >> attributePath(Attribute.PersistentAttributeType.ONE_TO_ONE)
-        _ * teamJoin.getJoins() >> ([] as Set)
+        _ * teamJoin.getSqmJoins() >> []
         1 * teamJoin.join('club', JoinType.LEFT) >> clubJoin
         1 * clubJoin.get('name') >> namePath
         result == namePath
@@ -241,9 +249,9 @@ class ExpressionResolverSpec extends Specification {
 
     def 'a sort reuses a join that the query already has for the association'() {
         given:
-        def root = Mock(From)
+        def root = Mock(SqmFrom)
         def clubJoin = joinOf('club')
-        def namePath = Mock(Path)
+        def namePath = Mock(SqmPath)
         def resolver = new ExpressionResolver(new AliasRegistry(), new JoinTracker(root))
 
         when:
@@ -251,32 +259,27 @@ class ExpressionResolverSpec extends Specification {
 
         then:
         _ * root.get('club') >> attributePath(Attribute.PersistentAttributeType.MANY_TO_ONE)
-        _ * root.getJoins() >> ([clubJoin] as Set)
+        _ * root.getSqmJoins() >> [clubJoin]
         0 * root.join(_, _)
         1 * clubJoin.get('name') >> namePath
         result == namePath
     }
 
-    def 'a sort reuses the first join that Hibernate made for the association'() {
+    def 'a sort reuses the first join that the query made for the association and no fetch'() {
         given:
         def root = Mock(SqmFrom)
-        def otherJoin = sqmJoinOf('owner', false)
-        def fetch = sqmJoinOf('scores', true)
-        def firstJoin = sqmJoinOf('scores', false)
-        def secondJoin = sqmJoinOf('scores', false)
-        def scoresPath = Mock(SqmPath)
+        def fetch = joinOf('scores', true)
+        def firstJoin = joinOf('scores')
+        def secondJoin = joinOf('scores')
         def scorePath = Mock(SqmPath)
-        def attribute = Mock(SingularAttribute)
         def resolver = new ExpressionResolver(new AliasRegistry(), new JoinTracker(root))
 
         when:
         def result = resolver.resolveSort('scores.score')
 
         then: 'the joins are read in the order in which they were made, which the set of getJoins() does not keep'
-        _ * attribute.getPersistentAttributeType() >> Attribute.PersistentAttributeType.ONE_TO_MANY
-        _ * scoresPath.getModel() >> attribute
-        _ * root.get('scores') >> scoresPath
-        _ * root.getSqmJoins() >> [Mock(SqmJoin), otherJoin, fetch, firstJoin, secondJoin]
+        _ * root.get('scores') >> attributePath(Attribute.PersistentAttributeType.ONE_TO_MANY)
+        _ * root.getSqmJoins() >> [Mock(SqmJoin), joinOf('owner'), fetch, firstJoin, secondJoin]
         0 * root.getJoins()
         0 * root.join(_, _)
         1 * firstJoin.get('score') >> scorePath
@@ -285,21 +288,12 @@ class ExpressionResolverSpec extends Specification {
         result == scorePath
     }
 
-    private SqmAttributeJoin sqmJoinOf(String attributeName, boolean fetched) {
-        def attribute = Mock(PersistentAttribute)
-        attribute.getName() >> attributeName
-        def join = Mock(SqmAttributeJoin)
-        join.getAttribute() >> attribute
-        join.isFetched() >> fetched
-        join
-    }
-
     def 'a sort joins a nested association with the join type requested for its path'() {
         given:
-        def root = Mock(From)
-        def teamJoin = Mock(Join)
-        def clubJoin = Mock(Join)
-        def namePath = Mock(Path)
+        def root = Mock(SqmFrom)
+        def teamJoin = Mock(SqmAttributeJoin)
+        def clubJoin = Mock(SqmAttributeJoin)
+        def namePath = Mock(SqmPath)
         def aliasRegistry = new AliasRegistry()
         aliasRegistry.define('team.club', new HibernateAlias('team.club', 'team.club', JoinType.INNER, false))
         def resolver = new ExpressionResolver(aliasRegistry, new JoinTracker(root))
@@ -309,10 +303,10 @@ class ExpressionResolverSpec extends Specification {
 
         then:
         _ * root.get('team') >> attributePath(Attribute.PersistentAttributeType.MANY_TO_ONE)
-        _ * root.getJoins() >> ([] as Set)
+        _ * root.getSqmJoins() >> []
         1 * root.join('team', JoinType.LEFT) >> teamJoin
         _ * teamJoin.get('club') >> attributePath(Attribute.PersistentAttributeType.MANY_TO_ONE)
-        _ * teamJoin.getJoins() >> ([] as Set)
+        _ * teamJoin.getSqmJoins() >> []
         1 * teamJoin.join('club', JoinType.INNER) >> clubJoin
         1 * clubJoin.get('name') >> namePath
         result == namePath
@@ -320,10 +314,10 @@ class ExpressionResolverSpec extends Specification {
 
     def 'a sort through an alias starts from the join of the alias'() {
         given:
-        def root = Mock(From)
-        def teamJoin = Mock(Join)
-        def clubJoin = Mock(Join)
-        def namePath = Mock(Path)
+        def root = Mock(SqmFrom)
+        def teamJoin = Mock(SqmAttributeJoin)
+        def clubJoin = Mock(SqmAttributeJoin)
+        def namePath = Mock(SqmPath)
         def aliasRegistry = new AliasRegistry()
         aliasRegistry.define('t', new HibernateAlias('team', 't', JoinType.INNER))
         def resolver = new ExpressionResolver(aliasRegistry, new JoinTracker(root))
@@ -334,17 +328,100 @@ class ExpressionResolverSpec extends Specification {
         then:
         1 * root.join('team', JoinType.INNER) >> teamJoin
         _ * teamJoin.get('club') >> attributePath(Attribute.PersistentAttributeType.MANY_TO_ONE)
-        _ * teamJoin.getJoins() >> ([] as Set)
+        _ * teamJoin.getSqmJoins() >> []
         1 * teamJoin.join('club', JoinType.LEFT) >> clubJoin
         1 * clubJoin.get('name') >> namePath
         result == namePath
     }
 
+    def 'a sort that ends with a foreign key reads it without a join of the association'() {
+        given:
+        def root = Mock(SqmFrom)
+        def clubPath = attributePath(Attribute.PersistentAttributeType.MANY_TO_ONE)
+        def idPath = Mock(SqmPath)
+        def resolver = new ExpressionResolver(new AliasRegistry(), new JoinTracker(root))
+
+        when:
+        def result = resolver.resolveSort('club.id', true)
+
+        then: 'the foreign key is a column of the source, so the rows without a club are kept as it is'
+        _ * root.get('club') >> clubPath
+        _ * root.getSqmJoins() >> []
+        _ * clubPath.get('id') >> idPath
+        0 * root.join(_, _)
+        result == idPath
+    }
+
+    def 'a sort that ends with a foreign key joins only the associations before it'() {
+        given:
+        def root = Mock(SqmFrom)
+        def teamJoin = Mock(SqmAttributeJoin)
+        def clubPath = attributePath(Attribute.PersistentAttributeType.MANY_TO_ONE)
+        def idPath = Mock(SqmPath)
+        def resolver = new ExpressionResolver(new AliasRegistry(), new JoinTracker(root))
+
+        when:
+        def result = resolver.resolveSort('team.club.id', true)
+
+        then:
+        _ * root.get('team') >> attributePath(Attribute.PersistentAttributeType.MANY_TO_ONE)
+        _ * root.getSqmJoins() >> []
+        1 * root.join('team', JoinType.LEFT) >> teamJoin
+        _ * teamJoin.get('club') >> clubPath
+        _ * teamJoin.getSqmJoins() >> []
+        _ * clubPath.get('id') >> idPath
+        0 * teamJoin.join(_, _)
+        result == idPath
+    }
+
+    def 'a sort that ends with a foreign key uses a join that the query has or requests for the association'() {
+        given:
+        def root = Mock(SqmFrom)
+        def clubJoin = joinOf('club')
+        def idPath = Mock(SqmPath)
+        def aliasRegistry = new AliasRegistry()
+        if (requested) {
+            aliasRegistry.define('club', new HibernateAlias('club', 'club', JoinType.INNER, false))
+        }
+        def resolver = new ExpressionResolver(aliasRegistry, new JoinTracker(root))
+
+        when:
+        def result = resolver.resolveSort('club.id', true)
+
+        then:
+        _ * root.get('club') >> attributePath(Attribute.PersistentAttributeType.MANY_TO_ONE)
+        _ * root.getSqmJoins() >> (requested ? [] : [clubJoin])
+        (requested ? 1 : 0) * root.join('club', JoinType.INNER) >> clubJoin
+        1 * clubJoin.get('id') >> idPath
+        result == idPath
+
+        where:
+        requested << [false, true]
+    }
+
+    def 'a sort by the identifier of an association that has its key in the other table joins the association'() {
+        given:
+        def root = Mock(SqmFrom)
+        def contractJoin = Mock(SqmAttributeJoin)
+        def idPath = Mock(SqmPath)
+        def resolver = new ExpressionResolver(new AliasRegistry(), new JoinTracker(root))
+
+        when: 'the path does not end with a foreign key'
+        def result = resolver.resolveSort('contract.id')
+
+        then: 'read as a plain path, the identifier would be joined with an implicit inner join'
+        _ * root.get('contract') >> attributePath(Attribute.PersistentAttributeType.MANY_TO_ONE)
+        _ * root.getSqmJoins() >> []
+        1 * root.join('contract', JoinType.LEFT) >> contractJoin
+        1 * contractJoin.get('id') >> idPath
+        result == idPath
+    }
+
     def 'a sort by a property of an embedded component is resolved as a plain path'() {
         given:
-        def root = Mock(From)
+        def root = Mock(SqmFrom)
         def addressPath = attributePath(Attribute.PersistentAttributeType.EMBEDDED)
-        def cityPath = Mock(Path)
+        def cityPath = Mock(SqmPath)
         def resolver = new ExpressionResolver(new AliasRegistry(), new JoinTracker(root))
 
         when:
@@ -360,10 +437,10 @@ class ExpressionResolverSpec extends Specification {
 
     def 'a sort through an embedded component joins an association inside the component with a left join'() {
         given:
-        def root = Mock(From)
-        def detailsJoin = Mock(Join)
-        def authorJoin = Mock(Join)
-        def namePath = Mock(Path)
+        def root = Mock(SqmFrom)
+        def detailsJoin = Mock(SqmAttributeJoin)
+        def authorJoin = Mock(SqmAttributeJoin)
+        def namePath = Mock(SqmPath)
         def resolver = new ExpressionResolver(new AliasRegistry(), new JoinTracker(root))
 
         when:
@@ -371,10 +448,10 @@ class ExpressionResolverSpec extends Specification {
 
         then: 'the component is joined, so that the association is not left to an implicit inner join'
         _ * root.get('details') >> attributePath(Attribute.PersistentAttributeType.EMBEDDED)
-        _ * root.getJoins() >> ([] as Set)
+        _ * root.getSqmJoins() >> []
         1 * root.join('details') >> detailsJoin
         _ * detailsJoin.get('author') >> attributePath(Attribute.PersistentAttributeType.MANY_TO_ONE)
-        _ * detailsJoin.getJoins() >> ([] as Set)
+        _ * detailsJoin.getSqmJoins() >> []
         1 * detailsJoin.join('author', JoinType.LEFT) >> authorJoin
         1 * authorJoin.get('name') >> namePath
         result == namePath
@@ -382,10 +459,10 @@ class ExpressionResolverSpec extends Specification {
 
     def 'a sort through an embedded component reuses the join that the query has for the component'() {
         given:
-        def root = Mock(From)
+        def root = Mock(SqmFrom)
         def detailsJoin = joinOf('details')
-        def authorJoin = Mock(Join)
-        def namePath = Mock(Path)
+        def authorJoin = Mock(SqmAttributeJoin)
+        def namePath = Mock(SqmPath)
         def resolver = new ExpressionResolver(new AliasRegistry(), new JoinTracker(root))
 
         when:
@@ -393,10 +470,9 @@ class ExpressionResolverSpec extends Specification {
 
         then:
         _ * root.get('details') >> attributePath(Attribute.PersistentAttributeType.EMBEDDED)
-        _ * root.getJoins() >> ([detailsJoin] as Set)
+        _ * root.getSqmJoins() >> [detailsJoin]
         0 * root.join(_)
         _ * detailsJoin.get('author') >> attributePath(Attribute.PersistentAttributeType.MANY_TO_ONE)
-        _ * detailsJoin.getJoins() >> ([] as Set)
         1 * detailsJoin.join('author', JoinType.LEFT) >> authorJoin
         1 * authorJoin.get('name') >> namePath
         result == namePath

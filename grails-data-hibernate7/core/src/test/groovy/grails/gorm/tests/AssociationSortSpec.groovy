@@ -253,6 +253,38 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate7TckManag
         results*.name == ['Bruno', 'Cole', 'Bukayo']
     }
 
+    void 'a #api sorted by #sort keeps a player without a contract'() {
+        given: 'the contract of a player has the key, so the player has no column to sort by'
+        new Player(name: 'Free Agent', team: Team.findByName('Arsenal First Team')).save(failOnError: true, flush: true)
+        manager.session.clear()
+
+        when:
+        final results = api == 'list' ? Player.list(sort: sort) : Player.withCriteria { order(sort) }
+
+        then: 'the contract is joined with a left join, also for its identifier'
+        'Free Agent' in results*.name
+        results.size() == 5
+
+        where:
+        [api, sort] << [['list', 'criteria query'], ['contract.id', 'contract.salary']].combinations()
+    }
+
+    void 'an order by the identifier of an association in a criteria query keeps the instances without it'() {
+        expect: 'the identifier is the foreign key, which is read without a join'
+        Team.withCriteria {
+            order('club.id', 'desc')
+        }*.name.sort() == ['Arsenal First Team', 'Chelsea First Team', 'Manchester United First Team', 'Unattached First Team']
+        Team.withCriteria {
+            isNotNull('club')
+            order('club.id', 'desc')
+        }*.name == ['Chelsea First Team', 'Arsenal First Team', 'Manchester United First Team']
+
+        and: 'the association before it on the path is joined with a left join'
+        Player.withCriteria {
+            order('team.club.id')
+        }*.name.sort() == ['Bruno', 'Bukayo', 'Cole', 'Unattached Player']
+    }
+
     void 'a dynamic finder sorted by an association property keeps a team without a club'() {
         when:
         final results = Team.findAllByNameLike('%First%', [sort: 'club.name'])
@@ -380,6 +412,73 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate7TckManag
         direction || expected
         'asc'     || ["Ann's pet", "Bob's pet"]
         'desc'    || ["Bob's pet", "Ann's pet"]
+    }
+
+    void 'an order by an alias of an association block sorts by that alias when a projection selects the path of the alias'() {
+        when:
+        final results = AssociationSortPet.withCriteria {
+            projections {
+                property('owner.scores.score')
+            }
+            owner {
+                createAlias('scores', 'first')
+                createAlias('scores', 'second')
+                eq('first.round', 'first')
+                eq('second.round', 'second')
+                order('second.score')
+            }
+        }
+
+        then: 'the projection selects the score of the first alias, and the order still sorts by the second'
+        results == [9, 1]
+    }
+
+    void 'an order in an association block is left out of a query that can only be ordered by what it selects'() {
+        when: 'the database would reject an order by the name of the club in each of these queries'
+        final distinctTeams = Team.createCriteria().listDistinct {
+            club {
+                like('name', '%')
+                order('name', 'desc')
+            }
+        }
+        final distinctNames = Team.withCriteria {
+            projections {
+                distinct('name')
+            }
+            club {
+                like('name', '%')
+                order('name', 'desc')
+            }
+        }
+        final lastName = Team.withCriteria {
+            projections {
+                max('name')
+            }
+            club {
+                like('name', '%')
+                order('name', 'desc')
+            }
+        }
+
+        then: 'they run as they did when no order of a block reached the query'
+        distinctTeams*.name.sort() == ['Arsenal First Team', 'Chelsea First Team', 'Manchester United First Team']
+        distinctNames.sort() == ['Arsenal First Team', 'Chelsea First Team', 'Manchester United First Team']
+        lastName == ['Manchester United First Team']
+    }
+
+    void 'an order in an association block sorts a distinct query that selects the property of the order'() {
+        when:
+        final results = Team.withCriteria {
+            projections {
+                distinct('club.name')
+            }
+            club {
+                order('name', 'desc')
+            }
+        }
+
+        then:
+        results == ['Manchester United', 'Chelsea', 'Arsenal']
     }
 
     void 'a criteria query with pagination arguments is ordered by an alias of an association block'() {

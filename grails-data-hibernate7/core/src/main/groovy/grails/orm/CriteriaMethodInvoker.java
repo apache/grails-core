@@ -43,6 +43,7 @@ import org.grails.datastore.mapping.model.types.Association;
 import org.grails.datastore.mapping.query.Query;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
 import org.grails.orm.hibernate.query.AssociationAliasOrder;
+import org.grails.orm.hibernate.query.AssociationOrder;
 import org.grails.orm.hibernate.query.HibernateAlias;
 import org.grails.orm.hibernate.query.HibernatePagedResultList;
 import org.grails.orm.hibernate.query.HibernateQuery;
@@ -331,7 +332,7 @@ public class CriteriaMethodInvoker {
         // the entity of the association, which is also there for an embedded component: the class of a
         // component is not a domain class, so the criteria of its block have no entity to look the property up on
         if (moved == null && associationCriteria.getAssociation().getAssociatedEntity().getPropertyByName(head) != null) {
-            moved = new Query.Order(associationName + '.' + property, order.getDirection());
+            moved = new AssociationOrder(associationName + '.' + property, order.getDirection());
         }
         return moved != null && order.isIgnoreCase() ? moved.ignoreCase() : moved;
     }

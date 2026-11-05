@@ -19,9 +19,12 @@
 package org.grails.orm.hibernate.query
 
 import org.grails.datastore.mapping.model.PersistentEntity
+import org.grails.datastore.mapping.model.PersistentProperty
 import org.grails.datastore.mapping.model.types.Association
 import org.grails.datastore.mapping.model.types.Embedded
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateManyToOneProperty
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateOneToOneProperty
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty
 import org.grails.orm.hibernate.cfg.HibernateMappingContext
 import org.grails.orm.hibernate.cfg.Mapping
@@ -365,6 +368,92 @@ class HqlListQueryBuilderSpec extends Specification {
 
         expect:
         builder.buildListHql() == "from Person e left join e.author s0 left join s0.publisher s1 order by s1.id asc"
+    }
+
+    void "test buildListHql sorts by the identifier of a many-to-one association without a join"() {
+        given:
+        def prop = Mock(HibernatePersistentProperty)
+        prop.getType() >> Long
+        def identity = Mock(PersistentProperty)
+        identity.getName() >> "id"
+        def authorEntity = Mock(PersistentEntity)
+        authorEntity.getIdentity() >> identity
+        def author = Mock(HibernateManyToOneProperty)
+        author.isValidHibernateManyToOne() >> true
+        author.getAssociatedEntity() >> authorEntity
+        entity.getPropertyByName("author") >> author
+        entity.getHibernatePropertyByPath("author.id") >> prop
+
+        def builder = new HqlListQueryBuilder(entity, [(HibernateQueryArgument.SORT.value()): "author.id"])
+
+        expect: "the identifier is the foreign key, a column of the entity, which keeps the rows without an author"
+        builder.buildListHql() == "from Person e order by e.author.id asc"
+    }
+
+    void "test buildListHql joins only the associations before the identifier of a nested many-to-one association"() {
+        given:
+        def prop = Mock(HibernatePersistentProperty)
+        prop.getType() >> Long
+        def identity = Mock(PersistentProperty)
+        identity.getName() >> "id"
+        def publisherEntity = Mock(PersistentEntity)
+        publisherEntity.getIdentity() >> identity
+        def publisher = Mock(HibernateManyToOneProperty)
+        publisher.isValidHibernateManyToOne() >> true
+        publisher.getAssociatedEntity() >> publisherEntity
+        def authorEntity = Mock(PersistentEntity)
+        authorEntity.getIdentity() >> identity
+        authorEntity.getPropertyByName("publisher") >> publisher
+        def author = Mock(HibernateManyToOneProperty)
+        author.isValidHibernateManyToOne() >> true
+        author.getAssociatedEntity() >> authorEntity
+        entity.getPropertyByName("author") >> author
+        entity.getHibernatePropertyByPath("author.publisher.id") >> prop
+
+        def builder = new HqlListQueryBuilder(entity, [(HibernateQueryArgument.SORT.value()): "author.publisher.id"])
+
+        expect:
+        builder.buildListHql() == "from Person e left join e.author s0 order by s0.publisher.id asc"
+    }
+
+    void "test buildListHql joins an association whose foreign key is not in the table of the entity for its identifier"() {
+        given:
+        def prop = Mock(HibernatePersistentProperty)
+        prop.getType() >> Long
+        def identity = Mock(PersistentProperty)
+        identity.getName() >> "id"
+        def passportEntity = Mock(PersistentEntity)
+        passportEntity.getIdentity() >> identity
+        def passport = Mock(HibernateOneToOneProperty)
+        passport.isValidHibernateManyToOne() >> false
+        passport.getAssociatedEntity() >> passportEntity
+        entity.getPropertyByName("passport") >> passport
+        entity.getHibernatePropertyByPath("passport.id") >> prop
+
+        def builder = new HqlListQueryBuilder(entity, [(HibernateQueryArgument.SORT.value()): "passport.id"])
+
+        expect: "the identifier is read from the table of the passport, which a hasOne association has its key in"
+        builder.buildListHql() == "from Person e left join e.passport s0 order by s0.id asc"
+    }
+
+    void "test buildListHql joins a many-to-one association for a property other than its identifier"() {
+        given:
+        def prop = Mock(HibernatePersistentProperty)
+        prop.getType() >> Long
+        def identity = Mock(PersistentProperty)
+        identity.getName() >> "id"
+        def authorEntity = Mock(PersistentEntity)
+        authorEntity.getIdentity() >> identity
+        def author = Mock(HibernateManyToOneProperty)
+        author.isValidHibernateManyToOne() >> true
+        author.getAssociatedEntity() >> authorEntity
+        entity.getPropertyByName("author") >> author
+        entity.getHibernatePropertyByPath("author.age") >> prop
+
+        def builder = new HqlListQueryBuilder(entity, [(HibernateQueryArgument.SORT.value()): "author.age"])
+
+        expect:
+        builder.buildListHql() == "from Person e left join e.author s0 order by s0.age asc"
     }
 
     void "test buildListHql joins an association once for two sort properties"() {

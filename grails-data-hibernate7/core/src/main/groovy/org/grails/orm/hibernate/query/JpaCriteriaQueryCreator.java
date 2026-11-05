@@ -15,6 +15,7 @@
  */
 package org.grails.orm.hibernate.query;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -36,6 +37,7 @@ import org.springframework.core.convert.ConversionService;
 
 import grails.gorm.DetachedCriteria;
 import org.grails.datastore.mapping.model.PersistentEntity;
+import org.grails.datastore.mapping.model.types.Association;
 import org.grails.datastore.mapping.query.Query;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
 
@@ -254,37 +256,71 @@ public class JpaCriteriaQueryCreator<T> {
             // on H2 and most other databases, so a count query leaves the criteria's orders out
             return;
         }
-        List<Query.Order> orders = detachedCriteria.getOrders();
-        if (!orders.isEmpty()) {
-            var jpaOrders = orders.stream()
-                    .map(order -> {
-                        var propertyName = order.getProperty();
-                        SqlProjection sqlProjection = findSqlProjection(propertyName, false);
-                        Expression<?> expression;
-                        if (sqlProjection != null) {
-                            expression = context.getSelectionAlias(sqlProjection.getColumnAlias());
-                        } else if (isSelectedProperty(propertyName)) {
-                            // a distinct or grouped query can only be ordered by what it selects, so the order
-                            // sorts by the expression of the projection and not through a join of its own
-                            expression = context.getFullyQualifiedExpression(propertyName);
-                        } else if (order instanceof AssociationAliasOrder aliasOrder) {
-                            expression = context.getSortExpression(aliasOrder);
-                        } else {
-                            expression = context.getSortExpression(propertyName);
-                        }
-                        if (order.isIgnoreCase() && expression.getJavaType().equals(String.class)) {
-                            return order.getDirection().equals(Query.Order.Direction.ASC) ?
-                                    criteriaBuilder.asc(criteriaBuilder.lower((Expression<String>) expression)) :
-                                    criteriaBuilder.desc(criteriaBuilder.lower((Expression<String>) expression));
-                        } else {
-                            return order.getDirection().equals(Query.Order.Direction.ASC) ?
-                                    criteriaBuilder.asc(expression) :
-                                    criteriaBuilder.desc(expression);
-                        }
-                    })
-                    .toArray(jakarta.persistence.criteria.Order[]::new);
+        boolean orderedBySelection = isOrderedBySelection();
+        List<jakarta.persistence.criteria.Order> jpaOrders = new ArrayList<>();
+        for (Query.Order order : detachedCriteria.getOrders()) {
+            var propertyName = order.getProperty();
+            SqlProjection sqlProjection = findSqlProjection(propertyName, false);
+            boolean selected = isSelectedProperty(propertyName);
+            Expression<?> expression;
+            if (sqlProjection != null) {
+                expression = context.getSelectionAlias(sqlProjection.getColumnAlias());
+            } else if (order instanceof AssociationOrder && orderedBySelection && !selected) {
+                // the order of an association block had no effect while it stayed in its block, and the
+                // database would reject it here, so it is left out as before
+                continue;
+            } else if (selected && (orderedBySelection || !(order instanceof AssociationAliasOrder))) {
+                // a distinct or grouped query can only be ordered by what it selects, so the order
+                // sorts by the expression of the projection and not through a join of its own
+                expression = context.getFullyQualifiedExpression(propertyName);
+            } else if (order instanceof AssociationAliasOrder aliasOrder) {
+                expression = context.getSortExpression(aliasOrder);
+            } else {
+                expression = context.getSortExpression(propertyName, endsWithForeignKey(propertyName));
+            }
+            boolean ascending = order.getDirection().equals(Query.Order.Direction.ASC);
+            if (order.isIgnoreCase() && expression.getJavaType().equals(String.class)) {
+                Expression<String> lower = criteriaBuilder.lower((Expression<String>) expression);
+                jpaOrders.add(ascending ? criteriaBuilder.asc(lower) : criteriaBuilder.desc(lower));
+            } else {
+                jpaOrders.add(ascending ? criteriaBuilder.asc(expression) : criteriaBuilder.desc(expression));
+            }
+        }
+        if (!jpaOrders.isEmpty()) {
             cq.orderBy(jpaOrders);
         }
+    }
+
+    /**
+     * Whether the query selects distinct or grouped values, or aggregates, and not only plain properties. Most
+     * databases reject an order of such a query by a value that it does not select.
+     */
+    private boolean isOrderedBySelection() {
+        for (Query.Projection projection : projections.getProjectionList()) {
+            if (!(projection instanceof Query.IdProjection) && projection.getClass() != Query.PropertyProjection.class) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Whether a sort path from the entity of the query ends with a foreign key: the identifier of an association
+     * that has its key in the table before it on the path. A path that starts with an alias is not such a path.
+     */
+    private boolean endsWithForeignKey(String propertyName) {
+        String[] tokens = propertyName.split("\\.");
+        PersistentEntity current = entity;
+        for (int i = 0; i < tokens.length - 1 && current != null; i++) {
+            if (!(current.getPropertyByName(tokens[i]) instanceof Association<?> association)) {
+                return false;
+            }
+            if (i == tokens.length - 2) {
+                return HqlListQueryBuilder.isForeignKey(association, tokens[i + 1]);
+            }
+            current = association.getAssociatedEntity();
+        }
+        return false;
     }
 
     /**

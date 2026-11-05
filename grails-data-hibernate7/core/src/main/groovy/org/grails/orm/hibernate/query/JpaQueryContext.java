@@ -45,7 +45,8 @@ public class JpaQueryContext implements Cloneable {
     private final ExpressionResolver resolver;
     private final Map<ParameterExpression<?>, Object> parameterValues = new LinkedHashMap<>();
     private final Map<String, Expression<?>> selectionAliases = new HashMap<>();
-    private final Map<DetachedAssociationCriteria<?>, JpaQueryContext> associationContexts = new IdentityHashMap<>();
+    // only the context of a query, which has no parent, records the contexts of its association blocks
+    private Map<DetachedAssociationCriteria<?>, JpaQueryContext> associationContexts;
     private JpaQueryContext parent;
 
     public JpaQueryContext() {
@@ -205,10 +206,24 @@ public class JpaQueryContext implements Cloneable {
      * @return the expression to sort by
      */
     public Expression<?> getSortExpression(String path) {
+        return getSortExpression(path, false);
+    }
+
+    /**
+     * Returns the expression that an order of this query sorts by, as {@link #getSortExpression(String)} does.
+     * A path that ends with a foreign key is not joined for it: Hibernate reads the column, which keeps the rows
+     * where the association is {@code null} as it is.
+     *
+     * @param path the property path of the order
+     * @param endsWithForeignKey whether the last two attributes of the path are an association and its
+     *     identifier, with the foreign key on the side of the path
+     * @return the expression to sort by
+     */
+    Expression<?> getSortExpression(String path, boolean endsWithForeignKey) {
         if (parent != null && path != null && path.startsWith("{alias}")) {
             return getFullyQualifiedExpression(path);
         }
-        return resolver.resolveSort(path);
+        return resolver.resolveSort(path, endsWithForeignKey);
     }
 
     /**
@@ -238,6 +253,9 @@ public class JpaQueryContext implements Cloneable {
         if (parent != null) {
             parent.registerAssociationContext(association, context);
         } else {
+            if (associationContexts == null) {
+                associationContexts = new IdentityHashMap<>();
+            }
             associationContexts.put(association, context);
         }
     }
@@ -250,7 +268,10 @@ public class JpaQueryContext implements Cloneable {
      * @return the context of the block, or {@code null} if the query has built no criteria of that block
      */
     JpaQueryContext getAssociationContext(DetachedAssociationCriteria<?> association) {
-        return parent != null ? parent.getAssociationContext(association) : associationContexts.get(association);
+        if (parent != null) {
+            return parent.getAssociationContext(association);
+        }
+        return associationContexts != null ? associationContexts.get(association) : null;
     }
 
     public Path<?> getFullyQualifiedPath(String path) {
