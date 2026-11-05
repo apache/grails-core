@@ -267,6 +267,8 @@ public class JpaCriteriaQueryCreator<T> {
                             // a distinct or grouped query can only be ordered by what it selects, so the order
                             // sorts by the expression of the projection and not through a join of its own
                             expression = context.getFullyQualifiedExpression(propertyName);
+                        } else if (order instanceof AssociationAliasOrder aliasOrder) {
+                            expression = context.getSortExpression(aliasOrder);
                         } else {
                             expression = context.getSortExpression(propertyName);
                         }

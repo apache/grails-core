@@ -26,6 +26,10 @@ import jakarta.persistence.metamodel.Attribute;
 import jakarta.persistence.metamodel.Attribute.PersistentAttributeType;
 import jakarta.persistence.metamodel.PluralAttribute;
 
+import org.hibernate.query.sqm.tree.from.SqmAttributeJoin;
+import org.hibernate.query.sqm.tree.from.SqmFrom;
+import org.hibernate.query.sqm.tree.from.SqmJoin;
+
 /**
  * Resolves string paths and aliases into JPA Expressions and Paths.
  *
@@ -165,10 +169,9 @@ public class ExpressionResolver {
         if (component ? !joinComponent : !isAssociation(type)) {
             return null;
         }
-        for (Join<?, ?> join : from.getJoins()) {
-            if (attributeName.equals(join.getAttribute().getName())) {
-                return join;
-            }
+        Join<?, ?> existing = existingJoin(from, attributeName);
+        if (existing != null) {
+            return existing;
         }
         if (component) {
             return from.join(attributeName);
@@ -176,6 +179,31 @@ public class ExpressionResolver {
         HibernateAlias requested = associationPath != null ? aliasRegistry.getDefinition(associationPath) : null;
         JoinType joinType = requested != null && !requested.explicit() ? requested.joinType() : JoinType.LEFT;
         return from.join(attributeName, joinType);
+    }
+
+    /**
+     * Returns the first join that a source has for an attribute, or {@code null} if it has none. An association
+     * has a join for each of its aliases, and the first of them is the join that the path of the association
+     * shares, so that is the one a sort by the path uses. Hibernate keeps the joins of a source in the order in
+     * which they were made, while {@link From#getJoins()} returns them as a set, which has no order.
+     */
+    private static Join<?, ?> existingJoin(From<?, ?> from, String attributeName) {
+        if (from instanceof SqmFrom<?, ?> sqmFrom) {
+            for (SqmJoin<?, ?> join : sqmFrom.getSqmJoins()) {
+                // the joins that getJoins() has: a fetch is not a join to sort through
+                if (join instanceof SqmAttributeJoin<?, ?> attributeJoin && !attributeJoin.isFetched() &&
+                        attributeName.equals(attributeJoin.getAttribute().getName())) {
+                    return attributeJoin;
+                }
+            }
+            return null;
+        }
+        for (Join<?, ?> join : from.getJoins()) {
+            if (attributeName.equals(join.getAttribute().getName())) {
+                return join;
+            }
+        }
+        return null;
     }
 
     private static boolean isAssociation(PersistentAttributeType type) {

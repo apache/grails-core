@@ -22,6 +22,11 @@ import jakarta.persistence.criteria.JoinType
 import jakarta.persistence.criteria.Expression
 import jakarta.persistence.metamodel.Attribute
 import jakarta.persistence.metamodel.SingularAttribute
+import org.hibernate.metamodel.model.domain.PersistentAttribute
+import org.hibernate.query.sqm.tree.domain.SqmPath
+import org.hibernate.query.sqm.tree.from.SqmAttributeJoin
+import org.hibernate.query.sqm.tree.from.SqmFrom
+import org.hibernate.query.sqm.tree.from.SqmJoin
 import spock.lang.Specification
 
 /**
@@ -250,6 +255,43 @@ class ExpressionResolverSpec extends Specification {
         0 * root.join(_, _)
         1 * clubJoin.get('name') >> namePath
         result == namePath
+    }
+
+    def 'a sort reuses the first join that Hibernate made for the association'() {
+        given:
+        def root = Mock(SqmFrom)
+        def otherJoin = sqmJoinOf('owner', false)
+        def fetch = sqmJoinOf('scores', true)
+        def firstJoin = sqmJoinOf('scores', false)
+        def secondJoin = sqmJoinOf('scores', false)
+        def scoresPath = Mock(SqmPath)
+        def scorePath = Mock(SqmPath)
+        def attribute = Mock(SingularAttribute)
+        def resolver = new ExpressionResolver(new AliasRegistry(), new JoinTracker(root))
+
+        when:
+        def result = resolver.resolveSort('scores.score')
+
+        then: 'the joins are read in the order in which they were made, which the set of getJoins() does not keep'
+        _ * attribute.getPersistentAttributeType() >> Attribute.PersistentAttributeType.ONE_TO_MANY
+        _ * scoresPath.getModel() >> attribute
+        _ * root.get('scores') >> scoresPath
+        _ * root.getSqmJoins() >> [Mock(SqmJoin), otherJoin, fetch, firstJoin, secondJoin]
+        0 * root.getJoins()
+        0 * root.join(_, _)
+        1 * firstJoin.get('score') >> scorePath
+        0 * secondJoin.get(_)
+        0 * fetch.get(_)
+        result == scorePath
+    }
+
+    private SqmAttributeJoin sqmJoinOf(String attributeName, boolean fetched) {
+        def attribute = Mock(PersistentAttribute)
+        attribute.getName() >> attributeName
+        def join = Mock(SqmAttributeJoin)
+        join.getAttribute() >> attribute
+        join.isFetched() >> fetched
+        join
     }
 
     def 'a sort joins a nested association with the join type requested for its path'() {

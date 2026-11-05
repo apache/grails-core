@@ -40,6 +40,7 @@ import org.grails.datastore.mapping.model.PersistentProperty;
 import org.grails.datastore.mapping.model.types.Association;
 import org.grails.datastore.mapping.query.Query;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
+import org.grails.orm.hibernate.query.AssociationAliasOrder;
 import org.grails.orm.hibernate.query.HibernateAlias;
 import org.grails.orm.hibernate.query.HibernatePagedResultList;
 import org.grails.orm.hibernate.query.HibernateQuery;
@@ -254,37 +255,49 @@ public class CriteriaMethodInvoker {
     /**
      * Moves the orders of an association block to the enclosing criteria, since only the orders of the root
      * criteria reach the query. An order by a property of the association is qualified with the name of the
-     * association. An alias exists only in the block that declares it, so an order by such an alias is moved as
-     * an order by the path that the alias stands for. Any other order stays in the block.
+     * association. An alias exists only in the block that declares it, so an order by such an alias keeps its
+     * block and is resolved against it. Any other order stays in the block.
      */
     private static void moveOrdersToEnclosingCriteria(
             HibernateQuery hibernateQuery, String associationName, DetachedAssociationCriteria<?> associationCriteria) {
         for (Iterator<Query.Order> orders = associationCriteria.getOrders().iterator(); orders.hasNext();) {
-            Query.Order order = orders.next();
-            String property = pathFromAssociation(order.getProperty(), associationCriteria);
-            if (property != null) {
-                Query.Order qualified = new Query.Order(associationName + '.' + property, order.getDirection());
-                hibernateQuery.order(order.isIgnoreCase() ? qualified.ignoreCase() : qualified);
+            Query.Order order = orderOfEnclosingCriteria(orders.next(), associationName, associationCriteria);
+            if (order != null) {
+                hibernateQuery.order(order);
                 orders.remove();
             }
         }
     }
 
     /**
-     * Returns the property of an order in an association block as a path of properties from the association, or
-     * {@code null} if it starts with neither a property of the association nor an alias that the block declares.
+     * Returns an order of an association block as an order of the enclosing criteria, or {@code null} if it
+     * starts with neither a property of the association nor an alias that the block declares.
      */
-    private static String pathFromAssociation(String property, DetachedAssociationCriteria<?> associationCriteria) {
+    private static Query.Order orderOfEnclosingCriteria(
+            Query.Order order, String associationName, DetachedAssociationCriteria<?> associationCriteria) {
+        if (order instanceof AssociationAliasOrder aliasOrder) {
+            // an order by an alias of a block inside this one, which is still resolved against that block
+            return aliasOrder.qualifiedWith(associationName);
+        }
+        String property = order.getProperty();
         int dot = property.indexOf('.');
         String head = dot < 0 ? property : property.substring(0, dot);
+        Query.Order moved = null;
         if (dot > 0) {
             for (Query.Criterion criterion : associationCriteria.getCriteria()) {
                 if (criterion instanceof HibernateAlias alias && head.equals(alias.alias())) {
-                    return alias.path() + property.substring(dot);
+                    moved = new AssociationAliasOrder(associationName + '.' + alias.path() + property.substring(dot),
+                            order.getDirection(), associationCriteria, property);
+                    break;
                 }
             }
         }
-        return associationCriteria.getPersistentEntity().getPropertyByName(head) != null ? property : null;
+        // the entity of the association, which is also there for an embedded component: the class of a
+        // component is not a domain class, so the criteria of its block have no entity to look the property up on
+        if (moved == null && associationCriteria.getAssociation().getAssociatedEntity().getPropertyByName(head) != null) {
+            moved = new Query.Order(associationName + '.' + property, order.getDirection());
+        }
+        return moved != null && order.isIgnoreCase() ? moved.ignoreCase() : moved;
     }
 
     @SuppressWarnings("PMD.DataflowAnomalyAnalysis")

@@ -17,6 +17,7 @@ package org.grails.orm.hibernate.query;
 
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -26,6 +27,8 @@ import jakarta.persistence.criteria.From;
 import jakarta.persistence.criteria.JoinType;
 import jakarta.persistence.criteria.ParameterExpression;
 import jakarta.persistence.criteria.Path;
+
+import org.grails.datastore.gorm.query.criteria.DetachedAssociationCriteria;
 
 /**
  * Orchestrator for JPA query translation state (Aliases, Joins, Expressions).
@@ -42,6 +45,7 @@ public class JpaQueryContext implements Cloneable {
     private final ExpressionResolver resolver;
     private final Map<ParameterExpression<?>, Object> parameterValues = new LinkedHashMap<>();
     private final Map<String, Expression<?>> selectionAliases = new HashMap<>();
+    private final Map<DetachedAssociationCriteria<?>, JpaQueryContext> associationContexts = new IdentityHashMap<>();
     private JpaQueryContext parent;
 
     public JpaQueryContext() {
@@ -205,6 +209,48 @@ public class JpaQueryContext implements Cloneable {
             return getFullyQualifiedExpression(path);
         }
         return resolver.resolveSort(path);
+    }
+
+    /**
+     * Returns the expression that an order by an alias of an association block sorts by. The order is resolved
+     * against the context of its block, where the alias is declared, so it sorts by the join of the alias that it
+     * names. An order whose block is not among the criteria of the query sorts by its path.
+     *
+     * @param order the order by an alias of an association block
+     * @return the expression to sort by
+     */
+    Expression<?> getSortExpression(AssociationAliasOrder order) {
+        JpaQueryContext associationContext = getAssociationContext(order.getAssociation());
+        return associationContext != null ?
+                associationContext.getSortExpression(order.getAliasedProperty()) :
+                getSortExpression(order.getProperty());
+    }
+
+    /**
+     * Records the context that the criteria of an association block are built against, in which the aliases of
+     * the block are declared and joined. A context nested in another records it in the context of the query, so
+     * that an order of the query finds the context of a block at any depth.
+     *
+     * @param association the criteria of the association block
+     * @param context the context of the block
+     */
+    void registerAssociationContext(DetachedAssociationCriteria<?> association, JpaQueryContext context) {
+        if (parent != null) {
+            parent.registerAssociationContext(association, context);
+        } else {
+            associationContexts.put(association, context);
+        }
+    }
+
+    /**
+     * Returns the context recorded for an association block by
+     * {@link #registerAssociationContext(DetachedAssociationCriteria, JpaQueryContext)}.
+     *
+     * @param association the criteria of the association block
+     * @return the context of the block, or {@code null} if the query has built no criteria of that block
+     */
+    JpaQueryContext getAssociationContext(DetachedAssociationCriteria<?> association) {
+        return parent != null ? parent.getAssociationContext(association) : associationContexts.get(association);
     }
 
     public Path<?> getFullyQualifiedPath(String path) {

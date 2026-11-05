@@ -21,6 +21,9 @@ import jakarta.persistence.criteria.Join
 import jakarta.persistence.criteria.JoinType
 import jakarta.persistence.criteria.ParameterExpression
 import jakarta.persistence.criteria.Path
+import org.grails.datastore.gorm.query.criteria.DetachedAssociationCriteria
+import org.grails.datastore.mapping.model.types.Association
+import org.grails.datastore.mapping.query.Query
 import spock.lang.Specification
 
 /**
@@ -277,6 +280,54 @@ class JpaQueryContextSpec extends Specification {
         then:
         1 * root.get('height') >> heightPath
         resolved == heightPath
+    }
+
+    def "test an order by an alias of an association block is resolved against the context of the block"() {
+        given:
+        def root = Mock(From)
+        def context = new JpaQueryContext(root)
+        def outerContext = new JpaQueryContext(context, Mock(From))
+        def blockContext = new JpaQueryContext(outerContext, Mock(From))
+        def secondJoin = Mock(Join)
+        def scorePath = Mock(Path)
+        def block = new DetachedAssociationCriteria(Object, Mock(Association))
+        blockContext.registerAlias('second', new HibernateAlias('scores', 'second'))
+        blockContext.registerAlias('second', secondJoin)
+
+        when: 'the context of a nested block is recorded'
+        outerContext.registerAssociationContext(block, blockContext)
+
+        then: 'the context of the query has it'
+        context.getAssociationContext(block).is(blockContext)
+        outerContext.getAssociationContext(block).is(blockContext)
+
+        when:
+        def result = context.getSortExpression(
+                new AssociationAliasOrder('pet.owner.scores.score', Query.Order.Direction.ASC, block, 'second.score'))
+
+        then: 'the order sorts by the join of the alias that it names and not by its path'
+        1 * secondJoin.get('score') >> scorePath
+        0 * root._
+        result == scorePath
+    }
+
+    def "test an order by an alias of a block that the query has not built sorts by its path"() {
+        given:
+        def root = Mock(From)
+        def context = new JpaQueryContext(root)
+        def ownerPath = Mock(Path)
+        def namePath = Mock(Path)
+        def block = new DetachedAssociationCriteria(Object, Mock(Association))
+
+        when:
+        def result = context.getSortExpression(
+                new AssociationAliasOrder('owner.name', Query.Order.Direction.ASC, block, 'o.name'))
+
+        then:
+        context.getAssociationContext(block) == null
+        _ * root.get('owner') >> ownerPath
+        _ * ownerPath.get('name') >> namePath
+        result == namePath
     }
 
     def "test parameter values cannot be changed through the returned map"() {

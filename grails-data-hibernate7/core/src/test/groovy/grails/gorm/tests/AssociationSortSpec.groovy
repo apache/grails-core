@@ -32,7 +32,8 @@ import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate7TckManager> {
 
     void setupSpec() {
-        manager.registerDomainClasses(Club, Team, Player, Contract, AssociationSortBook, AssociationSortAuthor)
+        manager.registerDomainClasses(Club, Team, Player, Contract, AssociationSortBook, AssociationSortAuthor,
+                AssociationSortOwner, AssociationSortScore, AssociationSortPet)
     }
 
     void setup() {
@@ -48,6 +49,13 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate7TckManag
         new AssociationSortBook(title: 'It', details: new AssociationSortBookDetails(isbn: '1', author: king)).save(failOnError: true)
         new AssociationSortBook(title: 'Guide', details: new AssociationSortBookDetails(isbn: '2', author: adams)).save(failOnError: true)
         new AssociationSortBook(title: 'Anonymous', details: new AssociationSortBookDetails(isbn: '3')).save(failOnError: true)
+        [Ann: [1, 9], Bob: [9, 1]].each { ownerName, scores ->
+            final owner = new AssociationSortOwner(name: ownerName)
+            owner.addToScores(round: 'first', score: scores[0])
+            owner.addToScores(round: 'second', score: scores[1])
+            owner.save(failOnError: true)
+            new AssociationSortPet(name: "${ownerName}'s pet", owner: owner).save(failOnError: true)
+        }
         manager.session.flush()
         manager.session.clear()
     }
@@ -201,6 +209,125 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate7TckManag
         'desc'    || ['Bruno', 'Cole', 'Bukayo']
     }
 
+    void 'an order by an alias of a nested association block sorts by that alias'() {
+        when:
+        final results = Contract.withCriteria {
+            player {
+                team {
+                    createAlias('club', 'c')
+                    order('c.name', direction)
+                }
+            }
+        }
+
+        then:
+        results*.player*.name == expected
+
+        where:
+        direction || expected
+        'asc'     || ['Bukayo', 'Cole', 'Bruno']
+        'desc'    || ['Bruno', 'Cole', 'Bukayo']
+    }
+
+    void 'an order by the #alias alias of a collection that has two aliases sorts by that alias'() {
+        when:
+        final results = AssociationSortOwner.withCriteria {
+            createAlias('scores', 'first')
+            createAlias('scores', 'second')
+            eq('first.round', 'first')
+            eq('second.round', 'second')
+            order("${alias}.score")
+        }
+
+        then:
+        results*.name == expected
+
+        where:
+        alias    || expected
+        'first'  || ['Ann', 'Bob']
+        'second' || ['Bob', 'Ann']
+    }
+
+    void 'an order in an association block by the #alias alias of a collection that has two aliases sorts #direction by that alias'() {
+        when:
+        final results = AssociationSortPet.withCriteria {
+            owner {
+                createAlias('scores', 'first')
+                createAlias('scores', 'second')
+                eq('first.round', 'first')
+                eq('second.round', 'second')
+                order("${alias}.score", direction)
+            }
+        }
+
+        then: 'the order does not sort by the other alias of the collection'
+        results*.name == expected
+
+        where:
+        alias    | direction || expected
+        'first'  | 'asc'     || ["Ann's pet", "Bob's pet"]
+        'first'  | 'desc'    || ["Bob's pet", "Ann's pet"]
+        'second' | 'asc'     || ["Bob's pet", "Ann's pet"]
+        'second' | 'desc'    || ["Ann's pet", "Bob's pet"]
+    }
+
+    void 'an order by the path of a collection that has two aliases sorts by the join that the path shares with the first alias'() {
+        when:
+        final results = AssociationSortOwner.withCriteria {
+            createAlias('scores', 'first')
+            createAlias('scores', 'second')
+            eq('first.round', 'first')
+            eq('second.round', 'second')
+            order('scores.score', direction)
+        }
+
+        then:
+        results*.name == expected
+
+        where:
+        direction || expected
+        'asc'     || ['Ann', 'Bob']
+        'desc'    || ['Bob', 'Ann']
+    }
+
+    void 'an order in an association block by the path of a collection that has two aliases sorts by the join that the path shares with the first alias'() {
+        when:
+        final results = AssociationSortPet.withCriteria {
+            owner {
+                createAlias('scores', 'first')
+                createAlias('scores', 'second')
+                eq('first.round', 'first')
+                eq('second.round', 'second')
+                order('scores.score', direction)
+            }
+        }
+
+        then:
+        results*.name == expected
+
+        where:
+        direction || expected
+        'asc'     || ["Ann's pet", "Bob's pet"]
+        'desc'    || ["Bob's pet", "Ann's pet"]
+    }
+
+    void 'a criteria query with pagination arguments is ordered by an alias of an association block'() {
+        when:
+        final results = AssociationSortPet.createCriteria().list(max: 10) {
+            owner {
+                createAlias('scores', 'first')
+                createAlias('scores', 'second')
+                eq('first.round', 'first')
+                eq('second.round', 'second')
+                order('second.score')
+            }
+        }
+
+        then:
+        results*.name == ["Bob's pet", "Ann's pet"]
+        results.totalCount == 2
+    }
+
     void 'an order in an association block that names neither a property nor an alias of the block stays in the block'() {
         when:
         final results = Player.withCriteria {
@@ -310,6 +437,48 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate7TckManag
         AssociationSortBook.list(sort: 'details.isbn', order: 'desc')*.title == ['Anonymous', 'Guide', 'It']
     }
 
+    void 'an order inside a block of an embedded component sorts by the property of the component'() {
+        when:
+        final results = AssociationSortBook.withCriteria {
+            details {
+                order('isbn', direction)
+            }
+        }
+
+        then:
+        results*.title == expected
+
+        where:
+        direction || expected
+        'asc'     || ['It', 'Guide', 'Anonymous']
+        'desc'    || ['Anonymous', 'Guide', 'It']
+    }
+
+    void 'an order inside a block of an embedded component sorts through an association of the component'() {
+        when:
+        final results = AssociationSortBook.withCriteria {
+            details {
+                order('author.name')
+            }
+        }
+
+        then: 'the association inside the component is joined with a left join'
+        'Anonymous' in results*.title
+        results*.title - 'Anonymous' == ['Guide', 'It']
+    }
+
+    void 'an order in a block of an embedded component that names no property of the component stays in the block'() {
+        when:
+        final results = AssociationSortBook.withCriteria {
+            details {
+                order('unknown')
+            }
+        }
+
+        then:
+        results.size() == 3
+    }
+
     private static List<AssociationSortBook> booksSortedByAuthor(String api) {
         switch (api) {
             case 'where query':
@@ -346,4 +515,23 @@ class AssociationSortBookDetails {
 @Entity
 class AssociationSortAuthor {
     String name
+}
+
+@Entity
+class AssociationSortOwner {
+    String name
+    static hasMany = [scores: AssociationSortScore]
+}
+
+@Entity
+class AssociationSortScore {
+    String round
+    Integer score
+    static belongsTo = [owner: AssociationSortOwner]
+}
+
+@Entity
+class AssociationSortPet {
+    String name
+    AssociationSortOwner owner
 }
