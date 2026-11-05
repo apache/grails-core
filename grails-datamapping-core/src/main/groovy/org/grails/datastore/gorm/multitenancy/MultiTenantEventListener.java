@@ -34,6 +34,7 @@ import org.springframework.context.ApplicationEvent;
 import grails.gorm.multitenancy.Tenants;
 import org.grails.datastore.gorm.GormEnhancer;
 import org.grails.datastore.mapping.core.Datastore;
+import org.grails.datastore.mapping.dirty.checking.DirtyCheckable;
 import org.grails.datastore.mapping.engine.event.AbstractPersistenceEvent;
 import org.grails.datastore.mapping.engine.event.PersistenceEventListener;
 import org.grails.datastore.mapping.engine.event.PreInsertEvent;
@@ -156,19 +157,23 @@ public class MultiTenantEventListener implements PersistenceEventListener {
     }
 
     /**
-     * Finds the associated objects that the validation of the object of the given event cascades to, directly or
-     * through another associated object. They are validated with that object, without a {@link ValidationEvent}
-     * of their own, so a listener that assigns the tenant id of an object before it is validated handles the
-     * returned events as well.
+     * Finds the associated objects that are validated and saved with the object of the given event: the ones its
+     * validation cascades to, directly or through another associated object, that are new or have changes. They are
+     * validated with that object, without a {@link ValidationEvent} of their own, so a listener that assigns the
+     * tenant id of an object before it is validated handles the returned events as well.
+     *
+     * <p>A validation that does not cascade, see {@link ValidationEvent#isDeepValidate()}, returns no events. Neither
+     * does an associated object that has a tenant id and no changes: it is validated, but it is not saved, so it
+     * keeps the tenant id it has.</p>
      *
      * @param event The event of the object that is validated
-     * @return An event for each associated entity instance that is validated with that object
+     * @return An event for each associated entity instance that is validated and saved with that object
      * @since 7.0.18
      */
     public static List<ValidationEvent> cascadedValidationEvents(ValidationEvent event) {
         PersistentEntity entity = event.getEntity();
         Object source = event.getSource();
-        if (entity == null || !(source instanceof Datastore)) {
+        if (entity == null || !(source instanceof Datastore) || !event.isDeepValidate()) {
             return Collections.emptyList();
         }
         Object entityObject = event.getEntityObject();
@@ -180,15 +185,28 @@ public class MultiTenantEventListener implements PersistenceEventListener {
         List<ValidationEvent> events = new ArrayList<>(associatedObjects.size());
         for (Object associatedObject : associatedObjects) {
             ValidationEvent cascaded = new ValidationEvent((Datastore) source, associatedObject);
-            if (cascaded.getEntity() != null) {
+            if (cascaded.getEntity() != null && !keepsTenantId(cascaded)) {
                 events.add(cascaded);
             }
         }
         return events;
     }
 
-    // Follows the associations that PersistentEntityValidator cascades validation to. An association or an object
-    // that is not loaded yet is left alone.
+    // An object without changes is not updated, so the tenant id it has is not replaced. One without a tenant id is
+    // still given one, as it can be without changes too: Hibernate tracks the changes of a new object from the save
+    // on, before it is inserted, and the in-memory datastore does not read the tenant id of a loaded object back.
+    private static boolean keepsTenantId(ValidationEvent event) {
+        Object object = event.getEntityObject();
+        if (!(object instanceof DirtyCheckable) || ((DirtyCheckable) object).hasChanged()) {
+            return false;
+        }
+        TenantId tenantId = event.getEntity().getTenantId();
+        return tenantId == null || event.getEntityAccess().getProperty(tenantId.getName()) != null;
+    }
+
+    // Follows PersistentEntityValidator: the same associations, and the same order of checks for an associated
+    // object, so that the objects found are the ones it validates. An association or an object that is not loaded
+    // yet is left alone.
     private static void collectCascadedObjects(PersistentEntity entity, Object object, Association inverseSide,
                                                Set<Object> visited, List<Object> associatedObjects) {
         List<Association> associations = entity.getAssociations();
@@ -202,32 +220,49 @@ public class MultiTenantEventListener implements PersistenceEventListener {
         }
         EntityReflector reflector = mappingContext.getEntityReflector(entity);
         for (Association association : associations) {
-            PersistentEntity associatedEntity = association.getAssociatedEntity();
-            if (associatedEntity == null || association == inverseSide) {
+            if (association.getAssociatedEntity() == null || association == inverseSide) {
                 continue;
             }
-            Collection<?> values = Collections.emptyList();
             if (association instanceof ToOne) {
-                values = Collections.singletonList(reflector.getProperty(object, association.getName()));
+                Object associatedObject = reflector.getProperty(object, association.getName());
+                // An association that does not cascade to the object does not mark it as visited, so that another
+                // association that refers to the same object can still cascade to it
+                if (isLoaded(associatedObject, proxyHandler) && association.doesCascadeValidate(associatedObject)) {
+                    collectCascadedObject(association, associatedObject, visited, associatedObjects);
+                }
             }
             else if (association instanceof ToMany && association.doesCascadeValidate(null)) {
                 Object value = reflector.getProperty(object, association.getName());
-                if (value instanceof Collection && proxyHandler.isInitialized(value)) {
+                if (!isLoaded(value, proxyHandler)) {
+                    continue;
+                }
+                Collection<?> values = Collections.emptyList();
+                if (value instanceof Collection) {
                     values = (Collection<?>) value;
                 }
-                else if (value instanceof Map && proxyHandler.isInitialized(value)) {
+                else if (value instanceof Map) {
                     values = ((Map<?, ?>) value).values();
                 }
-            }
-            Association nextInverseSide = association.isBidirectional() ? association.getInverseSide() : null;
-            for (Object associatedObject : values) {
-                if (associatedObject != null && proxyHandler.isInitialized(associatedObject) && visited.add(associatedObject) &&
-                        association.doesCascadeValidate(associatedObject)) {
-                    associatedObjects.add(associatedObject);
-                    collectCascadedObjects(associatedEntity, associatedObject, nextInverseSide, visited, associatedObjects);
+                for (Object associatedObject : values) {
+                    if (isLoaded(associatedObject, proxyHandler)) {
+                        collectCascadedObject(association, associatedObject, visited, associatedObjects);
+                    }
                 }
             }
         }
+    }
+
+    private static void collectCascadedObject(Association association, Object associatedObject,
+                                              Set<Object> visited, List<Object> associatedObjects) {
+        if (visited.add(associatedObject) && association.doesCascadeValidate(associatedObject)) {
+            associatedObjects.add(associatedObject);
+            Association inverseSide = association.isBidirectional() ? association.getInverseSide() : null;
+            collectCascadedObjects(association.getAssociatedEntity(), associatedObject, inverseSide, visited, associatedObjects);
+        }
+    }
+
+    private static boolean isLoaded(Object object, ProxyHandler proxyHandler) {
+        return object != null && proxyHandler.isInitialized(object);
     }
 }
 

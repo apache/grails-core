@@ -58,7 +58,7 @@ class MongoTenantIdConstraintsSpec extends AutoStartedMongoSpec {
                 'grails.gorm.multiTenancy.tenantResolverClass': SystemPropertyTenantResolver,
                 (MongoSettings.SETTING_URL)                   : "mongodb://${mongoHost}:${mongoPort}/tenantIdConstraintsDb" as String,
         ]
-        this.datastore = new MongoDatastore(config, TenantAccount, TenantOwner, TenantPet)
+        this.datastore = new MongoDatastore(config, TenantAccount, TenantOwner, TenantPet, TenantWalker, TenantJogger, TenantLeash)
     }
 
     void setup() {
@@ -134,6 +134,49 @@ class MongoTenantIdConstraintsSpec extends AutoStartedMongoSpec {
         storedCounts() == [owners: 0L, pets: 0L]
     }
 
+    void 'saving an owner fails when the current tenant id breaks a constraint of an associated object that an association that does not cascade validation refers to too'() {
+        given: 'a current tenant id longer than the maxSize of the tenant id of a leash'
+        System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, 'toolongtenant')
+
+        when: 'whichever of the two associations comes first, one of the walkers reaches the leash first through the one that does not cascade'
+        def leash = new TenantLeash(colour: 'red')
+        def walker = walkerType.newInstance(name: 'Dave', borrowed: leash, leash: leash)
+        def saved = walkerType.withNewSession { walker.save(flush: true) }
+
+        then: 'the walker reports the tenant id of the leash through the association that cascades'
+        !saved
+        walker.errors.getFieldError("${cascading}.firmId").code == 'maxSize.exceeded'
+
+        and: 'neither is stored'
+        walkerType.collection.countDocuments() == 0L
+        TenantLeash.collection.countDocuments() == 0L
+
+        where:
+        walkerType   | cascading
+        TenantWalker | 'leash'
+        TenantJogger | 'borrowed'
+    }
+
+    void 'an associated object that has a tenant id and no changes keeps it as its owner is validated'() {
+        given: 'an owner and two pets of one tenant'
+        System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, 'acme')
+        ObjectId id = TenantOwner.withNewSession {
+            new TenantOwner(name: 'Dave').addToPets(new TenantPet(name: 'Rex')).addToPets(new TenantPet(name: 'Tom')).save(flush: true).id
+        }
+
+        when: 'they are loaded, one pet is changed, and the owner is validated while another tenant is current'
+        Map<String, String> tenantIds = TenantOwner.withNewSession {
+            def owner = TenantOwner.get(id)
+            owner.pets.find { it.name == 'Tom' }.name = 'Tim'
+            System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, 'beta')
+            assert owner.validate()
+            [owner: owner.tenantId] + owner.pets.collectEntries { [it.name, it.firmId] }
+        }
+
+        then: 'the changed pet is given the tenant id its update gives it, and the pet that is not updated is left alone'
+        tenantIds == [owner: 'beta', Rex: 'acme', Tim: 'beta']
+    }
+
     void 'saving an owner inside withoutId fails when a new associated object is not given a tenant id'() {
         when:
         def owner = new TenantOwner(name: 'Dave', tenantId: 'acme').addToPets(new TenantPet(name: 'Rex'))
@@ -193,6 +236,49 @@ class TenantPet implements MultiTenant<TenantPet>, MongoEntity<TenantPet> {
 
     static constraints = {
         firmId nullable: false, maxSize: 5
+    }
+
+    static mapping = {
+        tenantId name: 'firmId'
+    }
+}
+
+@Entity
+class TenantWalker implements MultiTenant<TenantWalker>, MongoEntity<TenantWalker> {
+    ObjectId id
+    String name
+    String tenantId
+    TenantLeash borrowed
+    TenantLeash leash
+
+    static mapping = {
+        borrowed cascadeValidate: 'none'
+    }
+}
+
+@Entity
+class TenantJogger implements MultiTenant<TenantJogger>, MongoEntity<TenantJogger> {
+    ObjectId id
+    String name
+    String tenantId
+    TenantLeash borrowed
+    TenantLeash leash
+
+    static mapping = {
+        leash cascadeValidate: 'none'
+    }
+}
+
+@Entity
+class TenantLeash implements MultiTenant<TenantLeash>, MongoEntity<TenantLeash> {
+    ObjectId id
+    String colour
+    String firmId
+
+    static belongsTo = [TenantWalker, TenantJogger]
+
+    static constraints = {
+        firmId maxSize: 5
     }
 
     static mapping = {

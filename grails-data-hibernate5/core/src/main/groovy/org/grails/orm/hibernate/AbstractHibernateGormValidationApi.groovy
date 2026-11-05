@@ -76,7 +76,7 @@ abstract class AbstractHibernateGormValidationApi<D> extends GormValidationApi<D
 
         evict = ClassUtils.getBooleanFromMap(ARGUMENT_EVICT, arguments)
 
-        fireEvent(instance, validatedFieldsList)
+        fireEvent(instance, validatedFieldsList, deepValidate)
 
         hibernateTemplate.execute { Session session ->
 
@@ -128,9 +128,10 @@ abstract class AbstractHibernateGormValidationApi<D> extends GormValidationApi<D
 
     abstract applyManualFlush(Session session)
 
-    private void fireEvent(Object target, List<?> validatedFieldsList) {
+    private void fireEvent(Object target, List<?> validatedFieldsList, boolean deepValidate) {
         ValidationEvent event = new ValidationEvent(datastore, target)
         event.setValidatedFields(validatedFieldsList)
+        event.setDeepValidate(deepValidate)
         datastore.getApplicationEventPublisher().publishEvent(event)
     }
 

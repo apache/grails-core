@@ -25,7 +25,9 @@ In `DISCRIMINATOR` mode GORM assigns the current tenant id to an instance before
 * `DATABASE` and `SCHEMA` mode, where GORM selects the database or schema of the current tenant and does not set a tenant id property;
 * unit tests whose datastore is not configured for `DISCRIMINATOR` mode.
 
-In `DISCRIMINATOR` mode GORM also assigns the current tenant id to the associated instances that are validated with an instance, such as the new instances saved with their owner. The constraints declared on their tenant ids are therefore checked as the owner is validated: a tenant id that breaks one of them is a validation error of the owner, and neither is saved. Inside `withoutId` nothing assigns it, so give such an instance its tenant id before saving its owner.
+In `DISCRIMINATOR` mode GORM also assigns the current tenant id to the associated instances that are validated and saved with an instance: the new ones, such as a new child saved with its owner, and the ones that have changes. The constraints declared on their tenant ids are therefore checked as the owner is validated: a tenant id that breaks one of them is a validation error of the owner, and neither is saved. Inside `withoutId` nothing assigns it, so give such an instance its tenant id before saving its owner.
+
+An associated instance that has a tenant id and no changes is not saved with its owner, so it keeps its tenant id and is checked with it. When validation does not cascade, as with `validate(deepValidate: false)` or `save(deepValidate: false)`, the associated instances are neither validated nor given a tenant id with their owner. They get the current tenant id as they are inserted or updated.
 
 For example, here every book needs a publisher of at most 20 characters, also when it is saved inside `withoutId`:
 

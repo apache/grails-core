@@ -33,6 +33,7 @@ public class ValidationEvent extends AbstractPersistenceEvent {
     private static final long serialVersionUID = 1;
 
     private List<?> validatedFields;
+    private boolean deepValidate = true;
 
     public ValidationEvent(final Datastore source, final PersistentEntity entity,
             final EntityAccess entityAccess) {
@@ -53,6 +54,23 @@ public class ValidationEvent extends AbstractPersistenceEvent {
 
     public void setValidatedFields(final List<?> fields) {
         validatedFields = fields;
+    }
+
+    /**
+     * @return Whether the associated objects are validated with the object of this event. They are, unless
+     * {@code validate} or {@code save} is called with {@code deepValidate: false}.
+     * @since 7.0.18
+     */
+    public boolean isDeepValidate() {
+        return deepValidate;
+    }
+
+    /**
+     * @param deepValidate Whether the associated objects are validated with the object of this event
+     * @since 7.0.18
+     */
+    public void setDeepValidate(final boolean deepValidate) {
+        this.deepValidate = deepValidate;
     }
 
     @Override

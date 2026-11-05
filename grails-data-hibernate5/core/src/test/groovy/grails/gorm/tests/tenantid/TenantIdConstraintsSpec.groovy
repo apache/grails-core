@@ -207,6 +207,71 @@ class TenantIdConstraintsSpec extends Specification {
         !Hibernate.isInitialized(owner.pets)
     }
 
+    void 'validating an owner without cascading leaves a new associated object alone'() {
+        given:
+        System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, 'acme')
+
+        when:
+        def owner = new TenantOwner(name: 'Dave').addToPets(new TenantPet(name: 'Rex'))
+        boolean valid = owner.validate(deepValidate: false)
+
+        then: 'only the owner is given the current tenant id'
+        valid
+        owner.tenantId == 'acme'
+        owner.pets*.firmId == [null]
+
+        when: 'the pet is not validated with the owner as it is saved either'
+        owner.save(deepValidate: false, flush: true)
+
+        then: 'it is given the current tenant id as it is inserted'
+        !owner.hasErrors()
+        owner.pets*.firmId == ['acme']
+        TenantPet.count() == 1
+    }
+
+    void 'validating or saving an owner without cascading leaves a changed associated object of another tenant alone'() {
+        given: 'an owner and a pet of one tenant, loaded inside withoutId'
+        TenantOwner owner = loadWithoutTenant(savedForTenant('beta', 'Rex'))
+
+        when: 'the pet is changed, and the owner is validated while another tenant is current'
+        owner.pets.first().name = 'Max'
+        System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, 'acme')
+        boolean valid = owner.validate(deepValidate: false)
+
+        then: 'only the owner is given the current tenant id'
+        valid
+        owner.tenantId == 'acme'
+        owner.pets*.firmId == ['beta']
+
+        when: 'the owner is saved, which does not update the pet before the session is flushed'
+        owner.save(deepValidate: false)
+
+        then:
+        !owner.hasErrors()
+        owner.pets*.firmId == ['beta']
+    }
+
+    void 'an associated object that has a tenant id and no changes keeps it as its owner is validated'() {
+        given: 'an owner and two pets of one tenant, loaded inside withoutId'
+        TenantOwner owner = loadWithoutTenant(savedForTenant('beta', 'Rex', 'Tom'))
+
+        when: 'one pet is changed, and the owner is validated while another tenant is current'
+        owner.pets.find { it.name == 'Tom' }.name = 'Tim'
+        System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, 'acme')
+        boolean valid = owner.validate()
+
+        then: 'the changed pet is given the tenant id its update gives it, and the pet that is not updated is left alone'
+        valid
+        owner.pets.collectEntries { [it.name, it.firmId] } == [Rex: 'beta', Tim: 'acme']
+
+        when:
+        owner.save(flush: true)
+
+        then:
+        !owner.hasErrors()
+        storedTenantIds() == [Rex: 'beta', Tim: 'acme']
+    }
+
     void 'a tenant id an associated object already has is checked as it is saved with its owner'() {
         when:
         def owner = new TenantOwner(name: 'Dave', tenantId: 'abc').addToPets(new TenantPet(name: 'Rex', firmId: 'a-tenant-too-long'))
@@ -216,6 +281,28 @@ class TenantIdConstraintsSpec extends Specification {
         !saved
         owner.id == null
         owner.errors.fieldErrors.find { it.field.endsWith('firmId') }?.code == 'maxSize.exceeded'
+    }
+
+    private Long savedForTenant(String tenantId, String... petNames) {
+        System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, tenantId)
+        def owner = new TenantOwner(name: 'Dave')
+        petNames.each { owner.addToPets(new TenantPet(name: it)) }
+        Long id = owner.save(flush: true).id
+        datastore.sessionFactory.currentSession.clear()
+        id
+    }
+
+    private TenantOwner loadWithoutTenant(Long id) {
+        Tenants.withoutId(datastore) {
+            def owner = TenantOwner.get(id)
+            owner.pets.size()
+            owner
+        }
+    }
+
+    private Map<String, String> storedTenantIds() {
+        datastore.sessionFactory.currentSession.clear()
+        Tenants.withoutId(datastore) { TenantPet.list().collectEntries { [it.name, it.firmId] } }
     }
 }
 

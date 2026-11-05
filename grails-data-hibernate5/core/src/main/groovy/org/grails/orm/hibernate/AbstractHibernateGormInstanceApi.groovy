@@ -124,7 +124,9 @@ abstract class AbstractHibernateGormInstanceApi<D> extends GormInstanceApi<D> {
             Errors errors = HibernateRuntimeUtils.setupErrorsProperty(target)
 
             if (validator) {
-                datastore.applicationEventPublisher?.publishEvent(new ValidationEvent(datastore, target))
+                ValidationEvent event = new ValidationEvent(datastore, target)
+                event.setDeepValidate(deepValidate)
+                datastore.applicationEventPublisher?.publishEvent(event)
 
                 if (validator instanceof CascadingValidator) {
                     ((CascadingValidator) validator).validate(target, errors, deepValidate)

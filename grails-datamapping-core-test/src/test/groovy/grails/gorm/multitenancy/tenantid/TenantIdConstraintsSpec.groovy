@@ -205,6 +205,91 @@ class TenantIdConstraintsSpec extends Specification {
         Guest.withNewSession { Guest.count() } == 1
     }
 
+    void 'an associated object is given the current tenant id when an association that does not cascade validation refers to it too'() {
+        given:
+        System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, 'acme')
+
+        when: 'whichever of the two associations comes first, one of the walkers reaches the leash first through the one that does not cascade'
+        def leash = new Leash(colour: 'red')
+        def walker = walkerType.newInstance(name: 'Dave', borrowed: leash, leash: leash)
+        boolean valid = walkerType.withNewSession { walker.validate() }
+
+        then:
+        valid
+        leash.firmId == 'acme'
+
+        when:
+        System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, 'a-tenant-too-long')
+        leash = new Leash(colour: 'red')
+        walker = walkerType.newInstance(name: 'Dave', borrowed: leash, leash: leash)
+        def saved = walkerType.withNewSession { walker.save(flush: true) }
+
+        then: 'the walker reports the tenant id of the leash through the association that cascades'
+        !saved
+        walker.errors.getFieldError("${cascading}.firmId").code == 'maxSize.exceeded'
+        Leash.withNewSession { Leash.count() } == 0
+
+        where:
+        walkerType | cascading
+        Walker     | 'leash'
+        Jogger     | 'borrowed'
+    }
+
+    void 'validating an owner without cascading leaves its associated objects alone'() {
+        given:
+        System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, 'acme')
+
+        when:
+        def owner = new Owner(name: 'Dave').addToPets(new Pet(name: 'Rex', firmId: 'other')).addToPets(new Pet(name: 'Tom'))
+        boolean valid = Owner.withNewSession { owner.validate(deepValidate: false) }
+
+        then: 'only the owner is given the current tenant id'
+        valid
+        owner.tenantId == 'acme'
+        owner.pets.collectEntries { [it.name, it.firmId] } == [Rex: 'other', Tom: null]
+
+        when: 'the pets are not validated with the owner as it is saved either'
+        def saved = Owner.withNewSession { owner.save(deepValidate: false, flush: true) }
+
+        then: 'each is given the current tenant id as it is inserted'
+        saved
+        owner.pets.collectEntries { [it.name, it.firmId] } == [Rex: 'acme', Tom: 'acme']
+        Pet.withNewSession { Pet.count() } == 2
+    }
+
+    void 'an associated object that has a tenant id and no changes keeps it as its owner is validated'() {
+        given: 'two pets of another tenant without changes, as the pets a datastore has loaded'
+        System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, 'acme')
+        def rex = new Pet(name: 'Rex', firmId: 'other')
+        def tom = new Pet(name: 'Tom', firmId: 'other')
+        def owner = new Owner(name: 'Dave').addToPets(rex).addToPets(tom)
+        [rex, tom]*.trackChanges()
+
+        when: 'one of them is changed, and the owner is validated'
+        tom.name = 'Tim'
+        boolean valid = Owner.withNewSession { owner.validate() }
+
+        then: 'the changed pet is given the tenant id its update gives it, and the pet that is not updated is left alone'
+        valid
+        rex.firmId == 'other'
+        tom.firmId == 'acme'
+    }
+
+    void 'an associated object that has no tenant id is given the current one although it has no changes'() {
+        given: 'a pet without changes that has no tenant id yet'
+        System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, 'acme')
+        def pet = new Pet(name: 'Rex')
+        def owner = new Owner(name: 'Dave').addToPets(pet)
+        pet.trackChanges()
+
+        when:
+        boolean valid = Owner.withNewSession { owner.validate() }
+
+        then: 'the pet, whose tenant id is declared nullable: false, is validated with the current tenant id'
+        valid
+        pet.firmId == 'acme'
+    }
+
     void 'the other properties of a new associated object are still checked as it is saved with its owner'() {
         given:
         System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, 'acme')
@@ -287,6 +372,49 @@ class Tag implements MultiTenant<Tag> {
 
     static constraints = {
         firmId nullable: false
+    }
+
+    static mapping = {
+        tenantId name: 'firmId'
+    }
+}
+
+@Entity
+class Walker implements MultiTenant<Walker> {
+
+    String name
+    String tenantId
+    Leash borrowed
+    Leash leash
+
+    static mapping = {
+        borrowed cascadeValidate: 'none'
+    }
+}
+
+@Entity
+class Jogger implements MultiTenant<Jogger> {
+
+    String name
+    String tenantId
+    Leash borrowed
+    Leash leash
+
+    static mapping = {
+        leash cascadeValidate: 'none'
+    }
+}
+
+@Entity
+class Leash implements MultiTenant<Leash> {
+
+    String colour
+    String firmId
+
+    static belongsTo = [Walker, Jogger]
+
+    static constraints = {
+        firmId maxSize: 5
     }
 
     static mapping = {

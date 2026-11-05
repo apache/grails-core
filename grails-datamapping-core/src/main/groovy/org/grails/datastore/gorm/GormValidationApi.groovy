@@ -105,7 +105,7 @@ class GormValidationApi<D> extends AbstractGormApi<D> {
         }
         try {
             beforeValidateHelper.invokeBeforeValidate(instance, fields)
-            fireEvent(instance, fields)
+            fireEvent(instance, fields, deepValidate)
 
             Validator validator = getValidator()
             if (validator == null) {
@@ -192,10 +192,12 @@ class GormValidationApi<D> extends AbstractGormApi<D> {
      * Fire the validation event.
      * @param target The target instance.
      * @param fields The list of fields being validated, or null.
+     * @param deepValidate Whether the associated objects are validated with the target instance.
      */
-    private void fireEvent(target, List fields) {
+    private void fireEvent(target, List fields, boolean deepValidate) {
         ValidationEvent event = createValidationEvent(target)
         event.validatedFields = fields
+        event.deepValidate = deepValidate
         eventPublisher?.publishEvent(event)
     }
 
