@@ -116,13 +116,8 @@ public abstract class AbstractHibernateQuery extends Query {
      */
     private final List<Order> pendingOrders = new ArrayList<>();
     /**
-     * The collections, by association path, that are restricted to those that are not empty because
-     * the query requests an inner or a right join for them. See {@link #applyDeferredJoins()}.
-     */
-    private final Set<String> nonEmptyCollections = new HashSet<>();
-    /**
      * The association paths that the query requests an inner or a right join for and that it is
-     * restricted to with a subquery, because they pass through a collection. See
+     * restricted to with a subquery, because they end in a collection or pass through one. See
      * {@link #applyDeferredJoins()}.
      */
     private final Set<String> subqueryJoinedPaths = new HashSet<>();
@@ -610,8 +605,8 @@ public abstract class AbstractHibernateQuery extends Query {
      */
     private void createJoin(CriteriaAndAlias join) {
         String associationPath = join.associationPath;
-        // a collection that is restricted to those that are not empty is fetched, through a left join
-        JoinType joinType = nonEmptyCollections.contains(associationPath) ? JoinType.LEFT : joinTypes.get(associationPath);
+        // a path that the query is restricted to with a subquery is joined, and fetched, with a left join
+        JoinType joinType = subqueryJoinedPaths.contains(associationPath) ? JoinType.LEFT : joinTypes.get(associationPath);
         if (joinType == null) {
             joinType = join.usedByCriteria ? JoinType.INNER : JoinType.LEFT;
         }
@@ -822,16 +817,14 @@ public abstract class AbstractHibernateQuery extends Query {
      * each association on the path. A path that does not consist of associations to other entities
      * is left as it is.
      * <p>
-     * Hibernate fetches a collection only through a left join. An inner or a right join requested for
-     * a collection therefore keeps the left join of its fetch mode, or the left join that a sort by the
-     * collection needs, and the query is restricted to the rows whose collection is not empty, which
-     * are the instances that either join returns.
-     * <p>
-     * A join through a collection returns an instance once for each element of the collection. A
-     * path that passes through a collection that nothing else in the query joins is therefore joined
-     * in a subquery, which restricts the query to the instances that the join returns a row for
-     * without changing the number of its rows: see
-     * {@link GrailsHibernateUtil#joinedInSubquery(String, String, String)}.
+     * Hibernate fetches a collection only through a left join, and a join through a collection
+     * returns an instance once for each element of the collection. A path that ends in a collection,
+     * or passes through one, that nothing else in the query joins is therefore joined in a subquery,
+     * which restricts the query to the instances that the join returns a row for without changing
+     * the number of its rows: see {@link GrailsHibernateUtil#joinedInSubquery(String, String, String)}.
+     * A collection at the end of the path keeps the left join of its fetch mode, or the left join that
+     * a sort by the collection needs, and the associations before it are joined, so that the
+     * collection is fetched.
      */
     private void applyRequestedJoin(String associationPath, JoinType joinType) {
         String[] tokens = associationPath.split("\\.");
@@ -855,23 +848,13 @@ public abstract class AbstractHibernateQuery extends Query {
                 unjoinedCollection = i;
             }
         }
-        if (unjoinedCollection >= 0 && unjoinedCollection < last) {
-            if (subqueryJoinedPaths.add(associationPath)) {
-                String rootAlias = criteria != null ? criteria.getAlias() : detachedCriteria.getAlias();
-                addToCriteria(GrailsHibernateUtil.joinedInSubquery(entity.getName(), rootAlias, associationPath));
-            }
-            return;
+        if (unjoinedCollection >= 0 && subqueryJoinedPaths.add(associationPath)) {
+            String rootAlias = criteria != null ? criteria.getAlias() : detachedCriteria.getAlias();
+            addToCriteria(GrailsHibernateUtil.joinedInSubquery(entity.getName(), rootAlias, associationPath));
         }
-
-        String currentAlias = null;
-        for (int i = 0; i < tokens.length; i++) {
-            if (i == unjoinedCollection) {
-                if (nonEmptyCollections.add(associationPath)) {
-                    addToCriteria(Restrictions.isNotEmpty(currentAlias != null ? currentAlias + '.' + tokens[i] : calculatePropertyName(tokens[i])));
-                }
-                return;
-            }
-            currentAlias = getOrRegisterJoinAt(paths[i], tokens[i]).alias;
+        int joined = unjoinedCollection < 0 ? tokens.length : unjoinedCollection == last ? last : 0;
+        for (int i = 0; i < joined; i++) {
+            getOrRegisterJoinAt(paths[i], tokens[i]);
         }
     }
 

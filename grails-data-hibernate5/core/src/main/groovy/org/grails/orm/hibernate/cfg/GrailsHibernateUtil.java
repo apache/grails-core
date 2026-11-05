@@ -362,11 +362,12 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
      * other than a left join is applied by joining each association on the path that the criteria do
      * not join already; one that they join keeps its join.
      * <p>
-     * Hibernate fetches a collection only through a left join. An inner or a right join requested for
-     * a collection therefore keeps the left join of the fetch mode, and the criteria are restricted to
-     * the rows whose collection is not empty, which are the instances that either join returns. A
-     * path that passes through a collection that the criteria do not join is joined in a subquery:
-     * see {@link #joinedInSubquery(String, String, String)}.
+     * Hibernate fetches a collection only through a left join, and a join through a collection
+     * returns an instance once for each element of the collection. A path that ends in a collection,
+     * or passes through one, that the criteria do not join is therefore joined in a subquery, see
+     * {@link #joinedInSubquery(String, String, String)}. A collection at the end of the path keeps the
+     * left join of the fetch mode, and the associations before it are joined, so that the collection
+     * is fetched.
      *
      * @param datastore The datastore
      * @param targetClass The class that the criteria query
@@ -403,32 +404,16 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
                 unjoinedCollection = i;
             }
         }
-        if (unjoinedCollection >= 0 && unjoinedCollection < last) {
+        if (unjoinedCollection >= 0) {
             root.add(joinedInSubquery(targetClass.getName(), root.getAlias(), associationPath));
-            return;
         }
 
         JoinType lastJoinType = joinType == jakarta.persistence.criteria.JoinType.INNER ? JoinType.INNER_JOIN : JoinType.RIGHT_OUTER_JOIN;
-        Criteria parent = root;
-        String parentAlias = null;
-        for (int i = 0; i < tokens.length; i++) {
-            if (joined[i] != null) {
-                parent = joined[i];
-                parentAlias = joined[i].getAlias();
-            }
-            else if (i == unjoinedCollection) {
-                if (parentAlias != null) {
-                    root.add(Restrictions.isNotEmpty(parentAlias + '.' + tokens[i]));
-                }
-                else {
-                    parent.add(Restrictions.isNotEmpty(tokens[i]));
-                }
-            }
-            else {
+        int joinedCount = unjoinedCollection < 0 ? tokens.length : unjoinedCollection == last ? last : 0;
+        for (int i = 0; i < joinedCount; i++) {
+            if (joined[i] == null) {
                 // joined from the root criteria with the whole path, as the count of a paged list recreates it
-                parentAlias = paths[i].replace('.', '_') + "_join";
-                root.createAlias(paths[i], parentAlias, i == last ? lastJoinType : JoinType.LEFT_OUTER_JOIN);
-                parent = root;
+                root.createAlias(paths[i], paths[i].replace('.', '_') + "_join", i == last ? lastJoinType : JoinType.LEFT_OUTER_JOIN);
             }
         }
     }
@@ -441,7 +426,9 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
      * A join through a collection returns an instance once for each element of the collection. That
      * multiplies the rows that a row limit and a count work on, and a collection that is fetched from
      * those rows lacks the elements that the rest of the path leaves out. A subquery restricts the
-     * query to the same instances without either effect.
+     * query to the same instances without either effect. Unlike a check that a collection is not
+     * empty, its joins apply the filters that are enabled for the session, such as the one of
+     * discriminator based multi-tenancy.
      *
      * @param entityName The name of the entity that the query returns
      * @param rootAlias The alias of the root of the query
