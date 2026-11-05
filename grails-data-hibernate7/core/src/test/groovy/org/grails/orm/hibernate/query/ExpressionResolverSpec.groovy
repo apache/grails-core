@@ -212,6 +212,31 @@ class ExpressionResolverSpec extends Specification {
         joinTracker.getJoin('favorite.tag') == tagJoin
     }
 
+    def 'an alias path that names an alias before the separator is joined from the join of that alias'() {
+        given:
+        def root = Mock(From)
+        def firstLikesJoin = Mock(Join)
+        def secondLikesJoin = Mock(Join)
+        def tagJoin = Mock(Join)
+        def ownerJoin = Mock(Join)
+        def aliasRegistry = new AliasRegistry()
+        aliasRegistry.define('first', new HibernateAlias('likes', 'first'))
+        aliasRegistry.define('second', new HibernateAlias('likes', 'second'))
+        aliasRegistry.define('t', new HibernateAlias('second:tag', 't', JoinType.LEFT))
+        aliasRegistry.define('o', new HibernateAlias('second:tag.owner', 'o'))
+        def resolver = new ExpressionResolver(aliasRegistry, new JoinTracker(root))
+
+        when:
+        def resolved = ['o', 't', 'second', 'first'].collectEntries { [it, resolver.resolve(it)] }
+
+        then: 'the second alias of likes has a join of its own, which the paths continue from'
+        2 * root.join('likes', JoinType.INNER) >>> [secondLikesJoin, firstLikesJoin]
+        1 * secondLikesJoin.join('tag', JoinType.LEFT) >> tagJoin
+        1 * tagJoin.join('owner', JoinType.INNER) >> ownerJoin
+        0 * firstLikesJoin.join(*_)
+        resolved == [o: ownerJoin, t: tagJoin, second: secondLikesJoin, first: firstLikesJoin]
+    }
+
     def "test resolve with parent context using explicit alias #explicitAlias and realized expression #realized"() {
         given:
         // Parent context

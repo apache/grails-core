@@ -22,6 +22,8 @@ import jakarta.persistence.criteria.Path;
 import jakarta.persistence.metamodel.Attribute.PersistentAttributeType;
 import jakarta.persistence.metamodel.PluralAttribute;
 
+import grails.orm.HibernateCriteriaBuilder;
+
 /**
  * Resolves string paths and aliases into JPA Expressions and Paths.
  *
@@ -62,8 +64,8 @@ public class ExpressionResolver {
         }
 
         // 3. Handle alias:property
-        if (cleanPath.contains(grails.orm.HibernateCriteriaBuilder.ALIAS_SEPARATOR)) {
-            String[] parts = cleanPath.split(grails.orm.HibernateCriteriaBuilder.ALIAS_SEPARATOR);
+        if (cleanPath.contains(HibernateCriteriaBuilder.ALIAS_SEPARATOR)) {
+            String[] parts = cleanPath.split(HibernateCriteriaBuilder.ALIAS_SEPARATOR);
             Expression<?> resolved = resolveFromAlias(parts[0], parts[1]);
             if (resolved == null) {
                 resolved = getPath(joinTracker.getRoot(), parts[1]);
@@ -135,12 +137,20 @@ public class ExpressionResolver {
      * Joins the last association of a path with the given join type. A nested path such as
      * {@code owner.address} is joined one association at a time, as a JPA join takes a single attribute. The
      * associations before the last one are relative to this query's root and share the joins this query has
-     * for them.
+     * for them. A path that names an alias before {@link HibernateCriteriaBuilder#ALIAS_SEPARATOR}, such as
+     * {@code o:address}, starts at the join of that alias instead of the root.
      */
     private From<?, ?> joinPath(String path, JoinType joinType) {
         int lastDot = path.lastIndexOf('.');
-        From<?, ?> from = lastDot < 0 ? joinTracker.getRoot() : resolvePrefix(path.substring(0, lastDot), joinType);
-        return from.join(path.substring(lastDot + 1), joinType);
+        if (lastDot >= 0) {
+            return resolvePrefix(path.substring(0, lastDot), joinType).join(path.substring(lastDot + 1), joinType);
+        }
+        int separator = path.indexOf(HibernateCriteriaBuilder.ALIAS_SEPARATOR);
+        if (separator >= 0) {
+            From<?, ?> aliased = (From<?, ?>) resolveFromAlias(path.substring(0, separator), null);
+            return aliased.join(path.substring(separator + HibernateCriteriaBuilder.ALIAS_SEPARATOR.length()), joinType);
+        }
+        return joinTracker.getRoot().join(path, joinType);
     }
 
     /**
