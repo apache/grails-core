@@ -72,6 +72,27 @@ class UnresolvedProjectionPathSpec extends HibernateGormDatastoreSpec {
         e.message.contains('zz.name')
     }
 
+    void 'a suffix after a projection alias that names nothing fails naming the path: #kind'() {
+        when:
+        UnresolvedPathTeam.withCriteria(closure)
+
+        then:
+        def e = thrown(Exception)
+        e.message.contains('n.nonexistent')
+
+        where:
+        kind            | closure
+        'countDistinct' | { projections { groupProperty('name', 'n'); countDistinct('n.nonexistent') } }
+        'count'         | { projections { groupProperty('name', 'n'); count('n.nonexistent') } }
+        'property'      | { projections { groupProperty('name', 'n'); property('n.nonexistent') } }
+        'max'           | { projections { groupProperty('name', 'n'); max('n.nonexistent') } }
+    }
+
+    void 'a bare projection alias still counts'() {
+        expect:
+        UnresolvedPathTeam.withCriteria { projections { groupProperty('name', 'n'); countDistinct('n') } }.size() == 4
+    }
+
     void 'resolvable projections still work'() {
         expect:
         UnresolvedPathTeam.withCriteria { projections { property('name') } }.sort() == ['both', 'x', 'y', 'z']

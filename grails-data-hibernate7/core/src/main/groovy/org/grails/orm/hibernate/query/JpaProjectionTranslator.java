@@ -188,8 +188,8 @@ public class JpaProjectionTranslator {
 
     private void requireResolved(Expression<?> expression, String path) {
         if (expression == null) {
-            throw new ConfigurationException("Cannot use projection on non-existent property [" + path
-                    + "] of class [" + context.getRoot().getJavaType().getName() + "]");
+            throw new ConfigurationException("Cannot use projection on non-existent property [" + path +
+                    "] of class [" + context.getRoot().getJavaType().getName() + "]");
         }
     }
 }

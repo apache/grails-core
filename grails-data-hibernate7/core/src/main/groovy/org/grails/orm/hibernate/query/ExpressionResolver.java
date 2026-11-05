@@ -98,10 +98,11 @@ public class ExpressionResolver {
         // 1. Check if already realized in THIS or PARENT registry
         Expression<?> aliased = aliasRegistry.getRealized(alias);
         if (aliased != null) {
-            if (subPath != null && aliased instanceof From<?, ?> from) {
-                return getPath(from, subPath);
+            if (subPath == null) {
+                return aliased;
             }
-            return aliased; // It's a non-From expression (projection alias) or subPath is null
+            // A selection other than a join has no properties, so a path below it names nothing
+            return aliased instanceof From<?, ?> from ? getPath(from, subPath) : null;
         }
 
         HibernateAlias def = aliasRegistry.getDefinition(alias);
