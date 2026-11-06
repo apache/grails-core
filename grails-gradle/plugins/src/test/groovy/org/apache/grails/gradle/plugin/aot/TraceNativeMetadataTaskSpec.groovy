@@ -264,6 +264,31 @@ exec '${new File(System.getProperty('java.home'), 'bin/java').absolutePath}' \\
             e.message.contains('no form on the page')
     }
 
+    void 'a path is not asked for while the application still answers that it is not ready'() {
+        given: 'the Spring Security plugin answers every request with 503 until the application has started'
+            TraceNativeMetadataTask task = task(['/'], [], 'gated')
+
+        when:
+            task.trace()
+
+        then: 'where it would otherwise record the refusal and fail'
+            notThrown(GradleException)
+            requested.contains('GET /')
+    }
+
+    void 'an application whose home page always answers that it is not ready is still traced'() {
+        given: 'waited for no longer than the timeout, since nothing says that answer will change'
+            TraceNativeMetadataTask task = task(['/page'], [], 'homePageDown')
+            task.startTimeoutSeconds.set(2)
+
+        when:
+            task.trace()
+
+        then:
+            notThrown(GradleException)
+            requested.contains('GET /page')
+    }
+
     void 'a path that answers with an error fails the trace'() {
         given: 'because what would be recorded is the error page rather than the page'
             TraceNativeMetadataTask task = task(['/broken'], [])

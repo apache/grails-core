@@ -66,10 +66,19 @@ class TracedRunFixture {
         File requested = new File(args[1])
         String behaviour = args.length > 2 ? args[2] : 'ok'
 
+        long openAt = System.currentTimeMillis() + 1500
+
         HttpServer server = HttpServer.create(new InetSocketAddress('localhost', port), 0)
         server.createContext('/') { HttpExchange exchange ->
             String path = exchange.requestURI.path
             String method = exchange.requestMethod
+            boolean holding = behaviour == 'gated' && System.currentTimeMillis() < openAt
+            boolean homePageDown = behaviour == 'homePageDown' && path == '/'
+            if (holding || homePageDown) {
+                exchange.sendResponseHeaders(503, -1)
+                exchange.close()
+                return
+            }
             String body = exchange.requestBody.getText('UTF-8')
             requested << "${method} ${path}${body ? ' ' + body : ''}\n"
             if (!(method in ['GET', 'POST'])) {

@@ -62,7 +62,7 @@ class TrainAotCacheTaskSpec extends Specification {
      * {@code -XX:AOTCacheOutput}, which a JDK before 25 refuses outright, and a test of this task
      * should not also be a test of which JDK the build is running on.</p>
      */
-    private TrainAotCacheTask servingTask(List<String> paths, boolean announcesItself = true) {
+    private TrainAotCacheTask servingTask(List<String> paths, boolean announcesItself = true, String behaviour = 'ok') {
         File application = new File(temporaryFolder, 'serving')
         application.mkdirs()
         new File(application, 'served.jar').text = 'stands in for the archive, and is what is digested'
@@ -81,7 +81,7 @@ for arg in "\$@"; do
 done
 exec '${new File(System.getProperty('java.home'), 'bin/java').absolutePath}' \\
   -cp '${System.getProperty('java.class.path')}' \\
-  ${TrainingRunFixture.name} "\$cache" "\$port" '${requestedFile.absolutePath}' ${announcesItself ? 'loud' : 'quiet'}
+  ${TrainingRunFixture.name} "\$cache" "\$port" '${requestedFile.absolutePath}' ${announcesItself ? 'loud' : 'quiet'} ${behaviour}
 """
         script.setExecutable(true)
 
@@ -307,6 +307,31 @@ exit 1
 
         and: 'the paths that are URIs were still asked for'
             requested == ['/']
+    }
+
+    void 'a path is not asked for while the run still answers that it is not ready'() {
+        given: 'the Spring Security plugin answers every request with 503 until the application has started'
+            TrainAotCacheTask task = servingTask(['/'], true, 'gated')
+
+        when:
+            task.train()
+
+        then: 'where it would otherwise train on the refusal'
+            noExceptionThrown()
+            requested == ['/']
+    }
+
+    void 'a run whose home page always answers that it is not ready is still exercised'() {
+        given: 'waited for no longer than the timeout, since nothing says that answer will change'
+            TrainAotCacheTask task = servingTask(['/page'], true, 'homePageDown')
+            task.startTimeoutSeconds.set(2)
+
+        when:
+            task.train()
+
+        then:
+            noExceptionThrown()
+            requested == ['/page']
     }
 
     void 'a run that says nothing is found by its port'() {

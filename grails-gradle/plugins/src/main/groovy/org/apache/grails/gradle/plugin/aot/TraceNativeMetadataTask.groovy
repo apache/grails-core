@@ -504,18 +504,21 @@ abstract class TraceNativeMetadataTask extends DefaultTask {
     private void awaitStarted(Process process, File output) {
         long deadline = System.currentTimeMillis() + Duration.ofSeconds(startTimeoutSeconds.get()).toMillis()
         StartupLog log = new StartupLog(output)
+        boolean started = false
         while (System.currentTimeMillis() < deadline) {
             if (!process.isAlive()) {
                 throw new GradleException('The application ended before it started serving. ' +
                         "What it printed is in ${output}")
             }
-            if (log.saysItStarted()) {
-                return
-            }
-            if (serving()) {
+            started = log.saysItStarted() || serving()
+            if (started && !RunPort.answersNotReady(port.get())) {
                 return
             }
             Thread.sleep(250L)
+        }
+        if (started) {
+            // Its home page is what answers 503, as it may for reasons of its own, so the requests are its to answer.
+            return
         }
         throw new GradleException("The application did not start within ${startTimeoutSeconds.get()}s. " +
                 "What it printed is in ${output}")

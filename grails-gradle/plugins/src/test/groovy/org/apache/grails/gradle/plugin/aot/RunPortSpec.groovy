@@ -18,13 +18,49 @@
  */
 package org.apache.grails.gradle.plugin.aot
 
+import com.sun.net.httpserver.HttpExchange
+import com.sun.net.httpserver.HttpServer
 import org.gradle.api.GradleException
 import spock.lang.Specification
+import spock.lang.Unroll
 
 /**
- * Covers refusing a port something else is already answering on.
+ * Covers refusing a port something else is already answering on, and asking whether what answers on one is ready.
  */
 class RunPortSpec extends Specification {
+
+    @Unroll
+    void 'an application answering #status is #description'() {
+        given:
+            HttpServer server = HttpServer.create(new InetSocketAddress('localhost', 0), 0)
+            server.createContext('/') { HttpExchange exchange ->
+                exchange.sendResponseHeaders(status, -1)
+                exchange.close()
+            }
+            server.start()
+
+        expect:
+            RunPort.answersNotReady(server.address.port) == notReady
+
+        cleanup:
+            server?.stop(0)
+
+        where:
+            status | notReady | description
+            503    | true     | 'not ready'
+            200    | false    | 'ready'
+            302    | false    | 'ready, wherever it sends the request'
+            404    | false    | 'ready, whatever it has at its home page'
+            500    | false    | 'ready, since only 503 says to come back'
+    }
+
+    void 'a port nothing answers on is not said to be not ready'() {
+        given:
+            int free = new ServerSocket(0).withCloseable { ServerSocket socket -> socket.localPort }
+
+        expect: 'whether anything listens is what the wait for the port itself is for'
+            !RunPort.answersNotReady(free)
+    }
 
     void 'a free port is not refused'() {
         given: 'a port nothing is listening on, found by letting the system choose one and closing it'

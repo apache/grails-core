@@ -272,22 +272,28 @@ abstract class TrainAotCacheTask extends DefaultTask {
      * the earlier and clearer of the two, but it is an INFO log an application is free to turn off
      * or reword; a port that accepts a connection is the application's own doing and cannot be
      * configured away while it is still an application worth training.</p>
+     *
+     * <p>Both come before its {@code ApplicationStartedEvent}, so a filter that holds requests until then is waited
+     * for, up to the timeout.</p>
      */
     private void awaitStarted(Process process, File output) {
         long deadline = System.currentTimeMillis() + Duration.ofSeconds(startTimeoutSeconds.get()).toMillis()
         StartupLog log = new StartupLog(output)
+        boolean started = false
         while (System.currentTimeMillis() < deadline) {
             if (!process.isAlive()) {
                 throw new GradleException('The training run ended before it started serving.' +
                         whyItEnded(output) + " What it printed is in ${output}")
             }
-            if (log.saysItStarted()) {
-                return
-            }
-            if (serving()) {
+            started = log.saysItStarted() || serving()
+            if (started && !RunPort.answersNotReady(port.get())) {
                 return
             }
             Thread.sleep(250L)
+        }
+        if (started) {
+            // Its home page is what answers 503, as it may for reasons of its own, so the requests are its to answer.
+            return
         }
         throw new GradleException("The training run did not start within ${startTimeoutSeconds.get()}s. " +
                 "What it printed is in ${output}")

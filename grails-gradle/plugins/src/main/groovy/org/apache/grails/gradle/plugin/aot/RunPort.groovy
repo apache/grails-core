@@ -42,6 +42,34 @@ final class RunPort {
     }
 
     /**
+     * Whether what listens on the port says it is not ready yet. A connection and the log saying the application
+     * started both come before its {@code ApplicationStartedEvent}, and a filter that holds requests until then, such
+     * as the Spring Security plugin's, answers them with 503, which a run would record in place of the page.
+     *
+     * @param port the port the run is reached on
+     * @return whether it answers with 503, and not where nothing answers at all
+     * @since 9.1
+     */
+    static boolean answersNotReady(int port) {
+        try {
+            HttpURLConnection connection = (HttpURLConnection) new URI("http://localhost:${port}/").toURL().openConnection()
+            connection.requestMethod = 'HEAD'
+            connection.instanceFollowRedirects = false
+            connection.connectTimeout = 500
+            connection.readTimeout = 2000
+            try {
+                return connection.responseCode == HttpURLConnection.HTTP_UNAVAILABLE
+            }
+            finally {
+                connection.disconnect()
+            }
+        }
+        catch (IOException ignored) {
+            return false
+        }
+    }
+
+    /**
      * Refuses where something is already listening on the port.
      *
      * @param port the port the run will be reached on
