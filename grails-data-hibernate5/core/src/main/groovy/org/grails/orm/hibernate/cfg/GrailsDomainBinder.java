@@ -165,6 +165,13 @@ public class GrailsDomainBinder implements MetadataContributor {
 
     protected final String sessionFactoryName;
     protected final String dataSourceName;
+
+    /**
+     * The abstract base classes this binder maps as joined because one of their subclasses asks for it, while their own
+     * mapping says nothing. It belongs to the binder, which builds one datasource: the mapping of a class is shared by
+     * every datasource, so the strategy a datasource infers is never written to it.
+     */
+    private final java.util.Set<Class<?>> inferredJoinedRoots = new java.util.HashSet<>();
     protected final HibernateMappingContext hibernateMappingContext;
     protected Closure defaultMapping;
     protected PersistentEntityNamingStrategy namingStrategy;
@@ -433,7 +440,7 @@ public class GrailsDomainBinder implements MetadataContributor {
         if (collection.isOneToMany()) {
 
             Mapping m = getRootMapping(referenced);
-            boolean tablePerSubclass = m != null && !m.getTablePerHierarchy();
+            boolean tablePerSubclass = m != null && !isTablePerHierarchy(rootClassOf(referenced.getJavaClass()), m);
 
             if (referenced != null && !referenced.isRoot() && !tablePerSubclass) {
                 Mapping rootMapping = getRootMapping(referenced);
@@ -1525,15 +1532,15 @@ public class GrailsDomainBinder implements MetadataContributor {
         Mapping m = getMapping(entity);
         if (m != null && entity.isAbstract() && m.getTablePerHierarchy() && hasTablePerSubclassChild(children)) {
             // an abstract base class that says nothing about its strategy follows a subclass that sets
-            // tablePerHierarchy false: the hierarchy is joined, as the subclass would be unable to be
+            // tablePerHierarchy false: the hierarchy is joined on this datasource, as the subclass would be unable to be
             // joined to a base class that keeps a discriminator column
-            m.setTablePerHierarchy(false);
+            inferredJoinedRoots.add(entity.getJavaClass());
         }
 
         bindRootPersistentClassCommonValues(entity, root, mappings, sessionFactoryBeanName);
 
         if (!children.isEmpty()) {
-            boolean tablePerSubclass = m != null && !m.getTablePerHierarchy();
+            boolean tablePerSubclass = m != null && !isTablePerHierarchy(entity.getJavaClass(), m);
             if (!tablePerSubclass) {
                 // if the root class has children create a discriminator property
                 bindDiscriminatorProperty(root.getTable(), root, mappings);
@@ -1545,6 +1552,22 @@ public class GrailsDomainBinder implements MetadataContributor {
         addMultiTenantFilterIfNecessary(entity, root, mappings, sessionFactoryBeanName);
 
         mappings.addEntityBinding(root);
+    }
+
+    /**
+     * Whether a class is stored in the table of its base class, for the datasource this binder builds: its mapping
+     * says so, and the hierarchy it belongs to has not been inferred as joined.
+     */
+    private boolean isTablePerHierarchy(Class<?> entityClass, Mapping mapping) {
+        return mapping.getTablePerHierarchy() && !inferredJoinedRoots.contains(rootClassOf(entityClass));
+    }
+
+    private static Class<?> rootClassOf(Class<?> entityClass) {
+        Class<?> current = entityClass;
+        while (!Object.class.equals(current.getSuperclass())) {
+            current = current.getSuperclass();
+        }
+        return current;
     }
 
     private boolean hasTablePerSubclassChild(java.util.Collection<PersistentEntity> children) {
@@ -1628,7 +1651,7 @@ public class GrailsDomainBinder implements MetadataContributor {
         evaluateMapping(sub, defaultMapping);
         Mapping m = getMapping(parent.getMappedClass());
         Subclass subClass;
-        boolean tablePerSubclass = m != null && !m.getTablePerHierarchy() && !m.isTablePerConcreteClass();
+        boolean tablePerSubclass = m != null && !isTablePerHierarchy(parent.getMappedClass(), m) && !m.isTablePerConcreteClass();
         boolean tablePerConcreteClass = m != null && m.isTablePerConcreteClass();
         final String fullName = sub.getName();
         if (tablePerSubclass) {
@@ -2278,7 +2301,7 @@ public class GrailsDomainBinder implements MetadataContributor {
             column.setNullable(property.isNullable());
         } else {
             Mapping mapping = getMapping(owner);
-            if (mapping == null || mapping.getTablePerHierarchy()) {
+            if (mapping == null || isTablePerHierarchy(owner.getJavaClass(), mapping)) {
                 if (LOG.isDebugEnabled()) {
                     LOG.debug("[GrailsDomainBinder] Sub class property [" + property.getName() +
                             "] for column name [" + column.getName() + "] set to nullable");
@@ -2454,7 +2477,7 @@ public class GrailsDomainBinder implements MetadataContributor {
         if (componentProperty == null) return false;
         final PersistentEntity domainClass = componentProperty.getOwner();
         final Mapping mapping = getMapping(domainClass.getJavaClass());
-        return !domainClass.isRoot() && (mapping == null || mapping.isTablePerHierarchy()) || componentProperty.isNullable();
+        return !domainClass.isRoot() && (mapping == null || isTablePerHierarchy(domainClass.getJavaClass(), mapping)) || componentProperty.isNullable();
     }
 
     /*
@@ -3178,7 +3201,7 @@ public class GrailsDomainBinder implements MetadataContributor {
         final PersistentEntity owner = property.getOwner();
         if (!owner.isRoot()) {
             Mapping mapping = getMapping(owner);
-            if (mapping == null || mapping.getTablePerHierarchy()) {
+            if (mapping == null || isTablePerHierarchy(owner.getJavaClass(), mapping)) {
                 if (LOG.isDebugEnabled())
                     LOG.debug("[GrailsDomainBinder] Sub class property [" + property.getName() + "] for column name [" + column.getName() + "] set to nullable");
                 column.setNullable(true);
