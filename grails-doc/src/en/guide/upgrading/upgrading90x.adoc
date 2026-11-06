@@ -1259,8 +1259,6 @@ config.getProperty('server.ports.2')      // Grails 8: [8080, 8443], Grails 9: n
 
 A list of maps reads into its elements, as `app.rows.0.name`. An index past the end of the list, a number with a leading zero such as `01`, or any other segment after it, is absent. A map whose keys are numbers, such as `codes: {'0': zero}`, reads as before.
 
-A placeholder in a list element, such as `${EXAMPLE_ORIGIN:https://default.example.com}` as an element of `app.origins`, is not resolved by `config`: `getProperty('app.origins.1')`, `getProperty('app.origins[1]')` and the elements of `getProperty('app.origins', List)` hold it as written, as the whole list did in Grails 8, where the `Environment` answers `https://default.example.com`. Read such an element through the `Environment`, or bind the list with `@ConfigurationProperties`.
-
 A typed read with a default changes with nothing to point at it, because the default takes over. With the parent set to a boolean as a shorthand for its block:
 
 [source,groovy]

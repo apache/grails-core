@@ -866,6 +866,18 @@ app:
         config.getProperty('app.rows[0].db.host') == 'https://default.example.com'
         config.navigate('app', 'rows')[0].db.host == 'https://default.example.com'
         config.navigate('app', 'rows')[0].tags == ['https://default.example.com']
+
+        and: "a read by a whole number answers the same, as it does from the environment"
+        environment.getProperty('app.origins.1') == 'https://default.example.com'
+        config.getProperty('app.origins.1') == 'https://default.example.com'
+        config.navigate('app', 'origins', '1') == 'https://default.example.com'
+        config.navigate('app', 'origins[1]') == 'https://default.example.com'
+        environment.getProperty('app.rows.0.url') == 'https://default.example.com'
+        config.getProperty('app.rows.0.url') == 'https://default.example.com'
+        environment.getProperty('app.rows.0.db.host') == 'https://default.example.com'
+        config.getProperty('app.rows.0.db.host') == 'https://default.example.com'
+        environment.getProperty('app.rows.0.tags.0') == 'https://default.example.com'
+        config.getProperty('app.rows.0.tags.0') == 'https://default.example.com'
     }
 
     void 'a placeholder in a list held whole is resolved'() {
@@ -881,6 +893,15 @@ app:
         config.navigate('app', 'origins') == ['https://a.example.com', 'https://default.example.com']
         config.navigate('app', 'rows') == [[url: 'https://default.example.com', port: 8080]]
         config.navigate('app', 'groups') == [['https://default.example.com']]
+
+        and: "a read by index answers the same, in either spelling"
+        config.getProperty('app.origins.1') == 'https://default.example.com'
+        config.getProperty('app.origins[1]') == 'https://default.example.com'
+        config.navigate('app', 'origins', '1') == 'https://default.example.com'
+        config.getProperty('app.rows.0.url') == 'https://default.example.com'
+        config.getProperty('app.rows[0].url') == 'https://default.example.com'
+        config.getProperty('app.groups.0.0') == 'https://default.example.com'
+        config.getProperty('app.groups[0][0]') == 'https://default.example.com'
 
         and: "the property source keeps the list as written"
         map.navigate('app', 'origins') == ['https://a.example.com', '${EXAMPLE_ORIGIN:https://default.example.com}']
