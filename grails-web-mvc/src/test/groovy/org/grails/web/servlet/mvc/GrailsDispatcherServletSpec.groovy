@@ -253,26 +253,27 @@ class GrailsDispatcherServletSpec extends Specification {
     }
 
     @Issue('https://github.com/apache/grails-core/issues/15819')
-    void 'a late filter preserves the request and response wrappers seen by the dispatcher'() {
+    void 'a late filter preserves dispatcher wrappers with replaceBinding=#replaceBinding, wrapRequest=#wrapRequest and wrapResponse=#wrapResponse'() {
         given:
         def context = new StaticWebApplicationContext()
         context.servletContext = servletContext
         def request = new MockHttpServletRequest(servletContext, 'GET', '/test')
         def response = new MockHttpServletResponse()
-        def wrappedRequest = new HttpServletRequestWrapper(request) {
+        def wrappedRequest = wrapRequest ? new HttpServletRequestWrapper(request) {
             @Override
             boolean isUserInRole(String role) {
                 role == 'ADMIN'
             }
-        }
-        def wrappedResponse = new HttpServletResponseWrapper(response)
+        } : request
+        def wrappedResponse = wrapResponse ? new HttpServletResponseWrapper(response) : response
         GrailsWebRequest filterRequest
         GrailsWebRequest dispatchRequest
         def controller = { req, res ->
             dispatchRequest = GrailsWebRequest.lookup()
             assert dispatchRequest.request.is(wrappedRequest)
             assert dispatchRequest.response.is(wrappedResponse)
-            assert dispatchRequest.request.isUserInRole('ADMIN')
+            assert dispatchRequest.request.isUserInRole('ADMIN') == wrapRequest
+            assert GrailsWebRequest.lookup(req).is(dispatchRequest)
             assert req.getAttribute(GrailsApplicationAttributes.WEB_REQUEST).is(dispatchRequest)
             null
         } as Controller
@@ -289,9 +290,17 @@ class GrailsDispatcherServletSpec extends Specification {
         when:
         filter.doFilter(request, response, { req, res ->
             filterRequest = GrailsWebRequest.lookup()
-            new RequestContextFilter().doFilter(wrappedRequest, wrappedResponse, { lateRequest, lateResponse ->
-                servlet.service(lateRequest, lateResponse)
-            } as FilterChain)
+            assert !filterRequest.request.isUserInRole('ADMIN')
+            if (replaceBinding) {
+                new RequestContextFilter().doFilter(wrappedRequest, wrappedResponse, { lateRequest, lateResponse ->
+                    servlet.service(lateRequest, lateResponse)
+                } as FilterChain)
+            }
+            else {
+                servlet.service(wrappedRequest, wrappedResponse)
+                assert GrailsWebRequest.lookup().is(filterRequest)
+                assert filterRequest.active
+            }
         } as FilterChain)
 
         then:
@@ -303,6 +312,15 @@ class GrailsDispatcherServletSpec extends Specification {
         RequestContextHolder.resetRequestAttributes()
         servlet?.destroy()
         context.close()
+
+        where:
+        replaceBinding | wrapRequest | wrapResponse
+        false          | true        | false
+        false          | false       | true
+        false          | true        | true
+        true           | true        | false
+        true           | false       | true
+        true           | true        | true
     }
 
     @Issue('https://github.com/apache/grails-core/issues/15819')

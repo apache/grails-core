@@ -61,13 +61,14 @@ class GrailsDispatcherServlet extends DispatcherServlet implements ServletContex
 
     @Override
     protected ServletRequestAttributes buildRequestAttributes(HttpServletRequest request, HttpServletResponse response, RequestAttributes previousAttributes) {
-        if (previousAttributes instanceof GrailsWebRequest && previousAttributes.active) {
+        if (previousAttributes instanceof GrailsWebRequest && previousAttributes.active &&
+                previousAttributes.request.is(request) && previousAttributes.response.is(response)) {
             return (GrailsWebRequest) previousAttributes
         }
         GrailsWebRequest webRequest = buildGrailsWebRequest(request, response)
         if (previousAttributes != null) {
-            // A later filter replaced the binding. Publish the dispatch's instance so URL mappings
-            // and rendering agree, while preserving the request and response wrappers seen here.
+            // A later filter replaced the binding or wrapped the request/response. Publish the dispatch's
+            // instance so URL mappings and rendering agree, preserving the wrappers seen here.
             // FrameworkServlet passes null on Callable threads, which need their own instance
             // without replacing the attribute still used by the dispatch.
             request.setAttribute(GrailsApplicationAttributes.WEB_REQUEST, webRequest)
