@@ -24,7 +24,12 @@ import grails.core.GrailsApplication
 import grails.web.mapping.UrlMappingInfo
 import grails.web.mapping.UrlMappingsHolder
 import grails.web.mapping.exceptions.UrlMappingException
+import io.micrometer.observation.Observation
+import io.micrometer.observation.ObservationHandler
+import io.micrometer.observation.ObservationRegistry
+import java.lang.reflect.InvocationTargetException
 import org.apache.grails.core.testing.support.LogCapture
+import org.codehaus.groovy.runtime.InvokerInvocationException
 import org.grails.exceptions.reporting.DefaultStackTraceFilterer
 import org.apache.grails.core.GrailsBootstrapRegistryInitializer
 import org.grails.exceptions.reporting.StackTraceFilterer
@@ -38,12 +43,14 @@ import org.springframework.beans.factory.BeanNotOfRequiredTypeException
 import org.springframework.beans.factory.NoSuchBeanDefinitionException
 import org.springframework.context.ApplicationContext
 import org.springframework.context.support.StaticApplicationContext
+import org.springframework.http.server.observation.ServerRequestObservationContext
 import org.springframework.mock.web.MockHttpServletRequest
 import org.springframework.mock.web.MockHttpServletResponse
 import org.springframework.mock.web.MockServletContext
 import org.springframework.web.context.request.RequestContextHolder
 import org.springframework.web.context.request.ServletRequestAttributes
 import org.springframework.web.context.request.async.AsyncRequestTimeoutException
+import org.springframework.web.filter.ServerHttpObservationFilter
 import org.springframework.web.util.WebUtils
 import org.springframework.web.context.WebApplicationContext
 import org.springframework.web.context.support.StaticWebApplicationContext
@@ -53,6 +60,7 @@ import org.springframework.web.servlet.view.InternalResourceView
 import spock.lang.Issue
 import spock.lang.Specification
 
+import jakarta.servlet.FilterChain
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
 
@@ -62,6 +70,8 @@ class GrailsExceptionResolverSpec extends Specification {
     private static final String PLAIN_OVER_GRAILS = 'plain attributes over a stored GrailsWebRequest'
     private static final String PLAIN = 'plain attributes'
     private static final String NOTHING = 'nothing'
+    private static final Exception FAILURE = new IllegalStateException('failed')
+    private static final Exception ASYNC_TIMEOUT = new AsyncRequestTimeoutException()
 
     private final MockServletContext servletContext = new MockServletContext()
     private StaticWebApplicationContext webContext
@@ -69,6 +79,63 @@ class GrailsExceptionResolverSpec extends Specification {
     def cleanup() {
         RequestContextHolder.resetRequestAttributes()
         webContext?.close()
+    }
+
+    void 'an exception #description is recorded as the error of the HTTP server observation'() {
+        given: 'the filter a running application has around its requests'
+        ServerRequestObservationContext observed = null
+        def registry = ObservationRegistry.create()
+        registry.observationConfig().observationHandler(new ObservationHandler<Observation.Context>() {
+            @Override
+            boolean supportsContext(Observation.Context context) {
+                context instanceof ServerRequestObservationContext
+            }
+
+            @Override
+            void onStop(Observation.Context context) {
+                observed = (ServerRequestObservationContext) context
+            }
+        })
+        def resolver = observedResolver()
+        def request = new MockHttpServletRequest('GET', '/failing')
+        def response = new MockHttpServletResponse()
+        FilterChain application = { req, res ->
+            resolver.resolveException((HttpServletRequest) req, (HttpServletResponse) res, null, thrown)
+        } as FilterChain
+
+        when:
+        new ServerHttpObservationFilter(registry).doFilter(request, response, application)
+
+        then: 'or its metrics and trace would say nothing failed'
+        response.status == status
+        observed.error.is(recorded)
+
+        where:
+        description            | thrown                                                 | recorded                  | status
+        'an action threw'      | FAILURE                                                | FAILURE                   | 500
+        'wrapped by Groovy'    | new InvokerInvocationException(new InvocationTargetException(FAILURE)) | FAILURE   | 500
+        'of an async timeout'  | ASYNC_TIMEOUT                                          | ASYNC_TIMEOUT             | 503
+    }
+
+    void 'an exception is resolved as usual without an observation'() {
+        when:
+        def response = new MockHttpServletResponse()
+        observedResolver().resolveException(new MockHttpServletRequest('GET', '/failing'), response, null, FAILURE)
+
+        then:
+        response.status == 500
+    }
+
+    private GrailsExceptionResolver observedResolver() {
+        webContext = new StaticWebApplicationContext()
+        webContext.beanFactory.registerSingleton(GrailsApplication.APPLICATION_ID, Stub(GrailsApplication))
+        webContext.refresh()
+        servletContext.setAttribute(WebApplicationContext.ROOT_WEB_APPLICATION_CONTEXT_ATTRIBUTE, webContext)
+        def resolver = new GrailsExceptionResolver()
+        resolver.servletContext = servletContext
+        resolver.defaultErrorView = '/error'
+        resolver.stackFilterer = new DefaultStackTraceFilterer()
+        resolver
     }
 
     void 'async timeouts resolve as 503 without an error stack trace'() {
