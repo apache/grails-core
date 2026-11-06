@@ -621,6 +621,75 @@ class AssociationJoinTypeSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckM
         results*.name.sort() == TEAMS_WITH_A_CLUB
     }
 
+    void 'a criteria query ordered by an association applies the join type that #description for the association'() {
+        when:
+        final List<Team> results = query.call()
+
+        then: 'the order does not bring back the team without a club'
+        results*.name.sort() == TEAMS_WITH_A_CLUB
+        results*.club*.name == ['Arsenal', 'Arsenal', 'Chelsea', 'Manchester United']
+
+        where:
+        description                           | query
+        'join requests before the order'      | { Team.createCriteria().list { like('name', '%First%'); join('club', JoinType.INNER); order('club.name') } }
+        'join requests after the order'       | { Team.createCriteria().list { like('name', '%First%'); order('club.name'); join('club', JoinType.INNER) } }
+        'join requests with a right join'     | { Team.createCriteria().list { like('name', '%First%'); join('club', JoinType.RIGHT); order('club.name') } }
+        'the fetch argument requests'         | { Team.createCriteria().list(fetch: [club: JoinType.INNER]) { like('name', '%First%'); order('club.name') } }
+        'join requests in a paged list'       | { Team.createCriteria().list(max: 10) { like('name', '%First%'); join('club', JoinType.INNER); order('club.name') } }
+    }
+
+    void 'the total count and get of a criteria query ordered by an association apply an inner join that it requests'() {
+        when:
+        final results = Team.createCriteria().list(max: 2) {
+            like('name', '%First%')
+            join('club', JoinType.INNER)
+            order('club.name')
+        }
+        final unattached = Team.createCriteria().get {
+            eq('name', 'Unattached First Team')
+            join('club', JoinType.INNER)
+            order('club.name')
+        }
+
+        then:
+        results.size() == 2
+        results.totalCount == 4
+        unattached == null
+    }
+
+    void 'a criteria query ordered by a nested association applies an inner join that it requests #description'() {
+        when:
+        final results = Player.createCriteria().list(criteria)
+
+        then:
+        results*.name == ['Arsenal Player', 'Chelsea Player', 'MU Player']
+
+        where:
+        description                              | criteria
+        'for the path'                           | { join('team.club', JoinType.INNER); order('team.club.name') }
+        'for the path, after the order'          | { order('team.club.name'); join('team.club', JoinType.INNER) }
+        'inside the criteria of the association' | { team { join('club', JoinType.INNER); order('club.name') } }
+    }
+
+    void 'a criteria query ordered by a collection fetches the collection with the join type that #description'() {
+        when:
+        final List<Team> results = query.call()
+
+        then:
+        results*.name == expected
+
+        and: 'the collection is fetched'
+        results.every { Hibernate.isInitialized(it.players) }
+
+        where:
+        description                               | query                                                                                                                || expected
+        'join requests before the order'          | { Team.createCriteria().list { like('name', '%First%'); join('players', JoinType.INNER); order('players.name') } }  || TEAMS_WITH_PLAYERS
+        'join requests after the order'           | { Team.createCriteria().list { like('name', '%First%'); order('players.name'); join('players', JoinType.INNER) } }  || TEAMS_WITH_PLAYERS
+        'join requests with a right join'         | { Team.createCriteria().list { like('name', '%First%'); join('players', JoinType.RIGHT); order('players.name') } }  || TEAMS_WITH_PLAYERS
+        'join requests with a left join'          | { Team.createCriteria().list { like('name', '%First%'); join('players', JoinType.LEFT); order('players.name') } }   || ['Playerless First Team'] + TEAMS_WITH_PLAYERS
+        'the fetch argument requests'             | { Team.createCriteria().list(fetch: [players: JoinType.INNER]) { like('name', '%First%'); order('players.name') } } || TEAMS_WITH_PLAYERS
+    }
+
     void 'a criteria query joins a collection with the join type that join requests'() {
         when:
         final results = Team.createCriteria().list {

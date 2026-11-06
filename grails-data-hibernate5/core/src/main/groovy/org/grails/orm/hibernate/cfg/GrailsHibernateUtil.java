@@ -277,9 +277,15 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
     }
 
     /**
-     * Whether the criteria ask for the association at the given path to be fetched with a join.
+     * Whether the criteria ask for the association at the given path to be fetched with a join. A
+     * join that is made for a sort must not keep a collection from being fetched then: see
+     * {@link #unfetchedJoinCondition()}.
+     *
+     * @param root The root criteria
+     * @param associationPath The path of the association from the root entity
+     * @return Whether a join fetch is requested for the association
      */
-    private static boolean isFetchRequested(Criteria root, String associationPath) {
+    public static boolean isFetchRequested(Criteria root, String associationPath) {
         if (!(root instanceof CriteriaImpl)) {
             return false;
         }
@@ -303,6 +309,19 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
      */
     public static Criterion unfetchedJoinCondition() {
         return Restrictions.sqlRestriction("1=1");
+    }
+
+    /**
+     * Returns the alias of the join that the criteria have for an association path, whichever part
+     * of the query made the join.
+     *
+     * @param root The root criteria
+     * @param associationPath The path of the association from the root entity
+     * @return The alias, or null when the criteria do not join the association or join it without an alias
+     */
+    public static String getJoinAlias(Criteria root, String associationPath) {
+        CriteriaImpl.Subcriteria existing = findCriteria(root, associationPath);
+        return existing != null ? existing.getAlias() : null;
     }
 
     /**

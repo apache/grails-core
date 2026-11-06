@@ -22,7 +22,9 @@ import grails.gorm.annotation.Entity
 import org.apache.grails.data.hibernate5.core.GrailsDataHibernate5TckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.grails.datastore.mapping.query.Query
+import org.hibernate.FetchMode
 import org.hibernate.Hibernate
+import org.hibernate.criterion.Order
 
 /**
  * A sort by a property of an association must not leave out the instances whose association is null,
@@ -293,9 +295,28 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManag
         results*.name == ['MU Player', 'Chelsea Player', 'Arsenal Player']
 
         where:
-        description           | criteria
-        'for the association' | { team { club { like('name', '%e%') } }; order('team.club.name', 'desc') }
-        'through an alias'    | { createAlias('team', 't'); createAlias('t.club', 'c'); like('c.name', '%e%'); order('team.club.name', 'desc') }
+        description                            | criteria
+        'for the association'                  | { team { club { like('name', '%e%') } }; order('team.club.name', 'desc') }
+        'for the association, after the order' | { order('team.club.name', 'desc'); team { club { like('name', '%e%') } } }
+        'through an alias'                     | { createAlias('team', 't'); createAlias('t.club', 'c'); like('c.name', '%e%'); order('team.club.name', 'desc') }
+        'through an alias, after the order'    | { order('team.club.name', 'desc'); createAlias('team', 't'); createAlias('t.club', 'c'); like('c.name', '%e%') }
+    }
+
+    void 'a criteria query adds its orders in the sequence in which it requests them: #description'() {
+        given:
+        new Team(club: Club.findByName('Arsenal'), name: 'Arsenal Second Team').save(failOnError: true, flush: true)
+
+        when:
+        final results = Team.createCriteria().list(criteria)
+
+        then:
+        results*.name == expected
+
+        where:
+        description                              | criteria                                                              || expected
+        'an association, then a Hibernate order' | { isNotNull('club'); order('club.name'); order(Order.desc('name')) } || ['Arsenal Second Team', 'Arsenal First Team', 'Chelsea First Team', 'MU First Team']
+        'a Hibernate order, then an association' | { isNotNull('club'); order(Order.desc('name')); order('club.name') } || ['MU First Team', 'Chelsea First Team', 'Arsenal Second Team', 'Arsenal First Team']
+        'a property, then an association'        | { isNotNull('club'); order('name', 'desc'); order('club.name') }     || ['MU First Team', 'Chelsea First Team', 'Arsenal Second Team', 'Arsenal First Team']
     }
 
     void 'a criteria query ordered by a property of a collection does not fetch the collection'() {
@@ -312,6 +333,28 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManag
         then: 'the row limit does not leave players out of the collection'
         !Hibernate.isInitialized(results.first().players)
         results.first().players.size() == 3
+    }
+
+    void 'a criteria query ordered by a property of a collection fetches the collection when #description'() {
+        given:
+        saveSquad()
+
+        when:
+        final List<Team> results = query.call()
+
+        then:
+        results*.name.unique() == ['Squad']
+        results.every { Hibernate.isInitialized(it.players) }
+        results.first().players.size() == 3
+
+        where:
+        description                          | query
+        'join requests it before the order'  | { Team.createCriteria().list { eq('name', 'Squad'); join('players'); order('players.name') } }
+        'join requests it after the order'   | { Team.createCriteria().list { eq('name', 'Squad'); order('players.name'); join('players') } }
+        'a fetch mode requests it'           | { Team.createCriteria().list { eq('name', 'Squad'); fetchMode('players', FetchMode.JOIN); order('players.name') } }
+        'the fetch argument requests it'     | { Team.createCriteria().list(fetch: [players: 'join']) { eq('name', 'Squad'); order('players.name') } }
+        'listDistinct requests it with join' | { Team.createCriteria().listDistinct { eq('name', 'Squad'); join('players'); order('players.name') } }
+        'join requests it for a Query.Order' | { Team.createCriteria().list { eq('name', 'Squad'); join('players'); order(Query.Order.asc('players.name')) } }
     }
 
     void 'list sorts by every property of the default sort of the mapping'() {
