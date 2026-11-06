@@ -314,7 +314,7 @@ class ActionExceptionProblemDetailsSpec extends Specification {
                 notified << context.error
             }
         })
-        def resolver = resolver([problemDetails: true], null, registry)
+        def resolver = resolver([problemDetails: true])
         def handler = action(new ProblemController())
         FilterChain application = { req, res ->
             resolver.resolveException((HttpServletRequest) req, (HttpServletResponse) res, handler, thrown)
@@ -486,8 +486,7 @@ class ActionExceptionProblemDetailsSpec extends Specification {
         new JsonSlurper().parseText(response.contentAsString) as Map
     }
 
-    private ActionExceptionHandlerResolver resolver(Map<String, Boolean> settings, Closure mappings = null,
-                                                    ObservationRegistry registry = null) {
+    private ActionExceptionHandlerResolver resolver(Map<String, Boolean> settings, Closure mappings = null) {
         context = new GenericWebApplicationContext()
         context.environment.propertySources.addFirst(new MapPropertySource('test',
                 settings.collectEntries { key, value -> ["grails.exceptionresolver.$key".toString(), value] } as Map<String, Object>))
@@ -502,9 +501,6 @@ class ActionExceptionProblemDetailsSpec extends Specification {
             grailsContext.registerMockBean(GrailsApplication.APPLICATION_ID, new DefaultGrailsApplication())
             def holder = new DefaultUrlMappingsHolder(new DefaultUrlMappingEvaluator(grailsContext).evaluateMappings(mappings))
             context.registerBean(UrlMappingsHolder.BEAN_ID, UrlMappingsHolder, { holder })
-        }
-        if (registry != null) {
-            context.registerBean('observationRegistry', ObservationRegistry, { registry })
         }
         context.registerBean(ActionExceptionHandlerResolver)
         context.refresh()

@@ -26,7 +26,6 @@ import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
 
 import io.micrometer.observation.Observation
-import io.micrometer.observation.ObservationRegistry
 
 import org.springframework.context.ApplicationContext
 import org.springframework.context.ApplicationContextAware
@@ -79,6 +78,13 @@ import org.grails.web.util.WebUtils
 @CompileStatic
 @Slf4j
 class ActionExceptionHandlerResolver implements HandlerExceptionResolver, Ordered, ApplicationContextAware {
+
+    /**
+     * Where {@link ServerHttpObservationFilter} keeps the observation of a request. The filter only offers its context,
+     * which cannot tell the handlers of an error, and a registry cannot be relied on to find it, because a filter can be
+     * built with a registry the application does not know.
+     */
+    private static final String SERVER_OBSERVATION_ATTRIBUTE = ServerHttpObservationFilter.name + '.observation'
 
     /** The name of the bean Spring MVC's content negotiation manager is. */
     private static final String MVC_CONTENT_NEGOTIATION_MANAGER = 'mvcContentNegotiationManager'
@@ -251,36 +257,18 @@ class ActionExceptionHandlerResolver implements HandlerExceptionResolver, Ordere
 
     /**
      * As Spring MVC records an exception it translates to a server error, which the observation would not see otherwise.
-     * Only the observation tells its handlers, one of which marks the span, so setting the error on the context is what
-     * is left when the observation cannot be found.
+     * Only the observation tells its handlers, one of which marks the span.
      */
-    private void recordServerError(HttpServletRequest request, Exception ex) {
-        ServerHttpObservationFilter.findObservationContext(request).ifPresent { ServerRequestObservationContext context ->
-            Observation observation = findObservation(context)
-            if (observation != null) {
-                observation.error(ex)
-            }
-            else {
+    private static void recordServerError(HttpServletRequest request, Exception ex) {
+        Object observation = request.getAttribute(SERVER_OBSERVATION_ATTRIBUTE)
+        if (observation instanceof Observation) {
+            ((Observation) observation).error(ex)
+        }
+        else {
+            ServerHttpObservationFilter.findObservationContext(request).ifPresent { ServerRequestObservationContext context ->
                 context.error = ex
             }
         }
-    }
-
-    /**
-     * The observation of a context, which the filter that started it keeps in scope while the request is dispatched,
-     * though not necessarily as the innermost one.
-     */
-    private Observation findObservation(Observation.Context context) {
-        ObservationRegistry registry = applicationContext.getBeanProvider(ObservationRegistry).getIfAvailable()
-        Observation.Scope scope = registry?.currentObservationScope
-        while (scope != null) {
-            Observation observation = scope.currentObservation
-            if (observation?.context.is(context)) {
-                return observation
-            }
-            scope = scope.previousObservationScope
-        }
-        return null
     }
 
     /** The action as a handler method: the controller that handles the request, and its method of the action. */
