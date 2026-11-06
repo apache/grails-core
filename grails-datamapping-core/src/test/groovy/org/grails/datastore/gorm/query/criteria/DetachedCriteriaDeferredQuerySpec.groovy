@@ -188,4 +188,33 @@ class DetachedCriteriaDeferredQuerySpec extends Specification {
         derived.@criteria*.value == ['A', 'Z']
         lazy.materializeLazyCriteria().@criteria*.value == ['A']
     }
+
+    @Unroll
+    void 'a deferred query that derives a criteria with #way while it runs does not run again'() {
+        given:
+        AtomicInteger counter = new AtomicInteger()
+        def lazy = new DetachedCriteria(TestEntity).buildLazy {
+            counter.incrementAndGet()
+            add(new Query.Equals('name', 'A'))
+            step.call(delegate)
+        }
+
+        when:
+        def read = lazy.materializeLazyCriteria()
+
+        then: 'the query ran once, and the copy it read holds what the query added and no pending query'
+        noExceptionThrown()
+        counter.get() == 1
+        read.@criteria*.property.contains('name')
+        read.@lazyQuery == null
+        lazy.@lazyQuery == null
+
+        where:
+        way             | step
+        'sort'          | { it.sort('name') }
+        'max'           | { it.max(5) }
+        'where'         | { it.where { } }
+        'build'         | { it.build { } }
+        'a second lazy' | { it.buildLazy { } }
+    }
 }

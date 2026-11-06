@@ -944,7 +944,9 @@ abstract class AbstractDetachedCriteria<T> implements Criteria, Cloneable {
             criteria.@joinTypes = new HashMap<>(this.joinTypes)
             criteria.@junctions = new ArrayList(this.junctions)
             criteria.@connectionName = this.connectionName
-            criteria.@lazyQuery = this.lazyQuery
+            // a copy made by the call that is running the deferred query, such as sort or where inside it, must not
+            // carry that query: it is running, and a copy that held it would run it again, without end
+            criteria.@lazyQuery = lazyApplyingThread == Thread.currentThread() ? null : this.lazyQuery
             Map<String, DetachedAssociationCriteria> clonedAssociations = new LinkedHashMap<>()
             for (Map.Entry<String, DetachedAssociationCriteria> entry : this.associationCriteriaMap.entrySet()) {
                 clonedAssociations.put(entry.key, copyAssociationCriteria(entry.value, associationCopies))
