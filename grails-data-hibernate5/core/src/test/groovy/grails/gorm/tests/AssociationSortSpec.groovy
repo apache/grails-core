@@ -356,6 +356,21 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManag
         results*.name - 'Unattached First Team' == ['MU First Team', 'Arsenal First Team', 'Chelsea First Team']
     }
 
+    void 'an order with a Query.Order inside the criteria of an association is relative to that association'() {
+        given:
+        savePlayer('Zed Player', new Team(name: 'A Team').save(failOnError: true))
+
+        when:
+        final results = Player.createCriteria().list {
+            team {
+                order(Query.Order.asc('name'))
+            }
+        }
+
+        then:
+        results*.name == ['Zed Player', 'Arsenal Player', 'Chelsea Player', 'MU Player', 'Unattached Player']
+    }
+
     void 'a criteria query ordered by a property of a collection does not fetch the collection'() {
         given:
         saveSquad()

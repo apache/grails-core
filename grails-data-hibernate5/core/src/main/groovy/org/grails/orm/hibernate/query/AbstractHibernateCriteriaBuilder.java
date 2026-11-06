@@ -1521,13 +1521,7 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
         if (criteria == null) {
             throwRuntimeException(new IllegalArgumentException("Call to [order] not allowed here."));
         }
-        final String property = o.getProperty();
-        if (property.indexOf('.') == -1) {
-            requestedOrders.add(new RequestedOrder(convertOrder(o, property)));
-        }
-        else {
-            requestOrder(property, propertyName -> convertOrder(o, propertyName));
-        }
+        requestOrder(o.getProperty(), propertyName -> convertOrder(o, propertyName));
         return this;
     }
 
