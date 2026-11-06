@@ -57,58 +57,6 @@ dependencies {
     testCompileOnly 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation
 }
 
-def defaultTestConfig = {
-    maxParallelForks = rootProject.ext.configuredTestParallel
-    forkEvery = isCiBuild ? 50 : 100
-    excludes = ['**/*TestCase.class', '**/*$*.class']
-}
-
-def isolatedTests = [
-        '**/ContentFormatControllerTests.class',
-        '**/JSONBindingToNullTests.class',
-        '**/ControllerWithXmlConvertersTests.class',
-        '**/GroovyPageAttributesTests.class',
-        '**/BindingExcludeTests.class',
-        '**/NestedXmlBindingTests.class',
-        '**/GSPResponseWriterSpec.class',
-        '**/RespondMethodSpec.class',
-        '**/ContentNegotiationSpec.class',
-        '**/pages/ext/jsp/*.class',
-        '**/WithFormatContentTypeSpec.class',
-        '**/CommandObjectNoDataSpec.class'
-]
-
-tasks.register('execIsolatedTests', Test).configure { Test it ->
-    it.configure(defaultTestConfig)
-    // A Test task registered rather than the one the java plugin creates has neither of these,
-    // which makes it NO-SOURCE: it reports success having run nothing. These classes are excluded
-    // from `test` below, so without this they run in no task at all.
-    it.testClassesDirs = sourceSets.test.output.classesDirs
-    it.classpath = sourceSets.test.runtimeClasspath
-    it.forkEvery = 1
-    it.includes.addAll(isolatedTests)
-}
-
-tasks.register('createCombinedReport', TestReport).configure { TestReport rTask ->
-    rTask.group = 'verification'
-    rTask.destinationDirectory = layout.buildDirectory.dir('reports/allTests')
-    rTask.testResults.from(
-            tasks.named('execIsolatedTests', Test).map({ it.binaryResultsDirectory }),
-            tasks.named('test', Test).map({ it.binaryResultsDirectory })
-    )
-}
-
-tasks.named('test', Test).configure { Test it ->
-    it.configure(defaultTestConfig)
-    it.excludes.addAll(isolatedTests)
-}
-
-// Nothing else asked for this task, so `build` ran `test` and stopped. The shard plugin picks it
-// up through tasks.withType(Test), which is why the joint workflow reached it and gradle.yml did not.
-tasks.named('check') {
-    dependsOn('execIsolatedTests')
-}
-
 tasks.withType(Groovydoc).configureEach {
     // tests do not have groovydoc
     enabled = false
