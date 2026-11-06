@@ -26,7 +26,7 @@ import org.springframework.dao.InvalidDataAccessResourceUsageException
 class AggregateSubquerySpec extends Neo4jGormDatastoreSpec {
 
     void setupSpec() {
-        manager.registerDomainClasses(AggSubNode)
+        manager.registerDomainClasses(AggSubNode, AggSubPet)
     }
 
     private void seed() {
@@ -127,6 +127,39 @@ class AggregateSubquerySpec extends Neo4jGormDatastoreSpec {
         after*.firstName == ['Old']
     }
 
+    void "a comparison against a subquery that returns no row matches no row"() {
+        given:
+        seed()
+
+        when:
+        List<AggSubNode> greater = AggSubNode.where { age > avg(age).of { firstName == 'Absent' } }.list()
+        List<AggSubNode> equal = AggSubNode.where { age == max(age).of { firstName == 'Absent' } }.list()
+        List<AggSubNode> notEqual = AggSubNode.where { age != max(age).of { firstName == 'Absent' } }.list()
+
+        then:
+        greater.isEmpty()
+        equal.isEmpty()
+        notEqual.isEmpty()
+    }
+
+    void "a subquery inside an association block is run"() {
+        given:
+        seed()
+        def barney = AggSubNode.findByFirstName('Barney')
+        def lisa = AggSubNode.findByFirstName('Lisa')
+        new AggSubPet(name: 'Rex', owner: barney).save(failOnError: true)
+        new AggSubPet(name: 'Tom', owner: lisa).save(failOnError: true)
+        manager.session.flush()
+        manager.session.clear()
+        def over46 = AggSubNode.where { age > 46 }.property('firstName')
+
+        when:
+        List<AggSubPet> found = new DetachedCriteria(AggSubPet).build { owner { inList('firstName', over46) } }.list()
+
+        then:
+        found*.name == ['Rex']
+    }
+
     void "a comparison against a subquery that returns several rows is rejected"() {
         given:
         seed()
@@ -159,4 +192,10 @@ class AggregateSubquerySpec extends Neo4jGormDatastoreSpec {
 class AggSubNode {
     String firstName
     Integer age
+}
+
+@Entity
+class AggSubPet {
+    String name
+    AggSubNode owner
 }

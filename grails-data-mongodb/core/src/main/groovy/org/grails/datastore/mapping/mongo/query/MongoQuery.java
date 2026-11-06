@@ -480,8 +480,12 @@ public class MongoQuery extends BsonQuery implements QueryArgumentsAware {
      * @return The Mongo query
      */
     public Document getMongoQuery() {
+        return getMongoQuery(criteria);
+    }
+
+    private Document getMongoQuery(Junction queryCriteria) {
         Document query = createQueryObject(entity);
-        populateMongoQuery((AbstractMongoSession) getSession(), query, criteria, entity);
+        populateMongoQuery((AbstractMongoSession) getSession(), query, queryCriteria, entity);
         return query;
     }
 
@@ -505,7 +509,7 @@ public class MongoQuery extends BsonQuery implements QueryArgumentsAware {
                 dbObject = ((FindIterable<Document>) setHint(cursor)).limit(1)
                         .first();
             } else {
-                FindIterable<Document> cursor = mongoSession.find(collection, getMongoQuery());
+                FindIterable<Document> cursor = mongoSession.find(collection, getMongoQuery(criteria));
 
                 dbObject = ((FindIterable<Document>) setHint(cursor)).limit(1)
                         .first();

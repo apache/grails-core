@@ -27,7 +27,7 @@ import org.springframework.dao.InvalidDataAccessResourceUsageException
 class AggregateSubquerySpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
 
     void setupSpec() {
-        manager.registerDomainClasses(AggSubPerson)
+        manager.registerDomainClasses(AggSubPerson, AggSubCity)
     }
 
     private void seed() {
@@ -165,6 +165,54 @@ class AggregateSubquerySpec extends GrailsDataTckSpec<GrailsDataMongoTckManager>
         notIn*.firstName == ['Bart', 'Lisa', 'Marge']
     }
 
+    void "a single result with a subquery in an in uses the values the subquery returns"() {
+        given:
+        seed()
+        def over46 = AggSubPerson.where { age > 46 }.property('firstName')
+
+        when:
+        AggSubPerson found = new DetachedCriteria(AggSubPerson).build { inList('firstName', over46) }.get()
+        AggSubPerson none = new DetachedCriteria(AggSubPerson).build { inList('firstName', AggSubPerson.where { age > 100 }.property('firstName')) }.get()
+
+        then:
+        found.firstName == 'Barney'
+        none == null
+    }
+
+    void "a comparison against a subquery that returns no row matches no row"() {
+        given:
+        seed()
+        new AggSubPerson(firstName: 'Nobody').save(flush: true, failOnError: true)
+        manager.session.clear()
+
+        when:
+        List<AggSubPerson> greater = AggSubPerson.where { age > avg(age).of { firstName == 'Absent' } }.list()
+        List<AggSubPerson> equal = AggSubPerson.where { age == max(age).of { firstName == 'Absent' } }.list()
+        List<AggSubPerson> notEqual = AggSubPerson.where { age != max(age).of { firstName == 'Absent' } }.list()
+
+        then: 'not the rows whose age is null, which an equality with null would have matched'
+        greater.isEmpty()
+        equal.isEmpty()
+        notEqual.isEmpty()
+    }
+
+    void "a subquery inside an association block is run"() {
+        given:
+        new AggSubCity(name: 'Paris').save(flush: true, failOnError: true)
+        new AggSubPerson(firstName: 'Amelie', address: new AggSubAddress(city: 'Paris')).save(flush: true, failOnError: true)
+        new AggSubPerson(firstName: 'Bob', address: new AggSubAddress(city: 'Rome')).save(flush: true, failOnError: true)
+        manager.session.clear()
+        def names = AggSubCity.where { name == 'Paris' }.property('name')
+
+        when:
+        List<AggSubPerson> found = new DetachedCriteria(AggSubPerson).build { address { inList('city', names) } }.list()
+        List<AggSubPerson> excluded = new DetachedCriteria(AggSubPerson).build { address { notIn('city', names) } }.list()
+
+        then:
+        found*.firstName == ['Amelie']
+        excluded*.firstName == ['Bob']
+    }
+
     void "a comparison against a subquery that returns several rows is rejected"() {
         given:
         seed()
@@ -197,4 +245,16 @@ class AggregateSubquerySpec extends GrailsDataTckSpec<GrailsDataMongoTckManager>
 class AggSubPerson {
     String firstName
     Integer age
+    AggSubAddress address
+
+    static embedded = ['address']
+}
+
+class AggSubAddress {
+    String city
+}
+
+@Entity
+class AggSubCity {
+    String name
 }

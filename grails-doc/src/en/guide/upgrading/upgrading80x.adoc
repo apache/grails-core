@@ -1472,6 +1472,8 @@ Under Hibernate 7, calling a collection criterion such as `isNotEmpty('pets')`, 
 
 `Person.where { age > avg(age) }` and the other aggregate subqueries documented for `where` returned no rows on MongoDB and Neo4j, because the subquery was compared as an object instead of being run (issue https://github.com/apache/grails-core/issues/16809[#16809]). Both datastores now run the subquery first and compare with its result: `==`, `!=`, `>`, `>=`, `<` and `<=` against `avg`, `max`, `min` and `sum`, and `inList` / `notIn` against a subquery that selects a property. A comparison against a subquery that returns more than one row, and the `exists`, `notExists`, `all` and `some` forms, now throw an `InvalidDataAccessResourceUsageException` that names the form.
 
+A comparison against a subquery that returns no row matches no row, as in SQL, where the comparison is unknown. A subquery inside an association block, such as `address { inList('city', City.where { }.property('name')) }`, is run too, and so is one used with `get()`.
+
 ==== 27. GORM Properties Are Nullable by Default
 
 Grails 8 changes the validation default so that an *unconstrained persistent (domain) property is nullable by default* rather than required.

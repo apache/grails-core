@@ -698,8 +698,9 @@ public abstract class Query implements Cloneable, Serializable {
      *
      * <p>A comparison ({@code ==}, {@code !=}, {@code >}, {@code >=}, {@code <}, {@code <=}) against a
      * subquery, such as {@code age > avg(age)}, takes the one value the subquery returns, and {@code in}
-     * and {@code notIn} take all of them. A subquery that returns more than one row for a comparison is
-     * rejected. {@code exists}, {@code notExists} and the {@code all} and {@code some} forms are rejected
+     * and {@code notIn} take all of them. A comparison against a subquery that returns no row matches no row,
+     * as in SQL, where the comparison is unknown. A subquery that returns more than one row for a comparison is
+     * rejected. Subqueries inside an association block are resolved too. {@code exists}, {@code notExists} and the {@code all} and {@code some} forms are rejected
      * with an {@link InvalidDataAccessResourceUsageException}, as they are not supported.</p>
      *
      * @param criteria the criteria of this query
@@ -747,8 +748,34 @@ public abstract class Query implements Cloneable, Serializable {
         if (criterion instanceof SubqueryCriterion) {
             throw unsupportedSubquery(criterion.getClass().getSimpleName());
         }
+        if (criterion instanceof AssociationQuery associationQuery) {
+            Junction nested = associationQuery.getCriteria();
+            Junction resolved = (Junction) resolveSubqueries((Criterion) nested);
+            if (resolved == nested) {
+                return criterion;
+            }
+            AssociationQuery copy = new AssociationQuery(associationQuery.getSession(), associationQuery.getEntity(),
+                    associationQuery.getAssociation());
+            copy.criteria = resolved;
+            return copy;
+        }
         if (criterion instanceof PropertyCriterion property && property.getValue() instanceof QueryableCriteria subquery) {
-            Object value = scalarSubqueryValue(property.getProperty(), subquery);
+            if (!(criterion instanceof Equals || criterion instanceof NotEquals || criterion instanceof GreaterThan ||
+                    criterion instanceof GreaterThanEquals || criterion instanceof LessThan ||
+                    criterion instanceof LessThanEquals)) {
+                throw unsupportedSubquery(criterion.getClass().getSimpleName());
+            }
+            List<?> rows = subquery.list();
+            if (rows == null || rows.isEmpty()) {
+                // a comparison with the value of an empty subquery is unknown in SQL, so it matches no row
+                return new In(property.getProperty(), Collections.emptyList());
+            }
+            if (rows.size() > 1) {
+                throw new InvalidDataAccessResourceUsageException("The subquery compared with property '" +
+                        property.getProperty() + "' returned " + rows.size() +
+                        " rows, but a comparison needs exactly one value");
+            }
+            Object value = rows.get(0);
             if (criterion instanceof Equals) {
                 return new Equals(property.getProperty(), value);
             }
@@ -764,10 +791,7 @@ public abstract class Query implements Cloneable, Serializable {
             if (criterion instanceof LessThan) {
                 return new LessThan(property.getProperty(), value);
             }
-            if (criterion instanceof LessThanEquals) {
-                return new LessThanEquals(property.getProperty(), value);
-            }
-            throw unsupportedSubquery(criterion.getClass().getSimpleName());
+            return new LessThanEquals(property.getProperty(), value);
         }
         return criterion;
     }
@@ -775,18 +799,6 @@ public abstract class Query implements Cloneable, Serializable {
     private Collection<?> subqueryValues(QueryableCriteria<?> subquery) {
         List<?> rows = subquery.list();
         return rows == null ? Collections.emptyList() : rows;
-    }
-
-    private Object scalarSubqueryValue(String property, QueryableCriteria<?> subquery) {
-        List<?> rows = subquery.list();
-        if (rows == null || rows.isEmpty()) {
-            return null;
-        }
-        if (rows.size() > 1) {
-            throw new InvalidDataAccessResourceUsageException("The subquery compared with property '" + property +
-                    "' returned " + rows.size() + " rows, but a comparison needs exactly one value");
-        }
-        return rows.get(0);
     }
 
     private InvalidDataAccessResourceUsageException unsupportedSubquery(String form) {
