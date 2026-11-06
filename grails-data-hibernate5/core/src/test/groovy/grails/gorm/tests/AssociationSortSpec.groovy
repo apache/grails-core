@@ -319,6 +319,43 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManag
         'a property, then an association'        | { isNotNull('club'); order('name', 'desc'); order('club.name') }     || ['MU First Team', 'Chelsea First Team', 'Arsenal Second Team', 'Arsenal First Team']
     }
 
+    void 'a criteria query ordered by the identifier of an association can be distinct on it or group by it'() {
+        given:
+        final clubIds = [Club.findByName('Manchester United'), Club.findByName('Arsenal'), Club.findByName('Chelsea')]*.id
+
+        when:
+        final distinct = Team.createCriteria().list {
+            isNotNull('club')
+            projections {
+                distinct('club.id')
+            }
+            order('club.id')
+        }
+        final grouped = Team.createCriteria().list {
+            isNotNull('club')
+            projections {
+                groupProperty('club.id')
+                rowCount()
+            }
+            order('club.id', 'desc')
+        }
+
+        then: 'the order reads the foreign key, as the projection does'
+        distinct == clubIds.sort()
+        grouped.collect { it[0] } == clubIds.sort().reverse()
+    }
+
+    void 'a criteria query ordered by the identifier of an association keeps a team without a club'() {
+        when:
+        final results = Team.createCriteria().list {
+            order('club.id')
+        }
+
+        then:
+        'Unattached First Team' in results*.name
+        results*.name - 'Unattached First Team' == ['MU First Team', 'Arsenal First Team', 'Chelsea First Team']
+    }
+
     void 'a criteria query ordered by a property of a collection does not fetch the collection'() {
         given:
         saveSquad()

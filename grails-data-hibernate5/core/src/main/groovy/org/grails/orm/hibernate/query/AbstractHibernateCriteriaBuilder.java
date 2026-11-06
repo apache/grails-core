@@ -75,6 +75,7 @@ import org.grails.datastore.mapping.model.types.Association;
 import org.grails.datastore.mapping.model.types.Basic;
 import org.grails.datastore.mapping.model.types.Embedded;
 import org.grails.datastore.mapping.model.types.ToMany;
+import org.grails.datastore.mapping.model.types.ToOne;
 import org.grails.datastore.mapping.multitenancy.MultiTenancySettings;
 import org.grails.datastore.mapping.query.Query;
 import org.grails.datastore.mapping.query.api.BuildableCriteria;
@@ -1541,13 +1542,33 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
      */
     private void requestOrder(String propertyName, Function<String, Order> orderFactory) {
         String[] tokens = propertyName.split("\\.");
-        if (tokens.length == 1 || datastore == null || aliasMap.containsValue(tokens[0])) {
-            // a property of the queried class, or a path from an alias
+        if (tokens.length == 1 || datastore == null || aliasMap.containsValue(tokens[0]) || isAssociationIdentifier(tokens)) {
+            // a property of the queried class, a path from an alias, or a path that needs no join
             requestedOrders.add(new RequestedOrder(orderFactory.apply(calculatePropertyName(propertyName))));
         }
         else {
             requestedOrders.add(new RequestedOrder(tokens, orderFactory, targetClass, getAssociationPath(), getLastAlias()));
         }
+    }
+
+    /**
+     * Whether the path is the identifier of an association to a single instance. Hibernate reads it
+     * from the foreign key of the association, so the association is not joined for an order by it.
+     * A projection that groups by the same path, or is distinct on it, reads the foreign key as well,
+     * and a database only accepts an order by what such a projection selects.
+     */
+    private boolean isAssociationIdentifier(String[] tokens) {
+        if (tokens.length != 2) {
+            return false;
+        }
+        PersistentEntity entity = datastore.getMappingContext().getPersistentEntity(targetClass.getName());
+        PersistentProperty property = entity != null ? entity.getPropertyByName(tokens[0]) : null;
+        if (!(property instanceof ToOne) || property instanceof Embedded) {
+            return false;
+        }
+        PersistentEntity associatedEntity = ((ToOne) property).getAssociatedEntity();
+        PersistentProperty identity = associatedEntity != null ? associatedEntity.getIdentity() : null;
+        return identity != null && identity.getName().equals(tokens[1]);
     }
 
     /**
