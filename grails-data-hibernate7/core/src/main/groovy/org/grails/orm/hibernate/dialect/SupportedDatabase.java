@@ -24,6 +24,7 @@ import org.hibernate.dialect.DB2iDialect;
 import org.hibernate.dialect.DB2zDialect;
 import org.hibernate.dialect.Dialect;
 import org.hibernate.dialect.H2Dialect;
+import org.hibernate.dialect.MariaDBDialect;
 import org.hibernate.dialect.MySQLDialect;
 import org.hibernate.dialect.OracleDialect;
 import org.hibernate.dialect.PostgreSQLDialect;
@@ -69,7 +70,9 @@ import org.grails.orm.hibernate.query.SqlSyntax;
  */
 public enum SupportedDatabase implements ClassKeyed<SupportedDatabase> {
 
-    // MariaDB's dialect extends MySQL's, and both read RLIKE
+    // MariaDB's dialect extends MySQL's, so it is declared first; REGEXP and RLIKE are synonyms on both
+    MARIADB(SqlSyntax.MYSQL, "?1 REGEXP ?2", UniqueIndexNulls.DISTINCT, MariaDBDialect.class),
+
     MYSQL(SqlSyntax.MYSQL, "?1 RLIKE ?2", UniqueIndexNulls.DISTINCT, MySQLDialect.class),
 
     POSTGRESQL(SqlSyntax.POSTGRESQL, "?1 ~* ?2", UniqueIndexNulls.DISTINCT, PostgreSQLDialect.class),
@@ -79,8 +82,10 @@ public enum SupportedDatabase implements ClassKeyed<SupportedDatabase> {
 
     ORACLE(SqlSyntax.ORACLE, "REGEXP_LIKE(?1, ?2)", UniqueIndexNulls.COMPARED, OracleDialect.class),
 
-    SQL_SERVER(SqlSyntax.TRANSACT_SQL, "?1 LIKE ?2", UniqueIndexNulls.DISTINCT,
-            SQLServerDialect.class, SybaseDialect.class),
+    SQL_SERVER(SqlSyntax.TRANSACT_SQL, "?1 LIKE ?2", UniqueIndexNulls.DISTINCT, SQLServerDialect.class),
+
+    // reads native SQL as SQL Server does, and has no regular expression operator here
+    SYBASE(SqlSyntax.TRANSACT_SQL, "?1 LIKE ?2", UniqueIndexNulls.DISTINCT, SybaseDialect.class),
 
     H2(SqlSyntax.H2, "REGEXP_LIKE(?1, ?2)", UniqueIndexNulls.DISTINCT, H2Dialect.class),
 

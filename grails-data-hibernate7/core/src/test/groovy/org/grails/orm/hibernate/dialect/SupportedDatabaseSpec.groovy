@@ -46,12 +46,12 @@ class SupportedDatabaseSpec extends Specification {
         where:
         dialect                                  || expected
         new MySQLDialect()                       || SupportedDatabase.MYSQL
-        new MariaDBDialect()                     || SupportedDatabase.MYSQL
+        new MariaDBDialect()                     || SupportedDatabase.MARIADB
         new PostgreSQLDialect()                  || SupportedDatabase.POSTGRESQL
         new CockroachDialect()                   || SupportedDatabase.COCKROACH
         new OracleDialect()                      || SupportedDatabase.ORACLE
         new SQLServerDialect()                   || SupportedDatabase.SQL_SERVER
-        new SybaseDialect()                      || SupportedDatabase.SQL_SERVER
+        new SybaseDialect()                      || SupportedDatabase.SYBASE
         new H2Dialect()                          || SupportedDatabase.H2
         new DB2iDialect()                        || SupportedDatabase.DB2_IBM_I
         new DB2zDialect()                        || SupportedDatabase.DB2_ZOS
@@ -72,7 +72,7 @@ class SupportedDatabaseSpec extends Specification {
         where:
         dialect                 || pattern
         new MySQLDialect()      || '?1 RLIKE ?2'
-        new MariaDBDialect()    || '?1 RLIKE ?2'
+        new MariaDBDialect()    || '?1 REGEXP ?2'
         new PostgreSQLDialect() || '?1 ~* ?2'
         new OracleDialect()     || 'REGEXP_LIKE(?1, ?2)'
         new H2Dialect()         || 'REGEXP_LIKE(?1, ?2)'
