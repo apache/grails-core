@@ -76,6 +76,10 @@ class ReusedBuilderStateSpec extends HibernateGormDatastoreSpec {
         'throw then count'         | { throwing(it) { it.list { eq('name', 'both'); throw new IllegalStateException('x') } } } | { it.count { } }
         'association throws'       | { throwing(it) { it.list { club { throw new IllegalStateException('x') } } } }            | { it.list { club { eq('name', 'A') } } }
         'association then list'    | { it.list { club { eq('name', 'A') } } }           | { it.list { eq('name', 'x') } }
+        'list() then list'         | { it.eq('name', 'both'); it.list() }               | { it.list { eq('name', 'x') } }
+        'list() then count'        | { it.eq('name', 'both'); it.list() }               | { it.count { } }
+        'singleResult then list'   | { it.eq('name', 'both'); it.singleResult() }       | { it.list { } }
+        'maxResults list() then list' | { it.maxResults(1); it.list() }                 | { it.list { } }
     }
 
     void 'a fetch join of one call does not reach the next call'() {
@@ -106,6 +110,8 @@ class ReusedBuilderStateSpec extends HibernateGormDatastoreSpec {
         'firstResult then list'     | { it.firstResult(3) }          | { it.list { } }                       || 1
         'criterion then count'      | { it.eq('name', 'both') }      | { it.count { } }                      || 1
         'criterion then list'       | { it.eq('name', 'both') }      | { it.list { } }                       || 1
+        'maxResults then list()'    | { it.maxResults(1) }           | { it.list() }                         || 1
+        'criterion then list()'     | { it.eq('name', 'both') }      | { it.list() }                         || 1
     }
 
     void 'a criterion held by the builder applies to a get'() {
@@ -115,6 +121,16 @@ class ReusedBuilderStateSpec extends HibernateGormDatastoreSpec {
 
         expect:
         c.get { }.name == 'both'
+    }
+
+    void 'a criterion held by the builder applies to singleResult and is gone afterwards'() {
+        given:
+        def c = ReusedStateTeam.createCriteria()
+        c.eq('name', 'both')
+
+        expect:
+        c.singleResult().name == 'both'
+        c.list { }.size() == 4
     }
 
     void 'a unique result requested before the call is the single instance'() {

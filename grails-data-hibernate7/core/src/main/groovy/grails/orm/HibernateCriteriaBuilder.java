@@ -1318,11 +1318,19 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
     }
 
     public List<?> list() {
-        return hibernateQuery.list();
+        try {
+            return hibernateQuery.list();
+        } finally {
+            resetQueryState();
+        }
     }
 
     public Object singleResult() {
-        return hibernateQuery.singleResult();
+        try {
+            return hibernateQuery.singleResult();
+        } finally {
+            resetQueryState();
+        }
     }
 
     @Override
