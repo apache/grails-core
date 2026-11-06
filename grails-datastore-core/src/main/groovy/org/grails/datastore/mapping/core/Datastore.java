@@ -23,6 +23,7 @@ import groovy.lang.Closure;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.ConfigurableApplicationContext;
 
+import org.grails.datastore.mapping.config.UniqueNulls;
 import org.grails.datastore.mapping.model.MappingContext;
 import org.grails.datastore.mapping.services.ServiceRegistry;
 
@@ -85,6 +86,49 @@ public interface Datastore extends ServiceRegistry {
      * @return True if it does
      */
     boolean isSchemaless();
+
+    /**
+     * How the {@code unique} constraint treats a {@code null} in a composite key for the entities of this datastore:
+     * the {@code grails.gorm.unique.nulls} setting, whose default {@code database} reads
+     * {@link #getDatabaseUniqueNulls()}. Never {@link UniqueNulls#DATABASE}.
+     *
+     * @return the reading
+     */
+    default UniqueNulls getUniqueNulls() {
+        return getDatabaseUniqueNulls();
+    }
+
+    /**
+     * How the unique index of the database this datastore keeps treats a {@code null} in a composite key: {@link UniqueNulls#SKIP}
+     * where nulls are distinct, {@link UniqueNulls#VALUE} where they are compared. A datastore that keeps no such index,
+     * or does not know the database, answers {@link UniqueNulls#VALUE}.
+     *
+     * @return {@link UniqueNulls#SKIP} or {@link UniqueNulls#VALUE}
+     */
+    default UniqueNulls getDatabaseUniqueNulls() {
+        return UniqueNulls.VALUE;
+    }
+
+    /**
+     * The configured {@link UniqueNulls} reading from settings, before resolving {@link UniqueNulls#DATABASE}.
+     *
+     * @return the configured mode, or {@code null} if unconfigured
+     */
+    default UniqueNulls getConfiguredUniqueNulls() {
+        return null;
+    }
+
+    /**
+     * Whether the unique index of the database this datastore keeps omits a key that is {@code null} in every
+     * column, or the datastore does not have a unique index of its own (such as {@code MongoDatastore},
+     * {@code Neo4jDatastore} or {@code SimpleMapDatastore}), so that two rows whose unique key is entirely null
+     * do not conflict.
+     *
+     * @return {@code true} if entirely-null unique keys are exempt from uniqueness checks under the database reading
+     */
+    default boolean isEntirelyNullKeyExempt() {
+        return true;
+    }
 
     /**
      * Execute the given closure with a session

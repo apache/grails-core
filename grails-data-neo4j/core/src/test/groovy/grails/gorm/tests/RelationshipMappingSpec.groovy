@@ -254,6 +254,17 @@ class RelationshipMappingSpec extends Neo4jGormDatastoreSpec{
 
     }
 
+    void "test query relationship entity with isNull and isNotNull on endpoints"() {
+        given:
+        setupRelationship()
+
+        expect:
+        CastMember.createCriteria().list { isNotNull('from') }.size() == 2
+        CastMember.createCriteria().list { isNotNull('to') }.size() == 2
+        CastMember.createCriteria().list { isNull('from') }.isEmpty()
+        CastMember.createCriteria().list { isNull('to') }.isEmpty()
+    }
+
     protected void setupRelationship() {
         Celeb c = new Celeb(name: "Keanu")
         c.save()
