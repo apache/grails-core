@@ -34,6 +34,8 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
+import io.micrometer.observation.Observation;
+import io.micrometer.observation.ObservationRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -43,6 +45,7 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.http.server.observation.ServerRequestObservationContext;
 import org.springframework.web.context.ServletContextAware;
 import org.springframework.web.context.request.async.AsyncRequestTimeoutException;
+import org.springframework.web.context.support.WebApplicationContextUtils;
 import org.springframework.web.filter.ServerHttpObservationFilter;
 import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.View;
@@ -106,8 +109,6 @@ public class GrailsExceptionResolver extends SimpleMappingExceptionResolver impl
 
         ex = findWrappedException(ex);
 
-        recordServerError(request, ex);
-
         if (!(ex instanceof AsyncRequestTimeoutException)) {
             logFullStackTraceIfEnabled(ex);
             filterStackTrace(ex);
@@ -129,15 +130,52 @@ public class GrailsExceptionResolver extends SimpleMappingExceptionResolver impl
             mv = resolveViewOrForward(ex, urlMappings, request, response, mv);
         }
 
+        recordServerError(request, ex);
+
         return mv;
     }
 
     /**
      * Every exception this resolves is a server error, and resolving it hides it from the observation of the request,
-     * whose metrics would otherwise say there was no error and whose trace would not be marked as failed.
+     * whose metrics would otherwise say there was no error and whose trace would not be marked as failed. Only
+     * {@link Observation#error(Throwable)} tells the observation's handlers, one of which marks the span, so setting the
+     * error on the context is what is left when the observation cannot be found.
+     * <p>
+     * An exception left in {@link WebUtils#ERROR_EXCEPTION_ATTRIBUTE} is not recorded here, because the filter that stops
+     * the observation records what it finds there.
      */
-    private static void recordServerError(HttpServletRequest request, Exception ex) {
-        ServerHttpObservationFilter.findObservationContext(request).ifPresent(context -> context.setError(ex));
+    private void recordServerError(HttpServletRequest request, Exception ex) {
+        if (request.getAttribute(WebUtils.ERROR_EXCEPTION_ATTRIBUTE) == ex) {
+            return;
+        }
+        ServerHttpObservationFilter.findObservationContext(request).ifPresent(context -> {
+            Observation observation = findObservation(context);
+            if (observation != null) {
+                observation.error(ex);
+            }
+            else {
+                context.setError(ex);
+            }
+        });
+    }
+
+    /**
+     * The observation of a context, which the filter that started it keeps in scope while the request is dispatched,
+     * though not necessarily as the innermost one.
+     */
+    private Observation findObservation(Observation.Context context) {
+        ApplicationContext applicationContext = WebApplicationContextUtils.getWebApplicationContext(servletContext);
+        ObservationRegistry registry = applicationContext != null ?
+                applicationContext.getBeanProvider(ObservationRegistry.class).getIfAvailable() : null;
+        Observation.Scope scope = registry != null ? registry.getCurrentObservationScope() : null;
+        while (scope != null) {
+            Observation observation = scope.getCurrentObservation();
+            if (observation != null && observation.getContext() == context) {
+                return observation;
+            }
+            scope = scope.getPreviousObservationScope();
+        }
+        return null;
     }
 
     /**
