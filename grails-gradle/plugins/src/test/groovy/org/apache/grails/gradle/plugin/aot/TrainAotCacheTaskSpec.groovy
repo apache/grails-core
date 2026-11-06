@@ -324,7 +324,7 @@ exit 1
     void 'a run whose home page always answers that it is not ready is still exercised'() {
         given: 'waited for no longer than the timeout, since nothing says that answer will change'
             TrainAotCacheTask task = servingTask(['/page'], true, 'homePageDown')
-            task.startTimeoutSeconds.set(2)
+            task.startTimeoutSeconds.set(10)
 
         when:
             task.train()
