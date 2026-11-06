@@ -114,6 +114,13 @@ The default builder is `paketobuildpacks/ubuntu-resolute-builder`, in place of `
 With no `builder` configured, the run image is `paketobuildpacks/ubuntu-resolute-run-tiny:latest`, which still has no shell; with one configured, it is the run image of the builder, which for `ubuntu-resolute-builder` has a shell.
 The builder no longer pins the version of the run image, so set both `builder` and `runImage` to specific versions for repeatable images, or set `builder` to `paketobuildpacks/builder-noble-java-tiny` to keep the previous one.
 
+* *An exception an action throws is now recorded as an error on the HTTP server observation.*
+`GrailsExceptionResolver` handled the exception out of the observation's sight, so `http.server.requests` tagged a 500 with `error` and `exception` values of `none`, and tracing did not see a failure.
+It now records the exception, as Spring Framework 7.1 does for the exceptions Spring MVC translates to a 5xx, including an async timeout.
+These requests were already counted with `outcome=SERVER_ERROR`, but an alert that counts a non-`none` `error` value will see more server errors than before.
+A client error is not recorded.
+A custom `ObservationConvention` can leave out the error for particular exceptions.
+
 * *`spring-boot-starter-amqp` no longer means RabbitMQ.*
 It is now the starter for generic AMQP 1.0, and RabbitMQ has starters of its own.
 An application that uses RabbitMQ through `spring-boot-starter-amqp` or `spring-boot-starter-amqp-test` changes to `spring-boot-starter-rabbitmq` or `spring-boot-starter-rabbitmq-test`, and any import of `org.springframework.boot.amqp.autoconfigure` to `org.springframework.boot.rabbitmq.autoconfigure`.
