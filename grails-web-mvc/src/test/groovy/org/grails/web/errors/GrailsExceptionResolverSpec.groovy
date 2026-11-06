@@ -61,6 +61,7 @@ import spock.lang.Issue
 import spock.lang.Specification
 
 import jakarta.servlet.FilterChain
+import jakarta.servlet.RequestDispatcher
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
 
@@ -124,6 +125,22 @@ class GrailsExceptionResolverSpec extends Specification {
         then: 'the handler answered, and the wrapper its model left on the request is not what is reported'
         response.forwardedUrl == '/errors/serverError'
         observed.error.is(original)
+    }
+
+    void 'a filter can read the exception an error handler answered once the chain has returned, with no observation'() {
+        given:
+        def resolver = resolverFor({ '500'(controller: 'errors', action: 'serverError') }, true)
+        def request = new MockHttpServletRequest(servletContext, 'GET', '/fail')
+        def response = new MockHttpServletResponse()
+        bind(GRAILS, request, response)
+        def original = new IllegalStateException('original')
+
+        when:
+        resolver.resolveException(request, response, null, original)
+
+        then:
+        response.forwardedUrl == '/errors/serverError'
+        request.getAttribute(RequestDispatcher.ERROR_EXCEPTION).is(original)
     }
 
     void 'an exception is resolved as usual without an observation'() {

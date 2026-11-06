@@ -141,13 +141,13 @@ public class GrailsExceptionResolver extends SimpleMappingExceptionResolver impl
     }
 
     /**
-     * A forward to an error handler copies its model to the request and routes the request again. The wrapper this
-     * leaves in {@link WebUtils#ERROR_EXCEPTION_ATTRIBUTE} is what the observation reads last, over the exception that
-     * was recorded, and the handler's route replaces the one that failed, so every failure a handler answers would be
-     * reported as the same route. Spring MVC clears that attribute in the same way once it has rendered an error view.
+     * A forward to an error handler copies its model to the request and routes the request again. That leaves a wrapper
+     * in {@link WebUtils#ERROR_EXCEPTION_ATTRIBUTE}, and the handler's route in place of the one that failed, so every
+     * failure a handler answers would be reported as the same route. The attribute keeps the exception itself for
+     * whatever reads it once the chain has returned, which includes the filter that observes the request.
      */
-    private static void keepFailureObserved(HttpServletRequest request, String failedRoute) {
-        request.removeAttribute(WebUtils.ERROR_EXCEPTION_ATTRIBUTE);
+    private static void keepFailureObserved(HttpServletRequest request, Exception ex, String failedRoute) {
+        request.setAttribute(WebUtils.ERROR_EXCEPTION_ATTRIBUTE, ex);
         ServerHttpObservationFilter.findObservationContext(request)
                 .ifPresent(context -> context.setPathPattern(failedRoute));
     }
@@ -283,7 +283,7 @@ public class GrailsExceptionResolver extends SimpleMappingExceptionResolver impl
                     }
                     finally {
                         request.removeAttribute(ERROR_HANDLER_FORWARD_IN_PROGRESS_ATTRIBUTE);
-                        keepFailureObserved(request, failedRoute);
+                        keepFailureObserved(request, ex, failedRoute);
                     }
                     // return an empty ModelAndView since the error handler has been processed
                     return new ModelAndView();
