@@ -18,6 +18,13 @@
  */
 package org.grails.datastore.gorm.mongodb.embedded;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.Socket;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
+import java.nio.charset.StandardCharsets;
+
 import de.bwaldvogel.mongo.MongoServer;
 import de.bwaldvogel.mongo.backend.memory.MemoryBackend;
 
@@ -40,6 +47,14 @@ public class InMemoryMongoBackend implements EmbeddedMongoBackend {
     public static final String NAME = "in-memory";
 
     private static final String SERVER_CLASS = "de.bwaldvogel.mongo.MongoServer";
+
+    private static final int SERVE_ONE_REQUEST_TIMEOUT_MILLIS = 5000;
+
+    private static final int OP_MSG = 2013;
+
+    private static final byte BSON_STRING = 0x02;
+
+    private static final byte BSON_INT32 = 0x10;
 
     @Override
     public String getName() {
@@ -70,7 +85,53 @@ public class InMemoryMongoBackend implements EmbeddedMongoBackend {
         MemoryBackend backend = new RetainingMemoryBackend();
         MongoServer server = new MongoServer(backend);
         server.bind("localhost", settings.getPort());
+        serveOneRequest(settings.getPort());
         return new RunningInMemoryMongo(backend, server);
+    }
+
+    /**
+     * Has the server answer one request, so that what its event loops need is loaded while the
+     * application is starting rather than when its first client connects.
+     *
+     * <p>That client is the MongoDB driver, which connects as the application context finishes
+     * refreshing, the moment Spring Boot closes the jars of an executable jar to clear its class
+     * loader's caches. A class loaded right then fails with {@code IllegalStateException}. Reading
+     * the driver's first bytes allocates the event loop's first buffer, and an event loop that fails
+     * to load the class of it ends its thread. The driver's connections on it then never answer, and
+     * stopping the server waits forever for them to close.
+     *
+     * <p>Whatever goes wrong here goes wrong again for the first real client, where it says more, so
+     * it is not reported.
+     */
+    private static void serveOneRequest(int port) {
+        try (Socket client = new Socket("localhost", port)) {
+            client.setSoTimeout(SERVE_ONE_REQUEST_TIMEOUT_MILLIS);
+            client.getOutputStream().write(isMaster());
+            // the whole reply, since closing with some of it unread resets the connection, which the server logs as an error
+            InputStream reply = client.getInputStream();
+            int length = ByteBuffer.wrap(reply.readNBytes(4)).order(ByteOrder.LITTLE_ENDIAN).getInt();
+            reply.readNBytes(length - 4);
+        }
+        catch (IOException ignored) {
+            return;
+        }
+    }
+
+    /** The {@code isMaster} command the driver starts with, in the wire protocol's {@code OP_MSG}. */
+    private static byte[] isMaster() {
+        byte[] command = "isMaster".getBytes(StandardCharsets.UTF_8);
+        byte[] databaseField = "$db".getBytes(StandardCharsets.UTF_8);
+        byte[] database = "admin".getBytes(StandardCharsets.UTF_8);
+        int documentLength = 4 + 1 + command.length + 1 + 4 + 1 + databaseField.length + 1 + 4 + database.length + 1 + 1;
+        int messageLength = 16 + 4 + 1 + documentLength;
+        ByteBuffer message = ByteBuffer.allocate(messageLength).order(ByteOrder.LITTLE_ENDIAN);
+        message.putInt(messageLength).putInt(1).putInt(0).putInt(OP_MSG);
+        message.putInt(0).put((byte) 0);
+        message.putInt(documentLength);
+        message.put(BSON_INT32).put(command).put((byte) 0).putInt(1);
+        message.put(BSON_STRING).put(databaseField).put((byte) 0).putInt(database.length + 1).put(database).put((byte) 0);
+        message.put((byte) 0);
+        return message.array();
     }
 
     /**
