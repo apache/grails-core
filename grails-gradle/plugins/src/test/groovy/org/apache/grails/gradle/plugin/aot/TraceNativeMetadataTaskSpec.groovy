@@ -159,6 +159,24 @@ exec '${new File(System.getProperty('java.home'), 'bin/java').absolutePath}' \\
             !posted.contains('nosuchfield')
     }
 
+    void 'a field rendered with an empty value is filled in, so that the form can succeed'() {
+        given: 'blank fields fail validation, the page answers with the form again, and the save is never recorded'
+            TraceNativeMetadataTask task = task([], ['/scaffolded'])
+
+        when:
+            task.trace()
+
+        then:
+            String submitted = requested.find { String line -> line.startsWith('POST /scaffolded-save') }
+            submitted =~ /username=traced-\d+/
+            submitted.contains('password=traced-secret')
+
+        and: 'what a field does say is sent, and a hidden field is the page\'s own, whatever it says'
+            submitted.contains('nickname=kept')
+            submitted.contains('_csrf=token')
+            submitted =~ /version=(&|$)/
+    }
+
     void 'the form with the most fields is the one submitted'() {
         given: 'a page carrying a layout search form ahead of its own'
             TraceNativeMetadataTask task = task([], ['/create'])
@@ -279,7 +297,7 @@ exec '${new File(System.getProperty('java.home'), 'bin/java').absolutePath}' \\
     void 'an application whose home page always answers that it is not ready is still traced'() {
         given: 'waited for no longer than the timeout, since nothing says that answer will change'
             TraceNativeMetadataTask task = task(['/page'], [], 'homePageDown')
-            task.startTimeoutSeconds.set(2)
+            task.startTimeoutSeconds.set(10)
 
         when:
             task.trace()

@@ -61,6 +61,16 @@ class TracedRunFixture {
             <input type="text" name="secretTitle"/>
         </form></body></html>'''
 
+    /** What the fields plugin renders for a new instance: a value that is there and says nothing. */
+    private static final String SCAFFOLDED_FORM = '''<html><body>
+        <form action="/scaffolded-save" method="post">
+            <input type="hidden" name="_csrf" value="token"/>
+            <input type="hidden" name="version" value=""/>
+            <input type="text" name="username" value=""/>
+            <input type="password" name="password" value=""/>
+            <input type="text" name="nickname" value="kept"/>
+        </form></body></html>'''
+
     static void main(String[] args) {
         int port = Integer.parseInt(args[0])
         File requested = new File(args[1])
@@ -97,6 +107,9 @@ class TracedRunFixture {
             }
             else if (path == '/login') {
                 response = LOGIN_FORM
+            }
+            else if (path == '/scaffolded') {
+                response = SCAFFOLDED_FORM
             }
             else if (path == '/authenticate') {
                 exchange.responseHeaders.add('Set-Cookie', 'session=in; Path=/')

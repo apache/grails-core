@@ -466,7 +466,10 @@ abstract class TraceNativeMetadataTask extends DefaultTask {
     /**
      * What the form would send. A field that carries a value sends it, which is how the token a
      * security filter demands is carried; a checkbox sends what a ticked one sends; anything else
-     * sends something recognisable, so a row in a database says where it came from.
+     * sends something recognisable, so a row in a database says where it came from. That includes a
+     * field rendered with an empty value, as the fields plugin renders them for a new instance:
+     * sent blank it fails validation, the page answers with the form again, and what a save does
+     * when it succeeds is never recorded. A hidden field is the page's own, so it is sent as it is.
      */
     private static Map<String, String> fieldsOf(String markup) {
         Map<String, String> fields = [:]
@@ -483,7 +486,8 @@ abstract class TraceNativeMetadataTask extends DefaultTask {
             if (kind in ['submit', 'button', 'reset', 'image', 'file']) {
                 continue
             }
-            fields[name.group(1)] = value.find() ? value.group(1)
+            String carried = value.find() ? value.group(1) : null
+            fields[name.group(1)] = carried || (carried != null && kind == 'hidden') ? carried
                     : kind == 'checkbox' || kind == 'radio' ? 'on'
                     : kind == 'password' ? 'traced-secret'
                     : "traced-${System.nanoTime()}".toString()
