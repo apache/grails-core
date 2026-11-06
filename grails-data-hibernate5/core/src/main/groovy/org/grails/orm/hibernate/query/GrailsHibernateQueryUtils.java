@@ -19,6 +19,8 @@
 
 package org.grails.orm.hibernate.query;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
 import jakarta.persistence.LockModeType;
@@ -27,7 +29,10 @@ import jakarta.persistence.criteria.CriteriaQuery;
 import jakarta.persistence.criteria.Expression;
 import jakarta.persistence.criteria.From;
 import jakarta.persistence.criteria.Join;
+import jakarta.persistence.criteria.JoinType;
+import jakarta.persistence.criteria.Predicate;
 import jakarta.persistence.criteria.Root;
+import jakarta.persistence.criteria.Subquery;
 
 import org.hibernate.Criteria;
 import org.hibernate.FetchMode;
@@ -43,9 +48,12 @@ import org.grails.datastore.mapping.config.Property;
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.PersistentProperty;
 import org.grails.datastore.mapping.model.types.Association;
+import org.grails.datastore.mapping.model.types.Basic;
 import org.grails.datastore.mapping.model.types.Embedded;
+import org.grails.datastore.mapping.model.types.ToMany;
 import org.grails.datastore.mapping.reflect.ClassUtils;
 import org.grails.orm.hibernate.cfg.AbstractGrailsDomainBinder;
+import org.grails.orm.hibernate.cfg.GrailsHibernateUtil;
 import org.grails.orm.hibernate.cfg.Mapping;
 
 /**
@@ -92,7 +100,14 @@ public class GrailsHibernateQueryUtils {
             Map fetch = (Map) fetchObj;
             for (Object o : fetch.keySet()) {
                 String associationName = (String) o;
-                c.setFetchMode(associationName, getFetchMode(fetch.get(associationName)));
+                Object fetchValue = fetch.get(associationName);
+                if (fetchValue instanceof JoinType) {
+                    // applied before the sort, so that a sort by the association uses the requested join
+                    GrailsHibernateUtil.applyJoinType(entity, c, associationName, (JoinType) fetchValue);
+                }
+                else {
+                    c.setFetchMode(associationName, getFetchMode(fetchValue));
+                }
             }
         }
 
@@ -167,9 +182,11 @@ public class GrailsHibernateQueryUtils {
             Map fetch = (Map) fetchObj;
             for (Object o : fetch.keySet()) {
                 String associationName = (String) o;
-
-                final FetchMode fetchMode = getFetchMode(fetch.get(associationName));
-                if (fetchMode == FetchMode.JOIN) {
+                Object fetchValue = fetch.get(associationName);
+                if (fetchValue instanceof JoinType) {
+                    restrictToJoinedInstances(entity, query, queryRoot, criteriaBuilder, associationName, (JoinType) fetchValue);
+                }
+                else if (getFetchMode(fetchValue) == FetchMode.JOIN) {
                     queryRoot.join(associationName);
                 }
             }
@@ -262,9 +279,49 @@ public class GrailsHibernateQueryUtils {
     }
 
     /**
+     * Restricts a query to the instances for which an inner join of an association path returns a row,
+     * when the {@code fetch} argument requests an inner or a right join. The path is joined in a
+     * subquery, which is correlated with the query by the instance, so that a path through a
+     * collection does not multiply the rows. A left join leaves the query as it is.
+     */
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    private static void restrictToJoinedInstances(PersistentEntity entity, CriteriaQuery query, Root queryRoot, CriteriaBuilder criteriaBuilder, String associationPath, JoinType joinType) {
+        if (joinType == JoinType.LEFT) {
+            return;
+        }
+        String[] tokens = associationPath.split("\\.");
+        PersistentEntity currentEntity = entity;
+        for (int i = 0; i < tokens.length; i++) {
+            PersistentProperty property = currentEntity != null ? currentEntity.getPropertyByName(tokens[i]) : null;
+            if (!(property instanceof Association) || property instanceof Embedded || (property instanceof Basic && i != tokens.length - 1)) {
+                return;
+            }
+            currentEntity = ((Association) property).getAssociatedEntity();
+        }
+        Subquery subquery = query.subquery(entity.getJavaClass());
+        Root subqueryRoot = subquery.from(entity.getJavaClass());
+        From from = subqueryRoot;
+        for (String token : tokens) {
+            from = from.join(token, JoinType.INNER);
+        }
+        subquery.select(subqueryRoot).where(criteriaBuilder.equal(subqueryRoot, queryRoot));
+        Predicate exists = criteriaBuilder.exists(subquery);
+        Predicate restriction = query.getRestriction();
+        query.where(restriction != null ? criteriaBuilder.and(restriction, exists) : exists);
+    }
+
+    /**
      * Add order to criteria, creating necessary subCriteria if nested sort property (ie. sort:'nested.property').
      */
     private static void addOrderPossiblyNested(Criteria c, PersistentEntity entity, String sort, String order, boolean ignoreCase) {
+        addOrderPossiblyNested(c, null, entity, sort, order, ignoreCase);
+    }
+
+    /**
+     * Add order to criteria, creating necessary subCriteria if nested sort property (ie. sort:'nested.property').
+     * The association path is the path of the given criteria from the root criteria, or null for the root.
+     */
+    private static void addOrderPossiblyNested(Criteria c, String associationPath, PersistentEntity entity, String sort, String order, boolean ignoreCase) {
         int firstDotPos = sort.indexOf(".");
         if (firstDotPos == -1) {
             addOrder(c, sort, order, ignoreCase);
@@ -277,11 +334,22 @@ public class GrailsHibernateQueryUtils {
                 addOrder(c, sort, order, ignoreCase);
             } else if (property instanceof Association) {
                 Association a = (Association) property;
-                Criteria subCriteria = c.createCriteria(sortHead);
                 PersistentEntity associatedEntity = a.getAssociatedEntity();
-                Class<?> propertyTargetClass = associatedEntity.getJavaClass();
-                cacheCriteriaByMapping(propertyTargetClass, subCriteria);
-                addOrderPossiblyNested(subCriteria, associatedEntity, sortTail, order, ignoreCase); // Recurse on nested sort
+                String sortPath = associationPath == null ? sortHead : associationPath + '.' + sortHead;
+                // a join that the query already has for the association, such as the one of a requested join type
+                Criteria subCriteria = GrailsHibernateUtil.findJoinCriteria(c, sortPath);
+                if (subCriteria == null) {
+                    // a left join, so that the sort keeps the rows where the association is null; a collection
+                    // is joined without being fetched, unless the query fetches it or another collection
+                    org.hibernate.sql.JoinType joinType = GrailsHibernateUtil.getSortJoinType(c, sortPath, a instanceof ToMany);
+                    subCriteria = c.createCriteria(sortHead, joinType);
+                    if (a instanceof ToMany && joinType == org.hibernate.sql.JoinType.LEFT_OUTER_JOIN &&
+                            GrailsHibernateUtil.keepsSortedCollectionUnfetched(c, sortPath)) {
+                        GrailsHibernateUtil.keepCollectionUnfetched(subCriteria);
+                    }
+                    cacheCriteriaByMapping(associatedEntity.getJavaClass(), subCriteria);
+                }
+                addOrderPossiblyNested(subCriteria, sortPath, associatedEntity, sortTail, order, ignoreCase); // Recurse on nested sort
             }
         }
     }
@@ -312,12 +380,28 @@ public class GrailsHibernateQueryUtils {
                 addOrder(entity, query, queryRoot, criteriaBuilder, sort, order, ignoreCase);
             } else if (property instanceof Association) {
                 final Association<? extends Property> a = (Association<? extends Property>) property;
-                final Join join = queryRoot.join(sortHead);
+                final Join join = getOrCreateSortJoin(queryRoot, sortHead);
                 PersistentEntity associatedEntity = a.getAssociatedEntity();
-                Class<?> propertyTargetClass = associatedEntity.getJavaClass();
                 addOrderPossiblyNested(query, join, criteriaBuilder, associatedEntity, sortTail, order, ignoreCase); // Recurse on nested sort
             }
         }
+    }
+
+    /**
+     * Returns the join of an association for a sort: the join that the query already has for it, made
+     * by the {@code fetch} argument or by an earlier sort property, or, failing that, a new one, so that
+     * the association is joined once. A new one is a left join, so that the sort keeps the rows where
+     * the association is null.
+     */
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    private static Join getOrCreateSortJoin(From from, String associationName) {
+        for (Object existing : from.getJoins()) {
+            Join join = (Join) existing;
+            if (associationName.equals(join.getAttribute().getName())) {
+                return join;
+            }
+        }
+        return from.join(associationName, JoinType.LEFT);
     }
 
     private static boolean isIgnoreCaseProperty(boolean ignoreCase, PersistentProperty<? extends Property> persistentProperty) {
@@ -342,9 +426,9 @@ public class GrailsHibernateQueryUtils {
                 path = criteriaBuilder.upper(path);
             }
             if (DynamicFinder.ORDER_DESC.equals(order)) {
-                query.orderBy(criteriaBuilder.desc(path));
+                addOrder(query, criteriaBuilder.desc(path));
             } else {
-                query.orderBy(criteriaBuilder.asc(path));
+                addOrder(query, criteriaBuilder.asc(path));
             }
         } else {
             Expression path = queryRoot.get(sort);
@@ -353,11 +437,22 @@ public class GrailsHibernateQueryUtils {
                 path = criteriaBuilder.upper(path);
             }
             if (DynamicFinder.ORDER_DESC.equals(order)) {
-                query.orderBy(criteriaBuilder.desc(path));
+                addOrder(query, criteriaBuilder.desc(path));
             } else {
-                query.orderBy(criteriaBuilder.asc(path));
+                addOrder(query, criteriaBuilder.asc(path));
             }
         }
+    }
+
+    /**
+     * Adds an order to the orders the query already has: <code>orderBy</code> replaces them, so a sort
+     * by more than one property would otherwise sort by the last one only.
+     */
+    @SuppressWarnings("unchecked")
+    private static void addOrder(CriteriaQuery query, jakarta.persistence.criteria.Order order) {
+        List<jakarta.persistence.criteria.Order> orders = new ArrayList<>(query.getOrderList());
+        orders.add(order);
+        query.orderBy(orders);
     }
 
     /**
