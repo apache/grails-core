@@ -41,6 +41,7 @@ public interface HibernateQueryConstants {
     String ARGUMENT_IGNORE_CASE = "ignoreCase";
     String ARGUMENT_CACHE = "cache";
     String ARGUMENT_LOCK = "lock";
+    String METHOD_ADD = "add";
     String CONFIG_PROPERTY_CACHE_QUERIES = "grails.hibernate.cache.queries";
     String CONFIG_PROPERTY_OSIV_READONLY = "grails.hibernate.osiv.readonly";
     String CONFIG_PROPERTY_PASS_READONLY_TO_HIBERNATE = "grails.hibernate.pass.readonly";

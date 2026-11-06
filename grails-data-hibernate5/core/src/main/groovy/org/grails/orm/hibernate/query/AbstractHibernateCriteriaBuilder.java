@@ -1801,6 +1801,13 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
 
         if (criteria == null) createCriteriaInstance();
 
+        if (HibernateQueryConstants.METHOD_ADD.equals(name) && args.length == 1 && args[0] instanceof Criterion) {
+            // a Hibernate criterion belongs to the junction that is open, not to the root criteria;
+            // the call returns the builder so that add(a).add(b) chains as it did on the Criteria
+            addToCriteria((Criterion) args[0]);
+            return this;
+        }
+
         MetaMethod metaMethod = getMetaClass().getMetaMethod(name, args);
         if (metaMethod != null) {
             return metaMethod.invoke(this, args);
