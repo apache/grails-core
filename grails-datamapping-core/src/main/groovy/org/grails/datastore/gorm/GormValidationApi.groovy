@@ -18,6 +18,8 @@
  */
 package org.grails.datastore.gorm
 
+import java.util.function.BiPredicate
+
 import groovy.transform.CompileStatic
 
 import jakarta.persistence.FlushModeType
@@ -29,6 +31,7 @@ import org.springframework.validation.ObjectError
 import org.springframework.validation.Validator
 
 import grails.gorm.validation.CascadingValidator
+import grails.gorm.validation.PersistentEntityValidator
 import org.grails.datastore.gorm.support.BeforeValidateHelper
 import org.grails.datastore.gorm.validation.ValidatorProvider
 import org.grails.datastore.mapping.core.Datastore
@@ -36,6 +39,7 @@ import org.grails.datastore.mapping.core.Session
 import org.grails.datastore.mapping.engine.event.ValidationEvent
 import org.grails.datastore.mapping.model.MappingContext
 import org.grails.datastore.mapping.model.config.GormProperties
+import org.grails.datastore.mapping.model.types.Association
 import org.grails.datastore.mapping.reflect.ClassUtils
 import org.grails.datastore.mapping.validation.ValidationErrors
 
@@ -105,7 +109,7 @@ class GormValidationApi<D> extends AbstractGormApi<D> {
         }
         try {
             beforeValidateHelper.invokeBeforeValidate(instance, fields)
-            fireEvent(instance, fields)
+            ValidationEvent event = fireEvent(instance, fields, deepValidate)
 
             Validator validator = getValidator()
             if (validator == null) {
@@ -126,7 +130,11 @@ class GormValidationApi<D> extends AbstractGormApi<D> {
                 }
             }
 
-            if (validator instanceof CascadingValidator) {
+            BiPredicate<Object, Association> cascadeListener = event.cascadeListener
+            if (cascadeListener != null && validator instanceof PersistentEntityValidator) {
+                // The errors it returns are a copy of the given ones when the errors of an associated object were replaced
+                localErrors = (ValidationErrors) ((PersistentEntityValidator) validator).validate(instance, localErrors, deepValidate, cascadeListener)
+            } else if (validator instanceof CascadingValidator) {
                 ((CascadingValidator) validator).validate(instance, localErrors, deepValidate)
             } else if (validator instanceof org.grails.datastore.gorm.validation.CascadingValidator) {
                 ((org.grails.datastore.gorm.validation.CascadingValidator) validator).validate(instance, localErrors, deepValidate)
@@ -192,11 +200,15 @@ class GormValidationApi<D> extends AbstractGormApi<D> {
      * Fire the validation event.
      * @param target The target instance.
      * @param fields The list of fields being validated, or null.
+     * @param deepValidate Whether the associated objects are validated with the target instance.
+     * @return The event, with the listeners that its listeners have registered for the associated objects.
      */
-    private void fireEvent(target, List fields) {
+    private ValidationEvent fireEvent(target, List fields, boolean deepValidate) {
         ValidationEvent event = createValidationEvent(target)
         event.validatedFields = fields
+        event.deepValidate = deepValidate
         eventPublisher?.publishEvent(event)
+        event
     }
 
     protected ValidationEvent createValidationEvent(target) {

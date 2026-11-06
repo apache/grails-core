@@ -28,15 +28,19 @@ import org.springframework.context.ApplicationEvent;
 import grails.gorm.multitenancy.Tenants;
 import org.grails.datastore.gorm.GormEnhancer;
 import org.grails.datastore.mapping.core.Datastore;
+import org.grails.datastore.mapping.dirty.checking.DirtyCheckable;
 import org.grails.datastore.mapping.engine.event.AbstractPersistenceEvent;
 import org.grails.datastore.mapping.engine.event.PersistenceEventListener;
 import org.grails.datastore.mapping.engine.event.PreInsertEvent;
 import org.grails.datastore.mapping.engine.event.PreUpdateEvent;
 import org.grails.datastore.mapping.engine.event.ValidationEvent;
 import org.grails.datastore.mapping.model.PersistentEntity;
+import org.grails.datastore.mapping.model.types.Association;
 import org.grails.datastore.mapping.model.types.TenantId;
+import org.grails.datastore.mapping.model.types.ToOne;
 import org.grails.datastore.mapping.multitenancy.MultiTenantCapableDatastore;
 import org.grails.datastore.mapping.multitenancy.exceptions.TenantException;
+import org.grails.datastore.mapping.multitenancy.exceptions.TenantNotFoundException;
 import org.grails.datastore.mapping.query.Query;
 import org.grails.datastore.mapping.query.event.PreQueryEvent;
 
@@ -66,6 +70,79 @@ public class MultiTenantEventListener implements PersistenceEventListener {
 
     @Override
     public void onApplicationEvent(ApplicationEvent event) {
+        handleEvent(event);
+        if (event instanceof ValidationEvent && this.datastore.equals(event.getSource())) {
+            ValidationEvent validationEvent = (ValidationEvent) event;
+            if (validationEvent.isDeepValidate()) {
+                // The associated objects that are validated with this one get no event of their own, so the
+                // validator calls back with each of them
+                validationEvent.addCascadeListener(this::assignTenantIdOfAssociatedObject);
+            }
+        }
+    }
+
+    // Called with an associated object, and the association through which the validation reaches it, once its
+    // beforeValidate callback has run, and before its constraints are checked. The object is given the tenant id it
+    // is inserted or updated with. One that has a tenant id and is not saved with its owner keeps it, and is passed
+    // again once every callback of the validation has run, as one of them may have changed it. Without a current
+    // tenant the object is left alone, and gets its tenant id as it is inserted or updated, as before. Returns
+    // whether the object was given a tenant id.
+    private boolean assignTenantIdOfAssociatedObject(Object associatedObject, Association association) {
+        ValidationEvent cascaded = new ValidationEvent(this.datastore, associatedObject);
+        PersistentEntity entity = cascaded.getEntity();
+        if (entity == null || !entity.isMultiTenant()) {
+            return false;
+        }
+        TenantId tenantId = entity.getTenantId();
+        Object object = cascaded.getEntityObject();
+        Object previous = tenantId != null ? cascaded.getEntityAccess().getProperty(tenantId.getName()) : null;
+        boolean saved = isSaved(object, association);
+        if (previous != null && !saved) {
+            return false;
+        }
+        try {
+            handleEvent(cascaded);
+        }
+        catch (TenantNotFoundException e) {
+            return false;
+        }
+        if (tenantId != null && saved) {
+            markChanged(object, tenantId.getName(), previous, cascaded.getEntityAccess().getProperty(tenantId.getName()));
+        }
+        return true;
+    }
+
+    // A datastore that writes the changed properties of an object alone, as GORM for MongoDB does, stores the tenant
+    // id that this listener assigns as the object is updated, since it takes the properties that a listener sets
+    // then as changed. The tenant id is now set here, before that, so it is recorded as a change of an object that
+    // is updated. An object that is not updated is not touched, or it would be updated because of this, and neither
+    // is one that is changed as a whole, all of which is written.
+    private static void markChanged(Object object, String tenantIdName, Object previous, Object assigned) {
+        if (object instanceof DirtyCheckable) {
+            DirtyCheckable dirtyCheckable = (DirtyCheckable) object;
+            boolean changedAsAWhole = dirtyCheckable.hasChanged() && dirtyCheckable.listDirtyPropertyNames().isEmpty();
+            if (!changedAsAWhole) {
+                dirtyCheckable.markDirty(tenantIdName, assigned, previous);
+            }
+        }
+    }
+
+    // Whether the object is inserted or updated with its owner. For an object that tracks its changes this is the
+    // answer of the session, which updates an object only when it is dirty. A save cascades to the object of a
+    // to-one association only when that object has changes of its own, as GORM for MongoDB does, so there a change
+    // inside an embedded or an associated object does not count. An object without a tenant id is not asked: the
+    // in-memory datastore does not read the tenant id of a loaded object back.
+    private boolean isSaved(Object object, Association association) {
+        if (!(object instanceof DirtyCheckable)) {
+            return true;
+        }
+        if (association instanceof ToOne && !association.isEmbedded()) {
+            return ((DirtyCheckable) object).hasChanged();
+        }
+        return this.datastore.getCurrentSession().isDirty(object);
+    }
+
+    private void handleEvent(ApplicationEvent event) {
         Class<? extends ApplicationEvent> eventClass = event.getClass();
         if (supportsEventType(eventClass)) {
             Datastore datastore = (Datastore) event.getSource();
