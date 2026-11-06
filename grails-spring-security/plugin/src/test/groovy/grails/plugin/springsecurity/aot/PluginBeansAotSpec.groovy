@@ -135,3 +135,20 @@ class CustomClassesPluginBeansAotSpec extends AbstractPluginBeansAotSpec {
         securityConfig.springSecurityFilterChainProxyBeanClass = CustomClassesPluginBeansSpec.CustomFilterChainProxy
     }
 }
+
+class CleartextDigestPluginBeansAotSpec extends AbstractPluginBeansAotSpec {
+
+    protected void configure(Object securityConfig) {
+        securityConfig.securityConfigType = 'InterceptUrlMap'
+        securityConfig.useDigestAuth = true
+        securityConfig.digest = [useCleartextPasswords: true]
+    }
+}
+
+class EncodedDigestPluginBeansAotSpec extends AbstractPluginBeansAotSpec {
+
+    protected void configure(Object securityConfig) {
+        securityConfig.securityConfigType = 'InterceptUrlMap'
+        securityConfig.useDigestAuth = true
+    }
+}

@@ -748,13 +748,6 @@ class SpringSecurityCoreGrailsPlugin extends Plugin {
             applicationContext.registerAlias 'securityDebugFilter', 'springSecurityFilterChain'
         }
 
-        if (conf.useDigestAuth) {
-            def passwordEncoder = applicationContext.passwordEncoder
-// TODO            if (passwordEncoder instanceof DigestAuthPasswordEncoder) {
-//                passwordEncoder.resetInitializing()
-//            }
-        }
-
         if (conf.rejectRequestsDuringStartup) {
             // the startup gate opens once this has run and the application has started
             applicationContext.springSecurityStartupGateFilter.markInitialized()
@@ -911,14 +904,20 @@ class SpringSecurityCoreGrailsPlugin extends Plugin {
     private configureDigestAuth = { conf ->
 
         if (conf.digest.useCleartextPasswords) {
-            passwordEncoder(classFor('passwordEncoder', DelegatingPasswordEncoder), ENCODING_ID_NOOP, idToPasswordEncoder(conf))
+            // the filter hashes what is stored as a browser hashes the password, so an encoder adding its id to it would
+            // leave nothing a browser could match
+            Class passwordEncoderClass = classFor('passwordEncoder', NoOpPasswordEncoder)
+            boolean defaultEncoder = passwordEncoderClass == NoOpPasswordEncoder
+            passwordEncoder(passwordEncoderClass) { bean ->
+                if (defaultEncoder) {
+                    bean.factoryMethod = 'getInstance'
+                }
+            }
         }
         else {
+            // what is stored is the hash a browser computes, which no PasswordEncoder can make since it is not given the
+            // username, so the application makes it, and passwordEncoder stays as it was for what else it is used for
             conf.digest.passwordAlreadyEncoded = true
-            conf.dao.reflectionSaltSourceProperty = conf.userLookup.usernamePropertyName
-            passwordEncoder(classFor('passwordEncoder', DigestAuthPasswordEncoder)) {
-                realm = conf.digest.realmName
-            }
         }
 
         digestAuthenticationEntryPoint(classFor('digestAuthenticationEntryPoint', DigestAuthenticationEntryPoint)) {

@@ -119,6 +119,12 @@ A denied request for `/apple-touch-icon.png`, `/manifest.json` or the `/.well-kn
 Spring Security 7.2's configuration DSL ignores these paths, which the plugin does not use, so the plugin now ignores them too, with `grails.plugin.springsecurity.requestCache.ignoredPatterns`.
 An application that secures a page at one of these paths and wants a login to return to it can leave the path out of that list.
 
+* *Digest authentication in the Spring Security plugin starts and signs users in.*
+`useDigestAuth` with its default of hashed passwords used to fail at startup, naming an encoder that no longer exists.
+What a user has stored is now the hash a browser computes, which the application computes, as the link:security.html#core-basicAndDigestAuth[guide] shows.
+With `digest.useCleartextPasswords`, nobody could sign in with Digest authentication, because the password encoder stored `{noop}secret`.
+It now stores what was typed, so an application that signed in through a form with stored values such as `{noop}secret` removes the `{noop}` prefix from them.
+
 [TIP]
 ====
 The Spring Boot properties migrator, described in the link:upgrading.html#upgrading80x[Grails 8 upgrade guide], finds the configuration properties Spring Boot 4.2 renames, such as `server.tomcat.use-relative-redirects`.
