@@ -21,7 +21,14 @@ package org.grails.web.mapping.mvc
 import groovy.json.JsonSlurper
 import org.codehaus.groovy.runtime.InvokerInvocationException
 
+import jakarta.servlet.FilterChain
+import jakarta.servlet.http.HttpServletRequest
+import jakarta.servlet.http.HttpServletResponse
+
 import ch.qos.logback.classic.Level
+import io.micrometer.observation.Observation
+import io.micrometer.observation.ObservationHandler
+import io.micrometer.observation.ObservationRegistry
 
 import org.springframework.core.env.MapPropertySource
 import org.springframework.http.HttpHeaders
@@ -292,6 +299,39 @@ class ActionExceptionProblemDetailsSpec extends Specification {
         observation.error.is(serverError)
     }
 
+    void 'the handlers of the observation, one of which marks the span, are told of a server error and not of a client error'() {
+        given: 'the filter a running application has around its requests'
+        List<Throwable> notified = []
+        def registry = ObservationRegistry.create()
+        registry.observationConfig().observationHandler(new ObservationHandler<Observation.Context>() {
+            @Override
+            boolean supportsContext(Observation.Context context) {
+                context instanceof ServerRequestObservationContext
+            }
+
+            @Override
+            void onError(Observation.Context context) {
+                notified << context.error
+            }
+        })
+        def resolver = resolver([problemDetails: true], null, registry)
+        def handler = action(new ProblemController())
+        FilterChain application = { req, res ->
+            resolver.resolveException((HttpServletRequest) req, (HttpServletResponse) res, handler, thrown)
+        } as FilterChain
+
+        when:
+        new ServerHttpObservationFilter(registry).doFilter(request, response, application)
+
+        then:
+        notified == (told ? [thrown] : [])
+
+        where:
+        thrown                                              | told
+        new IllegalStateException('secret')                 | true
+        new ResponseStatusException(HttpStatus.BAD_REQUEST) | false
+    }
+
     void 'the request of an unexpected exception is logged, and that of an exception raised on purpose is not'() {
         given:
         def resolver = resolver([problemDetails: true])
@@ -446,7 +486,8 @@ class ActionExceptionProblemDetailsSpec extends Specification {
         new JsonSlurper().parseText(response.contentAsString) as Map
     }
 
-    private ActionExceptionHandlerResolver resolver(Map<String, Boolean> settings, Closure mappings = null) {
+    private ActionExceptionHandlerResolver resolver(Map<String, Boolean> settings, Closure mappings = null,
+                                                    ObservationRegistry registry = null) {
         context = new GenericWebApplicationContext()
         context.environment.propertySources.addFirst(new MapPropertySource('test',
                 settings.collectEntries { key, value -> ["grails.exceptionresolver.$key".toString(), value] } as Map<String, Object>))
@@ -461,6 +502,9 @@ class ActionExceptionProblemDetailsSpec extends Specification {
             grailsContext.registerMockBean(GrailsApplication.APPLICATION_ID, new DefaultGrailsApplication())
             def holder = new DefaultUrlMappingsHolder(new DefaultUrlMappingEvaluator(grailsContext).evaluateMappings(mappings))
             context.registerBean(UrlMappingsHolder.BEAN_ID, UrlMappingsHolder, { holder })
+        }
+        if (registry != null) {
+            context.registerBean('observationRegistry', ObservationRegistry, { registry })
         }
         context.registerBean(ActionExceptionHandlerResolver)
         context.refresh()

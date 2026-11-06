@@ -25,6 +25,9 @@ import org.codehaus.groovy.runtime.InvokerInvocationException
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
 
+import io.micrometer.observation.Observation
+import io.micrometer.observation.ObservationRegistry
+
 import org.springframework.context.ApplicationContext
 import org.springframework.context.ApplicationContextAware
 import org.springframework.core.Ordered
@@ -246,11 +249,38 @@ class ActionExceptionHandlerResolver implements HandlerExceptionResolver, Ordere
         return urlMappings.matchStatusCode(status, ex) != null || urlMappings.matchStatusCode(status, ExceptionUtils.getRootCause(ex)) != null
     }
 
-    /** As Spring MVC records an exception it translates to a server error, which the observation would not see otherwise. */
-    private static void recordServerError(HttpServletRequest request, Exception ex) {
+    /**
+     * As Spring MVC records an exception it translates to a server error, which the observation would not see otherwise.
+     * Only the observation tells its handlers, one of which marks the span, so setting the error on the context is what
+     * is left when the observation cannot be found.
+     */
+    private void recordServerError(HttpServletRequest request, Exception ex) {
         ServerHttpObservationFilter.findObservationContext(request).ifPresent { ServerRequestObservationContext context ->
-            context.error = ex
+            Observation observation = findObservation(context)
+            if (observation != null) {
+                observation.error(ex)
+            }
+            else {
+                context.error = ex
+            }
         }
+    }
+
+    /**
+     * The observation of a context, which the filter that started it keeps in scope while the request is dispatched,
+     * though not necessarily as the innermost one.
+     */
+    private Observation findObservation(Observation.Context context) {
+        ObservationRegistry registry = applicationContext.getBeanProvider(ObservationRegistry).getIfAvailable()
+        Observation.Scope scope = registry?.currentObservationScope
+        while (scope != null) {
+            Observation observation = scope.currentObservation
+            if (observation?.context.is(context)) {
+                return observation
+            }
+            scope = scope.previousObservationScope
+        }
+        return null
     }
 
     /** The action as a handler method: the controller that handles the request, and its method of the action. */
