@@ -115,9 +115,10 @@ With no `builder` configured, the run image is `paketobuildpacks/ubuntu-resolute
 The builder no longer pins the version of the run image, so set both `builder` and `runImage` to specific versions for repeatable images, or set `builder` to `paketobuildpacks/builder-noble-java-tiny` to keep the previous one.
 
 * *An exception an action throws is now recorded as an error on the HTTP server observation.*
-`GrailsExceptionResolver` handled the exception out of the observation's sight, so `http.server.requests` tagged a 500 with `error` and `exception` values of `none`, and tracing did not see a failure.
-It now records the exception, as Spring Framework 7.1 does for the exceptions Spring MVC translates to a 5xx, including an async timeout.
-These requests were already counted with `outcome=SERVER_ERROR`, but an alert that counts a non-`none` `error` value will see more server errors than before.
+When an error view answered, as the `"500"(view: '/error')` mapping of a generated application does, `http.server.requests` tagged the 500 with `error` and `exception` values of `none`, and tracing did not see a failure.
+A `500` mapping to a controller tagged it with `GrailsWrappedRuntimeException` and with the `uri` of that controller, so every failure it answered looked like the same route.
+Both now report the exception the action threw and the route of the action. The exception is recorded as Spring Framework 7.1 records the exceptions Spring MVC translates to a 5xx, including an async timeout.
+These requests were already counted with `outcome=SERVER_ERROR`, but an alert that counts a non-`none` `error` value will see more server errors than before, and a dashboard that reads the `uri` of an error controller will find those failures under the routes of the actions.
 A client error is not recorded.
 A custom `ObservationConvention` can leave out the error for particular exceptions.
 

@@ -84,18 +84,7 @@ class GrailsExceptionResolverSpec extends Specification {
     void 'an exception #description is recorded as the error of the HTTP server observation'() {
         given: 'the filter a running application has around its requests'
         ServerRequestObservationContext observed = null
-        def registry = ObservationRegistry.create()
-        registry.observationConfig().observationHandler(new ObservationHandler<Observation.Context>() {
-            @Override
-            boolean supportsContext(Observation.Context context) {
-                context instanceof ServerRequestObservationContext
-            }
-
-            @Override
-            void onStop(Observation.Context context) {
-                observed = (ServerRequestObservationContext) context
-            }
-        })
+        def registry = registryStoppingWith { observed = it }
         def resolver = observedResolver()
         def request = new MockHttpServletRequest('GET', '/failing')
         def response = new MockHttpServletResponse()
@@ -117,6 +106,26 @@ class GrailsExceptionResolverSpec extends Specification {
         'of an async timeout'  | ASYNC_TIMEOUT                                          | ASYNC_TIMEOUT             | 503
     }
 
+    void 'the exception an error handler answers stays the error of the HTTP server observation'() {
+        given: 'the filter a running application has around its requests, and an error handler to forward to'
+        ServerRequestObservationContext observed = null
+        def resolver = resolverFor({ '500'(controller: 'errors', action: 'serverError') }, true)
+        def request = new MockHttpServletRequest(servletContext, 'GET', '/fail')
+        def response = new MockHttpServletResponse()
+        bind(GRAILS, request, response)
+        def original = new IllegalStateException('original')
+        FilterChain application = { req, res ->
+            resolver.resolveException((HttpServletRequest) req, (HttpServletResponse) res, null, original)
+        } as FilterChain
+
+        when:
+        new ServerHttpObservationFilter(registryStoppingWith { observed = it }).doFilter(request, response, application)
+
+        then: 'the handler answered, and the wrapper its model left on the request is not what is reported'
+        response.forwardedUrl == '/errors/serverError'
+        observed.error.is(original)
+    }
+
     void 'an exception is resolved as usual without an observation'() {
         when:
         def response = new MockHttpServletResponse()
@@ -124,6 +133,22 @@ class GrailsExceptionResolverSpec extends Specification {
 
         then:
         response.status == 500
+    }
+
+    private static ObservationRegistry registryStoppingWith(Closure stopped) {
+        def registry = ObservationRegistry.create()
+        registry.observationConfig().observationHandler(new ObservationHandler<Observation.Context>() {
+            @Override
+            boolean supportsContext(Observation.Context context) {
+                context instanceof ServerRequestObservationContext
+            }
+
+            @Override
+            void onStop(Observation.Context context) {
+                stopped.call(context)
+            }
+        })
+        registry
     }
 
     private GrailsExceptionResolver observedResolver() {

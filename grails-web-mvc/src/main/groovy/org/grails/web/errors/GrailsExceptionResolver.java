@@ -40,6 +40,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.BeansException;
 import org.springframework.context.ApplicationContext;
+import org.springframework.http.server.observation.ServerRequestObservationContext;
 import org.springframework.web.context.ServletContextAware;
 import org.springframework.web.context.request.async.AsyncRequestTimeoutException;
 import org.springframework.web.filter.ServerHttpObservationFilter;
@@ -138,6 +139,18 @@ public class GrailsExceptionResolver extends SimpleMappingExceptionResolver impl
      */
     private static void recordServerError(HttpServletRequest request, Exception ex) {
         ServerHttpObservationFilter.findObservationContext(request).ifPresent(context -> context.setError(ex));
+    }
+
+    /**
+     * A forward to an error handler copies its model to the request and routes the request again. The wrapper this
+     * leaves in {@link WebUtils#ERROR_EXCEPTION_ATTRIBUTE} is what the observation reads last, over the exception that
+     * was recorded, and the handler's route replaces the one that failed, so every failure a handler answers would be
+     * reported as the same route. Spring MVC clears that attribute in the same way once it has rendered an error view.
+     */
+    private static void keepFailureObserved(HttpServletRequest request, String failedRoute) {
+        request.removeAttribute(WebUtils.ERROR_EXCEPTION_ATTRIBUTE);
+        ServerHttpObservationFilter.findObservationContext(request)
+                .ifPresent(context -> context.setPathPattern(failedRoute));
     }
 
     public String getRequestLogMessage(Throwable e, HttpServletRequest request) {
@@ -264,11 +277,14 @@ public class GrailsExceptionResolver extends SimpleMappingExceptionResolver impl
                         ((GrailsResponseMutator) response).deactivateResponseMutator();
                     }
                     request.setAttribute(ERROR_HANDLER_FORWARD_IN_PROGRESS_ATTRIBUTE, Boolean.TRUE);
+                    String failedRoute = ServerHttpObservationFilter.findObservationContext(request)
+                            .map(ServerRequestObservationContext::getPathPattern).orElse(null);
                     try {
                         forwardRequest(info, request, response, mv, uri);
                     }
                     finally {
                         request.removeAttribute(ERROR_HANDLER_FORWARD_IN_PROGRESS_ATTRIBUTE);
+                        keepFailureObserved(request, failedRoute);
                     }
                     // return an empty ModelAndView since the error handler has been processed
                     return new ModelAndView();
