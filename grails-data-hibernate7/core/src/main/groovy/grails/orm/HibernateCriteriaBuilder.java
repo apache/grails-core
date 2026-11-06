@@ -134,7 +134,7 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
     private final SessionFactory sessionFactory;
     private final boolean participate;
     private final org.hibernate.query.criteria.HibernateCriteriaBuilder cb;
-    private final HibernateQuery hibernateQuery;
+    private HibernateQuery hibernateQuery;
     private Class<?> targetClass;
     private CriteriaQuery<?> criteriaQuery;
     private boolean uniqueResult = false;
@@ -1314,21 +1314,27 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
 
     @Override
     public Object list(@DelegatesTo(Criteria.class) Closure<?> c) {
-        hibernateQuery.setDetachedCriteria(new DetachedCriteria<>(targetClass));
         return invokeMethod(CriteriaMethods.LIST_CALL.getName(), new Object[] {c});
     }
 
     public List<?> list() {
-        return hibernateQuery.list();
+        try {
+            return hibernateQuery.list();
+        } finally {
+            resetQueryState();
+        }
     }
 
     public Object singleResult() {
-        return hibernateQuery.singleResult();
+        try {
+            return hibernateQuery.singleResult();
+        } finally {
+            resetQueryState();
+        }
     }
 
     @Override
     public Object list(Map<String, ?> params, @DelegatesTo(Criteria.class) Closure<?> c) {
-        hibernateQuery.setDetachedCriteria(new DetachedCriteria<>(targetClass));
         return invokeMethod(CriteriaMethods.LIST_CALL.getName(), new Object[] {params, c});
     }
 
@@ -1389,6 +1395,22 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
      */
     public CriteriaQuery<?> getInstance() {
         return criteriaQuery;
+    }
+
+    /**
+     * Ends a call: replaces the query with a new one and clears the result mode the call selected, so
+     * nothing a call set, in its closure or through the builder, reaches the next call. A call runs with
+     * what the builder holds when it starts. The query is replaced and not cleared because a paged
+     * result list keeps the query it was built from, to count its total later.
+     */
+    void resetQueryState() {
+        hibernateQuery = new HibernateQuery(
+                (HibernateSession) hibernateQuery.getSession(), hibernateQuery.getEntity());
+        uniqueResult = false;
+        scroll = false;
+        count = false;
+        distinct = false;
+        paginationEnabledList = false;
     }
 
     /** Set whether a unique result should be returned */
