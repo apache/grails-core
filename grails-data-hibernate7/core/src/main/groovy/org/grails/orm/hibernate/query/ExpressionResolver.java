@@ -101,8 +101,10 @@ public class ExpressionResolver {
             if (subPath == null) {
                 return aliased;
             }
-            // A selection other than a join has no properties, so a path below it names nothing
-            return aliased instanceof From<?, ?> from ? getPath(from, subPath) : null;
+            // A path selected under an alias, such as groupProperty('favorite', 'favorite'), continues from that
+            // path. A basic value has no properties, so a path below it names nothing, and neither does a
+            // selection that is not a path.
+            return aliased instanceof Path<?> path ? getPath(path, subPath) : null;
         }
 
         HibernateAlias def = aliasRegistry.getDefinition(alias);
@@ -149,7 +151,7 @@ public class ExpressionResolver {
         return join;
     }
 
-    private Path<?> getPath(From<?, ?> from, String path) {
+    private Path<?> getPath(Path<?> from, String path) {
         if (from == null || path == null) return null;
         try {
             if (path.contains(".")) {

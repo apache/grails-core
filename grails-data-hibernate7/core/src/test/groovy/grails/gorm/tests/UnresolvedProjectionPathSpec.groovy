@@ -88,6 +88,19 @@ class UnresolvedProjectionPathSpec extends HibernateGormDatastoreSpec {
         'max'           | { projections { groupProperty('name', 'n'); max('n.nonexistent') } }
     }
 
+    void 'a suffix after a projection alias that names an association is resolved on that association: #kind'() {
+        when:
+        List rows = UnresolvedPathTeam.withCriteria(closure)
+
+        then:
+        rows.collect { it[1] }.sort() == expected
+
+        where:
+        kind            | expected         | closure
+        'countDistinct' | [1, 1]           | { projections { groupProperty('favorite', 'favorite'); countDistinct('favorite.id') } }
+        'max'           | ['likeA', 'likeB'] | { projections { groupProperty('favorite', 'favorite'); max('favorite.label') } }
+    }
+
     void 'a bare projection alias still counts'() {
         expect:
         UnresolvedPathTeam.withCriteria { projections { groupProperty('name', 'n'); countDistinct('n') } }.size() == 4
