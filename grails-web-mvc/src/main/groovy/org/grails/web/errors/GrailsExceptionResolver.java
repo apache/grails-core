@@ -35,7 +35,6 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
 import io.micrometer.observation.Observation;
-import io.micrometer.observation.ObservationRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -45,7 +44,6 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.http.server.observation.ServerRequestObservationContext;
 import org.springframework.web.context.ServletContextAware;
 import org.springframework.web.context.request.async.AsyncRequestTimeoutException;
-import org.springframework.web.context.support.WebApplicationContextUtils;
 import org.springframework.web.filter.ServerHttpObservationFilter;
 import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.View;
@@ -85,6 +83,14 @@ public class GrailsExceptionResolver extends SimpleMappingExceptionResolver impl
     /** Marks a request that is currently inside a forward to a status-code controller mapping. */
     private static final String ERROR_HANDLER_FORWARD_IN_PROGRESS_ATTRIBUTE =
             "org.grails.web.errors.ERROR_HANDLER_FORWARD_IN_PROGRESS";
+
+    /**
+     * Where {@link ServerHttpObservationFilter} keeps the observation of a request. The filter only offers its context,
+     * which cannot tell the handlers of an error, and a registry cannot be relied on to find it, because a filter can be
+     * built with a registry the application does not know.
+     */
+    private static final String SERVER_OBSERVATION_ATTRIBUTE =
+            ServerHttpObservationFilter.class.getName() + ".observation";
 
     protected static final Logger LOG = LoggerFactory.getLogger(GrailsExceptionResolver.class);
     protected static final String LINE_SEPARATOR = System.getProperty("line.separator");
@@ -138,44 +144,21 @@ public class GrailsExceptionResolver extends SimpleMappingExceptionResolver impl
     /**
      * Every exception this resolves is a server error, and resolving it hides it from the observation of the request,
      * whose metrics would otherwise say there was no error and whose trace would not be marked as failed. Only
-     * {@link Observation#error(Throwable)} tells the observation's handlers, one of which marks the span, so setting the
-     * error on the context is what is left when the observation cannot be found.
+     * {@link Observation#error(Throwable)} tells the observation's handlers, one of which marks the span.
      * <p>
      * An exception left in {@link WebUtils#ERROR_EXCEPTION_ATTRIBUTE} is not recorded here, because the filter that stops
      * the observation records what it finds there.
      */
-    private void recordServerError(HttpServletRequest request, Exception ex) {
+    private static void recordServerError(HttpServletRequest request, Exception ex) {
         if (request.getAttribute(WebUtils.ERROR_EXCEPTION_ATTRIBUTE) == ex) {
             return;
         }
-        ServerHttpObservationFilter.findObservationContext(request).ifPresent(context -> {
-            Observation observation = findObservation(context);
-            if (observation != null) {
-                observation.error(ex);
-            }
-            else {
-                context.setError(ex);
-            }
-        });
-    }
-
-    /**
-     * The observation of a context, which the filter that started it keeps in scope while the request is dispatched,
-     * though not necessarily as the innermost one.
-     */
-    private Observation findObservation(Observation.Context context) {
-        ApplicationContext applicationContext = WebApplicationContextUtils.getWebApplicationContext(servletContext);
-        ObservationRegistry registry = applicationContext != null ?
-                applicationContext.getBeanProvider(ObservationRegistry.class).getIfAvailable() : null;
-        Observation.Scope scope = registry != null ? registry.getCurrentObservationScope() : null;
-        while (scope != null) {
-            Observation observation = scope.getCurrentObservation();
-            if (observation != null && observation.getContext() == context) {
-                return observation;
-            }
-            scope = scope.getPreviousObservationScope();
+        if (request.getAttribute(SERVER_OBSERVATION_ATTRIBUTE) instanceof Observation observation) {
+            observation.error(ex);
         }
-        return null;
+        else {
+            ServerHttpObservationFilter.findObservationContext(request).ifPresent(context -> context.setError(ex));
+        }
     }
 
     /**
