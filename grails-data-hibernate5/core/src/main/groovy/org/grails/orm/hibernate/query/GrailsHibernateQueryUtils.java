@@ -288,8 +288,9 @@ public class GrailsHibernateQueryUtils {
                 Criteria subCriteria = findSortCriteria(c, sortHead);
                 if (subCriteria == null) {
                     // a left join, so that the sort keeps the rows where the association is null; a collection
-                    // is joined without being fetched, since a row limit would leave elements out of it
-                    subCriteria = a instanceof ToMany ?
+                    // is joined without being fetched, since a row limit would leave elements out of it,
+                    // unless the fetch argument asks for the collection to be fetched
+                    subCriteria = a instanceof ToMany && !isFetchRequested(c, sortHead) ?
                             c.createCriteria(sortHead, null, org.hibernate.sql.JoinType.LEFT_OUTER_JOIN, GrailsHibernateUtil.unfetchedJoinCondition()) :
                             c.createCriteria(sortHead, org.hibernate.sql.JoinType.LEFT_OUTER_JOIN);
                     cacheCriteriaByMapping(associatedEntity.getJavaClass(), subCriteria);
@@ -297,6 +298,19 @@ public class GrailsHibernateQueryUtils {
                 addOrderPossiblyNested(subCriteria, associatedEntity, sortTail, order, ignoreCase); // Recurse on nested sort
             }
         }
+    }
+
+    /**
+     * Whether the query asks for an association of the given criteria to be fetched with a join.
+     */
+    private static boolean isFetchRequested(Criteria parent, String associationName) {
+        String associationPath = associationName;
+        Criteria root = parent;
+        while (root instanceof CriteriaImpl.Subcriteria) {
+            associationPath = ((CriteriaImpl.Subcriteria) root).getPath() + '.' + associationPath;
+            root = ((CriteriaImpl.Subcriteria) root).getParent();
+        }
+        return GrailsHibernateUtil.isFetchRequested(root, associationPath);
     }
 
     /**

@@ -357,6 +357,26 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManag
         'join requests it for a Query.Order' | { Team.createCriteria().list { eq('name', 'Squad'); join('players'); order(Query.Order.asc('players.name')) } }
     }
 
+    void '#api sorted by a property of a collection fetches the collection when the fetch argument requests it'() {
+        given:
+        saveSquad()
+
+        when:
+        final Team team = query.call()
+
+        then:
+        team.name == 'Squad'
+        Hibernate.isInitialized(team.players)
+        team.players.size() == 3
+
+        where:
+        api                                | query
+        'a dynamic finder'                 | { Team.findAllByName('Squad', [sort: 'players.name', fetch: [players: 'join']]).first() }
+        'findAll by example'               | { Team.findAll(new Team(name: 'Squad'), [sort: 'players.name', fetch: [players: 'join']]).first() }
+        'findAllWhere'                     | { Team.findAllWhere([name: 'Squad'], [sort: 'players.name', fetch: [players: 'join']]).first() }
+        'a criteria query with pagination' | { Team.createCriteria().list(sort: 'players.name', fetch: [players: 'join']) { eq('name', 'Squad') }.first() }
+    }
+
     void 'list sorts by every property of the default sort of the mapping'() {
         given:
         [['Second', 'B'], ['First', 'B'], ['First', 'A'], ['Second', 'C']].each { String league, String name ->

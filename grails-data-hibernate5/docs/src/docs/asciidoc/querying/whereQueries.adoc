@@ -324,7 +324,7 @@ def results = Pet.where {
 
 The path can cross more than one association, such as `owner.employer.name` where both `owner` and `employer` are associations. An association that the `where` query already joins is reused for the sort, and any other association on the path is joined for it.
 
-Sorting does not change which rows a query returns. An association that is joined only for the sort is joined with a left join, so a sort by `owner.lastName` keeps the pets that have no owner. Whether they come first or last depends on how the database sorts nulls. If the query requests a join type for the association, for example with `fetch: [owner: JoinType.INNER]`, the association is joined with that join type, with and without the sort. Sorting does not change what a query fetches either: a collection that is joined only for the sort is not fetched.
+Sorting does not change which rows a query returns. An association that is joined only for the sort is joined with a left join, so a sort by `owner.lastName` keeps the pets that have no owner. Whether they come first or last depends on how the database sorts nulls. If the query requests a join type for the association, for example with `fetch: [owner: JoinType.INNER]`, the association is joined with that join type, with and without the sort. Sorting does not change what a query fetches either: a collection that is joined only for the sort is not fetched, and a collection that the query asks to fetch is fetched with and without the sort.
 
 If the `where` query defines an explicit alias for the association, you can sort by the alias instead:
 
