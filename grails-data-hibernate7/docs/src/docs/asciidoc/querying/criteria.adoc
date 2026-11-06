@@ -164,6 +164,8 @@ The path can also start with an alias declared earlier in the same criteria or a
 
 Aliases declared inside an association block are relative to that association. For example, `likes { createAlias('tag', 't'); eq('t.name', 'a') }` joins the tag of each like, not a tag on the outer entity. A local alias can reuse an outer alias name without changing the outer alias. Aliases declared in a `list { ... }` closure are discarded when another `list { ... }` query starts on the same builder.
 
+A dotted path in an association block whose first segment is the name of an alias declared outside the block starts at that alias, in a criteria query, a `DetachedCriteria` and a subquery alike. After `createAlias('tag', 'tag')`, `likes { eq('tag.name', 'a') }` restricts the tag of the entity the alias names, not the tag of each like. To restrict the tag of each like, give the outer alias another name or declare a local alias inside the block, as in `likes { createAlias('tag', 't'); eq('t.name', 'a') }`. Without an outer alias of that name, `tag.name` is the tag of each like.
+
 An unused entity alias inside an association block still creates its requested join in that association's scope. For example, `likes { createAlias('tag', 't') }` excludes likes with no tag, even without a restriction on `t`. Using join type `1` retains those likes. These join semantics also apply to counts and paginated totals.
 
 ===== Collection Aliases

@@ -131,6 +131,8 @@ def results = c.list {
 
 Here we find all accounts that have either performed transactions in the last 10 days OR have been recently created in the last 10 days.
 
+Inside an association block, name the properties of that association plainly, as `date` above. A dotted path such as `likes { eq('tag.name', 'a') }`, which goes through another association of the block, is rejected with a `QueryException`: declare an alias for that association inside the block instead, as in `likes { createAlias('tag', 't'); eq('t.name', 'a') }`. Hibernate 7 accepts the dotted form. When a name in such a path is also an alias declared outside the block with `createAlias`, the path starts at that outer alias in Hibernate 7, so write the local alias form for code that has to run on both.
+
 
 ==== Querying with Projections
 

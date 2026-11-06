@@ -136,6 +136,38 @@ class CreateAliasJoinSpec extends HibernateGormDatastoreSpec {
         rows*.name == ['same']
     }
 
+    void 'a dotted path in an association block starts at an explicit alias of the same name declared outside it'() {
+        given:
+        def a = new CreateAliasTag(name: 'a').save(failOnError: true)
+        def b = new CreateAliasTag(name: 'b').save(failOnError: true)
+        def likeA = new CreateAliasLike(label: 'a', tag: a).save(failOnError: true)
+        def likeB = new CreateAliasLike(label: 'b', tag: b).save(failOnError: true)
+        new CreateAliasTeam(name: 'team a, like a', tag: a).addToLikes(likeA).save(failOnError: true)
+        new CreateAliasTeam(name: 'team a, like b', tag: a).addToLikes(likeB).save(failOnError: true)
+        new CreateAliasTeam(name: 'team b, like a', tag: b).addToLikes(likeA).save(flush: true, failOnError: true)
+
+        when: 'tag.name inside likes names the tag of the outer alias, which is the tag of the team'
+        def root = CreateAliasTeam.withCriteria {
+            createAlias('tag', 'tag')
+            likes { eq('tag.name', 'a') }
+        }
+        def detached = new DetachedCriteria(CreateAliasTeam).build {
+            createAlias('tag', 'tag')
+            likes { eq('tag.name', 'a') }
+        }.list()
+        def subquery = CreateAliasTeam.withCriteria {
+            'in'('id', new DetachedCriteria(CreateAliasTeam).build {
+                createAlias('tag', 'tag')
+                likes { eq('tag.name', 'a') }
+            }.id())
+        }
+
+        then: 'the root query, a detached criteria and a subquery agree'
+        root*.name.sort() == ['team a, like a', 'team a, like b']
+        detached*.name.sort() == ['team a, like a', 'team a, like b']
+        subquery*.name.sort() == ['team a, like a', 'team a, like b']
+    }
+
     void 'an association block inside a junction does not hide an explicit alias of the same name declared outside it'() {
         given:
         def a = new CreateAliasTag(name: 'a').save(failOnError: true)
