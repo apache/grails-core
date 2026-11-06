@@ -601,7 +601,9 @@ public abstract class AbstractHibernateQuery extends Query {
      * Hibernate initializes a collection from the rows of a left join that has no condition of its
      * own, also when a row limit leaves elements out of those rows. Such a join of a collection is
      * therefore given a condition that is always true, unless the query asks for the collection to
-     * be fetched, and the collection is loaded on its own, when it is read.
+     * be fetched, and the collection is loaded on its own, when it is read. A left join that
+     * criteria use never fetches the collection: its rows lack the elements that the criteria leave
+     * out.
      */
     private void createJoin(CriteriaAndAlias join) {
         String associationPath = join.associationPath;
@@ -610,8 +612,8 @@ public abstract class AbstractHibernateQuery extends Query {
         if (joinType == null) {
             joinType = join.usedByCriteria ? JoinType.INNER : JoinType.LEFT;
         }
-        boolean unfetchedCollection = !join.usedByCriteria && joinType == JoinType.LEFT &&
-                getAssociation(associationPath) instanceof ToMany && !joinFetchedPaths.contains(associationPath);
+        boolean unfetchedCollection = joinType == JoinType.LEFT && getAssociation(associationPath) instanceof ToMany &&
+                (join.usedByCriteria || !joinFetchedPaths.contains(associationPath));
         org.hibernate.sql.JoinType hibernateJoinType = resolveJoinType(joinType);
         org.hibernate.criterion.Criterion joinCondition = unfetchedCollection ? GrailsHibernateUtil.unfetchedJoinCondition() : null;
         if (join.criteria != null) {

@@ -382,6 +382,27 @@ class AssociationJoinTypeSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckM
         results.first().players.size() == 3
     }
 
+    void 'a left join that #description requests for a collection that the query has criteria on does not fetch the collection'() {
+        given:
+        saveTeamWithAPlayerWithoutContract()
+
+        when:
+        final List<Team> results = query.call()
+
+        then:
+        results*.name == ['Squad Team']
+
+        and: 'the criteria do not leave players out of the collection'
+        !Hibernate.isInitialized(results.first().players)
+        results.first().players.size() == 3
+
+        where:
+        description          | query
+        'the fetch argument' | { Team.where { players { name == 'Squad Player A' } }.list(fetch: [players: JoinType.LEFT]) }
+        'join'               | { Team.where { players { name == 'Squad Player A' } }.join('players', JoinType.LEFT).list() }
+        'join, with a sort'  | { Team.where { players { name == 'Squad Player A' } }.join('players', JoinType.LEFT).sort('players.name').list() }
+    }
+
     void 'a join type that fetch requests is used for the join that the criteria of the query make'() {
         given:
         final query = Team.where {
