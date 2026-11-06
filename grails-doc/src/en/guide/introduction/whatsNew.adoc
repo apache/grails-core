@@ -79,6 +79,19 @@ The Grails 8 upgrade guide calls out the major application-impacting changes and
 For the changes since Spring Boot 4.1, see the https://github.com/spring-projects/spring-boot/wiki/Spring-Boot-4.2-Release-Notes[Spring Boot 4.2 Release Notes] and the https://github.com/spring-projects/spring-framework/wiki/Spring-Framework-7.1-Release-Notes[Spring Framework 7.1 Release Notes].
 The xref:upgrading#upgrading90x[Upgrading from Grails 8 to Grails {grailsMajorVersion}] section covers the upgrade, including the graphql-java 26 changes that affect GraphQL applications.
 
+Spring Boot 4.2 can switch metrics and spans to OpenTelemetry's semantic conventions:
+
+[source,yaml]
+----
+management:
+    observations:
+        conventions: open-telemetry
+----
+
+`http.server.requests` then becomes `http.server.request.duration`, tagged with `http.route` and `error.type` in place of `uri` and `exception`.
+In a Grails application `http.route` is `/controller/action`, not the pattern of the URL mapping, which keeps it low in cardinality.
+Spring Boot's https://docs.spring.io/spring-boot/reference/actuator/observability.html#actuator.observability.semantic-conventions[documentation] lists what else changes, such as the properties that customize meter names no longer taking effect.
+
 ==== The HTTP QUERY Method
 
 Spring Framework 7.1 supports the `QUERY` method of https://www.rfc-editor.org/info/rfc10008/[RFC 10008], a safe, idempotent request with a body. URL mappings gain a `query` prefix for it, next to `get`, `post` and the others, and a command object is bound to the body of a `QUERY`, which is JSON or form-encoded:

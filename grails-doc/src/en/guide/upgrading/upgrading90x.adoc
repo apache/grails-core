@@ -121,6 +121,10 @@ These requests were already counted with `outcome=SERVER_ERROR`, but an alert th
 A client error is not recorded.
 A custom `ObservationConvention` can leave out the error for particular exceptions.
 
+* *`http.server.requests.active` is no longer registered by default.*
+Spring Boot 4.2 makes this long task timer opt-in.
+A dashboard or alert that reads it sets `management.metrics.observations.include-active-long-task-timer` to `true`, which replaces `management.metrics.observations.ignored-meters`.
+
 * *`spring-boot-starter-amqp` no longer means RabbitMQ.*
 It is now the starter for generic AMQP 1.0, and RabbitMQ has starters of its own.
 An application that uses RabbitMQ through `spring-boot-starter-amqp` or `spring-boot-starter-amqp-test` changes to `spring-boot-starter-rabbitmq` or `spring-boot-starter-rabbitmq-test`, and any import of `org.springframework.boot.amqp.autoconfigure` to `org.springframework.boot.rabbitmq.autoconfigure`.
