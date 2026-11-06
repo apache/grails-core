@@ -122,6 +122,74 @@ class AssociationJoinTypeSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckM
         query.count() == 4
     }
 
+    void 'updateAll updates the teams that list returns when the query requests #description'() {
+        given:
+        final uncontracted = new Team(name: 'Uncontracted First Team').save(failOnError: true)
+        new Player(name: 'Player without contract', team: uncontracted).save(validate: false, flush: true)
+        manager.session.clear()
+        final allTeams = (ALL_TEAMS + 'Uncontracted First Team').sort()
+
+        when:
+        final listed = query.call().list()*.name.sort()
+        final updated = query.call().updateAll(name: 'Updated Team')
+        manager.session.clear()
+
+        then:
+        listed == expected
+        updated == expected.size()
+
+        and: 'the other teams keep their name'
+        (Team.list()*.name - 'Updated Team').sort() == allTeams - expected
+
+        where:
+        description                                       | query                                                                                                           || expected
+        'an inner join of an association'                 | { Team.where { name ==~ '%First%' }.join('club', JoinType.INNER) }                                              || TEAMS_WITH_A_CLUB
+        'a right join of an association'                  | { Team.where { name ==~ '%First%' }.join('club', JoinType.RIGHT) }                                              || TEAMS_WITH_A_CLUB
+        'an inner join, without criteria'                 | { new DetachedCriteria(Team).join('club', JoinType.INNER) }                                                     || TEAMS_WITH_A_CLUB
+        'an inner join of a collection'                   | { Team.where { name ==~ '%First%' }.join('players', JoinType.INNER) }                                           || (TEAMS_WITH_PLAYERS + 'Uncontracted First Team').sort()
+        'an inner join of an association of a collection' | { Team.where { name ==~ '%First%' }.join('players.contract', JoinType.INNER) }                                  || TEAMS_WITH_PLAYERS
+        'inner joins of an association and a collection'  | { Team.where { name ==~ '%First%' }.join('club', JoinType.INNER).join('players', JoinType.INNER) }              || ['Arsenal First Team', 'Chelsea First Team', 'MU First Team']
+        'a left join of an association'                   | { Team.where { name ==~ '%First%' }.join('club', JoinType.LEFT) }                                               || (ALL_TEAMS + 'Uncontracted First Team').sort()
+        'a join without a join type'                      | { Team.where { name ==~ '%First%' }.join('club') }                                                              || (ALL_TEAMS + 'Uncontracted First Team').sort()
+    }
+
+    void 'updateAll updates the players that list returns when the query requests an inner join of #description'() {
+        given:
+        new Player(name: 'Player without contract', team: Team.findByName('Playerless First Team')).save(validate: false, flush: true)
+        manager.session.clear()
+        final allPlayers = ['Arsenal Player', 'Chelsea Player', 'MU Player', 'Player without contract', 'Unattached Player']
+
+        when:
+        final listed = query.call().list()*.name.sort()
+        final updated = query.call().updateAll(name: 'Updated')
+        manager.session.clear()
+
+        then:
+        listed == expected
+        updated == expected.size()
+
+        and: 'the other players keep their name'
+        (Player.list()*.name - 'Updated').sort() == allPlayers - expected
+
+        where:
+        description                                               | query                                                                         || expected
+        'an association whose key the associated class has'       | { Player.where { name ==~ '%Player%' }.join('contract', JoinType.INNER) }     || ['Arsenal Player', 'Chelsea Player', 'MU Player', 'Unattached Player']
+        'an association of an association'                        | { Player.where { name ==~ '%Player%' }.join('team.club', JoinType.INNER) }    || ['Arsenal Player', 'Chelsea Player', 'MU Player', 'Player without contract']
+    }
+
+    void 'deleteAll deletes the instances that list returns when the query requests an inner join'() {
+        given: 'no contract refers to a player any more'
+        Contract.where { salary > 0G }.deleteAll()
+
+        when:
+        final deleted = Player.where { name ==~ '%Player' }.join('team.club', JoinType.INNER).deleteAll()
+        manager.session.clear()
+
+        then: 'the player whose team has no club is left'
+        deleted == 3
+        Player.list()*.name == ['Unattached Player']
+    }
+
     void 'a right join has a row without a team for a club that no team refers to'() {
         given:
         new Club(name: 'Teamless').save(flush: true)

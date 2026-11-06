@@ -26,6 +26,7 @@ import java.util.Map;
 import jakarta.persistence.FlushModeType;
 import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.CriteriaQuery;
+import jakarta.persistence.criteria.JoinType;
 import jakarta.persistence.criteria.Root;
 
 import org.hibernate.Criteria;
@@ -35,10 +36,16 @@ import org.hibernate.proxy.HibernateProxy;
 
 import org.springframework.context.ApplicationEventPublisher;
 
+import org.grails.datastore.gorm.query.criteria.AbstractDetachedCriteria;
 import org.grails.datastore.gorm.timestamp.DefaultTimestampProvider;
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.PersistentProperty;
 import org.grails.datastore.mapping.model.config.GormProperties;
+import org.grails.datastore.mapping.model.types.Association;
+import org.grails.datastore.mapping.model.types.Basic;
+import org.grails.datastore.mapping.model.types.Embedded;
+import org.grails.datastore.mapping.model.types.ToMany;
+import org.grails.datastore.mapping.model.types.ToOne;
 import org.grails.datastore.mapping.proxy.ProxyHandler;
 import org.grails.datastore.mapping.query.Query;
 import org.grails.datastore.mapping.query.api.QueryableCriteria;
@@ -101,7 +108,7 @@ public class HibernateSession extends AbstractHibernateSession {
             builder.setHibernateCompatible(true);
             JpaQueryInfo jpaQueryInfo = builder.buildDelete();
 
-            org.hibernate.query.Query query = session.createQuery(jpaQueryInfo.getQuery());
+            org.hibernate.query.Query query = session.createQuery(applyRequestedJoins(jpaQueryInfo.getQuery(), criteria));
             getHibernateTemplate().applySettings(query);
 
             List parameters = jpaQueryInfo.getParameters();
@@ -143,7 +150,7 @@ public class HibernateSession extends AbstractHibernateSession {
 
             JpaQueryInfo jpaQueryInfo = builder.buildUpdate(properties);
 
-            org.hibernate.query.Query query = session.createQuery(jpaQueryInfo.getQuery());
+            org.hibernate.query.Query query = session.createQuery(applyRequestedJoins(jpaQueryInfo.getQuery(), criteria));
             getHibernateTemplate().applySettings(query);
             List parameters = jpaQueryInfo.getParameters();
             if (parameters != null) {
@@ -159,6 +166,90 @@ public class HibernateSession extends AbstractHibernateSession {
             applicationEventPublisher.publishEvent(new PostQueryEvent(datastore, hqlQuery, Collections.singletonList(result)));
             return result;
         });
+    }
+
+    /**
+     * Restricts an update or a delete to the instances that the criteria return when they are
+     * listed. A join type other than a left join that the criteria request for an association
+     * leaves out the instances for which the join returns no row. An update and a delete cannot
+     * join, so each such join is applied as a restriction, see
+     * {@link #buildRequestedJoinRestriction(PersistentEntity, String, int)}.
+     *
+     * @param query The update or delete query of the criteria
+     * @param criteria The criteria
+     * @return The query with the restrictions
+     */
+    private static String applyRequestedJoins(String query, QueryableCriteria criteria) {
+        if (!(criteria instanceof AbstractDetachedCriteria)) {
+            return query;
+        }
+        Map<String, JoinType> joinTypes = ((AbstractDetachedCriteria<?>) criteria).getJoinTypes();
+        StringBuilder restricted = new StringBuilder(query);
+        boolean hasWhereClause = !criteria.getCriteria().isEmpty();
+        int index = 0;
+        for (Map.Entry<String, JoinType> requestedJoin : joinTypes.entrySet()) {
+            if (requestedJoin.getValue() == null || requestedJoin.getValue() == JoinType.LEFT) {
+                continue;
+            }
+            String restriction = buildRequestedJoinRestriction(criteria.getPersistentEntity(), requestedJoin.getKey(), index);
+            if (restriction != null) {
+                restricted.append(hasWhereClause ? JpaQueryBuilder.LOGICAL_AND : " WHERE ").append(restriction);
+                hasWhereClause = true;
+                index++;
+            }
+        }
+        return restricted.toString();
+    }
+
+    /**
+     * Returns the restriction to the instances of an entity for which an inner join of an
+     * association path returns a row, or null when the path does not consist of associations to
+     * other entities. The restriction is a subquery that selects from the entity of the first
+     * association and joins the rest of the path, so that the filters that are enabled for the
+     * session apply to every entity on the path, as they do to a join.
+     */
+    private static String buildRequestedJoinRestriction(PersistentEntity entity, String associationPath, int index) {
+        String rootAlias = entity.getDecapitalizedName();
+        String[] tokens = associationPath.split("\\.");
+        StringBuilder from = new StringBuilder();
+        String correlation = null;
+        String alias = null;
+        PersistentEntity currentEntity = entity;
+        for (int i = 0; i < tokens.length; i++) {
+            PersistentProperty property = currentEntity != null ? currentEntity.getPropertyByName(tokens[i]) : null;
+            if (!(property instanceof Association) || property instanceof Embedded || property instanceof Basic) {
+                return null;
+            }
+            Association association = (Association) property;
+            PersistentEntity associatedEntity = association.getAssociatedEntity();
+            if (associatedEntity == null) {
+                return null;
+            }
+            String joinAlias = "join" + index + '_' + i;
+            if (i > 0) {
+                from.append(" INNER JOIN ").append(alias).append('.').append(tokens[i]).append(' ').append(joinAlias);
+            }
+            else {
+                from.append(associatedEntity.getName()).append(' ').append(joinAlias);
+                if (association instanceof ToMany) {
+                    correlation = joinAlias + " MEMBER OF " + rootAlias + '.' + tokens[i];
+                }
+                else if (association instanceof ToOne && ((ToOne) association).isForeignKeyInChild()) {
+                    // the associated entity has the foreign key, so it is matched through its side of the association
+                    String inverse = association.getReferencedPropertyName();
+                    if (inverse == null) {
+                        return null;
+                    }
+                    correlation = joinAlias + '.' + inverse + " = " + rootAlias;
+                }
+                else {
+                    correlation = joinAlias + " = " + rootAlias + '.' + tokens[i];
+                }
+            }
+            alias = joinAlias;
+            currentEntity = associatedEntity;
+        }
+        return "EXISTS (SELECT 1 FROM " + from + " WHERE " + correlation + ")";
     }
 
     public List retrieveAll(final Class type, final Iterable keys) {
