@@ -32,6 +32,10 @@ import jakarta.persistence.criteria.Root;
 import org.hibernate.Criteria;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
+import org.hibernate.dialect.Dialect;
+import org.hibernate.dialect.MariaDB103Dialect;
+import org.hibernate.dialect.MySQLDialect;
+import org.hibernate.engine.spi.SessionFactoryImplementor;
 import org.hibernate.proxy.HibernateProxy;
 
 import org.springframework.context.ApplicationEventPublisher;
@@ -179,7 +183,7 @@ public class HibernateSession extends AbstractHibernateSession {
      * @param criteria The criteria
      * @return The query with the restrictions
      */
-    private static String applyRequestedJoins(String query, QueryableCriteria criteria) {
+    private String applyRequestedJoins(String query, QueryableCriteria criteria) {
         if (!(criteria instanceof AbstractDetachedCriteria)) {
             return query;
         }
@@ -207,13 +211,20 @@ public class HibernateSession extends AbstractHibernateSession {
      * other entities. The restriction is a subquery that selects from the entity of the first
      * association and joins the rest of the path, so that the filters that are enabled for the
      * session apply to every entity on the path, as they do to a join.
+     * <p>
+     * MySQL does not allow an update or a delete to select from the table that it modifies. A path
+     * that leads back to the class of the entity cannot be applied there, and is rejected instead of
+     * being left to fail in the database.
+     *
+     * @throws UnsupportedOperationException if the join cannot be applied to an update or a delete
      */
-    private static String buildRequestedJoinRestriction(PersistentEntity entity, String associationPath, int index) {
+    private String buildRequestedJoinRestriction(PersistentEntity entity, String associationPath, int index) {
         String rootAlias = entity.getDecapitalizedName();
         String[] tokens = associationPath.split("\\.");
         StringBuilder from = new StringBuilder();
         String correlation = null;
         String alias = null;
+        boolean selectsFromModifiedTable = false;
         PersistentEntity currentEntity = entity;
         for (int i = 0; i < tokens.length; i++) {
             PersistentProperty property = currentEntity != null ? currentEntity.getPropertyByName(tokens[i]) : null;
@@ -238,7 +249,8 @@ public class HibernateSession extends AbstractHibernateSession {
                     // the associated entity has the foreign key, so it is matched through its side of the association
                     String inverse = association.getReferencedPropertyName();
                     if (inverse == null) {
-                        return null;
+                        throw new UnsupportedOperationException("The join type requested for [" + associationPath + "] of [" + entity.getName() +
+                                "] cannot be applied to an update or a delete: [" + tokens[i] + "] has no property that refers back to [" + entity.getName() + "]");
                     }
                     correlation = joinAlias + '.' + inverse + " = " + rootAlias;
                 }
@@ -246,10 +258,25 @@ public class HibernateSession extends AbstractHibernateSession {
                     correlation = joinAlias + " = " + rootAlias + '.' + tokens[i];
                 }
             }
+            selectsFromModifiedTable |= associatedEntity.getRootEntity().equals(entity.getRootEntity());
             alias = joinAlias;
             currentEntity = associatedEntity;
         }
+        if (selectsFromModifiedTable && !canSelectFromModifiedTable()) {
+            throw new UnsupportedOperationException("The join type requested for [" + associationPath + "] of [" + entity.getName() +
+                    "] cannot be applied to an update or a delete on this database, which does not allow them to select from the table that they modify. " +
+                    "Do not request the join type for the update or the delete, and restrict the query with criteria instead.");
+        }
         return "EXISTS (SELECT 1 FROM " + from + " WHERE " + correlation + ")";
+    }
+
+    /**
+     * Whether an update or a delete can select, in a subquery, from the table that it modifies.
+     * MySQL does not allow it, and neither does MariaDB before version 10.3.
+     */
+    private boolean canSelectFromModifiedTable() {
+        Dialect dialect = ((SessionFactoryImplementor) getHibernateTemplate().getSessionFactory()).getJdbcServices().getDialect();
+        return !(dialect instanceof MySQLDialect) || dialect instanceof MariaDB103Dialect;
     }
 
     public List retrieveAll(final Class type, final Iterable keys) {

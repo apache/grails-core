@@ -19,6 +19,7 @@
 package grails.gorm.tests
 
 import grails.gorm.DetachedCriteria
+import grails.gorm.annotation.Entity
 import org.apache.grails.data.hibernate5.core.GrailsDataHibernate5TckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.hibernate.Hibernate
@@ -32,7 +33,7 @@ class AssociationJoinTypeSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckM
     private static final List<String> ALL_TEAMS = (TEAMS_WITH_A_CLUB + 'Unattached First Team').sort()
 
     void setupSpec() {
-        manager.domainClasses.addAll([Club, Team, Player, Contract])
+        manager.domainClasses.addAll([Club, Team, Player, Contract, AssociationJoinTypeCategory])
     }
 
     void setup() {
@@ -175,6 +176,23 @@ class AssociationJoinTypeSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckM
         description                                               | query                                                                         || expected
         'an association whose key the associated class has'       | { Player.where { name ==~ '%Player%' }.join('contract', JoinType.INNER) }     || ['Arsenal Player', 'Chelsea Player', 'MU Player', 'Unattached Player']
         'an association of an association'                        | { Player.where { name ==~ '%Player%' }.join('team.club', JoinType.INNER) }    || ['Arsenal Player', 'Chelsea Player', 'MU Player', 'Player without contract']
+    }
+
+    void 'updateAll applies an inner join that the query requests for an association to the queried class itself'() {
+        given:
+        final root = new AssociationJoinTypeCategory(name: 'Root category').save(failOnError: true)
+        new AssociationJoinTypeCategory(name: 'Child category', parent: root).save(failOnError: true, flush: true)
+        manager.session.clear()
+
+        when:
+        final updated = AssociationJoinTypeCategory.where {
+            name ==~ '%category'
+        }.join('parent', JoinType.INNER).updateAll(name: 'Updated')
+        manager.session.clear()
+
+        then:
+        updated == 1
+        AssociationJoinTypeCategory.list()*.name.sort() == ['Root category', 'Updated']
     }
 
     void 'deleteAll deletes the instances that list returns when the query requests an inner join'() {
@@ -916,5 +934,15 @@ class AssociationJoinTypeSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckM
 
         then:
         results*.name.sort() == ALL_TEAMS
+    }
+}
+
+@Entity
+class AssociationJoinTypeCategory {
+    String name
+    AssociationJoinTypeCategory parent
+
+    static constraints = {
+        parent nullable: true
     }
 }
