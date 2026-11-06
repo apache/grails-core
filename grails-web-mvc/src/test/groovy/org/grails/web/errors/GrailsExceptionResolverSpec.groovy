@@ -95,7 +95,7 @@ class GrailsExceptionResolverSpec extends Specification {
         when:
         new ServerHttpObservationFilter(registry).doFilter(request, response, application)
 
-        then: 'as Spring MVC records one it translates to a server error, or its metrics and trace would say nothing failed'
+        then: 'or its metrics and trace would say nothing failed'
         response.status == status
         observed.error.is(recorded)
 

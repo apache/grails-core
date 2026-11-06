@@ -134,8 +134,7 @@ public class GrailsExceptionResolver extends SimpleMappingExceptionResolver impl
 
     /**
      * Every exception this resolves is a server error, and resolving it hides it from the observation of the request,
-     * whose metrics would otherwise say there was no error and whose trace would not be marked as failed. Spring MVC
-     * has recorded the exceptions it translates to a server error in the same way since Spring Framework 7.1.
+     * whose metrics would otherwise say there was no error and whose trace would not be marked as failed.
      */
     private static void recordServerError(HttpServletRequest request, Exception ex) {
         ServerHttpObservationFilter.findObservationContext(request).ifPresent(context -> context.setError(ex));
