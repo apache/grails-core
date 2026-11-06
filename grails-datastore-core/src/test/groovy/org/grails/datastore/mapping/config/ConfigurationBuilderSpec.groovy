@@ -211,6 +211,25 @@ class ConfigurationBuilderSpec extends Specification {
         emptySqls.isEmpty()
     }
 
+    void "Test a higher source indexed list replaces a longer lower list"() {
+        given:
+        def environment = new StandardEnvironment()
+        environment.propertySources.addFirst(new MapPropertySource('low', [
+                'dataSource.properties.connectionInitSqls[0]': 'SET A=1',
+                'dataSource.properties.connectionInitSqls[1]': 'SET B=2',
+                'dataSource.properties.connectionInitSqls[2]': 'SET C=3'
+        ]))
+        environment.propertySources.addFirst(new MapPropertySource('high', [
+                'dataSource.properties.connectionInitSqls[0]': 'SET X=9'
+        ]))
+
+        when:
+        def properties = new MapConfigurationBuilder(environment).build().properties
+
+        then:
+        properties.connectionInitSqls == ['SET X=9']
+    }
+
     void "Test a higher map leaf is not replaced by a lower map or unresolved placeholder"() {
         given:
         def options = [enabled: true]

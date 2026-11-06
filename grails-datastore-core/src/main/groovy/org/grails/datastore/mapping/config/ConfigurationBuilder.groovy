@@ -438,13 +438,13 @@ abstract class ConfigurationBuilder<B, C> {
         String prefix = propertyPath + '.'
         Map<String, Object> result = new LinkedHashMap<>()
         Set<Map<String, Object>> containers = Collections.newSetFromMap(new IdentityHashMap<Map<String, Object>, Boolean>())
-        Set<List<Object>> builtLists = Collections.newSetFromMap(new IdentityHashMap<List<Object>, Boolean>())
         containers.add(result)
         boolean stored = false
         for (PropertySource<?> propertySource : environment.propertySources) {
             if (!(propertySource instanceof EnumerablePropertySource)) {
                 continue
             }
+            Set<List<Object>> builtLists = Collections.newSetFromMap(new IdentityHashMap<List<Object>, Boolean>())
             for (String name : ((EnumerablePropertySource<?>) propertySource).propertyNames) {
                 if (name == null || !name.startsWith(prefix)) {
                     continue
@@ -502,7 +502,8 @@ abstract class ConfigurationBuilder<B, C> {
     /**
      * True when this path is already stored, or an ancestor holds a non-map.
      * A stored map is not a blocking ancestor of a missing leaf.
-     * Only a list this walk built from a numeric index accepts a later index.
+     * Only a list built from the numeric indexes of the current source accepts a later index,
+     * so a higher source's list replaces a lower one whole.
      */
     private static boolean pathBlocked(Map<String, Object> result, Set<List<Object>> builtLists, String name) {
         int bracket = indexedBracket(name)
@@ -846,4 +847,3 @@ abstract class ConfigurationBuilder<B, C> {
         return ClassUtils.isAssignableValue(propertyType, nestedValue) ? nestedValue : null
     }
 }
-
