@@ -61,7 +61,7 @@ class MongoTenantIdConstraintsSpec extends AutoStartedMongoSpec {
                 (MongoSettings.SETTING_URL)                   : "mongodb://${mongoHost}:${mongoPort}/tenantIdConstraintsDb" as String,
         ]
         this.datastore = new MongoDatastore(config, TenantAccount, TenantOwner, TenantPet, TenantWalker, TenantJogger, TenantLeash,
-                TenantShelter, TenantCat, TenantChip)
+                TenantShelter, TenantCat, TenantChip, TenantRider, TenantHorse)
     }
 
     void setup() {
@@ -266,6 +266,61 @@ class MongoTenantIdConstraintsSpec extends AutoStartedMongoSpec {
         TenantCat.collection.find().first().home.city == 'Oslo'
     }
 
+    void 'saving an owner without validating a new associated object skips the insert of an associated object whose tenant id breaks a constraint'() {
+        given: 'a current tenant id longer than the maxSize of the tenant id of a pet'
+        System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, 'toolongtenant')
+
+        when: 'the pet is not validated with the owner, so it is validated as it is inserted, with the current tenant id'
+        def owner = new TenantOwner(name: 'Dave').addToPets(new TenantPet(name: 'Rex'))
+        def saved = TenantOwner.withNewSession { owner.save(arguments + [flush: true]) }
+
+        then: 'that validation fails, and the pet is not inserted, without an error'
+        saved
+        !owner.hasErrors()
+        storedCounts() == [owners: 1L, pets: 0L]
+
+        where:
+        arguments << [[deepValidate: false], [validate: false]]
+    }
+
+    void 'saving an owner without cascading and flushing later skips both inserts when the tenant id of a new associated object breaks a constraint'() {
+        given:
+        System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, 'toolongtenant')
+
+        when: 'the owner is validated again as it is inserted, this time with the pet'
+        def owner = new TenantOwner(name: 'Dave').addToPets(new TenantPet(name: 'Rex'))
+        def saved = TenantOwner.withNewSession { session ->
+            def result = owner.save(deepValidate: false)
+            session.flush()
+            result
+        }
+
+        then: 'neither is inserted, although the save returned the owner'
+        saved
+        storedCounts() == [owners: 0L, pets: 0L]
+    }
+
+    void 'an associated object of a to-one association whose only change is inside an embedded object keeps its tenant id'() {
+        given: 'a rider and a horse of one tenant'
+        System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, 'acme')
+        ObjectId id = TenantRider.withNewSession {
+            new TenantRider(name: 'Dave', horse: new TenantHorse(name: 'Bolt', stable: new TenantHome(city: 'Rome'))).save(flush: true).id
+        }
+
+        when: 'they are loaded, only the embedded stable of the horse is changed, and the rider is saved while another tenant is current'
+        Map<String, Object> result = TenantRider.withNewSession {
+            def rider = TenantRider.get(id)
+            rider.horse.stable.city = 'Paris'
+            System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, 'beta')
+            def saved = rider.save(flush: true)
+            [saved: saved != null, tenantId: rider.horse.firmId, changed: rider.horse.hasChanged()]
+        }
+
+        then: 'the horse, which a to-one association saves only when it has changes of its own, is left alone and is not updated'
+        result == [saved: true, tenantId: 'acme', changed: false]
+        TenantHorse.collection.find().first().firmId == 'acme'
+    }
+
     void 'saving an owner inside withoutId fails when a new associated object is not given a tenant id'() {
         when:
         def owner = new TenantOwner(name: 'Dave', tenantId: 'acme').addToPets(new TenantPet(name: 'Rex'))
@@ -273,7 +328,8 @@ class MongoTenantIdConstraintsSpec extends AutoStartedMongoSpec {
 
         then: 'the pet does not get the tenant id of a tenant, so the owner reports the tenant id of the pet'
         !saved
-        owner.errors.hasFieldErrors('pets[0].firmId')
+        owner.pets*.firmId == [null]
+        owner.errors.getFieldError('pets[0].firmId').code == 'nullable'
         storedCounts() == [owners: 0L, pets: 0L]
     }
 
@@ -436,5 +492,34 @@ class TenantHome {
         if (city == 'Oslo') {
             setCity('Bergen')
         }
+    }
+}
+
+@Entity
+class TenantRider implements MultiTenant<TenantRider>, MongoEntity<TenantRider> {
+    ObjectId id
+    String name
+    String tenantId
+    TenantHorse horse
+}
+
+@Entity
+class TenantHorse implements MultiTenant<TenantHorse>, MongoEntity<TenantHorse> {
+    ObjectId id
+    String name
+    String firmId
+    TenantHome stable
+
+    static belongsTo = TenantRider
+
+    static embedded = ['stable']
+
+    static constraints = {
+        firmId maxSize: 5
+        stable nullable: true
+    }
+
+    static mapping = {
+        tenantId name: 'firmId'
     }
 }

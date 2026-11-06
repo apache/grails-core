@@ -18,7 +18,7 @@
  */
 package org.grails.datastore.gorm
 
-import java.util.function.Predicate
+import java.util.function.BiPredicate
 
 import groovy.transform.CompileStatic
 
@@ -39,6 +39,7 @@ import org.grails.datastore.mapping.core.Session
 import org.grails.datastore.mapping.engine.event.ValidationEvent
 import org.grails.datastore.mapping.model.MappingContext
 import org.grails.datastore.mapping.model.config.GormProperties
+import org.grails.datastore.mapping.model.types.Association
 import org.grails.datastore.mapping.reflect.ClassUtils
 import org.grails.datastore.mapping.validation.ValidationErrors
 
@@ -129,9 +130,10 @@ class GormValidationApi<D> extends AbstractGormApi<D> {
                 }
             }
 
-            Predicate<Object> cascadeListener = event.cascadeListener
+            BiPredicate<Object, Association> cascadeListener = event.cascadeListener
             if (cascadeListener != null && validator instanceof PersistentEntityValidator) {
-                ((PersistentEntityValidator) validator).validate(instance, localErrors, deepValidate, cascadeListener)
+                // The errors it returns are a copy of the given ones when the errors of an associated object were replaced
+                localErrors = (ValidationErrors) ((PersistentEntityValidator) validator).validate(instance, localErrors, deepValidate, cascadeListener)
             } else if (validator instanceof CascadingValidator) {
                 ((CascadingValidator) validator).validate(instance, localErrors, deepValidate)
             } else if (validator instanceof org.grails.datastore.gorm.validation.CascadingValidator) {

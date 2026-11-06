@@ -18,6 +18,8 @@
  */
 package grails.gorm.multitenancy.tenantid
 
+import groovy.transform.EqualsAndHashCode
+
 import spock.lang.AutoCleanup
 import spock.lang.Issue
 import spock.lang.Shared
@@ -205,6 +207,36 @@ class TenantIdConstraintsSpec extends Specification {
         !kennel.hasErrors()
         kennel.guests*.firmId == ['acme']
         Guest.withNewSession { Guest.count() } == 1
+    }
+
+    void 'validating an owner that is not multi-tenant without a current tenant leaves its associated objects alone'() {
+        given: 'no current tenant'
+        System.clearProperty(SystemPropertyTenantResolver.PROPERTY_NAME)
+
+        when:
+        def kennel = new Kennel(name: 'North').addToGuests(new Guest(name: 'Rex'))
+        boolean valid = Kennel.withNewSession { kennel.validate() }
+
+        then: 'the guest gets no tenant id, and its tenant id, which is declared nullable: false, is reported'
+        !valid
+        kennel.guests*.firmId == [null]
+        kennel.errors.getFieldError('guests[0].firmId').code == 'nullable'
+    }
+
+    void 'an associated object that two associations refer to is validated once, also when its hashCode includes its tenant id'() {
+        given: 'a collar without a colour, whose hashCode includes its tenant id, as the collar and the spare of a hound'
+        System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, 'acme')
+        def collar = new Collar()
+        def hound = new Hound(name: 'Rex', collar: collar, spare: collar)
+
+        when:
+        boolean valid = Hound.withNewSession { hound.validate() }
+
+        then: 'its beforeValidate callback runs once, and its colour is reported once'
+        !valid
+        collar.firmId == 'acme'
+        collar.validations == 1
+        hound.errors.fieldErrors*.field.findAll { it.endsWith('colour') }.size() == 1
     }
 
     void 'an associated object is given the current tenant id when an association that does not cascade validation refers to it too'() {
@@ -425,6 +457,32 @@ class TenantIdConstraintsSpec extends Specification {
 
         and: 'that tenant id is the only change of the cat itself'
         cat.listDirtyPropertyNames() == ['firmId']
+    }
+
+    void 'an associated object of a to-one association keeps its tenant id when its only change is inside an embedded object'() {
+        given: 'a horse of another tenant without changes, as a horse a datastore has loaded'
+        System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, 'acme')
+        def horse = new Horse(name: 'Bolt', firmId: 'other', stable: new Basket(colour: 'red'))
+        def rider = new Rider(name: 'Dave', horse: horse)
+        [horse, horse.stable]*.trackChanges()
+
+        when: 'only its embedded stable is changed, and the rider is validated'
+        horse.stable.colour = 'blue'
+        boolean valid = Rider.withNewSession { rider.validate() }
+
+        then: 'the horse, which a datastore saves through a to-one association only when it has changes of its own, is left alone'
+        valid
+        horse.firmId == 'other'
+        !horse.hasChanged()
+
+        when: 'the horse itself is changed'
+        horse.name = 'Storm'
+        valid = Rider.withNewSession { rider.validate() }
+
+        then: 'it is given the current tenant id, which is recorded as a change'
+        valid
+        horse.firmId == 'acme'
+        horse.listDirtyPropertyNames() as Set == ['firmId', 'name'] as Set
     }
 
     void 'a validation that a beforeValidate callback runs with a validator assigns no tenant ids for the validation around it'() {
@@ -698,6 +756,69 @@ class Guest implements MultiTenant<Guest> {
 
     static constraints = {
         firmId nullable: false
+    }
+
+    static mapping = {
+        tenantId name: 'firmId'
+    }
+}
+
+@Entity
+class Hound implements MultiTenant<Hound> {
+
+    String name
+    String tenantId
+    Collar collar
+    Collar spare
+}
+
+@Entity
+@EqualsAndHashCode(includes = ['colour', 'firmId'])
+class Collar implements MultiTenant<Collar> {
+
+    String colour
+    String firmId
+    int validations
+
+    static belongsTo = Hound
+
+    static transients = ['validations']
+
+    static constraints = {
+        colour nullable: false
+    }
+
+    static mapping = {
+        tenantId name: 'firmId'
+    }
+
+    def beforeValidate() {
+        validations++
+    }
+}
+
+@Entity
+class Rider implements MultiTenant<Rider> {
+
+    String name
+    String tenantId
+    Horse horse
+}
+
+@Entity
+class Horse implements MultiTenant<Horse> {
+
+    String name
+    String firmId
+    Basket stable
+
+    static belongsTo = Rider
+
+    static embedded = ['stable']
+
+    static constraints = {
+        firmId maxSize: 5
+        stable nullable: true
     }
 
     static mapping = {

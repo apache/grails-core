@@ -18,7 +18,7 @@
  */
 package org.grails.orm.hibernate
 
-import java.util.function.Predicate
+import java.util.function.BiPredicate
 
 import groovy.transform.CompileStatic
 
@@ -33,6 +33,7 @@ import grails.gorm.validation.PersistentEntityValidator
 import org.grails.datastore.gorm.GormValidationApi
 import org.grails.datastore.gorm.validation.CascadingValidator
 import org.grails.datastore.mapping.engine.event.ValidationEvent
+import org.grails.datastore.mapping.model.types.Association
 import org.grails.datastore.mapping.reflect.ClassUtils
 import org.grails.datastore.mapping.validation.ValidationErrors
 import org.grails.orm.hibernate.support.HibernateRuntimeUtils
@@ -60,6 +61,7 @@ abstract class AbstractHibernateGormValidationApi<D> extends GormValidationApi<D
 
     boolean validate(D instance, List validatedFieldsList, Map arguments = Collections.emptyMap()) {
         Errors errors = setupErrorsProperty(instance)
+        Errors attachedErrors = errors
 
         Validator validator = getValidator()
         if (validator == null) return true
@@ -79,7 +81,7 @@ abstract class AbstractHibernateGormValidationApi<D> extends GormValidationApi<D
 
         evict = ClassUtils.getBooleanFromMap(ARGUMENT_EVICT, arguments)
 
-        Predicate<Object> cascadeListener = fireEvent(instance, validatedFieldsList, deepValidate).cascadeListener
+        BiPredicate<Object, Association> cascadeListener = fireEvent(instance, validatedFieldsList, deepValidate).cascadeListener
 
         hibernateTemplate.execute { Session session ->
 
@@ -87,7 +89,8 @@ abstract class AbstractHibernateGormValidationApi<D> extends GormValidationApi<D
             applyManualFlush(session)
             try {
                 if (cascadeListener != null && validator instanceof PersistentEntityValidator) {
-                    ((PersistentEntityValidator) validator).validate(instance, errors, deepValidate, cascadeListener)
+                    // The errors it returns are a copy of the given ones when the errors of an associated object were replaced
+                    errors = ((PersistentEntityValidator) validator).validate(instance, errors, deepValidate, cascadeListener)
                 } else if (validator instanceof CascadingValidator) {
                     ((CascadingValidator) validator).validate(instance, errors, deepValidate)
                 } else if (validator instanceof grails.gorm.validation.CascadingValidator) {
@@ -119,8 +122,8 @@ abstract class AbstractHibernateGormValidationApi<D> extends GormValidationApi<D
             }
         }
 
-        // If the errors have been filtered, update the 'errors' object attached to the target.
-        if (errors.errorCount != oldErrorCount) {
+        // If the errors have been replaced or filtered, update the 'errors' object attached to the target.
+        if (!errors.is(attachedErrors) || errors.errorCount != oldErrorCount) {
             setErrors(instance, errors)
         }
 

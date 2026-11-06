@@ -18,6 +18,8 @@
  */
 package grails.gorm.validation
 
+import groovy.transform.EqualsAndHashCode
+
 import org.grails.datastore.gorm.validation.constraints.registry.DefaultValidatorRegistry
 import org.grails.datastore.mapping.core.connections.ConnectionSourceSettings
 import org.grails.datastore.mapping.dirty.checking.DirtyCheckable
@@ -26,6 +28,7 @@ import org.grails.datastore.mapping.keyvalue.mapping.config.KeyValueMappingConte
 import org.grails.datastore.mapping.model.MappingContext
 import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.model.config.GormMappingConfigurationStrategy
+import org.grails.datastore.mapping.model.types.Association
 import org.grails.datastore.mapping.validation.ValidationErrors
 import org.grails.datastore.mapping.validation.ValidatorRegistry
 import org.springframework.validation.BeanPropertyBindingResult
@@ -187,16 +190,19 @@ class PersistentEntityValidatorSpec extends Specification {
         Shelf shelf = new Shelf(name: 'Top', volume: new Volume())
         Errors errors = new ValidationErrors(shelf)
         List<String> titles = []
+        List<String> associations = []
 
         when: 'the listener unsets the title that beforeValidate has given the associated object'
-        shelfValidator.validate(shelf, errors, true) { Object associatedObject ->
+        shelfValidator.validate(shelf, errors, true) { Object associatedObject, Association association ->
             titles << associatedObject.title
+            associations << association.name
             associatedObject.title = null
             true
         }
 
-        then: 'it is called once, after the beforeValidate callback of that object'
+        then: 'it is called once, after the beforeValidate callback of that object, with the association that reaches it'
         titles == ['untitled']
+        associations == ['volume']
 
         and: 'before the constraints of that object are checked'
         errors.getFieldError('volume.title').code == 'nullable'
@@ -210,7 +216,7 @@ class PersistentEntityValidatorSpec extends Specification {
         int calls = 0
 
         when: 'the listener leaves the object alone each time'
-        shelfValidator.validate(shelf, errors, true) { Object associatedObject ->
+        shelfValidator.validate(shelf, errors, true) { Object associatedObject, Association association ->
             calls++
             false
         }
@@ -221,7 +227,7 @@ class PersistentEntityValidatorSpec extends Specification {
 
         when: 'the listener changes the object the second time'
         calls = 0
-        shelfValidator.validate(shelf, errors, true) { Object associatedObject ->
+        shelfValidator.validate(shelf, errors, true) { Object associatedObject, Association association ->
             if (++calls == 1) {
                 return false
             }
@@ -243,7 +249,7 @@ class PersistentEntityValidatorSpec extends Specification {
         List<Object> changed = []
 
         when: 'the listener changes the object it was passed first, and the other one only once the first is changed'
-        shelfValidator.validate(shelf, errors, true) { Object associatedObject ->
+        shelfValidator.validate(shelf, errors, true) { Object associatedObject, Association association ->
             if (!passed.any { it.is(associatedObject) }) {
                 passed << associatedObject
                 return false
@@ -268,7 +274,7 @@ class PersistentEntityValidatorSpec extends Specification {
         int calls = 0
 
         when: 'the listener leaves both alone as they are validated, and gives the volume another code as it is passed again'
-        shelfValidator.validate(shelf, errors, true) { Object associatedObject ->
+        Errors result = shelfValidator.validate(shelf, errors, true) { Object associatedObject, Association association ->
             if (++calls > 2 && associatedObject.is(shelf.volume)) {
                 associatedObject.code = newCode
                 return true
@@ -276,8 +282,12 @@ class PersistentEntityValidatorSpec extends Specification {
             false
         }
 
-        then: 'the error of the code it had is gone, its constraints are checked with the new code, and the other errors are kept'
-        errors.fieldErrors.collect { [it.field, it.rejectedValue] } == expected
+        then: 'the errors returned are a copy of the given errors, which still hold the error of the code it had'
+        !result.is(errors)
+        errors.getFieldError('volume.code').rejectedValue == 'too-long'
+
+        and: 'in the copy that error is gone, its constraints are checked with the new code, and the other errors are kept'
+        result.fieldErrors.collect { [it.field, it.rejectedValue] } == expected
 
         where:
         newCode         || expected
@@ -295,7 +305,7 @@ class PersistentEntityValidatorSpec extends Specification {
         int calls = 0
 
         when: 'the listener leaves the volume alone as it is validated, and changes it as it is passed again'
-        shelfValidator.validate(shelf, errors, true) { Object associatedObject ->
+        Errors result = shelfValidator.validate(shelf, errors, true) { Object associatedObject, Association association ->
             if (++calls == 1) {
                 return false
             }
@@ -305,10 +315,25 @@ class PersistentEntityValidatorSpec extends Specification {
 
         then: 'both are kept, and no error is added to them'
         calls == 2
+        result.is(errors)
         errors.fieldErrors.collect { [it.field, it.code] } == [['name', 'bound'], ['volume.code', 'bound']]
     }
 
-    def "a validation with a cascade listener records its errors in the given errors, under their nested path"() {
+    def "a validation with a cascade listener records its errors in the given errors, and returns them"() {
+        given:
+        Validator shelfValidator = shelfValidator()
+        Shelf shelf = new Shelf(volume: new Volume(code: 'too-long'))
+        Errors errors = new ValidationErrors(shelf)
+
+        when: 'the listener leaves the volume alone each time'
+        Errors result = shelfValidator.validate(shelf, errors, true) { Object associatedObject, Association association -> false }
+
+        then: 'every error is in the given errors, which are returned'
+        result.is(errors)
+        errors.fieldErrors*.field == ['name', 'volume.code']
+    }
+
+    def "the errors that a cascade listener makes a validation return keep the object name and the nested path of the given errors"() {
         given: 'the errors of an object that holds the shelf'
         Validator shelfValidator = shelfValidator()
         Shelf shelf = new Shelf(volume: new Volume(code: 'too-long'), spare: new Volume(code: 'way-too-long'))
@@ -317,7 +342,7 @@ class PersistentEntityValidatorSpec extends Specification {
         int calls = 0
 
         when: 'the listener leaves both volumes alone as they are validated, and gives the first one another code as it is passed again'
-        shelfValidator.validate(shelf, errors, true) { Object associatedObject ->
+        Errors result = shelfValidator.validate(shelf, errors, true) { Object associatedObject, Association association ->
             if (++calls > 2 && associatedObject.is(shelf.volume)) {
                 associatedObject.code = 'also-too-long'
                 return true
@@ -326,12 +351,40 @@ class PersistentEntityValidatorSpec extends Specification {
         }
 
         then:
+        !result.is(errors)
         errors.nestedPath == 'shelf.'
-        errors.fieldErrors.collect { [it.objectName, it.field, it.rejectedValue] } == [
+        result.nestedPath == 'shelf.'
+        result.fieldErrors.collect { [it.objectName, it.field, it.rejectedValue] } == [
                 ['holder', 'shelf.name', null],
                 ['holder', 'shelf.spare.code', 'way-too-long'],
                 ['holder', 'shelf.volume.code', 'also-too-long']
         ]
+    }
+
+    def "an associated object that two associations refer to is validated once, also when the listener changes its hashCode"() {
+        given: 'a tome whose hashCode depends on its code, on both ends of a bookend'
+        MappingContext mappingContext = new KeyValueMappingContext("test")
+        mappingContext.mappingFactory = new GormKeyValueMappingFactory("test")
+        mappingContext.syntaxStrategy = new GormMappingConfigurationStrategy(mappingContext.mappingFactory)
+        PersistentEntity bookendEntity = mappingContext.addPersistentEntity(Bookend)
+        mappingContext.addPersistentEntity(Tome)
+        mappingContext.validatorRegistry = new DefaultValidatorRegistry(mappingContext, new ConnectionSourceSettings())
+        Validator bookendValidator = mappingContext.getEntityValidator(bookendEntity)
+        Tome tome = new Tome()
+        Bookend bookend = new Bookend(name: 'Oak', left: tome, right: tome)
+        int calls = 0
+
+        when: 'the listener gives the tome a code each time it is called'
+        Errors result = bookendValidator.validate(bookend, new ValidationErrors(bookend), true) { Object associatedObject, Association association ->
+            calls++
+            associatedObject.code = "code-${calls}"
+            true
+        }
+
+        then: 'the beforeValidate callback of the tome runs once, the listener is called once, and its title is reported once'
+        tome.validations == 1
+        calls == 1
+        result.fieldErrors*.field.findAll { it.endsWith('title') }.size() == 1
     }
 
     def "a cascade listener is not called when validation does not cascade, and validation runs without one"() {
@@ -341,7 +394,7 @@ class PersistentEntityValidatorSpec extends Specification {
         List<Object> seen = []
 
         when:
-        authorValidator.validate(author, errors, false) { Object associatedObject ->
+        authorValidator.validate(author, errors, false) { Object associatedObject, Association association ->
             seen << associatedObject
             true
         }
@@ -366,7 +419,7 @@ class PersistentEntityValidatorSpec extends Specification {
         Set<Object> seen = Collections.newSetFromMap(new IdentityHashMap<>())
 
         when: 'the listener of one validation runs another validation, which has no listener, each time it is called'
-        authorValidator.validate(author, new ValidationErrors(author), true) { Object associatedObject ->
+        authorValidator.validate(author, new ValidationErrors(author), true) { Object associatedObject, Association association ->
             seen << associatedObject
             authorValidator.validate(other, new ValidationErrors(other))
             true
@@ -468,6 +521,7 @@ class Shelf {
     Volume spare
 
     static constraints = {
+        name nullable: false
         spare nullable: true
     }
 }
@@ -490,5 +544,32 @@ class Volume {
 
     def beforeValidate() {
         title = 'untitled'
+    }
+}
+
+@Entity
+class Bookend {
+    String name
+    Tome left
+    Tome right
+}
+
+@Entity
+@EqualsAndHashCode(includes = ['code'])
+class Tome {
+    String code
+    String title
+
+    @Transient
+    int validations
+
+    static belongsTo = Bookend
+
+    static constraints = {
+        title nullable: false
+    }
+
+    def beforeValidate() {
+        validations++
     }
 }

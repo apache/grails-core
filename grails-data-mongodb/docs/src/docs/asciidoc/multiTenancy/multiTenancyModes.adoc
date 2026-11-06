@@ -119,6 +119,8 @@ Without a current tenant a lookup by id throws `TenantNotFoundException`, as a q
 
 When an instance is saved, GORM sets its `tenantId` to the current tenant id, also when that tenant id is `DEFAULT`, the name of the default connection source. Only inside `Tenants.withoutId` or a method annotated with `@WithoutTenant` does an instance keep the `tenantId` that is set on it.
 
+The constraints declared on the tenant id, such as `nullable` or `maxSize`, are checked when an instance is validated, after GORM has set it. GORM also sets the tenant id of the new and the changed associated instances that are validated with an instance, so a tenant id that breaks a constraint declared on one of them is a validation error of the instance that is saved, and neither is stored. GORM for MongoDB validates an instance again as it inserts or updates it, and skips the insert or update without an error when that validation fails. An associated instance that is not validated with the instance being saved, as with `save(deepValidate: false)` or `save(validate: false)`, is therefore not stored when its tenant id breaks a constraint declared on it.
+
 But this logic bypasses any built into tenant id interception and inclusion:
 
 [source,groovy]

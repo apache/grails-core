@@ -19,7 +19,7 @@
 
 package grails.gorm.validation
 
-import java.util.function.Predicate
+import java.util.function.BiPredicate
 
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
@@ -57,8 +57,9 @@ class PersistentEntityValidator implements CascadingValidator, ConstrainedEntity
                                                             GormProperties.IDENTITY,
                                                             GormProperties.VERSION)
 
-    // The listener that validate(Object, Errors, boolean, Predicate) hands to the validation it starts
-    private static final ThreadLocal<Predicate<Object>> CASCADE_LISTENER = new ThreadLocal<>()
+    // What validate(Object, Errors, boolean, BiPredicate) hands to the validation it starts: the listener, and the
+    // errors that the validation leaves
+    private static final ThreadLocal<CascadeValidation> CASCADE_VALIDATION = new ThreadLocal<>()
 
     final PersistentEntity entity
     final EntityReflector entityReflector
@@ -86,11 +87,16 @@ class PersistentEntityValidator implements CascadingValidator, ConstrainedEntity
 
     /**
      * Validates the given object with a listener for the associated objects that the validation cascades to. The
-     * listener is called with each of them once the beforeValidate callback of that object has run and before its
-     * constraints are checked, and returns whether it has changed the object. An object that it has left alone is
-     * passed to it again when every associated object has been validated, since a callback that ran in between may
-     * have changed that object. When the listener changes it then, its constraints are checked again, and the errors
-     * that they recorded the first time are not reported.
+     * listener is called with each of them, and with the association through which the validation reaches it, once
+     * the beforeValidate callback of that object has run and before its constraints are checked. It returns whether
+     * it has changed the object. An object that it has left alone is passed to it again when every associated object
+     * has been validated, since a callback that ran in between may have changed that object. When the listener
+     * changes it then, its constraints are checked again.
+     *
+     * <p>The errors are recorded in the given errors as the validation runs. The errors that the constraints of an
+     * object recorded before the listener changed it no longer hold, and they cannot be taken out of the given
+     * errors. The validation then returns a copy of the given errors without them, which holds the errors recorded
+     * since, and the caller uses the returned errors as the errors of the object.</p>
      *
      * <p>Only this validation calls the listener. A validation that runs while this one does, from a callback for
      * example, calls the listener it is given itself, or none.</p>
@@ -99,23 +105,26 @@ class PersistentEntityValidator implements CascadingValidator, ConstrainedEntity
      * @param errors The errors
      * @param cascade Whether the validation cascades to the associated objects
      * @param cascadeListener The listener, which may be null
+     * @return The errors of the validation, which are the given errors unless the copy described above was needed
      * @since 7.0.18
      */
-    void validate(Object obj, Errors errors, boolean cascade, Predicate<Object> cascadeListener) {
-        CASCADE_LISTENER.set(cascadeListener)
+    Errors validate(Object obj, Errors errors, boolean cascade, BiPredicate<Object, Association> cascadeListener) {
+        CascadeValidation cascadeValidation = new CascadeValidation(cascadeListener)
+        CASCADE_VALIDATION.set(cascadeValidation)
         try {
             validate(obj, errors, cascade)
         }
         finally {
-            CASCADE_LISTENER.remove()
+            CASCADE_VALIDATION.remove()
         }
+        cascadeValidation.errors != null ? cascadeValidation.errors : errors
     }
 
     @Override
     void validate(Object obj, Errors errors, boolean cascade = true) {
         // Taken before anything else runs, so that a validation that this one runs does not see it
-        Predicate<Object> cascadeListener = CASCADE_LISTENER.get()
-        CASCADE_LISTENER.remove()
+        CascadeValidation cascadeValidation = CASCADE_VALIDATION.get()
+        CASCADE_VALIDATION.remove()
 
         if (obj == null || !targetClass.isInstance(obj)) {
             throw new IllegalArgumentException("Argument [$obj] is not an instance of [$targetClass] which this validator is configured for")
@@ -124,15 +133,8 @@ class PersistentEntityValidator implements CascadingValidator, ConstrainedEntity
         Map<String, ConstrainedProperty> constrainedProperties = this.constrainedProperties
         Set<String> constrainedPropertyNames = new HashSet<>(constrainedProperties.keySet())
 
-        ValidatedObjects validatedObjects = new ValidatedObjects(cascadeListener)
+        ValidatedObjects validatedObjects = new ValidatedObjects(cascadeValidation?.listener)
         validatedObjects.add(obj)
-
-        // An error cannot be taken out of the errors once it is recorded, and the errors of an object that the
-        // listener changes when it is passed again no longer hold. A validation with a listener therefore records
-        // its errors in a copy, and adds those that hold in the end to the given errors.
-        boolean replaceable = cascade && cascadeListener != null && errors instanceof BindingResult
-        Errors recorded = replaceable ? copyOf((BindingResult) errors, Collections.<ObjectError>emptySet()) : errors
-        int givenErrorCount = recorded.getErrorCount()
 
         for (PersistentProperty pp in entity.persistentProperties) {
             def propertyName = pp.name
@@ -140,13 +142,13 @@ class PersistentEntityValidator implements CascadingValidator, ConstrainedEntity
             ConstrainedProperty constrainedProperty = constrainedProperties.get(propertyName)
 
             if (constrainedProperty != null) {
-                validatePropertyWithConstraint(obj, propertyName, entityReflector, recorded, constrainedProperty, pp)
+                validatePropertyWithConstraint(obj, propertyName, entityReflector, errors, constrainedProperty, pp)
             }
 
             if (pp instanceof Association) {
                 Association association = (Association) pp
                 if (cascade) {
-                    cascadeToAssociativeProperty(obj, recorded, entityReflector, association, validatedObjects)
+                    cascadeToAssociativeProperty(obj, errors, entityReflector, association, validatedObjects)
                 }
             }
 
@@ -156,24 +158,20 @@ class PersistentEntityValidator implements CascadingValidator, ConstrainedEntity
         for (String remainingProperty in constrainedPropertyNames) {
             ConstrainedProperty constrainedProperty = constrainedProperties.get(remainingProperty)
             if (remainingProperty != null) {
-                validatePropertyWithConstraint(obj, remainingProperty, entityReflector, recorded, constrainedProperty, null)
+                validatePropertyWithConstraint(obj, remainingProperty, entityReflector, errors, constrainedProperty, null)
             }
         }
 
-        recorded = offerAgain(validatedObjects, recorded)
-
-        if (replaceable) {
-            List<ObjectError> all = recorded.getAllErrors()
-            for (ObjectError error : all.subList(givenErrorCount, all.size())) {
-                ((BindingResult) errors).addError(error)
-            }
+        Errors recorded = offerAgain(validatedObjects, errors)
+        if (cascadeValidation != null) {
+            cascadeValidation.errors = recorded
         }
     }
 
     // A callback that ran after the listener was called with an object may have changed that object. The listener
     // is therefore called again with the objects it has left alone, until it leaves them all alone. The constraints
-    // of an object that it changes now are checked again, in place of the first check: the errors that they
-    // recorded then are left out of the errors that this method returns.
+    // of an object that it changes now are checked again, in place of the first check. The errors that they recorded
+    // then cannot be taken out of the given errors, so this method then returns a copy of them without those errors.
     private Errors offerAgain(ValidatedObjects validatedObjects, Errors errors) {
         List<LeftAlone> leftAlone = validatedObjects.leftAlone
         Errors recorded = errors
@@ -184,7 +182,7 @@ class PersistentEntityValidator implements CascadingValidator, ConstrainedEntity
             ListIterator<LeftAlone> candidates = leftAlone.listIterator(leftAlone.size())
             while (candidates.hasPrevious()) {
                 LeftAlone candidate = candidates.previous()
-                if (validatedObjects.cascadeListener.test(candidate.object)) {
+                if (validatedObjects.cascadeListener.test(candidate.object, candidate.association)) {
                     candidates.remove()
                     changed = true
                     if (recorded instanceof BindingResult && !candidate.errors.isEmpty()) {
@@ -205,7 +203,7 @@ class PersistentEntityValidator implements CascadingValidator, ConstrainedEntity
     }
 
     // The errors of the same object under the same nested path, without the given ones
-    private static BindingResult copyOf(BindingResult errors, Set<ObjectError> without) {
+    private static ValidationErrors copyOf(BindingResult errors, Set<ObjectError> without) {
         ValidationErrors copy = new ValidationErrors(errors.getTarget(), errors.getObjectName())
         if (errors instanceof AbstractBindingResult) {
             copy.setMessageCodesResolver(((AbstractBindingResult) errors).getMessageCodesResolver())
@@ -471,23 +469,37 @@ class PersistentEntityValidator implements CascadingValidator, ConstrainedEntity
 
     /**
      * The objects that a validation has cascaded to, which the cascade methods pass on as their set of validated
-     * objects, with the listener of that validation and the objects that it has left alone.
+     * objects, with the listener of that validation and the objects that it has left alone. An object is also found
+     * by identity, so that it is validated once when the listener, or a callback, changes a property that its
+     * hashCode depends on.
      */
     @CompileStatic
     private static class ValidatedObjects extends HashSet<Object> {
 
         private static final long serialVersionUID = 1L
 
-        final transient Predicate<Object> cascadeListener
+        final transient BiPredicate<Object, Association> cascadeListener
         final transient List<LeftAlone> leftAlone = []
+        private final transient Set<Object> identities = Collections.newSetFromMap(new IdentityHashMap<Object, Boolean>())
 
-        ValidatedObjects(Predicate<Object> cascadeListener) {
+        ValidatedObjects(BiPredicate<Object, Association> cascadeListener) {
             this.cascadeListener = cascadeListener
+        }
+
+        @Override
+        boolean add(Object object) {
+            identities.add(object)
+            super.add(object)
+        }
+
+        @Override
+        boolean contains(Object object) {
+            identities.contains(object) || super.contains(object)
         }
 
         // Returns the record of the object when the listener has left it alone, and null otherwise
         LeftAlone offer(Object associatedObject, Association association, String nestedPath) {
-            if (cascadeListener == null || cascadeListener.test(associatedObject)) {
+            if (cascadeListener == null || cascadeListener.test(associatedObject, association)) {
                 return null
             }
             LeftAlone object = new LeftAlone(associatedObject, association, nestedPath)
@@ -516,6 +528,17 @@ class PersistentEntityValidator implements CascadingValidator, ConstrainedEntity
             if (all.size() > errorCount) {
                 errors.addAll(all.subList(errorCount, all.size()))
             }
+        }
+    }
+
+    @CompileStatic
+    private static class CascadeValidation {
+
+        final BiPredicate<Object, Association> listener
+        Errors errors
+
+        CascadeValidation(BiPredicate<Object, Association> listener) {
+            this.listener = listener
         }
     }
 }

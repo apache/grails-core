@@ -18,7 +18,7 @@
  */
 package org.grails.orm.hibernate
 
-import java.util.function.Predicate
+import java.util.function.BiPredicate
 
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
@@ -131,9 +131,14 @@ abstract class AbstractHibernateGormInstanceApi<D> extends GormInstanceApi<D> {
                 event.setDeepValidate(deepValidate)
                 datastore.applicationEventPublisher?.publishEvent(event)
 
-                Predicate<Object> cascadeListener = event.cascadeListener
+                BiPredicate<Object, Association> cascadeListener = event.cascadeListener
                 if (cascadeListener != null && validator instanceof PersistentEntityValidator) {
-                    ((PersistentEntityValidator) validator).validate(target, errors, deepValidate, cascadeListener)
+                    // The errors it returns are a copy of the given ones when the errors of an associated object were replaced
+                    Errors validated = ((PersistentEntityValidator) validator).validate(target, errors, deepValidate, cascadeListener)
+                    if (!validated.is(errors)) {
+                        errors = validated
+                        setErrorsOnInstance(target, errors)
+                    }
                 } else if (validator instanceof CascadingValidator) {
                     ((CascadingValidator) validator).validate(target, errors, deepValidate)
                 } else if (validator instanceof org.grails.datastore.gorm.validation.CascadingValidator) {
