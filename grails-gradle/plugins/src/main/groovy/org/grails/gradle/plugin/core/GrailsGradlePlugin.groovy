@@ -1239,6 +1239,9 @@ ${importStatements}
         extension.startTimeoutSeconds.convention(TRAINING_START_TIMEOUT_SECONDS)
         extension.outputDirectory.convention(project.layout.projectDirectory
                 .dir('src/native/resources/META-INF/native-image'))
+        project.pluginManager.withPlugin(NATIVE_IMAGE_PLUGIN) {
+            addTracedMetadataToNativeImageClasspath(project, extension)
+        }
 
         project.pluginManager.withPlugin(SPRING_BOOT_PLUGIN) {
             TaskProvider<?> bootJar = project.tasks.named('bootJar')
@@ -1261,6 +1264,37 @@ ${importStatements}
                 task.outputDirectory.set(extension.outputDirectory)
             }
         }
+    }
+
+    /**
+     * Puts what {@code traceNativeMetadata} recorded on the classpath the image is built from, without which
+     * recording it changes nothing: the image is built, starts, and fails on the first request that needs it.
+     *
+     * <p>Dynamically, for the reason {@link #addToNativeImageClasspath} is.</p>
+     */
+    @CompileDynamic
+    private static void addTracedMetadataToNativeImageClasspath(Project project, NativeMetadataExtension extension) {
+        def graalvm = project.extensions.findByName('graalvmNative')
+        graalvm?.binaries?.configureEach { binary ->
+            binary.classpath(extension.outputDirectory.map { Directory directory -> nativeMetadataRoot(directory.asFile) })
+        }
+    }
+
+    /**
+     * The classpath entry the metadata in a directory is read from: {@code native-image} looks for it under
+     * {@code META-INF/native-image} of each entry, so a directory anywhere else would never be read.
+     */
+    private static File nativeMetadataRoot(File directory) {
+        File metaInf = directory
+        while (metaInf != null && metaInf.name != 'META-INF') {
+            metaInf = metaInf.parentFile
+        }
+        if (metaInf?.parentFile == null) {
+            throw new GradleException("grails.nativeMetadata.outputDirectory is ${directory}, which an image cannot " +
+                    'read metadata from. Use a directory under META-INF/native-image, as the default ' +
+                    'src/native/resources/META-INF/native-image is.')
+        }
+        metaInf.parentFile
     }
 
     protected void configureBootRunPidFile(Project project) {

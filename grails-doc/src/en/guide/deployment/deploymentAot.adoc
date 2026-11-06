@@ -143,7 +143,7 @@ grails {
 ./gradlew traceNativeMetadata
 ----
 
-The result is merged into `src/native/resources/META-INF/native-image`, alongside the source rather than under `build`, because which paths an image was built to cover is worth reviewing and worth committing.
+The result is merged into `src/native/resources/META-INF/native-image`, alongside the source rather than under `build`, because which paths an image was built to cover is worth reviewing and worth committing. `nativeCompile` builds the image with it. A different `outputDirectory` has to be under a `META-INF/native-image` directory, which is where an image reads metadata from, and the build fails if it is not.
 
 `paths` are asked for. `forms` are asked for *and submitted*: the page is read, the fields the form declares are filled in, and they are posted to the action the form names. Submitting matters separately from rendering, because binding a form is a different half of the framework from rendering one — and it is the half that converts. A checkbox arrives as a string and lands on a boolean property, so a form submitted without one never asks the conversion service anything, and the image is built without the answer.
 
@@ -190,3 +190,5 @@ Redirects are followed, so an application that sends `/` to its real home page r
 NOTE: The agent ships with GraalVM rather than with a JDK, and it must trace the archive the image will be built from — which is compiled for GraalVM's Java. The task uses the project toolchain, which for a project that builds an image is already a GraalVM; `grails.nativeMetadata.javaExecutable` points it elsewhere.
 
 WARNING: The agent records only what ran. A path that is not listed is not covered, and it will be missing in the way that only appears when somebody uses that page. Treat the list as the coverage it is, and extend it as the application grows.
+
+The trace sends `GET` and form `POST` requests, so it cannot reach an action restricted to `QUERY`. What the framework does to bind a command object is the same whichever method reaches it, so tracing another action that binds one covers it, and the classes of the application are written down without a trace. The trace also fails on a request that answers with an error, so what the framework does to answer one is registered for you where it writes one itself, as it does for an exception written as an RFC 9457 problem with `grails.exceptionresolver.problemDetails`.
