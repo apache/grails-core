@@ -53,6 +53,14 @@ public class ExpressionResolver {
             cleanPath = cleanPath.substring(5);
         }
 
+        // 0. A name without a dot that the entity of this scope has as a property is that property, whatever an
+        // enclosing query calls its own alias or joins by that name: the alias is reached by qualifying it, as in
+        // alias.property
+        Path<?> inheritedName = ownPropertyHidden(cleanPath);
+        if (inheritedName != null) {
+            return inheritedName;
+        }
+
         // 1. Check for materialized aliases (Materialized Selects/Joins)
         if (aliasRegistry.hasRealized(cleanPath)) {
             return aliasRegistry.getRealized(cleanPath);
@@ -94,6 +102,19 @@ public class ExpressionResolver {
 
         // 6. Fallback to Root path resolution
         return getPath(joinTracker.getRoot(), cleanPath);
+    }
+
+    /**
+     * The property of the entity of this scope that an alias or join of an enclosing query would hide, or
+     * {@code null} when no enclosing query has an alias or join of the name, or the entity has no such property.
+     */
+    private Path<?> ownPropertyHidden(String name) {
+        if (name.contains(".") || aliasRegistry.isOwnDefined(name) || aliasRegistry.isOwnRealized(name) ||
+                joinTracker.getOwnJoin(name) != null) {
+            return null;
+        }
+        boolean inherited = aliasRegistry.isDefined(name) || aliasRegistry.hasRealized(name) || joinTracker.getJoin(name) != null;
+        return inherited ? getPath(joinTracker.getRoot(), name) : null;
     }
 
     private Expression<?> resolveFromAlias(String alias, String subPath) {

@@ -1726,6 +1726,23 @@ class CreateAliasJoinSpec extends HibernateGormDatastoreSpec {
         where:
         path << ['f.label', 'f.missing', 'f.tag.name', 'f.label.tag']
     }
+
+    void 'a property of an association block is that property, not an outer alias or join of the same name'() {
+        given: 'a team whose like has no tag, one whose like has a tag, and one with no like'
+        def b = new CreateAliasTag(name: 'b').save(failOnError: true)
+        def untagged = new CreateAliasLike(label: 'untagged').save(failOnError: true)
+        def tagged = new CreateAliasLike(label: 'tagged', tag: b).save(failOnError: true)
+        def matching = new CreateAliasTeam(name: 'matching', tag: b).addToLikes(untagged).save(failOnError: true)
+        new CreateAliasTeam(name: 'tagged like', tag: b).addToLikes(tagged).save(failOnError: true)
+        new CreateAliasTeam(name: 'no likes', tag: b).save(flush: true, failOnError: true)
+
+        expect: 'the tag of the team never makes isNull(\'tag\') false for the like'
+        CreateAliasTeam.withCriteria { createAlias('tag', 'tag'); likes { isNull('tag') } }*.id == [matching.id]
+        CreateAliasTeam.withCriteria { tag { eq('name', 'b') }; likes { isNull('tag') } }*.id == [matching.id]
+        CreateAliasTeam.withCriteria { likes { isNotNull('tag') } }*.name == ['tagged like']
+        new DetachedCriteria(CreateAliasTeam).build { createAlias('tag', 't'); likes { isNull('tag') } }.list()*.id == [matching.id]
+        new DetachedCriteria(CreateAliasTeam).build { createAlias('tag', 'tag'); likes { isNull('tag') } }.list()*.id == [matching.id]
+    }
 }
 
 @Entity

@@ -43,6 +43,62 @@ class ExpressionResolverSpec extends Specification {
         result == propPath
     }
 
+    def "a name an enclosing query uses as an alias or join is still a property of this scope"() {
+        given:
+        def outerRoot = Mock(From)
+        def outerTag = Mock(From)
+        def root = Mock(From)
+        def tagProperty = Mock(Path)
+        def parentRegistry = new AliasRegistry()
+        def parentTracker = new JoinTracker(outerRoot)
+        if (enclosing == 'alias') {
+            parentRegistry.realize('tag', outerTag)
+        } else {
+            parentTracker.addJoin('tag', outerTag)
+        }
+        def resolver = new ExpressionResolver(new AliasRegistry(parentRegistry), new JoinTracker(parentTracker, root))
+
+        when:
+        def result = resolver.resolve('tag')
+
+        then:
+        1 * root.get('tag') >> tagProperty
+        result.is(tagProperty)
+
+        where:
+        enclosing << ['alias', 'join']
+    }
+
+    def "a name this scope uses as its own alias is that alias, not the property"() {
+        given:
+        def root = Mock(From)
+        def ownTag = Mock(From)
+        def registry = new AliasRegistry()
+        registry.realize('tag', ownTag)
+        def resolver = new ExpressionResolver(registry, new JoinTracker(root))
+
+        expect:
+        resolver.resolve('tag').is(ownTag)
+    }
+
+    def "a dotted name still reaches the alias of an enclosing query"() {
+        given:
+        def outerRoot = Mock(From)
+        def outerTag = Mock(From)
+        def namePath = Mock(Path)
+        def parentRegistry = new AliasRegistry()
+        parentRegistry.define('tag', new HibernateAlias('tag', 'tag', JoinType.INNER, true))
+        parentRegistry.realize('tag', outerTag)
+        def resolver = new ExpressionResolver(new AliasRegistry(parentRegistry), new JoinTracker(new JoinTracker(outerRoot), Mock(From)))
+
+        when:
+        def result = resolver.resolve('tag.name')
+
+        then:
+        1 * outerTag.get('name') >> namePath
+        result.is(namePath)
+    }
+
     def "test resolve {alias} returns root"() {
         given:
         def root = Mock(From)
