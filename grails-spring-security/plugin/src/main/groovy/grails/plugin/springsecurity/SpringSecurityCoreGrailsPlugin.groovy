@@ -903,20 +903,16 @@ class SpringSecurityCoreGrailsPlugin extends Plugin {
 
     private configureDigestAuth = { conf ->
 
-        if (conf.digest.useCleartextPasswords) {
-            // the filter hashes what is stored as a browser hashes the password, so an encoder adding its id to it would
-            // leave nothing a browser could match
-            Class passwordEncoderClass = classFor('passwordEncoder', NoOpPasswordEncoder)
-            boolean defaultEncoder = passwordEncoderClass == NoOpPasswordEncoder
-            passwordEncoder(passwordEncoderClass) { bean ->
-                if (defaultEncoder) {
-                    bean.factoryMethod = 'getInstance'
-                }
+        // the filter hands what is stored to the authentication manager as the credentials, to be compared with itself
+        if (classFor('passwordEncoder', NoOpPasswordEncoder) == NoOpPasswordEncoder) {
+            passwordEncoder(NoOpPasswordEncoder) { bean ->
+                bean.factoryMethod = 'getInstance'
             }
         }
-        else {
-            // what is stored is the hash a browser computes, which no PasswordEncoder can make since it is not given the
-            // username, so the application makes it, and passwordEncoder stays as it was for what else it is used for
+
+        // what is stored is the hash a browser computes, which no PasswordEncoder can make since it is not given the
+        // username, so the application makes it
+        if (!conf.digest.useCleartextPasswords) {
             conf.digest.passwordAlreadyEncoded = true
         }
 

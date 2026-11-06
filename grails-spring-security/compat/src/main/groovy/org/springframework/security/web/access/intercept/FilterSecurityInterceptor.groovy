@@ -29,6 +29,8 @@ import jakarta.servlet.ServletResponse
 
 import org.springframework.security.access.intercept.AbstractSecurityInterceptor
 import org.springframework.security.authentication.AuthenticationCredentialsNotFoundException
+import org.springframework.security.core.Authentication
+import org.springframework.security.core.context.SecurityContext
 import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.security.web.FilterInvocation
 
@@ -65,14 +67,30 @@ class FilterSecurityInterceptor extends AbstractSecurityInterceptor implements F
             return
         }
 
-        def authentication = SecurityContextHolder.context?.authentication
+        Authentication authentication = SecurityContextHolder.context?.authentication
         if (authentication == null) {
             throw new AuthenticationCredentialsNotFoundException('An Authentication object was not found in the SecurityContext')
         }
-        accessDecisionManager?.decide(authentication, invocation, attributes)
+        accessDecisionManager?.decide(authenticateIfRequired(authentication), invocation, attributes)
         if (!invocation.response.committed) {
             chain.doFilter(request, response)
         }
+    }
+
+    /**
+     * Authenticates what a filter left in the context without doing so, as {@code DigestAuthenticationFilter} does so
+     * that the account checks of the authentication manager still run, or everything if {@code alwaysReauthenticate}
+     * is set. Spring Security's own {@code AbstractSecurityInterceptor} did this before Spring Security 7 removed it.
+     */
+    private Authentication authenticateIfRequired(Authentication authentication) {
+        if (authentication.authenticated && !alwaysReauthenticate) {
+            return authentication
+        }
+        Authentication authenticated = authenticationManager.authenticate(authentication)
+        SecurityContext context = SecurityContextHolder.createEmptyContext()
+        context.authentication = authenticated
+        SecurityContextHolder.context = context
+        authenticated
     }
 
     @Override

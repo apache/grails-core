@@ -123,5 +123,5 @@ Digest authentication cannot be applied to a subset of URLs like Basic authentic
 
 [NOTE]
 ====
-What `s2-quickstart` generates hashes a password with `springSecurityService.encodePassword(password)`, in the user class or in its password encoder listener, which gives the wrong value for Digest authentication. Replace that call with the hash above, or set `digest.useCleartextPasswords` to `true`. With that set, `passwordEncoder` stores passwords as they were typed, so a form can sign a user in as well. Otherwise a form cannot sign in a user who has a Digest hash stored, because it authenticates against `passwordEncoder`, which stays as you configured it and does not recognize the hash.
+What `s2-quickstart` generates hashes a password with `springSecurityService.encodePassword(password)`, in the user class or in its password encoder listener, which gives the wrong value for Digest authentication. Replace that call with the hash above, or set `digest.useCleartextPasswords` to `true`. With Digest authentication `passwordEncoder` compares a password as it is with what is stored, because the filter hands it what is stored as the credentials. So a form can sign a user in with cleartext passwords stored, and cannot with the hash stored.
 ====

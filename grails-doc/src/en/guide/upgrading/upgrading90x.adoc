@@ -125,6 +125,9 @@ What a user has stored is now the hash a browser computes, which the application
 With `digest.useCleartextPasswords`, nobody could sign in with Digest authentication, because the password encoder stored `{noop}secret`.
 It now stores what was typed, so an application that signed in through a form with stored values such as `{noop}secret` removes the `{noop}` prefix from them.
 
+* *`fii.alwaysReauthenticate` in the Spring Security plugin takes effect.*
+The setting did nothing, because the plugin's security interceptor went straight to the access decision. An application that sets it now has every request authenticated again, as the setting describes.
+
 [TIP]
 ====
 The Spring Boot properties migrator, described in the link:upgrading.html#upgrading80x[Grails 8 upgrade guide], finds the configuration properties Spring Boot 4.2 renames, such as `server.tomcat.use-relative-redirects`.

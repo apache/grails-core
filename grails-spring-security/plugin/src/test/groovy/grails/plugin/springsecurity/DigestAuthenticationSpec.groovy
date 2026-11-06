@@ -18,7 +18,8 @@
  */
 package grails.plugin.springsecurity
 
-import org.springframework.mock.web.MockFilterChain
+import jakarta.servlet.FilterChain
+
 import org.springframework.mock.web.MockHttpServletRequest
 import org.springframework.mock.web.MockHttpServletResponse
 import org.springframework.security.authentication.BadCredentialsException
@@ -38,7 +39,7 @@ import grails.web.CamelCaseUrlConverter
 
 /**
  * The handshake a browser makes, against what the plugin creates with {@code useDigestAuth}: the challenge from its
- * entry point, and the response its filter checks against what a user has stored.
+ * entry point, and the response sent through its whole filter chain, which is what grants the request.
  */
 abstract class AbstractDigestAuthenticationSpec extends Specification implements GrailsWebUnitTest {
 
@@ -57,6 +58,7 @@ abstract class AbstractDigestAuthenticationSpec extends Specification implements
     Closure doWithConfig() {
         { config ->
             config.grails.plugin.springsecurity.securityConfigType = 'InterceptUrlMap'
+            config.grails.plugin.springsecurity.interceptUrlMap = [[pattern: '/secure', access: ['isAuthenticated()']]]
             config.grails.plugin.springsecurity.useDigestAuth = true
             config.grails.plugin.springsecurity.userDetailsServiceBeanClass = StoredPasswordUserDetailsService
             config.grails.plugin.springsecurity.digest = digestConfig()
@@ -75,11 +77,13 @@ abstract class AbstractDigestAuthenticationSpec extends Specification implements
         SpringSecurityUtils.application = null
     }
 
-    protected void store(String password) {
-        applicationContext.getBean('userDetailsService', StoredPasswordUserDetailsService).password = password
+    protected void store(String password, boolean enabled = true) {
+        def users = applicationContext.getBean('userDetailsService', StoredPasswordUserDetailsService)
+        users.password = password
+        users.enabled = enabled
     }
 
-    /** Who a browser sending this password is signed in as, if anyone. */
+    /** Who a browser sending this password reaches the application as, if it reaches it. */
     protected String signedInWith(String password) {
         def challenge = new MockHttpServletResponse()
         applicationContext.getBean('digestAuthenticationEntryPoint')
@@ -93,22 +97,25 @@ abstract class AbstractDigestAuthenticationSpec extends Specification implements
         String response = "${ha1}:${nonce}:00000001:cnonce:auth:${ha2}".md5()
 
         def request = new MockHttpServletRequest('GET', '/secure')
+        request.servletPath = '/secure'
         request.addHeader('Authorization', "Digest username=\"user\", realm=\"${realm}\", nonce=\"${nonce}\", " +
                 "uri=\"/secure\", qop=auth, nc=00000001, cnonce=\"cnonce\", response=\"${response}\"")
+        String reached = null
+        FilterChain application = { req, res -> reached = SecurityContextHolder.context.authentication.name } as FilterChain
         SecurityContextHolder.clearContext()
-        applicationContext.getBean('digestAuthenticationFilter')
-                .doFilter(request, new MockHttpServletResponse(), new MockFilterChain())
-        SecurityContextHolder.context.authentication?.name
+        applicationContext.getBean('springSecurityFilterChainProxy').doFilter(request, new MockHttpServletResponse(), application)
+        reached
     }
 
     static class StoredPasswordUserDetailsService implements UserDetailsService {
 
         GrailsApplication grailsApplication
         String password
+        boolean enabled = true
 
         @Override
         UserDetails loadUserByUsername(String username) {
-            new User(username, password, [new SimpleGrantedAuthority('ROLE_USER')])
+            new User(username, password, enabled, true, true, true, [new SimpleGrantedAuthority('ROLE_USER')])
         }
     }
 }
@@ -134,6 +141,26 @@ class EncodedDigestAuthenticationSpec extends AbstractDigestAuthenticationSpec {
 
         expect:
             signedInWith('secret') == null
+    }
+
+    void 'an account that is disabled is refused, however right the password'() {
+        given:
+            store("user:${REALM}:secret".md5(), false)
+
+        expect:
+            signedInWith('secret') == null
+    }
+
+    void 'a form cannot sign in a user with the hash stored'() {
+        given:
+            store("user:${REALM}:secret".md5())
+
+        when:
+            applicationContext.getBean('daoAuthenticationProvider')
+                    .authenticate(UsernamePasswordAuthenticationToken.unauthenticated('user', 'secret'))
+
+        then:
+            thrown(BadCredentialsException)
     }
 }
 
