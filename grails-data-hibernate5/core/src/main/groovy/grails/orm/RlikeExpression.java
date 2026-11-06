@@ -58,7 +58,9 @@ public class RlikeExpression implements Criterion {
             throw new HibernateException("rlike may only be used with single-column properties");
         }
 
-        return SupportedDatabase.forDialect(dialect).regexPattern().replace("?1", columns[0]).replace("?2", "?");
+        // the value placeholder goes first: the column is inserted last, so a formula or a quoted name that
+        // contains "?2" reaches the SQL as it is
+        return SupportedDatabase.forDialect(dialect).regexPattern().replace("?2", "?").replace("?1", columns[0]);
     }
 
     public TypedValue[] getTypedValues(Criteria criteria, CriteriaQuery criteriaQuery) throws HibernateException {

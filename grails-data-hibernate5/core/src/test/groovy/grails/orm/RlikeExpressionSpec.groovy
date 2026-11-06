@@ -65,13 +65,26 @@ class RlikeExpressionSpec extends Specification {
         dialect << [new DB2390Dialect(), new DB2390V8Dialect(), new SQLServer2012Dialect()]
     }
 
-    private CriteriaQuery criteriaQuery(Dialect dialect) {
+    @Unroll
+    void 'a column that contains a placeholder is not changed on #dialect.class.simpleName'() {
+        expect: 'the column of a formula or a quoted name is inserted as it is, even when it reads like the second placeholder'
+        new RlikeExpression('name', 'a.*').toSqlString(Stub(Criteria), criteriaQuery(dialect, 'code?2')) == sql
+
+        where:
+        dialect                    | sql
+        new MySQL8Dialect()        | 'code?2 rlike ?'
+        new Oracle12cDialect()     | ' REGEXP_LIKE (code?2, ?)'
+        new PostgreSQL10Dialect()  | 'code?2 ~* ?'
+        new H2Dialect()            | 'code?2 REGEXP ?'
+    }
+
+    private CriteriaQuery criteriaQuery(Dialect dialect, String column = 'name_col') {
         SessionFactoryImplementor factory = Stub {
             getDialect() >> dialect
         }
         Stub(CriteriaQuery) {
             getFactory() >> factory
-            getColumnsUsingProjection(_ as Criteria, 'name') >> (['name_col'] as String[])
+            getColumnsUsingProjection(_ as Criteria, 'name') >> ([column] as String[])
         }
     }
 }
