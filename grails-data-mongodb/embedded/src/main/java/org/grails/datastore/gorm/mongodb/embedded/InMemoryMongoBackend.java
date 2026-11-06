@@ -27,6 +27,7 @@ import java.nio.charset.StandardCharsets;
 
 import de.bwaldvogel.mongo.MongoServer;
 import de.bwaldvogel.mongo.backend.memory.MemoryBackend;
+import io.netty.buffer.ByteBufAllocator;
 
 import org.springframework.util.ClassUtils;
 
@@ -49,6 +50,9 @@ public class InMemoryMongoBackend implements EmbeddedMongoBackend {
     private static final String SERVER_CLASS = "de.bwaldvogel.mongo.MongoServer";
 
     private static final int SERVE_ONE_REQUEST_TIMEOUT_MILLIS = 5000;
+
+    /** Netty tracks about one buffer in 128, so this many allocations reach that all but certainly. */
+    private static final int ALLOCATIONS_TO_TRACK_ONE_BUFFER = 2048;
 
     private static final int OP_MSG = 2013;
 
@@ -86,7 +90,20 @@ public class InMemoryMongoBackend implements EmbeddedMongoBackend {
         MongoServer server = new MongoServer(backend);
         server.bind("localhost", settings.getPort());
         serveOneRequest(settings.getPort());
+        allocateUntilOneBufferIsTracked();
         return new RunningInMemoryMongo(backend, server);
+    }
+
+    /**
+     * Allocates buffers until Netty's leak detection has tracked one, so that what only a tracked
+     * buffer needs is loaded as well. Netty picks the buffers it tracks at random, so the request
+     * {@link #serveOneRequest(int)} sends rarely gets that far, and a buffer picked while the jars are
+     * closed fails as the first one would.
+     */
+    private static void allocateUntilOneBufferIsTracked() {
+        for (int i = 0; i < ALLOCATIONS_TO_TRACK_ONE_BUFFER; i++) {
+            ByteBufAllocator.DEFAULT.ioBuffer(1).release();
+        }
     }
 
     /**

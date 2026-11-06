@@ -19,6 +19,8 @@
 package org.grails.datastore.gorm.mongodb.embedded;
 
 import java.io.File;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.net.MalformedURLException;
 import java.net.Socket;
 import java.net.URL;
@@ -26,6 +28,8 @@ import java.net.URLClassLoader;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+
+import io.netty.buffer.ByteBufAllocator;
 
 import org.springframework.context.support.GenericApplicationContext;
 import org.springframework.core.env.MapPropertySource;
@@ -53,14 +57,21 @@ public final class ClearedJarsServerApplication {
         int port = Integer.parseInt(args[0]);
         ClearedJarsClassLoader loader = new ClearedJarsClassLoader();
         Thread.currentThread().setContextClassLoader(loader);
-        Runnable stop = (Runnable) loader.loadClass(Server.class.getName())
-                .getMethod("start", int.class).invoke(null, port);
+        Class<?> server = loader.loadClass(Server.class.getName());
+        Runnable stop = (Runnable) server.getMethod("start", int.class).invoke(null, port);
+        Method allocate = server.getMethod("allocateAsAnEventLoopDoes");
 
         try (Socket client = new Socket("localhost", port)) {
             Thread.sleep(1000L);
             loader.cleared = true;
             client.getOutputStream().write(1);
             client.getOutputStream().flush();
+            try {
+                allocate.invoke(null);
+            }
+            catch (InvocationTargetException ex) {
+                System.out.println(ex.getCause());
+            }
             Thread.sleep(1000L);
             loader.cleared = false;
 
@@ -72,6 +83,17 @@ public final class ClearedJarsServerApplication {
     public static final class Server {
 
         private Server() {
+        }
+
+        /**
+         * As many buffers as it takes for Netty's leak detection to track one, which it does at random
+         * and which loads classes of its own. Without this, a server missing those classes would pass
+         * all but about once in 128 runs.
+         */
+        public static void allocateAsAnEventLoopDoes() {
+            for (int i = 0; i < 2048; i++) {
+                ByteBufAllocator.DEFAULT.ioBuffer(1).release();
+            }
         }
 
         public static Runnable start(int port) {
