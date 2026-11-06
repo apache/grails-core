@@ -23,6 +23,7 @@ import grails.artefact.controller.support.AllowedMethodsHelper
 import org.springframework.aot.hint.MemberCategory
 import org.springframework.aot.hint.RuntimeHints
 import org.springframework.aot.hint.TypeReference
+import org.springframework.http.HttpMethod
 import spock.lang.Specification
 
 /**
@@ -50,6 +51,11 @@ class ControllerRuntimeHintsSpec extends Specification {
     void 'the method check a form submission reaches is registered'() {
         expect: 'reached only by POST, PUT and DELETE, so a walk of an application never records it'
             registered(AllowedMethodsHelper)
+    }
+
+    void 'the comparison of HTTP methods binding a command object reaches is registered'() {
+        expect: 'Groovy compares two different methods with compareTo, so a trace that only submits forms never records it'
+            registered(HttpMethod)
     }
 
     void 'the controller trait Groovy dispatches through is registered'() {
