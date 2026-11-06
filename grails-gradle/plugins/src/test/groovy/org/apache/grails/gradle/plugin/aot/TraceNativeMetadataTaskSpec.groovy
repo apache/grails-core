@@ -289,6 +289,79 @@ exec '${new File(System.getProperty('java.home'), 'bin/java').absolutePath}' \\
             e.message.contains('did not answer with the page')
     }
 
+    void 'a request is made with the method, type, body and accept it names'() {
+        given:
+            TraceNativeMetadataTask task = task([], [])
+            task.requests.set([[method: 'query', path: '/book/search', contentType: 'application/json',
+                                body: '{"title":"Grails"}', accept: 'application/json']])
+
+        when:
+            task.trace()
+
+        then: 'an action restricted to QUERY answers nothing else, so nothing else records what it reaches'
+            requested.contains('QUERY /book/search {"title":"Grails"}')
+            requested.contains('HEADERS application/json application/json')
+    }
+
+    void 'a request that names only its method and path sends no body, and accepts what a path does'() {
+        given:
+            TraceNativeMetadataTask task = task([], [])
+            task.requests.set([[method: 'DELETE', path: '/book/1']])
+
+        when:
+            task.trace()
+
+        then:
+            requested.contains('DELETE /book/1')
+            requested.contains('HEADERS null text/html,*/*')
+    }
+
+    void 'requests are made after the forms, whose session they are in'() {
+        given: 'a request of a signed-in client is only worth making once the login form has been submitted'
+            TraceNativeMetadataTask task = task(['/after'], ['/login'])
+            task.requests.set([[method: 'QUERY', path: '/protected']])
+
+        when:
+            task.trace()
+
+        then:
+            requested.findIndexOf { it.startsWith('POST /authenticate') } < requested.indexOf('QUERY /protected')
+            requested.indexOf('QUERY /protected') < requested.indexOf('GET /after')
+
+        and: 'and it was not sent on to the login page'
+            requested.count('GET /login') == 1
+    }
+
+    void 'a request that answers with an error fails the trace'() {
+        given:
+            TraceNativeMetadataTask task = task([], [])
+            task.requests.set([[method: 'QUERY', path: '/broken']])
+
+        when:
+            task.trace()
+
+        then:
+            GradleException e = thrown()
+            e.message.contains('QUERY /broken -> 500')
+    }
+
+    void 'a request that does not say what to send, or misspells it, fails the trace rather than sending something else'() {
+        given:
+            TraceNativeMetadataTask task = task([], [])
+            task.requests.set([request])
+
+        when:
+            task.trace()
+
+        then:
+            GradleException e = thrown()
+            e.message.contains('a request names its method and path')
+            !requested.any { it.contains('/book/search') }
+
+        where:
+            request << [[path: '/book/search'], [method: 'QUERY'], [method: 'QUERY', path: '/book/search', bodyy: '{}']]
+    }
+
     void 'the cookie handler the build had is put back after a trace'() {
         given: 'a daemon outlives the build, so what this sets is handed to every task after it'
             CookieHandler inherited = new CookieManager()

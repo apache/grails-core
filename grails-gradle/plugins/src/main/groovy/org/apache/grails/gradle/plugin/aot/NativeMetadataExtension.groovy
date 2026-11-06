@@ -45,6 +45,15 @@ abstract class NativeMetadataExtension {
      */
     abstract ListProperty<String> getForms()
 
+    /**
+     * Requests neither a path nor a form can make: a method other than GET and POST, such as QUERY, or a body that
+     * is not a form, such as JSON. Each names its {@code method} and {@code path}, and may name its
+     * {@code contentType}, {@code body} and {@code accept}.
+     *
+     * @since 9.1
+     */
+    abstract ListProperty<Map<String, String>> getRequests()
+
     abstract ListProperty<String> getJvmArguments()
 
     abstract Property<Integer> getPort()

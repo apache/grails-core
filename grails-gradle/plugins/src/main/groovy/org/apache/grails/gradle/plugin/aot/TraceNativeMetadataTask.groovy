@@ -85,6 +85,19 @@ import org.gradle.work.DisableCachingByDefault
  * -- the one declaring the most fields is submitted, and which it was is reported. A page whose
  * wanted form is not the fullest names it: {@code '/book/create#bookForm'}.</p>
  *
+ * <p>A request neither of those can make, with another method or with a body that is not a form, is
+ * declared whole. An action restricted to QUERY answers nothing else, and what writes a JSON response
+ * runs only for a client that asks for one:</p>
+ *
+ * <pre>
+ * grails {
+ *     nativeMetadata {
+ *         requests = [[method: 'QUERY', path: '/book/search', contentType: 'application/json',
+ *                      body: '{"title": "Grails"}', accept: 'application/json']]
+ *     }
+ * }
+ * </pre>
+ *
  * <p>Written to the application's sources rather than to the build directory: what an image was
  * built from should be reviewable, and a trace is only as good as the paths someone thought of.</p>
  *
@@ -93,6 +106,9 @@ import org.gradle.work.DisableCachingByDefault
 @CompileStatic
 @DisableCachingByDefault(because = 'Records what a run of the application did, which is not an output of its inputs')
 abstract class TraceNativeMetadataTask extends DefaultTask {
+
+    /** What a request in {@link #getRequests()} may name, so that a misspelt one is not silently left out. */
+    private static final Set<String> REQUEST_KEYS = ['method', 'path', 'contentType', 'body', 'accept'] as Set
 
     /** How the agent is asked for, and the only way its output can be merged with what is there. */
     private static final String AGENT = 'native-image-agent'
@@ -147,6 +163,14 @@ abstract class TraceNativeMetadataTask extends DefaultTask {
     @Input
     abstract ListProperty<String> getForms()
 
+    /**
+     * Requests to make as they are declared.
+     *
+     * @since 9.1
+     */
+    @Input
+    abstract ListProperty<Map<String, String>> getRequests()
+
     @Input
     abstract Property<Integer> getPort()
 
@@ -196,6 +220,7 @@ abstract class TraceNativeMetadataTask extends DefaultTask {
             // the login form, and what the agent records is the login page under the name of the
             // page that was wanted. The session the form establishes is carried by this client.
             forms.get().each { String path -> answered << submit(path) }
+            requests.get().each { Map<String, String> request -> answered << send(request) }
             paths.get().each { String path -> answered << ask(path) }
         }
         finally {
@@ -220,8 +245,8 @@ abstract class TraceNativeMetadataTask extends DefaultTask {
                     'traced, so what was recorded is not what was asked for:\n  ' +
                     "${failed*.line.join('\n  ')}\nWhat it printed is in ${output}")
         }
-        logger.lifecycle('Traced {} forms and {} paths into {}',
-                forms.get().size(), paths.get().size(), metadata)
+        logger.lifecycle('Traced {} forms, {} requests and {} paths into {}',
+                forms.get().size(), requests.get().size(), paths.get().size(), metadata)
     }
 
     /** What one request recorded, and whether it recorded the thing it was asked for. */
@@ -275,6 +300,36 @@ abstract class TraceNativeMetadataTask extends DefaultTask {
         String where = elsewhere ? "  (landed on ${landed})" : ''
         new Answer("GET  ${path} -> ${response.statusCode()}${where}".toString(),
                 response.statusCode() < 400, elsewhere)
+    }
+
+    /**
+     * Makes a request as it is declared, with the Accept header {@link #requestTo} gives one that names none, and
+     * reports where it was answered from as {@link #ask} does: a request that needs a login and has not got one is
+     * sent on to the login page, which records that page under the name of this one.
+     */
+    private Answer send(Map<String, String> request) {
+        Map declared = request
+        Collection unknown = declared.keySet() - REQUEST_KEYS
+        String method = declared.method?.toString()?.toUpperCase(Locale.ROOT)
+        String path = declared.path?.toString()
+        if (unknown || !method || !path) {
+            return new Answer("REQUEST ${declared} -> a request names its method and path, and may name " +
+                    "${REQUEST_KEYS - ['method', 'path']}".toString(), false)
+        }
+        HttpRequest.Builder builder = requestTo(path)
+        if (declared.accept) {
+            builder.setHeader('Accept', declared.accept.toString())
+        }
+        if (declared.contentType) {
+            builder.header('Content-Type', declared.contentType.toString())
+        }
+        builder.method(method, declared.body == null ? HttpRequest.BodyPublishers.noBody() :
+                HttpRequest.BodyPublishers.ofString(declared.body.toString()))
+        HttpResponse<String> response = client.send(builder.build(), HttpResponse.BodyHandlers.ofString())
+        String landed = response.uri().path
+        boolean elsewhere = landed != uriOf(path).path
+        String where = elsewhere ? "  (landed on ${landed})" : ''
+        new Answer("${method} ${path} -> ${response.statusCode()}${where}".toString(), response.statusCode() < 400, elsewhere)
     }
 
     /**

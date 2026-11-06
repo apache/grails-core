@@ -70,8 +70,11 @@ class TracedRunFixture {
         server.createContext('/') { HttpExchange exchange ->
             String path = exchange.requestURI.path
             String method = exchange.requestMethod
-            String body = method == 'POST' ? exchange.requestBody.getText('UTF-8') : ''
+            String body = exchange.requestBody.getText('UTF-8')
             requested << "${method} ${path}${body ? ' ' + body : ''}\n"
+            if (!(method in ['GET', 'POST'])) {
+                requested << "HEADERS ${exchange.requestHeaders.getFirst('Content-Type')} ${exchange.requestHeaders.getFirst('Accept')}\n"
+            }
             boolean signedIn = exchange.requestHeaders.getFirst('Cookie')?.contains('session=in')
 
             int status = 200
