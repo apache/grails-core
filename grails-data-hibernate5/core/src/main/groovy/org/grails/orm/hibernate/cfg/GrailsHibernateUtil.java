@@ -40,12 +40,19 @@ import org.hibernate.criterion.Projections;
 import org.hibernate.criterion.Restrictions;
 import org.hibernate.criterion.Subqueries;
 import org.hibernate.engine.spi.EntityEntry;
+import org.hibernate.engine.spi.SessionFactoryImplementor;
 import org.hibernate.engine.spi.SessionImplementor;
 import org.hibernate.engine.spi.Status;
 import org.hibernate.internal.CriteriaImpl;
 import org.hibernate.internal.util.StringHelper;
+import org.hibernate.persister.entity.EntityPersister;
+import org.hibernate.persister.entity.OuterJoinLoadable;
 import org.hibernate.proxy.HibernateProxy;
 import org.hibernate.sql.JoinType;
+import org.hibernate.type.BagType;
+import org.hibernate.type.CollectionType;
+import org.hibernate.type.EntityType;
+import org.hibernate.type.Type;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -249,7 +256,7 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
                 return;
             }
             associationPath = associationPath == null ? sortHead : associationPath + '.' + sortHead;
-            criteria = getOrCreateSortCriteria(c, associationPath, persistentProperty instanceof ToMany);
+            criteria = getOrCreateSortCriteria(c, criteria, associationPath, sortHead, persistentProperty instanceof ToMany);
             currentClass = ((Association) persistentProperty).getAssociatedEntity().getJavaClass();
             GrailsHibernateUtil.cacheCriteriaByMapping(datastore, currentClass, criteria);
             property = property.substring(firstDotPos + 1);
@@ -259,56 +266,205 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
 
     /**
      * Returns the criteria that joins an association for a sort: the one the query already has for the
-     * association path or, failing that, a new one. A new one is created from the root criteria with its
-     * whole path, and not from the criteria of the association before it, because the count of a paged
-     * list recreates each join from the root criteria by its path. It is a left join, so that the sort
-     * keeps the rows where the association is null. A collection is joined without being fetched, unless
-     * the criteria ask for it to be fetched: see {@link #unfetchedJoinCondition()}.
+     * association path or, failing that, a new one. A new one is created from the root criteria,
+     * because the count of a paged list recreates each join from the root criteria by its path, and
+     * an association after the first one on the path is joined through the alias of the join before
+     * it, so that Hibernate does not read the first association of the path as an alias of the same
+     * name. It is a left join, so that the sort keeps the rows where the association is null. A
+     * collection is joined without being fetched, unless the query fetches it: see
+     * {@link #getSortJoinType(Criteria, String, boolean)} and
+     * {@link #keepsSortedCollectionUnfetched(Criteria, String)}.
      */
-    private static Criteria getOrCreateSortCriteria(Criteria root, String associationPath, boolean collection) {
+    private static Criteria getOrCreateSortCriteria(Criteria root, Criteria parent, String associationPath, String associationName, boolean collection) {
         Criteria existing = findCriteria(root, associationPath);
         if (existing != null) {
             return existing;
         }
-        if (collection && !isFetchRequested(root, associationPath)) {
-            return root.createCriteria(associationPath, null, JoinType.LEFT_OUTER_JOIN, unfetchedJoinCondition());
+        JoinType joinType = getSortJoinType(root, associationPath, collection);
+        Criteria join = root.createCriteria(getJoinPath(parent, associationPath, associationName), newJoinAlias(root, associationPath, "_sort"), joinType);
+        if (collection && joinType == JoinType.LEFT_OUTER_JOIN && keepsSortedCollectionUnfetched(root, associationPath)) {
+            keepCollectionUnfetched(join);
         }
-        return root.createCriteria(associationPath, JoinType.LEFT_OUTER_JOIN);
+        return join;
+    }
+
+    /**
+     * Returns the path to create the join of an association with from the root criteria: the alias of
+     * the join of the association before it, followed by its name, or the whole path when the
+     * association follows the root, or a join without an alias.
+     */
+    private static String getJoinPath(Criteria parent, String associationPath, String associationName) {
+        String parentAlias = parent instanceof CriteriaImpl.Subcriteria ? ((CriteriaImpl.Subcriteria) parent).getAlias() : null;
+        return parentAlias != null ? parentAlias + '.' + associationName : associationPath;
+    }
+
+    /**
+     * Returns an alias for a join that the criteria do not use yet.
+     */
+    private static String newJoinAlias(Criteria root, String associationPath, String suffix) {
+        CriteriaImpl criteria = getRootCriteria(root);
+        String base = associationPath.replace('.', '_') + suffix;
+        String alias = base;
+        int count = 1;
+        while (criteria != null && findCriteriaByAlias(criteria, alias) != null) {
+            alias = base + count++;
+        }
+        return alias;
+    }
+
+    private static CriteriaImpl getRootCriteria(Criteria criteria) {
+        Criteria root = criteria;
+        while (root instanceof CriteriaImpl.Subcriteria) {
+            root = ((CriteriaImpl.Subcriteria) root).getParent();
+        }
+        return root instanceof CriteriaImpl ? (CriteriaImpl) root : null;
     }
 
     /**
      * Whether the criteria ask for the association at the given path to be fetched with a join. A
      * join that is made for a sort must not keep a collection from being fetched then: see
-     * {@link #unfetchedJoinCondition()}.
+     * {@link #keepsSortedCollectionUnfetched(Criteria, String)}.
      *
      * @param root The root criteria
      * @param associationPath The path of the association from the root entity
      * @return Whether a join fetch is requested for the association
      */
     public static boolean isFetchRequested(Criteria root, String associationPath) {
-        if (!(root instanceof CriteriaImpl)) {
-            return false;
+        return getRequestedFetchMode(root, associationPath) == FetchMode.JOIN;
+    }
+
+    private static FetchMode getRequestedFetchMode(Criteria root, String associationPath) {
+        CriteriaImpl criteria = getRootCriteria(root);
+        if (criteria == null) {
+            return null;
         }
-        CriteriaImpl criteria = (CriteriaImpl) root;
         // Hibernate records a fetch mode under the path from the alias of the root criteria
         String rootAlias = criteria.getAlias();
         String path = rootAlias != null && !associationPath.startsWith(rootAlias + '.') ? rootAlias + '.' + associationPath : associationPath;
-        return criteria.getFetchMode(path) == FetchMode.JOIN;
+        return criteria.getFetchMode(path);
     }
 
     /**
-     * Returns the condition for a left join of a collection that must not fetch the collection.
+     * Returns the join type of a join that a query makes for a sort, and not for criteria on the
+     * association: a left join, so that the sort keeps the rows where the association is null.
      * <p>
-     * Hibernate initializes a collection from the rows of a left join that has no condition of its
-     * own. It does so also when a row limit leaves elements out of those rows, and the collection then
-     * lacks those elements. A left join that is made for a sort is therefore given this condition,
-     * which is always true: the join returns the same rows, and the collection is loaded on its own,
-     * when it is read.
+     * A collection is joined with an inner join when the query fetches another collection and both
+     * collections are bags. Hibernate does not fetch two bags in one query, and it reads the elements
+     * of the collection that it fetches from the columns of a left join that it does not fetch, when
+     * both collections hold elements of the same table: see
+     * {@link #keepsSortedCollectionUnfetched(Criteria, String)}. An inner join has no such columns.
      *
-     * @return The join condition
+     * @param criteria The criteria of the query
+     * @param associationPath The path of the association from the root entity
+     * @param collection Whether the association is a collection
+     * @return The join type
      */
-    public static Criterion unfetchedJoinCondition() {
-        return Restrictions.sqlRestriction("1=1");
+    public static JoinType getSortJoinType(Criteria criteria, String associationPath, boolean collection) {
+        return collection && getOtherFetchedCollection(criteria, associationPath) == OtherFetchedCollection.BAG ?
+                JoinType.INNER_JOIN : JoinType.LEFT_OUTER_JOIN;
+    }
+
+    /**
+     * Whether a left join of a collection that a query makes for a sort, and not for criteria on the
+     * collection, must keep the collection from being fetched.
+     * <p>
+     * Hibernate initializes a collection from the rows of a left join that it is not kept from
+     * fetching. It does so also when a row limit leaves elements out of those rows, and the collection
+     * then lacks those elements. A sort must not change what a query fetches either. Such a join is
+     * therefore kept from fetching the collection, unless the query asks to fetch it.
+     * <p>
+     * It is fetched as well when the query fetches another collection, because Hibernate then reads
+     * the elements of the collection that it fetches from the columns of the join that it does not
+     * fetch, when both collections hold elements of the same table.
+     *
+     * @param criteria The criteria of the query
+     * @param associationPath The path of the collection from the root entity
+     * @return Whether the collection is kept from being fetched
+     */
+    public static boolean keepsSortedCollectionUnfetched(Criteria criteria, String associationPath) {
+        return !isFetchRequested(criteria, associationPath) && getOtherFetchedCollection(criteria, associationPath) == OtherFetchedCollection.NONE;
+    }
+
+    private enum OtherFetchedCollection { NONE, FETCHED, BAG }
+
+    /**
+     * Returns whether the query fetches a collection of the root entity other than the one at the
+     * given path, and whether both are bags.
+     */
+    private static OtherFetchedCollection getOtherFetchedCollection(Criteria criteria, String associationPath) {
+        CriteriaImpl root = getRootCriteria(criteria);
+        if (root == null || root.getSession() == null) {
+            return OtherFetchedCollection.NONE;
+        }
+        SessionFactoryImplementor factory = root.getSession().getFactory();
+        EntityPersister persister = factory.getMetamodel().entityPersister(root.getEntityOrClassName());
+        String sortedRole = getCollectionRole(factory, persister, associationPath);
+        boolean sortedBag = sortedRole != null && isBag(factory, sortedRole);
+        String[] propertyNames = persister.getPropertyNames();
+        Type[] propertyTypes = persister.getPropertyTypes();
+        for (int i = 0; i < propertyNames.length; i++) {
+            if (!propertyTypes[i].isCollectionType() || propertyNames[i].equals(associationPath)) {
+                continue;
+            }
+            FetchMode requested = getRequestedFetchMode(root, propertyNames[i]);
+            boolean fetched = requested != null ? requested == FetchMode.JOIN :
+                    persister instanceof OuterJoinLoadable && ((OuterJoinLoadable) persister).getFetchMode(i) == FetchMode.JOIN;
+            if (fetched) {
+                return sortedBag && isBag(factory, ((CollectionType) propertyTypes[i]).getRole()) ? OtherFetchedCollection.BAG : OtherFetchedCollection.FETCHED;
+            }
+        }
+        return OtherFetchedCollection.NONE;
+    }
+
+    private static String getCollectionRole(SessionFactoryImplementor factory, EntityPersister persister, String associationPath) {
+        EntityPersister current = persister;
+        Type type = null;
+        for (String token : associationPath.split("\\.")) {
+            if (current == null) {
+                return null;
+            }
+            try {
+                type = current.getPropertyType(token);
+            }
+            catch (RuntimeException e) {
+                return null;
+            }
+            current = type instanceof EntityType ? factory.getMetamodel().entityPersister(((EntityType) type).getAssociatedEntityName(factory)) : null;
+        }
+        return type instanceof CollectionType ? ((CollectionType) type).getRole() : null;
+    }
+
+    private static boolean isBag(SessionFactoryImplementor factory, String role) {
+        return factory.getMetamodel().collectionPersister(role).getCollectionType().getClass() == BagType.class;
+    }
+
+    /**
+     * Keeps Hibernate from fetching the collection that a left join of the criteria joins.
+     * <p>
+     * Hibernate does not fetch a collection through a join that has a restriction of its own. The
+     * restriction is always true, so the join returns the same rows, and it is added through the
+     * criteria of the join, so it is part of the where clause and not of the join condition, which
+     * Hibernate combines with the filters of a collection that has a join table.
+     *
+     * @param joinCriteria The criteria of the join
+     */
+    public static void keepCollectionUnfetched(Criteria joinCriteria) {
+        joinCriteria.add(Restrictions.sqlRestriction("1=1"));
+    }
+
+    /**
+     * Keeps Hibernate from fetching the collection that the join with the given alias joins: see
+     * {@link #keepCollectionUnfetched(Criteria)}.
+     *
+     * @param criteria The criteria that the join was made on
+     * @param alias The alias of the join
+     */
+    public static void keepCollectionUnfetched(Criteria criteria, String alias) {
+        CriteriaImpl root = getRootCriteria(criteria);
+        Criteria join = root != null ? findCriteriaByAlias(root, alias) : null;
+        if (join instanceof CriteriaImpl.Subcriteria) {
+            keepCollectionUnfetched(join);
+        }
     }
 
     /**
@@ -322,6 +478,18 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
     public static String getJoinAlias(Criteria root, String associationPath) {
         CriteriaImpl.Subcriteria existing = findCriteria(root, associationPath);
         return existing != null ? existing.getAlias() : null;
+    }
+
+    /**
+     * Returns the criteria of the join that a query has for an association path, whichever part of
+     * the query made the join.
+     *
+     * @param criteria The root criteria of the query, or the criteria of one of its joins
+     * @param associationPath The path of the association from the root entity
+     * @return The criteria of the join, or null when the query does not join the association
+     */
+    public static Criteria findJoinCriteria(Criteria criteria, String associationPath) {
+        return findCriteria(getRootCriteria(criteria), associationPath);
     }
 
     /**
@@ -395,14 +563,29 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
      * @param joinType The requested join type
      */
     public static void applyJoinType(AbstractHibernateDatastore datastore, Class<?> targetClass, Criteria root, String associationPath, jakarta.persistence.criteria.JoinType joinType) {
+        PersistentEntity entity = datastore != null && targetClass != null ? datastore.getMappingContext().getPersistentEntity(targetClass.getName()) : null;
+        applyJoinType(entity, root, associationPath, joinType);
+    }
+
+    /**
+     * Applies the join type that a query requests for an association: see
+     * {@link #applyJoinType(AbstractHibernateDatastore, Class, Criteria, String, jakarta.persistence.criteria.JoinType)}.
+     *
+     * @param entity The entity that the criteria query
+     * @param root The root criteria
+     * @param associationPath The path of the association from the entity
+     * @param joinType The requested join type
+     */
+    public static void applyJoinType(PersistentEntity entity, Criteria root, String associationPath, jakarta.persistence.criteria.JoinType joinType) {
         root.setFetchMode(associationPath, FetchMode.JOIN);
-        if (joinType == null || joinType == jakarta.persistence.criteria.JoinType.LEFT || datastore == null || targetClass == null) {
+        if (joinType == null || joinType == jakarta.persistence.criteria.JoinType.LEFT || entity == null) {
             return;
         }
 
         String[] tokens = associationPath.split("\\.");
+        int last = tokens.length - 1;
         Association[] associations = new Association[tokens.length];
-        PersistentEntity currentEntity = datastore.getMappingContext().getPersistentEntity(targetClass.getName());
+        PersistentEntity currentEntity = entity;
         for (int i = 0; i < tokens.length; i++) {
             PersistentProperty persistentProperty = currentEntity != null ? currentEntity.getPropertyByName(tokens[i]) : null;
             if (!(persistentProperty instanceof Association) || persistentProperty instanceof Embedded || persistentProperty instanceof Basic) {
@@ -412,7 +595,6 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
             currentEntity = associations[i].getAssociatedEntity();
         }
 
-        int last = tokens.length - 1;
         String[] paths = new String[tokens.length];
         CriteriaImpl.Subcriteria[] joined = new CriteriaImpl.Subcriteria[tokens.length];
         int unjoinedCollection = -1;
@@ -424,16 +606,22 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
             }
         }
         if (unjoinedCollection >= 0) {
-            root.add(joinedInSubquery(targetClass.getName(), root.getAlias(), associationPath));
+            root.add(joinedInSubquery(entity.getName(), root.getAlias(), associationPath));
         }
 
         JoinType lastJoinType = joinType == jakarta.persistence.criteria.JoinType.INNER ? JoinType.INNER_JOIN : JoinType.RIGHT_OUTER_JOIN;
         int joinedCount = unjoinedCollection < 0 ? tokens.length : unjoinedCollection == last ? last : 0;
+        String parentAlias = null;
         for (int i = 0; i < joinedCount; i++) {
-            if (joined[i] == null) {
-                // joined from the root criteria with the whole path, as the count of a paged list recreates it
-                root.createAlias(paths[i], paths[i].replace('.', '_') + "_join", i == last ? lastJoinType : JoinType.LEFT_OUTER_JOIN);
+            if (joined[i] != null) {
+                parentAlias = joined[i].getAlias();
+                continue;
             }
+            // joined from the root criteria, as the count of a paged list recreates it, through the
+            // alias of the join before it
+            String alias = newJoinAlias(root, paths[i], "_join");
+            root.createAlias(parentAlias != null ? parentAlias + '.' + tokens[i] : paths[i], alias, i == last ? lastJoinType : JoinType.LEFT_OUTER_JOIN);
+            parentAlias = alias;
         }
     }
 

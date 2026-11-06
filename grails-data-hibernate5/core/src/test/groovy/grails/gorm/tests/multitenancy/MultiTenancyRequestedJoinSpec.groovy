@@ -48,18 +48,21 @@ class MultiTenancyRequestedJoinSpec extends Specification {
                 'hibernate.flush.mode'                        : 'COMMIT',
                 'hibernate.hbm2ddl.auto'                      : 'create',
         ]
-        datastore = new HibernateDatastore(DatastoreUtils.createPropertyResolver(config), RequestedJoinShelf, RequestedJoinBook)
+        datastore = new HibernateDatastore(DatastoreUtils.createPropertyResolver(config), RequestedJoinShelf, RequestedJoinBook, RequestedJoinCase, RequestedJoinItem)
 
         System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, 'fiction')
         RequestedJoinShelf.withTransaction {
             final shared = new RequestedJoinShelf(name: 'Shared shelf').save(failOnError: true)
             new RequestedJoinBook(title: 'A novel', shelf: shared).save(failOnError: true)
             new RequestedJoinShelf(name: 'Travel shelf').save(failOnError: true, flush: true)
+            new RequestedJoinCase(name: 'Shared case').addToItems(new RequestedJoinItem(title: 'A fiction item')).save(failOnError: true)
+            new RequestedJoinCase(name: 'Empty case').save(failOnError: true, flush: true)
         }
         System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, 'travel')
         RequestedJoinShelf.withTransaction {
             new RequestedJoinBook(title: 'A guide', shelf: RequestedJoinShelf.findByName('Travel shelf')).save(failOnError: true)
             new RequestedJoinBook(title: 'A map', shelf: RequestedJoinShelf.findByName('Shared shelf')).save(failOnError: true, flush: true)
+            RequestedJoinCase.findByName('Shared case').addToItems(new RequestedJoinItem(title: 'A travel item')).save(failOnError: true, flush: true)
         }
     }
 
@@ -131,6 +134,51 @@ class MultiTenancyRequestedJoinSpec extends Specification {
         then:
         results*.name == ['Shared shelf', 'Travel shelf']
     }
+
+    void '#api sorted by a collection that has a join table applies the tenant filter to the join'() {
+        when:
+        final List<RequestedJoinCase> results = RequestedJoinCase.withTransaction { query.call() }
+
+        then: 'a sort by a collection returns an instance once for each row of the join'
+        results*.name.unique().sort() == ['Empty case', 'Shared case']
+
+        where:
+        api                         | query
+        'a where query'             | { RequestedJoinCase.where { name ==~ '%case' }.list(sort: 'items.title') }
+        'a paged criteria query'    | { RequestedJoinCase.createCriteria().list(sort: 'items.title', max: 10) { like('name', '%case') } }
+        'order in a criteria query' | { RequestedJoinCase.createCriteria().list { like('name', '%case'); order('items.title') } }
+        'findAll by example'        | { RequestedJoinCase.findAll(new RequestedJoinCase(), [sort: 'items.title']) }
+        'list'                      | { RequestedJoinCase.list(sort: 'items.title') }
+    }
+
+    void 'criteria on a collection that has a join table apply the tenant filter with a requested left join to #title'() {
+        when:
+        final List<RequestedJoinCase> results = RequestedJoinCase.withTransaction {
+            RequestedJoinCase.where { items { title == itemTitle } }.join('items', JoinType.LEFT).list()
+        }
+
+        then:
+        results*.name == expected
+
+        where:
+        itemTitle        || expected
+        'A fiction item' || ['Shared case']
+        'A travel item'  || []
+
+        title = itemTitle
+    }
+}
+
+@Entity
+class RequestedJoinCase {
+    String name
+    static hasMany = [items: RequestedJoinItem]
+}
+
+@Entity
+class RequestedJoinItem implements MultiTenant<RequestedJoinItem> {
+    String title
+    String tenantId
 }
 
 @Entity

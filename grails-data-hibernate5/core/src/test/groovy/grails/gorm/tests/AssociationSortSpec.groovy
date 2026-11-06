@@ -26,6 +26,8 @@ import org.hibernate.FetchMode
 import org.hibernate.Hibernate
 import org.hibernate.criterion.Order
 
+import jakarta.persistence.criteria.JoinType
+
 /**
  * A sort by a property of an association must not leave out the instances whose association is null,
  * and must not change what the query fetches.
@@ -33,7 +35,8 @@ import org.hibernate.criterion.Order
 class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManager> {
 
     void setupSpec() {
-        manager.domainClasses.addAll([Club, Team, Player, Contract, AssociationSortLeague])
+        manager.domainClasses.addAll([Club, Team, Player, Contract, AssociationSortLeague, AssociationSortEmployee, AssociationSortDepartment,
+                                      AssociationSortSquad, AssociationSortMember, AssociationSortBagSquad, AssociationSortBagMember])
     }
 
     void setup() {
@@ -302,6 +305,114 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManag
         'through an alias, after the order'    | { order('team.club.name', 'desc'); createAlias('team', 't'); createAlias('t.club', 'c'); like('c.name', '%e%') }
     }
 
+    void 'a paged criteria query can be sorted through the alias that the criteria give an association: #sort'() {
+        when:
+        final results = Player.createCriteria().list(sort: sort, order: 'desc', max: 10) {
+            createAlias('team', 't')
+            createAlias('t.club', 'c')
+        }
+
+        then:
+        results*.name == ['MU Player', 'Chelsea Player', 'Arsenal Player']
+
+        where:
+        sort << ['t.club.name', 'team.club.name']
+    }
+
+    void 'a paged criteria query sorted by a nested path is not resolved through an alias that has the name of the first association'() {
+        given:
+        saveEmployees()
+
+        when:
+        final results = AssociationSortEmployee.createCriteria().list(max: 10, sort: 'manager.department.name') {
+            createAlias('department', 'd')
+            createAlias('d.manager', 'manager')
+        }
+
+        then: 'sorted by the department of the manager of each employee, not by that of the manager of their department'
+        results*.name == ['e2', 'e1']
+        results.totalCount == 2
+    }
+
+    private void saveEmployees() {
+        final departmentA = new AssociationSortDepartment(name: 'A dept').save(failOnError: true)
+        final departmentB = new AssociationSortDepartment(name: 'B dept').save(failOnError: true)
+        final departmentX = new AssociationSortDepartment(name: 'X dept').save(failOnError: true)
+        final departmentY = new AssociationSortDepartment(name: 'Y dept').save(failOnError: true)
+        final managerOne = new AssociationSortEmployee(name: 'm1', department: departmentB).save(failOnError: true)
+        final managerTwo = new AssociationSortEmployee(name: 'm2', department: departmentA).save(failOnError: true)
+        departmentX.manager = managerTwo
+        departmentY.manager = managerOne
+        new AssociationSortEmployee(name: 'e1', manager: managerOne, department: departmentX).save(failOnError: true)
+        new AssociationSortEmployee(name: 'e2', manager: managerTwo, department: departmentY).save(failOnError: true, flush: true)
+        manager.session.clear()
+    }
+
+    void 'an inner join requested for a nested path is not made through an alias that has the name of the first association'() {
+        given:
+        saveEmployees()
+        final departmentZ = new AssociationSortDepartment(name: 'Z dept', manager: AssociationSortEmployee.findByName('m1')).save(failOnError: true)
+        final managerThree = new AssociationSortEmployee(name: 'm3').save(failOnError: true)
+        new AssociationSortEmployee(name: 'e3', manager: managerThree, department: departmentZ).save(failOnError: true, flush: true)
+        manager.session.clear()
+
+        when:
+        final names = AssociationSortEmployee.createCriteria().list {
+            createAlias('department', 'd')
+            createAlias('d.manager', 'manager')
+            join('manager.department', JoinType.INNER)
+        }*.name.sort()
+
+        then: 'e3, whose own manager has no department, is left out'
+        names == ['e1', 'e2']
+    }
+
+    void '#api sorted by a collection keeps the elements of another collection of the same class that the query fetches'() {
+        given:
+        final squad = new AssociationSortSquad(name: 'Squad').save(failOnError: true)
+        new AssociationSortMember(name: 'Regular', squad: squad).save(failOnError: true)
+        new AssociationSortMember(name: 'Reserve', reserveSquad: squad).save(failOnError: true, flush: true)
+        manager.session.clear()
+
+        when:
+        final List<AssociationSortSquad> results = query.call()
+
+        then:
+        results*.name == ['Squad']
+        Hibernate.isInitialized(results.first().reserves)
+        results.first().reserves*.name == ['Reserve']
+        results.first().players*.name == ['Regular']
+
+        where:
+        api                         | query
+        'a where query'             | { AssociationSortSquad.where { name == 'Squad' }.join('reserves').list(sort: 'players.name') }
+        'a paged criteria query'    | { AssociationSortSquad.createCriteria().list(sort: 'players.name', max: 10) { join('reserves') } }
+        'order in a criteria query' | { AssociationSortSquad.createCriteria().list { join('reserves'); order('players.name') } }
+        'findAll by example'        | { AssociationSortSquad.findAll(new AssociationSortSquad(name: 'Squad'), [sort: 'players.name', fetch: [reserves: 'join']]) }
+        'a dynamic finder'          | { AssociationSortSquad.findAllByName('Squad', [sort: 'players.name', fetch: [reserves: 'join']]) }
+    }
+
+    void '#api sorted by a bag keeps the elements of another bag that the query fetches'() {
+        given:
+        final squad = new AssociationSortBagSquad(name: 'Squad').save(failOnError: true)
+        new AssociationSortBagMember(name: 'Regular', squad: squad).save(failOnError: true)
+        new AssociationSortBagMember(name: 'Substitute', substituteSquad: squad).save(failOnError: true, flush: true)
+        manager.session.clear()
+
+        when:
+        final List<AssociationSortBagSquad> results = query.call()
+
+        then: 'Hibernate cannot fetch both bags, so the bag that the query sorts by is joined with an inner join'
+        results*.name == ['Squad']
+        results.first().substitutes*.name == ['Substitute']
+        results.first().regulars*.name == ['Regular']
+
+        where:
+        api                         | query
+        'a where query'             | { AssociationSortBagSquad.where { name == 'Squad' }.join('substitutes').list(sort: 'regulars.name') }
+        'order in a criteria query' | { AssociationSortBagSquad.createCriteria().list { join('substitutes'); order('regulars.name') } }
+    }
+
     void 'a criteria query adds its orders in the sequence in which it requests them: #description'() {
         given:
         new Team(club: Club.findByName('Arsenal'), name: 'Arsenal Second Team').save(failOnError: true, flush: true)
@@ -480,6 +591,68 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManag
         'findAllWhere with a limit'        | { Team.findAllWhere([name: 'Squad'], [sort: 'players.name', max: 2]).first() }
         'findWhere'                        | { Team.findWhere([name: 'Squad'], [sort: 'players.name']) }
         'a criteria query with pagination' | { Team.createCriteria().list(sort: 'players.name', max: 2) { eq('name', 'Squad') }.first() }
+    }
+}
+
+@Entity
+class AssociationSortEmployee {
+    String name
+    AssociationSortEmployee manager
+    AssociationSortDepartment department
+
+    static constraints = {
+        manager nullable: true
+        department nullable: true
+    }
+}
+
+@Entity
+class AssociationSortDepartment {
+    String name
+    AssociationSortEmployee manager
+
+    static constraints = {
+        manager nullable: true
+    }
+}
+
+@Entity
+class AssociationSortSquad {
+    String name
+    static hasMany = [players: AssociationSortMember, reserves: AssociationSortMember]
+    static mappedBy = [players: 'squad', reserves: 'reserveSquad']
+}
+
+@Entity
+class AssociationSortMember {
+    String name
+    AssociationSortSquad squad
+    AssociationSortSquad reserveSquad
+
+    static constraints = {
+        squad nullable: true
+        reserveSquad nullable: true
+    }
+}
+
+@Entity
+class AssociationSortBagSquad {
+    String name
+    Collection<AssociationSortBagMember> regulars
+    Collection<AssociationSortBagMember> substitutes
+    static hasMany = [regulars: AssociationSortBagMember, substitutes: AssociationSortBagMember]
+    static mappedBy = [regulars: 'squad', substitutes: 'substituteSquad']
+}
+
+@Entity
+class AssociationSortBagMember {
+    String name
+    AssociationSortBagSquad squad
+    AssociationSortBagSquad substituteSquad
+
+    static constraints = {
+        squad nullable: true
+        substituteSquad nullable: true
     }
 }
 

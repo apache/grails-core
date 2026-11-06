@@ -122,9 +122,11 @@ public abstract class AbstractHibernateQuery extends Query {
      */
     private final Set<String> subqueryJoinedPaths = new HashSet<>();
     /**
-     * The association paths that the query asks to be fetched with a join.
+     * The join types that the query requested for an association before it requested a fetch mode for
+     * it. The fetch mode replaces the join type, but the join that criteria on the association make
+     * still has it: see {@link #createJoin(CriteriaAndAlias)}.
      */
-    private final Set<String> joinFetchedPaths = new HashSet<>();
+    private final Map<String, JoinType> supersededJoinTypes = new HashMap<>();
     protected LinkedList<String> aliasStack = new LinkedList<>();
     protected LinkedList<PersistentEntity> entityStack = new LinkedList<>();
     protected LinkedList<Association> associationStack = new LinkedList<>();
@@ -596,41 +598,41 @@ public abstract class AbstractHibernateQuery extends Query {
      * Makes a join, with the join type that the query requests for the association. Without a
      * requested join type, a join that criteria use is an inner join, and a join that only a sort, a
      * projection or the path to a requested association uses is a left join, which keeps the rows
-     * where the association is null.
+     * where the association is null. A join that criteria use keeps a join type that the query
+     * requested before a fetch mode replaced it, as it did when the join was made at once.
      * <p>
-     * Hibernate initializes a collection from the rows of a left join that has no condition of its
-     * own, also when a row limit leaves elements out of those rows. Such a join of a collection is
-     * therefore given a condition that is always true, unless the query asks for the collection to
-     * be fetched, and the collection is loaded on its own, when it is read. A left join that
-     * criteria use never fetches the collection: its rows lack the elements that the criteria leave
-     * out.
+     * A left join of a collection is kept from fetching the collection when criteria use it, since
+     * its rows lack the elements that the criteria leave out, and when only a sort or a projection
+     * uses it, unless the query fetches the collection or another one: see
+     * {@link GrailsHibernateUtil#getSortJoinType(Criteria, String, boolean)} and
+     * {@link GrailsHibernateUtil#keepsSortedCollectionUnfetched(Criteria, String)}.
      */
     private void createJoin(CriteriaAndAlias join) {
         String associationPath = join.associationPath;
+        boolean collection = getAssociation(associationPath) instanceof ToMany;
         // a path that the query is restricted to with a subquery is joined, and fetched, with a left join
         JoinType joinType = subqueryJoinedPaths.contains(associationPath) ? JoinType.LEFT : joinTypes.get(associationPath);
+        if (joinType == null && join.usedByCriteria) {
+            joinType = supersededJoinTypes.get(associationPath);
+        }
+        org.hibernate.sql.JoinType hibernateJoinType;
         if (joinType == null) {
             joinType = join.usedByCriteria ? JoinType.INNER : JoinType.LEFT;
+            hibernateJoinType = join.usedByCriteria || join.criteria == null ? resolveJoinType(joinType) :
+                    GrailsHibernateUtil.getSortJoinType(join.criteria, associationPath, collection);
         }
-        boolean unfetchedCollection = joinType == JoinType.LEFT && getAssociation(associationPath) instanceof ToMany &&
-                (join.usedByCriteria || !joinFetchedPaths.contains(associationPath));
-        org.hibernate.sql.JoinType hibernateJoinType = resolveJoinType(joinType);
-        org.hibernate.criterion.Criterion joinCondition = unfetchedCollection ? GrailsHibernateUtil.unfetchedJoinCondition() : null;
+        else {
+            hibernateJoinType = resolveJoinType(joinType);
+        }
         if (join.criteria != null) {
-            if (joinCondition != null) {
-                join.criteria.createAlias(associationPath, join.alias, hibernateJoinType, joinCondition);
-            }
-            else {
-                join.criteria.createAlias(associationPath, join.alias, hibernateJoinType);
+            join.criteria.createAlias(associationPath, join.alias, hibernateJoinType);
+            if (hibernateJoinType == org.hibernate.sql.JoinType.LEFT_OUTER_JOIN && collection &&
+                    (join.usedByCriteria || GrailsHibernateUtil.keepsSortedCollectionUnfetched(join.criteria, associationPath))) {
+                GrailsHibernateUtil.keepCollectionUnfetched(join.criteria, join.alias);
             }
         }
         else if (join.detachedCriteria != null) {
-            if (joinCondition != null) {
-                join.detachedCriteria.createAlias(associationPath, join.alias, hibernateJoinType, joinCondition);
-            }
-            else {
-                join.detachedCriteria.createAlias(associationPath, join.alias, hibernateJoinType);
-            }
+            join.detachedCriteria.createAlias(associationPath, join.alias, hibernateJoinType);
         }
     }
 
@@ -1005,9 +1007,7 @@ public abstract class AbstractHibernateQuery extends Query {
     @Override
     public Query join(String property) {
         this.hasJoins = true;
-        // the fetch mode alone replaces a join type that was requested for the association before
-        this.joinTypes.remove(property);
-        this.joinFetchedPaths.add(property);
+        supersedeJoinType(property);
         if (criteria != null)
             criteria.setFetchMode(property, FetchMode.JOIN);
         else if (detachedCriteria != null)
@@ -1019,7 +1019,7 @@ public abstract class AbstractHibernateQuery extends Query {
     public Query join(String property, JoinType joinType) {
         this.hasJoins = true;
         this.joinTypes.put(property, joinType);
-        this.joinFetchedPaths.add(property);
+        this.supersededJoinTypes.remove(property);
         if (criteria != null)
             criteria.setFetchMode(property, FetchMode.JOIN);
         else if (detachedCriteria != null)
@@ -1027,11 +1027,21 @@ public abstract class AbstractHibernateQuery extends Query {
         return this;
     }
 
+    /**
+     * Replaces a join type that the query requested for an association with the fetch mode that it
+     * now requests. The join that criteria on the association make keeps the join type.
+     */
+    private void supersedeJoinType(String property) {
+        JoinType joinType = this.joinTypes.remove(property);
+        if (joinType != null) {
+            this.supersededJoinTypes.put(property, joinType);
+        }
+    }
+
     @Override
     public Query select(String property) {
         this.hasJoins = true;
-        this.joinTypes.remove(property);
-        this.joinFetchedPaths.remove(property);
+        supersedeJoinType(property);
         if (criteria != null)
             criteria.setFetchMode(property, FetchMode.SELECT);
         else if (detachedCriteria != null)
@@ -1099,14 +1109,12 @@ public abstract class AbstractHibernateQuery extends Query {
         for (Map.Entry<String, FetchType> entry : fetchStrategies.entrySet()) {
             switch (entry.getValue()) {
                 case EAGER:
-                    joinFetchedPaths.add(entry.getKey());
                     if (criteria != null)
                         criteria.setFetchMode(entry.getKey(), FetchMode.JOIN);
                     else if (detachedCriteria != null)
                         detachedCriteria.setFetchMode(entry.getKey(), FetchMode.JOIN);
                     break;
                 case LAZY:
-                    joinFetchedPaths.remove(entry.getKey());
                     if (criteria != null)
                         criteria.setFetchMode(entry.getKey(), FetchMode.SELECT);
                     else if (detachedCriteria != null)

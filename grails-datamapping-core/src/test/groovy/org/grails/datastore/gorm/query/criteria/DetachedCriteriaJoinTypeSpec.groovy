@@ -33,6 +33,7 @@ class DetachedCriteriaJoinTypeSpec extends Specification {
         then:
         criteria.fetchStrategies == [name: FetchType.EAGER]
         criteria.joinTypes == [name: JoinType.INNER]
+        criteria.supersededJoinTypes.isEmpty()
     }
 
     void "a later join without a join type replaces a join type that was requested before"() {
@@ -42,6 +43,9 @@ class DetachedCriteriaJoinTypeSpec extends Specification {
         then:
         criteria.fetchStrategies == [name: FetchType.EAGER]
         criteria.joinTypes.isEmpty()
+
+        and: 'the join type is kept as one that the fetch mode replaced'
+        criteria.supersededJoinTypes == [name: JoinType.INNER]
     }
 
     void "a later select replaces a join type that was requested before"() {
@@ -51,5 +55,28 @@ class DetachedCriteriaJoinTypeSpec extends Specification {
         then:
         criteria.fetchStrategies == [name: FetchType.LAZY]
         criteria.joinTypes.isEmpty()
+        criteria.supersededJoinTypes == [name: JoinType.INNER]
+    }
+
+    void "a join type that is requested again after a fetch mode is no longer superseded"() {
+        when:
+        def criteria = new DetachedCriteria(TestEntity).join('name', JoinType.INNER).join('name').join('name', JoinType.LEFT)
+
+        then:
+        criteria.joinTypes == [name: JoinType.LEFT]
+        criteria.supersededJoinTypes.isEmpty()
+    }
+
+    void "a copy of the criteria keeps the superseded join types"() {
+        given:
+        def criteria = new DetachedCriteria(TestEntity).join('name', JoinType.INNER).join('name')
+
+        when:
+        def copy = criteria.clone()
+        criteria.join('name', JoinType.LEFT)
+
+        then:
+        copy.supersededJoinTypes == [name: JoinType.INNER]
+        copy.joinTypes.isEmpty()
     }
 }

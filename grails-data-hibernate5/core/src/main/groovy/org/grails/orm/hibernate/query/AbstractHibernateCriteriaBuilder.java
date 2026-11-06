@@ -1587,7 +1587,10 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
      * criteria already have for the association is used, and an association that they do not join is
      * joined for the order. It is joined with a left join, so that the order keeps the rows where the
      * association is null. A collection is joined without being fetched, since a row limit would
-     * leave elements out of it, unless the criteria ask for the collection to be fetched.
+     * leave elements out of it, unless the query fetches it or another collection: see
+     * {@link GrailsHibernateUtil#keepsSortedCollectionUnfetched(Criteria, String)}. An association
+     * after the first one on the path is joined through the alias of the join before it, so that
+     * Hibernate does not read the first association of the path as an alias of the same name.
      */
     private String calculateOrderPropertyName(RequestedOrder requested) {
         String[] tokens = requested.tokens;
@@ -1601,17 +1604,19 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
                 String rest = String.join(".", Arrays.copyOfRange(tokens, i, tokens.length));
                 return alias != null ? alias + '.' + rest : rest;
             }
+            String parentAlias = alias;
             associationPath = associationPath.isEmpty() ? tokens[i] : associationPath + '.' + tokens[i];
             alias = GrailsHibernateUtil.getJoinAlias(criteria, associationPath);
             if (alias == null) {
                 aliasCount++;
                 alias = tokens[i] + ALIAS + aliasCount;
                 aliasMap.put(associationPath, alias);
-                if (property instanceof ToMany && !GrailsHibernateUtil.isFetchRequested(criteria, associationPath)) {
-                    criteria.createAlias(associationPath, alias, org.hibernate.sql.JoinType.LEFT_OUTER_JOIN, GrailsHibernateUtil.unfetchedJoinCondition());
-                }
-                else {
-                    criteria.createAlias(associationPath, alias, org.hibernate.sql.JoinType.LEFT_OUTER_JOIN);
+                String joinPath = parentAlias != null ? parentAlias + '.' + tokens[i] : associationPath;
+                org.hibernate.sql.JoinType joinType = GrailsHibernateUtil.getSortJoinType(criteria, associationPath, property instanceof ToMany);
+                criteria.createAlias(joinPath, alias, joinType);
+                if (property instanceof ToMany && joinType == org.hibernate.sql.JoinType.LEFT_OUTER_JOIN &&
+                        GrailsHibernateUtil.keepsSortedCollectionUnfetched(criteria, associationPath)) {
+                    GrailsHibernateUtil.keepCollectionUnfetched(criteria, alias);
                 }
             }
             entity = ((Association) property).getAssociatedEntity();
@@ -1937,7 +1942,8 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
                         final String order = HibernateQueryConstants.ORDER_DESC.equalsIgnoreCase(orderParam) ?
                                 HibernateQueryConstants.ORDER_DESC : HibernateQueryConstants.ORDER_ASC;
                         int lastPropertyPos = sort.lastIndexOf('.');
-                        String associationForOrdering = lastPropertyPos >= 0 ? sort.substring(0, lastPropertyPos) : null;
+                        // the association path of the sort, also when the sort starts with an alias
+                        String associationForOrdering = lastPropertyPos >= 0 ? getWholeAssociationPath(sort.substring(0, lastPropertyPos)) : null;
                         if (associationForOrdering != null && aliasMap.containsKey(associationForOrdering)) {
                             addOrder(criteria, aliasMap.get(associationForOrdering) + "." + sort.substring(lastPropertyPos + 1),
                                     order, ignoreCase);

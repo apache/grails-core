@@ -33,7 +33,8 @@ class AssociationJoinTypeSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckM
     private static final List<String> ALL_TEAMS = (TEAMS_WITH_A_CLUB + 'Unattached First Team').sort()
 
     void setupSpec() {
-        manager.domainClasses.addAll([Club, Team, Player, Contract, AssociationJoinTypeCategory])
+        manager.domainClasses.addAll([Club, Team, Player, Contract, AssociationJoinTypeCategory, AssociationJoinTypeShelf, AssociationJoinTypeTag,
+                                      AssociationJoinTypeFace, AssociationJoinTypeNose])
     }
 
     void setup() {
@@ -234,6 +235,74 @@ class AssociationJoinTypeSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckM
 
         where:
         fetch << ['lazy', 'join']
+    }
+
+    void 'deleteAll deletes the instances that list returns when the query requests an inner join of a collection that has a join table'() {
+        given:
+        saveShelves()
+
+        when:
+        final query = AssociationJoinTypeShelf.where { name ==~ 'First%' }.join('tags', JoinType.INNER)
+        final listed = query.list()*.name
+        final deleted = query.deleteAll()
+        manager.session.flush()
+        manager.session.clear()
+
+        then:
+        listed == ['First tagged shelf']
+        deleted == 1
+
+        and: 'the other shelves keep their tags'
+        AssociationJoinTypeShelf.list().collect { "${it.name}: ${it.tags*.name.sort()}" }.sort() == ['First untagged shelf: []', 'Other shelf: [y]']
+    }
+
+    void 'updateAll updates the instances that list returns when the query requests an inner join of a collection that has a join table'() {
+        given:
+        saveShelves()
+
+        when:
+        final updated = AssociationJoinTypeShelf.where { name ==~ 'First%' }.join('tags', JoinType.INNER).updateAll(name: 'Updated shelf')
+        manager.session.clear()
+
+        then:
+        updated == 1
+        AssociationJoinTypeShelf.list().collect { "${it.name}: ${it.tags*.name.sort()}" }.sort() == ['First untagged shelf: []', 'Other shelf: [y]', 'Updated shelf: [x]']
+    }
+
+    private void saveShelves() {
+        new AssociationJoinTypeShelf(name: 'First tagged shelf').addToTags(new AssociationJoinTypeTag(name: 'x')).save(failOnError: true)
+        new AssociationJoinTypeShelf(name: 'First untagged shelf').save(failOnError: true)
+        new AssociationJoinTypeShelf(name: 'Other shelf').addToTags(new AssociationJoinTypeTag(name: 'y')).save(failOnError: true, flush: true)
+        manager.session.clear()
+    }
+
+    void 'updateAll applies an inner join of the side of a one-to-one that the other class has the foreign key of'() {
+        given: 'one nose of a face, and noses of no face'
+        final noses = (1..3).collect { new AssociationJoinTypeNose(freckles: true).save(validate: false) }
+        new AssociationJoinTypeFace(name: 'Face with a nose', nose: noses.last()).save(failOnError: true)
+        new AssociationJoinTypeFace(name: 'Face without a nose').save(failOnError: true, flush: true)
+        manager.session.clear()
+
+        when:
+        final listed = AssociationJoinTypeNose.where { freckles == true }.join('face', JoinType.INNER).list()*.id
+        final updated = AssociationJoinTypeNose.where { freckles == true }.join('face', JoinType.INNER).updateAll(freckles: false)
+        manager.session.clear()
+
+        then:
+        listed == [noses.last().id]
+        updated == 1
+        AssociationJoinTypeNose.findAllByFreckles(false)*.id == [noses.last().id]
+    }
+
+    void 'a fetch mode requested after a join type keeps the join type for the join that criteria on the association make: #description'() {
+        expect:
+        query.call()*.name.sort() == ['Arsenal First Team', 'Playerless First Team', 'Unattached First Team']
+
+        where:
+        description                  | query
+        'the fetch argument of list' | { Team.where { club.name == 'Arsenal' || name == 'Unattached First Team' }.join('club', JoinType.LEFT).list(fetch: [club: 'join']) }
+        'join without a join type'   | { Team.where { club.name == 'Arsenal' || name == 'Unattached First Team' }.join('club', JoinType.LEFT).join('club').list() }
+        'select'                     | { Team.where { club.name == 'Arsenal' || name == 'Unattached First Team' }.join('club', JoinType.LEFT).select('club').list() }
     }
 
     void 'a fetch mode that a where query requests with #method replaces a join type that it requested before'() {
@@ -926,6 +995,57 @@ class AssociationJoinTypeSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckM
         results*.name.sort() == TEAMS_WITH_A_CLUB
     }
 
+    void '#api applies the inner join that the fetch argument requests to a sort by the association'() {
+        when:
+        final List<Team> results = query.call()
+
+        then:
+        results*.name.sort() == TEAMS_WITH_A_CLUB
+        results*.club*.name == ['Arsenal', 'Arsenal', 'Chelsea', 'Manchester United']
+
+        where:
+        api                  | query
+        'findAll by example' | { Team.findAll(new Team(), [sort: 'club.name', fetch: [club: JoinType.INNER]]) }
+        'list'               | { Team.list(sort: 'club.name', fetch: [club: JoinType.INNER]) }
+        'a paged list'       | { Team.list(sort: 'club.name', max: 10, fetch: [club: JoinType.INNER]) }
+    }
+
+    void '#api sorted by an association does not find an instance without it when the fetch argument requests an inner join'() {
+        expect:
+        query.call() == expected
+
+        where:
+        api               | query                                                                                                            || expected
+        'findAllWhere'    | { Team.findAllWhere([name: 'Unattached First Team'], [sort: 'club.name', fetch: [club: JoinType.INNER]]) }      || []
+        'findWhere'       | { Team.findWhere([name: 'Unattached First Team'], [sort: 'club.name', fetch: [club: JoinType.INNER]]) }         || null
+        'find by example' | { Team.find(new Team(name: 'Unattached First Team'), [sort: 'club.name', fetch: [club: JoinType.INNER]]) }     || null
+    }
+
+    void '#api applies an inner join that the fetch argument requests for #path without a sort'() {
+        given:
+        saveTeamWithAPlayerWithoutContract()
+
+        expect:
+        query.call()*.name.unique().sort() == expected
+
+        where:
+        api                  | path               | query                                                                                         || expected
+        'findAll by example' | 'club'             | { Team.findAll(new Team(), [fetch: [club: JoinType.INNER]]) }                                || TEAMS_WITH_A_CLUB + 'Squad Team'
+        'list'               | 'club'             | { Team.list(fetch: [club: JoinType.INNER]) }                                                 || TEAMS_WITH_A_CLUB + 'Squad Team'
+        'findAllWhere'       | 'players'          | { Team.findAllWhere([name: 'Playerless First Team'], [fetch: [players: JoinType.INNER]]) }   || []
+        'list'               | 'players'          | { Team.list(fetch: [players: JoinType.INNER]) }                                              || (TEAMS_WITH_PLAYERS + 'Squad Team').sort()
+        'list'               | 'players.contract' | { Team.list(fetch: ['players.contract': JoinType.INNER]) }                                   || (TEAMS_WITH_PLAYERS + 'Squad Team').sort()
+    }
+
+    void 'the total count of a paged list counts the instances that an inner join the fetch argument requests leaves'() {
+        when:
+        final results = Team.list(max: 2, fetch: [club: JoinType.INNER])
+
+        then:
+        results.size() == 2
+        results.totalCount == TEAMS_WITH_A_CLUB.size()
+    }
+
     void 'a join type requested for a property that is not an association is ignored'() {
         when:
         final results = Team.where {
@@ -935,6 +1055,33 @@ class AssociationJoinTypeSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckM
         then:
         results*.name.sort() == ALL_TEAMS
     }
+}
+
+@Entity
+class AssociationJoinTypeShelf {
+    String name
+    static hasMany = [tags: AssociationJoinTypeTag]
+}
+
+@Entity
+class AssociationJoinTypeTag {
+    String name
+}
+
+@Entity
+class AssociationJoinTypeFace {
+    String name
+    AssociationJoinTypeNose nose
+
+    static constraints = {
+        nose nullable: true
+    }
+}
+
+@Entity
+class AssociationJoinTypeNose {
+    boolean freckles
+    static belongsTo = [face: AssociationJoinTypeFace]
 }
 
 @Entity
