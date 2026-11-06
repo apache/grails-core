@@ -82,7 +82,7 @@ public class ValidationEvent extends AbstractPersistenceEvent {
      * callback of that associated object has run and before its constraints are checked, and returns whether it has
      * changed the object. An object that it has left alone is passed to it again when every associated object has
      * been validated, since a callback that ran in between may have changed that object. When the listener changes
-     * it then, its constraints are checked again.
+     * it then, its constraints are checked again, and the errors that they recorded the first time are not reported.
      *
      * @param listener The listener
      * @since 7.0.18

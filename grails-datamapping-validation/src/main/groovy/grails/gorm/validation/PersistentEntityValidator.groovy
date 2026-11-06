@@ -25,8 +25,11 @@ import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 
 import org.springframework.context.MessageSource
+import org.springframework.validation.AbstractBindingResult
+import org.springframework.validation.BindingResult
 import org.springframework.validation.Errors
 import org.springframework.validation.FieldError
+import org.springframework.validation.ObjectError
 
 import org.grails.datastore.gorm.support.BeforeValidateHelper
 import org.grails.datastore.gorm.validation.constraints.eval.ConstraintsEvaluator
@@ -39,6 +42,7 @@ import org.grails.datastore.mapping.model.types.ToMany
 import org.grails.datastore.mapping.model.types.ToOne
 import org.grails.datastore.mapping.proxy.ProxyHandler
 import org.grails.datastore.mapping.reflect.EntityReflector
+import org.grails.datastore.mapping.validation.ValidationErrors
 
 /**
  * A Validator that validates a {@link org.grails.datastore.mapping.model.PersistentEntity} against known constraints
@@ -85,7 +89,8 @@ class PersistentEntityValidator implements CascadingValidator, ConstrainedEntity
      * listener is called with each of them once the beforeValidate callback of that object has run and before its
      * constraints are checked, and returns whether it has changed the object. An object that it has left alone is
      * passed to it again when every associated object has been validated, since a callback that ran in between may
-     * have changed that object. When the listener changes it then, its constraints are checked again.
+     * have changed that object. When the listener changes it then, its constraints are checked again, and the errors
+     * that they recorded the first time are not reported.
      *
      * <p>Only this validation calls the listener. A validation that runs while this one does, from a callback for
      * example, calls the listener it is given itself, or none.</p>
@@ -122,19 +127,26 @@ class PersistentEntityValidator implements CascadingValidator, ConstrainedEntity
         ValidatedObjects validatedObjects = new ValidatedObjects(cascadeListener)
         validatedObjects.add(obj)
 
+        // An error cannot be taken out of the errors once it is recorded, and the errors of an object that the
+        // listener changes when it is passed again no longer hold. A validation with a listener therefore records
+        // its errors in a copy, and adds those that hold in the end to the given errors.
+        boolean replaceable = cascade && cascadeListener != null && errors instanceof BindingResult
+        Errors recorded = replaceable ? copyOf((BindingResult) errors, Collections.<ObjectError>emptySet()) : errors
+        int givenErrorCount = recorded.getErrorCount()
+
         for (PersistentProperty pp in entity.persistentProperties) {
             def propertyName = pp.name
 
             ConstrainedProperty constrainedProperty = constrainedProperties.get(propertyName)
 
             if (constrainedProperty != null) {
-                validatePropertyWithConstraint(obj, propertyName, entityReflector, errors, constrainedProperty, pp)
+                validatePropertyWithConstraint(obj, propertyName, entityReflector, recorded, constrainedProperty, pp)
             }
 
             if (pp instanceof Association) {
                 Association association = (Association) pp
                 if (cascade) {
-                    cascadeToAssociativeProperty(obj, errors, entityReflector, association, validatedObjects)
+                    cascadeToAssociativeProperty(obj, recorded, entityReflector, association, validatedObjects)
                 }
             }
 
@@ -144,19 +156,27 @@ class PersistentEntityValidator implements CascadingValidator, ConstrainedEntity
         for (String remainingProperty in constrainedPropertyNames) {
             ConstrainedProperty constrainedProperty = constrainedProperties.get(remainingProperty)
             if (remainingProperty != null) {
-                validatePropertyWithConstraint(obj, remainingProperty, entityReflector, errors, constrainedProperty, null)
+                validatePropertyWithConstraint(obj, remainingProperty, entityReflector, recorded, constrainedProperty, null)
             }
         }
 
-        offerAgain(validatedObjects, errors)
+        recorded = offerAgain(validatedObjects, recorded)
+
+        if (replaceable) {
+            List<ObjectError> all = recorded.getAllErrors()
+            for (ObjectError error : all.subList(givenErrorCount, all.size())) {
+                ((BindingResult) errors).addError(error)
+            }
+        }
     }
 
     // A callback that ran after the listener was called with an object may have changed that object. The listener
-    // is therefore called again with the objects it has left alone, until it leaves them all alone, and the
-    // constraints of an object that it changes now are checked again.
-    private void offerAgain(ValidatedObjects validatedObjects, Errors errors) {
+    // is therefore called again with the objects it has left alone, until it leaves them all alone. The constraints
+    // of an object that it changes now are checked again, in place of the first check: the errors that they
+    // recorded then are left out of the errors that this method returns.
+    private Errors offerAgain(ValidatedObjects validatedObjects, Errors errors) {
         List<LeftAlone> leftAlone = validatedObjects.leftAlone
-        String nestedPath = errors.getNestedPath()
+        Errors recorded = errors
         boolean changed = !leftAlone.isEmpty()
         while (changed) {
             changed = false
@@ -167,16 +187,36 @@ class PersistentEntityValidator implements CascadingValidator, ConstrainedEntity
                 if (validatedObjects.cascadeListener.test(candidate.object)) {
                     candidates.remove()
                     changed = true
+                    if (recorded instanceof BindingResult && !candidate.errors.isEmpty()) {
+                        recorded = copyOf((BindingResult) recorded, candidate.errors)
+                    }
+                    String nestedPath = recorded.getNestedPath()
                     try {
-                        errors.setNestedPath(candidate.nestedPath)
-                        validateConstraints(candidate.object, candidate.association, errors)
+                        recorded.setNestedPath(candidate.nestedPath)
+                        validateConstraints(candidate.object, candidate.association, recorded)
                     }
                     finally {
-                        errors.setNestedPath(nestedPath)
+                        recorded.setNestedPath(nestedPath)
                     }
                 }
             }
         }
+        recorded
+    }
+
+    // The errors of the same object under the same nested path, without the given ones
+    private static BindingResult copyOf(BindingResult errors, Set<ObjectError> without) {
+        ValidationErrors copy = new ValidationErrors(errors.getTarget(), errors.getObjectName())
+        if (errors instanceof AbstractBindingResult) {
+            copy.setMessageCodesResolver(((AbstractBindingResult) errors).getMessageCodesResolver())
+        }
+        for (ObjectError error : errors.getAllErrors()) {
+            if (!without.contains(error)) {
+                copy.addError(error)
+            }
+        }
+        copy.setNestedPath(errors.getNestedPath())
+        copy
     }
 
     // Checks the constraints of an associated object without cascading, under the nested path of that object
@@ -338,9 +378,8 @@ class PersistentEntityValidator implements CascadingValidator, ConstrainedEntity
         String associatedPath = buildNestedPath(nestedPath, propertyName, indexOrKey)
 
         // Tell the listener of this validation, which may complete the associated object before it is validated
-        if (validatedObjects instanceof ValidatedObjects) {
-            ((ValidatedObjects) validatedObjects).offer(associatedObject, association, associatedPath)
-        }
+        LeftAlone leftAlone = validatedObjects instanceof ValidatedObjects ?
+                ((ValidatedObjects) validatedObjects).offer(associatedObject, association, associatedPath) : null
 
         try {
             errors.setNestedPath(associatedPath)
@@ -353,7 +392,11 @@ class PersistentEntityValidator implements CascadingValidator, ConstrainedEntity
                 String associatedPropertyName = associatedPersistentProperty.getName()
                 if (associatedConstrainedProperties.containsKey(associatedPropertyName)) {
                     ConstrainedProperty associatedConstrainedProperty = associatedConstrainedProperties.get(associatedPropertyName)
+                    int errorCount = errors.getErrorCount()
                     validatePropertyWithConstraint(associatedObject, errors.getNestedPath() + associatedPropertyName, associatedReflector, errors, associatedConstrainedProperty, associatedPersistentProperty)
+                    if (leftAlone != null) {
+                        leftAlone.addErrorsSince(errors, errorCount)
+                    }
                 }
 
                 // Don't continue cascade if the the other side is equal to avoid stack overflow
@@ -442,10 +485,14 @@ class PersistentEntityValidator implements CascadingValidator, ConstrainedEntity
             this.cascadeListener = cascadeListener
         }
 
-        void offer(Object associatedObject, Association association, String nestedPath) {
-            if (cascadeListener != null && !cascadeListener.test(associatedObject)) {
-                leftAlone.add(new LeftAlone(associatedObject, association, nestedPath))
+        // Returns the record of the object when the listener has left it alone, and null otherwise
+        LeftAlone offer(Object associatedObject, Association association, String nestedPath) {
+            if (cascadeListener == null || cascadeListener.test(associatedObject)) {
+                return null
             }
+            LeftAlone object = new LeftAlone(associatedObject, association, nestedPath)
+            leftAlone.add(object)
+            object
         }
     }
 
@@ -455,11 +502,20 @@ class PersistentEntityValidator implements CascadingValidator, ConstrainedEntity
         final Object object
         final Association association
         final String nestedPath
+        // The errors that the constraints of the object have recorded, by identity
+        final Set<ObjectError> errors = Collections.newSetFromMap(new IdentityHashMap<ObjectError, Boolean>())
 
         LeftAlone(Object object, Association association, String nestedPath) {
             this.object = object
             this.association = association
             this.nestedPath = nestedPath
+        }
+
+        void addErrorsSince(Errors recorded, int errorCount) {
+            List<ObjectError> all = recorded.getAllErrors()
+            if (all.size() > errorCount) {
+                errors.addAll(all.subList(errorCount, all.size()))
+            }
         }
     }
 }

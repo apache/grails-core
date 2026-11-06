@@ -22,6 +22,8 @@ package org.grails.orm.hibernate.multitenancy;
 import java.io.Serializable;
 
 import org.hibernate.collection.spi.PersistentCollection;
+import org.hibernate.engine.spi.EntityEntry;
+import org.hibernate.engine.spi.SessionImplementor;
 
 import org.springframework.context.ApplicationEvent;
 
@@ -71,7 +73,7 @@ public class MultiTenantEventListener implements PersistenceEventListener {
             if (validationEvent.isDeepValidate()) {
                 // The associated objects that are validated with this one get no event of their own, so the
                 // validator calls back with each of them
-                Datastore hibernateDatastore = (Datastore) event.getSource();
+                AbstractHibernateDatastore hibernateDatastore = (AbstractHibernateDatastore) event.getSource();
                 validationEvent.addCascadeListener(associatedObject ->
                         assignTenantIdOfAssociatedObject(hibernateDatastore, associatedObject));
             }
@@ -82,7 +84,7 @@ public class MultiTenantEventListener implements PersistenceEventListener {
     // checked. The object is given the tenant id it is inserted or updated with. One that has a tenant id and is
     // not saved with its owner keeps it, and is passed again once every callback of the validation has run, as one
     // of them may have changed it. Returns whether the object was given a tenant id.
-    private boolean assignTenantIdOfAssociatedObject(Datastore hibernateDatastore, Object associatedObject) {
+    private boolean assignTenantIdOfAssociatedObject(AbstractHibernateDatastore hibernateDatastore, Object associatedObject) {
         ValidationEvent cascaded = new ValidationEvent(hibernateDatastore, associatedObject);
         PersistentEntity entity = cascaded.getEntity();
         if (entity == null || !entity.isMultiTenant()) {
@@ -90,20 +92,36 @@ public class MultiTenantEventListener implements PersistenceEventListener {
         }
         TenantId tenantId = entity.getTenantId();
         boolean hasTenantId = tenantId != null && cascaded.getEntityAccess().getProperty(tenantId.getName()) != null;
-        if (hasTenantId && !isSaved(entity, cascaded.getEntityObject())) {
+        if (hasTenantId && !isSaved(hibernateDatastore, entity, cascaded.getEntityObject())) {
             return false;
         }
         handleEvent(cascaded);
         return true;
     }
 
-    // Whether Hibernate inserts or updates the object with its owner. For an object that tracks its changes this is
-    // the check of GrailsEntityDirtinessStrategy, with which Hibernate decides whether to update an object of the
-    // session, and the check for a changed collection. An object without a tenant id is not asked: Hibernate tracks
-    // the changes of a new object from the save on, before it is inserted.
-    private static boolean isSaved(PersistentEntity entity, Object object) {
+    // Whether Hibernate writes the properties of the object as its owner is saved. It writes none of a read-only
+    // object. For another object that tracks its changes this is the check of GrailsEntityDirtinessStrategy, with
+    // which Hibernate decides whether to update an object of the session, and the check for a changed collection.
+    // An object without a tenant id is not asked: Hibernate tracks the changes of a new object from the save on,
+    // before it is inserted.
+    private static boolean isSaved(AbstractHibernateDatastore hibernateDatastore, PersistentEntity entity, Object object) {
+        if (isReadOnly(hibernateDatastore, object)) {
+            return false;
+        }
         return !(object instanceof DirtyCheckable) || ((DirtyCheckable) object).hasChanged() ||
                 DirtyCheckingSupport.areEmbeddedDirty(entity, object) || hasDirtyCollection(entity, object);
+    }
+
+    // An object that is read-only in the session, such as one that read(id) or a read-only query has returned, is
+    // not updated although it has changed. Hibernate looks for the changes of a modifiable object only, and updates
+    // no more than the version of a read-only object whose collection has changed.
+    private static boolean isReadOnly(AbstractHibernateDatastore hibernateDatastore, Object object) {
+        if (!hibernateDatastore.hasCurrentSession()) {
+            return false;
+        }
+        SessionImplementor session = (SessionImplementor) hibernateDatastore.getSessionFactory().getCurrentSession();
+        EntityEntry entry = session.getPersistenceContext().getEntry(object);
+        return entry != null && !entry.isModifiableEntity();
     }
 
     // Hibernate updates a versioned object when one of its collections has changed, to increment its version

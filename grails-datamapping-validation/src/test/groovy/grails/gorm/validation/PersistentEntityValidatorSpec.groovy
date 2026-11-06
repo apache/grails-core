@@ -28,6 +28,7 @@ import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.model.config.GormMappingConfigurationStrategy
 import org.grails.datastore.mapping.validation.ValidationErrors
 import org.grails.datastore.mapping.validation.ValidatorRegistry
+import org.springframework.validation.BeanPropertyBindingResult
 import org.springframework.validation.Errors
 import org.springframework.validation.Validator
 import spock.lang.Issue
@@ -259,6 +260,80 @@ class PersistentEntityValidatorSpec extends Specification {
         changed.size() == 2
     }
 
+    def "the errors of an associated object are replaced when a cascade listener changes it as it is passed again"() {
+        given: 'a volume whose code is too long, and a spare one whose code stays too long'
+        Validator shelfValidator = shelfValidator()
+        Shelf shelf = new Shelf(volume: new Volume(code: 'too-long'), spare: new Volume(code: 'way-too-long'))
+        Errors errors = new ValidationErrors(shelf)
+        int calls = 0
+
+        when: 'the listener leaves both alone as they are validated, and gives the volume another code as it is passed again'
+        shelfValidator.validate(shelf, errors, true) { Object associatedObject ->
+            if (++calls > 2 && associatedObject.is(shelf.volume)) {
+                associatedObject.code = newCode
+                return true
+            }
+            false
+        }
+
+        then: 'the error of the code it had is gone, its constraints are checked with the new code, and the other errors are kept'
+        errors.fieldErrors.collect { [it.field, it.rejectedValue] } == expected
+
+        where:
+        newCode         || expected
+        'short'         || [['name', null], ['spare.code', 'way-too-long']]
+        'also-too-long' || [['name', null], ['spare.code', 'way-too-long'], ['volume.code', 'also-too-long']]
+    }
+
+    def "the errors that were recorded before a validation are kept when an associated object is checked again"() {
+        given: 'errors that hold an error of the shelf and one of the code of its volume'
+        Validator shelfValidator = shelfValidator()
+        Shelf shelf = new Shelf(name: 'Top', volume: new Volume(code: 'too-long'))
+        Errors errors = new ValidationErrors(shelf)
+        errors.rejectValue('name', 'bound')
+        errors.rejectValue('volume.code', 'bound')
+        int calls = 0
+
+        when: 'the listener leaves the volume alone as it is validated, and changes it as it is passed again'
+        shelfValidator.validate(shelf, errors, true) { Object associatedObject ->
+            if (++calls == 1) {
+                return false
+            }
+            associatedObject.code = 'short'
+            true
+        }
+
+        then: 'both are kept, and no error is added to them'
+        calls == 2
+        errors.fieldErrors.collect { [it.field, it.code] } == [['name', 'bound'], ['volume.code', 'bound']]
+    }
+
+    def "a validation with a cascade listener records its errors in the given errors, under their nested path"() {
+        given: 'the errors of an object that holds the shelf'
+        Validator shelfValidator = shelfValidator()
+        Shelf shelf = new Shelf(volume: new Volume(code: 'too-long'), spare: new Volume(code: 'way-too-long'))
+        Errors errors = new BeanPropertyBindingResult(new Rack(shelf: shelf), 'holder')
+        errors.setNestedPath('shelf')
+        int calls = 0
+
+        when: 'the listener leaves both volumes alone as they are validated, and gives the first one another code as it is passed again'
+        shelfValidator.validate(shelf, errors, true) { Object associatedObject ->
+            if (++calls > 2 && associatedObject.is(shelf.volume)) {
+                associatedObject.code = 'also-too-long'
+                return true
+            }
+            false
+        }
+
+        then:
+        errors.nestedPath == 'shelf.'
+        errors.fieldErrors.collect { [it.objectName, it.field, it.rejectedValue] } == [
+                ['holder', 'shelf.name', null],
+                ['holder', 'shelf.spare.code', 'way-too-long'],
+                ['holder', 'shelf.volume.code', 'also-too-long']
+        ]
+    }
+
     def "a cascade listener is not called when validation does not cascade, and validation runs without one"() {
         given:
         Author author = new Author(name: 'Author', books: [new Book()], publisher: new Publisher())
@@ -397,14 +472,20 @@ class Shelf {
     }
 }
 
+class Rack {
+    Shelf shelf
+}
+
 @Entity
 class Volume {
     String title
+    String code
 
     static belongsTo = Shelf
 
     static constraints = {
         title nullable: false
+        code nullable: true, maxSize: 5
     }
 
     def beforeValidate() {

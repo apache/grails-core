@@ -344,6 +344,41 @@ class TenantIdConstraintsSpec extends Specification {
         cat.chip.firmId == 'other'
     }
 
+    void 'an associated object that keeps a tenant id that breaks a constraint declared on it fails the validation of its owner'() {
+        given: 'a cat without changes whose tenant id breaks its maxSize'
+        System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, 'acme')
+        def cat = new Cat(name: 'Tom', firmId: 'a-tenant-too-long', chip: new Chip(code: 'C-1', firmId: 'other'), basket: new Basket(colour: 'red'))
+        def shelter = new Shelter(name: 'North').addToCats(cat)
+        [cat, cat.chip, cat.basket]*.trackChanges()
+
+        when:
+        boolean valid = Shelter.withNewSession { shelter.validate() }
+
+        then: 'the cat, which is not updated, is validated with the tenant id it has'
+        !valid
+        cat.firmId == 'a-tenant-too-long'
+        shelter.errors.getFieldError('cats[0].firmId').rejectedValue == 'a-tenant-too-long'
+    }
+
+    void 'an associated object that a later callback changes is validated with the current tenant id alone'() {
+        given: 'a cat without changes whose tenant id breaks its maxSize, and whose basket changes itself as it is validated'
+        System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, 'acme')
+        def cat = new Cat(name: 'Tom', firmId: 'a-tenant-too-long', chip: new Chip(code: 'C-1', firmId: 'other'), basket: new Basket(colour: 'fading'))
+        def shelter = new Shelter(name: 'North').addToCats(cat)
+        [cat, cat.chip, cat.basket]*.trackChanges()
+
+        when:
+        boolean valid = Shelter.withNewSession { shelter.validate() }
+
+        then: 'the cat, which the callback has run after, is updated with the current tenant id'
+        cat.basket.colour == 'faded'
+        cat.firmId == 'acme'
+
+        and: 'the tenant id it had, which its constraints were checked with first, is not reported'
+        valid
+        !shelter.hasErrors()
+    }
+
     void 'an associated object whose own associated object changes in its beforeValidate callback is given the current tenant id'() {
         given: 'a cat of another tenant without changes, whose chip changes itself as it is validated'
         System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, 'acme')

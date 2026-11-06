@@ -337,6 +337,103 @@ class TenantIdConstraintsSpec extends Specification {
         cat.chip.firmId == 'beta'
     }
 
+    void 'an associated object that keeps a tenant id that breaks a constraint declared on it fails the validation of its owner'() {
+        given: 'a shelter and a cat, loaded inside withoutId, whose stored tenant id breaks the minSize of the cat'
+        TenantShelter shelter = shelterLoadedWithoutTenant('beta', null, 'x')
+        def cat = shelter.cats.first()
+
+        when: 'the shelter is validated while a tenant that fits is current'
+        System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, 'acme')
+        boolean valid = shelter.validate()
+
+        then: 'the cat, which is not updated, is validated with the tenant id it has'
+        !valid
+        cat.firmId == 'x'
+        shelter.errors.getFieldError('cats[0].firmId').code == 'minSize.notmet'
+    }
+
+    void 'an associated object that a later callback changes is validated with the current tenant id alone'() {
+        given: 'the same shelter and cat, whose home changes itself when it is validated in Oslo'
+        TenantShelter shelter = shelterLoadedWithoutTenant('beta', 'Oslo', 'x')
+        def cat = shelter.cats.first()
+
+        when: 'the shelter is validated while a tenant that fits is current'
+        System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, 'acme')
+        boolean valid = shelter.validate()
+
+        then: 'the cat, which the callback has run after, is updated with the current tenant id'
+        cat.home.city == 'Bergen'
+        cat.firmId == 'acme'
+
+        and: 'the tenant id it had, which its constraints were checked with first, is not reported'
+        valid
+        !shelter.hasErrors()
+
+        when:
+        shelter.save(flush: true)
+
+        then:
+        !shelter.hasErrors()
+        storedTenantIds(TenantCat) == [Tom: 'acme']
+    }
+
+    void 'a read-only associated object keeps its tenant id as its owner is validated'() {
+        given: 'an owner and a pet of one tenant, loaded inside withoutId, the pet with read(id)'
+        System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, 'beta')
+        def stored = new TenantOwner(name: 'Dave').addToPets(new TenantPet(name: 'Rex')).save(flush: true)
+        Long ownerId = stored.id
+        Long petId = stored.pets.first().id
+        datastore.sessionFactory.currentSession.clear()
+        TenantPet pet = null
+        TenantOwner owner = Tenants.withoutId(datastore) {
+            pet = TenantPet.read(petId)
+            def loaded = TenantOwner.get(ownerId)
+            loaded.pets.size()
+            loaded
+        }
+
+        when: 'the pet is changed, and the owner is validated while a tenant that breaks the maxSize of the pet is current'
+        pet.name = 'Max'
+        System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, 'a-tenant-too-long')
+        boolean valid = owner.validate()
+
+        then: 'the pet, which Hibernate does not update although it has changed, is left alone'
+        owner.pets.first().is(pet)
+        pet.hasChanged()
+        valid
+        pet.firmId == 'beta'
+
+        when:
+        owner.save(flush: true)
+
+        then: 'and is stored as it was'
+        !owner.hasErrors()
+        storedTenantIds() == [Rex: 'beta']
+    }
+
+    void 'a read-only associated object keeps its tenant id when one of its collections has changed'() {
+        given: 'a shelter and a cat of one tenant, loaded inside withoutId, the cat made read-only'
+        TenantShelter shelter = shelterLoadedWithoutTenant('beta')
+        def cat = shelter.cats.first()
+        datastore.sessionFactory.currentSession.setReadOnly(cat, true)
+
+        when: 'a nickname is added, and the shelter is validated while a tenant that breaks the maxSize of the cat is current'
+        cat.nicknames << 'Tommy'
+        System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, 'a-tenant-too-long')
+        boolean valid = shelter.validate()
+
+        then: 'the cat, whose version alone Hibernate updates, is left alone'
+        valid
+        cat.firmId == 'beta'
+
+        when:
+        shelter.save(flush: true)
+
+        then: 'and its tenant id is stored as it was'
+        !shelter.hasErrors()
+        storedTenantIds(TenantCat) == [Tom: 'beta']
+    }
+
     void 'an associated object whose only change is in a collection is given the current tenant id'() {
         given: 'a shelter and a cat of one tenant, loaded inside withoutId'
         TenantShelter shelter = shelterLoadedWithoutTenant('beta')
@@ -382,13 +479,17 @@ class TenantIdConstraintsSpec extends Specification {
         }
     }
 
-    private TenantShelter shelterLoadedWithoutTenant(String tenantId, String storedCity = null) {
+    private TenantShelter shelterLoadedWithoutTenant(String tenantId, String storedCity = null, String storedTenantId = null) {
         System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, tenantId)
         def cat = new TenantCat(name: 'Tom', home: new TenantHome(city: 'Rome'), nicknames: ['Tom'] as Set)
         Long id = new TenantShelter(name: 'North').addToCats(cat).save(flush: true).id
         if (storedCity) {
             // Stored directly, so that the beforeValidate callback of the home has not seen it yet
             TenantCat.executeUpdate('update TenantCat c set c.home.city = :city', [city: storedCity])
+        }
+        if (storedTenantId) {
+            // Stored directly, as validation does not let a tenant id through that breaks a constraint declared on it
+            TenantCat.executeUpdate('update TenantCat c set c.firmId = :tenantId', [tenantId: storedTenantId])
         }
         datastore.sessionFactory.currentSession.clear()
         Tenants.withoutId(datastore) {
@@ -399,9 +500,9 @@ class TenantIdConstraintsSpec extends Specification {
         }
     }
 
-    private Map<String, String> storedTenantIds() {
+    private Map<String, String> storedTenantIds(Class<?> type = TenantPet) {
         datastore.sessionFactory.currentSession.clear()
-        Tenants.withoutId(datastore) { TenantPet.list().collectEntries { [it.name, it.firmId] } }
+        Tenants.withoutId(datastore) { type.list().collectEntries { [it.name, it.firmId] } }
     }
 }
 
@@ -487,7 +588,7 @@ class TenantCat implements MultiTenant<TenantCat> {
     static embedded = ['home']
 
     static constraints = {
-        firmId nullable: false, maxSize: 5
+        firmId nullable: false, minSize: 2, maxSize: 5
         chip nullable: true
         home nullable: true
     }
