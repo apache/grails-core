@@ -75,7 +75,8 @@ public enum SupportedDatabase implements ClassKeyed<SupportedDatabase> {
 
     MYSQL(SqlSyntax.MYSQL, "?1 RLIKE ?2", UniqueIndexNulls.DISTINCT, MySQLDialect.class),
 
-    POSTGRESQL(SqlSyntax.POSTGRESQL, "?1 ~* ?2", UniqueIndexNulls.DISTINCT, PostgreSQLDialect.class),
+    // ~ is case-sensitive; Hibernate 5 renders ~*, see #16882
+    POSTGRESQL(SqlSyntax.POSTGRESQL, "?1 ~ ?2", UniqueIndexNulls.DISTINCT, PostgreSQLDialect.class),
 
     // reads native SQL as PostgreSQL does, and has no regular expression operator here
     COCKROACH(SqlSyntax.POSTGRESQL, "?1 LIKE ?2", UniqueIndexNulls.DISTINCT, CockroachDialect.class),

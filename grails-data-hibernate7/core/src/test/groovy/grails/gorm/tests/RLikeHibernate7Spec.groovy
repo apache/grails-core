@@ -107,17 +107,17 @@ class RLikeHibernate7Spec extends HibernateGormDatastoreSpec {
         ['Alice', 'alice', 'bob'].each { new RlikeFoo(name: it).save() }
         RlikeFoo.withSession { it.flush() }
 
-        when: 'the pattern is matched, as Hibernate 5 does on the same database'
+        when: 'the pattern is matched'
         manager.session.clear()
         List<String> names = RlikeFoo.findAllByNameRlike('^al.*')*.name.sort()
 
-        then: 'whether case matters follows the database: PostgreSQL ignores it with ~*, MySQL and MariaDB by collation'
+        then: 'whether case matters follows the database: PostgreSQL matches with ~, which is case-sensitive, and MySQL and MariaDB follow the collation (Hibernate 5 renders ~*, see #16882)'
         names == expected
 
         where:
         db           | container || expected
         "H2"         | null      || ['alice']
-        "Postgres"   | postgres  || ['Alice', 'alice']
+        "Postgres"   | postgres  || ['alice']
         "MySQL"      | mysql     || ['Alice', 'alice']
         "MariaDB"    | mariadb   || ['Alice', 'alice']
         "Oracle"     | oracle    || ['alice']
