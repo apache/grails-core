@@ -275,6 +275,29 @@ class TenantIdConstraintsSpec extends Specification {
         valid
         rex.firmId == 'other'
         tom.firmId == 'acme'
+
+        and: 'the tenant id of the changed pet counts as a change, so that a datastore that writes the changes alone stores it'
+        tom.listDirtyPropertyNames() as Set == ['firmId', 'name'] as Set
+        tom.getOriginalValue('firmId') == 'other'
+        !rex.hasChanged()
+    }
+
+    void 'an associated object that is marked as changed as a whole stays so when it is given the current tenant id'() {
+        given: 'a pet of another tenant that is marked as changed without a changed property, so that all of it is written'
+        System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, 'acme')
+        def pet = new Pet(name: 'Rex', firmId: 'other')
+        def owner = new Owner(name: 'Dave').addToPets(pet)
+        pet.trackChanges()
+        pet.markDirty()
+
+        when:
+        boolean valid = Owner.withNewSession { owner.validate() }
+
+        then:
+        valid
+        pet.firmId == 'acme'
+        pet.listDirtyPropertyNames().empty
+        pet.hasChanged('name')
     }
 
     void 'an associated object that has no tenant id is given the current one although it has no changes'() {
@@ -290,6 +313,9 @@ class TenantIdConstraintsSpec extends Specification {
         then: 'the pet, whose tenant id is declared nullable: false, is validated with the current tenant id'
         valid
         pet.firmId == 'acme'
+
+        and: 'it is still without changes, so validating its owner does not make a datastore update it'
+        !pet.hasChanged()
     }
 
     void 'an associated object that a beforeValidate callback creates as its owner is validated is given the current tenant id'() {
@@ -337,8 +363,10 @@ class TenantIdConstraintsSpec extends Specification {
         then: 'the cat, which the callback has run after, is updated, and is given the tenant id its update gives it'
         valid
         cat.basket.colour == 'faded'
-        !cat.hasChanged()
         cat.firmId == 'acme'
+
+        and: 'that tenant id is the only change of the cat itself'
+        cat.listDirtyPropertyNames() == ['firmId']
 
         and: 'its chip, which is not updated, is left alone'
         cat.chip.firmId == 'other'
@@ -392,9 +420,11 @@ class TenantIdConstraintsSpec extends Specification {
         then: 'the chip and the cat that owns it, which this datastore updates with it, are given the current tenant id'
         valid
         cat.chip.code == 'renewed'
-        !cat.hasChanged()
         cat.chip.firmId == 'acme'
         cat.firmId == 'acme'
+
+        and: 'that tenant id is the only change of the cat itself'
+        cat.listDirtyPropertyNames() == ['firmId']
     }
 
     void 'a validation that a beforeValidate callback runs with a validator assigns no tenant ids for the validation around it'() {
@@ -430,9 +460,11 @@ class TenantIdConstraintsSpec extends Specification {
         boolean valid = Shelter.withNewSession { shelter.validate() }
 
         then: 'the cat, which is updated, is given the tenant id its update gives it'
-        !cat.hasChanged()
         valid
         cat.firmId == 'acme'
+
+        and: 'that tenant id is the only change of the cat itself'
+        cat.listDirtyPropertyNames() == ['firmId']
 
         and: 'its chip, which is not, is left alone'
         cat.chip.firmId == 'other'

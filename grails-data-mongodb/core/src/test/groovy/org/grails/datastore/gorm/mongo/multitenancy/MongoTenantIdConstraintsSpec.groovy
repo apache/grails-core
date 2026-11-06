@@ -180,6 +180,26 @@ class MongoTenantIdConstraintsSpec extends AutoStartedMongoSpec {
         tenantIds == [owner: 'beta', Rex: 'acme', Tim: 'beta']
     }
 
+    void 'an associated object that is updated with its owner is stored with the current tenant id'() {
+        given: 'an owner and two pets of one tenant'
+        System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, 'acme')
+        ObjectId id = TenantOwner.withNewSession {
+            new TenantOwner(name: 'Dave').addToPets(new TenantPet(name: 'Rex')).addToPets(new TenantPet(name: 'Tom')).save(flush: true).id
+        }
+
+        when: 'they are loaded, one pet is changed, and the owner is saved while another tenant is current'
+        boolean saved = TenantOwner.withNewSession {
+            def owner = TenantOwner.get(id)
+            owner.pets.find { it.name == 'Tom' }.name = 'Tim'
+            System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, 'beta')
+            owner.save(flush: true) != null
+        }
+
+        then: 'the tenant id that the changed pet is validated with is the one its update stores, and the other pet is stored as it was'
+        saved
+        TenantPet.collection.find().collectEntries { [it.name, it.firmId] } == [Rex: 'acme', Tim: 'beta']
+    }
+
     void 'an associated object that a beforeValidate callback creates as its owner is validated is saved for the current tenant'() {
         given:
         System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, 'acme')
@@ -236,11 +256,11 @@ class MongoTenantIdConstraintsSpec extends AutoStartedMongoSpec {
             def cat = shelter.cats.first()
             System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, 'toolongtenant')
             def saved = shelter.save(flush: true)
-            [city: cat.home.city, changed: cat.hasChanged(), saved: saved != null, error: shelter.errors.getFieldError('cats[0].firmId')?.code]
+            [city: cat.home.city, changes: cat.listDirtyPropertyNames(), saved: saved != null, error: shelter.errors.getFieldError('cats[0].firmId')?.code]
         }
 
-        then: 'the cat, which the callback has run after, is updated with the current tenant id, and is validated with it'
-        result == [city: 'Bergen', changed: false, saved: false, error: 'maxSize.exceeded']
+        then: 'the cat, which the callback has run after and whose only own change is its tenant id, is validated with the current tenant id'
+        result == [city: 'Bergen', changes: ['firmId'], saved: false, error: 'maxSize.exceeded']
 
         and: 'the cat is stored as it was'
         TenantCat.collection.find().first().home.city == 'Oslo'

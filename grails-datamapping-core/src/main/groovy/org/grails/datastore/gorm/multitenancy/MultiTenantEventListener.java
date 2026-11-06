@@ -89,12 +89,32 @@ public class MultiTenantEventListener implements PersistenceEventListener {
             return false;
         }
         TenantId tenantId = entity.getTenantId();
-        boolean hasTenantId = tenantId != null && cascaded.getEntityAccess().getProperty(tenantId.getName()) != null;
-        if (hasTenantId && !isSaved(cascaded.getEntityObject())) {
+        Object object = cascaded.getEntityObject();
+        Object previous = tenantId != null ? cascaded.getEntityAccess().getProperty(tenantId.getName()) : null;
+        boolean saved = isSaved(object);
+        if (previous != null && !saved) {
             return false;
         }
         handleEvent(cascaded);
+        if (tenantId != null && saved) {
+            markChanged(object, tenantId.getName(), previous, cascaded.getEntityAccess().getProperty(tenantId.getName()));
+        }
         return true;
+    }
+
+    // A datastore that writes the changed properties of an object alone, as GORM for MongoDB does, stores the tenant
+    // id that this listener assigns as the object is updated, since it takes the properties that a listener sets
+    // then as changed. The tenant id is now set here, before that, so it is recorded as a change of an object that
+    // is updated. An object that is not updated is not touched, or it would be updated because of this, and neither
+    // is one that is changed as a whole, all of which is written.
+    private static void markChanged(Object object, String tenantIdName, Object previous, Object assigned) {
+        if (object instanceof DirtyCheckable) {
+            DirtyCheckable dirtyCheckable = (DirtyCheckable) object;
+            boolean changedAsAWhole = dirtyCheckable.hasChanged() && dirtyCheckable.listDirtyPropertyNames().isEmpty();
+            if (!changedAsAWhole) {
+                dirtyCheckable.markDirty(tenantIdName, assigned, previous);
+            }
+        }
     }
 
     // Whether the object is inserted or updated with its owner. For an object that tracks its changes this is the
