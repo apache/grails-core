@@ -139,4 +139,22 @@ class AliasRegistrySpec extends Specification {
         registry.getAssociationAlias('likes') == first
         registry.getAssociationAlias('favorite') == null
     }
+
+    def "the first join type recorded for an association block stays, and no alias is declared"() {
+        given:
+        def parent = new AliasRegistry()
+        parent.define('tag', new HibernateAlias('tag', 'tag', JoinType.INNER, true))
+        def registry = new AliasRegistry(parent)
+
+        when:
+        registry.defineAssociationJoinType('tag', JoinType.LEFT)
+        registry.defineAssociationJoinType('tag', JoinType.INNER)
+
+        then:
+        registry.getAssociationJoinType('tag') == JoinType.LEFT
+        parent.getAssociationJoinType('tag') == null
+        !registry.isOwnDefined('tag')
+        registry.getDefinition('tag').explicit()
+        registry.getAssociationJoinType('likes') == null
+    }
 }

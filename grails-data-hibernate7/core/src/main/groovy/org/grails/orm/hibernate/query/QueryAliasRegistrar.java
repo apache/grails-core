@@ -153,7 +153,8 @@ final class QueryAliasRegistrar {
 
     /**
      * Registers an implicit alias, named after the path it joins, unless this query declares an alias of that name
-     * or an enclosing query has an explicit one. An implicit alias never hides an explicit alias that is visible
+     * or an enclosing query has an explicit one, in which case only the join type is kept for the block's association.
+     * An implicit alias never hides an explicit alias that is visible
      * from the scope it is registered in: a reference to the name must still reach the alias the user declared.
      *
      * @param context the context to register the alias in
@@ -163,7 +164,11 @@ final class QueryAliasRegistrar {
     private void registerImplicit(JpaQueryContext context, String path, JoinType joinType) {
         AliasRegistry registry = context.getAliasRegistry();
         HibernateAlias visible = registry.getDefinition(path);
-        if (registry.isOwnDefined(path) || (visible != null && visible.explicit())) {
+        if (registry.isOwnDefined(path)) {
+            return;
+        }
+        if (visible != null && visible.explicit()) {
+            registry.defineAssociationJoinType(path, joinType);
             return;
         }
         context.registerAlias(path, new HibernateAlias(path, path, joinType, false));

@@ -1743,6 +1743,43 @@ class CreateAliasJoinSpec extends HibernateGormDatastoreSpec {
         new DetachedCriteria(CreateAliasTeam).build { createAlias('tag', 't'); likes { isNull('tag') } }.list()*.id == [matching.id]
         new DetachedCriteria(CreateAliasTeam).build { createAlias('tag', 'tag'); likes { isNull('tag') } }.list()*.id == [matching.id]
     }
+
+    void 'a left join requested in an association block is kept when an outer alias has the same name'() {
+        given: 'a team whose favorite has no tag, one whose favorite has a tag, and one with no favorite'
+        def x = new CreateAliasTag(name: 'x').save(failOnError: true)
+        def untagged = new CreateAliasLike(label: 'untagged').save(failOnError: true)
+        def tagged = new CreateAliasLike(label: 'tagged', tag: x).save(failOnError: true)
+        def matching = new CreateAliasTeam(name: 'matching', tag: x, favorite: untagged).save(failOnError: true)
+        new CreateAliasTeam(name: 'tagged favorite', tag: x, favorite: tagged).save(failOnError: true)
+        new CreateAliasTeam(name: 'no favorite', tag: x).save(flush: true, failOnError: true)
+
+        expect: 'the favorite is joined, and its missing tag is a null name'
+        CreateAliasTeam.withCriteria { createAlias('tag', 'tag'); favorite { tag(1) { isNull('name') } } }*.id == [matching.id]
+        CreateAliasTeam.withCriteria { favorite { tag(1) { isNull('name') } } }*.id == [matching.id]
+    }
+
+    void 'a nested alias path and a block on the same association restrict the same element'() {
+        given: 'a team with the likes (a, tag A) and (b, tag B), and one with the like (a, tag B)'
+        def tagA = new CreateAliasTag(name: 'tagA').save(failOnError: true)
+        def tagB = new CreateAliasTag(name: 'tagB').save(failOnError: true)
+        def likeA = new CreateAliasLike(label: 'a', tag: tagA).save(failOnError: true)
+        def likeB = new CreateAliasLike(label: 'b', tag: tagB).save(failOnError: true)
+        def likeAB = new CreateAliasLike(label: 'a', tag: tagB).save(failOnError: true)
+        new CreateAliasTeam(name: 'split').addToLikes(likeA).addToLikes(likeB).save(failOnError: true)
+        def together = new CreateAliasTeam(name: 'together').addToLikes(likeAB).save(flush: true, failOnError: true)
+
+        and: 'a club of each team'
+        new CreateAliasClub(name: 'split club', team: CreateAliasTeam.findByName('split')).save(failOnError: true)
+        def club = new CreateAliasClub(name: 'together club', team: together).save(flush: true, failOnError: true)
+
+        expect: 'one like has to be both label a and tag B'
+        CreateAliasClub.withCriteria { createAlias('team.likes.tag', 't'); team { likes { eq('label', 'a') } }; eq('t.name', 'tagB') }*.id == [club.id]
+        CreateAliasClub.withCriteria { team { likes { eq('label', 'a') } }; createAlias('team.likes.tag', 't'); eq('t.name', 'tagB') }*.id == [club.id]
+        CreateAliasClub.withCriteria { createAlias('team.likes.tag', 't'); eq('t.name', 'tagB'); team { likes { eq('label', 'a') } } }*.id == [club.id]
+        CreateAliasTeam.withCriteria { createAlias('likes.tag', 't'); likes { eq('label', 'a') }; eq('t.name', 'tagB') }*.id == [together.id]
+        CreateAliasTeam.withCriteria { likes { eq('label', 'a') }; createAlias('likes.tag', 't'); eq('t.name', 'tagB') }*.id == [together.id]
+        new DetachedCriteria(CreateAliasTeam).build { createAlias('likes.tag', 't'); likes { eq('label', 'a') }; eq('t.name', 'tagB') }.list()*.id == [together.id]
+    }
 }
 
 @Entity
