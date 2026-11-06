@@ -63,7 +63,9 @@ import org.hibernate.criterion.PropertyProjection;
 import org.hibernate.criterion.Restrictions;
 import org.hibernate.criterion.SimpleExpression;
 import org.hibernate.criterion.Subqueries;
+import org.hibernate.engine.spi.SessionFactoryImplementor;
 import org.hibernate.transform.ResultTransformer;
+import org.hibernate.type.ManyToOneType;
 import org.hibernate.type.Type;
 
 import org.springframework.beans.BeanUtils;
@@ -1546,10 +1548,12 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
     }
 
     /**
-     * Whether the path is the identifier of an association to a single instance. Hibernate reads it
-     * from the foreign key of the association, so the association is not joined for an order by it.
-     * A projection that groups by the same path, or is distinct on it, reads the foreign key as well,
-     * and a database only accepts an order by what such a projection selects.
+     * Whether the path is the identifier of an association to a single instance whose foreign key the
+     * queried class has. Hibernate reads it from the foreign key, so the association is not joined for
+     * an order by it. A projection that groups by the same path, or is distinct on it, reads the foreign
+     * key as well, and a database only accepts an order by what such a projection selects. The foreign
+     * key of a one-to-one that the other class refers back with, such as a {@code hasOne}, is in the
+     * table of the other class, so such an association is joined.
      */
     private boolean isAssociationIdentifier(String[] tokens) {
         if (tokens.length != 2) {
@@ -1562,7 +1566,11 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
         }
         PersistentEntity associatedEntity = ((ToOne) property).getAssociatedEntity();
         PersistentProperty identity = associatedEntity != null ? associatedEntity.getIdentity() : null;
-        return identity != null && identity.getName().equals(tokens[1]);
+        if (identity == null || !identity.getName().equals(tokens[1])) {
+            return false;
+        }
+        Type type = ((SessionFactoryImplementor) sessionFactory).getMetamodel().entityPersister(targetClass.getName()).getPropertyType(tokens[0]);
+        return type instanceof ManyToOneType;
     }
 
     /**
@@ -1931,8 +1939,10 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
                     }
                     // GRAILS-7324 look if we already have association to sort by
                     Map argMap = listArguments;
-                    final String sort = (String) argMap.get(HibernateQueryConstants.ARGUMENT_SORT);
-                    if (sort != null) {
+                    final Object sortArgument = argMap.get(HibernateQueryConstants.ARGUMENT_SORT);
+                    // a map of sort properties is applied with the other arguments
+                    if (sortArgument instanceof String) {
+                        final String sort = (String) sortArgument;
                         boolean ignoreCase = true;
                         Object caseArg = argMap.get(HibernateQueryConstants.ARGUMENT_IGNORE_CASE);
                         if (caseArg instanceof Boolean) {

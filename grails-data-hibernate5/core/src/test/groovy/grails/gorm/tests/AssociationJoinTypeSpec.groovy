@@ -34,7 +34,8 @@ class AssociationJoinTypeSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckM
 
     void setupSpec() {
         manager.domainClasses.addAll([Club, Team, Player, Contract, AssociationJoinTypeCategory, AssociationJoinTypeShelf, AssociationJoinTypeTag,
-                                      AssociationJoinTypeFace, AssociationJoinTypeNose])
+                                      AssociationJoinTypeFace, AssociationJoinTypeNose, AssociationJoinTypePost, AssociationJoinTypeAuthor,
+                                      AssociationJoinTypeBook])
     }
 
     void setup() {
@@ -292,6 +293,79 @@ class AssociationJoinTypeSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckM
         listed == [noses.last().id]
         updated == 1
         AssociationJoinTypeNose.findAllByFreckles(false)*.id == [noses.last().id]
+    }
+
+    void '#description applies an inner join requested for a collection of a basic type'() {
+        given:
+        new AssociationJoinTypePost(title: 'Tagged post', tags: ['x', 'y']).save(failOnError: true)
+        new AssociationJoinTypePost(title: 'Untagged post').save(failOnError: true, flush: true)
+        manager.session.clear()
+
+        expect: 'a fetched collection repeats the post for each element in some of the queries'
+        query.call()*.title.unique() == ['Tagged post']
+
+        where:
+        description           | query
+        'a where query'       | { AssociationJoinTypePost.where { title ==~ '%post' }.join('tags', JoinType.INNER).list() }
+        'the fetch argument'  | { AssociationJoinTypePost.where { title ==~ '%post' }.list(fetch: [tags: JoinType.INNER]) }
+        'a criteria query'    | { AssociationJoinTypePost.createCriteria().list { like('title', '%post'); join('tags', JoinType.INNER) } }
+        'a dynamic finder'    | { AssociationJoinTypePost.findAllByTitleLike('%post', [fetch: [tags: JoinType.INNER]]) }
+        'findAll by example'  | { AssociationJoinTypePost.findAll(new AssociationJoinTypePost(), [fetch: [tags: JoinType.INNER]]) }
+        'list'                | { AssociationJoinTypePost.list(fetch: [tags: JoinType.INNER]) }
+    }
+
+    void 'count and updateAll apply an inner join requested for a collection of a basic type'() {
+        given:
+        new AssociationJoinTypePost(title: 'Tagged post', tags: ['x']).save(failOnError: true)
+        new AssociationJoinTypePost(title: 'Untagged post').save(failOnError: true, flush: true)
+        manager.session.clear()
+
+        when:
+        final counted = AssociationJoinTypePost.where { title ==~ '%post' }.join('tags', JoinType.INNER).count()
+        final updated = AssociationJoinTypePost.where { title ==~ '%post' }.join('tags', JoinType.INNER).updateAll(title: 'Updated post')
+        manager.session.clear()
+
+        then:
+        counted == 1
+        updated == 1
+        AssociationJoinTypePost.list()*.title.sort() == ['Untagged post', 'Updated post']
+    }
+
+    void '#api joins and fetches the associations before a collection on a path that it requests an inner join for'() {
+        given:
+        saveTeamWithAPlayerWithoutContract()
+        final lonelyTeam = new Team(name: 'Lonely Team').save(failOnError: true)
+        new Player(name: 'Lonely Player', team: lonelyTeam).save(validate: false, flush: true)
+        manager.session.clear()
+
+        when:
+        final List<Player> players = query.call()
+
+        then: 'a player whose team has no player with a contract is left out'
+        players*.name.sort() == ['Arsenal Player', 'Chelsea Player', 'MU Player', 'Squad Player A', 'Squad Player B', 'Squad Player without contract', 'Unattached Player']
+
+        and: 'the team of each player is fetched'
+        players.every { Hibernate.isInitialized(it.team) }
+
+        where:
+        api                | query
+        'a where query'    | { Player.where { name ==~ '%Player%' }.join('team.players.contract', JoinType.INNER).list() }
+        'a criteria query' | { Player.createCriteria().list { like('name', '%Player%'); join('team.players.contract', JoinType.INNER) } }
+    }
+
+    void 'a right join requested for a collection that criteria on the collection join returns the instances that an inner join returns'() {
+        given: 'a book without an author'
+        final author = new AssociationJoinTypeAuthor(name: 'Author').save(failOnError: true)
+        new AssociationJoinTypeBook(title: 'The book', author: author).save(failOnError: true)
+        new AssociationJoinTypeBook(title: 'The book without an author').save(failOnError: true, flush: true)
+        manager.session.clear()
+
+        when:
+        final query = AssociationJoinTypeAuthor.where { books { title ==~ 'The%' } }.join('books', JoinType.RIGHT)
+
+        then:
+        query.list()*.name == ['Author']
+        query.count() == 1
     }
 
     void 'a fetch mode requested after a join type keeps the join type for the join that criteria on the association make: #description'() {
@@ -1082,6 +1156,28 @@ class AssociationJoinTypeFace {
 class AssociationJoinTypeNose {
     boolean freckles
     static belongsTo = [face: AssociationJoinTypeFace]
+}
+
+@Entity
+class AssociationJoinTypePost {
+    String title
+    static hasMany = [tags: String]
+}
+
+@Entity
+class AssociationJoinTypeAuthor {
+    String name
+    static hasMany = [books: AssociationJoinTypeBook]
+}
+
+@Entity
+class AssociationJoinTypeBook {
+    String title
+    AssociationJoinTypeAuthor author
+
+    static constraints = {
+        author nullable: true
+    }
 }
 
 @Entity

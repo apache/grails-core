@@ -293,7 +293,7 @@ public class GrailsHibernateQueryUtils {
         PersistentEntity currentEntity = entity;
         for (int i = 0; i < tokens.length; i++) {
             PersistentProperty property = currentEntity != null ? currentEntity.getPropertyByName(tokens[i]) : null;
-            if (!(property instanceof Association) || property instanceof Embedded || property instanceof Basic) {
+            if (!(property instanceof Association) || property instanceof Embedded || (property instanceof Basic && i != tokens.length - 1)) {
                 return;
             }
             currentEntity = ((Association) property).getAssociatedEntity();

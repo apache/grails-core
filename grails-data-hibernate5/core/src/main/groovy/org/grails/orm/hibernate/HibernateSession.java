@@ -291,7 +291,8 @@ public class HibernateSession extends AbstractHibernateSession {
      * the path, as they do to a join. The subquery is matched with the instance through the
      * association, by the side of it that has the foreign key: a one-to-one whose foreign key the
      * other entity has, such as a {@code hasOne}, is matched through the property of the other entity
-     * that refers back.
+     * that refers back. A collection of a basic type has no entity of its own, so a path that starts
+     * with one selects from the entity itself.
      * <p>
      * MySQL does not allow an update or a delete to select from the table that it modifies. A path
      * that leads back to the class of the entity cannot be applied there, and is rejected instead of
@@ -302,6 +303,7 @@ public class HibernateSession extends AbstractHibernateSession {
     private String buildRequestedJoinRestriction(PersistentEntity entity, String associationPath, int index) {
         String rootAlias = entity.getDecapitalizedName();
         String[] tokens = associationPath.split("\\.");
+        int last = tokens.length - 1;
         EntityPersister persister = ((SessionFactoryImplementor) getHibernateTemplate().getSessionFactory()).getMetamodel().entityPersister(entity.getName());
         StringBuilder from = new StringBuilder();
         String correlation = null;
@@ -310,17 +312,24 @@ public class HibernateSession extends AbstractHibernateSession {
         PersistentEntity currentEntity = entity;
         for (int i = 0; i < tokens.length; i++) {
             PersistentProperty property = currentEntity != null ? currentEntity.getPropertyByName(tokens[i]) : null;
-            if (!(property instanceof Association) || property instanceof Embedded || property instanceof Basic) {
+            if (!(property instanceof Association) || property instanceof Embedded || (property instanceof Basic && i != last)) {
                 return null;
             }
             Association association = (Association) property;
             PersistentEntity associatedEntity = association.getAssociatedEntity();
-            if (associatedEntity == null) {
+            if (associatedEntity == null && !(association instanceof Basic)) {
                 return null;
             }
             String joinAlias = "join" + index + '_' + i;
             if (i > 0) {
                 from.append(" INNER JOIN ").append(alias).append('.').append(tokens[i]).append(' ').append(joinAlias);
+            }
+            else if (association instanceof Basic) {
+                String ownerAlias = "join" + index + "_owner";
+                from.append(entity.getName()).append(' ').append(ownerAlias)
+                        .append(" INNER JOIN ").append(ownerAlias).append('.').append(tokens[i]).append(' ').append(joinAlias);
+                correlation = ownerAlias + " = " + rootAlias;
+                selectsFromModifiedTable = true;
             }
             else {
                 from.append(associatedEntity.getName()).append(' ').append(joinAlias);
@@ -336,7 +345,9 @@ public class HibernateSession extends AbstractHibernateSession {
                     correlation = joinAlias + " = " + rootAlias + '.' + tokens[i];
                 }
             }
-            selectsFromModifiedTable |= associatedEntity.getRootEntity().equals(entity.getRootEntity());
+            if (associatedEntity != null) {
+                selectsFromModifiedTable |= associatedEntity.getRootEntity().equals(entity.getRootEntity());
+            }
             alias = joinAlias;
             currentEntity = associatedEntity;
         }

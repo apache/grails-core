@@ -588,7 +588,8 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
         PersistentEntity currentEntity = entity;
         for (int i = 0; i < tokens.length; i++) {
             PersistentProperty persistentProperty = currentEntity != null ? currentEntity.getPropertyByName(tokens[i]) : null;
-            if (!(persistentProperty instanceof Association) || persistentProperty instanceof Embedded || persistentProperty instanceof Basic) {
+            if (!(persistentProperty instanceof Association) || persistentProperty instanceof Embedded ||
+                    (persistentProperty instanceof Basic && i != last)) {
                 return;
             }
             associations[i] = (Association) persistentProperty;
@@ -609,8 +610,9 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
             root.add(joinedInSubquery(entity.getName(), root.getAlias(), associationPath));
         }
 
+        // the associations before a collection that the subquery joins are joined and fetched
         JoinType lastJoinType = joinType == jakarta.persistence.criteria.JoinType.INNER ? JoinType.INNER_JOIN : JoinType.RIGHT_OUTER_JOIN;
-        int joinedCount = unjoinedCollection < 0 ? tokens.length : unjoinedCollection == last ? last : 0;
+        int joinedCount = unjoinedCollection < 0 ? tokens.length : unjoinedCollection;
         String parentAlias = null;
         for (int i = 0; i < joinedCount; i++) {
             if (joined[i] != null) {

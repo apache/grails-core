@@ -36,7 +36,8 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManag
 
     void setupSpec() {
         manager.domainClasses.addAll([Club, Team, Player, Contract, AssociationSortLeague, AssociationSortEmployee, AssociationSortDepartment,
-                                      AssociationSortSquad, AssociationSortMember, AssociationSortBagSquad, AssociationSortBagMember])
+                                      AssociationSortSquad, AssociationSortMember, AssociationSortBagSquad, AssociationSortBagMember,
+                                      AssociationSortVenue, AssociationSortGround])
     }
 
     void setup() {
@@ -319,6 +320,20 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManag
         sort << ['t.club.name', 'team.club.name']
     }
 
+    void 'a paged criteria query can be sorted by a map of properties'() {
+        given:
+        new Team(club: Club.findByName('Arsenal'), name: 'Arsenal Second Team').save(failOnError: true, flush: true)
+
+        when:
+        final results = Team.createCriteria().list(sort: ['club.name': 'asc', name: 'desc'], max: 10) {
+            isNotNull('club')
+        }
+
+        then:
+        results*.name == ['Arsenal Second Team', 'Arsenal First Team', 'Chelsea First Team', 'MU First Team']
+        results.totalCount == 4
+    }
+
     void 'a paged criteria query sorted by a nested path is not resolved through an alias that has the name of the first association'() {
         given:
         saveEmployees()
@@ -411,6 +426,31 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManag
         api                         | query
         'a where query'             | { AssociationSortBagSquad.where { name == 'Squad' }.join('substitutes').list(sort: 'regulars.name') }
         'order in a criteria query' | { AssociationSortBagSquad.createCriteria().list { join('substitutes'); order('regulars.name') } }
+    }
+
+    void 'a criteria query ordered by the identifier of a hasOne association keeps a player without it'() {
+        given:
+        new Player(name: 'Player without contract', team: Team.findByName('MU First Team')).save(validate: false, flush: true)
+        manager.session.clear()
+
+        when:
+        final names = Player.createCriteria().list { order('contract.id') }*.name
+
+        then:
+        names.size() == 5
+        'Player without contract' in names
+    }
+
+    void 'a projection of a property of an embedded component of an association uses the join of the association'() {
+        given:
+        final ground = new AssociationSortGround(name: 'Ground', address: new AssociationSortAddress(city: 'London')).save(failOnError: true)
+        new AssociationSortVenue(name: 'Venue', ground: ground).save(failOnError: true)
+        new AssociationSortVenue(name: 'Venue without a ground').save(failOnError: true, flush: true)
+        manager.session.clear()
+
+        expect:
+        AssociationSortVenue.where { name ==~ 'Venue%' }.property('ground.address.city').list() as Set == ['London', null] as Set
+        AssociationSortVenue.where { name ==~ 'Venue%' }.list(sort: 'ground.address.city')*.name as Set == ['Venue', 'Venue without a ground'] as Set
     }
 
     void 'a criteria query adds its orders in the sequence in which it requests them: #description'() {
@@ -654,6 +694,27 @@ class AssociationSortBagMember {
         squad nullable: true
         substituteSquad nullable: true
     }
+}
+
+@Entity
+class AssociationSortVenue {
+    String name
+    AssociationSortGround ground
+
+    static constraints = {
+        ground nullable: true
+    }
+}
+
+@Entity
+class AssociationSortGround {
+    String name
+    AssociationSortAddress address
+    static embedded = ['address']
+}
+
+class AssociationSortAddress {
+    String city
 }
 
 @Entity

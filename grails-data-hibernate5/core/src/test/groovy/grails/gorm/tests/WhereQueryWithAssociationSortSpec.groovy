@@ -59,6 +59,45 @@ class WhereQueryWithAssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibe
         manager.session.clear()
     }
 
+    /**
+     * Saves players whose order differs by each property on the sort path: by the name and the
+     * identifier of the club of their team, by the name of their team, and by their own name, which
+     * is also the order in which they are saved.
+     */
+    private void savePlayersInDistinctOrders() {
+        final clubA = new Club(name: 'Order club A').save(failOnError: true)
+        final clubC = new Club(name: 'Order club C').save(failOnError: true)
+        final clubB = new Club(name: 'Order club B').save(failOnError: true)
+        final teamZ = new Team(club: clubB, name: 'Order team Z').save(failOnError: true)
+        final teamY = new Team(club: clubA, name: 'Order team Y').save(failOnError: true)
+        final teamX = new Team(club: clubC, name: 'Order team X').save(failOnError: true)
+        savePlayer('Order player 1', teamZ)
+        savePlayer('Order player 2', teamY)
+        savePlayer('Order player 3', teamX)
+        manager.session.clear()
+    }
+
+    void '#api sorted by #sort orders by the club, not by the team or the player'() {
+        given:
+        savePlayersInDistinctOrders()
+
+        expect:
+        query.call()*.name == expected
+
+        where:
+        api                                       | sort             | query                                                                                                    || expected
+        'a where query'                           | 'team.club.name' | { Player.where { name ==~ 'Order%' }.list(sort: 'team.club.name') }                                     || ['Order player 2', 'Order player 1', 'Order player 3']
+        'a where query'                           | 'team.club.id'   | { Player.where { name ==~ 'Order%' }.list(sort: 'team.club.id') }                                       || ['Order player 2', 'Order player 3', 'Order player 1']
+        'a where query with criteria on the team' | 'team.club.name' | { Player.where { team.name ==~ 'Order%' }.list(sort: 'team.club.name') }                                || ['Order player 2', 'Order player 1', 'Order player 3']
+        'a where query with criteria on the team' | 'team.club.id'   | { Player.where { team.name ==~ 'Order%' }.list(sort: 'team.club.id') }                                  || ['Order player 2', 'Order player 3', 'Order player 1']
+        'a where query through an alias'          | 't.club.id'      | { Player.where { final t = team; t.name ==~ 'Order%' }.list(sort: 't.club.id') }                         || ['Order player 2', 'Order player 3', 'Order player 1']
+        'a dynamic finder'                        | 'team.club.name' | { Player.findAllByNameLike('Order%', [sort: 'team.club.name']) }                                        || ['Order player 2', 'Order player 1', 'Order player 3']
+        'a paged criteria query'                  | 'team.club.name' | { Player.createCriteria().list(sort: 'team.club.name', max: 10) { like('name', 'Order%') } }             || ['Order player 2', 'Order player 1', 'Order player 3']
+        'a paged criteria query'                  | 'team.club.id'   | { Player.createCriteria().list(sort: 'team.club.id', max: 10) { like('name', 'Order%') } }               || ['Order player 2', 'Order player 3', 'Order player 1']
+        'order in a criteria query'               | 'team.club.name' | { Player.createCriteria().list { like('name', 'Order%'); order('team.club.name') } }                     || ['Order player 2', 'Order player 1', 'Order player 3']
+        'order in a criteria query'               | 'team.club.id'   | { Player.createCriteria().list { like('name', 'Order%'); order('team.club.id') } }                       || ['Order player 2', 'Order player 3', 'Order player 1']
+    }
+
     @Issue(['https://github.com/apache/grails-core/issues/9860', 'https://github.com/apache/grails-core/issues/15589'])
     void 'sort by an association property that is also used in the where query'() {
         when:

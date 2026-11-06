@@ -599,7 +599,9 @@ public abstract class AbstractHibernateQuery extends Query {
      * requested join type, a join that criteria use is an inner join, and a join that only a sort, a
      * projection or the path to a requested association uses is a left join, which keeps the rows
      * where the association is null. A join that criteria use keeps a join type that the query
-     * requested before a fetch mode replaced it, as it did when the join was made at once.
+     * requested before a fetch mode replaced it, as it did when the join was made at once. A right
+     * join of a collection is made as an inner join: it would return a row without an instance for
+     * each element that no instance has.
      * <p>
      * A left join of a collection is kept from fetching the collection when criteria use it, since
      * its rows lack the elements that the criteria leave out, and when only a sort or a projection
@@ -622,6 +624,9 @@ public abstract class AbstractHibernateQuery extends Query {
                     GrailsHibernateUtil.getSortJoinType(join.criteria, associationPath, collection);
         }
         else {
+            if (joinType == JoinType.RIGHT && collection) {
+                joinType = JoinType.INNER;
+            }
             hibernateJoinType = resolveJoinType(joinType);
         }
         if (join.criteria != null) {
@@ -827,23 +832,24 @@ public abstract class AbstractHibernateQuery extends Query {
      * which restricts the query to the instances that the join returns a row for without changing
      * the number of its rows: see {@link GrailsHibernateUtil#joinedInSubquery(String, String, String)}.
      * A collection at the end of the path keeps the left join of its fetch mode, or the left join that
-     * a sort by the collection needs, and the associations before it are joined, so that the
-     * collection is fetched.
+     * a sort by the collection needs. The associations before the collection are joined, so that they
+     * are fetched. A collection of a basic type can only be at the end of the path.
      */
     private void applyRequestedJoin(String associationPath, JoinType joinType) {
         String[] tokens = associationPath.split("\\.");
+        int last = tokens.length - 1;
         Association[] associations = new Association[tokens.length];
         PersistentEntity currentEntity = entity;
         for (int i = 0; i < tokens.length; i++) {
             PersistentProperty persistentProperty = currentEntity != null ? currentEntity.getPropertyByName(tokens[i]) : null;
-            if (!(persistentProperty instanceof Association) || persistentProperty instanceof Embedded || persistentProperty instanceof Basic) {
+            if (!(persistentProperty instanceof Association) || persistentProperty instanceof Embedded ||
+                    (persistentProperty instanceof Basic && i != last)) {
                 return;
             }
             associations[i] = (Association) persistentProperty;
             currentEntity = associations[i].getAssociatedEntity();
         }
 
-        int last = tokens.length - 1;
         String[] paths = new String[tokens.length];
         int unjoinedCollection = -1;
         for (int i = 0; i < tokens.length; i++) {
@@ -856,7 +862,7 @@ public abstract class AbstractHibernateQuery extends Query {
             String rootAlias = criteria != null ? criteria.getAlias() : detachedCriteria.getAlias();
             addToCriteria(GrailsHibernateUtil.joinedInSubquery(entity.getName(), rootAlias, associationPath));
         }
-        int joined = unjoinedCollection < 0 ? tokens.length : unjoinedCollection == last ? last : 0;
+        int joined = unjoinedCollection < 0 ? tokens.length : unjoinedCollection;
         for (int i = 0; i < joined; i++) {
             getOrRegisterJoinAt(paths[i], tokens[i]);
         }
@@ -949,7 +955,11 @@ public abstract class AbstractHibernateQuery extends Query {
             String token = tokens[i];
             PersistentProperty persistentProperty = currentEntity != null ? currentEntity.getPropertyByName(token) : null;
             if (!(persistentProperty instanceof Association) || persistentProperty instanceof Embedded) {
-                return calculatePropertyName(propertyName);
+                if (currentAlias == null) {
+                    return calculatePropertyName(propertyName);
+                }
+                // the rest of the path is a component path or a property, which Hibernate resolves through the alias
+                return currentAlias + '.' + String.join(".", Arrays.copyOfRange(tokens, i, tokens.length));
             }
 
             if (associationPath.length() > 0) {
