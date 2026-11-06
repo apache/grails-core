@@ -63,6 +63,7 @@ import org.grails.support.MockApplicationContext
 import org.grails.web.mapping.DefaultUrlMappingEvaluator
 import org.grails.web.mapping.DefaultUrlMappingsHolder
 import org.grails.web.servlet.mvc.GrailsWebRequest
+import org.grails.web.servlet.mvc.exceptions.ControllerExecutionException
 import org.grails.web.util.GrailsApplicationAttributes
 import org.grails.web.util.WebUtils
 import spock.lang.Specification
@@ -198,6 +199,25 @@ class ActionExceptionProblemDetailsSpec extends Specification {
         then:
         response.status == 409
         problem().detail == 'Taken'
+    }
+
+    void 'an exception wrapped by #wrapper keeps its own status, whatever caused it'() {
+        given:
+        def resolver = resolver([problemDetails: true])
+        def thrown = new ResponseStatusException(HttpStatus.GONE, 'Gone for good', new IllegalStateException('why'))
+
+        when:
+        resolver.resolveException(request, response, action(new ProblemController()), wrap.call(thrown))
+
+        then:
+        response.status == 410
+        problem().status == 410
+
+        where:
+        wrapper                | wrap
+        'a dynamic invocation' | { Throwable it -> new InvokerInvocationException(it) }
+        'an action execution'  | { Throwable it -> new ControllerExecutionException('Failed', it) }
+        'both'                 | { Throwable it -> new ControllerExecutionException('Failed', new InvokerInvocationException(it)) }
     }
 
     void 'a request that can no longer be answered writes nothing'() {

@@ -201,15 +201,16 @@ class ActionExceptionHandlerResolver implements HandlerExceptionResolver, Ordere
         return request.getAttribute(WebUtils.FORWARD_REQUEST_URI_ATTRIBUTE) ?: request.requestURI
     }
 
-    /** As the Grails exception resolver finds the exception an action threw. */
+    /**
+     * The exception an action threw, out of what Groovy and Grails wrap it in. Only those come off: what that exception
+     * wraps itself is its own cause, and the status it answers with is its own.
+     */
     private static Exception unwrap(Exception ex) {
-        if (ex instanceof InvokerInvocationException || ex instanceof GrailsMVCException) {
-            Throwable rootCause = ExceptionUtils.getRootCause(ex)
-            if (rootCause instanceof Exception) {
-                return (Exception) rootCause
-            }
+        Throwable found = ex
+        while ((found instanceof InvokerInvocationException || found instanceof GrailsMVCException) && found.cause != null) {
+            found = found.cause
         }
-        return ex
+        return found instanceof Exception ? (Exception) found : ex
     }
 
     /**
