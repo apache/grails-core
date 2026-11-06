@@ -455,7 +455,9 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
      * @return The restriction
      */
     public static Criterion joinedInSubquery(String entityName, String rootAlias, String associationPath) {
-        String subqueryAlias = associationPath.replace('.', '_') + "_subquery";
+        // Hibernate uses this alias as it is in the SQL of the subquery, so it is not made from the
+        // association path, which can be longer than a database allows an identifier to be
+        String subqueryAlias = "join_subquery";
         DetachedCriteria subquery = DetachedCriteria.forEntityName(entityName, subqueryAlias);
         String parentAlias = subqueryAlias;
         int level = 0;
