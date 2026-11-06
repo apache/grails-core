@@ -29,7 +29,6 @@ import java.util.Map;
 import org.codehaus.groovy.control.CompilationFailedException;
 import org.codehaus.groovy.runtime.InvokerInvocationException;
 
-import jakarta.servlet.DispatcherType;
 import jakarta.servlet.ServletContext;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -152,8 +151,7 @@ public class GrailsExceptionResolver extends SimpleMappingExceptionResolver impl
      * that does not look.
      */
     private static void recordServerError(HttpServletRequest request, Exception ex) {
-        if (request.getDispatcherType() != DispatcherType.ASYNC &&
-                request.getAttribute(WebUtils.ERROR_EXCEPTION_ATTRIBUTE) == ex) {
+        if (!WebUtils.isAsync(request) && request.getAttribute(WebUtils.ERROR_EXCEPTION_ATTRIBUTE) == ex) {
             return;
         }
         if (request.getAttribute(SERVER_OBSERVATION_ATTRIBUTE) instanceof Observation observation) {

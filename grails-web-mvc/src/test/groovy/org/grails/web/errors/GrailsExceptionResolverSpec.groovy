@@ -153,18 +153,21 @@ class GrailsExceptionResolverSpec extends Specification {
         notified.first().is(original)
     }
 
-    void 'the handlers hear of an exception an error handler answers on an asynchronous dispatch'() {
+    void 'the handlers hear of an exception an error handler answers on an asynchronous dispatch, #where'() {
         given: 'the filter, which on that dispatch does not read the exception left on the request'
         List<Throwable> notified = []
         def registry = registryReporting({ }, { notified << it })
         def resolver = resolverFor({ '500'(controller: 'errors', action: 'serverError') }, true)
         def request = new MockHttpServletRequest(servletContext, 'GET', '/fail')
         request.dispatcherType = DispatcherType.ASYNC
+        request.setAttribute(GrailsWebUtils.ASYNC_REQUEST_URI_ATTRIBUTE, '/fail')
         def response = new MockHttpServletResponse()
         bind(GRAILS, request, response)
         def original = new IllegalStateException('original')
         FilterChain application = { req, res ->
+            request.dispatcherType = resolvedOn
             resolver.resolveException((HttpServletRequest) req, (HttpServletResponse) res, null, original)
+            request.dispatcherType = DispatcherType.ASYNC
         } as FilterChain
 
         when:
@@ -174,6 +177,11 @@ class GrailsExceptionResolverSpec extends Specification {
         response.forwardedUrl == '/errors/serverError'
         notified.size() == 1
         notified.first().is(original)
+
+        where:
+        where                       | resolvedOn
+        'in the action dispatched'  | DispatcherType.ASYNC
+        'in an action forwarded to' | DispatcherType.FORWARD
     }
 
     void 'a filter can read the exception an error handler answered once the chain has returned, with no observation'() {
