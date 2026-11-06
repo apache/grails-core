@@ -19,8 +19,16 @@
 
 package issue11102
 
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.CopyOnWriteArrayList
+import java.util.concurrent.atomic.AtomicBoolean
+
 import io.micrometer.core.instrument.MeterRegistry
+import io.micrometer.observation.Observation
+import io.micrometer.observation.ObservationHandler
+import io.micrometer.observation.ObservationRegistry
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.http.server.observation.ServerRequestObservationContext
 import spock.lang.Specification
 import spock.lang.Tag
 import spock.util.concurrent.PollingConditions
@@ -37,19 +45,32 @@ import org.apache.grails.testing.http.client.HttpClientSupport
 @Tag('http-client')
 class FailedActionObservationSpec extends Specification implements HttpClientSupport {
 
+    private static final AtomicBoolean LISTENING = new AtomicBoolean()
+    private static final Map<String, List<String>> NOTIFIED = new ConcurrentHashMap<>()
+
     @Autowired
     MeterRegistry meterRegistry
 
-    void 'a failed action answered by #handler is tagged with its own exception and route'() {
+    @Autowired
+    ObservationRegistry observationRegistry
+
+    void setup() {
+        if (LISTENING.compareAndSet(false, true)) {
+            observationRegistry.observationConfig().observationHandler(new ErrorListener())
+        }
+    }
+
+    void 'a failed action answered by #handler is reported with its own exception and route'() {
         when:
         def response = http("/failing/$action")
 
         then: 'the error page answered, so the exception did not reach the filter'
         response.assertContains(500, page)
 
-        and:
+        and: 'its metrics say what failed and where, and the handlers that mark a span hear of it once'
         new PollingConditions(timeout: 5).eventually {
             assert errorTags("/failing/$action") == [exception]
+            assert NOTIFIED["/failing/$action".toString()] == [exception]
         }
 
         where:
@@ -60,5 +81,19 @@ class FailedActionObservationSpec extends Specification implements HttpClientSup
 
     private List<String> errorTags(String route) {
         meterRegistry.find('http.server.requests').tag('status', '500').tag('uri', route).timers()*.id*.getTag('error')
+    }
+
+    private static class ErrorListener implements ObservationHandler<Observation.Context> {
+
+        @Override
+        boolean supportsContext(Observation.Context context) {
+            context instanceof ServerRequestObservationContext
+        }
+
+        @Override
+        void onError(Observation.Context context) {
+            def route = ((ServerRequestObservationContext) context).pathPattern
+            NOTIFIED.computeIfAbsent(route) { new CopyOnWriteArrayList<>() } << context.error.class.simpleName
+        }
     }
 }

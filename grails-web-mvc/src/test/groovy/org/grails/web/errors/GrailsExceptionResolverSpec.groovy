@@ -85,8 +85,9 @@ class GrailsExceptionResolverSpec extends Specification {
     void 'an exception #description is recorded as the error of the HTTP server observation'() {
         given: 'the filter a running application has around its requests'
         ServerRequestObservationContext observed = null
-        def registry = registryStoppingWith { observed = it }
-        def resolver = observedResolver()
+        List<Throwable> notified = []
+        def registry = registryReporting({ observed = it }, { notified << it })
+        def resolver = observedResolver(registry)
         def request = new MockHttpServletRequest('GET', '/failing')
         def response = new MockHttpServletResponse()
         FilterChain application = { req, res ->
@@ -96,9 +97,13 @@ class GrailsExceptionResolverSpec extends Specification {
         when:
         new ServerHttpObservationFilter(registry).doFilter(request, response, application)
 
-        then: 'or its metrics and trace would say nothing failed'
+        then: 'or its metrics would say nothing failed'
         response.status == status
         observed.error.is(recorded)
+
+        and: 'or the handler that marks the span would not hear of it'
+        notified.size() == 1
+        notified.first().is(recorded)
 
         where:
         description            | thrown                                                 | recorded                  | status
@@ -107,10 +112,29 @@ class GrailsExceptionResolverSpec extends Specification {
         'of an async timeout'  | ASYNC_TIMEOUT                                          | ASYNC_TIMEOUT             | 503
     }
 
+    void 'an exception is still the error of the observation when the observation cannot be found'() {
+        given: 'a filter whose registry is not a bean of the application'
+        ServerRequestObservationContext observed = null
+        def registry = registryReporting({ observed = it }, { })
+        def resolver = observedResolver()
+        FilterChain application = { req, res ->
+            resolver.resolveException((HttpServletRequest) req, (HttpServletResponse) res, null, FAILURE)
+        } as FilterChain
+
+        when:
+        new ServerHttpObservationFilter(registry).doFilter(
+                new MockHttpServletRequest('GET', '/failing'), new MockHttpServletResponse(), application)
+
+        then:
+        observed.error.is(FAILURE)
+    }
+
     void 'the exception an error handler answers stays the error of the HTTP server observation'() {
         given: 'the filter a running application has around its requests, and an error handler to forward to'
         ServerRequestObservationContext observed = null
-        def resolver = resolverFor({ '500'(controller: 'errors', action: 'serverError') }, true)
+        List<Throwable> notified = []
+        def registry = registryReporting({ observed = it }, { notified << it })
+        def resolver = resolverFor({ '500'(controller: 'errors', action: 'serverError') }, true, registry)
         def request = new MockHttpServletRequest(servletContext, 'GET', '/fail')
         def response = new MockHttpServletResponse()
         bind(GRAILS, request, response)
@@ -120,11 +144,15 @@ class GrailsExceptionResolverSpec extends Specification {
         } as FilterChain
 
         when:
-        new ServerHttpObservationFilter(registryStoppingWith { observed = it }).doFilter(request, response, application)
+        new ServerHttpObservationFilter(registry).doFilter(request, response, application)
 
         then: 'the handler answered, and the wrapper its model left on the request is not what is reported'
         response.forwardedUrl == '/errors/serverError'
         observed.error.is(original)
+
+        and: 'the handlers hear of it once, though both the resolver and the filter could tell them'
+        notified.size() == 1
+        notified.first().is(original)
     }
 
     void 'a filter can read the exception an error handler answered once the chain has returned, with no observation'() {
@@ -152,12 +180,17 @@ class GrailsExceptionResolverSpec extends Specification {
         response.status == 500
     }
 
-    private static ObservationRegistry registryStoppingWith(Closure stopped) {
+    private static ObservationRegistry registryReporting(Closure stopped, Closure errored) {
         def registry = ObservationRegistry.create()
         registry.observationConfig().observationHandler(new ObservationHandler<Observation.Context>() {
             @Override
             boolean supportsContext(Observation.Context context) {
                 context instanceof ServerRequestObservationContext
+            }
+
+            @Override
+            void onError(Observation.Context context) {
+                errored.call(context.error)
             }
 
             @Override
@@ -168,9 +201,12 @@ class GrailsExceptionResolverSpec extends Specification {
         registry
     }
 
-    private GrailsExceptionResolver observedResolver() {
+    private GrailsExceptionResolver observedResolver(ObservationRegistry registry = null) {
         webContext = new StaticWebApplicationContext()
         webContext.beanFactory.registerSingleton(GrailsApplication.APPLICATION_ID, Stub(GrailsApplication))
+        if (registry) {
+            webContext.beanFactory.registerSingleton('observationRegistry', registry)
+        }
         webContext.refresh()
         servletContext.setAttribute(WebApplicationContext.ROOT_WEB_APPLICATION_CONTEXT_ATTRIBUTE, webContext)
         def resolver = new GrailsExceptionResolver()
@@ -758,7 +794,8 @@ class GrailsExceptionResolverSpec extends Specification {
         attributes << [GRAILS, PLAIN_OVER_GRAILS, PLAIN, NOTHING]
     }
 
-    private GrailsExceptionResolver resolverFor(Closure mappings, boolean controllerMappings) {
+    private GrailsExceptionResolver resolverFor(Closure mappings, boolean controllerMappings,
+                                                ObservationRegistry registry = null) {
         def grailsApplication = new DefaultGrailsApplication().tap {
             initialise()
         }
@@ -777,6 +814,9 @@ class GrailsExceptionResolverSpec extends Specification {
         webContext.beanFactory.registerSingleton(UrlMappingsHolder.BEAN_ID, urlMappings)
         webContext.beanFactory.registerSingleton(CompositeViewResolver.BEAN_NAME,
                 new CompositeViewResolver(viewResolvers: [viewResolver]))
+        if (registry) {
+            webContext.beanFactory.registerSingleton('observationRegistry', registry)
+        }
         webContext.refresh()
         servletContext.setAttribute(WebApplicationContext.ROOT_WEB_APPLICATION_CONTEXT_ATTRIBUTE, webContext)
 
