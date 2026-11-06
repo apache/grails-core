@@ -335,7 +335,7 @@ class Neo4jQuery extends Query {
         @Override
         @CompileStatic
         CypherExpression handle(GraphPersistentEntity entity, Query.IsNull criterion, CypherBuilder builder, String prefix) {
-            String relationship = associationRelationshipPattern(entity, criterion.property, prefix)
+            String relationship = associationRelationshipPattern(entity, criterion.property, prefix, builder)
             if (relationship != null) {
                 return new CypherExpression("NOT ${relationship}")
             }
@@ -363,7 +363,7 @@ class Neo4jQuery extends Query {
         @Override
         @CompileStatic
         CypherExpression handle(GraphPersistentEntity entity, Query.IsNotNull criterion, CypherBuilder builder, String prefix) {
-            String relationship = associationRelationshipPattern(entity, criterion.property, prefix)
+            String relationship = associationRelationshipPattern(entity, criterion.property, prefix, builder)
             if (relationship != null) {
                 return new CypherExpression(relationship)
             }
@@ -670,9 +670,12 @@ class Neo4jQuery extends Query {
      *
      * @param entity the entity the property belongs to: for criteria nested in an association block, the entity
      *     the block is on, which {@link AssociationQueryHandler} passes on
+     * @param builder the query, which knows whether the prefix is the variable of a relationship, as it is in a block
+     *     on an association to a relationship entity: the properties tested there are the relationship's own
      */
-    private static String associationRelationshipPattern(GraphPersistentEntity entity, String propertyName, String prefix) {
-        if (entity.isRelationshipEntity()) {
+    private static String associationRelationshipPattern(GraphPersistentEntity entity, String propertyName, String prefix,
+                                                        CypherBuilder builder) {
+        if (entity.isRelationshipEntity() || builder.isRelationshipVariable(prefix)) {
             return null
         }
         PersistentProperty property = entity.getPropertyByName(propertyName)
@@ -803,11 +806,15 @@ class Neo4jQuery extends Query {
                 // The nested criteria are about the associated entity, so a property is looked up there: a
                 // plain property of the same name as an association of the entity the query started from is
                 // still a plain property, and an association of the associated entity is tested as one. An
-                // association to a relationship entity keeps the entity it was given, as its properties
-                // are those of the relationship.
+                // association to a relationship entity keeps the entity it was given, and its variable is
+                // recorded as a relationship: the properties are those of the relationship, which has no
+                // relationship of its own to test.
                 PersistentEntity associated = association.associatedEntity
                 GraphPersistentEntity nested = associated instanceof GraphPersistentEntity &&
                         !((GraphPersistentEntity) associated).isRelationshipEntity() ? (GraphPersistentEntity) associated : entity
+                if (criterion.entity instanceof RelationshipPersistentEntity) {
+                    builder.addRelationshipVariable(nextPrefix)
+                }
                 return dispatchCriterion(aq.criteria, nested, builder, nextPrefix)
             }
 

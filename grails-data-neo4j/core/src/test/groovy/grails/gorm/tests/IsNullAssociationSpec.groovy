@@ -20,6 +20,7 @@
 package grails.gorm.tests
 
 import grails.gorm.annotation.Entity
+import grails.neo4j.Relationship
 import org.apache.grails.data.neo4j.core.Neo4jGormDatastoreSpec
 import spock.lang.Issue
 
@@ -32,7 +33,7 @@ class IsNullAssociationSpec extends Neo4jGormDatastoreSpec {
 
     void setupSpec() {
         manager.registerDomainClasses(NullTestFolder, NullTestKind, NullTestAddress, NullTestOwner, NullTestPet,
-                NullTestShelf, NullTestItem, NullTestTagged, NullTestPerson)
+                NullTestShelf, NullTestItem, NullTestTagged, NullTestPerson, NullTestMate, NullTestBond)
     }
 
     private void seed() {
@@ -180,6 +181,20 @@ class IsNullAssociationSpec extends Neo4jGormDatastoreSpec {
         nulls.size() + notNulls.size() == 2
     }
 
+    void "a null test on a scalar of a relationship entity block tests the relationship's property, not the node's association of that name"() {
+        given: 'a mate with a spouse association, and bonds whose own spouse property is a plain string'
+        NullTestMate spouse = new NullTestMate(name: 'spouse').save(flush: true, failOnError: true)
+        NullTestMate owner = new NullTestMate(name: 'owner', spouse: spouse).save(flush: true, failOnError: true)
+        NullTestMate friend = new NullTestMate(name: 'friend').save(flush: true, failOnError: true)
+        new NullTestBond(from: owner, to: friend, spouse: 'set').save(flush: true)
+        new NullTestBond(from: owner, to: spouse).save(flush: true)
+        NullTestMate.withSession { it.clear() }
+
+        expect:
+        NullTestMate.createCriteria().list { connections { isNull('spouse') } }*.name == ['spouse']
+        NullTestMate.createCriteria().list { connections { isNotNull('spouse') } }*.name == ['friend']
+    }
+
     private static List<String> names(List<?> entities) {
         entities*.name.sort()
     }
@@ -269,5 +284,25 @@ class NullTestPerson {
 
     static constraints = {
         home nullable: true
+    }
+}
+
+@Entity
+class NullTestMate {
+    String name
+    NullTestMate spouse
+    static hasMany = [connections: NullTestBond]
+
+    static constraints = {
+        spouse nullable: true
+    }
+}
+
+@Entity
+class NullTestBond implements Relationship<NullTestMate, NullTestMate> {
+    String spouse
+
+    static constraints = {
+        spouse nullable: true
     }
 }
