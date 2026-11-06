@@ -60,6 +60,7 @@ import org.springframework.web.servlet.view.InternalResourceView
 import spock.lang.Issue
 import spock.lang.Specification
 
+import jakarta.servlet.DispatcherType
 import jakarta.servlet.FilterChain
 import jakarta.servlet.RequestDispatcher
 import jakarta.servlet.http.HttpServletRequest
@@ -148,6 +149,29 @@ class GrailsExceptionResolverSpec extends Specification {
         observed.error.is(original)
 
         and: 'the handlers hear of it once, though both the resolver and the filter could tell them'
+        notified.size() == 1
+        notified.first().is(original)
+    }
+
+    void 'the handlers hear of an exception an error handler answers on an asynchronous dispatch'() {
+        given: 'the filter, which on that dispatch does not read the exception left on the request'
+        List<Throwable> notified = []
+        def registry = registryReporting({ }, { notified << it })
+        def resolver = resolverFor({ '500'(controller: 'errors', action: 'serverError') }, true)
+        def request = new MockHttpServletRequest(servletContext, 'GET', '/fail')
+        request.dispatcherType = DispatcherType.ASYNC
+        def response = new MockHttpServletResponse()
+        bind(GRAILS, request, response)
+        def original = new IllegalStateException('original')
+        FilterChain application = { req, res ->
+            resolver.resolveException((HttpServletRequest) req, (HttpServletResponse) res, null, original)
+        } as FilterChain
+
+        when:
+        new ServerHttpObservationFilter(registry).doFilter(request, response, application)
+
+        then:
+        response.forwardedUrl == '/errors/serverError'
         notified.size() == 1
         notified.first().is(original)
     }

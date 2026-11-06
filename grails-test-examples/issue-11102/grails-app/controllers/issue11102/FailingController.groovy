@@ -19,6 +19,10 @@
 
 package issue11102
 
+import org.springframework.web.context.request.async.DeferredResult
+import org.springframework.web.context.request.async.WebAsyncManager
+import org.springframework.web.context.request.async.WebAsyncUtils
+
 class FailingController {
 
     def answeredByView() {
@@ -29,7 +33,23 @@ class FailingController {
         throw new UnsupportedOperationException('answered by the error controller')
     }
 
+    def answeredByViewAsynchronously() {
+        failAsynchronously(new IllegalStateException('answered by the error view'))
+    }
+
+    def answeredByControllerAsynchronously() {
+        failAsynchronously(new UnsupportedOperationException('answered by the error controller'))
+    }
+
     def errorHandler() {
         render status: 500, text: 'Answered by the error controller'
+    }
+
+    private void failAsynchronously(Exception failure) {
+        WebAsyncManager asyncManager = WebAsyncUtils.getAsyncManager(request)
+        asyncManager.asyncWebRequest = WebAsyncUtils.createAsyncWebRequest(request, response)
+        DeferredResult<Object> result = new DeferredResult<>()
+        asyncManager.startDeferredResultProcessing(result)
+        result.errorResult = failure
     }
 }

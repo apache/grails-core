@@ -74,9 +74,11 @@ class FailedActionObservationSpec extends Specification implements HttpClientSup
         }
 
         where:
-        handler               | action                 | page                               | exception
-        'the error view'      | 'answeredByView'       | 'An error has occurred'            | 'IllegalStateException'
-        'an error controller' | 'answeredByController' | 'Answered by the error controller' | 'UnsupportedOperationException'
+        handler                               | action                               | page                               | exception
+        'the error view'                      | 'answeredByView'                     | 'An error has occurred'            | 'IllegalStateException'
+        'an error controller'                 | 'answeredByController'               | 'Answered by the error controller' | 'UnsupportedOperationException'
+        'the error view, asynchronously'      | 'answeredByViewAsynchronously'       | 'An error has occurred'            | 'IllegalStateException'
+        'an error controller, asynchronously' | 'answeredByControllerAsynchronously' | 'Answered by the error controller' | 'UnsupportedOperationException'
     }
 
     private List<String> errorTags(String route) {

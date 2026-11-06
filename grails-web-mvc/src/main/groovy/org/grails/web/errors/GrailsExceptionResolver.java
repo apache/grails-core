@@ -29,6 +29,7 @@ import java.util.Map;
 import org.codehaus.groovy.control.CompilationFailedException;
 import org.codehaus.groovy.runtime.InvokerInvocationException;
 
+import jakarta.servlet.DispatcherType;
 import jakarta.servlet.ServletContext;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -147,10 +148,12 @@ public class GrailsExceptionResolver extends SimpleMappingExceptionResolver impl
      * {@link Observation#error(Throwable)} tells the observation's handlers, one of which marks the span.
      * <p>
      * An exception left in {@link WebUtils#ERROR_EXCEPTION_ATTRIBUTE} is not recorded here, because the filter that stops
-     * the observation records what it finds there.
+     * the observation records what it finds there. On an asynchronous dispatch the filter leaves stopping it to a listener
+     * that does not look.
      */
     private static void recordServerError(HttpServletRequest request, Exception ex) {
-        if (request.getAttribute(WebUtils.ERROR_EXCEPTION_ATTRIBUTE) == ex) {
+        if (request.getDispatcherType() != DispatcherType.ASYNC &&
+                request.getAttribute(WebUtils.ERROR_EXCEPTION_ATTRIBUTE) == ex) {
             return;
         }
         if (request.getAttribute(SERVER_OBSERVATION_ATTRIBUTE) instanceof Observation observation) {
