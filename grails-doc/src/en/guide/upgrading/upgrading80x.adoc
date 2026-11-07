@@ -1468,6 +1468,22 @@ Removing one element of a unidirectional `hasMany` set or bag, with `removeFrom*
 
 Under Hibernate 7, calling a collection criterion such as `isNotEmpty('pets')`, `isEmpty('pets')`, or `sizeEq('pets', n)` next to an association block for the same collection (`pets { ... }`) threw a `ClassCastException` because the path resolved to the join rather than the collection attribute (issue https://github.com/apache/grails-core/issues/16633[#16633]). Collection criteria now resolve to the collection property on the parent whether they appear before or after an association block of the same name.
 
+===== 26.14 Not-Equal Comparisons Leave Out Null Rows
+
+As of Grails 8.0.1, a comparison that says a property is not equal to a value does not return the rows whose property is `null`, on Hibernate 7 and on Hibernate 5, whichever way the query is run. `where { qty != 2 }`, `ne('qty', 2)`, `findAllByQtyNotEqual(2)` and the negations `!(qty == 2)`, `not { eq('qty', 2) }`, `!(qty in [2])` and `findAllByQtyNotInList([2])` return the rows whose `qty` is something other than 2, as SQL does, where a `null` is neither equal nor not equal to 2. The same holds inside `||`.
+
+Before, the same where query returned the rows with a `null` when it was read with `list()` or `count()` and left them out when it ran as `updateAll` or `deleteAll`, so a query could select one set of rows to read and another to change. All the forms and all the operations now agree.
+
+An application on 8.0.0 that relied on the rows with a `null` being returned adds them back with an explicit test:
+
+[source,groovy]
+----
+Item.where { qty != 2 || qty == null }.list()
+Item.createCriteria().list { or { ne('qty', 2); isNull('qty') } }
+----
+
+The functions that a where query calls on a property are `lower`, `upper`, `trim`, `length`, `second`, `hour`, `minute`, `day`, `month` and `year`. A criterion that names any other function throws an `InvalidDataAccessResourceUsageException`, in a read and in `updateAll` and `deleteAll`; before, Hibernate 7 passed the name to the database and a bulk statement wrote it into the query as it was given. A function over an `rlike` is rejected in `updateAll` and `deleteAll`, which have no regular expression operator, and is applied in a read.
+
 ==== 27. GORM Properties Are Nullable by Default
 
 Grails 8 changes the validation default so that an *unconstrained persistent (domain) property is nullable by default* rather than required.

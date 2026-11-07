@@ -27,8 +27,10 @@ import jakarta.persistence.criteria.Expression
 import jakarta.persistence.criteria.Root
 import jakarta.persistence.criteria.Predicate
 import org.hibernate.query.criteria.JpaExpression
+import org.grails.datastore.mapping.core.exceptions.ConfigurationException
 import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.query.Query
+import org.grails.datastore.mapping.query.criteria.FunctionCallingCriterion
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
 import org.grails.orm.hibernate.query.JpaQueryContext
 import org.grails.orm.hibernate.query.PredicateGenerator
@@ -213,13 +215,26 @@ class PredicateGeneratorSpec extends HibernateGormDatastoreSpec {
 
     def "getPredicates supports PropertyArithmetic on RHS of GreaterThan (age > salary * 10)"() {
         given:
-        List criteria = [new Query.GreaterThan("age", new PropertyArithmetic("salary", PropertyArithmetic.Operator.MULTIPLY, 10))]
+        new PredicateGeneratorSpecPerson(firstName: 'Rich', lastName: 'Person', age: 50, salary: 4G).save(failOnError: true)
+        new PredicateGeneratorSpecPerson(firstName: 'Poor', lastName: 'Person', age: 15, salary: 40G).save(flush: true, failOnError: true)
+        CriteriaQuery<String> pQuery = cb.createQuery(String)
+        Root<PredicateGeneratorSpecPerson> pRoot = pQuery.from(PredicateGeneratorSpecPerson)
+        JpaQueryContext pContext = new JpaQueryContext(pRoot)
+        List criteria = [
+            new Query.GreaterThan("age", new PropertyArithmetic("age", PropertyArithmetic.Operator.SUBTRACT, 10)),
+            new Query.GreaterThanEquals("age", new PropertyArithmetic("age", PropertyArithmetic.Operator.DIVIDE, 2)),
+            new Query.LessThan("age", new PropertyArithmetic("age", PropertyArithmetic.Operator.ADD, 10)),
+            new Query.LessThanEquals("salary", new PropertyArithmetic("salary", PropertyArithmetic.Operator.MULTIPLY, 10G)),
+            new Query.LessThan("salary", 10G)
+        ]
 
         when:
-        def predicates = predicateGenerator.getPredicates(query, root, criteria, fromProvider, personEntity)
+        Predicate[] predicates = predicateGenerator.getPredicates(pQuery, pRoot, criteria, pContext, personEntity)
+        pQuery.select(pRoot.get('firstName')).where(predicates)
+        List<String> results = sessionFactory.currentSession.createQuery(pQuery).resultList
 
         then:
-        predicates.length == 1
+        results == ['Rich']
     }
 
     def "test getPredicates with In on basic collection"() {
@@ -236,6 +251,32 @@ class PredicateGeneratorSpec extends HibernateGormDatastoreSpec {
         then:
         predicates.length == 1
         predicates[0] instanceof org.hibernate.query.sqm.tree.predicate.SqmInListPredicate
+    }
+
+    def "test getPredicates with In on unjoined collection path uses isMember and handles empty collection"() {
+        given:
+        new PredicateGeneratorSpecPerson(firstName: 'Bob', lastName: 'Smith', nicknames: ['Bobby', 'Rob'] as Set).save(failOnError: true)
+        new PredicateGeneratorSpecPerson(firstName: 'Alice', lastName: 'Smith', nicknames: ['Ali'] as Set).save(flush: true, failOnError: true)
+
+        when: "non-empty In on unjoined collection path"
+        CriteriaQuery<String> cQuery = cb.createQuery(String)
+        Root<PredicateGeneratorSpecPerson> cRoot = cQuery.from(PredicateGeneratorSpecPerson)
+        JpaQueryContext cContext = new JpaQueryContext(cRoot)
+        Predicate[] predicates = predicateGenerator.getPredicates(cQuery, cRoot, [new Query.In("nicknames", ["Bobby", "Other"])], cContext, personEntity)
+        cQuery.select(cRoot.get('firstName')).where(predicates)
+        List<String> matched = sessionFactory.currentSession.createQuery(cQuery).resultList
+
+        and: "empty In on unjoined collection path returns disjunction (matches nothing)"
+        CriteriaQuery<String> emptyQuery = cb.createQuery(String)
+        Root<PredicateGeneratorSpecPerson> emptyRoot = emptyQuery.from(PredicateGeneratorSpecPerson)
+        JpaQueryContext emptyContext = new JpaQueryContext(emptyRoot)
+        Predicate[] emptyPredicates = predicateGenerator.getPredicates(emptyQuery, emptyRoot, [new Query.In("nicknames", [])], emptyContext, personEntity)
+        emptyQuery.select(emptyRoot.get('firstName')).where(emptyPredicates)
+        List<String> emptyMatched = sessionFactory.currentSession.createQuery(emptyQuery).resultList
+
+        then:
+        matched == ['Bob']
+        emptyMatched.isEmpty()
     }
 
     def "test getPredicates with DistinctProjection returns conjunction"() {
@@ -375,11 +416,12 @@ class PredicateGeneratorSpec extends HibernateGormDatastoreSpec {
         predicates.length == 1
     }
 
-    def "test getPredicates with NotEquals criterion includes null values"() {
+    def "test getPredicates with NotEquals criterion leaves out null values as SQL does"() {
         given:
         new PredicateGeneratorSpecNullableAgeEntity(name: "Null 1", age: null).save(failOnError: true)
         new PredicateGeneratorSpecNullableAgeEntity(name: "Equal", age: 11).save(failOnError: true)
-        new PredicateGeneratorSpecNullableAgeEntity(name: "Null 2", age: null).save(flush: true, failOnError: true)
+        new PredicateGeneratorSpecNullableAgeEntity(name: "Null 2", age: null).save(failOnError: true)
+        new PredicateGeneratorSpecNullableAgeEntity(name: "Other", age: 12).save(flush: true, failOnError: true)
         CriteriaQuery<Long> countQuery = cb.createQuery(Long)
         Root<PredicateGeneratorSpecNullableAgeEntity> countRoot = countQuery.from(PredicateGeneratorSpecNullableAgeEntity)
         GrailsHibernatePersistentEntity nullableAgeEntity = session.datastore.mappingContext.getPersistentEntity(PredicateGeneratorSpecNullableAgeEntity.name) as GrailsHibernatePersistentEntity
@@ -391,7 +433,7 @@ class PredicateGeneratorSpec extends HibernateGormDatastoreSpec {
         Long count = sessionFactory.currentSession.createQuery(countQuery).singleResult
 
         then:
-        count == 2L
+        count == 1L
     }
 
     def "test getPredicates with SqlRestriction binds the values and replaces {alias}"() {
@@ -515,17 +557,64 @@ class PredicateGeneratorSpec extends HibernateGormDatastoreSpec {
             new Query.LessThanEqualsAll("age", subCriteria),
             new Query.LessThanAll("age", subCriteria),
             new Query.EqualsAll("age", subCriteria),
+            new Query.NotEqualsAll("age", subCriteria),
             new Query.GreaterThanEqualsSome("age", subCriteria),
             new Query.GreaterThanSome("age", subCriteria),
             new Query.LessThanEqualsSome("age", subCriteria),
-            new Query.LessThanSome("age", subCriteria)
+            new Query.LessThanSome("age", subCriteria),
+            new Query.Equals("age", subCriteria),
+            new Query.NotEquals("age", subCriteria),
+            new Query.NotEquals("age", null)
         ]
 
         when:
         def predicates = predicateGenerator.getPredicates(query, root, criteria, fromProvider, personEntity)
 
         then:
-        predicates.length == 9
+        predicates.length == 13
+    }
+
+    def "test getPredicates with DetachedAssociationCriteria and HibernateAssociationQuery"() {
+        given:
+        def owner = new PredicateGeneratorSpecPerson(firstName: 'Bob', lastName: 'Smith', age: 40)
+        owner.addToPets(new PredicateGeneratorSpecPet(name: 'Lucky'))
+        owner.save(failOnError: true)
+        def other = new PredicateGeneratorSpecPerson(firstName: 'Alice', lastName: 'Jones', age: 30)
+        other.addToPets(new PredicateGeneratorSpecPet(name: 'Rex'))
+        other.save(flush: true, failOnError: true)
+
+        def petsAssociation = personEntity.getPropertyByName('pets') as org.grails.datastore.mapping.model.types.Association
+        def petEntity = petsAssociation.associatedEntity as GrailsHibernatePersistentEntity
+
+        when: "DetachedAssociationCriteria is evaluated and executed"
+        def detachedAssoc = new org.grails.datastore.gorm.query.criteria.DetachedAssociationCriteria(PredicateGeneratorSpecPet, petsAssociation, 'pets')
+        detachedAssoc.add(new Query.Equals('name', 'Lucky'))
+        CriteriaQuery<String> dQuery = cb.createQuery(String)
+        Root<PredicateGeneratorSpecPerson> dRoot = dQuery.from(PredicateGeneratorSpecPerson)
+        JpaQueryContext dContext = new JpaQueryContext(dRoot)
+        Predicate[] dPredicates = predicateGenerator.getPredicates(dQuery, dRoot, [detachedAssoc], dContext, personEntity)
+        dQuery.select(dRoot.get('firstName')).where(dPredicates)
+        List<String> dResults = sessionFactory.currentSession.createQuery(dQuery).resultList
+
+        and: "HibernateAssociationQuery is evaluated and executed"
+        def hibernateAssoc = new org.grails.orm.hibernate.query.HibernateAssociationQuery(
+                session as org.grails.orm.hibernate.HibernateSession,
+                petEntity,
+                petsAssociation,
+                'pets',
+                'p'
+        )
+        hibernateAssoc.add(new Query.Equals('name', 'Rex'))
+        CriteriaQuery<String> hQuery = cb.createQuery(String)
+        Root<PredicateGeneratorSpecPerson> hRoot = hQuery.from(PredicateGeneratorSpecPerson)
+        JpaQueryContext hContext = new JpaQueryContext(hRoot)
+        Predicate[] hPredicates = predicateGenerator.getPredicates(hQuery, hRoot, [hibernateAssoc], hContext, personEntity)
+        hQuery.select(hRoot.get('firstName')).where(hPredicates)
+        List<String> hResults = sessionFactory.currentSession.createQuery(hQuery).resultList
+
+        then:
+        dResults == ['Bob']
+        hResults == ['Alice']
     }
 
     def "test getPredicates with all Size criteria"() {
@@ -570,6 +659,139 @@ class PredicateGeneratorSpec extends HibernateGormDatastoreSpec {
 
         then:
         predicates.length == 1
+    }
+
+    def "test getPredicates with FunctionCallingCriterion for string functions"() {
+        given:
+        List criteria = [
+            new FunctionCallingCriterion("upper", new Query.Equals("firstName", "BOB")),
+            new FunctionCallingCriterion("lower", new Query.Like("lastName", "smith%")),
+            new FunctionCallingCriterion("upper", new Query.ILike("lastName", "smith%")),
+            new FunctionCallingCriterion("lower", new Query.RLike("lastName", "^smith.*")),
+            new FunctionCallingCriterion("trim", new Query.NotEquals("firstName", "Alice")),
+            new FunctionCallingCriterion("length", new Query.GreaterThan("firstName", 3)),
+            new FunctionCallingCriterion("length", new Query.GreaterThanEquals("firstName", 3)),
+            new FunctionCallingCriterion("length", new Query.LessThan("firstName", 10)),
+            new FunctionCallingCriterion("length", new Query.LessThanEquals("firstName", "10")),
+            new FunctionCallingCriterion("upper", new Query.Equals("firstName", 123))
+        ]
+
+        when:
+        def predicates = predicateGenerator.getPredicates(query, root, criteria, fromProvider, personEntity)
+
+        then:
+        predicates.length == 10
+    }
+
+    def "test getPredicates with FunctionCallingCriterion throws on unsupported wrapped criterion"() {
+        given:
+        List criteria = [new FunctionCallingCriterion("upper", new Query.Between("firstName", "A", "Z"))]
+
+        when:
+        predicateGenerator.getPredicates(query, root, criteria, fromProvider, personEntity)
+
+        then:
+        thrown(UnsupportedOperationException)
+    }
+
+    def "test getPredicates with FunctionCallingCriterion throws on invalid property"() {
+        given:
+        List criteria = [new FunctionCallingCriterion("upper", new Query.Equals("nonExistent", "BOB"))]
+
+        when:
+        predicateGenerator.getPredicates(query, root, criteria, fromProvider, personEntity)
+
+        then:
+        thrown(ConfigurationException)
+    }
+
+    def "test getPredicates with FunctionCallingCriterion throws when function is on value"() {
+        given:
+        List criteria = [new FunctionCallingCriterion("firstName", "upper", new Query.Equals("firstName", "BOB"), true)]
+
+        when:
+        predicateGenerator.getPredicates(query, root, criteria, fromProvider, personEntity)
+
+        then:
+        thrown(UnsupportedOperationException)
+    }
+
+    def "test getPredicates with FunctionCallingCriterion handles null Equals, null NotEquals, and subquery In"() {
+        given:
+        def subCriteria = new DetachedCriteria(PredicateGeneratorSpecPerson).build {
+            projections {
+                property('firstName')
+            }
+            eq('lastName', 'Smith')
+        }
+        List criteria = [
+            new FunctionCallingCriterion("upper", new Query.Equals("firstName", null)),
+            new FunctionCallingCriterion("upper", new Query.NotEquals("firstName", null)),
+            new FunctionCallingCriterion("lower", new Query.In("firstName", subCriteria)),
+            new FunctionCallingCriterion("upper", new Query.Equals("firstName", subCriteria)),
+            new FunctionCallingCriterion("upper", new Query.NotEquals("firstName", subCriteria))
+        ]
+
+        when:
+        def predicates = predicateGenerator.getPredicates(query, root, criteria, fromProvider, personEntity)
+
+        then:
+        predicates.length == 5
+    }
+
+    def "test getPredicates selects most specific superclass handler for unregistered Query.Equals subclass"() {
+        given:
+        new PredicateGeneratorSpecNullableAgeEntity(name: 'Alice', age: 25).save(failOnError: true)
+        new PredicateGeneratorSpecNullableAgeEntity(name: 'Bob', age: 30).save(flush: true, failOnError: true)
+        CriteriaQuery<String> nameQuery = cb.createQuery(String)
+        Root<PredicateGeneratorSpecNullableAgeEntity> nameRoot = nameQuery.from(PredicateGeneratorSpecNullableAgeEntity)
+        GrailsHibernatePersistentEntity nullableAgeEntity = session.datastore.mappingContext.getPersistentEntity(PredicateGeneratorSpecNullableAgeEntity.name) as GrailsHibernatePersistentEntity
+        JpaQueryContext context = new JpaQueryContext(nameRoot)
+        Query.Equals customEquals = new Query.Equals('name', 'Alice') {}
+
+        when:
+        Predicate[] predicates = predicateGenerator.getPredicates(nameQuery, nameRoot, [customEquals], context, nullableAgeEntity)
+        nameQuery.select(nameRoot.get('name')).where(predicates)
+        List<String> results = sessionFactory.currentSession.createQuery(nameQuery).resultList
+
+        then:
+        results == ['Alice']
+
+        when: "conversionService converts StringBuilder to String and String to Integer in FunctionCallingCriterion"
+        CriteriaQuery<String> funcQuery = cb.createQuery(String)
+        Root<PredicateGeneratorSpecNullableAgeEntity> funcRoot = funcQuery.from(PredicateGeneratorSpecNullableAgeEntity)
+        JpaQueryContext funcContext = new JpaQueryContext(funcRoot)
+        List<Query.Criterion> funcCriteria = [
+            new FunctionCallingCriterion('upper', new Query.Equals('name', new StringBuilder('ALICE'))),
+            new FunctionCallingCriterion('length', new Query.GreaterThan('name', '4'))
+        ]
+        Predicate[] funcPredicates = predicateGenerator.getPredicates(funcQuery, funcRoot, funcCriteria, funcContext, nullableAgeEntity)
+        funcQuery.select(funcRoot.get('name')).where(funcPredicates)
+        List<String> funcResults = sessionFactory.currentSession.createQuery(funcQuery).resultList
+
+        then:
+        funcResults == ['Alice']
+    }
+
+    def "test registerCriterionHandler and clearCustomCriterionHandlers"() {
+        given:
+        Query.Criterion customCriterion = new Query.Criterion() {}
+        PredicateGenerator.registerCriterionHandler(customCriterion.class) { cq, r, builder, c ->
+            builder.equal(r.get('firstName'), 'CustomBob')
+        }
+
+        when:
+        Predicate[] predicates = predicateGenerator.getPredicates(query, root, [customCriterion], fromProvider, personEntity)
+
+        then:
+        predicates.length == 1
+
+        when:
+        PredicateGenerator.clearCustomCriterionHandlers()
+        predicateGenerator.getPredicates(query, root, [customCriterion], fromProvider, personEntity)
+
+        then:
+        thrown(IllegalArgumentException)
     }
 }
 

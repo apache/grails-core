@@ -244,4 +244,34 @@ class JpaQueryBuilderSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
         queryInfo.query == 'UPDATE org.apache.grails.data.testing.tck.domains.Person person SET person.firstName=:p1'
         queryInfo.parameters == ["Fred"]
     }
+
+    void "Test build UPDATE with FunctionCallingCriterion ILike, In values, In subquery, and null checks"() {
+        given:
+        def personEntity = manager.session.mappingContext.getPersistentEntity(Person.name)
+        def subCriteria = new DetachedCriteria(Person).build {
+            eq('lastName', 'Simpson')
+        }.distinct('firstName')
+
+        when: "FunctionCallingCriterion with ILike and multi-value In"
+        def criteria1 = [
+            new org.grails.datastore.mapping.query.criteria.FunctionCallingCriterion('upper', new org.grails.datastore.mapping.query.Query.ILike('firstName', 'bob%')),
+            new org.grails.datastore.mapping.query.criteria.FunctionCallingCriterion('lower', new org.grails.datastore.mapping.query.Query.In('lastName', ['smith', 'jones']))
+        ]
+        def queryInfo1 = new JpaQueryBuilder(personEntity, criteria1).buildUpdate(age: 40)
+
+        then:
+        queryInfo1.query == 'UPDATE org.apache.grails.data.testing.tck.domains.Person person SET person.age=:p1 WHERE (lower(upper(person.firstName)) like lower(:p2) AND lower(person.lastName) IN (:p3,:p4))'
+        queryInfo1.parameters == [40, 'bob%', 'smith', 'jones']
+
+        when: "FunctionCallingCriterion with In subquery followed by another criterion"
+        def criteria2 = [
+            new org.grails.datastore.mapping.query.criteria.FunctionCallingCriterion('upper', new org.grails.datastore.mapping.query.Query.In('firstName', subCriteria)),
+            new org.grails.datastore.mapping.query.criteria.FunctionCallingCriterion('upper', new org.grails.datastore.mapping.query.Query.Equals('lastName', 'SMITH'))
+        ]
+        def queryInfo2 = new JpaQueryBuilder(personEntity, criteria2).buildUpdate(age: 50)
+
+        then:
+        queryInfo2.query == 'UPDATE org.apache.grails.data.testing.tck.domains.Person person SET person.age=:p1 WHERE (upper(person.firstName) IN (SELECT person1.firstName FROM org.apache.grails.data.testing.tck.domains.Person person1 WHERE person1.lastName=:p2) AND upper(person.lastName) = :p3)'
+        queryInfo2.parameters == [50, 'Simpson', 'SMITH']
+    }
 }
