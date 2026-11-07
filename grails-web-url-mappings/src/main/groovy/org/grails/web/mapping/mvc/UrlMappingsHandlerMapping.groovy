@@ -227,13 +227,17 @@ class UrlMappingsHandlerMapping extends AbstractHandlerMapping {
      * Sets the HTTP server observation's route from the matched controller/action, so the
      * {@code http.server.requests} {@code uri} tag is a low-cardinality route (e.g. {@code /book/show})
      * instead of {@code UNKNOWN}. Runs at {@code preHandle}: at URL-mapping match the observation
-     * context is not yet on the request.
+     * context is not yet on the request. A request routed to an error handler keeps the route that failed, so
+     * that the failures an error handler answers are not all reported as its own route.
      */
     @CompileStatic
     static class ObservationRouteHandler implements HandlerInterceptor {
 
         @Override
         boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
+            if (request.getAttribute(WebUtils.ERROR_STATUS_CODE_ATTRIBUTE) != null) {
+                return true
+            }
             try {
                 String controllerName = null
                 String actionName = null
