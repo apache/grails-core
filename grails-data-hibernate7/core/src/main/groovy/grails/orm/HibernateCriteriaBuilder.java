@@ -47,7 +47,9 @@ import grails.gorm.DetachedCriteria;
 import grails.gorm.MultiTenant;
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.types.Association;
+import org.grails.datastore.gorm.query.criteria.DetachedAssociationCriteria;
 import org.grails.datastore.mapping.model.types.Basic;
+import org.grails.datastore.mapping.model.types.Embedded;
 import org.grails.datastore.mapping.multitenancy.MultiTenancySettings;
 import org.grails.datastore.mapping.query.Query;
 import org.grails.datastore.mapping.query.api.BuildableCriteria;
@@ -242,18 +244,25 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
     public Criteria createAlias(
             String associationPath, String alias, int joinType) {
         var criteria = hibernateQuery.getDetachedCriteria();
-        JoinType convertedJoinType = convertFromInt(joinType);
+        // the block of an embedded component has the entity of the component, while its criteria have none:
+        // the class of a component is not a domain class
+        boolean embeddedBlock = criteria instanceof DetachedAssociationCriteria<?> block && block.getAssociation() instanceof Embedded;
+        var entity = criteria instanceof DetachedAssociationCriteria<?> block ?
+                block.getAssociation().getAssociatedEntity() : criteria.getPersistentEntity();
+                JoinType convertedJoinType = convertFromInt(joinType);
         String path = pathFromDeclaredAlias(criteria, associationPath, alias);
         if (path.contains(ALIAS_SEPARATOR)) {
             criteria.getCriteria().add(new HibernateAlias(path, alias, convertedJoinType));
             return this;
         }
-        var prop = criteria.getPersistentEntity().getPropertyByName(path);
+        var prop = entity.getPropertyByName(path);
         criteria.getCriteria().add(new HibernateAlias(path, alias, convertedJoinType));
         if (prop instanceof Basic) {
             return this;
         }
-        criteria.createAlias(path, alias);
+        if (!embeddedBlock) {
+            criteria.createAlias(path, alias);
+        }
         criteria.join(path, convertedJoinType);
         return this;
     }
@@ -998,19 +1007,19 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
 
     @Override
     public Criteria and(Closure<?> callable) {
-        hibernateQuery.and(callable);
+        hibernateQuery.and(criteriaMethodInvoker.evaluatedByBuilder(callable));
         return this;
     }
 
     @Override
     public Criteria or(Closure<?> callable) {
-        hibernateQuery.or(callable);
+        hibernateQuery.or(criteriaMethodInvoker.evaluatedByBuilder(callable));
         return this;
     }
 
     @Override
     public Criteria not(Closure<?> callable) {
-        hibernateQuery.not(callable);
+        hibernateQuery.not(criteriaMethodInvoker.evaluatedByBuilder(callable));
         return this;
     }
 
