@@ -31,6 +31,7 @@ class UrlMappings {
 
         "/"(controller: 'application', action:'index')
         "/task/error"(controller:"task", action:'error')
+        "/taskRequest/$action"(controller: 'taskRequest')
         "500"(view: '/error')
         "404"(view: '/notFound')
     }

@@ -18,6 +18,7 @@
  */
 package org.grails.plugins.web.async
 
+import java.time.Duration
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.RejectedExecutionException
@@ -25,7 +26,9 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 
 import org.springframework.beans.factory.support.BeanRegistryAdapter
+import org.springframework.boot.web.servlet.ServletListenerRegistrationBean
 import org.springframework.beans.factory.support.DefaultListableBeanFactory
+import org.springframework.core.env.MapPropertySource
 import org.springframework.core.env.StandardEnvironment
 import org.springframework.core.task.AsyncTaskExecutor
 import org.springframework.core.task.TaskDecorator
@@ -48,6 +51,7 @@ import org.grails.events.bus.spring.EventBusFactoryBean
 import org.grails.web.servlet.mvc.GrailsWebRequest
 import org.grails.plugins.web.async.mvc.AsyncActionResultTransformer
 
+import spock.lang.Issue
 import spock.lang.Specification
 
 class ControllersAsyncGrailsPluginSpec extends Specification {
@@ -69,7 +73,48 @@ class ControllersAsyncGrailsPluginSpec extends Specification {
         beanFactory.getBeanDefinition('asyncPromiseResponseActionResultTransformer').beanClassName == AsyncActionResultTransformer.name
         beanFactory.getBeanDefinition('grailsPromiseFactory').beanClassName == PromiseFactory.name
         beanFactory.getBeanDefinition('grailsWebRequestTaskDecorator').beanClassName == TaskDecorator.name
+        beanFactory.getBeanDefinition('grailsTaskRequestListener').beanClassName == ServletListenerRegistrationBean.name
         beanFactory.getBeanDefinition('grailsPromiseExecutor').fallback
+    }
+
+    @Issue('https://github.com/apache/grails-core/issues/15851')
+    void 'beanRegistrar registers the listener telling the tasks of a request when the container is done with it'() {
+        given:
+        def beanFactory = new DefaultListableBeanFactory()
+        def registrar = new ControllersAsyncGrailsPlugin().beanRegistrar()
+        new BeanRegistryAdapter(beanFactory, new StandardEnvironment(), registrar.getClass()).register(registrar)
+
+        when:
+        ServletListenerRegistrationBean registration = beanFactory.getBean('grailsTaskRequestListener', ServletListenerRegistrationBean)
+
+        then: 'completing a request waits for a call a task is making as long as the container lets a read or write wait'
+        registration.listener instanceof TaskRequestListener
+        ((TaskRequestListener) registration.listener).callWait == Duration.ofSeconds(60)
+    }
+
+    @Issue('https://github.com/apache/grails-core/issues/15851')
+    void 'grails.async.requestCompletionWait sets how long completing a request waits for a call a task is making'() {
+        given:
+        def beanFactory = new DefaultListableBeanFactory()
+        def environment = new StandardEnvironment()
+        environment.propertySources.addFirst(new MapPropertySource('test', ['grails.async.requestCompletionWait': '2s']))
+        def registrar = new ControllersAsyncGrailsPlugin().beanRegistrar()
+        new BeanRegistryAdapter(beanFactory, environment, registrar.getClass()).register(registrar)
+
+        when:
+        ServletListenerRegistrationBean registration = beanFactory.getBean('grailsTaskRequestListener', ServletListenerRegistrationBean)
+
+        then:
+        ((TaskRequestListener) registration.listener).callWait == Duration.ofSeconds(2)
+    }
+
+    @Issue('https://github.com/apache/grails-core/issues/15851')
+    void 'the listener does not take a negative wait'() {
+        when:
+        new TaskRequestListener(Duration.ofSeconds(-1))
+
+        then:
+        thrown(IllegalArgumentException)
     }
 
     void 'promise factory uses the application task executor'() {
