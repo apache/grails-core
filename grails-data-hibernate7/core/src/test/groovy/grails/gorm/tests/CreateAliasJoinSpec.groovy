@@ -34,7 +34,8 @@ class CreateAliasJoinSpec extends HibernateGormDatastoreSpec {
 
     void setupSpec() {
         manager.grailsConfig.hibernate.session_factory.statement_inspector = sqlCapture
-        manager.registerDomainClasses(CreateAliasTeam, CreateAliasLike, CreateAliasStudent, CreateAliasTag, CreateAliasOwner)
+        manager.registerDomainClasses(CreateAliasTeam, CreateAliasLike, CreateAliasStudent, CreateAliasTag, CreateAliasOwner,
+                CreateAliasClub)
     }
 
     void setup() {
@@ -110,6 +111,108 @@ class CreateAliasJoinSpec extends HibernateGormDatastoreSpec {
 
         then:
         rows*.id == [matching.id]
+    }
+
+    void 'an association block does not hide an explicit alias of the same name declared outside it'() {
+        given: 'one team whose favorite has the team tag, and one whose favorite has another'
+        def a = new CreateAliasTag(name: 'a').save(failOnError: true)
+        def b = new CreateAliasTag(name: 'b').save(failOnError: true)
+        def likeA = new CreateAliasLike(label: 'first', tag: a).save(failOnError: true)
+        def likeB = new CreateAliasLike(label: 'second', tag: b).save(failOnError: true)
+        new CreateAliasTeam(name: 'same', tag: a, favorite: likeA).save(failOnError: true)
+        new CreateAliasTeam(name: 'different', tag: a, favorite: likeB).save(flush: true, failOnError: true)
+
+        when: 'the block compares its own tag with the tag the outer alias names'
+        def rows = CreateAliasTeam.withCriteria {
+            createAlias('tag', 'tag')
+            favorite {
+                tag {
+                    eqProperty('name', 'tag.name')
+                }
+            }
+        }
+
+        then: 'tag.name is the outer tag, not the tag of the favorite'
+        rows*.name == ['same']
+    }
+
+    void 'a dotted path in an association block starts at an explicit alias of the same name declared outside it'() {
+        given:
+        def a = new CreateAliasTag(name: 'a').save(failOnError: true)
+        def b = new CreateAliasTag(name: 'b').save(failOnError: true)
+        def likeA = new CreateAliasLike(label: 'a', tag: a).save(failOnError: true)
+        def likeB = new CreateAliasLike(label: 'b', tag: b).save(failOnError: true)
+        new CreateAliasTeam(name: 'team a, like a', tag: a).addToLikes(likeA).save(failOnError: true)
+        new CreateAliasTeam(name: 'team a, like b', tag: a).addToLikes(likeB).save(failOnError: true)
+        new CreateAliasTeam(name: 'team b, like a', tag: b).addToLikes(likeA).save(flush: true, failOnError: true)
+
+        when: 'tag.name inside likes names the tag of the outer alias, which is the tag of the team'
+        def root = CreateAliasTeam.withCriteria {
+            createAlias('tag', 'tag')
+            likes { eq('tag.name', 'a') }
+        }
+        def detached = new DetachedCriteria(CreateAliasTeam).build {
+            createAlias('tag', 'tag')
+            likes { eq('tag.name', 'a') }
+        }.list()
+        def subquery = CreateAliasTeam.withCriteria {
+            'in'('id', new DetachedCriteria(CreateAliasTeam).build {
+                createAlias('tag', 'tag')
+                likes { eq('tag.name', 'a') }
+            }.id())
+        }
+
+        then: 'the root query, a detached criteria and a subquery agree'
+        root*.name.sort() == ['team a, like a', 'team a, like b']
+        detached*.name.sort() == ['team a, like a', 'team a, like b']
+        subquery*.name.sort() == ['team a, like a', 'team a, like b']
+    }
+
+    void 'an association block inside a junction does not hide an explicit alias of the same name declared outside it'() {
+        given:
+        def a = new CreateAliasTag(name: 'a').save(failOnError: true)
+        def b = new CreateAliasTag(name: 'b').save(failOnError: true)
+        def likeA = new CreateAliasLike(label: 'first', tag: a).save(failOnError: true)
+        def likeB = new CreateAliasLike(label: 'second', tag: b).save(failOnError: true)
+        new CreateAliasTeam(name: 'same', tag: a, favorite: likeA).save(failOnError: true)
+        new CreateAliasTeam(name: 'different', tag: a, favorite: likeB).save(flush: true, failOnError: true)
+
+        when:
+        def rows = CreateAliasTeam.withCriteria {
+            createAlias('tag', 'tag')
+            favorite {
+                or {
+                    tag {
+                        eqProperty('name', 'tag.name')
+                    }
+                }
+            }
+        }
+
+        then:
+        rows*.name == ['same']
+    }
+
+    void 'an association block still joins its association when no alias of that name is declared outside'() {
+        given:
+        def a = new CreateAliasTag(name: 'a').save(failOnError: true)
+        def b = new CreateAliasTag(name: 'b').save(failOnError: true)
+        def likeA = new CreateAliasLike(label: 'first', tag: a).save(failOnError: true)
+        def likeB = new CreateAliasLike(label: 'second', tag: b).save(failOnError: true)
+        new CreateAliasTeam(name: 'with a', tag: b, favorite: likeA).save(failOnError: true)
+        new CreateAliasTeam(name: 'with b', tag: a, favorite: likeB).save(flush: true, failOnError: true)
+
+        when:
+        def rows = CreateAliasTeam.withCriteria {
+            favorite {
+                tag {
+                    eq('name', 'a')
+                }
+            }
+        }
+
+        then:
+        rows*.name == ['with a']
     }
 
     void 'association aliases stay local with root tag #rootTag and explicit join type #explicitJoinType'() {
@@ -1246,6 +1349,514 @@ class CreateAliasJoinSpec extends HibernateGormDatastoreSpec {
             projections { property('name') }
         } == ['y']
     }
+
+    void 'nested alias path #declarations joins each association once'() {
+        given:
+        def a = new CreateAliasTag(name: 'a').save(failOnError: true)
+        def b = new CreateAliasTag(name: 'b').save(failOnError: true)
+        def likeA = new CreateAliasLike(label: 'a', tag: a).save(failOnError: true)
+        def likeB = new CreateAliasLike(label: 'b', tag: b).save(failOnError: true)
+        new CreateAliasTeam(name: 'matching', favorite: likeA, tag: b).save(failOnError: true)
+        new CreateAliasTeam(name: 'wrong favorite tag', favorite: likeB, tag: a).save(failOnError: true)
+        new CreateAliasTeam(name: 'no favorite', tag: a).save(flush: true, failOnError: true)
+
+        when:
+        def names = CreateAliasTeam.withCriteria {
+            for (declaration in declarations) {
+                createAlias(declaration[0], declaration[1])
+            }
+            eq('favorite.label', 'a')
+            eq('t.name', 'a')
+            projections { property('name') }
+        }
+
+        then:
+        names == ['matching']
+        sqlCapture.statements.last().findAll(/(?i)\bjoin create_alias_like\b/).size() == 1
+        sqlCapture.statements.last().findAll(/(?i)\bjoin create_alias_tag\b/).size() == 1
+
+        where:
+        declarations << [
+                [['favorite.tag', 't']],
+                [['favorite', 'f'], ['favorite.tag', 't']],
+                [['favorite.tag', 't'], ['favorite', 'f']]
+        ]
+    }
+
+    void 'nested alias path #declarations keeps the join type of each alias'() {
+        given:
+        def tag = new CreateAliasTag(name: 'tag').save(failOnError: true)
+        def tagged = new CreateAliasLike(label: 'tagged', tag: tag).save(failOnError: true)
+        def untagged = new CreateAliasLike(label: 'untagged').save(failOnError: true)
+        new CreateAliasTeam(name: 'tagged', favorite: tagged).save(failOnError: true)
+        new CreateAliasTeam(name: 'untagged', favorite: untagged).save(failOnError: true)
+        new CreateAliasTeam(name: 'no favorite').save(flush: true, failOnError: true)
+
+        expect:
+        CreateAliasTeam.withCriteria {
+            for (declaration in declarations) {
+                createAlias(declaration[0], declaration[1], declaration[2])
+            }
+            projections { property('name') }
+            order('name', 'asc')
+        } == expected
+
+        where:
+        declarations                                     || expected
+        [['favorite.tag', 't', 0]]                       || ['tagged']
+        [['favorite.tag', 't', 1]]                       || ['no favorite', 'tagged', 'untagged']
+        [['favorite', 'f', 0], ['favorite.tag', 't', 1]] || ['tagged', 'untagged']
+        [['favorite', 'f', 1], ['favorite.tag', 't', 0]] || ['tagged']
+    }
+
+    void 'nested alias path does not change the join type of a restricted first association'() {
+        given:
+        def tag = new CreateAliasTag(name: 'tag').save(failOnError: true)
+        def tagged = new CreateAliasLike(label: 'tagged', tag: tag).save(failOnError: true)
+        def untagged = new CreateAliasLike(label: 'untagged').save(failOnError: true)
+        new CreateAliasTeam(name: 'tagged', favorite: tagged).save(failOnError: true)
+        new CreateAliasTeam(name: 'untagged', favorite: untagged).save(failOnError: true)
+        new CreateAliasTeam(name: 'no favorite').save(flush: true, failOnError: true)
+
+        expect:
+        CreateAliasTeam.withCriteria {
+            createAlias('favorite.tag', 't', 1)
+            or {
+                eq('favorite.label', 'tagged')
+                eq('name', 'no favorite')
+            }
+            projections { property('name') }
+            order('name', 'asc')
+        } == CreateAliasTeam.withCriteria {
+            or {
+                eq('favorite.label', 'tagged')
+                eq('name', 'no favorite')
+            }
+            projections { property('name') }
+            order('name', 'asc')
+        }
+    }
+
+    void 'detached nested alias path uses the configured join types'() {
+        given:
+        def tag = new CreateAliasTag(name: 'tag').save(failOnError: true)
+        def tagged = new CreateAliasLike(label: 'tagged', tag: tag).save(failOnError: true)
+        def untagged = new CreateAliasLike(label: 'untagged').save(failOnError: true)
+        new CreateAliasTeam(name: 'tagged', favorite: tagged).save(failOnError: true)
+        new CreateAliasTeam(name: 'untagged', favorite: untagged).save(failOnError: true)
+        new CreateAliasTeam(name: 'no favorite').save(flush: true, failOnError: true)
+        def criteria = new DetachedCriteria(CreateAliasTeam).build {
+            join('favorite', JoinType.INNER)
+            join('favorite.tag', JoinType.LEFT)
+            createAlias('favorite.tag', 't')
+        }
+
+        expect:
+        criteria.list()*.name.sort() == ['tagged', 'untagged']
+    }
+
+    void 'nested alias path #innerAlias in a subquery joins from its own root'() {
+        given:
+        def a = new CreateAliasTag(name: 'a').save(failOnError: true)
+        def b = new CreateAliasTag(name: 'b').save(failOnError: true)
+        def likeA = new CreateAliasLike(label: 'a', tag: a).save(failOnError: true)
+        def likeB = new CreateAliasLike(label: 'b', tag: b).save(failOnError: true)
+        def teamA = new CreateAliasTeam(name: 'A', favorite: likeA).save(failOnError: true)
+        new CreateAliasTeam(name: 'B', favorite: likeB).save(flush: true, failOnError: true)
+        def teamsWithFavoriteTagB = new DetachedCriteria(CreateAliasTeam).build {
+            createAlias('favorite.tag', innerAlias)
+            eq("${innerAlias}.name", 'b')
+        }
+
+        when:
+        def rows = CreateAliasTeam.withCriteria {
+            createAlias('favorite.tag', 'outside')
+            eq('favorite.label', 'a')
+            eq('outside.name', 'a')
+            exists(teamsWithFavoriteTagB)
+        }
+
+        then:
+        rows*.id == [teamA.id]
+
+        where:
+        innerAlias << ['inside', 'outside']
+    }
+
+    void 'nested alias path #declarations shares the join of an alias on the associations before its last'() {
+        given:
+        def a = new CreateAliasTag(name: 'a').save(failOnError: true)
+        def b = new CreateAliasTag(name: 'b').save(failOnError: true)
+        def likeA = new CreateAliasLike(label: 'a', tag: a).save(failOnError: true)
+        def likeB = new CreateAliasLike(label: 'b', tag: b).save(failOnError: true)
+        def team = new CreateAliasTeam(name: 'team').addToLikes(likeA).addToLikes(likeB).save(failOnError: true)
+        new CreateAliasClub(name: 'club', team: team).save(flush: true, failOnError: true)
+
+        expect: 'the tag is the tag of the like the other alias restricts'
+        CreateAliasClub.withCriteria {
+            for (declaration in declarations) {
+                createAlias(declaration[0], declaration[1])
+            }
+            eq('l.label', 'a')
+            eq('t.name', tagName)
+            projections { property('name') }
+        } == expected
+
+        where:
+        declarations                                                   | tagName || expected
+        [['team.likes', 'l'], ['team.likes.tag', 't']]                 | 'a'     || ['club']
+        [['team.likes', 'l'], ['team.likes.tag', 't']]                 | 'b'     || []
+        [['team.likes.tag', 't'], ['team.likes', 'l']]                 | 'b'     || []
+        [['team', 'tm'], ['team.likes', 'l'], ['team.likes.tag', 't']] | 'b'     || []
+    }
+
+    void 'nested alias paths through the same to-many association return one row for each of its elements'() {
+        given:
+        def a = new CreateAliasTag(name: 'a').save(failOnError: true)
+        def b = new CreateAliasTag(name: 'b').save(failOnError: true)
+        def likeA = new CreateAliasLike(label: 'a', tag: a).save(failOnError: true)
+        def likeB = new CreateAliasLike(label: 'b', tag: b).save(failOnError: true)
+        def team = new CreateAliasTeam(name: 'team').addToLikes(likeA).addToLikes(likeB).save(failOnError: true)
+        new CreateAliasClub(name: 'club', team: team).save(flush: true, failOnError: true)
+
+        expect:
+        CreateAliasClub.withCriteria {
+            createAlias('team.likes', 'l', 1)
+            createAlias('team.likes.tag', 't', 1)
+            projections {
+                property('l.label')
+                property('t.name')
+            }
+        }.collect { it as List }.sort() == [['a', 'a'], ['b', 'b']]
+    }
+
+    void 'nested alias path joins a to-one association before its last once'() {
+        given:
+        def tag = new CreateAliasTag(name: 'tag').save(failOnError: true)
+        def favorite = new CreateAliasLike(label: 'favorite', tag: tag).save(failOnError: true)
+        def team = new CreateAliasTeam(name: 'team', favorite: favorite).save(failOnError: true)
+        new CreateAliasClub(name: 'club', team: team).save(flush: true, failOnError: true)
+
+        when:
+        def names = CreateAliasClub.withCriteria {
+            createAlias('team.favorite', 'f')
+            createAlias('team.favorite.tag', 't')
+            eq('f.label', 'favorite')
+            eq('t.name', 'tag')
+            projections { property('name') }
+        }
+
+        then:
+        names == ['club']
+        sqlCapture.statements.last().findAll(/(?i)\bjoin create_alias_team\b/).size() == 1
+        sqlCapture.statements.last().findAll(/(?i)\bjoin create_alias_like\b/).size() == 1
+        sqlCapture.statements.last().findAll(/(?i)\bjoin create_alias_tag\b/).size() == 1
+    }
+
+    void 'nested alias path declared #position an association block keeps the inner join of the block'() {
+        given:
+        def tag = new CreateAliasTag(name: 'tag').save(failOnError: true)
+        def tagged = new CreateAliasLike(label: 'tagged', tag: tag).save(failOnError: true)
+        def untagged = new CreateAliasLike(label: 'untagged').save(failOnError: true)
+        new CreateAliasTeam(name: 'tagged', favorite: tagged).save(failOnError: true)
+        new CreateAliasTeam(name: 'untagged', favorite: untagged).save(failOnError: true)
+        new CreateAliasTeam(name: 'no favorite').save(flush: true, failOnError: true)
+
+        expect: 'a team with no favorite does not satisfy a restriction on its favorite'
+        CreateAliasTeam.withCriteria(criteria)*.name == ['untagged']
+        new DetachedCriteria(CreateAliasTeam).build(detachedCriteria).list()*.name == ['untagged']
+
+        where:
+        position << ['before', 'after']
+        criteria << [
+                { createAlias('favorite.tag', 't', 1); favorite { isNull('tag') } },
+                { favorite { isNull('tag') }; createAlias('favorite.tag', 't', 1) }
+        ]
+        detachedCriteria << [
+                { createAlias('favorite.tag', 't'); join('favorite.tag', JoinType.LEFT); favorite { isNull('tag') } },
+                { favorite { isNull('tag') }; createAlias('favorite.tag', 't'); join('favorite.tag', JoinType.LEFT) }
+        ]
+    }
+
+    void 'detached criteria joins a nested path that has a join type and no alias one association at a time'() {
+        given:
+        def tag = new CreateAliasTag(name: 'tag').save(failOnError: true)
+        def tagged = new CreateAliasLike(label: 'tagged', tag: tag).save(failOnError: true)
+        def untagged = new CreateAliasLike(label: 'untagged').save(failOnError: true)
+        new CreateAliasTeam(name: 'tagged', favorite: tagged).save(failOnError: true)
+        new CreateAliasTeam(name: 'untagged', favorite: untagged).save(failOnError: true)
+        new CreateAliasTeam(name: 'no favorite').save(flush: true, failOnError: true)
+
+        expect:
+        new DetachedCriteria(CreateAliasTeam).build {
+            join('favorite.tag', JoinType.LEFT)
+            isNull('favorite.tag')
+        }.list()*.name == ['untagged']
+    }
+
+    void 'an alias path that starts with an earlier alias continues from the join of that alias'() {
+        given:
+        def a = new CreateAliasTag(name: 'a').save(failOnError: true)
+        def b = new CreateAliasTag(name: 'b').save(failOnError: true)
+        def likeA = new CreateAliasLike(label: 'a', tag: a).save(failOnError: true)
+        def likeB = new CreateAliasLike(label: 'b', tag: b).save(failOnError: true)
+        new CreateAliasTeam(name: 'favorite a', favorite: likeA).save(failOnError: true)
+        new CreateAliasTeam(name: 'favorite b', favorite: likeB).save(flush: true, failOnError: true)
+
+        when:
+        def names = CreateAliasTeam.withCriteria {
+            createAlias('favorite', 'f')
+            createAlias('f.tag', 't')
+            eq('f.label', 'a')
+            eq('t.name', 'a')
+            projections { property('name') }
+        }
+
+        then:
+        names == ['favorite a']
+        sqlCapture.statements.last().findAll(/(?i)\bjoin create_alias_like\b/).size() == 1
+        sqlCapture.statements.last().findAll(/(?i)\bjoin create_alias_tag\b/).size() == 1
+    }
+
+    void 'an alias path that starts with an earlier alias keeps the join type of each alias #declarations'() {
+        given:
+        def tag = new CreateAliasTag(name: 'tag').save(failOnError: true)
+        def tagged = new CreateAliasLike(label: 'tagged', tag: tag).save(failOnError: true)
+        def untagged = new CreateAliasLike(label: 'untagged').save(failOnError: true)
+        new CreateAliasTeam(name: 'tagged', favorite: tagged).save(failOnError: true)
+        new CreateAliasTeam(name: 'untagged', favorite: untagged).save(failOnError: true)
+        new CreateAliasTeam(name: 'no favorite').save(flush: true, failOnError: true)
+
+        expect:
+        CreateAliasTeam.withCriteria {
+            for (declaration in declarations) {
+                createAlias(declaration[0], declaration[1], declaration[2])
+            }
+            projections { property('name') }
+            order('name', 'asc')
+        } == expected
+
+        where:
+        declarations                               || expected
+        [['favorite', 'f', 0], ['f.tag', 't', 0]]  || ['tagged']
+        [['favorite', 'f', 0], ['f.tag', 't', 1]]  || ['tagged', 'untagged']
+        [['favorite', 'f', 1], ['f.tag', 't', 1]]  || ['no favorite', 'tagged', 'untagged']
+        [['favorite', 'f', 1], ['f.tag', 't', 0]]  || ['tagged']
+    }
+
+    void 'alias paths #declarations that start with an alias share the joins of the same association path'() {
+        given:
+        def a = new CreateAliasTag(name: 'a').save(failOnError: true)
+        def b = new CreateAliasTag(name: 'b').save(failOnError: true)
+        def likeA = new CreateAliasLike(label: 'a', tag: a).save(failOnError: true)
+        def likeB = new CreateAliasLike(label: 'b', tag: b).save(failOnError: true)
+        def team = new CreateAliasTeam(name: 'team').addToLikes(likeA).addToLikes(likeB).save(failOnError: true)
+        new CreateAliasClub(name: 'club', team: team).save(flush: true, failOnError: true)
+
+        expect: 'the tag is the tag of the like the other alias restricts'
+        CreateAliasClub.withCriteria {
+            for (declaration in declarations) {
+                createAlias(declaration[0], declaration[1])
+            }
+            eq('l.label', 'a')
+            eq('t.name', tagName)
+            projections { property('name') }
+        } == expected
+
+        where:
+        declarations                                                 | tagName || expected
+        [['team', 'tm'], ['tm.likes', 'l'], ['l.tag', 't']]          | 'a'     || ['club']
+        [['team', 'tm'], ['tm.likes', 'l'], ['l.tag', 't']]          | 'b'     || []
+        [['team', 'tm'], ['tm.likes', 'l'], ['tm.likes.tag', 't']]   | 'b'     || []
+        [['team', 'tm'], ['tm.likes', 'l'], ['team.likes.tag', 't']] | 'b'     || []
+        [['team.likes', 'l'], ['l.tag', 't']]                        | 'b'     || []
+    }
+
+    void 'an alias path that starts with a later alias of an association continues from the join of that alias'() {
+        given:
+        def a = new CreateAliasTag(name: 'a').save(failOnError: true)
+        def b = new CreateAliasTag(name: 'b').save(failOnError: true)
+        def likeA = new CreateAliasLike(label: 'a', tag: a).save(failOnError: true)
+        def likeB = new CreateAliasLike(label: 'b', tag: b).save(failOnError: true)
+        new CreateAliasTeam(name: 'team').addToLikes(likeA).addToLikes(likeB).save(flush: true, failOnError: true)
+
+        expect: 'each tag is the tag of the like its own alias refers to'
+        CreateAliasTeam.withCriteria {
+            createAlias('likes', 'first')
+            createAlias('likes', 'second')
+            createAlias('first.tag', 'firstTag')
+            createAlias('second.tag', 'secondTag')
+            eq('first.label', 'a')
+            eq('second.label', 'b')
+            eq('firstTag.name', 'a')
+            eq('secondTag.name', secondTagName)
+            projections { property('name') }
+        } == expected
+
+        where:
+        secondTagName || expected
+        'b'           || ['team']
+        'a'           || []
+    }
+
+    void 'the first segment of an alias path refers to an alias before an association with the same name'() {
+        given:
+        def a = new CreateAliasTag(name: 'a').save(failOnError: true)
+        def b = new CreateAliasTag(name: 'b').save(failOnError: true)
+        def likeA = new CreateAliasLike(label: 'a', tag: a).save(failOnError: true)
+        def likeB = new CreateAliasLike(label: 'b', tag: b).save(failOnError: true)
+        new CreateAliasTeam(name: 'team', favorite: likeB).addToLikes(likeA).save(flush: true, failOnError: true)
+
+        expect: 'favorite.tag is the tag of a like, as favorite is an alias of likes'
+        CreateAliasTeam.withCriteria {
+            createAlias('likes', 'favorite')
+            createAlias('favorite.tag', 't')
+            eq('t.name', tagName)
+            projections { property('name') }
+        } == expected
+
+        where:
+        tagName || expected
+        'a'     || ['team']
+        'b'     || []
+    }
+
+    void 'an alias path that starts with an alias is relative to the association block that declares it'() {
+        given:
+        def tag = new CreateAliasTag(name: 'tag').save(failOnError: true)
+        def favorite = new CreateAliasLike(label: 'favorite', tag: tag).save(failOnError: true)
+        def withFavorite = new CreateAliasTeam(name: 'with favorite', favorite: favorite).save(failOnError: true)
+        def withoutFavorite = new CreateAliasTeam(name: 'without favorite').save(failOnError: true)
+        new CreateAliasClub(name: 'club', team: withFavorite).save(failOnError: true)
+        new CreateAliasClub(name: 'other', team: withoutFavorite).save(flush: true, failOnError: true)
+
+        when:
+        def clubs = CreateAliasClub.createCriteria().list(max: 1) {
+            team {
+                createAlias('favorite', 'f')
+                createAlias('f.tag', 't')
+                eq('t.name', 'tag')
+            }
+        }
+
+        then:
+        clubs*.name == ['club']
+        clubs.totalCount == 1
+    }
+
+    void 'an alias path #path that starts with an alias is rejected when it is not a chain of associations'() {
+        when:
+        CreateAliasTeam.withCriteria {
+            createAlias('favorite', 'f')
+            createAlias(path, 'x')
+        }
+
+        then:
+        def e = thrown(IllegalArgumentException)
+        e.message == "Argument [${path}] is not an association"
+
+        where:
+        path << ['f.label', 'f.missing', 'f.tag.name', 'f.label.tag']
+    }
+
+    void 'a property of an association block is that property, not an outer alias or join of the same name'() {
+        given: 'a team whose like has no tag, one whose like has a tag, and one with no like'
+        def b = new CreateAliasTag(name: 'b').save(failOnError: true)
+        def untagged = new CreateAliasLike(label: 'untagged').save(failOnError: true)
+        def tagged = new CreateAliasLike(label: 'tagged', tag: b).save(failOnError: true)
+        def matching = new CreateAliasTeam(name: 'matching', tag: b).addToLikes(untagged).save(failOnError: true)
+        new CreateAliasTeam(name: 'tagged like', tag: b).addToLikes(tagged).save(failOnError: true)
+        new CreateAliasTeam(name: 'no likes', tag: b).save(flush: true, failOnError: true)
+
+        expect: 'the tag of the team never makes isNull(\'tag\') false for the like'
+        CreateAliasTeam.withCriteria { createAlias('tag', 'tag'); likes { isNull('tag') } }*.id == [matching.id]
+        CreateAliasTeam.withCriteria { tag { eq('name', 'b') }; likes { isNull('tag') } }*.id == [matching.id]
+        CreateAliasTeam.withCriteria { likes { isNotNull('tag') } }*.name == ['tagged like']
+        new DetachedCriteria(CreateAliasTeam).build { createAlias('tag', 't'); likes { isNull('tag') } }.list()*.id == [matching.id]
+        new DetachedCriteria(CreateAliasTeam).build { createAlias('tag', 'tag'); likes { isNull('tag') } }.list()*.id == [matching.id]
+    }
+
+    void 'a left join requested in an association block is kept when an outer alias has the same name'() {
+        given: 'a team whose favorite has no tag, one whose favorite has a tag, and one with no favorite'
+        def x = new CreateAliasTag(name: 'x').save(failOnError: true)
+        def untagged = new CreateAliasLike(label: 'untagged').save(failOnError: true)
+        def tagged = new CreateAliasLike(label: 'tagged', tag: x).save(failOnError: true)
+        def matching = new CreateAliasTeam(name: 'matching', tag: x, favorite: untagged).save(failOnError: true)
+        new CreateAliasTeam(name: 'tagged favorite', tag: x, favorite: tagged).save(failOnError: true)
+        new CreateAliasTeam(name: 'no favorite', tag: x).save(flush: true, failOnError: true)
+
+        expect: 'the favorite is joined, and its missing tag is a null name'
+        CreateAliasTeam.withCriteria { createAlias('tag', 'tag'); favorite { tag(1) { isNull('name') } } }*.id == [matching.id]
+        CreateAliasTeam.withCriteria { favorite { tag(1) { isNull('name') } } }*.id == [matching.id]
+    }
+
+    void 'a nested alias path and a block on the same association restrict the same element'() {
+        given: 'a team with the likes (a, tag A) and (b, tag B), and one with the like (a, tag B)'
+        def tagA = new CreateAliasTag(name: 'tagA').save(failOnError: true)
+        def tagB = new CreateAliasTag(name: 'tagB').save(failOnError: true)
+        def likeA = new CreateAliasLike(label: 'a', tag: tagA).save(failOnError: true)
+        def likeB = new CreateAliasLike(label: 'b', tag: tagB).save(failOnError: true)
+        def likeAB = new CreateAliasLike(label: 'a', tag: tagB).save(failOnError: true)
+        new CreateAliasTeam(name: 'split').addToLikes(likeA).addToLikes(likeB).save(failOnError: true)
+        def together = new CreateAliasTeam(name: 'together').addToLikes(likeAB).save(flush: true, failOnError: true)
+
+        and: 'a club of each team'
+        new CreateAliasClub(name: 'split club', team: CreateAliasTeam.findByName('split')).save(failOnError: true)
+        def club = new CreateAliasClub(name: 'together club', team: together).save(flush: true, failOnError: true)
+
+        expect: 'one like has to be both label a and tag B'
+        CreateAliasClub.withCriteria { createAlias('team.likes.tag', 't'); team { likes { eq('label', 'a') } }; eq('t.name', 'tagB') }*.id == [club.id]
+        CreateAliasClub.withCriteria { team { likes { eq('label', 'a') } }; createAlias('team.likes.tag', 't'); eq('t.name', 'tagB') }*.id == [club.id]
+        CreateAliasClub.withCriteria { createAlias('team.likes.tag', 't'); eq('t.name', 'tagB'); team { likes { eq('label', 'a') } } }*.id == [club.id]
+        CreateAliasTeam.withCriteria { createAlias('likes.tag', 't'); likes { eq('label', 'a') }; eq('t.name', 'tagB') }*.id == [together.id]
+        CreateAliasTeam.withCriteria { likes { eq('label', 'a') }; createAlias('likes.tag', 't'); eq('t.name', 'tagB') }*.id == [together.id]
+        new DetachedCriteria(CreateAliasTeam).build { createAlias('likes.tag', 't'); likes { eq('label', 'a') }; eq('t.name', 'tagB') }.list()*.id == [together.id]
+    }
+
+    void 'a nested alias path and a block that declares its own alias on the same association restrict the same element'() {
+        given: 'a team with the likes (a, tag A) and (b, tag B), and one with the like (a, tag B)'
+        def tagA = new CreateAliasTag(name: 'tagA').save(failOnError: true)
+        def tagB = new CreateAliasTag(name: 'tagB').save(failOnError: true)
+        def likeA = new CreateAliasLike(label: 'a', tag: tagA).save(failOnError: true)
+        def likeB = new CreateAliasLike(label: 'b', tag: tagB).save(failOnError: true)
+        def likeAB = new CreateAliasLike(label: 'a', tag: tagB).save(failOnError: true)
+        new CreateAliasTeam(name: 'split').addToLikes(likeA).addToLikes(likeB).save(failOnError: true)
+        def together = new CreateAliasTeam(name: 'together').addToLikes(likeAB).save(flush: true, failOnError: true)
+        new CreateAliasClub(name: 'split club', team: CreateAliasTeam.findByName('split')).save(failOnError: true)
+        def club = new CreateAliasClub(name: 'together club', team: together).save(flush: true, failOnError: true)
+
+        expect: 'one like has to be both label a and tag B, whichever alias is declared first'
+        CreateAliasClub.withCriteria { createAlias('team.likes.tag', 't'); team { createAlias('likes', 'l'); eq('l.label', 'a') }; eq('t.name', 'tagB') }*.id == [club.id]
+        CreateAliasClub.withCriteria { team { createAlias('likes', 'l'); eq('l.label', 'a') }; createAlias('team.likes.tag', 't'); eq('t.name', 'tagB') }*.id == [club.id]
+        new DetachedCriteria(CreateAliasClub).build { createAlias('team.likes.tag', 't'); team { createAlias('likes', 'l'); eq('l.label', 'a') }; eq('t.name', 'tagB') }.list()*.id == [club.id]
+    }
+
+    void 'a block that asks for an inner join keeps it when a nested alias path joins the same association with a left join'() {
+        given: 'a club whose team has no likes, and one whose team has a like without a tag'
+        def bare = new CreateAliasTeam(name: 'bare').save(failOnError: true)
+        def like = new CreateAliasLike(label: 'untagged').save(failOnError: true)
+        def liked = new CreateAliasTeam(name: 'liked').addToLikes(like).save(flush: true, failOnError: true)
+        new CreateAliasClub(name: 'bare club', team: bare).save(failOnError: true)
+        def likedClub = new CreateAliasClub(name: 'liked club', team: liked).save(flush: true, failOnError: true)
+
+        expect: 'the block needs a like, so only the club whose team has one is returned'
+        CreateAliasClub.withCriteria { createAlias('team.likes.tag', 't', 1); team { likes { isNull('tag') } } }*.id == [likedClub.id]
+        CreateAliasClub.withCriteria { team { likes { isNull('tag') } }; createAlias('team.likes.tag', 't', 1) }*.id == [likedClub.id]
+        new DetachedCriteria(CreateAliasClub).build { createAlias('team.likes.tag', 't'); join('team.likes.tag', JoinType.LEFT); team { likes { isNull('tag') } } }.list()*.id == [likedClub.id]
+    }
+
+    void 'a block that asks for a left join keeps it when an alias of the same name as its association is declared outside it'() {
+        given: 'a team with a favorite and no likes, one with a favorite and a like, and one with neither'
+        def favorite = new CreateAliasLike(label: 'f').save(failOnError: true)
+        def likeX = new CreateAliasLike(label: 'x').save(failOnError: true)
+        def noLikes = new CreateAliasTeam(name: 'no likes', favorite: favorite).save(failOnError: true)
+        new CreateAliasTeam(name: 'with like', favorite: favorite).addToLikes(likeX).save(failOnError: true)
+        new CreateAliasTeam(name: 'bare').save(flush: true, failOnError: true)
+
+        expect: 'the unreferenced alias still joins the favorite, and the left join of the block returns the team without likes'
+        CreateAliasTeam.withCriteria { createAlias('favorite', 'likes'); likes(1) { isNull('label') } }*.id == [noLikes.id]
+        CreateAliasTeam.withCriteria { likes(1) { isNull('label') }; createAlias('favorite', 'likes') }*.id == [noLikes.id]
+    }
 }
 
 @Entity
@@ -1275,6 +1886,12 @@ class CreateAliasLike {
 @Entity
 class CreateAliasTag {
     String name
+}
+
+@Entity
+class CreateAliasClub {
+    String name
+    CreateAliasTeam team
 }
 
 @Entity
