@@ -57,6 +57,16 @@ Arguments:
 * `comment` (optional) - The comment for the column (used to create the table DDL)
 * `defaultValue` (optional) - The database default value
 
+Properties that name the same `index` share one composite index. The columns appear in the index in the order the properties are declared in the mapping block, so this declaration creates an index on `(token, address)`:
+
+[source,groovy]
+----
+static mapping = {
+    token index: 'idx_nft'
+    address index: 'idx_nft'
+}
+----
+
 By default GORM uses the property name and type to determine how to map a property in the database. For example a `String` property is typically mapped as a `varchar(255)` column. You can customize these with column configuration arguments:
 
 [source,groovy]
