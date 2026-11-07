@@ -88,6 +88,86 @@ class JpaQueryBuilderFunctionSpec extends Specification {
         info.parameters == [30, 'Alice', 21, 'bob']
     }
 
+    void "a subquery without criteria has no WHERE, so the statement parses"() {
+        given:
+        QueryableCriteria subquery = Stub(QueryableCriteria) {
+            getPersistentEntity() >> entity
+            getProjections() >> [Projections.property('name')]
+            getCriteria() >> []
+        }
+
+        when:
+        def info = new JpaQueryBuilder(entity, [new FunctionCallingCriterion('upper', new Query.In('name', subquery))]).buildDelete()
+
+        then:
+        info.query == "DELETE FROM ${JpaFunctionTestPerson.name} jpaFunctionTestPerson WHERE (upper(jpaFunctionTestPerson.name) IN (SELECT jpaFunctionTestPerson0.name FROM ${JpaFunctionTestPerson.name} jpaFunctionTestPerson0))"
+        info.parameters == []
+    }
+
+    @Unroll
+    void "a function with a one-row subquery as its value renders the subquery for operator #operator"() {
+        given:
+        QueryableCriteria subquery = Stub(QueryableCriteria) {
+            getPersistentEntity() >> entity
+            getProjections() >> [Projections.max('age')]
+            getCriteria() >> [new Query.Equals('name', 'Alice')]
+        }
+
+        when:
+        def info = new JpaQueryBuilder(entity, [new FunctionCallingCriterion('year', criterion(subquery))]).buildDelete()
+
+        then: 'the subquery is part of the statement and its parameter is bound, not the criteria object'
+        info.query == "DELETE FROM ${JpaFunctionTestPerson.name} jpaFunctionTestPerson WHERE (year(jpaFunctionTestPerson.age)${operator}(SELECT MAX(jpaFunctionTestPerson0.age) FROM ${JpaFunctionTestPerson.name} jpaFunctionTestPerson0 WHERE jpaFunctionTestPerson0.name=:p1))"
+        info.parameters == ['Alice']
+
+        where:
+        criterion << [
+            { new Query.Equals('age', it) },
+            { new Query.NotEquals('age', it) },
+            { new Query.GreaterThan('age', it) },
+            { new Query.LessThanEquals('age', it) }
+        ]
+        operator << [' = ', ' != ', ' > ', ' <= ']
+    }
+
+    void "a function over an rlike is rejected in a bulk statement, as a plain rlike is, and not written as LIKE"() {
+        when:
+        new JpaQueryBuilder(entity, [new FunctionCallingCriterion('lower', new Query.RLike('name', '^r.x$'))]).buildDelete()
+
+        then:
+        thrown(InvalidDataAccessResourceUsageException)
+
+        when:
+        new JpaQueryBuilder(entity, [new Query.RLike('name', '^r.x$')]).buildDelete()
+
+        then:
+        thrown(InvalidDataAccessResourceUsageException)
+    }
+
+    @Unroll
+    void "the function name '#functionName' is rejected before it reaches the statement"() {
+        when:
+        new JpaQueryBuilder(entity, [new FunctionCallingCriterion(functionName, new Query.Equals('name', 'x'))]).buildUpdate(age: 30)
+
+        then:
+        thrown(InvalidDataAccessResourceUsageException)
+
+        where:
+        functionName << ["upper(name) = name OR 1=1 OR upper", 'concat', 'LOWER', '', 'lower)', 'x y']
+    }
+
+    @Unroll
+    void "the function #functionName that the where DSL supports is accepted"() {
+        when:
+        def info = new JpaQueryBuilder(entity, [new FunctionCallingCriterion(functionName, new Query.Equals('name', 'x'))]).buildDelete()
+
+        then:
+        info.query.contains("${functionName}(jpaFunctionTestPerson.name)")
+
+        where:
+        functionName << ['lower', 'upper', 'trim', 'length', 'second', 'hour', 'minute', 'day', 'month', 'year']
+    }
+
     void "FunctionCallingCriterion throws when function is on value"() {
         given:
         def criteria = [new FunctionCallingCriterion('name', 'upper', new Query.Equals('name', 'BOB'), true)]
@@ -141,12 +221,34 @@ class JpaQueryBuilderFunctionSpec extends Specification {
         info.parameters == ['Alice']
     }
 
-    void "QueryableCriteria default methods return self and do nothing"() {
+    void "an In subquery that is deferred is materialized before its restriction is read"() {
+        given:
+        QueryableCriteria materializedSubquery = Stub(QueryableCriteria) {
+            getPersistentEntity() >> entity
+            getProjections() >> [Projections.property('name')]
+            getCriteria() >> [new Query.Equals('name', 'Alice')]
+        }
+        QueryableCriteria deferredSubquery = Stub(QueryableCriteria) {
+            getPersistentEntity() >> entity
+            getProjections() >> []
+            getCriteria() >> []
+            materializeLazyCriteria() >> materializedSubquery
+        }
+        def criteria = [new Query.In('name', deferredSubquery)]
+
+        when:
+        def info = new JpaQueryBuilder(entity, criteria).buildDelete()
+
+        then: 'the subquery carries the restriction and projection of the materialized criteria'
+        info.query == "DELETE FROM ${JpaFunctionTestPerson.name} jpaFunctionTestPerson WHERE (jpaFunctionTestPerson.name IN (SELECT jpaFunctionTestPerson0.name FROM ${JpaFunctionTestPerson.name} jpaFunctionTestPerson0 WHERE jpaFunctionTestPerson0.name=:p1))"
+        info.parameters == ['Alice']
+    }
+
+    void "QueryableCriteria materializeLazyCriteria returns self by default"() {
         given:
         QueryableCriteria criteria = [:] as QueryableCriteria
 
         when:
-        criteria.applyLazyCriteria()
         QueryableCriteria materialized = criteria.materializeLazyCriteria()
 
         then:

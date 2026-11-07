@@ -1468,7 +1468,23 @@ Removing one element of a unidirectional `hasMany` set or bag, with `removeFrom*
 
 Under Hibernate 7, calling a collection criterion such as `isNotEmpty('pets')`, `isEmpty('pets')`, or `sizeEq('pets', n)` next to an association block for the same collection (`pets { ... }`) threw a `ClassCastException` because the path resolved to the join rather than the collection attribute (issue https://github.com/apache/grails-core/issues/16633[#16633]). Collection criteria now resolve to the collection property on the parent whether they appear before or after an association block of the same name.
 
-===== 26.14 Bulk deleteAll and updateAll on a Query
+===== 26.14 Not-Equal Comparisons Leave Out Null Rows
+
+As of Grails 8.0.1, a comparison that says a property is not equal to a value does not return the rows whose property is `null`, on Hibernate 7 and on Hibernate 5, whichever way the query is run. `where { qty != 2 }`, `ne('qty', 2)`, `findAllByQtyNotEqual(2)` and the negations `!(qty == 2)`, `not { eq('qty', 2) }`, `!(qty in [2])` and `findAllByQtyNotInList([2])` return the rows whose `qty` is something other than 2, as SQL does, where a `null` is neither equal nor not equal to 2. The same holds inside `||`.
+
+Before, the same where query returned the rows with a `null` when it was read with `list()` or `count()` and left them out when it ran as `updateAll` or `deleteAll`, so a query could select one set of rows to read and another to change. All the forms and all the operations now agree.
+
+An application on 8.0.0 that relied on the rows with a `null` being returned adds them back with an explicit test:
+
+[source,groovy]
+----
+Item.where { qty != 2 || qty == null }.list()
+Item.createCriteria().list { or { ne('qty', 2); isNull('qty') } }
+----
+
+The functions that a where query calls on a property are `lower`, `upper`, `trim`, `length`, `second`, `hour`, `minute`, `day`, `month` and `year`. A criterion that names any other function throws an `InvalidDataAccessResourceUsageException`, in a read and in `updateAll` and `deleteAll`; before, Hibernate 7 passed the name to the database and a bulk statement wrote it into the query as it was given. A function over an `rlike` is rejected in `updateAll` and `deleteAll`, which have no regular expression operator, and is applied in a read.
+
+===== 26.15 Bulk deleteAll and updateAll on a Query
 
 `deleteAll()` and `updateAll(Map)` on a `where` query or a `DetachedCriteria` run one `delete` or `update` statement. The statement has no row limit, so a query that carries `max` or `offset` used to write to every matching row: `Person.where { age > 18 }.max(2).deleteAll()` deleted all of them (issue https://github.com/apache/grails-core/issues/16805[#16805]). `deleteAll()` and `updateAll(Map)` now throw an `InvalidDataAccessResourceUsageException` that names the `max` or `offset` value, and write nothing. Select the ids first, with the limit on that query, and delete or update by id:
 
@@ -4912,6 +4928,7 @@ With `DISCRIMINATOR` multi-tenancy, GORM for MongoDB, GORM for Neo4j and GORM's 
 As of Grails 8.0.1, and 7.0.18 on the 7.0.x line, the lists of bindable properties that Grails generates for a class at compile time, from its statically typed properties, its `bindable` constraints, its `transients` list and its `transient` fields, are generated for every class that implements `grails.validation.Validateable` or declares `constraints` or `transients`, and for every class that extends one, wherever the class is compiled with the data binding library, `grails-web-databinding`, on the compilation's classpath, as it is in an application or a plugin. A library module that compiles against GORM alone generates no lists and gets no warning. Previously only domain classes and the parameter types of controller actions compiled with their controller got them, and in the permissive mode a class without them was bound without restriction.
 
 * A command object compiled apart from the controller that binds it, in a plugin or in a shared module, a `Validateable` object bound as a nested property, and a command object declared inside another class are now bound by their `bindable` constraints and their `transients`, like a command object compiled with its controller. As a consequence, in the permissive mode their dynamically typed properties, declared with `def` or as `Object`, are no longer bound by default. Declare a type for such a property, or mark it `bindable: true`.
+* A GORM entity compiled outside `grails-app/domain`, such as an `@Entity` class in `src/main/groovy` or in a shared module, now gets the lists a domain class in `grails-app/domain` gets, as GORM declares a `transients` list on every entity, and is bound by the same rules. In particular, `bindData` no longer binds its `id`, `version`, `dateCreated` and `lastUpdated`. Previously, in the permissive mode, such a class was bound without restriction, its `id` and `version` included.
 * A class compiled against an already compiled parent takes the parent's bindable properties from the compiled parent. When the parent was compiled by an earlier version of Grails, or without the data binding library on its compile classpath, the compiler warns that the lists of the subclass are derived from the parent's bytecode and asks for the parent to be recompiled. Recompile the plugin or module that holds the parent with Grails 8.0.1 or later, or 7.0.18 or later, to clear the warning.
 * A property of type `org.springframework.validation.Errors`, such as the `errors` property of a domain class or of a `Validateable` object, is never bound from request data, whatever a generated list names.
 * `bindData` with an `exclude` list, including the `bindData(target, source, List excludes)` overloads, keeps the generated list in effect in the permissive mode too and removes the excluded properties from it. Previously, in the permissive mode, an `exclude` list without an `include` list set the generated list aside, so that only the excluded properties were kept out.

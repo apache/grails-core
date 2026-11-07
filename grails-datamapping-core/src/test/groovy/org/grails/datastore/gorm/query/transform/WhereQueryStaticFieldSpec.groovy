@@ -114,8 +114,8 @@ class StmtKindsQueryBook {
         given:
         grails.gorm.DetachedCriteria lazy = compile().lazyQuery
 
-        expect: 'nothing has been built yet'
-        lazy.criteria.empty
+        expect: 'nothing has been built yet: the closure is pending, and only a read or a change runs it'
+        lazy.@lazyQuery != null
 
         when: 'a criterion is added, which triggers the deferred criteria to be applied first'
         lazy.add(new Query.Equals('price', 1))
