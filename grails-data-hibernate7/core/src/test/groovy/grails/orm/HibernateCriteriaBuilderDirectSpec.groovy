@@ -426,6 +426,41 @@ class HibernateCriteriaBuilderDirectSpec extends HibernateGormDatastoreSpec {
         c.list { inList("category", ["X", "Y"]) }.size() == 4
         c.list { inList("category", "X", "Y") }.size() == 4
         c.list { inList("category", "Y") }*.name.sort() == ["C", "D"]
+        c.list { inList("category", ["Y", null]) }*.name.sort() == ["C", "D"]
+        c.list { inList("category", [null]) }.empty
+        c.list { inList("category", []) }.empty
+    }
+
+    void "test shared subquery without explicit projections is not mutated across queries"() {
+        given:
+        def sharedSubquery = new DetachedCriteria(CriteriaTestEntity).build {
+            eq("category", "Y")
+        }
+
+        when:
+        def byAmount = c.list { inList("amount", sharedSubquery) }*.name.sort()
+        def byCategory = c.list { inList("category", sharedSubquery) }*.name.sort()
+
+        then:
+        sharedSubquery.projections.isEmpty()
+        byAmount == ["C", "D"]
+        byCategory == ["C", "D"]
+    }
+
+    void "test invalid property paths in property comparison, unary property name, and subquery criteria throw ConfigurationException"() {
+        when:
+        c.list(criteriaClosure)
+
+        then:
+        def e = thrown(org.grails.datastore.mapping.core.exceptions.ConfigurationException)
+        e.message.contains(expectedProperty)
+
+        where:
+        expectedProperty     | criteriaClosure
+        "nonExistentLeft"    | { eqProperty("nonExistentLeft", "name") }
+        "nonExistentRight"   | { eqProperty("name", "nonExistentRight") }
+        "nonExistentUnary"   | { isNull("nonExistentUnary") }
+        "nonExistentSubquery"| { eqAll("nonExistentSubquery", new DetachedCriteria(CriteriaTestEntity).build { projections { property("amount") } }) }
     }
 
     void "test eq with ignoreCase param matches the whole value in any case"() {

@@ -822,6 +822,53 @@ class PredicateGeneratorSpec extends HibernateGormDatastoreSpec {
         then:
         thrown(IllegalArgumentException)
     }
+
+    def "subquery translation does not mutate source criteria projection list in-place"() {
+        given:
+        def subCriteria = new DetachedCriteria(PredicateGeneratorSpecPerson).eq("lastName", "Smith")
+        List criteria = [
+            new Query.In("id", subCriteria),
+            new Query.EqualsAll("age", subCriteria)
+        ]
+
+        when:
+        def predicates = predicateGenerator.getPredicates(query, root, criteria, fromProvider, personEntity)
+
+        then:
+        predicates.length == 2
+        subCriteria.projections.isEmpty()
+    }
+
+    def "property comparison and property name criteria throw ConfigurationException on non-existent property"() {
+        when:
+        predicateGenerator.getPredicates(query, root, [criterion], fromProvider, personEntity)
+
+        then:
+        thrown(ConfigurationException)
+
+        where:
+        criterion << [
+            new Query.EqualsProperty("nonExistent", "lastName"),
+            new Query.EqualsProperty("firstName", "nonExistent"),
+            new Query.IsNull("nonExistent"),
+            new Query.EqualsAll("nonExistent", new DetachedCriteria(PredicateGeneratorSpecPerson))
+        ]
+    }
+
+    def "Query.In filters null values and returns disjunction when empty"() {
+        given:
+        List criteria = [
+            new Query.In("firstName", ["Bob", null]),
+            new Query.In("firstName", [null]),
+            new Query.In("firstName", [])
+        ]
+
+        when:
+        def predicates = predicateGenerator.getPredicates(query, root, criteria, fromProvider, personEntity)
+
+        then:
+        predicates.length == 3
+    }
 }
 
 @Entity
