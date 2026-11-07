@@ -40,12 +40,13 @@ import org.grails.datastore.mapping.query.criteria.FunctionCallingCriterion;
  *
  * @since 8.0.1
  */
-public class FunctionCallingCriterionHandler implements InternalCriterionHandler<FunctionCallingCriterion> {
+class FunctionCallingCriterionHandler implements InternalCriterionHandler<FunctionCallingCriterion> {
 
     @Override
     @SuppressWarnings("unchecked")
     public Predicate handle(CriterionContext context, FunctionCallingCriterion criterion) {
         String functionName = criterion.getFunctionName();
+        FunctionCallingCriterion.requireSupported(functionName);
         if (criterion.isOnValue()) {
             throw new UnsupportedOperationException("A function on the value of a comparison is not supported: " + functionName);
         }

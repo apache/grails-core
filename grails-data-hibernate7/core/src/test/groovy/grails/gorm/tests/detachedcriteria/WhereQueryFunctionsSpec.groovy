@@ -23,12 +23,13 @@ import grails.gorm.annotation.Entity
 import grails.gorm.hibernate.HibernateEntity
 import grails.gorm.tests.HibernateGormDatastoreSpec
 import org.grails.datastore.mapping.query.Query
+import org.springframework.dao.InvalidDataAccessResourceUsageException
 import org.grails.datastore.mapping.query.criteria.FunctionCallingCriterion
 
 class WhereQueryFunctionsSpec extends HibernateGormDatastoreSpec {
 
     def setupSpec() {
-        manager.registerDomainClasses(WhereQueryFunctionEntity)
+        manager.registerDomainClasses(WhereQueryFunctionEntity, WhereQueryFunctionOwner, WhereQueryFunctionPet)
     }
 
     private void seedEntities() {
@@ -36,6 +37,12 @@ class WhereQueryFunctionsSpec extends HibernateGormDatastoreSpec {
         new WhereQueryFunctionEntity(name: 'b', label: 'Beta', amount: 2, created: date(2012, 1, 1)).save(flush: true)
         new WhereQueryFunctionEntity(name: 'c', label: null, amount: 3, created: date(2013, 1, 1)).save(flush: true)
         new WhereQueryFunctionEntity(name: 'd', label: 'Delta', amount: null, created: null).save(flush: true)
+    }
+
+    private static DetachedCriteria<WhereQueryFunctionEntity> criteriaOf(Query.Criterion criterion) {
+        DetachedCriteria<WhereQueryFunctionEntity> criteria = new DetachedCriteria<>(WhereQueryFunctionEntity)
+        criteria.add(criterion)
+        criteria
     }
 
     private static Date date(int year, int month, int day) {
@@ -147,6 +154,193 @@ class WhereQueryFunctionsSpec extends HibernateGormDatastoreSpec {
         WhereQueryFunctionEntity.findByName('b').amount == 10
         WhereQueryFunctionEntity.findByName('d').amount == 20
     }
+
+    void "deleteAll with a function deletes the rows the function matches"() {
+        given:
+        seedEntities()
+
+        when:
+        int deleted = WhereQueryFunctionEntity.where { upper(name) == 'A' }.deleteAll()
+        session.clear()
+
+        then:
+        deleted == 1
+        WhereQueryFunctionEntity.list()*.name.sort() == ['b', 'c', 'd']
+    }
+
+    void "a function in over a subquery works in a bulk statement"() {
+        given:
+        seedEntities()
+        DetachedCriteria<WhereQueryFunctionEntity> sub = new DetachedCriteria<>(WhereQueryFunctionEntity).build {
+            projections { property('name') }
+            le('amount', 2)
+        }
+
+        when:
+        int updated = criteriaOf(new FunctionCallingCriterion('lower', new Query.In('name', sub))).updateAll(amount: 50)
+        int deleted = criteriaOf(new FunctionCallingCriterion('upper', new Query.In('name', sub))).deleteAll()
+        session.clear()
+
+        then: 'the subquery is evaluated by the database, and the rows it selected are the ones written'
+        updated == 2
+        deleted == 0
+        WhereQueryFunctionEntity.findByName('a').amount == 50
+        WhereQueryFunctionEntity.findByName('b').amount == 50
+        WhereQueryFunctionEntity.findByName('c').amount == 3
+    }
+
+    void "a criterion after a subquery in a bulk statement gets its own parameter"() {
+        given:
+        seedEntities()
+        DetachedCriteria<WhereQueryFunctionEntity> sub = new DetachedCriteria<>(WhereQueryFunctionEntity).build {
+            projections { property('name') }
+            le('amount', 2)
+        }
+
+        when: 'inList then a restriction'
+        int inListUpdated = new DetachedCriteria<>(WhereQueryFunctionEntity).build { inList('name', sub); eq('amount', 1) }.updateAll(label: 'in')
+        session.clear()
+
+        then:
+        inListUpdated == 1
+        WhereQueryFunctionEntity.findAllByLabel('in')*.name == ['a']
+
+        when: 'notIn then a restriction'
+        int notInUpdated = new DetachedCriteria<>(WhereQueryFunctionEntity).build { notIn('name', sub); eq('amount', 3) }.updateAll(label: 'notin')
+        session.clear()
+
+        then:
+        notInUpdated == 1
+        WhereQueryFunctionEntity.findAllByLabel('notin')*.name == ['c']
+
+        when: 'inList then a not-equal restriction'
+        int neUpdated = new DetachedCriteria<>(WhereQueryFunctionEntity).build { inList('name', sub); ne('amount', 1) }.updateAll(label: 'ne')
+        session.clear()
+
+        then:
+        neUpdated == 1
+        WhereQueryFunctionEntity.findAllByLabel('ne')*.name == ['b']
+    }
+
+    void "== and != against a projected subquery run"() {
+        given:
+        seedEntities()
+
+        when:
+        def equalToMax = WhereQueryFunctionEntity.where { amount == max(amount) }.list()*.name
+        def notMax = WhereQueryFunctionEntity.where { amount != max(amount) }.list()*.name.sort()
+
+        then: 'the row without an amount is not compared, as in SQL'
+        equalToMax == ['c']
+        notMax == ['a', 'b']
+    }
+
+    void "the documented date functions execute on every part of a date"() {
+        given:
+        new WhereQueryFunctionEntity(name: 'x', amount: 1, created: new GregorianCalendar(2014, 4, 6, 7, 8, 9).time).save(flush: true)
+        new WhereQueryFunctionEntity(name: 'y', amount: 1, created: new GregorianCalendar(2015, 5, 7, 8, 9, 10).time).save(flush: true)
+
+        when:
+        def byYear = WhereQueryFunctionEntity.where { year(created) == 2014 }.list()*.name
+        def byMonth = WhereQueryFunctionEntity.where { month(created) == 5 }.list()*.name
+        def byDay = WhereQueryFunctionEntity.where { day(created) == 7 }.list()*.name
+        def byHour = WhereQueryFunctionEntity.where { hour(created) == 7 }.list()*.name
+        def byMinute = WhereQueryFunctionEntity.where { minute(created) == 9 }.list()*.name
+        def bySecond = WhereQueryFunctionEntity.where { second(created) == 9 }.list()*.name
+
+        then:
+        byYear == ['x']
+        byMonth == ['x']
+        byDay == ['y']
+        byHour == ['x']
+        byMinute == ['y']
+        bySecond == ['x']
+    }
+
+    void "a function on a property of an association works, as the guide shows: year(pets.birthDate)"() {
+        given:
+        new WhereQueryFunctionOwner(name: 'old').addToPets(new WhereQueryFunctionPet(birthDate: date(2009, 3, 1)))
+                .addToPets(new WhereQueryFunctionPet(birthDate: date(2015, 3, 1))).save(flush: true)
+        new WhereQueryFunctionOwner(name: 'new').addToPets(new WhereQueryFunctionPet(birthDate: date(2015, 3, 1))).save(flush: true)
+
+        when:
+        def in2009 = WhereQueryFunctionOwner.where { year(pets.birthDate) == 2009 }.list()*.name
+        def after2009 = WhereQueryFunctionOwner.where { year(pets.birthDate) > 2009 }.list()*.name.sort()
+        def inMarch2015 = WhereQueryFunctionOwner.where { month(pets.birthDate) == 3 && year(pets.birthDate) == 2015 }.list()*.name.sort()
+
+        then:
+        in2009 == ['old']
+        after2009 == ['new', 'old']
+        inMarch2015 == ['new', 'old']
+    }
+
+    void "a function name that the where DSL does not support is rejected, and writes nothing"() {
+        given:
+        seedEntities()
+        def criterion = new FunctionCallingCriterion("upper(name) = name OR 1=1 OR upper", new Query.Equals('name', 'x'))
+
+        when:
+        criteriaOf(criterion).updateAll(amount: 99)
+
+        then:
+        thrown(InvalidDataAccessResourceUsageException)
+
+        when:
+        criteriaOf(criterion).list()
+
+        then:
+        thrown(InvalidDataAccessResourceUsageException)
+
+        and:
+        WhereQueryFunctionEntity.findAllByAmount(99).isEmpty()
+    }
+
+    void "a function over an rlike matches on a read and is rejected in a bulk statement, which has no regular expression"() {
+        given:
+        seedEntities()
+        def criterion = new FunctionCallingCriterion('lower', new Query.RLike('name', '^a$'))
+
+        expect: 'the read applies the regular expression'
+        criteriaOf(criterion).list()*.name == ['a']
+
+        when: 'a bulk statement would have written it as LIKE and matched differently'
+        criteriaOf(criterion).deleteAll()
+
+        then:
+        thrown(InvalidDataAccessResourceUsageException)
+        WhereQueryFunctionEntity.count() == 4
+    }
+
+    void "a function over an equality with a one-row detached criteria deletes through a subquery"() {
+        given:
+        seedEntities()
+        DetachedCriteria<WhereQueryFunctionEntity> oneRow = new DetachedCriteria<>(WhereQueryFunctionEntity).build {
+            projections { property('name') }
+            eq('amount', 1)
+        }
+
+        when:
+        int deleted = criteriaOf(new FunctionCallingCriterion('lower', new Query.Equals('name', oneRow))).deleteAll()
+        session.clear()
+
+        then:
+        deleted == 1
+        WhereQueryFunctionEntity.list()*.name.sort() == ['b', 'c', 'd']
+    }
+}
+
+@Entity
+class WhereQueryFunctionOwner implements HibernateEntity<WhereQueryFunctionOwner> {
+
+    String name
+
+    static hasMany = [pets: WhereQueryFunctionPet]
+}
+
+@Entity
+class WhereQueryFunctionPet implements HibernateEntity<WhereQueryFunctionPet> {
+
+    Date birthDate
 }
 
 @Entity

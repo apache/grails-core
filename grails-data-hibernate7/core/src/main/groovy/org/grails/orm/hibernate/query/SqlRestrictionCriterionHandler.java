@@ -31,7 +31,7 @@ import org.hibernate.query.criteria.HibernateCriteriaBuilder;
  *
  * @since 8.0.1
  */
-public class SqlRestrictionCriterionHandler implements InternalCriterionHandler<SqlRestriction> {
+class SqlRestrictionCriterionHandler implements InternalCriterionHandler<SqlRestriction> {
 
     @Override
     public Predicate handle(CriterionContext context, SqlRestriction restriction) {

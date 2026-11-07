@@ -168,7 +168,7 @@ class CriteriaComparisonScenarioSpec extends Specification {
         names(rows) == ['a', 'c']
     }
 
-    void "where: negation follows SQL three-valued logic, unlike != which includes null rows"() {
+    void "where: a negation leaves out the rows whose value is null, as != does"() {
         given:
         seed()
 
