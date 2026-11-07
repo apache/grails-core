@@ -86,7 +86,8 @@ public class GrailsExceptionResolver extends SimpleMappingExceptionResolver impl
     /**
      * Where {@link ServerHttpObservationFilter} keeps the observation of a request. The filter only offers its context,
      * which cannot tell the handlers of an error, and a registry cannot be relied on to find it, because a filter can be
-     * built with a registry the application does not know.
+     * built with a registry the application does not know. A public way to get it is requested in
+     * <a href="https://github.com/spring-projects/spring-framework/issues/37658">spring-framework#37658</a>.
      */
     private static final String SERVER_OBSERVATION_ATTRIBUTE =
             ServerHttpObservationFilter.class.getName() + ".observation";
