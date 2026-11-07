@@ -699,7 +699,8 @@ public abstract class Query implements Cloneable, Serializable {
      * <p>A comparison ({@code ==}, {@code !=}, {@code >}, {@code >=}, {@code <}, {@code <=}) against a
      * subquery, such as {@code age > avg(age)}, takes the one value the subquery returns, and {@code in}
      * and {@code notIn} take all of them. A comparison against a subquery that returns no row matches no row,
-     * as in SQL, where the comparison is unknown. A subquery that returns more than one row for a comparison is
+     * as in SQL, where the comparison is unknown, and so is its negation: {@code not { age > (empty) }} matches no
+     * row either. A subquery that returns more than one row for a comparison is
      * rejected. Subqueries inside an association block are resolved too. {@code exists}, {@code notExists} and the {@code all} and {@code some} forms are rejected
      * with an {@link InvalidDataAccessResourceUsageException}, as they are not supported.</p>
      *
@@ -709,15 +710,16 @@ public abstract class Query implements Cloneable, Serializable {
      * @since 8.0.1
      */
     protected Junction resolveSubqueries(Junction criteria) {
-        return (Junction) resolveSubqueries((Criterion) criteria);
+        return (Junction) resolveSubqueries((Criterion) criteria, false);
     }
 
-    private Criterion resolveSubqueries(Criterion criterion) {
+    private Criterion resolveSubqueries(Criterion criterion, boolean negated) {
         if (criterion instanceof Junction junction) {
             List<Criterion> resolved = new ArrayList<>(junction.getCriteria().size());
             boolean changed = false;
+            boolean nestedNegated = junction instanceof Negation ? !negated : negated;
             for (Criterion nested : junction.getCriteria()) {
-                Criterion replacement = resolveSubqueries(nested);
+                Criterion replacement = resolveSubqueries(nested, nestedNegated);
                 changed |= replacement != nested;
                 resolved.add(replacement);
             }
@@ -750,7 +752,7 @@ public abstract class Query implements Cloneable, Serializable {
         }
         if (criterion instanceof AssociationQuery associationQuery) {
             Junction nested = associationQuery.getCriteria();
-            Junction resolved = (Junction) resolveSubqueries((Criterion) nested);
+            Junction resolved = (Junction) resolveSubqueries((Criterion) nested, negated);
             if (resolved == nested) {
                 return criterion;
             }
@@ -767,8 +769,17 @@ public abstract class Query implements Cloneable, Serializable {
             }
             List<?> rows = subquery.list();
             if (rows == null || rows.isEmpty()) {
-                // a comparison with the value of an empty subquery is unknown in SQL, so it matches no row
-                return new In(property.getProperty(), Collections.emptyList());
+                // a comparison with the value of an empty subquery is unknown in SQL, and so is its negation: a row is
+                // returned only when the whole condition is true. A criterion that matches no row stands for it,
+                // or one that matches every row when an odd number of negations encloses it, so that the
+                // negation matches none
+                Criterion none = new In(property.getProperty(), Collections.emptyList());
+                if (!negated) {
+                    return none;
+                }
+                Negation every = new Negation();
+                every.add(none);
+                return every;
             }
             if (rows.size() > 1) {
                 throw new InvalidDataAccessResourceUsageException("The subquery compared with property '" +

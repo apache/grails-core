@@ -142,6 +142,32 @@ class AggregateSubquerySpec extends Neo4jGormDatastoreSpec {
         notEqual.isEmpty()
     }
 
+    void "a negated comparison against a subquery that returns no row matches no row, as in SQL"() {
+        given:
+        seed()
+        new AggSubNode(firstName: 'Nobody').save(failOnError: true)
+        manager.session.flush()
+        manager.session.clear()
+
+        when:
+        List<AggSubNode> negated = AggSubNode.where { !(age > avg(age).of { firstName == 'Absent' }) }.list()
+        List<AggSubNode> notBlock = AggSubNode.createCriteria().list {
+            not { gt('age', AggSubNode.where { firstName == 'Absent' }.property('age')) }
+        }
+        List<AggSubNode> twice = AggSubNode.createCriteria().list {
+            not { not { gt('age', AggSubNode.where { firstName == 'Absent' }.property('age')) } }
+        }
+        List<AggSubNode> inNegatedOr = AggSubNode.where { !(age > avg(age).of { firstName == 'Absent' } || firstName == 'Bart') }.list()
+        List<AggSubNode> inNegatedAnd = AggSubNode.where { !(age > avg(age).of { firstName == 'Absent' } && firstName == 'Bart') }.list(sort: 'firstName')
+
+        then: 'the comparison is unknown, so its negation is unknown too, and the rows follow SQL three-valued logic'
+        negated.isEmpty()
+        notBlock.isEmpty()
+        twice.isEmpty()
+        inNegatedOr.isEmpty()
+        inNegatedAnd*.firstName == ['Barney', 'Homer', 'Lisa', 'Marge', 'Nobody']
+    }
+
     void "a subquery inside an association block is run"() {
         given:
         seed()

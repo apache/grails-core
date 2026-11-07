@@ -196,6 +196,31 @@ class AggregateSubquerySpec extends GrailsDataTckSpec<GrailsDataMongoTckManager>
         notEqual.isEmpty()
     }
 
+    void "a negated comparison against a subquery that returns no row matches no row, as in SQL"() {
+        given:
+        seed()
+        new AggSubPerson(firstName: 'Nobody').save(flush: true, failOnError: true)
+        manager.session.clear()
+
+        when:
+        List<AggSubPerson> negated = AggSubPerson.where { !(age > avg(age).of { firstName == 'Absent' }) }.list()
+        List<AggSubPerson> notBlock = AggSubPerson.createCriteria().list {
+            not { gt('age', AggSubPerson.where { firstName == 'Absent' }.property('age')) }
+        }
+        List<AggSubPerson> twice = AggSubPerson.createCriteria().list {
+            not { not { gt('age', AggSubPerson.where { firstName == 'Absent' }.property('age')) } }
+        }
+        List<AggSubPerson> inNegatedOr = AggSubPerson.where { !(age > avg(age).of { firstName == 'Absent' } || firstName == 'Bart') }.list()
+        List<AggSubPerson> inNegatedAnd = AggSubPerson.where { !(age > avg(age).of { firstName == 'Absent' } && firstName == 'Bart') }.list(sort: 'firstName')
+
+        then: 'the comparison is unknown, so its negation is unknown too, and the rows follow SQL three-valued logic'
+        negated.isEmpty()
+        notBlock.isEmpty()
+        twice.isEmpty()
+        inNegatedOr.isEmpty()
+        inNegatedAnd*.firstName == ['Barney', 'Homer', 'Lisa', 'Marge', 'Nobody']
+    }
+
     void "a subquery inside an association block is run"() {
         given:
         new AggSubCity(name: 'Paris').save(flush: true, failOnError: true)
