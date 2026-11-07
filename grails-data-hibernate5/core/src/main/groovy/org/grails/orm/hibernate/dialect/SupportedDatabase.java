@@ -23,6 +23,7 @@ import org.hibernate.dialect.DB2390Dialect;
 import org.hibernate.dialect.DB2Dialect;
 import org.hibernate.dialect.Dialect;
 import org.hibernate.dialect.H2Dialect;
+import org.hibernate.dialect.MariaDBDialect;
 import org.hibernate.dialect.MySQLDialect;
 import org.hibernate.dialect.Oracle8iDialect;
 import org.hibernate.dialect.Oracle9Dialect;
@@ -54,6 +55,10 @@ import org.grails.datastore.mapping.internal.ClassKeyed;
  * @since 8.0.1
  */
 public enum SupportedDatabase implements ClassKeyed<SupportedDatabase> {
+
+    // the dialect of MariaDB extends the one for MySQL, so it is declared first; the two match a regular
+    // expression the same way, and a MariaDB database is reported as MariaDB
+    MARIADB("?1 rlike ?2", MariaDBDialect.class),
 
     MYSQL("?1 rlike ?2", MySQLDialect.class),
 

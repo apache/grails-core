@@ -26,6 +26,7 @@ import org.hibernate.dialect.DB297Dialect
 import org.hibernate.dialect.DB2Dialect
 import org.hibernate.dialect.H2Dialect
 import org.hibernate.dialect.MariaDB103Dialect
+import org.hibernate.dialect.MariaDBDialect
 import org.hibernate.dialect.MySQL8Dialect
 import org.hibernate.dialect.Oracle12cDialect
 import org.hibernate.dialect.Oracle8iDialect
@@ -48,7 +49,8 @@ class SupportedDatabaseSpec extends Specification {
         where:
         dialect                       || expected
         new MySQL8Dialect()           || SupportedDatabase.MYSQL
-        new MariaDB103Dialect()       || SupportedDatabase.MYSQL
+        new MariaDB103Dialect()       || SupportedDatabase.MARIADB
+        new MariaDBDialect()          || SupportedDatabase.MARIADB
         new PostgreSQL10Dialect()     || SupportedDatabase.POSTGRESQL
         new CockroachDB192Dialect()   || SupportedDatabase.COCKROACH
         new Oracle8iDialect()         || SupportedDatabase.ORACLE
@@ -78,6 +80,7 @@ class SupportedDatabaseSpec extends Specification {
         where:
         database      || pattern
         'MYSQL'       || '?1 rlike ?2'
+        'MARIADB'     || '?1 rlike ?2'
         'POSTGRESQL'  || '?1 ~* ?2'
         'ORACLE'      || ' REGEXP_LIKE (?1, ?2)'
         'H2'          || '?1 REGEXP ?2'
