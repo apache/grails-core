@@ -661,6 +661,35 @@ class PredicateGeneratorSpec extends HibernateGormDatastoreSpec {
         predicates.length == 1
     }
 
+    def "test getPredicates with scalar subquery in comparison criteria"() {
+        given:
+        new PredicateGeneratorSpecPerson(firstName: 'Young', lastName: 'P', age: 20, salary: 10G).save(failOnError: true)
+        new PredicateGeneratorSpecPerson(firstName: 'Mid', lastName: 'P', age: 30, salary: 20G).save(failOnError: true)
+        new PredicateGeneratorSpecPerson(firstName: 'Old', lastName: 'P', age: 40, salary: 30G).save(flush: true, failOnError: true)
+
+        def subqueryCriteria = new DetachedCriteria(PredicateGeneratorSpecPerson).build {
+            projections {
+                avg "age"
+            }
+        }
+        def executeSingle = { Query.Criterion c ->
+            CriteriaQuery<String> q = cb.createQuery(String)
+            Root<PredicateGeneratorSpecPerson> r = q.from(PredicateGeneratorSpecPerson)
+            JpaQueryContext ctx = new JpaQueryContext(r)
+            Predicate[] preds = predicateGenerator.getPredicates(q, r, [c], ctx, personEntity)
+            q.select(r.get('firstName')).where(preds)
+            def hq = sessionFactory.currentSession.createQuery(q)
+            ctx.parameterValues.each { k, v -> hq.setParameter(k, v) }
+            hq.resultList.sort()
+        }
+
+        expect:
+        executeSingle(new Query.GreaterThan("age", subqueryCriteria)) == ['Old']
+        executeSingle(new Query.GreaterThanEquals("age", subqueryCriteria)) == ['Mid', 'Old']
+        executeSingle(new Query.LessThan("age", subqueryCriteria)) == ['Young']
+        executeSingle(new Query.LessThanEquals("age", subqueryCriteria)) == ['Mid', 'Young']
+    }
+
     def "test getPredicates with FunctionCallingCriterion for string functions"() {
         given:
         List criteria = [
