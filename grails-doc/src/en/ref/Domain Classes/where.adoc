@@ -79,7 +79,7 @@ final query = Person.where {
 }
 ----
 
-On MongoDB and Neo4j the subquery runs first and its result is used as a value, so `age > avg(age)`, `age == max(age)` and `inList` / `notIn` against a subquery work there too. The subquery is run again each time the query is. A comparison against a subquery that returns no row matches no row, also under `not`, and one that returns several rows is rejected. A subquery inside an association block is run too. The `exists`, `notExists` and the `all` and `some` forms throw an `InvalidDataAccessResourceUsageException` on these datastores.
+On MongoDB and Neo4j the subquery runs first and its result is used as a value, so `age > avg(age)`, `age == max(age)` and `inList` / `notIn` against a subquery work there too. The subquery is run again each time the query is, on the connection of its own criteria, which is the default one unless it is built with `withConnection`. A comparison against a subquery that returns no row matches no row, also under `not`, and one that returns several rows is rejected. A subquery inside an association block is run too. The `exists`, `notExists` and the `all` and `some` forms throw an `InvalidDataAccessResourceUsageException` on these datastores.
 
 
 === Description
