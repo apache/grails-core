@@ -235,7 +235,8 @@ class Neo4jQuery extends Query {
                     builder.addMatch(
                             graphEntity.formatAssociationPatternFromExisting((Association) association, '', prefix, targetNodeName)
                     )
-                    lhs = graphEntity.formatId(targetNodeName)
+                    // the node reached is of the associated entity, whose identity may be mapped differently
+                    lhs = ((GraphPersistentEntity) ((Association) association).associatedEntity).formatId(targetNodeName)
                 }
 
             } else {
@@ -901,7 +902,8 @@ class Neo4jQuery extends Query {
                             graphEntity.formatAssociationPatternFromExisting((Association) association, '', prefix, targetNodeName)
                     )
 
-                    lhs = graphEntity.formatId(targetNodeName)
+                    // the node reached is of the associated entity, whose identity may be mapped differently
+                    lhs = associatedGraphEntity.formatId(targetNodeName)
                 }
             } else {
                 if (graphEntity.isRelationshipEntity() && criterion.property == RelationshipPersistentEntity.TYPE) {
