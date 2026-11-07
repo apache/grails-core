@@ -29,6 +29,7 @@ import org.hibernate.query.sqm.tree.SqmTypedNode;
 import org.hibernate.type.BasicType;
 import org.hibernate.type.BasicTypeReference;
 
+import org.grails.datastore.mapping.core.exceptions.ConfigurationException;
 import org.grails.datastore.mapping.query.Query;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
 
@@ -104,6 +105,7 @@ public class JpaProjectionTranslator {
         JpaExpression<?> jpaExpression;
         String propertyName = null;
         String alias = null;
+        String requestedPath = null;
 
         if (projection instanceof SqlGroupProjection) {
             return null;
@@ -126,6 +128,7 @@ public class JpaProjectionTranslator {
             propertyName = countDistinctProjection.getPropertyName();
         }
 
+        requestedPath = propertyName;
         if (propertyName != null && propertyName.contains(grails.orm.HibernateCriteriaBuilder.ALIAS_SEPARATOR)) {
             String[] parts = propertyName.split(grails.orm.HibernateCriteriaBuilder.ALIAS_SEPARATOR);
             alias = parts[0];
@@ -139,6 +142,7 @@ public class JpaProjectionTranslator {
                 if (pathExpr == null) {
                     pathExpr = context.getFullyQualifiedExpression("root." + propertyName);
                 }
+                requireResolved(pathExpr, requestedPath);
             } else {
                 pathExpr = context.getRoot();
             }
@@ -148,6 +152,7 @@ public class JpaProjectionTranslator {
             if (pathExpr == null) {
                 pathExpr = context.getFullyQualifiedExpression("root." + propertyName);
             }
+            requireResolved(pathExpr, requestedPath);
             jpaExpression = (JpaExpression<?>) criteriaBuilder.countDistinct(pathExpr);
         } else if (projection instanceof Query.IdProjection) {
             jpaExpression = (JpaExpression<?>) context.getFullyQualifiedPath("root.id");
@@ -157,6 +162,7 @@ public class JpaProjectionTranslator {
             return null;
         } else if (projection instanceof Query.PropertyProjection) {
             Expression<?> expression = context.getFullyQualifiedExpression(propertyName);
+            requireResolved(expression, requestedPath);
 
             if (projection instanceof Query.MaxProjection) {
                 jpaExpression = (JpaExpression<?>) criteriaBuilder.max((Expression<? extends Number>) expression);
@@ -178,5 +184,12 @@ public class JpaProjectionTranslator {
             context.registerAlias(alias, jpaExpression);
         }
         return jpaExpression;
+    }
+
+    private void requireResolved(Expression<?> expression, String path) {
+        if (expression == null) {
+            throw new ConfigurationException("Cannot use projection on non-existent property [" + path +
+                    "] of class [" + context.getRoot().getJavaType().getName() + "]");
+        }
     }
 }
