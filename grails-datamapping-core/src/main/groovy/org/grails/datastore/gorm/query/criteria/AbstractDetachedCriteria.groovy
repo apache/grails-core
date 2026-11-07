@@ -144,8 +144,14 @@ abstract class AbstractDetachedCriteria<T> implements Criteria, Cloneable {
             associationCriteriaMap[associationPath] = associationCriteria
             add(associationCriteria)
         }
-        else {
+        else if (associationCriteria.alias == null || associationCriteria.alias == alias) {
             associationCriteria.setAlias(alias)
+        }
+        else {
+            // A second alias of a path that already has one is another declaration, not a rename of the first: it
+            // is kept next to it, so both aliases reach the datastore, which decides whether they share a join.
+            associationCriteria = new DetachedAssociationCriteria(a.associatedEntity.javaClass, a, associationPath, alias)
+            add(associationCriteria)
         }
         return associationCriteria
     }
