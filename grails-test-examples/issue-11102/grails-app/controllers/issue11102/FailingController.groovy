@@ -41,6 +41,13 @@ class FailingController {
         failAsynchronously(new UnsupportedOperationException('answered by the error controller'))
     }
 
+    def answeredByControllerAfterStartingAsync() {
+        WebAsyncManager asyncManager = WebAsyncUtils.getAsyncManager(request)
+        asyncManager.asyncWebRequest = WebAsyncUtils.createAsyncWebRequest(request, response)
+        asyncManager.startDeferredResultProcessing(new DeferredResult<Object>())
+        throw new UnsupportedOperationException('answered by the error controller')
+    }
+
     def errorHandler() {
         render status: 500, text: 'Answered by the error controller'
     }

@@ -27,11 +27,13 @@ import grails.web.mapping.AbstractUrlMappingsSpec
 import org.grails.web.mapping.DefaultUrlMappingData
 import org.grails.web.mapping.DefaultUrlMappingInfo
 import org.grails.web.util.WebUtils
+import org.springframework.http.server.observation.ServerRequestObservationContext
 import org.springframework.ui.ModelMap
 import org.springframework.web.context.request.RequestContextHolder
 import org.springframework.web.context.request.WebRequest
 import org.springframework.web.context.request.WebRequestInterceptor
 import org.springframework.web.context.support.StaticWebApplicationContext
+import org.springframework.web.filter.ServerHttpObservationFilter
 import org.springframework.web.servlet.HandlerInterceptor
 import org.springframework.web.servlet.handler.WebRequestHandlerInterceptorAdapter
 import org.springframework.web.servlet.view.InternalResourceView
@@ -288,6 +290,39 @@ class UrlMappingsHandlerMappingSpec extends AbstractUrlMappingsSpec {
             "/foo/bar"(controller: "foo", action: "bar")
         })
         new UrlMappingsHandlerMapping(holder)
+    }
+
+    void "a request routed to an error handler keeps the route that failed on its observation"() {
+        given:
+        def grailsApplication = new DefaultGrailsApplication(FooController)
+        grailsApplication.initialise()
+        def holder = new GrailsControllerUrlMappings(grailsApplication, getUrlMappingsHolder {
+            "/foo/bar"(controller: 'foo', action: 'bar')
+            "500"(controller: 'foo', action: 'fooBar')
+        })
+        def handler = new UrlMappingsHandlerMapping(holder)
+        def webRequest = GrailsWebMockUtil.bindMockWebRequest()
+        def request = webRequest.request
+        request.requestURI = '/foo/bar'
+        def context = new ServerRequestObservationContext(request, webRequest.response)
+        request.setAttribute(ServerHttpObservationFilter.CURRENT_OBSERVATION_CONTEXT_ATTRIBUTE, context)
+
+        when: 'the action is routed'
+        def chain = handler.getHandler(request)
+        chain.interceptorList.each { it.preHandle(request, webRequest.response, chain.handler) }
+
+        then:
+        context.pathPattern == '/foo/bar'
+
+        when: 'it failed, and its error handler is routed, as a forward to it is'
+        request.setAttribute(WebUtils.ERROR_STATUS_CODE_ATTRIBUTE, 500)
+        chain = handler.getHandler(request)
+        chain.handler.configure(webRequest)
+        chain.interceptorList.each { it.preHandle(request, webRequest.response, chain.handler) }
+
+        then: 'the error handler answers, and the route is still the one that failed'
+        webRequest.actionName == 'fooBar'
+        context.pathPattern == '/foo/bar'
     }
 
     void cleanup() {
