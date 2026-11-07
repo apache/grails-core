@@ -17,10 +17,12 @@ package org.grails.orm.hibernate.query;
 
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import jakarta.persistence.criteria.Expression;
 import jakarta.persistence.criteria.From;
@@ -51,6 +53,7 @@ public class JpaQueryContext implements Cloneable {
     private Map<DetachedAssociationCriteria<?>, JpaQueryContext> associationContexts;
     private JpaQueryContext parent;
     private String blockPath;
+    private final Set<String> aliasClaims = new HashSet<>();
 
     public JpaQueryContext() {
         this(null, null, null);
@@ -93,6 +96,7 @@ public class JpaQueryContext implements Cloneable {
         this.aliasRegistry = new AliasRegistry(parent != null ? parent.getAliasRegistry() : null);
         this.resolver = new ExpressionResolver(aliasRegistry, joinTracker);
         this.resolver.shareJoins(this::inheritedJoin, this::publishJoin);
+        this.resolver.shareAliasClaims(this::inheritedClaim, this::claimPath);
         if (aliases != null) {
             for (HibernateAlias alias : aliases) {
                 aliasRegistry.define(alias.alias(), alias);
@@ -154,6 +158,25 @@ public class JpaQueryContext implements Cloneable {
     private void publishJoin(String path, From<?, ?> join) {
         if (parent != null && blockPath != null) {
             parent.shareJoin(blockPath + "." + path, join);
+        }
+    }
+
+    /**
+     * Whether an alias of an enclosing query, or of another block of one, already shares the join of a path of this
+     * scope. The first alias of a path shares the join of the path, and an alias after it has a join of its own.
+     */
+    private boolean inheritedClaim(String path) {
+        return parent != null && blockPath != null && parent.visibleClaim(blockPath + "." + path);
+    }
+
+    private boolean visibleClaim(String path) {
+        return aliasClaims.contains(path) || inheritedClaim(path);
+    }
+
+    private void claimPath(String path) {
+        aliasClaims.add(path);
+        if (parent != null && blockPath != null) {
+            parent.claimPath(blockPath + "." + path);
         }
     }
 

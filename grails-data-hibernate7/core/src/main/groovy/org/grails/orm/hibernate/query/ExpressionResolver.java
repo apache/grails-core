@@ -17,7 +17,9 @@ package org.grails.orm.hibernate.query;
 
 import java.util.Arrays;
 import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.Predicate;
 
 import jakarta.persistence.criteria.Expression;
 import jakarta.persistence.criteria.From;
@@ -44,6 +46,8 @@ public class ExpressionResolver {
     private final JoinTracker joinTracker;
     private Function<String, From<?, ?>> enclosingJoins = path -> null;
     private BiConsumer<String, From<?, ?>> joinPublisher = (path, join) -> { };
+    private Predicate<String> enclosingClaims = path -> false;
+    private Consumer<String> claimPublisher = path -> { };
 
     public ExpressionResolver(AliasRegistry aliasRegistry, JoinTracker joinTracker) {
         this.aliasRegistry = aliasRegistry;
@@ -60,6 +64,15 @@ public class ExpressionResolver {
     void shareJoins(Function<String, From<?, ?>> lookup, BiConsumer<String, From<?, ?>> publisher) {
         this.enclosingJoins = lookup;
         this.joinPublisher = publisher;
+    }
+
+    /**
+     * Lets the aliases of this scope and of the scopes around it agree on which alias shares the join of a path: the
+     * first one does, and an alias after it, in this scope or in another block, has a join of its own.
+     */
+    void shareAliasClaims(Predicate<String> enclosing, Consumer<String> publisher) {
+        this.enclosingClaims = enclosing;
+        this.claimPublisher = publisher;
     }
 
     public Expression<?> resolve(String path) {
@@ -180,7 +193,14 @@ public class ExpressionResolver {
         // the path of the association from the root, by which a join type is requested for it
         String associationPath = "";
         int first = 0;
-        if (aliasRegistry.isDefined(tokens[0])) {
+        Join<?, ?> declaredAlias = tokens.length > 1 ? aliasJoin(from, tokens[0]) : null;
+        if (declaredAlias != null) {
+            // the first alias that this scope declares for the association is the one the path names
+            from = declaredAlias;
+            associationPath = tokens[0];
+            first = 1;
+        }
+        else if (aliasRegistry.isDefined(tokens[0])) {
             if (!(resolveFromAlias(tokens[0], null) instanceof From<?, ?> aliased)) {
                 return resolve(path);
             }
@@ -228,7 +248,10 @@ public class ExpressionResolver {
         if (component ? last : !model.isAssociation()) {
             return null;
         }
-        Join<?, ?> existing = ownJoin(from, associationPath);
+        Join<?, ?> existing = aliasJoin(from, associationPath);
+        if (existing == null) {
+            existing = ownJoin(from, associationPath);
+        }
         if (existing == null) {
             existing = existingJoin(from, attributeName);
         }
@@ -243,6 +266,21 @@ public class ExpressionResolver {
             return from.join(attributeName, requested.joinType());
         }
         return foreignKey ? null : from.join(attributeName, JoinType.LEFT);
+    }
+
+    /**
+     * Returns the join of the first alias that this scope declares for an association path, which is the join an
+     * order by the path sorts by, or {@code null} if the scope declares none or its alias has no join of this source.
+     * The join of the alias is the one of the path when the alias shares it, and a join of its own in a block that
+     * the first alias of another block has already claimed the path of.
+     */
+    private Join<?, ?> aliasJoin(From<?, ?> from, String associationPath) {
+        HibernateAlias alias = associationPath != null ? aliasRegistry.getAssociationAlias(associationPath) : null;
+        if (alias == null || !alias.explicit() || !aliasRegistry.isOwnDefined(alias.alias())) {
+            return null;
+        }
+        Expression<?> realized = resolveFromAlias(alias.alias(), null);
+        return realized instanceof Join<?, ?> join && join.getParent() == from ? join : null;
     }
 
     /**
@@ -307,7 +345,8 @@ public class ExpressionResolver {
             Path<?> path = getPath(joinTracker.getRoot(), def.path());
             boolean elementCollection = path != null && path.getModel() instanceof PluralAttribute<?, ?, ?> attribute &&
                     attribute.getPersistentAttributeType() == PersistentAttributeType.ELEMENT_COLLECTION;
-            boolean sharesPath = !elementCollection && def.equals(aliasRegistry.getAssociationAlias(def.path()));
+            boolean sharesPath = !elementCollection && def.equals(aliasRegistry.getAssociationAlias(def.path())) &&
+                    !enclosingClaims.test(def.path());
             From<?, ?> join = sharesPath ? joinTracker.getOwnJoin(def.path()) : null;
             if (join == null && sharesPath) {
                 // the enclosing query may already join this association, for a nested alias path or another block
@@ -319,6 +358,7 @@ public class ExpressionResolver {
             if (sharesPath) {
                 joinTracker.addJoin(def.path(), join);
                 joinPublisher.accept(def.path(), join);
+                claimPublisher.accept(def.path());
             }
             aliased = join;
         }

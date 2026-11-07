@@ -699,6 +699,156 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate7TckManag
         'desc'    || ["Bob's pet", "Ann's pet"]
     }
 
+    void 'an order by a path in the second of two blocks that each declare an alias for it sorts by the join of its own block'() {
+        when:
+        final results = AssociationSortPet.withCriteria {
+            owner {
+                createAlias('scores', 'first')
+                eq('first.round', 'first')
+            }
+            owner {
+                createAlias('scores', 'second')
+                eq('second.round', 'second')
+                order('scores.score')
+            }
+        }
+
+        then:
+        results*.name == ["Bob's pet", "Ann's pet"]
+    }
+
+    void 'blocks of one association without an alias share one join'() {
+        when:
+        final results = AssociationSortPet.withCriteria {
+            owner {
+                scores {
+                    eq('round', 'first')
+                }
+            }
+            owner {
+                scores {
+                    eq('round', 'second')
+                }
+            }
+        }
+
+        then:
+        results.isEmpty()
+    }
+
+    void 'an order in the second of two blocks of an association sorts #direction by the join that the blocks share'() {
+        when:
+        final results = AssociationSortPet.withCriteria {
+            owner {
+                scores {
+                    eq('round', 'first')
+                }
+            }
+            owner {
+                scores {
+                    eq('round', 'first')
+                }
+                order('scores.score', direction)
+            }
+        }
+
+        then: 'the one join of the scores is restricted by both blocks, and the order is by its score'
+        results*.name == expected
+
+        where:
+        direction || expected
+        'asc'     || ["Ann's pet", "Bob's pet"]
+        'desc'    || ["Bob's pet", "Ann's pet"]
+    }
+
+    void 'an order in the first of two blocks of an association sorts by the join that the blocks share'() {
+        when:
+        final results = AssociationSortPet.withCriteria {
+            owner {
+                scores {
+                    eq('round', 'first')
+                }
+                order('scores.score', 'desc')
+            }
+            owner {
+                scores {
+                    eq('round', 'first')
+                }
+            }
+        }
+
+        then:
+        results*.name == ["Bob's pet", "Ann's pet"]
+    }
+
+    void 'an order in a nested block of the second of two blocks of an association sorts by the join that the blocks share'() {
+        when:
+        final results = AssociationSortPet.withCriteria {
+            owner {
+                scores {
+                    eq('round', 'first')
+                }
+            }
+            owner {
+                scores {
+                    eq('round', 'first')
+                    order('score', 'desc')
+                }
+            }
+        }
+
+        then:
+        results*.name == ["Bob's pet", "Ann's pet"]
+    }
+
+    void 'an alias in each of two blocks of one association has a join of its own'() {
+        when:
+        final results = AssociationSortPet.withCriteria {
+            owner {
+                createAlias('scores', 'first')
+                eq('first.round', 'first')
+            }
+            owner {
+                createAlias('scores', 'second')
+                eq('second.round', 'second')
+            }
+        }
+
+        then: 'both owners have a score in each round, so each alias finds its own score'
+        results*.name.sort() == ["Ann's pet", "Bob's pet"]
+    }
+
+    void 'two aliases in one block have a join each'() {
+        when:
+        final results = AssociationSortPet.withCriteria {
+            owner {
+                createAlias('scores', 'first')
+                createAlias('scores', 'second')
+                eq('first.round', 'first')
+                eq('second.round', 'second')
+            }
+        }
+
+        then:
+        results*.name.sort() == ["Ann's pet", "Bob's pet"]
+    }
+
+    void 'an alias and a block of one association restrict one join when the alias is the first'() {
+        when:
+        final results = AssociationSortPet.withCriteria {
+            owner {
+                createAlias('scores', 'first')
+                eq('first.round', 'first')
+                scores {
+                    eq('round', 'second')
+                }
+            }
+        }
+
+        then:
+        results.isEmpty()
+    }
+
     void 'an order in a block that joins nothing itself sorts by the join that the query has for the association'() {
         when:
         final results = AssociationSortPet.withCriteria {
