@@ -19,10 +19,12 @@
 package org.grails.datastore.gorm.neo4j;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * A builder for Cypher queries
@@ -155,6 +157,22 @@ public class CypherBuilder {
      */
     public void addOptionalMatch(String match) {
         optionalMatches.add(match);
+    }
+
+    private final Set<String> relationshipVariables = new HashSet<>();
+
+    /**
+     * Records that a variable of the query stands for a relationship, so a criterion on it is about the
+     * relationship's own properties and not about the relationships of a node.
+     *
+     * @param variable the variable of the relationship
+     */
+    public void addRelationshipVariable(String variable) {
+        relationshipVariables.add(variable);
+    }
+
+    public boolean isRelationshipVariable(String variable) {
+        return relationshipVariables.contains(variable);
     }
 
     public int getNextMatchNumber() {

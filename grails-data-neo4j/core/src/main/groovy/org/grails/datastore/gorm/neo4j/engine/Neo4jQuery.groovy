@@ -235,7 +235,8 @@ class Neo4jQuery extends Query {
                     builder.addMatch(
                             graphEntity.formatAssociationPatternFromExisting((Association) association, '', prefix, targetNodeName)
                     )
-                    lhs = graphEntity.formatId(targetNodeName)
+                    // the node reached is of the associated entity, whose identity may be mapped differently
+                    lhs = ((GraphPersistentEntity) ((Association) association).associatedEntity).formatId(targetNodeName)
                 }
 
             } else {
@@ -335,6 +336,10 @@ class Neo4jQuery extends Query {
         @Override
         @CompileStatic
         CypherExpression handle(GraphPersistentEntity entity, Query.IsNull criterion, CypherBuilder builder, String prefix) {
+            String relationship = associationRelationshipPattern(entity, criterion.property, prefix, builder)
+            if (relationship != null) {
+                return new CypherExpression("NOT ${relationship}")
+            }
             return new CypherExpression("${entity.formatProperty(prefix, criterion.property)} IS NULL")
         }
             },
@@ -359,6 +364,10 @@ class Neo4jQuery extends Query {
         @Override
         @CompileStatic
         CypherExpression handle(GraphPersistentEntity entity, Query.IsNotNull criterion, CypherBuilder builder, String prefix) {
+            String relationship = associationRelationshipPattern(entity, criterion.property, prefix, builder)
+            if (relationship != null) {
+                return new CypherExpression(relationship)
+            }
             return new CypherExpression("${entity.formatProperty(prefix, criterion.property)} IS NOT NULL")
         }
             },
@@ -654,6 +663,29 @@ class Neo4jQuery extends Query {
         RelationshipUtils.matchForAssociation(association, var, attributes)
     }
 
+    /**
+     * The pattern that holds when the node has a relationship for the association, or {@code null} when the
+     * property is not an association stored as a relationship. An association is not a property of the node, so
+     * a null test on it has to look for the relationship and not for a node property. A basic collection and an
+     * embedded component are stored on the node itself, so they stay a null test of the property.
+     *
+     * @param entity the entity the property belongs to: for criteria nested in an association block, the entity
+     *     the block is on, which {@link AssociationQueryHandler} passes on
+     * @param builder the query, which knows whether the prefix is the variable of a relationship, as it is in a block
+     *     on an association to a relationship entity: the properties tested there are the relationship's own
+     */
+    private static String associationRelationshipPattern(GraphPersistentEntity entity, String propertyName, String prefix,
+                                                        CypherBuilder builder) {
+        if (entity.isRelationshipEntity() || builder.isRelationshipVariable(prefix)) {
+            return null
+        }
+        PersistentProperty property = entity.getPropertyByName(propertyName)
+        if (property instanceof Association && !(property instanceof Basic) && !(property instanceof Embedded)) {
+            return entity.formatAssociationPatternFromExisting((Association) property, '', prefix, '')
+        }
+        return null
+    }
+
     private static int addBuildParameterForCriterion(CypherBuilder builder, PersistentEntity entity, Query.PropertyCriterion criterion) {
         Neo4jMappingContext mappingContext = (Neo4jMappingContext) entity.mappingContext
         return builder.addParam(mappingContext.convertToNative(criterion.value))
@@ -772,7 +804,19 @@ class Neo4jQuery extends Query {
                 builder.addMatch(
                         entity.formatAssociationPatternFromExisting(association, relationship, prefix, targetNodeName)
                 )
-                return dispatchCriterion(aq.criteria, entity, builder, nextPrefix)
+                // The nested criteria are about the associated entity, so a property is looked up there: a
+                // plain property of the same name as an association of the entity the query started from is
+                // still a plain property, and an association of the associated entity is tested as one. An
+                // association to a relationship entity keeps the entity it was given, and its variable is
+                // recorded as a relationship: the properties are those of the relationship, which has no
+                // relationship of its own to test.
+                PersistentEntity associated = association.associatedEntity
+                GraphPersistentEntity nested = associated instanceof GraphPersistentEntity &&
+                        !((GraphPersistentEntity) associated).isRelationshipEntity() ? (GraphPersistentEntity) associated : entity
+                if (criterion.entity instanceof RelationshipPersistentEntity) {
+                    builder.addRelationshipVariable(nextPrefix)
+                }
+                return dispatchCriterion(aq.criteria, nested, builder, nextPrefix)
             }
 
         }
@@ -858,7 +902,8 @@ class Neo4jQuery extends Query {
                             graphEntity.formatAssociationPatternFromExisting((Association) association, '', prefix, targetNodeName)
                     )
 
-                    lhs = graphEntity.formatId(targetNodeName)
+                    // the node reached is of the associated entity, whose identity may be mapped differently
+                    lhs = associatedGraphEntity.formatId(targetNodeName)
                 }
             } else {
                 if (graphEntity.isRelationshipEntity() && criterion.property == RelationshipPersistentEntity.TYPE) {

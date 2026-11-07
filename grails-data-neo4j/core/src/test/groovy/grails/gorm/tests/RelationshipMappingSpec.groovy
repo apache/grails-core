@@ -108,6 +108,31 @@ class RelationshipMappingSpec extends Neo4jGormDatastoreSpec{
     }
 
 
+    void "isNull and isNotNull on an association to a relationship entity test the relationship"() {
+        given:
+        Movie withCast = new Movie(title: "With cast").save(flush: true)
+        new Movie(title: "No cast").save(flush: true)
+        new CastMember(from: new Celeb(name: "Keanu").save(flush: true), to: withCast, roles: ["Neo"]).save(flush: true)
+        manager.session.clear()
+
+        expect:
+        Movie.createCriteria().list { isNull('cast') }*.title == ["No cast"]
+        Movie.createCriteria().list { isNotNull('cast') }*.title == ["With cast"]
+    }
+
+    void "isNull and isNotNull on the ends of a relationship entity are not rewritten to a pattern"() {
+        given:
+        new CastMember(from: new Celeb(name: "Keanu").save(flush: true), to: new Movie(title: "The Matrix").save(flush: true),
+                roles: ["Neo"]).save(flush: true)
+        manager.session.clear()
+
+        expect: 'a relationship always has both ends'
+        CastMember.createCriteria().list { isNotNull('from') }.size() == 1
+        CastMember.createCriteria().list { isNotNull('to') }.size() == 1
+        CastMember.createCriteria().list { isNull('from') }.isEmpty()
+        CastMember.createCriteria().list { isNull('to') }.isEmpty()
+    }
+
     void "Test query a relationship directly"() {
         given: " A relationship"
         Celeb c = new Celeb(name: "Keanu")

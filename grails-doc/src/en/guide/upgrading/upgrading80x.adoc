@@ -4899,3 +4899,14 @@ As of Grails 8.0.1, and 7.0.18 on the 7.0.x line, the lists of bindable properti
 * `bindData` with an `exclude` list, including the `bindData(target, source, List excludes)` overloads, keeps the generated list in effect in the permissive mode too and removes the excluded properties from it. Previously, in the permissive mode, an `exclude` list without an `include` list set the generated list aside, so that only the excluded properties were kept out.
 * A class that gets the lists now carries them as new `public static final` fields. A class that implements `Serializable` without declaring a `serialVersionUID`, such as a `Validateable` object kept in a persisted HTTP session or in a distributed cache, therefore gets a new default `serialVersionUID`, and instances serialized before the upgrade do not deserialize after it. Declare a `serialVersionUID` on such a class.
 * A controller compiled against a command object that was compiled without the lists, by an earlier version of Grails or without the data binding library, warns that the command object is bound without restriction and should be recompiled.
+
+==== 90. GORM for Neo4j: `isNull` and `isNotNull` on an association test the relationship
+
+An association is stored as a relationship, not as a property of the node. A null test on it used to compare a node property that does not exist, so `isNull` on an association matched every instance and `isNotNull` matched none. Now `isNull` matches the instances without the relationship and `isNotNull` the instances with it. A plain property, an embedded component, a basic collection and the ends of a relationship entity are tested as before.
+
+* The same applies to `findAllBy<Association>IsNull` and `findAllBy<Association>IsNotNull`, to `findAllBy<Association>(null)`, to the `countBy` forms, and to `where { association == null }` and `where { association != null }`.
+* On a to-many association, `isNull` means the collection has no element.
+* A null test inside an association block, such as `owner { isNull('address') }`, is made on the entity of the association. It used to be made on the entity the query started from, so it tested the wrong property, or a property that does not exist there.
+* `deleteAll()` and `updateAll()` follow the query. `Pet.where { owner == null }.deleteAll()` deleted every pet and now deletes only the pets without an owner.
+
+To get the earlier rows back, remove the criterion.
