@@ -34,7 +34,7 @@ import org.grails.datastore.mapping.query.Query;
  *
  * @since 8.0.1
  */
-public class PropertyComparisonCriterionHandler implements InternalCriterionHandler<Query.PropertyComparisonCriterion> {
+class PropertyComparisonCriterionHandler implements InternalCriterionHandler<Query.PropertyComparisonCriterion> {
 
     @Override
     @SuppressWarnings("unchecked")
@@ -80,11 +80,11 @@ public class PropertyComparisonCriterionHandler implements InternalCriterionHand
      */
     @SuppressWarnings({"unchecked", "rawtypes"})
     private static Expression<?> identifierIfCompared(Expression<?> expression, Expression<?> other) {
-        if (expression instanceof Path<?> path
-                && path.getModel() instanceof SingularAttribute<?, ?> attribute
-                && attribute.getType() instanceof EntityType<?> entityType
-                && !path.getJavaType().isAssignableFrom(other.getJavaType())
-                && !other.getJavaType().isAssignableFrom(path.getJavaType())) {
+        if (expression instanceof Path<?> path &&
+                path.getModel() instanceof SingularAttribute<?, ?> attribute &&
+                attribute.getType() instanceof EntityType<?> entityType &&
+                !path.getJavaType().isAssignableFrom(other.getJavaType()) &&
+                !other.getJavaType().isAssignableFrom(path.getJavaType())) {
             Class idType = entityType.getIdType().getJavaType();
             return path.get(entityType.getId(idType).getName());
         }

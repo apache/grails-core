@@ -29,7 +29,7 @@ import org.grails.datastore.mapping.query.Query;
  *
  * @since 8.0.1
  */
-public class JunctionCriterionHandler implements InternalCriterionHandler<Query.Junction> {
+class JunctionCriterionHandler implements InternalCriterionHandler<Query.Junction> {
 
     @Override
     public Predicate handle(CriterionContext context, Query.Junction junction) {

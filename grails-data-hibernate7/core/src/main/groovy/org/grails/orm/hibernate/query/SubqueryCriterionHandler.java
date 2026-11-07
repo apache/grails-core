@@ -33,7 +33,7 @@ import org.grails.datastore.mapping.query.api.QueryableCriteria;
  *
  * @since 8.0.1
  */
-public class SubqueryCriterionHandler implements InternalCriterionHandler<Query.SubqueryCriterion> {
+class SubqueryCriterionHandler implements InternalCriterionHandler<Query.SubqueryCriterion> {
 
     @Override
     @SuppressWarnings("unchecked")

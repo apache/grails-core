@@ -41,6 +41,12 @@ import org.grails.core.exceptions.GrailsConfigurationException;
  * A {@link Config} composed of other Configs. A lookup answers from the first config, in order of precedence,
  * that has the key, and the {@link Map} views, {@link #flatten()} and {@link #toProperties()} resolve a key
  * shared by several configs the same way, so each key appears once with its highest-precedence value.
+ * <p>
+ * One case differs: {@link #toProperties()} combines the names each config exports, and a config leaves out the
+ * dotted name that only repeats one of its own bracketed names; {@link #flatten()} combines the maps the configs
+ * store, which never hold that dotted name. So when a higher config spells a property in brackets,
+ * {@code app.routes[k]}, and a lower one dotted, {@code app.routes.k}, the dotted name keeps the lower value there,
+ * while {@link #getProperty(String)} answers the higher one.
  *
  * @author Graeme Rocher
  * @since 3.0

@@ -650,6 +650,7 @@ public class JpaQueryBuilder {
                 FunctionCallingCriterion functionCriterion = (FunctionCallingCriterion) criterion;
                 String name = functionCriterion.getProperty();
                 validateProperty(entity, name, FunctionCallingCriterion.class);
+                FunctionCallingCriterion.requireSupported(functionCriterion.getFunctionName());
                 if (functionCriterion.isOnValue()) {
                     throw new InvalidDataAccessResourceUsageException("A function on the value of a comparison is not supported: " + functionCriterion.getFunctionName());
                 }
@@ -705,8 +706,18 @@ public class JpaQueryBuilder {
                     if (operator == null) {
                         throw new InvalidDataAccessResourceUsageException("Unsupported criterion in a function call: " + wrapped.getClass().getSimpleName());
                     }
-                    whereClause.append(operator).append(PARAMETER_PREFIX).append(++position);
-                    parameters.add(wrapped.getValue());
+                    Object wrappedValue = wrapped.getValue();
+                    if (wrappedValue instanceof QueryableCriteria subquery) {
+                        // a detached criteria is a subquery, as it is when the query is read
+                        whereClause.append(operator).append(OPEN_BRACKET);
+                        buildSubQuery(q, whereClause, position, parameters, conversionService, allowJoins, hibernateCompatible, subquery);
+                        position = parameters.size();
+                        whereClause.append(CLOSE_BRACKET);
+                    }
+                    else {
+                        whereClause.append(operator).append(PARAMETER_PREFIX).append(++position);
+                        parameters.add(wrappedValue);
+                    }
                 }
                 return position;
             }
@@ -1005,6 +1016,8 @@ public class JpaQueryBuilder {
                 .append(associatedEntityLogicalName);
         List<Query.Criterion> criteria = subquery.getCriteria();
         if (!criteria.isEmpty()) {
+            // the criteria of a subquery are all required, as they are of the query, and a subquery
+            // without criteria has no WHERE
             whereClause.append(" WHERE ");
             buildWhereClauseForCriterion(associatedEntity, new Query.Conjunction(), q, whereClause, associatedEntityLogicalName,
                     criteria, position, parameters, conversionService, allowJoins, hibernateCompatible);
@@ -1176,6 +1189,11 @@ public class JpaQueryBuilder {
     }
 
     private static String functionOperator(Query.PropertyCriterion wrapped) {
+        if (wrapped instanceof Query.RLike) {
+            // RLike is a Like, but a regular expression is not LIKE, and a bulk statement has no regular expression
+            // operator: it is rejected here as a plain rlike is
+            return null;
+        }
         if (wrapped instanceof Query.Equals) {
             return " = ";
         }

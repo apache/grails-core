@@ -115,6 +115,102 @@ class DetachCriteriaSubquerySpec extends GrailsDataTckSpec<GrailsDataHibernate5T
         result.size() == 1
     }
 
+    void "a deferred criteria used as an inList subquery keeps its restriction"() {
+        setup:
+        new Organisation(name: 'A').save(flush: true)
+        new Organisation(name: 'B').save(flush: true)
+
+        when:
+        def subquery = new DetachedCriteria<>(Organisation).buildLazy { eq('name', 'A') }.property('name')
+
+        then:
+        Organisation.where { inList('name', subquery) }.list()*.name == ['A']
+        Organisation.where { 'in'('name', subquery) }.list()*.name == ['A']
+    }
+
+    void "a deferred criteria used as a notIn subquery keeps its restriction"() {
+        setup:
+        new Organisation(name: 'A').save(flush: true)
+        new Organisation(name: 'B').save(flush: true)
+
+        when:
+        def subquery = new DetachedCriteria<>(Organisation).buildLazy { eq('name', 'A') }.property('name')
+
+        then:
+        Organisation.where { notIn('name', subquery) }.list()*.name == ['B']
+    }
+
+    void "a deferred criteria used as an exists subquery that matches nothing selects no row"() {
+        setup:
+        new Organisation(name: 'A').save(flush: true)
+
+        when:
+        def subquery = new DetachedCriteria<>(Organisation).buildLazy { eq('name', 'Z') }.id()
+
+        then:
+        Organisation.where { exists(subquery) }.list().isEmpty()
+    }
+
+    void "the same where query with a deferred subquery selects the same rows for list and deleteAll"() {
+        setup:
+        new Organisation(name: 'A').save(flush: true)
+        new Organisation(name: 'B').save(flush: true)
+        def subquery = new DetachedCriteria<>(Organisation).buildLazy { eq('name', 'A') }.property('name')
+
+        when:
+        List<String> listed = Organisation.where { inList('name', subquery) }.list()*.name
+        Number deleted = Organisation.where { inList('name', subquery) }.deleteAll()
+
+        then:
+        listed == ['A']
+        deleted == 1
+        Organisation.list()*.name == ['B']
+    }
+
+    void "a restriction added to a deferred criteria after its first execution reaches the next execution"() {
+        setup:
+        Organisation orgA = new Organisation(name: 'A')
+        orgA.addToUsers(email: 'a1@a')
+        orgA.addToUsers(email: 'a2@a')
+        orgA.save(flush: true)
+        Organisation orgB = new Organisation(name: 'B')
+        orgB.addToUsers(email: 'b1@b')
+        orgB.save(flush: true)
+        DetachedCriteria<User> criteria = new DetachedCriteria<>(User).buildLazy {
+            createAlias('organisation', 'o')
+        }
+
+        when: 'the criteria runs, and an existing alias is then restricted'
+        List<String> first = criteria.list()*.email.sort()
+        criteria.eq('o.name', 'A')
+        List<String> second = criteria.list()*.email.sort()
+
+        then:
+        first == ['a1@a', 'a2@a', 'b1@b']
+        second == ['a1@a', 'a2@a']
+    }
+
+    void "a criteria derived from a deferred one after its first execution keeps what the closure added"() {
+        setup:
+        new Organisation(name: 'A').save(flush: true)
+        new Organisation(name: 'B').save(flush: true)
+        new Organisation(name: 'Z').save(flush: true)
+        def wanted = [name: 'A']
+        DetachedCriteria<Organisation> criteria = new DetachedCriteria<>(Organisation).buildLazy {
+            eq('name', wanted.name)
+        }
+
+        when: 'the value the closure reads changes after the first execution, and the criteria is extended'
+        List<String> first = criteria.list()*.name
+        wanted.name = 'B'
+        DetachedCriteria<Organisation> derived = criteria.where { ne('name', 'Z') }
+
+        then: 'the derived criteria has the restriction of the first run and the new one, and the original is unchanged'
+        first == ['A']
+        derived.list()*.name == ['A']
+        criteria.list()*.name == ['A']
+    }
+
     private User createUser(String email) {
         User user = new User(email: email)
         Organisation defaultOrg = Organisation.findOrCreateByName("default")
