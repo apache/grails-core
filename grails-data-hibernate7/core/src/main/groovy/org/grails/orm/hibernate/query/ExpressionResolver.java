@@ -15,9 +15,9 @@
  */
 package org.grails.orm.hibernate.query;
 
+import java.util.Arrays;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
-import java.util.Arrays;
 
 import jakarta.persistence.criteria.Expression;
 import jakarta.persistence.criteria.From;
@@ -28,10 +28,11 @@ import jakarta.persistence.metamodel.Attribute;
 import jakarta.persistence.metamodel.Attribute.PersistentAttributeType;
 import jakarta.persistence.metamodel.PluralAttribute;
 
-import grails.orm.HibernateCriteriaBuilder;
 import org.hibernate.query.sqm.tree.from.SqmAttributeJoin;
 import org.hibernate.query.sqm.tree.from.SqmFrom;
 import org.hibernate.query.sqm.tree.from.SqmJoin;
+
+import grails.orm.HibernateCriteriaBuilder;
 
 /**
  * Resolves string paths and aliases into JPA Expressions and Paths.

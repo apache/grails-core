@@ -45,9 +45,9 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 
 import grails.gorm.DetachedCriteria;
 import grails.gorm.MultiTenant;
+import org.grails.datastore.gorm.query.criteria.DetachedAssociationCriteria;
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.types.Association;
-import org.grails.datastore.gorm.query.criteria.DetachedAssociationCriteria;
 import org.grails.datastore.mapping.model.types.Basic;
 import org.grails.datastore.mapping.model.types.Embedded;
 import org.grails.datastore.mapping.multitenancy.MultiTenancySettings;
@@ -249,7 +249,7 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
         boolean embeddedBlock = criteria instanceof DetachedAssociationCriteria<?> block && block.getAssociation() instanceof Embedded;
         var entity = criteria instanceof DetachedAssociationCriteria<?> block ?
                 block.getAssociation().getAssociatedEntity() : criteria.getPersistentEntity();
-                JoinType convertedJoinType = convertFromInt(joinType);
+        JoinType convertedJoinType = convertFromInt(joinType);
         String path = pathFromDeclaredAlias(criteria, associationPath, alias);
         if (path.contains(ALIAS_SEPARATOR)) {
             criteria.getCriteria().add(new HibernateAlias(path, alias, convertedJoinType));
