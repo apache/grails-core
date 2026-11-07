@@ -48,6 +48,10 @@ class FailingController {
         throw new UnsupportedOperationException('answered by the error controller')
     }
 
+    def failsInInterceptor() {
+        render 'never reached, because the interceptor fails'
+    }
+
     def errorHandler() {
         render status: 500, text: 'Answered by the error controller'
     }
