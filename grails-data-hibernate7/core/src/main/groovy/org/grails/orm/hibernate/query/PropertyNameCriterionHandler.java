@@ -30,7 +30,7 @@ import org.grails.datastore.mapping.query.Query;
  *
  * @since 8.0.1
  */
-public class PropertyNameCriterionHandler implements InternalCriterionHandler<Query.PropertyNameCriterion> {
+class PropertyNameCriterionHandler implements InternalCriterionHandler<Query.PropertyNameCriterion> {
 
     @Override
     public Predicate handle(CriterionContext context, Query.PropertyNameCriterion c) {

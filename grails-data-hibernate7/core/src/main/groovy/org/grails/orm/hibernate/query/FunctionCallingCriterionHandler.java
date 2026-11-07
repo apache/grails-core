@@ -40,7 +40,7 @@ import org.grails.datastore.mapping.query.criteria.FunctionCallingCriterion;
  *
  * @since 8.0.1
  */
-public class FunctionCallingCriterionHandler implements InternalCriterionHandler<FunctionCallingCriterion> {
+class FunctionCallingCriterionHandler implements InternalCriterionHandler<FunctionCallingCriterion> {
 
     @Override
     @SuppressWarnings("unchecked")

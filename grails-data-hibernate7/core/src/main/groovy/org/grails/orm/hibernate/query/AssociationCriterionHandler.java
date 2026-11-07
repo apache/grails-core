@@ -32,7 +32,7 @@ import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersi
  *
  * @since 8.0.1
  */
-public class AssociationCriterionHandler {
+class AssociationCriterionHandler {
 
     public static Predicate handleDetachedAssociationCriteria(CriterionContext context, DetachedAssociationCriteria<?> associationCriteria) {
         String associationName = associationCriteria.getAssociationPath();
