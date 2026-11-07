@@ -19,7 +19,6 @@
 package grails.orm
 
 import org.hibernate.Criteria
-import org.hibernate.HibernateException
 import org.hibernate.criterion.CriteriaQuery
 import org.hibernate.dialect.DB2390Dialect
 import org.hibernate.dialect.DB2390V8Dialect
@@ -37,7 +36,7 @@ import spock.lang.Specification
 import spock.lang.Unroll
 
 /**
- * The SQL that {@link RlikeExpression} renders for each database, and the databases it refuses.
+ * The SQL that {@link RlikeExpression} renders for each database, and the like it falls back to on the rest.
  */
 class RlikeExpressionSpec extends Specification {
 
@@ -58,13 +57,9 @@ class RlikeExpressionSpec extends Specification {
     }
 
     @Unroll
-    void 'on #dialect.class.simpleName rlike is refused'() {
-        when:
-        new RlikeExpression('name', 'a.*').toSqlString(Stub(Criteria), criteriaQuery(dialect))
-
-        then:
-        HibernateException e = thrown()
-        e.message == "rlike is not supported with the configured dialect ${dialect.class.canonicalName}"
+    void 'on #dialect.class.simpleName, which has no regular expression operator here, rlike falls back to like'() {
+        expect:
+        new RlikeExpression('name', 'a.*').toSqlString(Stub(Criteria), criteriaQuery(dialect)) == 'name_col LIKE ?'
 
         where:
         dialect << [new DB2390Dialect(), new DB2390V8Dialect(), new SQLServer2012Dialect()]

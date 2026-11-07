@@ -4899,3 +4899,12 @@ As of Grails 8.0.1, and 7.0.18 on the 7.0.x line, the lists of bindable properti
 * `bindData` with an `exclude` list, including the `bindData(target, source, List excludes)` overloads, keeps the generated list in effect in the permissive mode too and removes the excluded properties from it. Previously, in the permissive mode, an `exclude` list without an `include` list set the generated list aside, so that only the excluded properties were kept out.
 * A class that gets the lists now carries them as new `public static final` fields. A class that implements `Serializable` without declaring a `serialVersionUID`, such as a `Validateable` object kept in a persisted HTTP session or in a distributed cache, therefore gets a new default `serialVersionUID`, and instances serialized before the upgrade do not deserialize after it. Declare a `serialVersionUID` on such a class.
 * A controller compiled against a command object that was compiled without the lists, by an earlier version of Grails or without the data binding library, warns that the command object is bound without restriction and should be recompiled.
+
+==== 91. `rlike` Is the Same on Hibernate 5 and Hibernate 7
+
+`rlike` is now rendered from one declaration of the supported databases in each Hibernate module, and the two modules agree on which databases fall back to `like`.
+
+* With Hibernate 5, a database that has no regular expression operator that Grails uses, such as SQL Server, Sybase, CockroachDB and Db2 for z/OS, no longer fails with `rlike is not supported with the configured dialect`: `rlike` falls back to `like`, as it does with Hibernate 7, so `%` and `_` are the wildcards there and not regular expression characters. Check queries that used `rlike` on such a database, as they now match different rows instead of failing.
+* Whether case matters follows the database: Oracle, H2 and Db2 match case-sensitively, and MySQL and MariaDB by the collation of the column. PostgreSQL matches with `~` (case-sensitive) with Hibernate 7 and `~*` (case-insensitive) with Hibernate 5; see issue 16882.
+
+See the `rlike` entry of the criteria reference for the databases that match with a regular expression.
