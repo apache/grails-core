@@ -441,8 +441,9 @@ class Neo4jQuery extends Query {
     }
 
     @Override
-    protected List executeQuery(PersistentEntity persistentEntity, Query.Junction criteria) {
+    protected List executeQuery(PersistentEntity persistentEntity, Query.Junction queryCriteria) {
 
+        Query.Junction criteria = resolveSubqueries(queryCriteria)
         CypherBuilder cypherBuilder = buildBaseQuery(persistentEntity, criteria)
         cypherBuilder.setOrderAndLimits(applyOrderAndLimits(cypherBuilder))
         GraphPersistentEntity graphEntity = (GraphPersistentEntity) persistentEntity

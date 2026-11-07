@@ -692,6 +692,133 @@ public abstract class Query implements Cloneable, Serializable {
     }
 
     /**
+     * Runs the subqueries inside the given criteria and returns a copy of the criteria that holds their
+     * results, for datastores that cannot evaluate a subquery themselves (MongoDB, Neo4j). The criteria
+     * passed in are never changed, so a query that is executed twice runs its subqueries twice.
+     *
+     * <p>A comparison ({@code ==}, {@code !=}, {@code >}, {@code >=}, {@code <}, {@code <=}) against a
+     * subquery, such as {@code age > avg(age)}, takes the one value the subquery returns, and {@code in}
+     * and {@code notIn} take all of them. A comparison against a subquery that returns no row matches no row,
+     * as in SQL, where the comparison is unknown, and so is its negation: {@code not { age > (empty) }} matches no
+     * row either. A subquery that returns more than one row for a comparison is
+     * rejected. Subqueries inside an association block are resolved too. {@code exists}, {@code notExists} and the {@code all} and {@code some} forms are rejected
+     * with an {@link InvalidDataAccessResourceUsageException}, as they are not supported.</p>
+     *
+     * @param criteria the criteria of this query
+     * @return the same instance when it holds no subquery, otherwise a copy with the subqueries resolved
+     * @throws InvalidDataAccessResourceUsageException for a form that cannot be resolved
+     * @since 8.0.1
+     */
+    protected Junction resolveSubqueries(Junction criteria) {
+        return (Junction) resolveSubqueries((Criterion) criteria, false);
+    }
+
+    private Criterion resolveSubqueries(Criterion criterion, boolean negated) {
+        if (criterion instanceof Junction junction) {
+            List<Criterion> resolved = new ArrayList<>(junction.getCriteria().size());
+            boolean changed = false;
+            boolean nestedNegated = junction instanceof Negation ? !negated : negated;
+            for (Criterion nested : junction.getCriteria()) {
+                Criterion replacement = resolveSubqueries(nested, nestedNegated);
+                changed |= replacement != nested;
+                resolved.add(replacement);
+            }
+            if (!changed) {
+                return junction;
+            }
+            if (junction instanceof Disjunction) {
+                return new Disjunction(resolved);
+            }
+            if (junction instanceof Negation) {
+                Negation negation = new Negation();
+                resolved.forEach(negation::add);
+                return negation;
+            }
+            return new Conjunction(resolved);
+        }
+        if (criterion instanceof Exists || criterion instanceof NotExists) {
+            throw unsupportedSubquery(criterion.getClass().getSimpleName());
+        }
+        if (criterion instanceof In in && in.getSubquery() != null) {
+            return new In(in.getProperty(), subqueryValues(in.getSubquery()));
+        }
+        if (criterion instanceof NotIn notIn) {
+            Negation negation = new Negation();
+            negation.add(new In(notIn.getProperty(), subqueryValues(notIn.getSubquery())));
+            return negation;
+        }
+        if (criterion instanceof SubqueryCriterion) {
+            throw unsupportedSubquery(criterion.getClass().getSimpleName());
+        }
+        if (criterion instanceof AssociationQuery associationQuery) {
+            Junction nested = associationQuery.getCriteria();
+            Junction resolved = (Junction) resolveSubqueries((Criterion) nested, negated);
+            if (resolved == nested) {
+                return criterion;
+            }
+            AssociationQuery copy = new AssociationQuery(associationQuery.getSession(), associationQuery.getEntity(),
+                    associationQuery.getAssociation());
+            copy.criteria = resolved;
+            return copy;
+        }
+        if (criterion instanceof PropertyCriterion property && property.getValue() instanceof QueryableCriteria subquery) {
+            if (!(criterion instanceof Equals || criterion instanceof NotEquals || criterion instanceof GreaterThan ||
+                    criterion instanceof GreaterThanEquals || criterion instanceof LessThan ||
+                    criterion instanceof LessThanEquals)) {
+                throw unsupportedSubquery(criterion.getClass().getSimpleName());
+            }
+            List<?> rows = subquery.list();
+            if (rows == null || rows.isEmpty()) {
+                // a comparison with the value of an empty subquery is unknown in SQL, and so is its negation: a row is
+                // returned only when the whole condition is true. A criterion that matches no row stands for it,
+                // or one that matches every row when an odd number of negations encloses it, so that the
+                // negation matches none
+                Criterion none = new In(property.getProperty(), Collections.emptyList());
+                if (!negated) {
+                    return none;
+                }
+                Negation every = new Negation();
+                every.add(none);
+                return every;
+            }
+            if (rows.size() > 1) {
+                throw new InvalidDataAccessResourceUsageException("The subquery compared with property '" +
+                        property.getProperty() + "' returned " + rows.size() +
+                        " rows, but a comparison needs exactly one value");
+            }
+            Object value = rows.get(0);
+            if (criterion instanceof Equals) {
+                return new Equals(property.getProperty(), value);
+            }
+            if (criterion instanceof NotEquals) {
+                return new NotEquals(property.getProperty(), value);
+            }
+            if (criterion instanceof GreaterThan) {
+                return new GreaterThan(property.getProperty(), value);
+            }
+            if (criterion instanceof GreaterThanEquals) {
+                return new GreaterThanEquals(property.getProperty(), value);
+            }
+            if (criterion instanceof LessThan) {
+                return new LessThan(property.getProperty(), value);
+            }
+            return new LessThanEquals(property.getProperty(), value);
+        }
+        return criterion;
+    }
+
+    private Collection<?> subqueryValues(QueryableCriteria<?> subquery) {
+        List<?> rows = subquery.list();
+        return rows == null ? Collections.emptyList() : rows;
+    }
+
+    private InvalidDataAccessResourceUsageException unsupportedSubquery(String form) {
+        return new InvalidDataAccessResourceUsageException("The " + form + " subquery form is not supported by " +
+                getClass().getSimpleName() + ". Select the values first and query with them, " +
+                "or use a comparison or in against a subquery.");
+    }
+
+    /**
      * Subclasses should implement this to provide the concrete implementation
      * of querying
      *
