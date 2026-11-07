@@ -96,6 +96,7 @@ public class CriteriaMethodInvoker {
         if (method == CriteriaMethods.LIST_CALL && args.length == 2) {
             builder.setPaginationEnabledList(true);
             if (args[0] instanceof Map<?, ?> map) {
+                hibernateQuery.setArguments(map);
                 if (map.get("max") instanceof Number max) {
                     hibernateQuery.maxResults(max.intValue());
                 }
@@ -143,7 +144,7 @@ public class CriteriaMethodInvoker {
                 result = hibernateQuery.list();
             }
         } else {
-            result = hibernateQuery.singleResult();
+            result = hibernateQuery.uniqueResult();
         }
         if (!builder.isParticipate()) {
             builder.closeSession();

@@ -39,23 +39,24 @@ public interface HqlQueryMethods {
 
     default void populateQuerySettings(HqlQueryDelegate d, Map<String, Object> args) {
         if (args == null || args.isEmpty()) return;
-        if (args.containsKey(HibernateQueryArgument.FLUSH_MODE.value())) {
-            d.setQueryFlushMode(GrailsQueryFlushMode.mapToHibernateQueryFlushMode(args.get(HibernateQueryArgument.FLUSH_MODE.value())));
-        }
         if (args.containsKey(HibernateQueryArgument.MAX.value())) {
             d.setMaxResults(toInteger(args.get(HibernateQueryArgument.MAX.value())));
         }
         if (args.containsKey(HibernateQueryArgument.OFFSET.value())) {
             d.setFirstResult(toInteger(args.get(HibernateQueryArgument.OFFSET.value())));
         }
-        if (args.containsKey(HibernateQueryArgument.FETCH_SIZE.value())) {
-            d.setFetchSize(toInteger(args.get(HibernateQueryArgument.FETCH_SIZE.value())));
+        HibernateQuerySettings settings = HibernateQuerySettings.from(args);
+        if (settings.flushMode() != null) {
+            d.setQueryFlushMode(settings.flushMode());
         }
-        if (args.containsKey(HibernateQueryArgument.TIMEOUT.value())) {
-            d.setTimeout(toInteger(args.get(HibernateQueryArgument.TIMEOUT.value())));
+        if (settings.fetchSize() != null) {
+            d.setFetchSize(settings.fetchSize());
         }
-        if (args.containsKey(HibernateQueryArgument.READ_ONLY.value())) {
-            d.setReadOnly(toBoolean(args.get(HibernateQueryArgument.READ_ONLY.value())));
+        if (settings.timeout() != null) {
+            d.setTimeout(settings.timeout());
+        }
+        if (settings.readOnly() != null) {
+            d.setReadOnly(settings.readOnly());
         }
         if (toBoolean(args.get(HibernateQueryArgument.LOCK.value()))) {
             d.setLockMode(LockModeType.PESSIMISTIC_WRITE);

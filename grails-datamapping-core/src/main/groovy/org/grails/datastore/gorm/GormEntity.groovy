@@ -512,7 +512,7 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
      * @return The DetachedCriteria instance
      */
     @Generated
-    static DetachedCriteria<D> where(Closure callable) {
+    static DetachedCriteria<D> where(@DelegatesTo(DetachedCriteria) Closure callable) {
         currentGormStaticApi().where(callable)
     }
 
@@ -522,7 +522,7 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
      * @return The DetachedCriteria instance that is lazily initialized
      */
     @Generated
-    static DetachedCriteria<D> whereLazy(Closure callable) {
+    static DetachedCriteria<D> whereLazy(@DelegatesTo(DetachedCriteria) Closure callable) {
         currentGormStaticApi().whereLazy(callable)
     }
 
@@ -532,7 +532,7 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
      * @return The DetachedCriteria instance
      */
     @Generated
-    static DetachedCriteria<D> whereAny(Closure callable) {
+    static DetachedCriteria<D> whereAny(@DelegatesTo(DetachedCriteria) Closure callable) {
         currentGormStaticApi().whereAny(callable)
     }
 
@@ -543,7 +543,7 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
      * @return A List of entities
      */
     @Generated
-    static List<D> findAll(Closure callable) {
+    static List<D> findAll(@DelegatesTo(DetachedCriteria) Closure callable) {
         currentGormStaticApi().findAll(callable)
     }
 
@@ -555,7 +555,7 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
      * @return A List of entities
      */
     @Generated
-    static List<D> findAll(Map args, Closure callable) {
+    static List<D> findAll(Map args, @DelegatesTo(DetachedCriteria) Closure callable) {
         currentGormStaticApi().findAll(args, callable)
     }
 
