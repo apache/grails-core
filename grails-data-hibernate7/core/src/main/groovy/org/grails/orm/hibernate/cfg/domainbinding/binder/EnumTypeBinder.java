@@ -49,6 +49,7 @@ public class EnumTypeBinder {
     private final ColumnConfigToColumnBinder columnConfigToColumnBinder;
     private final PersistentEntityNamingStrategy namingStrategy;
     private final CreateKeyForProps createKeyForProps;
+    private final StringColumnConstraintsBinder stringColumnConstraintsBinder = new StringColumnConstraintsBinder();
 
     public EnumTypeBinder(
             MetadataBuildingContext metadataBuildingContext,
@@ -98,10 +99,12 @@ public class EnumTypeBinder {
         Class<?> propertyType = property.getEnumType();
         PropertyConfig pc = property.getHibernateMappedForm();
         String typeName = property.getTypeName(propertyType);
+        GrailsEnumType enumType = null;
         if (typeName != null) {
             simpleValue.setTypeName(typeName);
         } else {
-            GrailsEnumType.fromString(pc.getEnumType()).configure(simpleValue, propertyType);
+            enumType = GrailsEnumType.fromString(pc.getEnumType());
+            enumType.configure(simpleValue, propertyType);
         }
         Properties enumProperties = new Properties();
         enumProperties.put(ENUM_CLASS_PROP, propertyType.getName());
@@ -118,6 +121,9 @@ public class EnumTypeBinder {
         Table t = simpleValue.getTable();
         t.addColumn(column);
         simpleValue.addColumn(column);
+        if (enumType == GrailsEnumType.DEFAULT || enumType == GrailsEnumType.STRING) {
+            stringColumnConstraintsBinder.bindStringColumnConstraints(column, pc, null);
+        }
         createKeyForProps.createKeyForProps(property, path, t, columnName);
 
         if (!pc.getColumns().isEmpty()) {
