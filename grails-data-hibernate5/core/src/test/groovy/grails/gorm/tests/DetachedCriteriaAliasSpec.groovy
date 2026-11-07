@@ -54,7 +54,19 @@ class DetachedCriteriaAliasSpec extends GrailsDataTckSpec<GrailsDataHibernate5Tc
         }.list(sort: 'name')*.name == ['both', 'first only']
     }
 
-    def 'a restriction on the second of two aliases of one association path fails on Hibernate 5'() {
+    def 'the second of two aliases of one association path replaces the first on Hibernate 5'() {
+        given:
+        seed()
+
+        expect: 'Hibernate 5 joins an association once, and a DetachedCriteria keeps the latest alias of a path'
+        new DetachedCriteria(AliasedTeam).build {
+            createAlias('items', 'a')
+            createAlias('items', 'b')
+            eq('b.label', 'second')
+        }.list(sort: 'name')*.name == ['both', 'second only']
+    }
+
+    def 'a restriction on the replaced alias fails on Hibernate 5'() {
         given:
         seed()
 
@@ -63,10 +75,9 @@ class DetachedCriteriaAliasSpec extends GrailsDataTckSpec<GrailsDataHibernate5Tc
             createAlias('items', 'a')
             createAlias('items', 'b')
             eq('a.label', 'first')
-            eq('b.label', 'second')
         }.list()
 
-        then: 'the second alias names no join, as Hibernate 5 joins an association once'
+        then:
         thrown(org.hibernate.QueryException)
     }
 }
