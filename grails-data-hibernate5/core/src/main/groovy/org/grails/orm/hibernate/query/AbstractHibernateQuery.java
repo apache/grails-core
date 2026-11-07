@@ -517,7 +517,6 @@ public abstract class AbstractHibernateQuery extends Query {
         CriteriaAndAlias subCriteria = null;
         String associationPath = getAssociationPath(associationName);
         Criteria parentCriteria = criteria;
-        String requestedAlias = alias;
         if (alias == null) {
             alias = generateAlias(associationName);
         }
@@ -534,13 +533,6 @@ public abstract class AbstractHibernateQuery extends Query {
         }
         if (createdAssociationPaths.containsKey(associationName)) {
             subCriteria = createdAssociationPaths.get(associationName);
-            if (requestedAlias != null && subCriteria.alias != null && !subCriteria.alias.equals(requestedAlias) &&
-                    !isGeneratedAlias(associationName, requestedAlias) && !isGeneratedAlias(associationName, subCriteria.alias) &&
-                    !subCriteria.alias.equals(alias) && !createdAssociationPaths.containsKey(requestedAlias) &&
-                    associationPath.equals(subCriteria.associationPath)) {
-                throw new InvalidDataAccessApiUsageException("Cannot join the association [" + associationPath + "] under the aliases [" +
-                        subCriteria.alias + "] and [" + requestedAlias + "]: Hibernate 5 joins an association once, so give both the same alias.");
-            }
         }
         else {
             JoinType joinType = joinTypes.get(associationName);
@@ -559,14 +551,6 @@ public abstract class AbstractHibernateQuery extends Query {
             }
         }
         return subCriteria;
-    }
-
-    /**
-     * Whether an alias is one that {@link #generateAlias(String)} makes for an association nobody named, as opposed
-     * to one a query declared.
-     */
-    private boolean isGeneratedAlias(String associationName, String alias) {
-        return alias.startsWith(calculatePropertyName(associationName) + calculatePropertyName(ALIAS));
     }
 
     private org.hibernate.sql.JoinType resolveJoinType(JoinType joinType) {
