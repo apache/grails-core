@@ -39,6 +39,10 @@ The `TenantResolver` can optionally implement the `AllTenantsResolver` interface
 
 If the `AllTenantsResolver` resolver is not implemented then GORM will use the configured link:../api/org/grails/org/hibernate/jdbc/schema/SchemaHandler.html[SchemaHandler] to resolve all the schema names from the database which it will use for the tenants.
 
+==== Associations to Entities That Are Not Multi-Tenant
+
+Each tenant schema gets its own `SessionFactory`, which maps the entities that implement `MultiTenant` and no other entity. An entity that implements `MultiTenant` therefore cannot have a `hasMany` or a to-one association to an entity that does not implement it. GORM refuses to start in that case and names the associations, for example `Vehicle` in `TenantUser.vehicles -> Vehicle`. Make the target entity implement `MultiTenant` as well, or use the `DISCRIMINATOR` mode, which keeps every entity in the same tables. Embedded associations are not affected.
+
 ==== Runtime Schema Creation
 
 On startup, if `dataSource.dbCreate` is set to create the database at runtime, then GORM will attempt to create the schemas if they are missing.

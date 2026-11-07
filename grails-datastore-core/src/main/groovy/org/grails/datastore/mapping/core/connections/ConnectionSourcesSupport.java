@@ -19,6 +19,7 @@
 
 package org.grails.datastore.mapping.core.connections;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -27,6 +28,10 @@ import org.springframework.util.ClassUtils;
 
 import org.grails.datastore.mapping.config.Entity;
 import org.grails.datastore.mapping.model.PersistentEntity;
+import org.grails.datastore.mapping.model.PersistentProperty;
+import org.grails.datastore.mapping.model.types.Association;
+import org.grails.datastore.mapping.model.types.Embedded;
+import org.grails.datastore.mapping.model.types.EmbeddedCollection;
 import org.grails.datastore.mapping.multitenancy.TenantDataSourceConfig;
 
 /**
@@ -85,6 +90,34 @@ public class ConnectionSourcesSupport {
             return names.contains(connectionSourceName) ||
                     names.contains(ConnectionSource.ALL);
         }
+    }
+
+    /**
+     * With schema based multi-tenancy every tenant schema gets its own connection source, which maps the
+     * multi tenant entities but only those other entities that use every connection source. An association
+     * from a multi tenant entity to any other entity therefore has nothing to refer to in a tenant schema.
+     *
+     * @param entities The persistent entities of the application
+     * @return A description of each association of a multi tenant entity to an entity the tenant schemas do
+     * not map, in the form {@code Owner.property -> Target}; empty when there is none
+     */
+    public static List<String> findAssociationsToEntitiesMissingFromTenantSchemas(Iterable<? extends PersistentEntity> entities) {
+        List<String> found = new ArrayList<>();
+        for (PersistentEntity entity : entities) {
+            if (!entity.isMultiTenant()) {
+                continue;
+            }
+            for (PersistentProperty<?> property : entity.getPersistentProperties()) {
+                if (!(property instanceof Association) || property instanceof Embedded || property instanceof EmbeddedCollection) {
+                    continue;
+                }
+                PersistentEntity target = ((Association<?>) property).getAssociatedEntity();
+                if (target != null && !target.isMultiTenant() && !getConnectionSourceNames(target).contains(ConnectionSource.ALL)) {
+                    found.add(entity.getJavaClass().getSimpleName() + '.' + property.getName() + " -> " + target.getJavaClass().getSimpleName());
+                }
+            }
+        }
+        return found;
     }
 
     protected static boolean isMultiTenant(Class[] interfaces) {
