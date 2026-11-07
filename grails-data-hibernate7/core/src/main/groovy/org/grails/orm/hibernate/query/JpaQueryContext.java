@@ -43,6 +43,7 @@ public class JpaQueryContext implements Cloneable {
     private final Map<ParameterExpression<?>, Object> parameterValues = new LinkedHashMap<>();
     private final Map<String, Expression<?>> selectionAliases = new HashMap<>();
     private JpaQueryContext parent;
+    private String blockPath;
 
     public JpaQueryContext() {
         this(null, null, null);
@@ -84,6 +85,7 @@ public class JpaQueryContext implements Cloneable {
         this.joinTracker = new JoinTracker(parent != null ? parent.getJoinTracker() : null, root);
         this.aliasRegistry = new AliasRegistry(parent != null ? parent.getAliasRegistry() : null);
         this.resolver = new ExpressionResolver(aliasRegistry, joinTracker);
+        this.resolver.shareJoins(this::inheritedJoin, this::publishJoin);
         if (aliases != null) {
             for (HibernateAlias alias : aliases) {
                 aliasRegistry.define(alias.alias(), alias);
@@ -123,9 +125,55 @@ public class JpaQueryContext implements Cloneable {
         return joinTracker.getJoin(path);
     }
 
+    /**
+     * Declares that this context is the one of an association block, and the path of that association in the
+     * enclosing context, so that a join of the block is the join of the same path from the enclosing query.
+     *
+     * @param blockPath the association path of the block, relative to the enclosing context
+     */
+    public void setBlockPath(String blockPath) {
+        this.blockPath = blockPath;
+    }
+
+    private From<?, ?> inheritedJoin(String path) {
+        return parent != null && blockPath != null ? parent.visibleJoin(blockPath + "." + path) : null;
+    }
+
+    private From<?, ?> visibleJoin(String path) {
+        From<?, ?> own = joinTracker.getOwnJoin(path);
+        return own != null ? own : inheritedJoin(path);
+    }
+
+    private void publishJoin(String path, From<?, ?> join) {
+        if (parent != null && blockPath != null) {
+            parent.shareJoin(blockPath + "." + path, join);
+        }
+    }
+
+    private void shareJoin(String path, From<?, ?> join) {
+        if (joinTracker.getOwnJoin(path) == null) {
+            joinTracker.addJoin(path, join);
+        }
+        publishJoin(path, join);
+    }
+
     From<?, ?> resolveAssociation(String path) {
+        if (joinTracker.getOwnJoin(path) == null) {
+            From<?, ?> shared = inheritedJoin(path);
+            if (shared != null) {
+                joinTracker.addJoin(path, shared);
+            }
+        }
+        From<?, ?> join = resolveOwnAssociation(path);
+        publishJoin(path, join);
+        return join;
+    }
+
+    private From<?, ?> resolveOwnAssociation(String path) {
         HibernateAlias definition = aliasRegistry.getDefinition(path);
-        JoinType joinType = definition != null && !definition.explicit() ? definition.joinType() : JoinType.INNER;
+        JoinType declared = aliasRegistry.getAssociationJoinType(path);
+        JoinType joinType = declared != null ? declared :
+                definition != null && !definition.explicit() ? definition.joinType() : JoinType.INNER;
         return resolver.resolveAssociation(path, joinType);
     }
 
