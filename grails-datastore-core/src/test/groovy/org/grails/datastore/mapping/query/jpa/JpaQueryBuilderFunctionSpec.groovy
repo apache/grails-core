@@ -74,6 +74,7 @@ class JpaQueryBuilderFunctionSpec extends Specification {
             getProjections() >> [Projections.property('name')]
             getCriteria() >> [new Query.Equals('name', 'Alice'), new Query.GreaterThan('age', 21)]
         }
+        subquery.materializeLazyCriteria() >> subquery
         def criteria = [
             new FunctionCallingCriterion('upper', new Query.In('name', subquery)),
             new FunctionCallingCriterion('lower', new Query.Equals('name', 'bob'))
@@ -198,6 +199,60 @@ class JpaQueryBuilderFunctionSpec extends Specification {
 
         then:
         thrown(InvalidDataAccessResourceUsageException)
+    }
+
+    void "JpaQueryBuilder(QueryableCriteria) materializes deferred criteria on construction and in subqueries"() {
+        given:
+        QueryableCriteria materializedRoot = Stub(QueryableCriteria) {
+            getPersistentEntity() >> entity
+            getCriteria() >> [new Query.Equals('name', 'Alice')]
+        }
+        QueryableCriteria lazyRoot = Stub(QueryableCriteria) {
+            getPersistentEntity() >> entity
+            getCriteria() >> []
+            materializeLazyCriteria() >> materializedRoot
+        }
+
+        when:
+        def info = new JpaQueryBuilder(lazyRoot).buildDelete()
+
+        then:
+        info.query == "DELETE FROM ${JpaFunctionTestPerson.name} jpaFunctionTestPerson WHERE (jpaFunctionTestPerson.name=:p1)"
+        info.parameters == ['Alice']
+    }
+
+    void "an In subquery that is deferred is materialized before its restriction is read"() {
+        given:
+        QueryableCriteria materializedSubquery = Stub(QueryableCriteria) {
+            getPersistentEntity() >> entity
+            getProjections() >> [Projections.property('name')]
+            getCriteria() >> [new Query.Equals('name', 'Alice')]
+        }
+        QueryableCriteria deferredSubquery = Stub(QueryableCriteria) {
+            getPersistentEntity() >> entity
+            getProjections() >> []
+            getCriteria() >> []
+            materializeLazyCriteria() >> materializedSubquery
+        }
+        def criteria = [new Query.In('name', deferredSubquery)]
+
+        when:
+        def info = new JpaQueryBuilder(entity, criteria).buildDelete()
+
+        then: 'the subquery carries the restriction and projection of the materialized criteria'
+        info.query == "DELETE FROM ${JpaFunctionTestPerson.name} jpaFunctionTestPerson WHERE (jpaFunctionTestPerson.name IN (SELECT jpaFunctionTestPerson0.name FROM ${JpaFunctionTestPerson.name} jpaFunctionTestPerson0 WHERE jpaFunctionTestPerson0.name=:p1))"
+        info.parameters == ['Alice']
+    }
+
+    void "QueryableCriteria materializeLazyCriteria returns self by default"() {
+        given:
+        QueryableCriteria criteria = [:] as QueryableCriteria
+
+        when:
+        QueryableCriteria materialized = criteria.materializeLazyCriteria()
+
+        then:
+        materialized.is(criteria)
     }
 }
 

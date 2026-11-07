@@ -50,4 +50,9 @@ class DetachedAssociationCriteria<T> extends DetachedCriteria<T> implements Crit
         this.association = association
         this.associationPath = associationPath
     }
+
+    @Override
+    protected DetachedCriteria newInstance() {
+        new DetachedAssociationCriteria(targetClass, association, associationPath, alias)
+    }
 }

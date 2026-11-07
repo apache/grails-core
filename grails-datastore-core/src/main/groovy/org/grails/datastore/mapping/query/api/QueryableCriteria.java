@@ -57,4 +57,17 @@ public interface QueryableCriteria<T> extends Criteria {
      */
     String getAlias();
 
+    /**
+     * Returns the criteria to read the query from, with its deferred criteria applied: the deferred query runs once,
+     * the first time the criteria is used, and what it adds stays part of the criteria. A criteria with a deferred
+     * query returns a copy, so that a query implementation can extend or translate it without changing the
+     * criteria it was given. A query implementation calls this before it translates a criteria that appears as a
+     * subquery. Implementations without deferred criteria return themselves.
+     *
+     * @return The criteria to read the query from
+     */
+    default QueryableCriteria<T> materializeLazyCriteria() {
+        return this;
+    }
+
 }

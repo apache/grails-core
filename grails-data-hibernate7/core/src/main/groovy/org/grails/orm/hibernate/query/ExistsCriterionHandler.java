@@ -38,7 +38,7 @@ class ExistsCriterionHandler implements InternalCriterionHandler<Query.Exists> {
     @Override
     @SuppressWarnings("unchecked")
     public Predicate handle(CriterionContext context, Query.Exists exists) {
-        QueryableCriteria<?> subqueryCriteria = exists.getSubquery();
+        QueryableCriteria<?> subqueryCriteria = exists.getSubquery().materializeLazyCriteria();
         GrailsHibernatePersistentEntity subqueryEntity = (GrailsHibernatePersistentEntity) subqueryCriteria.getPersistentEntity();
         Subquery<?> subquery = context.getCriteriaQuery().subquery(subqueryEntity.getJavaClass());
         var creator = new JpaCriteriaQueryCreator(
