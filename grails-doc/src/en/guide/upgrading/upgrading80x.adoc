@@ -884,6 +884,9 @@ A declared `unique` index that could not be built because documents already shar
 * **GORM for MongoDB builds only the indexes of the domain classes mapped to each connection.**
 The index build of a named connection also created the indexes of classes mapped only to another connection, in its own database. Each connection now builds the indexes of the classes mapped to it, including those mapped to `ConnectionSource.ALL`. Indexes already created elsewhere are left in place. See link:{mongodb5Guide}index.html#upgradeNotes[Upgrade Notes] in the GORM for MongoDB guide.
 
+* **Indexed data binding rejects negative and malformed indexes.**
+Array, List, and other positional collection or association binding now requires a non-negative integer index, aligning with the JavaBeans indexed-property model (spec v1.01, section 7.2). Request parameters such as `books[-1].title` or `albums[bogus]` become binding errors and no longer select a different element or throw an uncaught exception. Audit existing form markup and request parameters for negative or non-numeric indexes on arrays and Lists. `Set` association keys remain arbitrary grouping tokens (selection is by `id`), so `authors[foo]` and `authors[-1]` continue to work for Sets.
+
 ==== 21. Tag Library Test Cleanup Changes
 
 Grails 8 removes the `purgeTagLibMetaClass` test hook used by some web and TagLib unit tests.
