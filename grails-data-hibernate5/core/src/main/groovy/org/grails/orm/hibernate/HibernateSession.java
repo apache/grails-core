@@ -39,6 +39,7 @@ import org.hibernate.proxy.HibernateProxy;
 
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.core.convert.ConversionService;
+import org.springframework.dao.InvalidDataAccessResourceUsageException;
 
 import org.grails.datastore.gorm.timestamp.DefaultTimestampProvider;
 import org.grails.datastore.mapping.model.PersistentEntity;
@@ -94,12 +95,37 @@ public class HibernateSession extends AbstractHibernateSession {
     }
 
     /**
+     * A bulk {@code delete} or {@code update} statement has no {@code LIMIT} or {@code OFFSET}, so a
+     * criteria that carries {@code max} or {@code offset} would write to every matching row. Refuse it.
+     */
+    private static void rejectPagination(QueryableCriteria<?> criteria, String operation) {
+        Integer max = criteria.getDefaultMax();
+        Integer offset = criteria.getDefaultOffset();
+        if (max == null && offset == null) {
+            return;
+        }
+        StringBuilder unsupported = new StringBuilder();
+        if (max != null) {
+            unsupported.append("max(").append(max).append(')');
+        }
+        if (offset != null) {
+            if (unsupported.length() > 0) {
+                unsupported.append(", ");
+            }
+            unsupported.append("offset(").append(offset).append(')');
+        }
+        throw new InvalidDataAccessResourceUsageException(operation + " cannot limit the rows it writes to, " +
+                "so it does not support " + unsupported + "; remove it or select the ids first");
+    }
+
+    /**
      * Deletes all objects matching the given criteria.
      *
      * @param criteria The criteria
      * @return The total number of records deleted
      */
     public long deleteAll(final QueryableCriteria criteria) {
+        rejectPagination(criteria, "deleteAll()");
         return getHibernateTemplate().execute((GrailsHibernateTemplate.HibernateCallback<Integer>) session -> {
             JpaQueryBuilder builder = new JpaQueryBuilder(criteria);
             builder.setConversionService(getMappingContext().getConversionService());
@@ -133,6 +159,7 @@ public class HibernateSession extends AbstractHibernateSession {
      * @return The total number of records updated
      */
     public long updateAll(final QueryableCriteria criteria, final Map<String, Object> properties) {
+        rejectPagination(criteria, "updateAll()");
         return getHibernateTemplate().execute((GrailsHibernateTemplate.HibernateCallback<Integer>) session -> {
             JpaQueryBuilder builder = new JpaQueryBuilder(criteria);
             builder.setConversionService(getMappingContext().getConversionService());

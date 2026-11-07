@@ -24,7 +24,6 @@ import spock.lang.Specification
 
 /**
  * A bulk write has no LIMIT or OFFSET, so a criteria with max or offset is refused and writes nothing.
- * Hibernate 5 ignores them and writes every matching row, so this scenario is not shared with it.
  */
 @Integration(applicationClass = Application)
 class BulkWriteGuardScenarioSpec extends Specification {

@@ -1486,7 +1486,7 @@ The functions that a where query calls on a property are `lower`, `upper`, `trim
 
 ===== 26.15 Bulk deleteAll and updateAll on a Query
 
-`deleteAll()` and `updateAll(Map)` on a `where` query or a `DetachedCriteria` run one `delete` or `update` statement. The statement has no row limit, so a query that carries `max` or `offset` used to write to every matching row: `Person.where { age > 18 }.max(2).deleteAll()` deleted all of them (issue https://github.com/apache/grails-core/issues/16805[#16805]). `deleteAll()` and `updateAll(Map)` now throw an `InvalidDataAccessResourceUsageException` that names the `max` or `offset` value, and write nothing. Select the ids first, with the limit on that query, and delete or update by id:
+`deleteAll()` and `updateAll(Map)` on a `where` query or a `DetachedCriteria` run one `delete` or `update` statement. The statement has no row limit, so a query that carries `max` or `offset` used to write to every matching row: `Person.where { age > 18 }.max(2).deleteAll()` deleted all of them (issue https://github.com/apache/grails-core/issues/16805[#16805]). `deleteAll()` and `updateAll(Map)` now throw an `InvalidDataAccessResourceUsageException` that names the `max` or `offset` value, and write nothing. Hibernate 5 now follows the same rule (issue https://github.com/apache/grails-core/issues/16832[#16832]), where it used to ignore the limit silently. Select the ids first, with the limit on that query, and delete or update by id:
 
 [source,groovy]
 ----
