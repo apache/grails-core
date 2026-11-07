@@ -17,15 +17,20 @@ package org.grails.orm.hibernate.query;
 
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
 import jakarta.persistence.criteria.Expression;
 import jakarta.persistence.criteria.From;
+import jakarta.persistence.criteria.Join;
 import jakarta.persistence.criteria.JoinType;
 import jakarta.persistence.criteria.ParameterExpression;
 import jakarta.persistence.criteria.Path;
+import jakarta.persistence.metamodel.Attribute;
+
+import org.grails.datastore.gorm.query.criteria.DetachedAssociationCriteria;
 
 /**
  * Orchestrator for JPA query translation state (Aliases, Joins, Expressions).
@@ -42,6 +47,8 @@ public class JpaQueryContext implements Cloneable {
     private final ExpressionResolver resolver;
     private final Map<ParameterExpression<?>, Object> parameterValues = new LinkedHashMap<>();
     private final Map<String, Expression<?>> selectionAliases = new HashMap<>();
+    // only the context of a query, which has no parent, records the contexts of its association blocks
+    private Map<DetachedAssociationCriteria<?>, JpaQueryContext> associationContexts;
     private JpaQueryContext parent;
 
     public JpaQueryContext() {
@@ -190,6 +197,96 @@ public class JpaQueryContext implements Cloneable {
             }
         }
         return resolver.resolve(path);
+    }
+
+    /**
+     * Returns the expression that an order of this query sorts by. Unlike
+     * {@link #getFullyQualifiedExpression(String)}, an association on the path that the query does not join is
+     * joined with a left join, so that the sort keeps the rows where the association is {@code null}.
+     *
+     * @param path the property path of the order
+     * @return the expression to sort by
+     */
+    public Expression<?> getSortExpression(String path) {
+        return getSortExpression(path, false);
+    }
+
+    /**
+     * Returns the expression that an order of this query sorts by, as {@link #getSortExpression(String)} does.
+     * A path that ends with a foreign key is not joined for it: Hibernate reads the column, which keeps the rows
+     * where the association is {@code null} as it is.
+     *
+     * @param path the property path of the order
+     * @param endsWithForeignKey whether the last two attributes of the path are an association and its
+     *     identifier, with the foreign key on the side of the path
+     * @return the expression to sort by
+     */
+    public Expression<?> getSortExpression(String path, boolean endsWithForeignKey) {
+        if (parent != null && path != null && path.startsWith("{alias}")) {
+            return getFullyQualifiedExpression(path);
+        }
+        return resolver.resolveSort(path, endsWithForeignKey);
+    }
+
+    /**
+     * Records the context that the criteria of an association block are built against, in which the aliases of
+     * the block are declared and its joins are made. An order of the block is resolved against it, so that it
+     * sorts by the joins of its own block. A context nested in another records it in the context of the query,
+     * so that an order of the query finds the context of a block at any depth.
+     *
+     * @param association the criteria of the association block
+     * @param context the context of the block
+     */
+    public void registerAssociationContext(DetachedAssociationCriteria<?> association, JpaQueryContext context) {
+        if (parent != null) {
+            parent.registerAssociationContext(association, context);
+        } else {
+            if (associationContexts == null) {
+                associationContexts = new IdentityHashMap<>();
+            }
+            associationContexts.put(association, context);
+        }
+    }
+
+    /**
+     * Returns the context recorded for an association block by
+     * {@link #registerAssociationContext(DetachedAssociationCriteria, JpaQueryContext)}.
+     *
+     * @param association the criteria of the association block
+     * @return the context of the block, or {@code null} if the query has built no criteria of that block
+     */
+    public JpaQueryContext getAssociationContext(DetachedAssociationCriteria<?> association) {
+        if (parent != null) {
+            return parent.getAssociationContext(association);
+        }
+        return associationContexts != null ? associationContexts.get(association) : null;
+    }
+
+    /**
+     * Whether an expression is read from the table of the root of this query: a property of the root, of one of
+     * its embedded components, or one of its foreign keys. Anything that is read through a join of an
+     * association is not.
+     *
+     * @param expression the expression
+     * @return whether the expression is a column of the root
+     */
+    public boolean isColumnOfRoot(Expression<?> expression) {
+        if (!(expression instanceof Path<?> path)) {
+            return false;
+        }
+        Path<?> parent = path.getParentPath();
+        while (parent != null && parent != getRoot()) {
+            if (parent instanceof Join<?, ?> join) {
+                // the join of a component has no table of its own
+                if (join.getAttribute().getPersistentAttributeType() != Attribute.PersistentAttributeType.EMBEDDED) {
+                    return false;
+                }
+                parent = join.getParent();
+            } else {
+                parent = parent.getParentPath();
+            }
+        }
+        return parent != null;
     }
 
     public Path<?> getFullyQualifiedPath(String path) {

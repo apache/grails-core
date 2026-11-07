@@ -21,6 +21,12 @@ import jakarta.persistence.criteria.Join
 import jakarta.persistence.criteria.JoinType
 import jakarta.persistence.criteria.ParameterExpression
 import jakarta.persistence.criteria.Path
+import jakarta.persistence.metamodel.Attribute
+import jakarta.persistence.metamodel.SingularAttribute
+import org.grails.datastore.gorm.query.criteria.DetachedAssociationCriteria
+import org.grails.datastore.mapping.model.types.Association
+import org.hibernate.query.sqm.tree.domain.SqmPath
+import org.hibernate.query.sqm.tree.from.SqmFrom
 import spock.lang.Specification
 
 /**
@@ -277,6 +283,92 @@ class JpaQueryContextSpec extends Specification {
         then:
         1 * root.get('height') >> heightPath
         resolved == heightPath
+    }
+
+    def "test the context of an association block is recorded in the context of the query"() {
+        given:
+        def context = new JpaQueryContext(Mock(From))
+        def outerContext = new JpaQueryContext(context, Mock(From))
+        def blockContext = new JpaQueryContext(outerContext, Mock(From))
+        def block = new DetachedAssociationCriteria(Object, Mock(Association))
+        def other = new DetachedAssociationCriteria(Object, Mock(Association))
+
+        when: 'the context of a nested block is recorded'
+        outerContext.registerAssociationContext(block, blockContext)
+
+        then: 'the context of the query has it, so that an order of the query finds the block at any depth'
+        context.getAssociationContext(block).is(blockContext)
+        outerContext.getAssociationContext(block).is(blockContext)
+
+        and: 'a block that the query has not built has no context'
+        context.getAssociationContext(other) == null
+    }
+
+    def "test a path of the root or of one of its components is a column of the root"() {
+        given:
+        def root = Mock(From)
+        def context = new JpaQueryContext(root)
+        def componentAttribute = Mock(Attribute)
+        componentAttribute.getPersistentAttributeType() >> Attribute.PersistentAttributeType.EMBEDDED
+        def componentJoin = Mock(Join)
+        componentJoin.getAttribute() >> componentAttribute
+        componentJoin.getParent() >> root
+        def associationPath = Mock(Path)
+        associationPath.getParentPath() >> root
+        def name = Mock(Path)
+        name.getParentPath() >> root
+        def foreignKey = Mock(Path)
+        foreignKey.getParentPath() >> associationPath
+        def componentProperty = Mock(Path)
+        componentProperty.getParentPath() >> componentJoin
+
+        expect:
+        context.isColumnOfRoot(name)
+        context.isColumnOfRoot(foreignKey)
+        context.isColumnOfRoot(componentProperty)
+    }
+
+    def "test a path through the join of an association is not a column of the root"() {
+        given:
+        def root = Mock(From)
+        def context = new JpaQueryContext(root)
+        def associationAttribute = Mock(Attribute)
+        associationAttribute.getPersistentAttributeType() >> Attribute.PersistentAttributeType.MANY_TO_ONE
+        def associationJoin = Mock(Join)
+        associationJoin.getAttribute() >> associationAttribute
+        associationJoin.getParent() >> root
+        def joined = Mock(Path)
+        joined.getParentPath() >> associationJoin
+        def detached = Mock(Path)
+
+        expect:
+        !context.isColumnOfRoot(joined)
+        !context.isColumnOfRoot(detached)
+        !context.isColumnOfRoot(Mock(Expression))
+    }
+
+    def "test a sort path that ends with a foreign key is not joined for it"() {
+        given:
+        def root = Mock(From)
+        def context = new JpaQueryContext(root)
+        def attribute = Mock(SingularAttribute)
+        attribute.getPersistentAttributeType() >> Attribute.PersistentAttributeType.MANY_TO_ONE
+        attribute.isAssociation() >> true
+        def clubPath = Mock(SqmPath)
+        clubPath.getModel() >> attribute
+        def idPath = Mock(SqmPath)
+        def sqmRoot = Mock(SqmFrom)
+        def sqmContext = new JpaQueryContext(sqmRoot)
+
+        when:
+        def result = sqmContext.getSortExpression('club.id', true)
+
+        then:
+        _ * sqmRoot.get('club') >> clubPath
+        _ * sqmRoot.getSqmJoins() >> []
+        _ * clubPath.get('id') >> idPath
+        0 * sqmRoot.join(_, _)
+        result == idPath
     }
 
     def "test parameter values cannot be changed through the returned map"() {

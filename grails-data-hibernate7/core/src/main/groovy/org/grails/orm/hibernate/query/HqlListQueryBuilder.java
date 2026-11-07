@@ -20,10 +20,15 @@ package org.grails.orm.hibernate.query;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
 import org.grails.datastore.gorm.finders.DynamicFinder;
+import org.grails.datastore.mapping.model.PersistentEntity;
+import org.grails.datastore.mapping.model.PersistentProperty;
+import org.grails.datastore.mapping.model.types.Association;
+import org.grails.datastore.mapping.model.types.Embedded;
 import org.grails.datastore.mapping.reflect.NameUtils;
 import org.grails.orm.hibernate.cfg.HibernateMappingContext;
 import org.grails.orm.hibernate.cfg.Mapping;
@@ -40,6 +45,10 @@ public class HqlListQueryBuilder {
 
     private final GrailsHibernatePersistentEntity entity;
     private final Map<String, Object> params;
+    // the joins of the associations that the query sorts through, by the path they join
+    private final Map<String, String> sortJoins = new LinkedHashMap<>();
+    // the paths that the query fetches, with the alias of a fetch that the query also sorts through
+    private final Map<String, String> fetchJoins = new LinkedHashMap<>();
 
     public HqlListQueryBuilder(GrailsHibernatePersistentEntity entity, Map<String, Object> params) {
         this.entity = entity;
@@ -56,12 +65,20 @@ public class HqlListQueryBuilder {
             fetchMap.forEach((prop, type) -> {
                 if (HibernateQueryArgument.JOIN.value().equals(type) || HibernateQueryArgument.EAGER.value().equals(type)) {
                     requireMappedProperty(prop, HibernateQueryArgument.FETCH.value());
-                    hql.append(" join fetch e.").append(prop);
+                    fetchJoins.putIfAbsent("e." + prop, "");
                 }
             });
         }
 
+        // the sort comes first: it gives an alias to a fetch that it sorts through
         String sortHql = buildSortClause();
+        fetchJoins.forEach((path, alias) -> {
+            hql.append(" join fetch ").append(path);
+            if (!alias.isEmpty()) {
+                hql.append(' ').append(alias);
+            }
+        });
+        sortJoins.forEach((path, alias) -> hql.append(" left join ").append(path).append(' ').append(alias));
         if (!sortHql.isEmpty()) {
             hql.append(" order by ").append(sortHql);
         }
@@ -114,14 +131,79 @@ public class HqlListQueryBuilder {
         return "";
     }
 
+    /**
+     * Builds one part of the order clause from a caller-supplied property path. The path is resolved against the
+     * mapping before it is interpolated into HQL, in the one walk that also decides where it is read from: a path
+     * that the mapping does not know is rejected, and a property of an association is read from a left join of
+     * the association and not from the path through it, which Hibernate joins with an implicit inner join that
+     * leaves out the rows where the association is {@code null}.
+     *
+     * @param propertyName The property path
+     * @param direction The direction of the sort
+     * @param ignoreCase Whether a string is sorted without regard to its case
+     * @return The order part
+     */
     private String buildSortPart(String propertyName, String direction, boolean ignoreCase) {
-        HibernatePersistentProperty prop = requireMappedProperty(propertyName, HibernateQueryArgument.SORT.value());
+        String argument = HibernateQueryArgument.SORT.value();
+        if (!NameUtils.isValidPropertyPath(propertyName)) {
+            throw new IllegalArgumentException("Invalid " + argument + " property");
+        }
+        String[] tokens = propertyName.split("\\.");
+        PersistentEntity current = entity;
+        String alias = "e";
+        for (int i = 0; i < tokens.length - 1; i++) {
+            if (!(current.getPropertyByName(tokens[i]) instanceof Association<?> association) ||
+                    association.getAssociatedEntity() == null) {
+                throw new IllegalArgumentException("Invalid " + argument + " property");
+            }
+            String joined = alias + '.' + tokens[i];
+            if (association instanceof Embedded<?>) {
+                // a component has no join of its own: an association inside it is joined through its path
+                alias = joined;
+            } else if (i == tokens.length - 2 && isForeignKey(association, tokens[i + 1])) {
+                // Hibernate reads the foreign key without a join, which keeps the rows where it is null
+                alias = joined;
+            } else if (fetchJoins.containsKey(joined)) {
+                // the query already joins the association to fetch it, and the sort uses that join
+                alias = fetchJoins.get(joined);
+                if (alias.isEmpty()) {
+                    alias = "f" + fetchJoins.values().stream().filter(fetchAlias -> !fetchAlias.isEmpty()).count();
+                    fetchJoins.put(joined, alias);
+                }
+            } else {
+                alias = sortJoins.computeIfAbsent(joined, path -> "s" + sortJoins.size());
+            }
+            current = association.getAssociatedEntity();
+        }
+        PersistentProperty<?> property = current.getPropertyByName(tokens[tokens.length - 1]);
+        if (property == null) {
+            throw new IllegalArgumentException("Invalid " + argument + " property");
+        }
         String normalizedDirection = DynamicFinder.normalizeDirection(direction);
-        String path = "e." + propertyName;
-        if (prop.getType() == String.class && ignoreCase) {
+        String path = alias + '.' + tokens[tokens.length - 1];
+        if (property.getType() == String.class && ignoreCase) {
             return "upper(" + path + ") " + normalizedDirection;
         }
         return path + " " + normalizedDirection;
+    }
+
+    /**
+     * Whether a property of the entity that an association refers to is the foreign key of the association: the
+     * association is mapped as a many-to-one, which has its key in the table of the entity that declares it, and
+     * the property is the identifier that the key holds. An association with its key in the other table, as
+     * {@code hasOne} declares, has no such column.
+     *
+     * @param association the association
+     * @param propertyName the name of a property of the associated entity
+     * @return whether a path through the association to the property is read from the foreign key column
+     */
+    static boolean isForeignKey(Association<?> association, String propertyName) {
+        if (!(association instanceof HibernatePersistentProperty mapped && mapped.isValidHibernateManyToOne())) {
+            return false;
+        }
+        PersistentEntity associated = association.getAssociatedEntity();
+        PersistentProperty<?> identity = associated != null ? associated.getIdentity() : null;
+        return identity != null && propertyName.equals(identity.getName());
     }
 
     /**
