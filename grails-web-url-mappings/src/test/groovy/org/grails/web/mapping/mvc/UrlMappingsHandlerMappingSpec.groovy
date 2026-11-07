@@ -20,14 +20,17 @@ package org.grails.web.mapping.mvc
 
 import grails.artefact.Artefact
 import grails.core.DefaultGrailsApplication
+import grails.core.GrailsApplication
 import grails.util.GrailsWebMockUtil
 import grails.web.Action
 import grails.web.HyphenatedUrlConverter
 import grails.web.mapping.AbstractUrlMappingsSpec
 import org.grails.web.mapping.DefaultUrlMappingData
+import org.grails.web.errors.GrailsWrappedRuntimeException
 import org.grails.web.mapping.DefaultUrlMappingInfo
 import org.grails.web.util.WebUtils
 import org.springframework.ui.ModelMap
+import org.springframework.web.context.WebApplicationContext
 import org.springframework.web.context.request.RequestContextHolder
 import org.springframework.web.context.request.WebRequest
 import org.springframework.web.context.request.WebRequestInterceptor
@@ -72,6 +75,42 @@ class UrlMappingsHandlerMappingSpec extends AbstractUrlMappingsSpec {
 
         then:"The controller action that is mapped to the 404 handler is executed"
         webRequest.response.contentAsString == 'Not Found'
+    }
+
+    void "a mapping for an exception is found for #what"() {
+        given:
+        def holder = getUrlMappingsHolder {
+            "500"(controller: 'errors', action: 'ioFailure', exception: IOException)
+            "500"(controller: 'errors', action: 'illegalArgument', exception: IllegalArgumentException)
+            "500"(controller: 'errors', action: 'anyFailure')
+        }
+        def handler = new UrlMappingsHandlerMapping(holder)
+        def webContext = new StaticWebApplicationContext()
+        webContext.beanFactory.registerSingleton(GrailsApplication.APPLICATION_ID, new DefaultGrailsApplication())
+        webContext.refresh()
+        def request = GrailsWebMockUtil.bindMockWebRequest().request
+        request.servletContext.setAttribute(WebApplicationContext.ROOT_WEB_APPLICATION_CONTEXT_ATTRIBUTE, webContext)
+        request.setAttribute(WebUtils.ERROR_STATUS_CODE_ATTRIBUTE, '500')
+        request.setAttribute(WebUtils.ERROR_EXCEPTION_ATTRIBUTE,
+                wrapped ? new GrailsWrappedRuntimeException(request.servletContext, thrown) : thrown)
+
+        when:
+        def info = handler.getHandler(request).handler
+
+        then:
+        info.actionName == action
+
+        cleanup:
+        webContext.close()
+
+        where:
+        what                                                 | wrapped | thrown                                                                          | action
+        'the exception an error handler is forwarded for'    | true    | new IOException('thrown', new IllegalStateException('its own cause'))           | 'ioFailure'
+        'the exception the container reports'                | false   | new IOException('thrown', new IllegalStateException('its own cause'))           | 'ioFailure'
+        'the root cause an error handler is forwarded for'   | true    | new IllegalStateException('thrown', new IOException('the root cause'))          | 'ioFailure'
+        'the root cause the container reports'               | false   | new IllegalStateException('thrown', new IOException('the root cause'))          | 'ioFailure'
+        'the exception first, where its root cause has one'  | true    | new IllegalArgumentException('thrown', new IOException('the root cause'))       | 'illegalArgument'
+        'neither, which leaves the mapping without an exception' | true | new IllegalStateException('thrown', new UnsupportedOperationException('no map')) | 'anyFailure'
     }
 
     @Issue('https://github.com/apache/grails-core/issues/10149')

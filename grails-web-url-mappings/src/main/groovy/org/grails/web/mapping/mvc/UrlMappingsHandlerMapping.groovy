@@ -43,6 +43,7 @@ import grails.web.mapping.cors.GrailsCorsConfiguration
 import grails.web.mime.MimeType
 import grails.web.mime.MimeTypeResolver
 import org.grails.exceptions.ExceptionUtils
+import org.grails.web.errors.GrailsWrappedRuntimeException
 import org.grails.web.servlet.mvc.GrailsWebRequest
 import org.grails.web.util.GrailsApplicationAttributes
 import org.grails.web.util.HiddenHttpMethod
@@ -154,6 +155,16 @@ class UrlMappingsHandlerMapping extends AbstractHandlerMapping {
         return chain
     }
 
+    /**
+     * The mapping for an exception, found as the Grails exception resolver finds it: for the exception that was thrown,
+     * which a forward from that resolver has wrapped, and then for its root cause.
+     */
+    private UrlMappingInfo matchException(int status, Throwable exception) {
+        Throwable thrown = exception instanceof GrailsWrappedRuntimeException ? exception.cause : exception
+        return urlMappingsHolder.matchStatusCode(status, thrown) ?:
+                urlMappingsHolder.matchStatusCode(status, ExceptionUtils.getRootCause(thrown))
+    }
+
     @Override
     protected Object getHandlerInternal(HttpServletRequest request) throws Exception {
 
@@ -172,8 +183,7 @@ class UrlMappingsHandlerMapping extends AbstractHandlerMapping {
             def exception = request.getAttribute(WebUtils.ERROR_EXCEPTION_ATTRIBUTE)
             UrlMappingInfo info
             if (exception instanceof Throwable) {
-                exception = ExceptionUtils.getRootCause(exception)
-                def exceptionSpecificMatch = urlMappingsHolder.matchStatusCode(errorStatus.toString().toInteger(), (Throwable) exception)
+                def exceptionSpecificMatch = matchException(errorStatus.toString().toInteger(), (Throwable) exception)
                 if (exceptionSpecificMatch) {
                     info = exceptionSpecificMatch
                 }
