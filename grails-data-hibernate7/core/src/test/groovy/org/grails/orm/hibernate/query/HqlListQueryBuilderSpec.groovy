@@ -23,7 +23,10 @@ import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentP
 import org.grails.orm.hibernate.cfg.HibernateMappingContext
 import org.grails.orm.hibernate.cfg.Mapping
 import org.grails.orm.hibernate.cfg.MappingCacheHolder
+import org.grails.orm.hibernate.cfg.PropertyConfig
 import org.grails.orm.hibernate.cfg.SortConfig
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateManyToOneProperty
+import org.hibernate.FetchMode
 import spock.lang.Specification
 import spock.lang.Unroll
 
@@ -32,11 +35,13 @@ class HqlListQueryBuilderSpec extends Specification {
     GrailsHibernatePersistentEntity entity = Mock(GrailsHibernatePersistentEntity)
     HibernateMappingContext mappingContext = Mock(HibernateMappingContext)
     MappingCacheHolder cacheHolder = Mock(MappingCacheHolder)
+    List persistentProperties = []
 
     def setup() {
         entity.getName() >> "Person"
         entity.getJavaClass() >> Object
         entity.getMappingContext() >> mappingContext
+        entity.getPersistentProperties() >> { persistentProperties }
         mappingContext.getMappingCacheHolder() >> cacheHolder
     }
 
@@ -54,6 +59,36 @@ class HqlListQueryBuilderSpec extends Specification {
 
         expect:
         builder.buildListHql() == "from Person e"
+    }
+
+    void "test buildListHql left join fetches a to-one association mapped with fetch join"() {
+        given:
+        def config = new PropertyConfig()
+        config.fetch = FetchMode.JOIN
+        def toOne = Mock(HibernateManyToOneProperty)
+        toOne.getName() >> "destination"
+        toOne.getHibernateMappedForm() >> config
+        def plain = Mock(HibernateManyToOneProperty)
+        plain.getName() >> "origin"
+        plain.getHibernateMappedForm() >> new PropertyConfig()
+        persistentProperties = [toOne, plain]
+
+        expect:
+        new HqlListQueryBuilder(entity, [:]).buildListHql() == "from Person e left join fetch e.destination"
+    }
+
+    void "test buildListHql does not repeat a mapped fetch join that was requested explicitly"() {
+        given:
+        def config = new PropertyConfig()
+        config.fetch = FetchMode.JOIN
+        def toOne = Mock(HibernateManyToOneProperty)
+        toOne.getName() >> "destination"
+        toOne.getHibernateMappedForm() >> config
+        persistentProperties = [toOne]
+        entity.getHibernatePropertyByPath("destination") >> toOne
+
+        expect:
+        new HqlListQueryBuilder(entity, [(HibernateQueryArgument.FETCH.value()): [destination: 'join']]).buildListHql() == "from Person e join fetch e.destination"
     }
 
     void "test buildListHql with simple sort"() {
