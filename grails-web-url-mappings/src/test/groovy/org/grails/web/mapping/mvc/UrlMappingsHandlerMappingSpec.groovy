@@ -18,6 +18,8 @@
  */
 package org.grails.web.mapping.mvc
 
+import java.sql.SQLException
+
 import grails.artefact.Artefact
 import grails.core.DefaultGrailsApplication
 import grails.core.GrailsApplication
@@ -111,6 +113,46 @@ class UrlMappingsHandlerMappingSpec extends AbstractUrlMappingsSpec {
         'the root cause the container reports'                   | false   | new IllegalStateException('thrown', new IOException('the root cause'))           | 'ioFailure'
         'the exception first, where its root cause has one'      | true    | new IllegalArgumentException('thrown', new IOException('the root cause'))        | 'illegalArgument'
         'neither, which leaves the mapping without an exception' | true    | new IllegalStateException('thrown', new UnsupportedOperationException('no map')) | 'anyFailure'
+    }
+
+    void "where several mappings match the exception, the one declared last answers, which keeps #how"() {
+        given:
+        def holder = getUrlMappingsHolder(mappings)
+        def handler = new UrlMappingsHandlerMapping(holder)
+        def webContext = new StaticWebApplicationContext()
+        webContext.beanFactory.registerSingleton(GrailsApplication.APPLICATION_ID, new DefaultGrailsApplication())
+        webContext.refresh()
+        def request = GrailsWebMockUtil.bindMockWebRequest().request
+        request.servletContext.setAttribute(WebApplicationContext.ROOT_WEB_APPLICATION_CONTEXT_ATTRIBUTE, webContext)
+        request.setAttribute(WebUtils.ERROR_STATUS_CODE_ATTRIBUTE, '500')
+        request.setAttribute(WebUtils.ERROR_EXCEPTION_ATTRIBUTE, new GrailsWrappedRuntimeException(request.servletContext,
+                new DataLayerException(new SQLException('the root cause'))))
+
+        when:
+        def info = handler.getHandler(request).handler
+
+        then:
+        info.actionName == action
+
+        cleanup:
+        webContext.close()
+
+        where:
+        how                                                         | action     | mappings
+        'the mapping for the exception ahead of its root cause'     | 'runtime'  | {
+            "500"(controller: 'errors', action: 'database', exception: SQLException)
+            "500"(controller: 'errors', action: 'runtime', exception: RuntimeException)
+        }
+        'a mapping declared before a broader one from answering'    | 'runtime'  | {
+            "500"(controller: 'errors', action: 'database', exception: SQLException)
+            "500"(controller: 'errors', action: 'database', exception: DataLayerException)
+            "500"(controller: 'errors', action: 'runtime', exception: RuntimeException)
+        }
+        'the workaround the upgrade guide gives working'            | 'database' | {
+            "500"(controller: 'errors', action: 'database', exception: SQLException)
+            "500"(controller: 'errors', action: 'runtime', exception: RuntimeException)
+            "500"(controller: 'errors', action: 'database', exception: DataLayerException)
+        }
     }
 
     @Issue('https://github.com/apache/grails-core/issues/10149')
@@ -357,5 +399,13 @@ class FooController  {
     @Action
     def notFound() {
         RequestContextHolder.currentRequestAttributes().response.writer << "Not Found"
+    }
+}
+
+/** Stands in for a data access exception, such as Spring's {@code DataAccessException}, that wraps a {@code SQLException}. */
+class DataLayerException extends RuntimeException {
+
+    DataLayerException(Throwable cause) {
+        super('a data layer failure', cause)
     }
 }

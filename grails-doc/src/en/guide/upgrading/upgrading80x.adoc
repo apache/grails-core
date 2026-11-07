@@ -4913,5 +4913,5 @@ As of Grails 8.0.1, a `"500"` mapping that names an exception is matched against
 "500"(controller: 'errors', action: 'runtime', exception: RuntimeException)
 ----
 +
-To keep sending it to `database`, map `DataAccessException` there as well, ahead of `RuntimeException`.
+To keep sending it to `database`, map `DataAccessException` there as well, declared after the mapping for `RuntimeException`: where several mappings match an exception, the one declared last answers. That sends every `DataAccessException` there, not only one caused by a `SQLException`.
 * For an exception that Groovy or Grails wrapped, the `cause` of `request.exception` in the error handler is now the exception the action threw rather than its root cause.
