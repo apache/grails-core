@@ -164,7 +164,7 @@ An unused entity alias inside an association block still creates its requested j
 
 ===== Collection Aliases
 
-Declaring two different aliases for the same entity-valued collection in `createCriteria()` or `withCriteria` creates independent joins, so restrictions on those aliases can match different associated entities:
+Declaring two different aliases for the same entity-valued collection in `createCriteria()`, `withCriteria` or a `DetachedCriteria` creates independent joins, so restrictions on those aliases can match different associated entities:
 
 [source,groovy]
 ----

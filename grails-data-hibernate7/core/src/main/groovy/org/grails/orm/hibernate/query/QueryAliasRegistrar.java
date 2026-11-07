@@ -129,7 +129,9 @@ final class QueryAliasRegistrar {
                 }
             }
             else if (criterion instanceof DetachedAssociationCriteria<?> dac) {
-                if (dac.getAlias() != null) {
+                if (dac.getAlias() != null && !context.getAliasRegistry().isOwnDefined(dac.getAlias())) {
+                    // An alias the query already declares keeps its own join type: a path has one join type
+                    // in the criteria, so a second alias of the same path would otherwise take the last one.
                     String associationPath = dac.getAssociationPath();
                     JoinType joinType = detachedCriteria.getJoinTypes().getOrDefault(associationPath, JoinType.INNER);
                     context.registerAlias(dac.getAlias(), new HibernateAlias(associationPath, dac.getAlias(), joinType));

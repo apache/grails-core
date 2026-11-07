@@ -29,7 +29,7 @@ import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 class DetachedCriteriaAliasSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManager> {
 
     def setupSpec() {
-        manager.domainClasses.addAll([AliasedTeam, AliasedItem])
+        manager.registerDomainClasses(AliasedTeam, AliasedItem)
     }
 
     private void seed() {
