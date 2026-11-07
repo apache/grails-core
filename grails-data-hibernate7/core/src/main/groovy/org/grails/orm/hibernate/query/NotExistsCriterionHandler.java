@@ -27,7 +27,7 @@ import org.grails.datastore.mapping.query.Query;
  *
  * @since 8.0.1
  */
-public class NotExistsCriterionHandler implements InternalCriterionHandler<Query.NotExists> {
+class NotExistsCriterionHandler implements InternalCriterionHandler<Query.NotExists> {
 
     private final ExistsCriterionHandler existsHandler = new ExistsCriterionHandler();
 

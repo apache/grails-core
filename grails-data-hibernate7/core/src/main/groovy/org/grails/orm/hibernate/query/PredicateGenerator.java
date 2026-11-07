@@ -48,19 +48,22 @@ import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersi
 
 /**
  * Converts Grails Datastore query criteria into JPA {@link Predicate} instances.
- * Dispatches criteria to dedicated {@link InternalCriterionHandler} implementations
- * while supporting custom criterion extension via {@link CriterionHandler}.
+ * Dispatches criteria to dedicated handlers while supporting custom criterion extension via {@link CriterionHandler}.
  *
- * @author Graeme Rocher
- * @since 6.0
+ * @since 8.0
  */
 public class PredicateGenerator {
 
     /**
-     * Handler SPI for converting a custom {@link Query.Criterion} to a JPA {@link Predicate}.
+     * Extension point for user-defined criterion handlers. Register a handler for a custom
+     * {@link Query.Criterion} subclass to have it converted to a JPA {@link Predicate} during
+     * query execution. Registered handlers are checked first, before any built-in criterion
+     * handling, so a handler can also override built-in behavior.
      *
+     * <p>Example registration (e.g., in {@code BootStrap.groovy}):
      * <pre>
      *     PredicateGenerator.registerCriterionHandler(MyCustomCriterion) { query, root, cb, criterion -&gt;
+     *         def c = criterion as MyCustomCriterion
      *         cb.like(cb.cast(root.get(c.property), String), c.value)
      *     }
      * </pre>
@@ -78,6 +81,20 @@ public class PredicateGenerator {
 
     /**
      * SPI for contributing a {@link CriterionHandler} via {@link ServiceLoader}.
+     *
+     * <p>Create an implementation and register it in
+     * {@code META-INF/services/org.grails.orm.hibernate.query.PredicateGenerator$CriterionHandlerProvider}
+     * so that it is discovered automatically on first query execution, with no BootStrap registration needed.
+     *
+     * <pre>
+     *     // Example implementation (Groovy)
+     *     class MyHandlerProvider implements PredicateGenerator.CriterionHandlerProvider {
+     *         Class&lt;? extends Query.Criterion&gt; criterionType() { MyCriterion }
+     *         PredicateGenerator.CriterionHandler criterionHandler() {
+     *             { query, root, cb, criterion -&gt; ... } as PredicateGenerator.CriterionHandler
+     *         }
+     *     }
+     * </pre>
      */
     public interface CriterionHandlerProvider {
 
@@ -189,10 +206,22 @@ public class PredicateGenerator {
         }
     }
 
+    /**
+     * Registers a {@link CriterionHandler} for the given criterion type. The handler is called
+     * before any built-in criterion logic when a criterion of exactly that type is encountered.
+     * Programmatic registration takes precedence over {@link ServiceLoader}-discovered handlers.
+     *
+     * @param type    the exact criterion class to handle
+     * @param handler the handler that converts the criterion to a JPA {@link Predicate}
+     */
     public static void registerCriterionHandler(Class<? extends Query.Criterion> type, CriterionHandler handler) {
         CUSTOM_HANDLERS.put(type, handler);
     }
 
+    /**
+     * Removes all registered custom criterion handlers and resets the ServiceLoader flag.
+     * Useful for test cleanup.
+     */
     public static void clearCustomCriterionHandlers() {
         CUSTOM_HANDLERS.clear();
         SERVICE_LOADERS_INITIALIZED.set(false);
@@ -251,6 +280,10 @@ public class PredicateGenerator {
         return criteriaBuilder.and(predicates);
     }
 
+    /**
+     * Returns the first arguments of a function that renders native SQL: the SQL as a literal and, if it contains
+     * {@code {alias}}, a column of the entity's own table whose table alias replaces it.
+     */
     static List<Expression<?>> nativeSqlArguments(
             CriteriaBuilder criteriaBuilder, String sql, From<?, ?> root, GrailsHibernatePersistentEntity entity) {
         List<Expression<?>> arguments = new ArrayList<>();
@@ -261,6 +294,11 @@ public class PredicateGenerator {
         return arguments;
     }
 
+    /**
+     * Returns a column of the entity's own table, whose table alias replaces {@code {alias}} in native SQL:
+     * its identifier column, or the first one of a composite identifier. An identifier that is an association
+     * stands for its foreign key columns, which are resolved the same way from the associated entity.
+     */
     private static Expression<?> aliasColumn(From<?, ?> root, GrailsHibernatePersistentEntity entity) {
         Path<?> path = root;
         PersistentEntity current = entity;

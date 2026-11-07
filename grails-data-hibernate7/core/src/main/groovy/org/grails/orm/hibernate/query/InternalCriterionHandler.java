@@ -30,7 +30,7 @@ import org.grails.datastore.mapping.query.Query;
  * @since 8.0.1
  */
 @FunctionalInterface
-public interface InternalCriterionHandler<T extends Query.QueryElement> {
+interface InternalCriterionHandler<T extends Query.QueryElement> {
 
     Predicate handle(CriterionContext context, T criterion);
 }

@@ -33,7 +33,7 @@ import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersi
  *
  * @since 8.0.1
  */
-public class ExistsCriterionHandler implements InternalCriterionHandler<Query.Exists> {
+class ExistsCriterionHandler implements InternalCriterionHandler<Query.Exists> {
 
     @Override
     @SuppressWarnings("unchecked")

@@ -46,7 +46,7 @@ import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersi
  *
  * @since 8.0.1
  */
-public class PropertyCriterionHandler implements InternalCriterionHandler<Query.PropertyCriterion> {
+class PropertyCriterionHandler implements InternalCriterionHandler<Query.PropertyCriterion> {
 
     @Override
     @SuppressWarnings("unchecked")
@@ -141,6 +141,10 @@ public class PropertyCriterionHandler implements InternalCriterionHandler<Query.
         }
     }
 
+    /**
+     * Compares a {@link String} property with the value in lower case, as Hibernate 5's
+     * {@code Restrictions.eq(...).ignoreCase()} did. Any other property is compared with plain equality.
+     */
     @SuppressWarnings("unchecked")
     private static Predicate handleEqualsIgnoreCase(CriterionContext context, Query.PropertyCriterion pc, Expression<?> propertyPath) {
         Object value = pc.getValue();

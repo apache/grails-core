@@ -85,7 +85,6 @@ dependencies {
 test {
     systemProperty('neo4j.gorm.suite', System.getProperty('neo4j.gorm.suite') ?: true)
     maxParallelForks = rootProject.ext.configuredTestParallel
-    forkEvery = 10
     jvmArgs = ['-Xmx1028M']
 }
 
