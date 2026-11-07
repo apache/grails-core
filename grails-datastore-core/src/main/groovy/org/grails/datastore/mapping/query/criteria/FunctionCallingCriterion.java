@@ -18,6 +18,13 @@
  */
 package org.grails.datastore.mapping.query.criteria;
 
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.LinkedHashSet;
+import java.util.Set;
+
+import org.springframework.dao.InvalidDataAccessResourceUsageException;
+
 import org.grails.datastore.mapping.query.Query;
 
 /**
@@ -26,6 +33,28 @@ import org.grails.datastore.mapping.query.Query;
  * Example in SQL: year(date) == 2007 where the function is 'year', the property 'date' and the value is '2007'
  */
 public class FunctionCallingCriterion extends Query.PropertyNameCriterion {
+
+    /**
+     * The functions a where query can call on a property: the ten that the where DSL accepts. A query that runs
+     * a function by name, as the bulk statements of {@code updateAll} and {@code deleteAll} and Hibernate 7 do,
+     * accepts no other name, so that the name is never text that changes the query.
+     */
+    public static final Set<String> SUPPORTED_FUNCTIONS = Collections.unmodifiableSet(new LinkedHashSet<>(Arrays.asList(
+            "lower", "upper", "trim", "length", "second", "hour", "minute", "day", "month", "year")));
+
+    /**
+     * Rejects a function name that the where DSL does not support.
+     *
+     * @param functionName the name of the function
+     * @throws InvalidDataAccessResourceUsageException when the name is not one of {@link #SUPPORTED_FUNCTIONS}
+     */
+    public static void requireSupported(String functionName) {
+        if (!SUPPORTED_FUNCTIONS.contains(functionName)) {
+            throw new InvalidDataAccessResourceUsageException("Unsupported function defined in query [" + functionName +
+                    "]. The functions supported are " + SUPPORTED_FUNCTIONS);
+        }
+    }
+
 
     private String functionName;
     private Query.PropertyCriterion propertyCriterion;

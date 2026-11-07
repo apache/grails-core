@@ -46,6 +46,7 @@ public class FunctionCallingCriterionHandler implements InternalCriterionHandler
     @SuppressWarnings("unchecked")
     public Predicate handle(CriterionContext context, FunctionCallingCriterion criterion) {
         String functionName = criterion.getFunctionName();
+        FunctionCallingCriterion.requireSupported(functionName);
         if (criterion.isOnValue()) {
             throw new UnsupportedOperationException("A function on the value of a comparison is not supported: " + functionName);
         }
