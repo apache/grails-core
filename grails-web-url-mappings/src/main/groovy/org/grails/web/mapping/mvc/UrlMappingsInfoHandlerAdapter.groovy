@@ -161,11 +161,31 @@ class UrlMappingsInfoHandlerAdapter implements HandlerAdapter, ApplicationContex
                     }
                 }
 
+                // render(view:) sets MODEL_AND_VIEW on the request and does not set renderView=false,
+                // so this path is always intentional view resolution — honour it unconditionally.
                 def modelAndView = request.getAttribute(GrailsApplicationAttributes.MODEL_AND_VIEW)
                 if (modelAndView instanceof ModelAndView) {
                     return (ModelAndView) modelAndView
                 }
-                else if (result instanceof Map) {
+                if (result instanceof Map) {
+                    // All render() variants except render(view:) set webRequest.renderView = false.
+                    // Check the raw flag (not the composite isRenderView(), which also returns false
+                    // for error status, committed response, or redirect) so that only an explicit
+                    // render() call suppresses view resolution. (#15819)
+                    //
+                    // redirect() sets REDIRECT_ISSUED on the request and a 3xx status without calling
+                    // setRenderView(false), so renderViewRequested stays true. Similarly, the response
+                    // may already be committed (e.g. the body was written directly) without that flag
+                    // being cleared. In both cases there is nothing left for DispatcherServlet to do.
+                    //
+                    // Exception: during a servlet include dispatch the outer response is already
+                    // committed, but the include can still append output and must still resolve a
+                    // view. Skip the committed check for include dispatches.
+                    if (!webRequest.renderViewRequested
+                            || request.getAttribute(GrailsApplicationAttributes.REDIRECT_ISSUED) != null
+                            || (response.committed && !WebUtils.isInclude(request))) {
+                        return null
+                    }
                     String viewName = controllerClass.actionUriToViewName(action)
                     def finalModel = new LinkedHashMap<String, Object>()
                     def flashScope = webRequest.getFlashScope()
@@ -181,8 +201,8 @@ class UrlMappingsInfoHandlerAdapter implements HandlerAdapter, ApplicationContex
                 }
                 else if (result instanceof ModelAndView) {
                     return (ModelAndView) result
-                } else if (result == null &&
-                          webRequest.renderView) {
+                }
+                else if (result == null && webRequest.renderView) {
                     return new ModelAndView(controllerClass.actionUriToViewName(action))
                 }
             }

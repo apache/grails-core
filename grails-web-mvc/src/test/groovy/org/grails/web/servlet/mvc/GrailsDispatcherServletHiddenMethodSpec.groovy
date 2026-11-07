@@ -22,8 +22,12 @@ import org.grails.web.util.HiddenHttpMethod
 
 import org.springframework.mock.web.MockHttpServletRequest
 import org.springframework.mock.web.MockHttpServletResponse
+import org.springframework.mock.web.MockServletConfig
 import org.springframework.mock.web.MockServletContext
 import org.springframework.web.context.request.RequestContextHolder
+import org.springframework.web.context.support.StaticWebApplicationContext
+import org.springframework.web.servlet.handler.SimpleUrlHandlerMapping
+import org.springframework.web.servlet.mvc.Controller
 
 import spock.lang.Specification
 
@@ -118,13 +122,32 @@ class GrailsDispatcherServletHiddenMethodSpec extends Specification {
     }
 
     private def dispatch(MockHttpServletRequest request, boolean resolveHiddenHttpMethod) {
-        def servlet = new GrailsDispatcherServlet()
+        def context = new StaticWebApplicationContext()
+        context.servletContext = new MockServletContext()
+        def dispatched
+        def controller = { req, res ->
+            dispatched = req
+            assert GrailsWebRequest.lookup().is(GrailsWebRequest.lookup(req))
+            null
+        } as Controller
+        def mapping = new SimpleUrlHandlerMapping(['/books/1': controller], 0)
+        context.beanFactory.registerSingleton('handlerMapping', mapping)
+        context.refresh()
+        mapping.setApplicationContext(context)
+        def servlet = new GrailsDispatcherServlet(context)
         servlet.resolveHiddenHttpMethod = resolveHiddenHttpMethod
-
+        servlet.init(new MockServletConfig(context.servletContext))
         def response = new MockHttpServletResponse()
-        webRequest = new GrailsWebRequest(request, response, new MockServletContext())
+        webRequest = new GrailsWebRequest(request, response, context.servletContext)
         RequestContextHolder.setRequestAttributes(webRequest)
 
-        servlet.checkMultipart(request)
+        try {
+            servlet.service(request, response)
+            return dispatched
+        }
+        finally {
+            servlet.destroy()
+            context.close()
+        }
     }
 }

@@ -95,7 +95,10 @@ render(file: new File(absolutePath), inline: true)
 
 
 A multi-purpose method for rendering responses to the client which is best illustrated with a few examples! Warning - this method does not always support multiple parameters. For example, if you specify both collection and model, the model parameter will be ignored.
-Parameters
+
+Any `render(...)` call other than `render(view: ...)` suppresses the action's implicit view, including `render(status: ...)` with no body, even if the action then returns a model map. `render(view: ...)` explicitly selects the view to render.
+
+A rendered template does not need to commit the HTTP response to suppress implicit view rendering. Do not call `response.flushBuffer()` solely to prevent a second view from being rendered.
 
 Parameters:
 
