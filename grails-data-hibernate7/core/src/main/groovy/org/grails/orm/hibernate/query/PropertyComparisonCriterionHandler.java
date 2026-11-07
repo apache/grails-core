@@ -80,11 +80,11 @@ class PropertyComparisonCriterionHandler implements InternalCriterionHandler<Que
      */
     @SuppressWarnings({"unchecked", "rawtypes"})
     private static Expression<?> identifierIfCompared(Expression<?> expression, Expression<?> other) {
-        if (expression instanceof Path<?> path
-                && path.getModel() instanceof SingularAttribute<?, ?> attribute
-                && attribute.getType() instanceof EntityType<?> entityType
-                && !path.getJavaType().isAssignableFrom(other.getJavaType())
-                && !other.getJavaType().isAssignableFrom(path.getJavaType())) {
+        if (expression instanceof Path<?> path &&
+                path.getModel() instanceof SingularAttribute<?, ?> attribute &&
+                attribute.getType() instanceof EntityType<?> entityType &&
+                !path.getJavaType().isAssignableFrom(other.getJavaType()) &&
+                !other.getJavaType().isAssignableFrom(path.getJavaType())) {
             Class idType = entityType.getIdType().getJavaType();
             return path.get(entityType.getId(idType).getName());
         }
