@@ -143,13 +143,14 @@ class UrlMappingsHandlerMapping extends AbstractHandlerMapping {
         HandlerExecutionChain chain = super.getHandlerExecutionChain(handler, request)
 
         // WebRequestInterceptors have to come first, as these include things like Hibernate OSIV.
-        if (webRequestHandlerInterceptors) {
-            for (int i = 0; i < webRequestHandlerInterceptors.length; i++) {
-                chain.addInterceptor(i, webRequestHandlerInterceptors[i])
-            }
+        int webRequestInterceptorCount = webRequestHandlerInterceptors ? webRequestHandlerInterceptors.length : 0
+        for (int i = 0; i < webRequestInterceptorCount; i++) {
+            chain.addInterceptor(i, webRequestHandlerInterceptors[i])
         }
 
-        chain.addInterceptor(OBSERVATION_ROUTE_HANDLER)
+        // The route goes on the observation ahead of the interceptors that can fail, such as a Grails interceptor's
+        // before(), so that a failure in one is reported under the route that failed
+        chain.addInterceptor(webRequestInterceptorCount, OBSERVATION_ROUTE_HANDLER)
         chain.addInterceptor(ERROR_HANDLING_HANDLER)
         return chain
     }

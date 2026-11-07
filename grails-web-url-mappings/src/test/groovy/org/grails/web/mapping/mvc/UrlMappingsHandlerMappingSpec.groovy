@@ -237,7 +237,7 @@ class UrlMappingsHandlerMappingSpec extends AbstractUrlMappingsSpec {
         result.view.getUrl() == "/index.html"
     }
 
-    void "the handler chain keeps WebRequestInterceptors first and appends the Grails interceptors last"() {
+    void "the handler chain keeps WebRequestInterceptors first, then the route, and appends the error handling last"() {
         given: "a handler mapping with both a WebRequestInterceptor and an ordinary HandlerInterceptor"
         def handlerMapping = handlerMapping()
         def plainInterceptor = new HandlerInterceptor() {}
@@ -259,8 +259,9 @@ class UrlMappingsHandlerMappingSpec extends AbstractUrlMappingsSpec {
         interceptors[0] instanceof WebRequestHandlerInterceptorAdapter
         interceptors.contains(plainInterceptor)
 
-        and: "the Grails interceptors are appended last, in order"
-        interceptors[-2].class.simpleName == 'ObservationRouteHandler'
+        and: "the route is set ahead of the ordinary interceptors, which can fail, and the error handling is last"
+        interceptors[1].class.simpleName == 'ObservationRouteHandler'
+        interceptors.indexOf(plainInterceptor) > 1
         interceptors[-1].class.simpleName == 'ErrorHandlingHandler'
     }
 
