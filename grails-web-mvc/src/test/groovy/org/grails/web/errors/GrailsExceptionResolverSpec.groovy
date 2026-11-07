@@ -577,7 +577,6 @@ class GrailsExceptionResolverSpec extends Specification {
         forwards.size() == 2
     }
 
-    @Issue('https://github.com/apache/grails-core/issues/16129')
     void "an exception mapping is matched against the exception an action threw when it is #how"() {
         given:
         def resolver = resolverFor({
@@ -640,6 +639,7 @@ class GrailsExceptionResolverSpec extends Specification {
         response.status == 500
     }
 
+    @Issue('https://github.com/apache/grails-core/issues/16129')
     void "an error handler mapped to #handler is forwarded to with #attributes bound"() {
         given:
         def resolver = resolverFor(mappings, true)

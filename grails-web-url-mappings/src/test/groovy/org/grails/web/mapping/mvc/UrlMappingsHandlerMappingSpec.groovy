@@ -25,8 +25,8 @@ import grails.util.GrailsWebMockUtil
 import grails.web.Action
 import grails.web.HyphenatedUrlConverter
 import grails.web.mapping.AbstractUrlMappingsSpec
-import org.grails.web.mapping.DefaultUrlMappingData
 import org.grails.web.errors.GrailsWrappedRuntimeException
+import org.grails.web.mapping.DefaultUrlMappingData
 import org.grails.web.mapping.DefaultUrlMappingInfo
 import org.grails.web.util.WebUtils
 import org.springframework.ui.ModelMap
@@ -104,13 +104,13 @@ class UrlMappingsHandlerMappingSpec extends AbstractUrlMappingsSpec {
         webContext.close()
 
         where:
-        what                                                 | wrapped | thrown                                                                          | action
-        'the exception an error handler is forwarded for'    | true    | new IOException('thrown', new IllegalStateException('its own cause'))           | 'ioFailure'
-        'the exception the container reports'                | false   | new IOException('thrown', new IllegalStateException('its own cause'))           | 'ioFailure'
-        'the root cause an error handler is forwarded for'   | true    | new IllegalStateException('thrown', new IOException('the root cause'))          | 'ioFailure'
-        'the root cause the container reports'               | false   | new IllegalStateException('thrown', new IOException('the root cause'))          | 'ioFailure'
-        'the exception first, where its root cause has one'  | true    | new IllegalArgumentException('thrown', new IOException('the root cause'))       | 'illegalArgument'
-        'neither, which leaves the mapping without an exception' | true | new IllegalStateException('thrown', new UnsupportedOperationException('no map')) | 'anyFailure'
+        what                                                     | wrapped | thrown                                                                           | action
+        'the exception an error handler is forwarded for'        | true    | new IOException('thrown', new IllegalStateException('its own cause'))            | 'ioFailure'
+        'the exception the container reports'                    | false   | new IOException('thrown', new IllegalStateException('its own cause'))            | 'ioFailure'
+        'the root cause an error handler is forwarded for'       | true    | new IllegalStateException('thrown', new IOException('the root cause'))           | 'ioFailure'
+        'the root cause the container reports'                   | false   | new IllegalStateException('thrown', new IOException('the root cause'))           | 'ioFailure'
+        'the exception first, where its root cause has one'      | true    | new IllegalArgumentException('thrown', new IOException('the root cause'))        | 'illegalArgument'
+        'neither, which leaves the mapping without an exception' | true    | new IllegalStateException('thrown', new UnsupportedOperationException('no map')) | 'anyFailure'
     }
 
     @Issue('https://github.com/apache/grails-core/issues/10149')

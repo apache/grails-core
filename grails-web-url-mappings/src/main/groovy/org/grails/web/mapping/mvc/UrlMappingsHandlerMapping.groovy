@@ -161,8 +161,9 @@ class UrlMappingsHandlerMapping extends AbstractHandlerMapping {
      */
     private UrlMappingInfo matchException(int status, Throwable exception) {
         Throwable thrown = exception instanceof GrailsWrappedRuntimeException ? exception.cause : exception
-        return urlMappingsHolder.matchStatusCode(status, thrown) ?:
-                urlMappingsHolder.matchStatusCode(status, ExceptionUtils.getRootCause(thrown))
+        UrlMappingInfo match = urlMappingsHolder.matchStatusCode(status, thrown)
+        Throwable rootCause = ExceptionUtils.getRootCause(thrown)
+        return match == null && !rootCause.is(thrown) ? urlMappingsHolder.matchStatusCode(status, rootCause) : match
     }
 
     @Override
