@@ -37,6 +37,7 @@ import org.springframework.web.servlet.DispatcherServlet
 
 import grails.util.Holders
 import org.grails.web.context.ServletEnvironmentGrailsApplicationDiscoveryStrategy
+import org.grails.web.util.GrailsApplicationAttributes
 import org.grails.web.util.HiddenHttpMethod
 import org.grails.web.util.WebUtils
 
@@ -60,18 +61,19 @@ class GrailsDispatcherServlet extends DispatcherServlet implements ServletContex
 
     @Override
     protected ServletRequestAttributes buildRequestAttributes(HttpServletRequest request, HttpServletResponse response, RequestAttributes previousAttributes) {
-        if (previousAttributes == null || !(previousAttributes instanceof GrailsWebRequest)) {
-            return buildGrailsWebRequest(request, response)
+        if (previousAttributes instanceof GrailsWebRequest && previousAttributes.active &&
+                previousAttributes.request.is(request) && previousAttributes.response.is(response)) {
+            return (GrailsWebRequest) previousAttributes
         }
-        else {
-            GrailsWebRequest webRequest = (GrailsWebRequest) previousAttributes
-            if (webRequest.isActive()) {
-                return webRequest
-            }
-            else {
-                return buildGrailsWebRequest(request, response)
-            }
+        GrailsWebRequest webRequest = buildGrailsWebRequest(request, response)
+        if (previousAttributes != null) {
+            // A later filter replaced the binding or wrapped the request/response. Publish the dispatch's
+            // instance so URL mappings and rendering agree, preserving the wrappers seen here.
+            // FrameworkServlet passes null on Callable threads, which need their own instance
+            // without replacing the attribute still used by the dispatch.
+            request.setAttribute(GrailsApplicationAttributes.WEB_REQUEST, webRequest)
         }
+        return webRequest
     }
 
     protected GrailsWebRequest buildGrailsWebRequest(HttpServletRequest request, HttpServletResponse response) {

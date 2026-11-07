@@ -19,20 +19,34 @@
 package org.grails.web.mapping.mvc
 
 import grails.artefact.Artefact
+import grails.artefact.Controller
 import grails.core.DefaultGrailsApplication
 import grails.util.GrailsWebMockUtil
 import grails.web.Action
 import grails.web.HyphenatedUrlConverter
 import grails.web.mapping.AbstractUrlMappingsSpec
+import jakarta.servlet.FilterChain
 import org.grails.web.mapping.DefaultUrlMappingData
 import org.grails.web.mapping.DefaultUrlMappingInfo
+import org.grails.web.servlet.mvc.GrailsDispatcherServlet
+import org.grails.web.servlet.mvc.GrailsWebRequest
+import org.grails.web.servlet.mvc.GrailsWebRequestFilter
+import org.grails.web.servlet.view.CompositeViewResolver
+import org.grails.web.util.GrailsApplicationAttributes
 import org.grails.web.util.WebUtils
+import org.springframework.mock.web.MockHttpServletRequest
+import org.springframework.mock.web.MockHttpServletResponse
+import org.springframework.mock.web.MockServletConfig
+import org.springframework.mock.web.MockServletContext
 import org.springframework.ui.ModelMap
 import org.springframework.web.context.request.RequestContextHolder
 import org.springframework.web.context.request.WebRequest
 import org.springframework.web.context.request.WebRequestInterceptor
 import org.springframework.web.context.support.StaticWebApplicationContext
+import org.springframework.web.filter.RequestContextFilter
 import org.springframework.web.servlet.HandlerInterceptor
+import org.springframework.web.servlet.View
+import org.springframework.web.servlet.ViewResolver
 import org.springframework.web.servlet.handler.WebRequestHandlerInterceptorAdapter
 import org.springframework.web.servlet.view.InternalResourceView
 import spock.lang.Issue
@@ -290,13 +304,81 @@ class UrlMappingsHandlerMappingSpec extends AbstractUrlMappingsSpec {
         new UrlMappingsHandlerMapping(holder)
     }
 
+    @Issue('https://github.com/apache/grails-core/issues/15819')
+    void "late RequestContextFilter does not cause implicit view resolution after #actionName"() {
+        given: "a real dispatcher and handler adapter for a template-rendering action"
+        def grailsApplication = new DefaultGrailsApplication(FooController)
+        grailsApplication.initialise()
+        def holder = new GrailsControllerUrlMappings(grailsApplication, getUrlMappingsHolder {
+            "/foo/$actionName"(controller: 'foo', action: actionName)
+        })
+        def servletContext = new MockServletContext()
+        def ctx = new StaticWebApplicationContext()
+        ctx.servletContext = servletContext
+        def templateView = Mock(View)
+        def templateResolver = Mock(CompositeViewResolver)
+        def implicitViewResolver = Mock(ViewResolver)
+        ctx.beanFactory.registerSingleton(CompositeViewResolver.BEAN_NAME, templateResolver)
+        ctx.beanFactory.registerSingleton('viewResolver', implicitViewResolver)
+        ctx.beanFactory.registerSingleton('handlerMapping', new UrlMappingsHandlerMapping(holder))
+        ctx.beanFactory.registerSingleton('handlerAdapter', new UrlMappingsInfoHandlerAdapter())
+        servletContext.setAttribute(GrailsApplicationAttributes.APPLICATION_CONTEXT, ctx)
+        ctx.refresh()
+        def servlet = new GrailsDispatcherServlet(ctx)
+        servlet.init(new MockServletConfig(servletContext))
+        def grailsFilter = new GrailsWebRequestFilter()
+        grailsFilter.setServletContext(servletContext)
+        grailsFilter.setApplicationContext(ctx)
+        def lateFilter = new RequestContextFilter()
+        def request = new MockHttpServletRequest(servletContext, 'GET', "/foo/$actionName")
+        def response = new MockHttpServletResponse()
+        GrailsWebRequest filterRequest
+        GrailsWebRequest renderingRequest
+        GrailsWebRequest attributeRequest
+
+        when: "Spring's filter replaces the thread binding after the Grails filter"
+        grailsFilter.doFilter(request, response, { req, res ->
+            filterRequest = GrailsWebRequest.lookup(req)
+            lateFilter.doFilter(req, res, { lateRequest, lateResponse ->
+                assert !(RequestContextHolder.requestAttributes instanceof GrailsWebRequest)
+                servlet.service(lateRequest, lateResponse)
+            } as FilterChain)
+        } as FilterChain)
+
+        then: "the template is rendered without committing the response"
+        1 * templateResolver.resolveView('/foo/_greeting', _) >> templateView
+        1 * templateView.render([name: 'Grails'], _, _) >> { model, req, res ->
+            renderingRequest = GrailsWebRequest.lookup()
+            attributeRequest = req.getAttribute(GrailsApplicationAttributes.WEB_REQUEST)
+            res.writer.write("Hello ${model.name}")
+        }
+        0 * implicitViewResolver.resolveViewName(_, _)
+        response.status == 200
+        response.contentAsString == 'Hello Grails'
+        !response.committed
+
+        and: "rendering uses the published dispatch request, not the filter request"
+        !renderingRequest.is(filterRequest)
+        renderingRequest.is(attributeRequest)
+        !renderingRequest.renderView
+        filterRequest.renderView
+        RequestContextHolder.requestAttributes == null
+
+        cleanup:
+        servlet?.destroy()
+        ctx.close()
+
+        where:
+        actionName << ['renderTemplate']
+    }
+
     void cleanup() {
         RequestContextHolder.resetRequestAttributes()
     }
 }
 
 @Artefact('Controller')
-class FooController  {
+class FooController implements Controller {
 
     static defaultAction = 'fooBar'
 
@@ -318,5 +400,10 @@ class FooController  {
     @Action
     def notFound() {
         RequestContextHolder.currentRequestAttributes().response.writer << "Not Found"
+    }
+
+    @Action
+    def renderTemplate() {
+        render(template: '/foo/greeting', model: [name: 'Grails'])
     }
 }
