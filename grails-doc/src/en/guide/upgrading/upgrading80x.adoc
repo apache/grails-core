@@ -1484,6 +1484,25 @@ Item.createCriteria().list { or { ne('qty', 2); isNull('qty') } }
 
 The functions that a where query calls on a property are `lower`, `upper`, `trim`, `length`, `second`, `hour`, `minute`, `day`, `month` and `year`. A criterion that names any other function throws an `InvalidDataAccessResourceUsageException`, in a read and in `updateAll` and `deleteAll`; before, Hibernate 7 passed the name to the database and a bulk statement wrote it into the query as it was given. A function over an `rlike` is rejected in `updateAll` and `deleteAll`, which have no regular expression operator, and is applied in a read.
 
+===== 26.15 Bulk deleteAll and updateAll on a Query
+
+`deleteAll()` and `updateAll(Map)` on a `where` query or a `DetachedCriteria` run one `delete` or `update` statement. The statement has no row limit, so a query that carries `max` or `offset` used to write to every matching row: `Person.where { age > 18 }.max(2).deleteAll()` deleted all of them (issue https://github.com/apache/grails-core/issues/16805[#16805]). `deleteAll()` and `updateAll(Map)` now throw an `InvalidDataAccessResourceUsageException` that names the `max` or `offset` value, and write nothing. Select the ids first, with the limit on that query, and delete or update by id:
+
+[source,groovy]
+----
+def ids = Person.where { age > 18 }.max(2).property('id').list()
+Person.where { id in ids }.deleteAll()
+----
+
+A bulk statement cannot join, so these query shapes are now written as subqueries instead of being refused or corrupting the parameters of the criteria after them:
+
+* a to-one association: an association block (`owner { eq('name', 'Ned') }`), a path (`eq('owner.name', 'Ned')`, `where { owner.name == 'Ned' }`) or an alias made with `createAlias('owner', 'o')`. An association that holds many (`pets { ... }`) is still refused, because a bulk statement cannot join it;
+* `exists` and `notExists`;
+* several criteria in one subquery, which are now joined with `and`; and
+* `sqlRestriction`, including `{alias}` and `?` values.
+
+A bulk statement does not update the entities already loaded in the session. Clear or refresh them before reading them again.
+
 ==== 27. GORM Properties Are Nullable by Default
 
 Grails 8 changes the validation default so that an *unconstrained persistent (domain) property is nullable by default* rather than required.

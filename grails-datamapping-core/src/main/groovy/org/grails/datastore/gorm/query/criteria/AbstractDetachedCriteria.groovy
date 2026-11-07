@@ -1013,6 +1013,14 @@ abstract class AbstractDetachedCriteria<T> implements Criteria, Cloneable {
 
     protected abstract AbstractDetachedCriteria newInstance()
 
+    Integer getDefaultMax() {
+        defaultMax
+    }
+
+    Integer getDefaultOffset() {
+        defaultOffset
+    }
+
     /**
      * Sets the default max to use and returns a new criteria instance. This method does not mutate the original criteria!
      *
