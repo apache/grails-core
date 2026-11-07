@@ -872,6 +872,9 @@ A GORM datastore implementation outside the Grails repository whose transaction 
 * **`bindData` can clear omitted included fields.**
 `bindData(target, source, [include: [...], clearMissing: true])` now clears included properties that are absent from the binding source. The behavior is opt-in, requires an `include` list, and does not apply globally. Existing `bindData` calls without `clearMissing: true` keep omitted fields unchanged.
 
+* **Data binding reads only the constraint accessors a class has.**
+To find the properties an object constrains `bindable: false`, Grails 8.0.0 also read a `constraintsMap` or `getConstraintsMap()` that only `propertyMissing` or `methodMissing` provides, and a `getMetaConstraintValue` method that only `methodMissing` provides on a constrained property. As of Grails 8.0.1, data binding reads these accessors only when the class declares or inherits them, or adds them through its metaclass, so a property that such an accessor marks `bindable: false` can now be bound. To keep it out of a bind, declare the accessor.
+
 * **GORM for MongoDB builds its indexes when the datastore starts, not when it is created.**
 Creating a `MongoDatastore` no longer connects to MongoDB or builds the declared indexes, whichever constructor creates it, including one given an application's own `MongoClient`. In an application Spring starts the datastore before `BootStrap` runs, so nothing changes there; code that creates a `MongoDatastore` itself and expects its indexes once the constructor returns has to call `start()`, although the first GORM query or save on a datastore nothing has started also starts it. See link:{mongodb5Guide}index.html#upgradeNotes[Upgrade Notes] in the GORM for MongoDB guide.
 

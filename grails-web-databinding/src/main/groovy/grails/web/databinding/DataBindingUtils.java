@@ -29,6 +29,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import groovy.lang.GroovySystem;
 import groovy.lang.MetaClass;
+import groovy.lang.MetaProperty;
 
 import jakarta.servlet.ServletRequest;
 
@@ -52,11 +53,13 @@ import grails.web.mime.MimeType;
 import grails.web.mime.MimeTypeResolver;
 import grails.web.mime.MimeTypeUtils;
 import org.grails.core.exceptions.GrailsConfigurationException;
+import org.grails.core.io.support.GrailsFactoriesLoader;
 import org.grails.datastore.mapping.model.MappingContext;
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.PersistentProperty;
 import org.grails.datastore.mapping.model.types.OneToOne;
 import org.grails.datastore.mapping.proxy.ProxyHandler;
+import org.grails.validation.discovery.ConstrainedDiscovery;
 import org.grails.web.databinding.BindingIncludeLists;
 import org.grails.web.databinding.DefaultASTDatabindingHelper;
 import org.grails.web.databinding.bindingsource.DataBindingSourceRegistry;
@@ -75,6 +78,8 @@ public class DataBindingUtils {
     private static final Logger LOG = LoggerFactory.getLogger(DataBindingUtils.class);
     public static final String DATA_BINDER_BEAN_NAME = "grailsWebDataBinder";
     private static final String BLANK = "";
+    private static final String CONSTRAINTS_MAP_PROPERTY = "constraintsMap";
+    private static final String CONSTRAINTS_PROPERTY = "constraints";
     private static final Map<Class, List> CLASS_TO_UNBINDABLE_PROPERTY_NAMES = new ConcurrentHashMap<>();
 
     /**
@@ -154,18 +159,80 @@ public class DataBindingUtils {
         if (application != null) {
             try {
                 final MappingContext mappingContext = application.getMappingContext();
-                final ProxyHandler proxyHandler = mappingContext != null ? mappingContext.getProxyHandler() : null;
-                if (proxyHandler != null && proxyHandler.isProxy(object)) {
-                    final Object unwrapped = proxyHandler.unwrap(object);
-                    if (unwrapped != null) {
-                        return unwrapped.getClass();
-                    }
+                if (mappingContext != null) {
+                    return persistentClass(object, mappingContext);
                 }
             } catch (GrailsConfigurationException e) {
                 // GORM has not initialized, so no datastore has created a proxy to bind
             }
         }
         return object.getClass();
+    }
+
+    /**
+     * The class of an object, or, when it is a proxy of an entity, the class of what it stands for, which the proxy
+     * handler of the mapping context unwraps and which binding into the proxy would initialize anyway.
+     */
+    private static Class persistentClass(final Object object, final MappingContext mappingContext) {
+        final ProxyHandler proxyHandler = mappingContext.getProxyHandler();
+        if (proxyHandler != null && proxyHandler.isProxy(object)) {
+            final Object unwrapped = proxyHandler.unwrap(object);
+            if (unwrapped != null) {
+                return unwrapped.getClass();
+            }
+        }
+        return object.getClass();
+    }
+
+    /**
+     * The constraints of the persistent entity an object is an instance of, or a proxy of. The mapping context
+     * evaluates them once, for the validator of the entity, and keeps them for as long as the entity is mapped,
+     * so binding reads them there, through {@link ConstrainedDiscovery}, rather than evaluating the
+     * {@code constraints} closure of the class again.
+     *
+     * @return the constraints, or {@code null} when the object is not a mapped entity or the validator of the
+     * entity does not hold its constraints
+     */
+    private static Map getEntityConstrainedProperties(final Object object, final GrailsApplication application) {
+        final ConstrainedDiscovery constrainedDiscovery = EntityConstraints.DISCOVERY;
+        if (application == null || constrainedDiscovery == null) {
+            return null;
+        }
+        try {
+            final MappingContext mappingContext = application.getMappingContext();
+            if (mappingContext == null) {
+                return null;
+            }
+            final Class type = persistentClass(object, mappingContext);
+            final PersistentEntity entity = mappingContext.getPersistentEntity(type.getName());
+            // The entity found by name can be another class's: getPersistentEntity cuts a name at the proxy marker
+            // _$$_, and a reloaded class has the name of the class it replaces.
+            if (entity == null || entity.getJavaClass() != type) {
+                return null;
+            }
+            // Discovery wraps each constraint the validator holds in a new delegate on every call. Binding accepts
+            // that cost to read the constraints through the SPI rather than from the validator's own map.
+            final Map constrainedProperties = constrainedDiscovery.findConstrainedProperties(entity);
+            // An entity whose validator does not hold its constraints, such as the one an entity annotated
+            // @Validated has, or that has no validator, is discovered to have none, so the constraints of its class
+            // are evaluated instead.
+            return constrainedProperties == null || constrainedProperties.isEmpty() ? null : constrainedProperties;
+        } catch (GrailsConfigurationException e) {
+            // GORM has not initialized, so there is no entity to read the constraints of
+            return null;
+        }
+    }
+
+    /**
+     * Loads the {@link ConstrainedDiscovery} binding reads entity constraints with the first time it needs it,
+     * rather than on every bind.
+     */
+    private static final class EntityConstraints {
+
+        private static final ConstrainedDiscovery DISCOVERY = GrailsFactoriesLoader.loadFactory(ConstrainedDiscovery.class);
+
+        private EntityConstraints() {
+        }
     }
 
     static List asGeneratedBindingIncludeList(final List includeList) {
@@ -181,13 +248,17 @@ public class DataBindingUtils {
     }
 
     static List getUnbindablePropertyNames(final Object object) {
+        return getUnbindablePropertyNames(object, Holders.findApplication());
+    }
+
+    private static List getUnbindablePropertyNames(final Object object, final GrailsApplication application) {
         if (BindingIncludeLists.inheritsConstraintsMap(object.getClass())) {
             // The inherited Validateable accessor holds the superclass's constraints, so the class's own are evaluated once.
             return getUnbindablePropertyNames(object.getClass());
         }
         // Instance-derived constraints (constraintsMap / getConstraintsMap / constraints)
         // may differ between instances of the same class, so do not cache by Class here.
-        return getPropertyNamesWithBindableValue(object, Boolean.FALSE);
+        return getPropertyNamesWithBindableValue(getConstrainedProperties(object, application), Boolean.FALSE);
     }
 
     static List getUnbindablePropertyNames(final Class objectClass) {
@@ -207,30 +278,44 @@ public class DataBindingUtils {
     }
 
     static Map getConstrainedProperties(final Object object) {
+        return getConstrainedProperties(object, Holders.findApplication());
+    }
+
+    private static Map getConstrainedProperties(final Object object, final GrailsApplication application) {
         if (BindingIncludeLists.inheritsConstraintsMap(object.getClass())) {
             return BindingIncludeLists.constrainedProperties(object.getClass());
         }
+        // Each accessor is looked up before it is read, so an object that has none of them does not throw
+        // and catch a missing property exception on every bind. A getConstraintsMap() method, static or not, is
+        // found as the constraintsMap property. An accessor that only propertyMissing or methodMissing provides
+        // is not found.
         MetaClass metaClass = GroovySystem.getMetaClassRegistry().getMetaClass(object.getClass());
         try {
-            Object constrainedProperties = metaClass.getProperty(object, "constraintsMap");
-            if (constrainedProperties instanceof Map) {
-                return (Map) constrainedProperties;
+            MetaProperty constraintsMapProperty = metaClass.hasProperty(object, CONSTRAINTS_MAP_PROPERTY);
+            if (constraintsMapProperty != null) {
+                Object constrainedProperties = constraintsMapProperty.getProperty(object);
+                if (constrainedProperties instanceof Map) {
+                    return (Map) constrainedProperties;
+                }
             }
         } catch (Exception ignored) {
         }
         try {
-            Object constrainedProperties = metaClass.invokeMethod(object, "getConstraintsMap", new Object[0]);
-            if (constrainedProperties instanceof Map) {
-                return (Map) constrainedProperties;
+            MetaProperty constraintsProperty = metaClass.hasProperty(object, CONSTRAINTS_PROPERTY);
+            if (constraintsProperty != null) {
+                Object constrainedProperties = constraintsProperty.getProperty(object);
+                if (constrainedProperties instanceof Map) {
+                    return (Map) constrainedProperties;
+                }
             }
         } catch (Exception ignored) {
         }
-        try {
-            Object constrainedProperties = metaClass.getProperty(object, "constraints");
-            if (constrainedProperties instanceof Map) {
-                return (Map) constrainedProperties;
-            }
-        } catch (Exception ignored) {
+        // An object gets here when none of its accessors holds a map, as for a domain class, whose constraints are a
+        // closure. The validator of an entity holds the constraints its closure declares, so they are read there
+        // rather than evaluated again.
+        final Map entityConstrainedProperties = getEntityConstrainedProperties(object, application);
+        if (entityConstrainedProperties != null) {
+            return entityConstrainedProperties;
         }
         try {
             Map constrainedProperties = evaluateConstrainedProperties(object.getClass());
@@ -251,7 +336,20 @@ public class DataBindingUtils {
     }
 
     static List addUnbindablePropertyNames(final Object object, final List exclude) {
-        final List unbindablePropertyNames = getUnbindablePropertyNames(object);
+        return addUnbindablePropertyNames(object, exclude, Holders.findApplication());
+    }
+
+    /**
+     * Adds the properties an object constrains {@code bindable: false} to the properties a bind excludes.
+     *
+     * @param object the object bound
+     * @param exclude the properties the bind excludes, which may be {@code null}
+     * @param application the application whose mapping context holds the entity the object is an instance of,
+     * which may be {@code null}
+     * @return the properties to exclude
+     */
+    static List addUnbindablePropertyNames(final Object object, final List exclude, final GrailsApplication application) {
+        final List unbindablePropertyNames = getUnbindablePropertyNames(object, application);
         if (unbindablePropertyNames.isEmpty()) {
             return exclude;
         }
