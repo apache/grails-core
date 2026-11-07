@@ -76,6 +76,7 @@ export GRADLE_OPTS="-Dorg.gradle.jvmargs=-Xmx4G"
 > - Writing Hibernate code → Read `.agents/skills/hibernate-developer/SKILL.md`
 > - Fixing style/analysis violations → Read `.agents/skills/violation-fixer/SKILL.md`
 > - Fixing broken test → Read `.agents/skills/test-fixer/SKILL.md`
+> - Running mutation testing / verifying test assertions → Read `.agents/skills/mutation-testing/SKILL.md`
 > - Integrating a standalone repository -> Read `.agents/skills/mono-repo-integration/SKILL.md`
 >
 > Use your file reading capability to load the skill content before proceeding with any code changes.
@@ -90,6 +91,7 @@ export GRADLE_OPTS="-Dorg.gradle.jvmargs=-Xmx4G"
 | **hibernate-developer** | `.agents/skills/hibernate-developer/SKILL.md` | Hibernate 7 mapping, binders, generators |
 | **violation-fixer** | `.agents/skills/violation-fixer/SKILL.md` | Fix style/analysis violations (CodeNarc, Checkstyle, PMD, SpotBugs) |
 | **test-fixer** | `.agents/skills/test-fixer/SKILL.md` | Aggregate and fix test failures |
+| **mutation-testing** | `.agents/skills/mutation-testing/SKILL.md` | Targeted PITest bytecode mutation testing and Java/Groovy semantic mutant checks |
 | **mono-repo-integration** | `.agents/skills/mono-repo-integration/SKILL.md` | Merge a standalone Grails plugin repository into this monorepo |
 
 ## Repository Conventions
