@@ -46,7 +46,7 @@ import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyPrope
  *
  * @since 8.0.1
  */
-public class CriterionContext {
+class CriterionContext {
 
     private final AbstractQuery<?> criteriaQuery;
     private final From<?, ?> root;
@@ -153,6 +153,13 @@ public class CriterionContext {
         return value;
     }
 
+    /**
+     * Returns an arithmetic expression for a {@link PropertyArithmetic}, otherwise the converted value itself.
+     * A plain value is not wrapped in a literal, so the comparison overload that takes it infers its type from
+     * the property path, as HQL does for a parameter. A literal is typed from the value's class instead, which a
+     * property mapped with a custom {@code UserType} cannot be compared with when that class is
+     * {@link java.io.Serializable}.
+     */
     @SuppressWarnings("unchecked")
     public Object convertComparisonValue(String propertyName, Object value, Expression<?> propertyPath) {
         if (value instanceof PropertyArithmetic pa) {
@@ -169,6 +176,12 @@ public class CriterionContext {
         return convertValue(propertyName, value, propertyPath);
     }
 
+    /**
+     * Returns the value as an expression for a comparison overload that takes an expression, which the JPA ordering
+     * overloads need for a value that is not {@link Comparable}. The value becomes a criteria parameter of the
+     * property's Java type, bound once the query is created, so Hibernate types it from the property it is compared
+     * with, as it does for an HQL parameter.
+     */
     public Expression<?> asExpression(Object value, Expression<?> propertyPath) {
         if (value instanceof Expression<?> expression) {
             return expression;
