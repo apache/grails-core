@@ -1812,6 +1812,51 @@ class CreateAliasJoinSpec extends HibernateGormDatastoreSpec {
         CreateAliasTeam.withCriteria { likes { eq('label', 'a') }; createAlias('likes.tag', 't'); eq('t.name', 'tagB') }*.id == [together.id]
         new DetachedCriteria(CreateAliasTeam).build { createAlias('likes.tag', 't'); likes { eq('label', 'a') }; eq('t.name', 'tagB') }.list()*.id == [together.id]
     }
+
+    void 'a nested alias path and a block that declares its own alias on the same association restrict the same element'() {
+        given: 'a team with the likes (a, tag A) and (b, tag B), and one with the like (a, tag B)'
+        def tagA = new CreateAliasTag(name: 'tagA').save(failOnError: true)
+        def tagB = new CreateAliasTag(name: 'tagB').save(failOnError: true)
+        def likeA = new CreateAliasLike(label: 'a', tag: tagA).save(failOnError: true)
+        def likeB = new CreateAliasLike(label: 'b', tag: tagB).save(failOnError: true)
+        def likeAB = new CreateAliasLike(label: 'a', tag: tagB).save(failOnError: true)
+        new CreateAliasTeam(name: 'split').addToLikes(likeA).addToLikes(likeB).save(failOnError: true)
+        def together = new CreateAliasTeam(name: 'together').addToLikes(likeAB).save(flush: true, failOnError: true)
+        new CreateAliasClub(name: 'split club', team: CreateAliasTeam.findByName('split')).save(failOnError: true)
+        def club = new CreateAliasClub(name: 'together club', team: together).save(flush: true, failOnError: true)
+
+        expect: 'one like has to be both label a and tag B, whichever alias is declared first'
+        CreateAliasClub.withCriteria { createAlias('team.likes.tag', 't'); team { createAlias('likes', 'l'); eq('l.label', 'a') }; eq('t.name', 'tagB') }*.id == [club.id]
+        CreateAliasClub.withCriteria { team { createAlias('likes', 'l'); eq('l.label', 'a') }; createAlias('team.likes.tag', 't'); eq('t.name', 'tagB') }*.id == [club.id]
+        new DetachedCriteria(CreateAliasClub).build { createAlias('team.likes.tag', 't'); team { createAlias('likes', 'l'); eq('l.label', 'a') }; eq('t.name', 'tagB') }.list()*.id == [club.id]
+    }
+
+    void 'a block that asks for an inner join keeps it when a nested alias path joins the same association with a left join'() {
+        given: 'a club whose team has no likes, and one whose team has a like without a tag'
+        def bare = new CreateAliasTeam(name: 'bare').save(failOnError: true)
+        def like = new CreateAliasLike(label: 'untagged').save(failOnError: true)
+        def liked = new CreateAliasTeam(name: 'liked').addToLikes(like).save(flush: true, failOnError: true)
+        new CreateAliasClub(name: 'bare club', team: bare).save(failOnError: true)
+        def likedClub = new CreateAliasClub(name: 'liked club', team: liked).save(flush: true, failOnError: true)
+
+        expect: 'the block needs a like, so only the club whose team has one is returned'
+        CreateAliasClub.withCriteria { createAlias('team.likes.tag', 't', 1); team { likes { isNull('tag') } } }*.id == [likedClub.id]
+        CreateAliasClub.withCriteria { team { likes { isNull('tag') } }; createAlias('team.likes.tag', 't', 1) }*.id == [likedClub.id]
+        new DetachedCriteria(CreateAliasClub).build { createAlias('team.likes.tag', 't'); join('team.likes.tag', JoinType.LEFT); team { likes { isNull('tag') } } }.list()*.id == [likedClub.id]
+    }
+
+    void 'a block that asks for a left join keeps it when an alias of the same name as its association is declared outside it'() {
+        given: 'a team with a favorite and no likes, one with a favorite and a like, and one with neither'
+        def favorite = new CreateAliasLike(label: 'f').save(failOnError: true)
+        def likeX = new CreateAliasLike(label: 'x').save(failOnError: true)
+        def noLikes = new CreateAliasTeam(name: 'no likes', favorite: favorite).save(failOnError: true)
+        new CreateAliasTeam(name: 'with like', favorite: favorite).addToLikes(likeX).save(failOnError: true)
+        new CreateAliasTeam(name: 'bare').save(flush: true, failOnError: true)
+
+        expect: 'the unreferenced alias still joins the favorite, and the left join of the block returns the team without likes'
+        CreateAliasTeam.withCriteria { createAlias('favorite', 'likes'); likes(1) { isNull('label') } }*.id == [noLikes.id]
+        CreateAliasTeam.withCriteria { likes(1) { isNull('label') }; createAlias('favorite', 'likes') }*.id == [noLikes.id]
+    }
 }
 
 @Entity

@@ -85,6 +85,7 @@ public class JpaQueryContext implements Cloneable {
         this.joinTracker = new JoinTracker(parent != null ? parent.getJoinTracker() : null, root);
         this.aliasRegistry = new AliasRegistry(parent != null ? parent.getAliasRegistry() : null);
         this.resolver = new ExpressionResolver(aliasRegistry, joinTracker);
+        this.resolver.shareJoins(this::inheritedJoin, this::publishJoin);
         if (aliases != null) {
             for (HibernateAlias alias : aliases) {
                 aliasRegistry.define(alias.alias(), alias);

@@ -309,8 +309,7 @@ public class PredicateGenerator {
 
         // Create a nested context for this association
         JpaQueryContext nestedContext = new QueryAliasRegistrar(associationCriteria, null)
-                .createContext(fromsByProvider, associationRoot);
-        nestedContext.setBlockPath(associationName);
+                .createContext(fromsByProvider, associationRoot, associationName);
 
         GrailsHibernatePersistentEntity associatedEntity = (GrailsHibernatePersistentEntity) associationCriteria.getAssociation().getAssociatedEntity();
         List<Query.Criterion> criteriaList = associationCriteria.getCriteria();

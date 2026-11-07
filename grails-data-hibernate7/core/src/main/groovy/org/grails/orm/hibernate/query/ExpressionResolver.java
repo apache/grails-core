@@ -15,6 +15,9 @@
  */
 package org.grails.orm.hibernate.query;
 
+import java.util.function.BiConsumer;
+import java.util.function.Function;
+
 import jakarta.persistence.criteria.Expression;
 import jakarta.persistence.criteria.From;
 import jakarta.persistence.criteria.JoinType;
@@ -32,10 +35,24 @@ import grails.orm.HibernateCriteriaBuilder;
 public class ExpressionResolver {
     private final AliasRegistry aliasRegistry;
     private final JoinTracker joinTracker;
+    private Function<String, From<?, ?>> enclosingJoins = path -> null;
+    private BiConsumer<String, From<?, ?>> joinPublisher = (path, join) -> { };
 
     public ExpressionResolver(AliasRegistry aliasRegistry, JoinTracker joinTracker) {
         this.aliasRegistry = aliasRegistry;
         this.joinTracker = joinTracker;
+    }
+
+    /**
+     * Connects this resolver to the joins of the enclosing association block: an alias for a path the enclosing
+     * query already joins uses that join, and a join created here for a path is published to it.
+     *
+     * @param lookup finds the join an enclosing query has for a path relative to this scope, or {@code null}
+     * @param publisher receives each join an alias creates, to share it with the enclosing query
+     */
+    void shareJoins(Function<String, From<?, ?>> lookup, BiConsumer<String, From<?, ?>> publisher) {
+        this.enclosingJoins = lookup;
+        this.joinPublisher = publisher;
     }
 
     public Expression<?> resolve(String path) {
@@ -142,11 +159,16 @@ public class ExpressionResolver {
                     attribute.getPersistentAttributeType() == PersistentAttributeType.ELEMENT_COLLECTION;
             boolean sharesPath = !elementCollection && def.equals(aliasRegistry.getAssociationAlias(def.path()));
             From<?, ?> join = sharesPath ? joinTracker.getOwnJoin(def.path()) : null;
+            if (join == null && sharesPath) {
+                // the enclosing query may already join this association, for a nested alias path or another block
+                join = enclosingJoins.apply(def.path());
+            }
             if (join == null) {
                 join = joinPath(def.path(), def.joinType());
-                if (sharesPath) {
-                    joinTracker.addJoin(def.path(), join);
-                }
+            }
+            if (sharesPath) {
+                joinTracker.addJoin(def.path(), join);
+                joinPublisher.accept(def.path(), join);
             }
             aliased = join;
         }
@@ -180,7 +202,9 @@ public class ExpressionResolver {
      */
     private From<?, ?> resolvePrefix(String prefix, JoinType joinType) {
         HibernateAlias configured = aliasRegistry.isOwnDefined(prefix) ? aliasRegistry.getDefinition(prefix) : null;
-        return resolveAssociation(prefix, configured != null && !configured.explicit() ? configured.joinType() : joinType);
+        JoinType requested = aliasRegistry.getAssociationJoinType(prefix);
+        return resolveAssociation(prefix, configured != null && !configured.explicit() ? configured.joinType() :
+                requested != null ? requested : joinType);
     }
 
     /**

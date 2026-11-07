@@ -71,8 +71,25 @@ final class QueryAliasRegistrar {
      * @return the context, with its aliases registered and explicit entity association joins materialized
      */
     JpaQueryContext createContext(JpaQueryContext parent, From<?, ?> root) {
+        return createContext(parent, root, null);
+    }
+
+    /**
+     * Creates the context of an association block, which knows its path in the enclosing query before its aliases
+     * are materialized, so that an alias of the block for an association the enclosing query already joins uses
+     * that join.
+     *
+     * @param parent the context of the enclosing query
+     * @param root the join of the block's association
+     * @param blockPath the association path of the block, relative to the enclosing context, or {@code null}
+     * @return the context, with its aliases registered and explicit entity association joins materialized
+     */
+    JpaQueryContext createContext(JpaQueryContext parent, From<?, ?> root, String blockPath) {
         List<HibernateAlias> aliases = explicitAliases();
         JpaQueryContext context = JpaQueryContext.forSubquery(parent, aliases, root);
+        if (blockPath != null) {
+            context.setBlockPath(blockPath);
+        }
         registerDetachedJoins(context);
         discover(detachedCriteria.getCriteria(), context);
         for (HibernateAlias alias : aliases) {
@@ -138,6 +155,9 @@ final class QueryAliasRegistrar {
                     // joins the association first. A configured join type is already registered.
                     registerImplicit(context, associationPath, JoinType.INNER);
                 }
+                if (!(dac.getAssociation() instanceof Embedded)) {
+                    recordNestedBlockJoins(dac, associationPath, context);
+                }
             }
             else if (criterion instanceof Query.PropertyNameCriterion pnc) {
                 discoverProperty(pnc.getProperty(), context);
@@ -165,6 +185,10 @@ final class QueryAliasRegistrar {
         AliasRegistry registry = context.getAliasRegistry();
         HibernateAlias visible = registry.getDefinition(path);
         if (registry.isOwnDefined(path)) {
+            if (visible != null && visible.explicit()) {
+                // an alias declared here with the name of the block's association is another join
+                registry.defineAssociationJoinType(path, joinType);
+            }
             return;
         }
         if (visible != null && visible.explicit()) {
@@ -172,6 +196,22 @@ final class QueryAliasRegistrar {
             return;
         }
         context.registerAlias(path, new HibernateAlias(path, path, joinType, false));
+    }
+
+    /**
+     * Records the join type of each association block nested in a block, under its path from this query's root,
+     * so that a nested alias path such as {@code team.likes.tag}, which joins {@code team.likes} before this
+     * query reaches the block, gives that join the type the block asks for and not the type of the alias.
+     */
+    private void recordNestedBlockJoins(DetachedAssociationCriteria<?> block, String prefix, JpaQueryContext context) {
+        for (Query.Criterion criterion : block.getCriteria()) {
+            if (criterion instanceof DetachedAssociationCriteria<?> nested && !(nested.getAssociation() instanceof Embedded)) {
+                String path = prefix + "." + nested.getAssociationPath();
+                context.getAliasRegistry().defineAssociationJoinType(path,
+                        block.getJoinTypes().getOrDefault(nested.getAssociationPath(), JoinType.INNER));
+                recordNestedBlockJoins(nested, path, context);
+            }
+        }
     }
 
     private void discoverProperty(String propertyName, JpaQueryContext context) {
