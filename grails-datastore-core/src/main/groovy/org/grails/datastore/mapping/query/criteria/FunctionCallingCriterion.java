@@ -55,7 +55,6 @@ public class FunctionCallingCriterion extends Query.PropertyNameCriterion {
         }
     }
 
-
     private String functionName;
     private Query.PropertyCriterion propertyCriterion;
     private boolean onValue;
