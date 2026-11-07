@@ -34,6 +34,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
+import io.micrometer.observation.Observation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -42,6 +43,7 @@ import org.springframework.beans.BeansException;
 import org.springframework.context.ApplicationContext;
 import org.springframework.web.context.ServletContextAware;
 import org.springframework.web.context.request.async.AsyncRequestTimeoutException;
+import org.springframework.web.filter.ServerHttpObservationFilter;
 import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.View;
 import org.springframework.web.servlet.ViewResolver;
@@ -80,6 +82,15 @@ public class GrailsExceptionResolver extends SimpleMappingExceptionResolver impl
     /** Marks a request that is currently inside a forward to a status-code controller mapping. */
     private static final String ERROR_HANDLER_FORWARD_IN_PROGRESS_ATTRIBUTE =
             "org.grails.web.errors.ERROR_HANDLER_FORWARD_IN_PROGRESS";
+
+    /**
+     * Where {@link ServerHttpObservationFilter} keeps the observation of a request. The filter only offers its context,
+     * which cannot tell the handlers of an error, and a registry cannot be relied on to find it, because a filter can be
+     * built with a registry the application does not know. A public way to get it is requested in
+     * <a href="https://github.com/spring-projects/spring-framework/issues/37658">spring-framework#37658</a>.
+     */
+    private static final String SERVER_OBSERVATION_ATTRIBUTE =
+            ServerHttpObservationFilter.class.getName() + ".observation";
 
     protected static final Logger LOG = LoggerFactory.getLogger(GrailsExceptionResolver.class);
     protected static final String LINE_SEPARATOR = System.getProperty("line.separator");
@@ -125,7 +136,39 @@ public class GrailsExceptionResolver extends SimpleMappingExceptionResolver impl
             mv = resolveViewOrForward(ex, urlMappings, request, response, mv);
         }
 
+        recordServerError(request, ex);
+
         return mv;
+    }
+
+    /**
+     * Every exception this resolves is a server error, and resolving it hides it from the observation of the request,
+     * whose metrics would otherwise say there was no error and whose trace would not be marked as failed. Only
+     * {@link Observation#error(Throwable)} tells the observation's handlers, one of which marks the span.
+     * <p>
+     * An exception left in {@link WebUtils#ERROR_EXCEPTION_ATTRIBUTE} is not recorded here, because the filter that stops
+     * the observation records what it finds there. On an asynchronous dispatch the filter leaves stopping it to a listener
+     * that does not look.
+     */
+    private static void recordServerError(HttpServletRequest request, Exception ex) {
+        if (!WebUtils.isAsync(request) && request.getAttribute(WebUtils.ERROR_EXCEPTION_ATTRIBUTE) == ex) {
+            return;
+        }
+        if (request.getAttribute(SERVER_OBSERVATION_ATTRIBUTE) instanceof Observation observation) {
+            observation.error(ex);
+        }
+        else {
+            ServerHttpObservationFilter.findObservationContext(request).ifPresent(context -> context.setError(ex));
+        }
+    }
+
+    /**
+     * A forward to an error handler copies its model to the request, which leaves a wrapper in
+     * {@link WebUtils#ERROR_EXCEPTION_ATTRIBUTE}. The attribute keeps the exception itself for whatever reads it once the
+     * chain has returned, which includes the filter that observes the request.
+     */
+    private static void keepFailureOnRequest(HttpServletRequest request, Exception ex) {
+        request.setAttribute(WebUtils.ERROR_EXCEPTION_ATTRIBUTE, ex);
     }
 
     public String getRequestLogMessage(Throwable e, HttpServletRequest request) {
@@ -257,6 +300,7 @@ public class GrailsExceptionResolver extends SimpleMappingExceptionResolver impl
                     }
                     finally {
                         request.removeAttribute(ERROR_HANDLER_FORWARD_IN_PROGRESS_ATTRIBUTE);
+                        keepFailureOnRequest(request, ex);
                     }
                     // return an empty ModelAndView since the error handler has been processed
                     return new ModelAndView();

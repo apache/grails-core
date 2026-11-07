@@ -143,9 +143,27 @@ grails {
 ./gradlew traceNativeMetadata
 ----
 
-The result is merged into `src/native/resources/META-INF/native-image`, alongside the source rather than under `build`, because which paths an image was built to cover is worth reviewing and worth committing.
+The result is merged into `src/native/resources/META-INF/native-image`, alongside the source rather than under `build`, because which paths an image was built to cover is worth reviewing and worth committing. `nativeCompile` builds the image with it. A different `outputDirectory` has to be under a `META-INF/native-image` directory, which is where an image reads metadata from, and the build fails if it is not.
 
 `paths` are asked for. `forms` are asked for *and submitted*: the page is read, the fields the form declares are filled in, and they are posted to the action the form names. Submitting matters separately from rendering, because binding a form is a different half of the framework from rendering one — and it is the half that converts. A checkbox arrives as a string and lands on a boolean property, so a form submitted without one never asks the conversion service anything, and the image is built without the answer.
+
+==== Other methods and bodies
+
+`paths` are asked for with `GET` and `forms` are posted as forms, which reaches neither an action restricted to another method, such as `QUERY`, nor what binds a JSON body or writes a JSON response. `requests` makes a request as it is declared, after the forms and in their session:
+
+[source,groovy]
+----
+grails {
+    nativeMetadata {
+        requests = [
+            [method: 'QUERY', path: '/book/search', contentType: 'application/json', body: '{"title": "Grails"}', accept: 'application/json'],
+            [method: 'DELETE', path: '/book/1']
+        ]
+    }
+}
+----
+
+Each names its `method` and `path`, and may name its `contentType`, `body` and `accept`. A request that does not, or that names anything else, fails the trace, as one that answers with an error does.
 
 ==== Pages behind a login
 
@@ -162,6 +180,20 @@ grails {
 ----
 
 A form may be told what to put in it with a query string, as `/login` is above. Only fields the form actually declares are set from it; a value naming a field that is not there is reported rather than posted, because it was meant for a form that has since changed.
+
+An application using the Spring Security plugin traces its login the same way, naming the page the plugin renders:
+
+[source,groovy]
+----
+grails {
+    nativeMetadata {
+        forms = ['/login/auth?username=admin&password=secret']
+        paths = ['/', '/book']
+    }
+}
+----
+
+The plugin answers every request with a 503 until the application has started, so the trace and an AOT cache training run wait for that answer to change before they make their first request, for no longer than `startTimeoutSeconds`. What the plugin declares and the default configuration it loads are ready for an image. Its companion plugins (REST, LDAP, ACL, CAS, OAuth2 and UI) are not yet: each compiles a default configuration script as it starts, which an image cannot do.
 
 ==== Choosing which form
 
@@ -190,3 +222,5 @@ Redirects are followed, so an application that sends `/` to its real home page r
 NOTE: The agent ships with GraalVM rather than with a JDK, and it must trace the archive the image will be built from — which is compiled for GraalVM's Java. The task uses the project toolchain, which for a project that builds an image is already a GraalVM; `grails.nativeMetadata.javaExecutable` points it elsewhere.
 
 WARNING: The agent records only what ran. A path that is not listed is not covered, and it will be missing in the way that only appears when somebody uses that page. Treat the list as the coverage it is, and extend it as the application grows.
+
+The trace fails on a request that answers with an error, so what the framework does to answer one is registered for you where it writes one itself, as it does for an exception written as an RFC 9457 problem with `grails.exceptionresolver.problemDetails`.

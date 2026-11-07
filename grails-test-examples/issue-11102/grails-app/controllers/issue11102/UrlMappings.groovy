@@ -31,7 +31,10 @@ class UrlMappings {
             action = [GET: 'get2']
         }
 
+        "/failing/$action"(controller: 'failing')
+
         "/"(view:"/index")
+        "500"(controller: 'failing', action: 'errorHandler', exception: UnsupportedOperationException)
         "500"(view:'/error')
         "404"(view:'/notFound')
     }

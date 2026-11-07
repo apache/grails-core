@@ -43,8 +43,17 @@ class TrainingRunFixture {
         File requested = new File(args[2])
 
         HttpServer server = HttpServer.create(new InetSocketAddress('localhost', port), 0)
+        long openAt = args.length > 4 && args[4] == 'gated' ? System.currentTimeMillis() + 1500 : 0
+        boolean homePageDown = args.length > 4 && args[4] == 'homePageDown'
         server.createContext('/') { HttpExchange exchange ->
-            requested << "${exchange.requestURI.path}\n"
+            if (System.currentTimeMillis() < openAt || (homePageDown && exchange.requestURI.path == '/')) {
+                exchange.sendResponseHeaders(503, -1)
+                exchange.close()
+                return
+            }
+            if (exchange.requestMethod != 'HEAD') {
+                requested << "${exchange.requestURI.path}\n"
+            }
             byte[] body = 'served'.bytes
             int status = exchange.requestURI.path == '/missing' ? 404 : 200
             exchange.sendResponseHeaders(status, body.length)

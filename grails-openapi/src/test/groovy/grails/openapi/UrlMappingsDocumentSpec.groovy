@@ -162,12 +162,12 @@ class UrlMappingsDocumentSpec extends Specification {
         openApi.paths.size() == existing
     }
 
-    void 'skips a mapping declared for a method OpenAPI has no operation for'() {
+    void 'skips a mapping declared for the #httpMethod method, which OpenAPI has no operation for'() {
         given:
         def openApi = new OpenAPI()
         def customizer = OpenApiFixture.generator(holderFor {
             '/books'(controller: 'book', action: 'index', method: 'GET')
-            '/books/report'(controller: 'book', action: 'report', method: 'REPORT')
+            '/books/report'(controller: 'book', action: 'report', method: httpMethod)
         })
 
         when:
@@ -178,6 +178,9 @@ class UrlMappingsDocumentSpec extends Specification {
 
         and:
         !openApi.paths.containsKey('/books/report')
+
+        where:
+        httpMethod << ['REPORT', 'QUERY']
     }
 
     void 'names a greedy parameter for the constraint that binds it'() {

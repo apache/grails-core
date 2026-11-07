@@ -17,6 +17,8 @@
  *  under the License.
  */
 
+import org.apache.grails.buildsrc.ParentBomVersions
+import org.apache.grails.buildsrc.PomVersions
 import org.apache.grails.gradle.tasks.bom.ExtractDependenciesTask
 import org.apache.grails.gradle.tasks.bom.ExtractedDependencyConstraint
 import org.apache.grails.gradle.tasks.bom.PropertyNameCalculator
@@ -51,6 +53,51 @@ ext {
             'grails-gradle-common':'org.apache.grails.gradle',
             'grails-gradle-tasks':'org.apache.grails',
     ]
+}
+
+def pomFile = { String coordinates ->
+    Configuration pom = configurations.detachedConfiguration(dependencies.create("${coordinates}@pom"))
+    pom.transitive = false
+    pom.singleFile
+}
+
+// Hibernate ORM follows the version spring-boot-dependencies manages, unless dependencies.gradle sets
+// hibernate7VersionOverride to a newer release
+String springBootHibernateVersion = ParentBomVersions.resolve(parentBoms, pomFile).versions['org.hibernate.orm:hibernate-core']
+if (!springBootHibernateVersion) {
+    throw new GradleException("${parentBoms.join(', ')} does not manage org.hibernate.orm:hibernate-core: " +
+            'set hibernate7VersionOverride in dependencies.gradle to the Hibernate ORM 7 release to manage')
+}
+String hibernateVersion = springBootHibernateVersion
+if (hibernate7VersionOverride) {
+    // Gradle's conflict resolution selects the newer of two requested versions, by its own version ordering
+    Configuration bothVersions = configurations.detachedConfiguration(
+            dependencies.create("org.hibernate.orm:hibernate-core:${hibernate7VersionOverride}"),
+            dependencies.create("org.hibernate.orm:hibernate-core:${springBootHibernateVersion}"))
+    bothVersions.transitive = false
+    String newer = bothVersions.incoming.resolutionResult.allComponents
+            .find { it.moduleVersion.name == 'hibernate-core' }.moduleVersion.version
+    if (hibernate7VersionOverride == springBootHibernateVersion || newer != hibernate7VersionOverride) {
+        throw new GradleException("hibernate7VersionOverride ${hibernate7VersionOverride} is not newer than the " +
+                "Hibernate ORM ${springBootHibernateVersion} that spring-boot-dependencies manages: remove it from dependencies.gradle")
+    }
+    hibernateVersion = hibernate7VersionOverride
+}
+
+// hibernate-models is strictly re-declared too, so it must move with Hibernate ORM
+String ormHibernateModels = PomVersions.read(pomFile("org.hibernate.orm:hibernate-core:${hibernateVersion}")).dependencies
+        .find { it.groupId == 'org.hibernate.models' && it.artifactId == 'hibernate-models' }?.version
+if (ormHibernateModels && ormHibernateModels != customBomVersions['hibernate-models.version']) {
+    throw new GradleException("Hibernate ORM ${hibernateVersion} depends on hibernate-models ${ormHibernateModels}, " +
+            "but dependencies.gradle manages ${customBomVersions['hibernate-models.version']}: set hibernate-models.version to ${ormHibernateModels}")
+}
+
+customBomVersions['hibernate.version'] = hibernateVersion
+combinedVersions['hibernate.version'] = hibernateVersion
+for (String module : hibernateOrmModules) {
+    String coordinates = "org.hibernate.orm:${module}:${hibernateVersion}"
+    customBomDependencies[module] = coordinates
+    combinedDependencies[module] = coordinates
 }
 
 dependencies {

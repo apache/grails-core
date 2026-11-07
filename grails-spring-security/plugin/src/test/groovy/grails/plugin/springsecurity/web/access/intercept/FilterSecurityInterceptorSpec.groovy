@@ -28,6 +28,8 @@ import org.springframework.security.access.AccessDeniedException
 import org.springframework.security.access.SecurityConfig
 import org.springframework.security.access.vote.RoleVoter
 import org.springframework.security.authentication.AuthenticationCredentialsNotFoundException
+import org.springframework.security.authentication.AuthenticationManager
+import org.springframework.security.authentication.BadCredentialsException
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken
 import org.springframework.security.core.authority.AuthorityUtils
 import org.springframework.security.core.context.SecurityContextHolder
@@ -103,6 +105,76 @@ class FilterSecurityInterceptorSpec extends AbstractUnitSpec {
         exception.message == 'An Authentication object was not found in the SecurityContext'
         0 * interceptor.accessDecisionManager._
         0 * chain._
+    }
+
+    void 'what a filter left unauthenticated is authenticated before the access decision'() {
+        given:
+        def left = UsernamePasswordAuthenticationToken.unauthenticated('user', 'stored')
+        def authenticated = UsernamePasswordAuthenticationToken.authenticated(
+            'user', 'stored', AuthorityUtils.createAuthorityList('ROLE_USER'))
+        SecurityContextHolder.context.authentication = left
+        def interceptor = interceptorFor(Mock(AuthenticationManager), Mock(AccessDecisionManager))
+        FilterChain chain = Mock()
+
+        when:
+        interceptor.doFilter(request, response, chain)
+
+        then:
+        1 * interceptor.authenticationManager.authenticate(left) >> authenticated
+
+        then:
+        1 * interceptor.accessDecisionManager.decide(authenticated, _ as FilterInvocation, _)
+
+        then:
+        1 * chain.doFilter(request, response)
+        SecurityContextHolder.context.authentication.is(authenticated)
+    }
+
+    void 'what the authentication manager refuses never reaches the access decision'() {
+        given:
+        SecurityContextHolder.context.authentication = UsernamePasswordAuthenticationToken.unauthenticated('user', 'stored')
+        def interceptor = interceptorFor(
+            Stub(AuthenticationManager) { authenticate(_) >> { throw new BadCredentialsException('refused') } },
+            Mock(AccessDecisionManager))
+        FilterChain chain = Mock()
+
+        when:
+        interceptor.doFilter(request, response, chain)
+
+        then:
+        thrown(BadCredentialsException)
+        0 * interceptor.accessDecisionManager._
+        0 * chain._
+    }
+
+    void 'what is authenticated already is left alone unless alwaysReauthenticate is set'() {
+        given:
+        def authentication = UsernamePasswordAuthenticationToken.authenticated(
+            'user', 'password', AuthorityUtils.createAuthorityList('ROLE_USER'))
+        SecurityContextHolder.context.authentication = authentication
+        def interceptor = interceptorFor(Mock(AuthenticationManager), Mock(AccessDecisionManager))
+        interceptor.alwaysReauthenticate = always
+
+        when:
+        interceptor.doFilter(request, response, Stub(FilterChain))
+
+        then:
+        times * interceptor.authenticationManager.authenticate(authentication) >> authentication
+
+        where:
+        always | times
+        false  | 0
+        true   | 1
+    }
+
+    private FilterSecurityInterceptor interceptorFor(AuthenticationManager manager, AccessDecisionManager decisions) {
+        new FilterSecurityInterceptor(
+            authenticationManager: manager,
+            accessDecisionManager: decisions,
+            securityMetadataSource: Stub(FilterInvocationSecurityMetadataSource) {
+                getAttributes(_ as FilterInvocation) >> [new SecurityConfig('ROLE_USER')]
+            }
+        )
     }
 
     void 'secured filter chain responds with #status for #scenario'() {

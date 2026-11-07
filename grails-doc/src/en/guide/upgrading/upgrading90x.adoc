@@ -51,6 +51,7 @@ The ones most likely to affect a Grails application are:
 Spring Framework 7.1's `ForwardedHeaderFilter` reads either the RFC 7239 `Forwarded` header or the `+X-Forwarded-*+` headers, and Spring Boot 4.2 configures it for `+X-Forwarded-*+`.
 Before, it read `Forwarded` when the request carried one and `+X-Forwarded-*+` otherwise.
 If your reverse proxy sends `Forwarded`, set `spring.mvc.forwarded-headers.header-format: standard`.
+The filter also ignores `X-Forwarded-Prefix` now, where it used to add it to the context path, so if your proxy strips a path prefix and sends that header, absolute links and redirects lose the prefix until you set `spring.mvc.forwarded-headers.use-forwarded-prefix: true`.
 Spring Boot 4.2 also registers the filter from its Spring MVC auto-configuration, which backs off when the application declares `@EnableWebMvc`; such an application must now register a `ForwardedHeaderFilter` itself.
 
 * *Embedded Tomcat keeps relative redirect locations relative.*
@@ -107,6 +108,43 @@ A Spring MVC `@RestController` that returns JAXB-annotated objects needs the con
 The Spring TestContext Framework used to ignore such a class unless its class hierarchy declared `@ContextConfiguration`, and now adds it to the test's application context.
 Grails 8 already logs a warning for each one it ignores, so a test run on Grails 8 shows the affected tests.
 Remove the `@Configuration` annotation, or move the class to a top-level class, if the test should not load it.
+
+* *`bootBuildImage` builds on Ubuntu 26.04.*
+The default builder is `paketobuildpacks/ubuntu-resolute-builder`, in place of `paketobuildpacks/builder-noble-java-tiny`, and images are based on Ubuntu 26.04 instead of 24.04.
+With no `builder` configured, the run image is `paketobuildpacks/ubuntu-resolute-run-tiny:latest`, which still has no shell; with one configured, it is the run image of the builder, which for `ubuntu-resolute-builder` has a shell.
+The builder no longer pins the version of the run image, so set both `builder` and `runImage` to specific versions for repeatable images, or set `builder` to `paketobuildpacks/builder-noble-java-tiny` to keep the previous one.
+
+* *An exception an action throws is now recorded as an error on the HTTP server observation.*
+When an error view answered, as the `"500"(view: '/error')` mapping of a generated application does, `http.server.requests` tagged the 500 with `error` and `exception` values of `none`, and tracing did not see a failure.
+A `500` mapping to a controller tagged it with `GrailsWrappedRuntimeException` and with the `uri` of that controller, so every failure it answered looked like the same route.
+Both now report the exception the action threw and the route of the action, and the span of the request is marked as failed. An async timeout, which answers with a 503, is recorded in the same way.
+These requests were already counted with `outcome=SERVER_ERROR`, but an alert that counts a non-`none` `error` value will see more server errors than before, and a dashboard that reads the `uri` of an error controller will find those failures under the routes of the actions.
+After a forward to an error controller, the `jakarta.servlet.error.exception` request attribute holds the exception the action threw rather than a `GrailsWrappedRuntimeException`, for a filter that reads it once the chain has returned. Inside the error controller it still holds the wrapper.
+A client error is not recorded.
+A custom `ObservationConvention` can leave out the error for particular exceptions.
+
+* *`http.server.requests.active` is no longer registered by default.*
+Spring Boot 4.2 makes this long task timer opt-in.
+A dashboard or alert that reads it sets `management.metrics.observations.include-active-long-task-timer` to `true`, which replaces `management.metrics.observations.ignored-meters`.
+
+* *`spring-boot-starter-amqp` no longer means RabbitMQ.*
+It is now the starter for generic AMQP 1.0, and RabbitMQ has starters of its own.
+An application that uses RabbitMQ through `spring-boot-starter-amqp` or `spring-boot-starter-amqp-test` changes to `spring-boot-starter-rabbitmq` or `spring-boot-starter-rabbitmq-test`, and any import of `org.springframework.boot.amqp.autoconfigure` to `org.springframework.boot.rabbitmq.autoconfigure`.
+RabbitMQ over AMQP 1.0 has `spring-boot-starter-amqp-rabbitmq`.
+
+* *The Spring Security plugin no longer saves the requests browsers send on their own.*
+A denied request for `/apple-touch-icon.png`, `/manifest.json` or the `/.well-known/appspecific/com.chrome.devtools.json` that Chrome DevTools sends used to be saved, so a login redirected to it instead of to the page the user asked for.
+Spring Security 7.2's configuration DSL ignores these paths, which the plugin does not use, so the plugin now ignores them too, with `grails.plugin.springsecurity.requestCache.ignoredPatterns`.
+An application that secures a page at one of these paths and wants a login to return to it can leave the path out of that list.
+
+* *Digest authentication in the Spring Security plugin starts and signs users in.*
+`useDigestAuth` with its default of hashed passwords used to fail at startup, naming an encoder that no longer exists.
+What a user has stored is now the hash a browser computes, which the application computes, as the link:security.html#core-basicAndDigestAuth[guide] shows.
+With `digest.useCleartextPasswords`, nobody could sign in with Digest authentication, because the password encoder stored `{noop}secret`.
+It now stores what was typed, so an application that signed in through a form with stored values such as `{noop}secret` removes the `{noop}` prefix from them.
+
+* *`fii.alwaysReauthenticate` in the Spring Security plugin takes effect.*
+The setting did nothing, because the plugin's security interceptor went straight to the access decision. An application that sets it now has every request authenticated again, as the setting describes.
 
 [TIP]
 ====
@@ -1238,6 +1276,13 @@ grails:
         springHandlers: true
 ----
 
+Spring Framework 7.1 adds `ProblemDetailsConfigurer.renderUnhandledExceptions`, which renders any exception no exception
+handler method handles as a problem. Turned on in a `WebMvcConfigurer`, it applies to Grails actions whatever
+`grails.exceptionresolver.springHandlers` says, and answers every exception, a browser's included, ahead of the Grails
+exception resolver, so `"500"` URL mappings no longer apply. Set `grails.exceptionresolver.problemDetails: true` instead,
+which writes the same problems and leaves the error page to the clients that prefer HTML. See
+<<controllerExceptionHandling,Declarative Controller Exception Handling>>.
+
 ==== 18. Actions Can Return Spring MVC Responses
 
 An action that returns a `ResponseEntity` or another `HttpEntity`, a `ProblemDetail`, an `ErrorResponse`,
@@ -1351,10 +1396,10 @@ See <<asyncPromises,Promises>> and <<events,Events>>.
 
 Grails no longer registers a character encoding filter of its own. It used to, and Spring Boot's backed off, so `spring.servlet.encoding` had no effect in a Grails application. Spring Boot's filter now decodes requests: it runs at `Ordered.HIGHEST_PRECEDENCE`, ahead of every other filter, and `spring.servlet.encoding` configures it.
 
-* The request encoding is now overridden by default, as in any Spring Boot application, so a request that declares a charset of its own is still decoded as UTF-8: its parameters, a body read through `getReader()`, `request.JSON` and `request.XML`, and a JSON or XML body bound to a command object or domain class. The parameters of a PUT, PATCH or DELETE form are the exception, as in Grails 8: the `FormContentFilter` that parses them decodes them with the declared charset, forced or not. To keep the charset a request declares, as Grails 8 did, set `spring.servlet.encoding.force-request: false`.
+* The request encoding is now overridden by default, as in any Spring Boot application, so a request that declares a charset of its own is still decoded as UTF-8: its parameters, a body read through `getReader()`, `request.JSON` and `request.XML`, and a JSON or XML body bound to a command object or domain class. The parameters of a PUT, PATCH, DELETE or QUERY form are the exception, as in Grails 8: the `FormContentFilter` that parses them decodes them with the declared charset, forced or not. To keep the charset a request declares, as Grails 8 did, set `spring.servlet.encoding.force-request: false`.
 * Grails 8.1 already registers its encoding filter at `Ordered.HIGHEST_PRECEDENCE`, so an application coming from 8.1 sees no change in where the encoding filter runs. In an application coming from 8.0, filters ordered between `Ordered.HIGHEST_PRECEDENCE + 1` and -181, which used to run before Grails' encoding filter, now run after Spring Boot's, with the request encoding set, as section 5 of <<upgrading81x,Upgrading from Grails 8.0 to Grails 8.1>> describes. asset-pipeline's filter at -190 is one: in a packaged application (a WAR or an executable jar) it copies the request's encoding to the precompiled assets it serves, so every asset response now declares a charset, for example `text/css;charset=UTF-8`, and browsers use it for stylesheets and scripts instead of detecting their encoding. A filter among them that reads a request body sent without a charset through `getReader()` now decodes it as UTF-8 instead of ISO-8859-1.
 * `grails.filter.encoding` and `grails.filter.forceEncoding` are deprecated. Grails 9 translates them into `spring.servlet.encoding.charset` and `spring.servlet.encoding.force` and logs a warning, and a `spring.servlet.encoding` setting of the application wins over them. Use the Spring Boot properties instead.
-* `GrailsFilters.CHARACTER_ENCODING_FILTER` is deprecated, and its order is now `Ordered.HIGHEST_PRECEDENCE`, the order of Spring Boot's encoding filter, where Grails 8.0 had -180. A filter ordered at `GrailsFilters.CHARACTER_ENCODING_FILTER.order + 1` therefore runs right after the encoding filter, and now also ahead of `FormContentFilter` and of Grails' security headers filter at `GrailsFilters.FIRST`: it no longer sees the parameters of a PUT, PATCH or DELETE form, and a response it sends without continuing the chain gets no security headers. Order it at `Ordered.HIGHEST_PRECEDENCE + 1` instead, or at `GrailsFilters.ASSET_PIPELINE_FILTER.order + 1` to keep the place it had in Grails 8.0.
+* `GrailsFilters.CHARACTER_ENCODING_FILTER` is deprecated, and its order is now `Ordered.HIGHEST_PRECEDENCE`, the order of Spring Boot's encoding filter, where Grails 8.0 had -180. A filter ordered at `GrailsFilters.CHARACTER_ENCODING_FILTER.order + 1` therefore runs right after the encoding filter, and now also ahead of `FormContentFilter` and of Grails' security headers filter at `GrailsFilters.FIRST`: it no longer sees the parameters of a PUT, PATCH, DELETE or QUERY form, and a response it sends without continuing the chain gets no security headers. Order it at `Ordered.HIGHEST_PRECEDENCE + 1` instead, or at `GrailsFilters.ASSET_PIPELINE_FILTER.order + 1` to keep the place it had in Grails 8.0.
 * `spring.servlet.encoding.enabled: false` turns the encoding filter off.
 * The CAS plugin's single sign-out filter, which reads a parameter of every POST, is registered right after the encoding filter.
 * A filter of your own that reads request parameters needs a later order than `Ordered.HIGHEST_PRECEDENCE`, or form input reaches controllers decoded as ISO-8859-1. One registered at exactly `Ordered.HIGHEST_PRECEDENCE` through a `FilterRegistrationBean` runs before the encoding filter.
