@@ -29,6 +29,7 @@ import java.util.Map;
 import org.codehaus.groovy.control.CompilationFailedException;
 import org.codehaus.groovy.runtime.InvokerInvocationException;
 
+import jakarta.servlet.DispatcherType;
 import jakarta.servlet.ServletContext;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -112,6 +113,7 @@ public class GrailsExceptionResolver extends SimpleMappingExceptionResolver impl
                                          Object handler, Exception ex) {
         // don't reuse cached controller attribute
         request.removeAttribute(GrailsApplicationAttributes.GRAILS_CONTROLLER_CLASS_AVAILABLE);
+        DispatcherType dispatchedAs = request.getDispatcherType();
 
         ex = findWrappedException(ex);
 
@@ -136,7 +138,7 @@ public class GrailsExceptionResolver extends SimpleMappingExceptionResolver impl
             mv = resolveViewOrForward(ex, urlMappings, request, response, mv);
         }
 
-        recordServerError(request, ex);
+        recordServerError(request, ex, dispatchedAs);
 
         return mv;
     }
@@ -146,12 +148,13 @@ public class GrailsExceptionResolver extends SimpleMappingExceptionResolver impl
      * whose metrics would otherwise say there was no error and whose trace would not be marked as failed. Only
      * {@link Observation#error(Throwable)} tells the observation's handlers, one of which marks the span.
      * <p>
-     * An exception left in {@link WebUtils#ERROR_EXCEPTION_ATTRIBUTE} is not recorded here, because the filter that stops
-     * the observation records what it finds there. On an asynchronous dispatch the filter leaves stopping it to a listener
-     * that does not look.
+     * An exception left in {@link WebUtils#ERROR_EXCEPTION_ATTRIBUTE} is not recorded here when it is recorded from there
+     * once the dispatch returns, so that the handlers hear of it once.
+     *
+     * @param dispatchedAs how the request was dispatched before an error handler was forwarded to
      */
-    private static void recordServerError(HttpServletRequest request, Exception ex) {
-        if (!WebUtils.isAsync(request) && request.getAttribute(WebUtils.ERROR_EXCEPTION_ATTRIBUTE) == ex) {
+    private static void recordServerError(HttpServletRequest request, Exception ex, DispatcherType dispatchedAs) {
+        if (request.getAttribute(WebUtils.ERROR_EXCEPTION_ATTRIBUTE) == ex && recordedFromRequest(request, dispatchedAs)) {
             return;
         }
         if (request.getAttribute(SERVER_OBSERVATION_ATTRIBUTE) instanceof Observation observation) {
@@ -160,6 +163,25 @@ public class GrailsExceptionResolver extends SimpleMappingExceptionResolver impl
         else {
             ServerHttpObservationFilter.findObservationContext(request).ifPresent(context -> context.setError(ex));
         }
+    }
+
+    /**
+     * Whether the exception left in {@link WebUtils#ERROR_EXCEPTION_ATTRIBUTE} is recorded from there once the dispatch
+     * returns.
+     * <ul>
+     * <li>The filter that observes the request records it at the end of a plain dispatch. It does not look at the end of
+     * an asynchronous dispatch, which {@link WebUtils#isAsync} tells even inside a forward.</li>
+     * <li>A dispatch that has started asynchronous processing leaves stopping the observation to a listener of the filter.
+     * Tomcat reports the exception to that listener when the dispatch returns. Jetty does not, but the request already
+     * reads as asynchronous there, so the exception is recorded here.</li>
+     * <li>Undertow leaves a request that was forwarded reading as a forward, so the filter takes it for a plain dispatch
+     * and records the exception however the request was dispatched.</li>
+     * </ul>
+     */
+    private static boolean recordedFromRequest(HttpServletRequest request, DispatcherType dispatchedAs) {
+        boolean forwardLeftOnRequest = dispatchedAs != DispatcherType.FORWARD &&
+                request.getDispatcherType() == DispatcherType.FORWARD;
+        return forwardLeftOnRequest || !WebUtils.isAsync(request);
     }
 
     /**
