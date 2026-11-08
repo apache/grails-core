@@ -92,6 +92,20 @@ class FunctionCallingCriterionHandler implements InternalCriterionHandler<Functi
             return criteriaBuilder.notEqual(left, value);
         }
 
+        if (rawValue instanceof QueryableCriteria<?> qc) {
+            Expression<? extends Comparable> subquery = (Expression<? extends Comparable>)
+                    PropertyCriterionHandler.buildSubquery(context, left, qc, criterion.getProperty());
+            if (wrapped instanceof Query.GreaterThan) {
+                return criteriaBuilder.greaterThan((Expression<? extends Comparable>) left, subquery);
+            } else if (wrapped instanceof Query.GreaterThanEquals) {
+                return criteriaBuilder.greaterThanOrEqualTo((Expression<? extends Comparable>) left, subquery);
+            } else if (wrapped instanceof Query.LessThan) {
+                return criteriaBuilder.lessThan((Expression<? extends Comparable>) left, subquery);
+            } else if (wrapped instanceof Query.LessThanEquals) {
+                return criteriaBuilder.lessThanOrEqualTo((Expression<? extends Comparable>) left, subquery);
+            }
+        }
+
         Object value = convertFunctionValue(context.getConversionService(), functionName, rawValue);
         if (wrapped instanceof Query.ILike) {
             return criteriaBuilder.ilike((Expression<String>) left, (String) value);

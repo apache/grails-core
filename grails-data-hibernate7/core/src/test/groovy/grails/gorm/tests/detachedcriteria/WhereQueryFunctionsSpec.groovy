@@ -235,6 +235,28 @@ class WhereQueryFunctionsSpec extends HibernateGormDatastoreSpec {
         notMax == ['a', 'b']
     }
 
+    void "an ordered comparison of a function with a one-row subquery runs: #criterion.simpleName"() {
+        given:
+        seedEntities()
+        new WhereQueryFunctionEntity(name: 'g', label: 'Gamma', amount: 5, created: date(2014, 1, 1)).save(flush: true)
+        DetachedCriteria<WhereQueryFunctionEntity> largestAmount = new DetachedCriteria<>(WhereQueryFunctionEntity).build {
+            projections { max('amount') }
+        }
+
+        when: 'the largest amount is 5, and the label lengths are 5, 4, 5 and 5'
+        def names = criteriaOf(new FunctionCallingCriterion('length', criterion.newInstance('label', largestAmount))).list()*.name.sort()
+
+        then: 'the row without a label is not compared, as in SQL'
+        names == expected
+
+        where:
+        criterion                 || expected
+        Query.GreaterThan         || []
+        Query.GreaterThanEquals   || ['a', 'd', 'g']
+        Query.LessThan            || ['b']
+        Query.LessThanEquals      || ['a', 'b', 'd', 'g']
+    }
+
     void "the documented date functions execute on every part of a date"() {
         given:
         new WhereQueryFunctionEntity(name: 'x', amount: 1, created: new GregorianCalendar(2014, 4, 6, 7, 8, 9).time).save(flush: true)
