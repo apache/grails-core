@@ -257,6 +257,26 @@ class WhereQueryFunctionsSpec extends HibernateGormDatastoreSpec {
         Query.LessThanEquals      || ['a', 'b', 'd', 'g']
     }
 
+    void "a fractional number compared with a function keeps its precision"() {
+        given:
+        new WhereQueryFunctionEntity(name: 'abc', amount: 1, created: date(2014, 1, 1)).save(flush: true)
+        new WhereQueryFunctionEntity(name: 'abcd', amount: 1, created: date(2014, 1, 1)).save(flush: true)
+
+        when:
+        def above = WhereQueryFunctionEntity.where { length(name) > 3.5 }.list()*.name
+        def atLeast = WhereQueryFunctionEntity.where { length(name) >= 3.5 }.list()*.name
+        def below = WhereQueryFunctionEntity.where { length(name) < 3.5 }.list()*.name.sort()
+        def whole = WhereQueryFunctionEntity.where { length(name) == 3.0 }.list()*.name
+        def yearAbove = WhereQueryFunctionEntity.where { year(created) > 2013.5 }.list()*.name.sort()
+
+        then:
+        above == ['abcd']
+        atLeast == ['abcd']
+        below == ['abc']
+        whole == ['abc']
+        yearAbove == ['abc', 'abcd']
+    }
+
     void "the documented date functions execute on every part of a date"() {
         given:
         new WhereQueryFunctionEntity(name: 'x', amount: 1, created: new GregorianCalendar(2014, 4, 6, 7, 8, 9).time).save(flush: true)

@@ -79,6 +79,9 @@ class FunctionCallingCriterionHandler implements InternalCriterionHandler<Functi
                 return criteriaBuilder.equal(left, subquery);
             }
             Object value = convertFunctionValue(context.getConversionService(), functionName, rawValue);
+            if (isFractional(value)) {
+                return criteriaBuilder.equal(left, criteriaBuilder.literal((Number) value));
+            }
             return criteriaBuilder.equal(left, value);
         } else if (wrapped instanceof Query.NotEquals) {
             if (rawValue == null) {
@@ -89,6 +92,9 @@ class FunctionCallingCriterionHandler implements InternalCriterionHandler<Functi
                 return criteriaBuilder.notEqual(left, subquery);
             }
             Object value = convertFunctionValue(context.getConversionService(), functionName, rawValue);
+            if (isFractional(value)) {
+                return criteriaBuilder.notEqual(left, criteriaBuilder.literal((Number) value));
+            }
             return criteriaBuilder.notEqual(left, value);
         }
 
@@ -113,6 +119,19 @@ class FunctionCallingCriterionHandler implements InternalCriterionHandler<Functi
             return PropertyCriterionHandler.handleRLike(criteriaBuilder, (Expression<String>) left, rLike);
         } else if (wrapped instanceof Query.Like) {
             return criteriaBuilder.like((Expression<String>) left, (String) value);
+        } else if (isFractional(value) && wrapped instanceof Query.PropertyCriterion) {
+            // the parameter of a comparison takes the type of the function, an int, which would cut the fraction off;
+            // a literal keeps its own type
+            Expression<? extends Comparable> literal = (Expression<? extends Comparable>) (Expression<?>) criteriaBuilder.literal((Number) value);
+            if (wrapped instanceof Query.GreaterThan) {
+                return criteriaBuilder.greaterThan((Expression<? extends Comparable>) left, literal);
+            } else if (wrapped instanceof Query.GreaterThanEquals) {
+                return criteriaBuilder.greaterThanOrEqualTo((Expression<? extends Comparable>) left, literal);
+            } else if (wrapped instanceof Query.LessThan) {
+                return criteriaBuilder.lessThan((Expression<? extends Comparable>) left, literal);
+            } else if (wrapped instanceof Query.LessThanEquals) {
+                return criteriaBuilder.lessThanOrEqualTo((Expression<? extends Comparable>) left, literal);
+            }
         } else if (wrapped instanceof Query.GreaterThan) {
             return criteriaBuilder.greaterThan((Expression<? extends Comparable>) left, (Comparable) value);
         } else if (wrapped instanceof Query.GreaterThanEquals) {
@@ -132,6 +151,12 @@ class FunctionCallingCriterionHandler implements InternalCriterionHandler<Functi
             case "upper" -> criteriaBuilder.upper((Expression<String>) expression);
             case "trim" -> criteriaBuilder.trim((Expression<String>) expression);
             case "length" -> criteriaBuilder.length((Expression<String>) expression);
+            case "year" -> criteriaBuilder.year((Expression<? extends java.time.temporal.TemporalAccessor>) expression);
+            case "month" -> criteriaBuilder.month((Expression<? extends java.time.temporal.TemporalAccessor>) expression);
+            case "day" -> criteriaBuilder.day((Expression<? extends java.time.temporal.TemporalAccessor>) expression);
+            case "hour" -> criteriaBuilder.hour((Expression<? extends java.time.temporal.TemporalAccessor>) expression);
+            case "minute" -> criteriaBuilder.minute((Expression<? extends java.time.temporal.TemporalAccessor>) expression);
+            case "second" -> criteriaBuilder.second((Expression<? extends java.time.temporal.TemporalAccessor>) expression);
             default -> criteriaBuilder.function(functionName, Integer.class, expression);
         };
     }
@@ -144,8 +169,25 @@ class FunctionCallingCriterionHandler implements InternalCriterionHandler<Functi
             case "lower", "upper", "trim" -> String.class;
             default -> Integer.class;
         };
+        if (targetType == Integer.class && value instanceof Number number && !isWholeInt(number)) {
+            // a fractional or too large number is compared as it is; narrowing it to an int would change the answer
+            return value;
+        }
         return conversionService != null && conversionService.canConvert(value.getClass(), targetType) ?
                 conversionService.convert(value, targetType) :
                 value;
+    }
+
+    private static boolean isFractional(Object value) {
+        return value instanceof Number number && !isWholeInt(number);
+    }
+
+    private static boolean isWholeInt(Number number) {
+        if (number instanceof Integer || number instanceof Short || number instanceof Byte || number instanceof Long) {
+            long l = number.longValue();
+            return l >= Integer.MIN_VALUE && l <= Integer.MAX_VALUE;
+        }
+        double d = number.doubleValue();
+        return d == Math.rint(d) && d >= Integer.MIN_VALUE && d <= Integer.MAX_VALUE;
     }
 }
