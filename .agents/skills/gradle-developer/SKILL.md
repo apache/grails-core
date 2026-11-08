@@ -151,7 +151,7 @@ Never unify those casually.
 2. Run the bootstrap project with a system `gradle` **of the new version** to regenerate shared wrappers from `.sdkmanrc`. The `wrapper` task copies the jar from the Gradle that runs it, so an older `gradle` writes its own jar next to the new `distributionUrl`:
 
    ```bash
-   sdk env install   # installs and selects the versions .sdkmanrc now names
+   sdk env install   # installs any missing versions .sdkmanrc names, then switches this shell to them
    gradle -p gradle-bootstrap
    ```
 
