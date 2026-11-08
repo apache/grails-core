@@ -768,8 +768,9 @@ public abstract class Query implements Cloneable, Serializable {
                 throw unsupportedSubquery(criterion.getClass().getSimpleName());
             }
             List<?> rows = subquery.list();
-            if (rows == null || rows.isEmpty()) {
-                // a comparison with the value of an empty subquery is unknown in SQL, and so is its negation: a row is
+            if (rows == null || rows.isEmpty() || (rows.size() == 1 && rows.get(0) == null)) {
+                // a comparison with the value of an empty subquery, or of one that returns a single null, such as the
+                // average of no rows, is unknown in SQL, and so is its negation: a row is
                 // returned only when the whole condition is true. A criterion that matches no row stands for it,
                 // or one that matches every row when an odd number of negations encloses it, so that the
                 // negation matches none

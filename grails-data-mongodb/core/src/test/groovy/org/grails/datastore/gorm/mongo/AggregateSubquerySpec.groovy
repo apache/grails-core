@@ -221,6 +221,33 @@ class AggregateSubquerySpec extends GrailsDataTckSpec<GrailsDataMongoTckManager>
         inNegatedAnd*.firstName == ['Barney', 'Homer', 'Lisa', 'Marge', 'Nobody']
     }
 
+    void "a comparison against a subquery that returns one null matches no row, as with no row"() {
+        given:
+        seed()
+        new AggSubPerson(firstName: 'Nobody').save(flush: true, failOnError: true)
+        manager.session.clear()
+
+        when: 'the age of the person whose age is not set is one null'
+        List<AggSubPerson> greater = AggSubPerson.createCriteria().list {
+            gt('age', AggSubPerson.where { firstName == 'Nobody' }.property('age'))
+        }
+        List<AggSubPerson> equal = AggSubPerson.createCriteria().list {
+            eq('age', AggSubPerson.where { firstName == 'Nobody' }.property('age'))
+        }
+        List<AggSubPerson> notEqual = AggSubPerson.createCriteria().list {
+            ne('age', AggSubPerson.where { firstName == 'Nobody' }.property('age'))
+        }
+        List<AggSubPerson> negated = AggSubPerson.createCriteria().list {
+            not { gt('age', AggSubPerson.where { firstName == 'Nobody' }.property('age')) }
+        }
+
+        then: 'not the rows whose age is missing, which a null test would have matched'
+        greater.isEmpty()
+        equal.isEmpty()
+        notEqual.isEmpty()
+        negated.isEmpty()
+    }
+
     void "a subquery inside an association block is run"() {
         given:
         new AggSubCity(name: 'Paris').save(flush: true, failOnError: true)
