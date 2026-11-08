@@ -27,6 +27,8 @@ import jakarta.persistence.LockModeType;
 import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.CriteriaQuery;
 import jakarta.persistence.criteria.Expression;
+import jakarta.persistence.criteria.Fetch;
+import jakarta.persistence.criteria.FetchParent;
 import jakarta.persistence.criteria.From;
 import jakarta.persistence.criteria.Join;
 import jakarta.persistence.criteria.JoinType;
@@ -184,7 +186,7 @@ public class GrailsHibernateQueryUtils {
                 String associationName = (String) o;
                 Object fetchValue = fetch.get(associationName);
                 if (fetchValue instanceof JoinType) {
-                    restrictToJoinedInstances(entity, query, queryRoot, criteriaBuilder, associationName, (JoinType) fetchValue);
+                    fetchWithJoinType(entity, query, queryRoot, criteriaBuilder, associationName, (JoinType) fetchValue);
                 }
                 else if (getFetchMode(fetchValue) == FetchMode.JOIN) {
                     queryRoot.join(associationName);
@@ -279,25 +281,81 @@ public class GrailsHibernateQueryUtils {
     }
 
     /**
-     * Restricts a query to the instances for which an inner join of an association path returns a row,
-     * when the {@code fetch} argument requests an inner or a right join. The path is joined in a
-     * subquery, which is correlated with the query by the instance, so that a path through a
-     * collection does not multiply the rows. A left join leaves the query as it is.
+     * Fetches the association that the {@code fetch} argument requests a join type for, with the
+     * associations before it on the path.
+     * <p>
+     * A path that ends in the association, or in a collection, is fetched with the requested join type
+     * for its last association and left joins for the ones before it. An inner join leaves out the
+     * instances that it returns no row for, and a fetched collection holds all of its elements, since
+     * nothing restricts them. Hibernate does not support right joins in criteria queries, so a right
+     * join is made as an inner join.
+     * <p>
+     * A path that passes through a collection is fetched with left joins, so that the collection holds
+     * all of its elements, also those that an inner join of the rest of the path would leave out.
+     * <p>
+     * An inner or a right join restricts the query to the instances for which the join returns a row
+     * in a subquery as well, see {@link #restrictToJoinedInstances}: for a path through a collection,
+     * since its fetch is a left join, and for any other path, so that the count of a paged list, which
+     * cannot keep the fetches, leaves out the same instances.
+     * <p>
+     * A query that fetches a collection is distinct, so that it returns each instance once and not
+     * once for each element of the collection.
      */
     @SuppressWarnings({"rawtypes", "unchecked"})
-    private static void restrictToJoinedInstances(PersistentEntity entity, CriteriaQuery query, Root queryRoot, CriteriaBuilder criteriaBuilder, String associationPath, JoinType joinType) {
-        if (joinType == JoinType.LEFT) {
-            return;
-        }
+    private static void fetchWithJoinType(PersistentEntity entity, CriteriaQuery query, Root queryRoot, CriteriaBuilder criteriaBuilder, String associationPath, JoinType joinType) {
         String[] tokens = associationPath.split("\\.");
+        int last = tokens.length - 1;
+        Association[] associations = new Association[tokens.length];
         PersistentEntity currentEntity = entity;
+        int throughCollection = -1;
         for (int i = 0; i < tokens.length; i++) {
             PersistentProperty property = currentEntity != null ? currentEntity.getPropertyByName(tokens[i]) : null;
-            if (!(property instanceof Association) || property instanceof Embedded || (property instanceof Basic && i != tokens.length - 1)) {
+            if (!(property instanceof Association) || property instanceof Embedded || (property instanceof Basic && i != last)) {
                 return;
             }
-            currentEntity = ((Association) property).getAssociatedEntity();
+            associations[i] = (Association) property;
+            if (throughCollection < 0 && i != last && property instanceof ToMany) {
+                throughCollection = i;
+            }
+            currentEntity = associations[i].getAssociatedEntity();
         }
+        boolean inner = joinType != JoinType.LEFT;
+        if (inner) {
+            restrictToJoinedInstances(entity, query, queryRoot, criteriaBuilder, tokens);
+        }
+        FetchParent parent = queryRoot;
+        boolean collection = false;
+        for (int i = 0; i < tokens.length; i++) {
+            parent = getOrCreateFetch(parent, tokens[i], inner && i == last && throughCollection < 0 ? JoinType.INNER : JoinType.LEFT);
+            collection |= associations[i] instanceof ToMany;
+        }
+        if (collection) {
+            query.distinct(true);
+        }
+    }
+
+    /**
+     * Returns the fetch of an association that the query already has, so that another path that
+     * starts with it uses it, or a new one with the given join type.
+     */
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    private static FetchParent getOrCreateFetch(FetchParent parent, String associationName, JoinType joinType) {
+        for (Object existing : parent.getFetches()) {
+            Fetch fetch = (Fetch) existing;
+            if (associationName.equals(fetch.getAttribute().getName())) {
+                return (FetchParent) fetch;
+            }
+        }
+        return (FetchParent) parent.fetch(associationName, joinType);
+    }
+
+    /**
+     * Restricts a query to the instances for which an inner join of an association path returns a
+     * row. The path is joined in a subquery, which is correlated with the query by the instance, so
+     * that a path through a collection does not multiply the rows.
+     */
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    private static void restrictToJoinedInstances(PersistentEntity entity, CriteriaQuery query, Root queryRoot, CriteriaBuilder criteriaBuilder, String[] tokens) {
         Subquery subquery = query.subquery(entity.getJavaClass());
         Root subqueryRoot = subquery.from(entity.getJavaClass());
         From from = subqueryRoot;
@@ -389,10 +447,10 @@ public class GrailsHibernateQueryUtils {
     }
 
     /**
-     * Returns the join of an association for a sort: the join that the query already has for it, made
-     * by the {@code fetch} argument or by an earlier sort property, or, failing that, a new one, so that
-     * the association is joined once. A new one is a left join, so that the sort keeps the rows where
-     * the association is null.
+     * Returns the join of an association for a sort: the join or the fetch that the query already has
+     * for it, made by the {@code fetch} argument or by an earlier sort property, or, failing that, a
+     * new one, so that the association is joined once. A new one is a left join, so that the sort keeps
+     * the rows where the association is null.
      */
     @SuppressWarnings({"rawtypes", "unchecked"})
     private static Join getOrCreateSortJoin(From from, String associationName) {
@@ -400,6 +458,11 @@ public class GrailsHibernateQueryUtils {
             Join join = (Join) existing;
             if (associationName.equals(join.getAttribute().getName())) {
                 return join;
+            }
+        }
+        for (Object existing : from.getFetches()) {
+            if (existing instanceof Join && associationName.equals(((Join) existing).getAttribute().getName())) {
+                return (Join) existing;
             }
         }
         return from.join(associationName, JoinType.LEFT);

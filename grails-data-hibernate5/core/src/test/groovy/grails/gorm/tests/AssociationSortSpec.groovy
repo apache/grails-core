@@ -37,6 +37,7 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManag
     void setupSpec() {
         manager.domainClasses.addAll([Club, Team, Player, Contract, AssociationSortLeague, AssociationSortEmployee, AssociationSortDepartment,
                                       AssociationSortSquad, AssociationSortMember, AssociationSortBagSquad, AssociationSortBagMember,
+                                      AssociationSortMixedSquad, AssociationSortMixedMember,
                                       AssociationSortVenue, AssociationSortGround])
     }
 
@@ -443,6 +444,82 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManag
         'order in a criteria query'                 | { AssociationSortBagSquad.createCriteria().list { eq('name', 'Squad'); order('regulars.name') } }
     }
 
+    /**
+     * A sort by a property of a collection, in a query that fetches another collection of the same class:
+     *
+     * <pre>
+     * | sorted by           | fetched           | result                                                          |
+     * |---------------------|-------------------|-----------------------------------------------------------------|
+     * | a set               | nothing           | every squad, also one whose set is empty                        |
+     * | a set               | a bag             | every squad, and the bag holds its own elements                 |
+     * | a bag               | nothing           | every squad, also one whose bag is empty                        |
+     * | a bag               | a set             | every squad, and the set holds its own elements                 |
+     * | a bag               | another bag       | UnsupportedOperationException: Hibernate fetches one bag a query |
+     * </pre>
+     */
+    void '#api sorted by #sort while it fetches #fetched: #outcome'() {
+        given: 'a full squad, and a squad with a substitute only'
+        final full = new AssociationSortMixedSquad(name: 'Full squad').save(failOnError: true)
+        new AssociationSortMixedMember(name: 'Regular', squad: full).save(failOnError: true)
+        new AssociationSortMixedMember(name: 'Substitute', substituteSquad: full).save(failOnError: true)
+        new AssociationSortMixedMember(name: 'Reserve', reserveSquad: full).save(failOnError: true)
+        final empty = new AssociationSortMixedSquad(name: 'Empty squad').save(failOnError: true)
+        new AssociationSortMixedMember(name: 'Lone substitute', substituteSquad: empty).save(failOnError: true, flush: true)
+        manager.session.clear()
+
+        when:
+        List<AssociationSortMixedSquad> results = null
+        UnsupportedOperationException rejection = null
+        try {
+            results = query.call(sort, fetched)
+        }
+        catch (UnsupportedOperationException e) {
+            rejection = e
+        }
+
+        then:
+        (rejection != null) == (outcome == 'rejected')
+
+        and: 'otherwise every squad is returned, and a fetched collection holds its own elements'
+        outcome == 'rejected' || results*.name.unique().sort() == ['Empty squad', 'Full squad']
+        outcome == 'rejected' || fetched == 'nothing' || results.every { Hibernate.isInitialized(it."$fetched") }
+        outcome == 'rejected' || fetched == 'nothing' || results.find { it.name == 'Full squad' }."$fetched"*.name == FETCHED_ELEMENTS[fetched]
+
+        where:
+        [api, sort, fetched, outcome] << [
+                ['a where query', 'order in a criteria query'],
+                [
+                        ['reserves.name', 'nothing', 'kept'],
+                        ['reserves.name', 'regulars', 'kept'],
+                        ['regulars.name', 'nothing', 'kept'],
+                        ['regulars.name', 'reserves', 'kept'],
+                        ['regulars.name', 'substitutes', 'rejected'],
+                ]
+        ].combinations().collect { List row -> [row[0]] + row[1] }
+        query = MIXED_QUERIES[api]
+    }
+
+    private static final Map<String, List<String>> FETCHED_ELEMENTS = [regulars: ['Regular'], reserves: ['Reserve'], substitutes: ['Substitute']]
+
+    private static final Map<String, Closure<List<AssociationSortMixedSquad>>> MIXED_QUERIES = [
+            'a where query'            : { String sort, String fetched ->
+                final query = AssociationSortMixedSquad.where { name ==~ '%squad' }
+                if (fetched != 'nothing') {
+                    query.join(fetched)
+                }
+                query.list(sort: sort)
+            },
+            'order in a criteria query': { String sort, String fetched ->
+                AssociationSortMixedSquad.createCriteria().list {
+                    like('name', '%squad')
+                    if (fetched != 'nothing') {
+                        join(fetched)
+                    }
+                    order(sort)
+                }
+            },
+    ]
+
     private void saveSquadWithASubstituteOnly() {
         final squad = new AssociationSortBagSquad(name: 'Squad').save(failOnError: true)
         new AssociationSortBagMember(name: 'Substitute', substituteSquad: squad).save(failOnError: true, flush: true)
@@ -714,6 +791,29 @@ class AssociationSortBagMember {
     static constraints = {
         squad nullable: true
         substituteSquad nullable: true
+    }
+}
+
+@Entity
+class AssociationSortMixedSquad {
+    String name
+    Collection<AssociationSortMixedMember> regulars
+    Collection<AssociationSortMixedMember> substitutes
+    static hasMany = [regulars: AssociationSortMixedMember, substitutes: AssociationSortMixedMember, reserves: AssociationSortMixedMember]
+    static mappedBy = [regulars: 'squad', substitutes: 'substituteSquad', reserves: 'reserveSquad']
+}
+
+@Entity
+class AssociationSortMixedMember {
+    String name
+    AssociationSortMixedSquad squad
+    AssociationSortMixedSquad substituteSquad
+    AssociationSortMixedSquad reserveSquad
+
+    static constraints = {
+        squad nullable: true
+        substituteSquad nullable: true
+        reserveSquad nullable: true
     }
 }
 

@@ -583,7 +583,7 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
      */
     public static void applyJoinType(PersistentEntity entity, Criteria root, String associationPath, jakarta.persistence.criteria.JoinType joinType) {
         root.setFetchMode(associationPath, FetchMode.JOIN);
-        if (joinType == null || joinType == jakarta.persistence.criteria.JoinType.LEFT || entity == null) {
+        if (entity == null) {
             return;
         }
 
@@ -599,6 +599,10 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
             }
             associations[i] = (Association) persistentProperty;
             currentEntity = associations[i].getAssociatedEntity();
+        }
+        fetchAssociationsBefore(root, associationPath);
+        if (joinType == null || joinType == jakarta.persistence.criteria.JoinType.LEFT) {
+            return;
         }
 
         String[] paths = new String[tokens.length];
@@ -629,6 +633,27 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
             String alias = newJoinAlias(root, paths[i], "_join");
             root.createAlias(parentAlias != null ? parentAlias + '.' + tokens[i] : paths[i], alias, i == last ? lastJoinType : JoinType.LEFT_OUTER_JOIN);
             parentAlias = alias;
+        }
+    }
+
+    /**
+     * Asks the criteria to fetch, with a join, the associations before the last one on a path that a
+     * join type is requested for, unless they request another fetch mode for them. Hibernate fetches
+     * an association by its fetch mode only when it fetches the associations before it, and a
+     * collection on the path is fetched with all of its elements, since nothing restricts them: the
+     * requested join type only decides which instances the query returns.
+     *
+     * @param criteria The criteria of the query
+     * @param associationPath The path from the root entity
+     */
+    public static void fetchAssociationsBefore(Criteria criteria, String associationPath) {
+        int dot = associationPath.indexOf('.');
+        while (dot > 0) {
+            String path = associationPath.substring(0, dot);
+            if (getRequestedFetchMode(criteria, path) == null) {
+                criteria.setFetchMode(path, FetchMode.JOIN);
+            }
+            dot = associationPath.indexOf('.', dot + 1);
         }
     }
 

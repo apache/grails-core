@@ -805,9 +805,7 @@ public abstract class AbstractHibernateQuery extends Query {
      */
     protected void applyDeferredJoins() {
         for (Map.Entry<String, JoinType> requestedJoin : joinTypes.entrySet()) {
-            if (requestedJoin.getValue() != JoinType.LEFT) {
-                applyRequestedJoin(requestedJoin.getKey(), requestedJoin.getValue());
-            }
+            applyRequestedJoin(requestedJoin.getKey(), requestedJoin.getValue());
         }
         for (Order order : pendingOrders) {
             applyOrder(order);
@@ -830,8 +828,12 @@ public abstract class AbstractHibernateQuery extends Query {
      * which restricts the query to the instances that the join returns a row for without changing
      * the number of its rows: see {@link GrailsHibernateUtil#joinedInSubquery(String, String, String)}.
      * A collection at the end of the path keeps the left join of its fetch mode, or the left join that
-     * a sort by the collection needs. The associations before the collection are joined, so that they
-     * are fetched. A collection of a basic type can only be at the end of the path.
+     * a sort by the collection needs. The associations before the last one on the path, a collection
+     * among them, are fetched as well, so that a fetched collection holds all of its elements: the
+     * requested join type only decides which instances the query returns, see
+     * {@link GrailsHibernateUtil#fetchAssociationsBefore(Criteria, String)}. The associations before a
+     * collection are also joined. A left join only fetches the path. A collection of a basic type can
+     * only be at the end of the path.
      */
     private void applyRequestedJoin(String associationPath, JoinType joinType) {
         String[] tokens = associationPath.split("\\.");
@@ -846,6 +848,12 @@ public abstract class AbstractHibernateQuery extends Query {
             }
             associations[i] = (Association) persistentProperty;
             currentEntity = associations[i].getAssociatedEntity();
+        }
+        if (criteria != null) {
+            GrailsHibernateUtil.fetchAssociationsBefore(criteria, associationPath);
+        }
+        if (joinType == JoinType.LEFT) {
+            return;
         }
 
         String[] paths = new String[tokens.length];
