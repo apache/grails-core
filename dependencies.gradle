@@ -318,11 +318,12 @@ ext {
         combinedDependencies += customBomDependencies
     } else if (project.name in ['grails-hibernate7-bom'] || project.name.startsWith('grails-data-hibernate7')) {
         // Hibernate ORM follows the version spring-boot-dependencies manages. grails-hibernate7-bom reads it
-        // from there and re-declares these modules at it, strictly, under Spring Boot's hibernate.version.
+        // from that POM's own entries and re-declares these modules at it, strictly, under Spring Boot's
+        // hibernate.version.
         hibernateOrmModules = ['hibernate-core', 'hibernate-envers', 'hibernate-jcache']
         // A Hibernate ORM 7 release to manage instead, for when Spring Boot lags behind one Grails needs.
-        // It must be newer than the version Spring Boot manages, so the build fails once Spring Boot
-        // catches up with it: remove it then.
+        // It must be newer than the version Spring Boot manages, so validateHibernateVersion, which
+        // check and the BOM's POM generation run, fails once Spring Boot catches up with it: remove it then.
         hibernate7VersionOverride = null
         customBomVersions = [
                 'cache-ri-impl.version'         : '1.1.1',
@@ -330,8 +331,8 @@ ext {
                 // Spring Boot 4.2 can select Hibernate ORM 7.4.x through Spring Dependency
                 // Management, and Hibernate ORM 7.4.x requires hibernate-models 1.1.x. This BOM
                 // strictly re-declares the version so enforcedPlatform consumers are forced to it; a
-                // platform() import is not enforced. grails-hibernate7-bom fails the build when it
-                // differs from the version the managed Hibernate ORM release depends on.
+                // platform() import is not enforced. validateHibernateVersion fails when it differs
+                // from the version the managed Hibernate ORM release depends on.
                 'hibernate-models.version'      : '1.1.2',
                 'hibernate-tools.version'       : '7.3.13.Final',
                 'jandex.version'                : '3.6.0',
