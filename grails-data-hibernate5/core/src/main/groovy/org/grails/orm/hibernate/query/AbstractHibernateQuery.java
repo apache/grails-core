@@ -725,8 +725,13 @@ public abstract class AbstractHibernateQuery extends Query {
         String sortHead = property.substring(0, i);
         if (!createdAssociationPaths.containsKey(sortHead)) {
             PersistentProperty persistentProperty = entity.getPropertyByName(sortHead);
+            if (persistentProperty == null) {
+                // neither an alias of this query nor a property of the entity, so there is nothing to sort by, and
+                // ignoring the order would hide a misspelled or missing alias
+                throw new IllegalArgumentException("Invalid sort property");
+            }
             if (!(persistentProperty instanceof Association)) {
-                // neither an alias of this query nor an association: the sort is ignored
+                // a property that is not an association has no properties to sort by: the sort is ignored
                 return;
             }
             if (persistentProperty instanceof Embedded) {
