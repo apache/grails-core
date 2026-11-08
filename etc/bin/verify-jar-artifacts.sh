@@ -129,6 +129,20 @@ while IFS= read -r line; do
     exit 1
   fi
 
+  # When a jar advertises an SBOM via the Sbom-Location manifest attribute, that file must be
+  # packaged. This is manifest-driven so it validates every jar that generates an SBOM (the primary
+  # jar and its cli companion) while skipping jars that legitimately ship none (javadoc, sources).
+  SBOM_LOCATION=$(unzip -p "${JAR_FILE}" META-INF/MANIFEST.MF | tr -d '\r' | sed -n 's/^Sbom-Location: *//p')
+  if [ -n "${SBOM_LOCATION}" ]; then
+    echo "... Verifying declared SBOM is packaged (${SBOM_LOCATION})..."
+    if jar tf "${JAR_FILE}" | grep -qxF -- "${SBOM_LOCATION}"; then
+      echo "✅ SBOM present at ${SBOM_LOCATION} in ${JAR_FILE}"
+    else
+      echo "❌ Manifest declares Sbom-Location '${SBOM_LOCATION}' but it is not packaged in ${JAR_FILE}"
+      exit 1
+    fi
+  fi
+
   if [[ $ARTIFACT_ID != grails-cli && $ARTIFACT_ID != grails-forge-cli && $JAR_FILE != *-javadoc.jar ]]; then
       echo "... Verifying required files exist in non-javadoc jar..."
         required_jar_contents=(META-INF/LICENSE META-INF/NOTICE)
@@ -144,6 +158,30 @@ while IFS= read -r line; do
           exit 1
         else
           printf '✅ Required files %s are present in %s\n' "${required_jar_contents[*]}" "${JAR_FILE}"
+        fi
+
+        # If META-INF/LICENSE or META-INF/NOTICE reference another license file (for example
+        # "See licenses/LICENSE-MIT.txt for the full license terms."), that file must be packaged
+        # in the jar at the referenced path resolved under META-INF.
+        echo "... Verifying referenced license files are packaged in non-javadoc jar..."
+        jar_entries=$(jar tf "${JAR_FILE}")
+        missing_referenced_licenses=()
+        for meta_file in META-INF/LICENSE META-INF/NOTICE; do
+            grep -qxF -- "${meta_file}" <<< "${jar_entries}" || continue
+            while IFS= read -r referenced_license; do
+                [ -z "${referenced_license}" ] && continue
+                expected_entry="META-INF/${referenced_license}"
+                if ! grep -qxF -- "${expected_entry}" <<< "${jar_entries}"; then
+                    missing_referenced_licenses+=("${meta_file} references '${referenced_license}' but '${expected_entry}' is not packaged")
+                fi
+            done < <(unzip -p "${JAR_FILE}" "${meta_file}" | grep -oE 'See [^[:space:]]+ for the full license terms' | awk '{print $2}')
+        done
+
+        if ((${#missing_referenced_licenses[@]})); then
+          printf '❌ %s in %s\n' "${missing_referenced_licenses[*]}" "${JAR_FILE}"
+          exit 1
+        else
+          printf '✅ Referenced license files are packaged in %s\n' "${JAR_FILE}"
         fi
   fi
 

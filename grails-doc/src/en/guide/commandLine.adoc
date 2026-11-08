@@ -40,8 +40,8 @@ grails run-app
 It will first search the application, and then the profile for commands:
 
 * `PROJECT_HOME/src/main/scripts/run-app.groovy`
-* `<<profile>>/commands/run-app.groovy`
-* `<<profile>>/commands/run-app.yml`
+* `&lt;profile&gt;/commands/run-app.groovy`
+* `&lt;profile&gt;/commands/run-app.yml`
 
 To get a list of all commands and some help about the available commands type:
 

@@ -55,6 +55,23 @@ class Application extends GrailsAutoConfiguration {
 }
 ----
 
+[id=bean-overriding-and-circular-references]
+=== Bean Definition Overriding and Circular References
+
+By default Grails starts the application context with bean definition overriding and circular references enabled, because many plugins rely on contributing or replacing beans during startup. These two behaviors map onto the standard Spring Boot `spring.main` properties and both default to `true` in Grails.
+
+If you want stricter startup semantics — for example to catch an accidental bean name clash or an unintended circular dependency — you can disable either behavior in `application.yml`:
+
+[source,yaml]
+----
+spring:
+  main:
+    allow-bean-definition-overriding: false
+    allow-circular-references: false
+----
+
+NOTE: These default to `true` in Grails to preserve compatibility, which differs from a plain Spring Boot application where both default to `false`. Disabling them can cause startup failures if a plugin (or your own configuration) registers a bean that is already defined or depends on a circular reference, so change these values with care.
+
 [id=customizing-the-banner]
 === Customizing the Banner
 
@@ -76,19 +93,40 @@ grails:
     art:
       display: true # Whether to display the banner art (default: true).
       file: 'banner.txt' # Path to a custom banner file on the classpath (default: null).
+      # The colour to show the art in, where the terminal colours output at all (default: 214).
+      # A number selects one of the 256 colours a terminal offers; a name selects one of the
+      # eight it has always had; 'none' leaves the art uncoloured. A value that is neither
+      # falls back to the default. Named colours are:
+      #   black, red, green, yellow, blue, magenta, cyan, white
+      #   bright_black, bright_red, bright_green, bright_yellow,
+      #   bright_blue, bright_magenta, bright_cyan, bright_white
+      color: 214
+    mark:
+      # Says how the application was started, centred under the art and above the versions:
+      # NATIVE for a GraalVM image, AOT CACHE for a JVM given a cache to read with
+      # -XX:AOTCache, AOT for one running bean definitions that were generated ahead of time.
+      # An ordinary start says nothing at all.
+      display: true # (default: true)
+      # Its own colour, brighter than the art, so the mark is not read as the last line of the
+      # drawing above it. Same values as grails.banner.art.color (default: 226, bright yellow).
+      color: 226
+      text: '' # Say this instead of what was detected; empty shows nothing.
     versions:
       display: true # Whether to display version information (default: true).
       include:
-        # Include optional versions (default: []).
-        # These will trigger class loading to determine the version
-        # and show 'unknown' if the class is not found.
+        # Include an optional version (default: []). A library that is not on the classpath, or
+        # that records no version, is left out rather than shown as unknown -- so including one
+        # costs nothing where it does not apply.
+        # The container being served on is already shown by default, under 'container'. These name
+        # a particular one instead, for an application that wants to be told about it whether or
+        # not it is the one serving.
         # Valid options are:
-        - spring-security
         - tomcat
         - jetty
         - undertow
       exclude:
-        # Exclude any of the versions included by default (default: []).
+        # Exclude any of the versions shown by default (default: []).
+        # Use 'container' to leave out the servlet container, whichever one it is.
         # Valid options are:
         - app
         - grails
@@ -96,6 +134,8 @@ grails:
         - jvm
         - spring-boot
         - spring
+        - spring-security
+        - container
       order:
         # Optional ordering in which to display the versions in the banner.
         # You can specify any number of the options listed below
@@ -108,6 +148,7 @@ grails:
         - spring-boot
         - spring
         - spring-security
+        - container
         - tomcat
         - jetty
         - undertow

@@ -1,0 +1,562 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+[[core-usingControllerAnnotations]]
+=== Using Controller Annotations to Secure URLs
+
+==== 1. Create your Grails application.
+
+....
+$ grails create-app bookstore
+$ cd bookstore
+....
+
+==== 2. "`Install`" the plugin by adding it to build.gradle
+
+[source,groovy,sub="+attributes"]
+----
+dependencies {
+   ...
+   implementation 'org.apache.grails:grails-spring-security:{project-version}'
+   ...
+}
+----
+
+Run the compile command to resolve dependencies and ensure everything is correct:
+
+....
+$ grails compile
+....
+
+==== 3. Create the User and Role domain classes.
+
+[source,bash]
+----
+./grailsw s2-quickstart com.mycompany.myapp User Role
+----
+
+You can choose your names for your domain classes and package; these are just examples.
+
+[NOTE]
+====
+Depending on your database, some domain class names might not be valid, especially those relating to security. Before you create names like "`User`" or "`Group`", make sure they are not reserved keywords in your database, or escape the name with backticks in the `mapping` block, e.g.
+
+[source,groovy]
+----
+static mapping = {
+   table '`user`'
+}
+----
+====
+
+If you are using Spring Core version 3.1.2 or later and GORM 6.0.10 or later, the script creates this User class:
+
+[source, groovy]
+.`grails-app/domain/com/mycompany/myapp/User.groovy`
+----
+package com.mycompany.myapp
+
+import groovy.transform.EqualsAndHashCode
+import groovy.transform.ToString
+import grails.compiler.GrailsCompileStatic
+
+@GrailsCompileStatic
+@EqualsAndHashCode(includes='username')
+@ToString(includes='username', includeNames=true, includePackage=false)
+class User implements Serializable {
+
+    private static final long serialVersionUID = 1
+
+    String username
+    String password
+    boolean enabled = true
+    boolean accountExpired
+    boolean accountLocked
+    boolean passwordExpired
+
+    Set<Role> getAuthorities() {
+        (UserRole.findAllByUser(this) as List<UserRole>)*.role as Set<Role>
+    }
+
+    static constraints = {
+        password blank: false, password: true
+        username blank: false, unique: true
+    }
+
+    static mapping = {
+        password column: '`password`'
+    }
+}
+----
+
+and a password encoder listener to manage password encoding:
+
+[source, groovy]
+.`grails-app/conf/spring/resources.groovy`
+----
+import com.mycompany.myapp.UserPasswordEncoderListener
+// Place your Spring DSL code here
+beans = {
+    userPasswordEncoderListener(UserPasswordEncoderListener)
+}
+----
+
+[source, groovy]
+.`src/main/groovy/com/mycompany/myapp/UserPasswordEncoderListener.groovy`
+----
+package com.mycompany.myapp
+
+import grails.plugin.springsecurity.SpringSecurityService
+import org.grails.datastore.mapping.engine.event.AbstractPersistenceEvent
+import org.grails.datastore.mapping.engine.event.PreInsertEvent
+import org.grails.datastore.mapping.engine.event.PreUpdateEvent
+import org.springframework.beans.factory.annotation.Autowired
+import grails.events.annotation.gorm.Listener
+import groovy.transform.CompileStatic
+
+@CompileStatic
+class UserPasswordEncoderListener {
+
+    @Autowired
+    SpringSecurityService springSecurityService
+
+    @Listener(User)
+    void onPreInsertEvent(PreInsertEvent event) {
+        encodePasswordForEvent(event)
+    }
+
+    @Listener(User)
+    void onPreUpdateEvent(PreUpdateEvent event) {
+        encodePasswordForEvent(event)
+    }
+
+    private void encodePasswordForEvent(AbstractPersistenceEvent event) {
+        if (event.entityObject instanceof User) {
+            User u = event.entityObject as User
+            if (u.password && ((event instanceof  PreInsertEvent) || (event instanceof PreUpdateEvent && u.isDirty('password')))) {
+                event.getEntityAccess().setProperty('password', encodePassword(u.password))
+            }
+        }
+    }
+
+    private String encodePassword(String password) {
+        springSecurityService?.passwordEncoder ? springSecurityService.encodePassword(password) : password
+    }
+}
+----
+
+Previous versions of the plugin's script manage the password encoding directly in domain class:
+
+[source, groovy]
+.`grails-app/domain/com/mycompany/myapp/User.groovy`
+----
+package com.mycompany.myapp
+
+import grails.plugin.springsecurity.SpringSecurityService
+import groovy.transform.EqualsAndHashCode
+import groovy.transform.ToString
+import grails.compiler.GrailsCompileStatic
+
+@GrailsCompileStatic
+@EqualsAndHashCode(includes='username')
+@ToString(includes='username', includeNames=true, includePackage=false)
+class User implements Serializable {
+
+    private static final long serialVersionUID = 1
+
+    SpringSecurityService springSecurityService
+
+    String username
+    String password
+    boolean enabled = true
+    boolean accountExpired
+    boolean accountLocked
+    boolean passwordExpired
+
+    Set<Role> getAuthorities() {
+        (UserRole.findAllByUser(this) as List<UserRole>)*.role as Set<Role>
+    }
+
+    def beforeInsert() {
+        encodePassword()
+    }
+
+    def beforeUpdate() {
+        if (isDirty('password')) {
+            encodePassword()
+        }
+    }
+
+    protected void encodePassword() {
+        password = springSecurityService?.passwordEncoder ? springSecurityService.encodePassword(password) : password
+    }
+
+    static transients = ['springSecurityService']
+
+    static constraints = {
+        password blank: false, password: true
+        username blank: false, unique: true
+    }
+
+    static mapping = {
+        password column: '`password`'
+    }
+}
+----
+
+WARNING: If you use this older pattern, be aware that `springSecurityService` will be `null` when creating User instances in `BootStrap.groovy`. Domain class instances are plain Groovy objects, not Spring-managed beans, so their transient service references are not autowired at construction time. The `beforeInsert()` callback will silently skip password encoding because of the `?.` safe-navigation operator, resulting in plaintext passwords stored in the database. See <<core-password-encoding-bootstrap>> below for the recommended approach to seeding users in BootStrap.
+
+include::../domainClasses/gormAutowire.adoc[]
+
+`s2-quickstart` script generates this Role too:
+
+[source, groovy]
+.`Role.groovy`
+----
+package com.mycompany.myapp
+
+import groovy.transform.EqualsAndHashCode
+import groovy.transform.ToString
+import grails.compiler.GrailsCompileStatic
+
+@GrailsCompileStatic
+@EqualsAndHashCode(includes='authority')
+@ToString(includes='authority', includeNames=true, includePackage=false)
+class Role implements Serializable {
+
+    private static final long serialVersionUID = 1
+
+    String authority
+
+    static constraints = {
+        authority blank: false, unique: true
+    }
+
+    static mapping = {
+        cache true
+    }
+}
+----
+
+and a domain class that maps the many-to-many join class, `UserRole`:
+
+[source, groovy]
+.`UserRole.groovy`
+----
+package com.mycompany.myapp
+
+import grails.gorm.DetachedCriteria
+import groovy.transform.ToString
+
+import org.codehaus.groovy.util.HashCodeHelper
+import grails.compiler.GrailsCompileStatic
+
+@GrailsCompileStatic
+@ToString(cache=true, includeNames=true, includePackage=false)
+class UserRole implements Serializable {
+
+    private static final long serialVersionUID = 1
+
+    User user
+    Role role
+
+    @Override
+    boolean equals(other) {
+        if (other instanceof UserRole) {
+            other.userId == user?.id && other.roleId == role?.id
+        }
+    }
+
+    @Override
+    int hashCode() {
+        int hashCode = HashCodeHelper.initHash()
+        if (user) {
+            hashCode = HashCodeHelper.updateHash(hashCode, user.id)
+        }
+        if (role) {
+            hashCode = HashCodeHelper.updateHash(hashCode, role.id)
+        }
+        hashCode
+    }
+
+    static UserRole get(long userId, long roleId) {
+        criteriaFor(userId, roleId).get()
+    }
+
+    static boolean exists(long userId, long roleId) {
+        criteriaFor(userId, roleId).count()
+    }
+
+    private static DetachedCriteria criteriaFor(long userId, long roleId) {
+        UserRole.where {
+            user == User.load(userId) &&
+                    role == Role.load(roleId)
+        }
+    }
+
+    static UserRole create(User user, Role role, boolean flush = false) {
+        def instance = new UserRole(user: user, role: role)
+        instance.save(flush: flush)
+        instance
+    }
+
+    static boolean remove(User u, Role r) {
+        if (u != null && r != null) {
+            UserRole.where { user == u && role == r }.deleteAll()
+        }
+    }
+
+    static int removeAll(User u) {
+        u == null ? 0 : UserRole.where { user == u }.deleteAll() as int
+    }
+
+    static int removeAll(Role r) {
+        r == null ? 0 : UserRole.where { role == r }.deleteAll() as int
+    }
+
+    static constraints = {
+        role validator: { Role r, UserRole ur ->
+            if (ur.user?.id) {
+                UserRole.withNewSession {
+                    if (UserRole.exists(ur.user.id, r.id)) {
+                        return ['userRole.exists']
+                    }
+                }
+            }
+        }
+    }
+
+    static mapping = {
+        id composite: ['user', 'role']
+        version false
+    }
+}
+----
+
+[NOTE]
+====
+These generated files are not part of the plugin - these are your application files.
+They are examples to get you started, so you can edit them as you please.
+They contain the minimum needed for the plugin's default implementation of the Spring Security `UserDetailsService`
+(which like everything in the plugin is customizable - see <<core-userDetailsService>>).
+====
+
+The script has edited (or created) `grails-app/conf/application.groovy` and added the configuration for your domain classes. Make sure that the changes are correct.
+
+While you're looking at `application.groovy`, add this config override to make the sample app easier to work with:
+
+[source,groovy]
+----
+grails.plugin.springsecurity.logout.postOnly = false
+----
+
+[WARNING]
+====
+By default only POST requests can be used to logout; this is a very sensible default and shouldn't be changed in most cases. However to keep things simple for this tutorial we'll change it (using the `logout.postOnly` config override above) to avoid having to create a GSP form that POSTs to /logout.
+====
+
+The plugin has no support for CRUD actions or GSPs for your domain classes; the `spring-security-ui` plugin supplies a UI for those. So for now you will create roles and users in `grails-app/init/BootStrap.groovy`. (See step 7.)
+
+==== 4. Create a controller that will be restricted by role.
+
+....
+$ grails create-controller com.mycompany.myapp.Secure
+....
+
+This command creates `grails-app/controllers/com/mycompany/myapp/SecureController.groovy`. Add some output so you can verify that things are working:
+
+[source, groovy]
+.`SecureController.groovy`
+----
+package com.mycompany.myapp
+
+class SecureController {
+
+   def index() {
+      render 'Secure access only'
+   }
+}
+----
+
+==== 5. Edit grails-app/init/BootStrap.groovy to add a test user.
+
+[source,groovy]
+.`BootStrap.groovy`
+----
+package com.mycompany.myapp
+
+import grails.gorm.transactions.Transactional
+
+class BootStrap {
+    def init = {
+        addTestUser()
+    }
+
+    @Transactional
+    void addTestUser() {
+        def adminRole = new Role(authority: 'ROLE_ADMIN').save()
+
+        def testUser = new User(username: 'me', password: 'password').save()
+
+        UserRole.create testUser, adminRole
+
+        UserRole.withSession {
+            it.flush()
+            it.clear()
+        }
+
+        assert User.count() == 1
+        assert Role.count() == 1
+        assert UserRole.count() == 1
+    }
+}
+----
+
+Some things to note about the preceding `BootStrap.groovy`:
+
+* The example does not use a traditional GORM many-to-many mapping for the User pass:[&lt;==&gt;] Role relationship; instead you are mapping the join table with the `UserRole` class. This performance optimization helps significantly when many users have one or more common roles.
+* We explicitly flush (using `withSession`) because `BootStrap` does not run in a transaction or OpenSessionInView.
+* This example works correctly because the `UserPasswordEncoderListener` (a Spring-managed bean) handles password encoding during the GORM `PreInsertEvent`. If you are using the older domain class pattern with `beforeInsert()` instead, see the note below.
+
+[[core-password-encoding-bootstrap]]
+===== Password Encoding in BootStrap
+
+If you are using the older User domain class pattern where `springSecurityService` is declared as a `transient` field and password encoding happens in `beforeInsert()`, passwords will **not** be encoded when creating users in `BootStrap.groovy`. This is because domain class instances are plain Groovy objects - their transient service references are not autowired by Spring at construction time. The `springSecurityService` field will be `null`, and the safe-navigation operator (`?.`) in `encodePassword()` will silently skip encoding.
+
+To work around this, inject the `passwordEncoder` bean directly in `BootStrap` and pre-encode passwords before saving:
+
+[source,groovy]
+.`BootStrap.groovy`
+----
+import grails.gorm.transactions.Transactional
+import org.springframework.security.crypto.password.PasswordEncoder
+
+class BootStrap {
+
+    PasswordEncoder passwordEncoder // <1>
+
+    def init = {
+        addTestUser()
+    }
+
+    @Transactional
+    void addTestUser() {
+        def adminRole = new Role(authority: 'ROLE_ADMIN').save()
+
+        String encodedPassword = passwordEncoder.encode('password') // <2>
+        def testUser = new User(username: 'me', password: encodedPassword).save()
+
+        UserRole.create testUser, adminRole
+
+        UserRole.withSession {
+            it.flush()
+            it.clear()
+        }
+    }
+}
+----
+<1> The `PasswordEncoder` bean is auto-configured by the plugin and can be injected into `BootStrap` by name.
+<2> Pre-encode the password before constructing the `User` instance so that password encoding is handled explicitly here, rather than relying on a `beforeInsert()` hook or an injected `springSecurityService` in the domain class.
+
+TIP: Be careful not to double-encode passwords if you also use a `beforeInsert()`-style encoding hook or a Spring-managed listener (for example, a `User` domain class with an injected `springSecurityService`, or a `UserPasswordEncoderListener` that encodes on insert/update). In those cases, the callback or listener would see the already-encoded value produced in `BootStrap` and attempt to encode it again. Ensure that only one mechanism is responsible for encoding - for example, rely solely on a listener such as `UserPasswordEncoderListener`, or disable automatic encoding for users created in `BootStrap`. The recommended approach is to use the `UserPasswordEncoderListener` pattern shown above, which avoids this issue entirely.
+
+==== 6. Start the server.
+
+....
+$ grails run-app
+....
+
+==== 7. Verify that you cannot access the page yet.
+
+Before you secure the page, navigate to http://localhost:8080/secure to verify that you cannot access the page yet. You will be redirected to the login page, but after a successful authentication (log in with the username and password you used for the test user in BootStrap.groovy) you will see an error page:
+
+....
+Sorry, you're not authorized to view this page.
+....
+
+This is because with the default configuration, all URLs are denied unless there is an access rule specified.
+
+==== 8. Apply the annotation.
+
+Edit `grails-app/controllers/com/mycompany/myapp/SecureController.groovy` to import the annotation class and apply the annotation to restrict (and grant) access.
+
+[source, groovy]
+.`SecureController.groovy`
+----
+package com.mycompany.myapp
+
+import grails.plugin.springsecurity.annotation.Secured
+
+class SecureController {
+
+   @Secured('ROLE_ADMIN')
+   def index() {
+      render 'Secure access only'
+   }
+}
+----
+
+or
+
+[source, groovy]
+.`SecureController.groovy`
+----
+package com.mycompany.myapp
+
+import grails.plugin.springsecurity.annotation.Secured
+
+@Secured('ROLE_ADMIN')
+class SecureController {
+
+   def index() {
+      render 'Secure access only'
+   }
+}
+----
+
+
+You can annotate the entire controller or individual actions. In this case you have only one action, so you can do either.
+
+==== 9. Restart.
+
+Shut down the app and run `grails run-app` again, and navigate again to http://localhost:8080/secure.
+
+This time you should again be able to see the secure page after successfully authenticating.
+
+==== 10. Test the Remember Me functionality.
+
+Check the checkbox, and once you've tested the secure page, close your browser and reopen it. Navigate again the the secure page. Because a cookie is stored, you should not need to log in again. Logout at any time by navigating to http://localhost:8080/logout.
+
+==== 11. Create a CRUD UI.
+
+Optionally, create a CRUD UI to work with users and roles.
+
+===== Run grails generate-all for the domain classes:
+
+....
+$ grails generate-all com.mycompany.myapp.User
+....
+
+....
+$ grails generate-all com.mycompany.myapp.Role
+....
+
+Since the User domain class handles password hashing, there are no changes required in the generated controllers.
+
+Be sure to add an `@Secured` annotation to both of the generated controllers to make them accessible.

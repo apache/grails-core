@@ -20,6 +20,7 @@ package org.grails.compiler.injection.testing
 
 import java.lang.reflect.Modifier
 
+import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import org.codehaus.groovy.ast.ASTNode
 import org.codehaus.groovy.ast.AnnotatedNode
@@ -115,7 +116,8 @@ class IntegrationTestAstTransformation implements ASTTransformation, TransformWi
                 GrailsASTUtils.error(source, applicationClassExpression, "Invalid applicationClass attribute value [${applicationClassNode.getName()}].  The applicationClass attribute must specify a class which extends grails.boot.config.GrailsAutoConfiguration.", true)
             }
         } else {
-            String mainClass = MainClassFinder.searchMainClass(source.source.URI)
+            String mainClass = MainClassFinder.searchMainClass(source.source.URI, compileClasspath(source),
+                    source.configuration?.targetDirectory)
             if (mainClass) {
                 applicationClassNode = ClassHelper.make(mainClass)
             } else {
@@ -129,6 +131,29 @@ class IntegrationTestAstTransformation implements ASTTransformation, TransformWi
             weaveIntegrationTestMixin(classNode, applicationClassNode)
         }
 
+    }
+
+    /**
+     * The classpath the spec is compiled with: the compiler configuration's entries and those of the class loaders it
+     * compiles against. It carries the application's main classes directory wherever the build puts it. Dynamic, as
+     * static flow typing would hold the loop's class loader to the first one's type and fail on its parent.
+     */
+    @CompileDynamic
+    private static Collection<File> compileClasspath(SourceUnit source) {
+        Set<File> entries = new LinkedHashSet<>()
+        for (String entry in source.configuration?.classpath ?: Collections.<String>emptyList()) {
+            entries << new File(entry)
+        }
+        for (ClassLoader loader = source.classLoader; loader != null; loader = loader.parent) {
+            if (loader instanceof URLClassLoader) {
+                for (URL url in ((URLClassLoader) loader).URLs) {
+                    if (url.protocol == 'file') {
+                        entries << new File(url.toURI())
+                    }
+                }
+            }
+        }
+        entries
     }
 
     void weaveIntegrationTestMixin(ClassNode classNode, ClassNode applicationClassNode) {
@@ -166,8 +191,7 @@ class IntegrationTestAstTransformation implements ASTTransformation, TransformWi
         try {
             servletApi = Class.forName('jakarta.servlet.ServletContext', false, getClass().classLoader)
         }
-        catch (Exception e) {
-            // ignore
+        catch (Exception ignored) {
         }
 
         if (servletApi) {
@@ -206,7 +230,7 @@ class IntegrationTestAstTransformation implements ASTTransformation, TransformWi
         def args = new ArgumentListExpression(new VariableExpression('this'), new ConstantExpression(AutowireCapableBeanFactory.AUTOWIRE_BY_NAME), new ConstantExpression(Boolean.FALSE))
         def autoMethodCall = new MethodCallExpression(getBeanFactoryMethodCall, 'autowireBeanProperties', args)
         body.addStatement(new ExpressionStatement(autoMethodCall))
-        classNode.addMethod('setApplicationContext', Modifier.PUBLIC, ClassHelper.VOID_TYPE, [p] as Parameter[], null, body)
+        classNode.addMethod('setApplicationContext', Modifier.PUBLIC, ClassHelper.VOID_TYPE, [p] as Parameter[], ClassNode.EMPTY_ARRAY, body)
     }
 
     protected void enhanceGebSpecWithPort(ClassNode classNode) {
@@ -238,7 +262,7 @@ class IntegrationTestAstTransformation implements ASTTransformation, TransformWi
             args.addExpression(new ConstantExpression('geb.build.baseUrl'))
             args.addExpression(baseUrlVariableExpression)
             methodBody.addStatement(new ExpressionStatement(new MethodCallExpression(systemClassExpression, 'setProperty', args)))
-            def method = new MethodNode('configureGebBaseUrl', Modifier.PUBLIC, ClassHelper.VOID_TYPE, [contextPathParameter, serverPortParameter] as Parameter[], null, methodBody)
+            def method = new MethodNode('configureGebBaseUrl', Modifier.PUBLIC, ClassHelper.VOID_TYPE, [contextPathParameter, serverPortParameter] as Parameter[], ClassNode.EMPTY_ARRAY, methodBody)
             method.addAnnotation(new AnnotationNode(ClassHelper.make(Autowired)))
             classNode.addMethod(method)
         }

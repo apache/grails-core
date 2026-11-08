@@ -31,5 +31,6 @@ import java.time.LocalTime
  * @author James Kleeh
  */
 @CompileStatic
-class LongToLocalTimeConverter implements Converter<Long, LocalTime>, LocalTimeConverter{
+class LongToLocalTimeConverter implements Converter<Long, LocalTime>, LocalTimeConverter {
+
 }

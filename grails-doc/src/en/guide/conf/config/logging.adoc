@@ -17,9 +17,72 @@ specific language governing permissions and limitations
 under the License.
 ////
 
-Logging is handled by the https://logback.qos.ch[Logback logging framework] and can be configured with the `grails-app/conf/logback-spring.xml` file. See the https://docs.spring.io/spring-boot/how-to/logging.html[Spring Boot Logging] and https://docs.spring.io/spring-boot/reference/features/logging.html#features.logging.logback-extensions[Logging Extensions] for all the available options.
+Logging is handled by the https://logback.qos.ch[Logback logging framework]. A new application works with *zero logging configuration*: it depends on `grails-logging`, which brings in Spring Boot's logging starter, so Logback and Spring Boot's default Logback configuration (an `INFO` root logger and a colorized console pattern) are applied automatically. See the https://docs.spring.io/spring-boot/how-to/logging.html[Spring Boot Logging] and https://docs.spring.io/spring-boot/reference/features/logging.html#features.logging.logback-extensions[Logging Extensions] documentation for all the available options.
 
-The Grails Environments `development`, `test` and `production` can be used with <springProfile name="development"> to configure environment specific logging.  This was one of the features lost when logback removed groovy configuration.  
+NOTE: As of Grails 8, newly generated applications no longer include a `grails-app/conf/logback-spring.xml` file; logging works out of the box using Spring Boot's defaults. Add the file (see below) only when you need to customize logging.
+
+For most needs, levels and patterns can be adjusted entirely from `application.yml` without any XML:
+
+[source,yaml]
+.application.yml
+----
+logging:
+    level:
+        root: INFO
+        com.example.myapp: DEBUG          # your packages
+        org.hibernate.SQL: DEBUG          # see the generated SQL
+    file:
+        name: logs/myapp.log              # activates Boot's file appender only when no logback-spring.xml is present
+                                          # (otherwise include Boot's file-appender.xml in that file)
+----
+
+Per-environment levels need no XML either. Grails environments map to Spring profiles, so an `environments` block in `application.yml` applies levels to a single environment — for example, verbose logging for your own packages in development only (a profile-specific `application-development.yml` works as well):
+
+[source,yaml]
+.application.yml
+----
+environments:
+    development:
+        logging:
+            level:
+                com.example.myapp: DEBUG
+----
+
+Further Spring Boot logging properties cover most remaining needs — output patterns, logger groups, per-appender thresholds, and rotation of the file appender:
+
+[source,yaml]
+.application.yml
+----
+logging:
+    pattern:
+        console: "%d{HH:mm:ss.SSS} %-5level %logger{36} - %msg%n"
+        file: "%d %-5level [%thread] %logger : %msg%n"
+    group:
+        myapp:                            # define a named group of loggers...
+            - com.example.myapp.api
+            - com.example.myapp.security
+    level:
+        myapp: DEBUG                      # ...and set one level for the whole group
+        web: DEBUG                        # predefined group: Spring web loggers
+    threshold:
+        console: INFO                     # per-appender thresholds
+        file: WARN
+    logback:
+        rollingpolicy:
+            max-file-size: 10MB
+            max-history: 7
+            total-size-cap: 100MB
+----
+
+Spring Boot predefines the `web` and `sql` logger groups. The `logging.threshold.*` and `logging.logback.rollingpolicy.*` properties are consumed by Spring Boot's appenders, so they apply whenever those appenders are in use — either with no configuration file, or from a `logback-spring.xml` that composes Boot's `console-appender.xml` / `file-appender.xml` includes (see below).
+
+For quick diagnosis there are also two top-level shortcuts: `debug: true` raises a curated set of core loggers (embedded container, Hibernate, Spring Boot) to `DEBUG`, and `trace: true` does the same at `TRACE`. Console color can be controlled with `spring.output.ansi.enabled` (`detect` (the default), `always` or `never`).
+
+When properties are not enough — custom appenders, structured output, or per-environment appender routing — add a `grails-app/conf/logback-spring.xml` file. Use the `-spring` variant (not plain `logback.xml`), because it is processed by Spring Boot and unlocks `<springProfile>` and `<springProperty>`. The Grails environments `development`, `test` and `production` map to the corresponding Spring profiles, so `<springProfile name="development">` blocks configure environment-specific logging — one of the features lost when Logback removed Groovy configuration. Note that once the file exists it *replaces* Spring Boot's bundled configuration entirely, so it must declare its own appenders; the simplest approach is to compose Spring Boot's own `defaults.xml` and `console-appender.xml` includes with a `<root>` that references the `CONSOLE` appender.
+
+TIP: When generating a project with https://start.grails.org[Grails Forge], select the *Logback Configuration* feature to start with a ready-made `grails-app/conf/logback-spring.xml` in exactly that shape, including a `<springProfile name="development">` block.
+
+Everything above works the same with or without the file, with these boundaries: without a `logback-spring.xml` you give up anything only XML can express — most notably `<springProfile>`-conditional *appenders* and routing (per-environment *levels* still work via the `environments` block). Conversely, activating a file appender purely by setting `logging.file.name` only works *without* the file; when a `logback-spring.xml` is present it replaces Spring Boot's bundled configuration, so file output requires including Boot's `file-appender.xml` in it.
 
 // To be re-included when a Grails {grailsMajorVersion} release of the plugin gets released
 // See: virtualdogbert/logback-groovy-config#15
@@ -30,3 +93,73 @@ NOTE: The filename `logback.xml` still works but `logback-spring.xml` is now rec
 
 More information can be found in the official https://logback.qos.ch/documentation.html[Logback documentation].
 
+=== Structured Logging
+
+Grails does not enable structured logging. Existing Logback configuration and plain-text output remain unchanged
+unless an application explicitly selects a Spring Boot structured format. Spring Boot 4.1 provides the JSON format
+IDs `ecs` (Elastic Common Schema), `gelf` (Graylog Extended Log Format), and `logstash` for console and file output.
+For the complete reference, see the https://docs.spring.io/spring-boot/reference/features/logging.html#features.logging.structured[Spring Boot structured logging documentation].
+
+Configure the console and file outputs independently in `grails-app/conf/application.yml`:
+
+[source,yaml]
+.grails-app/conf/application.yml
+----
+logging:
+    structured:
+        format:
+            console: ecs
+            file: logstash
+        json:
+            exclude: process.pid
+            rename:
+                log.level: severity
+            add:
+                service.team: web
+            stacktrace:
+                root: first
+                max-length: 1024
+                max-throwable-depth: 20
+                include-common-frames: true
+                include-hashes: true
+----
+
+`logging.structured.json.include` limits output to selected paths. Use `exclude`, `rename`, and `add` to remove,
+rename, or add JSON members. The `stacktrace` settings control root-cause order, length, throwable depth, common
+frames, and hashes. Use `logging.structured.format.console` and `logging.structured.format.file` only with Spring
+Boot's default Logback configuration, or update a custom `logback-spring.xml` to use Spring Boot's structured encoder.
+
+Structured formats include MDC entries and SLF4J fluent key-value pairs. For example, application code can add both:
+
+[source,groovy]
+----
+import org.slf4j.LoggerFactory
+import org.slf4j.MDC
+
+class AuditService {
+    private static final log = LoggerFactory.getLogger(AuditService)
+
+    void record(String orderId) {
+        MDC.put('tenantId', 'acme')
+        try {
+            log.atInfo().addKeyValue('order.id', orderId).log('Order accepted')
+        } finally {
+            MDC.remove('tenantId')
+        }
+    }
+}
+----
+
+Structured logging does not enable tracing. When Micrometer tracing is configured, tracing owns the `traceId` and
+`spanId` MDC context that structured formats include. To copy selected baggage fields to MDC, configure
+`management.tracing.baggage.correlation.fields`, for example:
+
+[source,yaml]
+.grails-app/conf/application.yml
+----
+management:
+    tracing:
+        baggage:
+            correlation:
+                fields: tenantId
+----

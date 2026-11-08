@@ -16,6 +16,7 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
+import org.apache.tools.ant.DirectoryScanner
 import org.gradle.api.initialization.resolve.RepositoriesMode
 
 pluginManagement {
@@ -32,10 +33,14 @@ plugins {
 	id 'com.gradle.develocity' version '4.3.2'
 	id 'com.gradle.common-custom-user-data-gradle-plugin' version '2.4.0'
     id 'org.apache.grails.buildsrc.repo'
+	id 'com.autonomousapps.build-health' version '3.19.2' apply false
 }
+
+apply from: file('../gradle/dependency-analysis.settings.gradle')
 
 def isCI = System.getenv().containsKey('CI')
 def isLocal = !isCI
+def hasDevelocityAccessKey = System.getenv('DEVELOCITY_ACCESS_KEY') != null
 def isReproducibleBuild = System.getenv('SOURCE_DATE_EPOCH') != null
 if (isReproducibleBuild) {
     gradle.settingsEvaluated {
@@ -46,6 +51,7 @@ if (isReproducibleBuild) {
 
 develocity {
 	server = 'https://develocity.apache.org'
+	projectId = 'grails'
 	buildScan {
 		tag('grails')
 		tag('grails-gradle-plugins')
@@ -57,7 +63,7 @@ develocity {
 buildCache {
     local { enabled = (isLocal && !isReproducibleBuild) || (isCI && isReproducibleBuild) }
     remote(develocity.buildCache) {
-        push = isCI
+        push = hasDevelocityAccessKey
         enabled = !isReproducibleBuild
     }
 }
@@ -78,3 +84,10 @@ project(':grails-gradle-model').projectDir = file('model')
 
 include 'grails-gradle-tasks'
 project(':grails-gradle-tasks').projectDir = file('tasks')
+
+// Due to https://github.com/gradle/gradle/issues/2986 , we can't change the global exclude for profiles, it must be done everywhere
+for (String pattern in DirectoryScanner.defaultExcludes) {
+    if (pattern.contains('gitignore') || pattern.contains('gitattributes')) {
+        DirectoryScanner.removeDefaultExclude(pattern)
+    }
+}

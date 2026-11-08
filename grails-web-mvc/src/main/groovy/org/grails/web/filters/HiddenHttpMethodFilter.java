@@ -30,6 +30,8 @@ import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 
+import org.grails.web.util.WebUtils;
+
 /**
  * Based off the Spring implementation, but also supports the X-HTTP-Method-Override HTTP header.
  *
@@ -71,7 +73,11 @@ public class HiddenHttpMethodFilter extends OncePerRequestFilter {
     }
 
     protected String getHttpMethodOverride(HttpServletRequest request) {
-        String httpMethod = request.getParameter(methodParam);
+        // g:uploadForm(method: 'PUT') posts the override as a multipart part, so this read makes the
+        // container parse the parts - and fail when they breach the upload limits. The read is tolerant
+        // so the failure surfaces during dispatch rather than aborting the filter chain, where no
+        // HandlerExceptionResolver could see it. See WebUtils.readParameter.
+        String httpMethod = WebUtils.readParameter(request, methodParam);
 
         if (httpMethod == null) {
             httpMethod = request.getHeader(HEADER_X_HTTP_METHOD_OVERRIDE);

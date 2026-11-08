@@ -27,6 +27,7 @@ buildscript {
 
 plugins {
     id 'java-platform'
+    id 'org.apache.grails.buildsrc.bom-property-validator'
     id 'org.apache.grails.buildsrc.publish'
     id 'org.apache.grails.buildsrc.sbom'
 }
@@ -41,6 +42,8 @@ javaPlatform {
 ext {
     isReleaseBuild = System.getenv('GRAILS_PUBLISH_RELEASE') == 'true'
     isPublishedExternal = System.getenv().containsKey('NEXUS_PUBLISH_STAGING_PROFILE_ID')
+    // This BOM publishes the application versions; validateBomProperties fails for any of them no entry uses
+    bomVersionProperties = bomDependencyVersions
     // TODO: It should be possible to pull these build names using includedBuild, but I haven't found a way to do so
     gradleBuildProjects = [
             'grails-gradle-plugins':'org.apache.grails',
@@ -57,8 +60,6 @@ dependencies {
         exclude group: 'org.liquibase'
         exclude group: 'org.hibernate'
         exclude group: 'org.hibernate.orm'
-        exclude group: 'jakarta.servlet'
-        exclude group: 'jakarta.validation'
     }
 
     for (def entry : bomPlatformDependencies.entrySet()) {
@@ -99,6 +100,10 @@ dependencies {
     }
 }
 
+// Companion cli artifact constraints — declared directly here and on every derived BOM so that
+// enforcedPlatform() consumers also receive forced companion versions (see the shared script).
+apply from: rootProject.layout.projectDirectory.file('gradle/cli-companion-bom-constraints.gradle')
+
 configurations.register('bomDependencies').configure {
     it.canBeResolved = true
     it.transitive = true
@@ -122,6 +127,11 @@ tasks.register('extractConstraints', ExtractDependenciesTask).configure { Extrac
 
         rootProject.subprojects.each { p ->
             artifactIdMappings[p.name] = p.findProperty('pomArtifactId') ?: p.name
+
+            String cliArtifactId = p.findProperty('cliArtifactId')
+            if (cliArtifactId) {
+                artifactIdMappings[cliArtifactId] = cliArtifactId
+            }
         }
 
         for (Map.Entry<String, String> dependency : project.ext.gradleBuildProjects.entrySet()) {
@@ -138,6 +148,11 @@ tasks.register('extractConstraints', ExtractDependenciesTask).configure { Extrac
             String artifactId = p.findProperty('pomArtifactId') as String ?: p.name
             String baseVersionName = artifactId.replaceAll('[.]', '-')
             projectCoordinates["${p.group}:${ artifactId}:${p.version}" as String] = baseVersionName
+
+            String cliArtifactId = p.findProperty('cliArtifactId')
+            if (cliArtifactId) {
+                projectCoordinates["${p.group}:${cliArtifactId}:${p.version}" as String] = cliArtifactId
+            }
         }
 
         for (Map.Entry<String, String> dependency : project.ext.gradleBuildProjects.entrySet()) {
@@ -155,13 +170,16 @@ validateNoSnapshotDependencies.configure { Task it ->
     it.group = 'publishing'
     it.description = 'Validates that no snapshot dependencies are present in the project when performing a release.'
 
+    Provider<List<String>> snapshotDependencies = provider {
+        configurations.collectMany { config ->
+            config.allDependencies
+                    .findAll { dep -> dep.version && dep.version.contains('-SNAPSHOT') }
+                    .collect { dep -> "${dep.group}:${dep.name} (${dep.version})" as String }
+        }
+    }
     it.doLast {
-        configurations.each { config ->
-            config.allDependencies.each { dep ->
-                if (dep.version && dep.version.contains('-SNAPSHOT')) {
-                    throw new GradleException("Releases cannot have a snapshot dependency: ${dep.group}:${dep.name} (${dep.version})")
-                }
-            }
+        if (snapshotDependencies.get()) {
+            throw new GradleException("Releases cannot have a snapshot dependency: ${snapshotDependencies.get().first()}")
         }
     }
 }
@@ -177,6 +195,24 @@ if (ext.isReleaseBuild && ext.isPublishedExternal) {
     }
 }
 
+// The pom customization runs as the POM is generated, when the configuration cache allows no access
+// to the other projects, so it reads what it needs of them from this provider
+Provider<PropertyNameCalculator> bomPropertyNames = provider {
+    PropertyNameCalculator propertyNameCalculator = new PropertyNameCalculator(combinedPlatforms, combinedDependencies, combinedVersions)
+    propertyNameCalculator.addForcedGroupPrefix('org.apache.grails.profiles', 'grails-profile')
+    propertyNameCalculator.addProjects(rootProject.subprojects)
+    for (String gradleArtifactId : project.ext.gradleBuildProjects) {
+        propertyNameCalculator.addProject('org.apache.grails.gradle', gradleArtifactId, project.version as String, gradleArtifactId)
+    }
+    for (Project p : rootProject.subprojects) {
+        String cliArtifactId = p.findProperty('cliArtifactId')
+        if (cliArtifactId) {
+            propertyNameCalculator.addProject(p.group as String, cliArtifactId, p.version as String, cliArtifactId)
+        }
+    }
+    propertyNameCalculator
+}
+
 ext {
     pomDescription = 'Grails BOM (Bill of Materials) for managing dependency versions used by Grails Projects'
     pomCustomization = { xml ->
@@ -187,12 +223,7 @@ ext {
         def depMgmt = root.dependencyManagement?.getAt(0)
         def deps = depMgmt?.dependencies?.getAt(0)
         if (deps) {
-            PropertyNameCalculator propertyNameCalculator = new PropertyNameCalculator(combinedPlatforms, combinedDependencies, combinedVersions)
-            propertyNameCalculator.addForcedGroupPrefix('org.apache.grails.profiles', 'grails-profile')
-            propertyNameCalculator.addProjects(rootProject.subprojects)
-            for (String gradleArtifactId : project.ext.gradleBuildProjects) {
-                propertyNameCalculator.addProject('org.apache.grails.gradle', gradleArtifactId, project.version as String, gradleArtifactId)
-            }
+            PropertyNameCalculator propertyNameCalculator = bomPropertyNames.get()
 
             Map<String, String> pomProperties = [:]
             deps.dependency.each { dep ->

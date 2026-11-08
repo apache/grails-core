@@ -19,20 +19,28 @@
 
 package grails.plugin.json.view
 
+import groovy.transform.CompileStatic
+
+import org.springframework.beans.factory.BeanRegistrar
+import org.springframework.beans.factory.BeanRegistry
+import org.springframework.core.env.Environment
+
 import grails.plugin.json.view.api.jsonapi.DefaultJsonApiIdRenderer
 import grails.plugin.json.view.mvc.JsonViewResolver
 import grails.plugins.Plugin
 import grails.views.mvc.GenericGroovyTemplateViewResolver
+import grails.views.mvc.SmartViewResolver
 import grails.views.resolve.PluginAwareTemplateResolver
 
+@CompileStatic
 class JsonViewGrailsPlugin extends Plugin {
 
     // the version or versions of Grails the plugin is designed for
-    def grailsVersion = '7.0.0-SNAPSHOT > *'
+    def grailsVersion = '8.0.0-SNAPSHOT > *'
 
     def title = 'JSON Views' // Headline display name of the plugin
-    def author = 'Graeme Rocher'
-    def authorEmail = 'graeme.rocher@gmail.com'
+    def author = 'Apache Grails Team'
+    def authorEmail = ''
     def description = 'A plugin that allows rendering of JSON views'
     def profiles = ['web']
 
@@ -45,10 +53,7 @@ class JsonViewGrailsPlugin extends Plugin {
     def license = 'APACHE'
 
     // Details of company behind the plugin (if there is one)
-    def organization = [name: 'Grails', url: 'https://grails.apache.org']
-
-    // Any additional developers beyond the author specified above.
-    def developers = [ [ name: 'Graeme Rocher', email: 'graeme.rocher@gmail.com' ]]
+    def organization = [name: 'Apache Grails', url: 'https://grails.apache.org']
 
     // Location of the plugin's issue tracker.
     def issueManagement = [ system: 'Github', url: 'https://github.com/apache/grails-core/issues' ]
@@ -56,15 +61,33 @@ class JsonViewGrailsPlugin extends Plugin {
     // Online location of the plugin's browseable source code.
     def scm = [ url: 'https://github.com/apache/grails-core' ]
 
-    Closure doWithSpring() {
-        { ->
-            jsonApiIdRenderStrategy(DefaultJsonApiIdRenderer)
-            jsonViewConfiguration(JsonViewConfiguration)
-            jsonTemplateEngine(JsonViewTemplateEngine, jsonViewConfiguration, applicationContext.classLoader)
-            jsonSmartViewResolver(JsonViewResolver, jsonTemplateEngine) {
-                templateResolver = bean(PluginAwareTemplateResolver, jsonViewConfiguration)
+    @Override
+    BeanRegistrar beanRegistrar() {
+        return { BeanRegistry registry, Environment environment ->
+            registry.registerBean('jsonApiIdRenderStrategy', DefaultJsonApiIdRenderer)
+            registry.registerBean('jsonViewConfiguration', JsonViewConfiguration)
+            registry.registerBean('jsonTemplateEngine', JsonViewTemplateEngine) {
+                it.supplier {
+                    new JsonViewTemplateEngine(
+                            it.bean('jsonViewConfiguration', JsonViewConfiguration),
+                            applicationContext.classLoader)
+                }
             }
-            jsonViewResolver(GenericGroovyTemplateViewResolver, jsonSmartViewResolver)
+            registry.registerBean('jsonSmartViewResolver', JsonViewResolver) {
+                it.supplier {
+                    JsonViewResolver viewResolver = new JsonViewResolver(it.bean('jsonTemplateEngine', JsonViewTemplateEngine))
+                    PluginAwareTemplateResolver templateResolver = new PluginAwareTemplateResolver(
+                            it.bean('jsonViewConfiguration', JsonViewConfiguration))
+                    templateResolver.pluginManager = pluginManager
+                    viewResolver.templateResolver = templateResolver
+                    return viewResolver
+                }
+            }
+            registry.registerBean('jsonViewResolver', GenericGroovyTemplateViewResolver) {
+                it.supplier {
+                    new GenericGroovyTemplateViewResolver(it.bean('jsonSmartViewResolver', SmartViewResolver))
+                }
+            }
         }
     }
 }

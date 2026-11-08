@@ -23,8 +23,7 @@ import jakarta.persistence.criteria.From;
 /**
  * Tracks physical JPA Joins and Roots to ensure consistency and avoid duplicate joins.
  *
- * @author walterduquedeestrada
- * @since 7.0.0
+ * @since 8.0
  */
 public class JoinTracker {
     private final Map<String, From<?, ?>> joinsByPath = new HashMap<>();
@@ -51,6 +50,14 @@ public class JoinTracker {
             return parent.getJoin(path);
         }
         return join;
+    }
+
+    /**
+     * Returns the join registered by this query, ignoring enclosing queries because
+     * an association path is relative to the root of the query it appears in.
+     */
+    From<?, ?> getOwnJoin(String path) {
+        return joinsByPath.get(path);
     }
 
     public From<?, ?> getRoot() {

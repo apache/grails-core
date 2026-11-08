@@ -67,8 +67,7 @@ class DefaultMultiStepCommand extends MultiStepCommand {
                                 if (completerClass) {
                                     try {
                                         this.description.completer = (Completer) Thread.currentThread().contextClassLoader.loadClass(completerClass.toString()).getDeclaredConstructor().newInstance()
-                                    } catch (e) {
-                                        // ignore
+                                    } catch (ignored) {
                                     }
                                 }
                             }

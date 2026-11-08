@@ -47,7 +47,7 @@ public class Generated {
             @NonNull DevelopmentReloading reloading,
             @NonNull JdkVersion jdkVersion) {
         this.type = Objects.requireNonNull(type, "Type cannot be null");
-        this.gorm = Objects.requireNonNull(gorm, "GORM cannot be null");
+        this.gorm = Objects.requireNonNull(gorm, "Grails Data implementation cannot be null");
         this.servlet = Objects.requireNonNull(servlet, "Embedded Servlet cannot be null");
         this.reloading = Objects.requireNonNull(reloading, "Development reloading cannot be null");
         this.jdkVersion = Objects.requireNonNull(jdkVersion, "JDK version cannot be null");

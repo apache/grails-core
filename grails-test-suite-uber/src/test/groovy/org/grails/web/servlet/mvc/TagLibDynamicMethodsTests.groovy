@@ -18,11 +18,19 @@
  */
 package org.grails.web.servlet.mvc
 
+import groovy.transform.CompileStatic
+
 import grails.artefact.Artefact
 import grails.testing.web.taglib.TagLibUnitTest
 import spock.lang.Specification
 
 class TagLibDynamicMethodsTests extends Specification implements TagLibUnitTest<TestTagLib> {
+
+    @CompileStatic
+    void "mockTagLib returns the typed taglib instance"() {
+        expect: "no compilation error"
+        TestTagLib t = mockTagLib(TestTagLib)
+    }
 
     void testFlashObject() {
         when:
@@ -66,4 +74,3 @@ class TagLibDynamicMethodsTests extends Specification implements TagLibUnitTest<
 class TestTagLib {
     def myTag = {attrs, body -> body() }
  }
-

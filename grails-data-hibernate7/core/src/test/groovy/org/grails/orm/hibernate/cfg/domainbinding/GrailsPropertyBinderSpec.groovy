@@ -21,9 +21,14 @@ package org.grails.orm.hibernate.cfg.domainbinding
 
 import grails.gorm.annotation.Entity
 import grails.gorm.tests.HibernateGormDatastoreSpec
+import org.grails.orm.hibernate.CompositeMoney
+import org.grails.orm.hibernate.CompositeMoneyType
+import org.grails.orm.hibernate.CompositeTier
+import org.grails.orm.hibernate.CompositeTierType
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.*
 import org.grails.orm.hibernate.cfg.domainbinding.binder.*
 
+import org.hibernate.MappingException
 import org.hibernate.mapping.ManyToOne
 import org.hibernate.mapping.OneToOne
 import org.hibernate.mapping.Property
@@ -44,6 +49,12 @@ import org.grails.orm.hibernate.cfg.domainbinding.util.ColumnNameForPropertyAndP
 import org.grails.orm.hibernate.cfg.domainbinding.util.DefaultColumnNameFetcher
 import org.grails.orm.hibernate.cfg.domainbinding.util.BackticksRemover
 import org.grails.orm.hibernate.cfg.domainbinding.util.TableForManyCalculator
+import org.grails.datastore.mapping.engine.types.CustomTypeMarshaller
+import org.grails.datastore.mapping.model.ClassMapping
+import org.grails.datastore.mapping.model.PropertyMapping
+import org.grails.orm.hibernate.cfg.PropertyConfig
+
+import java.beans.PropertyDescriptor
 
 import static org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBinder.EMPTY_PATH
 
@@ -58,9 +69,11 @@ class GrailsPropertyBinderSpec extends HibernateGormDatastoreSpec {
         ColumnNameForPropertyAndPathFetcher columnNameForPropertyAndPathFetcher = new ColumnNameForPropertyAndPathFetcher(namingStrategy, defaultColumnNameFetcher, backticksRemover)
         
         SimpleValueBinder simpleValueBinder = new SimpleValueBinder(metadataBuildingContext, namingStrategy, jdbcEnvironment)
+        CompositeUserTypeBinder compositeUserTypeBinder = new CompositeUserTypeBinder(metadataBuildingContext, namingStrategy, jdbcEnvironment)
         EnumTypeBinder enumTypeBinderToUse = new EnumTypeBinder(metadataBuildingContext, columnNameForPropertyAndPathFetcher, namingStrategy)
         SimpleValueColumnFetcher simpleValueColumnFetcher = new SimpleValueColumnFetcher()
         CompositeIdentifierToManyToOneBinder compositeIdentifierToManyToOneBinder = new CompositeIdentifierToManyToOneBinder(
+                collector,
                 new org.grails.orm.hibernate.cfg.domainbinding.util.ForeignKeyColumnCountCalculator(),
                 namingStrategy,
                 defaultColumnNameFetcher,
@@ -96,14 +109,25 @@ class GrailsPropertyBinderSpec extends HibernateGormDatastoreSpec {
                 componentBinder,
                 collectionBinder,
                 simpleValueBinder,
+                compositeUserTypeBinder,
                 oneToOneBinder,
                 manyToOneBinder,
                 foreignKeyOneToOneBinder
         )
         componentBinder.setGrailsPropertyBinder(propertyBinder)
+        GrailsPropertyBinder legacyPropertyBinder = new GrailsPropertyBinder(
+                enumTypeBinderToUse,
+                componentBinder,
+                collectionBinder,
+                simpleValueBinder,
+                oneToOneBinder,
+                manyToOneBinder,
+                foreignKeyOneToOneBinder
+        )
         
         return [
             propertyBinder: propertyBinder,
+            legacyPropertyBinder: legacyPropertyBinder,
             collectionBinder: collectionBinder
         ]
     }
@@ -116,12 +140,15 @@ class GrailsPropertyBinderSpec extends HibernateGormDatastoreSpec {
         manager.registerDomainClasses(
             PropertyBinderSpecSimpleBook,
             PropertyBinderSpecEnumBook,
+            PropertyBinderSpecEnumCollection,
             PropertyBinderSpecAuthor,
             PropertyBinderSpecPet,
             PropertyBinderSpecEmployee,
             PropertyBinderSpecSerializableEntity,
             PropertyBinderSpecCustomEntity,
             PropertyBinderSpecCustomUserTypeCollection,
+            PropertyBinderSpecCompositeUserTypeEntity,
+            PropertyBinderSpecCompositeEnumEntity,
             PropertyBinderSpecHasOneOwner,
             PropertyBinderSpecHasOneProfile,
             PropertyBinderSpecFKOwner,
@@ -164,6 +191,29 @@ class GrailsPropertyBinderSpec extends HibernateGormDatastoreSpec {
         then:
         value instanceof BasicValue
         ((BasicValue)value).enumerationStyle == jakarta.persistence.EnumType.STRING
+    }
+
+    void "Test bind hasMany of enum falls through to the collection binder"() {
+        given:
+        def binder = getGrailsDomainBinder()
+        def propertyBinder = getBinders(binder).propertyBinder
+        def persistentEntity = getPersistentEntity(PropertyBinderSpecEnumCollection) as GrailsHibernatePersistentEntity
+        def rootClass = new RootClass(binder.getMetadataBuildingContext())
+        rootClass.setTable(new Table("ENUM_COLLECTION"))
+        persistentEntity.setPersistentClass(rootClass)
+
+        when:
+        def statusesProp = persistentEntity.getPropertyByName("statuses") as HibernatePersistentProperty
+
+        then: "the property is a HibernateEnumProperty, but flagged as a collection element"
+        statusesProp instanceof HibernateBasicEnumProperty
+        ((HibernateEnumProperty) statusesProp).isCollectionElement()
+
+        when:
+        Value value = propertyBinder.bindProperty(statusesProp, null, EMPTY_PATH)
+
+        then: "it is bound as a collection with a join table, not as a scalar enum BasicValue"
+        value instanceof org.hibernate.mapping.Set
     }
 
     void "Test bind many-to-one"() {
@@ -249,6 +299,114 @@ class GrailsPropertyBinderSpec extends HibernateGormDatastoreSpec {
         when:
         def dataProp = persistentEntity.getPropertyByName("data") as HibernatePersistentProperty
         Value value = propertyBinder.bindProperty(dataProp, null, EMPTY_PATH)
+
+        then: "the type: mapping DSL routes this through isUserButNotCollectionType(), as a plain HibernateSimpleProperty"
+        !(dataProp instanceof HibernateCustomProperty)
+        dataProp.isUserButNotCollectionType()
+        value instanceof BasicValue
+    }
+
+    void "Test bind composite user type property"() {
+        given:
+        def binder = getGrailsDomainBinder()
+        def propertyBinder = getBinders(binder).propertyBinder
+        def persistentEntity = getPersistentEntity(PropertyBinderSpecCompositeUserTypeEntity) as GrailsHibernatePersistentEntity
+        def rootClass = new RootClass(binder.getMetadataBuildingContext())
+        rootClass.setTable(new Table("COMPOSITE_USER_TYPE_ENTITY"))
+        persistentEntity.setPersistentClass(rootClass)
+
+        when:
+        def priceProp = persistentEntity.getPropertyByName("price") as HibernatePersistentProperty
+        Value value = propertyBinder.bindProperty(priceProp, null, EMPTY_PATH)
+
+        then: "a type: mapping naming a CompositeUserType is bound as a component of that type, not as a basic value"
+        priceProp.getCompositeUserType() == CompositeMoneyType
+        priceProp.isUserButNotCollectionType()
+        value instanceof Component
+        (value as Component).typeName == CompositeMoneyType.name
+        (value as Component).componentClassName == CompositeMoney.name
+
+        and: "the component has one property per attribute of the embeddable class, in alphabetical order"
+        (value as Component).properties*.name == ['amount', 'currency']
+        (value as Component).properties.collect { it.value.columns.first().name } == ['price_value', 'price_currency']
+        rootClass.table.columns*.name == ['price_value', 'price_currency']
+    }
+
+    void "Test bind enum property mapped with a composite user type"() {
+        given:
+        def binder = getGrailsDomainBinder()
+        def propertyBinder = getBinders(binder).propertyBinder
+        def persistentEntity = getPersistentEntity(PropertyBinderSpecCompositeEnumEntity) as GrailsHibernatePersistentEntity
+        def rootClass = new RootClass(binder.getMetadataBuildingContext())
+        rootClass.setTable(new Table("COMPOSITE_ENUM_ENTITY"))
+        persistentEntity.setPersistentClass(rootClass)
+
+        when:
+        def tierProp = persistentEntity.getPropertyByName("tier") as HibernatePersistentProperty
+        Value value = propertyBinder.bindProperty(tierProp, null, EMPTY_PATH)
+
+        then: "the enum property is bound as a component of its composite user type, not as an enum column"
+        tierProp instanceof HibernateEnumProperty
+        tierProp.getCompositeUserType() == CompositeTierType
+        value instanceof Component
+        (value as Component).typeName == CompositeTierType.name
+        (value as Component).componentClassName == CompositeTier.name
+        (value as Component).properties*.name == ['code', 'rank']
+        rootClass.table.columns*.name == ['tier_code', 'tier_rank']
+    }
+
+    void "Test a property binder created without a composite user type binder binds other properties and rejects a composite user type"() {
+        given:
+        def binder = getGrailsDomainBinder()
+        def propertyBinder = getBinders(binder).legacyPropertyBinder
+        def persistentEntity = getPersistentEntity(PropertyBinderSpecCompositeUserTypeEntity) as GrailsHibernatePersistentEntity
+        def rootClass = new RootClass(binder.getMetadataBuildingContext())
+        rootClass.setTable(new Table("COMPOSITE_USER_TYPE_ENTITY"))
+        persistentEntity.setPersistentClass(rootClass)
+
+        when: "a simple property is bound"
+        def nameProp = persistentEntity.getPropertyByName("name") as HibernatePersistentProperty
+        Value value = propertyBinder.bindProperty(nameProp, null, EMPTY_PATH)
+
+        then:
+        value instanceof BasicValue
+
+        when: "a property mapped with a composite user type is bound"
+        def priceProp = persistentEntity.getPropertyByName("price") as HibernatePersistentProperty
+        propertyBinder.bindProperty(priceProp, null, EMPTY_PATH)
+
+        then: "the binder explains that it cannot bind it"
+        MappingException e = thrown()
+        e.message.contains('price')
+        e.message.contains(PropertyBinderSpecCompositeUserTypeEntity.name)
+        e.message.contains(CompositeMoneyType.name)
+        e.message.contains(CompositeUserTypeBinder.simpleName)
+    }
+
+    void "Test bind a genuine HibernateCustomProperty (GORM-detected custom type marshaller, no type: mapping)"() {
+        given: "a HibernateCustomProperty built the way HibernateMappingFactory#createCustom does: no type: " +
+                "mapping is set, so isUserButNotCollectionType() is false and the instanceof HibernateCustomProperty " +
+                "branch is the only one that can match"
+        def binder = getGrailsDomainBinder()
+        def propertyBinder = getBinders(binder).propertyBinder
+        def persistentEntity = getPersistentEntity(PropertyBinderSpecSimpleBook) as GrailsHibernatePersistentEntity
+        def rootClass = new RootClass(binder.getMetadataBuildingContext())
+        rootClass.setTable(new Table("SIMPLE_BOOK"))
+        persistentEntity.setPersistentClass(rootClass)
+
+        def propertyDescriptor = new PropertyDescriptor("title", PropertyBinderSpecSimpleBook)
+        def marshaller = Mock(CustomTypeMarshaller)
+        def customProp = new HibernateCustomProperty(persistentEntity, getMappingContext(), propertyDescriptor, marshaller)
+        customProp.setMapping(new PropertyMapping<PropertyConfig>() {
+            ClassMapping getClassMapping() { null }
+            PropertyConfig getMappedForm() { new PropertyConfig() }
+        })
+
+        expect: "no type: mapping means the isUserButNotCollectionType() branch cannot intercept it"
+        !customProp.isUserButNotCollectionType()
+
+        when:
+        Value value = propertyBinder.bindProperty(customProp, null, EMPTY_PATH)
 
         then:
         value instanceof BasicValue
@@ -354,6 +512,13 @@ class PropertyBinderSpecEnumBook {
 }
 
 @Entity
+class PropertyBinderSpecEnumCollection {
+    Long id
+    Set<java.util.concurrent.TimeUnit> statuses
+    static hasMany = [statuses: java.util.concurrent.TimeUnit]
+}
+
+@Entity
 class PropertyBinderSpecAuthor {
     Long id
     static hasMany = [pets: PropertyBinderSpecPet]
@@ -391,6 +556,31 @@ class PropertyBinderSpecCustomEntity {
     String data
     static mapping = {
         data type: 'org.hibernate.type.YesNoConverter'
+    }
+}
+
+@Entity
+class PropertyBinderSpecCompositeUserTypeEntity {
+    Long id
+    String name
+    CompositeMoney price
+    static mapping = {
+        price type: CompositeMoneyType, {
+            column name: 'price_value'
+            column name: 'price_currency'
+        }
+    }
+}
+
+@Entity
+class PropertyBinderSpecCompositeEnumEntity {
+    Long id
+    CompositeTier tier
+    static mapping = {
+        tier type: CompositeTierType, {
+            column name: 'tier_code'
+            column name: 'tier_rank'
+        }
     }
 }
 

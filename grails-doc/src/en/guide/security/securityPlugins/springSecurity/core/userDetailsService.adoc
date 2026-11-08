@@ -1,0 +1,144 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+[[core-userDetailsService]]
+== Custom UserDetailsService
+
+When you authenticate users from a database using {springSecurityApiDocsUrl}org/springframework/security/authentication/dao/DaoAuthenticationProvider.html[DaoAuthenticationProvider] (the default mode in the plugin if you have not enabled OpenID, LDAP, and so on), an implementation of {springSecurityApiDocsUrl}org/springframework/security/core/userdetails/UserDetailsService.html[UserDetailsService] is required. This class is responsible for returning a concrete implementation of {springSecurityApiDocsUrl}org/springframework/security/core/userdetails/UserDetails.html[UserDetails]. The plugin provides `grails.plugin.springsecurity.userdetails.GormUserDetailsService` as its `UserDetailsService` implementation and `grails.plugin.springsecurity.userdetails.GrailsUser` (which extends Spring Security's {springSecurityApiDocsUrl}org/springframework/security/core/userdetails/User.html[User]) as its `UserDetails` implementation.
+
+You can extend or replace `GormUserDetailsService` with your own implementation by defining a bean in `grails-app/conf/spring/resources.groovy` with the same bean name, `userDetailsService`. This works because application beans are configured after plugin beans and there can only be one bean for each name. The plugin uses an extension of `UserDetailsService`, `grails.plugin.springsecurity.userdetails.GrailsUserDetailsService`, which adds the method `UserDetails loadUserByUsername(String username, boolean loadRoles)` to support use cases like in LDAP where you often infer all roles from LDAP but might keep application-specific user details in the database. Create the class in `src/groovy` and not in `grails-app/services` - although the interface name includes "`Service`", this is just a coincidence and the bean wouldn't benefit from being a Grails service.
+
+In the following example, the `UserDetails` and `GrailsUserDetailsService` implementation adds the full name of the user domain class in addition to the standard information. If you extract extra data from your domain class, you are less likely to need to reload the user from the database. Most of your common data can be kept along with your security credentials.
+
+This example adds in a `fullName` property. Keeping the full name cached avoids hitting the database just for that lookup. `GrailsUser` already adds the `id` value from the domain class to so we can do a more efficient database load of the user. If all you have is the username, then you need to call `User.findByUsername(principal.username)`, but if you have the id you can call `User.get(principal.id)`. Even if you have a unique index on the `username` database column, loading by primary key is usually more efficient because it takes advantage of Hibernate's first-level and second-level caches.
+
+There is not much to implement other than your application-specific lookup code:
+
+[source,groovy]
+.`MyUserDetails.groovy`
+----
+package com.mycompany.myapp
+
+import grails.plugin.springsecurity.userdetails.GrailsUser
+import org.springframework.security.core.GrantedAuthority
+
+class MyUserDetails extends GrailsUser {
+
+   final String fullName
+
+   MyUserDetails(String username, String password, boolean enabled,
+                 boolean accountNonExpired, boolean credentialsNonExpired,
+                 boolean accountNonLocked,
+                 Collection<GrantedAuthority> authorities,
+                 long id, String fullName) {
+      super(username, password, enabled, accountNonExpired,
+            credentialsNonExpired, accountNonLocked, authorities, id)
+
+      this.fullName = fullName
+   }
+}
+----
+
+[source,groovy]
+.`MyUserDetailsService.groovy`
+----
+package com.mycompany.myapp
+
+import grails.plugin.springsecurity.SpringSecurityUtils
+import grails.plugin.springsecurity.userdetails.GrailsUserDetailsService
+import grails.plugin.springsecurity.userdetails.NoStackUsernameNotFoundException
+import grails.gorm.transactions.Transactional
+import org.springframework.security.core.authority.SimpleGrantedAuthority
+import org.springframework.security.core.userdetails.UserDetails
+import org.springframework.security.core.userdetails.UsernameNotFoundException
+
+class MyUserDetailsService implements GrailsUserDetailsService {
+
+   /**
+    * Some Spring Security classes (e.g. RoleHierarchyVoter) expect at least
+    * one role, so we give a user with no granted roles this one which gets
+    * past that restriction but doesn't grant anything.
+    */
+   static final List NO_ROLES = [new SimpleGrantedAuthority(SpringSecurityUtils.NO_ROLE)]
+
+   UserDetails loadUserByUsername(String username, boolean loadRoles)
+         throws UsernameNotFoundException {
+      return loadUserByUsername(username)
+   }
+
+   @Transactional(readOnly=true, noRollbackFor=[IllegalArgumentException, UsernameNotFoundException])
+   UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
+
+      User user = User.findByUsername(username)
+      if (!user) throw new NoStackUsernameNotFoundException()
+
+      def roles = user.authorities
+
+      // or if you are using role groups:
+      // def roles = user.authorities.collect { it.authorities }.flatten().unique()
+
+      def authorities = roles.collect {
+         new SimpleGrantedAuthority(it.authority)
+      }
+
+      return new MyUserDetails(user.username, user.password, user.enabled,
+            !user.accountExpired, !user.passwordExpired,
+            !user.accountLocked, authorities ?: NO_ROLES, user.id,
+            user.firstName + " " + user.lastName)
+   }
+}
+----
+
+The `loadUserByUsername` method is transactional, but read-only, to avoid lazy loading exceptions when accessing the `authorities` collection. There are obviously no database updates here but this is a convenient way to keep the Hibernate `Session` open to enable accessing the roles.
+
+To use your implementation, register it in `grails-app/conf/spring/resources.groovy` like this:
+
+[source,groovy]
+.Listing {counter:listing}. Registering a custom `UserDetailsService` in `resources.groovy`
+----
+import com.mycompany.myapp.MyUserDetailsService
+
+beans = {
+   userDetailsService(MyUserDetailsService)
+}
+----
+
+Another option for loading users and roles from the database is to subclass `grails.plugin.springsecurity.userdetails.GormUserDetailsService` - the methods are all protected so you can override as needed.
+
+This approach works with all beans defined in `SpringSecurityCoreGrailsPlugin.doWithSpring()` - you can replace or subclass any of the Spring beans to provide your own functionality when the standard extension mechanisms are insufficient.
+
+=== Flushing the Cached Authentication
+If you store mutable data in your custom `UserDetails` implementation (such as full name in the preceding example), be sure to rebuild the `Authentication` if it changes. `springSecurityService` has a `reauthenticate` method that does this for you:
+
+[source,groovy]
+.Listing {counter:listing}. Calling `reauthenticate()` after making a change that affects the cached authentication
+----
+class MyController {
+
+   def springSecurityService
+
+   def someAction() {
+      def user = ...
+      // update user data
+      user.save()
+      springSecurityService.reauthenticate user.username
+      ...
+   }
+}
+----

@@ -1,0 +1,30 @@
+// The same wiring as gsp-compile-classpath, in a Grails build. A Grails application renders the
+// views under grails-app/views, so it gets no compiled pages on its test runtime class path and its
+// `test` task is not put behind compileGroovyPages for pages it does not read.
+plugins {
+    id 'org.apache.grails.gradle.grails-web'
+    id 'org.apache.grails.gradle.grails-gsp'
+}
+
+group = 'org.example.test'
+
+grails {
+    bom = null
+    cliAutoProvision = false
+}
+
+springBoot {
+    mainClass = 'org.example.test.Application'
+}
+
+tasks.register('inspectGspRuntimeClasspath') {
+    def testRuntime = sourceSets.test.runtimeClasspath.files.collect { it.absolutePath.replace('\\', '/') }
+    def test = tasks.named('test').get()
+    def testDependencies = test.taskDependencies.getDependencies(test)*.name
+
+    doLast {
+        println "TEST_RUNTIME_HAS_PAGES=${testRuntime.any { it.contains('build/gsp-classes/main') }}"
+        println "TEST_RUNTIME_HAS_WEBAPP_PAGES=${testRuntime.any { it.contains('build/gsp-classes/webapp') }}"
+        println "TEST_WAITS_FOR_PAGE_COMPILATION=${testDependencies.contains('compileGroovyPages')}"
+    }
+}

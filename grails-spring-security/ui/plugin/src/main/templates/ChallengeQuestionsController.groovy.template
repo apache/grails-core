@@ -1,0 +1,128 @@
+package  ${packageName}
+
+import grails.plugin.springsecurity.SpringSecurityUtils
+import grails.validation.ValidationException
+
+class ${saClassName}Controller extends grails.plugin.springsecurity.ui.AbstractS2UiDomainController {
+
+     ${saClassName}Service ${camelCaseSaName}Service
+    
+     static allowedMethods = [save: "POST", update: "POST", delete: "POST"]
+     static defaultAction = 'index'
+
+     def search() { redirect action: "index", method: "GET" }
+
+    protected Class<?> getClazz() { ${saClassName} }
+    protected String getClassLabelCode() { '${camelCaseSaName}.label' }
+    protected Map model(${camelCaseSaName}, String action) {
+                    [ ${camelCaseSaName}: ${camelCaseSaName}]
+    }
+    
+    def index(Integer max) {
+        params.max = Math.min(max ?: 10, 100)
+        params.offset = Math.max(params.offset ? params.int('offset') : 0, 0)
+        def model = [:]
+        model.results = ${camelCaseSaName}Service.list(params)
+        model.totalCount = ${camelCaseSaName}Service.count()
+        addQueryParamsToModelForPaging(model,
+          <% for(int i=1; i <= numberOfQuestions.toInteger(); i++) {  %>'myQuestion${i}','myAnswer${i}',<%  } %>
+        'id', '${userPropName}.id'
+        )
+        render view: 'index', model: model
+    }
+    
+    def show(Long id) {
+        redirect action: 'edit', id: id
+    }
+    
+    def create() {
+        respond new ${saClassName}(params), model : ['users': ${userPropName.capitalize()}.list(),'lookupProp':SpringSecurityUtils.securityConfig.userLookup.usernamePropertyName]
+    }
+    
+    def save(${saClassName} ${camelCaseSaName}) {
+        withForm {
+            if (${camelCaseSaName} == null) {
+                notFound()
+                return
+            }
+
+            try {
+                ${camelCaseSaName}Service.save(${camelCaseSaName})
+            } catch (ValidationException e) {
+                respond ${camelCaseSaName}.errors, view:'create', model : ['users': ${userPropName.capitalize()}.list(),'lookupProp':SpringSecurityUtils.securityConfig.userLookup.usernamePropertyName]
+                return
+            }
+
+            request.withFormat {
+                form multipartForm {
+                    flashCreated(${camelCaseSaName}.id)
+                    redirect action:"index", method:"GET"
+                }
+                '*' { respond ${camelCaseSaName}, [status: CREATED] }
+            }
+        }.invalidToken {
+            doSaveWithInvalidToken()
+        }
+    }
+    
+    def edit(Long id) {
+        respond ${camelCaseSaName}Service.get(id), model : ['users': ${userPropName.capitalize()}.list(),'lookupProp':SpringSecurityUtils.securityConfig.userLookup.usernamePropertyName]
+    }
+    
+    def update(${saClassName} ${camelCaseSaName}) {
+        withForm {
+            if (${camelCaseSaName} == null) {
+                notFound()
+                return
+            }
+
+            try {
+                ${camelCaseSaName}Service.save(${camelCaseSaName})
+            } catch (ValidationException e) {
+                respond ${camelCaseSaName}.errors, view:'edit'
+                return
+            }
+
+            request.withFormat {
+                form multipartForm {
+                   flashUpdated()
+                   redirect action:"index", method:"GET"
+                }
+                '*'{ respond ${camelCaseSaName}, [status: OK] }
+            }
+        }.invalidToken {
+             doUpdateWithInvalidToken()
+        }
+    }
+    
+    def delete(Long id) {
+        withForm {
+            if (id == null) {
+                notFound()
+                return
+            }
+
+            ${camelCaseSaName}Service.delete(id)
+
+            request.withFormat {
+                form multipartForm {
+                    flashDeleted()
+                    redirect action:"index", method:"GET"
+                }
+                '*'{ render status: NO_CONTENT }
+            }
+        }.invalidToken {
+            doDeleteWithInvalidToken()
+        }
+    }
+    
+    protected void notFound() {
+        request.withFormat {
+            form multipartForm {
+                flashNotFound()
+                redirect action: "index", method: "GET"
+            }
+            '*'{ render status: NOT_FOUND }
+        }
+    }
+}

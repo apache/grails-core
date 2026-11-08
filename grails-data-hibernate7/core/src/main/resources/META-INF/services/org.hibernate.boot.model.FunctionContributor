@@ -1,1 +1,3 @@
 org.grails.orm.hibernate.query.GrailsRLikeFunctionContributor
+org.grails.orm.hibernate.query.GrailsSqlRestrictionFunctionContributor
+org.grails.orm.hibernate.query.GrailsSqlProjectionFunctionContributor

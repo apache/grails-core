@@ -51,15 +51,28 @@ public class SpringApplicationWebApplicationInitializer extends SpringBootServle
         catch (IOException ex) {
             throw new IllegalStateException(ex);
         }
+        // This initializer only applies to CLI-packaged WARs produced by the Grails shell 'war'
+        // command, which records the application source classes in the WAR manifest via the
+        // 'Spring-Application-Source-Classes' entry. When that entry is absent (for example a
+        // standard 'bootWar' archive deployed to an external servlet container such as Tomcat),
+        // this initializer is not applicable and must stay inert so it does not interfere with
+        // the application's own SpringBootServletInitializer.
+        // See https://github.com/apache/grails-core/issues/15377
+        if (this.sources == null || this.sources.length == 0) {
+            return;
+        }
         super.onStartup(servletContext);
     }
 
     private String[] getSources(ServletContext servletContext) throws IOException {
         Manifest manifest = getManifest(servletContext);
         if (manifest == null) {
-            throw new IllegalStateException("Unable to read manifest");
+            return null;
         }
         String sources = manifest.getMainAttributes().getValue(SOURCE_ENTRY);
+        if (sources == null || sources.isBlank()) {
+            return null;
+        }
         return sources.split(",");
     }
 

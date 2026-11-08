@@ -96,3 +96,67 @@ To use a client like the one in the above example, simply inject an instance of 
 ----
 
 For more details on writing and using declarative clients, consult the https://docs.micronaut.io/latest/guide/index.html#clientAnnotation[Http Client section] of the https://docs.micronaut.io/latest/guide/index.html[Micronaut user guide].
+
+==== Spring HTTP Interface Client
+
+Spring Framework 7 can create an HTTP client from an interface annotated with `@HttpExchange` and `@GetExchange`. This is a Spring API, not a Grails DSL or a controller contract.
+
+[source,java]
+----
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.service.annotation.GetExchange;
+import org.springframework.web.service.annotation.HttpExchange;
+
+@HttpExchange("/books")
+public interface BookClient {
+
+    @GetExchange("/{id}")
+    Book findById(@PathVariable Long id);
+}
+----
+
+For a synchronous client, create a proxy with `RestClient`:
+
+[source,java]
+----
+import org.springframework.web.client.RestClient;
+import org.springframework.web.client.support.RestClientAdapter;
+import org.springframework.web.service.invoker.HttpServiceProxyFactory;
+
+RestClient restClient = RestClient.builder()
+        .baseUrl("https://example.com")
+        .build();
+BookClient bookClient = HttpServiceProxyFactory
+        .builderFor(RestClientAdapter.create(restClient))
+        .build()
+        .createClient(BookClient.class);
+----
+
+Spring 7 can also register the proxy as a bean. Group related interfaces and configure their shared `RestClient` builder:
+
+[source,java]
+----
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.web.client.support.RestClientHttpServiceGroupConfigurer;
+import org.springframework.web.service.registry.HttpServiceGroup.ClientType;
+import org.springframework.web.service.registry.ImportHttpServices;
+
+@Configuration
+@ImportHttpServices(group = "books", types = BookClient.class,
+        clientType = ClientType.REST_CLIENT)
+class BookClientConfiguration {
+
+    @Bean
+    RestClientHttpServiceGroupConfigurer bookClientConfigurer() {
+        return groups -> groups.filterByName("books")
+                .forEachClient((group, builder) -> builder.baseUrl("https://example.com"));
+    }
+}
+----
+
+The registered `BookClient` can then be constructor-injected into an application bean and called like any other interface. Synchronous methods can return a decoded body, `HttpHeaders`, or `ResponseEntity`.
+
+For `Mono` or `Flux` return values, add Spring WebFlux to the classpath and use `WebClient` instead. Register the group with `clientType = ClientType.WEB_CLIENT` and configure it through `WebClientHttpServiceGroupConfigurer`; reactive applications also need Reactor types on the classpath.
+
+HTTP interface parameters cannot be `null` unless the parameter is optional. By default, 4xx and 5xx responses raise an exception. Configure status handling on the underlying `RestClient` or `WebClient` when an API requires different behavior.

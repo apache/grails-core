@@ -79,11 +79,12 @@ assert 'Percussion' == employee.department
 assert 42.0 == employee.salary
 ----
 
-Statically typed instance properties are bindable by default.  Properties which are not bindable by default are those related to transient fields, dynamically typed properties and static properties.
+Properties without explicit `bindable` constraints are eligible for mass data binding by default for compatibility.  Statically typed instance properties are bindable unless they are marked with `bindable: false`, are transient fields, are dynamically typed properties, or are static properties.
+
+Applications can opt into deny-by-default binding allowlists by setting `grails.databinding.denyByDefault=true`.  In secure mode, only properties declared with `bindable: true`, supplied in an explicit `include` list to `bindData`, or named by `@BindAllowed` on a controller action command object parameter are bound.  Properties marked `bindable: false` remain non-bindable in either mode.
 
 See the link:{guidePath}theWebLayer.html#dataBinding[data binding] section for more details on data binding.
 
 NOTE: The bindable constraint must be assigned a literal boolean value.  Dynamic expressions are not valid values for the bindable constraint.  The value must be the literal `true` or `false`.
 
 The bindable constraint must be applied in the constraints closure which is defined in the relevant class.  This means that bindable may not be used as a shared constraint.
-

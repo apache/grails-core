@@ -17,13 +17,15 @@ package org.grails.orm.hibernate.query;
 
 import jakarta.persistence.criteria.Expression;
 import jakarta.persistence.criteria.From;
+import jakarta.persistence.criteria.JoinType;
 import jakarta.persistence.criteria.Path;
+import jakarta.persistence.metamodel.Attribute.PersistentAttributeType;
+import jakarta.persistence.metamodel.PluralAttribute;
 
 /**
  * Resolves string paths and aliases into JPA Expressions and Paths.
  *
- * @author walterduquedeestrada
- * @since 7.0.0
+ * @since 8.0
  */
 public class ExpressionResolver {
     private final AliasRegistry aliasRegistry;
@@ -96,34 +98,60 @@ public class ExpressionResolver {
         // 1. Check if already realized in THIS or PARENT registry
         Expression<?> aliased = aliasRegistry.getRealized(alias);
         if (aliased != null) {
-            if (subPath != null && aliased instanceof From<?, ?> from) {
-                return getPath(from, subPath);
+            if (subPath == null) {
+                return aliased;
             }
-            return aliased; // It's a non-From expression (projection alias) or subPath is null
+            // A path selected under an alias, such as groupProperty('favorite', 'favorite'), continues from that
+            // path. A basic value has no properties, so a path below it names nothing, and neither does a
+            // selection that is not a path.
+            return aliased instanceof Path<?> path ? getPath(path, subPath) : null;
         }
 
-        // 2. Check if already joined in THIS or PARENT JoinTracker (correlated joins)
-        aliased = joinTracker.getJoin(alias);
-        if (aliased != null) {
-            aliasRegistry.realize(alias, aliased);
-            return subPath != null ? getPath((From<?, ?>) aliased, subPath) : aliased;
+        HibernateAlias def = aliasRegistry.getDefinition(alias);
+        if (def == null || def.path() == null) {
+            return null;
         }
-
-        // 3. If defined but not joined, materialize it on the CURRENT root
-        if (aliasRegistry.isDefined(alias)) {
-            HibernateAlias def = aliasRegistry.getDefinition(alias);
-            if (def != null && def.path() != null) {
-                aliased = joinTracker.getRoot().join(def.path(), def.joinType());
-                aliasRegistry.realize(alias, aliased);
-                joinTracker.addJoin(alias, (From<?, ?>) aliased);
-                return subPath != null ? getPath((From<?, ?>) aliased, subPath) : aliased;
+        if (!def.explicit()) {
+            // A path absent from this root can refer to an enclosing query's association join.
+            From<?, ?> enclosing = getPath(joinTracker.getRoot(), def.path()) == null ?
+                    joinTracker.getJoin(def.path()) : null;
+            aliased = enclosing != null ? enclosing : resolveAssociation(def.path(), def.joinType());
+        } else {
+            Path<?> path = getPath(joinTracker.getRoot(), def.path());
+            boolean elementCollection = path != null && path.getModel() instanceof PluralAttribute<?, ?, ?> attribute &&
+                    attribute.getPersistentAttributeType() == PersistentAttributeType.ELEMENT_COLLECTION;
+            boolean sharesPath = !elementCollection && def.equals(aliasRegistry.getAssociationAlias(def.path()));
+            From<?, ?> join = sharesPath ? joinTracker.getOwnJoin(def.path()) : null;
+            if (join == null) {
+                join = joinTracker.getRoot().join(def.path(), def.joinType());
+                if (sharesPath) {
+                    joinTracker.addJoin(def.path(), join);
+                }
             }
+            aliased = join;
         }
-
-        return null;
+        aliasRegistry.realize(alias, aliased);
+        return subPath != null ? getPath((From<?, ?>) aliased, subPath) : aliased;
     }
 
-    private Path<?> getPath(From<?, ?> from, String path) {
+    /**
+     * Resolves an association path independently of named aliases, even when an alias has the same name.
+     */
+    From<?, ?> resolveAssociation(String path, JoinType joinType) {
+        From<?, ?> join = joinTracker.getOwnJoin(path);
+        if (join == null) {
+            HibernateAlias associationAlias = aliasRegistry.getAssociationAlias(path);
+            if (associationAlias != null) {
+                join = (From<?, ?>) resolveFromAlias(associationAlias.alias(), null);
+            } else {
+                join = joinTracker.getRoot().join(path, joinType);
+            }
+            joinTracker.addJoin(path, join);
+        }
+        return join;
+    }
+
+    private Path<?> getPath(Path<?> from, String path) {
         if (from == null || path == null) return null;
         try {
             if (path.contains(".")) {

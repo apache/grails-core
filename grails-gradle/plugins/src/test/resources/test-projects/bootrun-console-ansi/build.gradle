@@ -1,0 +1,12 @@
+plugins {
+    id 'org.apache.grails.gradle.grails-app'
+}
+
+tasks.register('inspectBootRunSysProps') {
+    def consoleAvailable = providers.provider {
+        String.valueOf(tasks.named('bootRun', JavaExec).get().systemProperties.get('spring.output.ansi.console-available'))
+    }
+    doLast {
+        println "CONSOLE_AVAILABLE=${consoleAvailable.get()}"
+    }
+}

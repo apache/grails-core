@@ -20,7 +20,7 @@ under the License.
 The `create-app` command is available in both the Grails Shell CLI and the Forge CLI.
 
 - Use `grails create-app myapp` to generate a default project using the Grails Shell CLI. This is the most common usage.
-- Use `grails -t forge create-app myapp` to access advanced application generation options such as `--jdk`, `--gorm`, and other Forge-only flags.
+- Use `grails -t forge create-app myapp` to access advanced application generation options such as `--jdk`, `--data`, and other Forge-only flags.
 
 The example below assumes you are using the Forge CLI, which is solely intended for **application generation**. It does not support running, building, or managing a Grails application.
 
@@ -55,7 +55,9 @@ Many of these are built-in plugins provided by Gradle or third-party plugins. Th
 * `org.apache.grails.gradle.grails-gsp` - Adds support for compiling Groovy Server Pages (GSP)
 * `org.apache.grails.gradle.grails-gson` - Adds support for compiling JSON Views (GSON)
 * `org.apache.grails.gradle.grails-markup` - Adds support for compiling Markup Views (XML)
+* `org.apache.grails.gradle.grails-cli` - Configures the Grails CLI tier (the `grailsCli` configurations with automatic `-cli` companion discovery, command tasks, and the console/shell tasks); applied automatically by the application and plugin plugins
 * `org.apache.grails.gradle.grails-plugin` - Marks the project as a Grails plugin
+* `org.apache.grails.gradle.grails-plugin-cli` - Publishes a Grails plugin's CLI commands as a companion `-cli` artifact, keeping command code off application runtime classpaths
 * `org.apache.grails.gradle.grails-web` - Adds the web URL mappings report to the Gradle project
 * `org.apache.grails.gradle.grails-publish` - Assists in publishing to Maven or Nexus repositories
 * `org.apache.grails.gradle.grails-profile` - Marks the project as a Grails profile

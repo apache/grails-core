@@ -21,6 +21,7 @@ plugins {
     id 'org.apache.grails.buildsrc.properties'
     id 'org.apache.grails.buildsrc.dependency-validator'
     id 'org.apache.grails.buildsrc.compile'
+    id 'org.apache.grails.buildsrc.vulnerability-scan'
 }
 
 version = rootProject.version
@@ -62,7 +63,6 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-tomcat'
 
     runtimeOnly 'com.h2database:h2'
-    runtimeOnly 'org.fusesource.jansi:jansi'
     runtimeOnly 'com.zaxxer:HikariCP'
 
     testImplementation 'org.apache.grails:grails-testing-support-web'

@@ -59,6 +59,16 @@ With this configured, when you start your application the actions and views will
 
 A CRUD interface will also be generated. To access this open `http://localhost:8080/book` in a browser.
 
+When the application is built, the Gradle plugin's `generateScaffoldedViews` task expands the scaffolding templates for every domain class a controller scaffolds with `@Scaffold`, the application's or a plugin's, and `compileGroovyPages` compiles the resulting pages in the same compilation as the application's views. The templates are expanded by the application's own scaffolding library and Groovy, in a JVM on its runtime classpath, exactly as they would be expanded when the view is requested. With a `grails-scaffolding` the Grails Gradle plugin cannot work with, the build warns and compiles no scaffolded page, and the views are expanded on their first use. A packaged application then renders a scaffolded view without generating it on the first request, and a native image, which cannot compile a page at runtime, can render it at all.
+
+The task covers the application's scaffolded controllers and those its plugins provide, where the domain class a plugin's controller scaffolds is on the classpath the pages are compiled against. A plugin the project has only at runtime, such as one that reaches it through another project's `implementation` dependency, is not on that classpath. A page naming its domain class could not be compiled here, so its controllers are left to the plugin's own build. For each controller it covers, it expands every copy of each template the view resolver could choose: the application's own, in `src/main/templates/scaffolding` or `src/main/resources/META-INF/templates/scaffolding`, and every copy on the runtime classpath. Which copy the resolver finds is not something the build can know: on the JVM it looks beside the controller's class first, then at a plugin that overrides the templates, then along the classpath, while a native image, which keeps no class files to look beside, goes by the order of the classpath it was built from. A namespace-specific template, such as `src/main/templates/scaffolding/admin/show.gsp`, is expanded only for the domain classes of controllers with a `namespace`.
+
+A template of the application's own is its code, as a view is: if it cannot be expanded for a domain class, or a page expanded from it does not compile, the build fails. A copy a dependency supplies is not, and because every copy is compiled, that includes a copy the application has replaced with its own. If such a copy cannot be expanded, or its page does not compile, the build leaves the page out and says so, and the view is expanded on its first use if that copy is ever chosen - which it is not while the application's own copy comes first on the classpath, as it normally does.
+
+Compiling the pages does not change which page a request gets. A view the application or a plugin declares still takes precedence, and the resolver chooses the template as it always has; the compiled page is used only when it was expanded from that template for the same domain class. Otherwise the template is expanded on its first use, as before, and the log notes it once. That is the case for a controller using the `static scaffold` property described below, for a controller of a plugin the application has only at runtime whose pages the plugin's own build did not compile, and for a page the build left out because a template a dependency supplies could not be expanded or its page did not compile, which the build output reports.
+
+A native image cannot expand a template, so there a view with no compiled page fails; where the application has compiled pages of its own, a warning naming the template and the domain class comes first. What to do depends on why the page is missing: declare the controller with `@Scaffold` rather than `static scaffold`; for a plugin the application has only at runtime, declare it as a dependency of the application; for a page the build left out, give the application a template of its own in place of the one it came from: the build output names the page, under `build/generated/scaffolded-views`, and the page ends with a comment saying which template it was expanded from. Otherwise, provide a concrete GSP view. A plugin the application has only at runtime needs declaring because its own build compiled pages only for the template copies it saw, so an application template, or a theme earlier on the application's classpath, gives a page it never compiled.
+
 If you prefer to keep your domain model in Java and https://hibernate.org/[mapped with Hibernate] you can still use scaffolding, simply import the domain class and use it in the `@Scaffold` annotation.
 
 ===== Legacy Static Scaffold Property
@@ -188,7 +198,7 @@ All of this is what is known as "dynamic scaffolding" where the CRUD interface i
 
 NOTE: By default, the size of text areas in scaffolded views is defined in the CSS, so adding 'rows' and 'cols' attributes will have no effect.
 
-Also, the standard scaffold views expect model variables of the form `<propertyName>InstanceList` for collections and `<propertyName>Instance` for single instances. It's tempting to use properties like 'books' and 'book', but those won't work.
+Also, the standard scaffold views expect model variables of the form `<propertyName>List` and `<propertyName>Count` for collections, and `<propertyName>` for a single instance. The list view declares the count as `Number`, so it accepts the `Integer` or `Long` a controller supplies.
 
 
 ==== Static Scaffolding
@@ -224,6 +234,9 @@ If you have a domain class in a package or are generating from a https://hiberna
 ----
 grails generate-all com.bookstore.Book
 ----
+
+A generated controller redirects a successful form save or update to its own `show` action, so it keeps
+working when it is renamed, for example to serve the domain class at a different URL.
 
 ===== Generating Scaffolded Controllers and Services
 

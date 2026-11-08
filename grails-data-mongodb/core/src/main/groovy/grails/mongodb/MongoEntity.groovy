@@ -34,6 +34,7 @@ import org.bson.conversions.Bson
 import grails.mongodb.api.MongoAllOperations
 import org.grails.datastore.gorm.GormEnhancer
 import org.grails.datastore.gorm.GormEntity
+import org.grails.datastore.gorm.GormRegistry
 import org.grails.datastore.gorm.mongo.MongoCriteriaBuilder
 import org.grails.datastore.gorm.mongo.api.MongoStaticApi
 import org.grails.datastore.gorm.schemaless.DynamicAttributes
@@ -242,7 +243,10 @@ trait MongoEntity<D> implements GormEntity<D>, DynamicAttributes {
         def staticApi = GormEnhancer.findStaticApi(this, connectionName)
         return (T) staticApi.withNewSession {
             callable.setDelegate(staticApi)
-            return callable.call()
+            // The delegate covers only the calls that do not name the class; the scope covers the rest.
+            return GormRegistry.withConnectionScope(this, connectionName) {
+                callable.call()
+            }
         }
     }
 

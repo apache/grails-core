@@ -195,8 +195,7 @@ class ModelEntry {
                             if (defaultTypeClass.isAssignableFrom(fieldTypeClass)) {
                                 cleanedFieldType = defaultType
                             }
-                        } catch (e) {
-                            // ignore
+                        } catch (ignored) {
                         }
                     }
                     gspDeclaration << "${cleanedFieldType} ${fieldName}\n"

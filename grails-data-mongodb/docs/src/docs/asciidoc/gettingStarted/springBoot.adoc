@@ -46,6 +46,8 @@ class Application {
 NOTE: Using `ComponentScan` without a value results in Boot scanning for classes in the same package or any package nested within the `Application` class package.
 If your GORM entities are in a different package specify the package name as the value of the `ComponentScan` annotation.
 
+GORM declares the application's `MongoClient` bean, ahead of Spring Boot's MongoDB auto-configuration, which then declares none. It is built the way Spring Boot builds its own: from the `spring.mongodb.*` properties, Spring Boot's `MongoClientSettings` and every Spring Boot `MongoClientSettingsBuilderCustomizer` bean, so a `@ServiceConnection`, an SSL bundle or a metrics customizer applies to it as it would to Spring Boot's. Spring Data, health checks and anything else that injects a `MongoClient` share GORM's. GORM owns the client: it connects when the datastore starts, is closed when the application shuts down, and can be checkpointed with CRaC (see <<advancedConfig,Checkpoint and Restore>>). An application that declares a `MongoClient` bean of its own keeps it, and GORM uses that client instead and leaves closing it to the application.
+
 Finally create your GORM entities and ensure they are annotated with `grails.persistence.Entity`:
 
 [source,groovy]

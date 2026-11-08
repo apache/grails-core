@@ -157,7 +157,7 @@ class GroovyPageScanner implements Tokens {
                             return foundStartOrEndTag(GEND_TAG, tagNameSpace.length() + 3, tagNameSpace);
                         }
                     }
-                    else if (isStartOfGExpression(c, c1)) {
+                    else if (isStartOfGExpression(c, c1) && !isEscapedGExpression()) {
                         return found(GEXPR, 2);
                     }
 
@@ -274,6 +274,17 @@ class GroovyPageScanner implements Tokens {
 
     private boolean isStartOfGExpression(char c, char c1) {
         return c == '$' && c1 == '{';
+    }
+
+    /**
+     * A backslash immediately before <code>${</code> escapes the expression in template text: the
+     * whole sequence stays in the surrounding HTML token, and {@link GroovyPageParser} drops the
+     * backslash when it writes the token out, so the page renders a literal <code>${</code>.
+     * Expressions in tag attributes are scanned in {@link Tokens#GSTART_TAG} state and cannot be
+     * escaped this way.
+     */
+    private boolean isEscapedGExpression() {
+        return end1 > 1 && text.charAt(end1 - 2) == '\\';
     }
 
     private boolean skipComment(char c3, char c4) {

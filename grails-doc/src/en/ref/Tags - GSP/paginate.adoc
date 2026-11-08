@@ -77,6 +77,7 @@ Attributes
 * `total` (required) - The total number of results to paginate
 * `action` (optional) - the name of the action to use in the link; if not specified the default action will be linked
 * `controller` (optional) - the name of the controller to use in the link; if not specified the current controller will be linked
+* `namespace` (optional) - the namespace of the controller to use in generated links. If omitted, the namespace is inferred from the target controller; you only need to set it when more than one controller shares the name. Use `namespace=""` to target a non-namespaced controller.
 * `id` (optional) - The id to use in the link
 * `params` (optional) - A Map of request parameters
 * `prev` (optional) - The text to display for the previous link (defaults to "Previous" as defined by `default.paginate.prev` property in the i18n `messages.properties` file)

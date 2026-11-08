@@ -21,6 +21,7 @@ plugins {
     id 'org.apache.grails.buildsrc.properties'
     id 'org.apache.grails.buildsrc.dependency-validator'
     id 'org.apache.grails.buildsrc.compile'
+    id 'org.apache.grails.buildsrc.vulnerability-scan'
 }
 
 version = projectVersion
@@ -55,12 +56,10 @@ dependencies {
         implementation 'org.apache.grails:grails-sitemesh3'
     }
 
-    console 'org.apache.grails:grails-console'
 
     runtimeOnly 'cloud.wondrify:asset-pipeline-grails'
     runtimeOnly 'com.h2database:h2'
     runtimeOnly 'org.apache.tomcat:tomcat-jdbc'
-    runtimeOnly 'org.fusesource.jansi:jansi'
 
     testImplementation 'org.apache.grails:grails-testing-support-datamapping'
     testImplementation 'org.apache.grails:grails-testing-support-web'

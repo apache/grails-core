@@ -1,0 +1,10 @@
+// A project whose pages are compiled by a stand-in for the page compiler, which the test puts in
+// the compiler directory, so that what the compile task starts the compiler with can be read back.
+plugins {
+    id 'groovy'
+    id 'org.apache.grails.gradle.grails-gsp'
+}
+
+dependencies {
+    implementation files('compiler')
+}

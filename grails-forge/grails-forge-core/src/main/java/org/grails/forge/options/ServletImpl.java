@@ -30,7 +30,7 @@ public enum ServletImpl {
 
     TOMCAT("spring-boot-starter-tomcat", "Tomcat"),
     JETTY("spring-boot-starter-jetty", "Jetty"),
-    UNDERTOW("spring-boot-starter-undertow", "Undertow"),
+    UNDERTOW("grails-undertow", "Undertow"),
     NONE("NONE", "None");
 
     public static final ServletImpl DEFAULT_OPTION = TOMCAT;

@@ -31,7 +31,6 @@ import spock.lang.Specification
 
 @Issue('https://github.com/grails/gorm-hibernate5/issues/78')
 @Rollback
-//TODO Multi valued paths are only allowed for the member of operator
 class HasManyWithInQuerySpec extends Specification {
 
     @Shared @AutoCleanup HibernateDatastore datastore = new HibernateDatastore(getClass().getPackage())

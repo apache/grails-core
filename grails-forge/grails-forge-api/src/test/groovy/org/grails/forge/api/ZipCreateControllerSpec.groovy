@@ -21,7 +21,10 @@ package org.grails.forge.api
 
 
 import io.micronaut.http.HttpHeaders
+import io.micronaut.http.HttpRequest
 import io.micronaut.http.HttpStatus
+import io.micronaut.http.client.HttpClient
+import io.micronaut.http.client.annotation.Client
 import io.micronaut.http.client.exceptions.HttpClientResponseException
 import io.micronaut.test.extensions.spock.annotation.MicronautTest
 import jakarta.inject.Inject
@@ -35,6 +38,10 @@ class ZipCreateControllerSpec extends Specification {
 
     @Inject
     CreateClient client
+
+    @Inject
+    @Client("/")
+    HttpClient httpClient
 
     @Inject
     MyEventListener eventListener
@@ -110,5 +117,29 @@ class ZipCreateControllerSpec extends Specification {
 
         then:
         ZipUtil.containsFileWithContents(bytes, "test/build.gradle", "spring-boot-devtools")
+    }
+
+    void "test create app with an invalid Grails Data implementation is rejected"() {
+        when:
+        httpClient.toBlocking()
+                .exchange(HttpRequest.GET('/create/web/test?gorm=invalid'), byte[].class)
+
+        then:
+        def e = thrown(HttpClientResponseException)
+        e.status == HttpStatus.BAD_REQUEST
+
+        when: 'a valid Grails Data implementation is accepted'
+        def response = httpClient.toBlocking()
+                .exchange(HttpRequest.GET('/create/web/test?gorm=hibernate7'), byte[].class)
+
+        then:
+        ZipUtil.isZip(response.body())
+
+        when: 'the legacy hibernate value is accepted'
+        response = httpClient.toBlocking()
+                .exchange(HttpRequest.GET('/create/web/test?gorm=hibernate'), byte[].class)
+
+        then:
+        ZipUtil.isZip(response.body())
     }
 }

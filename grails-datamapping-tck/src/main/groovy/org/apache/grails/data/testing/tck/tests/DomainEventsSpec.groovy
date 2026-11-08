@@ -66,7 +66,7 @@ class DomainEventsSpec extends GrailsDataTckSpec {
         try {
             p.save()
             manager.session.flush()
-        } catch (e) {
+        } catch (ignored) {
             // ignore hibernate related flush errors
         }
         manager.session.clear()

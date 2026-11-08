@@ -1,0 +1,60 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+[[core-s2-quickstart]]
+=== s2-quickstart
+
+.Purpose
+
+Creates a user and role class (and optionally a requestmap class) in the specified package.
+If you specify a role-group name with the groupClassName argument, role/group classes will also be generated.
+If you specify the uiOnly flag, no domain classes are created but the plugin settings are initialized (useful with LDAP, Mock, Shibboleth, etc.)
+
+The general format is:
+
+[source,bash]
+----
+./grailsw s2-quickstart DOMAIN_CLASS_PACKAGE USER_CLASS_NAME ROLE_CLASS_NAME [REQUESTMAP_CLASS_NAME] [--groupClassName=GROUP_CLASS_NAME]
+----
+
+.Examples
+
+[source,bash]
+----
+./grailsw s2-quickstart com.yourapp User Role
+----
+
+[source,bash]
+----
+./grailsw s2-quickstart com.yourapp User Role --groupClassName=RoleGroup
+----
+
+[source,bash]
+----
+./grailsw s2-quickstart com.yourapp Person Authority Requestmap
+----
+
+[source,bash]
+----
+./grailsw s2-quickstart --uiOnly
+----
+
+.Description
+
+* Updates `grails-app/conf/application.groovy` with security configuration settings and creates domain classes in `grails-app/domain` unless the uiOnly flag is specified

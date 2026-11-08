@@ -1,0 +1,86 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+[[acl-customPermissions]]
+=== Custom Permissions
+
+By default there are 5 permissions available from the `org.springframework.security.acls.domain. BasePermission` class: `READ`, `WRITE`, `CREATE`, `DELETE`, and `ADMINISTRATION`. You can also add your own permissions if these aren't sufficient.
+
+The easiest approach is to create a subclass of `BasePermission` and add your new permissions there. This way you retain the default permissions and can use them if you need. For example, here's a subclass that adds a new `APPROVE` permission:
+
+[source,java]
+----
+package com.mycompany.myapp;
+
+import org.springframework.security.acls.domain.BasePermission;
+import org.springframework.security.acls.model.Permission;
+
+public class MyPermission extends BasePermission {
+
+   public static final Permission APPROVE = new MyPermission(1 << 5, 'V');
+
+   protected MyPermission(int mask) {
+      super(mask);
+   }
+
+   protected MyPermission(int mask, char code) {
+      super(mask, code);
+   }
+}
+----
+
+It sets the mask value to 32 (1 << 5) since the values up to 16 are defined in the base class.
+
+To use your class instead of the default, specify it in with the `grails.plugin.springsecurity.acl.permissionClass` attribute either as a Class or a String, for example
+
+[source,groovy]
+----
+import com.mycompany.myapp.MyPermissions
+...
+grails.plugin.springsecurity.acl. permissionClass = MyPermissions
+----
+
+or
+
+[source,groovy]
+----
+grails.plugin.springsecurity.acl.permissionClass = 'com.mycompany.myapp.MyPermissions'
+----
+
+You can also override the `aclPermissionFactory` bean in `grails-app/conf/spring/resources.groovy`, keeping the `org.springframework.security.acls.domain. DefaultPermissionFactory` class but passing your class as the constructor argument to keep it from defaulting to `BasePermission`, or do a more complex override to more fully reconfigure the behavior:
+
+[source,groovy]
+----
+import org.springframework.security.acls.domain.DefaultPermissionFactory
+import com.mycompany.myapp.MyPermission
+
+beans = {
+   aclPermissionFactory(DefaultPermissionFactory, MyPermission)
+}
+----
+
+Once this is done you can use the permission like any other, specifying its quoted lowercase name in an expression, e.g.
+
+[source,groovy]
+----
+@PreAuthorize("hasPermission(#id, 'com.testacl.Report', 'approve')")
+Report get(@P("id") long id) {
+   Report.get id
+}
+----

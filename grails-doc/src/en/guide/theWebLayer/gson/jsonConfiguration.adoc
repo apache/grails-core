@@ -107,9 +107,66 @@ grails:
             generator:
                 escapeUnicode: true
 
-== Default Date Format
+== Date and Time Rendering
 
-The default format for `java.util.Date` can be configured.
+JSON views render date and time values the same way as Spring Boot's default Jackson `JsonMapper`:
+
+[cols="2,3", options="header"]
+|===
+| Type
+| Rendered as
+
+| `java.util.Date`, `java.sql.Date`, `java.sql.Timestamp`, `Calendar`, `XMLGregorianCalendar`
+| a UTC instant with millisecond precision, such as `"2025-10-08T07:48:46.407Z"`
+
+| `java.sql.Time`
+| its wall-clock time in the JVM default time zone, such as `"01:48:46"`
+
+| `Instant`
+| ISO-8601, such as `"2025-10-08T07:48:46.407254Z"`
+
+| `LocalDate`, `LocalTime`, `LocalDateTime`
+| ISO-8601 without a time zone, such as `"2025-10-08"`, `"01:48:46.407254"`, `"2025-10-08T01:48:46.407254"`
+
+| `OffsetDateTime`, `ZonedDateTime`, `OffsetTime`
+| ISO-8601 with the offset and without a zone ID, such as `"2025-10-08T01:48:46.407254-06:00"`, `"03:00:00-03:00"`
+
+| `YearMonth`, `MonthDay`, `Duration`, `Period`, `javax.xml.datatype.Duration`
+| ISO-8601, such as `"2026-09"`, `"--09-25"`, `"PT1H30M"`, `"P1Y2M3D"`, `"P1DT2H"`
+
+| `Year`
+| a number, such as `2026`
+
+| `ZoneId`, `ZoneOffset`, `TimeZone`
+| the ID, such as `"America/Sao_Paulo"` or `"-03:00"`
+|===
+
+A `Month` renders by its name, such as `"SEPTEMBER"`, as every enum does, where Spring Boot writes its number; a
+`JsonGenerator.Converter` for `Month` that returns `month.value` renders its number. An `OffsetTime` keeps its seconds and
+writes a fraction of a second with only the digits it needs, where Spring Boot writes `"03:00-03:00"`. A map keyed by `Date`, `Calendar` or `ZonedDateTime` values renders its keys the same way as
+those values; other map keys render with their `toString()`. Values rendered with `g.render` are written the same way.
+
+== Time Zone
+
+The time zone that the date format writes `java.util.Date` and `Calendar` values in can be configured. The value here
+will be passed to `TimeZone.getTimeZone(...)`. As with Spring Boot's `spring.jackson.time-zone`, the default date format
+writes the date and time in that zone followed by its offset, such as `"2025-10-08T03:48:46.407-04:00"` for
+`America/New_York` or `"2025-10-08T13:18:46.407+05:30"` for `Asia/Kolkata`, or followed by `Z` in a zone with no offset,
+such as the default `GMT`.
+
+[source,yaml]
+grails:
+    views:
+        json:
+            generator:
+                timeZone: "America/New_York"
+
+== Date Format
+
+The `java.text.SimpleDateFormat` pattern for `java.util.Date` and `Calendar` values (and map keys) can be configured.
+The pattern is applied in the configured time zone. The default, `yyyy-MM-dd'T'HH:mm:ss.SSSXXX`, writes dates as Spring
+Boot does, a UTC instant with millisecond precision in the default `GMT` time zone. As with Spring Boot's
+`spring.jackson.date-format`, the pattern does not apply to `java.sql.Time` values, which are written as `"01:48:46"`.
 
 [source,yaml]
 grails:
@@ -118,7 +175,7 @@ grails:
             generator:
                 dateFormat: "yyyy-MM-dd'T'HH:mm:ss'Z'"
 
-In addition, the default locale can also be specified.
+In addition, the locale of the pattern can also be specified.
 
 [source,yaml]
 grails:
@@ -126,14 +183,3 @@ grails:
         json:
             generator:
                 locale: "en/US"
-
-== Default Time Zone
-
-The default time zone can be configured. The value here will be passed to `TimeZone.getTimeZone(...)`
-
-[source,yaml]
-grails:
-    views:
-        json:
-            generator:
-                timeZone: "GMT"

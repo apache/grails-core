@@ -30,6 +30,8 @@ Multiple controllers may be defined in the same namespace.  Multiple
 controllers may be defined with the same name as long as they are defined in
 separate packages and are not defined in the same namespace.
 
+When URL generation targets a controller and no `namespace` is specified, Grails resolves the namespace from the target controller. If exactly one controller has that name, `controller` and `action` are enough to generate the correct namespaced or non-namespaced URL. Specify `namespace` only when more than one controller shares the same name, or when you need to choose a namespace explicitly.
+
 
 === Examples
 

@@ -122,7 +122,7 @@ public class JSONTokener {
     public String next(int n) throws JSONException {
         int i = this.myIndex;
         int j = i + n;
-        if (j >= this.mySource.length()) {
+        if (j > this.mySource.length()) {
             throw syntaxError("Substring bounds error");
         }
         this.myIndex += n;
@@ -470,7 +470,7 @@ public class JSONTokener {
             endIndex = 19;
             appendDots = true;
         }
-        StringBuffer output = new StringBuffer(" at character " + this.myIndex + " of " + this.mySource.substring(0, endIndex));
+        StringBuilder output = new StringBuilder(" at character " + this.myIndex + " of " + this.mySource.substring(0, endIndex));
         if (appendDots) {
             output.append("...");
         }

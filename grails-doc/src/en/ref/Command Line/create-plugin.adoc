@@ -64,14 +64,14 @@ grails create-plugin [OPTIONS] NAME
 
 - `NAME`: The desired name for the Grails plugin.
 
-Options include specifying features, configuring the GORM implementation, selecting a servlet implementation, choosing a test framework, setting the JDK version, and more. You can tailor your Grails plugin to your specific requirements using these options.
+Options include specifying features, configuring the Grails Data implementation, selecting a servlet implementation, choosing a test framework, setting the JDK version, and more. You can tailor your Grails plugin to your specific requirements using these options.
 
 === Options
 
 Here are the available options for the create-plugin command:
 
-- -f, --features=FEATURE[,FEATURE...]: Specifies the features to include in the plugin. Available options include h2, gorm-hibernate5, spring-boot-starter-jetty, micronaut-http-client, cache-ehcache, hibernate-validator, postgres, mysql, cache, database-migration, grails-gsp, hamcrest, gorm-mongodb, assertj, mockito, spring-boot-starter-undertow,  github-workflow-java-ci, jrebel, testcontainers, sqlserver, grails-console, views-markup, views-json, gorm-neo4j, asciidoctor, grails-web-console, logbackGroovy, mongo-sync, shade, properties.
-- -g, --gorm=GORM Implementation: Specifies the GORM Implementation to configure for the plugin. Possible values are hibernate, mongodb, neo4j.
+- -f, --features=FEATURE[,FEATURE...]: Specifies the features to include in the plugin. Available options include h2, gorm-hibernate5, gorm-hibernate7, spring-boot-starter-jetty, micronaut-http-client, cache-ehcache, hibernate-validator, postgres, mysql, cache, database-migration, grails-gsp, hamcrest, gorm-mongodb, assertj, mockito, grails-undertow,  github-workflow-java-ci, jrebel, testcontainers, sqlserver, grails-console, views-markup, views-json, gorm-neo4j, asciidoctor, grails-web-console, logbackGroovy, mongo-sync, shade, properties.
+- -d, --data=Grails Data Implementation (-g, --gorm are legacy aliases): Specifies the Grails Data implementation to configure for the plugin. Possible values are hibernate5, hibernate7, mongodb.
 - -h, --help: Displays the help message and exits.
 - -i, --inplace: Creates a service within the current directory.
 - --jdk=<javaVersion>: Specifies the JDK version the project should target.
@@ -106,10 +106,10 @@ This command will create a Grails plugin project named "minimal-plugin" with the
 +
 [source,shell]
 ----
-grails create-plugin mongodb-plugin --gorm=mongodb
+grails create-plugin mongodb-plugin --data=mongodb
 ----
 +
-This command will generate a Grails plugin project named "mongodb-plugin" configured to use MongoDB as the GORM implementation.
+This command will generate a Grails plugin project named "mongodb-plugin" configured to use MongoDB as the Grails Data implementation.
 
 3. Create a plugin with embedded H2 database and view support:
 
@@ -121,4 +121,4 @@ grails create-plugin h2-views-plugin --features h2,views-markup
 +
 This command will create a Grails plugin project named "h2-views-plugin" with the H2 database and views markup feature enabled, making it useful for projects that require an embedded database and view rendering capabilities.
 
-These additional examples showcase different use cases for the `create-plugin` command, such as creating minimal plugins, customizing GORM implementations, and enabling specific features to meet project requirements.
+These additional examples showcase different use cases for the `create-plugin` command, such as creating minimal plugins, customizing Grails Data implementations, and enabling specific features to meet project requirements.

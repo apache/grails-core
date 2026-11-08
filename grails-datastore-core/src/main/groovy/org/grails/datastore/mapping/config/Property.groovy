@@ -34,7 +34,6 @@ import org.springframework.validation.DataBinder
 /**
  * Base class for classes returned from {@link org.grails.datastore.mapping.model.PropertyMapping#getMappedForm()}
  *
- * @author Graeme Rocher
  * @since 1.0
  */
 @CompileStatic
@@ -49,6 +48,7 @@ class Property implements Cloneable {
      * @return Whether the property is nullable
      */
     boolean nullable = false
+    private boolean nullableConfigured = false
 
     /**
      * @return Whether this property is a database reference such as a foreign key
@@ -167,6 +167,15 @@ class Property implements Cloneable {
 
     Boolean isLazy() {
         return lazy == Boolean.TRUE
+    }
+
+    void setNullable(boolean nullable) {
+        this.nullable = nullable
+        this.nullableConfigured = true
+    }
+
+    boolean isNullableConfigured() {
+        return nullableConfigured
     }
 
     void setLazy(Boolean lazy) {

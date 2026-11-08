@@ -25,6 +25,7 @@ plugins {
     id 'org.apache.grails.buildsrc.compile'
     id 'org.apache.grails.buildsrc.publish'
     id 'org.apache.grails.buildsrc.sbom'
+    id 'org.apache.grails.buildsrc.vulnerability-scan'
     id 'org.apache.grails.gradle.grails-code-style'
     id 'org.apache.grails.gradle.grails-jacoco'
 }
@@ -55,8 +56,10 @@ dependencies {
     implementation 'org.slf4j:slf4j-api'
     implementation 'org.springframework:spring-beans'
 
+    compileOnly 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation
+
+    testImplementation 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation and tests
     testImplementation 'org.spockframework:spock-core'
-    testRuntimeOnly 'org.slf4j:slf4j-nop' // Get rid of warnings about missing slf4j implementation during test task
 }
 
 apply {

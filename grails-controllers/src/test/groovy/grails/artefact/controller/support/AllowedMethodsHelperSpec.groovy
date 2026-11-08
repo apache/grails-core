@@ -29,7 +29,7 @@ class AllowedMethodsHelperSpec extends Specification {
     
     void 'test isAllowed method'() {
         expect:
-        expectedValue == AllowedMethodsHelper.isAllowed(actionName, [getMethod: {requestMethod}] as HttpServletRequest, allowedMethods)
+        expectedValue == AllowedMethodsHelper.isAllowed(actionName, [getMethod: { requestMethod }, getAttribute: { null }] as HttpServletRequest, allowedMethods)
         
         where:
         expectedValue | actionName | requestMethod | allowedMethods

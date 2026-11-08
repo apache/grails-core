@@ -89,7 +89,8 @@ class EmbeddedCollectionDecoder implements PropertyDecoder<EmbeddedCollection> {
                             owningEntity
                     )
                 }
-                map[key] = decoded
+                // Map.put rather than a subscript: a key such as "properties" is a bean property on Groovy 5
+                map.put(key, decoded)
                 bsonType = reader.readBsonType()
             }
             reader.readEndDocument()

@@ -47,6 +47,41 @@ class HtmlRendererSpec extends Specification {
         HttpServletResponseExtension.@mimeTypes = null
     }
 
+    void "Test that HTML renderer sets the content type with the configured charset"() {
+        when: "a domain instance is rendered for a negotiated HTML request"
+            def renderer = new DefaultHtmlRenderer(Book)
+            final webRequest = new GrailsWebRequest(new MockHttpServletRequest(), new MockHttpServletResponse(), new MockServletContext())
+            webRequest.actionName = "test"
+            def renderContext = new ServletRenderContext(webRequest) {
+                @Override
+                MimeType getAcceptMimeType() {
+                    MimeType.HTML
+                }
+            }
+            renderer.render(new Book(title: "The Stand"), renderContext)
+
+        then: "the response content type carries the charset, so the page is not left to the container default"
+            webRequest.currentResponse.contentType == 'text/html;charset=UTF-8'
+    }
+
+    void "Test that HTML renderer honors a configured encoding"() {
+        when: "a renderer configured with a non-default encoding renders for a negotiated HTML request"
+            def renderer = new DefaultHtmlRenderer(Book)
+            renderer.encoding = 'ISO-8859-1'
+            final webRequest = new GrailsWebRequest(new MockHttpServletRequest(), new MockHttpServletResponse(), new MockServletContext())
+            webRequest.actionName = "test"
+            def renderContext = new ServletRenderContext(webRequest) {
+                @Override
+                MimeType getAcceptMimeType() {
+                    MimeType.HTML
+                }
+            }
+            renderer.render(new Book(title: "The Stand"), renderContext)
+
+        then: "the configured encoding reaches the response content type"
+            webRequest.currentResponse.contentType == 'text/html;charset=ISO-8859-1'
+    }
+
     void "Test that HTML renderer sets a model and view correctly for a domain instance"() {
         when:"A domain instance is rendered"
             def renderer = new DefaultHtmlRenderer(Book)

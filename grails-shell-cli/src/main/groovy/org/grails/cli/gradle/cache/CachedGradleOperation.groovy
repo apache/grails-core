@@ -94,8 +94,7 @@ abstract class CachedGradleOperation<T> implements Callable<T> {
             depsFile.withPrintWriter { PrintWriter writer ->
                 writeToCache(writer, data)
             }
-        } catch (Throwable e) {
-            // ignore
+        } catch (Throwable ignored) {
         }
     }
 }

@@ -23,7 +23,12 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
-@Retention(RetentionPolicy.SOURCE)
+/**
+ * Names the request parameter an action parameter is bound from, where it differs from the
+ * parameter's own name. It is retained at runtime so that tools describing the actions, such as
+ * an OpenAPI generator, describe the name a request sends.
+ */
+@Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.PARAMETER)
 public @interface RequestParameter {
     /**

@@ -76,7 +76,7 @@ class DiscriminatorPropertyBinderSpec extends HibernateGormDatastoreSpec {
         rootClass.getDiscriminator() != null
         rootClass.getDiscriminator() instanceof BasicValue
         rootClass.getDiscriminatorValue() == DiscriminatorPropertyBinderSpecEntity.name
-        rootClass.getDiscriminator().getColumns().iterator().next().getName() == GrailsDomainBinder.JPA_DEFAULT_DISCRIMINATOR_TYPE
+        rootClass.getDiscriminator().getColumns().iterator().next().getName() == "class"
     }
 
     def "test bindDiscriminatorProperty with discriminator config uses configured binder"() {
@@ -94,7 +94,7 @@ class DiscriminatorPropertyBinderSpec extends HibernateGormDatastoreSpec {
         rootClass.getDiscriminator() != null
         rootClass.getDiscriminator() instanceof BasicValue
         rootClass.getDiscriminatorValue() == "TEST"
-        rootClass.getDiscriminator().getColumns().iterator().next().getName() == GrailsDomainBinder.JPA_DEFAULT_DISCRIMINATOR_TYPE
+        rootClass.getDiscriminator().getColumns().iterator().next().getName() == "class"
     }
 
     def "test bindDiscriminatorProperty with custom discriminator column name"() {

@@ -28,6 +28,7 @@ import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.file.DuplicatesStrategy
 import org.gradle.api.plugins.JavaPluginExtension
+import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.bundling.AbstractArchiveTask
 import org.gradle.api.tasks.bundling.Jar
 import org.gradle.api.tasks.compile.GroovyCompile
@@ -35,10 +36,24 @@ import org.gradle.api.tasks.compile.JavaCompile
 import org.gradle.api.tasks.javadoc.Javadoc
 import org.gradle.external.javadoc.StandardJavadocDocletOptions
 
+import static org.apache.grails.buildsrc.GradleUtils.lookupProperty
 import static org.apache.grails.buildsrc.GradleUtils.lookupPropertyByType
 
 @CompileStatic
 class CompilePlugin implements Plugin<Project> {
+
+    static final String AUTO_CONFIGURATION_IMPORTS_PATH =
+            'src/main/resources/META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports'
+    private static final String AUTO_CONFIGURATION_IMPORTS_INPUT_REGISTERED =
+            'grailsAutoConfigurationImportsInputRegistered'
+
+    static final String GRAILS_FACTORIES_PATH = 'src/main/resources/META-INF/grails.factories'
+    static final List<String> CLI_FACTORIES_PATHS = [
+            'src/main/resources/META-INF/grails-cli.factories',
+            'src/cli/resources/META-INF/grails-cli.factories',
+    ].asImmutable()
+    private static final String GRAILS_FACTORIES_INPUT_REGISTERED = 'grailsFactoriesInputRegistered'
+    private static final String CLI_FACTORIES_INPUT_REGISTERED = 'grailsCliFactoriesInputRegistered'
 
     @Override
     void apply(Project project) {
@@ -107,14 +122,80 @@ class CompilePlugin implements Plugin<Project> {
                 it.groovyOptions.encoding = StandardCharsets.UTF_8.name()
                 // Preserve method parameter names in Groovy/Java classes for IDE parameter hints & bean reflection metadata.
                 it.groovyOptions.parameters = true
+                // groovyOptions only covers Groovy sources; joint-compiled Java sources take their javac flags from here
+                if (!it.options.compilerArgs.contains('-parameters')) {
+                    it.options.compilerArgs.add('-parameters')
+                }
+                // Grails 8 keeps invokedynamic off for published artifacts. Groovy 5's
+                // compiler default is indy=true, which is a large runtime regression for
+                // dynamic Groovy (see #15293). Unpublished build-logic uses Gradle's
+                // default. Grails 9 / Groovy 6 can flip this. CI can still opt in with
+                // -PgrailsIndy=true (same property as grails-extension-gradle-config.gradle).
+                it.groovyOptions.optimizationOptions.put('indy', lookupProperty(project, 'grailsIndy', false))
                 // encoding needs to be the same since it's different across platforms
                 it.options.encoding = StandardCharsets.UTF_8.name()
                 it.options.fork = true
-                it.options.forkOptions.jvmArgs = ['-Xms128M', '-Xmx2G']
+                // always set an isolated build to ensure grails.factories aren't accidentally merged since every project
+                // in this mono repo should be an isolated projected
+                it.options.forkOptions.jvmArgs = ['-Xms128M', '-Xmx2G', '-Dgrails.isolated.build=true']
+                // Publish THIS project's base.dir to the forked Groovy compiler. Gradle reuses a forked
+                // compiler daemon for a task whose requested fork arguments the daemon already satisfies,
+                // so a compile that does NOT request base.dir can be handed a daemon started for another
+                // module and inherit that module's base.dir — merging one module's checked-in
+                // grails.factories into another (a real, data-dependent leak in this mono repo). Requesting
+                // a unique base.dir on EVERY module's compile keeps daemons partitioned per project, so the
+                // value can never cross modules. Mirrors GrailsAppBaseDirProvider from the Grails Gradle
+                // plugins (which is not on build-logic's classpath).
+                it.options.forkOptions.jvmArgumentProviders.add(new BaseDirArgumentProvider(project.projectDir))
                 if (System.getenv('SUPPRESS_DEPRECATION_WARNINGS') == 'true') {
                     it.options.compilerArgs += ['-Xlint:-removal']
                 }
+                // Canonicalize annotation member order for reproducible builds. Annotations copied from
+                // precompiled classes (e.g. @DelegatesTo on trait methods woven into controllers and GORM
+                // entities) have their members ordered by Class.getDeclaredMethods(), which varies between
+                // JVM runs. The GrailsGradlePlugin merges this script with its own configuration script
+                // when both are present.
+                it.groovyOptions.configurationScript =
+                        GradleUtils.findRootGrailsCoreDir(project).file('gradle/groovy-compile-configscript.groovy').asFile
             }
+            project.tasks.named('compileGroovy', GroovyCompile).configure { GroovyCompile task ->
+                // Resource-only changes do not ordinarily invalidate compilation. These files change
+                // what the compiler generates: whether it owns the imports resource, and what it
+                // merges into the factories files, so adding, editing or deleting one must run the
+                // transforms even when no Groovy source changed.
+                registerAutoConfigurationImportsInput(project, task)
+                registerFactoriesInputs(project, task)
+            }
+        }
+    }
+
+    static void registerAutoConfigurationImportsInput(Project project, GroovyCompile task) {
+        if (task.extensions.extraProperties.has(AUTO_CONFIGURATION_IMPORTS_INPUT_REGISTERED)) {
+            return
+        }
+        task.extensions.extraProperties.set(AUTO_CONFIGURATION_IMPORTS_INPUT_REGISTERED, true)
+        task.inputs.files(project.layout.projectDirectory.file(AUTO_CONFIGURATION_IMPORTS_PATH))
+                .withPropertyName('grailsAutoConfigurationImports')
+                .withPathSensitivity(PathSensitivity.RELATIVE)
+    }
+
+    /**
+     * Mirrors {@code FactoriesCompileInput} from the Grails Gradle plugins, which is not on build-logic's
+     * classpath, and marks the task the same way, so a module that also applies those plugins registers
+     * each input once. A cli tier's compilation is covered by the plugin that creates it.
+     */
+    static void registerFactoriesInputs(Project project, GroovyCompile task) {
+        if (!task.extensions.extraProperties.has(GRAILS_FACTORIES_INPUT_REGISTERED)) {
+            task.extensions.extraProperties.set(GRAILS_FACTORIES_INPUT_REGISTERED, true)
+            task.inputs.files(project.layout.projectDirectory.file(GRAILS_FACTORIES_PATH))
+                    .withPropertyName('grailsFactories')
+                    .withPathSensitivity(PathSensitivity.RELATIVE)
+        }
+        if (!task.extensions.extraProperties.has(CLI_FACTORIES_INPUT_REGISTERED)) {
+            task.extensions.extraProperties.set(CLI_FACTORIES_INPUT_REGISTERED, true)
+            task.inputs.files(CLI_FACTORIES_PATHS.collect { String path -> project.layout.projectDirectory.file(path) })
+                    .withPropertyName('grailsCliFactories')
+                    .withPathSensitivity(PathSensitivity.RELATIVE)
         }
     }
 

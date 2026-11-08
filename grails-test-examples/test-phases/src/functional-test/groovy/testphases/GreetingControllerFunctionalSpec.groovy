@@ -18,6 +18,8 @@
  */
 package testphases
 
+import testphases.pages.GreetingPage
+
 import grails.plugin.geb.ContainerGebSpec
 import grails.testing.mixin.integration.Integration
 
@@ -26,10 +28,10 @@ class GreetingControllerFunctionalSpec extends ContainerGebSpec {
 
     void "test greeting controller renders response"() {
         when: 'navigating to the greeting controller'
-        go('/greeting/index')
+        to GreetingPage
 
-        then: 'the page contains the greeting message'
-        pageSource.contains('Hello')
+        then: 'the page renders the greeting message'
+        greeting.contains('Hello')
     }
 
 }

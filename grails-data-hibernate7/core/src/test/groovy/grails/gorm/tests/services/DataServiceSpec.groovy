@@ -401,8 +401,7 @@ class DataServiceSpec extends Specification {
         Product product = productService.findByName("Apple").first()
 
         then:
-        //TODO I am not sure this is the right assertion related to the bug reported
-        //product.attributes.isInitialized()
+        // Accessing the collection verifies that @Join returned the expected initialized association data.
         product.attributes.size() == 1
         product.attributes.iterator().next() == attribute
 

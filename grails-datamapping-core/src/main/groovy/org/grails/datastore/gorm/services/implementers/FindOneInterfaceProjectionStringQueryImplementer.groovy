@@ -38,6 +38,11 @@ import grails.gorm.services.Query
 class FindOneInterfaceProjectionStringQueryImplementer extends FindOneStringQueryImplementer implements SingleResultInterfaceProjectionBuilder, AnnotatedServiceImplementer<Query> {
 
     @Override
+    int getOrder() {
+        return super.getOrder() - 1
+    }
+
+    @Override
     protected ClassNode resolveDomainClassFromSignature(ClassNode currentDomainClassNode, MethodNode methodNode) {
         return currentDomainClassNode
     }
