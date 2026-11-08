@@ -717,6 +717,32 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate7TckManag
         results*.name == ["Bob's pet", "Ann's pet"]
     }
 
+    void 'a sort by an alias that the query does not define is rejected, whichever way the query is made'() {
+        when:
+        query.call()
+
+        then:
+        IllegalArgumentException e = thrown()
+        e.message == 'Invalid sort property'
+
+        where:
+        description                                   | query
+        'a where query with a criterion on the club'  | { Team.where { club.name ==~ '%e%' }.list(sort: 'c1.name') }
+        'a where query that defines another alias'    | { Team.where { def c1 = club; c1.name ==~ '%e%' }.list(sort: 'c2.name') }
+        'a list without any criterion'                | { Team.list(sort: 'c1.name') }
+        'a dynamic finder'                            | { Team.findAllByNameLike('%', [sort: 'c1.name']) }
+        'a list that does not ignore case'            | { Team.list(sort: 'c1.name', ignoreCase: false) }
+        'an order added to a detached criteria'       | { new DetachedCriteria(Team).build { order('c1.name') }.list() }
+    }
+
+    void 'a sort by an alias that the query defines still sorts'() {
+        when:
+        final results = Team.where { def c1 = club; c1.name ==~ '%e%' }.list(sort: 'c1.name')
+
+        then:
+        results*.name == ['Arsenal First Team', 'Chelsea First Team', 'Manchester United First Team']
+    }
+
     void 'blocks of one association without an alias share one join'() {
         when:
         final results = AssociationSortPet.withCriteria {
