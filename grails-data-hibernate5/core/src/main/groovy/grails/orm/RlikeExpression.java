@@ -58,7 +58,11 @@ public class RlikeExpression implements Criterion {
             throw new HibernateException("rlike may only be used with single-column properties");
         }
 
-        return SupportedDatabase.forDialect(dialect).regexPattern().replace("?1", columns[0]).replace("?2", "?");
+        // the value marker is replaced first: a column or a formula that contains the text ?2 would otherwise be rewritten
+        // as well, and the query would name a column that does not exist
+        String pattern = SupportedDatabase.forDialect(dialect).regexPattern();
+        int column = pattern.indexOf("?1");
+        return pattern.substring(0, column).replace("?2", "?") + columns[0] + pattern.substring(column + 2).replace("?2", "?");
     }
 
     public TypedValue[] getTypedValues(Criteria criteria, CriteriaQuery criteriaQuery) throws HibernateException {

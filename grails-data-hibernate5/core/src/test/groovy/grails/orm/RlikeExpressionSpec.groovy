@@ -65,13 +65,25 @@ class RlikeExpressionSpec extends Specification {
         dialect << [new DB2390Dialect(), new DB2390V8Dialect(), new SQLServer2012Dialect()]
     }
 
-    private CriteriaQuery criteriaQuery(Dialect dialect) {
+    @Unroll
+    void 'on #dialect.class.simpleName a column that contains ?2 or ?1 is kept as it is'() {
+        expect:
+        new RlikeExpression('name', 'a.*').toSqlString(Stub(Criteria), criteriaQuery(dialect, column)) == sql
+
+        where:
+        dialect              | column                      | sql
+        new H2Dialect()      | "coalesce(a, '?2')"         | "coalesce(a, '?2') REGEXP ?"
+        new H2Dialect()      | "coalesce(a, '?1')"         | "coalesce(a, '?1') REGEXP ?"
+        new Oracle12cDialect()| "nvl(a, '?2')"             | " REGEXP_LIKE (nvl(a, '?2'), ?)"
+    }
+
+    private CriteriaQuery criteriaQuery(Dialect dialect, String column = 'name_col') {
         SessionFactoryImplementor factory = Stub {
             getDialect() >> dialect
         }
         Stub(CriteriaQuery) {
             getFactory() >> factory
-            getColumnsUsingProjection(_ as Criteria, 'name') >> (['name_col'] as String[])
+            getColumnsUsingProjection(_ as Criteria, 'name') >> ([column] as String[])
         }
     }
 }
