@@ -29,6 +29,7 @@ import org.apache.grails.data.testing.tck.domains.Pet
 import org.grails.datastore.mapping.query.Query
 import org.grails.orm.hibernate.HibernateDatastore
 import org.grails.orm.hibernate.HibernateSession
+import org.grails.orm.hibernate.query.HibernateAlias
 import org.grails.orm.hibernate.query.HibernateQuery
 import jakarta.persistence.criteria.JoinType
 import java.io.Serializable
@@ -1129,6 +1130,25 @@ class HibernateQuerySpec extends HibernateGormDatastoreSpec {
         cloned.max == hibernateQuery.max
         cloned.offset == hibernateQuery.offset
         cloned.hibernateCriteria != null
+    }
+
+    def "a cloned query keeps the aliases of its criteria, apart from the original"() {
+        given:
+        def alias = new HibernateAlias('pets', 'p', JoinType.LEFT)
+        hibernateQuery.detachedCriteria.criteria.add(alias)
+
+        when:
+        HibernateQuery cloned = (HibernateQuery) hibernateQuery.clone()
+
+        then: 'the aliases are entries of the criteria, which the clone copies'
+        cloned.detachedCriteria.criteria.contains(alias)
+
+        when:
+        cloned.detachedCriteria.criteria.add(new HibernateAlias('pets', 'other'))
+
+        then:
+        hibernateQuery.detachedCriteria.criteria.count { it instanceof HibernateAlias } == 1
+        cloned.detachedCriteria.criteria.count { it instanceof HibernateAlias } == 2
     }
 
     def "cloneQuery with order then clearOrders produces no ORDER BY in count"() {
