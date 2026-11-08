@@ -189,7 +189,9 @@ public class GrailsHibernateQueryUtils {
                     fetchWithJoinType(entity, query, queryRoot, criteriaBuilder, associationName, (JoinType) fetchValue);
                 }
                 else if (getFetchMode(fetchValue) == FetchMode.JOIN) {
-                    queryRoot.join(associationName);
+                    // the fetch mode join fetches the association and never leaves out an instance whose association
+                    // is null or empty, as it does for a where query and a dynamic finder; only a join type asks for that
+                    fetchWithJoinType(entity, query, queryRoot, criteriaBuilder, associationName, JoinType.LEFT);
                 }
             }
         }

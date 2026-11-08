@@ -142,4 +142,31 @@ class FetchJoinTypeSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManager
         teams = row.teams
         loaded = row.loaded
     }
+
+    void '#api with the fetch mode join on a collection that can be empty returns every team with its players'() {
+        when:
+        final List<Team> results = QUERIES[api].call([players: 'join'])
+
+        then:
+        results*.name.unique().sort() == ALL_TEAMS
+        results.every { Team team -> Hibernate.isInitialized(team.players) && team.players*.name.sort() == PLAYERS[team.name] }
+
+        where:
+        api << ['a where query with the fetch argument', 'a dynamic finder', 'list', 'a paged list']
+    }
+
+    void '#api with the fetch mode join on an association that can be null returns every team'() {
+        when:
+        final List<Team> results = QUERIES[api].call(fetch)
+
+        then: 'a fetch mode, unlike a join type, never leaves out an instance whose association is null'
+        results*.name.unique().sort() == ALL_TEAMS
+
+        and: 'the association is fetched'
+        results.every { Team team -> team.club == null || Hibernate.isInitialized(team.club) }
+
+        where:
+        [api, fetch] << [['a where query with the fetch argument', 'a dynamic finder', 'a criteria query with the fetch argument',
+                          'findAll by example', 'list', 'a paged list'], [[club: 'join']]].combinations()
+    }
 }
