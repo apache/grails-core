@@ -85,7 +85,7 @@ public class JpaCriteriaQueryCreator<T> {
         this.detachedCriteria = detachedCriteria;
         this.conversionService = conversionService;
         this.hibernateQuery = hibernateQuery;
-        this.aliasRegistrar = new QueryAliasRegistrar(detachedCriteria, hibernateQuery);
+        this.aliasRegistrar = new QueryAliasRegistrar(detachedCriteria);
     }
 
     public void setParentContext(JpaQueryContext parentContext) {

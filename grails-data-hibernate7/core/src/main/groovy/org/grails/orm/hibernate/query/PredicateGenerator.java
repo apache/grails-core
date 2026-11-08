@@ -308,7 +308,7 @@ public class PredicateGenerator {
         From<?, ?> associationRoot = fromsByProvider.resolveAssociation(associationName);
 
         // Create a nested context for this association
-        JpaQueryContext nestedContext = new QueryAliasRegistrar(associationCriteria, null)
+        JpaQueryContext nestedContext = new QueryAliasRegistrar(associationCriteria)
                 .createContext(fromsByProvider, associationRoot, associationName);
         // an order of this block is resolved against the joins that the block made
         fromsByProvider.registerAssociationContext(associationCriteria, nestedContext);

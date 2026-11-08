@@ -47,16 +47,13 @@ import org.grails.datastore.mapping.query.Query;
 final class QueryAliasRegistrar {
 
     private final DetachedCriteria<?> detachedCriteria;
-    private final HibernateQuery hibernateQuery;
     private final PersistentEntity persistentEntity;
 
     /**
      * @param detachedCriteria the criteria whose aliases and join types are registered
-     * @param hibernateQuery the query that holds aliases created through {@code createAlias}, or {@code null}
      */
-    QueryAliasRegistrar(DetachedCriteria<?> detachedCriteria, HibernateQuery hibernateQuery) {
+    QueryAliasRegistrar(DetachedCriteria<?> detachedCriteria) {
         this.detachedCriteria = detachedCriteria;
-        this.hibernateQuery = hibernateQuery;
         this.persistentEntity = detachedCriteria instanceof DetachedAssociationCriteria<?> associationCriteria ?
                 associationCriteria.getAssociation().getAssociatedEntity() :
                 detachedCriteria.getPersistentEntity();
@@ -101,13 +98,10 @@ final class QueryAliasRegistrar {
     }
 
     /**
-     * @return the aliases created explicitly: those held by the query, then those among the criteria
+     * @return the aliases created explicitly, which are among the criteria
      */
     List<HibernateAlias> explicitAliases() {
         List<HibernateAlias> aliases = new ArrayList<>();
-        if (hibernateQuery != null) {
-            aliases.addAll(hibernateQuery.getAliases());
-        }
         for (Query.Criterion criterion : detachedCriteria.getCriteria()) {
             if (criterion instanceof HibernateAlias alias) {
                 aliases.add(alias);
