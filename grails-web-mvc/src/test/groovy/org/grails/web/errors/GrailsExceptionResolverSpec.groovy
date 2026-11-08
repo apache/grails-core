@@ -37,6 +37,7 @@ import org.grails.web.mapping.DefaultUrlMappingEvaluator
 import org.grails.web.mapping.DefaultUrlMappingsHolder
 import org.grails.web.mapping.mvc.GrailsControllerUrlMappings
 import org.grails.web.servlet.mvc.GrailsWebRequest
+import org.grails.web.servlet.mvc.exceptions.ControllerExecutionException
 import org.grails.web.servlet.view.CompositeViewResolver
 import org.grails.web.util.WebUtils as GrailsWebUtils
 import org.springframework.beans.factory.BeanNotOfRequiredTypeException
@@ -744,6 +745,68 @@ class GrailsExceptionResolverSpec extends Specification {
 
         then: 'the guard only suppresses re-entry, so both are forwarded'
         forwards.size() == 2
+    }
+
+    void "an exception mapping is matched against the exception an action threw when it is #how"() {
+        given:
+        def resolver = resolverFor({
+            '500'(controller: 'errors', action: 'ioFailure', exception: IOException)
+            '500'(controller: 'errors', action: 'anyFailure')
+        }, true)
+        def request = new MockHttpServletRequest(servletContext, 'GET', '/fail')
+        def response = new MockHttpServletResponse()
+        bind(GRAILS, request, response)
+        def thrown = new IOException('thrown by the action', new IllegalStateException('its own cause'))
+
+        when:
+        resolver.resolveException(request, response, null, wrap.call(thrown))
+
+        then:
+        response.forwardedUrl == '/errors/ioFailure'
+
+        where:
+        how                      | wrap
+        'not wrapped'            | { Throwable it -> it }
+        'wrapped by Groovy'      | { Throwable it -> new InvokerInvocationException(it) }
+        'wrapped by Grails'      | { Throwable it -> new ControllerExecutionException('failed', it) }
+        'wrapped by both'        | { Throwable it -> new ControllerExecutionException('failed', new InvokerInvocationException(it)) }
+    }
+
+    void "an exception mapping still matches the root cause of #what"() {
+        given:
+        def resolver = resolverFor({
+            '500'(controller: 'errors', action: 'ioFailure', exception: IOException)
+            '500'(controller: 'errors', action: 'anyFailure')
+        }, true)
+        def request = new MockHttpServletRequest(servletContext, 'GET', '/fail')
+        def response = new MockHttpServletResponse()
+        bind(GRAILS, request, response)
+
+        when:
+        resolver.resolveException(request, response, null, thrown)
+
+        then:
+        response.forwardedUrl == '/errors/ioFailure'
+
+        where:
+        what                                 | thrown
+        'an exception an action threw'       | new IllegalStateException('thrown by the action', new IOException('the root cause'))
+        'an exception wrapped by Groovy'     | new InvokerInvocationException(new IllegalStateException('thrown by the action', new IOException('the root cause')))
+    }
+
+    void "an Error that a wrapper holds leaves the wrapper as the exception resolved"() {
+        given:
+        def resolver = resolverFor({ '500'(controller: 'errors', action: 'anyFailure') }, true)
+        def request = new MockHttpServletRequest(servletContext, 'GET', '/fail')
+        def response = new MockHttpServletResponse()
+        bind(GRAILS, request, response)
+
+        when:
+        resolver.resolveException(request, response, null, new InvokerInvocationException(new StackOverflowError('too deep')))
+
+        then:
+        response.forwardedUrl == '/errors/anyFailure'
+        response.status == 500
     }
 
     @Issue('https://github.com/apache/grails-core/issues/16129')
