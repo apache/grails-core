@@ -191,7 +191,12 @@ public class CriteriaMethodInvoker {
                     return name;
                 case PROJECTIONS:
                     if (args.length == 1 && (args[0] instanceof Closure)) {
-                        invokeClosureNode(callable);
+                        builder.setInProjections(true);
+                        try {
+                            invokeClosureNode(callable);
+                        } finally {
+                            builder.setInProjections(false);
+                        }
                         return name;
                     }
                     break;
@@ -244,9 +249,17 @@ public class CriteriaMethodInvoker {
                         DetachedAssociationCriteria<?> associationCriteria =
                                 new DetachedAssociationCriteria<>(associationClass, association);
                         hibernateQuery.setDetachedCriteria(associationCriteria);
+                        // inside projections { } a block names the association that the projections in it are of
+                        boolean projecting = builder.isInProjections();
+                        if (projecting) {
+                            builder.pushProjectionPath(name);
+                        }
                         try {
                             invokeClosureNode(callable);
                         } finally {
+                            if (projecting) {
+                                builder.popProjectionPath();
+                            }
                             hibernateQuery.setDetachedCriteria(oldDetachedCriteria);
                         }
                         // the orders of the block become orders of the enclosing criteria, in the place they
