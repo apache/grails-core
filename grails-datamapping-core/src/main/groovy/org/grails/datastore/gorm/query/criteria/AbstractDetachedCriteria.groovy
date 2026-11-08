@@ -115,6 +115,7 @@ abstract class AbstractDetachedCriteria<T> implements Criteria, Cloneable {
      */
     Criteria createAlias(String associationPath, String alias) {
         initialiseIfNecessary(targetClass)
+        associationPath = pathFromDeclaredAlias(associationPath)
         PersistentProperty prop
         if (associationPath.contains('.')) {
             def tokens = associationPath.split(/\./)
@@ -156,6 +157,25 @@ abstract class AbstractDetachedCriteria<T> implements Criteria, Cloneable {
             associationCriteria.setAlias(alias)
         }
         return associationCriteria
+    }
+
+    /**
+     * A path that starts with an alias this criteria declared earlier continues the path of that alias, so after
+     * {@code createAlias('children', 'c')} the path {@code c.related} is {@code children.related}. A first segment
+     * that is both an alias and a property of the entity names the alias.
+     */
+    private String pathFromDeclaredAlias(String associationPath) {
+        int dot = associationPath.indexOf('.')
+        if (dot < 0) {
+            return associationPath
+        }
+        String head = associationPath.substring(0, dot)
+        for (Query.Criterion criterion in criteria) {
+            if (criterion instanceof DetachedAssociationCriteria && ((DetachedAssociationCriteria) criterion).alias == head) {
+                return ((DetachedAssociationCriteria) criterion).associationPath + associationPath.substring(dot)
+            }
+        }
+        associationPath
     }
 
     /**
