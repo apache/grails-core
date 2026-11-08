@@ -1530,8 +1530,9 @@ public class GrailsDomainBinder implements MetadataContributor {
         bindClass(entity, root, mappings);
 
         Mapping m = getMapping(entity);
-        if (m != null && entity.isAbstract() && m.getTablePerHierarchy() && hasTablePerSubclassChild(children)) {
-            // an abstract base class that says nothing about its strategy follows a subclass that sets
+        if (m != null && entity.isAbstract() && m.getTablePerHierarchy() && !m.isTablePerHierarchyDeclared() &&
+                hasTablePerSubclassChild(children)) {
+            // an abstract base class that does not declare its strategy follows a subclass that sets
             // tablePerHierarchy false: the hierarchy is joined on this datasource, as the subclass would be unable to be
             // joined to a base class that keeps a discriminator column
             inferredJoinedRoots.add(entity.getJavaClass());
