@@ -29,7 +29,7 @@ import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 class DetachedCriteriaAliasSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManager> {
 
     def setupSpec() {
-        manager.domainClasses.addAll([AliasedTeam, AliasedItem])
+        manager.domainClasses.addAll([AliasedTeam, AliasedItem, ChainParent, ChainChild, ChainRelated])
     }
 
     private void seed() {
@@ -52,6 +52,34 @@ class DetachedCriteriaAliasSpec extends GrailsDataTckSpec<GrailsDataHibernate5Tc
             createAlias('items', 'a')
             eq('a.label', 'first')
         }.list(sort: 'name')*.name == ['both', 'first only']
+    }
+
+    def 'an alias whose path starts with an alias declared earlier joins from that alias'() {
+        given:
+        new ChainParent(name: 'with related').addToChildren(new ChainChild(name: 'c1', related: new ChainRelated(name: 'x').save())).save()
+        new ChainParent(name: 'without name').addToChildren(new ChainChild(name: 'c2', related: new ChainRelated().save())).save(flush: true)
+        manager.session.clear()
+
+        expect: 'the path c.related is the related of the children that c names, as createAlias(children.related) is'
+        new DetachedCriteria(ChainParent).build {
+            createAlias('children', 'c')
+            createAlias('c.related', 'r')
+            isNotNull('r.name')
+        }.list()*.name == ['with related']
+    }
+
+    def 'an alias whose path starts with an alias that has the name of its association still joins from it'() {
+        given:
+        new ChainParent(name: 'with related').addToChildren(new ChainChild(name: 'c1', related: new ChainRelated(name: 'x').save())).save()
+        new ChainParent(name: 'without name').addToChildren(new ChainChild(name: 'c2', related: new ChainRelated().save())).save(flush: true)
+        manager.session.clear()
+
+        expect:
+        new DetachedCriteria(ChainParent).build {
+            createAlias('children', 'children')
+            createAlias('children.related', 'r')
+            isNotNull('r.name')
+        }.list()*.name == ['with related']
     }
 
     def 'the second of two aliases of one association path replaces the first on Hibernate 5'() {
@@ -92,4 +120,26 @@ class AliasedTeam {
 @Entity
 class AliasedItem {
     String label
+}
+
+@Entity
+class ChainRelated {
+    String name
+
+    static constraints = {
+        name nullable: true
+    }
+}
+
+@Entity
+class ChainChild {
+    String name
+    ChainRelated related
+}
+
+@Entity
+class ChainParent {
+    String name
+
+    static hasMany = [children: ChainChild]
 }
