@@ -316,10 +316,7 @@ public class JpaCriteriaQueryCreator<T> {
                 expression = context.getSortExpression(propertyName, endsWithForeignKey(entity, propertyName));
             }
             if (expression == null) {
-                if (blockOrder != null) {
-                    // an order of an association block that names nothing has no effect, as before
-                    continue;
-                }
+                // an order that names nothing, in a block as anywhere else, is a mistake that ignoring would hide
                 throw new IllegalArgumentException("Invalid " + HibernateQueryArgument.SORT.value() + " property");
             }
             if (distinctEntities && !context.isColumnOfRoot(expression)) {

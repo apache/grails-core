@@ -982,16 +982,17 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate7TckManag
         results.totalCount == 2
     }
 
-    void 'an order in an association block that names neither a property nor an alias has no effect'() {
+    void 'an order in an association block that names neither a property nor an alias is rejected'() {
         when:
-        final results = Player.withCriteria {
+        Player.withCriteria {
             team {
                 order('unknown.name')
             }
         }
 
-        then: 'it is left out of the query, as every order of a block was before'
-        results.size() == 4
+        then: 'it is a mistake, as it is outside a block, and ignoring it would hide it'
+        IllegalArgumentException e = thrown()
+        e.message == 'Invalid sort property'
     }
 
     void 'a criteria query that selects a distinct association property is ordered by that property'() {
