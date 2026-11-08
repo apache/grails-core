@@ -94,6 +94,15 @@ class Mapping extends Entity<PropertyConfig> {
     }
 
     /**
+     * The fluent form of {@link #setTablePerHierarchy}; it records the declaration as the setter does, which the
+     * generated builder method would not
+     */
+    Mapping tablePerHierarchy(boolean tablePerHierarchy) {
+        setTablePerHierarchy(tablePerHierarchy)
+        return this
+    }
+
+    /**
      * Sets whether to use table-per-concrete-class or table-per-subclass mapping
      */
     boolean tablePerConcreteClass = false

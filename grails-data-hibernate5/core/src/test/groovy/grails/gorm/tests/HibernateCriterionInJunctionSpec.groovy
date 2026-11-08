@@ -87,6 +87,13 @@ class HibernateCriterionInJunctionSpec extends HibernateGormDatastoreSpec {
         }*.authorName == ['author1', 'author3']
     }
 
+    void "the result of add at the top level is the Criteria, so list works on it"() {
+        expect:
+        JunctionAuthor.createCriteria().add(Restrictions.like('authorName', 'author%'))
+                .add(Restrictions.ne('authorName', 'author3')).addOrder(org.hibernate.criterion.Order.asc('authorName'))
+                .list()*.authorName == ['author1', 'author2']
+    }
+
     void "a Hibernate criterion added at the top level still applies"() {
         expect:
         JunctionAuthor.createCriteria().list {
