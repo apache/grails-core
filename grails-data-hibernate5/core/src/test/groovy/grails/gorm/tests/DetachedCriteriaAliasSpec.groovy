@@ -22,6 +22,7 @@ import spock.lang.Issue
 
 import grails.gorm.DetachedCriteria
 import grails.gorm.annotation.Entity
+import org.grails.datastore.gorm.query.criteria.DetachedAssociationCriteria
 import org.apache.grails.data.hibernate5.core.GrailsDataHibernate5TckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 
@@ -40,6 +41,52 @@ class DetachedCriteriaAliasSpec extends GrailsDataTckSpec<GrailsDataHibernate5Tc
         new AliasedTeam(name: 'second only').addToItems(second).save()
         new AliasedTeam(name: 'none').save(flush: true)
         manager.session.clear()
+    }
+
+    private static DetachedAssociationCriteria aliased(DetachedCriteria criteria, String alias) {
+        criteria.criteria.find { it instanceof DetachedAssociationCriteria && it.alias == alias } as DetachedAssociationCriteria
+    }
+
+    def 'a path that starts with a later alias of an association says which alias it started from'() {
+        given:
+        DetachedCriteria criteria = new KeepsEveryAliasCriteria(ChainParent)
+
+        when:
+        criteria.createAlias('children', 'c1')
+        criteria.createAlias('children', 'c2')
+        criteria.createAlias('c2.related', 'r')
+
+        then: 'the association path is the one of the association, and the alias it started from is kept'
+        aliased(criteria, 'r').associationPath == 'children.related'
+        aliased(criteria, 'r').pathFromAlias == 'c2.related'
+    }
+
+    def 'a path that starts with the first alias of an association is the path of that association'() {
+        given:
+        DetachedCriteria criteria = new KeepsEveryAliasCriteria(ChainParent)
+
+        when:
+        criteria.createAlias('children', 'c1')
+        criteria.createAlias('children', 'c2')
+        criteria.createAlias('c1.related', 'r')
+
+        then:
+        aliased(criteria, 'r').associationPath == 'children.related'
+        aliased(criteria, 'r').pathFromAlias == null
+    }
+
+    def 'a datastore that keeps one alias per path has no later alias to start from'() {
+        given:
+        DetachedCriteria criteria = new DetachedCriteria(ChainParent)
+
+        when:
+        criteria.createAlias('children', 'c1')
+        criteria.createAlias('children', 'c2')
+        criteria.createAlias('c2.related', 'r')
+
+        then: 'the second alias replaced the first, so the path is the path of the one alias there is'
+        aliased(criteria, 'r').associationPath == 'children.related'
+        aliased(criteria, 'r').pathFromAlias == null
     }
 
     def 'declaring the same alias again for its path is still one alias'() {
@@ -107,6 +154,18 @@ class DetachedCriteriaAliasSpec extends GrailsDataTckSpec<GrailsDataHibernate5Tc
 
         then:
         thrown(org.hibernate.QueryException)
+    }
+}
+
+class KeepsEveryAliasCriteria extends DetachedCriteria {
+
+    KeepsEveryAliasCriteria(Class targetClass) {
+        super(targetClass)
+    }
+
+    @Override
+    protected boolean keepsEveryAlias() {
+        true
     }
 }
 
