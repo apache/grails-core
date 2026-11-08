@@ -299,9 +299,9 @@ public class JpaCriteriaQueryCreator<T> {
             if (sqlProjection != null) {
                 expression = context.getSelectionAlias(sqlProjection.getColumnAlias());
             } else if (blockOrder != null && orderedBySelection && !selected) {
-                // the order of an association block had no effect while it stayed in its block, and the
-                // database would reject it here, so it is left out as before
-                continue;
+                // the database would reject this order, and leaving it out would hide that the query is not sorted
+                throw new IllegalArgumentException("Cannot sort by [" + propertyName +
+                        "]: a distinct or grouped query can only be ordered by what it selects");
             } else if (selected && (orderedBySelection || blockOrder == null)) {
                 // a distinct or grouped query can only be ordered by what it selects, so the order
                 // sorts by the expression of the projection and not through a join of its own

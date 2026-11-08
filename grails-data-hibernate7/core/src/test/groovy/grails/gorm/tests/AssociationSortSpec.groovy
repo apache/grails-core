@@ -924,30 +924,18 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate7TckManag
         results == [9, 1]
     }
 
-    void 'an order in an association block is left out of a query that can only be ordered by what it selects'() {
-        when: 'the database would reject an order by the name of the club in each of these queries'
-        final distinctNames = Team.withCriteria {
-            projections {
-                distinct('name')
-            }
-            club {
-                like('name', '%')
-                order('name', 'desc')
-            }
-        }
-        final lastName = Team.withCriteria {
-            projections {
-                max('name')
-            }
-            club {
-                like('name', '%')
-                order('name', 'desc')
-            }
-        }
+    void 'an order in an association block of a query that can only be ordered by what it selects is rejected, as the database would reject it'() {
+        when:
+        query.call()
 
-        then: 'they run as they did when no order of a block reached the query'
-        distinctNames.sort() == ['Arsenal First Team', 'Chelsea First Team', 'Manchester United First Team']
-        lastName == ['Manchester United First Team']
+        then:
+        IllegalArgumentException e = thrown()
+        e.message.contains('can only be ordered by what it selects')
+
+        where:
+        description              | query
+        'a distinct projection'  | { Team.withCriteria { projections { distinct('name') }; club { like('name', '%'); order('name', 'desc') } } }
+        'an aggregate projection' | { Team.withCriteria { projections { max('name') }; club { like('name', '%'); order('name', 'desc') } } }
     }
 
     void 'an order in an association block sorts a distinct query that selects the property of the order'() {
