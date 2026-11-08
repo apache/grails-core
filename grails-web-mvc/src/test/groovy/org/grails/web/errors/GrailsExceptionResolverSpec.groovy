@@ -46,6 +46,7 @@ import org.springframework.context.support.StaticApplicationContext
 import org.springframework.http.server.observation.ServerRequestObservationContext
 import org.springframework.mock.web.MockHttpServletRequest
 import org.springframework.mock.web.MockHttpServletResponse
+import org.springframework.mock.web.MockRequestDispatcher
 import org.springframework.mock.web.MockServletContext
 import org.springframework.web.context.request.RequestContextHolder
 import org.springframework.web.context.request.ServletRequestAttributes
@@ -63,6 +64,9 @@ import spock.lang.Specification
 import jakarta.servlet.DispatcherType
 import jakarta.servlet.FilterChain
 import jakarta.servlet.RequestDispatcher
+import jakarta.servlet.ServletContext
+import jakarta.servlet.ServletRequest
+import jakarta.servlet.ServletResponse
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
 
@@ -180,6 +184,36 @@ class GrailsExceptionResolverSpec extends Specification {
         where                       | resolvedOn
         'in the action dispatched'  | DispatcherType.ASYNC
         'in an action forwarded to' | DispatcherType.FORWARD
+    }
+
+    void 'the handlers hear once of an exception an error handler answers on #dispatch, when the request still reads as a forward afterwards'() {
+        given: 'a container that leaves a forwarded request reading as a forward, as Undertow does, so the filter reads the exception left on it'
+        List<Throwable> notified = []
+        def registry = registryReporting({ }, { notified << it })
+        def resolver = resolverFor({ '500'(controller: 'errors', action: 'serverError') }, true)
+        def request = new ForwardLeftOnRequest(servletContext, 'GET', '/fail')
+        request.dispatcherType = dispatch
+        if (dispatch == DispatcherType.ASYNC) {
+            request.setAttribute(GrailsWebUtils.ASYNC_REQUEST_URI_ATTRIBUTE, '/fail')
+        }
+        def response = new MockHttpServletResponse()
+        bind(GRAILS, request, response)
+        def original = new IllegalStateException('original')
+        FilterChain application = { req, res ->
+            resolver.resolveException((HttpServletRequest) req, (HttpServletResponse) res, null, original)
+        } as FilterChain
+
+        when:
+        new ServerHttpObservationFilter(registry).doFilter(request, response, application)
+
+        then:
+        response.forwardedUrl == '/errors/serverError'
+        request.dispatcherType == DispatcherType.FORWARD
+        notified.size() == 1
+        notified.first().is(original)
+
+        where:
+        dispatch << [DispatcherType.REQUEST, DispatcherType.ASYNC]
     }
 
     void 'a filter can read the exception an error handler answered once the chain has returned, with no observation'() {
@@ -845,6 +879,26 @@ class GrailsExceptionResolverSpec extends Specification {
         resolver.grailsApplication = grailsApplication
         resolver.exceptionMappings = ['java.lang.Exception': '/error'] as Properties
         resolver
+    }
+
+    /** A request that still reads as a forward once a forward has returned, as Undertow leaves it. */
+    private static class ForwardLeftOnRequest extends MockHttpServletRequest {
+
+        ForwardLeftOnRequest(ServletContext servletContext, String method, String requestURI) {
+            super(servletContext, method, requestURI)
+        }
+
+        @Override
+        RequestDispatcher getRequestDispatcher(String path) {
+            MockHttpServletRequest forwarded = this
+            new MockRequestDispatcher(path) {
+                @Override
+                void forward(ServletRequest request, ServletResponse response) {
+                    super.forward(request, response)
+                    forwarded.dispatcherType = DispatcherType.FORWARD
+                }
+            }
+        }
     }
 
     private void bind(String attributes, MockHttpServletRequest request, MockHttpServletResponse response) {

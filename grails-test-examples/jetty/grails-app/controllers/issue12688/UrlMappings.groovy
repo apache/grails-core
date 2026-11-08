@@ -27,7 +27,10 @@ class UrlMappings {
         }
 
         "/"(view: "/index")
+        "/failing/$action"(controller: 'failing')
+
         "500"(view: '/error')
+        "500"(controller: 'failing', action: 'errorHandler', exception: UnsupportedOperationException)
         "413"(controller: 'upload', action: 'tooLarge')
         "404"(view: '/notFound')
     }
