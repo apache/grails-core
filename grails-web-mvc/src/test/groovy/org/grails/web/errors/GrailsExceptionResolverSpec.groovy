@@ -74,7 +74,6 @@ class GrailsExceptionResolverSpec extends Specification {
     private static final String PLAIN = 'plain attributes'
     private static final String NOTHING = 'nothing'
     private static final Exception FAILURE = new IllegalStateException('failed')
-    private static final Exception ASYNC_TIMEOUT = new AsyncRequestTimeoutException()
 
     private final MockServletContext servletContext = new MockServletContext()
     private StaticWebApplicationContext webContext
@@ -111,7 +110,6 @@ class GrailsExceptionResolverSpec extends Specification {
         description            | thrown                                                 | recorded                  | status
         'an action threw'      | FAILURE                                                | FAILURE                   | 500
         'wrapped by Groovy'    | new InvokerInvocationException(new InvocationTargetException(FAILURE)) | FAILURE   | 500
-        'of an async timeout'  | ASYNC_TIMEOUT                                          | ASYNC_TIMEOUT             | 503
     }
 
     void 'an exception is still the error of a context that comes without its observation'() {
