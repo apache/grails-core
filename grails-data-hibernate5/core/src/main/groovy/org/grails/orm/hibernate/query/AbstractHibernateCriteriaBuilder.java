@@ -1620,10 +1620,11 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
                 alias = tokens[i] + ALIAS + aliasCount;
                 aliasMap.put(associationPath, alias);
                 String joinPath = parentAlias != null ? parentAlias + '.' + tokens[i] : associationPath;
-                org.hibernate.sql.JoinType joinType = GrailsHibernateUtil.getSortJoinType(criteria, associationPath, property instanceof ToMany);
-                criteria.createAlias(joinPath, alias, joinType);
-                if (property instanceof ToMany && joinType == org.hibernate.sql.JoinType.LEFT_OUTER_JOIN &&
-                        GrailsHibernateUtil.keepsSortedCollectionUnfetched(criteria, associationPath)) {
+                if (property instanceof ToMany) {
+                    GrailsHibernateUtil.checkSortedCollection(criteria, associationPath);
+                }
+                criteria.createAlias(joinPath, alias, org.hibernate.sql.JoinType.LEFT_OUTER_JOIN);
+                if (property instanceof ToMany && GrailsHibernateUtil.keepsSortedCollectionUnfetched(criteria, associationPath)) {
                     GrailsHibernateUtil.keepCollectionUnfetched(criteria, alias);
                 }
             }

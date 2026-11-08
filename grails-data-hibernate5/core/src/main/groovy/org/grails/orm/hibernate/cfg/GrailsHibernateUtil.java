@@ -272,17 +272,19 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
      * it, so that Hibernate does not read the first association of the path as an alias of the same
      * name. It is a left join, so that the sort keeps the rows where the association is null. A
      * collection is joined without being fetched, unless the query fetches it: see
-     * {@link #getSortJoinType(Criteria, String, boolean)} and
-     * {@link #keepsSortedCollectionUnfetched(Criteria, String)}.
+     * {@link #keepsSortedCollectionUnfetched(Criteria, String)} and
+     * {@link #checkSortedCollection(Criteria, String)}.
      */
     private static Criteria getOrCreateSortCriteria(Criteria root, Criteria parent, String associationPath, String associationName, boolean collection) {
         Criteria existing = findCriteria(root, associationPath);
         if (existing != null) {
             return existing;
         }
-        JoinType joinType = getSortJoinType(root, associationPath, collection);
-        Criteria join = root.createCriteria(getJoinPath(parent, associationPath, associationName), newJoinAlias(root, associationPath, "_sort"), joinType);
-        if (collection && joinType == JoinType.LEFT_OUTER_JOIN && keepsSortedCollectionUnfetched(root, associationPath)) {
+        if (collection) {
+            checkSortedCollection(root, associationPath);
+        }
+        Criteria join = root.createCriteria(getJoinPath(parent, associationPath, associationName), newJoinAlias(root, associationPath, "_sort"), JoinType.LEFT_OUTER_JOIN);
+        if (collection && keepsSortedCollectionUnfetched(root, associationPath)) {
             keepCollectionUnfetched(join);
         }
         return join;
@@ -345,23 +347,23 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
     }
 
     /**
-     * Returns the join type of a join that a query makes for a sort, and not for criteria on the
-     * association: a left join, so that the sort keeps the rows where the association is null.
-     * <p>
-     * A collection is joined with an inner join when the query fetches another collection and both
-     * collections are bags. Hibernate does not fetch two bags in one query, and it reads the elements
-     * of the collection that it fetches from the columns of a left join that it does not fetch, when
-     * both collections hold elements of the same table: see
-     * {@link #keepsSortedCollectionUnfetched(Criteria, String)}. An inner join has no such columns.
+     * Throws an {@link UnsupportedOperationException} when a query sorts by a property of a bag while it
+     * fetches another bag. A bag is a collection without an order of its own, such as one declared as a
+     * {@code Collection}. A sort by a property of a collection fetches the collection when the query
+     * fetches another collection: see {@link #keepsSortedCollectionUnfetched(Criteria, String)}. Hibernate
+     * does not support fetching more than one bag in a query.
      *
      * @param criteria The criteria of the query
-     * @param associationPath The path of the association from the root entity
-     * @param collection Whether the association is a collection
-     * @return The join type
+     * @param associationPath The path, from the root entity, of the collection that the query sorts by
+     * @throws UnsupportedOperationException if both collections are bags
      */
-    public static JoinType getSortJoinType(Criteria criteria, String associationPath, boolean collection) {
-        return collection && getOtherFetchedCollection(criteria, associationPath) == OtherFetchedCollection.BAG ?
-                JoinType.INNER_JOIN : JoinType.LEFT_OUTER_JOIN;
+    public static void checkSortedCollection(Criteria criteria, String associationPath) {
+        String otherBag = findOtherFetchedCollection(criteria, associationPath, true);
+        if (otherBag != null) {
+            throw new UnsupportedOperationException("Cannot sort by a property of [" + associationPath + "] of [" + getRootCriteria(criteria).getEntityOrClassName() +
+                    "] while the query fetches [" + otherBag + "]. The sort fetches [" + associationPath + "] as well, both are bags, and Hibernate does not support " +
+                    "fetching more than one bag in a query. Declare one of them as a Set or a List instead of a Collection, or do not fetch [" + otherBag + "].");
+        }
     }
 
     /**
@@ -375,31 +377,34 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
      * <p>
      * It is fetched as well when the query fetches another collection, because Hibernate then reads
      * the elements of the collection that it fetches from the columns of the join that it does not
-     * fetch, when both collections hold elements of the same table.
+     * fetch, when both collections hold elements of the same table. That is not possible when both
+     * collections are bags: see {@link #checkSortedCollection(Criteria, String)}.
      *
      * @param criteria The criteria of the query
      * @param associationPath The path of the collection from the root entity
      * @return Whether the collection is kept from being fetched
      */
     public static boolean keepsSortedCollectionUnfetched(Criteria criteria, String associationPath) {
-        return !isFetchRequested(criteria, associationPath) && getOtherFetchedCollection(criteria, associationPath) == OtherFetchedCollection.NONE;
+        return !isFetchRequested(criteria, associationPath) && findOtherFetchedCollection(criteria, associationPath, false) == null;
     }
 
-    private enum OtherFetchedCollection { NONE, FETCHED, BAG }
-
     /**
-     * Returns whether the query fetches a collection of the root entity other than the one at the
-     * given path, and whether both are bags.
+     * Returns the name of a collection of the root entity, other than the one at the given path, that
+     * the query fetches, or null. With bags only, it returns one only when both collections are bags.
      */
-    private static OtherFetchedCollection getOtherFetchedCollection(Criteria criteria, String associationPath) {
+    private static String findOtherFetchedCollection(Criteria criteria, String associationPath, boolean bagsOnly) {
         CriteriaImpl root = getRootCriteria(criteria);
         if (root == null || root.getSession() == null) {
-            return OtherFetchedCollection.NONE;
+            return null;
         }
         SessionFactoryImplementor factory = root.getSession().getFactory();
         EntityPersister persister = factory.getMetamodel().entityPersister(root.getEntityOrClassName());
-        String sortedRole = getCollectionRole(factory, persister, associationPath);
-        boolean sortedBag = sortedRole != null && isBag(factory, sortedRole);
+        if (bagsOnly) {
+            String sortedRole = getCollectionRole(factory, persister, associationPath);
+            if (sortedRole == null || !isBag(factory, sortedRole)) {
+                return null;
+            }
+        }
         String[] propertyNames = persister.getPropertyNames();
         Type[] propertyTypes = persister.getPropertyTypes();
         for (int i = 0; i < propertyNames.length; i++) {
@@ -409,11 +414,11 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
             FetchMode requested = getRequestedFetchMode(root, propertyNames[i]);
             boolean fetched = requested != null ? requested == FetchMode.JOIN :
                     persister instanceof OuterJoinLoadable && ((OuterJoinLoadable) persister).getFetchMode(i) == FetchMode.JOIN;
-            if (fetched) {
-                return sortedBag && isBag(factory, ((CollectionType) propertyTypes[i]).getRole()) ? OtherFetchedCollection.BAG : OtherFetchedCollection.FETCHED;
+            if (fetched && (!bagsOnly || isBag(factory, ((CollectionType) propertyTypes[i]).getRole()))) {
+                return propertyNames[i];
             }
         }
-        return OtherFetchedCollection.NONE;
+        return null;
     }
 
     private static String getCollectionRole(SessionFactoryImplementor factory, EntityPersister persister, String associationPath) {

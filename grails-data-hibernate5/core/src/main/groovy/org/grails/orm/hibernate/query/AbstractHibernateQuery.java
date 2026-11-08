@@ -606,8 +606,8 @@ public abstract class AbstractHibernateQuery extends Query {
      * A left join of a collection is kept from fetching the collection when criteria use it, since
      * its rows lack the elements that the criteria leave out, and when only a sort or a projection
      * uses it, unless the query fetches the collection or another one: see
-     * {@link GrailsHibernateUtil#getSortJoinType(Criteria, String, boolean)} and
-     * {@link GrailsHibernateUtil#keepsSortedCollectionUnfetched(Criteria, String)}.
+     * {@link GrailsHibernateUtil#keepsSortedCollectionUnfetched(Criteria, String)} and
+     * {@link GrailsHibernateUtil#checkSortedCollection(Criteria, String)}.
      */
     private void createJoin(CriteriaAndAlias join) {
         String associationPath = join.associationPath;
@@ -617,18 +617,16 @@ public abstract class AbstractHibernateQuery extends Query {
         if (joinType == null && join.usedByCriteria) {
             joinType = supersededJoinTypes.get(associationPath);
         }
-        org.hibernate.sql.JoinType hibernateJoinType;
         if (joinType == null) {
             joinType = join.usedByCriteria ? JoinType.INNER : JoinType.LEFT;
-            hibernateJoinType = join.usedByCriteria || join.criteria == null ? resolveJoinType(joinType) :
-                    GrailsHibernateUtil.getSortJoinType(join.criteria, associationPath, collection);
-        }
-        else {
-            if (joinType == JoinType.RIGHT && collection) {
-                joinType = JoinType.INNER;
+            if (!join.usedByCriteria && join.criteria != null && collection) {
+                GrailsHibernateUtil.checkSortedCollection(join.criteria, associationPath);
             }
-            hibernateJoinType = resolveJoinType(joinType);
         }
+        else if (joinType == JoinType.RIGHT && collection) {
+            joinType = JoinType.INNER;
+        }
+        org.hibernate.sql.JoinType hibernateJoinType = resolveJoinType(joinType);
         if (join.criteria != null) {
             join.criteria.createAlias(associationPath, join.alias, hibernateJoinType);
             if (hibernateJoinType == org.hibernate.sql.JoinType.LEFT_OUTER_JOIN && collection &&

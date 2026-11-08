@@ -407,25 +407,46 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManag
         'a dynamic finder'          | { AssociationSortSquad.findAllByName('Squad', [sort: 'players.name', fetch: [reserves: 'join']]) }
     }
 
-    void '#api sorted by a bag keeps the elements of another bag that the query fetches'() {
+    void '#api sorted by a bag while it fetches another bag throws an exception, since Hibernate does not fetch two bags in a query'() {
         given:
-        final squad = new AssociationSortBagSquad(name: 'Squad').save(failOnError: true)
-        new AssociationSortBagMember(name: 'Regular', squad: squad).save(failOnError: true)
-        new AssociationSortBagMember(name: 'Substitute', substituteSquad: squad).save(failOnError: true, flush: true)
-        manager.session.clear()
+        saveSquadWithASubstituteOnly()
 
         when:
-        final List<AssociationSortBagSquad> results = query.call()
+        query.call()
 
-        then: 'Hibernate cannot fetch both bags, so the bag that the query sorts by is joined with an inner join'
-        results*.name == ['Squad']
-        results.first().substitutes*.name == ['Substitute']
-        results.first().regulars*.name == ['Regular']
+        then:
+        final UnsupportedOperationException e = thrown()
+        e.message.contains('[regulars]')
+        e.message.contains('[substitutes]')
+        e.message.contains('more than one bag')
 
         where:
         api                         | query
         'a where query'             | { AssociationSortBagSquad.where { name == 'Squad' }.join('substitutes').list(sort: 'regulars.name') }
         'order in a criteria query' | { AssociationSortBagSquad.createCriteria().list { join('substitutes'); order('regulars.name') } }
+        'a paged criteria query'    | { AssociationSortBagSquad.createCriteria().list(sort: 'regulars.name', max: 10) { join('substitutes') } }
+        'findAll by example'        | { AssociationSortBagSquad.findAll(new AssociationSortBagSquad(), [sort: 'regulars.name', fetch: [substitutes: 'join']]) }
+        'a dynamic finder'          | { AssociationSortBagSquad.findAllByName('Squad', [sort: 'regulars.name', fetch: [substitutes: 'join']]) }
+    }
+
+    void '#api sorted by an empty bag keeps the instance when the query fetches no other bag'() {
+        given:
+        saveSquadWithASubstituteOnly()
+
+        expect:
+        query.call()*.name.unique() == ['Squad']
+
+        where:
+        api                                         | query
+        'a where query'                             | { AssociationSortBagSquad.where { name == 'Squad' }.list(sort: 'regulars.name') }
+        'a where query that fetches the sorted bag' | { AssociationSortBagSquad.where { name == 'Squad' }.join('regulars').list(sort: 'regulars.name') }
+        'order in a criteria query'                 | { AssociationSortBagSquad.createCriteria().list { eq('name', 'Squad'); order('regulars.name') } }
+    }
+
+    private void saveSquadWithASubstituteOnly() {
+        final squad = new AssociationSortBagSquad(name: 'Squad').save(failOnError: true)
+        new AssociationSortBagMember(name: 'Substitute', substituteSquad: squad).save(failOnError: true, flush: true)
+        manager.session.clear()
     }
 
     void 'a criteria query ordered by the identifier of a hasOne association keeps a player without it'() {

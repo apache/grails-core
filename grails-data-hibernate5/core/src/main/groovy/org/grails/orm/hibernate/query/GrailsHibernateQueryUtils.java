@@ -341,10 +341,11 @@ public class GrailsHibernateQueryUtils {
                 if (subCriteria == null) {
                     // a left join, so that the sort keeps the rows where the association is null; a collection
                     // is joined without being fetched, unless the query fetches it or another collection
-                    org.hibernate.sql.JoinType joinType = GrailsHibernateUtil.getSortJoinType(c, sortPath, a instanceof ToMany);
-                    subCriteria = c.createCriteria(sortHead, joinType);
-                    if (a instanceof ToMany && joinType == org.hibernate.sql.JoinType.LEFT_OUTER_JOIN &&
-                            GrailsHibernateUtil.keepsSortedCollectionUnfetched(c, sortPath)) {
+                    if (a instanceof ToMany) {
+                        GrailsHibernateUtil.checkSortedCollection(c, sortPath);
+                    }
+                    subCriteria = c.createCriteria(sortHead, org.hibernate.sql.JoinType.LEFT_OUTER_JOIN);
+                    if (a instanceof ToMany && GrailsHibernateUtil.keepsSortedCollectionUnfetched(c, sortPath)) {
                         GrailsHibernateUtil.keepCollectionUnfetched(subCriteria);
                     }
                     cacheCriteriaByMapping(associatedEntity.getJavaClass(), subCriteria);
