@@ -305,7 +305,11 @@ public class PredicateGenerator {
         JpaQueryContext fromsByProvider,
         DetachedAssociationCriteria<?> associationCriteria) {
         String associationName = associationCriteria.getAssociationPath();
-        From<?, ?> associationRoot = fromsByProvider.resolveAssociation(associationName);
+        // A block for a path that starts with an alias joins from that alias, and not from the path of its association,
+        // which the first alias of that association owns
+        From<?, ?> associationRoot = associationCriteria.getPathFromAlias() != null && associationCriteria.getAlias() != null &&
+            fromsByProvider.getFullyQualifiedExpression(associationCriteria.getAlias()) instanceof From<?, ?> aliased ?
+            aliased : fromsByProvider.resolveAssociation(associationName);
 
         // Create a nested context for this association
         JpaQueryContext nestedContext = new QueryAliasRegistrar(associationCriteria)

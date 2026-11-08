@@ -25,6 +25,7 @@ import jakarta.persistence.criteria.From;
 import jakarta.persistence.criteria.JoinType;
 
 import grails.gorm.DetachedCriteria;
+import grails.orm.HibernateCriteriaBuilder;
 import org.grails.datastore.gorm.query.criteria.DetachedAssociationCriteria;
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.types.Association;
@@ -145,7 +146,11 @@ final class QueryAliasRegistrar {
                     // in the criteria, so a second alias of the same path would otherwise take the last one.
                     if (!context.getAliasRegistry().isOwnDefined(dac.getAlias())) {
                         JoinType joinType = detachedCriteria.getJoinTypes().getOrDefault(associationPath, JoinType.INNER);
-                        context.registerAlias(dac.getAlias(), new HibernateAlias(associationPath, dac.getAlias(), joinType));
+                        // a path that starts with a later alias of an association continues from that alias, which is the
+                        // join it started from; the criteria builder writes such a path as alias:rest
+                        String fromAlias = dac.getPathFromAlias();
+                        String aliasPath = fromAlias == null ? associationPath : fromAlias.replaceFirst("\\.", HibernateCriteriaBuilder.ALIAS_SEPARATOR);
+                        context.registerAlias(dac.getAlias(), new HibernateAlias(aliasPath, dac.getAlias(), joinType));
                     }
                 }
                 else if (!(dac.getAssociation() instanceof Embedded)) {

@@ -193,7 +193,11 @@ public class ExpressionResolver {
         // the path of the association from the root, by which a join type is requested for it
         String associationPath = "";
         int first = 0;
-        Join<?, ?> declaredAlias = tokens.length > 1 ? aliasJoin(from, tokens[0]) : null;
+        // an alias declared with the name of the first segment is what the segment names, even when another alias
+        // was declared for the association of that name
+        HibernateAlias namedAlias = aliasRegistry.getDefinition(tokens[0]);
+        boolean namesAlias = namedAlias != null && namedAlias.explicit();
+        Join<?, ?> declaredAlias = tokens.length > 1 && !namesAlias ? aliasJoin(from, tokens[0]) : null;
         if (declaredAlias != null) {
             // the first alias that this scope declares for the association is the one the path names
             from = declaredAlias;

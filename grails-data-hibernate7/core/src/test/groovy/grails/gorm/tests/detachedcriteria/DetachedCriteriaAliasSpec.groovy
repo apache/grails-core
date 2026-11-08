@@ -113,6 +113,40 @@ class DetachedCriteriaAliasSpec extends HibernateGormDatastoreSpec {
         }.list()*.name == ['with related']
     }
 
+    def 'an alias whose path starts with the second alias of an association joins from the second alias, not the first'() {
+        given:
+        new ChainParent(name: 'split').addToChildren(new ChainChild(name: 'one')).addToChildren(new ChainChild(name: 'two', related: new ChainRelated(name: 'x').save())).save()
+        new ChainParent(name: 'one child').addToChildren(new ChainChild(name: 'one', related: new ChainRelated(name: 'x').save())).save(flush: true)
+        manager.session.clear()
+
+        expect: 'r is the related of the child c2 names; the child c1 names has none, and the parent still matches'
+        new DetachedCriteria(ChainParent).build {
+            createAlias('children', 'c1')
+            createAlias('children', 'c2')
+            createAlias('c2.related', 'r')
+            eq('c1.name', 'one')
+            eq('c2.name', 'two')
+            eq('r.name', 'x')
+        }.list()*.name == ['split']
+    }
+
+    def 'a chain from the first alias still joins from the first alias when a second alias exists'() {
+        given:
+        new ChainParent(name: 'split').addToChildren(new ChainChild(name: 'one', related: new ChainRelated(name: 'x').save())).addToChildren(new ChainChild(name: 'two')).save()
+        new ChainParent(name: 'other').addToChildren(new ChainChild(name: 'one')).addToChildren(new ChainChild(name: 'two', related: new ChainRelated(name: 'x').save())).save(flush: true)
+        manager.session.clear()
+
+        expect:
+        new DetachedCriteria(ChainParent).build {
+            createAlias('children', 'c1')
+            createAlias('children', 'c2')
+            createAlias('c1.related', 'r')
+            eq('c1.name', 'one')
+            eq('c2.name', 'two')
+            eq('r.name', 'x')
+        }.list()*.name == ['split']
+    }
+
     def 'the order of the two alias declarations does not change what each alias names'() {
         given:
         seed()
