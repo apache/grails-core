@@ -62,6 +62,12 @@ abstract class AbstractDetachedCriteria<T> implements Criteria, Cloneable {
     protected Closure lazyQuery
     protected String alias
     protected String connectionName = ConnectionSource.DEFAULT
+
+    /**
+     * Whether the connection was chosen with {@link #withConnection}, as opposed to taken from the criteria that
+     * holds this one as a subquery. Only a connection that was not chosen follows the criteria that holds it.
+     */
+    protected boolean connectionExplicit = false
     protected Map<String, DetachedAssociationCriteria> associationCriteriaMap = [:]
 
     ProjectionList projectionList = new DetachedProjections(projections)
@@ -864,6 +870,12 @@ abstract class AbstractDetachedCriteria<T> implements Criteria, Cloneable {
      */
 
     AbstractDetachedCriteria<T> withConnection(String name) {
+        AbstractDetachedCriteria newCriteria = switchConnection(name)
+        newCriteria.connectionExplicit = true
+        return newCriteria
+    }
+
+    private AbstractDetachedCriteria switchConnection(String name) {
         AbstractDetachedCriteria newCriteria = this.clone()
         newCriteria.connectionName = name
         newCriteria.@criteria = new ArrayList<Query.Criterion>(newCriteria.@criteria.collect { Query.Criterion c -> onConnection(c, name) })
@@ -871,15 +883,13 @@ abstract class AbstractDetachedCriteria<T> implements Criteria, Cloneable {
     }
 
     /**
-     * A subquery that still has the default connection takes the connection of the criteria that holds it: a
-     * datastore that runs the subquery by itself, as MongoDB and Neo4j do, then reads the same connection as the
-     * outer query. A subquery built with its own connection keeps it. The criterion given is not changed; a copy
-     * is returned when a subquery moves.
+     * A subquery whose connection was not chosen with {@link #withConnection} takes the connection of the criteria
+     * that holds it, back to the default connection as well: a datastore that runs the subquery by itself, as MongoDB
+     * and Neo4j do, then reads the same connection as the outer query. A subquery built with its own connection,
+     * the default one included, keeps it. The criterion given is not changed; a copy is returned when a subquery
+     * moves.
      */
     private static Query.Criterion onConnection(Query.Criterion criterion, String name) {
-        if (name == ConnectionSource.DEFAULT) {
-            return criterion
-        }
         if (criterion instanceof Query.Junction) {
             Query.Junction junction = (Query.Junction) criterion
             List<Query.Criterion> moved = junction.criteria.collect { Query.Criterion c -> onConnection(c, name) }
@@ -919,8 +929,11 @@ abstract class AbstractDetachedCriteria<T> implements Criteria, Cloneable {
     }
 
     private static QueryableCriteria onConnection(QueryableCriteria subquery, String name) {
-        if (subquery instanceof AbstractDetachedCriteria && ((AbstractDetachedCriteria) subquery).connectionName == ConnectionSource.DEFAULT) {
-            return (QueryableCriteria) (Object) ((AbstractDetachedCriteria) subquery).withConnection(name)
+        if (subquery instanceof AbstractDetachedCriteria) {
+            AbstractDetachedCriteria detached = (AbstractDetachedCriteria) subquery
+            if (!detached.connectionExplicit && detached.connectionName != name) {
+                return (QueryableCriteria) (Object) detached.switchConnection(name)
+            }
         }
         return subquery
     }
@@ -940,6 +953,7 @@ abstract class AbstractDetachedCriteria<T> implements Criteria, Cloneable {
         criteria.@joinTypes = new HashMap<>(this.joinTypes)
         criteria.@junctions = new ArrayList(this.junctions)
         criteria.@connectionName = this.connectionName
+        criteria.@connectionExplicit = this.connectionExplicit
         criteria.@lazyQuery = this.lazyQuery
         criteria.@associationCriteriaMap = new LinkedHashMap<>(this.associationCriteriaMap)
         return criteria

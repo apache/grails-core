@@ -81,6 +81,42 @@ class DetachedCriteriaSubqueryConnectionSpec extends Specification {
         archive.criteria[0].value.@connectionName == 'reports'
     }
 
+    void "a subquery that took the connection of the criteria follows it back to the default connection"() {
+        given:
+        def outer = new DetachedCriteria(TestEntity)
+        outer.add(new Query.GreaterThan('id', subquery()))
+
+        when:
+        def back = outer.withConnection('archive').withConnection(ConnectionSource.DEFAULT)
+
+        then:
+        back.criteria[0].value.@connectionName == ConnectionSource.DEFAULT
+    }
+
+    void "a subquery that chose the default connection keeps it when the criteria moves to another one"() {
+        given:
+        def outer = new DetachedCriteria(TestEntity)
+        outer.add(new Query.GreaterThan('id', subquery().withConnection(ConnectionSource.DEFAULT)))
+
+        when:
+        def archive = outer.withConnection('archive')
+
+        then:
+        archive.criteria[0].value.@connectionName == ConnectionSource.DEFAULT
+    }
+
+    void "a subquery that took a connection moves again when the criteria moves to a third connection"() {
+        given:
+        def outer = new DetachedCriteria(TestEntity)
+        outer.add(new Query.GreaterThan('id', subquery()))
+
+        when:
+        def reports = outer.withConnection('archive').withConnection('reports')
+
+        then:
+        reports.criteria[0].value.@connectionName == 'reports'
+    }
+
     void "every comparison keeps its form and property when its subquery moves"() {
         given:
         def outer = new DetachedCriteria(TestEntity)
