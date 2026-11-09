@@ -18,6 +18,8 @@
  */
 package org.grails.datastore.mapping.query.jpa;
 
+import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -647,11 +649,16 @@ public class JpaQueryBuilder {
                     else {
                         for (Iterator i = in.getValues().iterator(); i.hasNext();) {
                             Object val = i.next();
-                            whereClause.append(PARAMETER_PREFIX).append(++position);
+                            if (FunctionCallingCriterion.isFractional(val)) {
+                                whereClause.append(numberLiteral((Number) val));
+                            }
+                            else {
+                                whereClause.append(PARAMETER_PREFIX).append(++position);
+                                parameters.add(val);
+                            }
                             if (i.hasNext()) {
                                 whereClause.append(COMMA);
                             }
-                            parameters.add(val);
                         }
                     }
                     whereClause.append(CLOSE_BRACKET);
@@ -674,6 +681,10 @@ public class JpaQueryBuilder {
                         buildSubQuery(q, whereClause, position, parameters, conversionService, allowJoins, hibernateCompatible, subquery);
                         position = parameters.size();
                         whereClause.append(CLOSE_BRACKET);
+                    }
+                    else if (FunctionCallingCriterion.isFractional(wrappedValue)) {
+                        // a parameter takes the type of the function, an int, which would not hold the fraction
+                        whereClause.append(operator).append(numberLiteral((Number) wrappedValue));
                     }
                     else {
                         whereClause.append(operator).append(PARAMETER_PREFIX).append(++position);
@@ -1043,6 +1054,30 @@ public class JpaQueryBuilder {
         }
 
         return position;
+    }
+
+    /**
+     * A number written into the query as a big decimal literal, which keeps the number as it is.
+     */
+    private static String numberLiteral(Number number) {
+        BigDecimal decimal;
+        if (number instanceof BigDecimal) {
+            decimal = (BigDecimal) number;
+        }
+        else if (number instanceof BigInteger) {
+            decimal = new BigDecimal((BigInteger) number);
+        }
+        else if (number instanceof Double || number instanceof Float) {
+            double value = number.doubleValue();
+            if (Double.isNaN(value) || Double.isInfinite(value)) {
+                throw new InvalidDataAccessResourceUsageException("A function cannot be compared with [" + number + "]");
+            }
+            decimal = number instanceof Float ? new BigDecimal(number.toString()) : BigDecimal.valueOf(value);
+        }
+        else {
+            decimal = BigDecimal.valueOf(number.longValue());
+        }
+        return decimal.toPlainString() + "bd";
     }
 
     private static String functionOperator(Query.PropertyCriterion wrapped) {

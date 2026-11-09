@@ -18,6 +18,8 @@
  */
 package org.grails.datastore.mapping.query.criteria;
 
+import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedHashSet;
@@ -53,6 +55,52 @@ public class FunctionCallingCriterion extends Query.PropertyNameCriterion {
             throw new InvalidDataAccessResourceUsageException("Unsupported function defined in query [" + functionName +
                     "]. The functions supported are " + SUPPORTED_FUNCTIONS);
         }
+    }
+
+    private static final BigDecimal INT_MIN = BigDecimal.valueOf(Integer.MIN_VALUE);
+    private static final BigDecimal INT_MAX = BigDecimal.valueOf(Integer.MAX_VALUE);
+
+    /**
+     * Whether a number is a whole number that an int holds exactly. The functions a where query can call return an
+     * int, so such a number can be compared as an int. Any other number, a fraction or one that is too large, has
+     * to be compared as it is: narrowing it changes which rows match. The test is exact, so a decimal a hair past
+     * a whole number is not the whole number.
+     *
+     * @param number the operand of a comparison with a function
+     */
+    public static boolean isWholeInt(Number number) {
+        if (number instanceof Integer || number instanceof Short || number instanceof Byte) {
+            return true;
+        }
+        if (number instanceof Long) {
+            long value = number.longValue();
+            return value >= Integer.MIN_VALUE && value <= Integer.MAX_VALUE;
+        }
+        if (number instanceof BigInteger) {
+            return ((BigInteger) number).bitLength() < Integer.SIZE;
+        }
+        BigDecimal exact;
+        if (number instanceof BigDecimal) {
+            exact = (BigDecimal) number;
+        }
+        else {
+            double value = number.doubleValue();
+            if (Double.isNaN(value) || Double.isInfinite(value)) {
+                return false;
+            }
+            exact = new BigDecimal(value);
+        }
+        return exact.signum() == 0 ||
+                exact.stripTrailingZeros().scale() <= 0 && exact.compareTo(INT_MIN) >= 0 && exact.compareTo(INT_MAX) <= 0;
+    }
+
+    /**
+     * Whether an operand is a number that {@link #isWholeInt} rejects.
+     *
+     * @param value the operand of a comparison with a function
+     */
+    public static boolean isFractional(Object value) {
+        return value instanceof Number && !isWholeInt((Number) value);
     }
 
     private String functionName;

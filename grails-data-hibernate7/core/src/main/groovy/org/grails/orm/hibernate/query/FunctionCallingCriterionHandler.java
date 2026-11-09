@@ -63,8 +63,18 @@ class FunctionCallingCriterionHandler implements InternalCriterionHandler<Functi
                 return left.in(subquery);
             }
             Collection<Object> values = new ArrayList<>();
+            boolean fractional = false;
             for (Object v : in.getValues()) {
-                values.add(convertFunctionValue(context.getConversionService(), functionName, v));
+                Object converted = convertFunctionValue(context.getConversionService(), functionName, v);
+                fractional |= FunctionCallingCriterion.isFractional(converted);
+                values.add(converted);
+            }
+            if (fractional) {
+                // the parameters of a list take the type of the function, an int, which would not hold a fraction;
+                // literals keep their own type
+                return left.in(values.stream()
+                        .map(value -> value instanceof Number number ? criteriaBuilder.literal(number) : criteriaBuilder.literal(value))
+                        .toArray(Expression[]::new));
             }
             return left.in(values);
         }
@@ -79,7 +89,7 @@ class FunctionCallingCriterionHandler implements InternalCriterionHandler<Functi
                 return criteriaBuilder.equal(left, subquery);
             }
             Object value = convertFunctionValue(context.getConversionService(), functionName, rawValue);
-            if (isFractional(value)) {
+            if (FunctionCallingCriterion.isFractional(value)) {
                 return criteriaBuilder.equal(left, criteriaBuilder.literal((Number) value));
             }
             return criteriaBuilder.equal(left, value);
@@ -92,7 +102,7 @@ class FunctionCallingCriterionHandler implements InternalCriterionHandler<Functi
                 return criteriaBuilder.notEqual(left, subquery);
             }
             Object value = convertFunctionValue(context.getConversionService(), functionName, rawValue);
-            if (isFractional(value)) {
+            if (FunctionCallingCriterion.isFractional(value)) {
                 return criteriaBuilder.notEqual(left, criteriaBuilder.literal((Number) value));
             }
             return criteriaBuilder.notEqual(left, value);
@@ -119,7 +129,7 @@ class FunctionCallingCriterionHandler implements InternalCriterionHandler<Functi
             return PropertyCriterionHandler.handleRLike(criteriaBuilder, (Expression<String>) left, rLike);
         } else if (wrapped instanceof Query.Like) {
             return criteriaBuilder.like((Expression<String>) left, (String) value);
-        } else if (isFractional(value) && wrapped instanceof Query.PropertyCriterion) {
+        } else if (FunctionCallingCriterion.isFractional(value) && wrapped instanceof Query.PropertyCriterion) {
             // the parameter of a comparison takes the type of the function, an int, which would cut the fraction off;
             // a literal keeps its own type
             Expression<? extends Comparable> literal = (Expression<? extends Comparable>) (Expression<?>) criteriaBuilder.literal((Number) value);
@@ -169,25 +179,12 @@ class FunctionCallingCriterionHandler implements InternalCriterionHandler<Functi
             case "lower", "upper", "trim" -> String.class;
             default -> Integer.class;
         };
-        if (targetType == Integer.class && value instanceof Number number && !isWholeInt(number)) {
+        if (targetType == Integer.class && value instanceof Number number && !FunctionCallingCriterion.isWholeInt(number)) {
             // a fractional or too large number is compared as it is; narrowing it to an int would change the answer
             return value;
         }
         return conversionService != null && conversionService.canConvert(value.getClass(), targetType) ?
                 conversionService.convert(value, targetType) :
                 value;
-    }
-
-    private static boolean isFractional(Object value) {
-        return value instanceof Number number && !isWholeInt(number);
-    }
-
-    private static boolean isWholeInt(Number number) {
-        if (number instanceof Integer || number instanceof Short || number instanceof Byte || number instanceof Long) {
-            long l = number.longValue();
-            return l >= Integer.MIN_VALUE && l <= Integer.MAX_VALUE;
-        }
-        double d = number.doubleValue();
-        return d == Math.rint(d) && d >= Integer.MIN_VALUE && d <= Integer.MAX_VALUE;
     }
 }

@@ -45,6 +45,10 @@ class WhereQueryFunctionsSpec extends HibernateGormDatastoreSpec {
         criteria
     }
 
+    private static DetachedCriteria<WhereQueryFunctionEntity> lengthIn(List values) {
+        criteriaOf(new FunctionCallingCriterion('length', new Query.In('name', values)))
+    }
+
     private static Date date(int year, int month, int day) {
         new GregorianCalendar(year, month - 1, day).time
     }
@@ -275,6 +279,56 @@ class WhereQueryFunctionsSpec extends HibernateGormDatastoreSpec {
         below == ['abc']
         whole == ['abc']
         yearAbove == ['abc', 'abcd']
+    }
+
+    void "a number a hair past a whole number is not the whole number"() {
+        given:
+        new WhereQueryFunctionEntity(name: 'abc', amount: 1, created: date(2014, 1, 1)).save(flush: true)
+        new WhereQueryFunctionEntity(name: 'abcd', amount: 1, created: date(2014, 1, 1)).save(flush: true)
+
+        when:
+        def equal = WhereQueryFunctionEntity.where { length(name) == 3.0000000000000000001 }.list()*.name
+        def notEqual = WhereQueryFunctionEntity.where { length(name) != 3.0000000000000000001 }.list()*.name.sort()
+        def atLeast = WhereQueryFunctionEntity.where { length(name) >= 3.0000000000000000001 }.list()*.name
+        def atMost = WhereQueryFunctionEntity.where { length(name) <= 3.0000000000000000001 }.list()*.name
+
+        then:
+        equal == []
+        notEqual == ['abc', 'abcd']
+        atLeast == ['abcd']
+        atMost == ['abc']
+    }
+
+    void "an in-list of a function can hold a fraction"() {
+        given:
+        new WhereQueryFunctionEntity(name: 'abc', amount: 1, created: date(2014, 1, 1)).save(flush: true)
+        new WhereQueryFunctionEntity(name: 'abcd', amount: 1, created: date(2014, 1, 1)).save(flush: true)
+
+        expect: 'a fraction is never the length of a name, and the whole numbers beside it still match'
+        lengthIn([3, 3.5]).list()*.name == ['abc']
+        lengthIn([3.5, 4, 3.0000000000000000001]).list()*.name == ['abcd']
+        lengthIn([3.5]).list() == []
+    }
+
+    void "a bulk statement compares a function with a fraction as it is"() {
+        given:
+        new WhereQueryFunctionEntity(name: 'abc', amount: 1, created: date(2014, 1, 1)).save(flush: true)
+        new WhereQueryFunctionEntity(name: 'abcd', amount: 1, created: date(2014, 1, 1)).save(flush: true)
+        new WhereQueryFunctionEntity(name: 'abcde', amount: 1, created: date(2014, 1, 1)).save(flush: true)
+
+        when:
+        int above = WhereQueryFunctionEntity.where { length(name) > 3.5 }.updateAll(amount: 2)
+        int equal = WhereQueryFunctionEntity.where { length(name) == 3.5 }.updateAll(amount: 3)
+        int inList = lengthIn([3, 3.5]).updateAll(amount: 4)
+        int deleted = WhereQueryFunctionEntity.where { length(name) < 3.5 }.deleteAll()
+        WhereQueryFunctionEntity.withSession { it.clear() }
+
+        then:
+        above == 2
+        equal == 0
+        inList == 1
+        deleted == 1
+        WhereQueryFunctionEntity.list().collectEntries { [it.name, it.amount] } == [abcd: 2, abcde: 2]
     }
 
     void "the documented date functions execute on every part of a date"() {
