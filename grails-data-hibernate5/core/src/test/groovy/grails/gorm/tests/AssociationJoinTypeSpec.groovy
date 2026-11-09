@@ -35,7 +35,7 @@ class AssociationJoinTypeSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckM
     void setupSpec() {
         manager.domainClasses.addAll([Club, Team, Player, Contract, AssociationJoinTypeCategory, AssociationJoinTypeShelf, AssociationJoinTypeTag,
                                       AssociationJoinTypeFace, AssociationJoinTypeNose, AssociationJoinTypePost, AssociationJoinTypeAuthor,
-                                      AssociationJoinTypeBook, AssociationJoinTypeSquad, AssociationJoinTypeSquadMember, AssociationJoinTypeTrophy])
+                                      AssociationJoinTypeBook, AssociationJoinTypeSquad, AssociationJoinTypeSquadMember, AssociationJoinTypeTrophy, AssociationJoinTypeMedal])
     }
 
     void setup() {
@@ -1167,18 +1167,12 @@ class AssociationJoinTypeSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckM
      * | need a value               | of the same class          | those with a matching element     | holds its own elements        |
      * | need a value               | of another class           | those with a matching element     | holds its own elements        |
      * | accept a missing element   | none                       | also those without an element     | none                          |
-     * | accept a missing element   | of the same class          | not those without an element      | holds its own elements        |
+     * | accept a missing element   | of the same class          | also those without an element     | holds its own elements        |
      * </pre>
      */
     void 'a left join of a collection that criteria use, #description'() {
-        given: 'a squad with a regular, a reserve and a trophy, and a squad with a reserve only'
-        final full = new AssociationJoinTypeSquad(name: 'Full').save(failOnError: true)
-        new AssociationJoinTypeSquadMember(name: 'Regular', kind: 'Regular', squad: full).save(failOnError: true)
-        new AssociationJoinTypeSquadMember(name: 'Reserve', kind: 'Reserve', reserveSquad: full).save(failOnError: true)
-        new AssociationJoinTypeTrophy(name: 'Cup', squad: full).save(failOnError: true)
-        final bench = new AssociationJoinTypeSquad(name: 'Bench').save(failOnError: true)
-        new AssociationJoinTypeSquadMember(name: 'Bench reserve', kind: 'Reserve', reserveSquad: bench).save(failOnError: true, flush: true)
-        manager.session.clear()
+        given:
+        saveSquads()
 
         when:
         final List<AssociationJoinTypeSquad> results = query.call()
@@ -1186,21 +1180,93 @@ class AssociationJoinTypeSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckM
         then:
         results*.name.unique().sort() == squads
         results.every { !Hibernate.isInitialized(it."$filtered") }
-        fetched.every { String collection, List<String> elements ->
-            final squad = results.find { it.name == 'Full' }
-            Hibernate.isInitialized(squad."$collection") && squad."$collection"*.name == elements
+        fetched.every { String squadName, Map<String, List<String>> collections ->
+            final squad = results.find { it.name == squadName }
+            collections.every { String collection, List<String> elements ->
+                Hibernate.isInitialized(squad."$collection") && squad."$collection"*.name.sort() == elements
+            }
         }
 
         where:
-        description                                                  | query                                                                                                                        | filtered   | squads            | fetched
-        'nothing else fetched'                                       | { AssociationJoinTypeSquad.where { players { kind == 'Regular' } }.join('players', JoinType.LEFT).list() }                   | 'players'  | ['Full']          | [:]
-        'fetching a collection of the same class'                    | { AssociationJoinTypeSquad.where { players { kind == 'Regular' } }.join('players', JoinType.LEFT).join('reserves').list() }  | 'players'  | ['Full']          | [reserves: ['Reserve']]
-        'fetching a collection of the same class with the argument'  | { AssociationJoinTypeSquad.where { players { kind == 'Regular' } }.list(fetch: [players: JoinType.LEFT, reserves: 'join']) } | 'players'  | ['Full']          | [reserves: ['Reserve']]
-        'fetching a collection of another class'                     | { AssociationJoinTypeSquad.where { players { kind == 'Regular' } }.join('players', JoinType.LEFT).join('trophies').list() }  | 'players'  | ['Full']          | [trophies: ['Cup']]
-        'fetching a collection that comes first in the entity'       | { AssociationJoinTypeSquad.where { reserves { kind == 'Reserve' } }.join('reserves', JoinType.LEFT).join('players').list() } | 'reserves' | ['Bench', 'Full'] | [players: ['Regular']]
-        'with criteria that accept a missing element'                | { AssociationJoinTypeSquad.where { players { kind == null } }.join('players', JoinType.LEFT).list() }                        | 'players'  | ['Bench']         | [:]
-        'with criteria that accept a missing element, fetching more' | { AssociationJoinTypeSquad.where { players { kind == null } }.join('players', JoinType.LEFT).join('reserves').list() }       | 'players'  | []                | [:]
+        description                                                  | query                                                                                                                                             | filtered   | squads            | fetched
+        'nothing else fetched'                                       | { AssociationJoinTypeSquad.where { players { kind == 'Regular' } }.join('players', JoinType.LEFT).list() }                                        | 'players'  | ['Full']          | [:]
+        'fetching a collection of the same class'                    | { AssociationJoinTypeSquad.where { players { kind == 'Regular' } }.join('players', JoinType.LEFT).join('reserves').list() }                       | 'players'  | ['Full']          | [Full: [reserves: ['Reserve']]]
+        'fetching a collection of the same class with the argument'  | { AssociationJoinTypeSquad.where { players { kind == 'Regular' } }.list(fetch: [players: JoinType.LEFT, reserves: 'join']) }                      | 'players'  | ['Full']          | [Full: [reserves: ['Reserve']]]
+        'fetching a collection of another class'                     | { AssociationJoinTypeSquad.where { players { kind == 'Regular' } }.join('players', JoinType.LEFT).join('trophies').list() }                       | 'players'  | ['Full']          | [Full: [trophies: ['Cup']]]
+        'fetching a collection that comes first in the entity'       | { AssociationJoinTypeSquad.where { reserves { kind == 'Reserve' } }.join('reserves', JoinType.LEFT).join('players').list() }                      | 'reserves' | ['Bench', 'Full'] | [Full: [players: ['Regular']], Bench: [players: []]]
+        'with criteria that accept a missing element'                | { AssociationJoinTypeSquad.where { players { kind == null } }.join('players', JoinType.LEFT).list() }                                             | 'players'  | ['Bench']         | [:]
+        'with criteria that accept a missing element, fetching more' | { AssociationJoinTypeSquad.where { players { kind == null } }.join('players', JoinType.LEFT).join('reserves').list() }                            | 'players'  | ['Bench']         | [Bench: [reserves: ['Bench reserve']]]
+        'sorted by a third collection, fetching another'             | { AssociationJoinTypeSquad.where { players { kind == 'Regular' } }.join('players', JoinType.LEFT).join('trophies').list(sort: 'reserves.name') }  | 'players'  | ['Full']          | [Full: [trophies: ['Cup']]]
     }
+
+    void 'a left join of a collection that criteria use loads a collection fetched through another collection after the query'() {
+        given:
+        saveSquads()
+
+        when:
+        final results = AssociationJoinTypeSquad.where { players { kind == 'Regular' } }.list(fetch: [players: JoinType.LEFT, 'reserves.medals': JoinType.LEFT])
+
+        then:
+        results*.name == ['Full']
+        !Hibernate.isInitialized(results.first().players)
+        Hibernate.isInitialized(results.first().reserves)
+        Hibernate.isInitialized(results.first().reserves.first().medals)
+        results.first().reserves.first().medals*.name == ['Gold']
+    }
+
+    void 'find with a left join of a collection that criteria use returns the instance and loads the collection that it fetches'() {
+        given:
+        saveSquads()
+
+        when:
+        final squad = AssociationJoinTypeSquad.where { players { kind == null } }.join('players', JoinType.LEFT).join('reserves').find()
+
+        then:
+        squad.name == 'Bench'
+        Hibernate.isInitialized(squad.reserves)
+        squad.reserves*.name == ['Bench reserve']
+    }
+
+    void 'a paged list with a left join of a collection that criteria use counts the instance without an element'() {
+        given:
+        saveSquads()
+
+        when:
+        final results = AssociationJoinTypeSquad.where { players { kind == null } }.join('players', JoinType.LEFT).join('reserves').list(max: 10)
+
+        then:
+        results*.name == ['Bench']
+        results.totalCount == 1
+        Hibernate.isInitialized(results.first().reserves)
+    }
+
+    void 'a projection with a left join of a collection that criteria use returns its values'() {
+        given:
+        saveSquads()
+
+        when:
+        final names = AssociationJoinTypeSquad.where { players { kind == null } }.join('players', JoinType.LEFT).join('reserves').property('name').list()
+
+        then:
+        names == ['Bench']
+    }
+
+    private void saveSquads() {
+        final full = new AssociationJoinTypeSquad(name: 'Full').save(failOnError: true)
+        new AssociationJoinTypeSquadMember(name: 'Regular', kind: 'Regular', squad: full).save(failOnError: true)
+        final reserve = new AssociationJoinTypeSquadMember(name: 'Reserve', kind: 'Reserve', reserveSquad: full).save(failOnError: true)
+        new AssociationJoinTypeMedal(name: 'Gold', member: reserve).save(failOnError: true)
+        new AssociationJoinTypeTrophy(name: 'Cup', squad: full).save(failOnError: true)
+        final bench = new AssociationJoinTypeSquad(name: 'Bench').save(failOnError: true)
+        new AssociationJoinTypeSquadMember(name: 'Bench reserve', kind: 'Reserve', reserveSquad: bench).save(failOnError: true, flush: true)
+        manager.session.clear()
+    }
+}
+
+@Entity
+class AssociationJoinTypeMedal {
+    String name
+    static belongsTo = [member: AssociationJoinTypeSquadMember]
 }
 
 @Entity
@@ -1216,6 +1282,7 @@ class AssociationJoinTypeSquadMember {
     String kind
     AssociationJoinTypeSquad squad
     AssociationJoinTypeSquad reserveSquad
+    static hasMany = [medals: AssociationJoinTypeMedal]
 
     static constraints = {
         kind nullable: true

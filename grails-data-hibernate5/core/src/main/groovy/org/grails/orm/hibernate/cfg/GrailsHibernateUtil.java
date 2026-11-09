@@ -18,6 +18,9 @@
  */
 package org.grails.orm.hibernate.cfg;
 
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -459,6 +462,57 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
      */
     public static boolean fetchesAnotherCollection(Criteria criteria, String associationPath) {
         return findOtherFetchedCollection(criteria, associationPath, false) != null;
+    }
+
+    /**
+     * Returns the paths, from the root entity, of the collections that the query fetches, at any depth.
+     *
+     * @param criteria The criteria of the query
+     * @return The paths of the collections
+     */
+    public static List<String> findFetchedCollections(Criteria criteria) {
+        CriteriaImpl root = getRootCriteria(criteria);
+        if (root == null || root.getSession() == null) {
+            return Collections.emptyList();
+        }
+        SessionFactoryImplementor factory = root.getSession().getFactory();
+        Map<String, String> fetched = new LinkedHashMap<>();
+        collectFetchedCollections(root, factory, factory.getMetamodel().entityPersister(root.getEntityOrClassName()), "", fetched);
+        return new ArrayList<>(fetched.keySet());
+    }
+
+    /**
+     * Initializes the collections at the given paths of the instances that a query returned, also of
+     * the elements of a collection that a path passes through.
+     *
+     * @param entity The entity of the instances
+     * @param instances The instances
+     * @param associationPaths The paths of the collections from the entity
+     */
+    public static void initializeCollections(PersistentEntity entity, Collection<?> instances, Collection<String> associationPaths) {
+        for (String associationPath : associationPaths) {
+            String[] tokens = associationPath.split("\\.");
+            for (Object instance : instances) {
+                initializeAlongPath(entity, instance, tokens, 0);
+            }
+        }
+    }
+
+    private static void initializeAlongPath(PersistentEntity entity, Object owner, String[] tokens, int index) {
+        if (owner == null || index == tokens.length) {
+            return;
+        }
+        Object value = entity.getReflector().getProperty(Hibernate.unproxy(owner), tokens[index]);
+        Hibernate.initialize(value);
+        PersistentEntity associated = ((Association<?>) entity.getPropertyByName(tokens[index])).getAssociatedEntity();
+        if (value instanceof Collection) {
+            for (Object element : (Collection<?>) value) {
+                initializeAlongPath(associated, element, tokens, index + 1);
+            }
+        }
+        else {
+            initializeAlongPath(associated, value, tokens, index + 1);
+        }
     }
 
     /**
