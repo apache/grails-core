@@ -608,6 +608,10 @@ public abstract class AbstractHibernateQuery extends Query {
      * uses it, unless the query fetches the collection or another one: see
      * {@link GrailsHibernateUtil#keepsSortedCollectionUnfetched(Criteria, String)} and
      * {@link GrailsHibernateUtil#checkSortedCollection(Criteria, String)}.
+     * <p>
+     * A left join of a collection that criteria use is made as an inner join when the query fetches
+     * another collection: see {@link GrailsHibernateUtil#fetchesAnotherCollection(Criteria, String)}.
+     * Criteria that need a value of the collection return the same rows from both joins.
      */
     private void createJoin(CriteriaAndAlias join) {
         String associationPath = join.associationPath;
@@ -624,6 +628,10 @@ public abstract class AbstractHibernateQuery extends Query {
             }
         }
         else if (joinType == JoinType.RIGHT && collection) {
+            joinType = JoinType.INNER;
+        }
+        else if (joinType == JoinType.LEFT && collection && join.usedByCriteria && join.criteria != null &&
+                GrailsHibernateUtil.fetchesAnotherCollection(join.criteria, associationPath)) {
             joinType = JoinType.INNER;
         }
         org.hibernate.sql.JoinType hibernateJoinType = resolveJoinType(joinType);

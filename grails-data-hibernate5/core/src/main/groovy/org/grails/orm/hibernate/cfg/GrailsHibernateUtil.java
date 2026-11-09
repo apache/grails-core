@@ -423,7 +423,20 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
      * @return Whether the collection is kept from being fetched
      */
     public static boolean keepsSortedCollectionUnfetched(Criteria criteria, String associationPath) {
-        return !isFetchRequested(criteria, associationPath) && findOtherFetchedCollection(criteria, associationPath, false) == null;
+        return !isFetchRequested(criteria, associationPath) && !fetchesAnotherCollection(criteria, associationPath);
+    }
+
+    /**
+     * Whether the query fetches a collection of the root entity other than the one at the given path.
+     * Hibernate then reads the elements of the collection that it fetches from the columns of a left
+     * join of a collection that it does not fetch, when both collections hold elements of the same table.
+     *
+     * @param criteria The criteria of the query
+     * @param associationPath The path of the collection from the root entity
+     * @return Whether another collection is fetched
+     */
+    public static boolean fetchesAnotherCollection(Criteria criteria, String associationPath) {
+        return findOtherFetchedCollection(criteria, associationPath, false) != null;
     }
 
     /**

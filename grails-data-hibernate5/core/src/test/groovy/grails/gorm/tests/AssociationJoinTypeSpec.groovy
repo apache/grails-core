@@ -35,7 +35,7 @@ class AssociationJoinTypeSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckM
     void setupSpec() {
         manager.domainClasses.addAll([Club, Team, Player, Contract, AssociationJoinTypeCategory, AssociationJoinTypeShelf, AssociationJoinTypeTag,
                                       AssociationJoinTypeFace, AssociationJoinTypeNose, AssociationJoinTypePost, AssociationJoinTypeAuthor,
-                                      AssociationJoinTypeBook])
+                                      AssociationJoinTypeBook, AssociationJoinTypeSquad, AssociationJoinTypeSquadMember, AssociationJoinTypeTrophy])
     }
 
     void setup() {
@@ -1153,6 +1153,78 @@ class AssociationJoinTypeSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckM
         'an inner join of a path through collection' | { new DetachedCriteria(Team, 't').join('players.contract', JoinType.INNER).list(max: 2) }                          || 4
         'an inner join of an association'            | { new DetachedCriteria(Team, 't').join('club', JoinType.INNER).list(max: 2) }                                      || 4
     }
+
+    /**
+     * A left join requested for a collection that the query has criteria on:
+     *
+     * <pre>
+     * | criteria on the collection | another collection fetched | squads returned                   | fetched collection            |
+     * |----------------------------|----------------------------|-----------------------------------|-------------------------------|
+     * | need a value               | none                       | those with a matching element     | none                          |
+     * | need a value               | of the same class          | those with a matching element     | holds its own elements        |
+     * | need a value               | of another class           | those with a matching element     | holds its own elements        |
+     * | accept a missing element   | none                       | also those without an element     | none                          |
+     * | accept a missing element   | of the same class          | not those without an element      | holds its own elements        |
+     * </pre>
+     */
+    void 'a left join of a collection that criteria use, #description'() {
+        given: 'a squad with a regular, a reserve and a trophy, and a squad with a reserve only'
+        final full = new AssociationJoinTypeSquad(name: 'Full').save(failOnError: true)
+        new AssociationJoinTypeSquadMember(name: 'Regular', kind: 'Regular', squad: full).save(failOnError: true)
+        new AssociationJoinTypeSquadMember(name: 'Reserve', kind: 'Reserve', reserveSquad: full).save(failOnError: true)
+        new AssociationJoinTypeTrophy(name: 'Cup', squad: full).save(failOnError: true)
+        final bench = new AssociationJoinTypeSquad(name: 'Bench').save(failOnError: true)
+        new AssociationJoinTypeSquadMember(name: 'Bench reserve', kind: 'Reserve', reserveSquad: bench).save(failOnError: true, flush: true)
+        manager.session.clear()
+
+        when:
+        final List<AssociationJoinTypeSquad> results = query.call()
+
+        then:
+        results*.name.unique().sort() == squads
+        results.every { !Hibernate.isInitialized(it."$filtered") }
+        fetched.every { String collection, List<String> elements ->
+            final squad = results.find { it.name == 'Full' }
+            Hibernate.isInitialized(squad."$collection") && squad."$collection"*.name == elements
+        }
+
+        where:
+        description                                                  | query                                                                                                                        | filtered   | squads            | fetched
+        'nothing else fetched'                                       | { AssociationJoinTypeSquad.where { players { kind == 'Regular' } }.join('players', JoinType.LEFT).list() }                   | 'players'  | ['Full']          | [:]
+        'fetching a collection of the same class'                    | { AssociationJoinTypeSquad.where { players { kind == 'Regular' } }.join('players', JoinType.LEFT).join('reserves').list() }  | 'players'  | ['Full']          | [reserves: ['Reserve']]
+        'fetching a collection of the same class with the argument'  | { AssociationJoinTypeSquad.where { players { kind == 'Regular' } }.list(fetch: [players: JoinType.LEFT, reserves: 'join']) } | 'players'  | ['Full']          | [reserves: ['Reserve']]
+        'fetching a collection of another class'                     | { AssociationJoinTypeSquad.where { players { kind == 'Regular' } }.join('players', JoinType.LEFT).join('trophies').list() }  | 'players'  | ['Full']          | [trophies: ['Cup']]
+        'fetching a collection that comes first in the entity'       | { AssociationJoinTypeSquad.where { reserves { kind == 'Reserve' } }.join('reserves', JoinType.LEFT).join('players').list() } | 'reserves' | ['Bench', 'Full'] | [players: ['Regular']]
+        'with criteria that accept a missing element'                | { AssociationJoinTypeSquad.where { players { kind == null } }.join('players', JoinType.LEFT).list() }                        | 'players'  | ['Bench']         | [:]
+        'with criteria that accept a missing element, fetching more' | { AssociationJoinTypeSquad.where { players { kind == null } }.join('players', JoinType.LEFT).join('reserves').list() }       | 'players'  | []                | [:]
+    }
+}
+
+@Entity
+class AssociationJoinTypeSquad {
+    String name
+    static hasMany = [players: AssociationJoinTypeSquadMember, reserves: AssociationJoinTypeSquadMember, trophies: AssociationJoinTypeTrophy]
+    static mappedBy = [players: 'squad', reserves: 'reserveSquad']
+}
+
+@Entity
+class AssociationJoinTypeSquadMember {
+    String name
+    String kind
+    AssociationJoinTypeSquad squad
+    AssociationJoinTypeSquad reserveSquad
+
+    static constraints = {
+        kind nullable: true
+        squad nullable: true
+        reserveSquad nullable: true
+    }
+}
+
+@Entity
+class AssociationJoinTypeTrophy {
+    String name
+    static belongsTo = [squad: AssociationJoinTypeSquad]
 }
 
 @Entity
