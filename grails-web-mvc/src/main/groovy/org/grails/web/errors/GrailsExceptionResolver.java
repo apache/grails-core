@@ -427,14 +427,18 @@ public class GrailsExceptionResolver extends SimpleMappingExceptionResolver impl
         }
     }
 
+    /**
+     * The exception an action threw, out of what Groovy and Grails wrap it in. Only those come off: what that exception
+     * wraps itself is its own cause, and an exception mapping that names it has to find it. A mapping that names a cause
+     * finds it through {@link #matchStatusCode(Exception, UrlMappingsHolder)}.
+     */
     protected Exception findWrappedException(Exception e) {
-        if ((e instanceof InvokerInvocationException) || (e instanceof GrailsMVCException)) {
-            Throwable t = getRootCause(e);
-            if (t instanceof Exception) {
-                e = (Exception) t;
-            }
+        Throwable found = e;
+        while ((found instanceof InvokerInvocationException || found instanceof GrailsMVCException) &&
+                found.getCause() != null) {
+            found = found.getCause();
         }
-        return e;
+        return found instanceof Exception exception ? exception : e;
     }
 
     protected String getRequestLogMessage(String exceptionName, HttpServletRequest request, String message) {
