@@ -384,15 +384,12 @@ class AliasPathModelSpec extends HibernateGormDatastoreSpec {
                 return left == null || right == null ? null : (node.op == 'eqProp') == (left == right)
             default:
                 def value = leaf(node.ref as String, scope, aliases, binding, club)
-                if (node.op == 'ne') {
-                    // ne is x <> value or x is null, as it is on Hibernate 5, so a missing element matches it
-                    return value == null || value != node.val
-                }
                 if (value == null) {
                     return null
                 }
                 switch (node.op) {
                     case 'eq': return value == node.val
+                    case 'ne': return value != node.val
                     case 'gt': return value > node.val
                     case 'ge': return value >= node.val
                     case 'lt': return value < node.val
