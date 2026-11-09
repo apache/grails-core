@@ -96,6 +96,7 @@ class FailedActionObservationSpec extends Specification implements HttpClientSup
         'an error controller, for an Error'                                  | '/failing/answeredByControllerForAnError'         | '/failing/answeredByControllerForAnError'         | 'Answered by the error controller' || 'StackOverflowError'
         'an error controller that forwards'                                  | '/failing/answeredByForwardingController'         | '/failing/answeredByForwardingController'         | 'Answered by the error controller' || 'ArithmeticException'
         'the error view, after an include'                                   | '/failing/failsAfterInclude'                      | '/failing/failsAfterInclude'                      | 'An error has occurred'            || 'IllegalStateException'
+        'an error controller, after an include'                              | '/failing/failsAfterIncludeAnsweredByController'  | '/failing/failsAfterIncludeAnsweredByController'  | 'Answered by the error controller' || 'UnsupportedOperationException'
         'an error controller, after an interceptor failed'                   | '/failing/failsInInterceptor'                     | '/failing/failsInInterceptor'                     | 'Answered by the error controller' || 'UnsupportedOperationException'
     }
 
@@ -113,8 +114,9 @@ class FailedActionObservationSpec extends Specification implements HttpClientSup
         !NOTIFIED.containsKey(path)
 
         where:
-        handler          | path
-        'the error view' | '/failing/includesAnswerOfView'
+        handler               | path
+        'the error view'      | '/failing/includesAnswerOfView'
+        'an error controller' | '/failing/includesAnswerOfController'
     }
 
     void 'a request #what is reported under #reported'() {

@@ -252,9 +252,44 @@ public class UrlMappingUtils {
      * @throws jakarta.servlet.ServletException Thrown when an error occurs executing the forward
      * @throws java.io.IOException Thrown when an error occurs executing the forward
      */
-    @SuppressWarnings({ "unchecked", "rawtypes" })
     public static String forwardRequestForUrlMappingInfo(HttpServletRequest request,
             HttpServletResponse response, UrlMappingInfo info, Map<String, Object> model, boolean includeParams) throws ServletException, IOException {
+        return dispatchRequestForUrlMappingInfo(request, response, info, model, includeParams, false);
+    }
+
+    /**
+     * Includes what the given UrlMappingInfo maps to in the response, where
+     * {@link #forwardRequestForUrlMappingInfo(HttpServletRequest, HttpServletResponse, UrlMappingInfo, Map, boolean)}
+     * would forward to it. A request that is itself an include cannot forward: a forward ends the response it is given,
+     * which inside an include belongs to the page that included it. The include answers with the given mapping,
+     * whatever its URI would match.
+     *
+     * @param request The request
+     * @param response The response
+     * @param info The UrlMappingInfo object
+     * @param model The Model
+     * @param includeParams Whether to include any request parameters
+     * @return The URI included
+     *
+     * @throws jakarta.servlet.ServletException Thrown when an error occurs executing the include
+     * @throws java.io.IOException Thrown when an error occurs executing the include
+     * @since 8.0.1
+     */
+    public static String includeRequestForUrlMappingInfo(HttpServletRequest request,
+            HttpServletResponse response, UrlMappingInfo info, Map<String, Object> model, boolean includeParams) throws ServletException, IOException {
+        request.setAttribute(UrlMappingsHandlerMapping.INCLUDED_MAPPING_INFO, info);
+        try {
+            return dispatchRequestForUrlMappingInfo(request, response, info, model, includeParams, true);
+        }
+        finally {
+            request.removeAttribute(UrlMappingsHandlerMapping.INCLUDED_MAPPING_INFO);
+        }
+    }
+
+    @SuppressWarnings({ "unchecked", "rawtypes" })
+    private static String dispatchRequestForUrlMappingInfo(HttpServletRequest request, HttpServletResponse response,
+            UrlMappingInfo info, Map<String, Object> model, boolean includeParams, boolean include)
+            throws ServletException, IOException {
 
         String forwardUrl = buildDispatchUrlForMapping(info, includeParams);
 
@@ -275,7 +310,12 @@ public class UrlMappingUtils {
         webRequest.removeAttribute(GrailsApplicationAttributes.GRAILS_CONTROLLER_CLASS_AVAILABLE, WebRequest.SCOPE_REQUEST);
         webRequest.removeAttribute(UrlMappingsHandlerMapping.MATCHED_REQUEST, WebRequest.SCOPE_REQUEST);
         webRequest.removeAttribute("grailsWebRequestFilter" + OncePerRequestFilter.ALREADY_FILTERED_SUFFIX, WebRequest.SCOPE_REQUEST);
-        dispatcher.forward(request, response);
+        if (include) {
+            dispatcher.include(request, response);
+        }
+        else {
+            dispatcher.forward(request, response);
+        }
         return forwardUrl;
     }
 

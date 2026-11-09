@@ -301,19 +301,19 @@ class GrailsExceptionResolverSpec extends Specification {
             servlet.service(req, res)
         } as FilterChain)
 
-        then: 'the error page answered inside the page, which answered the request'
+        then: 'the error page answered inside the page, included rather than forwarded to, which answered the request'
         response.status == 200
-        response.includedUrls == included
-        response.forwardedUrl == forwarded
+        response.includedUrls == [page]
+        response.forwardedUrl == null
 
         and: 'so the request did not fail'
         observed.error == null
         notified.empty
 
         where:
-        handler               | mappings                                               | controllerMappings | included   | forwarded
-        'the error view'      | { '500'(view: '/error') }                              | false              | ['/error'] | null
-        'an error controller' | { '500'(controller: 'errors', action: 'serverError') } | true               | []         | '/errors/serverError'
+        handler               | mappings                                               | controllerMappings | page
+        'the error view'      | { '500'(view: '/error') }                              | false              | '/error'
+        'an error controller' | { '500'(controller: 'errors', action: 'serverError') } | true               | '/errors/serverError'
     }
 
     void 'an exception is resolved as usual without an observation'() {

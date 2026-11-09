@@ -401,6 +401,32 @@ class UrlMappingsHandlerMappingSpec extends AbstractUrlMappingsSpec {
         dispatch << [DispatcherType.FORWARD, DispatcherType.INCLUDE]
     }
 
+    void "an include made for a mapping answers with that mapping, whatever its URI matches"() {
+        given: 'an error handler with no URL of its own, as a status code mapping has'
+        def grailsApplication = new DefaultGrailsApplication(FooController)
+        grailsApplication.initialise()
+        def holder = new GrailsControllerUrlMappings(grailsApplication, getUrlMappingsHolder {
+            "/foo/bar"(controller: 'foo', action: 'bar')
+            "500"(controller: 'foo', action: 'fooBar')
+        })
+        def handler = new UrlMappingsHandlerMapping(holder)
+        def webRequest = GrailsWebMockUtil.bindMockWebRequest()
+        def request = webRequest.request
+        def errorHandler = holder.matchStatusCode(500)
+
+        when: 'it is included while the exception is resolved, under the URI built for it'
+        request.setAttribute(WebUtils.ERROR_STATUS_CODE_ATTRIBUTE, 500)
+        request.setAttribute(WebUtils.INCLUDE_REQUEST_URI_ATTRIBUTE, '/foo/fooBar')
+        request.requestURI = '/foo/fooBar'
+        request.setAttribute(UrlMappingsHandlerMapping.INCLUDED_MAPPING_INFO, errorHandler)
+        def info = handler.getHandler(request).handler
+
+        then: 'it answers with the error handler, and only that include does'
+        info.is(errorHandler)
+        request.getAttribute(UrlMappingsHandlerMapping.INCLUDED_MAPPING_INFO) == null
+        handler.getHandler(request) == null
+    }
+
     void "an action a page includes leaves the route of the page on its observation"() {
         given:
         def grailsApplication = new DefaultGrailsApplication(FooController)
