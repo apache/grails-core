@@ -33,6 +33,7 @@ class UrlMappings {
         "500"(view: '/error')
         "500"(controller: 'failing', action: 'errorHandler', exception: UnsupportedOperationException)
         "500"(controller: 'failing', action: 'errorHandler', exception: StackOverflowError)
+        "500"(controller: 'failing', action: 'forwardingErrorHandler', exception: ArithmeticException)
         "500"(controller: 'errorPage', action: 'handle', exception: StaticInitFailure)
         "413"(controller: 'upload', action: 'tooLarge')
         "404"(view: '/notFound')
