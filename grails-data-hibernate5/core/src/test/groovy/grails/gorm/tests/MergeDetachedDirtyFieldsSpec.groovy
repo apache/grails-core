@@ -52,8 +52,10 @@ class MergeDetachedDirtyFieldsSpec extends HibernateGormDatastoreSpec {
         MergeDirtyData data = new MergeDirtyData(name: 'a', number: 1).save(flush: true)
         session.clear()
 
-        when: 'the instance is made by hand, restored from a serialized copy, or marked dirty as a whole'
-        MergeDirtyData instance = new MergeDirtyData(id: data.id, name: 'changed', number: 2)
+        when: 'the instance carries the id and version of the row, is made by hand, restored from a serialized copy, or marked dirty as a whole'
+        MergeDirtyData instance = new MergeDirtyData(name: 'changed', number: 2)
+        instance.id = data.id
+        instance.version = data.version
         if (form == 'serialized') {
             instance = serialized(instance)
         } else if (form == 'marked') {
