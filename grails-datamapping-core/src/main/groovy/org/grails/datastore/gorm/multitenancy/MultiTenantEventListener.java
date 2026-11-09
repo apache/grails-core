@@ -23,11 +23,16 @@ import java.io.Serializable;
 import java.util.Arrays;
 import java.util.List;
 
+import jakarta.persistence.CascadeType;
+
 import org.springframework.context.ApplicationEvent;
 
 import grails.gorm.multitenancy.Tenants;
 import org.grails.datastore.gorm.GormEnhancer;
+import org.grails.datastore.mapping.config.Property;
 import org.grails.datastore.mapping.core.Datastore;
+import org.grails.datastore.mapping.core.Session;
+import org.grails.datastore.mapping.core.SessionImplementor;
 import org.grails.datastore.mapping.dirty.checking.DirtyCheckable;
 import org.grails.datastore.mapping.engine.event.AbstractPersistenceEvent;
 import org.grails.datastore.mapping.engine.event.PersistenceEventListener;
@@ -37,6 +42,7 @@ import org.grails.datastore.mapping.engine.event.ValidationEvent;
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.types.Association;
 import org.grails.datastore.mapping.model.types.TenantId;
+import org.grails.datastore.mapping.model.types.ToMany;
 import org.grails.datastore.mapping.model.types.ToOne;
 import org.grails.datastore.mapping.multitenancy.MultiTenantCapableDatastore;
 import org.grails.datastore.mapping.multitenancy.exceptions.TenantException;
@@ -127,21 +133,41 @@ public class MultiTenantEventListener implements PersistenceEventListener {
         }
     }
 
-    // Whether the object is inserted or updated with its owner. An object without an identifier is new, so it counts
-    // whatever changes it tracks. For another object that tracks its changes this is the answer of the session, which
-    // updates an object only when it is dirty. A save cascades to the object of a to-one association only when that
-    // object has changes of its own, as GORM for MongoDB does, so there a change inside an embedded or an associated
-    // object does not count. An object without a tenant id is not asked: the in-memory datastore does not read the
-    // tenant id of a loaded object back.
+    // Whether the object is inserted or updated with its owner. A save reaches the objects of a collection only when
+    // the association cascades it to them. A new object counts whatever changes it tracks. For another object that
+    // tracks its changes this is the answer of the session, which updates an object only when it is dirty. A save
+    // cascades to the object of a to-one association only when that object has changes of its own, as GORM for MongoDB
+    // does, so there a change inside an embedded or an associated object does not count. An object without a tenant id
+    // is not asked: the in-memory datastore does not read the tenant id of a loaded object back.
     private boolean isSaved(ValidationEvent cascaded, Association association) {
+        if (association instanceof ToMany && !association.doesCascade(CascadeType.PERSIST)) {
+            return false;
+        }
         Object object = cascaded.getEntityObject();
-        if (!(object instanceof DirtyCheckable) || cascaded.getEntityAccess().getIdentifier() == null) {
+        if (!(object instanceof DirtyCheckable) || isNew(cascaded)) {
             return true;
         }
         if (association instanceof ToOne && !association.isEmbedded()) {
             return ((DirtyCheckable) object).hasChanged();
         }
         return this.datastore.getCurrentSession().isDirty(object);
+    }
+
+    // Whether a datastore inserts the object rather than updating it: the object has no identifier, or an assigned
+    // identifier that the session does not know
+    private boolean isNew(ValidationEvent cascaded) {
+        if (cascaded.getEntityAccess().getIdentifier() == null) {
+            return true;
+        }
+        PersistentEntity entity = cascaded.getEntity();
+        Session session = this.datastore.getCurrentSession();
+        boolean stateless = session instanceof SessionImplementor && ((SessionImplementor<?>) session).isStateless(entity);
+        return hasAssignedIdentifier(entity) && !stateless && !session.contains(cascaded.getEntityObject());
+    }
+
+    private static boolean hasAssignedIdentifier(PersistentEntity entity) {
+        Property identity = entity.getIdentity().getMapping().getMappedForm();
+        return identity != null && "assigned".equals(identity.getGenerator());
     }
 
     private void handleEvent(ApplicationEvent event) {

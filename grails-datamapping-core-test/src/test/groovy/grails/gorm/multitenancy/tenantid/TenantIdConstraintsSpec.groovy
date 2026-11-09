@@ -394,6 +394,101 @@ class TenantIdConstraintsSpec extends Specification {
         'to-many'   | Pet       | 'pets[0].firmId' | { new Owner(name: 'Dave').addToPets(it) }
     }
 
+    void 'a new associated object of a #association with an assigned identifier and no tracked changes is validated with the current tenant id'() {
+        given: 'a new object whose assigned identifier the session does not know, and whose tracked changes were reset'
+        System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, 'a-tenant-too-long')
+        def child = childType.newInstance(name: 'Rex', firmId: 'other')
+        child.id = 'a1'
+        def owner = build(child)
+        child.trackChanges()
+
+        when:
+        boolean valid = childType.withNewSession { owner.validate() }
+
+        then:
+        !valid
+        child.firmId == 'a-tenant-too-long'
+        owner.errors.getFieldError(errorField).code == 'maxSize.exceeded'
+
+        where:
+        association | childType | errorField       | build
+        'to-one'    | Steed     | 'steed.firmId'   | { new Rancher(name: 'Dave', steed: it) }
+        'to-many'   | Hand      | 'hands[0].firmId' | { new Rancher(name: 'Dave').addToHands(it) }
+    }
+
+    void 'a new associated object with an assigned identifier and no tracked changes is inserted with the current tenant id'() {
+        given: 'a new hand whose assigned identifier the session does not know, and whose tracked changes were reset'
+        System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, 'acme')
+        def hand = new Hand(name: 'Rex', firmId: 'other')
+        hand.id = 'a1'
+        def rancher = new Rancher(name: 'Dave').addToHands(hand)
+        hand.trackChanges()
+
+        when:
+        def saved = Hand.withNewSession { rancher.save(flush: true) }
+
+        then:
+        saved
+        hand.firmId == 'acme'
+        Hand.withNewSession { Hand.count() } == 1
+    }
+
+    void 'an associated object with an assigned identifier that the session knows keeps its tenant id'() {
+        given: 'a hand that is stored'
+        System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, 'acme')
+        def stored = new Hand(name: 'Rex')
+        stored.id = 'a1'
+        Hand.withNewSession { new Rancher(name: 'Dave').addToHands(stored).save(flush: true) }
+
+        when: 'it is loaded, so that the session knows it, and given another tenant id, as the in-memory datastore reads none back'
+        def result = Hand.withNewSession {
+            def hand = Hand.get('a1')
+            def rancher = new Rancher(name: 'Eve').addToHands(hand)
+            hand.firmId = 'other'
+            hand.trackChanges()
+            [valid: rancher.validate(), firmId: hand.firmId]
+        }
+
+        then:
+        result == [valid: true, firmId: 'other']
+    }
+
+    void 'an associated object with an assigned identifier of a stateless class is not taken for a new one'() {
+        given: 'a drone without tracked changes, which a stateless session does not hold'
+        System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, 'acme')
+        def drone = new Drone(name: 'Rex', firmId: 'other')
+        drone.id = 'a1'
+        def hive = new Hive(name: 'North').addToDrones(drone)
+        drone.trackChanges()
+
+        when:
+        boolean valid = Hive.withNewSession { hive.validate() }
+
+        then:
+        valid
+        drone.firmId == 'other'
+    }
+
+    void 'an associated object of a collection that does not cascade keeps its tenant id: #state'() {
+        given: 'a calf of another tenant in a collection mapped with cascade none, and a current tenant that breaks its maxSize'
+        System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, 'a-tenant-too-long')
+        def calf = new Calf(name: 'Rex', firmId: 'other')
+        def barn = new Barn(name: 'North').addToCalves(calf)
+        prepare(calf)
+
+        when:
+        boolean valid = Barn.withNewSession { barn.validate() }
+
+        then: 'the save does not reach the calf, so it is validated with the tenant id it has'
+        valid
+        calf.firmId == 'other'
+
+        where:
+        state     | prepare
+        'changed' | { asLoaded(it); it.name = 'Max' }
+        'new'     | { }
+    }
+
     void 'an associated object that a beforeValidate callback creates as its owner is validated is given the current tenant id'() {
         given:
         System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, 'acme')
@@ -852,6 +947,117 @@ class Collar implements MultiTenant<Collar> {
 
     def beforeValidate() {
         validations++
+    }
+}
+
+@Entity
+class Rancher implements MultiTenant<Rancher> {
+
+    String name
+    String tenantId
+    Steed steed
+
+    static hasMany = [hands: Hand]
+
+    static constraints = {
+        steed nullable: true
+    }
+}
+
+@Entity
+class Steed implements MultiTenant<Steed> {
+
+    String id
+    String name
+    String firmId
+
+    static belongsTo = Rancher
+
+    static constraints = {
+        firmId maxSize: 5
+    }
+
+    static mapping = {
+        id generator: 'assigned'
+        tenantId name: 'firmId'
+    }
+}
+
+@Entity
+class Hand implements MultiTenant<Hand> {
+
+    String id
+    String name
+    String firmId
+
+    static belongsTo = [rancher: Rancher]
+
+    static constraints = {
+        firmId maxSize: 5
+    }
+
+    static mapping = {
+        id generator: 'assigned'
+        tenantId name: 'firmId'
+    }
+}
+
+@Entity
+class Hive implements MultiTenant<Hive> {
+
+    String name
+    String tenantId
+
+    static hasMany = [drones: Drone]
+}
+
+@Entity
+class Drone implements MultiTenant<Drone> {
+
+    String id
+    String name
+    String firmId
+
+    static belongsTo = [hive: Hive]
+
+    static constraints = {
+        firmId maxSize: 5
+    }
+
+    static mapping = {
+        stateless true
+        id generator: 'assigned'
+        tenantId name: 'firmId'
+    }
+}
+
+@Entity
+class Barn implements MultiTenant<Barn> {
+
+    String name
+    String tenantId
+
+    static hasMany = [calves: Calf]
+
+    static mapping = {
+        calves cascade: 'none'
+    }
+}
+
+@Entity
+class Calf implements MultiTenant<Calf> {
+
+    String name
+    String firmId
+
+    static belongsTo = [barn: Barn]
+
+    static constraints = {
+        firmId maxSize: 5
+    }
+
+    static mapping = {
+        tenantId name: 'firmId'
     }
 }
 

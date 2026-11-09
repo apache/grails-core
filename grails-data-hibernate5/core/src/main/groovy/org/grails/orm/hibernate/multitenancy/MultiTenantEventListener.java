@@ -23,6 +23,7 @@ import java.io.Serializable;
 import java.util.List;
 
 import org.hibernate.collection.spi.PersistentCollection;
+import org.hibernate.engine.spi.CascadingActions;
 import org.hibernate.engine.spi.EntityEntry;
 import org.hibernate.engine.spi.SessionFactoryImplementor;
 import org.hibernate.engine.spi.SessionImplementor;
@@ -80,7 +81,7 @@ public class MultiTenantEventListener implements PersistenceEventListener {
                 // validator calls back with each of them
                 AbstractHibernateDatastore hibernateDatastore = (AbstractHibernateDatastore) event.getSource();
                 validationEvent.addCascadeListener((associatedObject, association) ->
-                        assignTenantIdOfAssociatedObject(hibernateDatastore, associatedObject));
+                        assignTenantIdOfAssociatedObject(hibernateDatastore, associatedObject, association));
             }
         }
     }
@@ -90,13 +91,13 @@ public class MultiTenantEventListener implements PersistenceEventListener {
     // keeps the tenant id it has, or its lack of one, and is passed again once every callback of the validation has
     // run, as one of them may have changed it. Without a current tenant the object is left alone, and gets its tenant
     // id as it is inserted or updated, as before. Returns whether the object was given a tenant id.
-    private boolean assignTenantIdOfAssociatedObject(AbstractHibernateDatastore hibernateDatastore, Object associatedObject) {
+    private boolean assignTenantIdOfAssociatedObject(AbstractHibernateDatastore hibernateDatastore, Object associatedObject, Association association) {
         ValidationEvent cascaded = new ValidationEvent(hibernateDatastore, associatedObject);
         PersistentEntity entity = cascaded.getEntity();
         if (entity == null || !entity.isMultiTenant()) {
             return false;
         }
-        if (!isSaved(hibernateDatastore, entity, cascaded.getEntityObject())) {
+        if (!isSaved(hibernateDatastore, entity, cascaded.getEntityObject(), association)) {
             return false;
         }
         try {
@@ -113,14 +114,16 @@ public class MultiTenantEventListener implements PersistenceEventListener {
     // changes of a modifiable object only, and updates no more than the version of a read-only object whose collection
     // has changed. It inserts an object of the session that is not in the database yet, whose insert waits for the
     // flush, as its identifier comes from a sequence for example, and an object outside the session that is transient,
-    // whatever changes that object tracks. An update of a class mapped with dynamicUpdate writes the properties that
-    // have changed alone, which a tenant id, being derived, never counts as. For another object that tracks its
-    // changes this is the check of GrailsEntityDirtinessStrategy, with which Hibernate decides whether to update an
-    // object of the session, and the check for a changed collection.
-    private static boolean isSaved(AbstractHibernateDatastore hibernateDatastore, PersistentEntity entity, Object object) {
+    // whatever changes that object tracks. It writes another object outside the session only when the save cascades to
+    // it. An update of a class mapped with dynamicUpdate writes the properties that have changed alone, which a tenant
+    // id, being derived, never counts as. For another object that tracks its changes this is the check of
+    // GrailsEntityDirtinessStrategy, with which Hibernate decides whether to update an object of the session, and the
+    // check for a changed collection.
+    private static boolean isSaved(AbstractHibernateDatastore hibernateDatastore, PersistentEntity entity, Object object, Association association) {
         SessionImplementor session = currentSession(hibernateDatastore);
         EntityEntry entry = session != null ? session.getPersistenceContext().getEntry(object) : null;
-        EntityPersister persister = ((SessionFactoryImplementor) hibernateDatastore.getSessionFactory()).getMetamodel().entityPersister(entity.getName());
+        SessionFactoryImplementor sessionFactory = (SessionFactoryImplementor) hibernateDatastore.getSessionFactory();
+        EntityPersister persister = sessionFactory.getMetamodel().entityPersister(entity.getName());
         if (entry != null) {
             if (!entry.isModifiableEntity()) {
                 return false;
@@ -129,8 +132,13 @@ public class MultiTenantEventListener implements PersistenceEventListener {
                 return true;
             }
         }
-        else if (session != null && isTransient(persister, object, session)) {
-            return true;
+        else if (session != null) {
+            if (isTransient(persister, object, session)) {
+                return true;
+            }
+            if (!cascadesSave(sessionFactory, association)) {
+                return false;
+            }
         }
         if (session != null && persister.getEntityMetamodel().isDynamicUpdate()) {
             return false;
@@ -148,6 +156,14 @@ public class MultiTenantEventListener implements PersistenceEventListener {
             return isTransient;
         }
         return session.getPersistenceContext().getDatabaseSnapshot(persister.getIdentifier(object, session), persister) == null;
+    }
+
+    // Whether a save reaches an object outside the session through the association. The owner of an association inside
+    // an embedded object has no persister, so such an association is taken to cascade.
+    private static boolean cascadesSave(SessionFactoryImplementor sessionFactory, Association association) {
+        EntityPersister owner = sessionFactory.getMetamodel().entityPersisters().get(association.getOwner().getName());
+        Integer index = owner != null ? owner.getEntityMetamodel().getPropertyIndexOrNull(association.getName()) : null;
+        return index == null || owner.getPropertyCascadeStyles()[index].doCascade(CascadingActions.SAVE_UPDATE);
     }
 
     private static SessionImplementor currentSession(AbstractHibernateDatastore hibernateDatastore) {

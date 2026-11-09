@@ -60,7 +60,8 @@ class TenantIdConstraintsSpec extends Specification {
                 'dataSource.dialect'                          : H2Dialect.name,
         ]), TenantCustomer, TenantAccount, TenantOwner, TenantPet, TenantShelter, TenantCat, TenantChip, TenantSignup, TenantClub,
                 TenantMember, TenantDen, TenantCub, TenantLedger, TenantJournal, TenantArchive, TenantBurrow, TenantFerret, TenantNest, TenantChick, TenantLog,
-                TenantEntry, TenantRack, TenantTag, TenantLabel, TenantYard, TenantCrate, TenantBox, TenantBin, TenantPail)
+                TenantEntry, TenantRack, TenantTag, TenantLabel, TenantYard, TenantCrate, TenantBox, TenantBin, TenantPail, TenantFarm,
+                TenantCow, TenantGoat, TenantSheep, TenantHen, TenantDuck, TenantHouse, TenantMat)
     }
 
     void 'a tenant id the listener assigns passes the constraints declared on it'() {
@@ -762,6 +763,75 @@ class TenantIdConstraintsSpec extends Specification {
         TenantPail  | 'pails'    | 'code'      | 'changed'       || false
     }
 
+    void 'a changed associated object outside the session is given the current tenant id only when the save cascades to it: #type.simpleName, cascade #cascade, detached #detached'() {
+        given: 'a farm and an animal of one tenant, loaded inside withoutId'
+        System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, 'beta')
+        def stored = new TenantFarm(name: 'Farm').save(flush: true)
+        type.newInstance(name: 'Rex', farm: stored).save(flush: true)
+        Long id = stored.id
+        datastore.sessionFactory.currentSession.clear()
+        TenantFarm farm = Tenants.withoutId(datastore) {
+            def loaded = TenantFarm.get(id)
+            loaded."$collection".size()
+            loaded
+        }
+        def animal = farm."$collection".first()
+        if (detached) {
+            animal.discard()
+        }
+
+        when: 'the animal is changed, and the farm is validated while a tenant that breaks the maxSize of the animal is current'
+        animal.name = 'Max'
+        System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, 'a-tenant-too-long')
+        boolean valid = farm.validate()
+
+        then: 'the animal is validated with the tenant id that is written for it'
+        valid == !written
+        animal.firmId == (written ? 'a-tenant-too-long' : 'beta')
+
+        when: 'the farm is saved while a tenant that fits is current'
+        System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, 'acme')
+        def saved = farm.save(flush: true)
+
+        then:
+        saved
+        storedTenantIds(type) == (written ? [Max: 'acme'] : [Rex: 'beta'])
+
+        where:
+        type        | collection | cascade       | detached || written
+        TenantCow   | 'cows'     | 'none'        | true     || false
+        TenantCow   | 'cows'     | 'none'        | false    || true
+        TenantGoat  | 'goats'    | 'save-update' | true     || true
+        TenantSheep | 'sheep'    | 'merge'       | true     || false
+        TenantSheep | 'sheep'    | 'merge'       | false    || true
+        TenantHen   | 'hens'     | 'persist'     | true     || false
+        TenantDuck  | 'ducks'    | 'default'     | true     || true
+    }
+
+    void 'a changed detached object that is reached through an embedded object is given the current tenant id'() {
+        given: 'a house and its mat of one tenant, loaded inside withoutId, the mat then detached from the session'
+        System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, 'beta')
+        def storedMat = new TenantMat(name: 'Rex').save(flush: true)
+        Long id = new TenantHouse(name: 'North', porch: new TenantPorch(mat: storedMat)).save(flush: true).id
+        datastore.sessionFactory.currentSession.clear()
+        TenantHouse house = Tenants.withoutId(datastore) {
+            def loaded = TenantHouse.get(id)
+            loaded.porch.mat.name
+            loaded
+        }
+        def mat = house.porch.mat
+        mat.discard()
+
+        when: 'the mat is changed, and the house is validated'
+        mat.name = 'Max'
+        System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, 'acme')
+        boolean valid = house.validate()
+
+        then:
+        valid
+        mat.firmId == 'acme'
+    }
+
     void 'an associated object of a class with dynamicUpdate that is marked as changed as a whole keeps its tenant id'() {
         given: 'a yard and a bin of one tenant, loaded inside withoutId'
         TenantYard yard = yardLoadedWithoutTenant(TenantBin, 'bins')
@@ -1309,6 +1379,138 @@ class TenantLabel implements MultiTenant<TenantLabel> {
     static mapping = {
         id generator: 'assigned'
         version false
+        tenantId name: 'firmId'
+    }
+}
+
+@Entity
+class TenantFarm implements MultiTenant<TenantFarm> {
+
+    String name
+    String tenantId
+
+    static hasMany = [cows: TenantCow, goats: TenantGoat, sheep: TenantSheep, hens: TenantHen, ducks: TenantDuck]
+
+    static mapping = {
+        cows cascade: 'none'
+        goats cascade: 'save-update'
+        sheep cascade: 'merge'
+        hens cascade: 'persist'
+    }
+}
+
+@Entity
+class TenantCow implements MultiTenant<TenantCow> {
+
+    String name
+    String firmId
+
+    static belongsTo = [farm: TenantFarm]
+
+    static constraints = {
+        firmId nullable: false, maxSize: 5
+    }
+
+    static mapping = {
+        tenantId name: 'firmId'
+    }
+}
+
+@Entity
+class TenantGoat implements MultiTenant<TenantGoat> {
+
+    String name
+    String firmId
+
+    static belongsTo = [farm: TenantFarm]
+
+    static constraints = {
+        firmId nullable: false, maxSize: 5
+    }
+
+    static mapping = {
+        tenantId name: 'firmId'
+    }
+}
+
+@Entity
+class TenantSheep implements MultiTenant<TenantSheep> {
+
+    String name
+    String firmId
+
+    static belongsTo = [farm: TenantFarm]
+
+    static constraints = {
+        firmId nullable: false, maxSize: 5
+    }
+
+    static mapping = {
+        tenantId name: 'firmId'
+    }
+}
+
+@Entity
+class TenantHen implements MultiTenant<TenantHen> {
+
+    String name
+    String firmId
+
+    static belongsTo = [farm: TenantFarm]
+
+    static constraints = {
+        firmId nullable: false, maxSize: 5
+    }
+
+    static mapping = {
+        tenantId name: 'firmId'
+    }
+}
+
+@Entity
+class TenantDuck implements MultiTenant<TenantDuck> {
+
+    String name
+    String firmId
+
+    static belongsTo = [farm: TenantFarm]
+
+    static constraints = {
+        firmId nullable: false, maxSize: 5
+    }
+
+    static mapping = {
+        tenantId name: 'firmId'
+    }
+}
+
+@Entity
+class TenantHouse implements MultiTenant<TenantHouse> {
+
+    String name
+    String tenantId
+    TenantPorch porch
+
+    static embedded = ['porch']
+}
+
+@DirtyCheck
+class TenantPorch {
+
+    TenantMat mat
+}
+
+@Entity
+class TenantMat implements MultiTenant<TenantMat> {
+
+    String name
+    String firmId
+
+    static constraints = {
+        firmId nullable: false, maxSize: 5
+    }
+
+    static mapping = {
         tenantId name: 'firmId'
     }
 }

@@ -61,7 +61,8 @@ class MongoTenantIdConstraintsSpec extends AutoStartedMongoSpec {
                 (MongoSettings.SETTING_URL)                   : "mongodb://${mongoHost}:${mongoPort}/tenantIdConstraintsDb" as String,
         ]
         this.datastore = new MongoDatastore(config, TenantAccount, TenantOwner, TenantPet, TenantWalker, TenantJogger, TenantLeash,
-                TenantShelter, TenantCat, TenantChip, TenantRider, TenantHorse)
+                TenantShelter, TenantCat, TenantChip, TenantRider, TenantHorse, TenantCaptain, TenantShip, TenantSailor, TenantFarmer,
+                TenantCalf, TenantBull)
     }
 
     void setup() {
@@ -365,6 +366,102 @@ class MongoTenantIdConstraintsSpec extends AutoStartedMongoSpec {
         'to-many'   | TenantPet   | { new TenantOwner(name: 'Dave').addToPets(it) }
     }
 
+    void 'saving an owner fails when the current tenant id breaks a constraint of a new associated object of a #association with an assigned identifier and no tracked changes'() {
+        given: 'a new object whose assigned identifier the session does not know, and a current tenant id longer than its maxSize'
+        System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, 'toolongtenant')
+        def child = childType.newInstance(name: 'Bolt', firmId: 'acme')
+        child.id = 'a1'
+        def owner = build(child)
+        child.trackChanges()
+
+        when:
+        def saved = childType.withNewSession { owner.save(flush: true) }
+
+        then: 'the owner reports the tenant id of the object, and neither is stored'
+        !saved
+        child.firmId == 'toolongtenant'
+        owner.errors.getFieldError(errorField).code == 'maxSize.exceeded'
+        TenantCaptain.collection.countDocuments() == 0L
+        childType.collection.countDocuments() == 0L
+
+        where:
+        association | childType    | errorField        | build
+        'to-one'    | TenantShip   | 'ship.firmId'     | { new TenantCaptain(name: 'Dave', ship: it) }
+        'to-many'   | TenantSailor | 'crew[0].firmId'  | { new TenantCaptain(name: 'Dave').addToCrew(it) }
+    }
+
+    void 'a new associated object of a #association with an assigned identifier and no tracked changes is inserted with the current tenant id'() {
+        given: 'a new object whose assigned identifier the session does not know, and that has another tenant id'
+        System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, 'gamma')
+        def child = childType.newInstance(name: 'Bolt', firmId: 'acme')
+        child.id = 'a1'
+        def owner = build(child)
+        child.trackChanges()
+
+        when:
+        def saved = childType.withNewSession { owner.save(flush: true) }
+
+        then:
+        saved
+        childType.collection.find().first().firmId == 'gamma'
+
+        where:
+        association | childType    | build
+        'to-one'    | TenantShip   | { new TenantCaptain(name: 'Dave', ship: it) }
+        'to-many'   | TenantSailor | { new TenantCaptain(name: 'Dave').addToCrew(it) }
+    }
+
+    void 'an associated object with an assigned identifier that is loaded keeps its tenant id as its owner is validated'() {
+        given: 'a captain and a sailor of one tenant'
+        System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, 'beta')
+        def stored = new TenantSailor(name: 'Rex')
+        stored.id = 'a1'
+        ObjectId id = TenantCaptain.withNewSession { new TenantCaptain(name: 'Dave').addToCrew(stored).save(flush: true).id }
+
+        when: 'they are loaded, and the captain is validated while a tenant longer than the maxSize of the sailor is current'
+        Map<String, Object> result = TenantCaptain.withNewSession {
+            def captain = TenantCaptain.get(id)
+            def sailor = captain.crew.first()
+            System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, 'toolongtenant')
+            [valid: captain.validate(), firmId: sailor.firmId]
+        }
+
+        then:
+        result == [valid: true, firmId: 'beta']
+    }
+
+    void 'a changed associated object of a #association mapped with cascade none is given the current tenant id only when it is written'() {
+        given: 'a farmer, a calf and a bull of one tenant'
+        System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, 'beta')
+        ObjectId id = TenantFarmer.withNewSession {
+            def bull = new TenantBull(name: 'Rex').save(flush: true)
+            def farmer = new TenantFarmer(name: 'Dave', bull: bull).save(flush: true)
+            new TenantCalf(name: 'Rex', farmer: farmer).save(flush: true)
+            farmer.id
+        }
+
+        when: 'they are loaded, the object is changed, and the farmer is validated while a tenant longer than its maxSize is current'
+        Map<String, Object> result = TenantFarmer.withNewSession {
+            def farmer = TenantFarmer.get(id)
+            def changed = childOf(farmer)
+            changed.name = 'Max'
+            System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, 'toolongtenant')
+            boolean valid = farmer.validate()
+            String firmId = changed.firmId
+            System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, 'gamma')
+            [valid: valid, firmId: firmId, saved: farmer.save(flush: true) != null]
+        }
+
+        then: 'the object is validated with the tenant id that is written for it'
+        result == [valid: !written, firmId: written ? 'toolongtenant' : 'beta', saved: true]
+        childType.collection.find().collect { [it.name, it.firmId] } == [written ? ['Max', 'gamma'] : ['Rex', 'beta']]
+
+        where:
+        association | childType  | childOf             || written
+        'to-many'   | TenantCalf | { it.herd.first() } || false
+        'to-one'    | TenantBull | { it.bull }         || true
+    }
+
     void 'a new object of a to-one association whose tracked changes were reset and that already has the current tenant id is not inserted'() {
         given: 'a new horse without tracked changes, which assigning the current tenant id does not change'
         System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, 'gamma')
@@ -552,6 +649,105 @@ class TenantHome {
         if (city == 'Oslo') {
             setCity('Bergen')
         }
+    }
+}
+
+@Entity
+class TenantCaptain implements MultiTenant<TenantCaptain>, MongoEntity<TenantCaptain> {
+    ObjectId id
+    String name
+    String tenantId
+    TenantShip ship
+
+    static hasMany = [crew: TenantSailor]
+
+    static constraints = {
+        ship nullable: true
+    }
+}
+
+@Entity
+class TenantShip implements MultiTenant<TenantShip>, MongoEntity<TenantShip> {
+    String id
+    String name
+    String firmId
+
+    static belongsTo = TenantCaptain
+
+    static constraints = {
+        firmId maxSize: 5
+    }
+
+    static mapping = {
+        id generator: 'assigned'
+        tenantId name: 'firmId'
+    }
+}
+
+@Entity
+class TenantSailor implements MultiTenant<TenantSailor>, MongoEntity<TenantSailor> {
+    String id
+    String name
+    String firmId
+
+    static belongsTo = [captain: TenantCaptain]
+
+    static constraints = {
+        firmId maxSize: 5
+    }
+
+    static mapping = {
+        id generator: 'assigned'
+        tenantId name: 'firmId'
+    }
+}
+
+@Entity
+class TenantFarmer implements MultiTenant<TenantFarmer>, MongoEntity<TenantFarmer> {
+    ObjectId id
+    String name
+    String tenantId
+    TenantBull bull
+
+    static hasMany = [herd: TenantCalf]
+
+    static mapping = {
+        herd cascade: 'none'
+        bull cascade: 'none'
+    }
+}
+
+@Entity
+class TenantCalf implements MultiTenant<TenantCalf>, MongoEntity<TenantCalf> {
+    ObjectId id
+    String name
+    String firmId
+
+    static belongsTo = [farmer: TenantFarmer]
+
+    static constraints = {
+        firmId maxSize: 5
+    }
+
+    static mapping = {
+        tenantId name: 'firmId'
+    }
+}
+
+@Entity
+class TenantBull implements MultiTenant<TenantBull>, MongoEntity<TenantBull> {
+    ObjectId id
+    String name
+    String firmId
+
+    static belongsTo = TenantFarmer
+
+    static constraints = {
+        firmId maxSize: 5
+    }
+
+    static mapping = {
+        tenantId name: 'firmId'
     }
 }
 
