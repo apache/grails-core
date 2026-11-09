@@ -78,12 +78,18 @@ class FilterSecurityInterceptor extends AbstractSecurityInterceptor implements F
     }
 
     /**
-     * Authenticates what a filter left in the context without doing so, as {@code DigestAuthenticationFilter} does so
-     * that the account checks of the authentication manager still run, or everything if {@code alwaysReauthenticate}
-     * is set. Spring Security's own {@code AbstractSecurityInterceptor} did this before Spring Security 7 removed it.
+     * Authenticates, for a request that has security attributes, what a filter left in the context without doing so,
+     * as {@code DigestAuthenticationFilter} does so that the account checks of the authentication manager still run.
+     * A request without security attributes is passed on before this, so nothing is authenticated for it, as Spring
+     * Security's own {@code AbstractSecurityInterceptor} did for public invocations before Spring Security 7 removed it.
+     *
+     * <p>With {@code alwaysReauthenticate}, what is authenticated already is authenticated again too, but only while it
+     * still holds its credentials. The authentication manager erases them by default once it has authenticated it, as
+     * for a form login kept in the session, and such an authentication, with nothing left to authenticate with, is
+     * returned as it is.</p>
      */
     private Authentication authenticateIfRequired(Authentication authentication) {
-        if (authentication.authenticated && !alwaysReauthenticate) {
+        if (authentication.authenticated && (!alwaysReauthenticate || authentication.credentials == null)) {
             return authentication
         }
         Authentication authenticated = authenticationManager.authenticate(authentication)

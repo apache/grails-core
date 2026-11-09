@@ -148,7 +148,9 @@ With `digest.useCleartextPasswords`, nobody could sign in with Digest authentica
 A form or Basic authentication signs a user in with their password in either mode.
 
 * *`fii.alwaysReauthenticate` in the Spring Security plugin takes effect.*
-The setting did nothing, because the plugin's security interceptor went straight to the access decision. An application that sets it now has every request authenticated again, as the setting describes.
+The setting did nothing, because the plugin's security interceptor went straight to the access decision.
+An application that sets it now has the `Authentication` of a request to a secured URL authenticated again, while it still holds its credentials, as it does with `providerManager.eraseCredentialsAfterAuthentication` set to `false`.
+By default the credentials are erased at sign-in, so a user signed in through a form is not authenticated again.
 
 [TIP]
 ====

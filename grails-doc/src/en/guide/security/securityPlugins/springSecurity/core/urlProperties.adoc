@@ -177,7 +177,7 @@ The table shows configurable URL-related properties.
 
 |fii.alwaysReauthenticate
 |`false`
-|If `true`, re-authenticates when there is a `Authentication` in the `SecurityContext`
+|If `true`, re-authenticates the `Authentication` in the `SecurityContext` for every request to a secured URL, unless its credentials were erased once it was authenticated, as `providerManager.eraseCredentialsAfterAuthentication` does by default
 
 |fii.rejectPublicInvocations
 |`true`
