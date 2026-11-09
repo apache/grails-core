@@ -1152,6 +1152,9 @@ class AssociationJoinTypeSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckM
         'an inner join of a collection'              | { new DetachedCriteria(Team, 't').join('players', JoinType.INNER).list(max: 2) }                                   || 4
         'an inner join of a path through collection' | { new DetachedCriteria(Team, 't').join('players.contract', JoinType.INNER).list(max: 2) }                          || 4
         'an inner join of an association'            | { new DetachedCriteria(Team, 't').join('club', JoinType.INNER).list(max: 2) }                                      || 4
+        'an alias that ends like one of a subquery'  | { new DetachedCriteria(Team, 't_sub').join('players', JoinType.INNER).list(max: 2) }                               || 4
+        'an alias that a subquery used to have'      | { new DetachedCriteria(Team, 'join_subquery').join('players', JoinType.INNER).list(max: 2) }                       || 4
+        'an alias of a join that a subquery had'     | { new DetachedCriteria(Team, 'join_subquery0').join('players', JoinType.INNER).list(max: 2) }                      || 4
     }
 
     /**
