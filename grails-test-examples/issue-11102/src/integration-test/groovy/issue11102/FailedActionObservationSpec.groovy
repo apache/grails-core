@@ -79,16 +79,18 @@ class FailedActionObservationSpec extends Specification implements HttpClientSup
         NOTIFIED[path] == [exception]
 
         where:
-        handler                                            | path                                              | route                                             | page                               || exception
-        'the error view'                                   | '/failing/answeredByView'                         | '/failing/answeredByView'                         | 'An error has occurred'            || 'IllegalStateException'
-        'an error controller'                              | '/failing/answeredByController'                   | '/failing/answeredByController'                   | 'Answered by the error controller' || 'UnsupportedOperationException'
-        'the error view, asynchronously'                   | '/failing/answeredByViewAsynchronously'           | '/failing/answeredByViewAsynchronously'           | 'An error has occurred'            || 'IllegalStateException'
-        'an error controller, asynchronously'              | '/failing/answeredByControllerAsynchronously'     | '/failing/answeredByControllerAsynchronously'     | 'Answered by the error controller' || 'UnsupportedOperationException'
-        'the error view, after starting async'             | '/failing/answeredByViewAfterStartingAsync'       | '/failing/answeredByViewAfterStartingAsync'       | 'An error has occurred'            || 'IllegalStateException'
-        'an error controller, after starting async'        | '/failing/answeredByControllerAfterStartingAsync' | '/failing/answeredByControllerAfterStartingAsync' | 'Answered by the error controller' || 'UnsupportedOperationException'
-        'the error view, after a forward'                  | '/failing/forwardedToView'                        | '/failing/answeredByView'                         | 'An error has occurred'            || 'IllegalStateException'
-        'an error controller, after a forward'             | '/failing/forwardedToController'                  | '/failing/answeredByController'                   | 'Answered by the error controller' || 'UnsupportedOperationException'
-        'an error controller, after an interceptor failed' | '/failing/failsInInterceptor'                     | '/failing/failsInInterceptor'                     | 'Answered by the error controller' || 'UnsupportedOperationException'
+        handler                                              | path                                              | route                                             | page                               || exception
+        'the error view'                                     | '/failing/answeredByView'                         | '/failing/answeredByView'                         | 'An error has occurred'            || 'IllegalStateException'
+        'an error controller'                                | '/failing/answeredByController'                   | '/failing/answeredByController'                   | 'Answered by the error controller' || 'UnsupportedOperationException'
+        'the error view, asynchronously'                     | '/failing/answeredByViewAsynchronously'           | '/failing/answeredByViewAsynchronously'           | 'An error has occurred'            || 'IllegalStateException'
+        'an error controller, asynchronously'                | '/failing/answeredByControllerAsynchronously'     | '/failing/answeredByControllerAsynchronously'     | 'Answered by the error controller' || 'UnsupportedOperationException'
+        'the error view, after starting async'               | '/failing/answeredByViewAfterStartingAsync'       | '/failing/answeredByViewAfterStartingAsync'       | 'An error has occurred'            || 'IllegalStateException'
+        'an error controller, after starting async'          | '/failing/answeredByControllerAfterStartingAsync' | '/failing/answeredByControllerAfterStartingAsync' | 'Answered by the error controller' || 'UnsupportedOperationException'
+        'the error view, after a forward'                    | '/failing/forwardedToView'                        | '/failing/answeredByView'                         | 'An error has occurred'            || 'IllegalStateException'
+        'an error controller, after a forward'               | '/failing/forwardedToController'                  | '/failing/answeredByController'                   | 'Answered by the error controller' || 'UnsupportedOperationException'
+        'the error view, after an asynchronous forward'      | '/spring/forwardedToViewAsynchronously'           | '/spring/answeredByView'                          | 'An error has occurred'            || 'IllegalStateException'
+        'an error controller, after an asynchronous forward' | '/spring/forwardedToControllerAsynchronously'     | '/spring/answeredByController'                    | 'Answered by the error controller' || 'UnsupportedOperationException'
+        'an error controller, after an interceptor failed'   | '/failing/failsInInterceptor'                     | '/failing/failsInInterceptor'                     | 'Answered by the error controller' || 'UnsupportedOperationException'
     }
 
     private List<String> errorTags(String route) {
