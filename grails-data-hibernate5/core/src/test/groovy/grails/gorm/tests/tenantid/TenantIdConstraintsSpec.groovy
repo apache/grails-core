@@ -60,7 +60,7 @@ class TenantIdConstraintsSpec extends Specification {
                 'dataSource.dialect'                          : H2Dialect.name,
         ]), TenantCustomer, TenantAccount, TenantOwner, TenantPet, TenantShelter, TenantCat, TenantChip, TenantSignup, TenantClub,
                 TenantMember, TenantDen, TenantCub, TenantLedger, TenantJournal, TenantArchive, TenantBurrow, TenantFerret, TenantNest, TenantChick, TenantLog,
-                TenantEntry)
+                TenantEntry, TenantRack, TenantTag, TenantLabel)
     }
 
     void 'a tenant id the listener assigns passes the constraints declared on it'() {
@@ -602,6 +602,104 @@ class TenantIdConstraintsSpec extends Specification {
         den.errors.getFieldError('cubs[0].firmId').code == 'not.inList'
     }
 
+    void 'a new associated object whose tracked changes were reset is given the current tenant id as it is saved with its owner'() {
+        given: 'a new pet that is not in the session and has no tracked changes'
+        System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, 'acme')
+        def pet = new TenantPet(name: 'Rex')
+        def owner = new TenantOwner(name: 'Dave').addToPets(pet)
+        pet.trackChanges()
+
+        when:
+        def saved = owner.save(flush: true)
+
+        then: 'the pet, which Hibernate inserts, is validated and stored with the current tenant id'
+        saved
+        !owner.hasErrors()
+        pet.firmId == 'acme'
+        storedTenantIds() == [Rex: 'acme']
+    }
+
+    void 'a new associated object whose tracked changes were reset is validated with the current tenant id rather than the one it has'() {
+        given: 'a new pet that has a tenant id, is not in the session and has no tracked changes'
+        System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, 'a-tenant-too-long')
+        def pet = new TenantPet(name: 'Rex', firmId: 'beta')
+        def owner = new TenantOwner(name: 'Dave').addToPets(pet)
+        pet.trackChanges()
+
+        when:
+        boolean valid = owner.validate()
+
+        then: 'the pet is validated with the tenant id it is inserted with'
+        !valid
+        pet.firmId == 'a-tenant-too-long'
+        owner.errors.getFieldError('pets[0].firmId').code == 'maxSize.exceeded'
+    }
+
+    void 'a new associated object with an assigned identifier whose tracked changes were reset is given the current tenant id'() {
+        given: 'a new item that has an identifier, is not in the session and has no tracked changes'
+        System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, 'acme')
+        def item = type.newInstance(name: 'North')
+        item.id = 'north'
+        def rack = new TenantRack(name: 'Rack')
+        rack."addTo${collection}"(item)
+        item.trackChanges()
+
+        when:
+        def saved = rack.save(flush: true)
+
+        then: 'Hibernate finds that it is not stored yet, and inserts it with the current tenant id'
+        saved
+        !rack.hasErrors()
+        item.firmId == 'acme'
+        storedTenantIds(type) == [North: 'acme']
+
+        where:
+        type        | collection
+        TenantTag   | 'Tags'
+        TenantLabel | 'Labels'
+    }
+
+    void 'a detached associated object without changes keeps its tenant id'() {
+        given: 'an owner and a pet of one tenant, loaded inside withoutId, the pet then detached from the session'
+        TenantOwner owner = loadWithoutTenant(savedForTenant('beta', 'Rex'))
+        def pet = owner.pets.first()
+        pet.discard()
+
+        when: 'the owner is saved while a tenant that breaks the maxSize of the pet is current'
+        System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, 'a-tenant-too-long')
+        def saved = owner.save(flush: true)
+
+        then: 'the pet, which Hibernate does not update, is validated with the tenant id it has, and is stored as it was'
+        saved
+        pet.firmId == 'beta'
+        storedTenantIds() == [Rex: 'beta']
+    }
+
+    void 'a detached associated object with an assigned identifier and no version keeps its tenant id'() {
+        given: 'a rack and a label of one tenant, loaded inside withoutId, the label then detached from the session'
+        System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, 'beta')
+        def stored = new TenantLabel(name: 'North')
+        stored.id = 'north'
+        Long id = new TenantRack(name: 'Rack').addToLabels(stored).save(flush: true).id
+        datastore.sessionFactory.currentSession.clear()
+        TenantRack rack = Tenants.withoutId(datastore) {
+            def loaded = TenantRack.get(id)
+            loaded.labels.size()
+            loaded
+        }
+        def label = rack.labels.first()
+        label.discard()
+
+        when: 'the rack is saved while a tenant that breaks the maxSize of the label is current'
+        System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, 'a-tenant-too-long')
+        def saved = rack.save(flush: true)
+
+        then: 'Hibernate finds the label in the database and does not update it, so it is left alone'
+        saved
+        label.firmId == 'beta'
+        storedTenantIds(TenantLabel) == [North: 'beta']
+    }
+
     void 'an unversioned associated object whose only change is in a collection keeps its tenant id'() {
         given: 'a burrow and a ferret of one tenant, loaded inside withoutId'
         System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, 'beta')
@@ -1043,6 +1141,54 @@ class TenantEntry implements MultiTenant<TenantEntry> {
     }
 
     static mapping = {
+        tenantId name: 'firmId'
+    }
+}
+
+@Entity
+class TenantRack implements MultiTenant<TenantRack> {
+
+    String name
+    String tenantId
+
+    static hasMany = [tags: TenantTag, labels: TenantLabel]
+}
+
+@Entity
+class TenantTag implements MultiTenant<TenantTag> {
+
+    String id
+    String name
+    String firmId
+
+    static belongsTo = [rack: TenantRack]
+
+    static constraints = {
+        firmId nullable: false, maxSize: 5
+    }
+
+    static mapping = {
+        id generator: 'assigned'
+        tenantId name: 'firmId'
+    }
+}
+
+@Entity
+class TenantLabel implements MultiTenant<TenantLabel> {
+
+    String id
+    String name
+    String firmId
+
+    static belongsTo = [rack: TenantRack]
+
+    static constraints = {
+        firmId nullable: false, maxSize: 5
+    }
+
+    static mapping = {
+        id generator: 'assigned'
+        version false
         tenantId name: 'firmId'
     }
 }

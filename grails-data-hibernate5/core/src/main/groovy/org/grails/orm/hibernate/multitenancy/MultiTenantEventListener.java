@@ -25,6 +25,7 @@ import java.util.List;
 import org.hibernate.collection.spi.PersistentCollection;
 import org.hibernate.engine.spi.EntityEntry;
 import org.hibernate.engine.spi.SessionImplementor;
+import org.hibernate.persister.entity.EntityPersister;
 
 import org.springframework.context.ApplicationEvent;
 
@@ -112,10 +113,11 @@ public class MultiTenantEventListener implements PersistenceEventListener {
     // collection has changed. It inserts an object of the session that is not in the database yet, whose insert
     // waits for the flush, as its identifier comes from a sequence for example. For another object that tracks its
     // changes this is the check of GrailsEntityDirtinessStrategy, with which Hibernate decides whether to update an
-    // object of the session, and the check for a changed collection. A new object that is not in the session yet has
-    // no tracked changes, so it counts as changed.
+    // object of the session, and the check for a changed collection. It also inserts an object outside the session
+    // that is transient, whatever changes that object tracks. Without a session nothing is saved.
     private static boolean isSaved(AbstractHibernateDatastore hibernateDatastore, PersistentEntity entity, Object object) {
-        EntityEntry entry = entryOf(hibernateDatastore, object);
+        SessionImplementor session = currentSession(hibernateDatastore);
+        EntityEntry entry = session != null ? session.getPersistenceContext().getEntry(object) : null;
         if (entry != null) {
             if (!entry.isModifiableEntity()) {
                 return false;
@@ -125,16 +127,27 @@ public class MultiTenantEventListener implements PersistenceEventListener {
             }
         }
         return !(object instanceof DirtyCheckable) || hasStoredChange(entity, (DirtyCheckable) object) ||
-                DirtyCheckingSupport.areEmbeddedDirty(entity, object) || hasDirtyCollection(entity, object);
+                DirtyCheckingSupport.areEmbeddedDirty(entity, object) || hasDirtyCollection(entity, object) ||
+                (session != null && entry == null && isTransient(entity, object, session));
     }
 
-    // The entry of the object in the current session, if it is in one
-    private static EntityEntry entryOf(AbstractHibernateDatastore hibernateDatastore, Object object) {
+    // Whether Hibernate takes an object outside the session for a new one as a save cascades to it. The identifier and
+    // the version of the object tell, except for one with an assigned identifier and no version, which it looks up in
+    // the database.
+    private static boolean isTransient(PersistentEntity entity, Object object, SessionImplementor session) {
+        EntityPersister persister = session.getEntityPersister(entity.getName(), object);
+        Boolean isTransient = persister.isTransient(object, session);
+        if (isTransient != null) {
+            return isTransient;
+        }
+        return session.getPersistenceContext().getDatabaseSnapshot(persister.getIdentifier(object, session), persister) == null;
+    }
+
+    private static SessionImplementor currentSession(AbstractHibernateDatastore hibernateDatastore) {
         if (!hibernateDatastore.hasCurrentSession()) {
             return null;
         }
-        SessionImplementor session = (SessionImplementor) hibernateDatastore.getSessionFactory().getCurrentSession();
-        return session.getPersistenceContext().getEntry(object);
+        return (SessionImplementor) hibernateDatastore.getSessionFactory().getCurrentSession();
     }
 
     // Whether the object has a change that makes Hibernate update it. GrailsEntityDirtinessStrategy updates an object
