@@ -40,12 +40,22 @@ class FailingController {
         failAsynchronously(new UnsupportedOperationException('answered by the error controller'))
     }
 
+    def answeredByViewAfterStartingAsync() {
+        startAsyncThatTimesOut()
+        throw new IllegalStateException('answered by the error view')
+    }
+
     def answeredByControllerAfterStartingAsync() {
-        WebAsyncManager asyncManager = WebAsyncUtils.getAsyncManager(request)
-        asyncManager.asyncWebRequest = WebAsyncUtils.createAsyncWebRequest(request, response)
-        // nothing completes the processing this starts, so Jetty ends the request when it times out
-        asyncManager.startDeferredResultProcessing(new DeferredResult<Object>(500L))
+        startAsyncThatTimesOut()
         throw new UnsupportedOperationException('answered by the error controller')
+    }
+
+    def forwardedToView() {
+        forward(action: 'answeredByView')
+    }
+
+    def forwardedToController() {
+        forward(action: 'answeredByController')
     }
 
     def errorHandler() {
@@ -53,10 +63,22 @@ class FailingController {
     }
 
     private void failAsynchronously(Exception failure) {
+        DeferredResult<Object> result = new DeferredResult<>()
+        startAsync(result)
+        result.errorResult = failure
+    }
+
+    /**
+     * Starts asynchronous processing that nothing completes. Unless the container ends it when the action fails, as
+     * Tomcat does when the exception is left on the request, it ends when it times out.
+     */
+    private void startAsyncThatTimesOut() {
+        startAsync(new DeferredResult<Object>(500L))
+    }
+
+    private void startAsync(DeferredResult<Object> result) {
         WebAsyncManager asyncManager = WebAsyncUtils.getAsyncManager(request)
         asyncManager.asyncWebRequest = WebAsyncUtils.createAsyncWebRequest(request, response)
-        DeferredResult<Object> result = new DeferredResult<>()
         asyncManager.startDeferredResultProcessing(result)
-        result.errorResult = failure
     }
 }

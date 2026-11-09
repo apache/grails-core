@@ -45,7 +45,9 @@ import org.apache.grails.testing.http.client.HttpClientSupport
 class UndertowFailedActionObservationSpec extends Specification implements HttpClientSupport {
 
     private static final AtomicBoolean LISTENING = new AtomicBoolean()
+    private static final String REQUEST_HEADER = 'X-Failing-Request'
     private static final Map<String, List<String>> NOTIFIED = new ConcurrentHashMap<>()
+    private static final Map<String, String> STOPPED_ON_ROUTE = new ConcurrentHashMap<>()
 
     @Autowired
     MeterRegistry meterRegistry
@@ -61,24 +63,30 @@ class UndertowFailedActionObservationSpec extends Specification implements HttpC
 
     void 'a failed action answered by #handler is reported once with its own exception and route'() {
         when:
-        def response = http("/failing/$action")
+        def response = http([(REQUEST_HEADER): path], path)
 
-        then:
+        then: 'the error page answered, so the exception did not reach the filter'
         response.assertContains(500, page)
 
-        and: 'its metrics say what failed and where, and the handlers that mark a span hear of it once'
+        and: 'the observation stopped on the route that failed, and its metrics say what failed'
         new PollingConditions(timeout: 5).eventually {
-            assert errorTags("/failing/$action") == [exception]
-            assert NOTIFIED["/failing/$action".toString()] == [exception]
+            assert STOPPED_ON_ROUTE[path] == route
+            assert errorTags(route) == [exception]
         }
 
+        and: 'the handlers that mark a span, all told of the failure before the observation stopped, heard of it once'
+        NOTIFIED[path] == [exception]
+
         where:
-        handler                                     | action                                   | page                               | exception
-        'the error view'                            | 'answeredByView'                         | 'An error has occurred'            | 'IllegalStateException'
-        'an error controller'                       | 'answeredByController'                   | 'Answered by the error controller' | 'UnsupportedOperationException'
-        'the error view, asynchronously'            | 'answeredByViewAsynchronously'           | 'An error has occurred'            | 'IllegalStateException'
-        'an error controller, asynchronously'       | 'answeredByControllerAsynchronously'     | 'Answered by the error controller' | 'UnsupportedOperationException'
-        'an error controller, after starting async' | 'answeredByControllerAfterStartingAsync' | 'Answered by the error controller' | 'UnsupportedOperationException'
+        handler                                     | path                                              | route                                             | page                               || exception
+        'the error view'                            | '/failing/answeredByView'                         | '/failing/answeredByView'                         | 'An error has occurred'            || 'IllegalStateException'
+        'an error controller'                       | '/failing/answeredByController'                   | '/failing/answeredByController'                   | 'Answered by the error controller' || 'UnsupportedOperationException'
+        'the error view, asynchronously'            | '/failing/answeredByViewAsynchronously'           | '/failing/answeredByViewAsynchronously'           | 'An error has occurred'            || 'IllegalStateException'
+        'an error controller, asynchronously'       | '/failing/answeredByControllerAsynchronously'     | '/failing/answeredByControllerAsynchronously'     | 'Answered by the error controller' || 'UnsupportedOperationException'
+        'the error view, after starting async'      | '/failing/answeredByViewAfterStartingAsync'       | '/failing/answeredByViewAfterStartingAsync'       | 'An error has occurred'            || 'IllegalStateException'
+        'an error controller, after starting async' | '/failing/answeredByControllerAfterStartingAsync' | '/failing/answeredByControllerAfterStartingAsync' | 'Answered by the error controller' || 'UnsupportedOperationException'
+        'the error view, after a forward'           | '/failing/forwardedToView'                        | '/failing/answeredByView'                         | 'An error has occurred'            || 'IllegalStateException'
+        'an error controller, after a forward'      | '/failing/forwardedToController'                  | '/failing/answeredByController'                   | 'Answered by the error controller' || 'UnsupportedOperationException'
     }
 
     private List<String> errorTags(String route) {
@@ -94,8 +102,16 @@ class UndertowFailedActionObservationSpec extends Specification implements HttpC
 
         @Override
         void onError(Observation.Context context) {
-            def route = ((ServerRequestObservationContext) context).pathPattern
-            NOTIFIED.computeIfAbsent(route) { new CopyOnWriteArrayList<>() } << context.error.class.simpleName
+            NOTIFIED.computeIfAbsent(requestOf(context)) { new CopyOnWriteArrayList<>() } << context.error.class.simpleName
+        }
+
+        @Override
+        void onStop(Observation.Context context) {
+            STOPPED_ON_ROUTE[requestOf(context)] = ((ServerRequestObservationContext) context).pathPattern ?: 'none'
+        }
+
+        private static String requestOf(Observation.Context context) {
+            ((ServerRequestObservationContext) context).carrier.getHeader(REQUEST_HEADER) ?: 'none'
         }
     }
 }
