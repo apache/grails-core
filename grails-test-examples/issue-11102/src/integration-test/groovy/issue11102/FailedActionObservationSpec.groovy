@@ -48,7 +48,7 @@ class FailedActionObservationSpec extends Specification implements HttpClientSup
     private static final AtomicBoolean LISTENING = new AtomicBoolean()
     private static final String REQUEST_HEADER = 'X-Failing-Request'
     private static final Map<String, List<String>> NOTIFIED = new ConcurrentHashMap<>()
-    private static final Map<String, String> STOPPED_ON_ROUTE = new ConcurrentHashMap<>()
+    private static final Map<String, List<String>> STOPPED = new ConcurrentHashMap<>()
 
     @Autowired
     MeterRegistry meterRegistry
@@ -69,10 +69,10 @@ class FailedActionObservationSpec extends Specification implements HttpClientSup
         then: 'the error page answered, so the exception did not reach the filter'
         response.assertContains(500, page)
 
-        and: 'the observation stopped on the route that failed, and its metrics say what failed'
+        and: 'the observation stopped on the route that failed with what failed, as its metrics say'
         new PollingConditions(timeout: 5).eventually {
-            assert STOPPED_ON_ROUTE[path] == route
-            assert errorTags(route) == [exception]
+            assert STOPPED[path] == [route, exception]
+            assert exception in errorTags(route)
         }
 
         and: 'the handlers that mark a span, all told of the failure before the observation stopped, heard of it once'
@@ -109,9 +109,14 @@ class FailedActionObservationSpec extends Specification implements HttpClientSup
             NOTIFIED.computeIfAbsent(requestOf(context)) { new CopyOnWriteArrayList<>() } << context.error.class.simpleName
         }
 
+        /**
+         * Spring stops the observation of a request it times out twice, on the timeout and again when the request
+         * completes, so what the observation reported is what it carried when it first stopped.
+         */
         @Override
         void onStop(Observation.Context context) {
-            STOPPED_ON_ROUTE[requestOf(context)] = ((ServerRequestObservationContext) context).pathPattern ?: 'none'
+            STOPPED.putIfAbsent(requestOf(context), [((ServerRequestObservationContext) context).pathPattern ?: 'none',
+                                                     context.error?.class?.simpleName ?: 'none'])
         }
 
         private static String requestOf(Observation.Context context) {
