@@ -473,17 +473,21 @@ exec '${new File(System.getProperty('java.home'), 'bin/java').absolutePath}' \\
     }
 
     void 'a request that does not say what to send, or misspells it, fails the trace rather than sending something else'() {
-        given:
-            TraceNativeMetadataTask task = task([], [])
-            task.requests.set([request])
+        given: 'listed after one that can be made, and alongside a path'
+            TraceNativeMetadataTask task = task(['/'], [])
+            task.requests.set([[method: 'QUERY', path: '/book/valid'], request])
 
         when:
             task.trace()
 
-        then:
+        then: 'the one that cannot be made is named'
             GradleException e = thrown()
             e.message.contains('a request names its method and path')
-            !requested.any { it.contains('/book/search') }
+            !e.message.contains('/book/valid')
+
+        and: 'before the application is started, rather than once it has been started and traced'
+            requested.isEmpty()
+            !new File(task.temporaryDir, 'trace.log').exists()
 
         where:
             request << [[path: '/book/search'], [method: 'QUERY'], [method: 'QUERY', path: '/book/search', bodyy: '{}']]

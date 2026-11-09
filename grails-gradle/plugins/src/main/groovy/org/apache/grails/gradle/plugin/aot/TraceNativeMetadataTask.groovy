@@ -200,6 +200,7 @@ abstract class TraceNativeMetadataTask extends DefaultTask {
 
     @TaskAction
     void trace() {
+        refuseRequestsThatCannotBeMade()
         File java = new File(javaExecutable.get())
         File metadata = outputDirectory.get().asFile
         metadata.mkdirs()
@@ -282,6 +283,24 @@ abstract class TraceNativeMetadataTask extends DefaultTask {
     }
 
     /**
+     * Refuses a request that does not name its method and path, or names what a request cannot have, before
+     * anything is started. Found as the request was made, it failed the build only after the application had been
+     * started and the rest traced, which for a misspelt key is the whole wait for an answer known before it began.
+     */
+    private void refuseRequestsThatCannotBeMade() {
+        List<String> refused = requests.get().findAll { Map<String, String> request ->
+            Map declared = request
+            (declared.keySet() - REQUEST_KEYS) || !declared.method || !declared.path
+        }.collect { Map<String, String> request ->
+            "REQUEST ${request} -> a request names its method and path, and may name ${REQUEST_KEYS - ['method', 'path']}".toString()
+        }
+        if (refused) {
+            throw new GradleException('grails.nativeMetadata.requests names a request that cannot be made, so the ' +
+                    "application was not started:\n  ${refused.join('\n  ')}")
+        }
+    }
+
+    /**
      * Refuses before starting rather than after. Without the agent the JVM stops at load with a
      * message about a library path, which reads as a broken machine rather than as the wrong JDK.
      */
@@ -323,13 +342,8 @@ abstract class TraceNativeMetadataTask extends DefaultTask {
      */
     private Answer send(Map<String, String> request) {
         Map declared = request
-        Collection unknown = declared.keySet() - REQUEST_KEYS
-        String method = declared.method?.toString()?.toUpperCase(Locale.ROOT)
-        String path = declared.path?.toString()
-        if (unknown || !method || !path) {
-            return new Answer("REQUEST ${declared} -> a request names its method and path, and may name " +
-                    "${REQUEST_KEYS - ['method', 'path']}".toString(), false)
-        }
+        String method = declared.method.toString().toUpperCase(Locale.ROOT)
+        String path = declared.path.toString()
         HttpRequest.Builder builder = requestTo(path)
         if (declared.accept) {
             builder.setHeader('Accept', declared.accept.toString())

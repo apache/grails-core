@@ -165,7 +165,7 @@ grails {
 }
 ----
 
-Each names its `method` and `path`, and may name its `contentType`, `body` and `accept`. A request that does not, or that names anything else, fails the trace, as one that answers with an error does.
+Each names its `method` and `path`, and may name its `contentType`, `body` and `accept`. A request that does not, or that names anything else, fails the trace before the application is started, and one that answers with an error fails it too.
 
 ==== Pages behind a login
 
