@@ -98,10 +98,13 @@ public class ExpressionResolver {
         // 1. Check if already realized in THIS or PARENT registry
         Expression<?> aliased = aliasRegistry.getRealized(alias);
         if (aliased != null) {
-            if (subPath != null && aliased instanceof From<?, ?> from) {
-                return getPath(from, subPath);
+            if (subPath == null) {
+                return aliased;
             }
-            return aliased; // It's a non-From expression (projection alias) or subPath is null
+            // A path selected under an alias, such as groupProperty('favorite', 'favorite'), continues from that
+            // path. A basic value has no properties, so a path below it names nothing, and neither does a
+            // selection that is not a path.
+            return aliased instanceof Path<?> path ? getPath(path, subPath) : null;
         }
 
         HibernateAlias def = aliasRegistry.getDefinition(alias);
@@ -148,7 +151,7 @@ public class ExpressionResolver {
         return join;
     }
 
-    private Path<?> getPath(From<?, ?> from, String path) {
+    private Path<?> getPath(Path<?> from, String path) {
         if (from == null || path == null) return null;
         try {
             if (path.contains(".")) {

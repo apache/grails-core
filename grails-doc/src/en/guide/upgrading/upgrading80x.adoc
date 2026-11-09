@@ -4900,6 +4900,22 @@ As of Grails 8.0.1, and 7.0.18 on the 7.0.x line, the lists of bindable properti
 * A class that gets the lists now carries them as new `public static final` fields. A class that implements `Serializable` without declaring a `serialVersionUID`, such as a `Validateable` object kept in a persisted HTTP session or in a distributed cache, therefore gets a new default `serialVersionUID`, and instances serialized before the upgrade do not deserialize after it. Declare a `serialVersionUID` on such a class.
 * A controller compiled against a command object that was compiled without the lists, by an earlier version of Grails or without the data binding library, warns that the command object is bound without restriction and should be recompiled.
 
+==== 90. An Exception Mapping Matches the Exception That Was Thrown Before Its Root Cause
+
+As of Grails 8.0.1, a `"500"` mapping that names an exception is matched against the exception that was thrown first and its root cause second, both when the error handler is chosen and when the request is routed to it. The routing used to look only at the root cause.
+
+* A mapping that names an exception with a cause of its own now answers it, where the mapping without an exception answered before.
+* Where the exception and its root cause each match a mapping, the mapping for the exception now answers. With the mappings below, a `DataAccessException` caused by a `SQLException` used to go to `database`, and now goes to `runtime`:
++
+[source,groovy]
+----
+"500"(controller: 'errors', action: 'database', exception: SQLException)
+"500"(controller: 'errors', action: 'runtime', exception: RuntimeException)
+----
++
+To keep sending it to `database`, map `DataAccessException` there as well, declared after the mapping for `RuntimeException`: where several mappings match an exception, the one declared last answers. That sends every `DataAccessException` there, not only one caused by a `SQLException`.
+* For an exception that Groovy or Grails wrapped, the `cause` of `request.exception` in the error handler is now the exception the action threw rather than its root cause.
+
 ==== 91. `rlike` Is the Same on Hibernate 5 and Hibernate 7
 
 `rlike` is now rendered from one declaration of the supported databases in each Hibernate module, and the two modules agree on which databases fall back to `like`.
