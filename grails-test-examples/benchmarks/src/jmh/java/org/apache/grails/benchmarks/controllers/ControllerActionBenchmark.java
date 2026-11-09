@@ -43,7 +43,6 @@ import org.springframework.web.context.WebApplicationContext;
 
 import grails.core.GrailsApplication;
 import grails.core.GrailsControllerClass;
-import grails.util.Environment;
 import grails.util.GrailsWebMockUtil;
 import grails.web.databinding.DataBindingUtils;
 import grails.web.databinding.GrailsWebDataBinder;
@@ -163,9 +162,6 @@ public class ControllerActionBenchmark {
         GrailsWebMockUtil.bindMockWebRequest(applicationContext, request, new MockHttpServletResponse());
 
         assertFixtureInvokes();
-
-        System.out.println("[fixture] Environment.isDevelopmentMode()=" + Environment.isDevelopmentMode() +
-                " (false means GrailsControllerClass.invoke dispatches through a MethodHandle, as in production)");
     }
 
     /**
