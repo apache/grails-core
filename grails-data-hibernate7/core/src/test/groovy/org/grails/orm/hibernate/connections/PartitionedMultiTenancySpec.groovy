@@ -66,7 +66,7 @@ class PartitionedMultiTenancySpec extends HibernateGormDatastoreSpec {
                 'hibernate.flush.mode'                        : 'COMMIT',
                 // Disable query cache and 2nd level cache for this spec to avoid cross-tenant contamination
                 'hibernate.cache.queries'                     : 'false',
-                'hibernate.use_query_cache'                   : 'false',
+                'hibernate.cache.use_query_cache'             : 'false',
                 'hibernate.cache.use_second_level_cache'      : 'false',
                 'hibernate.hbm2ddl.auto'                      : 'create',
                 'hibernate.type.descriptor.sql'               : 'true',
