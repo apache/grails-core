@@ -661,6 +661,46 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManag
         JoinType.INNER || 2
     }
 
+    void '#api sorted by a collection while it fetches #fetched is rejected, since the bag is read from repeated rows'() {
+        given:
+        saveAuthorAndCategories()
+
+        when:
+        query.call()
+
+        then:
+        final UnsupportedOperationException e = thrown()
+        e.message.contains("[$fetched]")
+
+        where:
+        api                                 | fetched            | query
+        'a where query'                     | 'publisher.awards' | { AssociationSortAuthor.where { name ==~ '%' }.list(sort: 'books.title', fetch: ['publisher.awards': JoinType.LEFT]) }
+        'a where query that joins the path' | 'publisher.awards' | { AssociationSortAuthor.where { name ==~ '%' }.join('publisher').join('publisher.awards').list(sort: 'books.title') }
+        'order in a criteria query'         | 'publisher.awards' | { AssociationSortAuthor.createCriteria().list { join('publisher'); join('publisher.awards'); order('books.title') } }
+        'a dynamic finder'                  | 'publisher.awards' | { AssociationSortAuthor.findAllByNameLike('%', [sort: 'books.title', fetch: ['publisher.awards': JoinType.LEFT]]) }
+        'findAll by example'                | 'publisher.awards' | { AssociationSortAuthor.findAll(new AssociationSortAuthor(), [sort: 'books.title', fetch: ['publisher.awards': JoinType.LEFT]]) }
+        'a list'                            | 'publisher.awards' | { AssociationSortAuthor.list(sort: 'books.title', fetch: ['publisher.awards': JoinType.LEFT]) }
+        'a where query on a self-reference' | 'parent.children'  | { AssociationSortCategory.where { name == 'Left' }.list(sort: 'children.name', fetch: ['parent.children': JoinType.LEFT]) }
+        'a list on a self-reference'        | 'parent.children'  | { AssociationSortCategory.list(sort: 'children.name', fetch: ['parent.children': JoinType.LEFT]) }
+    }
+
+    void '#api that fetches a bag through an association holds each element once when no collection is sorted'() {
+        given:
+        saveAuthorAndCategories()
+
+        when:
+        final results = query.call()
+
+        then:
+        results.first().publisher.awards*.title.sort() == ['W1', 'W2']
+
+        where:
+        api                                 | query
+        'a where query'                     | { AssociationSortAuthor.where { name ==~ '%' }.list(fetch: ['publisher.awards': JoinType.LEFT]) }
+        'a where query sorted by a property' | { AssociationSortAuthor.where { name ==~ '%' }.list(sort: 'name', fetch: ['publisher.awards': JoinType.LEFT]) }
+        'a list'                            | { AssociationSortAuthor.list(fetch: ['publisher.awards': JoinType.LEFT]) }
+    }
+
     private void saveAuthorAndCategories() {
         final publisher = new AssociationSortPublisher(name: 'Publisher').save(failOnError: true)
         ['W1', 'W2'].each { new AssociationSortAward(title: it, publisher: publisher).save(failOnError: true) }

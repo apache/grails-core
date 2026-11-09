@@ -19,6 +19,7 @@
 package org.grails.orm.hibernate.cfg;
 
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -28,6 +29,7 @@ import groovy.lang.MetaClass;
 
 import jakarta.persistence.criteria.CriteriaQuery;
 import jakarta.persistence.criteria.Fetch;
+import jakarta.persistence.criteria.FetchParent;
 import jakarta.persistence.criteria.Join;
 import jakarta.persistence.criteria.Root;
 import jakarta.persistence.metamodel.Attribute;
@@ -388,13 +390,30 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
             return;
         }
         for (Root<?> root : query.getRoots()) {
-            for (Fetch<?, ?> fetch : root.getFetches()) {
-                Attribute<?, ?> fetched = fetch.getAttribute();
-                if (fetched instanceof PluralAttribute && !fetched.equals(sorted) && (isBag(sorted) || isBag(fetched))) {
-                    throw new UnsupportedOperationException(sortedCollectionMessage(sorted.getName(), root.getJavaType().getName(), fetched.getName()));
-                }
+            String fetched = findFetchNextToSortedCollection(root, "", isBag(sorted));
+            if (fetched != null) {
+                throw new UnsupportedOperationException(sortedCollectionMessage(sorted.getName(), root.getJavaType().getName(), fetched));
             }
         }
+    }
+
+    /**
+     * Returns the path of a collection that the given parent fetches, at any depth, that a query cannot
+     * fetch next to a sort by a collection, or null: any bag, or any collection if the sorted one is a bag.
+     */
+    private static String findFetchNextToSortedCollection(FetchParent<?, ?> parent, String prefix, boolean sortedBag) {
+        for (Fetch<?, ?> fetch : parent.getFetches()) {
+            Attribute<?, ?> attribute = fetch.getAttribute();
+            String path = prefix + attribute.getName();
+            if (attribute instanceof PluralAttribute && (sortedBag || isBag(attribute))) {
+                return path;
+            }
+            String nested = findFetchNextToSortedCollection(fetch, path + '.', sortedBag);
+            if (nested != null) {
+                return nested;
+            }
+        }
+        return null;
     }
 
     private static boolean isBag(Attribute<?, ?> attribute) {
@@ -443,9 +462,9 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
     }
 
     /**
-     * Returns the name of a collection of the root entity, other than the one at the given path, that
-     * the query fetches, or null. When a bag must be involved, it returns one only when either collection
-     * is a bag, or when both are if the query fetches the collection at the path itself.
+     * Returns the path of a collection, other than the one at the given path, that the query fetches at
+     * any depth, or null. When a bag must be involved, it returns one only when either collection is a
+     * bag, or when both are if the query fetches the collection at the path itself.
      */
     private static String findOtherFetchedCollection(Criteria criteria, String associationPath, boolean bagInvolved) {
         CriteriaImpl root = getRootCriteria(criteria);
@@ -463,23 +482,52 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
             sortedBag = isBag(factory, sortedRole);
         }
         boolean sortedFetched = isFetchRequested(root, associationPath);
-        String[] propertyNames = persister.getPropertyNames();
-        Type[] propertyTypes = persister.getPropertyTypes();
-        for (int i = 0; i < propertyNames.length; i++) {
-            if (!propertyTypes[i].isCollectionType() || propertyNames[i].equals(associationPath)) {
+        Map<String, String> fetched = new LinkedHashMap<>();
+        collectFetchedCollections(root, factory, persister, "", fetched);
+        for (Map.Entry<String, String> collection : fetched.entrySet()) {
+            if (collection.getKey().equals(associationPath)) {
                 continue;
             }
-            FetchMode requested = getRequestedFetchMode(root, propertyNames[i]);
-            boolean fetched = requested != null ? requested == FetchMode.JOIN :
-                    persister instanceof OuterJoinLoadable && ((OuterJoinLoadable) persister).getFetchMode(i) == FetchMode.JOIN;
-            if (fetched) {
-                boolean otherBag = bagInvolved && isBag(factory, ((CollectionType) propertyTypes[i]).getRole());
-                if (!bagInvolved || (sortedFetched ? sortedBag && otherBag : sortedBag || otherBag)) {
-                    return propertyNames[i];
-                }
+            boolean otherBag = bagInvolved && isBag(factory, collection.getValue());
+            if (!bagInvolved || (sortedFetched ? sortedBag && otherBag : sortedBag || otherBag)) {
+                return collection.getKey();
             }
         }
         return null;
+    }
+
+    /**
+     * Collects the role of each collection that the query fetches, by its path. It follows the
+     * associations that the query fetches, as Hibernate does. Below the root entity only a fetch that
+     * the query requests is followed, so that a mapping that fetches its own class comes to an end.
+     */
+    private static void collectFetchedCollections(CriteriaImpl root, SessionFactoryImplementor factory, EntityPersister persister, String prefix, Map<String, String> fetched) {
+        String[] propertyNames = persister.getPropertyNames();
+        Type[] propertyTypes = persister.getPropertyTypes();
+        for (int i = 0; i < propertyNames.length; i++) {
+            if (!propertyTypes[i].isAssociationType()) {
+                continue;
+            }
+            String path = prefix + propertyNames[i];
+            FetchMode requested = getRequestedFetchMode(root, path);
+            boolean joined = requested != null ? requested == FetchMode.JOIN :
+                    prefix.isEmpty() && persister instanceof OuterJoinLoadable && ((OuterJoinLoadable) persister).getFetchMode(i) == FetchMode.JOIN;
+            if (!joined) {
+                continue;
+            }
+            if (propertyTypes[i].isCollectionType()) {
+                fetched.put(path, ((CollectionType) propertyTypes[i]).getRole());
+            }
+            EntityPersister associated = getAssociatedPersister(factory, propertyTypes[i]);
+            if (associated != null) {
+                collectFetchedCollections(root, factory, associated, path + '.', fetched);
+            }
+        }
+    }
+
+    private static EntityPersister getAssociatedPersister(SessionFactoryImplementor factory, Type type) {
+        Type target = type instanceof CollectionType ? factory.getMetamodel().collectionPersister(((CollectionType) type).getRole()).getElementType() : type;
+        return target instanceof EntityType ? factory.getMetamodel().entityPersister(((EntityType) target).getAssociatedEntityName(factory)) : null;
     }
 
     private static String getCollectionRole(SessionFactoryImplementor factory, EntityPersister persister, String associationPath) {
@@ -495,7 +543,7 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
             catch (RuntimeException e) {
                 return null;
             }
-            current = type instanceof EntityType ? factory.getMetamodel().entityPersister(((EntityType) type).getAssociatedEntityName(factory)) : null;
+            current = getAssociatedPersister(factory, type);
         }
         return type instanceof CollectionType ? ((CollectionType) type).getRole() : null;
     }
