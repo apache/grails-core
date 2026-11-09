@@ -18,8 +18,9 @@
  */
 package org.grails.datastore.gorm.mongodb.embedded;
 
+import java.io.DataInputStream;
 import java.io.IOException;
-import java.io.InputStream;
+import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -28,6 +29,8 @@ import java.nio.charset.StandardCharsets;
 import de.bwaldvogel.mongo.MongoServer;
 import de.bwaldvogel.mongo.backend.memory.MemoryBackend;
 import io.netty.buffer.ByteBufAllocator;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.springframework.util.ClassUtils;
 
@@ -60,6 +63,8 @@ public class InMemoryMongoBackend implements EmbeddedMongoBackend {
 
     private static final byte BSON_INT32 = 0x10;
 
+    private static final Logger log = LoggerFactory.getLogger(InMemoryMongoBackend.class);
+
     @Override
     public String getName() {
         return NAME;
@@ -89,16 +94,27 @@ public class InMemoryMongoBackend implements EmbeddedMongoBackend {
         MemoryBackend backend = new RetainingMemoryBackend();
         MongoServer server = new MongoServer(backend);
         server.bind("localhost", settings.getPort());
-        serveOneRequest(settings.getPort());
+        serveOneRequest(addressOf(server));
         allocateUntilOneBufferIsTracked();
         return new RunningInMemoryMongo(backend, server);
     }
 
     /**
+     * Where {@link #serveOneRequest(InetSocketAddress)} sends its request: the address the server has
+     * just bound, which is not the port asked for when that was 0.
+     *
+     * <p>Not private, so that the specification can put a peer there that answers as no server would,
+     * and see that the server this started is handed back all the same.
+     */
+    InetSocketAddress addressOf(MongoServer server) {
+        return server.getLocalAddress();
+    }
+
+    /**
      * Allocates buffers until Netty's leak detection has tracked one, so that what only a tracked
      * buffer needs is loaded as well. Netty picks the buffers it tracks at random, so the request
-     * {@link #serveOneRequest(int)} sends rarely gets that far, and a buffer picked while the jars are
-     * closed fails as the first one would.
+     * {@link #serveOneRequest(InetSocketAddress)} sends rarely gets that far, and a buffer picked while
+     * the jars are closed fails as the first one would.
      */
     private static void allocateUntilOneBufferIsTracked() {
         for (int i = 0; i < ALLOCATIONS_TO_TRACK_ONE_BUFFER; i++) {
@@ -118,19 +134,22 @@ public class InMemoryMongoBackend implements EmbeddedMongoBackend {
      * stopping the server waits forever for them to close.
      *
      * <p>Whatever goes wrong here goes wrong again for the first real client, where it says more, so
-     * it is not reported.
+     * it is only logged, and the server is handed back all the same. That includes a reply that is
+     * cut short or gives a length it cannot have: the reply is read with what reports the end of the
+     * stream as an {@link IOException}, and a length shorter than the one already read skips nothing.
      */
-    private static void serveOneRequest(int port) {
-        try (Socket client = new Socket("localhost", port)) {
+    private static void serveOneRequest(InetSocketAddress address) {
+        try (Socket client = new Socket()) {
+            client.connect(address, SERVE_ONE_REQUEST_TIMEOUT_MILLIS);
             client.setSoTimeout(SERVE_ONE_REQUEST_TIMEOUT_MILLIS);
             client.getOutputStream().write(isMaster());
             // the whole reply, since closing with some of it unread resets the connection, which the server logs as an error
-            InputStream reply = client.getInputStream();
-            int length = ByteBuffer.wrap(reply.readNBytes(4)).order(ByteOrder.LITTLE_ENDIAN).getInt();
-            reply.readNBytes(length - 4);
+            DataInputStream reply = new DataInputStream(client.getInputStream());
+            int length = Integer.reverseBytes(reply.readInt());
+            reply.skipNBytes(length - (long) Integer.BYTES);
         }
-        catch (IOException ignored) {
-            return;
+        catch (IOException ex) {
+            log.debug("The embedded MongoDB at {} did not answer the request it serves as it starts", address, ex);
         }
     }
 
