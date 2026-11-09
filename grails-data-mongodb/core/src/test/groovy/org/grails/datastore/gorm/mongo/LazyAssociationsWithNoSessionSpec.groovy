@@ -36,6 +36,9 @@ import spock.lang.Shared
  */
 class LazyAssociationsWithNoSessionSpec extends AutoStartedMongoSpec {
 
+    /** MongoDB returns the first 101 documents with the query and the rest in later batches. */
+    static final int BEYOND_FIRST_BATCH = 102
+
     @Shared
     MongoDatastore datastore
 
@@ -67,6 +70,14 @@ class LazyAssociationsWithNoSessionSpec extends AutoStartedMongoSpec {
             LazyPlayer player = new LazyPlayer(name: 'Player', team: team).save()
             new LazyClub(name: 'Club').addToMembers(player).save()
             new LazyOwner(name: 'Owner').addToPets(new LazyPet(name: 'Rex')).save()
+            LazyClub bigClub = new LazyClub(name: 'Big club')
+            LazyOwner bigOwner = new LazyOwner(name: 'Big owner')
+            (1..BEYOND_FIRST_BATCH).each { int i ->
+                bigClub.addToMembers(new LazyPlayer(name: "Member $i", team: team).save())
+                bigOwner.addToPets(new LazyPet(name: "Pet $i"))
+            }
+            bigClub.save()
+            bigOwner.save()
             session.flush()
         }
     }
@@ -77,7 +88,7 @@ class LazyAssociationsWithNoSessionSpec extends AutoStartedMongoSpec {
 
     void "a to-one whose class has associations of its own loads with no session bound"() {
         when:
-        String name = LazyPlayer.list()[0].team.name
+        String name = LazyPlayer.findByName('Player').team.name
 
         then:
         name == 'Rovers'
@@ -86,17 +97,27 @@ class LazyAssociationsWithNoSessionSpec extends AutoStartedMongoSpec {
 
     void "the loaded instance's own to-one loads with no session bound"() {
         expect:
-        LazyPlayer.list()[0].team.league.name == 'Premier'
+        LazyPlayer.findByName('Player').team.league.name == 'Premier'
     }
 
     void "a unidirectional one-to-many whose class has associations of its own loads with no session bound"() {
         expect:
-        LazyClub.list()[0].members*.name == ['Player']
+        LazyClub.findByName('Club').members*.name == ['Player']
     }
 
     void "a bidirectional one-to-many loads with no session bound"() {
         expect:
-        LazyOwner.list()[0].pets*.name == ['Rex']
+        LazyOwner.findByName('Owner').pets*.name == ['Rex']
+    }
+
+    void "a unidirectional one-to-many longer than the first batch loads with no session bound"() {
+        expect:
+        LazyClub.findByName('Big club').members*.name.toSet().size() == BEYOND_FIRST_BATCH
+    }
+
+    void "a bidirectional one-to-many longer than the first batch loads with no session bound"() {
+        expect:
+        LazyOwner.findByName('Big owner').pets*.name.toSet().size() == BEYOND_FIRST_BATCH
     }
 
     void "a to-one loads with no session bound through the Groovy proxy factory"() {
@@ -105,7 +126,7 @@ class LazyAssociationsWithNoSessionSpec extends AutoStartedMongoSpec {
         datastore.mappingContext.proxyFactory = new GroovyProxyFactory()
 
         when:
-        LazyTeam team = LazyPlayer.list()[0].team
+        LazyTeam team = LazyPlayer.findByName('Player').team
 
         then:
         datastore.mappingContext.proxyFactory.isProxy(team)
@@ -124,8 +145,8 @@ class LazyAssociationsWithNoSessionSpec extends AutoStartedMongoSpec {
     void "a load with a session bound opens no session"() {
         when:
         List<Integer> opened = LazyPlayer.withNewSession {
-            LazyPlayer player = LazyPlayer.list()[0]
-            LazyClub club = LazyClub.list()[0]
+            LazyPlayer player = LazyPlayer.findByName('Player')
+            LazyClub club = LazyClub.findByName('Club')
             [sessionsOpenedRunning { player.team.name }, sessionsOpenedRunning { club.members.size() }]
         }
 

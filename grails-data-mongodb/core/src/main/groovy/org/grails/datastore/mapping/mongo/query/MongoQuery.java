@@ -491,12 +491,17 @@ public class MongoQuery extends BsonQuery implements QueryArgumentsAware {
      * The codec engine decodes the associations of what it reads in the session bound to the thread,
      * which need not be this query's: a proxy or a collection loads through the session its owner was
      * read in, which by then may be closed and not bound. With no session bound, this reads in a
-     * session of its own.
+     * session of its own, and reads every result before that session closes: MongoDB returns the
+     * first 101 documents with the query, and the cursor decodes the rest as they are read.
      */
     @Override
     protected List executeQuery(final PersistentEntity entity, final Junction criteria) {
-        if (isCodecPersister) {
-            return DatastoreUtils.execute(session.getDatastore(), (Session bound) -> readResults(entity, criteria));
+        if (isCodecPersister && !session.getDatastore().hasCurrentSession()) {
+            return DatastoreUtils.execute(session.getDatastore(), (Session bound) -> {
+                final List results = readResults(entity, criteria);
+                results.size(); // reads every result
+                return results;
+            });
         }
         return readResults(entity, criteria);
     }
