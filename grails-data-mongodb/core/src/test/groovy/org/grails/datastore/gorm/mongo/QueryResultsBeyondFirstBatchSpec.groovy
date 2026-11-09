@@ -18,10 +18,15 @@
  */
 package org.grails.datastore.gorm.mongo
 
+import com.mongodb.client.MongoCursor
 import grails.gorm.annotation.Entity
 import org.apache.grails.testing.mongo.AutoStartedMongoSpec
 import org.grails.datastore.mapping.core.Session
+import org.grails.datastore.mapping.core.SessionCreationEvent
 import org.grails.datastore.mapping.mongo.MongoDatastore
+import org.grails.datastore.mapping.mongo.query.MongoQuery
+import org.springframework.context.ApplicationEvent
+import org.springframework.context.ApplicationListener
 import spock.lang.Shared
 
 /**
@@ -35,6 +40,9 @@ class QueryResultsBeyondFirstBatchSpec extends AutoStartedMongoSpec {
     @Shared
     MongoDatastore datastore
 
+    @Shared
+    int sessionsOpened
+
     @Override
     boolean shouldInitializeDatastore() {
         false
@@ -43,11 +51,19 @@ class QueryResultsBeyondFirstBatchSpec extends AutoStartedMongoSpec {
     void setupSpec() {
         datastore = new MongoDatastore(
                 ['grails.mongodb.url': dbContainer.getReplicaSetUrl('queryResultsBeyondFirstBatch')] as Map,
-                BatchTeam, BatchPlayer)
+                BatchTeam, BatchPlayer, BatchClub)
         datastore.start()
+        datastore.applicationEventPublisher.addApplicationListener({ ApplicationEvent event ->
+            if (event instanceof SessionCreationEvent) {
+                sessionsOpened++
+            }
+        } as ApplicationListener)
         BatchPlayer.withNewSession { Session session ->
             BatchTeam team = new BatchTeam(name: 'Rovers').save()
-            102.times { int i -> new BatchPlayer(name: "Player $i", team: team).save() }
+            102.times { int i ->
+                BatchPlayer player = new BatchPlayer(name: "Player $i", team: team).save()
+                new BatchClub(name: "Club $i").addToMembers(player).save()
+            }
             session.flush()
         }
     }
@@ -67,6 +83,28 @@ class QueryResultsBeyondFirstBatchSpec extends AutoStartedMongoSpec {
         BatchPlayer.list().every { BatchPlayer player -> player.team.name == 'Rovers' }
     }
 
+    void "the results beyond the first batch with a one-to-many association are read with no session bound"() {
+        expect:
+        BatchClub.list().size() == 102
+    }
+
+    void "the results of an aggregation beyond the first batch are read with no session bound"() {
+        expect:
+        BatchPlayer.aggregate([['$match': [:]]]).size() == 102
+    }
+
+    void "tryNext reads the results beyond the first batch with no session bound"() {
+        when:
+        MongoCursor cursor = ((MongoQuery.MongoResultList) BatchPlayer.list()).cursor
+        int read = 0
+        while (cursor.tryNext() != null) {
+            read++
+        }
+
+        then:
+        read == 102
+    }
+
     void "the results beyond the first batch are read on a thread with no session"() {
         when:
         def read = null
@@ -82,6 +120,22 @@ class QueryResultsBeyondFirstBatchSpec extends AutoStartedMongoSpec {
         read == 102
     }
 
+    void "reading results that fit in the first batch opens no session"() {
+        when:
+        List<BatchTeam> teams = BatchTeam.list()
+
+        then:
+        sessionsOpenedReading(teams) == 0
+    }
+
+    void "reading the results beyond the first batch opens one session, for the later batch"() {
+        when:
+        List<BatchPlayer> players = BatchPlayer.list()
+
+        then:
+        sessionsOpenedReading(players) == 1
+    }
+
     void "the results beyond the first batch are read through the bound session"() {
         when:
         List read = BatchPlayer.withNewSession { Session session ->
@@ -91,6 +145,12 @@ class QueryResultsBeyondFirstBatchSpec extends AutoStartedMongoSpec {
 
         then:
         read == [102, true]
+    }
+
+    private int sessionsOpenedReading(List results) {
+        int before = sessionsOpened
+        results.size()
+        sessionsOpened - before
     }
 }
 
@@ -103,4 +163,10 @@ class BatchTeam {
 class BatchPlayer {
     String name
     BatchTeam team
+}
+
+@Entity
+class BatchClub {
+    String name
+    static hasMany = [members: BatchPlayer]
 }

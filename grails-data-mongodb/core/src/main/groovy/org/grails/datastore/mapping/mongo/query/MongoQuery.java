@@ -592,7 +592,7 @@ public class MongoQuery extends BsonQuery implements QueryArgumentsAware {
 
         cursor = (FindIterable<Document>) setHint(cursor);
 
-        return new SessionBoundCursor<>(cursor.iterator(), session.getDatastore());
+        return cursor.iterator();
     }
 
     private MongoIterable<Document> setHint(MongoIterable<Document> cursor) {
@@ -1504,10 +1504,24 @@ public class MongoQuery extends BsonQuery implements QueryArgumentsAware {
 
         @SuppressWarnings("unchecked")
         public MongoResultList(MongoCursor cursor, Integer offset, EntityPersister mongoEntityPersister) {
-            super(offset == null ? 0 : offset, cursor);
-            this.cursor = cursor;
+            super(offset == null ? 0 : offset, boundToSession(cursor, mongoEntityPersister));
+            this.cursor = (MongoCursor) super.getCursor();
             this.mongoEntityPersister = mongoEntityPersister;
             this.isCodecPersister = mongoEntityPersister instanceof MongoCodecEntityPersister;
+        }
+
+        /**
+         * The results are read after the query returns, by which time a session it opened for itself
+         * is closed. The codec engine decodes each batch, associations included, as the cursor fetches
+         * it, and needs a session to do so; the other engine decodes documents as they are read, in the
+         * query's session.
+         */
+        @SuppressWarnings("unchecked")
+        private static MongoCursor boundToSession(MongoCursor cursor, EntityPersister mongoEntityPersister) {
+            if (mongoEntityPersister instanceof MongoCodecEntityPersister) {
+                return new SessionBoundCursor<>(cursor, mongoEntityPersister.getSession().getDatastore());
+            }
+            return cursor;
         }
 
         @Override

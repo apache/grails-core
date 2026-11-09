@@ -36,6 +36,9 @@ import org.grails.datastore.mapping.core.SessionCallback;
  * it arrives. A query run with no session bound decodes its first batch in the session it opens for
  * itself, which is closed by the time the cursor fetches a later batch, and decoding an association
  * needs a session.
+ *
+ * <p>Like the first batch's, the instances a later batch holds belong to no session the caller can
+ * see: the session they are decoded in closes when the call that fetched them returns.
  */
 final class SessionBoundCursor<T> implements MongoCursor<T> {
 
@@ -63,11 +66,12 @@ final class SessionBoundCursor<T> implements MongoCursor<T> {
     }
 
     /**
-     * Whether this call fetches a batch, which it does only when none of the current batch is left,
-     * with no session bound to decode it in.
+     * Whether this call fetches a batch with no session bound to decode it in. It fetches one only
+     * when none of the current batch is left and the server has more results; once it has sent the
+     * last, the cursor answers without it.
      */
     private boolean fetchesBatch() {
-        return cursor.available() == 0 && !datastore.hasCurrentSession();
+        return cursor.available() == 0 && !datastore.hasCurrentSession() && cursor.getServerCursor() != null;
     }
 
     private <R> R inSession(Supplier<R> call) {
