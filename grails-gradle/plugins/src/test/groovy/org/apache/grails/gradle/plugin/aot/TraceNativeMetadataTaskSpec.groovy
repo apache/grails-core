@@ -20,6 +20,10 @@ package org.apache.grails.gradle.plugin.aot
 
 import java.net.CookieHandler
 import java.net.CookieManager
+import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.LocalTime
+import java.time.YearMonth
 
 import org.gradle.api.GradleException
 import org.gradle.api.Project
@@ -175,6 +179,42 @@ exec '${new File(System.getProperty('java.home'), 'bin/java').absolutePath}' \\
             submitted.contains('nickname=kept')
             submitted.contains('_csrf=token')
             submitted =~ /version=(&|$)/
+    }
+
+    void 'a field rendered empty is filled in with something its type accepts'() {
+        given: 'a number or a date sent text fails to bind, and the form answering again with a 200 reads as a save'
+            TraceNativeMetadataTask task = task([], ['/typed'])
+
+        when:
+            task.trace()
+
+        then:
+            Map<String, String> sent = postedTo('/typed-save')
+            with(sent) {
+                available == 'on'
+                (title =~ /^traced-\d+$/) && title.size() <= 12
+                (notes =~ /^\d+$/) && notes.size() <= 5
+                query =~ /^traced-\d+$/
+                secret == 'traced-secret'
+                new BigDecimal(pages) >= 0
+                new BigDecimal(rating) >= 3 && new BigDecimal(rating) <= 5
+                new BigDecimal(price) <= 0.5
+                new BigDecimal(volume) >= 10 && new BigDecimal(volume) <= 20
+                LocalDate.parse(released)
+                launched == '2999-01-01'
+                LocalDateTime.parse(startsAt)
+                LocalTime.parse(opensAt)
+                YearMonth.parse(issue)
+                sprint ==~ /\d{4}-W\d{2}/
+                contact ==~ /traced-\d+@example\.com/
+                (shortContact ==~ /[^@]+@example\.com/) && shortContact.size() <= 16
+                new URI(homepage).scheme == 'https' && new URI(homepage).host
+                phone ==~ /\d+/
+                colour ==~ /#[0-9a-f]{6}/
+            }
+
+        and: 'a hidden field is the page\'s own, so one that says nothing is sent saying nothing'
+            sent._available == ''
     }
 
     void 'the form with the most fields is the one submitted'() {
@@ -436,6 +476,16 @@ exec '${new File(System.getProperty('java.home'), 'bin/java').absolutePath}' \\
 
         cleanup:
             CookieHandler.default = null
+    }
+
+    /** The fields a form was submitted with, by name, from what the application was sent. */
+    private Map<String, String> postedTo(String action) {
+        String line = requested.find { String request -> request.startsWith("POST ${action} ") }
+        assert line, "nothing was posted to ${action}: ${requested}"
+        line.substring("POST ${action} ".length()).split('&').collectEntries { String pair ->
+            List<String> parts = pair.split('=', 2) as List<String>
+            [(URLDecoder.decode(parts[0], 'UTF-8')): URLDecoder.decode(parts.size() > 1 ? parts[1] : '', 'UTF-8')]
+        } as Map<String, String>
     }
 
     void 'a java without the agent is refused before the application is started'() {

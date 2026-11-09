@@ -22,6 +22,10 @@ import java.net.http.HttpClient
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
 import java.time.Duration
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
+import java.time.temporal.ChronoUnit
+import java.time.temporal.IsoFields
 import java.util.concurrent.TimeUnit
 import java.util.regex.Matcher
 import java.util.regex.Pattern
@@ -125,6 +129,12 @@ abstract class TraceNativeMetadataTask extends DefaultTask {
     private static final Pattern NAME = Pattern.compile(/(?i)\bname\s*=\s*"([^"]+)"/)
     private static final Pattern VALUE = Pattern.compile(/(?i)\bvalue\s*=\s*"([^"]*)"/)
     private static final Pattern TYPE = Pattern.compile(/(?i)\btype\s*=\s*"([^"]+)"/)
+    private static final Pattern MAXLENGTH = Pattern.compile(/(?i)\bmaxlength\s*=\s*"\s*(\d{1,9})\s*"/)
+    private static final Pattern MIN = Pattern.compile(/(?i)\bmin\s*=\s*"([^"]*)"/)
+    private static final Pattern MAX = Pattern.compile(/(?i)\bmax\s*=\s*"([^"]*)"/)
+
+    private static final String EMAIL_DOMAIN = '@example.com'
+    private static final String URL_BASE = 'https://example.com/'
 
     /**
      * Carries the session from one request to the next, which is what makes a form that
@@ -465,11 +475,10 @@ abstract class TraceNativeMetadataTask extends DefaultTask {
 
     /**
      * What the form would send. A field that carries a value sends it, which is how the token a
-     * security filter demands is carried; a checkbox sends what a ticked one sends; anything else
-     * sends something recognisable, so a row in a database says where it came from. That includes a
-     * field rendered with an empty value, as the fields plugin renders them for a new instance:
-     * sent blank it fails validation, the page answers with the form again, and what a save does
-     * when it succeeds is never recorded. A hidden field is the page's own, so it is sent as it is.
+     * security filter demands is carried, and a hidden field is the page's own, so it is sent as it
+     * is even when that is nothing. Any other field without a value is filled in, as the fields
+     * plugin renders every field of a new instance: sent blank it fails validation, the page answers
+     * with the form again, and what a save does when it succeeds is never recorded.
      */
     private static Map<String, String> fieldsOf(String markup) {
         Map<String, String> fields = [:]
@@ -482,17 +491,130 @@ abstract class TraceNativeMetadataTask extends DefaultTask {
             }
             Matcher value = VALUE.matcher(tag)
             Matcher type = TYPE.matcher(tag)
-            String kind = type.find() ? type.group(1).toLowerCase(Locale.ROOT) : 'text'
+            // The first word only: the fields plugin renders a decimal property as type="number decimal".
+            String kind = type.find() ? type.group(1).trim().toLowerCase(Locale.ROOT).split(/\s+/)[0] : 'text'
             if (kind in ['submit', 'button', 'reset', 'image', 'file']) {
                 continue
             }
             String carried = value.find() ? value.group(1) : null
-            fields[name.group(1)] = carried || (carried != null && kind == 'hidden') ? carried
-                    : kind == 'checkbox' || kind == 'radio' ? 'on'
-                    : kind == 'password' ? 'traced-secret'
-                    : "traced-${System.nanoTime()}".toString()
+            fields[name.group(1)] = carried || kind == 'hidden' ? (carried ?: '') : fill(kind, tag)
         }
         fields
+    }
+
+    /**
+     * Something a field of this type accepts, so that what fails is never the value the trace made up.
+     *
+     * <p>A number field sent text, or an email field sent something that is not an address, fails to
+     * bind or fails its constraint, and the page answers with the form again -- with a 200, which is
+     * what a save that succeeded answers with too. So the trace would report the form as covered
+     * while what a save does went unrecorded, which is the gap filling the field in was meant to
+     * close. A checkbox sends what a ticked one sends, and text sends something recognisable, so a
+     * row in a database says where it came from.</p>
+     *
+     * <p>What the field says about itself is kept to: a number lies within its {@code min} and
+     * {@code max}, as a date does, and nothing is longer than its {@code maxlength}, which is how the
+     * fields plugin renders the constraints of the property behind it.</p>
+     */
+    private static String fill(String kind, String tag) {
+        String declaredLength = attribute(MAXLENGTH, tag)
+        Integer maxLength = declaredLength ? Integer.valueOf(declaredLength) : null
+        LocalDateTime now = LocalDateTime.now().truncatedTo(ChronoUnit.MINUTES)
+        switch (kind) {
+            case 'checkbox':
+            case 'radio':
+                return 'on'
+            case 'number':
+            case 'range':
+                return numberWithin(tag)
+            case 'date':
+                return within(now.toLocalDate().toString(), tag)
+            case 'datetime-local':
+                return within(now.format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm", Locale.ROOT)), tag)
+            case 'time':
+                return within(now.format(DateTimeFormatter.ofPattern('HH:mm', Locale.ROOT)), tag)
+            case 'month':
+                return within(now.format(DateTimeFormatter.ofPattern('yyyy-MM', Locale.ROOT)), tag)
+            case 'week':
+                return within(String.format(Locale.ROOT, '%d-W%02d',
+                        now.get(IsoFields.WEEK_BASED_YEAR), now.get(IsoFields.WEEK_OF_WEEK_BASED_YEAR)), tag)
+            case 'email':
+                return traced(maxLength == null ? null : Math.max(maxLength - EMAIL_DOMAIN.length(), 1)) + EMAIL_DOMAIN
+            case 'url':
+                return URL_BASE + traced(maxLength == null ? null : Math.max(maxLength - URL_BASE.length(), 0))
+            case 'tel':
+                return cut('5550100', maxLength)
+            case 'color':
+                return '#000000'
+            case 'password':
+                return cut('traced-secret', maxLength)
+            default:
+                return traced(maxLength)
+        }
+    }
+
+    /** One, or the nearest number to it the field's {@code min} and {@code max} allow. */
+    private static String numberWithin(String tag) {
+        BigDecimal number = BigDecimal.ONE
+        BigDecimal min = decimal(attribute(MIN, tag))
+        BigDecimal max = decimal(attribute(MAX, tag))
+        if (min != null && number < min) {
+            number = min
+        }
+        if (max != null && number > max) {
+            number = max
+        }
+        number.toPlainString()
+    }
+
+    /**
+     * The value, or the nearest end of the field's {@code min} and {@code max}. A date, a time, a month and a week
+     * are each written so that the earlier of two sorts first, which is what lets them be compared as they are.
+     */
+    private static String within(String value, String tag) {
+        String min = attribute(MIN, tag)
+        String max = attribute(MAX, tag)
+        if (min && value < min) {
+            return min
+        }
+        if (max && value > max) {
+            return max
+        }
+        value
+    }
+
+    /**
+     * Something recognisable, and different from one trace to the next, so that a field the application keeps
+     * unique is given a value it has not seen. Where it does not fit, the name is given up before the digits that
+     * change are.
+     */
+    private static String traced(Integer maxLength) {
+        String unique = String.valueOf(System.nanoTime() & Long.MAX_VALUE)
+        String value = "traced-${unique}".toString()
+        if (maxLength == null || value.length() <= maxLength) {
+            return value
+        }
+        int room = maxLength - 'traced-'.length()
+        room > 0 ? "traced-${unique.substring(unique.length() - room)}".toString()
+                : unique.substring(Math.max(unique.length() - maxLength, 0))
+    }
+
+    private static String cut(String value, Integer maxLength) {
+        maxLength == null || value.length() <= maxLength ? value : value.substring(0, maxLength)
+    }
+
+    private static String attribute(Pattern pattern, String tag) {
+        Matcher matcher = pattern.matcher(tag)
+        matcher.find() ? matcher.group(1).trim() : null
+    }
+
+    private static BigDecimal decimal(String text) {
+        try {
+            text ? new BigDecimal(text) : null
+        }
+        catch (NumberFormatException ignored) {
+            null
+        }
     }
 
     private HttpRequest.Builder requestTo(String path) {

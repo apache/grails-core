@@ -147,6 +147,8 @@ The result is merged into `src/native/resources/META-INF/native-image`, alongsid
 
 `paths` are asked for. `forms` are asked for *and submitted*: the page is read, the fields the form declares are filled in, and they are posted to the action the form names. Submitting matters separately from rendering, because binding a form is a different half of the framework from rendering one — and it is the half that converts. A checkbox arrives as a string and lands on a boolean property, so a form submitted without one never asks the conversion service anything, and the image is built without the answer.
 
+A field that carries a value sends it, as a hidden field does whatever it carries. A field rendered empty, as the fields plugin renders those of a new instance, is filled in with something its type accepts: a number within the field's `min` and `max`, a date for a date field, an address for an email field, and recognisable text, no longer than the field's `maxlength`, for a text field. A value its type does not accept would fail to bind, and the page would answer with the form again, which looks to the trace like a save that succeeded.
+
 ==== Other methods and bodies
 
 `paths` are asked for with `GET` and `forms` are posted as forms, which reaches neither an action restricted to another method, such as `QUERY`, nor what binds a JSON body or writes a JSON response. `requests` makes a request as it is declared, after the forms and in their session:

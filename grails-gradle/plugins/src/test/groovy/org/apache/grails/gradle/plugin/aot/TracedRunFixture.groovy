@@ -71,6 +71,35 @@ class TracedRunFixture {
             <input type="text" name="nickname" value="kept"/>
         </form></body></html>'''
 
+    /**
+     * A field of every type rendered with nothing in it, as the fields plugin renders a new instance's: a number
+     * or a date sent text fails to bind, and the page answers with the form again and a 200.
+     */
+    private static final String TYPED_FORM = '''<html><body>
+        <form action="/typed-save" method="post">
+            <input type="hidden" name="_available"/>
+            <input type="checkbox" name="available" value=""/>
+            <input type="text" name="title" value="" maxlength="12"/>
+            <textarea name="notes" maxlength="5"></textarea>
+            <input type="search" name="query" value=""/>
+            <input type="password" name="secret" value=""/>
+            <input type="number" name="pages" value=""/>
+            <input type="number" name="rating" value="" min="3" max="5"/>
+            <input type="number decimal" name="price" value="" step="any" max="0.5"/>
+            <input type="range" name="volume" value="" min="10" max="20"/>
+            <input type="date" name="released" value=""/>
+            <input type="date" name="launched" value="" min="2999-01-01"/>
+            <input type="datetime-local" name="startsAt" value=""/>
+            <input type="time" name="opensAt" value=""/>
+            <input type="month" name="issue" value=""/>
+            <input type="week" name="sprint" value=""/>
+            <input type="email" name="contact" value=""/>
+            <input type="email" name="shortContact" value="" maxlength="16"/>
+            <input type="url" name="homepage" value=""/>
+            <input type="tel" name="phone" value=""/>
+            <input type="color" name="colour" value=""/>
+        </form></body></html>'''
+
     static void main(String[] args) {
         int port = Integer.parseInt(args[0])
         File requested = new File(args[1])
@@ -110,6 +139,9 @@ class TracedRunFixture {
             }
             else if (path == '/scaffolded') {
                 response = SCAFFOLDED_FORM
+            }
+            else if (path == '/typed') {
+                response = TYPED_FORM
             }
             else if (path == '/authenticate') {
                 exchange.responseHeaders.add('Set-Cookie', 'session=in; Path=/')
