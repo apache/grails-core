@@ -53,6 +53,21 @@ class ValidatorRegistrySpec extends Specification {
 
     }
 
+    void 'the registry validates a local URL'() {
+        given:
+        def mappingContext = new KeyValueMappingContext('test')
+        def entity = mappingContext.addPersistentEntity(Person)
+        def registry = new DefaultValidatorRegistry(mappingContext, new ConnectionSourceSettings())
+        def person = new Person(town: 'London', age: 1, description: 'http://localhost:8080')
+        def errors = new ValidationErrors(person, Person.simpleName)
+
+        when:
+        registry.getValidator(entity).validate(person, errors)
+
+        then:
+        !errors.hasErrors()
+    }
+
 }
 
 @Entity

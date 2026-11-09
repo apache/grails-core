@@ -33,24 +33,43 @@ class UrlConstrainedPropertyBuilderForCommandsTests extends Specification implem
         cmd.validate()
     }
 
-    void 'test a valid url'() {
+    void 'test a valid url #value with imported constraints'() {
         given:
-        def cmd = new UrlConstraintsCommand(url: 'https://grails.apache.org')
+        def cmd = new UrlConstraintsCommand(url: value)
 
         expect:
         cmd.validate()
+
+        and: 'the source domain constraint accepts the same URL'
+        new FooConstraintsPerson(url: value).validate()
+
+        where:
+        value << [
+                'https://grails.apache.org',
+                'http://foo',
+                'http://0',
+                'http://123',
+                'http://localhost',
+                'http://foo.localhost',
+                'http://foo.localdomain',
+                'https://localhost:9443/apptest/authentication/oidc/MS_ENTRA',
+                'http://my-server:8080/path'
+        ]
     }
 
-    void 'test an invalid url'() {
+    void 'test an invalid url #value with imported constraints'() {
         given:
-        def cmd = new UrlConstraintsCommand(url: 'http://foo')
+        def cmd = new UrlConstraintsCommand(url: value)
 
         expect:
         !cmd.validate()
         cmd.hasErrors()
         cmd.errors.errorCount == 1
         cmd.errors.getFieldErrors('url').size() == 1
-        cmd.errors.getFieldErrors('url')[0].rejectedValue == 'http://foo'
+        cmd.errors.getFieldErrors('url')[0].rejectedValue == value
+
+        where:
+        value << ['http://-foo', 'http://foo-', 'http://bad_host', 'http://localhost:65536', 'http:///path']
     }
 }
 
