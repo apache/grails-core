@@ -143,7 +143,8 @@ class ActionExceptionHandlerResolver implements HandlerExceptionResolver, Ordere
             return null
         }
         ModelAndView resolved = enabled ? resolveWithHandlerMethods(request, response, (GrailsControllerUrlMappingInfo) handler, ex) : null
-        return resolved == null && problemDetails ? resolveAsProblem(request, response, ex) : resolved
+        return resolved == null && problemDetails ?
+                resolveAsProblem(request, response, (GrailsControllerUrlMappingInfo) handler, ex) : resolved
     }
 
     private ModelAndView resolveWithHandlerMethods(HttpServletRequest request, HttpServletResponse response,
@@ -159,7 +160,8 @@ class ActionExceptionHandlerResolver implements HandlerExceptionResolver, Ordere
      * resolvers, as a failure of an exception handler method leaves it in Spring MVC. An action a page includes is left
      * to them too, since a problem written into the page is no answer to the client.
      */
-    private ModelAndView resolveAsProblem(HttpServletRequest request, HttpServletResponse response, Exception thrown) {
+    private ModelAndView resolveAsProblem(HttpServletRequest request, HttpServletResponse response,
+                                          GrailsControllerUrlMappingInfo handler, Exception thrown) {
         Exception ex = unwrap(thrown)
         try {
             if (response.committed || WebUtils.isIncludeRequest(request) || !returnValues.writesErrorResponses() ||
@@ -170,7 +172,7 @@ class ActionExceptionHandlerResolver implements HandlerExceptionResolver, Ordere
             // what an exception handler method that failed produces, as Spring MVC removes it for its own last resort
             request.removeAttribute(HandlerMapping.PRODUCIBLE_MEDIA_TYPES_ATTRIBUTE)
             ModelAndView written = errorResponse == null ? new ModelAndView() : returnValues.writeErrorResponse(errorResponse,
-                    request.getAttribute(GrailsApplicationAttributes.CONTROLLER), request, response)
+                    handler.controllerClass?.clazz, request, response)
             if (isServerError(response)) {
                 recordServerError(request, ex)
                 // Spring MVC's translation logs an unexpected exception without the request it failed

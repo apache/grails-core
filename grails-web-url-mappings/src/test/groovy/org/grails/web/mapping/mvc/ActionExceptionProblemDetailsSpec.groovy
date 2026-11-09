@@ -30,12 +30,16 @@ import io.micrometer.observation.Observation
 import io.micrometer.observation.ObservationHandler
 import io.micrometer.observation.ObservationRegistry
 
+import org.springframework.core.MethodParameter
 import org.springframework.core.env.MapPropertySource
 import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpStatus
+import org.springframework.http.MediaType
 import org.springframework.http.ProblemDetail
 import org.springframework.http.converter.HttpMessageConverter
 import org.springframework.http.converter.json.JacksonJsonHttpMessageConverter
+import org.springframework.http.server.ServerHttpRequest
+import org.springframework.http.server.ServerHttpResponse
 import org.springframework.http.server.observation.ServerRequestObservationContext
 import org.springframework.mock.web.MockHttpServletRequest
 import org.springframework.mock.web.MockHttpServletResponse
@@ -52,6 +56,7 @@ import org.springframework.web.filter.ServerHttpObservationFilter
 import org.springframework.web.server.ResponseStatusException
 import org.springframework.web.servlet.mvc.method.annotation.ExceptionHandlerExceptionResolver
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter
+import org.springframework.web.servlet.mvc.method.annotation.ResponseBodyAdvice
 
 import grails.core.DefaultGrailsApplication
 import grails.core.GrailsApplication
@@ -377,6 +382,30 @@ class ActionExceptionProblemDetailsSpec extends Specification {
         logCapture.close()
     }
 
+    void 'the advice for the controller the request is mapped to applies to the problem when the request holds #held'() {
+        given:
+        def resolver = resolver([problemDetails: true])
+        if (controller != null) {
+            request.setAttribute(GrailsApplicationAttributes.CONTROLLER, controller)
+        }
+        def info = new GrailsControllerUrlMappingInfo(new DefaultGrailsControllerClass(ProblemController), Stub(UrlMappingInfo) {
+            getActionName() >> 'index'
+        })
+
+        when:
+        resolver.resolveException(request, response, info, new IllegalStateException('secret'))
+
+        then:
+        problem().status == 500
+        response.getHeader(ProblemResponseAdvice.HEADER) == ProblemController.simpleName
+
+        where:
+        held                                                             | controller
+        'no controller, as when an interceptor fails before creating it' | null
+        'the controller that forwarded to it'                            | new ForwardingProblemController()
+        'that controller'                                                | new ProblemController()
+    }
+
     void 'an ErrorResponse.Interceptor sees the problem, as it sees one a handler method returns'() {
         given:
         interceptors = [new ErrorResponse.Interceptor() {
@@ -512,6 +541,7 @@ class ActionExceptionProblemDetailsSpec extends Specification {
                 settings.collectEntries { key, value -> ["grails.exceptionresolver.$key".toString(), value] } as Map<String, Object>))
         List<HttpMessageConverter<?>> converters = [new JacksonJsonHttpMessageConverter()]
         context.registerBean(ProblemControllerAdvice)
+        context.registerBean(ProblemResponseAdvice)
         context.registerBean(ExceptionHandlerExceptionResolver, { new ExceptionHandlerExceptionResolver(messageConverters: converters) })
         context.registerBean('requestMappingHandlerAdapter', RequestMappingHandlerAdapter, {
             new RequestMappingHandlerAdapter(messageConverters: converters, errorResponseInterceptors: interceptors)
@@ -541,6 +571,12 @@ class ProblemController {
     }
 }
 
+class ForwardingProblemController {
+
+    def index() {
+    }
+}
+
 @ResponseStatus(code = HttpStatus.I_AM_A_TEAPOT, reason = 'Short and stout')
 class TeapotException extends RuntimeException {
 }
@@ -556,5 +592,24 @@ class ProblemControllerAdvice {
     @ExceptionHandler(value = UnsupportedOperationException, produces = 'text/csv')
     String failing(UnsupportedOperationException e) {
         throw e
+    }
+}
+
+@ControllerAdvice(assignableTypes = ProblemController)
+class ProblemResponseAdvice implements ResponseBodyAdvice<Object> {
+
+    static final String HEADER = 'X-Advised-For'
+
+    @Override
+    boolean supports(MethodParameter returnType, Class<? extends HttpMessageConverter<?>> converterType) {
+        true
+    }
+
+    @Override
+    Object beforeBodyWrite(Object body, MethodParameter returnType, MediaType selectedContentType,
+                           Class<? extends HttpMessageConverter<?>> selectedConverterType, ServerHttpRequest request,
+                           ServerHttpResponse response) {
+        response.headers.set(HEADER, ProblemController.simpleName)
+        body
     }
 }

@@ -192,20 +192,22 @@ class ActionReturnValues {
     /**
      * Writes an error response with the return value handler Spring MVC's handler adapter selects for one, as Spring MVC
      * writes what an exception handler method returns: with its content negotiation, its {@code ErrorResponse.Interceptor}
-     * beans and the {@code ResponseBodyAdvice} beans that apply to the controller, which the action of the exception may
-     * not have got as far as creating.
+     * beans and the {@code ResponseBodyAdvice} beans that apply to the controller. Those are found by the controller's
+     * class, since the request may not have got as far as creating the controller, as when an interceptor's
+     * {@code before()} fails, or may still hold the one that forwarded to it.
      *
      * @param errorResponse the error response
-     * @param controller the controller, or {@code null}
+     * @param controllerType the class of the controller the request is mapped to, or {@code null}
      * @param request the request
      * @param response the response
      * @return the view a handler selected, or an empty one where it wrote the response
      * @since 9.1
      */
-    ModelAndView writeErrorResponse(ErrorResponse errorResponse, Object controller, HttpServletRequest request, HttpServletResponse response) {
+    ModelAndView writeErrorResponse(ErrorResponse errorResponse, Class<?> controllerType, HttpServletRequest request,
+                                    HttpServletResponse response) {
         // looked up here rather than when the class loads, so that an application that writes none never needs it
         MethodParameter returnType = new MethodParameter(ActionReturnValues.getDeclaredMethod('returnedErrorResponse'), -1)
-                .withContainingClass(controller?.getClass() ?: ActionReturnValues)
+                .withContainingClass(controllerType ?: ActionReturnValues)
         ModelAndViewContainer container = new ModelAndViewContainer()
         adapter().returnValueHandlers.handleReturnValue(errorResponse, returnType, container, new ServletWebRequest(request, response))
         // only once it is written: a failure leaves the response to the error page, which an action can answer
