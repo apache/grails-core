@@ -57,6 +57,8 @@ import org.grails.datastore.bson.query.BsonQuery;
 import org.grails.datastore.bson.query.EmbeddedQueryEncoder;
 import org.grails.datastore.gorm.mongo.geo.GeoJSONType;
 import org.grails.datastore.gorm.query.AbstractResultList;
+import org.grails.datastore.mapping.core.DatastoreUtils;
+import org.grails.datastore.mapping.core.Session;
 import org.grails.datastore.mapping.core.SessionImplementor;
 import org.grails.datastore.mapping.engine.EntityAccess;
 import org.grails.datastore.mapping.engine.EntityPersister;
@@ -485,8 +487,21 @@ public class MongoQuery extends BsonQuery implements QueryArgumentsAware {
         return query;
     }
 
+    /**
+     * The codec engine decodes the associations of what it reads in the session bound to the thread,
+     * which need not be this query's: a proxy or a collection loads through the session its owner was
+     * read in, which by then may be closed and not bound. With no session bound, this reads in a
+     * session of its own.
+     */
     @Override
     protected List executeQuery(final PersistentEntity entity, final Junction criteria) {
+        if (isCodecPersister) {
+            return DatastoreUtils.execute(session.getDatastore(), (Session bound) -> readResults(entity, criteria));
+        }
+        return readResults(entity, criteria);
+    }
+
+    private List readResults(final PersistentEntity entity, final Junction criteria) {
         final AbstractMongoSession mongoSession = this.mongoSession;
         com.mongodb.client.MongoCollection<Document> collection = mongoSession.getCollection(entity);
 
