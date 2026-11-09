@@ -20,6 +20,7 @@ package org.grails.web.mapping.mvc
 
 import groovy.transform.CompileStatic
 
+import jakarta.servlet.DispatcherType
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
 
@@ -172,7 +173,9 @@ class UrlMappingsHandlerMapping extends AbstractHandlerMapping {
 
         def matchedInfo = request.getAttribute(MATCHED_REQUEST)
         def errorStatus = request.getAttribute(WebUtils.ERROR_STATUS_CODE_ATTRIBUTE)
-        if (matchedInfo != null && errorStatus == null) return matchedInfo
+        // The dispatch that returns the result of asynchronous processing answers for the action that started it. Any
+        // other dispatch, such as a forward a view makes, matches its own URI, whatever an earlier dispatch left here.
+        if (matchedInfo != null && errorStatus == null && request.dispatcherType == DispatcherType.ASYNC) return matchedInfo
 
         String uri = urlHelper.getPathWithinApplication(request)
         def webRequest = GrailsWebRequest.lookup(request)

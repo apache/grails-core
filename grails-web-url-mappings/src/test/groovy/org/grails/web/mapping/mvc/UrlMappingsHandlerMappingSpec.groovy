@@ -20,6 +20,8 @@ package org.grails.web.mapping.mvc
 
 import java.sql.SQLException
 
+import jakarta.servlet.DispatcherType
+
 import grails.artefact.Artefact
 import grails.core.DefaultGrailsApplication
 import grails.core.GrailsApplication
@@ -416,6 +418,38 @@ class UrlMappingsHandlerMappingSpec extends AbstractUrlMappingsSpec {
 
         then:
         context.pathPattern == '/foo/bar'
+    }
+
+    void "the match of a dispatch answers for the async dispatch that follows it, and not for a #dispatch to another action"() {
+        given:
+        def grailsApplication = new DefaultGrailsApplication(FooController)
+        grailsApplication.initialise()
+        def holder = new GrailsControllerUrlMappings(grailsApplication, getUrlMappingsHolder {
+            "/foo/bar"(controller: 'foo', action: 'bar')
+            "/other"(controller: 'foo', action: 'fooBar')
+        })
+        def handler = new UrlMappingsHandlerMapping(holder)
+        def webRequest = GrailsWebMockUtil.bindMockWebRequest()
+        def request = webRequest.request
+        request.requestURI = '/foo/bar'
+        def started = handler.getHandler(request).handler
+
+        when: 'the action started async processing, and its result comes back on an async dispatch'
+        request.dispatcherType = DispatcherType.ASYNC
+
+        then:
+        handler.getHandler(request).handler.is(started)
+
+        when: 'the view of that result sends the request to another action'
+        request.dispatcherType = dispatch
+        request.requestURI = '/other'
+        def info = handler.getHandler(request).handler
+
+        then:
+        info.actionName == 'fooBar'
+
+        where:
+        dispatch << [DispatcherType.FORWARD, DispatcherType.INCLUDE]
     }
 
     void "an action a page includes leaves the route of the page on its observation"() {
