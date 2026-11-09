@@ -21,6 +21,8 @@ package undertowapp
 import org.springframework.web.context.request.async.DeferredResult
 import org.springframework.web.context.request.async.WebAsyncManager
 import org.springframework.web.context.request.async.WebAsyncUtils
+import org.springframework.web.servlet.ModelAndView
+import org.springframework.web.servlet.view.InternalResourceView
 
 class FailingController {
 
@@ -66,6 +68,14 @@ class FailingController {
         forward(action: 'answeredByView')
     }
 
+    def forwardedToViewAsynchronously() {
+        forwardAsynchronously('/failing/answeredByView')
+    }
+
+    def forwardedToControllerAsynchronously() {
+        forwardAsynchronously('/failing/answeredByController')
+    }
+
     def forwardedToController() {
         forward(action: 'answeredByController')
     }
@@ -99,6 +109,16 @@ class FailingController {
         DeferredResult<Object> result = new DeferredResult<>()
         startAsync(result)
         result.errorResult = failure
+    }
+
+    /**
+     * Completes asynchronous processing with a view that forwards, as a view Spring MVC resolves from a
+     * {@code forward:} name does, so that the action the path maps to answers on the asynchronous dispatch.
+     */
+    private void forwardAsynchronously(String path) {
+        DeferredResult<Object> result = new DeferredResult<>()
+        startAsync(result)
+        result.result = new ModelAndView(new InternalResourceView(path))
     }
 
     /**
