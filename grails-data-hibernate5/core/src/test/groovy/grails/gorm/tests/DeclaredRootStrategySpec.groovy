@@ -19,6 +19,7 @@
 package grails.gorm.tests
 
 import grails.gorm.annotation.Entity
+import org.grails.orm.hibernate.cfg.Mapping
 import spock.lang.Issue
 
 /**
@@ -60,6 +61,22 @@ class DeclaredRootStrategySpec extends HibernateGormDatastoreSpec {
     void "a base class that says nothing is joined with a subclass that is"() {
         expect:
         !hasDiscriminator('SILENT_ROOT')
+    }
+
+    void "the fluent tablePerHierarchy method records the declaration and returns the mapping"() {
+        given:
+        Mapping mapping = new Mapping()
+
+        expect:
+        !mapping.tablePerHierarchyDeclared
+
+        when:
+        def returned = mapping.tablePerHierarchy(false)
+
+        then:
+        returned.is(mapping)
+        mapping.tablePerHierarchyDeclared
+        !mapping.tablePerHierarchy
     }
 
     void "the rows of the base table of a declared base class are still returned"() {

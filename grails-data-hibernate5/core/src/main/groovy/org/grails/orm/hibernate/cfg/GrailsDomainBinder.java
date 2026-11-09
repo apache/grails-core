@@ -171,7 +171,7 @@ public class GrailsDomainBinder implements MetadataContributor {
      * mapping says nothing. It belongs to the binder, which builds one datasource: the mapping of a class is shared by
      * every datasource, so the strategy a datasource infers is never written to it.
      */
-    private final java.util.Set<Class<?>> inferredJoinedRoots = new java.util.HashSet<>();
+    private final Set<Class<?>> inferredJoinedRoots = new HashSet<>();
     protected final HibernateMappingContext hibernateMappingContext;
     protected Closure defaultMapping;
     protected PersistentEntityNamingStrategy namingStrategy;
@@ -440,7 +440,7 @@ public class GrailsDomainBinder implements MetadataContributor {
         if (collection.isOneToMany()) {
 
             Mapping m = getRootMapping(referenced);
-            boolean tablePerSubclass = m != null && !isTablePerHierarchy(rootClassOf(referenced.getJavaClass()), m);
+            boolean tablePerSubclass = m != null && !isTablePerHierarchy(referenced.getJavaClass(), m);
 
             if (referenced != null && !referenced.isRoot() && !tablePerSubclass) {
                 Mapping rootMapping = getRootMapping(referenced);
@@ -703,14 +703,8 @@ public class GrailsDomainBinder implements MetadataContributor {
 
     protected Mapping getRootMapping(PersistentEntity referenced) {
         if (referenced == null) return null;
-        Class<?> current = referenced.getJavaClass();
-        while (true) {
-            Class<?> superClass = current.getSuperclass();
-            if (Object.class.equals(superClass)) break;
-            current = superClass;
-        }
-
-        return getMapping(current);
+        // the root entity of the mapping model: a plain class above the first domain class is not part of the hierarchy
+        return getMapping(referenced.getRootEntity());
     }
 
     protected boolean isBidirectionalOneToManyMap(Association property) {
@@ -1560,19 +1554,23 @@ public class GrailsDomainBinder implements MetadataContributor {
      * says so, and the hierarchy it belongs to has not been inferred as joined.
      */
     private boolean isTablePerHierarchy(Class<?> entityClass, Mapping mapping) {
-        return mapping.getTablePerHierarchy() && !inferredJoinedRoots.contains(rootClassOf(entityClass));
-    }
-
-    private static Class<?> rootClassOf(Class<?> entityClass) {
-        Class<?> current = entityClass;
-        while (!Object.class.equals(current.getSuperclass())) {
-            current = current.getSuperclass();
+        if (!mapping.getTablePerHierarchy()) {
+            return false;
         }
-        return current;
+        for (Class<?> inferredRoot : inferredJoinedRoots) {
+            if (inferredRoot.isAssignableFrom(entityClass)) {
+                return false;
+            }
+        }
+        return true;
     }
 
     private boolean hasTablePerSubclassChild(java.util.Collection<PersistentEntity> children) {
         for (PersistentEntity child : children) {
+            if (!ConnectionSourcesSupport.usesConnectionSource(child, dataSourceName)) {
+                // a subclass mapped to another datasource is not part of this session factory's hierarchy
+                continue;
+            }
             Mapping childMapping = evaluateMapping(child, defaultMapping);
             if (childMapping != null && !childMapping.getTablePerHierarchy() && !childMapping.isTablePerConcreteClass()) {
                 return true;
