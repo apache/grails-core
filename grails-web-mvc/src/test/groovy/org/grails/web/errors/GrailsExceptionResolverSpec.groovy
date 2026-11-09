@@ -36,6 +36,7 @@ import org.grails.exceptions.reporting.StackTraceFilterer
 import org.grails.web.mapping.DefaultUrlMappingEvaluator
 import org.grails.web.mapping.DefaultUrlMappingsHolder
 import org.grails.web.mapping.mvc.GrailsControllerUrlMappings
+import org.grails.web.servlet.mvc.GrailsDispatcherServlet
 import org.grails.web.servlet.mvc.GrailsWebRequest
 import org.grails.web.servlet.view.CompositeViewResolver
 import org.grails.web.util.WebUtils as GrailsWebUtils
@@ -47,6 +48,7 @@ import org.springframework.http.server.observation.ServerRequestObservationConte
 import org.springframework.mock.web.MockHttpServletRequest
 import org.springframework.mock.web.MockHttpServletResponse
 import org.springframework.mock.web.MockRequestDispatcher
+import org.springframework.mock.web.MockServletConfig
 import org.springframework.mock.web.MockServletContext
 import org.springframework.web.context.request.RequestContextHolder
 import org.springframework.web.context.request.ServletRequestAttributes
@@ -57,6 +59,9 @@ import org.springframework.web.context.WebApplicationContext
 import org.springframework.web.context.support.StaticWebApplicationContext
 import org.springframework.web.servlet.ModelAndView
 import org.springframework.web.servlet.ViewResolver
+import org.springframework.web.servlet.handler.SimpleUrlHandlerMapping
+import org.springframework.web.servlet.mvc.Controller
+import org.springframework.web.servlet.mvc.SimpleControllerHandlerAdapter
 import org.springframework.web.servlet.view.InternalResourceView
 import spock.lang.Issue
 import spock.lang.Specification
@@ -64,6 +69,7 @@ import spock.lang.Specification
 import jakarta.servlet.DispatcherType
 import jakarta.servlet.FilterChain
 import jakarta.servlet.RequestDispatcher
+import jakarta.servlet.Servlet
 import jakarta.servlet.ServletContext
 import jakarta.servlet.ServletRequest
 import jakarta.servlet.ServletResponse
@@ -214,6 +220,42 @@ class GrailsExceptionResolverSpec extends Specification {
 
         where:
         dispatch << [DispatcherType.REQUEST, DispatcherType.ASYNC]
+    }
+
+    void 'the handlers hear once of an exception an error controller answers in a forward from #dispatch, when #container'() {
+        given: 'the Grails dispatcher servlet behind the filter, and a handler that forwards to one that fails'
+        List<Throwable> notified = []
+        def registry = registryReporting({ }, { notified << it })
+        def resolver = resolverFor({ '500'(controller: 'errors', action: 'serverError') }, true)
+        def original = new IllegalStateException('original')
+        def servlet = dispatcherServletWith(resolver, [
+                '/forwarding': { req, res -> req.getRequestDispatcher('/failing').forward(req, res); null } as Controller,
+                '/failing'   : { req, res -> throw original } as Controller])
+        def request = new ForwardingRequest(servletContext, '/forwarding', servlet, ['/forwarding', '/failing'] as Set,
+                restoresForward)
+        request.dispatcherType = dispatch
+        if (dispatch == DispatcherType.ASYNC) {
+            request.setAttribute(GrailsWebUtils.ASYNC_REQUEST_URI_ATTRIBUTE, '/forwarding')
+        }
+        def response = new MockHttpServletResponse()
+
+        when:
+        new ServerHttpObservationFilter(registry).doFilter(request, response, { req, res ->
+            servlet.service(req, res)
+        } as FilterChain)
+
+        then:
+        response.forwardedUrl == '/errors/serverError'
+        request.dispatcherType == (restoresForward ? dispatch : DispatcherType.FORWARD)
+        notified.size() == 1
+        notified.first().is(original)
+
+        where:
+        dispatch               | restoresForward | container
+        DispatcherType.REQUEST | true            | 'the container restores the request, as Tomcat and Jetty do'
+        DispatcherType.REQUEST | false           | 'the request still reads as the forward, as on Undertow'
+        DispatcherType.ASYNC   | true            | 'the container restores the request, as Tomcat and Jetty do'
+        DispatcherType.ASYNC   | false           | 'the request still reads as the forward, as on Undertow'
     }
 
     void 'a filter can read the exception an error handler answered once the chain has returned, with no observation'() {
@@ -879,6 +921,60 @@ class GrailsExceptionResolverSpec extends Specification {
         resolver.grailsApplication = grailsApplication
         resolver.exceptionMappings = ['java.lang.Exception': '/error'] as Properties
         resolver
+    }
+
+    private GrailsDispatcherServlet dispatcherServletWith(GrailsExceptionResolver resolver, Map<String, Controller> handlers) {
+        def handlerMapping = new SimpleUrlHandlerMapping(handlers)
+        handlerMapping.applicationContext = webContext
+        webContext.beanFactory.registerSingleton('handlerMapping', handlerMapping)
+        webContext.beanFactory.registerSingleton('handlerAdapter', new SimpleControllerHandlerAdapter())
+        webContext.beanFactory.registerSingleton('exceptionResolver', resolver)
+        def servlet = new GrailsDispatcherServlet(webContext)
+        servlet.init(new MockServletConfig(servletContext, 'grails'))
+        servlet
+    }
+
+    /**
+     * A request whose forwards to the handlers of a servlet dispatch through it, and which reads as the forward once it
+     * has returned, unless the container restores it, as Tomcat and Jetty do and Undertow does not.
+     */
+    private static class ForwardingRequest extends MockHttpServletRequest {
+
+        final Servlet servlet
+        final Set<String> handled
+        final boolean restoresForward
+
+        ForwardingRequest(ServletContext servletContext, String requestURI, Servlet servlet, Set<String> handled,
+                boolean restoresForward) {
+            super(servletContext, 'GET', requestURI)
+            this.servlet = servlet
+            this.handled = handled
+            this.restoresForward = restoresForward
+        }
+
+        @Override
+        RequestDispatcher getRequestDispatcher(String path) {
+            ForwardingRequest forwarded = this
+            new MockRequestDispatcher(path) {
+                @Override
+                void forward(ServletRequest request, ServletResponse response) {
+                    DispatcherType dispatchedAs = forwarded.dispatcherType
+                    String requestURI = forwarded.requestURI
+                    forwarded.dispatcherType = DispatcherType.FORWARD
+                    forwarded.requestURI = path
+                    if (path in forwarded.handled) {
+                        forwarded.servlet.service(request, response)
+                    }
+                    else {
+                        super.forward(request, response)
+                    }
+                    if (forwarded.restoresForward) {
+                        forwarded.dispatcherType = dispatchedAs
+                        forwarded.requestURI = requestURI
+                    }
+                }
+            }
+        }
     }
 
     /** A request that still reads as a forward once a forward has returned, as Undertow leaves it. */

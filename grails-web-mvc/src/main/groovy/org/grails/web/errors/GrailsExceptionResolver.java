@@ -93,6 +93,10 @@ public class GrailsExceptionResolver extends SimpleMappingExceptionResolver impl
     private static final String SERVER_OBSERVATION_ATTRIBUTE =
             ServerHttpObservationFilter.class.getName() + ".observation";
 
+    /** Where a dispatch holds the exception left on its request until it returns. */
+    private static final String FAILURE_LEFT_ON_REQUEST_ATTRIBUTE =
+            GrailsExceptionResolver.class.getName() + ".FAILURE_LEFT_ON_REQUEST";
+
     protected static final Logger LOG = LoggerFactory.getLogger(GrailsExceptionResolver.class);
     protected static final String LINE_SEPARATOR = System.getProperty("line.separator");
 
@@ -144,16 +148,52 @@ public class GrailsExceptionResolver extends SimpleMappingExceptionResolver impl
     }
 
     /**
+     * Holds the exception this resolver leaves on the request until the dispatch has returned, because only then does
+     * the request read as the filter that observes it will read it. Inside a forward it does not yet: Tomcat and Jetty
+     * restore a request when a forward returns, and Undertow leaves it reading as the forward.
+     * {@link org.grails.web.servlet.mvc.GrailsDispatcherServlet} calls this when a dispatch enters it, and runs what
+     * this returns when the dispatch returns.
+     *
+     * @param request the request of the dispatch
+     * @return what records the exception left on the request, unless the filter will; it does nothing for a forward or
+     * include within a dispatch that already holds it
+     */
+    public static Runnable holdFailureLeftOnRequest(HttpServletRequest request) {
+        if (request.getAttribute(FAILURE_LEFT_ON_REQUEST_ATTRIBUTE) != null) {
+            return () -> { };
+        }
+        FailureLeftOnRequest held = new FailureLeftOnRequest(request.getDispatcherType());
+        request.setAttribute(FAILURE_LEFT_ON_REQUEST_ATTRIBUTE, held);
+        return () -> {
+            request.removeAttribute(FAILURE_LEFT_ON_REQUEST_ATTRIBUTE);
+            if (held.failure != null) {
+                recordUnlessRecordedFromRequest(request, held.failure, held.dispatchedAs);
+            }
+        };
+    }
+
+    /**
      * Every exception this resolves is a server error, and resolving it hides it from the observation of the request,
      * whose metrics would otherwise say there was no error and whose trace would not be marked as failed. Only
      * {@link Observation#error(Throwable)} tells the observation's handlers, one of which marks the span.
      * <p>
      * An exception left in {@link WebUtils#ERROR_EXCEPTION_ATTRIBUTE} is not recorded here when it is recorded from there
-     * once the dispatch returns, so that the handlers hear of it once.
+     * once the dispatch returns, so that the handlers hear of it once. A dispatch that holds it decides when it returns.
      *
      * @param dispatchedAs how the request was dispatched before an error handler was forwarded to
      */
     private static void recordServerError(HttpServletRequest request, Exception ex, DispatcherType dispatchedAs) {
+        if (request.getAttribute(WebUtils.ERROR_EXCEPTION_ATTRIBUTE) == ex &&
+                request.getAttribute(FAILURE_LEFT_ON_REQUEST_ATTRIBUTE) instanceof FailureLeftOnRequest held) {
+            held.failure = ex;
+        }
+        else {
+            recordUnlessRecordedFromRequest(request, ex, dispatchedAs);
+        }
+    }
+
+    private static void recordUnlessRecordedFromRequest(HttpServletRequest request, Exception ex,
+            DispatcherType dispatchedAs) {
         if (request.getAttribute(WebUtils.ERROR_EXCEPTION_ATTRIBUTE) == ex && recordedFromRequest(request, dispatchedAs)) {
             return;
         }
@@ -167,7 +207,7 @@ public class GrailsExceptionResolver extends SimpleMappingExceptionResolver impl
 
     /**
      * Whether the exception left in {@link WebUtils#ERROR_EXCEPTION_ATTRIBUTE} is recorded from there once the dispatch
-     * returns.
+     * returns, judged from how the request reads now.
      * <ul>
      * <li>The filter that observes the request records it at the end of a plain dispatch. It does not look at the end of
      * an asynchronous dispatch, which {@link WebUtils#isAsync} tells even inside a forward.</li>
@@ -175,8 +215,11 @@ public class GrailsExceptionResolver extends SimpleMappingExceptionResolver impl
      * Tomcat reports the exception to that listener when the dispatch returns. Jetty does not, but the request already
      * reads as asynchronous there, so the exception is recorded here.</li>
      * <li>Undertow leaves a request that was forwarded reading as a forward, so the filter takes it for a plain dispatch
-     * and records the exception however the request was dispatched.</li>
+     * and records the exception however the request was dispatched. A request that reads as a forward although the
+     * dispatch did not begin as one was left that way.</li>
      * </ul>
+     *
+     * @param dispatchedAs how the dispatch began
      */
     private static boolean recordedFromRequest(HttpServletRequest request, DispatcherType dispatchedAs) {
         boolean forwardLeftOnRequest = dispatchedAs != DispatcherType.FORWARD &&
@@ -639,6 +682,17 @@ public class GrailsExceptionResolver extends SimpleMappingExceptionResolver impl
                 true :
                 config.getProperty(Settings.SETTING_LOG_FULL_STACKTRACE_ON_FILTER, Boolean.class, true);
             ((DefaultStackTraceFilterer) stackFilterer).setLogFullStackTraceOnFilter(logOnFilter);
+        }
+    }
+
+    /** The exception left on the request of a dispatch, held until the dispatch returns. */
+    private static final class FailureLeftOnRequest {
+
+        private final DispatcherType dispatchedAs;
+        private Exception failure;
+
+        private FailureLeftOnRequest(DispatcherType dispatchedAs) {
+            this.dispatchedAs = dispatchedAs;
         }
     }
 }
