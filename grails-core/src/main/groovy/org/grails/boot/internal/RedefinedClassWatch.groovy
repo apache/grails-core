@@ -29,8 +29,8 @@ import org.grails.io.support.GrailsResourceUtils
  * application has loaded. An agent that redefines a loaded class in place, such as Hotswap Agent or a debugger on the
  * JetBrains Runtime, replaces that class only after the class file is written, so the plugins are told of the class
  * as it was, and a controller action added to it is not registered. A class that gains or loses a method or a field
- * after the plugins were told of it has been redefined, and its source file is returned so that they can be told
- * again.</p>
+ * after its shape was recorded for the plugins has been redefined, and its source file is returned so that they can
+ * be told again.</p>
  *
  * @since 8.1
  */
@@ -45,20 +45,24 @@ class RedefinedClassWatch {
     }
 
     /**
-     * Records the shape of the class compiled from a source file, as the plugins were just told of it.
+     * Records the shape of the class compiled from a source file, then tells the plugins of it. The shape is recorded
+     * first, so that a class an agent redefines while the plugins are told of it is found changed afterwards.
      *
-     * @param source the source file the plugins were told of
+     * @param source the source file to tell the plugins of
+     * @param tellPlugins tells the plugins of the source file
      */
-    void told(File source) {
+    void tell(File source, Runnable tellPlugins) {
         Set<String> shape = shapeOf(source)
         if (shape != null) {
             shapes.put(source, shape)
         }
+        tellPlugins.run()
     }
 
     /**
-     * The source files whose class has gained or lost a method or a field since the plugins were told of it. Each is
-     * recorded with the shape it has now, so it is returned once for each change.
+     * The source files whose class has gained or lost a method or a field since its shape was recorded. Each is
+     * recorded with the shape it has now, before the plugins are told of it again, so it is returned once for each
+     * change.
      *
      * @return the source files to tell the plugins of again
      */

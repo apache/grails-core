@@ -34,7 +34,7 @@ class RedefinedClassWatchSpec extends Specification {
 
     void 'a class the plugins were told of is not reported while it keeps its shape'() {
         when:
-        watch.told(controllerSource)
+        watch.tell(controllerSource) {}
 
         then:
         watch.redefined().empty
@@ -43,7 +43,7 @@ class RedefinedClassWatchSpec extends Specification {
 
     void 'a class that gains an action after the plugins were told of it is reported once'() {
         given:
-        watch.told(controllerSource)
+        watch.tell(controllerSource) {}
 
         when:
         classLoader.classes['reload.ReloadController'] = ActionAddedController
@@ -53,10 +53,21 @@ class RedefinedClassWatchSpec extends Specification {
         watch.redefined().empty
     }
 
+    void 'a class an agent redefines while the plugins are told of it is reported'() {
+        when:
+        watch.tell(controllerSource) {
+            classLoader.classes['reload.ReloadController'] = ActionAddedController
+        }
+
+        then:
+        watch.redefined() == [controllerSource]
+        watch.redefined().empty
+    }
+
     void 'a class that loses a field after the plugins were told of it is reported'() {
         given:
         classLoader.classes['reload.ReloadController'] = ActionAddedController
-        watch.told(controllerSource)
+        watch.tell(controllerSource) {}
 
         when:
         classLoader.classes['reload.ReloadController'] = FieldRemovedController
@@ -67,7 +78,7 @@ class RedefinedClassWatchSpec extends Specification {
 
     void 'a class is reported again for each change of its shape'() {
         given:
-        watch.told(controllerSource)
+        watch.tell(controllerSource) {}
 
         when:
         classLoader.classes['reload.ReloadController'] = ActionAddedController
@@ -84,8 +95,8 @@ class RedefinedClassWatchSpec extends Specification {
         given:
         def serviceSource = new File('/app/grails-app/services/reload/ReloadService.groovy')
         classLoader.classes['reload.ReloadService'] = ReloadService
-        watch.told(controllerSource)
-        watch.told(serviceSource)
+        watch.tell(controllerSource) {}
+        watch.tell(serviceSource) {}
 
         when:
         classLoader.classes['reload.ReloadController'] = ActionAddedController
@@ -98,11 +109,14 @@ class RedefinedClassWatchSpec extends Specification {
         given:
         def buildFile = new File('/app/build.gradle')
 
+        boolean told = false
+
         when:
-        watch.told(buildFile)
+        watch.tell(buildFile) { told = true }
         classLoader.classes['reload.ReloadController'] = ActionAddedController
 
         then:
+        told
         watch.redefined().empty
     }
 
@@ -111,7 +125,7 @@ class RedefinedClassWatchSpec extends Specification {
         def unloadable = new File('/app/grails-app/controllers/reload/MissingController.groovy')
 
         when:
-        watch.told(unloadable)
+        watch.tell(unloadable) {}
 
         then:
         watch.redefined().empty

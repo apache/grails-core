@@ -358,8 +358,7 @@ class GrailsApp extends SpringApplication {
                                 if (newFiles.contains(f)) {
                                     newFiles.remove(f)
                                 }
-                                pluginManager.informOfFileChange(f)
-                                redefinedClasses.told(f)
+                                redefinedClasses.tell(f) { pluginManager.informOfFileChange(f) }
                                 sleep(1000)
                             }
                         } else if (i == 1) {
@@ -375,8 +374,7 @@ class GrailsApp extends SpringApplication {
                                 if (newFiles.contains(changedFile)) {
                                     newFiles.remove(changedFile)
                                 }
-                                pluginManager.informOfFileChange(changedFile)
-                                redefinedClasses.told(changedFile)
+                                redefinedClasses.tell(changedFile) { pluginManager.informOfFileChange(changedFile) }
                             }
                         }
 
