@@ -35,7 +35,8 @@ class AssociationJoinTypeSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckM
     void setupSpec() {
         manager.domainClasses.addAll([Club, Team, Player, Contract, AssociationJoinTypeCategory, AssociationJoinTypeShelf, AssociationJoinTypeTag,
                                       AssociationJoinTypeFace, AssociationJoinTypeNose, AssociationJoinTypePost, AssociationJoinTypeAuthor,
-                                      AssociationJoinTypeBook, AssociationJoinTypeSquad, AssociationJoinTypeSquadMember, AssociationJoinTypeTrophy, AssociationJoinTypeMedal])
+                                      AssociationJoinTypeBook, AssociationJoinTypeSquad, AssociationJoinTypeSquadMember, AssociationJoinTypeTrophy, AssociationJoinTypeMedal,
+                                      AssociationJoinTypePrize, AssociationJoinTypeRibbon])
     }
 
     void setup() {
@@ -1240,6 +1241,20 @@ class AssociationJoinTypeSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckM
         Hibernate.isInitialized(results.first().reserves)
     }
 
+    void 'a left join of a collection that criteria use loads a collection fetched through a map after the query'() {
+        given:
+        saveSquads()
+
+        when:
+        final results = AssociationJoinTypeSquad.where { players { kind == 'Regular' } }.list(fetch: [players: JoinType.LEFT, 'prizes.ribbons': JoinType.LEFT])
+
+        then:
+        results*.name == ['Full']
+        Hibernate.isInitialized(results.first().prizes)
+        Hibernate.isInitialized(results.first().prizes['main'].ribbons)
+        results.first().prizes['main'].ribbons*.name == ['Blue']
+    }
+
     void 'a projection with a left join of a collection that criteria use returns its values'() {
         given:
         saveSquads()
@@ -1257,6 +1272,10 @@ class AssociationJoinTypeSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckM
         final reserve = new AssociationJoinTypeSquadMember(name: 'Reserve', kind: 'Reserve', reserveSquad: full).save(failOnError: true)
         new AssociationJoinTypeMedal(name: 'Gold', member: reserve).save(failOnError: true)
         new AssociationJoinTypeTrophy(name: 'Cup', squad: full).save(failOnError: true)
+        final prize = new AssociationJoinTypePrize(name: 'Prize').save(failOnError: true)
+        new AssociationJoinTypeRibbon(name: 'Blue', prize: prize).save(failOnError: true)
+        full.prizes = [main: prize]
+        full.save(failOnError: true)
         final bench = new AssociationJoinTypeSquad(name: 'Bench').save(failOnError: true)
         new AssociationJoinTypeSquadMember(name: 'Bench reserve', kind: 'Reserve', reserveSquad: bench).save(failOnError: true, flush: true)
         manager.session.clear()
@@ -1270,10 +1289,27 @@ class AssociationJoinTypeMedal {
 }
 
 @Entity
+class AssociationJoinTypePrize {
+    String name
+    static hasMany = [ribbons: AssociationJoinTypeRibbon]
+}
+
+@Entity
+class AssociationJoinTypeRibbon {
+    String name
+    static belongsTo = [prize: AssociationJoinTypePrize]
+}
+
+@Entity
 class AssociationJoinTypeSquad {
     String name
-    static hasMany = [players: AssociationJoinTypeSquadMember, reserves: AssociationJoinTypeSquadMember, trophies: AssociationJoinTypeTrophy]
+    Map<String, AssociationJoinTypePrize> prizes
+    static hasMany = [players: AssociationJoinTypeSquadMember, reserves: AssociationJoinTypeSquadMember, trophies: AssociationJoinTypeTrophy, prizes: AssociationJoinTypePrize]
     static mappedBy = [players: 'squad', reserves: 'reserveSquad']
+
+    static constraints = {
+        prizes nullable: true
+    }
 }
 
 @Entity

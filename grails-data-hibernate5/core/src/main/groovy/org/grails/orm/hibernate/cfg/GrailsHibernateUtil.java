@@ -512,13 +512,9 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
         Object value = entity.getReflector().getProperty(Hibernate.unproxy(owner), tokens[index]);
         Hibernate.initialize(value);
         PersistentEntity associated = ((Association<?>) entity.getPropertyByName(tokens[index])).getAssociatedEntity();
-        if (value instanceof Collection) {
-            for (Object element : (Collection<?>) value) {
-                initializeAlongPath(associated, element, tokens, index + 1);
-            }
-        }
-        else {
-            initializeAlongPath(associated, value, tokens, index + 1);
+        Collection<?> owners = value instanceof Map ? ((Map<?, ?>) value).values() : value instanceof Collection ? (Collection<?>) value : Collections.singletonList(value);
+        for (Object next : owners) {
+            initializeAlongPath(associated, next, tokens, index + 1);
         }
     }
 
