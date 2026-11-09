@@ -91,6 +91,8 @@ class UndertowFailedActionObservationSpec extends Specification implements HttpC
         'an error controller, after a forward'               | '/failing/forwardedToController'                  | '/failing/answeredByController'                   | 'Answered by the error controller' || 'UnsupportedOperationException'
         'the error view, after an asynchronous forward'      | '/spring/forwardedToViewAsynchronously'           | '/spring/answeredByView'                          | 'An error has occurred'            || 'IllegalStateException'
         'an error controller, after an asynchronous forward' | '/spring/forwardedToControllerAsynchronously'     | '/spring/answeredByController'                    | 'Answered by the error controller' || 'UnsupportedOperationException'
+        'the error view, for an Error'                       | '/failing/answeredByViewForAnError'               | '/failing/answeredByViewForAnError'               | 'An error has occurred'            || 'AssertionError'
+        'an error controller, for an Error'                  | '/failing/answeredByControllerForAnError'         | '/failing/answeredByControllerForAnError'         | 'Answered by the error controller' || 'StackOverflowError'
     }
 
     private List<String> errorTags(String route) {

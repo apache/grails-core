@@ -22,6 +22,7 @@ import groovy.json.JsonSlurper
 import org.codehaus.groovy.runtime.InvokerInvocationException
 
 import jakarta.servlet.FilterChain
+import jakarta.servlet.ServletException
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
 
@@ -355,6 +356,26 @@ class ActionExceptionProblemDetailsSpec extends Specification {
         thrown                                              | told
         new IllegalStateException('secret')                 | true
         new ResponseStatusException(HttpStatus.BAD_REQUEST) | false
+    }
+
+    void 'an Error an action threw is recorded on the HTTP server observation as itself, when #wrapper wrapped it'() {
+        given:
+        def resolver = resolver([problemDetails: true])
+        def observation = new ServerRequestObservationContext(request, response)
+        request.setAttribute(ServerHttpObservationFilter.CURRENT_OBSERVATION_CONTEXT_ATTRIBUTE, observation)
+
+        when:
+        resolver.resolveException(request, response, action(new ProblemController()), thrown)
+
+        then: 'as the filter that observes the request reports one that reaches it'
+        response.status == 500
+        problem().status == 500
+        observation.error.is(error)
+
+        where:
+        wrapper                   | error                            | thrown
+        'Spring MVC'              | new AssertionError('failed')     | new ServletException("Handler dispatch failed: $error", error)
+        'a dynamic invocation'    | new StackOverflowError('deep')   | new InvokerInvocationException(error)
     }
 
     void 'the request of an unexpected exception is logged, and that of an exception raised on purpose is not'() {

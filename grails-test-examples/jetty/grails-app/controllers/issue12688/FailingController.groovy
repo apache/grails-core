@@ -50,6 +50,14 @@ class FailingController {
         throw new UnsupportedOperationException('answered by the error controller')
     }
 
+    def answeredByViewForAnError() {
+        throw new AssertionError('answered by the error view')
+    }
+
+    def answeredByControllerForAnError() {
+        throw new StackOverflowError('answered by the error controller')
+    }
+
     def forwardedToView() {
         forward(action: 'answeredByView')
     }

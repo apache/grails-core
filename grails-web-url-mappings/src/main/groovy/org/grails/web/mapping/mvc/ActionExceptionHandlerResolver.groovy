@@ -22,6 +22,7 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import org.codehaus.groovy.runtime.InvokerInvocationException
 
+import jakarta.servlet.ServletException
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
 
@@ -174,7 +175,7 @@ class ActionExceptionHandlerResolver implements HandlerExceptionResolver, Ordere
             ModelAndView written = errorResponse == null ? new ModelAndView() : returnValues.writeErrorResponse(errorResponse,
                     handler.controllerClass?.clazz, request, response)
             if (isServerError(response)) {
-                recordServerError(request, ex)
+                recordServerError(request, reportedFailure(thrown))
                 // Spring MVC's translation logs an unexpected exception without the request it failed
                 if (!(ex instanceof ErrorResponse) && !DisconnectedClientHelper.isClientDisconnectedException(ex)) {
                     log.error('{} occurred when processing request: [{}] {}', ex.class.simpleName, request.method, requestUri(request))
@@ -185,7 +186,7 @@ class ActionExceptionHandlerResolver implements HandlerExceptionResolver, Ordere
         catch (Exception e) {
             if (DISCONNECTED_CLIENTS.checkAndLogClientDisconnectedException(e)) {
                 if (isServerError(response)) {
-                    recordServerError(request, ex)
+                    recordServerError(request, reportedFailure(thrown))
                 }
                 return new ModelAndView()
             }
@@ -260,10 +261,27 @@ class ActionExceptionHandlerResolver implements HandlerExceptionResolver, Ordere
     }
 
     /**
+     * What the action threw, as the observation of the request reports it. {@code DispatcherServlet} wraps an
+     * {@link Error}, such as a failed {@code assert}, in a {@link ServletException}, which
+     * {@link ServerHttpObservationFilter} takes off an exception that reaches it, and {@link #unwrap} leaves a Groovy
+     * wrapper around an {@code Error}, since a problem is written for an exception.
+     */
+    private static Throwable reportedFailure(Exception thrown) {
+        Throwable failure = thrown
+        if (failure instanceof ServletException && failure.cause != null) {
+            failure = failure.cause
+        }
+        while ((failure instanceof InvokerInvocationException || failure instanceof GrailsMVCException) && failure.cause != null) {
+            failure = failure.cause
+        }
+        return failure
+    }
+
+    /**
      * As Spring MVC records an exception it translates to a server error, which the observation would not see otherwise.
      * Only the observation tells its handlers, one of which marks the span.
      */
-    private static void recordServerError(HttpServletRequest request, Exception ex) {
+    private static void recordServerError(HttpServletRequest request, Throwable ex) {
         Object observation = request.getAttribute(SERVER_OBSERVATION_ATTRIBUTE)
         if (observation instanceof Observation) {
             ((Observation) observation).error(ex)

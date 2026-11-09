@@ -142,7 +142,7 @@ public class GrailsExceptionResolver extends SimpleMappingExceptionResolver impl
             mv = resolveViewOrForward(ex, urlMappings, request, response, mv);
         }
 
-        recordServerError(request, ex, dispatchedAs);
+        recordServerError(request, reportedFailure(ex), dispatchedAs);
 
         return mv;
     }
@@ -182,7 +182,7 @@ public class GrailsExceptionResolver extends SimpleMappingExceptionResolver impl
      *
      * @param dispatchedAs how the request was dispatched before an error handler was forwarded to
      */
-    private static void recordServerError(HttpServletRequest request, Exception ex, DispatcherType dispatchedAs) {
+    private static void recordServerError(HttpServletRequest request, Throwable ex, DispatcherType dispatchedAs) {
         if (request.getAttribute(WebUtils.ERROR_EXCEPTION_ATTRIBUTE) == ex &&
                 request.getAttribute(FAILURE_LEFT_ON_REQUEST_ATTRIBUTE) instanceof FailureLeftOnRequest held) {
             held.failure = ex;
@@ -192,7 +192,7 @@ public class GrailsExceptionResolver extends SimpleMappingExceptionResolver impl
         }
     }
 
-    private static void recordUnlessRecordedFromRequest(HttpServletRequest request, Exception ex,
+    private static void recordUnlessRecordedFromRequest(HttpServletRequest request, Throwable ex,
             DispatcherType dispatchedAs) {
         if (request.getAttribute(WebUtils.ERROR_EXCEPTION_ATTRIBUTE) == ex && recordedFromRequest(request, dispatchedAs)) {
             return;
@@ -233,7 +233,26 @@ public class GrailsExceptionResolver extends SimpleMappingExceptionResolver impl
      * chain has returned, which includes the filter that observes the request.
      */
     private static void keepFailureOnRequest(HttpServletRequest request, Exception ex) {
-        request.setAttribute(WebUtils.ERROR_EXCEPTION_ATTRIBUTE, ex);
+        request.setAttribute(WebUtils.ERROR_EXCEPTION_ATTRIBUTE, reportedFailure(ex));
+    }
+
+    /**
+     * What the action threw, as the observation of the request reports it. {@code DispatcherServlet} wraps an
+     * {@link Error}, such as a failed {@code assert}, in a {@link ServletException}, which
+     * {@link ServerHttpObservationFilter} takes off an exception that reaches it, and
+     * {@link #findWrappedException(Exception)} leaves a Groovy wrapper around an {@code Error}, since it resolves
+     * exceptions only.
+     */
+    private static Throwable reportedFailure(Exception resolved) {
+        Throwable failure = resolved;
+        if (failure instanceof ServletException && failure.getCause() != null) {
+            failure = failure.getCause();
+        }
+        while ((failure instanceof InvokerInvocationException || failure instanceof GrailsMVCException) &&
+                failure.getCause() != null) {
+            failure = failure.getCause();
+        }
+        return failure;
     }
 
     public String getRequestLogMessage(Throwable e, HttpServletRequest request) {
@@ -689,7 +708,7 @@ public class GrailsExceptionResolver extends SimpleMappingExceptionResolver impl
     private static final class FailureLeftOnRequest {
 
         private final DispatcherType dispatchedAs;
-        private Exception failure;
+        private Throwable failure;
 
         private FailureLeftOnRequest(DispatcherType dispatchedAs) {
             this.dispatchedAs = dispatchedAs;

@@ -71,6 +71,7 @@ import jakarta.servlet.FilterChain
 import jakarta.servlet.RequestDispatcher
 import jakarta.servlet.Servlet
 import jakarta.servlet.ServletContext
+import jakarta.servlet.ServletException
 import jakarta.servlet.ServletRequest
 import jakarta.servlet.ServletResponse
 import jakarta.servlet.http.HttpServletRequest
@@ -83,6 +84,8 @@ class GrailsExceptionResolverSpec extends Specification {
     private static final String PLAIN = 'plain attributes'
     private static final String NOTHING = 'nothing'
     private static final Exception FAILURE = new IllegalStateException('failed')
+    private static final AssertionError FAILED_ASSERT = new AssertionError('failed')
+    private static final StackOverflowError TOO_DEEP = new StackOverflowError('too deep')
 
     private final MockServletContext servletContext = new MockServletContext()
     private StaticWebApplicationContext webContext
@@ -116,9 +119,11 @@ class GrailsExceptionResolverSpec extends Specification {
         notified.first().is(recorded)
 
         where:
-        description            | thrown                                                 | recorded                  | status
-        'an action threw'      | FAILURE                                                | FAILURE                   | 500
-        'wrapped by Groovy'    | new InvokerInvocationException(new InvocationTargetException(FAILURE)) | FAILURE   | 500
+        description                                  | thrown                                                                         | recorded      | status
+        'an action threw'                            | FAILURE                                                                        | FAILURE       | 500
+        'wrapped by Groovy'                          | new InvokerInvocationException(new InvocationTargetException(FAILURE))         | FAILURE       | 500
+        'that is an Error DispatcherServlet wrapped' | new ServletException("Handler dispatch failed: $FAILED_ASSERT", FAILED_ASSERT) | FAILED_ASSERT | 500
+        'that is an Error Groovy wrapped'            | new InvokerInvocationException(TOO_DEEP)                                       | TOO_DEEP      | 500
     }
 
     void 'an exception is still the error of a context that comes without its observation'() {
@@ -258,20 +263,24 @@ class GrailsExceptionResolverSpec extends Specification {
         DispatcherType.ASYNC   | false           | 'the request still reads as the forward, as on Undertow'
     }
 
-    void 'a filter can read the exception an error handler answered once the chain has returned, with no observation'() {
+    void 'a filter can read the exception an error handler answered once the chain has returned, with no observation, when #description'() {
         given:
         def resolver = resolverFor({ '500'(controller: 'errors', action: 'serverError') }, true)
         def request = new MockHttpServletRequest(servletContext, 'GET', '/fail')
         def response = new MockHttpServletResponse()
         bind(GRAILS, request, response)
-        def original = new IllegalStateException('original')
 
         when:
-        resolver.resolveException(request, response, null, original)
+        resolver.resolveException(request, response, null, thrown)
 
-        then:
+        then: 'what the action threw, as the filter that observes the request reports an exception that reaches it'
         response.forwardedUrl == '/errors/serverError'
-        request.getAttribute(RequestDispatcher.ERROR_EXCEPTION).is(original)
+        request.getAttribute(RequestDispatcher.ERROR_EXCEPTION).is(left)
+
+        where:
+        description                                          | thrown                                                                         | left
+        'an action threw an exception'                       | FAILURE                                                                        | FAILURE
+        'an action threw an Error DispatcherServlet wrapped' | new ServletException("Handler dispatch failed: $FAILED_ASSERT", FAILED_ASSERT) | FAILED_ASSERT
     }
 
     void 'an exception is resolved as usual without an observation'() {
