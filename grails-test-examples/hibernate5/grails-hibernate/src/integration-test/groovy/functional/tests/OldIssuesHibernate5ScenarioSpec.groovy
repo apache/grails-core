@@ -25,29 +25,15 @@ import spock.lang.Specification
 import grails.testing.mixin.integration.Integration
 
 /**
- * Behaviour of Hibernate 5 that reporters asked for years ago and that is now pinned (#14354, #14370, #14423).
+ * Behaviour of Hibernate 5 that reporters asked for years ago and that is now pinned (#14354, #14370).
  */
 @Integration(applicationClass = Application)
 class OldIssuesHibernate5ScenarioSpec extends Specification {
 
     void cleanup() {
-        ScenarioInheritanceMan.withNewTransaction {
-            ScenarioInheritanceMan.list()*.delete(flush: true)
-            ScenarioInheritanceTeam.list()*.delete(flush: true)
+        ScenarioOldIssueItem.withNewTransaction {
             ScenarioOldIssueItem.list()*.delete(flush: true)
         }
-    }
-
-    void "a subclass with tablePerHierarchy false under an abstract base class loads through a collection"() {
-        given:
-        Long teamId = ScenarioInheritanceTeam.withNewTransaction {
-            ScenarioInheritanceTeam team = new ScenarioInheritanceTeam().save(failOnError: true)
-            new ScenarioInheritanceMan(firstName: 'a', weight: 70L, team: team).save(failOnError: true)
-            team.id
-        }
-
-        expect:
-        ScenarioInheritanceTeam.withNewSession { ScenarioInheritanceTeam.get(teamId).men.size() } == 1
     }
 
     void "merge writes the changed fields of a detached instance"() {

@@ -455,10 +455,17 @@ abstract class AbstractHibernateGormInstanceApi<D> extends GormInstanceApi<D> {
         // seeing it, so the properties the detached instance changed are marked on the managed one; otherwise
         // the dirtiness strategy finds nothing to flush.
         List<String> changed = target instanceof DirtyCheckable ? ((DirtyCheckable) target).listDirtyPropertyNames() : []
+        // an instance that reports a change without naming the properties, such as one restored from a
+        // serialized session, has all of its properties marked
+        boolean changedWithoutNames = changed.isEmpty() && target instanceof DirtyCheckable && ((DirtyCheckable) target).hasChanged()
         hibernateTemplate.execute { Session session ->
             Object merged = session.merge(target)
             if (merged instanceof DirtyCheckable && !merged.is(target)) {
-                changed.each { String name -> ((DirtyCheckable) merged).markDirty(name) }
+                if (changedWithoutNames) {
+                    ((DirtyCheckable) merged).markDirty()
+                } else {
+                    changed.each { String name -> ((DirtyCheckable) merged).markDirty(name) }
+                }
             }
             session.lock(merged, LockMode.NONE)
             if (flush) {

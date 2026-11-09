@@ -46,10 +46,56 @@ class MergeDetachedDirtyFieldsSpec extends HibernateGormDatastoreSpec {
         reloaded.name == 'dirty'
         reloaded.number == 2
     }
+
+    void "merge writes an instance that reports a change without naming the properties"() {
+        given:
+        MergeDirtyData data = new MergeDirtyData(name: 'a', number: 1).save(flush: true)
+        session.clear()
+
+        when: 'the instance is made by hand, restored from a serialized copy, or marked dirty as a whole'
+        MergeDirtyData instance = new MergeDirtyData(id: data.id, name: 'changed', number: 2)
+        if (form == 'serialized') {
+            instance = serialized(instance)
+        } else if (form == 'marked') {
+            instance.markDirty()
+        }
+        MergeDirtyData merged = instance.merge(flush: true)
+        session.clear()
+
+        then: 'the row carries its values'
+        merged.name == 'changed'
+        MergeDirtyData.get(data.id).name == 'changed'
+        MergeDirtyData.get(data.id).number == 2
+
+        where:
+        form << ['new', 'serialized', 'marked']
+    }
+
+    void "merge of an instance the session already manages keeps its changes"() {
+        given:
+        MergeDirtyData data = new MergeDirtyData(name: 'a', number: 1).save(flush: true)
+
+        when: 'the instance is still attached to the session'
+        data.name = 'managed'
+        MergeDirtyData merged = data.merge(flush: true)
+        session.clear()
+
+        then: 'the merge returns the same instance and the row carries the change'
+        merged.is(data)
+        MergeDirtyData.get(data.id).name == 'managed'
+    }
+
+    private static MergeDirtyData serialized(MergeDirtyData data) {
+        ByteArrayOutputStream bytes = new ByteArrayOutputStream()
+        new ObjectOutputStream(bytes).withCloseable { ObjectOutputStream out -> out.writeObject(data) }
+        new ObjectInputStream(new ByteArrayInputStream(bytes.toByteArray())).withCloseable { ObjectInputStream input ->
+            (MergeDirtyData) input.readObject()
+        }
+    }
 }
 
 @Entity
-class MergeDirtyData {
+class MergeDirtyData implements Serializable {
     String name
     Integer number
 }

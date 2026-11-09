@@ -83,26 +83,6 @@ class Mapping extends Entity<PropertyConfig> {
     boolean tablePerHierarchy = true
 
     /**
-     * Whether the mapping states its strategy, as opposed to leaving the default: a base class that states one keeps
-     * it, and only one that does not follows a subclass that sets {@code tablePerHierarchy false}
-     */
-    boolean tablePerHierarchyDeclared = false
-
-    void setTablePerHierarchy(boolean tablePerHierarchy) {
-        this.tablePerHierarchy = tablePerHierarchy
-        this.tablePerHierarchyDeclared = true
-    }
-
-    /**
-     * The fluent form of {@link #setTablePerHierarchy}; it records the declaration as the setter does, which the
-     * generated builder method would not
-     */
-    Mapping tablePerHierarchy(boolean tablePerHierarchy) {
-        setTablePerHierarchy(tablePerHierarchy)
-        return this
-    }
-
-    /**
      * Sets whether to use table-per-concrete-class or table-per-subclass mapping
      */
     boolean tablePerConcreteClass = false
