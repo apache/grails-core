@@ -26,6 +26,13 @@ import groovy.lang.GroovyObject;
 import groovy.lang.GroovySystem;
 import groovy.lang.MetaClass;
 
+import jakarta.persistence.criteria.CriteriaQuery;
+import jakarta.persistence.criteria.Fetch;
+import jakarta.persistence.criteria.Join;
+import jakarta.persistence.criteria.Root;
+import jakarta.persistence.metamodel.Attribute;
+import jakarta.persistence.metamodel.PluralAttribute;
+
 import org.hibernate.Criteria;
 import org.hibernate.FetchMode;
 import org.hibernate.FlushMode;
@@ -349,9 +356,10 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
     /**
      * Throws an {@link UnsupportedOperationException} when a query sorts by a property of a bag while it
      * fetches another bag. A bag is a collection without an order of its own, such as one declared as a
-     * {@code Collection}. A sort by a property of a collection fetches the collection when the query
-     * fetches another collection: see {@link #keepsSortedCollectionUnfetched(Criteria, String)}. Hibernate
-     * does not support fetching more than one bag in a query.
+     * {@code Collection}. The join for the sort returns a row for each element of the sorted bag, and a
+     * bag cannot tell a repeated row from a repeated element, so a bag that is fetched from those rows
+     * would hold its elements more than once. That is why Hibernate does not support fetching more than
+     * one bag in a query.
      *
      * @param criteria The criteria of the query
      * @param associationPath The path, from the root entity, of the collection that the query sorts by
@@ -360,10 +368,40 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
     public static void checkSortedCollection(Criteria criteria, String associationPath) {
         String otherBag = findOtherFetchedCollection(criteria, associationPath, true);
         if (otherBag != null) {
-            throw new UnsupportedOperationException("Cannot sort by a property of [" + associationPath + "] of [" + getRootCriteria(criteria).getEntityOrClassName() +
-                    "] while the query fetches [" + otherBag + "]. The sort fetches [" + associationPath + "] as well, both are bags, and Hibernate does not support " +
-                    "fetching more than one bag in a query. Declare one of them as a Set or a List instead of a Collection, or do not fetch [" + otherBag + "].");
+            throw new UnsupportedOperationException(sortedBagMessage(associationPath, getRootCriteria(criteria).getEntityOrClassName(), otherBag));
         }
+    }
+
+    /**
+     * Throws an {@link UnsupportedOperationException} when a JPA criteria query, which is what
+     * {@code list} runs, makes a join to sort by a property of a bag while it fetches another bag: see
+     * {@link #checkSortedCollection(Criteria, String)}.
+     *
+     * @param query The query
+     * @param sortJoin The join that the query makes for the sort
+     * @throws UnsupportedOperationException if both collections are bags
+     */
+    public static void checkSortedCollection(CriteriaQuery<?> query, Join<?, ?> sortJoin) {
+        if (!isBag(sortJoin.getAttribute())) {
+            return;
+        }
+        for (Root<?> root : query.getRoots()) {
+            for (Fetch<?, ?> fetch : root.getFetches()) {
+                if (isBag(fetch.getAttribute()) && !fetch.getAttribute().equals(sortJoin.getAttribute())) {
+                    throw new UnsupportedOperationException(sortedBagMessage(sortJoin.getAttribute().getName(), root.getJavaType().getName(), fetch.getAttribute().getName()));
+                }
+            }
+        }
+    }
+
+    private static boolean isBag(Attribute<?, ?> attribute) {
+        return attribute instanceof PluralAttribute && ((PluralAttribute<?, ?, ?>) attribute).getCollectionType() == PluralAttribute.CollectionType.COLLECTION;
+    }
+
+    private static String sortedBagMessage(String sortedBag, String entityName, String otherBag) {
+        return "Cannot sort by a property of [" + sortedBag + "] of [" + entityName + "] while the query fetches [" + otherBag + "]. Both are bags. The join for the sort " +
+                "returns a row for each element of [" + sortedBag + "], and a bag cannot tell a repeated row from a repeated element, which is why Hibernate does not support " +
+                "fetching more than one bag in a query. Declare both of them as a Set or a List instead of a Collection, or do not fetch [" + otherBag + "].";
     }
 
     /**

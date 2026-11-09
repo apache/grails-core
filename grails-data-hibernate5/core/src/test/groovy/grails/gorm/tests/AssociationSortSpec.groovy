@@ -420,6 +420,7 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManag
         e.message.contains('[regulars]')
         e.message.contains('[substitutes]')
         e.message.contains('more than one bag')
+        e.message.contains('Declare both of them')
 
         where:
         api                         | query
@@ -428,6 +429,9 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManag
         'a paged criteria query'    | { AssociationSortBagSquad.createCriteria().list(sort: 'regulars.name', max: 10) { join('substitutes') } }
         'findAll by example'        | { AssociationSortBagSquad.findAll(new AssociationSortBagSquad(), [sort: 'regulars.name', fetch: [substitutes: 'join']]) }
         'a dynamic finder'          | { AssociationSortBagSquad.findAllByName('Squad', [sort: 'regulars.name', fetch: [substitutes: 'join']]) }
+        'a list'                    | { AssociationSortBagSquad.list(sort: 'regulars.name', fetch: [substitutes: 'join']) }
+        'a paged list'              | { AssociationSortBagSquad.list(sort: 'regulars.name', max: 10, fetch: [substitutes: 'join']) }
+        'a list with a join type'   | { AssociationSortBagSquad.list(sort: 'regulars.name', fetch: [substitutes: JoinType.LEFT]) }
     }
 
     void '#api sorted by an empty bag keeps the instance when the query fetches no other bag'() {
@@ -442,6 +446,8 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManag
         'a where query'                             | { AssociationSortBagSquad.where { name == 'Squad' }.list(sort: 'regulars.name') }
         'a where query that fetches the sorted bag' | { AssociationSortBagSquad.where { name == 'Squad' }.join('regulars').list(sort: 'regulars.name') }
         'order in a criteria query'                 | { AssociationSortBagSquad.createCriteria().list { eq('name', 'Squad'); order('regulars.name') } }
+        'a list'                                    | { AssociationSortBagSquad.list(sort: 'regulars.name') }
+        'a list that fetches the sorted bag'        | { AssociationSortBagSquad.list(sort: 'regulars.name', fetch: [regulars: 'join']) }
     }
 
     /**
@@ -487,7 +493,7 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManag
 
         where:
         [api, sort, fetched, outcome] << [
-                ['a where query', 'order in a criteria query'],
+                ['a where query', 'order in a criteria query', 'a list'],
                 [
                         ['reserves.name', 'nothing', 'kept'],
                         ['reserves.name', 'regulars', 'kept'],
@@ -517,6 +523,9 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManag
                     }
                     order(sort)
                 }
+            },
+            'a list'                   : { String sort, String fetched ->
+                fetched == 'nothing' ? AssociationSortMixedSquad.list(sort: sort) : AssociationSortMixedSquad.list(sort: sort, fetch: [(fetched): 'join'])
             },
     ]
 

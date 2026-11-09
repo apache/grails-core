@@ -449,7 +449,7 @@ public class GrailsHibernateQueryUtils {
                 addOrder(entity, query, queryRoot, criteriaBuilder, sort, order, ignoreCase);
             } else if (property instanceof Association) {
                 final Association<? extends Property> a = (Association<? extends Property>) property;
-                final Join join = getOrCreateSortJoin(queryRoot, sortHead);
+                final Join join = getOrCreateSortJoin(query, queryRoot, sortHead);
                 PersistentEntity associatedEntity = a.getAssociatedEntity();
                 addOrderPossiblyNested(query, join, criteriaBuilder, associatedEntity, sortTail, order, ignoreCase); // Recurse on nested sort
             }
@@ -460,10 +460,11 @@ public class GrailsHibernateQueryUtils {
      * Returns the join of an association for a sort: the join or the fetch that the query already has
      * for it, made by the {@code fetch} argument or by an earlier sort property, or, failing that, a
      * new one, so that the association is joined once. A new one is a left join, so that the sort keeps
-     * the rows where the association is null.
+     * the rows where the association is null. A new join of a bag is rejected when the query fetches
+     * another bag: see {@link GrailsHibernateUtil#checkSortedCollection(CriteriaQuery, Join)}.
      */
     @SuppressWarnings({"rawtypes", "unchecked"})
-    private static Join getOrCreateSortJoin(From from, String associationName) {
+    private static Join getOrCreateSortJoin(CriteriaQuery query, From from, String associationName) {
         for (Object existing : from.getJoins()) {
             Join join = (Join) existing;
             if (associationName.equals(join.getAttribute().getName())) {
@@ -475,7 +476,9 @@ public class GrailsHibernateQueryUtils {
                 return (Join) existing;
             }
         }
-        return from.join(associationName, JoinType.LEFT);
+        final Join join = from.join(associationName, JoinType.LEFT);
+        GrailsHibernateUtil.checkSortedCollection(query, join);
+        return join;
     }
 
     private static boolean isIgnoreCaseProperty(boolean ignoreCase, PersistentProperty<? extends Property> persistentProperty) {
