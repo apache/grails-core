@@ -62,8 +62,10 @@ class UrlMappingsHandlerMapping extends AbstractHandlerMapping {
     public static final String MATCHED_REQUEST = 'org.grails.url.match.info'
 
     /**
-     * The mapping an include made by {@link org.grails.web.mapping.UrlMappingUtils#includeRequestForUrlMappingInfo} answers with, whatever its
-     * URI would match, as a forward to a status code mapping answers with that mapping.
+     * The mapping an include made by {@link org.grails.web.mapping.UrlMappingUtils#includeRequestForUrlMappingInfo} answers
+     * with, whatever its URI would match. While an error is being handled, the include answers with the status code
+     * mapping, as a forward to it does, since the mapping it was made for can be one that carries the parameters of the
+     * request rather than its controller.
      *
      * @since 8.0.1
      */
@@ -179,15 +181,17 @@ class UrlMappingsHandlerMapping extends AbstractHandlerMapping {
     @Override
     protected Object getHandlerInternal(HttpServletRequest request) throws Exception {
 
-        def includedInfo = request.getAttribute(INCLUDED_MAPPING_INFO)
-        if (includedInfo instanceof UrlMappingInfo && WebUtils.isInclude(request)) {
+        def includedInfo = WebUtils.isInclude(request) ? request.getAttribute(INCLUDED_MAPPING_INFO) : null
+        if (includedInfo != null) {
             request.removeAttribute(INCLUDED_MAPPING_INFO)
+        }
+        def matchedInfo = request.getAttribute(MATCHED_REQUEST)
+        def errorStatus = request.getAttribute(WebUtils.ERROR_STATUS_CODE_ATTRIBUTE)
+        if (includedInfo instanceof UrlMappingInfo && errorStatus == null) {
             request.setAttribute(MATCHED_REQUEST, includedInfo)
             return includedInfo
         }
 
-        def matchedInfo = request.getAttribute(MATCHED_REQUEST)
-        def errorStatus = request.getAttribute(WebUtils.ERROR_STATUS_CODE_ATTRIBUTE)
         // The dispatch that returns the result of asynchronous processing answers for the action that started it. Any
         // other dispatch, such as a forward a view makes, matches its own URI, whatever an earlier dispatch left here.
         if (matchedInfo != null && errorStatus == null && request.dispatcherType == DispatcherType.ASYNC) return matchedInfo
@@ -199,7 +203,9 @@ class UrlMappingsHandlerMapping extends AbstractHandlerMapping {
 
         String version = findRequestedVersion(webRequest)
 
-        if (errorStatus && !WebUtils.isInclude(request)) {
+        // An include made for the error handler resolves it as a forward to it does. Any other include made while an
+        // error page renders answers for its own URI.
+        if (errorStatus && (!WebUtils.isInclude(request) || includedInfo != null)) {
             def exception = request.getAttribute(WebUtils.ERROR_EXCEPTION_ATTRIBUTE)
             UrlMappingInfo info
             if (exception instanceof Throwable) {

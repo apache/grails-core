@@ -452,7 +452,7 @@ class UrlMappingsHandlerMappingSpec extends AbstractUrlMappingsSpec {
         dispatch << [DispatcherType.FORWARD, DispatcherType.INCLUDE]
     }
 
-    void "an include made for a mapping answers with that mapping, whatever its URI matches"() {
+    void "an include made for the error handler answers with it as a forward does, when the include was made for #made"() {
         given: 'an error handler with no URL of its own, as a status code mapping has'
         def grailsApplication = new DefaultGrailsApplication(FooController)
         grailsApplication.initialise()
@@ -464,6 +464,10 @@ class UrlMappingsHandlerMappingSpec extends AbstractUrlMappingsSpec {
         def webRequest = GrailsWebMockUtil.bindMockWebRequest()
         def request = webRequest.request
         def errorHandler = holder.matchStatusCode(500)
+        if (pageParameters) {
+            // as the exception resolver passes it when the URL of the page carries parameters
+            errorHandler = new DefaultUrlMappingInfo(errorHandler, pageParameters, grailsApplication)
+        }
 
         when: 'it is included while the exception is resolved, under the URI built for it'
         request.setAttribute(WebUtils.ERROR_STATUS_CODE_ATTRIBUTE, 500)
@@ -472,10 +476,39 @@ class UrlMappingsHandlerMappingSpec extends AbstractUrlMappingsSpec {
         request.setAttribute(UrlMappingsHandlerMapping.INCLUDED_MAPPING_INFO, errorHandler)
         def info = handler.getHandler(request).handler
 
-        then: 'it answers with the error handler, and only that include does'
-        info.is(errorHandler)
+        then: 'it answers with the controller of the error handler, and only that include does'
+        info instanceof GrailsControllerUrlMappingInfo
+        ((GrailsControllerUrlMappingInfo) info).controllerClass.clazz == FooController
+        info.actionName == 'fooBar'
         request.getAttribute(UrlMappingsHandlerMapping.INCLUDED_MAPPING_INFO) == null
         handler.getHandler(request) == null
+
+        where:
+        made                                                | pageParameters
+        'its mapping'                                       | [:]
+        'its mapping with the parameters of the page\'s URL' | [slug: 'example']
+    }
+
+    void "an include made for a mapping answers with that mapping when no error is being handled"() {
+        given:
+        def grailsApplication = new DefaultGrailsApplication(FooController)
+        grailsApplication.initialise()
+        def holder = new GrailsControllerUrlMappings(grailsApplication, getUrlMappingsHolder {
+            "/foo/bar"(controller: 'foo', action: 'bar')
+            "/foo/other"(controller: 'foo', action: 'fooBar')
+        })
+        def handler = new UrlMappingsHandlerMapping(holder)
+        def webRequest = GrailsWebMockUtil.bindMockWebRequest()
+        def request = webRequest.request
+        def mapping = holder.match('/foo/other')
+
+        when:
+        request.setAttribute(WebUtils.INCLUDE_REQUEST_URI_ATTRIBUTE, '/foo/fooBar')
+        request.requestURI = '/foo/fooBar'
+        request.setAttribute(UrlMappingsHandlerMapping.INCLUDED_MAPPING_INFO, mapping)
+
+        then:
+        handler.getHandler(request).handler.is(mapping)
     }
 
     void "an action a page includes leaves the route of the page on its observation"() {

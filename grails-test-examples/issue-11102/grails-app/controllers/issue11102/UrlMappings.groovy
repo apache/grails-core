@@ -32,6 +32,7 @@ class UrlMappings {
         }
 
         "/failing/$action"(controller: 'failing')
+        "/page/$slug"(controller: 'failing', action: 'includesAnswerOfController')
 
         "/"(view:"/index")
         "500"(controller: 'failing', action: 'errorHandler', exception: UnsupportedOperationException)
