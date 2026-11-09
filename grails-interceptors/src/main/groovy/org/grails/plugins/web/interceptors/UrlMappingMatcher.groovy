@@ -32,6 +32,12 @@ import grails.web.mapping.UrlMappingInfo
 /**
  * Used to match {@link UrlMappingInfo} instance by {@link grails.artefact.Interceptor} instances
  *
+ * <p>URI patterns are matched against the path passed to {@link #doesMatch(String, UrlMappingInfo, String, String)}
+ * as-is. {@link grails.artefact.Interceptor#doesMatch(jakarta.servlet.http.HttpServletRequest)} passes the decoded,
+ * application-relative path that URL mappings route on, so this class must not decode or remove matrix parameters
+ * again: that would match a different path than the one dispatched ({@code /health%3Bx} is dispatched as
+ * {@code /health;x}, not as {@code /health}).
+ *
  * @author Graeme Rocher
  * @since 3.0
  */
@@ -61,16 +67,20 @@ class UrlMappingMatcher implements Matcher {
     }
 
     boolean doesMatch(String uri, UrlMappingInfo info, String method) {
+        doesMatch(uri, info, method, null)
+    }
+
+    @Override
+    boolean doesMatch(String uri, UrlMappingInfo info, String method, String contextPath) {
         boolean hasUriPatterns = !uriPatterns.isEmpty()
 
-        boolean isExcluded = this.isExcluded(uri, info)
+        boolean isExcluded = this.isExcluded(uri, info, contextPath)
         if (matchAll && !isExcluded) return true
 
         if (!isExcluded) {
             if (hasUriPatterns) {
-                uri = uri.replace(';', '')
                 for (pattern in uriPatterns) {
-                    if (pathMatcher.match(pattern, uri)) {
+                    if (matchesPattern(pattern, uri, contextPath)) {
                         return true
                     }
                 }
@@ -84,8 +94,12 @@ class UrlMappingMatcher implements Matcher {
     }
 
     protected boolean isExcluded(String uri, UrlMappingInfo info) {
+        isExcluded(uri, info, null)
+    }
+
+    protected boolean isExcluded(String uri, UrlMappingInfo info, String contextPath) {
         for (pattern in uriExcludePatterns) {
-            if (pathMatcher.match(pattern, uri)) {
+            if (matchesPattern(pattern, uri, contextPath)) {
                 return true
             }
         }
@@ -97,6 +111,22 @@ class UrlMappingMatcher implements Matcher {
             }
         }
         return false
+    }
+
+    /**
+     * Matches the pattern against the application-relative path. A pattern that begins with the context path is
+     * also accepted with the context path removed, so interceptors written against a context-prefixed URI
+     * (issue 10857) keep working. The path itself is never re-prefixed with the context path, so a pattern such as
+     * <code>/*&#47;*</code> only matches paths with two segments inside the application.
+     */
+    private boolean matchesPattern(String pattern, String path, String contextPath) {
+        if (pathMatcher.match(pattern, path)) {
+            return true
+        }
+        if (contextPath && contextPath != '/' && (pattern == contextPath || pattern.startsWith(contextPath + '/'))) {
+            return pathMatcher.match(pattern.substring(contextPath.length()) ?: '/', path)
+        }
+        false
     }
 
     protected boolean doesMatchInternal(UrlMappingInfo info, String method) {

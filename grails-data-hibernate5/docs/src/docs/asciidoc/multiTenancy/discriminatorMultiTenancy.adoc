@@ -83,6 +83,23 @@ List<Book> books = withId("moreBooks") {
 }
 ----
 
+To work with the instances of every tenant, run the code inside `withoutId` or in a method annotated with `@WithoutTenant`. There the filter is not activated, and an instance that is saved keeps the tenant id that is set on it:
+
+[source,groovy]
+----
+import static grails.gorm.multitenancy.Tenants.*
+
+List<Book> allBooks = withoutId {
+    Book.list()
+}
+----
+
+Only `withoutId` and `@WithoutTenant` do this. A tenant id that a `TenantResolver` returns or that is passed to `withId` restricts GORM to that tenant, also when it is `default`, the name of the default connection source. `Tenants.isWithoutId()` tells whether the current code runs without a tenant id.
+
+GORM also activates the filter before Hibernate loads a collection of a multi-tenant entity, whether it is loaded lazily or fetched by join, also when it is a many-to-many collection or a query fetches it by join through another association, so the collection holds the instances of the current tenant only. A collection of a multi-tenant entity that is mapped with `fetch: 'join'` is loaded eagerly with a select of its own, because Hibernate does not apply the filter to a collection that it fetches by join with an instance loaded by id. `load` and `proxy` of a multi-tenant entity run a query, as `get` does.
+
+A query on an entity that isn't multi-tenant can fetch such a collection by join, too, so before a query on an entity that has a collection of a multi-tenant entity, directly or through its associations, GORM activates the filter for the current tenant as well. That calls the `TenantResolver` for these queries. When there is no current tenant, because the resolver throws a `TenantNotFoundException` or returns `null`, such a query runs as it does for any entity that isn't multi-tenant. Any other exception from the resolver fails the query. A query that the resolver runs on an entity that isn't multi-tenant while GORM resolves the tenant does not call the resolver again, so a resolver can look the tenant up with GORM through such an entity. A query on a multi-tenant entity does call the resolver again, so a resolver must not run one.
+
 Note that this automatic activation of the Hibernate filter using GORM eventing and therefore only works when you use GORM methods, if you perform any raw Hibernate queries on the session factory you will need to activate the filter manually:
 
 [source,groovy]

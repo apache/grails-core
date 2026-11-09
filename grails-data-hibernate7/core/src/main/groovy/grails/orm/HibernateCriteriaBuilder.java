@@ -23,6 +23,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.function.Supplier;
 
 import groovy.lang.Closure;
 import groovy.lang.DelegatesTo;
@@ -36,11 +37,14 @@ import jakarta.persistence.metamodel.PluralAttribute;
 
 import org.hibernate.FetchMode;
 import org.hibernate.SessionFactory;
+import org.hibernate.type.BasicTypeReference;
+import org.hibernate.type.StandardBasicTypes;
 
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import grails.gorm.DetachedCriteria;
 import grails.gorm.MultiTenant;
+import org.grails.datastore.mapping.model.types.Basic;
 import org.grails.datastore.mapping.multitenancy.MultiTenancySettings;
 import org.grails.datastore.mapping.query.Query;
 import org.grails.datastore.mapping.query.api.BuildableCriteria;
@@ -51,7 +55,13 @@ import org.grails.orm.hibernate.GrailsHibernateTemplate;
 import org.grails.orm.hibernate.HibernateDatastore;
 import org.grails.orm.hibernate.HibernateSession;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
+import org.grails.orm.hibernate.query.Hibernate7CountProjection;
+import org.grails.orm.hibernate.query.HibernateAlias;
 import org.grails.orm.hibernate.query.HibernateQuery;
+import org.grails.orm.hibernate.query.SqlGroupProjection;
+import org.grails.orm.hibernate.query.SqlProjection;
+import org.grails.orm.hibernate.query.SqlRestriction;
+import org.grails.orm.hibernate.query.SqlSyntax;
 import org.grails.orm.hibernate.support.hibernate7.SessionHolder;
 
 /**
@@ -108,7 +118,7 @@ import org.grails.orm.hibernate.support.hibernate7.SessionHolder;
  *
  * <p>Closure method calls in the DSL are dispatched through {@code invokeMethod} → {@code
  * CriteriaMethodInvoker} → {@link HibernateQuery}, which translates each GORM constraint into the
- * equivalent JPA Criteria predicate. {@link grails.gorm.DetachedCriteria} can also be passed in
+ * equivalent JPA Criteria predicate. {@link DetachedCriteria} can also be passed in
  * place of a closure to support multi-tenant and reusable query fragments.
  *
  * To customise which methods are handled, either extend {@link CriteriaMethodInvoker} and inject it
@@ -116,7 +126,7 @@ import org.grails.orm.hibernate.support.hibernate7.SessionHolder;
  *
  * @author Graeme Rocher
  * @see HibernateQuery
- * @see grails.gorm.DetachedCriteria
+ * @see DetachedCriteria
  */
 @Slf4j
 @SuppressWarnings("PMD.AvoidDuplicateLiterals")
@@ -152,7 +162,7 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
             this.participate = true;
         } else {
             this.participate = false;
-            org.hibernate.Session session = sessionFactory.openSession();
+            var session = sessionFactory.openSession();
             TransactionSynchronizationManager.bindResource(sessionFactory, new SessionHolder(session));
         }
         HibernateSession session = (HibernateSession) datastore.connect();
@@ -164,16 +174,55 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
 
     public static final String ALIAS_SEPARATOR = ":";
 
+    // The types a sqlProjection or sqlGroupProjection takes in the criteria DSL, as on Hibernate 5
+    public static final BasicTypeReference<?> BOOLEAN = StandardBasicTypes.BOOLEAN;
+    public static final BasicTypeReference<?> YES_NO = StandardBasicTypes.YES_NO;
+    public static final BasicTypeReference<?> BYTE = StandardBasicTypes.BYTE;
+    public static final BasicTypeReference<?> CHARACTER = StandardBasicTypes.CHARACTER;
+    public static final BasicTypeReference<?> SHORT = StandardBasicTypes.SHORT;
+    public static final BasicTypeReference<?> INTEGER = StandardBasicTypes.INTEGER;
+    public static final BasicTypeReference<?> LONG = StandardBasicTypes.LONG;
+    public static final BasicTypeReference<?> FLOAT = StandardBasicTypes.FLOAT;
+    public static final BasicTypeReference<?> DOUBLE = StandardBasicTypes.DOUBLE;
+    public static final BasicTypeReference<?> BIG_DECIMAL = StandardBasicTypes.BIG_DECIMAL;
+    public static final BasicTypeReference<?> BIG_INTEGER = StandardBasicTypes.BIG_INTEGER;
+    public static final BasicTypeReference<?> STRING = StandardBasicTypes.STRING;
+    public static final BasicTypeReference<?> NUMERIC_BOOLEAN = StandardBasicTypes.NUMERIC_BOOLEAN;
+    public static final BasicTypeReference<?> TRUE_FALSE = StandardBasicTypes.TRUE_FALSE;
+    public static final BasicTypeReference<?> URL = StandardBasicTypes.URL;
+    public static final BasicTypeReference<?> TIME = StandardBasicTypes.TIME;
+    public static final BasicTypeReference<?> DATE = StandardBasicTypes.DATE;
+    public static final BasicTypeReference<?> TIMESTAMP = StandardBasicTypes.TIMESTAMP;
+    public static final BasicTypeReference<?> CALENDAR = StandardBasicTypes.CALENDAR;
+    public static final BasicTypeReference<?> CALENDAR_DATE = StandardBasicTypes.CALENDAR_DATE;
+    public static final BasicTypeReference<?> CLASS = StandardBasicTypes.CLASS;
+    public static final BasicTypeReference<?> LOCALE = StandardBasicTypes.LOCALE;
+    public static final BasicTypeReference<?> CURRENCY = StandardBasicTypes.CURRENCY;
+    public static final BasicTypeReference<?> TIMEZONE = StandardBasicTypes.TIMEZONE;
+    public static final BasicTypeReference<?> UUID_BINARY = StandardBasicTypes.UUID_BINARY;
+    public static final BasicTypeReference<?> UUID_CHAR = StandardBasicTypes.UUID_CHAR;
+    public static final BasicTypeReference<?> BINARY = StandardBasicTypes.BINARY;
+    public static final BasicTypeReference<?> WRAPPER_BINARY = StandardBasicTypes.BINARY_WRAPPER;
+    public static final BasicTypeReference<?> IMAGE = StandardBasicTypes.IMAGE;
+    public static final BasicTypeReference<?> BLOB = StandardBasicTypes.BLOB;
+    public static final BasicTypeReference<?> MATERIALIZED_BLOB = StandardBasicTypes.MATERIALIZED_BLOB;
+    public static final BasicTypeReference<?> CHAR_ARRAY = StandardBasicTypes.CHAR_ARRAY;
+    public static final BasicTypeReference<?> CHARACTER_ARRAY = StandardBasicTypes.CHARACTER_ARRAY;
+    public static final BasicTypeReference<?> TEXT = StandardBasicTypes.TEXT;
+    public static final BasicTypeReference<?> CLOB = StandardBasicTypes.CLOB;
+    public static final BasicTypeReference<?> MATERIALIZED_CLOB = StandardBasicTypes.MATERIALIZED_CLOB;
+    public static final BasicTypeReference<?> SERIALIZABLE = StandardBasicTypes.SERIALIZABLE;
+
     private static String getFullyQualifiedColumn(String propertyName, String alias) {
         return (Objects.nonNull(alias) ? alias + ALIAS_SEPARATOR : "") + propertyName;
     }
 
-    public org.grails.datastore.mapping.query.api.Criteria exists(Closure subquery) {
-        return exists(new grails.gorm.DetachedCriteria(targetClass).build(subquery));
+    public Criteria exists(Closure subquery) {
+        return exists(new DetachedCriteria(targetClass).build(subquery));
     }
 
-    public org.grails.datastore.mapping.query.api.Criteria notExists(Closure subquery) {
-        return notExists(new grails.gorm.DetachedCriteria(targetClass).build(subquery));
+    public Criteria notExists(Closure subquery) {
+        return notExists(new DetachedCriteria(targetClass).build(subquery));
     }
 
     public final void setDatastore(HibernateDatastore datastore) {
@@ -183,29 +232,21 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
         }
     }
 
-    public org.grails.datastore.mapping.query.api.Criteria createAlias(String associationPath, String alias) {
-        var prop = hibernateQuery.getEntity().getPropertyByName(associationPath);
-        if (prop instanceof org.grails.datastore.mapping.model.types.Basic) {
-            hibernateQuery.addAlias(
-                    new org.grails.orm.hibernate.query.HibernateAlias(associationPath, alias, JoinType.INNER));
-            return this;
-        }
-        hibernateQuery.getDetachedCriteria().createAlias(associationPath, alias);
-        hibernateQuery.getDetachedCriteria().join(associationPath, JoinType.INNER);
-        return this;
+    public Criteria createAlias(String associationPath, String alias) {
+        return createAlias(associationPath, alias, 0);
     }
 
-    public org.grails.datastore.mapping.query.api.Criteria createAlias(
+    public Criteria createAlias(
             String associationPath, String alias, int joinType) {
-        var prop = hibernateQuery.getEntity().getPropertyByName(associationPath);
+        var criteria = hibernateQuery.getDetachedCriteria();
+        var prop = criteria.getPersistentEntity().getPropertyByName(associationPath);
         JoinType convertedJoinType = convertFromInt(joinType);
-        if (prop instanceof org.grails.datastore.mapping.model.types.Basic) {
-            hibernateQuery.addAlias(
-                    new org.grails.orm.hibernate.query.HibernateAlias(associationPath, alias, convertedJoinType));
+        criteria.getCriteria().add(new HibernateAlias(associationPath, alias, convertedJoinType));
+        if (prop instanceof Basic) {
             return this;
         }
-        hibernateQuery.getDetachedCriteria().createAlias(associationPath, alias);
-        hibernateQuery.getDetachedCriteria().join(associationPath, convertedJoinType);
+        criteria.createAlias(associationPath, alias);
+        criteria.join(associationPath, convertedJoinType);
         return this;
     }
 
@@ -335,7 +376,7 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
      * @param alias The alias to use
      */
     public void count(String propertyName, String alias) {
-        hibernateQuery.projections().add(new org.grails.orm.hibernate.query.Hibernate7CountProjection(getFullyQualifiedColumn(propertyName, alias)));
+        hibernateQuery.projections().add(new Hibernate7CountProjection(getFullyQualifiedColumn(propertyName, alias)));
     }
 
     @Override
@@ -576,7 +617,7 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
     @Override
     @SuppressWarnings({"unchecked", "rawtypes"})
     public Criteria eqAll(String propertyName, Closure<?> propertyValue) {
-        return eqAll(propertyName, new grails.gorm.DetachedCriteria(targetClass).build(propertyValue));
+        return eqAll(propertyName, new DetachedCriteria(targetClass).build(propertyValue));
     }
 
     /**
@@ -590,7 +631,7 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
     @Override
     @SuppressWarnings({"unchecked", "rawtypes"})
     public Criteria gtAll(String propertyName, Closure<?> propertyValue) {
-        return gtAll(propertyName, new grails.gorm.DetachedCriteria(targetClass).build(propertyValue));
+        return gtAll(propertyName, new DetachedCriteria(targetClass).build(propertyValue));
     }
 
     /**
@@ -604,7 +645,7 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
     @Override
     @SuppressWarnings({"unchecked", "rawtypes"})
     public Criteria ltAll(String propertyName, Closure<?> propertyValue) {
-        return ltAll(propertyName, new grails.gorm.DetachedCriteria(targetClass).build(propertyValue));
+        return ltAll(propertyName, new DetachedCriteria(targetClass).build(propertyValue));
     }
 
     /**
@@ -618,7 +659,7 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
     @Override
     @SuppressWarnings({"unchecked", "rawtypes"})
     public Criteria geAll(String propertyName, Closure<?> propertyValue) {
-        return geAll(propertyName, new grails.gorm.DetachedCriteria(targetClass).build(propertyValue));
+        return geAll(propertyName, new DetachedCriteria(targetClass).build(propertyValue));
     }
 
     /**
@@ -632,7 +673,7 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
     @Override
     @SuppressWarnings({"unchecked", "rawtypes"})
     public Criteria leAll(String propertyName, Closure<?> propertyValue) {
-        return leAll(propertyName, new grails.gorm.DetachedCriteria(targetClass).build(propertyValue));
+        return leAll(propertyName, new DetachedCriteria(targetClass).build(propertyValue));
     }
 
     /**
@@ -926,8 +967,8 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
      * @return A Criterion instance
      */
     public Criteria eq(String propertyName, Object propertyValue, Map<?, ?> params) {
-        if (Boolean.TRUE.equals(params.get("ignoreCase"))) {
-            hibernateQuery.like(propertyName, "%" + propertyValue.toString() + "%");
+        if (Boolean.TRUE.equals(params.get("ignoreCase")) && propertyValue instanceof CharSequence) {
+            hibernateQuery.eqIgnoreCase(propertyName, propertyValue.toString());
         } else {
             hibernateQuery.eq(propertyName, propertyValue);
         }
@@ -1113,6 +1154,106 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
     }
 
     /**
+     * Projects the value of a native SQL expression. {@code {alias}} in the SQL stands for the table alias of the
+     * queried entity.
+     *
+     * @param sql SQL projecting a single value, optionally followed by {@code as} and the column alias
+     * @param columnAlias the column alias of the projected value
+     * @param type the type of the projected value: a {@code StandardBasicTypes} constant such as {@link #INTEGER},
+     *     an {@code org.hibernate.type.Type} or a Java class
+     * @return this projection list
+     */
+    public ProjectionList sqlProjection(String sql, String columnAlias, Object type) {
+        return sqlProjection(sql, Collections.singletonList(columnAlias), Collections.singletonList(type));
+    }
+
+    /**
+     * Projects the values of native SQL expressions, separated by commas. {@code {alias}} in the SQL stands for the
+     * table alias of the queried entity.
+     *
+     * @param sql SQL projecting the values, each one optionally followed by {@code as} and its column alias
+     * @param columnAliases the column alias of each projected value, in order
+     * @param types the type of each projected value, in order: a {@code StandardBasicTypes} constant such as
+     *     {@link #INTEGER}, an {@code org.hibernate.type.Type} or a Java class
+     * @return this projection list
+     * @throws IllegalArgumentException if the numbers of projected values, column aliases and types differ
+     */
+    public ProjectionList sqlProjection(String sql, List<String> columnAliases, List<?> types) {
+        for (SqlProjection projection : closingSessionOnError(() -> SqlProjection.of(sql, columnAliases, types, sqlSyntax()))) {
+            hibernateQuery.projections().add(projection);
+        }
+        return this;
+    }
+
+    /**
+     * Projects the values of native SQL expressions, separated by commas, and groups the results by a native SQL
+     * group by clause. {@code {alias}} in the SQL stands for the table alias of the queried entity.
+     *
+     * @param sql SQL projecting the values, each one optionally followed by {@code as} and its column alias
+     * @param groupBy the group by clause: a single expression or a comma separated list of them
+     * @param columnAliases the column alias of each projected value, in order
+     * @param types the type of each projected value, in order: a {@code StandardBasicTypes} constant such as
+     *     {@link #INTEGER}, an {@code org.hibernate.type.Type} or a Java class
+     * @return this projection list
+     * @throws IllegalArgumentException if the numbers of projected values, column aliases and types differ, or the
+     *     group by clause is empty
+     */
+    public ProjectionList sqlGroupProjection(String sql, String groupBy, List<String> columnAliases, List<?> types) {
+        List<SqlProjection> projections = closingSessionOnError(() -> SqlProjection.of(sql, columnAliases, types, sqlSyntax()));
+        for (SqlGroupProjection groupProjection : closingSessionOnError(() -> SqlGroupProjection.of(groupBy, sqlSyntax()))) {
+            hibernateQuery.projections().add(groupProjection);
+        }
+        for (SqlProjection projection : projections) {
+            hibernateQuery.projections().add(projection);
+        }
+        return this;
+    }
+
+    /**
+     * Returns the projections a DSL method creates, closing the session the builder opened if their arguments are
+     * invalid, as {@link #throwRuntimeException(RuntimeException)} does.
+     */
+    private <T> T closingSessionOnError(Supplier<T> projections) {
+        try {
+            return projections.get();
+        } catch (IllegalArgumentException e) {
+            closeSessionFollowingException();
+            throw e;
+        }
+    }
+
+    /**
+     * Restricts the results with a native SQL condition. {@code {alias}} in the SQL stands for the table alias of
+     * the queried entity.
+     *
+     * @param sqlRestriction the SQL condition
+     * @return this criteria
+     */
+    public Criteria sqlRestriction(String sqlRestriction) {
+        return sqlRestriction(sqlRestriction, Collections.emptyList());
+    }
+
+    /**
+     * Restricts the results with a native SQL condition whose {@code ?} placeholders are bound to the given values.
+     * {@code {alias}} in the SQL stands for the table alias of the queried entity.
+     *
+     * @param sqlRestriction the SQL condition
+     * @param values the values of the {@code ?} placeholders, in order, none of them {@code null}
+     * @return this criteria
+     * @throws IllegalArgumentException if the number of {@code ?} placeholders differs from the number of values,
+     *     or a value is {@code null}
+     */
+    public Criteria sqlRestriction(String sqlRestriction, List<?> values) {
+        hibernateQuery.add(closingSessionOnError(() -> SqlRestriction.of(sqlRestriction, values, sqlSyntax())));
+        return this;
+    }
+
+    /** The syntax of the native SQL of the database the session factory connects to, in which the DSL's SQL is read. */
+    private SqlSyntax sqlSyntax() {
+        return SqlSyntax.forSessionFactory(sessionFactory);
+    }
+
+    /**
      * Creates a Criterion with from the specified property name and "rlike" (a regular expression
      * version of "like") expression
      *
@@ -1121,7 +1262,7 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
      * @return A Criterion instance
      */
     @Override
-    public org.grails.datastore.mapping.query.api.Criteria rlike(String propertyName, Object propertyValue) {
+    public Criteria rlike(String propertyName, Object propertyValue) {
         hibernateQuery.rlike(propertyName, propertyValue.toString());
         return this;
     }

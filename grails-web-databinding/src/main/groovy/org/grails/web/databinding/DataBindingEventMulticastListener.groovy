@@ -39,6 +39,10 @@ class DataBindingEventMulticastListener implements DataBindingListener {
         this.listeners = listeners
     }
 
+    List<DataBindingListener> getListeners() {
+        listeners
+    }
+
     boolean supports(Class<?> clazz) {
         true
     }

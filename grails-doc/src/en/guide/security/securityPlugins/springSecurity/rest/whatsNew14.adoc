@@ -1,0 +1,49 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+[[rest-whatsNew14]]
+== Full compatibility with Spring Security core.
+
+Up to previous releases, this plugin was overriding "stateful" Spring Security core beans, to ensure a stateless behaviour.
+After some users reported issues integrating this plugin with existing installations, version 1.4 now follows a more
+friendly approach.
+
+A new chapter has been created explaining how to configure the filter chains appropriately.
+
+== RFC 6750 Bearer Token support by default
+
+Now, the token validation and rendering aligns with the http://tools.ietf.org/html/rfc6750[RFC 6750 Bearer Token] spec.
+If you want to keep the old behaviour, simply disable it by setting
+`grails.plugin.springsecurity.rest.token.validation.useBearerToken = false`
+
+== Credentials are extracted from JSON by default
+
+It makes more sense in a REST application. The old behaviour can still be used by using the corresponding configuration
+property.
+
+== Anonymous access is allowed
+
+In case you want to enable anonymous access (read: not authenticated) to certain URL patterns, you can do so. Take a
+look at the [new chapter in the documentation|guide:tokenValidation].
+
+== Other minor changes
+
+* Upgraded dependencies:
+** `spring-security-core:2.0-RC3`.
+** `cors:1.1.6`.

@@ -27,8 +27,11 @@ import groovy.transform.CompileStatic
 import jakarta.servlet.ServletContext
 
 import org.springframework.beans.factory.BeanClassLoaderAware
-import org.springframework.beans.factory.annotation.Value
+import org.springframework.boot.context.properties.bind.Bindable
+import org.springframework.boot.context.properties.bind.Binder
+import org.springframework.context.EnvironmentAware
 import org.springframework.context.ResourceLoaderAware
+import org.springframework.core.env.Environment
 import org.springframework.core.io.Resource
 import org.springframework.core.io.ResourceLoader
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver
@@ -46,7 +49,7 @@ import grails.core.support.GrailsApplicationAware
  * @author Graeme Rocher
  */
 @CompileStatic
-class TagLibraryResolverImpl implements ServletContextAware, GrailsApplicationAware, TagLibraryResolver, ResourceLoaderAware, BeanClassLoaderAware {
+class TagLibraryResolverImpl implements ServletContextAware, GrailsApplicationAware, TagLibraryResolver, ResourceLoaderAware, BeanClassLoaderAware, EnvironmentAware {
 
     protected Map<String, JspTagLib> tagLibs = new ConcurrentHashMap<String, JspTagLib>()
     GrailsApplication grailsApplication
@@ -54,9 +57,20 @@ class TagLibraryResolverImpl implements ServletContextAware, GrailsApplicationAw
     ClassLoader classLoader
     ResourceLoader resourceLoader
 
-    @Value('${grails.gsp.tldScanPattern:}')
     String[] tldScanPatterns = [] as String[]
     volatile boolean initialized = false
+
+    /**
+     * Reads {@code grails.gsp.tldScanPattern}, given as a comma-separated value or as a list. The
+     * patterns are bound rather than injected with {@code @Value}, which cannot read a list from
+     * {@code application.yml}, because Grails exposes such a list element by element.
+     */
+    @Override
+    void setEnvironment(Environment environment) {
+        tldScanPatterns = Binder.get(environment)
+                .bind('grails.gsp.tld-scan-pattern', Bindable.of(String[]))
+                .orElse(tldScanPatterns)
+    }
 
     /**
      * Resolves a JspTagLib instance for the given URI

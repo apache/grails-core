@@ -22,7 +22,9 @@ import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.net.URI;
 import java.net.URL;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
@@ -155,6 +157,7 @@ public class DefaultGrailsPluginManager extends AbstractGrailsPluginManager {
             return;
         }
 
+        List<String> loadedPlugins = new ArrayList<>();
         // Note: the environment is null here since the plugins should have always been populated in the bootstrap phase
         pluginDiscovery.getPluginsInLoadOrder().forEach(pluginInfo -> {
             GrailsPlugin plugin;
@@ -164,8 +167,8 @@ public class DefaultGrailsPluginManager extends AbstractGrailsPluginManager {
                 plugin = createBinaryGrailsPlugin(pluginInfo.getPluginClass(), pluginInfo.getPluginDescriptor());
             }
 
-            if (LOG.isInfoEnabled()) {
-                LOG.info("Grails plug-in [" + plugin.getName() + "] with version [" + plugin.getVersion() + "] loaded successfully");
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("Grails plug-in [" + plugin.getName() + "] with version [" + plugin.getVersion() + "] loaded successfully");
             }
 
             // plugin is always ApplicationContextAware
@@ -175,7 +178,13 @@ public class DefaultGrailsPluginManager extends AbstractGrailsPluginManager {
             }
             plugin.setManager(this);
             plugins.put(plugin.getName(), plugin);
+            loadedPlugins.add(plugin.getName() + " (" + plugin.getVersion() + ")");
         });
+
+        if (LOG.isInfoEnabled()) {
+            LOG.info("Loaded " + loadedPlugins.size() + " Grails plugins in load order: [" +
+                    String.join(", ", loadedPlugins) + "]");
+        }
 
         initialised = true;
     }

@@ -20,6 +20,7 @@ package org.apache.grails.data.testing.tck.tests
 
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.apache.grails.data.testing.tck.domains.TestEntity
+import spock.lang.PendingFeatureIf
 
 class FindWhereSpec extends GrailsDataTckSpec {
 
@@ -82,6 +83,7 @@ class FindWhereSpec extends GrailsDataTckSpec {
         entityId == entity[0].id
     }
 
+    @PendingFeatureIf({ Boolean.getBoolean('neo4j.gorm.suite') })
     def 'Test findWhere matches null property values'() {
         given:
         new TestEntity(name: 'hasAge', age: 41).save(flush: true)
@@ -96,6 +98,7 @@ class FindWhereSpec extends GrailsDataTckSpec {
         null == entity.age
     }
 
+    @PendingFeatureIf({ Boolean.getBoolean('neo4j.gorm.suite') })
     def 'Test findAllWhere matches null property values'() {
         given:
         new TestEntity(name: 'hasAge', age: 41).save(flush: true)

@@ -81,11 +81,6 @@ public class Scaffolding implements DefaultFeature {
     @Override
     public void apply(GeneratorContext generatorContext) {
         generatorContext.addDependency(Dependency.builder()
-                .groupId("org.fusesource.jansi")
-                .artifactId("jansi")
-                .runtimeOnly());
-
-        generatorContext.addDependency(Dependency.builder()
                 .groupId("org.apache.grails")
                 .artifactId("grails-scaffolding")
                 .implementation());

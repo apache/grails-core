@@ -381,7 +381,7 @@ class Schema {
                     DataFetcher countFetcher = dataFetcherManager.getReadingFetcher(entity, COUNT).orElse(new CountEntityDataFetcher(entity))
 
                     final String countFieldName = namingConvention.getCount(entity)
-                    final GraphQLOutputType countOutputType = (GraphQLOutputType) typeManager.getType(Integer)
+                    final GraphQLOutputType countOutputType = (GraphQLOutputType) typeManager.getType(Long)
 
                     GraphQLFieldDefinition.Builder queryCount = newFieldDefinition()
                             .name(countFieldName)
@@ -499,11 +499,11 @@ class Schema {
                 }
 
                 for (CustomOperation operation : mapping.customQueryOperations) {
-                    queryFields.add(operation.createField(entity, serviceManager, mappingContext, listArguments))
+                    queryFields.add(operation.createField(entity, serviceManager, mappingContext, listArguments, queryTypeName))
                 }
 
                 for (CustomOperation operation : mapping.customMutationOperations) {
-                    mutationFields.add(operation.createField(entity, serviceManager, mappingContext, Collections.emptyMap()))
+                    mutationFields.add(operation.createField(entity, serviceManager, mappingContext, Collections.emptyMap(), mutationTypeName))
                 }
 
                 for (GraphQLSchemaInterceptor schemaInterceptor : interceptorManager.interceptors) {

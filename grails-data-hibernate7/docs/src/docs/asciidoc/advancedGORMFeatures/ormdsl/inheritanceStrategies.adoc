@@ -43,6 +43,18 @@ class Page extends Content {
 
 The single table will contain columns for all properties of all subclasses, with nullable columns for subclass-specific fields.
 
+By default the discriminator column is named `class` and each row stores the fully qualified name of its class, for example `com.example.Content` or `com.example.BlogPost`. This is the same default as `grails-data-hibernate5`, so existing table-per-hierarchy tables can be used without a mapping change. Any class that does not set a discriminator value keeps its fully qualified class name, including when the root class maps only the discriminator column:
+
+[source,groovy]
+----
+class Content {
+    String title
+    static mapping = {
+        discriminator column: 'content_type'    // values remain the fully qualified class names
+    }
+}
+----
+
 ==== Customising the Discriminator
 
 [source,groovy]
@@ -68,7 +80,7 @@ You can also configure the discriminator column type and whether it is insertabl
 ----
 static mapping = {
     discriminator {
-        column name: 'dtype', sqlType: 'varchar(30)'
+        column name: 'content_type', sqlType: 'varchar(30)'
         value  'blog'
         insert false
     }

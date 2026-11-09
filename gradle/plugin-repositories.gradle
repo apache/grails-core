@@ -36,6 +36,7 @@ ext.configurePluginRepositories = { RepositoryHandler repositories ->
         url = uri('https://central.sonatype.com/repository/maven-snapshots')
         content {
             includeGroupByRegex('cloud[.]wondrify[.].*')
+            includeGroup('org.spockframework')
         }
         mavenContent {
             snapshotsOnly()

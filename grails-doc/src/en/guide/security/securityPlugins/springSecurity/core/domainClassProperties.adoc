@@ -1,0 +1,89 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+[[core-domainClassProperties]]
+== User, Authority (Role), and Requestmap Properties
+
+Properties you are most likely to override are the `User` and  `Authority` (and `Requestmap` if you use the database to store mappings) class and property names.
+
+.Domain class configuration options
+[cols="30,30,40"]
+|====================
+| *Property* | *Default Value* | *Meaning*
+
+|userLookup.userDomainClassName
+|_none_
+|User class name
+
+|userLookup.usernamePropertyName
+|"`username`"
+|User class username property
+
+|userLookup.usernameIgnoreCase
+|"`false`"
+|Ignore case when searching for usernamePropertyName
+
+|userLookup.passwordPropertyName
+|"`password`"
+|User class password property
+
+|userLookup.authoritiesPropertyName
+|"`authorities`"
+|User class role collection property
+
+|userLookup.enabledPropertyName
+|"`enabled`"
+|User class enabled property
+
+|userLookup.accountExpiredPropertyName
+|"`accountExpired`"
+|User class account expired property
+
+|userLookup.accountLockedPropertyName
+|"`accountLocked`"
+|User class account locked property
+
+|userLookup.passwordExpiredPropertyName
+|"`passwordExpired`"
+|User class password expired property
+
+|userLookup.authorityJoinClassName
+|_none_
+|User/Role many-many join class name
+
+|authority.className
+|_none_
+|Role class name
+
+|authority.nameField
+|"`authority`"
+|Role class role name property
+
+|requestMap.className
+|_none_
+|Requestmap class name
+
+|requestMap.urlField
+|"`url`"
+|Requestmap class URL pattern property
+
+|requestMap.configAttributeField
+|"`configAttribute`"
+|Requestmap class role/token property
+|====================

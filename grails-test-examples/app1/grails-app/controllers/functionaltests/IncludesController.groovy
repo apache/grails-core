@@ -52,4 +52,17 @@ class IncludesController {
     def includeFromTemplateRenderingText() {
         render template:"textInclude"
     }
+
+    /**
+     * A tag call written with its namespace, in a controller declared by convention.
+     *
+     * <p>Read by CompiledTagCallSpec, which asserts this compiled into a direct invocation. That is
+     * the claim the tag library index exists to make, and it holds only when the whole build wires
+     * together - index generated, packaged, on the compile classpath, transform applied - so it is
+     * checked here against a real build rather than a synthetic compilation.
+     */
+    def compiledTagCallProbe() {
+        render g.createLink(controller: 'includes', action: 'viewRendering')
+    }
+
 }

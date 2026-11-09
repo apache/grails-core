@@ -18,9 +18,28 @@
  */
 package org.grails.plugins.web.async
 
+import groovy.transform.CompileStatic
+import groovy.util.logging.Slf4j
+
+import java.util.concurrent.Executor
+import java.util.function.UnaryOperator
+
+import org.springframework.beans.factory.BeanRegistrar
+import org.springframework.beans.factory.BeanRegistry
+import org.springframework.beans.factory.NoSuchBeanDefinitionException
+import org.springframework.core.env.Environment
+import org.springframework.core.task.AsyncTaskExecutor
+import org.springframework.core.task.TaskDecorator
+import org.springframework.core.task.support.CompositeTaskDecorator
+import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor
+
+import grails.async.PromiseFactory
+import grails.async.Promises
 import grails.plugins.Plugin
+import grails.async.web.WebPromises
+import org.grails.async.factory.PromiseFactoryBuilder
+import org.grails.async.factory.future.VirtualThreadPromiseFactory
 import org.grails.plugins.web.async.mvc.AsyncActionResultTransformer
-import org.grails.plugins.web.async.spring.PromiseFactoryBean
 
 /**
  * Async support for the Grails 2.0. Doesn't do much right now, most logic handled
@@ -29,14 +48,60 @@ import org.grails.plugins.web.async.spring.PromiseFactoryBean
  * @author Graeme Rocher
  * @since 2.0
  */
+@CompileStatic
+@Slf4j
 class ControllersAsyncGrailsPlugin extends Plugin {
 
-    def grailsVersion = '7.0.0-SNAPSHOT > *'
+    def grailsVersion = '8.0.0-SNAPSHOT > *'
     def loadAfter = ['controllers']
-    Closure doWithSpring() {
-        { ->
-            asyncPromiseResponseActionResultTransformer(AsyncActionResultTransformer)
-            grailsPromiseFactory(PromiseFactoryBean)
+
+    @Override
+    BeanRegistrar beanRegistrar() {
+        return { BeanRegistry registry, Environment environment ->
+            registry.registerBean('asyncPromiseResponseActionResultTransformer', AsyncActionResultTransformer)
+            registry.registerBean('grailsWebRequestTaskDecorator', TaskDecorator) {
+                it.supplier { new GrailsWebRequestTaskDecorator() }
+            }
+            registry.registerBean('grailsPromiseExecutor', AsyncTaskExecutor) {
+                it.fallback()
+                it.supplier { context ->
+                    List<TaskDecorator> decorators = context.beanProvider(TaskDecorator).orderedStream().toList()
+                    ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor()
+                    executor.threadNamePrefix = 'grails-promise-'
+                    executor.corePoolSize = 8
+                    if (decorators) {
+                        executor.taskDecorator = new CompositeTaskDecorator(decorators)
+                    }
+                    return executor
+                }
+            }
+            registry.registerBean('grailsPromiseFactory', PromiseFactory) {
+                it.supplier { context ->
+                    AsyncTaskExecutor executor
+                    String executorName = 'applicationTaskExecutor'
+                    try {
+                        executor = context.bean('applicationTaskExecutor', AsyncTaskExecutor)
+                    }
+                    catch (NoSuchBeanDefinitionException missing) {
+                        if (missing.beanName != 'applicationTaskExecutor') {
+                            throw missing
+                        }
+                        executor = context.bean('grailsPromiseExecutor', AsyncTaskExecutor)
+                        executorName = 'grailsPromiseExecutor'
+                    }
+                    CompositeTaskDecorator decorator = new CompositeTaskDecorator(context.beanProvider(TaskDecorator).orderedStream().toList())
+                    UnaryOperator<Executor> decorateExecutor = (Executor owned) -> {
+                        Executor decorated = (Runnable task) -> owned.execute(decorator.decorate(task))
+                        return decorated
+                    }
+                    PromiseFactory promiseFactory = PromiseFactoryBuilder.build(executor, decorateExecutor)
+                    String execution = promiseFactory instanceof VirtualThreadPromiseFactory ? 'owned virtual-thread executor' : executorName
+                    log.debug('Created promise factory {} with {}', promiseFactory.class.name, execution)
+                    Promises.setPromiseFactory(promiseFactory)
+                    WebPromises.setPromiseFactory(promiseFactory)
+                    return promiseFactory
+                }
+            }
         }
     }
 }

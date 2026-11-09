@@ -73,7 +73,7 @@ class UrlMappings {
 }
 ----
 
-Reverse URL mappings also require that the `namespace` be specified.
+Reverse URL mappings may specify the `namespace` explicitly.
 
 [source,groovy]
 ----
@@ -81,9 +81,26 @@ Reverse URL mappings also require that the `namespace` be specified.
 <g:link controller="admin" namespace="users">Click For User Admin</g:link>
 ----
 
-When resolving a URL mapping (forward or reverse) to a namespaced controller,
-a mapping will only match if the `namespace` has been provided.  If
-the application provides several controllers with the same name in different
+Most links do not need a `namespace` attribute. When a link, redirect, chain, form action, pagination link, sortable column link, or include targets a controller and omits `namespace`, Grails resolves the namespace for the target controller automatically.
+
+If the target is the controller currently handling the request, Grails uses the current request namespace. Otherwise it resolves the controller name the way code resolves a name, nearest scope first, the same rule that resolves a `resource` link to a controller (see link:theWebLayer.html#restfulMappings[Mapping to REST resources]):
+
+. the current request namespace, if it defines a controller with that name
+. the default, non-namespaced controller, if there is one
+. the namespace of the only controller with that name
+
+So `controller` and `action` are enough to generate the correct URL. When the same controller name is defined in several namespaces, as it is for an administration area or for versioned APIs, a link stays in the namespace it is rendered from. From the `admin` namespace, `<g:link controller="user">` targets the `admin` `UserController`; from anywhere else, it targets the non-namespaced one.
+
+A name defined only in namespaces other than the default one and the current request's, such as `v1` and `v2` from a page outside both, is ambiguous. Grails infers no namespace, logs a warning the first time, and the link must specify `namespace` explicitly.
+
+A name no registered controller has stays in the namespace the link is made from, as a relative reference resolves against where it is made.
+
+A `redirect` naming no `namespace` is resolved exactly as a link is, starting from the namespace of the controller issuing it, so it reaches a controller defined in another namespace rather than being forced into its own.
+
+An explicit `namespace` always wins. Use `namespace="reports"` in GSP markup, or `namespace: 'reports'` in Groovy code, to target a specific namespace. Use `namespace=""` in GSP markup, or `namespace: null` in Groovy code, to target a non-namespaced controller.
+
+When resolving a URL mapping to a namespaced controller, the selected namespace
+must identify one target controller. If the application provides several controllers with the same name in different
 packages, at most 1 of them may be defined without a `namespace` property.  If
 there are multiple controllers with the same name that do not define a
 `namespace` property, the framework will not know how to distinguish between

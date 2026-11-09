@@ -16,7 +16,7 @@ class ${className}Controller {
         }
     }
 
-    def show(Long id) {
+    def show(Serializable id) {
         ${className}.async.get(id).then { ${propertyName} ->
             respond ${propertyName}
         }
@@ -44,20 +44,20 @@ class ${className}Controller {
             request.withFormat {
                 form multipartForm {
                     flash.message = message(code: 'default.created.message', args: [message(code: '${propertyName}.label', default: '${className}'), ${propertyName}.id])
-                    redirect ${propertyName}
+                    redirect action: "show", id: ${propertyName}.id, method: "GET"
                 }
                 '*' { respond ${propertyName}, [status: CREATED] }
             }
         }
     }
 
-    def edit(Long id) {
+    def edit(Serializable id) {
         ${className}.async.get(id).then { ${propertyName} ->
             respond ${propertyName}
         }
     }
 
-    def update(Long id) {
+    def update(Serializable id) {
         ${className}.async.withTransaction { TransactionStatus status ->
             def ${propertyName} = ${className}.get(id)
             if (${propertyName} == null) {
@@ -76,14 +76,14 @@ class ${className}Controller {
             request.withFormat {
                 form multipartForm {
                     flash.message = message(code: 'default.updated.message', args: [message(code: '${className}.label', default: '${className}'), ${propertyName}.id])
-                    redirect ${propertyName}
+                    redirect action: "show", id: ${propertyName}.id, method: "GET"
                 }
                 '*'{ respond ${propertyName}, [status: OK] }
             }
         }
     }
 
-    def delete(Long id) {
+    def delete(Serializable id) {
         ${className}.async.withTransaction { TransactionStatus status ->
             def ${propertyName} = ${className}.get(id)
             if (${propertyName} == null) {

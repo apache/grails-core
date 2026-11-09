@@ -10,6 +10,8 @@ Additional Licenses
 
 Liquibase Hibernate Support
 This product includes software from the Liquibase Hibernate project (https://github.com/liquibase/liquibase-hibernate),
-originally from Liquibase Hibernate v4.27.0.
+originally from Liquibase Hibernate v4.27.0, with later fixes (ID generator intent detection, native generator
+sequences, column remark diffs and PostgreSQL index/primary key/unique constraint diff suppression) ported from the
+project's main branch as of commit 93316a3.
 Copyright Liquibase.
 Licensed under the Apache License, Version 2.0.

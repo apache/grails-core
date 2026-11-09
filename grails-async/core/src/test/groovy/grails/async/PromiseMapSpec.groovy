@@ -98,7 +98,7 @@ class PromiseMapSpec extends Specification {
             new PollingConditions(timeout: 5, delay: 0.2, initialDelay: 0.3).eventually {
                 assert !result
                 assert err
-                assert err.message == 'java.lang.RuntimeException: bad'
+                assert err.message == 'bad'
             }
     }
 

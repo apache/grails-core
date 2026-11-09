@@ -165,7 +165,7 @@ trait RestResponder {
                 final firstFormat = formats[0]
                 mimeType = allMimeTypes.find { MimeType mt -> mt.extension == firstFormat }
                 if (mimeType) {
-                    webRequest.currentRequest.setAttribute(GrailsApplicationAttributes.RESPONSE_MIME_TYPE, mimeType)
+                    webRequest.request.setAttribute(GrailsApplicationAttributes.RESPONSE_MIME_TYPE, mimeType)
                 }
             }
 

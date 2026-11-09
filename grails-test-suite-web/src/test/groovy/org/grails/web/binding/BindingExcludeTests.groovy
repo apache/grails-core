@@ -20,6 +20,7 @@
 package org.grails.web.binding
 
 import grails.artefact.Artefact
+import grails.persistence.Entity
 import grails.testing.gorm.DataTest
 import grails.testing.web.controllers.ControllerUnitTest
 import spock.lang.Specification
@@ -27,7 +28,7 @@ import spock.lang.Specification
 class BindingExcludeTests extends Specification implements ControllerUnitTest<ExcludingController>, DataTest {
 
     Class[] getDomainClassesToMock() {
-        [Person, Location]
+        [Person, Location, RestrictedAccount]
     }
 
     void testThatAssociationsAreExcluded() {
@@ -65,10 +66,59 @@ class BindingExcludeTests extends Specification implements ControllerUnitTest<Ex
         l.shippingAddress == 'Shipping Address'
         l.billingAddress == null
     }
+
+    void 'excluding a property with #form keeps what the class itself keeps out of binding'() {
+        when:
+        def model = controller."$action"()
+        def account = model.account
+
+        then: 'the excluded property is not bound'
+        account.note == null
+
+        and: 'nor are the properties the class declares non-bindable or transient'
+        !account.admin
+        account.secret == null
+
+        and: 'the rest is'
+        account.name == 'Sample'
+
+        where:
+        form             | action
+        'an exclude map' | 'bindWithExcludeMap'
+        'an exclude list' | 'bindWithExcludeList'
+    }
+}
+
+@Entity
+class RestrictedAccount {
+    String name
+    String note
+    boolean admin
+    String secret
+
+    static transients = ['secret']
+    static constraints = {
+        note nullable: true
+        admin bindable: false
+    }
 }
 
 @Artefact('Controller')
 class ExcludingController {
+    private static final Map<String, Object> ACCOUNT_INPUT = [name: 'Sample', note: 'Note', admin: true, secret: 'submitted']
+
+    def bindWithExcludeMap() {
+        def account = new RestrictedAccount()
+        bindData(account, ACCOUNT_INPUT, [exclude: 'note'])
+        [account: account]
+    }
+
+    def bindWithExcludeList() {
+        def account = new RestrictedAccount()
+        bindData(account, ACCOUNT_INPUT, ['note'])
+        [account: account]
+    }
+
     def bind() {
         def p = new Person()
         bindData(p, request, [exclude:"locations"])

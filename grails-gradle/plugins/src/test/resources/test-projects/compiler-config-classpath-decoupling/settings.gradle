@@ -1,0 +1,4 @@
+rootProject.name = 'compiler-config-classpath-decoupling'
+include 'producer'
+include 'runtime-only-producer'
+include 'app'

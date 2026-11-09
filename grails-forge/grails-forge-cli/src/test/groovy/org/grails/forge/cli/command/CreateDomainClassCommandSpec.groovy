@@ -79,7 +79,7 @@ class CreateDomainClassCommandSpec extends CommandSpec implements CommandFixture
             dependencies are included for OperatingSystem.MACOS_ARCH64 and this
             causes the integrationTest task to fail.
         */
-        executeGradleCommand("build -x iT")
+        executeGradleCommand("build -x integrationTest")
 
         then:
         exitCode == 0

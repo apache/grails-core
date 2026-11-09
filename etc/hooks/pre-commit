@@ -1,0 +1,41 @@
+#!/bin/bash
+#
+#  Licensed to the Apache Software Foundation (ASF) under one
+#  or more contributor license agreements.  See the NOTICE file
+#  distributed with this work for additional information
+#  regarding copyright ownership.  The ASF licenses this file
+#  to you under the Apache License, Version 2.0 (the
+#  "License"); you may not use this file except in compliance
+#  with the License.  You may obtain a copy of the License at
+#
+#    https://www.apache.org/licenses/LICENSE-2.0
+#
+#  Unless required by applicable law or agreed to in writing,
+#  software distributed under the License is distributed on an
+#  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+#  KIND, either express or implied.  See the License for the
+#  specific language governing permissions and limitations
+#  under the License.
+#
+
+set -e
+
+# Get staged files that are Groovy or Java
+STAGED_FILES=$(git diff --cached --name-only --diff-filter=ACMR | grep -E '\.(groovy|java)$' || true)
+
+if [ -n "$STAGED_FILES" ]; then
+    echo "Formatting staged Groovy/Java files using IntelliJ formatter..."
+
+    # Convert newline-separated list to comma-separated for Gradle property
+    FILES_COMMAS=$(echo "$STAGED_FILES" | tr '\n' ',' | sed 's/,$//')
+
+    # Run the Gradle formatting task
+    ./gradlew :formatCode -PformatFiles="$FILES_COMMAS"
+
+    # Re-stage the files in case they were modified by the formatter
+    for FILE in $STAGED_FILES; do
+        if [ -f "$FILE" ]; then
+            git add "$FILE"
+        fi
+    done
+fi

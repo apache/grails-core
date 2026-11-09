@@ -35,6 +35,7 @@ import org.hibernate.boot.internal.BootstrapContextImpl
 import org.hibernate.boot.internal.InFlightMetadataCollectorImpl
 import org.hibernate.boot.internal.MetadataBuilderImpl
 import org.hibernate.boot.registry.BootstrapServiceRegistry
+import org.hibernate.boot.registry.StandardServiceRegistry
 import org.hibernate.boot.registry.StandardServiceRegistryBuilder
 import org.hibernate.boot.registry.classloading.spi.ClassLoaderService
 import org.hibernate.dialect.H2Dialect
@@ -51,6 +52,8 @@ import org.hibernate.boot.spi.AdditionalMappingContributor
  */
 class HibernateGormDatastoreSpec extends GrailsDataTckSpec<GrailsDataHibernate7TckManager> {
 
+    private final List<StandardServiceRegistry> collectorRegistries = []
+
     void setupSpec() {
         manager.grailsConfig = [
                 'dataSource.url'               : "jdbc:h2:mem:grailsDB;LOCK_TIMEOUT=10000",
@@ -63,6 +66,13 @@ class HibernateGormDatastoreSpec extends GrailsDataTckSpec<GrailsDataHibernate7T
                 'hibernate.jpa.compliance.cascade': 'true',
                 'hibernate.proxy_factory_class' : 'org.grails.orm.hibernate.proxy.ByteBuddyGroovyProxyFactory'
         ]
+    }
+
+    void cleanup() {
+        // Each registry from getCollector() runs its own JDBC connection pool, whose validation
+        // thread keeps the registry and everything it references alive until it is destroyed.
+        collectorRegistries.each { StandardServiceRegistryBuilder.destroy(it) }
+        collectorRegistries.clear()
     }
 
     GrailsHibernatePersistentEntity createPersistentEntity(GrailsDomainBinder binder
@@ -121,6 +131,7 @@ class HibernateGormDatastoreSpec extends GrailsDataTckSpec<GrailsDataHibernate7T
                 .addService(org.hibernate.bytecode.spi.BytecodeProvider.class, new org.grails.orm.hibernate.proxy.GrailsBytecodeProvider())
                 .applySetting("hibernate.bytecode.allow_enhancement_as_proxy", "false")
                 .build()
+        collectorRegistries << serviceRegistry
         def options = new MetadataBuilderImpl(
                 new MetadataSources(serviceRegistry)
         ).getMetadataBuildingOptions()

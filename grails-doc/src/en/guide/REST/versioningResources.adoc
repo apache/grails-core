@@ -118,7 +118,7 @@ Then update the list of acceptable response formats in your controller:
 
 [source,groovy]
 ----
-class BookController extends RestfulController {
+class BookController extends RestfulController<Book> {
     static responseFormats = ['json', 'xml', 'book', 'bookv2']
 
     // ...

@@ -1,0 +1,119 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+By default, this plugin renders the token in http://tools.ietf.org/html/rfc6750[RFC 6750 Bearer Token] format:
+
+[source,javascript]
+.Sample Access token response
+----
+HTTP/1.1 200 OK
+Content-Type: application/json;charset=UTF-8
+Cache-Control: no-store
+Pragma: no-cache
+
+{
+    "access_token":"eyJhbGciOiJIUzI1NiJ9...",
+    "token_type":"Bearer",
+    "username": "john.doe",
+    "roles": [
+        "ROLE_ADMIN",
+        "ROLE_USER"
+    ]
+}
+----
+
+[NOTE]
+====
+As per the RFC, `access_token` and `token_type` property names cannot be customised.
+====
+
+The JSON structure can be customised with the following configuration keys:
+
+.Token rendering configuration options
+[cols="80,20"]
+|===
+|*Config key*   |*Default value*
+
+|`grails.plugin.springsecurity.rest.token.rendering.usernamePropertyName`
+|`username`
+
+|`grails.plugin.springsecurity.rest.token.rendering.authoritiesPropertyName`
+|`roles`
+|===
+
+E.g., with the following configuration:
+
+[source,groovy]
+----
+grails.plugin.springsecurity.rest.token.rendering.usernamePropertyName = 'login'
+grails.plugin.springsecurity.rest.token.rendering.authoritiesPropertyName = 'permissions'
+----
+
+The output will look like:
+
+[source,javascript]
+----
+{
+    "access_token":"eyJhbGciOiJIUzI1NiJ9...",
+    "token_type":"Bearer",
+    "login": "john.doe",
+    "permissions": [
+        "ROLE_ADMIN",
+        "ROLE_USER"
+    ]
+}
+----
+
+[[rest-tokenRendering]]
+== Disabling bearer tokens support for full response customisation
+
+In order to fully customise the response, you need first to disable bearer tokens support by setting
+`grails.plugin.springsecurity.rest.token.validation.useBearerToken = false`. That will enable you to use this additional
+property:
+
+.Token rendering configuration options
+[cols="80,20"]
+|===
+|*Config key*   |*Default value*
+
+|`grails.plugin.springsecurity.rest.token.rendering.tokenPropertyName`
+|`access_token`
+|===
+
+[WARNING]
+====
+Disabling bearer token support impacts the way tokens are extracted from the HTTP request. Please, read carefully
+the chapter about token validation first.
+====
+
+If you want your own implementation, simply create a class implementing
+link:{grailsApiDocsUrl}grails/plugin/springsecurity/rest/token/rendering/AccessTokenJsonRenderer.html[AccessTokenJsonRenderer]
+and wire it up in `resources.groovy` with name `accessTokenJsonRenderer`.
+
+[NOTE]
+====
+The principal object stored in the security context, and passed to the JSON renderer, is coming from the configured
+authentication providers. In most cases, this will be a `UserDetails` object retrieved using the `userDetailsService` bean.
+
+If you want to render additional information in your JSON response, you have to:
+
+. Configure an alternative `userDetailsService` bean that retrieves the additional information you want, and put it in a principal object.
+
+. Configure an alternative `accessTokenJsonRenderer` that reads that information from the `restAuthenticationToken.principal` object.
+====

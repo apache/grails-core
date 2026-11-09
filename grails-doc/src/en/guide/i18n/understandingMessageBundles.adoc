@@ -29,3 +29,70 @@ Each bundle starts with the name `messages` by convention and ends with the loca
 * ...
 
 By default Grails looks in `messages.properties` for messages unless the user has specified a locale. You can create your own message bundle by simply creating a new properties file that ends with the locale you are interested in. For example `messages_en_GB.properties` for British English.
+
+==== Configuration
+
+Message resolution is Spring Boot's, so the standard `spring.messages.*` properties apply:
+
+[source,yaml]
+----
+spring:
+    messages:
+        encoding: UTF-8
+        cache-duration: 5s
+        fallback-to-system-locale: false
+        use-code-as-default-message: false
+----
+
+Grails sets `fallback-to-system-locale` to `false` and carries `grails.views.gsp.encoding` over to
+`spring.messages.encoding`, but an application may override either.
+
+You do not normally need to set `spring.messages.basename`. Grails records the bundles an application
+and each of its plugins ship at build time and composes the list for you. Setting it yourself is still
+supported and is the way to reach a bundle outside `grails-app/i18n` — anything you declare is kept and
+takes precedence over the discovered base names.
+
+==== Base names
+
+Every bundle needs a locale-independent file. `messages_de.properties` without `messages.properties`
+means Spring Boot's message-source auto-configuration never activates and the application has no
+message source at all, so the build rejects it.
+
+An application may use any base name, with one reservation: a base name ending in a valid locale
+identifier is ambiguous, because `api_fr.properties` reads as base name `api` in French. Declare the
+base name when you mean something else:
+
+[source,groovy]
+----
+grails {
+    i18n {
+        basenames = ['api', 'api_errors']
+    }
+}
+----
+
+==== Plugin bundles
+
+A plugin's base names must be its plugin name, or that name followed by a hyphen and a suffix — so the
+`spring-security-core` plugin may ship `spring-security-core.properties` and
+`spring-security-core-validation.properties`, but not `messages.properties`. Spring resolves a base name
+to the first matching resource on the classpath, so a shared base name would silently shadow another
+bundle rather than merge with it. The plugin build enforces this.
+
+Precedence runs application first, then plugins. Where several plugins define the same code, the
+reverse of Grails' plugin topological order wins, which is the behaviour applications had before Spring
+Boot owned the message source. An application's own bundle always overrides every plugin's, so
+redefining a plugin's code in `messages.properties` is the supported way to change it.
+
+Set `grails.i18n.include-plugin-bundles` to `false` to leave plugin bundles out entirely.
+
+==== Reloading during development
+
+Editing a value in an existing bundle is picked up without a restart. Grails contributes a short
+`spring.messages.cache-duration` automatically when reload is enabled; without one Spring caches every
+bundle for the lifetime of the application. Set the property yourself to override the duration.
+
+Adding a locale file for a base name that already exists resolves without a restart too, though the
+language selector described in <<changingLocales>> only lists it once the build has regenerated its
+metadata. Adding or removing a base name needs a restart: Spring Boot reads the configured base names
+once, when it builds the message source.

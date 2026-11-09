@@ -17,7 +17,7 @@ specific language governing permissions and limitations
 under the License.
 ////
 
-Grails has no default mechanism for authentication as it is possible to implement authentication in many different ways. It is however, easy to implement a simple authentication mechanism using link:theWebLayer.html#interceptors[interceptors]. This is sufficient for simple use cases but it's highly preferable to use an established security framework, for example by using the <<springSecurity,Spring Security>> or the <<shiro,Shiro>> plugin.
+Grails has no default mechanism for authentication as it is possible to implement authentication in many different ways. It is however, easy to implement a simple authentication mechanism using <<interceptors,interceptors>>. This is sufficient for simple use cases but it's highly preferable to use an established security framework, for example by using the <<springSecurity,Spring Security>> plugin.
 
 Interceptors let you apply authentication across all controllers or across a URI space. For example you can create a new set of filters in a class called `grails-app/controllers/SecurityInterceptor.groovy` by running:
 

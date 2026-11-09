@@ -1,0 +1,30 @@
+// A cli-owning module whose companion coordinate is customized (acme-tools instead of the
+// default custom-owner-cli). The cli variants must carry the advertised capability so in-build
+// consumers can require the customized coordinate.
+plugins {
+    id 'java-library'
+    id 'org.apache.grails.gradle.grails-plugin-cli'
+    id 'org.apache.grails.gradle.grails-publish'
+}
+
+group = 'org.example.test'
+
+cliArtifact {
+    artifactId = 'acme-tools'
+    defaultDependencies = false
+}
+
+dependencies {
+    cliApi project(path)
+}
+
+grailsPublish {
+    githubSlug = 'apache/grails-core'
+    license {
+        name = 'Apache-2.0'
+    }
+    title = 'Custom Owner'
+    desc = 'Test module whose cli companion coordinate is customized'
+    developers = [test: 'Test Developer']
+    testRepositoryPath = rootProject.layout.buildDirectory.dir('test-repo').get()
+}

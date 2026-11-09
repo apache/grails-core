@@ -37,7 +37,7 @@ public class GroovyDefTag extends GroovySyntaxTag {
         if (GrailsStringUtils.isBlank(expr)) {
             throw new GrailsTagException("Tag [" + TAG_NAME + "] missing required attribute [" + ATTRIBUTE_VALUE + "]", parser.getPageName(), parser.getCurrentOutputLineNumber());
         }
-        expr = calculateExpression(expr);
+        expr = groovyExpressionFor(expr);
 
         String var = attributes.get(ATTRIBUTE_VAR);
         if (GrailsStringUtils.isBlank(var)) {
@@ -59,8 +59,29 @@ public class GroovyDefTag extends GroovySyntaxTag {
         if (typeName.equals("def") || typeName.equals("Object")) {
             out.println(expr);
         } else {
-            out.println(typeName + ".cast(" + expr + ")");
+            // A Groovy cast rather than Class.cast, which only accepts what is already of the type
+            // and so rejects every conversion Groovy would otherwise have made. The expression is
+            // parenthesised because it is written by the page and may be a GString or an operation.
+            out.println("(" + typeName + ") (" + expr + ")");
         }
+    }
+
+    /**
+     * The Groovy an attribute value stands for.
+     *
+     * <p>The parser has already made it Groovy: a lone <code>${...}</code> arrives as the expression
+     * it holds, and anything else arrives quoted, as the GString or the string literal it is. Only
+     * the quoting a plain value carries is undone here, so that naming a variable still reads it.
+     */
+    private static String groovyExpressionFor(String value) {
+        String text = value.trim();
+        if (text.contains("${")) {
+            return text;
+        }
+        if ((text.startsWith("\"") && text.endsWith("\"")) || (text.startsWith("'") && text.endsWith("'"))) {
+            text = text.substring(1, text.length() - 1).trim();
+        }
+        return text;
     }
 
     public void doEndTag() {

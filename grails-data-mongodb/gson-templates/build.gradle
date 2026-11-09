@@ -25,6 +25,7 @@ plugins {
     id 'org.apache.grails.buildsrc.compile'
     id 'org.apache.grails.buildsrc.publish'
     id 'org.apache.grails.buildsrc.sbom'
+    id 'org.apache.grails.buildsrc.vulnerability-scan'
     id 'org.apache.grails.gradle.grails-code-style'
     id 'org.apache.grails.gradle.grails-jacoco'
 }
@@ -72,6 +73,9 @@ tasks.register('compileViews', JavaExec).configure {JavaExec it ->
 tasks.named('classes').configure {
     it.dependsOn 'compileViews'
 }
+// The views are compiled into the main classes directory, so every task that reads the main classes
+// directories (not only the ones wired through 'classes') must run after the views compile.
+sourceSets.main.output.classesDirs.builtBy('compileViews')
 
 apply {
     from rootProject.layout.projectDirectory.file('gradle/mongodb-test-config.gradle')

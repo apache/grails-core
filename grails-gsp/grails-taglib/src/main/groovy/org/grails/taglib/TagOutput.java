@@ -54,7 +54,7 @@ public class TagOutput {
             throw new GrailsTagException("Tag [" + tagName + "] does not exist. No corresponding tag library found.");
         }
 
-        boolean gspTagSyntaxCall = attrs instanceof GroovyPageAttributes && ((GroovyPageAttributes) attrs).isGspTagSyntaxCall();
+        boolean gspTagSyntaxCall = attrs instanceof GroovyPageAttributes && ((GroovyPageAttributes) attrs).gspTagSyntaxCall();
         if (!(attrs instanceof GroovyPageAttributes)) {
             attrs = new GroovyPageAttributes(attrs, false);
         }

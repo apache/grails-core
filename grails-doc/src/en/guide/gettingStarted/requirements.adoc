@@ -19,16 +19,19 @@ under the License.
 
 Before installing Grails you will need a Java Development Kit (JDK) installed with the minimum version denoted in the table below. Download the appropriate JDK for your operating system, run the installer, and then set up an environment variable called `JAVA_HOME` pointing to the location of this installation.
 
-We recommend https://bell-sw.com/pages/downloads/#jdk-17-lts[Liberica JDK 17 LTS] based on https://spring.io/quickstart[Spring's JDK recommendation].
+We recommend https://bell-sw.com/pages/downloads/#jdk-21-lts[Liberica JDK 21 LTS] based on https://spring.io/quickstart[Spring's JDK recommendation].
 
 [cols="1,1"]
 |===
 | Grails version | JDK version (minimum)
 
+| 8 | 21
 | 7 | 17
 | 6 | 11
 | 5 | 8
 |===
+
+Grails applications are built with https://gradle.org/[Gradle]. Gradle does not need to be installed separately: a generated application includes the Gradle wrapper (`gradlew`), which downloads the right Gradle version on first use. Grails {grailsMajorVersion} requires Gradle 9.7 or later and generates applications with Gradle {gradleVersion}.
 
 To automate the installation of Grails we recommend https://sdkman.io/[SDKMAN] which greatly simplifies installing and managing multiple Grails versions.
 

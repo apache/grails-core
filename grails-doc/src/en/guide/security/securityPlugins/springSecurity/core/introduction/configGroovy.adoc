@@ -1,0 +1,49 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+[[core-configGroovy]]
+== Configuration and Customization
+
+The Spring Security plugin's configuration is primarily managed within the `grails-app/conf/application.groovy` file, although an alternative is to house plugin configuration within `application.yml`. Default values are stored in the `grails-app/conf/DefaultSecurityConfig.groovy` file, with additional application-specific settings appended to `application.groovy` (or `application.yml`). This configuration structure involves merging default and custom values, giving precedence to application-specific settings.
+
+=== Environment-Specific Configuration
+
+This configuration approach accommodates environment-specific needs. For instance, during development, you might require less restrictive security rules compared to a production environment. To handle environment-specific parameters, utilize the `environments` block.
+
+=== Property Prefix and Overrides
+
+To distinguish these configuration properties from others in Grails or from different plugins, all the plugin-specific configuration properties begin with `grails.plugin.springsecurity`. When overriding these properties, ensure to use the `grails.plugin.springsecurity` prefix. For example:
+
+[source, groovy]
+----
+grails.plugin.springsecurity.password.algorithm = 'bcrypt'
+----
+
+=== Integration with CXF Grails Plugin
+
+If your application incorporates the CXF Grails plugin, it's crucial to arrange the dependencies correctly. Place the CXF dependency above the Spring Security plugin within the `dependencies` block, as shown below:
+
+[source,groovy,subs="+attributes"]
+----
+dependencies {
+    implementation 'org.grails.plugins:cxf:3.1.1'
+    // CXF above security.
+    implementation 'org.apache.grails:grails-spring-security'
+}
+----

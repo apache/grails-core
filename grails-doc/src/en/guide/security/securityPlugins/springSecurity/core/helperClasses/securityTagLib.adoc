@@ -1,0 +1,277 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+[[core-securityTagLib]]
+=== SecurityTagLib
+
+The plugin includes GSP tags to support conditional display based on whether the user is authenticated, and/or has the required role to perform a particular action. These tags are in the `sec` namespace and are implemented in `grails.plugin.springsecurity.SecurityTagLib`.
+
+==== ifLoggedIn
+Displays the inner body content if the user is authenticated.
+
+Example:
+
+[source,html]
+.Listing {counter:listing}. Example using `<sec:ifLoggedIn>`
+----
+<sec:ifLoggedIn>
+Welcome Back!
+</sec:ifLoggedIn>
+----
+
+==== ifNotLoggedIn
+Displays the inner body content if the user is not authenticated.
+
+Example:
+
+[source,html]
+.Listing {counter:listing}. Example using `<sec:ifNotLoggedIn>`
+----
+<sec:ifNotLoggedIn>
+<g:link controller='login' action='auth'>Login</g:link>
+</sec:ifNotLoggedIn>
+----
+
+==== ifAllGranted
+Displays the inner body content only if all of the listed roles are granted.
+
+Example:
+
+[source,html]
+.Listing {counter:listing}. Example using `<sec:ifAllGranted>`
+----
+<sec:ifAllGranted roles='ROLE_ADMIN,ROLE_SUPERVISOR'>
+...
+secure stuff here
+...
+</sec:ifAllGranted>
+----
+
+==== ifAnyGranted
+Displays the inner body content if at least one of the listed roles are granted.
+
+Example:
+
+[source,html]
+.Listing {counter:listing}. Example using `<sec:ifAnyGranted>`
+----
+<sec:ifAnyGranted roles='ROLE_ADMIN,ROLE_SUPERVISOR'>
+...
+secure stuff here
+...
+</sec:ifAnyGranted>
+----
+
+==== ifNotGranted
+Displays the inner body content if none of the listed roles are granted.
+
+Example:
+
+[source,html]
+.Listing {counter:listing}. Example using `<sec:ifNotGranted>`
+----
+<sec:ifNotGranted roles='ROLE_USER'>
+...
+non-user stuff here
+...
+</sec:ifNotGranted>
+----
+
+==== loggedInUserInfo
+Displays the value of the specified UserDetails property if logged in. For example, to show the username property:
+
+[source,html]
+.Listing {counter:listing}. Example using `<sec:loggedInUserInfo>`
+----
+<sec:loggedInUserInfo field='username'/>
+----
+
+If you have customized the UserDetails (e.g. with a custom UserDetailsService) to add a `fullName` property, you access it as follows:
+
+[source,html]
+.Listing {counter:listing}. Example using `<sec:loggedInUserInfo>` for a nonstandard property
+----
+Welcome Back <sec:loggedInUserInfo field='fullName'/>
+----
+
+[[core-taglib-username]]
+==== username
+Displays the value of the UserDetails `username` property if logged in.
+
+[source,html]
+.Listing {counter:listing}. Example using `<sec:username>`
+----
+<sec:ifLoggedIn>
+Welcome Back <sec:username/>!
+</sec:ifLoggedIn>
+<sec:ifNotLoggedIn>
+<g:link controller='login' action='auth'>Login</g:link>
+</sec:ifNotLoggedIn>
+----
+
+==== ifSwitched
+Displays the inner body content only if the current user switched from another user. (See also <<core-switchUser>>.)
+
+[source,html]
+.Listing {counter:listing}. Example using `<sec:ifSwitched>` and `<sec:ifNotSwitched>`
+----
+<sec:ifLoggedIn>
+Logged in as <sec:username/>
+</sec:ifLoggedIn>
+
+<sec:ifSwitched>
+    <form action='${request.contextPath}/logout/impersonate' method='POST'>
+        <input type='submit' value="Resume as ${grails.plugin.springsecurity.SpringSecurityUtils.switchedUserOriginalUsername}"/>
+    </form>
+</sec:ifSwitched>
+
+<sec:ifNotSwitched>
+
+   <sec:ifAllGranted roles='ROLE_SWITCH_USER'>
+
+   <form action='${request.contextPath}/login/impersonate'
+         method='POST'>
+
+      Switch to user: <input type='text' name='username'/><br/>
+
+      <input type='submit' value='Switch'/> </form>
+
+   </sec:ifAllGranted>
+
+</sec:ifNotSwitched>
+----
+
+==== ifNotSwitched
+Displays the inner body content only if the current user has not switched from another user.
+
+==== switchedUserOriginalUsername
+Renders the original user's username if the current user switched from another user.
+
+[source,html]
+.Listing {counter:listing}. Example using `<sec:switchedUserOriginalUsername>`
+----
+<sec:ifSwitched>
+    <form action='${request.contextPath}/logout/impersonate' method='POST'>
+        <input type='submit' value="Resume as ${grails.plugin.springsecurity.SpringSecurityUtils.switchedUserOriginalUsername}"/>
+    </form>
+</sec:ifSwitched>
+----
+
+==== access
+
+Renders the body if the specified expression evaluates to `true` or specified URL is allowed.
+
+[source,html]
+.Listing {counter:listing}. Example using `<sec:access>` with an expression
+----
+<sec:access expression="hasRole('ROLE_USER')">
+
+You're a user
+
+</sec:access>
+----
+
+[source,html]
+.Listing {counter:listing}. Example using `<sec:access>` with a URL
+----
+<sec:access url='/admin/user'>
+
+<g:link controller='admin' action='user'>Manage Users</g:link>
+
+</sec:access>
+----
+
+You can also guard access to links generated from controller and action names or named URL mappings instead of hard-coding the values, for example
+
+[source,html]
+.Listing {counter:listing}. Example using `<sec:access>` with a controller and action
+----
+<sec:access controller='admin' action='user'>
+
+<g:link controller='admin' action='user'>Manage Users</g:link>
+
+</sec:access>
+----
+
+or if you have a named URL mapping you can refer to that:
+
+[source,html]
+.Listing {counter:listing}. Example using `<sec:access>` with a URL mapping
+----
+<sec:access mapping='manageUsers'>
+
+<g:link mapping='manageUsers'>Manage Users</g:link>
+
+</sec:access>
+----
+
+For even more control of the generated URL (still avoiding hard-coding) you can use `createLink` to build the URL, for example
+
+[source,html]
+.Listing {counter:listing}. Example using `<sec:access>` with `<g:createLink>`
+----
+<sec:access url='${createLink(controller: 'admin', action: 'user', base: '/')}'>
+
+<g:link controller='admin' action='user'>Manage Users</g:link>
+
+</sec:access>
+----
+
+Be sure to include the `base: '/'` attribute in this case to avoid appending the context name to the URL.
+
+==== noAccess
+
+Renders the body if the specified expression evaluates to `false` or URL isn't allowed.
+
+[source,html]
+.Listing {counter:listing}. Example using `<sec:noAccess>`
+----
+<sec:noAccess expression="hasRole('ROLE_USER')">
+
+You're not a user
+
+</sec:noAccess>
+----
+
+==== link
+
+A wrapper around the standard Grails link tag that renders if the specified expression evaluates to `true` or URL is allowed.
+
+To define the expression to evaluate within the tag itself:
+
+[source,html]
+.Listing {counter:listing}. Example using `<sec:link>` with an expression
+----
+<sec:link controller='myController' action='myAction' expression="hasRole('ROLE_USER')">My link text</sec:link>
+----
+
+To use access controls defined, for example, in the interceptUrlMap:
+
+[source,html]
+.Listing {counter:listing}. Example using `<sec:link>` without an expression
+----
+<sec:link controller='myController' action='myAction'>My link text</sec:link>
+----
+
+By default, nothing will be rendered if the specified expression evaluates to `false` or URL is not allowed. To render only the text that would have been linked, set the `fallback` attribute:
+[source,html]
+.Listing {counter:listing}. Example using `<sec:link fallback='true'>` without an expression
+----
+<sec:link controller='myController' action='myAction' fallback='true'>This text will display but won't be linked if the user doesn't have access</sec:link>
+----

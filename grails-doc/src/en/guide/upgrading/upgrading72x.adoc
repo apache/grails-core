@@ -27,7 +27,7 @@ Grails 7.2 upgrades the SiteMesh 3 integration to a *filter-less* architecture. 
 
 ===== What Changed
 
-* The `SiteMeshFilter` servlet filter is no longer active. A `NoopSitemeshFilter` placeholder bean is registered under the `sitemesh` name to prevent SiteMesh's auto-configuration from activating the upstream filter-based integration.
+* The `SiteMeshFilter` servlet filter is no longer active. The filter-based integration only activates when `sitemesh.integration=filter` is set explicitly, so the two integrations are mutually exclusive by configuration.
 * Layout resolution and decoration are now handled by `Sitemesh3LayoutView` (a Spring `View`) and `CaptureAwareContentProcessor`.
 * GSP pages populate a `Sitemesh3CapturedPage` at render time via the `grailsLayout` capture tag library. SiteMesh no longer parses the raw HTML response to extract head/body/title.
 

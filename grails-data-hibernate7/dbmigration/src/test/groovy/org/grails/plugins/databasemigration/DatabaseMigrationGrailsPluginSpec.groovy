@@ -22,14 +22,15 @@ import org.springframework.transaction.TransactionDefinition
 import org.springframework.transaction.TransactionStatus
 
 import grails.core.GrailsApplication
-import grails.spring.BeanBuilder
 import liquibase.parser.ChangeLogParserFactory
 import org.grails.config.PropertySourcesConfig
 import org.grails.plugins.databasemigration.liquibase.GrailsLiquibase
 import org.grails.plugins.databasemigration.liquibase.GrailsLiquibaseFactory
 import org.grails.plugins.databasemigration.liquibase.GroovyChangeLogParser
+import org.springframework.beans.factory.support.BeanRegistryAdapter
 import org.springframework.context.ApplicationContext
 import org.springframework.context.ConfigurableApplicationContext
+import org.springframework.context.support.GenericApplicationContext
 import org.springframework.transaction.PlatformTransactionManager
 import spock.lang.Specification
 import spock.lang.Unroll
@@ -38,15 +39,15 @@ import javax.sql.DataSource
 
 class DatabaseMigrationGrailsPluginSpec extends Specification {
 
-    void "test doWithSpring registers beans"() {
+    void "test beanRegistrar registers beans"() {
         given:
-        DatabaseMigrationGrailsPlugin plugin = new DatabaseMigrationGrailsPlugin()
-        GrailsApplication application = Mock(GrailsApplication)
-        ApplicationContext applicationContext = Mock(ApplicationContext)
+        def plugin = new DatabaseMigrationGrailsPlugin()
+        def application = Mock(GrailsApplication)
+        def ctx = new GenericApplicationContext()
         application.getConfig() >> new PropertySourcesConfig()
-        
+
         plugin.setGrailsApplication(application)
-        plugin.setApplicationContext(applicationContext)
+        plugin.setApplicationContext(ctx)
 
         // Ensure GroovyChangeLogParser is in the factory for configureLiquibase()
         if (!ChangeLogParserFactory.instance.parsers.find { it instanceof GroovyChangeLogParser }) {
@@ -54,20 +55,23 @@ class DatabaseMigrationGrailsPluginSpec extends Specification {
         }
 
         when:
-        BeanBuilder bb = new BeanBuilder()
-        bb.beans plugin.doWithSpring()
-        ApplicationContext ctx = bb.createApplicationContext()
+        def registrar = plugin.beanRegistrar()
+        new BeanRegistryAdapter(ctx.defaultListableBeanFactory, ctx.environment, registrar.getClass()).register(registrar)
+        ctx.refresh()
 
         then:
         ctx.containsBean('grailsLiquibaseFactory')
         ctx.getBean('grailsLiquibaseFactory') instanceof GrailsLiquibase
+
+        cleanup:
+        ctx.close()
     }
 
     @Unroll
     void "test getDataSourceNames with config: #configMap"() {
         given:
-        DatabaseMigrationGrailsPlugin plugin = new DatabaseMigrationGrailsPlugin()
-        GrailsApplication application = Mock(GrailsApplication)
+        def plugin = new DatabaseMigrationGrailsPlugin()
+        def application = Mock(GrailsApplication)
         application.getConfig() >> new PropertySourcesConfig(configMap)
         plugin.setGrailsApplication(application)
 
@@ -110,9 +114,9 @@ class DatabaseMigrationGrailsPluginSpec extends Specification {
 
     void "test doWithApplicationContext skip when no updateOnStart"() {
         given:
-        DatabaseMigrationGrailsPlugin plugin = new DatabaseMigrationGrailsPlugin()
-        GrailsApplication application = Mock(GrailsApplication)
-        ApplicationContext applicationContext = Mock(ApplicationContext)
+        def plugin = new DatabaseMigrationGrailsPlugin()
+        def application = Mock(GrailsApplication)
+        def applicationContext = Mock(ApplicationContext)
         
         // Config with updateOnStart = false
         application.getConfig() >> new PropertySourcesConfig([
@@ -131,9 +135,9 @@ class DatabaseMigrationGrailsPluginSpec extends Specification {
 
     void "test doWithApplicationContext triggers update when updateOnStart is true"() {
         given:
-        DatabaseMigrationGrailsPlugin plugin = new DatabaseMigrationGrailsPlugin()
-        GrailsApplication application = Mock(GrailsApplication)
-        ConfigurableApplicationContext applicationContext = Mock(ConfigurableApplicationContext)
+        def plugin = new DatabaseMigrationGrailsPlugin()
+        def application = Mock(GrailsApplication)
+        def applicationContext = Mock(ConfigurableApplicationContext)
         
         application.getConfig() >> new PropertySourcesConfig([
             'grails.plugin.databasemigration.updateOnStart': true,
@@ -143,9 +147,9 @@ class DatabaseMigrationGrailsPluginSpec extends Specification {
         plugin.setGrailsApplication(application)
         plugin.setApplicationContext(applicationContext)
 
-        DataSource dataSource = Mock(DataSource)
-        PlatformTransactionManager transactionManager = Mock(PlatformTransactionManager)
-        GrailsLiquibase grailsLiquibase = Mock(GrailsLiquibase)
+        def dataSource = Mock(DataSource)
+        def transactionManager = Mock(PlatformTransactionManager)
+        def grailsLiquibase = Mock(GrailsLiquibase)
 
         applicationContext.getBean('dataSource', DataSource) >> dataSource
         applicationContext.getBean('transactionManager', PlatformTransactionManager) >> transactionManager
@@ -153,7 +157,7 @@ class DatabaseMigrationGrailsPluginSpec extends Specification {
         applicationContext.getBean('grailsLiquibaseFactory', GrailsLiquibase) >> grailsLiquibase
 
         // Mock PlatformTransactionManager and TransactionStatus
-        TransactionStatus transactionStatus = Mock(TransactionStatus)
+        def transactionStatus = Mock(TransactionStatus)
         transactionManager.getTransaction(_ as TransactionDefinition) >> transactionStatus
 
         // DatabaseMigrationTransactionManager uses applicationContext.getBean(beanName, PlatformTransactionManager)

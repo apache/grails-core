@@ -68,3 +68,7 @@ class UpperCaseNamingStrategy implements PhysicalNamingStrategy {
 ----
 
 TIP: Individual column or table names set explicitly in the `mapping` block always take precedence over what the naming strategy would produce.
+
+For a *unidirectional* `hasMany` (a collection with no `belongsTo` or reciprocal `hasMany` on the other side), the default foreign-key column that references the associated entity is derived from that entity's physical table name. Consequently, a custom strategy that changes a domain table name also changes that column. For example, given `static hasMany = [books: TBook]`, if the strategy maps `TBook` to the table `book`, the default foreign-key column is `book_id`, not `tbook_id`.
+
+This does not apply to a *bidirectional* many-to-many association: both of its join-table foreign-key columns are still derived from the class names, regardless of any `table` mapping or naming strategy. Applications upgrading from an earlier GORM version should account for the unidirectional case's schema change, or configure the join-table columns explicitly in the `mapping` block. See https://grails.apache.org/docs/latest/guide/single.html#_join_table_foreign_key_column_names[Join-Table Foreign-Key Column Names] in the upgrade guide for details and a migration example.

@@ -31,7 +31,10 @@ import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentP
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyEntityProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.util.OrderByClauseBuilder;
 
-/** Binds the order-by clause and discriminator where condition to a collection. */
+/**
+ * Binds the order-by clause to a collection, and the discriminator where condition to a one-to-many
+ * collection of a table-per-hierarchy subclass.
+ */
 public class HibernateToManyEntityOrderByBinder {
 
     private final OrderByClauseBuilder orderByClauseBuilder;
@@ -43,18 +46,15 @@ public class HibernateToManyEntityOrderByBinder {
         this.collectionForPropertyConfigBinder = new CollectionForPropertyConfigBinder();
     }
 
-    /** Binds the order-by clause and discriminator where condition to the given collection. */
+    /**
+     * Binds the order-by clause and, for a one-to-many collection of a table-per-hierarchy subclass,
+     * the discriminator where condition to the given collection.
+     */
     public void bind(HibernateToManyEntityProperty property) {
         Collection collection = property.getCollection();
         PersistentClass associatedClass = property.getAssociatedClass();
         GrailsHibernatePersistentEntity referenced = property.getHibernateAssociatedEntity();
 
-        if (referenced.isTablePerHierarchySubclass()) {
-            String discriminatorColumnName = referenced.getDiscriminatorColumnName();
-            Set<String> discSet = referenced.buildDiscriminatorSet();
-            String clause = String.join(",", discSet);
-            collection.setWhere(discriminatorColumnName + " in (" + clause + ")");
-        }
         if (property.hasSort()) {
             HibernatePersistentProperty sortBy = referenced.getHibernatePropertyByName(property.getSort());
             String order = Optional.ofNullable(property.getOrder()).orElse("asc");
@@ -64,6 +64,14 @@ public class HibernateToManyEntityOrderByBinder {
 
         if (!collection.isOneToMany()) {
             return;
+        }
+        // the where condition applies to the collection table, which only holds the discriminator
+        // column when the collection is mapped by a foreign key in the element's table
+        if (referenced.isTablePerHierarchySubclass()) {
+            String discriminatorColumnName = referenced.getDiscriminatorColumnName();
+            Set<String> discSet = referenced.buildDiscriminatorSet();
+            String clause = String.join(",", discSet);
+            collection.setWhere(discriminatorColumnName + " in (" + clause + ")");
         }
         OneToMany oneToMany = (OneToMany) collection.getElement();
         oneToMany.setAssociatedClass(associatedClass);

@@ -259,6 +259,12 @@ public boolean supportsEventType(Class<? extends ApplicationEvent> eventType) {
 
 The `AbstractPersistenceEvent` class has many subclasses (`PreInsertEvent`, `PostInsertEvent` etc.) that provide further information specific to the event. A `cancel()` method is also provided on the event which allows you to veto an insert, update or delete operation.
 
+GORM for Hibernate 7 also publishes a `PersistEvent` (`eventType` `Persist`) whenever an entity is persisted, whether explicitly through `save()` or by a cascade when the session flushes, and a `MergeEvent` (`eventType` `Merge`) whenever an entity is merged. Both are published before Hibernate performs the operation and cannot be cancelled; the exception is an
+application that registers a listener of its own for `merge` or `persist`, in which case that listener performs
+the operation and GORM's event is published after it. A `MergeEvent` carries the detached instance passed to the merge rather than the managed copy it produces, and neither event is published for an uninitialized proxy.
+
+GORM for Hibernate 5 publishes a `SaveOrUpdateEvent` (`eventType` `SaveOrUpdate`) when an entity is saved, and publishes no event for a merge. A listener that switches over every `eventType` and runs against either version should therefore handle all three values.
+
 Once you have created your event listener you need to register it. If you are using Spring this can be done via the `ApplicationContext`:
 
 [source,groovy]
@@ -408,3 +414,21 @@ autoTimestampEventListener.withoutTimestamps {
 ----
 
 WARNING: Because the timestamp handling is only disabled for the duration of the closure, you must flush the session during the closure execution!
+
+NOTE: The timestamp handling is only disabled for the thread executing the closure. Other threads persisting entities at the same time are unaffected and will continue to have their timestamps applied.
+
+If work inside the closure runs on other threads (for example an executor-based import), the suppression must be propagated to those threads explicitly. Capture the state with `captureTimestampSuppression` and apply it on the executing thread with `withTimestampSuppression`:
+
+[source,groovy]
+----
+autoTimestampEventListener.withoutTimestamps {
+    def suppression = autoTimestampEventListener.captureTimestampSuppression()
+    executor.submit {
+        autoTimestampEventListener.withTimestampSuppression(suppression) {
+            new Foo(dateCreated: new Date() - 2, lastUpdated: new Date() - 1).save(flush: true)
+        }
+    }.get()
+}
+----
+
+The captured state is immutable and may be applied on any number of threads, even after the capturing closure has completed.

@@ -19,28 +19,28 @@
 package grails.gorm.tests
 
 import grails.gorm.annotation.Entity
-import org.testcontainers.mariadb.MariaDBContainer
-import org.testcontainers.mysql.MySQLContainer
-import org.testcontainers.postgresql.PostgreSQLContainer
-import org.testcontainers.oracle.OracleContainer
 import org.testcontainers.spock.Testcontainers
+import spock.lang.IgnoreIf
 import spock.lang.Requires
 import spock.lang.Shared
 import spock.lang.Unroll
+
 
 @Testcontainers
 @Requires({ isDockerAvailable() })
 class RLikeHibernate7Spec extends HibernateGormDatastoreSpec {
 
-    @Shared postgres = new PostgreSQLContainer("postgres:16")
-    @Shared mysql = new MySQLContainer("mysql:8.0")
-    @Shared mariadb = new MariaDBContainer("mariadb:10.11")
-    @Shared oracle = new OracleContainer("gvenzl/oracle-free:slim-faststart")
+    @Shared postgres = DatabaseContainers.POSTGRES
+    @Shared mysql = DatabaseContainers.MYSQL
+    @Shared mariadb = DatabaseContainers.MARIADB
+    @Shared oracle = DatabaseContainers.ORACLE
+    @Shared db2 = DatabaseContainers.DB2
 
     void setupSpec() {
         manager.registerDomainClasses(RlikeFoo)
     }
 
+    @IgnoreIf({ data.db == 'DB2' && System.getProperty('os.arch') in ['aarch64', 'arm64'] })
     void "test rlike works with #db"() {
         given:
         if (container != null && !container.isRunning()) {
@@ -84,7 +84,8 @@ class RLikeHibernate7Spec extends HibernateGormDatastoreSpec {
         "Postgres"   | postgres
         "MySQL"      | mysql
         "MariaDB"    | mariadb
-        // "Oracle"     | oracle
+        "Oracle"     | oracle
+        "DB2"        | db2
     }
 }
 

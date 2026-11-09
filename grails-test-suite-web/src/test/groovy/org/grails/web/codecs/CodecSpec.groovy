@@ -23,6 +23,9 @@ import grails.converters.XML
 import grails.converters.JSON
 import grails.testing.web.GrailsWebUnitTest
 import org.grails.buffer.StreamCharBuffer
+import org.grails.encoder.CodecIdentifier
+import org.grails.encoder.DefaultCodecIdentifier
+import org.grails.encoder.Encoder
 import org.grails.plugins.codecs.JSONCodec
 import org.grails.plugins.codecs.XMLCodec
 import spock.lang.Issue
@@ -78,6 +81,14 @@ class CodecSpec extends Specification implements GrailsWebUnitTest {
             1.encodeAsXML() == '1' // convert primitives to string
             true.encodeAsXML() == 'true'
     }
+
+    void "mockCodec without lookup reinitialization configures codec methods"() {
+        when:
+            mockCodec(MockCodecWithoutLookupReinitializationCodec, false)
+
+        then:
+            'value'.encodeAsMockCodecWithoutLookupReinitialization() == 'mock:value'
+    }
     
     @Issue("GRAILS-11493")
     void "should XML object support encodeAsXML method and return itself"() {
@@ -118,7 +129,36 @@ class CodecSpec extends Specification implements GrailsWebUnitTest {
         public boolean equals(Object obj) {
             throw new RuntimeException("equals shouldn't be called")
         }
+    }
+
+    private static class MockCodecWithoutLookupReinitializationCodec implements Encoder {
+
+        private static final CodecIdentifier CODEC_IDENTIFIER = new DefaultCodecIdentifier('MockCodecWithoutLookupReinitialization')
+
+        @Override
+        CodecIdentifier getCodecIdentifier() {
+            CODEC_IDENTIFIER
         }
+
+        @Override
+        Object encode(Object value) {
+            "mock:${value}"
+        }
+
+        @Override
+        void markEncoded(CharSequence string) {
+        }
+
+        @Override
+        boolean isSafe() {
+            true
+        }
+
+        @Override
+        boolean isApplyToSafelyEncoded() {
+            false
+        }
+    }
     
     @Issue("GRAILS-11361")
     void "JSON converter should not use encoding state"() {

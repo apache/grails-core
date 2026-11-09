@@ -1,0 +1,2 @@
+org.springframework.context.ApplicationContextInitializer=\
+org.grails.datastore.gorm.mongodb.embedded.EmbeddedMongoInitializer

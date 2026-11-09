@@ -20,6 +20,7 @@ plugins {
     id 'org.apache.grails.buildsrc.properties'
     id 'org.apache.grails.buildsrc.dependency-validator'
     id 'org.apache.grails.buildsrc.compile'
+    id 'org.apache.grails.buildsrc.vulnerability-scan'
 }
 
 version = '0.1'
@@ -59,7 +60,6 @@ dependencies {
     implementation 'org.apache.grails:grails-events'
     implementation 'org.apache.grails:grails-data-hibernate5'
     implementation 'org.apache.grails:grails-views-gson'
-    console 'org.apache.grails:grails-console'
     profile 'org.apache.grails.profiles:rest-api'
     runtimeOnly 'com.h2database:h2'
     runtimeOnly 'org.apache.tomcat:tomcat-jdbc'

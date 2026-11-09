@@ -22,8 +22,6 @@ package org.grails.compiler.gorm
 import groovy.transform.CompilationUnitAware
 import groovy.transform.CompileStatic
 import org.codehaus.groovy.ast.ASTNode
-import org.codehaus.groovy.ast.AnnotatedNode
-import org.codehaus.groovy.ast.AnnotationNode
 import org.codehaus.groovy.ast.ClassNode
 import org.codehaus.groovy.control.CompilationUnit
 import org.codehaus.groovy.control.CompilePhase
@@ -45,26 +43,16 @@ import org.apache.grails.common.compiler.GroovyTransformOrder
 class DirtyCheckTransformation implements ASTTransformation, CompilationUnitAware, TransformWithPriority {
 
     private static final ClassNode MY_TYPE = new ClassNode(DirtyCheck)
-    private static final String MY_TYPE_NAME = '@' + MY_TYPE.getNameWithoutPackage()
 
     CompilationUnit compilationUnit
 
     @Override
     @CompileStatic
     void visit(ASTNode[] astNodes, SourceUnit source) {
-
-        AnnotatedNode parent = (AnnotatedNode) astNodes[1]
-        AnnotationNode node = (AnnotationNode) astNodes[0]
-
-        if (!(astNodes[0] instanceof AnnotationNode) || !(astNodes[1] instanceof AnnotatedNode)) {
-            throw new RuntimeException("Internal error: wrong types: ${node.getClass()} / ${parent.getClass()}")
-        }
-
-        if (!MY_TYPE.equals(node.getClassNode()) || !(parent instanceof ClassNode)) {
+        ClassNode cNode = LocalTransformationSupport.resolveAnnotatedClassOrNull(astNodes, MY_TYPE)
+        if (cNode == null) {
             return
         }
-
-        ClassNode cNode = (ClassNode) parent
 
         def dirtyCheckingTransformer = new DirtyCheckingTransformer()
         dirtyCheckingTransformer.compilationUnit = compilationUnit

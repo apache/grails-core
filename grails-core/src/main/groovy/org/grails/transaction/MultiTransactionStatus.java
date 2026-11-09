@@ -36,7 +36,7 @@ import org.springframework.util.Assert;
  * @author Oliver Gierke
  * @since 2.3.6
  */
-class MultiTransactionStatus implements TransactionStatus {
+public class MultiTransactionStatus implements TransactionStatus {
 
     private final PlatformTransactionManager mainTransactionManager;
     private final Map<PlatformTransactionManager, TransactionStatus> transactionStatuses = Collections

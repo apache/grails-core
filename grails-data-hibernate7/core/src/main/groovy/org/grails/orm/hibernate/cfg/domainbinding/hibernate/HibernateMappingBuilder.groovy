@@ -119,7 +119,7 @@ class HibernateMappingBuilder implements MappingConfigurationBuilder<Mapping, Pr
 
     void hibernateCustomUserType(Map<String, Object> args) {
         if (args.type && (args['class'] instanceof Class)) {
-            mapping.userTypes[(Class) args['class']] = args.type.toString()
+            mapping.userTypes[(Class) args['class']] = args.type
         }
     }
 

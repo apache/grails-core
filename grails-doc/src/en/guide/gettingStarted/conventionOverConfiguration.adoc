@@ -29,13 +29,13 @@ Grails adopts the "convention over configuration" approach to configure itself. 
 * `taglib` - link:theWebLayer.html#taglibs[Tag Libraries].
 * `utils` - Houses Grails-specific utilities.
 * `views` - link:theWebLayer.html#gsp[Groovy Server Pages (GSP)] or link:theWebLayer.html#gson[JSON Views] - Responsible for the "V" in MVC.
-* `commands` - link:commandLine.html#customCommands[Custom Grails Commands] - Create your own Grails CLI commands.
+* `commands` - <<creatingCustomCommands,Custom Grails Commands>> - Create your own Grails CLI commands.
 
 2.  `src/main/groovy` - Supporting Sources
 
 3.  `src/test/groovy` - link:testing.html[Unit Tests]
 
-4.  `src/integration-test/groovy` - link:testing.html#integrationTests[Integration Tests] - For testing Grails applications at the integration level.
+4.  `src/integration-test/groovy` - <<integrationTesting,Integration Tests>> - For testing Grails applications at the integration level.
 
 5.  `src/main/scripts` - link:commandLine.html[Code generation scripts].
 

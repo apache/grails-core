@@ -29,6 +29,7 @@ import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyEntit
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty
 import org.grails.orm.hibernate.cfg.domainbinding.util.BackticksRemover
 import org.grails.orm.hibernate.cfg.domainbinding.util.DefaultColumnNameFetcher
+import org.hibernate.FetchMode
 import org.hibernate.mapping.Bag
 import spock.lang.Subject
 
@@ -93,7 +94,7 @@ class ToManyEntityMultiTenantFilterBinderSpec extends HibernateGormDatastoreSpec
         collection.getFilters().isEmpty()
     }
 
-    def "bind does not add filter for ManyToMany even when associated entity is multi-tenant"() {
+    def "bind adds manyToMany filter for many-to-many to multi-tenant entity"() {
         given:
         def property = propertyFor(CMTBManyToManyOwner)
         def collection = new Bag(getGrailsDomainBinder().getMetadataBuildingContext(), null)
@@ -104,8 +105,23 @@ class ToManyEntityMultiTenantFilterBinderSpec extends HibernateGormDatastoreSpec
         binder.bind(property)
 
         then:
+        collection.getManyToManyFilters().any { it.getName() == GormProperties.TENANT_IDENTITY }
         collection.getFilters().isEmpty()
-        collection.getManyToManyFilters().isEmpty()
+    }
+
+    def "bind loads a many-to-many collection of a multi-tenant entity that is fetched by join eagerly with a select instead"() {
+        given:
+        def property = propertyFor(CMTBManyToManyOwner)
+        def collection = new Bag(getGrailsDomainBinder().getMetadataBuildingContext(), null)
+        property.setCollection(collection)
+        collection.setFetchMode(FetchMode.JOIN)
+
+        when:
+        binder.bind(property)
+
+        then:
+        collection.getFetchMode() == FetchMode.SELECT
+        !collection.isLazy()
     }
 
     def "bind does not add filter when associated entity is not multi-tenant"() {
@@ -121,6 +137,35 @@ class ToManyEntityMultiTenantFilterBinderSpec extends HibernateGormDatastoreSpec
         then:
         collection.getFilters().isEmpty()
         collection.getManyToManyFilters().isEmpty()
+    }
+
+    def "bind loads a collection of a multi-tenant entity that is fetched by join eagerly with a select instead"() {
+        given:
+        def property = propertyFor(CMTBBidirectionalOwner)
+        def collection = new Bag(getGrailsDomainBinder().getMetadataBuildingContext(), null)
+        property.setCollection(collection)
+        collection.setFetchMode(FetchMode.JOIN)
+
+        when:
+        binder.bind(property)
+
+        then:
+        collection.getFetchMode() == FetchMode.SELECT
+        !collection.isLazy()
+    }
+
+    def "bind keeps the fetch mode of a collection of an entity that is not multi-tenant"() {
+        given:
+        def property = propertyFor(CMTBNonTenantOwner)
+        def collection = new Bag(getGrailsDomainBinder().getMetadataBuildingContext(), null)
+        property.setCollection(collection)
+        collection.setFetchMode(FetchMode.JOIN)
+
+        when:
+        binder.bind(property)
+
+        then:
+        collection.getFetchMode() == FetchMode.JOIN
     }
 
     def "bind does nothing when associated entity is null (partially-resolved association)"() {

@@ -66,7 +66,11 @@ public class ApiDelegateTransformation implements ASTTransformation, TransformWi
             final ClassNode owner = fieldNode.getOwner();
             ClassNode supportedType = owner;
             if (value instanceof ClassExpression) {
-                supportedType = value.getType();
+                ClassNode valueType = value.getType();
+                // Only use the specified value if it's not the default Object.class
+                if (!valueType.getName().equals("java.lang.Object")) {
+                    supportedType = valueType;
+                }
             }
 
             GrailsASTUtils.addDelegateInstanceMethods(supportedType, owner, type, new VariableExpression(fieldNode.getName()), resolveGenericsPlaceHolders(supportedType), isNoNullCheck(), isUseCompileStatic());

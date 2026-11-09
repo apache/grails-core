@@ -66,13 +66,14 @@ public class TableForManyCalculator {
     public String getJoinTableSchema(HibernateToManyProperty property) {
         PropertyConfig config = property.getHibernateMappedForm();
         JoinTable joinTable = config.getJoinTable();
-        String owningTableSchema = property.getTable().getSchema();
 
         if (joinTable != null && joinTable.getSchema() != null) {
             return joinTable.getSchema();
         }
         String schemaName = NamespaceNameExtractor.getSchemaName(mappings);
-        return (schemaName == null) ? owningTableSchema : schemaName;
+        // Ask the owning entity directly: property.getTable() may already return the
+        // (partially built) collection table for a basic collection element at this point.
+        return (schemaName == null) ? property.getPersistentClass().getTable().getSchema() : schemaName;
     }
 
     public String getJoinTableCatalog(HibernateToManyProperty property) {
@@ -112,7 +113,6 @@ public class TableForManyCalculator {
 
         // Only proceed with association logic if it's an actual Association and has an associated
         // entity
-        //TODO Use Hibernate hierarchy
         if (!(property instanceof Association<?> association)) {
             throw new MappingException("Property [" + property.getName() +
                     "] is not an association and is not a basic type for table calculation.");

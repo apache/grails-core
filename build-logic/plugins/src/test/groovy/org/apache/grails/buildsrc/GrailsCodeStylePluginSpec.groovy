@@ -66,7 +66,7 @@ class Test{
         when: "running codenarcFix"
         def result = GradleRunner.create()
                 .withProjectDir(testProjectDir.toFile())
-                .withArguments('codenarcFix', '--stacktrace')
+                .withArguments('codenarcFix', '--stacktrace', '--configuration-cache')
                 .withPluginClasspath()
                 .build()
 
@@ -84,6 +84,47 @@ class Test{
         fixedContent.count('\n\n') == 3 // ConsecutiveBlankLines
     }
 
+    def "codenarcFix keeps fixing files when its configuration cache entry is reused"() {
+        given: "a file with a violation"
+        groovyFile.text = 'class Test{}\n'
+
+        and: "the default configuration files the plugin writes while the first build is configured"
+        runCodenarcFix()
+
+        when: "codenarcFix runs, a new violation appears, and it runs again"
+        def stored = runCodenarcFix()
+        groovyFile.text = 'class Test{\n    def semi = 1;\n}\n'
+        def reused = runCodenarcFix()
+
+        then: "the later build reuses the entry and still sees the current sources"
+        stored.output.contains('Configuration cache entry stored')
+        reused.output.contains('Configuration cache entry reused')
+        !groovyFile.text.contains(';')
+    }
+
+    private def runCodenarcFix() {
+        GradleRunner.create()
+                .withProjectDir(testProjectDir.toFile())
+                .withArguments('codenarcFix', '--stacktrace', '--configuration-cache')
+                .withPluginClasspath()
+                .build()
+    }
+
+    def "applying code style also registers code analysis"() {
+        given:
+        groovyFile.text = 'class Test {}'
+
+        when:
+        def result = GradleRunner.create()
+                .withProjectDir(testProjectDir.toFile())
+                .withArguments('tasks', '--group=verification')
+                .withPluginClasspath()
+                .build()
+
+        then:
+        result.output.contains('codeAnalysis')
+    }
+
     def "test codenarcFix task does not break strings with single quotes"() {
         given: "a file with double quoted strings containing single quotes"
         groovyFile.text = """package org.test
@@ -97,7 +138,7 @@ class Test {
         when: "running codenarcFix"
         def result = GradleRunner.create()
                 .withProjectDir(testProjectDir.toFile())
-                .withArguments('codenarcFix', '--stacktrace')
+                .withArguments('codenarcFix', '--stacktrace', '--configuration-cache')
                 .withPluginClasspath()
                 .build()
 
@@ -123,7 +164,7 @@ class Test {
         when: "running codenarcFix"
         def result = GradleRunner.create()
                 .withProjectDir(testProjectDir.toFile())
-                .withArguments('codenarcFix', '--stacktrace')
+                .withArguments('codenarcFix', '--stacktrace', '--configuration-cache')
                 .withPluginClasspath()
                 .build()
 
@@ -149,7 +190,7 @@ class Test {
         when: "running codenarcFix"
         def result = GradleRunner.create()
                 .withProjectDir(testProjectDir.toFile())
-                .withArguments('codenarcFix', '--stacktrace')
+                .withArguments('codenarcFix', '--stacktrace', '--configuration-cache')
                 .withPluginClasspath()
                 .build()
 
@@ -180,7 +221,7 @@ class Test {
         when: "running codenarcFix"
         def result = GradleRunner.create()
                 .withProjectDir(testProjectDir.toFile())
-                .withArguments('codenarcFix', '--stacktrace')
+                .withArguments('codenarcFix', '--stacktrace', '--configuration-cache')
                 .withPluginClasspath()
                 .build()
 
@@ -208,7 +249,7 @@ class Test {
         when: "running codenarcFix"
         def result = GradleRunner.create()
                 .withProjectDir(testProjectDir.toFile())
-                .withArguments('codenarcFix', '--stacktrace')
+                .withArguments('codenarcFix', '--stacktrace', '--configuration-cache')
                 .withPluginClasspath()
                 .build()
 

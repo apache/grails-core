@@ -36,17 +36,12 @@
             <groupId>io.micronaut.platform</groupId>
             <artifactId>micronaut-platform</artifactId>
             <type>pom</type>
-            <version>4.10.1</version>
+            <version>4.10.16</version>
         </dependency>
         <dependency>
             <groupId>org.grails.plugins</groupId>
             <artifactId>grails-web-console</artifactId>
             <version>7.0.0</version>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.grails</groupId>
-            <artifactId>grails-quartz</artifactId>
-            <version>4.0.0</version>
         </dependency>
         <dependency>
             <!-- Last released Feb 24, 2021 -->
@@ -63,11 +58,6 @@
             <groupId>com.gradleup.shadow</groupId>
             <artifactId>shadow-gradle-plugin</artifactId>
             <version>9.2.2</version>
-        </dependency>
-        <dependency>
-            <groupId>org.ysb33r</groupId>
-            <artifactId>webdriver-binaries</artifactId>
-            <version>4.0.0</version>
         </dependency>
         <dependency>
             <groupId>org.zeroturnaround</groupId>

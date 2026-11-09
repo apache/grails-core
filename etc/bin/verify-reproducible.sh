@@ -59,35 +59,14 @@ fi
 
 killall -e java || true
 
-# JDK 21 (default) pass: grails-gradle composite (no Micronaut island), root
-# (Micronaut island skipped), grails-forge composite (transitively pulls in
-# the root build via includeBuild('..'), island skipped there too).
 cd grails-gradle
 ./gradlew publishToMavenLocal --rerun-tasks -PskipTests --no-build-cache --no-daemon
 cd ..
-./gradlew publishToMavenLocal --rerun-tasks -PskipTests --no-build-cache --no-daemon -PskipMicronautProjects
+./gradlew publishToMavenLocal --rerun-tasks -PskipTests --no-build-cache --no-daemon
 cd grails-forge
-./gradlew publishToMavenLocal --rerun-tasks -PskipTests --no-build-cache --no-daemon -PskipMicronautProjects
+./gradlew publishToMavenLocal --rerun-tasks -PskipTests --no-build-cache --no-daemon
 cd ..
 
-# JDK 25 pass: the Grails-Micronaut "island" only (grails-micronaut,
-# grails-micronaut-bom). Micronaut 5 platform GA targets JVM 25 bytecode so
-# these two artifacts cannot be reproduced on JDK 21. The verification
-# container provides ${JDK_25_HOME}; for local verification outside the
-# container, install Liberica JDK matching $JAVA_VERSION_MICRONAUT in
-# release.yml and export JDK_25_HOME before running this script.
-if [[ -z "${JDK_25_HOME:-}" ]]; then
-  echo "❌ JDK_25_HOME is not set; the Grails-Micronaut island requires a separate Liberica JDK 25 install."
-  echo "   In the verification container this is set automatically. Outside the container, install Liberica JDK"
-  echo "   matching JAVA_VERSION_MICRONAUT in .github/workflows/release.yml and export JDK_25_HOME=/path/to/jdk."
-  exit 1
-fi
-killall -e java || true
-echo "Switching to JDK 25 at ${JDK_25_HOME} for the Micronaut island..."
-JAVA_HOME="${JDK_25_HOME}" PATH="${JDK_25_HOME}/bin:${PATH}" \
-  ./gradlew :grails-micronaut:publishToMavenLocal :grails-micronaut-bom:publishToMavenLocal \
-  --rerun-tasks -PskipTests --no-build-cache --no-daemon
-killall -e java || true
 echo "Generating Checksums for Built Jars"
 "${SCRIPT_DIR}/generate-build-artifact-hashes.groovy" "${DOWNLOAD_LOCATION}/grails" > "${DOWNLOAD_LOCATION}/grails/etc/bin/results/second.txt"
 if [ -e "${DOWNLOAD_LOCATION}/grails/etc/bin/results/second.txt" ] && [ ! -s "${DOWNLOAD_LOCATION}/grails/etc/bin/results/second.txt" ]; then
@@ -116,7 +95,9 @@ cd "${DOWNLOAD_LOCATION}/grails/etc/bin/results"
 echo "Checking for differences in checksums"
 # diff -u CHECKSUMS second.txt
 DIFF_RESULTS=$(comm -3 <(sort ../../../CHECKSUMS) <(sort second.txt) | cut -d' ' -f1 | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | grep -v '^$' | uniq | sort)
-echo "$DIFF_RESULTS" > diff.txt
+if [[ -n $DIFF_RESULTS ]]; then
+    printf '%s\n' "$DIFF_RESULTS"
+fi > diff.txt
 
 if [ -s diff.txt ]; then
   echo "Differences were found, diffing jar files ..."
@@ -131,6 +112,7 @@ if [ -s diff.txt ]; then
 
   : > diff_purged.txt  # Ensure the file exists and is empty
   while IFS= read -r jar_file; do
+      [[ -z "${jar_file//[[:space:]]/}" ]] && continue
       echo "Checking jar ${jar_file}..."
 
       echo "Extracting ${jar_file}"
@@ -151,6 +133,12 @@ if [ -s diff.txt ]; then
       java -jar vineflower.jar firstArtifact firstSource > /dev/null 2>&1
       java -jar vineflower.jar secondArtifact secondSource > /dev/null 2>&1
       echo "✅ Decompiled ${jar_file}"
+
+      # Annotation member order in class files is not semantically meaningful and Groovy
+      # emits it nondeterministically for annotations copied from precompiled classes
+      # (e.g. @DelegatesTo on trait methods), so canonicalize it before comparing
+      "${SCRIPT_DIR}/normalize_annotations.groovy" "firstSource" "secondSource"
+      echo "✅ Normalized annotation member order for ${jar_file}"
 
       set +e
       DIFF_RESULT=$(diff -r -q "firstSource" "secondSource")

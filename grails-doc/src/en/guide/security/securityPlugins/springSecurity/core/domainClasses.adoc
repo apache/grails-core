@@ -1,0 +1,43 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+[[core-domainClasses]]
+== Domain Classes
+
+By default the plugin uses regular Grails domain classes to access its required data. It's easy to create your own user lookup code though, which can access a database or any other source to retrieve user and authority data. See <<core-userDetailsService>> for how to implement this.
+
+To use the standard user lookup you'll need at a minimum a "`person`" and an "`authority`" domain class. In addition, if you want to store URL pass:[&lt;==&gt;] Role mappings in the database (this is one of multiple approaches for defining the mappings) you need a "`requestmap`" domain class. If you use the recommended approach for mapping the many-to-many relationship between "`person`" and "`authority`", you also need a domain class to map the join table.
+
+To use the user/group lookup you'll also need a "`group`" domain class. If you are using the recommended approach for mapping many-to-many relationship between "`person`" and "`group`" and between "`group`" and "`authority`" you'll need a domain class for each to map the join tables. You can still additionally use "`requestmap`" with this approach.
+
+The <<core-s2-quickstart>> script creates initial domain classes for you. You specify the package and class names, and it creates the corresponding domain classes. After that you can customize them as you like. You can add additional properties, methods, and so on, as long as the core security-related functionality remains.
+
+include::domainClasses/personClass.adoc[]
+
+include::domainClasses/authorityClass.adoc[]
+
+include::domainClasses/personAuthorityClass.adoc[]
+
+include::domainClasses/authorityGroupClass.adoc[]
+
+include::domainClasses/personAuthorityGroupClass.adoc[]
+
+include::domainClasses/authorityGroupAuthorityClass.adoc[]
+
+include::domainClasses/requestmapClass.adoc[]

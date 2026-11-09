@@ -17,31 +17,196 @@ specific language governing permissions and limitations
 under the License.
 ////
 
+== External configuration and secrets
 
+Select the Grails production environment with `-Dgrails.env=prod` when starting Java.
+Grails environments and Spring profiles are distinct mechanisms; setting `SPRING_PROFILES_ACTIVE=prod` alone is not a substitute for selecting the Grails environment.
+Keep database credentials, signing keys, and certificates outside the release artifact and image.
 
-=== Setting up HTTPS and SSL certificates for standalone deployment
+For a standalone archive or container, Spring Boot can load an additional directory containing `application.yml` or `application.properties`:
 
+[source,bash]
+----
+java -Dgrails.env=prod -jar application.jar \
+    --spring.config.additional-location=file:/etc/myapp/
+----
 
-To configure an SSL certificate and to listen on an HTTPS port instead of HTTP, add properties like these to `application.yml`:
+`spring.config.additional-location` adds to the default search locations; `spring.config.location` replaces them.
+The trailing slash identifies a directory. This example fails at startup if the location is missing; add `optional:` only for configuration that really is optional.
+In the container examples, mount configuration read-only at `/etc/myapp/` and set `SPRING_CONFIG_ADDITIONAL_LOCATION=file:/etc/myapp/`.
+Do not mount over `/application`, which contains the extracted application and its dependencies.
+
+For Grails-specific Groovy configuration files, see link:conf.html#externalConfiguration[external configuration] and `grails.config.locations`.
+That mechanism skips missing locations, so it should not be relied on to enforce the presence of required secrets.
+Test the effective configuration in the packaged application, especially when combining Spring properties with Grails environment-specific blocks.
+
+For example, a GORM application can refer to deployment-provided values explicitly in `grails-app/conf/application.yml`:
+
+[source,yaml]
+----
+environments:
+    production:
+        dataSource:
+            dbCreate: none
+            url: ${JDBC_URL}
+            username: ${JDBC_USERNAME}
+            password: ${JDBC_PASSWORD}
+----
+
+Also configure the database driver and its runtime dependency for the chosen database.
+Supply the values through your platform's secret management; do not commit a populated environment file or bake it into an image.
+Prefer mounted secret files where available. Spring Boot supports `spring.config.import=configtree:/run/secrets/` to expose file names as property names and their contents as values, which application configuration can reference with placeholders.
+Use read-only mounts and permissions that allow the runtime user to read the required files. Environment variables and JVM options can appear in process inspection or diagnostic output; do not log their contents.
+
+Apply versioned database migrations as a coordinated release step. Do not use `create`, `create-drop`, or automatic schema `update` as a production migration strategy.
+Plan schema changes to support both old and new application versions during a rolling deployment and rollback.
+Budget connection pools across all replicas, including temporarily overlapping replicas during rollout.
+
+== Memory, storage, and logging
+
+For the manual Dockerfile, set a container memory limit and tune `-Xmx` or `-XX:MaxRAMPercentage` against that limit.
+Modern supported JVMs detect container limits by default; adding `-XX:+UseContainerSupport` is normally unnecessary.
+Heap is only part of total memory: allow space for metaspace, code cache, direct buffers, thread stacks, native libraries, monitoring agents, and memory-backed temporary files.
+A container can be killed for exceeding its limit even if the Java heap has not run out of memory.
+Measure resident memory and GC behavior under load rather than copying a fixed heap percentage between applications.
+
+`JAVA_TOOL_OPTIONS` is read by the JVM and works with the exec-form entry point in the Dockerfile.
+`JAVA_OPTS` has no automatic meaning to `java`, and Docker does not expand variables inside an exec-form entry point.
+For a buildpack image, preserve the launcher and use the buildpack's memory configuration, as described in <<deploymentLayeredBuilds,Cloud Native Buildpacks>>.
+
+Write application logs to standard output and standard error for the service manager or container platform to collect, with platform-managed retention.
+Keep uploads and durable data in external storage or persistent volumes; an image's writable layer and `/tmp` are disposable.
+Configure writable paths explicitly when using a read-only root filesystem.
+Heap dumps and other diagnostics need a writable destination with sufficient space and controlled access.
+Keep JVM debugging and management interfaces private; they should not be exposed through the application's public ingress.
+
+== Graceful shutdown and rolling updates
+
+Spring Boot 4.1 enables graceful shutdown by default for supported embedded web servers.
+The following configuration makes the intent explicit and sets the timeout per shutdown phase:
+
+[source,yaml]
+----
+server:
+    shutdown: graceful
+spring:
+    lifecycle:
+        timeout-per-shutdown-phase: 30s
+----
+
+The container entry point must forward termination signals to Java. The Dockerfile uses exec form so Java is PID 1 and receives `SIGTERM` directly.
+If a startup script is needed, finish it with `exec java ...`. If the application spawns child processes, consider the runtime's init support (such as `docker run --init`) for signal forwarding and child reaping.
+
+Allow the platform longer than the application's shutdown work before it sends `SIGKILL`. For example, stop a locally running Docker container from another terminal with:
+
+[source,bash]
+----
+docker stop -t 60 myapp
+----
+
+The timeout is per Spring lifecycle phase, not a global upper bound. Allow for all phases, background jobs, and load-balancer draining when setting the service manager's stop timeout or Kubernetes `terminationGracePeriodSeconds`.
+If using a Kubernetes `preStop` hook to allow endpoint removal to propagate, its execution also consumes the termination grace period.
+Test termination with in-flight requests through the actual ingress, including long-running or streaming requests.
+
+Run scheduled jobs and message consumers with a defined shutdown and multi-replica strategy.
+Keep HTTP sessions outside the process when they must survive rescheduling, or explicitly design for their loss. Sticky routing alone does not preserve sessions when a replica disappears.
+
+== Health probes
+
+Use separate startup, liveness, and readiness probes when deploying to an orchestrator.
+If the application does not already include Spring Boot Actuator, add its Grails-managed dependency:
 
 [source,groovy]
 ----
-server:
-    port: 8443                                             # The port to listen on
-    ssl:
-        enabled: true                                      # Activate HTTPS mode on the server port
-        key-store: <the-location-of-your-keystore>         # e.g. /etc/tomcat7/keystore/tomcat.keystore
-        key-store-password: <your-key-store-password>      # e.g. changeit
-        key-alias: <your-key-alias>                        # e.g. tomcat
-        key-password: <usually-the-same-as-your-key-store-password>
+dependencies {
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
+}
 ----
 
-These settings control the embedded Tomcat container for a production deployment. Alternatively, the properties can be specified on the command-line. Example: `-Dserver.ssl.enabled=true -Dserver.ssl.key-store=/path/to/keystore`.
+Merge these settings into `application.yml`:
 
-NOTE: Configuration of both an HTTP and HTTPS connector via application properties is not supported. If you want to have both, then you'll need to configure one of them programmatically. (More information on how to do this can be found in the how-to guide below.)
+[source,yaml]
+----
+management:
+    endpoints:
+        web:
+            exposure:
+                include: health
+    endpoint:
+        health:
+            show-details: never
+            probes:
+                enabled: true
+                add-additional-paths: true
+----
 
-There are other relevant settings. Further reference:
+Spring Boot 4.1 enables the `liveness` and `readiness` health groups by default. The configuration makes that explicit and additionally exposes `/livez` and `/readyz` on the main server port as well as the Actuator health-group paths.
+Probing the main port avoids a separately hosted management server reporting success while the application connector is unavailable.
+Allow the probe requests through the application's security rules without a login redirect, and restrict probe access at the network or ingress layer as appropriate.
+Do not expose all Actuator endpoints to make a health check work.
 
-* https://docs.spring.io/spring-boot/docs/current/reference/html/howto.html#howto-configure-ssl[Spring Boot: Embed Webservers - Configure SSL]
-* https://docs.spring.io/spring-boot/docs/current/reference/html/howto.html#howto-enable-multiple-connectors-in-tomcat[Spring Book: Enable Multiple Connectors with Tomcat]
-* https://docs.spring.io/spring-boot/docs/current/reference/html/common-application-properties.html[Spring Boot: Common Application Properties]
+For example, the following is a Kubernetes Pod-spec fragment (the `spec.template.spec` portion of a Deployment), assuming the default root context path and HTTP on port 8080:
+
+[source,yaml]
+----
+terminationGracePeriodSeconds: 60
+containers:
+    - name: myapp
+      image: registry.example.com/team/myapp:0.1
+      ports:
+          - name: http
+            containerPort: 8080
+      startupProbe:
+          httpGet:
+              path: /livez
+              port: http
+          periodSeconds: 5
+          failureThreshold: 60
+          timeoutSeconds: 2
+      livenessProbe:
+          httpGet:
+              path: /livez
+              port: http
+          periodSeconds: 10
+          timeoutSeconds: 2
+      readinessProbe:
+          httpGet:
+              path: /readyz
+              port: http
+          periodSeconds: 5
+          timeoutSeconds: 2
+----
+
+Replace the illustrative tag with the tested image digest for release deployment, and add resource requests/limits, configuration, secret mounts, and security context appropriate to the application.
+Adjust paths and schemes if using a context path or HTTPS. The startup probe allows up to five minutes here before restarts; tune that budget from measured startup times.
+Kubernetes defers liveness and readiness probes until the startup probe succeeds. A failing readiness probe removes the replica from service traffic; a failing liveness probe restarts it.
+
+Do not make liveness depend on the database, a remote API, or another shared service: an outage can otherwise cause every application instance to restart.
+Spring Boot's readiness group does not include external dependencies by default. Include only checks that should prevent that instance from receiving requests, and consider what happens if every replica becomes unready during a shared dependency outage.
+Validate that probes return the intended status rather than a security redirect or a generic application page.
+See the link:{springBootReference}actuator/endpoints.html#actuator.endpoints.kubernetes-probes[Spring Boot Kubernetes probes reference].
+
+== HTTPS and reverse proxies
+
+Many deployments terminate TLS at a reverse proxy or ingress. Keep certificate renewal there and restrict direct access to the application port.
+Configure forwarded-header handling only for a trusted proxy path, and have the boundary proxy remove untrusted client-supplied `Forwarded` and `X-Forwarded-*` headers.
+Choose `server.forward-headers-strategy=NATIVE` for supported embedded-container handling or `FRAMEWORK` for Spring's handling, according to your proxy's headers and trust configuration.
+Test redirects, absolute URLs, secure cookies, and client-address handling through that proxy. See the link:{springBootHowTo}webserver.html#howto.webserver.use-behind-a-proxy-server[Spring Boot proxy guidance].
+
+To terminate TLS in the embedded server instead, merge settings such as these into `application.yml` and mount the keystore read-only:
+
+[source,yaml]
+----
+server:
+    port: 8443
+    ssl:
+        enabled: true
+        key-store: file:/run/secrets/application.p12
+        key-store-type: PKCS12
+        key-store-password: ${TLS_KEYSTORE_PASSWORD}
+        key-alias: application
+----
+
+Provide the password at runtime and adapt the alias to the keystore. These properties configure the embedded server, not an external servlet container.
+Properties alone do not create simultaneous HTTP and HTTPS connectors; an additional connector requires programmatic configuration.
+See the link:{springBootHowTo}webserver.html#howto.webserver.configure-ssl[Spring Boot SSL guidance], link:{springBootReference}features/ssl.html[SSL bundles], and link:{springBootHowTo}webserver.html#howto.webserver.enable-multiple-connectors.tomcat[multiple Tomcat connectors].

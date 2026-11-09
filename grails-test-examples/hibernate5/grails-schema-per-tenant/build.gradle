@@ -24,6 +24,7 @@ plugins {
     id 'org.apache.grails.gradle.grails-gsp'
     id 'cloud.wondrify.asset-pipeline'
     id 'org.apache.grails.buildsrc.compile'
+    id 'org.apache.grails.buildsrc.vulnerability-scan'
 }
 
 version = projectVersion
@@ -56,6 +57,7 @@ dependencies {
     runtimeOnly 'org.springframework.boot:spring-boot-starter-logging'
     runtimeOnly 'org.springframework.boot:spring-boot-starter-tomcat'
 
+    testImplementation testFixtures('org.apache.grails.web:grails-web-common')
     testImplementation 'org.apache.grails.testing:grails-testing-support-core'
 }
 

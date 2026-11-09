@@ -61,5 +61,6 @@ Attributes
 * `titleKey` (optional) - title key to use for the column, resolved against the message source
 * `params` (optional) - a Map containing request parameters
 * `action` (optional) - the name of the action to use in the link; if not specified the `list` action will be used
+* `namespace` (optional) - the namespace of the controller to use in the link. If omitted, the namespace is inferred from the target controller; you only need to set it when more than one controller shares the name. Use `namespace=""` to target a non-namespaced controller.
 * `mapping` (optional) - The link:{guidePath}/theWebLayer.html#namedMappings[named URL mapping] to use to rewrite the link
 

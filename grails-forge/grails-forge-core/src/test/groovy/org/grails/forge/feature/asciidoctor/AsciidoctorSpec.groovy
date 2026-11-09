@@ -79,4 +79,14 @@ class AsciidoctorSpec extends ApplicationContextSpec implements CommandOutputFix
 """)
     }
 
+    void "asciidoctor tasks run without the configuration cache instead of failing it"() {
+        given:
+        final def output = generate(ApplicationType.WEB, new Options(DevelopmentReloading.DEVTOOLS), ["asciidoctor"])
+        final def asciidocGradle = output["gradle/asciidoc.gradle"]
+
+        expect:
+        asciidocGradle.contains("""tasks.named('asciidoctor') {
+    notCompatibleWithConfigurationCache('The Asciidoctor Gradle plugin does not support the configuration cache')
+}""")
+    }
 }

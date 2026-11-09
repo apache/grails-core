@@ -1,0 +1,10 @@
+${packageDeclaration}
+
+import grails.plugin.springsecurity.acl.AclClass
+
+class AclClassController extends grails.plugin.springsecurity.ui.AclClassController {
+
+	protected String lookupClassName() { AclClass.name }
+
+	protected Class<?> lookupClass() { AclClass }
+}
