@@ -1,0 +1,20 @@
+A6	Hibernate 5 ignores an alias on a nested path whose parent has no alias when nothing uses it, and fails when something does, so it is no reference
+A7	Hibernate 5 ignores an alias on a nested path whose parent has no alias when nothing uses it, and fails when something does, so it is no reference
+B10	Hibernate 5 ignores the join type given to an association block; Hibernate 7 keeps it
+B11	Hibernate 5 ignores the join type given to an association block; Hibernate 7 keeps it
+A2+B8	an association block joins its association with an inner join, so a team without likes does not match a test on a like (Hibernate 5 matches it)
+A9+B9	an association block joins its association with an inner join, so a team without a favorite does not match a test on its favorite (Hibernate 5 matches it)
+A4+B5	Hibernate 5 returns other rows for a detached criteria or a subquery than for the same criteria on the root, so it is no reference
+A4+B6	Hibernate 5 returns other rows for a detached criteria or a subquery than for the same criteria on the root, so it is no reference
+A8+A1+B5	Hibernate 5 returns other rows for a detached criteria or a subquery than for the same criteria on the root, so it is no reference
+A8+A4+B6	Hibernate 5 returns other rows for a detached criteria or a subquery than for the same criteria on the root, so it is no reference
+A8+B5	Hibernate 5 returns other rows for a detached criteria or a subquery than for the same criteria on the root, so it is no reference
+A8+B6	Hibernate 5 returns other rows for a detached criteria or a subquery than for the same criteria on the root, so it is no reference
+A8+B6+A4	Hibernate 5 returns other rows for a detached criteria or a subquery than for the same criteria on the root, so it is no reference
+B1+B4+B6	Hibernate 5 returns other rows for a detached criteria or a subquery than for the same criteria on the root, so it is no reference
+B13+A1	Hibernate 5 returns other rows for a detached criteria or a subquery than for the same criteria on the root, so it is no reference
+B13+B6+A1	Hibernate 5 returns other rows for a detached criteria or a subquery than for the same criteria on the root, so it is no reference
+B4+B5	Hibernate 5 returns other rows for a detached criteria or a subquery than for the same criteria on the root, so it is no reference
+B4+B6	Hibernate 5 returns other rows for a detached criteria or a subquery than for the same criteria on the root, so it is no reference
+B7+B5	Hibernate 5 returns other rows for a detached criteria or a subquery than for the same criteria on the root, so it is no reference
+B7+B6	Hibernate 5 returns other rows for a detached criteria or a subquery than for the same criteria on the root, so it is no reference

@@ -4893,13 +4893,30 @@ With `DISCRIMINATOR` multi-tenancy, GORM for MongoDB, GORM for Neo4j and GORM's 
 As of Grails 8.0.1, and 7.0.18 on the 7.0.x line, the lists of bindable properties that Grails generates for a class at compile time, from its statically typed properties, its `bindable` constraints, its `transients` list and its `transient` fields, are generated for every class that implements `grails.validation.Validateable` or declares `constraints` or `transients`, and for every class that extends one, wherever the class is compiled with the data binding library, `grails-web-databinding`, on the compilation's classpath, as it is in an application or a plugin. A library module that compiles against GORM alone generates no lists and gets no warning. Previously only domain classes and the parameter types of controller actions compiled with their controller got them, and in the permissive mode a class without them was bound without restriction.
 
 * A command object compiled apart from the controller that binds it, in a plugin or in a shared module, a `Validateable` object bound as a nested property, and a command object declared inside another class are now bound by their `bindable` constraints and their `transients`, like a command object compiled with its controller. As a consequence, in the permissive mode their dynamically typed properties, declared with `def` or as `Object`, are no longer bound by default. Declare a type for such a property, or mark it `bindable: true`.
+* A GORM entity compiled outside `grails-app/domain`, such as an `@Entity` class in `src/main/groovy` or in a shared module, now gets the lists a domain class in `grails-app/domain` gets, as GORM declares a `transients` list on every entity, and is bound by the same rules. In particular, `bindData` no longer binds its `id`, `version`, `dateCreated` and `lastUpdated`. Previously, in the permissive mode, such a class was bound without restriction, its `id` and `version` included.
 * A class compiled against an already compiled parent takes the parent's bindable properties from the compiled parent. When the parent was compiled by an earlier version of Grails, or without the data binding library on its compile classpath, the compiler warns that the lists of the subclass are derived from the parent's bytecode and asks for the parent to be recompiled. Recompile the plugin or module that holds the parent with Grails 8.0.1 or later, or 7.0.18 or later, to clear the warning.
 * A property of type `org.springframework.validation.Errors`, such as the `errors` property of a domain class or of a `Validateable` object, is never bound from request data, whatever a generated list names.
 * `bindData` with an `exclude` list, including the `bindData(target, source, List excludes)` overloads, keeps the generated list in effect in the permissive mode too and removes the excluded properties from it. Previously, in the permissive mode, an `exclude` list without an `include` list set the generated list aside, so that only the excluded properties were kept out.
 * A class that gets the lists now carries them as new `public static final` fields. A class that implements `Serializable` without declaring a `serialVersionUID`, such as a `Validateable` object kept in a persisted HTTP session or in a distributed cache, therefore gets a new default `serialVersionUID`, and instances serialized before the upgrade do not deserialize after it. Declare a `serialVersionUID` on such a class.
 * A controller compiled against a command object that was compiled without the lists, by an earlier version of Grails or without the data binding library, warns that the command object is bound without restriction and should be recompiled.
 
-==== 90. GORM for Neo4j: `isNull` and `isNotNull` on an association test the relationship
+==== 90. An Exception Mapping Matches the Exception That Was Thrown Before Its Root Cause
+
+As of Grails 8.0.1, a `"500"` mapping that names an exception is matched against the exception that was thrown first and its root cause second, both when the error handler is chosen and when the request is routed to it. The routing used to look only at the root cause.
+
+* A mapping that names an exception with a cause of its own now answers it, where the mapping without an exception answered before.
+* Where the exception and its root cause each match a mapping, the mapping for the exception now answers. With the mappings below, a `DataAccessException` caused by a `SQLException` used to go to `database`, and now goes to `runtime`:
++
+[source,groovy]
+----
+"500"(controller: 'errors', action: 'database', exception: SQLException)
+"500"(controller: 'errors', action: 'runtime', exception: RuntimeException)
+----
++
+To keep sending it to `database`, map `DataAccessException` there as well, declared after the mapping for `RuntimeException`: where several mappings match an exception, the one declared last answers. That sends every `DataAccessException` there, not only one caused by a `SQLException`.
+* For an exception that Groovy or Grails wrapped, the `cause` of `request.exception` in the error handler is now the exception the action threw rather than its root cause.
+
+==== 91. GORM for Neo4j: `isNull` and `isNotNull` on an association test the relationship
 
 An association is stored as a relationship, not as a property of the node. A null test on it used to compare a node property that does not exist, so `isNull` on an association matched every instance and `isNotNull` matched none. Now `isNull` matches the instances without the relationship and `isNotNull` the instances with it. A plain property, an embedded component, a basic collection and the ends of a relationship entity are tested as before.
 
