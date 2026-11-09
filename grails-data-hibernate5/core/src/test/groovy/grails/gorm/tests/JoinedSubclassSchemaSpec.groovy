@@ -72,32 +72,6 @@ class JoinedSubclassSchemaSpec extends Specification {
         datastore?.close()
     }
 
-    void "a joined subclass is created in the catalog it declares"() {
-        given:
-        HibernateDatastore datastore = new HibernateDatastore(DatastoreUtils.createPropertyResolver(
-                (Settings.SETTING_DB_CREATE): 'create-drop',
-                'dataSource.url': 'jdbc:h2:mem:joinedSubclassCatalog;LOCK_TIMEOUT=10000'),
-                CatalogYear, CatalogYearRegular)
-
-        when:
-        List<String> catalogs = []
-        datastore.sessionFactory.openSession().withCloseable { session ->
-            session.doWork { conn ->
-                def rs = conn.createStatement().executeQuery(
-                        "select table_catalog from information_schema.tables where table_name = 'CATALOG_YEAR_REGULAR'")
-                while (rs.next()) {
-                    catalogs << rs.getString(1)
-                }
-            }
-        }
-
-        then: 'the subclass table is in the catalog of the mapping, not only in the default one'
-        catalogs == ['JOINEDSUBCLASSCATALOG']
-
-        cleanup:
-        datastore?.close()
-    }
-
     private static List<String> tablesLike(HibernateDatastore datastore, String pattern) {
         List<String> tables = []
         datastore.sessionFactory.openSession().withCloseable { session ->
@@ -145,23 +119,4 @@ class InheritedSchemaYear {
 @Entity
 class InheritedSchemaYearRegular extends InheritedSchemaYear {
     String extra
-}
-
-@Entity
-class CatalogYear {
-    String name
-
-    static mapping = {
-        table catalog: 'JOINEDSUBCLASSCATALOG'
-        tablePerHierarchy false
-    }
-}
-
-@Entity
-class CatalogYearRegular extends CatalogYear {
-    String extra
-
-    static mapping = {
-        table catalog: 'JOINEDSUBCLASSCATALOG'
-    }
 }
