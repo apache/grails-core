@@ -38,6 +38,7 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManag
         manager.domainClasses.addAll([Club, Team, Player, Contract, AssociationSortLeague, AssociationSortEmployee, AssociationSortDepartment,
                                       AssociationSortSquad, AssociationSortMember, AssociationSortBagSquad, AssociationSortBagMember,
                                       AssociationSortMixedSquad, AssociationSortMixedMember,
+                                      AssociationSortAuthor, AssociationSortBook, AssociationSortPublisher, AssociationSortAward, AssociationSortCategory,
                                       AssociationSortVenue, AssociationSortGround])
     }
 
@@ -624,6 +625,54 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManag
         manager.session.clear()
     }
 
+    void 'the total of a list sorted through an association that it fetches counts the rows that it pages through: #fetch'() {
+        given: 'a team with three players and four teams with one player, so 13 rows'
+        saveSquad()
+
+        when:
+        final unfetched = Player.list(max: 2, sort: 'team.players.name')
+        final fetched = Player.list(max: 2, sort: 'team.players.name', fetch: [team: fetch])
+
+        then:
+        unfetched.totalCount == 13
+        fetched.totalCount == 13
+
+        where:
+        fetch << ['join', JoinType.LEFT, JoinType.INNER]
+    }
+
+    void 'the total of a list sorted through an association that it fetches keeps an instance without the association: #fetch'() {
+        given: 'an author whose publisher has two awards, and an author without a publisher'
+        saveAuthorAndCategories()
+        new AssociationSortAuthor(name: 'No publisher').save(failOnError: true, flush: true)
+        manager.session.clear()
+
+        when:
+        final results = AssociationSortAuthor.list(max: 10, sort: 'publisher.awards.title', fetch: [publisher: fetch])
+
+        then:
+        results.size() == rows
+        results.totalCount == rows
+
+        where:
+        fetch          || rows
+        'join'         || 3
+        JoinType.LEFT  || 3
+        JoinType.INNER || 2
+    }
+
+    private void saveAuthorAndCategories() {
+        final publisher = new AssociationSortPublisher(name: 'Publisher').save(failOnError: true)
+        ['W1', 'W2'].each { new AssociationSortAward(title: it, publisher: publisher).save(failOnError: true) }
+        final author = new AssociationSortAuthor(name: 'Author', publisher: publisher).save(failOnError: true)
+        ['B1', 'B2'].each { new AssociationSortBook(title: it, author: author).save(failOnError: true) }
+        final top = new AssociationSortCategory(name: 'Top').save(failOnError: true)
+        final left = new AssociationSortCategory(name: 'Left', parent: top).save(failOnError: true)
+        new AssociationSortCategory(name: 'Right', parent: top).save(failOnError: true)
+        ['G1', 'G2'].each { new AssociationSortCategory(name: it, parent: left).save(failOnError: true, flush: true) }
+        manager.session.clear()
+    }
+
     private void saveSquadWithASubstituteOnly() {
         final squad = new AssociationSortBagSquad(name: 'Squad').save(failOnError: true)
         new AssociationSortBagMember(name: 'Substitute', substituteSquad: squad).save(failOnError: true, flush: true)
@@ -895,6 +944,49 @@ class AssociationSortBagMember {
     static constraints = {
         squad nullable: true
         substituteSquad nullable: true
+    }
+}
+
+@Entity
+class AssociationSortAuthor {
+    String name
+    AssociationSortPublisher publisher
+    static hasMany = [books: AssociationSortBook]
+
+    static constraints = {
+        publisher nullable: true
+    }
+}
+
+@Entity
+class AssociationSortBook {
+    String title
+    static belongsTo = [author: AssociationSortAuthor]
+}
+
+@Entity
+class AssociationSortPublisher {
+    String name
+    Collection<AssociationSortAward> awards
+    static hasMany = [awards: AssociationSortAward]
+}
+
+@Entity
+class AssociationSortAward {
+    String title
+    static belongsTo = [publisher: AssociationSortPublisher]
+}
+
+@Entity
+class AssociationSortCategory {
+    String name
+    AssociationSortCategory parent
+    Collection<AssociationSortCategory> children
+    static hasMany = [children: AssociationSortCategory]
+    static mappedBy = [children: 'parent']
+
+    static constraints = {
+        parent nullable: true
     }
 }
 

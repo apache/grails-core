@@ -23,6 +23,9 @@ import java.sql.SQLException;
 import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.CriteriaQuery;
 import jakarta.persistence.criteria.Expression;
+import jakarta.persistence.criteria.Fetch;
+import jakarta.persistence.criteria.From;
+import jakarta.persistence.criteria.Join;
 import jakarta.persistence.criteria.Root;
 
 import org.hibernate.HibernateException;
@@ -65,8 +68,10 @@ public class PagedResultList extends grails.gorm.PagedResultList {
             totalCount = hibernateTemplate.execute(new GrailsHibernateTemplate.HibernateCallback<>() {
                 public Integer doInHibernate(Session session) throws HibernateException, SQLException {
                     // a count does not select the associations that the list fetched, and Hibernate rejects
-                    // a fetch of an association whose owner the query does not select
+                    // a fetch of an association whose owner the query does not select. A sort through a fetched
+                    // association joins from the fetch, and the list pages through the rows of that join
                     if (!queryRoot.getFetches().isEmpty()) {
+                        joinWhatIsJoinedFromFetches(queryRoot, queryRoot, "count");
                         queryRoot.getFetches().clear();
                     }
                     // a list that fetches a collection returns each instance once, whatever a sort joins; any other
@@ -80,6 +85,49 @@ public class PagedResultList extends grails.gorm.PagedResultList {
             });
         }
         return totalCount;
+    }
+
+    /**
+     * Joins, from the given target, the fetches of the given parent that have joins of their own, and
+     * those joins. Each join gets an alias from its path, since Hibernate would generate one that the
+     * root of the query already has from rendering the list.
+     */
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    private static void joinWhatIsJoinedFromFetches(From target, From parent, String aliasPrefix) {
+        for (Object existing : parent.getFetches()) {
+            if (existing instanceof From && hasJoins((From) existing)) {
+                From fetch = (From) existing;
+                String name = ((Fetch) fetch).getAttribute().getName();
+                String alias = aliasPrefix + '_' + name;
+                Join copy = target.join(name, ((Fetch) fetch).getJoinType());
+                copy.alias(alias);
+                copyJoins(copy, fetch, alias);
+                joinWhatIsJoinedFromFetches(copy, fetch, alias);
+            }
+        }
+    }
+
+    private static boolean hasJoins(From fetch) {
+        if (!fetch.getJoins().isEmpty()) {
+            return true;
+        }
+        for (Object nested : fetch.getFetches()) {
+            if (nested instanceof From && hasJoins((From) nested)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    private static void copyJoins(From target, From source, String aliasPrefix) {
+        for (Object existing : source.getJoins()) {
+            Join join = (Join) existing;
+            String alias = aliasPrefix + '_' + join.getAttribute().getName();
+            Join copy = target.join(join.getAttribute().getName(), join.getJoinType());
+            copy.alias(alias);
+            copyJoins(copy, join, alias);
+        }
     }
 
     public void setTotalCount(int totalCount) {
