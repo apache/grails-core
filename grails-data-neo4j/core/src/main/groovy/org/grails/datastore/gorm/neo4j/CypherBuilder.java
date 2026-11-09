@@ -19,12 +19,12 @@
 package org.grails.datastore.gorm.neo4j;
 
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
+
+import org.grails.datastore.mapping.model.PersistentEntity;
 
 /**
  * A builder for Cypher queries
@@ -159,20 +159,30 @@ public class CypherBuilder {
         optionalMatches.add(match);
     }
 
-    private final Set<String> relationshipVariables = new HashSet<>();
+    private final Map<String, PersistentEntity> relationshipVariables = new LinkedHashMap<>();
 
     /**
      * Records that a variable of the query stands for a relationship, so a criterion on it is about the
-     * relationship's own properties and not about the relationships of a node.
+     * relationship's own properties, identified as that relationship entity maps them, and not about the
+     * relationships or the identity of a node.
      *
      * @param variable the variable of the relationship
+     * @param relationshipEntity the relationship entity the variable stands for
      */
-    public void addRelationshipVariable(String variable) {
-        relationshipVariables.add(variable);
+    public void addRelationshipVariable(String variable, PersistentEntity relationshipEntity) {
+        relationshipVariables.put(variable, relationshipEntity);
     }
 
     public boolean isRelationshipVariable(String variable) {
-        return relationshipVariables.contains(variable);
+        return relationshipVariables.containsKey(variable);
+    }
+
+    /**
+     * @param variable a variable of the query
+     * @return the relationship entity the variable stands for, or {@code null} when it does not stand for a relationship
+     */
+    public PersistentEntity getRelationshipEntity(String variable) {
+        return relationshipVariables.get(variable);
     }
 
     public int getNextMatchNumber() {

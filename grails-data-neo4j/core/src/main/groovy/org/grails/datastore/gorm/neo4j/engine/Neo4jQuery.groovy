@@ -417,7 +417,31 @@ class Neo4jQuery extends Query {
         if (handler == null) {
             throw new UnsupportedOperationException("Criterion of type ${criterion.class.name} are not supported by GORM for Neo4j")
         }
-        return handler.handle(entity, criterion, builder, prefix)
+        return handler.handle(criterionScope(criterion, entity, builder, prefix), criterion, builder, prefix)
+    }
+
+    /**
+     * The entity a criterion is about. On the variable of a relationship, which a block on an association to a
+     * relationship entity declares, the identity and the plain properties are the relationship entity's own, as its
+     * mapping may differ from the one of the node that owns the relationship. An association of the relationship, and
+     * the properties the relationship has no mapping for, stay with the entity of the block.
+     */
+    private static GraphPersistentEntity criterionScope(Query.Criterion criterion, GraphPersistentEntity entity, CypherBuilder builder, String prefix) {
+        PersistentEntity relationship = builder.getRelationshipEntity(prefix)
+        if (!(relationship instanceof GraphPersistentEntity) || relationship.is(entity)) {
+            return entity
+        }
+        if (criterion instanceof Query.IdEquals) {
+            return (GraphPersistentEntity) relationship
+        }
+        if (criterion instanceof Query.PropertyNameCriterion) {
+            String name = ((Query.PropertyNameCriterion) criterion).property
+            PersistentProperty property = relationship.getPropertyByName(name)
+            if (name == relationship.identity?.name || (property != null && !(property instanceof Association))) {
+                return (GraphPersistentEntity) relationship
+            }
+        }
+        return entity
     }
 
     private String applyOrderAndLimits(CypherBuilder cypherBuilder) {
@@ -814,7 +838,7 @@ class Neo4jQuery extends Query {
                 GraphPersistentEntity nested = associated instanceof GraphPersistentEntity &&
                         !((GraphPersistentEntity) associated).isRelationshipEntity() ? (GraphPersistentEntity) associated : entity
                 if (criterion.entity instanceof RelationshipPersistentEntity) {
-                    builder.addRelationshipVariable(nextPrefix)
+                    builder.addRelationshipVariable(nextPrefix, (PersistentEntity) criterion.entity)
                 }
                 return dispatchCriterion(aq.criteria, nested, builder, nextPrefix)
             }
