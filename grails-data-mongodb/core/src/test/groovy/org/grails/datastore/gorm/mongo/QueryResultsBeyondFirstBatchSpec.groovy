@@ -105,6 +105,15 @@ class QueryResultsBeyondFirstBatchSpec extends AutoStartedMongoSpec {
         read == 102
     }
 
+    void "next alone reads the results beyond the first batch with no session bound"() {
+        when:
+        MongoCursor cursor = ((MongoQuery.MongoResultList) BatchPlayer.list()).cursor
+        List<BatchPlayer> read = (1..102).collect { (BatchPlayer) cursor.next() }
+
+        then:
+        read*.name.toSet().size() == 102
+    }
+
     void "the results beyond the first batch are read on a thread with no session"() {
         when:
         def read = null
