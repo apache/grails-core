@@ -247,7 +247,9 @@ class HibernateConnectionSourceSettings extends ConnectionSourceSettings {
             if (configClass != null) {
                 props.put('hibernate.config_class'.toString(), configClass.name)
             }
-            props.put('hibernate.use_query_cache', String.valueOf(cache.queries))
+            // Hibernate reads hibernate.cache.use_query_cache, so that is the property cache.queries sets. A property of
+            // that name that the application sets itself comes later and wins.
+            props.put('hibernate.cache.use_query_cache', String.valueOf(cache.queries))
             props.put('hibernate.jpa.compliance.cascade', String.valueOf(jpa.compliance.cascade))
 
             if (entity_dirtiness_strategy != null && !hibernateDirtyChecking) {

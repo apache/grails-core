@@ -197,8 +197,8 @@ class HqlListQueryBuilderSpec extends Specification {
 
         then:
         hql.startsWith("from Person e")
-        hql.contains(" join fetch e.books")
-        hql.contains(" join fetch e.profile")
+        hql.contains(" left join fetch e.books")
+        hql.contains(" left join fetch e.profile")
     }
 
     void "test buildListHql with default sort from mapping"() {
@@ -479,7 +479,7 @@ class HqlListQueryBuilderSpec extends Specification {
         ])
 
         expect: "the association is not joined a second time, and a fetch that is not sorted through has no alias"
-        builder.buildListHql() == "from Person e join fetch e.books join fetch e.author f0 order by upper(f0.name) asc"
+        builder.buildListHql() == "from Person e left join fetch e.books left join fetch e.author f0 order by upper(f0.name) asc"
     }
 
     void "test buildListHql joins the associations after a fetch join from the alias of the fetch"() {
@@ -494,7 +494,7 @@ class HqlListQueryBuilderSpec extends Specification {
         ])
 
         expect:
-        builder.buildListHql() == "from Person e join fetch e.author f0 left join f0.publisher s0 order by upper(s0.name) desc"
+        builder.buildListHql() == "from Person e left join fetch e.author f0 left join f0.publisher s0 order by upper(s0.name) desc"
     }
 
     void "test buildListHql keeps the sort join of an association that is not fetched"() {
@@ -508,7 +508,7 @@ class HqlListQueryBuilderSpec extends Specification {
         ])
 
         expect:
-        builder.buildListHql() == "from Person e join fetch e.books left join e.author s0 order by upper(s0.name) asc"
+        builder.buildListHql() == "from Person e left join fetch e.books left join e.author s0 order by upper(s0.name) asc"
     }
 
     void "test buildListHql sorts by a property of an embedded component without a join"() {

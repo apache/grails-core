@@ -73,7 +73,9 @@ public class HqlListQueryBuilder {
         // the sort comes first: it gives an alias to a fetch that it sorts through
         String sortHql = buildSortClause();
         fetchJoins.forEach((path, alias) -> {
-            hql.append(" join fetch ").append(path);
+            // the fetch mode join never leaves out an instance whose association is null or empty, as it does for a
+            // where query and a dynamic finder; only a join type asks for that
+            hql.append(" left join fetch ").append(path);
             if (!alias.isEmpty()) {
                 hql.append(' ').append(alias);
             }
