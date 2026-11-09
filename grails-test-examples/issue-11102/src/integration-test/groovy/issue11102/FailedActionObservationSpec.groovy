@@ -93,7 +93,26 @@ class FailedActionObservationSpec extends Specification implements HttpClientSup
         'the error view, for an Error'                       | '/failing/answeredByViewForAnError'               | '/failing/answeredByViewForAnError'               | 'An error has occurred'            || 'AssertionError'
         'an error controller, for an Error'                  | '/failing/answeredByControllerForAnError'         | '/failing/answeredByControllerForAnError'         | 'Answered by the error controller' || 'StackOverflowError'
         'an error controller that forwards'                  | '/failing/answeredByForwardingController'         | '/failing/answeredByForwardingController'         | 'Answered by the error controller' || 'ArithmeticException'
+        'the error view, after an include'                   | '/failing/failsAfterInclude'                      | '/failing/failsAfterInclude'                      | 'An error has occurred'            || 'IllegalStateException'
         'an error controller, after an interceptor failed'   | '/failing/failsInInterceptor'                     | '/failing/failsInInterceptor'                     | 'Answered by the error controller' || 'UnsupportedOperationException'
+    }
+
+    void 'a failure #handler answers inside an include is not the failure of the page that included it'() {
+        when:
+        def response = http([(REQUEST_HEADER): path], path)
+
+        then: 'the page answered, with the error page inside it'
+        response.assertContains(200, 'before').assertContains('after')
+
+        and: 'its observation stopped on its own route, with no error'
+        new PollingConditions(timeout: 30).eventually {
+            assert STOPPED[path] == [path, 'none']
+        }
+        !NOTIFIED.containsKey(path)
+
+        where:
+        handler          | path
+        'the error view' | '/failing/includesAnswerOfView'
     }
 
     private List<String> errorTags(String route) {

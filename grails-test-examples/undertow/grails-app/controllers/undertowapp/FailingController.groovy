@@ -70,6 +70,23 @@ class FailingController {
         forward(action: 'answeredByController')
     }
 
+    def failsAfterInclude() {
+        g.include(action: 'included')
+        throw new IllegalStateException('answered by the error view')
+    }
+
+    def includesAnswerOfView() {
+        render "before ${g.include(action: 'answeredByView')} after"
+    }
+
+    def includesAnswerOfController() {
+        render "before ${g.include(action: 'answeredByController')} after"
+    }
+
+    def included() {
+        render 'included'
+    }
+
     def errorHandler() {
         render status: 500, text: 'Answered by the error controller'
     }

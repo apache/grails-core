@@ -179,10 +179,16 @@ public class GrailsExceptionResolver extends SimpleMappingExceptionResolver impl
      * <p>
      * An exception left in {@link WebUtils#ERROR_EXCEPTION_ATTRIBUTE} is not recorded here when it is recorded from there
      * once the dispatch returns, so that the handlers hear of it once. A dispatch that holds it decides when it returns.
+     * <p>
+     * A failure inside an include is not recorded: its error page is rendered inside the page that included it, which
+     * goes on to answer the request.
      *
      * @param dispatchedAs how the request was dispatched before an error handler was forwarded to
      */
     private static void recordServerError(HttpServletRequest request, Throwable ex, DispatcherType dispatchedAs) {
+        if (dispatchedAs == DispatcherType.INCLUDE) {
+            return;
+        }
         if (request.getAttribute(WebUtils.ERROR_EXCEPTION_ATTRIBUTE) == ex &&
                 request.getAttribute(FAILURE_LEFT_ON_REQUEST_ATTRIBUTE) instanceof FailureLeftOnRequest held) {
             held.failure = ex;
