@@ -20,7 +20,6 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 import jakarta.persistence.criteria.Expression;
-import jakarta.persistence.criteria.JoinType;
 
 /**
  * Registry for user-defined and auto-generated aliases in a JPA query.
@@ -30,7 +29,6 @@ import jakarta.persistence.criteria.JoinType;
 public class AliasRegistry {
     private final Map<String, HibernateAlias> definitions = new LinkedHashMap<>();
     private final Map<String, Expression<?>> realizedExpressions = new HashMap<>();
-    private final Map<String, JoinType> associationJoinTypes = new HashMap<>();
     private final AliasRegistry parent;
 
     public AliasRegistry() {
@@ -64,23 +62,6 @@ public class AliasRegistry {
      */
     boolean isOwnDefined(String alias) {
         return definitions.containsKey(alias);
-    }
-
-    /**
-     * Records the join type an association block of this query asks for, without declaring an alias: an explicit
-     * alias of the same name in an enclosing query stays the one the name refers to. The first type recorded for a
-     * path stays.
-     */
-    void defineAssociationJoinType(String path, JoinType joinType) {
-        associationJoinTypes.putIfAbsent(path, joinType);
-    }
-
-    /**
-     * The join type an association block of this query asked for with {@link #defineAssociationJoinType}, or
-     * {@code null}.
-     */
-    JoinType getAssociationJoinType(String path) {
-        return associationJoinTypes.get(path);
     }
 
     /**
