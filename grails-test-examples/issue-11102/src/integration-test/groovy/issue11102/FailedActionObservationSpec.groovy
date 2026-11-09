@@ -115,6 +115,28 @@ class FailedActionObservationSpec extends Specification implements HttpClientSup
         'the error view' | '/failing/includesAnswerOfView'
     }
 
+    void 'a request #what is reported under #reported'() {
+        when:
+        def response = http([(REQUEST_HEADER): path], path)
+
+        then:
+        response.assertContains(status, page)
+
+        and: 'the route is set before the interceptors, and the container sends a request to a status code handler once its observation has stopped'
+        new PollingConditions(timeout: 30).eventually {
+            assert STOPPED[path] == [route, 'none']
+        }
+        !NOTIFIED.containsKey(path)
+
+        where:
+        what                                                    | path                           | status | page                                || route
+        'an interceptor denied'                                 | '/failing/deniedByInterceptor' | 403    | 'Denied by the interceptor'         || '/failing/deniedByInterceptor'
+        'whose action sent a 404, answered by a status handler' | '/failing/sendsNotFound'       | 404    | 'Answered by the not found handler' || '/failing/sendsNotFound'
+        'for a URL nothing maps, answered by a status handler'  | '/nowhere'                     | 404    | 'Answered by the not found handler' || 'none'
+
+        reported = route == 'none' ? 'no route' : 'its own route'
+    }
+
     private List<String> errorTags(String route) {
         meterRegistry.find('http.server.requests').tag('status', '500').tag('uri', route).timers()*.id*.getTag('error')
     }
