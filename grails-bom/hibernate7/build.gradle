@@ -17,6 +17,8 @@
  *  under the License.
  */
 
+import org.apache.maven.model.Model
+
 import org.apache.grails.buildsrc.PomVersions
 import org.apache.grails.gradle.tasks.bom.ExtractDependenciesTask
 import org.apache.grails.gradle.tasks.bom.ExtractedDependencyConstraint
@@ -64,11 +66,20 @@ def pomFile = { String coordinates ->
 // hibernate7VersionOverride to a newer release. Configuring this project reads only the parent BOMs' own
 // entries, not the BOMs they import, so a task that needs none of them does not fail when one is missing
 // from the cache; validateHibernateVersion checks the rest
-String springBootHibernateVersion = parentBoms.findResult { String parentBom ->
-    PomVersions.managedVersion(PomVersions.read(pomFile(parentBom)), 'org.hibernate.orm:hibernate-core')
+List<Model> parentBomModels = parentBoms.collect { String parentBom -> PomVersions.read(pomFile(parentBom)) }
+String springBootHibernateVersion = parentBomModels.findResult { Model parentBom ->
+    PomVersions.managedVersion(parentBom, 'org.hibernate.orm:hibernate-core')
 }
 String overrideHibernateVersion = hibernate7VersionOverride ?: ''
 String hibernateVersion = overrideHibernateVersion ?: springBootHibernateVersion
+// An override moves every Hibernate ORM module the parent BOMs manage, not only the ones Grails uses: an
+// enforcedPlatform consumer would otherwise get it for those and Spring Boot's version for the rest, such
+// as hibernate-hikaricp, while a Maven consumer setting the published hibernate.version moves them all
+List<String> managedHibernateOrmModules = overrideHibernateVersion ?
+        (hibernateOrmModules + parentBomModels.collectMany { Model parentBom ->
+            PomVersions.managedArtifactIds(parentBom, 'org.hibernate.orm')
+        }).unique() :
+        hibernateOrmModules
 if (!hibernateVersion) {
     throw new GradleException("${parentBoms.join(', ')} does not manage org.hibernate.orm:hibernate-core in its own POM: " +
             'set hibernate7VersionOverride in dependencies.gradle to the Hibernate ORM 7 release to manage')
@@ -117,7 +128,7 @@ tasks.withType(GenerateMavenPom).configureEach { GenerateMavenPom task -> task.d
 
 customBomVersions['hibernate.version'] = hibernateVersion
 combinedVersions['hibernate.version'] = hibernateVersion
-for (String module : hibernateOrmModules) {
+for (String module : managedHibernateOrmModules) {
     String coordinates = "org.hibernate.orm:${module}:${hibernateVersion}"
     customBomDependencies[module] = coordinates
     combinedDependencies[module] = coordinates

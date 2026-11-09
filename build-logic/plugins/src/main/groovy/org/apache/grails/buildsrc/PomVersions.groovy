@@ -96,6 +96,22 @@ class PomVersions {
     }
 
     /**
+     * Returns the artifacts of {@code groupId} the model's own {@code <dependencyManagement>} manages, in
+     * the order it lists them. As with {@link #managedVersion}, the BOMs it imports are not read, so this
+     * resolves no other POM; {@code <pluginManagement>} is not read either, since it manages plugins.
+     * An entry whose coordinates cannot be resolved from the model's own properties is not included.
+     */
+    static List<String> managedArtifactIds(Model model, String groupId) {
+        Map<String, String> properties = properties(model)
+        String prefix = "${groupId}:"
+        managedDependencies(model).findAll { Dependency dependency -> !isImport(dependency) }
+                .collect { Dependency dependency -> key(dependency, properties) }
+                .findAll { String module -> module?.startsWith(prefix) }
+                .collect { String module -> module.substring(prefix.length()) }
+                .unique()
+    }
+
+    /**
      * The properties the model's coordinates and versions may refer to: its own
      * {@code <properties>}, and the Maven built-ins, which are never declared there. A parent POM's
      * properties are not included, since reaching the parent means resolving it.

@@ -37,7 +37,10 @@ import org.apache.maven.model.Model
  *   test:lib-literal              5.0
  *   ${project.groupId}:lib-own    ${project.version}
  *   test:lib-inherited            ${inherited.version} - declared only by the parent POM
+ *   other:lib-other               2.0
+ *   test:lib-literal:tests        5.0 - the same artifact again, with a classifier
  *   test:family-bom               ${family-bom.version} = 3.0, imported, and managing test:family-core
+ *   test:test-maven-plugin        1.0 - in pluginManagement
  * </pre>
  */
 class PomVersionsSpec extends Specification {
@@ -67,12 +70,21 @@ class PomVersionsSpec extends Specification {
             <dependency><groupId>test</groupId><artifactId>lib-literal</artifactId><version>5.0</version></dependency>
             <dependency><groupId>${project.groupId}</groupId><artifactId>lib-own</artifactId><version>${project.version}</version></dependency>
             <dependency><groupId>test</groupId><artifactId>lib-inherited</artifactId><version>${inherited.version}</version></dependency>
+            <dependency><groupId>other</groupId><artifactId>lib-other</artifactId><version>2.0</version></dependency>
+            <dependency><groupId>test</groupId><artifactId>lib-literal</artifactId><version>5.0</version><classifier>tests</classifier></dependency>
             <dependency>
                 <groupId>test</groupId><artifactId>family-bom</artifactId><version>${family-bom.version}</version>
                 <type>pom</type><scope>import</scope>
             </dependency>
         </dependencies>
     </dependencyManagement>
+    <build>
+        <pluginManagement>
+            <plugins>
+                <plugin><groupId>test</groupId><artifactId>test-maven-plugin</artifactId><version>1.0</version></plugin>
+            </plugins>
+        </pluginManagement>
+    </build>
 </project>
 '''
         bom = PomVersions.read(pom)
@@ -107,5 +119,17 @@ class PomVersionsSpec extends Specification {
         then:
         GradleException e = thrown()
         e.message == 'Cannot resolve test:lib-inherited:${inherited.version}, managed by test:parent-bom:1.0, from that POM\'s own properties.'
+    }
+
+    def "the artifacts of a group are the ones the BOM's own entries list, in their order and each once"() {
+        expect: 'its own group resolved, and neither the BOM it imports, the plugin it manages nor the other group'
+        PomVersions.managedArtifactIds(bom, 'test') == ['lib-a', 'lib-literal', 'lib-own', 'lib-inherited']
+        PomVersions.managedArtifactIds(bom, 'other') == ['lib-other']
+    }
+
+    def "a group the BOM manages nothing of has no artifacts, whatever it shares a prefix with"() {
+        expect:
+        PomVersions.managedArtifactIds(bom, 'tes').isEmpty()
+        PomVersions.managedArtifactIds(bom, 'unknown').isEmpty()
     }
 }

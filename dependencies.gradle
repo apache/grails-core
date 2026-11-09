@@ -324,6 +324,8 @@ ext {
         // A Hibernate ORM 7 release to manage instead, for when Spring Boot lags behind one Grails needs.
         // It must be newer than the version Spring Boot manages, so validateHibernateVersion, which
         // check and the BOM's POM generation run, fails once Spring Boot catches up with it: remove it then.
+        // Set, it moves every org.hibernate.orm module spring-boot-dependencies manages in its own POM,
+        // not only the ones above, as setting hibernate.version moves them all for a Maven consumer.
         hibernate7VersionOverride = null
         customBomVersions = [
                 'cache-ri-impl.version'         : '1.1.1',
