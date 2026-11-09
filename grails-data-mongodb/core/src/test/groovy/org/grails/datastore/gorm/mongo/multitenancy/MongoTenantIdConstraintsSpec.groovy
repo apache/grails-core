@@ -321,6 +321,66 @@ class MongoTenantIdConstraintsSpec extends AutoStartedMongoSpec {
         TenantHorse.collection.find().first().firmId == 'acme'
     }
 
+    void 'saving an owner fails when the current tenant id breaks a constraint of a new associated object of a #association whose tracked changes were reset'() {
+        given: 'a new object that has a tenant id and no tracked changes, and a current tenant id longer than its maxSize'
+        System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, 'toolongtenant')
+        def child = childType.newInstance(name: 'Bolt', firmId: 'acme')
+        def owner = build(child)
+        child.trackChanges()
+
+        when:
+        def saved = childType.withNewSession { owner.save(flush: true) }
+
+        then: 'the owner reports the tenant id of the object, and neither is stored'
+        !saved
+        child.firmId == 'toolongtenant'
+        owner.errors.getFieldError(errorField).code == 'maxSize.exceeded'
+        owner.getClass().collection.countDocuments() == 0L
+        childType.collection.countDocuments() == 0L
+
+        where:
+        association | childType   | errorField       | build
+        'to-one'    | TenantHorse | 'horse.firmId'   | { new TenantRider(name: 'Dave', horse: it) }
+        'to-many'   | TenantPet   | 'pets[0].firmId' | { new TenantOwner(name: 'Dave').addToPets(it) }
+    }
+
+    void 'a new associated object of a #association whose tracked changes were reset is inserted with the current tenant id'() {
+        given: 'a new object that has another tenant id and no tracked changes'
+        System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, 'gamma')
+        def child = childType.newInstance(name: 'Bolt', firmId: 'acme')
+        def owner = build(child)
+        child.trackChanges()
+
+        when:
+        def saved = childType.withNewSession { owner.save(flush: true) }
+
+        then:
+        saved
+        child.id != null
+        childType.collection.find().first().firmId == 'gamma'
+
+        where:
+        association | childType   | build
+        'to-one'    | TenantHorse | { new TenantRider(name: 'Dave', horse: it) }
+        'to-many'   | TenantPet   | { new TenantOwner(name: 'Dave').addToPets(it) }
+    }
+
+    void 'a new object of a to-one association whose tracked changes were reset and that already has the current tenant id is not inserted'() {
+        given: 'a new horse without tracked changes, which assigning the current tenant id does not change'
+        System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, 'gamma')
+        def horse = new TenantHorse(name: 'Bolt', firmId: 'gamma')
+        def rider = new TenantRider(name: 'Dave', horse: horse)
+        horse.trackChanges()
+
+        when:
+        def saved = TenantRider.withNewSession { rider.save(flush: true) }
+
+        then: 'a to-one association saves an object only when it has changes of its own'
+        saved
+        horse.id == null
+        TenantHorse.collection.countDocuments() == 0L
+    }
+
     void 'saving an owner inside withoutId fails when a new associated object is not given a tenant id'() {
         when:
         def owner = new TenantOwner(name: 'Dave', tenantId: 'acme').addToPets(new TenantPet(name: 'Rex'))

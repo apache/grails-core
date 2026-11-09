@@ -297,7 +297,7 @@ class TenantIdConstraintsSpec extends Specification {
         def rex = new Pet(name: 'Rex', firmId: 'other')
         def tom = new Pet(name: 'Tom', firmId: 'other')
         def owner = new Owner(name: 'Dave').addToPets(rex).addToPets(tom)
-        [rex, tom]*.trackChanges()
+        asLoaded(rex, tom)
 
         when: 'one of them is changed, and the owner is validated'
         tom.name = 'Tim'
@@ -319,7 +319,7 @@ class TenantIdConstraintsSpec extends Specification {
         System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, 'acme')
         def pet = new Pet(name: 'Rex', firmId: 'other')
         def owner = new Owner(name: 'Dave').addToPets(pet)
-        pet.trackChanges()
+        asLoaded(pet)
         pet.markDirty()
 
         when:
@@ -337,7 +337,7 @@ class TenantIdConstraintsSpec extends Specification {
         System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, 'acme')
         def pet = new Pet(name: 'Rex')
         def owner = new Owner(name: 'Dave').addToPets(pet)
-        pet.trackChanges()
+        asLoaded(pet)
 
         when:
         boolean valid = Owner.withNewSession { owner.validate() }
@@ -348,6 +348,50 @@ class TenantIdConstraintsSpec extends Specification {
 
         and: 'it is still without changes, so validating its owner does not make a datastore update it'
         !pet.hasChanged()
+    }
+
+    void 'a new associated object of a #association that has a tenant id and no tracked changes is inserted with the current tenant id'() {
+        given: 'a new object without an identifier, whose tracked changes were reset'
+        System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, 'acme')
+        def child = childType.newInstance(name: 'Rex', firmId: 'other')
+        def owner = build(child)
+        child.trackChanges()
+
+        when:
+        def saved = childType.withNewSession { owner.save(flush: true) }
+
+        then: 'it is validated with the tenant id that it is inserted with'
+        saved
+        child.id != null
+        child.firmId == 'acme'
+        childType.withNewSession { childType.count() } == 1
+
+        where:
+        association | childType | build
+        'to-one'    | Horse     | { new Rider(name: 'Dave', horse: it) }
+        'to-many'   | Pet       | { new Owner(name: 'Dave').addToPets(it) }
+    }
+
+    void 'saving an owner fails when the current tenant id breaks a constraint of a new associated object of a #association that has a tenant id and no tracked changes'() {
+        given: 'a new object without an identifier, whose tracked changes were reset'
+        System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, 'a-tenant-too-long')
+        def child = childType.newInstance(name: 'Rex', firmId: 'other')
+        def owner = build(child)
+        child.trackChanges()
+
+        when:
+        def saved = childType.withNewSession { owner.save(flush: true) }
+
+        then:
+        !saved
+        child.id == null
+        child.firmId == 'a-tenant-too-long'
+        owner.errors.getFieldError(errorField).code == 'maxSize.exceeded'
+
+        where:
+        association | childType | errorField       | build
+        'to-one'    | Horse     | 'horse.firmId'   | { new Rider(name: 'Dave', horse: it) }
+        'to-many'   | Pet       | 'pets[0].firmId' | { new Owner(name: 'Dave').addToPets(it) }
     }
 
     void 'an associated object that a beforeValidate callback creates as its owner is validated is given the current tenant id'() {
@@ -371,7 +415,7 @@ class TenantIdConstraintsSpec extends Specification {
         System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, 'acme')
         def cat = new Cat(name: 'Tom', firmId: 'other')
         def shelter = new Shelter(name: 'North').addToCats(cat)
-        cat.trackChanges()
+        asLoaded(cat)
 
         when: 'the shelter is validated, and the beforeValidate callback of the cat gives it a chip'
         boolean valid = Shelter.withNewSession { shelter.validate() }
@@ -387,7 +431,8 @@ class TenantIdConstraintsSpec extends Specification {
         System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, 'acme')
         def cat = new Cat(name: 'Tom', firmId: 'other', chip: new Chip(code: 'C-1', firmId: 'other'), basket: new Basket(colour: 'fading'))
         def shelter = new Shelter(name: 'North').addToCats(cat)
-        [cat, cat.chip, cat.basket]*.trackChanges()
+        asLoaded(cat, cat.chip)
+        cat.basket.trackChanges()
 
         when:
         boolean valid = Shelter.withNewSession { shelter.validate() }
@@ -409,7 +454,8 @@ class TenantIdConstraintsSpec extends Specification {
         System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, 'acme')
         def cat = new Cat(name: 'Tom', firmId: 'a-tenant-too-long', chip: new Chip(code: 'C-1', firmId: 'other'), basket: new Basket(colour: 'red'))
         def shelter = new Shelter(name: 'North').addToCats(cat)
-        [cat, cat.chip, cat.basket]*.trackChanges()
+        asLoaded(cat, cat.chip)
+        cat.basket.trackChanges()
 
         when:
         boolean valid = Shelter.withNewSession { shelter.validate() }
@@ -425,7 +471,8 @@ class TenantIdConstraintsSpec extends Specification {
         System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, 'acme')
         def cat = new Cat(name: 'Tom', firmId: 'a-tenant-too-long', chip: new Chip(code: 'C-1', firmId: 'other'), basket: new Basket(colour: 'fading'))
         def shelter = new Shelter(name: 'North').addToCats(cat)
-        [cat, cat.chip, cat.basket]*.trackChanges()
+        asLoaded(cat, cat.chip)
+        cat.basket.trackChanges()
 
         when:
         boolean valid = Shelter.withNewSession { shelter.validate() }
@@ -444,7 +491,7 @@ class TenantIdConstraintsSpec extends Specification {
         System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, 'acme')
         def cat = new Cat(name: 'Tom', firmId: 'other', chip: new Chip(code: 'worn', firmId: 'other'))
         def shelter = new Shelter(name: 'North').addToCats(cat)
-        [cat, cat.chip]*.trackChanges()
+        asLoaded(cat, cat.chip)
 
         when:
         boolean valid = Shelter.withNewSession { shelter.validate() }
@@ -464,7 +511,8 @@ class TenantIdConstraintsSpec extends Specification {
         System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, 'acme')
         def horse = new Horse(name: 'Bolt', firmId: 'other', stable: new Basket(colour: 'red'))
         def rider = new Rider(name: 'Dave', horse: horse)
-        [horse, horse.stable]*.trackChanges()
+        asLoaded(horse)
+        horse.stable.trackChanges()
 
         when: 'only its embedded stable is changed, and the rider is validated'
         horse.stable.colour = 'blue'
@@ -511,7 +559,8 @@ class TenantIdConstraintsSpec extends Specification {
         System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, 'acme')
         def cat = new Cat(name: 'Tom', firmId: 'other', chip: new Chip(code: 'C-1', firmId: 'other'), basket: new Basket(colour: 'red'))
         def shelter = new Shelter(name: 'North').addToCats(cat)
-        [cat, cat.chip, cat.basket]*.trackChanges()
+        asLoaded(cat, cat.chip)
+        cat.basket.trackChanges()
 
         when: 'only its embedded basket is changed, and the shelter is validated'
         cat.basket.colour = 'blue'
@@ -541,6 +590,15 @@ class TenantIdConstraintsSpec extends Specification {
         owner.id == null
         owner.errors.fieldErrors.find { it.field.endsWith('name') }?.code == 'nullable'
         !owner.errors.fieldErrors.any { it.field.endsWith('firmId') }
+    }
+
+    // An object with an identifier and no tracked changes stands in for one that a datastore has loaded, as the
+    // in-memory datastore does not read the tenant id of a loaded object back
+    private static void asLoaded(Object... objects) {
+        objects.eachWithIndex { object, index ->
+            object.id = index + 1L
+            object.trackChanges()
+        }
     }
 }
 

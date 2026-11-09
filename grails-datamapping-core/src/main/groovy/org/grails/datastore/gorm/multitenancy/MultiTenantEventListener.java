@@ -96,7 +96,7 @@ public class MultiTenantEventListener implements PersistenceEventListener {
         TenantId tenantId = entity.getTenantId();
         Object object = cascaded.getEntityObject();
         Object previous = tenantId != null ? cascaded.getEntityAccess().getProperty(tenantId.getName()) : null;
-        boolean saved = isSaved(object, association);
+        boolean saved = isSaved(cascaded, association);
         if (previous != null && !saved) {
             return false;
         }
@@ -127,13 +127,15 @@ public class MultiTenantEventListener implements PersistenceEventListener {
         }
     }
 
-    // Whether the object is inserted or updated with its owner. For an object that tracks its changes this is the
-    // answer of the session, which updates an object only when it is dirty. A save cascades to the object of a
-    // to-one association only when that object has changes of its own, as GORM for MongoDB does, so there a change
-    // inside an embedded or an associated object does not count. An object without a tenant id is not asked: the
-    // in-memory datastore does not read the tenant id of a loaded object back.
-    private boolean isSaved(Object object, Association association) {
-        if (!(object instanceof DirtyCheckable)) {
+    // Whether the object is inserted or updated with its owner. An object without an identifier is new, so it counts
+    // whatever changes it tracks. For another object that tracks its changes this is the answer of the session, which
+    // updates an object only when it is dirty. A save cascades to the object of a to-one association only when that
+    // object has changes of its own, as GORM for MongoDB does, so there a change inside an embedded or an associated
+    // object does not count. An object without a tenant id is not asked: the in-memory datastore does not read the
+    // tenant id of a loaded object back.
+    private boolean isSaved(ValidationEvent cascaded, Association association) {
+        Object object = cascaded.getEntityObject();
+        if (!(object instanceof DirtyCheckable) || cascaded.getEntityAccess().getIdentifier() == null) {
             return true;
         }
         if (association instanceof ToOne && !association.isEmbedded()) {

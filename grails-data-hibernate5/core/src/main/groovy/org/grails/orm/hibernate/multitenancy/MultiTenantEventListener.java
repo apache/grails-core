@@ -24,6 +24,7 @@ import java.util.List;
 
 import org.hibernate.collection.spi.PersistentCollection;
 import org.hibernate.engine.spi.EntityEntry;
+import org.hibernate.engine.spi.SessionFactoryImplementor;
 import org.hibernate.engine.spi.SessionImplementor;
 import org.hibernate.persister.entity.EntityPersister;
 
@@ -107,17 +108,19 @@ public class MultiTenantEventListener implements PersistenceEventListener {
         return true;
     }
 
-    // Whether Hibernate writes the properties of the object as its owner is saved. It writes none of an object that
-    // is read-only in the session, such as one that read(id) or a read-only query has returned: Hibernate looks for
-    // the changes of a modifiable object only, and updates no more than the version of a read-only object whose
-    // collection has changed. It inserts an object of the session that is not in the database yet, whose insert
-    // waits for the flush, as its identifier comes from a sequence for example. For another object that tracks its
+    // Whether Hibernate writes the tenant id of the object as its owner is saved. It writes none of an object that is
+    // read-only in the session, such as one that read(id) or a read-only query has returned: Hibernate looks for the
+    // changes of a modifiable object only, and updates no more than the version of a read-only object whose collection
+    // has changed. It inserts an object of the session that is not in the database yet, whose insert waits for the
+    // flush, as its identifier comes from a sequence for example, and an object outside the session that is transient,
+    // whatever changes that object tracks. An update of a class mapped with dynamicUpdate writes the properties that
+    // have changed alone, which a tenant id, being derived, never counts as. For another object that tracks its
     // changes this is the check of GrailsEntityDirtinessStrategy, with which Hibernate decides whether to update an
-    // object of the session, and the check for a changed collection. It also inserts an object outside the session
-    // that is transient, whatever changes that object tracks. Without a session nothing is saved.
+    // object of the session, and the check for a changed collection.
     private static boolean isSaved(AbstractHibernateDatastore hibernateDatastore, PersistentEntity entity, Object object) {
         SessionImplementor session = currentSession(hibernateDatastore);
         EntityEntry entry = session != null ? session.getPersistenceContext().getEntry(object) : null;
+        EntityPersister persister = ((SessionFactoryImplementor) hibernateDatastore.getSessionFactory()).getMetamodel().entityPersister(entity.getName());
         if (entry != null) {
             if (!entry.isModifiableEntity()) {
                 return false;
@@ -126,16 +129,20 @@ public class MultiTenantEventListener implements PersistenceEventListener {
                 return true;
             }
         }
-        return !(object instanceof DirtyCheckable) || hasStoredChange(entity, (DirtyCheckable) object) ||
-                DirtyCheckingSupport.areEmbeddedDirty(entity, object) || hasDirtyCollection(entity, object) ||
-                (session != null && entry == null && isTransient(entity, object, session));
+        else if (session != null && isTransient(persister, object, session)) {
+            return true;
+        }
+        if (session != null && persister.getEntityMetamodel().isDynamicUpdate()) {
+            return false;
+        }
+        return !(object instanceof DirtyCheckable) || hasStoredChange(persister, (DirtyCheckable) object) ||
+                DirtyCheckingSupport.areEmbeddedDirty(entity, object) || hasDirtyCollection(entity, object);
     }
 
     // Whether Hibernate takes an object outside the session for a new one as a save cascades to it. The identifier and
     // the version of the object tell, except for one with an assigned identifier and no version, which it looks up in
     // the database.
-    private static boolean isTransient(PersistentEntity entity, Object object, SessionImplementor session) {
-        EntityPersister persister = session.getEntityPersister(entity.getName(), object);
+    private static boolean isTransient(EntityPersister persister, Object object, SessionImplementor session) {
         Boolean isTransient = persister.isTransient(object, session);
         if (isTransient != null) {
             return isTransient;
@@ -150,24 +157,32 @@ public class MultiTenantEventListener implements PersistenceEventListener {
         return (SessionImplementor) hibernateDatastore.getSessionFactory().getCurrentSession();
     }
 
-    // Whether the object has a change that makes Hibernate update it. GrailsEntityDirtinessStrategy updates an object
-    // when a property that Hibernate maps has changed, and any changed object that has a lastUpdated property. A
-    // change to a property that it does not map, such as an untyped one, makes no update. An object that has changed
-    // without a changed property is new, or is changed as a whole.
-    private static boolean hasStoredChange(PersistentEntity entity, DirtyCheckable object) {
+    // Whether the object has a change that makes Hibernate update its row. GrailsEntityDirtinessStrategy reports the
+    // properties that have changed, and the lastUpdated property of any changed object. A change to a property that
+    // Hibernate does not map, such as an untyped one, makes no update. An object that has changed without a changed
+    // property is new, or is changed as a whole.
+    private static boolean hasStoredChange(EntityPersister persister, DirtyCheckable object) {
         if (!object.hasChanged()) {
             return false;
         }
         List<String> changed = object.listDirtyPropertyNames();
-        if (changed.isEmpty() || entity.getPropertyByName(GormProperties.LAST_UPDATED) != null) {
+        if (changed.isEmpty() || updatesRow(persister, GormProperties.LAST_UPDATED)) {
             return true;
         }
         for (String name : changed) {
-            if (entity.getPropertyByName(name) != null) {
+            if (updatesRow(persister, name)) {
                 return true;
             }
         }
         return false;
+    }
+
+    // A reported property makes Hibernate update the row when the object has a version, which Hibernate increments for
+    // the change, or when the property is updateable, which a formula or a collection is not. The update then writes
+    // every updateable column.
+    private static boolean updatesRow(EntityPersister persister, String propertyName) {
+        Integer index = persister.getEntityMetamodel().getPropertyIndexOrNull(propertyName);
+        return index != null && (persister.isVersioned() || persister.getPropertyUpdateability()[index]);
     }
 
     // Hibernate updates a versioned object when one of its collections has changed, to increment its version

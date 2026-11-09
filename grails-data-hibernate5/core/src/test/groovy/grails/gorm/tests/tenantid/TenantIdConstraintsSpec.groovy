@@ -60,7 +60,7 @@ class TenantIdConstraintsSpec extends Specification {
                 'dataSource.dialect'                          : H2Dialect.name,
         ]), TenantCustomer, TenantAccount, TenantOwner, TenantPet, TenantShelter, TenantCat, TenantChip, TenantSignup, TenantClub,
                 TenantMember, TenantDen, TenantCub, TenantLedger, TenantJournal, TenantArchive, TenantBurrow, TenantFerret, TenantNest, TenantChick, TenantLog,
-                TenantEntry, TenantRack, TenantTag, TenantLabel)
+                TenantEntry, TenantRack, TenantTag, TenantLabel, TenantYard, TenantCrate, TenantBox, TenantBin, TenantPail)
     }
 
     void 'a tenant id the listener assigns passes the constraints declared on it'() {
@@ -722,6 +722,113 @@ class TenantIdConstraintsSpec extends Specification {
         ferret.firmId == 'beta'
     }
 
+    void 'an associated object is given the current tenant id only when Hibernate writes it: #type.simpleName with only #property changed'() {
+        given: 'a yard and an item of one tenant, loaded inside withoutId'
+        TenantYard yard = yardLoadedWithoutTenant(type, collection)
+        def item = yard."$collection".first()
+
+        when: 'only the property is changed, and the yard is validated while a tenant that breaks the maxSize of the item is current'
+        item."$property" = value
+        System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, 'a-tenant-too-long')
+        boolean valid = yard.validate()
+
+        then: 'the item is validated with the tenant id that is written for it'
+        valid == !written
+        item.firmId == (written ? 'a-tenant-too-long' : 'beta')
+        !written || yard.errors.getFieldError("${collection}[0].firmId").code == 'maxSize.exceeded'
+
+        when: 'the yard is saved while a tenant that fits is current'
+        System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, 'acme')
+        def saved = yard.save(flush: true)
+
+        then:
+        saved
+        storedTenantIds(type, 'code') == [c1: written ? 'acme' : 'beta']
+
+        where:
+        type        | collection | property    | value           || written
+        TenantCrate | 'crates'   | 'name'      | 'changed'       || true
+        TenantCrate | 'crates'   | 'code'      | 'changed'       || true
+        TenantCrate | 'crates'   | 'computed'  | 5               || true
+        TenantCrate | 'crates'   | 'nicknames' | ['Fido'] as Set || true
+        TenantBox   | 'boxes'    | 'name'      | 'changed'       || true
+        TenantBox   | 'boxes'    | 'code'      | 'changed'       || false
+        TenantBox   | 'boxes'    | 'computed'  | 5               || false
+        TenantBox   | 'boxes'    | 'nicknames' | ['Fido'] as Set || false
+        TenantBin   | 'bins'     | 'name'      | 'changed'       || false
+        TenantBin   | 'bins'     | 'code'      | 'changed'       || false
+        TenantBin   | 'bins'     | 'nicknames' | ['Fido'] as Set || false
+        TenantPail  | 'pails'    | 'name'      | 'changed'       || false
+        TenantPail  | 'pails'    | 'code'      | 'changed'       || false
+    }
+
+    void 'an associated object of a class with dynamicUpdate that is marked as changed as a whole keeps its tenant id'() {
+        given: 'a yard and a bin of one tenant, loaded inside withoutId'
+        TenantYard yard = yardLoadedWithoutTenant(TenantBin, 'bins')
+        def bin = yard.bins.first()
+
+        when: 'the bin is marked as changed as a whole, and the yard is validated while a tenant that breaks its maxSize is current'
+        bin.markDirty()
+        System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, 'a-tenant-too-long')
+        boolean valid = yard.validate()
+
+        then: 'a tenant id never counts as changed, so Hibernate does not write it, and the bin is validated with the one it has'
+        valid
+        bin.firmId == 'beta'
+
+        when:
+        System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, 'acme')
+        def saved = yard.save(flush: true)
+
+        then:
+        saved
+        storedTenantIds(TenantBin, 'code') == [c1: 'beta']
+    }
+
+    void 'a new associated object of a class with dynamicUpdate is given the current tenant id when no session is bound'() {
+        given:
+        System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, 'acme')
+        def bin = new TenantBin(name: 'North', code: 'c1')
+        def yard = new TenantYard(name: 'Yard').addToBins(bin)
+        Throwable failure = null
+
+        when: 'the yard is saved on a thread without a session'
+        Thread.start {
+            try {
+                yard.save()
+            }
+            catch (Throwable e) {
+                failure = e
+            }
+        }.join()
+
+        then: 'the bin passes validation with the current tenant id, and the save fails only as it writes'
+        failure != null
+        !yard.hasErrors()
+        bin.firmId == 'acme'
+    }
+
+    void 'a new associated object of a class with dynamicUpdate is given the current tenant id'() {
+        given: 'a new item, which is inserted whole'
+        System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, 'acme')
+        def item = new TenantBin(name: 'North', code: 'c1', firmId: 'beta')
+        def yard = new TenantYard(name: 'Yard').addToBins(item)
+        if (reset) {
+            item.trackChanges()
+        }
+
+        when:
+        def saved = yard.save(flush: true)
+
+        then:
+        saved
+        item.firmId == 'acme'
+        storedTenantIds(TenantBin, 'code') == [c1: 'acme']
+
+        where:
+        reset << [true, false]
+    }
+
     void 'saving an owner without cascading fails as a new associated object is inserted with a tenant id that breaks a constraint declared on it'() {
         given:
         System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, 'a-tenant-too-long')
@@ -824,6 +931,19 @@ class TenantIdConstraintsSpec extends Specification {
             shelter.cats*.chip*.code
             shelter.cats*.nicknames*.size()
             shelter
+        }
+    }
+
+    private TenantYard yardLoadedWithoutTenant(Class<?> type, String collection) {
+        System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, 'beta')
+        def yard = new TenantYard(name: 'Yard')
+        yard."addTo${collection.capitalize()}"(type.newInstance(name: 'North', code: 'c1'))
+        Long id = yard.save(flush: true).id
+        datastore.sessionFactory.currentSession.clear()
+        Tenants.withoutId(datastore) {
+            def loaded = TenantYard.get(id)
+            loaded."$collection"*.nicknames*.size()
+            loaded
         }
     }
 
@@ -1190,5 +1310,108 @@ class TenantLabel implements MultiTenant<TenantLabel> {
         id generator: 'assigned'
         version false
         tenantId name: 'firmId'
+    }
+}
+
+@Entity
+class TenantYard implements MultiTenant<TenantYard> {
+
+    String name
+    String tenantId
+
+    static hasMany = [crates: TenantCrate, boxes: TenantBox, bins: TenantBin, pails: TenantPail]
+}
+
+@Entity
+class TenantCrate implements MultiTenant<TenantCrate> {
+
+    String name
+    String code
+    Integer computed
+    String firmId
+
+    static belongsTo = [yard: TenantYard]
+
+    static hasMany = [nicknames: String]
+
+    static constraints = {
+        firmId nullable: false, maxSize: 5
+        computed nullable: true
+    }
+
+    static mapping = {
+        tenantId name: 'firmId'
+        code updateable: false
+        computed formula: '1 + 1'
+    }
+}
+
+@Entity
+class TenantBox implements MultiTenant<TenantBox> {
+
+    String name
+    String code
+    Integer computed
+    String firmId
+
+    static belongsTo = [yard: TenantYard]
+
+    static hasMany = [nicknames: String]
+
+    static constraints = {
+        firmId nullable: false, maxSize: 5
+        computed nullable: true
+    }
+
+    static mapping = {
+        version false
+        tenantId name: 'firmId'
+        code updateable: false
+        computed formula: '1 + 1'
+    }
+}
+
+@Entity
+class TenantBin implements MultiTenant<TenantBin> {
+
+    String name
+    String code
+    String firmId
+
+    static belongsTo = [yard: TenantYard]
+
+    static hasMany = [nicknames: String]
+
+    static constraints = {
+        firmId nullable: false, maxSize: 5
+    }
+
+    static mapping = {
+        dynamicUpdate true
+        tenantId name: 'firmId'
+        code updateable: false
+    }
+}
+
+@Entity
+class TenantPail implements MultiTenant<TenantPail> {
+
+    String name
+    String code
+    String firmId
+
+    static belongsTo = [yard: TenantYard]
+
+    static hasMany = [nicknames: String]
+
+    static constraints = {
+        firmId nullable: false, maxSize: 5
+    }
+
+    static mapping = {
+        dynamicUpdate true
+        version false
+        tenantId name: 'firmId'
+        code updateable: false
     }
 }
