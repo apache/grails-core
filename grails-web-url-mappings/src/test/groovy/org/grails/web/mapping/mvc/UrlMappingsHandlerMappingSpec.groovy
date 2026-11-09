@@ -367,6 +367,33 @@ class UrlMappingsHandlerMappingSpec extends AbstractUrlMappingsSpec {
         context.pathPattern == '/foo/bar'
     }
 
+    void "an action a page includes leaves the route of the page on its observation"() {
+        given:
+        def grailsApplication = new DefaultGrailsApplication(FooController)
+        grailsApplication.initialise()
+        def holder = new GrailsControllerUrlMappings(grailsApplication, getUrlMappingsHolder {
+            "/foo/bar"(controller: 'foo', action: 'bar')
+            "/included"(controller: 'foo', action: 'fooBar')
+        })
+        def handler = new UrlMappingsHandlerMapping(holder)
+        def webRequest = GrailsWebMockUtil.bindMockWebRequest()
+        def request = webRequest.request
+        request.requestURI = '/foo/bar'
+        def context = new ServerRequestObservationContext(request, webRequest.response)
+        request.setAttribute(ServerHttpObservationFilter.CURRENT_OBSERVATION_CONTEXT_ATTRIBUTE, context)
+        def chain = handler.getHandler(request)
+        chain.interceptorList.each { it.preHandle(request, webRequest.response, chain.handler) }
+
+        when: 'the page includes another action'
+        request.setAttribute(WebUtils.INCLUDE_REQUEST_URI_ATTRIBUTE, '/included')
+        request.requestURI = '/included'
+        chain = handler.getHandler(request)
+        chain.interceptorList.each { it.preHandle(request, webRequest.response, chain.handler) }
+
+        then:
+        context.pathPattern == '/foo/bar'
+    }
+
     void cleanup() {
         RequestContextHolder.resetRequestAttributes()
     }

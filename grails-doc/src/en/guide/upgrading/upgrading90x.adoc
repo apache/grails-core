@@ -121,7 +121,7 @@ Both now report the exception the action threw and the route of the action, and 
 That includes an `Error`, such as a failed `assert`, rather than the `ServletException` Spring MVC wraps it in.
 These requests were already counted with `outcome=SERVER_ERROR`, but an alert that counts a non-`none` `error` value will see more server errors than before, and a dashboard that reads the `uri` of an error controller will find those failures under the routes of the actions.
 After a forward to an error controller, the `jakarta.servlet.error.exception` request attribute holds the exception the action threw rather than a `GrailsWrappedRuntimeException`, for a filter that reads it once the chain has returned. Inside the error controller it still holds the wrapper.
-A client error is not recorded.
+A client error is not recorded, and neither is a failure inside `g:include`, whose error page is rendered inside a page that goes on to answer the request.
 A custom `ObservationConvention` can leave out the error for particular exceptions.
 
 * *`http.server.requests.active` is no longer registered by default.*

@@ -76,6 +76,7 @@ import jakarta.servlet.ServletRequest
 import jakarta.servlet.ServletResponse
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
+import jakarta.servlet.http.HttpServletResponseWrapper
 
 class GrailsExceptionResolverSpec extends Specification {
 
@@ -281,6 +282,38 @@ class GrailsExceptionResolverSpec extends Specification {
         description                                          | thrown                                                                         | left
         'an action threw an exception'                       | FAILURE                                                                        | FAILURE
         'an action threw an Error DispatcherServlet wrapped' | new ServletException("Handler dispatch failed: $FAILED_ASSERT", FAILED_ASSERT) | FAILED_ASSERT
+    }
+
+    void 'an exception #handler answers inside an include is not recorded on the observation of the page that included it'() {
+        given: 'the Grails dispatcher servlet behind the filter, and a page that includes a handler that fails'
+        ServerRequestObservationContext observed = null
+        List<Throwable> notified = []
+        def registry = registryReporting({ observed = it }, { notified << it })
+        def resolver = resolverFor(mappings, controllerMappings)
+        def servlet = dispatcherServletWith(resolver, [
+                '/page'   : { req, res -> req.getRequestDispatcher('/failing').include(req, res); null } as Controller,
+                '/failing': { req, res -> throw FAILURE } as Controller])
+        def request = new ForwardingRequest(servletContext, '/page', servlet, ['/page', '/failing'] as Set, true)
+        def response = new MockHttpServletResponse()
+
+        when:
+        new ServerHttpObservationFilter(registry).doFilter(request, response, { req, res ->
+            servlet.service(req, res)
+        } as FilterChain)
+
+        then: 'the error page answered inside the page, which answered the request'
+        response.status == 200
+        response.includedUrls == included
+        response.forwardedUrl == forwarded
+
+        and: 'so the request did not fail'
+        observed.error == null
+        notified.empty
+
+        where:
+        handler               | mappings                                               | controllerMappings | included   | forwarded
+        'the error view'      | { '500'(view: '/error') }                              | false              | ['/error'] | null
+        'an error controller' | { '500'(controller: 'errors', action: 'serverError') } | true               | []         | '/errors/serverError'
     }
 
     void 'an exception is resolved as usual without an observation'() {
@@ -944,8 +977,8 @@ class GrailsExceptionResolverSpec extends Specification {
     }
 
     /**
-     * A request whose forwards to the handlers of a servlet dispatch through it, and which reads as the forward once it
-     * has returned, unless the container restores it, as Tomcat and Jetty do and Undertow does not.
+     * A request whose forwards and includes to the handlers of a servlet dispatch through it, and which reads as the
+     * forward once it has returned, unless the container restores it, as Tomcat and Jetty do and Undertow does not.
      */
     private static class ForwardingRequest extends MockHttpServletRequest {
 
@@ -982,7 +1015,37 @@ class GrailsExceptionResolverSpec extends Specification {
                         forwarded.requestURI = requestURI
                     }
                 }
+
+                @Override
+                void include(ServletRequest request, ServletResponse response) {
+                    if (!(path in forwarded.handled)) {
+                        super.include(request, response)
+                        return
+                    }
+                    DispatcherType dispatchedAs = forwarded.dispatcherType
+                    forwarded.dispatcherType = DispatcherType.INCLUDE
+                    forwarded.setAttribute(WebUtils.INCLUDE_REQUEST_URI_ATTRIBUTE, path)
+                    try {
+                        forwarded.servlet.service(request, new IncludedResponse((HttpServletResponse) response))
+                    }
+                    finally {
+                        forwarded.removeAttribute(WebUtils.INCLUDE_REQUEST_URI_ATTRIBUTE)
+                        forwarded.dispatcherType = dispatchedAs
+                    }
+                }
             }
+        }
+    }
+
+    /** The response an include writes to, which cannot change the status of the response that includes it. */
+    private static class IncludedResponse extends HttpServletResponseWrapper {
+
+        IncludedResponse(HttpServletResponse response) {
+            super(response)
+        }
+
+        @Override
+        void setStatus(int status) {
         }
     }
 
