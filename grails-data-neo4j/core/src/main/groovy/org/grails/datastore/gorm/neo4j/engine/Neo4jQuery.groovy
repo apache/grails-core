@@ -422,9 +422,9 @@ class Neo4jQuery extends Query {
 
     /**
      * The entity a criterion is about. On the variable of a relationship, which a block on an association to a
-     * relationship entity declares, the identity and the plain properties are the relationship entity's own, as its
-     * mapping may differ from the one of the node that owns the relationship. An association of the relationship, and
-     * the properties the relationship has no mapping for, stay with the entity of the block.
+     * relationship entity declares, the identity is the relationship entity's own, as its mapping may differ from the
+     * one of the node that owns the relationship. Every other property stays with the entity of the block, which
+     * qualifies it with the variable of the relationship.
      */
     private static GraphPersistentEntity criterionScope(Query.Criterion criterion, GraphPersistentEntity entity, CypherBuilder builder, String prefix) {
         PersistentEntity relationship = builder.getRelationshipEntity(prefix)
@@ -436,8 +436,7 @@ class Neo4jQuery extends Query {
         }
         if (criterion instanceof Query.PropertyNameCriterion) {
             String name = ((Query.PropertyNameCriterion) criterion).property
-            PersistentProperty property = relationship.getPropertyByName(name)
-            if (name == relationship.identity?.name || (property != null && !(property instanceof Association))) {
+            if (name == relationship.identity?.name) {
                 return (GraphPersistentEntity) relationship
             }
         }

@@ -39,7 +39,7 @@ class RelationshipBlockIdentitySpec extends Neo4jGormDatastoreSpec {
         RelIdTarget target = new RelIdTarget(name: 't').save(flush: true, failOnError: true)
         RelIdOwner withLink = new RelIdOwner(name: 'with').save(flush: true, failOnError: true)
         RelIdOwner without = new RelIdOwner(name: 'without').save(flush: true, failOnError: true)
-        new RelIdLink(from: withLink, to: target, kind: 'a').save(flush: true, failOnError: true)
+        new RelIdLink(from: withLink, to: target, kind: 'a', total: 1L).save(flush: true, failOnError: true)
         new RelIdRoot(label: 'r-with', owner: withLink).save(flush: true, failOnError: true)
         new RelIdRoot(label: 'r-without', owner: without).save(flush: true, failOnError: true)
         RelIdRoot.withSession { it.clear() }
@@ -91,6 +91,27 @@ class RelationshipBlockIdentitySpec extends Neo4jGormDatastoreSpec {
             }
         }*.label == ['r-with']
     }
+
+    void "a numeric property of the relationship is qualified with the relationship variable"() {
+        given:
+        seed()
+
+        expect:
+        RelIdRoot.createCriteria().list {
+            owner {
+                links {
+                    eq('total', 1L)
+                }
+            }
+        }*.label == ['r-with']
+        RelIdRoot.createCriteria().list {
+            owner {
+                links {
+                    gt('total', 5L)
+                }
+            }
+        }.empty
+    }
 }
 
 @Entity
@@ -117,4 +138,5 @@ class RelIdTarget {
 @Entity
 class RelIdLink implements Relationship<RelIdOwner, RelIdTarget> {
     String kind
+    Long total
 }
