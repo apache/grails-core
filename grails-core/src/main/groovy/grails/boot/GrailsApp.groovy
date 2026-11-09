@@ -45,6 +45,7 @@ import grails.plugins.GrailsPluginManager
 import grails.util.BuildSettings
 import grails.util.Environment
 import org.grails.boot.internal.JavaCompiler
+import org.grails.boot.internal.RedefinedClassWatch
 import org.grails.compiler.injection.AbstractGrailsArtefactTransformer
 import org.grails.compiler.injection.GrailsAwareInjectionOperation
 import org.grails.core.util.BeanCreationProfilingPostProcessor
@@ -332,12 +333,19 @@ class GrailsApp extends SpringApplication {
                 }
             }
 
+            // an agent that redefines classes in place does so after the plugins are told of a recompiled class
+            def redefinedClasses = new RedefinedClassWatch(applicationContext.getBean(GrailsApplication).classLoader)
             developmentModeActive = true
             Thread.start {
                 CompilerConfiguration compilerConfig = new CompilerConfiguration()
                 compilerConfig.setTargetDirectory(new File(location, BuildSettings.BUILD_CLASSES_PATH))
 
                 while (isDevelopmentModeActive()) {
+                    for (File redefined in redefinedClasses.redefined()) {
+                        log.debug('The class compiled from [{}] was redefined after the plugins were told of it, telling them again', redefined)
+                        pluginManager.informOfFileChange(redefined)
+                    }
+
                     // Workaround for some IDE / OS combos - 2 events (new + update) for the same file
                     def uniqueChangedFiles = changedFiles as Set<File>
 
@@ -351,6 +359,7 @@ class GrailsApp extends SpringApplication {
                                     newFiles.remove(f)
                                 }
                                 pluginManager.informOfFileChange(f)
+                                redefinedClasses.told(f)
                                 sleep(1000)
                             }
                         } else if (i == 1) {
@@ -367,6 +376,7 @@ class GrailsApp extends SpringApplication {
                                     newFiles.remove(changedFile)
                                 }
                                 pluginManager.informOfFileChange(changedFile)
+                                redefinedClasses.told(changedFile)
                             }
                         }
 
