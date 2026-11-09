@@ -92,6 +92,7 @@ class FailedActionObservationSpec extends Specification implements HttpClientSup
         'an error controller, after an asynchronous forward' | '/spring/forwardedToControllerAsynchronously'     | '/spring/answeredByController'                    | 'Answered by the error controller' || 'UnsupportedOperationException'
         'the error view, for an Error'                       | '/failing/answeredByViewForAnError'               | '/failing/answeredByViewForAnError'               | 'An error has occurred'            || 'AssertionError'
         'an error controller, for an Error'                  | '/failing/answeredByControllerForAnError'         | '/failing/answeredByControllerForAnError'         | 'Answered by the error controller' || 'StackOverflowError'
+        'an error controller that forwards'                  | '/failing/answeredByForwardingController'         | '/failing/answeredByForwardingController'         | 'Answered by the error controller' || 'ArithmeticException'
         'an error controller, after an interceptor failed'   | '/failing/failsInInterceptor'                     | '/failing/failsInInterceptor'                     | 'Answered by the error controller' || 'UnsupportedOperationException'
     }
 

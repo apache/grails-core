@@ -58,6 +58,10 @@ class FailingController {
         throw new StackOverflowError('answered by the error controller')
     }
 
+    def answeredByForwardingController() {
+        throw new ArithmeticException('answered by an error controller that forwards')
+    }
+
     def forwardedToView() {
         forward(action: 'answeredByView')
     }
@@ -68,6 +72,10 @@ class FailingController {
 
     def errorHandler() {
         render status: 500, text: 'Answered by the error controller'
+    }
+
+    def forwardingErrorHandler() {
+        forward(action: 'errorHandler')
     }
 
     private void failAsynchronously(Exception failure) {

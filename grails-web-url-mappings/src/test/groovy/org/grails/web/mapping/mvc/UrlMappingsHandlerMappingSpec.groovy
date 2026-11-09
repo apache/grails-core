@@ -380,6 +380,7 @@ class UrlMappingsHandlerMappingSpec extends AbstractUrlMappingsSpec {
         grailsApplication.initialise()
         def holder = new GrailsControllerUrlMappings(grailsApplication, getUrlMappingsHolder {
             "/foo/bar"(controller: 'foo', action: 'bar')
+            "/handled"(controller: 'foo', action: 'fooBar')
             "500"(controller: 'foo', action: 'fooBar')
         })
         def handler = new UrlMappingsHandlerMapping(holder)
@@ -404,6 +405,16 @@ class UrlMappingsHandlerMappingSpec extends AbstractUrlMappingsSpec {
 
         then: 'the error handler answers, and the route is still the one that failed'
         webRequest.actionName == 'fooBar'
+        context.pathPattern == '/foo/bar'
+
+        when: 'the error handler forwards, which takes the status code off the request and leaves the exception'
+        request.removeAttribute(WebUtils.ERROR_STATUS_CODE_ATTRIBUTE)
+        request.setAttribute(WebUtils.ERROR_EXCEPTION_ATTRIBUTE, new IllegalStateException('failed'))
+        request.requestURI = '/handled'
+        chain = handler.getHandler(request)
+        chain.interceptorList.each { it.preHandle(request, webRequest.response, chain.handler) }
+
+        then:
         context.pathPattern == '/foo/bar'
     }
 

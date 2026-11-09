@@ -36,6 +36,7 @@ class UrlMappings {
         "/"(view:"/index")
         "500"(controller: 'failing', action: 'errorHandler', exception: UnsupportedOperationException)
         "500"(controller: 'failing', action: 'errorHandler', exception: StackOverflowError)
+        "500"(controller: 'failing', action: 'forwardingErrorHandler', exception: ArithmeticException)
         "500"(view:'/error')
         "404"(view:'/notFound')
     }

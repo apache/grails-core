@@ -240,14 +240,15 @@ class UrlMappingsHandlerMapping extends AbstractHandlerMapping {
      * {@code http.server.requests} {@code uri} tag is a low-cardinality route (e.g. {@code /book/show})
      * instead of {@code UNKNOWN}. Runs at {@code preHandle}: at URL-mapping match the observation
      * context is not yet on the request. A request routed to an error handler keeps the route that failed, so
-     * that the failures an error handler answers are not all reported as its own route.
+     * that the failures an error handler answers are not all reported as its own route. That includes a handler
+     * that forwards: a forward takes the status code off the request, and leaves the exception.
      */
     @CompileStatic
     static class ObservationRouteHandler implements HandlerInterceptor {
 
         @Override
         boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
-            if (request.getAttribute(WebUtils.ERROR_STATUS_CODE_ATTRIBUTE) != null) {
+            if (WebUtils.isError(request) || request.getAttribute(WebUtils.ERROR_EXCEPTION_ATTRIBUTE) != null) {
                 return true
             }
             try {
