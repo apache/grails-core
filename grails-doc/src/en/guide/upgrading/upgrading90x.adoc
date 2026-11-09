@@ -122,7 +122,9 @@ That includes an `Error`, such as a failed `assert`, rather than the `ServletExc
 These requests were already counted with `outcome=SERVER_ERROR`, but an alert that counts a non-`none` `error` value will see more server errors than before, and a dashboard that reads the `uri` of an error controller will find those failures under the routes of the actions.
 After a forward to an error controller, the `jakarta.servlet.error.exception` request attribute holds the exception the action threw rather than a `GrailsWrappedRuntimeException`, for a filter that reads it once the chain has returned. Inside the error controller it still holds the wrapper.
 A client error is not recorded, and neither is a failure inside `g:include`, whose error page is rendered inside a page that goes on to answer the request.
-A custom `ObservationConvention` can leave out the error for particular exceptions.
+The route is now set before the Grails interceptors run, so that a failure in one is reported under the route of the action.
+An interceptor whose `before()` returns `false`, to render a 403 or to redirect, stopped the request before its route was set, so the request was reported with a `uri` of `UNKNOWN`, or `REDIRECTION` for a redirect.
+It is now reported under the route of the action, so a dashboard or alert keyed on those `uri` values sees those requests move.
 
 * *`http.server.requests.active` is no longer registered by default.*
 Spring Boot 4.2 makes this long task timer opt-in.

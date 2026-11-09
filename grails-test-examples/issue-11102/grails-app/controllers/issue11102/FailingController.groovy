@@ -75,6 +75,18 @@ class FailingController {
         render 'never reached, because the interceptor fails'
     }
 
+    def deniedByInterceptor() {
+        render 'never reached, because the interceptor denies it'
+    }
+
+    def sendsNotFound() {
+        response.sendError(404)
+    }
+
+    def notFoundHandler() {
+        render status: 404, text: 'Answered by the not found handler'
+    }
+
     def failsAfterInclude() {
         g.include(action: 'included')
         throw new IllegalStateException('answered by the error view')

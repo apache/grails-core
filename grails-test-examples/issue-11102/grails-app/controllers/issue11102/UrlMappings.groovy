@@ -38,6 +38,6 @@ class UrlMappings {
         "500"(controller: 'failing', action: 'errorHandler', exception: StackOverflowError)
         "500"(controller: 'failing', action: 'forwardingErrorHandler', exception: ArithmeticException)
         "500"(view:'/error')
-        "404"(view:'/notFound')
+        "404"(controller: 'failing', action: 'notFoundHandler')
     }
 }
