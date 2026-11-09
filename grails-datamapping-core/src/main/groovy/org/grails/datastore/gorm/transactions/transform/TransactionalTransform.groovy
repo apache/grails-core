@@ -24,6 +24,7 @@ import org.codehaus.groovy.ast.FieldNode
 import org.codehaus.groovy.ast.MethodNode
 import org.codehaus.groovy.ast.Parameter
 import org.codehaus.groovy.ast.expr.AttributeExpression
+import org.codehaus.groovy.ast.expr.ClassExpression
 import org.codehaus.groovy.ast.expr.ConstantExpression
 import org.codehaus.groovy.ast.expr.Expression
 import org.codehaus.groovy.ast.expr.ListExpression
@@ -288,34 +289,24 @@ class TransactionalTransform extends AbstractDatastoreMethodDecoratingTransforma
                 }
             }
 
+            // PlatformTransactionManager tenantTransactionManager = GormRegistry.getInstance().findCurrentTenantTransactionManager()
+            // or, given a datastore attribute, GormRegistry.getInstance().findCurrentTenantTransactionManagerByType(X)
+            // if (tenantTransactionManager != null) return tenantTransactionManager
+            // The tenant is the one bound for the default datastore, or for the datastore of the attribute: the thread
+            // can hold a different one for each datastore.
+            Expression datastoreAttribute = annotationNode.getMember('datastore')
+            Expression tenantTransactionManagerLookupExpr = datastoreAttribute instanceof ClassExpression ?
+                    callX(registryExpr, 'findCurrentTenantTransactionManagerByType', classX(((ClassExpression) datastoreAttribute).type.plainNodeReference)) :
+                    callX(registryExpr, 'findCurrentTenantTransactionManager')
             BlockStatement getterBody = new BlockStatement()
-            ClassNode currentTenantHolderClassNode = make(grails.gorm.multitenancy.CurrentTenantHolder)
-            ClassNode connectionSourceClassNode = make(org.grails.datastore.mapping.core.connections.ConnectionSource)
-            VariableExpression tenantIdVar = varX('tenantId', make(Serializable))
+            VariableExpression tenantTransactionManagerVar = varX('tenantTransactionManager', transactionManagerClassNode)
             getterBody.addStatement(
-                declS(tenantIdVar, callX(classX(currentTenantHolderClassNode), 'get'))
+                declS(tenantTransactionManagerVar, tenantTransactionManagerLookupExpr)
             )
-            
-            BlockStatement ifTenantActiveBody = new BlockStatement()
-            VariableExpression tmVar = varX('tm', transactionManagerClassNode)
-            ifTenantActiveBody.addStatement(
-                declS(tmVar, callX(registryExpr, 'findSingleTransactionManager', callX(tenantIdVar, 'toString')))
-            )
-            ifTenantActiveBody.addStatement(
-                ifS(notNullX(tmVar), returnS(tmVar))
-            )
-            
             getterBody.addStatement(
-                ifS(
-                    notNullX(tenantIdVar),
-                    ifElseS(
-                        callX(callX(tenantIdVar, 'toString'), 'equals', propX(classX(connectionSourceClassNode), 'DEFAULT')),
-                        new org.codehaus.groovy.ast.stmt.EmptyStatement(),
-                        ifTenantActiveBody
-                    )
-                )
+                ifS(notNullX(tenantTransactionManagerVar), returnS(tenantTransactionManagerVar))
             )
-            
+
             getterBody.addStatement(
                 ifElseS(notNullX(tmFieldExpr), returnS(tmFieldExpr), returnS(transactionManagerLookupExpr))
             )
