@@ -520,6 +520,48 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManag
             },
     ]
 
+    void 'the total of a list that fetches a collection counts each instance once when a sort joins another collection'() {
+        given:
+        saveSquadsToPage()
+
+        when:
+        final results = AssociationSortSquad.list(sort: 'players.name', max: 10, fetch: [reserves: 'join'])
+
+        then:
+        results*.name.sort() == ['First squad', 'Second squad']
+        results.totalCount == 2
+    }
+
+    void 'the total of #api sorted by a collection counts the rows that it pages through'() {
+        given:
+        saveSquadsToPage()
+
+        when:
+        final firstPage = query.call(0)
+        final secondPage = query.call(2)
+
+        then:
+        firstPage*.name == firstPageNames
+        firstPage.totalCount == 3
+        secondPage*.name == ['Second squad']
+
+        where: 'a where query returns an instance once from the rows of a page'
+        api                      | query                                                                                                                                  || firstPageNames
+        'a list'                 | { int offset -> AssociationSortSquad.list(sort: 'players.name', max: 2, offset: offset) }                                              || ['First squad', 'First squad']
+        'a where query'          | { int offset -> AssociationSortSquad.where { name ==~ '%squad' }.list(sort: 'players.name', max: 2, offset: offset) }                  || ['First squad']
+        'a paged criteria query' | { int offset -> AssociationSortSquad.createCriteria().list(sort: 'players.name', max: 2, offset: offset) { like('name', '%squad') } } || ['First squad', 'First squad']
+    }
+
+    private void saveSquadsToPage() {
+        final first = new AssociationSortSquad(name: 'First squad').save(failOnError: true)
+        new AssociationSortMember(name: 'A', squad: first).save(failOnError: true)
+        new AssociationSortMember(name: 'B', squad: first).save(failOnError: true)
+        new AssociationSortMember(name: 'Reserve', reserveSquad: first).save(failOnError: true)
+        final second = new AssociationSortSquad(name: 'Second squad').save(failOnError: true)
+        new AssociationSortMember(name: 'C', squad: second).save(failOnError: true, flush: true)
+        manager.session.clear()
+    }
+
     private void saveSquadWithASubstituteOnly() {
         final squad = new AssociationSortBagSquad(name: 'Squad').save(failOnError: true)
         new AssociationSortBagMember(name: 'Substitute', substituteSquad: squad).save(failOnError: true, flush: true)

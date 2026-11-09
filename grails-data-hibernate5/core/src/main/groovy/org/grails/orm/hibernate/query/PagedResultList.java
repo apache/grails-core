@@ -22,6 +22,7 @@ import java.sql.SQLException;
 
 import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.CriteriaQuery;
+import jakarta.persistence.criteria.Expression;
 import jakarta.persistence.criteria.Root;
 
 import org.hibernate.HibernateException;
@@ -68,7 +69,10 @@ public class PagedResultList extends grails.gorm.PagedResultList {
                     if (!queryRoot.getFetches().isEmpty()) {
                         queryRoot.getFetches().clear();
                     }
-                    final CriteriaQuery finalQuery = criteriaQuery.select(criteriaBuilder.count(queryRoot)).distinct(true).orderBy();
+                    // a list that fetches a collection returns each instance once, whatever a sort joins; any other
+                    // list returns a row for each element of a collection that it sorts by, and pages through those rows
+                    final Expression count = criteriaQuery.isDistinct() ? criteriaBuilder.countDistinct(queryRoot) : criteriaBuilder.count(queryRoot);
+                    final CriteriaQuery finalQuery = criteriaQuery.select(count).orderBy();
                     final Query query = session.createQuery(finalQuery);
                     hibernateTemplate.applySettings(query);
                     return ((Number) query.uniqueResult()).intValue();
