@@ -592,7 +592,7 @@ public class MongoQuery extends BsonQuery implements QueryArgumentsAware {
 
         cursor = (FindIterable<Document>) setHint(cursor);
 
-        return cursor.iterator();
+        return new SessionBoundCursor<>(cursor.iterator(), session.getDatastore());
     }
 
     private MongoIterable<Document> setHint(MongoIterable<Document> cursor) {
