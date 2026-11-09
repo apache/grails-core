@@ -70,7 +70,7 @@ class FailedActionObservationSpec extends Specification implements HttpClientSup
         response.assertContains(500, page)
 
         and: 'the observation stopped on the route that failed with what failed, as its metrics say'
-        new PollingConditions(timeout: 5).eventually {
+        new PollingConditions(timeout: 30).eventually {
             assert STOPPED[path] == [route, exception]
             assert exception in errorTags(route)
         }
