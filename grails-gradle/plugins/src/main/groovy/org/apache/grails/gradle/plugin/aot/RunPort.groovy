@@ -46,8 +46,12 @@ final class RunPort {
      * started both come before its {@code ApplicationStartedEvent}, and a filter that holds requests until then, such
      * as the Spring Security plugin's, answers them with 503, which a run would record in place of the page.
      *
+     * <p>Only a 503 that carries {@code Retry-After}, which is how a 503 says the unavailability is temporary, and
+     * how the Spring Security plugin's says it. A 503 without it is the application's own answer, which waiting will
+     * not change, and a run that waited for it would sit out its whole start timeout before going on.</p>
+     *
      * @param port the port the run is reached on
-     * @return whether it answers with 503, and not where nothing answers at all
+     * @return whether it answers with 503 and {@code Retry-After}, and not where nothing answers at all
      * @since 9.1
      */
     static boolean answersNotReady(int port) {
@@ -58,7 +62,8 @@ final class RunPort {
             connection.connectTimeout = 500
             connection.readTimeout = 2000
             try {
-                return connection.responseCode == HttpURLConnection.HTTP_UNAVAILABLE
+                return connection.responseCode == HttpURLConnection.HTTP_UNAVAILABLE &&
+                        connection.getHeaderField('Retry-After') != null
             }
             finally {
                 connection.disconnect()

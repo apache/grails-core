@@ -273,8 +273,9 @@ abstract class TrainAotCacheTask extends DefaultTask {
      * or reword; a port that accepts a connection is the application's own doing and cannot be
      * configured away while it is still an application worth training.</p>
      *
-     * <p>Both come before its {@code ApplicationStartedEvent}, so a filter that holds requests until then is waited
-     * for, up to the timeout.</p>
+     * <p>Both come before its {@code ApplicationStartedEvent}, so a filter that holds requests until then, answering
+     * them with 503 and {@code Retry-After}, is waited for, up to the timeout. A 503 without {@code Retry-After} is the
+     * application's own answer, and is not.</p>
      */
     private void awaitStarted(Process process, File output) {
         long deadline = System.currentTimeMillis() + Duration.ofSeconds(startTimeoutSeconds.get()).toMillis()
@@ -292,7 +293,8 @@ abstract class TrainAotCacheTask extends DefaultTask {
             Thread.sleep(250L)
         }
         if (started) {
-            // Its home page is what answers 503, as it may for reasons of its own, so the requests are its to answer.
+            // Its home page still says to come back after the whole of the timeout, which is longer than a start
+            // takes to finish, so the requests are its to answer.
             return
         }
         throw new GradleException("The training run did not start within ${startTimeoutSeconds.get()}s. " +

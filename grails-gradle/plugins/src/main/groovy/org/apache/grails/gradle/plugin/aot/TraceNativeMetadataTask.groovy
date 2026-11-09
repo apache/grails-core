@@ -670,6 +670,11 @@ abstract class TraceNativeMetadataTask extends DefaultTask {
         URI.create("http://localhost:${port.get()}${path.startsWith('/') ? path : '/' + path}")
     }
 
+    /**
+     * Waits for the application to serve and, where it answers 503 with {@code Retry-After} as the Spring Security
+     * plugin does until the application has started, for that answer to change, up to the timeout. A 503 without
+     * {@code Retry-After} is the application's own answer, and is not waited for.
+     */
     private void awaitStarted(Process process, File output) {
         long deadline = System.currentTimeMillis() + Duration.ofSeconds(startTimeoutSeconds.get()).toMillis()
         StartupLog log = new StartupLog(output)
@@ -686,7 +691,8 @@ abstract class TraceNativeMetadataTask extends DefaultTask {
             Thread.sleep(250L)
         }
         if (started) {
-            // Its home page is what answers 503, as it may for reasons of its own, so the requests are its to answer.
+            // Its home page still says to come back after the whole of the timeout, which is longer than a start
+            // takes to finish, so the requests are its to answer.
             return
         }
         throw new GradleException("The application did not start within ${startTimeoutSeconds.get()}s. " +

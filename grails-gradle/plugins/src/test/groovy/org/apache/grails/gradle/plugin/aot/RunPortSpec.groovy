@@ -34,6 +34,9 @@ class RunPortSpec extends Specification {
         given:
             HttpServer server = HttpServer.create(new InetSocketAddress('localhost', 0), 0)
             server.createContext('/') { HttpExchange exchange ->
+                if (retryAfter) {
+                    exchange.responseHeaders.add('Retry-After', '1')
+                }
                 exchange.sendResponseHeaders(status, -1)
                 exchange.close()
             }
@@ -46,12 +49,14 @@ class RunPortSpec extends Specification {
             server?.stop(0)
 
         where:
-            status | notReady | description
-            503    | true     | 'not ready'
-            200    | false    | 'ready'
-            302    | false    | 'ready, wherever it sends the request'
-            404    | false    | 'ready, whatever it has at its home page'
-            500    | false    | 'ready, since only 503 says to come back'
+            status | retryAfter | notReady | description
+            503    | true       | true     | 'not ready where it says to come back, as the Spring Security plugin does until the application has started'
+            503    | false      | false    | 'ready where it does not say to come back, since that is the application\'s own answer'
+            200    | false      | false    | 'ready'
+            302    | false      | false    | 'ready, wherever it sends the request'
+            404    | false      | false    | 'ready, whatever it has at its home page'
+            500    | false      | false    | 'ready, since only 503 says to come back'
+            500    | true       | false    | 'ready even with Retry-After, since only a 503 says it is not ready yet'
     }
 
     void 'a port nothing answers on is not said to be not ready'() {

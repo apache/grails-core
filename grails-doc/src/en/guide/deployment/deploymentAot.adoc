@@ -195,7 +195,7 @@ grails {
 }
 ----
 
-The plugin answers every request with a 503 until the application has started, so the trace and an AOT cache training run wait for that answer to change before they make their first request, for no longer than `startTimeoutSeconds`. What the plugin declares and the default configuration it loads are ready for an image. Its companion plugins (REST, LDAP, ACL, CAS, OAuth2 and UI) are not yet: each compiles a default configuration script as it starts, which an image cannot do.
+The plugin answers every request with a 503 and a `Retry-After` header until the application has started, so the trace and an AOT cache training run wait for that answer to change before they make their first request, for no longer than `startTimeoutSeconds`. A 503 without `Retry-After` is the application's own answer, which waiting will not change, so it is not waited for. What the plugin declares and the default configuration it loads are ready for an image. Its companion plugins (REST, LDAP, ACL, CAS, OAuth2 and UI) are not yet: each compiles a default configuration script as it starts, which an image cannot do.
 
 ==== Choosing which form
 

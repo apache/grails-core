@@ -18,6 +18,8 @@
  */
 package org.apache.grails.gradle.plugin.aot
 
+import java.time.Duration
+
 import org.gradle.api.GradleException
 import org.gradle.api.Project
 import org.gradle.testfixtures.ProjectBuilder
@@ -310,7 +312,7 @@ exit 1
     }
 
     void 'a path is not asked for while the run still answers that it is not ready'() {
-        given: 'the Spring Security plugin answers every request with 503 until the application has started'
+        given: 'the Spring Security plugin answers every request with 503 and Retry-After until the application has started'
             TrainAotCacheTask task = servingTask(['/'], true, 'gated')
 
         when:
@@ -321,10 +323,25 @@ exit 1
             requested == ['/']
     }
 
-    void 'a run whose home page always answers that it is not ready is still exercised'() {
-        given: 'waited for no longer than the timeout, since nothing says that answer will change'
+    void 'a run whose home page answers 503 of its own accord is exercised without waiting'() {
+        given: 'a 503 without Retry-After, which does not say it will change'
             TrainAotCacheTask task = servingTask(['/page'], true, 'homePageDown')
-            task.startTimeoutSeconds.set(10)
+            task.startTimeoutSeconds.set(60)
+            long began = System.nanoTime()
+
+        when:
+            task.train()
+
+        then: 'rather than after sitting out the whole of the start timeout'
+            noExceptionThrown()
+            requested == ['/page']
+            Duration.ofNanos(System.nanoTime() - began) < Duration.ofSeconds(30)
+    }
+
+    void 'a run whose home page always says to come back is still exercised once the timeout has passed'() {
+        given: 'waited for no longer than the timeout'
+            TrainAotCacheTask task = servingTask(['/page'], true, 'homePageRetrying')
+            task.startTimeoutSeconds.set(5)
 
         when:
             task.train()

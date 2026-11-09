@@ -20,6 +20,7 @@ package org.apache.grails.gradle.plugin.aot
 
 import java.net.CookieHandler
 import java.net.CookieManager
+import java.time.Duration
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
@@ -351,7 +352,7 @@ exec '${new File(System.getProperty('java.home'), 'bin/java').absolutePath}' \\
     }
 
     void 'a path is not asked for while the application still answers that it is not ready'() {
-        given: 'the Spring Security plugin answers every request with 503 until the application has started'
+        given: 'the Spring Security plugin answers every request with 503 and Retry-After until the application has started'
             TraceNativeMetadataTask task = task(['/'], [], 'gated')
 
         when:
@@ -362,10 +363,25 @@ exec '${new File(System.getProperty('java.home'), 'bin/java').absolutePath}' \\
             requested.contains('GET /')
     }
 
-    void 'an application whose home page always answers that it is not ready is still traced'() {
-        given: 'waited for no longer than the timeout, since nothing says that answer will change'
+    void 'an application whose home page answers 503 of its own accord is traced without waiting'() {
+        given: 'a 503 without Retry-After, which does not say it will change'
             TraceNativeMetadataTask task = task(['/page'], [], 'homePageDown')
-            task.startTimeoutSeconds.set(10)
+            task.startTimeoutSeconds.set(60)
+            long began = System.nanoTime()
+
+        when:
+            task.trace()
+
+        then: 'rather than after sitting out the whole of the start timeout'
+            notThrown(GradleException)
+            requested.contains('GET /page')
+            Duration.ofNanos(System.nanoTime() - began) < Duration.ofSeconds(30)
+    }
+
+    void 'an application whose home page always says to come back is still traced once the timeout has passed'() {
+        given: 'waited for no longer than the timeout'
+            TraceNativeMetadataTask task = task(['/page'], [], 'homePageRetrying')
+            task.startTimeoutSeconds.set(5)
 
         when:
             task.trace()

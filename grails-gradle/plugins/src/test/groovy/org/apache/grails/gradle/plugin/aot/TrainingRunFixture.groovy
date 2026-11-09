@@ -43,10 +43,17 @@ class TrainingRunFixture {
         File requested = new File(args[2])
 
         HttpServer server = HttpServer.create(new InetSocketAddress('localhost', port), 0)
-        long openAt = args.length > 4 && args[4] == 'gated' ? System.currentTimeMillis() + 1500 : 0
-        boolean homePageDown = args.length > 4 && args[4] == 'homePageDown'
+        String behaviour = args.length > 4 ? args[4] : 'ok'
+        long openAt = behaviour == 'gated' ? System.currentTimeMillis() + 1500 : 0
         server.createContext('/') { HttpExchange exchange ->
-            if (System.currentTimeMillis() < openAt || (homePageDown && exchange.requestURI.path == '/')) {
+            // Held as the Spring Security plugin holds a request until the application has started: a 503 that says
+            // to come back. A home page that is down answers 503 for reasons of its own, which says nothing of the kind.
+            boolean homePage = exchange.requestURI.path == '/'
+            boolean homePageDown = behaviour == 'homePageDown' && homePage
+            if (System.currentTimeMillis() < openAt || (behaviour == 'homePageRetrying' && homePage) || homePageDown) {
+                if (!homePageDown) {
+                    exchange.responseHeaders.add('Retry-After', '1')
+                }
                 exchange.sendResponseHeaders(503, -1)
                 exchange.close()
                 return

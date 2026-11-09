@@ -147,9 +147,15 @@ class TracedRunFixture {
         server.createContext('/') { HttpExchange exchange ->
             String path = exchange.requestURI.path
             String method = exchange.requestMethod
+            // Held as the Spring Security plugin holds a request until the application has started: a 503 that says
+            // to come back. A home page that is down answers 503 for reasons of its own, which says nothing of the kind.
             boolean holding = behaviour == 'gated' && System.currentTimeMillis() < openAt
+            boolean homePageRetrying = behaviour == 'homePageRetrying' && path == '/'
             boolean homePageDown = behaviour == 'homePageDown' && path == '/'
-            if (holding || homePageDown) {
+            if (holding || homePageRetrying || homePageDown) {
+                if (!homePageDown) {
+                    exchange.responseHeaders.add('Retry-After', '1')
+                }
                 exchange.sendResponseHeaders(503, -1)
                 exchange.close()
                 return
