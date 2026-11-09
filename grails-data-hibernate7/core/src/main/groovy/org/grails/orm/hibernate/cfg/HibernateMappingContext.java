@@ -24,6 +24,7 @@ import groovy.lang.Closure;
 
 import grails.gorm.hibernate.HibernateEntity;
 import org.grails.datastore.gorm.GormEntity;
+import org.grails.datastore.gorm.query.criteria.MultipleAliasesMappingContext;
 import org.grails.datastore.mapping.model.AbstractMappingContext;
 import org.grails.datastore.mapping.model.MappingConfigurationStrategy;
 import org.grails.datastore.mapping.model.MappingFactory;
@@ -41,7 +42,7 @@ import org.grails.orm.hibernate.proxy.HibernateProxyHandler;
  * @author Graeme Rocher
  * @since 5.0
  */
-public class HibernateMappingContext extends AbstractMappingContext {
+public class HibernateMappingContext extends AbstractMappingContext implements MultipleAliasesMappingContext {
 
     private final HibernateMappingFactory mappingFactory;
     private final MappingConfigurationStrategy syntaxStrategy;
@@ -128,5 +129,14 @@ public class HibernateMappingContext extends AbstractMappingContext {
                 .map(HibernatePersistentEntity.class::cast)
                 .peek(hibernateEntity -> hibernateEntity.setDataSourceName(dataSourceName))
                 .toList();
+    }
+
+    /**
+     * Hibernate 7 joins an association once for each alias that a criteria declares for it, so a
+     * {@code DetachedCriteria} keeps every alias of an association path.
+     */
+    @Override
+    public boolean isMultipleAliasesPerAssociationSupported() {
+        return true;
     }
 }

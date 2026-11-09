@@ -1123,8 +1123,6 @@ class HibernateQuerySpec extends HibernateGormDatastoreSpec {
     def cloneQuery() {
         given:
         hibernateQuery.eq("firstName", "Bob").max(10).offset(5)
-        def alias = new HibernateAlias('pets', 'p', JoinType.LEFT)
-        hibernateQuery.addAlias(alias)
         when:
         HibernateQuery cloned = (HibernateQuery) hibernateQuery.clone()
         then:
@@ -1132,14 +1130,25 @@ class HibernateQuerySpec extends HibernateGormDatastoreSpec {
         cloned.max == hibernateQuery.max
         cloned.offset == hibernateQuery.offset
         cloned.hibernateCriteria != null
-        cloned.aliases == [alias]
+    }
+
+    def "a cloned query keeps the aliases of its criteria, apart from the original"() {
+        given:
+        def alias = new HibernateAlias('pets', 'p', JoinType.LEFT)
+        hibernateQuery.detachedCriteria.criteria.add(alias)
 
         when:
-        cloned.addAlias(new HibernateAlias('pets', 'other'))
+        HibernateQuery cloned = (HibernateQuery) hibernateQuery.clone()
+
+        then: 'the aliases are entries of the criteria, which the clone copies'
+        cloned.detachedCriteria.criteria.contains(alias)
+
+        when:
+        cloned.detachedCriteria.criteria.add(new HibernateAlias('pets', 'other'))
 
         then:
-        cloned.aliases.size() == 2
-        hibernateQuery.aliases == [alias]
+        hibernateQuery.detachedCriteria.criteria.count { it instanceof HibernateAlias } == 1
+        cloned.detachedCriteria.criteria.count { it instanceof HibernateAlias } == 2
     }
 
     def "cloneQuery with order then clearOrders produces no ORDER BY in count"() {
@@ -1253,18 +1262,6 @@ class HibernateQuerySpec extends HibernateGormDatastoreSpec {
         then:
         preEvents > 0
         postEvents > 0
-    }
-
-    def "test add and get aliases"() {
-        given:
-        def alias = new org.grails.orm.hibernate.query.HibernateAlias("nicknames", "n")
-
-        when:
-        hibernateQuery.addAlias(alias)
-
-        then:
-        hibernateQuery.getAliases().size() == 1
-        hibernateQuery.getAliases()[0] == alias
     }
 
     def "singleResult returns first result when multiple rows match"() {

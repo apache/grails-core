@@ -112,6 +112,13 @@ public class JoinTracker {
         return owner.plan == null ? null : owner.plan.typeOf(key(path));
     }
 
+    /**
+     * The alias that declares a path relative to this scope first in the whole query, or {@code null}.
+     */
+    String plannedOwner(String path) {
+        return owner.plan == null ? null : owner.plan.ownerOf(key(path));
+    }
+
     public From<?, ?> getRoot() {
         return root;
     }

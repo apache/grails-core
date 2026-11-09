@@ -115,6 +115,13 @@ abstract class AbstractDetachedCriteria<T> implements Criteria, Cloneable {
      */
     Criteria createAlias(String associationPath, String alias) {
         initialiseIfNecessary(targetClass)
+        String writtenPath = associationPath
+        DetachedAssociationCriteria startingAlias = declaredAliasStarting(associationPath)
+        associationPath = pathFromDeclaredAlias(associationPath)
+        // the first alias of an association names the path itself, so a path that starts with it is that path; a
+        // later alias is a join of its own, and a path that starts with it has to continue from that join
+        String pathFromAlias = startingAlias != null && !startingAlias.is(associationCriteriaMap[startingAlias.associationPath]) ?
+                writtenPath : null
         PersistentProperty prop
         if (associationPath.contains('.')) {
             def tokens = associationPath.split(/\./)
@@ -140,13 +147,57 @@ abstract class AbstractDetachedCriteria<T> implements Criteria, Cloneable {
         DetachedAssociationCriteria associationCriteria = associationCriteriaMap[associationPath]
         if (associationCriteria == null) {
             associationCriteria = new DetachedAssociationCriteria(a.associatedEntity.javaClass, a, associationPath, alias)
+            associationCriteria.pathFromAlias = pathFromAlias
             associationCriteriaMap[associationPath] = associationCriteria
+            add(associationCriteria)
+        }
+        else if (associationCriteria.alias == null || associationCriteria.alias == alias) {
+            associationCriteria.setAlias(alias)
+        }
+        else if (keepsEveryAlias()) {
+            // A second alias of a path that already has one is another declaration, not a rename of the first: it
+            // is kept next to it, so both aliases reach the datastore, which decides whether they share a join.
+            associationCriteria = new DetachedAssociationCriteria(a.associatedEntity.javaClass, a, associationPath, alias)
+            associationCriteria.pathFromAlias = pathFromAlias
             add(associationCriteria)
         }
         else {
             associationCriteria.setAlias(alias)
         }
         return associationCriteria
+    }
+
+    /**
+     * A path that starts with an alias this criteria declared earlier continues the path of that alias, so after
+     * {@code createAlias('children', 'c')} the path {@code c.related} is {@code children.related}. A first segment
+     * that is both an alias and a property of the entity names the alias.
+     */
+    private String pathFromDeclaredAlias(String associationPath) {
+        DetachedAssociationCriteria starting = declaredAliasStarting(associationPath)
+        starting == null ? associationPath : starting.associationPath + associationPath.substring(associationPath.indexOf('.'))
+    }
+
+    private DetachedAssociationCriteria declaredAliasStarting(String associationPath) {
+        int dot = associationPath.indexOf('.')
+        if (dot < 0) {
+            return null
+        }
+        String head = associationPath.substring(0, dot)
+        for (Query.Criterion criterion in criteria) {
+            if (criterion instanceof DetachedAssociationCriteria && ((DetachedAssociationCriteria) criterion).alias == head) {
+                return (DetachedAssociationCriteria) criterion
+            }
+        }
+        null
+    }
+
+    /**
+     * Whether the datastore of the entity joins an association once for each alias declared for it. A datastore that
+     * does not say so keeps the latest alias of an association path, as it always has.
+     */
+    protected boolean keepsEveryAlias() {
+        def context = getPersistentEntity().mappingContext
+        context instanceof MultipleAliasesMappingContext && ((MultipleAliasesMappingContext) context).multipleAliasesPerAssociationSupported
     }
 
     /**

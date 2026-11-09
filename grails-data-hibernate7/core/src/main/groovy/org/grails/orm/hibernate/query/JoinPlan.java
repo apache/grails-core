@@ -42,6 +42,7 @@ final class JoinPlan {
     private final Set<String> mentioned = new HashSet<>();
     private final Map<String, JoinType> inherited = new HashMap<>();
     private final Map<String, JoinType> configured = new HashMap<>();
+    private final Map<String, String> owners = new HashMap<>();
 
     /**
      * Records the join type configured for a path on the criteria, which an association block of the path takes
@@ -58,6 +59,21 @@ final class JoinPlan {
     void override(String path, JoinType joinType) {
         declared.put(path, joinType);
         forEachAncestor(path, ancestor -> merge(inherited, ancestor, joinType));
+    }
+
+    /**
+     * Records the alias that declares a path first in the query, which is the one whose join the path shares: any
+     * later alias of the path, in the same block or in another one, has a join of its own.
+     */
+    void own(String path, String alias) {
+        owners.putIfAbsent(path, alias);
+    }
+
+    /**
+     * The alias that declares the path first in the query, or {@code null} when no alias declares it.
+     */
+    String ownerOf(String path) {
+        return owners.get(path);
     }
 
     Map<String, JoinType> configuredTypes() {

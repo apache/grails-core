@@ -27,7 +27,7 @@ import groovy.lang.MetaMethod;
 
 import jakarta.persistence.criteria.JoinType;
 import jakarta.persistence.metamodel.Attribute;
-import jakarta.persistence.metamodel.EntityType;
+import jakarta.persistence.metamodel.ManagedType;
 import jakarta.persistence.metamodel.Metamodel;
 
 import org.springframework.beans.BeanUtils;
@@ -35,10 +35,11 @@ import org.springframework.beans.BeanUtils;
 import grails.gorm.DetachedCriteria;
 import org.grails.datastore.gorm.finders.DynamicFinder;
 import org.grails.datastore.gorm.query.criteria.DetachedAssociationCriteria;
+import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.PersistentProperty;
 import org.grails.datastore.mapping.model.types.Association;
 import org.grails.datastore.mapping.query.Query;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
+import org.grails.orm.hibernate.query.AssociationOrders;
 import org.grails.orm.hibernate.query.HibernatePagedResultList;
 import org.grails.orm.hibernate.query.HibernateQuery;
 import org.grails.orm.hibernate.query.HibernateQueryArgument;
@@ -83,6 +84,14 @@ public class CriteriaMethodInvoker {
             return UNHANDLED;
         }
 
+        try {
+            return runCriteriaConstruction(method, args);
+        } finally {
+            builder.resetQueryState();
+        }
+    }
+
+    private Object runCriteriaConstruction(CriteriaMethods method, Object... args) {
         HibernateQuery hibernateQuery = builder.getHibernateQuery();
         switch (method) {
             case GET_CALL -> builder.setUniqueResult(true);
@@ -172,17 +181,22 @@ public class CriteriaMethodInvoker {
         if (method != null) {
             switch (method) {
                 case AND:
-                    hibernateQuery.and(callable);
+                    hibernateQuery.and(evaluatedByBuilder(callable));
                     return name;
                 case OR:
-                    hibernateQuery.or(callable);
+                    hibernateQuery.or(evaluatedByBuilder(callable));
                     return name;
                 case NOT:
-                    hibernateQuery.not(callable);
+                    hibernateQuery.not(evaluatedByBuilder(callable));
                     return name;
                 case PROJECTIONS:
                     if (args.length == 1 && (args[0] instanceof Closure)) {
-                        invokeClosureNode(callable);
+                        builder.setInProjections(true);
+                        try {
+                            invokeClosureNode(callable);
+                        } finally {
+                            builder.setInProjections(false);
+                        }
                         return name;
                     }
                     break;
@@ -194,8 +208,10 @@ public class CriteriaMethodInvoker {
         final PropertyDescriptor pd = BeanUtils.getPropertyDescriptor(builder.getTargetClass(), name);
         if (pd != null && pd.getReadMethod() != null) {
             final Metamodel metamodel = builder.getSessionFactory().getMetamodel();
-            final EntityType<?> entityType = metamodel.entity(builder.getTargetClass());
-            final Attribute<?, ?> attribute = entityType.getAttribute(name);
+            // the target is the class of an embedded component inside the block of that component, which is a
+            // managed type but not an entity
+            final ManagedType<?> managedType = metamodel.managedType(builder.getTargetClass());
+            final Attribute<?, ?> attribute = managedType.getAttribute(name);
             // The JPA metamodel does not consider an embedded component an association, but the
             // GORM model does - an embedded block must build a DetachedAssociationCriteria so its
             // properties resolve against the component. It needs no join: its columns live in the
@@ -208,44 +224,84 @@ public class CriteriaMethodInvoker {
                 Class<?> oldTargetClass = builder.getTargetClass();
                 Class<?> associationClass = builder.getClassForAssociationType(attribute);
                 builder.setTargetClass(associationClass);
-                if (!embedded) {
-                    JoinType joinType;
-                    if (hasMoreThanOneArg) {
-                        joinType = builder.convertFromInt((Integer) args[0]);
-                    } else if (associationClass.equals(oldTargetClass)) {
-                        joinType = JoinType.LEFT; // default to left join if joining on the same table
-                    } else {
-                        joinType = builder.convertFromInt(0);
+                try {
+                    if (!embedded) {
+                        JoinType joinType;
+                        if (hasMoreThanOneArg) {
+                            joinType = builder.convertFromInt((Integer) args[0]);
+                        } else if (associationClass.equals(oldTargetClass)) {
+                            joinType = JoinType.LEFT; // default to left join if joining on the same table
+                        } else {
+                            joinType = builder.convertFromInt(0);
+                        }
+
+                        hibernateQuery.join(name, joinType);
                     }
 
-                    hibernateQuery.join(name, joinType);
-                }
-
-                GrailsHibernatePersistentEntity parentEntity = (GrailsHibernatePersistentEntity)
-                        hibernateQuery.getSession().getMappingContext().getPersistentEntity(oldTargetClass.getName());
-                PersistentProperty<?> property = parentEntity.getPropertyByName(name);
-                if (property instanceof Association<?> association) {
-                    DetachedAssociationCriteria<?> associationCriteria =
-                            new DetachedAssociationCriteria<>(associationClass, association);
                     DetachedCriteria<?> oldDetachedCriteria = hibernateQuery.getDetachedCriteria();
-                    hibernateQuery.setDetachedCriteria(associationCriteria);
-                    try {
-                        invokeClosureNode(callable);
-                    } finally {
-                        hibernateQuery.setDetachedCriteria(oldDetachedCriteria);
+                    // inside the block of an embedded component the entity is the one of the component, which the
+                    // mapping context does not know by the class of the component
+                    PersistentEntity parentEntity = oldDetachedCriteria instanceof DetachedAssociationCriteria<?> enclosing ?
+                            enclosing.getAssociation().getAssociatedEntity() :
+                            hibernateQuery.getSession().getMappingContext().getPersistentEntity(oldTargetClass.getName());
+                    PersistentProperty<?> property = parentEntity.getPropertyByName(name);
+                    if (property instanceof Association<?> association) {
+                        DetachedAssociationCriteria<?> associationCriteria =
+                                new DetachedAssociationCriteria<>(associationClass, association);
+                        hibernateQuery.setDetachedCriteria(associationCriteria);
+                        // inside projections { } a block names the association that the projections in it are of
+                        boolean projecting = builder.isInProjections();
+                        if (projecting) {
+                            builder.pushProjectionPath(name);
+                        }
+                        try {
+                            invokeClosureNode(callable);
+                        } finally {
+                            if (projecting) {
+                                builder.popProjectionPath();
+                            }
+                            hibernateQuery.setDetachedCriteria(oldDetachedCriteria);
+                        }
+                        // the orders of the block become orders of the enclosing criteria, in the place they
+                        // were declared in, since only the orders of the root criteria reach the query
+                        AssociationOrders.moveOutOf(associationCriteria, hibernateQuery::order);
+                        hibernateQuery.add((Query.Criterion) associationCriteria);
+                    } else {
+                        // Fallback for non-GORM associations if any
+                        hibernateQuery.in(name, new DetachedCriteria<>(associationClass).build(callable));
                     }
-                    hibernateQuery.add((Query.Criterion) associationCriteria);
-                } else {
-                    // Fallback for non-GORM associations if any
-                    hibernateQuery.in(name, new DetachedCriteria<>(associationClass).build(callable));
-                }
 
-                builder.setTargetClass(oldTargetClass);
+                } finally {
+                    builder.setTargetClass(oldTargetClass);
+                }
 
                 return name;
             }
         }
         return UNHANDLED;
+    }
+
+    /**
+     * Returns a closure that has the builder evaluate the closure of {@code and}, {@code or} or {@code not}.
+     * The criteria that open the junction evaluate the closure that they are given themselves. An association
+     * block inside the junction would then not be a block of the builder: a join type given to it would be
+     * ignored, and its orders would stay in the block and reach the query after every other order, and not in
+     * the place they were declared in.
+     *
+     * @param callable the closure of the junction
+     * @return the closure to open the junction with
+     */
+    protected Closure<?> evaluatedByBuilder(Closure<?> callable) {
+        return new Closure<Object>(builder) {
+
+            private static final long serialVersionUID = 1L;
+
+            @SuppressWarnings("unused") // called reflectively by the Groovy runtime as the closure body
+            public Object doCall() {
+                invokeClosureNode(callable);
+                return null;
+            }
+        };
     }
 
     @SuppressWarnings("PMD.DataflowAnomalyAnalysis")

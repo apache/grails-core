@@ -127,4 +127,17 @@ class JoinPlanSpec extends Specification {
         plan.typeOf('team.likes') == JoinType.LEFT
         plan.typeOf('team') == JoinType.INNER
     }
+
+    def 'the first alias that declares a path owns it, and a later alias does not'() {
+        given:
+        def plan = new JoinPlan()
+
+        when:
+        plan.own('team.likes', 'l1')
+        plan.own('team.likes', 'l2')
+
+        then:
+        plan.ownerOf('team.likes') == 'l1'
+        plan.ownerOf('team') == null
+    }
 }
