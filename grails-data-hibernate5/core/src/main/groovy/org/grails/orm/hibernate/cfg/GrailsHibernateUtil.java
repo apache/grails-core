@@ -21,10 +21,12 @@ package org.grails.orm.hibernate.cfg;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import groovy.lang.GroovyObject;
 import groovy.lang.GroovySystem;
@@ -365,13 +367,18 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
      * each other's rows, and a bag cannot tell a repeated row from a repeated element, so a bag that is
      * read from those rows would hold its elements more than once. That is why Hibernate does not
      * support fetching more than one bag in a query. A collection that the query fetches anyway is not
-     * joined by the sort, so it is only rejected next to another bag.
+     * joined by the sort, so it is only rejected next to another bag. A query that projects values loads
+     * no collection, so it is not rejected.
      *
      * @param criteria The criteria of the query
      * @param associationPath The path, from the root entity, of the collection that the query sorts by
      * @throws UnsupportedOperationException if either collection is a bag
      */
     public static void checkSortedCollection(Criteria criteria, String associationPath) {
+        CriteriaImpl root = getRootCriteria(criteria);
+        if (root != null && root.getProjection() != null) {
+            return;
+        }
         String fetched = findOtherFetchedCollection(criteria, associationPath, true);
         if (fetched != null) {
             throw new UnsupportedOperationException(sortedCollectionMessage(associationPath, getRootCriteria(criteria).getEntityOrClassName(), fetched));
@@ -477,7 +484,7 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
         }
         SessionFactoryImplementor factory = root.getSession().getFactory();
         Map<String, String> fetched = new LinkedHashMap<>();
-        collectFetchedCollections(root, factory, factory.getMetamodel().entityPersister(root.getEntityOrClassName()), "", fetched);
+        collectFetchedCollections(root, factory, factory.getMetamodel().entityPersister(root.getEntityOrClassName()), "", new HashSet<>(), fetched);
         return new ArrayList<>(fetched.keySet());
     }
 
@@ -537,7 +544,7 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
         }
         boolean sortedFetched = isFetchRequested(root, associationPath);
         Map<String, String> fetched = new LinkedHashMap<>();
-        collectFetchedCollections(root, factory, persister, "", fetched);
+        collectFetchedCollections(root, factory, persister, "", new HashSet<>(), fetched);
         for (Map.Entry<String, String> collection : fetched.entrySet()) {
             if (collection.getKey().equals(associationPath)) {
                 continue;
@@ -552,10 +559,11 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
 
     /**
      * Collects the role of each collection that the query fetches, by its path. It follows the
-     * associations that the query fetches, as Hibernate does. Below the root entity only a fetch that
-     * the query requests is followed, so that a mapping that fetches its own class comes to an end.
+     * associations that the query or the mapping fetches, as Hibernate does. A fetch from the mapping is
+     * not followed when the same association is already on the path, so that a class that fetches itself
+     * comes to an end, as it does in Hibernate.
      */
-    private static void collectFetchedCollections(CriteriaImpl root, SessionFactoryImplementor factory, EntityPersister persister, String prefix, Map<String, String> fetched) {
+    private static void collectFetchedCollections(CriteriaImpl root, SessionFactoryImplementor factory, EntityPersister persister, String prefix, Set<String> mappedFetches, Map<String, String> fetched) {
         String[] propertyNames = persister.getPropertyNames();
         Type[] propertyTypes = persister.getPropertyTypes();
         for (int i = 0; i < propertyNames.length; i++) {
@@ -565,8 +573,9 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
             String path = prefix + propertyNames[i];
             FetchMode requested = getRequestedFetchMode(root, path);
             boolean joined = requested != null ? requested == FetchMode.JOIN :
-                    prefix.isEmpty() && persister instanceof OuterJoinLoadable && ((OuterJoinLoadable) persister).getFetchMode(i) == FetchMode.JOIN;
-            if (!joined) {
+                    persister instanceof OuterJoinLoadable && ((OuterJoinLoadable) persister).getFetchMode(i) == FetchMode.JOIN;
+            String mappedFetch = requested == null ? persister.getEntityName() + '.' + propertyNames[i] : null;
+            if (!joined || (mappedFetch != null && !mappedFetches.add(mappedFetch))) {
                 continue;
             }
             if (propertyTypes[i].isCollectionType()) {
@@ -574,7 +583,10 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
             }
             EntityPersister associated = getAssociatedPersister(factory, propertyTypes[i]);
             if (associated != null) {
-                collectFetchedCollections(root, factory, associated, path + '.', fetched);
+                collectFetchedCollections(root, factory, associated, path + '.', mappedFetches, fetched);
+            }
+            if (mappedFetch != null) {
+                mappedFetches.remove(mappedFetch);
             }
         }
     }

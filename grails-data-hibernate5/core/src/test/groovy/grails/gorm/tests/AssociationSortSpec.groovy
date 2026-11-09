@@ -18,6 +18,7 @@
  */
 package grails.gorm.tests
 
+import grails.gorm.DetachedCriteria
 import grails.gorm.annotation.Entity
 import org.apache.grails.data.hibernate5.core.GrailsDataHibernate5TckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
@@ -39,6 +40,8 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManag
                                       AssociationSortSquad, AssociationSortMember, AssociationSortBagSquad, AssociationSortBagMember,
                                       AssociationSortMixedSquad, AssociationSortMixedMember,
                                       AssociationSortAuthor, AssociationSortBook, AssociationSortPublisher, AssociationSortAward, AssociationSortCategory,
+                                      AssociationSortMappedAuthor, AssociationSortMappedBook, AssociationSortEagerAuthor, AssociationSortEagerBook,
+                                      AssociationSortMappedPublisher, AssociationSortMappedAward, AssociationSortMappedNode, AssociationSortMappedLeaf,
                                       AssociationSortVenue, AssociationSortGround])
     }
 
@@ -701,6 +704,98 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManag
         'a list'                            | { AssociationSortAuthor.list(fetch: ['publisher.awards': JoinType.LEFT]) }
     }
 
+    void '#api that projects a value next to a fetched collection returns it, since a projection loads no collection'() {
+        given: 'a squad with two regulars and a substitute'
+        final squad = new AssociationSortBagSquad(name: 'Squad').save(failOnError: true)
+        ['Regular A', 'Regular B'].each { new AssociationSortBagMember(name: it, squad: squad).save(failOnError: true) }
+        new AssociationSortBagMember(name: 'Substitute', substituteSquad: squad).save(failOnError: true, flush: true)
+        manager.session.clear()
+
+        expect:
+        query.call().toUnique().sort() == expected
+
+        where:
+        api                                        | query                                                                                                                                       || expected
+        'a detached criteria with a property'      | { new DetachedCriteria(AssociationSortBagSquad).join('substitutes').property('regulars.name').list() }                                      || ['Regular A', 'Regular B']
+        'a where query with a property'            | { AssociationSortBagSquad.where { name == 'Squad' }.join('substitutes').property('regulars.name').list() }                                  || ['Regular A', 'Regular B']
+        'a detached criteria with a distinct'      | { new DetachedCriteria(AssociationSortBagSquad).join('substitutes').distinct('regulars.name').list() }                                      || ['Regular A', 'Regular B']
+        'a property and a sort by the bag'         | { new DetachedCriteria(AssociationSortBagSquad).join('substitutes').property('name').list(sort: 'regulars.name') }                          || ['Squad']
+        'a criteria query ordered by the bag'      | { AssociationSortBagSquad.createCriteria().list { projections { property('name') }; join('substitutes'); order('regulars.name') } }         || ['Squad']
+        'a paged criteria query sorted by the bag' | { AssociationSortBagSquad.createCriteria().list(sort: 'regulars.name', max: 10) { projections { property('name') }; join('substitutes') } } || ['Squad']
+    }
+
+    void '#api sorted by a collection while a mapping fetches a bag below the root is rejected'() {
+        given:
+        saveMappedAuthors()
+
+        when:
+        query.call()
+
+        then:
+        final UnsupportedOperationException e = thrown()
+        e.message.contains('[publisher.awards]')
+
+        where:
+        api                                                   | query
+        'a where query that fetches the association'          | { AssociationSortMappedAuthor.where { name ==~ '%' }.join('publisher').list(sort: 'books.title') }
+        'a where query with the fetch argument'               | { AssociationSortMappedAuthor.where { name ==~ '%' }.list(sort: 'books.title', fetch: [publisher: JoinType.LEFT]) }
+        'a where query whose mapping fetches the association' | { AssociationSortEagerAuthor.where { name ==~ '%' }.list(sort: 'books.title') }
+        'order in a criteria query'                           | { AssociationSortEagerAuthor.createCriteria().list { order('books.title') } }
+        'a dynamic finder'                                    | { AssociationSortEagerAuthor.findAllByNameLike('%', [sort: 'books.title']) }
+        'findAll by example'                                  | { AssociationSortEagerAuthor.findAll(new AssociationSortEagerAuthor(name: 'Eager'), [sort: 'books.title']) }
+    }
+
+    void 'a bag that a mapping fetches below the root holds each element once #description'() {
+        given:
+        saveMappedAuthors()
+
+        when:
+        final results = query.call()
+
+        then:
+        results*.name.unique() == ['Eager']
+        results.first().publisher.awards*.title.sort() == ['W1', 'W2']
+
+        where:
+        description                       | query
+        'without a sort by a collection'  | { AssociationSortEagerAuthor.where { name ==~ '%' }.list() }
+        'when the query asks not to fetch' | { AssociationSortEagerAuthor.where { name ==~ '%' }.list(sort: 'books.title', fetch: ['publisher.awards': 'select']) }
+    }
+
+    void 'a list sorted by a collection is not rejected for what a mapping fetches, since a list does not join it'() {
+        given:
+        saveMappedAuthors()
+
+        expect:
+        AssociationSortEagerAuthor.list(sort: 'books.title')*.name.unique() == ['Eager']
+    }
+
+    void 'a sort by a collection comes to an end when a class fetches itself through its mapping'() {
+        given:
+        final first = new AssociationSortMappedNode(name: 'First').save(failOnError: true)
+        final second = new AssociationSortMappedNode(name: 'Second', next: first).save(failOnError: true)
+        first.next = second
+        first.save(failOnError: true)
+        new AssociationSortMappedLeaf(name: 'Leaf', node: first).save(failOnError: true, flush: true)
+        manager.session.clear()
+
+        when:
+        final results = AssociationSortMappedNode.where { name ==~ '%' }.list(sort: 'leaves.name')
+
+        then:
+        results*.name.unique().sort() == ['First', 'Second']
+    }
+
+    private void saveMappedAuthors() {
+        final publisher = new AssociationSortMappedPublisher(name: 'Publisher').save(failOnError: true)
+        ['W1', 'W2'].each { new AssociationSortMappedAward(title: it, publisher: publisher).save(failOnError: true) }
+        final author = new AssociationSortMappedAuthor(name: 'Mapped', publisher: publisher).save(failOnError: true)
+        ['B1', 'B2'].each { new AssociationSortMappedBook(title: it, author: author).save(failOnError: true) }
+        final eager = new AssociationSortEagerAuthor(name: 'Eager', publisher: publisher).save(failOnError: true)
+        ['B1', 'B2'].each { new AssociationSortEagerBook(title: it, author: eager).save(failOnError: true, flush: true) }
+        manager.session.clear()
+    }
+
     private void saveAuthorAndCategories() {
         final publisher = new AssociationSortPublisher(name: 'Publisher').save(failOnError: true)
         ['W1', 'W2'].each { new AssociationSortAward(title: it, publisher: publisher).save(failOnError: true) }
@@ -985,6 +1080,71 @@ class AssociationSortBagMember {
         squad nullable: true
         substituteSquad nullable: true
     }
+}
+
+@Entity
+class AssociationSortMappedPublisher {
+    String name
+    Collection<AssociationSortMappedAward> awards
+    static hasMany = [awards: AssociationSortMappedAward]
+    static mapping = {
+        awards fetch: 'join'
+    }
+}
+
+@Entity
+class AssociationSortMappedAward {
+    String title
+    static belongsTo = [publisher: AssociationSortMappedPublisher]
+}
+
+@Entity
+class AssociationSortMappedAuthor {
+    String name
+    AssociationSortMappedPublisher publisher
+    static hasMany = [books: AssociationSortMappedBook]
+}
+
+@Entity
+class AssociationSortMappedBook {
+    String title
+    static belongsTo = [author: AssociationSortMappedAuthor]
+}
+
+@Entity
+class AssociationSortEagerAuthor {
+    String name
+    AssociationSortMappedPublisher publisher
+    static hasMany = [books: AssociationSortEagerBook]
+    static mapping = {
+        publisher fetch: 'join'
+    }
+}
+
+@Entity
+class AssociationSortEagerBook {
+    String title
+    static belongsTo = [author: AssociationSortEagerAuthor]
+}
+
+@Entity
+class AssociationSortMappedNode {
+    String name
+    AssociationSortMappedNode next
+    static hasMany = [leaves: AssociationSortMappedLeaf]
+
+    static constraints = {
+        next nullable: true
+    }
+    static mapping = {
+        next fetch: 'join'
+    }
+}
+
+@Entity
+class AssociationSortMappedLeaf {
+    String name
+    static belongsTo = [node: AssociationSortMappedNode]
 }
 
 @Entity
