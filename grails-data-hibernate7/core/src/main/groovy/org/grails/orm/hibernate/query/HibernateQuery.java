@@ -77,6 +77,7 @@ public class HibernateQuery extends Query {
 
     protected static final String ALIAS = "_alias";
     private final Map<String, CriteriaAndAlias> createdAssociationPaths = new HashMap<>();
+    private final List<HibernateAlias> aliases = new ArrayList<>();
     private final Set<String> fetchJoinPaths = new LinkedHashSet<>();
     protected String alias;
     protected int aliasCount;
@@ -106,6 +107,14 @@ public class HibernateQuery extends Query {
 
     public void setDetachedCriteria(DetachedCriteria<?> detachedCriteria) {
         this.detachedCriteria = detachedCriteria;
+    }
+
+    public List<HibernateAlias> getAliases() {
+        return Collections.unmodifiableList(aliases);
+    }
+
+    public void addAlias(HibernateAlias alias) {
+        this.aliases.add(alias);
     }
 
     @Override
@@ -883,6 +892,7 @@ public class HibernateQuery extends Query {
                         hibernateQuery.offset(this.offset);
                     }
                     hibernateQuery.setDetachedCriteria(this.detachedCriteria.clone());
+                    hibernateQuery.aliases.addAll(this.aliases);
 
                     return hibernateQuery;
                 });

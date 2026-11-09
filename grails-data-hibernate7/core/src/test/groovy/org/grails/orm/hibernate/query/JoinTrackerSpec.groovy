@@ -16,6 +16,7 @@
 package org.grails.orm.hibernate.query
 
 import jakarta.persistence.criteria.From
+import jakarta.persistence.criteria.JoinType
 import spock.lang.Specification
 
 /**
@@ -73,5 +74,83 @@ class JoinTrackerSpec extends Specification {
         parent.getJoin("face") == parentJoin
         child.getJoin('missing') == null
         parent.getJoin('missing') == null
+    }
+
+    def 'an association block shares its joins with its query by the path from the root of the query'() {
+        given:
+        def query = new JoinTracker(Mock(From))
+        def team = new JoinTracker(query, Mock(From)) // a subquery has joins of its own
+        def teamJoin = Mock(From)
+        def likesJoin = Mock(From)
+        def block = JoinTracker.forBlock(query, Mock(From), 'team')
+        def nested = JoinTracker.forBlock(block, Mock(From), 'likes')
+
+        when:
+        query.addJoin('team', teamJoin)
+        nested.addJoin('tag', likesJoin)
+        block.addJoin('likes', Mock(From))
+
+        then:
+        block.getOwnJoin('likes') == query.getOwnJoin('team.likes')
+        nested.getOwnJoin('tag') == query.getOwnJoin('team.likes.tag')
+        nested.getOwnJoin('tag') == likesJoin
+        block.getOwnJoin('likes.tag') == likesJoin
+        query.getOwnJoin('team') == teamJoin
+        team.getOwnJoin('team.likes') == null
+    }
+
+    def 'the root of each scope is its own'() {
+        given:
+        def queryRoot = Mock(From)
+        def blockRoot = Mock(From)
+        def query = new JoinTracker(queryRoot)
+        def block = JoinTracker.forBlock(query, blockRoot, 'team')
+
+        expect:
+        query.getOwnJoin('root') == queryRoot
+        block.getOwnJoin('root') == blockRoot
+        block.getRoot() == blockRoot
+    }
+
+    def 'a block reads the join types the criteria of the whole query decided by its path from the root'() {
+        given:
+        def plan = new JoinPlan()
+        plan.declare('team.likes', JoinType.LEFT)
+        def query = new JoinTracker(Mock(From))
+        def block = JoinTracker.forBlock(query, Mock(From), 'team')
+        def nested = JoinTracker.forBlock(block, Mock(From), 'likes')
+
+        when:
+        query.setPlan(plan)
+
+        then:
+        query.plannedType('team.likes') == JoinType.LEFT
+        block.plannedType('likes') == JoinType.LEFT
+        nested.plannedType('tag') == null
+        nested.plannedType('likes') == null
+    }
+
+    def 'a tracker without a plan has no planned join type'() {
+        expect:
+        new JoinTracker(Mock(From)).plannedType('team') == null
+    }
+
+    def 'the owner of a path is read from the plan through the prefix of a block'() {
+        given:
+        def query = new JoinTracker(Mock(From))
+        def block = JoinTracker.forBlock(query, Mock(From), 'team')
+        def plan = new JoinPlan()
+        plan.own('team.likes', 'l1')
+        query.setPlan(plan)
+
+        expect:
+        query.plannedOwner('team.likes') == 'l1'
+        block.plannedOwner('likes') == 'l1'
+        block.plannedOwner('tag') == null
+    }
+
+    def 'a tracker without a plan has no planned owner'() {
+        expect:
+        new JoinTracker(Mock(From)).plannedOwner('team') == null
     }
 }

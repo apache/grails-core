@@ -17,12 +17,10 @@ package org.grails.orm.hibernate.query;
 
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import jakarta.persistence.criteria.Expression;
 import jakarta.persistence.criteria.From;
@@ -49,11 +47,9 @@ public class JpaQueryContext implements Cloneable {
     private final ExpressionResolver resolver;
     private final Map<ParameterExpression<?>, Object> parameterValues = new LinkedHashMap<>();
     private final Map<String, Expression<?>> selectionAliases = new HashMap<>();
-    // only the context of a query, which has no parent, records the contexts of its association blocks
-    private Map<DetachedAssociationCriteria<?>, JpaQueryContext> associationContexts;
     private JpaQueryContext parent;
-    private String blockPath;
-    private final Set<String> aliasClaims = new HashSet<>();
+
+    private Map<DetachedAssociationCriteria<?>, JpaQueryContext> associationContexts;
 
     public JpaQueryContext() {
         this(null, null, null);
@@ -88,15 +84,31 @@ public class JpaQueryContext implements Cloneable {
     }
 
     /**
+     * Creates the context of an association block, which shares the joins of the context that contains it.
+     *
+     * @param parent the context of the query or block that contains the block
+     * @param aliases the aliases the block declares, or {@code null}
+     * @param root the join of the block's association
+     * @param blockPath the association path of the block, relative to the container
+     */
+    public static JpaQueryContext forBlock(JpaQueryContext parent, List<HibernateAlias> aliases, From<?, ?> root,
+                                           String blockPath) {
+        return new JpaQueryContext(parent, aliases, root, blockPath);
+    }
+
+    /**
      * Internal constructor for subqueries and base initialization.
      */
     public JpaQueryContext(JpaQueryContext parent, List<HibernateAlias> aliases, From<?, ?> root) {
+        this(parent, aliases, root, null);
+    }
+
+    private JpaQueryContext(JpaQueryContext parent, List<HibernateAlias> aliases, From<?, ?> root, String blockPath) {
         this.parent = parent;
-        this.joinTracker = new JoinTracker(parent != null ? parent.getJoinTracker() : null, root);
+        this.joinTracker = blockPath != null ? JoinTracker.forBlock(parent.getJoinTracker(), root, blockPath) :
+                new JoinTracker(parent != null ? parent.getJoinTracker() : null, root);
         this.aliasRegistry = new AliasRegistry(parent != null ? parent.getAliasRegistry() : null);
         this.resolver = new ExpressionResolver(aliasRegistry, joinTracker);
-        this.resolver.shareJoins(this::inheritedJoin, this::publishJoin);
-        this.resolver.shareAliasClaims(this::inheritedClaim, this::claimPath);
         if (aliases != null) {
             for (HibernateAlias alias : aliases) {
                 aliasRegistry.define(alias.alias(), alias);
@@ -136,73 +148,18 @@ public class JpaQueryContext implements Cloneable {
         return joinTracker.getJoin(path);
     }
 
-    /**
-     * Declares that this context is the one of an association block, and the path of that association in the
-     * enclosing context, so that a join of the block is the join of the same path from the enclosing query.
-     *
-     * @param blockPath the association path of the block, relative to the enclosing context
-     */
-    public void setBlockPath(String blockPath) {
-        this.blockPath = blockPath;
-    }
-
-    private From<?, ?> inheritedJoin(String path) {
-        return parent != null && blockPath != null ? parent.visibleJoin(blockPath + "." + path) : null;
-    }
-
-    private From<?, ?> visibleJoin(String path) {
-        From<?, ?> own = joinTracker.getOwnJoin(path);
-        return own != null ? own : inheritedJoin(path);
-    }
-
-    private void publishJoin(String path, From<?, ?> join) {
-        if (parent != null && blockPath != null) {
-            parent.shareJoin(blockPath + "." + path, join);
-        }
+    void setJoinPlan(JoinPlan joinPlan) {
+        joinTracker.setPlan(joinPlan);
     }
 
     /**
-     * Whether an alias of an enclosing query, or of another block of one, already shares the join of a path of this
-     * scope. The first alias of a path shares the join of the path, and an alias after it has a join of its own.
+     * The join of an association path relative to this scope. It is the join every alias, block and property
+     * that goes through the path of the query shares, with the join type the criteria decided for the path.
      */
-    private boolean inheritedClaim(String path) {
-        return parent != null && blockPath != null && parent.visibleClaim(blockPath + "." + path);
-    }
-
-    private boolean visibleClaim(String path) {
-        return aliasClaims.contains(path) || inheritedClaim(path);
-    }
-
-    private void claimPath(String path) {
-        aliasClaims.add(path);
-        if (parent != null && blockPath != null) {
-            parent.claimPath(blockPath + "." + path);
-        }
-    }
-
-    private void shareJoin(String path, From<?, ?> join) {
-        if (joinTracker.getOwnJoin(path) == null) {
-            joinTracker.addJoin(path, join);
-        }
-        publishJoin(path, join);
-    }
-
     From<?, ?> resolveAssociation(String path) {
-        if (joinTracker.getOwnJoin(path) == null) {
-            From<?, ?> shared = inheritedJoin(path);
-            if (shared != null) {
-                joinTracker.addJoin(path, shared);
-            }
-        }
-        From<?, ?> join = resolveOwnAssociation(path);
-        publishJoin(path, join);
-        return join;
-    }
-
-    private From<?, ?> resolveOwnAssociation(String path) {
         HibernateAlias definition = aliasRegistry.getDefinition(path);
-        JoinType declared = aliasRegistry.getAssociationJoinType(path);
-        JoinType joinType = declared != null ? declared :
+        JoinType planned = joinTracker.plannedType(path);
+        JoinType joinType = planned != null ? planned :
                 definition != null && !definition.explicit() ? definition.joinType() : JoinType.INNER;
         return resolver.resolveAssociation(path, joinType);
     }

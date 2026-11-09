@@ -176,11 +176,15 @@ class ExpressionResolverSpec extends Specification {
         def favoriteJoin = Mock(Join)
         def tagJoin = Mock(Join)
         def aliasRegistry = new AliasRegistry()
-        if (configured) {
-            aliasRegistry.define('favorite', new HibernateAlias('favorite', 'favorite', configured, false))
-        }
         aliasRegistry.define('t', new HibernateAlias('favorite.tag', 't', JoinType.LEFT))
-        def resolver = new ExpressionResolver(aliasRegistry, new JoinTracker(root))
+        def plan = new JoinPlan()
+        if (configured) {
+            plan.declare('favorite', configured)
+        }
+        plan.declare('favorite.tag', JoinType.LEFT)
+        def tracker = new JoinTracker(root)
+        tracker.setPlan(plan)
+        def resolver = new ExpressionResolver(aliasRegistry, tracker)
 
         when:
         def result = resolver.resolve('t')
