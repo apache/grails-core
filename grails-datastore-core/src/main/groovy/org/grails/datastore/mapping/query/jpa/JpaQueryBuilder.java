@@ -648,7 +648,7 @@ public class JpaQueryBuilder {
                     }
                     else {
                         for (Iterator i = in.getValues().iterator(); i.hasNext();) {
-                            Object val = i.next();
+                            Object val = FunctionCallingCriterion.convertOperand(conversionService, functionCriterion.getFunctionName(), i.next());
                             if (FunctionCallingCriterion.isFractional(val)) {
                                 whereClause.append(numberLiteral((Number) val));
                             }
@@ -674,7 +674,8 @@ public class JpaQueryBuilder {
                     if (operator == null) {
                         throw new InvalidDataAccessResourceUsageException("Unsupported criterion in a function call: " + wrapped.getClass().getSimpleName());
                     }
-                    Object wrappedValue = wrapped.getValue();
+                    Object wrappedValue = wrapped.getValue() instanceof QueryableCriteria ? wrapped.getValue() :
+                            FunctionCallingCriterion.convertOperand(conversionService, functionCriterion.getFunctionName(), wrapped.getValue());
                     if (wrappedValue instanceof QueryableCriteria subquery) {
                         // a detached criteria is a subquery, as it is when the query is read
                         whereClause.append(operator).append(OPEN_BRACKET);

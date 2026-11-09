@@ -25,6 +25,7 @@ import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.Set;
 
+import org.springframework.core.convert.ConversionService;
 import org.springframework.dao.InvalidDataAccessResourceUsageException;
 
 import org.grails.datastore.mapping.query.Query;
@@ -101,6 +102,32 @@ public class FunctionCallingCriterion extends Query.PropertyNameCriterion {
      */
     public static boolean isFractional(Object value) {
         return value instanceof Number && !isWholeInt((Number) value);
+    }
+
+    /**
+     * The operand of a comparison with a function, as the type the function returns: text for a string function,
+     * a whole number for the others. A number that does not fit an int, or has a fraction, stays as it is, as
+     * narrowing it would change the answer.
+     *
+     * @param conversionService converts the operand, may be {@code null}
+     * @param functionName the name of the function
+     * @param value the operand
+     * @return the operand to compare the function with
+     */
+    public static Object convertOperand(ConversionService conversionService, String functionName, Object value) {
+        if (value == null) {
+            return null;
+        }
+        Class<?> targetType = switch (functionName) {
+            case "lower", "upper", "trim" -> String.class;
+            default -> Integer.class;
+        };
+        if (targetType == Integer.class && value instanceof Number number && !isWholeInt(number)) {
+            return value;
+        }
+        return conversionService != null && conversionService.canConvert(value.getClass(), targetType) ?
+                conversionService.convert(value, targetType) :
+                value;
     }
 
     private String functionName;

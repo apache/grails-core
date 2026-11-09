@@ -27,8 +27,6 @@ import jakarta.persistence.criteria.Subquery;
 
 import org.hibernate.query.criteria.HibernateCriteriaBuilder;
 
-import org.springframework.core.convert.ConversionService;
-
 import org.grails.datastore.mapping.core.exceptions.ConfigurationException;
 import org.grails.datastore.mapping.query.Query;
 import org.grails.datastore.mapping.query.api.QueryableCriteria;
@@ -65,7 +63,7 @@ class FunctionCallingCriterionHandler implements InternalCriterionHandler<Functi
             Collection<Object> values = new ArrayList<>();
             boolean fractional = false;
             for (Object v : in.getValues()) {
-                Object converted = convertFunctionValue(context.getConversionService(), functionName, v);
+                Object converted = FunctionCallingCriterion.convertOperand(context.getConversionService(), functionName, v);
                 fractional |= FunctionCallingCriterion.isFractional(converted);
                 values.add(converted);
             }
@@ -88,7 +86,7 @@ class FunctionCallingCriterionHandler implements InternalCriterionHandler<Functi
                 Subquery<?> subquery = PropertyCriterionHandler.buildSubquery(context, left, qc, criterion.getProperty());
                 return criteriaBuilder.equal(left, subquery);
             }
-            Object value = convertFunctionValue(context.getConversionService(), functionName, rawValue);
+            Object value = FunctionCallingCriterion.convertOperand(context.getConversionService(), functionName, rawValue);
             if (FunctionCallingCriterion.isFractional(value)) {
                 return criteriaBuilder.equal(left, criteriaBuilder.literal((Number) value));
             }
@@ -101,7 +99,7 @@ class FunctionCallingCriterionHandler implements InternalCriterionHandler<Functi
                 Subquery<?> subquery = PropertyCriterionHandler.buildSubquery(context, left, qc, criterion.getProperty());
                 return criteriaBuilder.notEqual(left, subquery);
             }
-            Object value = convertFunctionValue(context.getConversionService(), functionName, rawValue);
+            Object value = FunctionCallingCriterion.convertOperand(context.getConversionService(), functionName, rawValue);
             if (FunctionCallingCriterion.isFractional(value)) {
                 return criteriaBuilder.notEqual(left, criteriaBuilder.literal((Number) value));
             }
@@ -122,7 +120,7 @@ class FunctionCallingCriterionHandler implements InternalCriterionHandler<Functi
             }
         }
 
-        Object value = convertFunctionValue(context.getConversionService(), functionName, rawValue);
+        Object value = FunctionCallingCriterion.convertOperand(context.getConversionService(), functionName, rawValue);
         if (wrapped instanceof Query.ILike) {
             return criteriaBuilder.ilike((Expression<String>) left, (String) value);
         } else if (wrapped instanceof Query.RLike rLike) {
@@ -169,22 +167,5 @@ class FunctionCallingCriterionHandler implements InternalCriterionHandler<Functi
             case "second" -> criteriaBuilder.second((Expression<? extends java.time.temporal.TemporalAccessor>) expression);
             default -> criteriaBuilder.function(functionName, Integer.class, expression);
         };
-    }
-
-    static Object convertFunctionValue(ConversionService conversionService, String functionName, Object value) {
-        if (value == null) {
-            return null;
-        }
-        Class<?> targetType = switch (functionName) {
-            case "lower", "upper", "trim" -> String.class;
-            default -> Integer.class;
-        };
-        if (targetType == Integer.class && value instanceof Number number && !FunctionCallingCriterion.isWholeInt(number)) {
-            // a fractional or too large number is compared as it is; narrowing it to an int would change the answer
-            return value;
-        }
-        return conversionService != null && conversionService.canConvert(value.getClass(), targetType) ?
-                conversionService.convert(value, targetType) :
-                value;
     }
 }

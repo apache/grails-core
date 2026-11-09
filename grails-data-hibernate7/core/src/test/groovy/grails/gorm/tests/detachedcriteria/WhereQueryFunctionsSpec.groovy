@@ -310,6 +310,48 @@ class WhereQueryFunctionsSpec extends HibernateGormDatastoreSpec {
         lengthIn([3.5]).list() == []
     }
 
+    void "a string function compared with a number compares text, in a read and in a bulk statement"() {
+        given:
+        new WhereQueryFunctionEntity(name: 'abc', amount: 1, created: date(2014, 1, 1)).save(flush: true)
+        new WhereQueryFunctionEntity(name: 'abcd', amount: 1, created: date(2014, 1, 1)).save(flush: true)
+
+        when:
+        def readFraction = WhereQueryFunctionEntity.where { lower(name) == 3.5 }.list()
+        def readLong = WhereQueryFunctionEntity.where { lower(name) == 3L }.list()
+        int bulkFraction = WhereQueryFunctionEntity.where { lower(name) == 3.5 }.updateAll(amount: 7)
+        int bulkOrdered = WhereQueryFunctionEntity.where { lower(name) > 3.5 }.updateAll(amount: 7)
+        int bulkLong = WhereQueryFunctionEntity.where { upper(name) == 3L }.updateAll(amount: 7)
+        int bulkIn = criteriaOf(new FunctionCallingCriterion('lower', new Query.In('name', ['abc', 3.5, 4L]))).updateAll(amount: 9)
+        WhereQueryFunctionEntity.withSession { it.clear() }
+
+        then: 'a number is the text of the number, so no name matches it'
+        readFraction == []
+        readLong == []
+        bulkFraction == 0
+        bulkOrdered == 2
+        bulkLong == 0
+        bulkIn == 1
+        WhereQueryFunctionEntity.list().collectEntries { [it.name, it.amount] } == [abc: 9, abcd: 7]
+    }
+
+    void "a whole number passed as a Long compares with a numeric function in a bulk statement"() {
+        given:
+        new WhereQueryFunctionEntity(name: 'abc', amount: 1, created: date(2014, 1, 1)).save(flush: true)
+        new WhereQueryFunctionEntity(name: 'abcd', amount: 1, created: date(2014, 1, 1)).save(flush: true)
+
+        when:
+        int equal = WhereQueryFunctionEntity.where { length(name) == 3L }.updateAll(amount: 2)
+        int inList = criteriaOf(new FunctionCallingCriterion('length', new Query.In('name', [4L, 9L]))).updateAll(amount: 3)
+        int year = WhereQueryFunctionEntity.where { year(created) == 2014L }.updateAll(amount: 4)
+        WhereQueryFunctionEntity.withSession { it.clear() }
+
+        then:
+        equal == 1
+        inList == 1
+        year == 2
+        WhereQueryFunctionEntity.list().collectEntries { [it.name, it.amount] } == [abc: 4, abcd: 4]
+    }
+
     void "a bulk statement compares a function with a fraction as it is"() {
         given:
         new WhereQueryFunctionEntity(name: 'abc', amount: 1, created: date(2014, 1, 1)).save(flush: true)
