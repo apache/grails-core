@@ -64,6 +64,22 @@ class ReloadedControllerMappingSpec extends AbstractUrlMappingsSpec {
         controllerFor(mappings, '/reload/index').is(after.clazz)
     }
 
+    void 'an action removed from a controller registered again goes to a namespaced controller that has it'() {
+        given:
+        def plain = controller('reload.ReloadController', ['index', 'show'])
+        def namespaced = controller('admin.ReloadController', ['index', 'show'], 'admin')
+        def mappings = mappingsFor(plain, namespaced)
+
+        expect:
+        controllerFor(mappings, '/reload/show').is(plain.clazz)
+
+        when:
+        mappings.registerController(controller('reload.ReloadController', ['index']))
+
+        then:
+        controllerFor(mappings, '/reload/show').is(namespaced.clazz)
+    }
+
     void 'an action added to a namespaced controller registered again is matched without its namespace'() {
         given:
         def before = controller('reload.ReloadController', ['index'], 'admin')

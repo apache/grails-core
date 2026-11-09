@@ -217,7 +217,8 @@ abstract class AbstractGrailsControllerUrlMappings implements UrlMappings {
     /**
      * Gives a controller registered while the application runs, such as one whose class was reloaded, the keys its
      * earlier registration had, and drops the keys of the actions it no longer has. The deferred keys were merged by
-     * the constructor, so the keys of this registration are merged here by the same rule.
+     * the constructor, so the keys of this registration are merged here by the same rule, and a key left without a
+     * controller goes to the controller deferred for it, as it would have at startup.
      */
     private void replaceEarlierRegistration(GrailsControllerClass controller) {
         for (Map.Entry<ControllerKey, GrailsControllerClass> entry : deferredMappings.entrySet()) {
@@ -231,6 +232,9 @@ abstract class AbstractGrailsControllerUrlMappings implements UrlMappings {
         }
         mappingsToGrailsControllerMap.values().removeIf { GrailsControllerClass registered -> isEarlierRegistration(registered, controller) }
         deferredMappings.values().removeIf { GrailsControllerClass registered -> isEarlierRegistration(registered, controller) }
+        for (Map.Entry<ControllerKey, GrailsControllerClass> entry : deferredMappings.entrySet()) {
+            mappingsToGrailsControllerMap.putIfAbsent(entry.key, entry.value)
+        }
     }
 
     private static boolean isEarlierRegistration(GrailsControllerClass registered, GrailsControllerClass controller) {
