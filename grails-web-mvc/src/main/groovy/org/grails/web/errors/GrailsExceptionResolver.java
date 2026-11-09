@@ -386,7 +386,12 @@ public class GrailsExceptionResolver extends SimpleMappingExceptionResolver impl
                     }
                     request.setAttribute(ERROR_HANDLER_FORWARD_IN_PROGRESS_ATTRIBUTE, Boolean.TRUE);
                     try {
-                        forwardRequest(info, request, response, mv, uri);
+                        if (WebUtils.isInclude(request)) {
+                            includeRequest(info, request, response, mv, uri);
+                        }
+                        else {
+                            forwardRequest(info, request, response, mv, uri);
+                        }
                     }
                     finally {
                         request.removeAttribute(ERROR_HANDLER_FORWARD_IN_PROGRESS_ATTRIBUTE);
@@ -431,6 +436,23 @@ public class GrailsExceptionResolver extends SimpleMappingExceptionResolver impl
                 request, response, info, mv.getModel(), true);
         LOG.debug("Matched URI [{}] to URL mapping [{}], forwarding to [{}] with response [{}]",
                 uri, info, forwardUrl, response.getClass());
+    }
+
+    /**
+     * Answers an exception inside an include with its error handler, included where the failing action would have
+     * written, as Spring MVC includes a view rather than forwarding to it there. A forward ends the response it is
+     * given, which inside an include belongs to the page that included the action, so Tomcat answered that page with
+     * nothing.
+     *
+     * @since 8.0.1
+     */
+    protected void includeRequest(UrlMappingInfo info, HttpServletRequest request, HttpServletResponse response,
+            ModelAndView mv, String uri) throws ServletException, IOException {
+        info.configure(GrailsWebRequest.lookup(request));
+        String includeUrl = UrlMappingUtils.includeRequestForUrlMappingInfo(
+                request, response, info, mv.getModel(), true);
+        LOG.debug("Matched URI [{}] to URL mapping [{}], including [{}] with response [{}]",
+                uri, info, includeUrl, response.getClass());
     }
 
     protected String determineUri(HttpServletRequest request) {

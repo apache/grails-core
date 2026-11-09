@@ -61,6 +61,14 @@ class UrlMappingsHandlerMapping extends AbstractHandlerMapping {
 
     public static final String MATCHED_REQUEST = 'org.grails.url.match.info'
 
+    /**
+     * The mapping an include made by {@link org.grails.web.mapping.UrlMappingUtils#includeRequestForUrlMappingInfo} answers with, whatever its
+     * URI would match, as a forward to a status code mapping answers with that mapping.
+     *
+     * @since 8.0.1
+     */
+    public static final String INCLUDED_MAPPING_INFO = 'org.grails.url.include.info'
+
     // Both are stateless, so one shared instance each rather than two allocations per request.
     private static final HandlerInterceptor OBSERVATION_ROUTE_HANDLER = new ObservationRouteHandler()
     private static final HandlerInterceptor ERROR_HANDLING_HANDLER = new ErrorHandlingHandler()
@@ -170,6 +178,13 @@ class UrlMappingsHandlerMapping extends AbstractHandlerMapping {
 
     @Override
     protected Object getHandlerInternal(HttpServletRequest request) throws Exception {
+
+        def includedInfo = request.getAttribute(INCLUDED_MAPPING_INFO)
+        if (includedInfo instanceof UrlMappingInfo && WebUtils.isInclude(request)) {
+            request.removeAttribute(INCLUDED_MAPPING_INFO)
+            request.setAttribute(MATCHED_REQUEST, includedInfo)
+            return includedInfo
+        }
 
         def matchedInfo = request.getAttribute(MATCHED_REQUEST)
         def errorStatus = request.getAttribute(WebUtils.ERROR_STATUS_CODE_ATTRIBUTE)

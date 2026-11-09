@@ -102,8 +102,17 @@ class FailingController {
         throw new IllegalStateException('answered by the error view')
     }
 
+    def failsAfterIncludeAnsweredByController() {
+        g.include(action: 'included')
+        throw new UnsupportedOperationException('answered by the error controller')
+    }
+
     def includesAnswerOfView() {
         render "before ${g.include(action: 'answeredByView')} after"
+    }
+
+    def includesAnswerOfController() {
+        render "before ${g.include(action: 'answeredByController')} after"
     }
 
     def included() {
