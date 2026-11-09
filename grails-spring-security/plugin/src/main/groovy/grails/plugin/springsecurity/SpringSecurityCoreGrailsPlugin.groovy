@@ -22,6 +22,7 @@ import grails.plugin.springsecurity.access.NullAfterInvocationProvider
 import grails.plugin.springsecurity.access.intercept.NullAfterInvocationManager
 import grails.plugin.springsecurity.access.vote.AuthenticatedVetoableDecisionManager
 import grails.plugin.springsecurity.access.vote.ClosureVoter
+import grails.plugin.springsecurity.authentication.DigestDaoAuthenticationProvider
 import grails.plugin.springsecurity.authentication.GrailsAnonymousAuthenticationProvider
 import grails.plugin.springsecurity.authentication.NullAuthenticationEventPublisher
 import grails.plugin.springsecurity.cache.SpringUserCacheFactoryBean
@@ -495,8 +496,25 @@ class SpringSecurityCoreGrailsPlugin extends Plugin {
             preAuthenticationChecks(classFor('preAuthenticationChecks', DefaultPreAuthenticationChecks))
             postAuthenticationChecks(classFor('postAuthenticationChecks', DefaultPostAuthenticationChecks))
 
-            daoAuthenticationProvider(classFor('daoAuthenticationProvider', DaoAuthenticationProvider), ref('userDetailsService')) {
-                passwordEncoder = ref('passwordEncoder')
+            if (conf.useDigestAuth && !conf.digest.useCleartextPasswords) {
+                // what is stored is the hash a browser computes, which no PasswordEncoder can make since it is not given
+                // the username, so the application makes it
+                conf.digest.passwordAlreadyEncoded = true
+            }
+
+            // with Digest authentication what is stored is what the filter needs, which passwordEncoder cannot compare
+            // with a password, so the provider compares it itself and passwordEncoder stays as configured
+            Class daoAuthenticationProviderClass = classFor('daoAuthenticationProvider',
+                    conf.useDigestAuth ? DigestDaoAuthenticationProvider : DaoAuthenticationProvider)
+            boolean digestProvider = DigestDaoAuthenticationProvider.isAssignableFrom(daoAuthenticationProviderClass)
+            daoAuthenticationProvider(daoAuthenticationProviderClass, ref('userDetailsService')) {
+                if (digestProvider) {
+                    realmName = conf.digest.realmName // 'Grails Realm'
+                    passwordAlreadyEncoded = conf.digest.passwordAlreadyEncoded
+                }
+                else {
+                    passwordEncoder = ref('passwordEncoder')
+                }
                 userCache = ref('userCache')
                 preAuthenticationChecks = ref('preAuthenticationChecks')
                 postAuthenticationChecks = ref('postAuthenticationChecks')
@@ -902,19 +920,6 @@ class SpringSecurityCoreGrailsPlugin extends Plugin {
     }
 
     private configureDigestAuth = { conf ->
-
-        // the filter hands what is stored to the authentication manager as the credentials, to be compared with itself
-        if (classFor('passwordEncoder', NoOpPasswordEncoder) == NoOpPasswordEncoder) {
-            passwordEncoder(NoOpPasswordEncoder) { bean ->
-                bean.factoryMethod = 'getInstance'
-            }
-        }
-
-        // what is stored is the hash a browser computes, which no PasswordEncoder can make since it is not given the
-        // username, so the application makes it
-        if (!conf.digest.useCleartextPasswords) {
-            conf.digest.passwordAlreadyEncoded = true
-        }
 
         digestAuthenticationEntryPoint(classFor('digestAuthenticationEntryPoint', DigestAuthenticationEntryPoint)) {
             realmName = conf.digest.realmName // 'Grails Realm'

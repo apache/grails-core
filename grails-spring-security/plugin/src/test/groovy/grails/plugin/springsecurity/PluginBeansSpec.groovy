@@ -21,6 +21,8 @@ package grails.plugin.springsecurity
 import org.springframework.boot.web.servlet.ServletListenerRegistrationBean
 import org.springframework.security.authentication.AuthenticationProvider
 import org.springframework.security.authentication.ProviderManager
+import org.springframework.security.authentication.dao.DaoAuthenticationProvider
+import org.springframework.security.core.userdetails.UserDetailsService
 import org.springframework.security.crypto.password.DelegatingPasswordEncoder
 import org.springframework.security.crypto.password.MessageDigestPasswordEncoder
 import org.springframework.security.crypto.password.PasswordEncoder
@@ -32,6 +34,7 @@ import org.springframework.security.web.util.matcher.AnyRequestMatcher
 import spock.lang.Specification
 
 import grails.plugin.springsecurity.access.NullAfterInvocationProvider
+import grails.plugin.springsecurity.authentication.DigestDaoAuthenticationProvider
 import grails.testing.web.GrailsWebUnitTest
 import grails.web.CamelCaseUrlConverter
 
@@ -181,6 +184,76 @@ class CustomClassesPluginBeansSpec extends AbstractPluginBeansSpec {
 
         CustomFilterChainProxy(List<SecurityFilterChain> chains) {
             super(chains)
+        }
+    }
+}
+
+class DigestPluginBeansSpec extends AbstractPluginBeansSpec {
+
+    protected void configure(Object securityConfig) {
+        securityConfig.useDigestAuth = true
+        securityConfig.digest = [realmName: 'Test Realm']
+    }
+
+    void 'with Digest authentication the provider is told the realm and that what is stored is the hash'() {
+        given:
+            DigestDaoAuthenticationProvider provider =
+                    applicationContext.getBean('daoAuthenticationProvider', DigestDaoAuthenticationProvider)
+
+        expect:
+            provider.realmName == 'Test Realm'
+            provider.passwordAlreadyEncoded
+            applicationContext.getBean('passwordEncoder') instanceof DelegatingPasswordEncoder
+    }
+}
+
+class CleartextDigestPluginBeansSpec extends AbstractPluginBeansSpec {
+
+    protected void configure(Object securityConfig) {
+        securityConfig.useDigestAuth = true
+        securityConfig.digest = [realmName: 'Test Realm', useCleartextPasswords: true]
+        securityConfig.daoAuthenticationProviderBeanClass = CustomDigestDaoAuthenticationProvider
+    }
+
+    void 'a subclass of the Digest provider configured in its place is told what it is'() {
+        given:
+            CustomDigestDaoAuthenticationProvider provider =
+                    applicationContext.getBean('daoAuthenticationProvider', CustomDigestDaoAuthenticationProvider)
+
+        expect:
+            provider.realmName == 'Test Realm'
+            !provider.passwordAlreadyEncoded
+    }
+
+    static class CustomDigestDaoAuthenticationProvider extends DigestDaoAuthenticationProvider {
+
+        CustomDigestDaoAuthenticationProvider(UserDetailsService userDetailsService) {
+            super(userDetailsService)
+        }
+    }
+}
+
+class CustomProviderDigestPluginBeansSpec extends AbstractPluginBeansSpec {
+
+    protected void configure(Object securityConfig) {
+        securityConfig.useDigestAuth = true
+        securityConfig.daoAuthenticationProviderBeanClass = CustomDaoAuthenticationProvider
+    }
+
+    void 'a provider class of the application is given the password encoder with Digest authentication too'() {
+        expect:
+            applicationContext.getBean('daoAuthenticationProvider', CustomDaoAuthenticationProvider).encoder
+                    .is(applicationContext.getBean('passwordEncoder'))
+    }
+
+    static class CustomDaoAuthenticationProvider extends DaoAuthenticationProvider {
+
+        CustomDaoAuthenticationProvider(UserDetailsService userDetailsService) {
+            super(userDetailsService)
+        }
+
+        PasswordEncoder getEncoder() {
+            getPasswordEncoder()
         }
     }
 }

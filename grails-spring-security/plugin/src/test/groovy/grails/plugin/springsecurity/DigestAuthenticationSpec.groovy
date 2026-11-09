@@ -20,17 +20,23 @@ package grails.plugin.springsecurity
 
 import jakarta.servlet.FilterChain
 
+import org.springframework.mock.web.MockFilterChain
 import org.springframework.mock.web.MockHttpServletRequest
 import org.springframework.mock.web.MockHttpServletResponse
+import org.springframework.security.authentication.AuthenticationManager
 import org.springframework.security.authentication.BadCredentialsException
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken
 import org.springframework.security.core.Authentication
 import org.springframework.security.core.authority.SimpleGrantedAuthority
+import org.springframework.security.core.context.SecurityContext
 import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.security.core.userdetails.User
 import org.springframework.security.core.userdetails.UserDetails
 import org.springframework.security.core.userdetails.UserDetailsService
+import org.springframework.security.core.userdetails.UsernameNotFoundException
+import org.springframework.security.crypto.password.DelegatingPasswordEncoder
 import org.springframework.security.crypto.password.PasswordEncoder
+import org.springframework.security.web.context.HttpSessionSecurityContextRepository
 import spock.lang.Specification
 
 import grails.core.GrailsApplication
@@ -39,7 +45,9 @@ import grails.web.CamelCaseUrlConverter
 
 /**
  * The handshake a browser makes, against what the plugin creates with {@code useDigestAuth}: the challenge from its
- * entry point, and the response sent through its whole filter chain, which is what grants the request.
+ * entry point, and the response sent through its whole filter chain, which is what grants the request. And what the
+ * rest of the application still does with Digest authentication on: a form sign-in, a Basic one, and the user that
+ * {@code spring.security.user.*} describes.
  */
 abstract class AbstractDigestAuthenticationSpec extends Specification implements GrailsWebUnitTest {
 
@@ -62,10 +70,15 @@ abstract class AbstractDigestAuthenticationSpec extends Specification implements
             config.grails.plugin.springsecurity.useDigestAuth = true
             config.grails.plugin.springsecurity.userDetailsServiceBeanClass = StoredPasswordUserDetailsService
             config.grails.plugin.springsecurity.digest = digestConfig()
+            config.spring.security.user.name = 'admin'
+            config.spring.security.user.password = 'admin-secret'
         }
     }
 
     protected abstract Map digestConfig()
+
+    /** What the application stores for a user with this password. */
+    protected abstract String storedFor(String password)
 
     void cleanup() {
         SecurityContextHolder.clearContext()
@@ -75,6 +88,70 @@ abstract class AbstractDigestAuthenticationSpec extends Specification implements
         SpringSecurityUtils.resetSecurityConfig()
         ReflectionUtils.application = null
         SpringSecurityUtils.application = null
+    }
+
+    void 'a browser signs a user in with their password, and not with another'() {
+        given:
+            store(storedFor('secret'))
+
+        expect:
+            signedInWith('secret') == 'user'
+            signedInWith('wrong') == null
+    }
+
+    void 'an account that is disabled is refused, however right the password'() {
+        given:
+            store(storedFor('secret'), false)
+
+        expect:
+            signedInWith('secret') == null
+    }
+
+    void 'a form signs a user in with their password, and not with another'() {
+        given:
+            store(storedFor('secret'))
+
+        expect:
+            signedInThroughForm('user', 'secret') == 'user'
+            signedInThroughForm('user', 'wrong') == null
+    }
+
+    void 'what Basic authentication hands the authentication manager signs a user in with their password'() {
+        given:
+            store(storedFor('secret'))
+
+        when:
+            Authentication signedIn = authenticationManager.authenticate(
+                    UsernamePasswordAuthenticationToken.unauthenticated('user', 'secret'))
+
+        then:
+            signedIn.authenticated
+            signedIn.name == 'user'
+
+        when:
+            authenticationManager.authenticate(UsernamePasswordAuthenticationToken.unauthenticated('user', 'wrong'))
+
+        then:
+            thrown(BadCredentialsException)
+    }
+
+    void 'the password encoder stays as configured'() {
+        when:
+            PasswordEncoder encoder = applicationContext.getBean('passwordEncoder', PasswordEncoder)
+
+        then:
+            encoder instanceof DelegatingPasswordEncoder
+            encoder.encode('secret').startsWith('{bcrypt}')
+    }
+
+    void 'the user spring.security.user describes signs in through a form'() {
+        expect:
+            signedInThroughForm('admin', 'admin-secret') == 'admin'
+            signedInThroughForm('admin', 'wrong') == null
+    }
+
+    protected AuthenticationManager getAuthenticationManager() {
+        applicationContext.getBean('authenticationManager', AuthenticationManager)
     }
 
     protected void store(String password, boolean enabled = true) {
@@ -107,6 +184,19 @@ abstract class AbstractDigestAuthenticationSpec extends Specification implements
         reached
     }
 
+    /** Who a login form sending this username and password signs in, if anyone. */
+    protected String signedInThroughForm(String username, String password) {
+        def request = new MockHttpServletRequest('POST', '/login/authenticate')
+        request.servletPath = '/login/authenticate'
+        request.addParameter('username', username)
+        request.addParameter('password', password)
+        SecurityContextHolder.clearContext()
+        applicationContext.getBean('springSecurityFilterChainProxy')
+                .doFilter(request, new MockHttpServletResponse(), new MockFilterChain())
+        def context = request.getSession(false)?.getAttribute(HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY)
+        ((SecurityContext) context)?.authentication?.name
+    }
+
     static class StoredPasswordUserDetailsService implements UserDetailsService {
 
         GrailsApplication grailsApplication
@@ -115,6 +205,9 @@ abstract class AbstractDigestAuthenticationSpec extends Specification implements
 
         @Override
         UserDetails loadUserByUsername(String username) {
+            if (username != 'user') {
+                throw new UsernameNotFoundException(username)
+            }
             new User(username, password, enabled, true, true, true, [new SimpleGrantedAuthority('ROLE_USER')])
         }
     }
@@ -126,13 +219,8 @@ class EncodedDigestAuthenticationSpec extends AbstractDigestAuthenticationSpec {
         [realmName: REALM]
     }
 
-    void 'by default what is stored is the hash a browser computes, and not the password'() {
-        given:
-            store("user:${REALM}:secret".md5())
-
-        expect:
-            signedInWith('secret') == 'user'
-            signedInWith('wrong') == null
+    protected String storedFor(String password) {
+        "user:${REALM}:${password}".md5()
     }
 
     void 'a password stored as it was typed does not sign anyone in'() {
@@ -143,21 +231,22 @@ class EncodedDigestAuthenticationSpec extends AbstractDigestAuthenticationSpec {
             signedInWith('secret') == null
     }
 
-    void 'an account that is disabled is refused, however right the password'() {
+    void 'the hash stored does not sign anyone in through a form'() {
         given:
-            store("user:${REALM}:secret".md5(), false)
+            String hash = storedFor('secret')
+            store(hash)
 
         expect:
-            signedInWith('secret') == null
+            signedInThroughForm('user', hash) == null
     }
 
-    void 'a form cannot sign in a user with the hash stored'() {
+    void 'the hash stored does not sign anyone in through Basic authentication'() {
         given:
-            store("user:${REALM}:secret".md5())
+            String hash = storedFor('secret')
+            store(hash)
 
         when:
-            applicationContext.getBean('daoAuthenticationProvider')
-                    .authenticate(UsernamePasswordAuthenticationToken.unauthenticated('user', 'secret'))
+            authenticationManager.authenticate(UsernamePasswordAuthenticationToken.unauthenticated('user', hash))
 
         then:
             thrown(BadCredentialsException)
@@ -170,24 +259,15 @@ class CleartextDigestAuthenticationSpec extends AbstractDigestAuthenticationSpec
         [realmName: REALM, useCleartextPasswords: true]
     }
 
-    void 'with cleartext passwords what the password encoder stores is what the filter hashes'() {
+    protected String storedFor(String password) {
+        password
+    }
+
+    void 'a password stored by the password encoder does not sign anyone in'() {
         given:
             store(applicationContext.getBean('passwordEncoder', PasswordEncoder).encode('secret'))
 
         expect:
-            signedInWith('secret') == 'user'
-            signedInWith('wrong') == null
-    }
-
-    void 'with cleartext passwords a form still signs a user in'() {
-        given:
-            store(applicationContext.getBean('passwordEncoder', PasswordEncoder).encode('secret'))
-
-        when:
-            Authentication signedIn = applicationContext.getBean('daoAuthenticationProvider')
-                    .authenticate(UsernamePasswordAuthenticationToken.unauthenticated('user', 'secret'))
-
-        then:
-            signedIn.authenticated
+            signedInWith('secret') == null
     }
 }

@@ -123,5 +123,7 @@ Digest authentication cannot be applied to a subset of URLs like Basic authentic
 
 [NOTE]
 ====
-What `s2-quickstart` generates hashes a password with `springSecurityService.encodePassword(password)`, in the user class or in its password encoder listener, which gives the wrong value for Digest authentication. Replace that call with the hash above, or set `digest.useCleartextPasswords` to `true`. With Digest authentication `passwordEncoder` compares a password as it is with what is stored, because the filter hands it what is stored as the credentials. So a form can sign a user in with cleartext passwords stored, and cannot with the hash stored.
+What `s2-quickstart` generates hashes a password with `springSecurityService.encodePassword(password)`, in the user class or in its password encoder listener, which gives the wrong value for Digest authentication. Replace that call with the hash above, or set `digest.useCleartextPasswords` to `true` and store the password as it was typed.
+
+Digest authentication leaves `passwordEncoder` as configured, so `springSecurityService.encodePassword` and the users that other `UserDetailsService` beans or `spring.security.user.*` describe work as they do without it. The plugin's `daoAuthenticationProvider` does not use it: it hashes a password that a form or Basic authentication sends the way a browser does, so a form signs a user in with their password in either mode, and not with the hash stored. A class named with `daoAuthenticationProviderBeanClass` is given `passwordEncoder` instead, unless it extends `grails.plugin.springsecurity.authentication.DigestDaoAuthenticationProvider`.
 ====

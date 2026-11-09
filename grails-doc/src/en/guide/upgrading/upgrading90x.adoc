@@ -143,8 +143,9 @@ An application that secures a page at one of these paths and wants a login to re
 * *Digest authentication in the Spring Security plugin starts and signs users in.*
 `useDigestAuth` with its default of hashed passwords used to fail at startup, naming an encoder that no longer exists.
 What a user has stored is now the hash a browser computes, which the application computes, as the link:security.html#core-basicAndDigestAuth[guide] shows.
-With `digest.useCleartextPasswords`, nobody could sign in with Digest authentication, because the password encoder stored `{noop}secret`.
-It now stores what was typed, so an application that signed in through a form with stored values such as `{noop}secret` removes the `{noop}` prefix from them.
+With `digest.useCleartextPasswords`, nobody could sign in with Digest authentication, because the plugin replaced `passwordEncoder` with one that stored `{noop}secret`.
+`passwordEncoder` now stays as configured, and the application stores the password as it was typed, so an application with stored values such as `{noop}secret` removes the `{noop}` prefix from them and no longer stores them with `springSecurityService.encodePassword`.
+A form or Basic authentication signs a user in with their password in either mode.
 
 * *`fii.alwaysReauthenticate` in the Spring Security plugin takes effect.*
 The setting did nothing, because the plugin's security interceptor went straight to the access decision. An application that sets it now has every request authenticated again, as the setting describes.
