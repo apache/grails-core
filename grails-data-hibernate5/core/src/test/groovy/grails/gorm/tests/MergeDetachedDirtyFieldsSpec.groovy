@@ -73,6 +73,15 @@ class MergeDetachedDirtyFieldsSpec extends HibernateGormDatastoreSpec {
         form << ['new', 'serialized', 'marked']
     }
 
+    void "merge of a new instance inserts it once"() {
+        when: 'a new instance is merged'
+        MergeDirtyData merged = new MergeDirtyData(name: 'new', number: 1).merge(flush: true)
+
+        then: 'the insert is not followed by an update'
+        merged.version == 0
+        MergeDirtyData.count() == 1
+    }
+
     void "merge of an instance the session already manages keeps its changes"() {
         given:
         MergeDirtyData data = new MergeDirtyData(name: 'a', number: 1).save(flush: true)
