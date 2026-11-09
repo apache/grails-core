@@ -354,54 +354,57 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
     }
 
     /**
-     * Throws an {@link UnsupportedOperationException} when a query sorts by a property of a bag while it
-     * fetches another bag. A bag is a collection without an order of its own, such as one declared as a
-     * {@code Collection}. The join for the sort returns a row for each element of the sorted bag, and a
-     * bag cannot tell a repeated row from a repeated element, so a bag that is fetched from those rows
-     * would hold its elements more than once. That is why Hibernate does not support fetching more than
-     * one bag in a query.
+     * Throws an {@link UnsupportedOperationException} when a query sorts by a property of one collection
+     * while it fetches another, and either of them is a bag. A bag is a collection without an order of
+     * its own, such as one declared as a {@code Collection}. The join for the sort and the fetch repeat
+     * each other's rows, and a bag cannot tell a repeated row from a repeated element, so a bag that is
+     * read from those rows would hold its elements more than once. That is why Hibernate does not
+     * support fetching more than one bag in a query. A collection that the query fetches anyway is not
+     * joined by the sort, so it is only rejected next to another bag.
      *
      * @param criteria The criteria of the query
      * @param associationPath The path, from the root entity, of the collection that the query sorts by
-     * @throws UnsupportedOperationException if both collections are bags
+     * @throws UnsupportedOperationException if either collection is a bag
      */
     public static void checkSortedCollection(Criteria criteria, String associationPath) {
-        String otherBag = findOtherFetchedCollection(criteria, associationPath, true);
-        if (otherBag != null) {
-            throw new UnsupportedOperationException(sortedBagMessage(associationPath, getRootCriteria(criteria).getEntityOrClassName(), otherBag));
+        String fetched = findOtherFetchedCollection(criteria, associationPath, true);
+        if (fetched != null) {
+            throw new UnsupportedOperationException(sortedCollectionMessage(associationPath, getRootCriteria(criteria).getEntityOrClassName(), fetched));
         }
     }
 
     /**
      * Throws an {@link UnsupportedOperationException} when a JPA criteria query, which is what
-     * {@code list} runs, makes a join to sort by a property of a bag while it fetches another bag: see
-     * {@link #checkSortedCollection(Criteria, String)}.
+     * {@code list} runs, makes a join to sort by a property of one collection while it fetches another,
+     * and either of them is a bag: see {@link #checkSortedCollection(Criteria, String)}.
      *
      * @param query The query
      * @param sortJoin The join that the query makes for the sort
-     * @throws UnsupportedOperationException if both collections are bags
+     * @throws UnsupportedOperationException if either collection is a bag
      */
     public static void checkSortedCollection(CriteriaQuery<?> query, Join<?, ?> sortJoin) {
-        if (!isBag(sortJoin.getAttribute())) {
+        Attribute<?, ?> sorted = sortJoin.getAttribute();
+        if (!(sorted instanceof PluralAttribute)) {
             return;
         }
         for (Root<?> root : query.getRoots()) {
             for (Fetch<?, ?> fetch : root.getFetches()) {
-                if (isBag(fetch.getAttribute()) && !fetch.getAttribute().equals(sortJoin.getAttribute())) {
-                    throw new UnsupportedOperationException(sortedBagMessage(sortJoin.getAttribute().getName(), root.getJavaType().getName(), fetch.getAttribute().getName()));
+                Attribute<?, ?> fetched = fetch.getAttribute();
+                if (fetched instanceof PluralAttribute && !fetched.equals(sorted) && (isBag(sorted) || isBag(fetched))) {
+                    throw new UnsupportedOperationException(sortedCollectionMessage(sorted.getName(), root.getJavaType().getName(), fetched.getName()));
                 }
             }
         }
     }
 
     private static boolean isBag(Attribute<?, ?> attribute) {
-        return attribute instanceof PluralAttribute && ((PluralAttribute<?, ?, ?>) attribute).getCollectionType() == PluralAttribute.CollectionType.COLLECTION;
+        return ((PluralAttribute<?, ?, ?>) attribute).getCollectionType() == PluralAttribute.CollectionType.COLLECTION;
     }
 
-    private static String sortedBagMessage(String sortedBag, String entityName, String otherBag) {
-        return "Cannot sort by a property of [" + sortedBag + "] of [" + entityName + "] while the query fetches [" + otherBag + "]. Both are bags. The join for the sort " +
-                "returns a row for each element of [" + sortedBag + "], and a bag cannot tell a repeated row from a repeated element, which is why Hibernate does not support " +
-                "fetching more than one bag in a query. Declare both of them as a Set or a List instead of a Collection, or do not fetch [" + otherBag + "].";
+    private static String sortedCollectionMessage(String sorted, String entityName, String fetched) {
+        return "Cannot sort by a property of [" + sorted + "] of [" + entityName + "] while the query fetches [" + fetched + "], because at least one of them is a bag. The join " +
+                "for the sort and the fetch repeat each other's rows, and a bag cannot tell a repeated row from a repeated element, which is why Hibernate does not support " +
+                "fetching more than one bag in a query. Declare both of them as a Set or a List instead of a Collection, or do not fetch [" + fetched + "].";
     }
 
     /**
@@ -415,8 +418,8 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
      * <p>
      * It is fetched as well when the query fetches another collection, because Hibernate then reads
      * the elements of the collection that it fetches from the columns of the join that it does not
-     * fetch, when both collections hold elements of the same table. That is not possible when both
-     * collections are bags: see {@link #checkSortedCollection(Criteria, String)}.
+     * fetch, when both collections hold elements of the same table. That is not possible when either
+     * collection is a bag: see {@link #checkSortedCollection(Criteria, String)}.
      *
      * @param criteria The criteria of the query
      * @param associationPath The path of the collection from the root entity
@@ -441,21 +444,25 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
 
     /**
      * Returns the name of a collection of the root entity, other than the one at the given path, that
-     * the query fetches, or null. With bags only, it returns one only when both collections are bags.
+     * the query fetches, or null. When a bag must be involved, it returns one only when either collection
+     * is a bag, or when both are if the query fetches the collection at the path itself.
      */
-    private static String findOtherFetchedCollection(Criteria criteria, String associationPath, boolean bagsOnly) {
+    private static String findOtherFetchedCollection(Criteria criteria, String associationPath, boolean bagInvolved) {
         CriteriaImpl root = getRootCriteria(criteria);
         if (root == null || root.getSession() == null) {
             return null;
         }
         SessionFactoryImplementor factory = root.getSession().getFactory();
         EntityPersister persister = factory.getMetamodel().entityPersister(root.getEntityOrClassName());
-        if (bagsOnly) {
+        boolean sortedBag = false;
+        if (bagInvolved) {
             String sortedRole = getCollectionRole(factory, persister, associationPath);
-            if (sortedRole == null || !isBag(factory, sortedRole)) {
+            if (sortedRole == null) {
                 return null;
             }
+            sortedBag = isBag(factory, sortedRole);
         }
+        boolean sortedFetched = isFetchRequested(root, associationPath);
         String[] propertyNames = persister.getPropertyNames();
         Type[] propertyTypes = persister.getPropertyTypes();
         for (int i = 0; i < propertyNames.length; i++) {
@@ -465,8 +472,11 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
             FetchMode requested = getRequestedFetchMode(root, propertyNames[i]);
             boolean fetched = requested != null ? requested == FetchMode.JOIN :
                     persister instanceof OuterJoinLoadable && ((OuterJoinLoadable) persister).getFetchMode(i) == FetchMode.JOIN;
-            if (fetched && (!bagsOnly || isBag(factory, ((CollectionType) propertyTypes[i]).getRole()))) {
-                return propertyNames[i];
+            if (fetched) {
+                boolean otherBag = bagInvolved && isBag(factory, ((CollectionType) propertyTypes[i]).getRole());
+                if (!bagInvolved || (sortedFetched ? sortedBag && otherBag : sortedBag || otherBag)) {
+                    return propertyNames[i];
+                }
             }
         }
         return null;

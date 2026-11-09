@@ -460,8 +460,9 @@ public class GrailsHibernateQueryUtils {
      * Returns the join of an association for a sort: the join or the fetch that the query already has
      * for it, made by the {@code fetch} argument or by an earlier sort property, or, failing that, a
      * new one, so that the association is joined once. A new one is a left join, so that the sort keeps
-     * the rows where the association is null. A new join of a bag is rejected when the query fetches
-     * another bag: see {@link GrailsHibernateUtil#checkSortedCollection(CriteriaQuery, Join)}.
+     * the rows where the association is null. A new join of a collection is rejected when the query
+     * fetches another one and either of them is a bag: see
+     * {@link GrailsHibernateUtil#checkSortedCollection(CriteriaQuery, Join)}.
      */
     @SuppressWarnings({"rawtypes", "unchecked"})
     private static Join getOrCreateSortJoin(CriteriaQuery query, From from, String associationName) {

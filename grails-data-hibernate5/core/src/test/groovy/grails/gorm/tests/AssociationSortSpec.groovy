@@ -457,18 +457,24 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManag
      * | sorted by           | fetched           | result                                                          |
      * |---------------------|-------------------|-----------------------------------------------------------------|
      * | a set               | nothing           | every squad, also one whose set is empty                        |
-     * | a set               | a bag             | every squad, and the bag holds its own elements                 |
+     * | a set               | another set       | every squad, and the fetched set holds its own elements once    |
+     * | a set               | a list            | every squad, and the fetched list holds its own elements once   |
+     * | a list              | a set             | every squad, and the fetched set holds its own elements once    |
+     * | a set               | a bag             | UnsupportedOperationException: the rows repeat, the bag cannot tell |
      * | a bag               | nothing           | every squad, also one whose bag is empty                        |
-     * | a bag               | a set             | every squad, and the set holds its own elements                 |
-     * | a bag               | another bag       | UnsupportedOperationException: Hibernate fetches one bag a query |
+     * | a bag               | a set             | UnsupportedOperationException: the rows repeat, the bag cannot tell |
+     * | a bag               | another bag       | UnsupportedOperationException: the rows repeat, the bag cannot tell |
      * </pre>
      */
     void '#api sorted by #sort while it fetches #fetched: #outcome'() {
-        given: 'a full squad, and a squad with a substitute only'
+        given: 'a full squad with two members in each collection, and a squad with a substitute only'
         final full = new AssociationSortMixedSquad(name: 'Full squad').save(failOnError: true)
-        new AssociationSortMixedMember(name: 'Regular', squad: full).save(failOnError: true)
-        new AssociationSortMixedMember(name: 'Substitute', substituteSquad: full).save(failOnError: true)
-        new AssociationSortMixedMember(name: 'Reserve', reserveSquad: full).save(failOnError: true)
+        FETCHED_ELEMENTS.regulars.each { new AssociationSortMixedMember(name: it, squad: full).save(failOnError: true) }
+        FETCHED_ELEMENTS.substitutes.each { new AssociationSortMixedMember(name: it, substituteSquad: full).save(failOnError: true) }
+        FETCHED_ELEMENTS.reserves.each { new AssociationSortMixedMember(name: it, reserveSquad: full).save(failOnError: true) }
+        FETCHED_ELEMENTS.benched.each { new AssociationSortMixedMember(name: it, benchSquad: full).save(failOnError: true) }
+        FETCHED_ELEMENTS.lineup.each { full.addToLineup(new AssociationSortMixedMember(name: it)) }
+        full.save(failOnError: true)
         final empty = new AssociationSortMixedSquad(name: 'Empty squad').save(failOnError: true)
         new AssociationSortMixedMember(name: 'Lone substitute', substituteSquad: empty).save(failOnError: true, flush: true)
         manager.session.clear()
@@ -489,23 +495,70 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManag
         and: 'otherwise every squad is returned, and a fetched collection holds its own elements'
         outcome == 'rejected' || results*.name.unique().sort() == ['Empty squad', 'Full squad']
         outcome == 'rejected' || fetched == 'nothing' || results.every { Hibernate.isInitialized(it."$fetched") }
-        outcome == 'rejected' || fetched == 'nothing' || results.find { it.name == 'Full squad' }."$fetched"*.name == FETCHED_ELEMENTS[fetched]
+        outcome == 'rejected' || fetched == 'nothing' || results.find { it.name == 'Full squad' }."$fetched"*.name.sort() == FETCHED_ELEMENTS[fetched]
 
         where:
         [api, sort, fetched, outcome] << [
                 ['a where query', 'order in a criteria query', 'a list'],
                 [
                         ['reserves.name', 'nothing', 'kept'],
-                        ['reserves.name', 'regulars', 'kept'],
+                        ['reserves.name', 'benched', 'kept'],
+                        ['reserves.name', 'lineup', 'kept'],
+                        ['lineup.name', 'reserves', 'kept'],
+                        ['reserves.name', 'regulars', 'rejected'],
                         ['regulars.name', 'nothing', 'kept'],
-                        ['regulars.name', 'reserves', 'kept'],
+                        ['regulars.name', 'reserves', 'rejected'],
                         ['regulars.name', 'substitutes', 'rejected'],
                 ]
         ].combinations().collect { List row -> [row[0]] + row[1] }
         query = MIXED_QUERIES[api]
     }
 
-    private static final Map<String, List<String>> FETCHED_ELEMENTS = [regulars: ['Regular'], reserves: ['Reserve'], substitutes: ['Substitute']]
+    void '#api that fetches the collection it sorts by is not rejected next to a bag, since the sort makes no join of its own'() {
+        given:
+        final squad = new AssociationSortMixedSquad(name: 'Squad').save(failOnError: true)
+        new AssociationSortMixedMember(name: 'Regular', squad: squad).save(failOnError: true)
+        new AssociationSortMixedMember(name: 'Reserve', reserveSquad: squad).save(failOnError: true, flush: true)
+        manager.session.clear()
+
+        expect:
+        query.call()*.name.unique() == ['Squad']
+
+        where:
+        api                         | query
+        'a where query'             | { AssociationSortMixedSquad.where { name == 'Squad' }.join('reserves').join('regulars').list(sort: 'reserves.name') }
+        'order in a criteria query' | { AssociationSortMixedSquad.createCriteria().list { join('reserves'); join('regulars'); order('reserves.name') } }
+        'a dynamic finder'          | { AssociationSortMixedSquad.findAllByName('Squad', [sort: 'reserves.name', fetch: [reserves: 'join', regulars: 'join']]) }
+        'a list'                    | { AssociationSortMixedSquad.list(sort: 'reserves.name', fetch: [reserves: 'join', regulars: 'join']) }
+    }
+
+    void '#api sorted by an association to a single instance is not rejected next to a fetched bag'() {
+        given:
+        final squad = new AssociationSortMixedSquad(name: 'Squad', league: new AssociationSortLeague(league: 'L', name: 'League').save(failOnError: true)).save(failOnError: true)
+        new AssociationSortMixedMember(name: 'Regular', squad: squad).save(failOnError: true, flush: true)
+        manager.session.clear()
+
+        when:
+        final results = query.call()
+
+        then:
+        results*.name == ['Squad']
+        results.first().regulars*.name == ['Regular']
+
+        where:
+        api                         | query
+        'a where query'             | { AssociationSortMixedSquad.where { name == 'Squad' }.join('regulars').list(sort: 'league.name') }
+        'order in a criteria query' | { AssociationSortMixedSquad.createCriteria().list { join('regulars'); order('league.name') } }
+        'a list'                    | { AssociationSortMixedSquad.list(sort: 'league.name', fetch: [regulars: 'join']) }
+    }
+
+    private static final Map<String, List<String>> FETCHED_ELEMENTS = [
+            regulars   : ['Regular A', 'Regular B'],
+            substitutes: ['Substitute A', 'Substitute B'],
+            reserves   : ['Reserve A', 'Reserve B'],
+            benched    : ['Benched A', 'Benched B'],
+            lineup     : ['Lineup A', 'Lineup B'],
+    ]
 
     private static final Map<String, Closure<List<AssociationSortMixedSquad>>> MIXED_QUERIES = [
             'a where query'            : { String sort, String fetched ->
@@ -850,8 +903,15 @@ class AssociationSortMixedSquad {
     String name
     Collection<AssociationSortMixedMember> regulars
     Collection<AssociationSortMixedMember> substitutes
-    static hasMany = [regulars: AssociationSortMixedMember, substitutes: AssociationSortMixedMember, reserves: AssociationSortMixedMember]
-    static mappedBy = [regulars: 'squad', substitutes: 'substituteSquad', reserves: 'reserveSquad']
+    List<AssociationSortMixedMember> lineup
+    AssociationSortLeague league
+    static hasMany = [regulars: AssociationSortMixedMember, substitutes: AssociationSortMixedMember, reserves: AssociationSortMixedMember,
+                      benched: AssociationSortMixedMember, lineup: AssociationSortMixedMember]
+    static mappedBy = [regulars: 'squad', substitutes: 'substituteSquad', reserves: 'reserveSquad', benched: 'benchSquad', lineup: 'lineupSquad']
+
+    static constraints = {
+        league nullable: true
+    }
 }
 
 @Entity
@@ -860,11 +920,15 @@ class AssociationSortMixedMember {
     AssociationSortMixedSquad squad
     AssociationSortMixedSquad substituteSquad
     AssociationSortMixedSquad reserveSquad
+    AssociationSortMixedSquad benchSquad
+    AssociationSortMixedSquad lineupSquad
 
     static constraints = {
         squad nullable: true
         substituteSquad nullable: true
         reserveSquad nullable: true
+        benchSquad nullable: true
+        lineupSquad nullable: true
     }
 }
 
