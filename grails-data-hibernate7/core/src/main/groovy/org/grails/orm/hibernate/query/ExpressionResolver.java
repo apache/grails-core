@@ -152,6 +152,14 @@ public class ExpressionResolver {
             // A path absent from this root can refer to an enclosing query's association join.
             From<?, ?> enclosing = getPath(joinTracker.getRoot(), def.path()) == null ?
                     joinTracker.getJoin(def.path()) : null;
+            if (enclosing == null && joinTracker.getOwnJoin(def.path()) == null) {
+                // the enclosing query may already join this association, for a nested alias path or another block
+                enclosing = enclosingJoins.apply(def.path());
+                if (enclosing != null) {
+                    joinTracker.addJoin(def.path(), enclosing);
+                    joinPublisher.accept(def.path(), enclosing);
+                }
+            }
             aliased = enclosing != null ? enclosing : resolveAssociation(def.path(), def.joinType());
         } else {
             Path<?> path = getPath(joinTracker.getRoot(), def.path());

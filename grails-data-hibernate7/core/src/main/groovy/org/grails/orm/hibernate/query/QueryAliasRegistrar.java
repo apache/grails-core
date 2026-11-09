@@ -204,12 +204,20 @@ final class QueryAliasRegistrar {
      * query reaches the block, gives that join the type the block asks for and not the type of the alias.
      */
     private void recordNestedBlockJoins(DetachedAssociationCriteria<?> block, String prefix, JpaQueryContext context) {
-        for (Query.Criterion criterion : block.getCriteria()) {
+        recordNestedBlockJoins(block, block.getCriteria(), prefix, context);
+    }
+
+    private void recordNestedBlockJoins(DetachedAssociationCriteria<?> block, List<Query.Criterion> criteria, String prefix,
+                                        JpaQueryContext context) {
+        for (Query.Criterion criterion : criteria) {
             if (criterion instanceof DetachedAssociationCriteria<?> nested && !(nested.getAssociation() instanceof Embedded)) {
                 String path = prefix + "." + nested.getAssociationPath();
                 context.getAliasRegistry().defineAssociationJoinType(path,
                         block.getJoinTypes().getOrDefault(nested.getAssociationPath(), JoinType.INNER));
                 recordNestedBlockJoins(nested, path, context);
+            }
+            else if (criterion instanceof Query.Junction junction) {
+                recordNestedBlockJoins(block, junction.getCriteria(), prefix, context);
             }
         }
     }
