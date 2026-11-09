@@ -105,18 +105,19 @@ class UndertowFailedActionObservationSpec extends Specification implements HttpC
         def response = http([(REQUEST_HEADER): path], path)
 
         then: 'the page answered, with the error page inside it'
-        response.assertContains(200, 'before').assertContains('after')
+        response.assertContains(200, 'before').assertContains(fragment).assertContains('after')
 
         and: 'its observation stopped on its own route, with no error'
         new PollingConditions(timeout: 30).eventually {
-            assert STOPPED[path] == [path, 'none']
+            assert STOPPED[path] == [route, 'none']
         }
         !NOTIFIED.containsKey(path)
 
         where:
-        handler               | path
-        'the error view'      | '/failing/includesAnswerOfView'
-        'an error controller' | '/failing/includesAnswerOfController'
+        handler                                                    | path                                  | route                                 | fragment
+        'the error view'                                           | '/failing/includesAnswerOfView'       | '/failing/includesAnswerOfView'       | 'An error has occurred'
+        'an error controller'                                      | '/failing/includesAnswerOfController' | '/failing/includesAnswerOfController' | 'Answered by the error controller'
+        'an error controller, on a page whose URL has a parameter' | '/page/example'                       | '/failing/includesAnswerOfController' | 'Answered by the error controller'
     }
 
     private List<String> errorTags(String route) {
