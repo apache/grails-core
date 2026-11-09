@@ -1137,6 +1137,22 @@ class AssociationJoinTypeSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckM
         then:
         results*.name.sort() == ALL_TEAMS
     }
+
+    void 'the total of a paged detached criteria with a root alias is counted with that alias: #description'() {
+        when:
+        final results = query.call()
+
+        then:
+        results.totalCount == total
+
+        where:
+        description                                  | query                                                                                                              || total
+        'criteria that name the alias'               | { new DetachedCriteria(Team, 't').eq('t.name', 'MU First Team').list(max: 2) }                                     || 1
+        'criteria that name it and an inner join'    | { new DetachedCriteria(Team, 't').eq('t.name', 'MU First Team').join('players', JoinType.INNER).list(max: 2) }     || 1
+        'an inner join of a collection'              | { new DetachedCriteria(Team, 't').join('players', JoinType.INNER).list(max: 2) }                                   || 4
+        'an inner join of a path through collection' | { new DetachedCriteria(Team, 't').join('players.contract', JoinType.INNER).list(max: 2) }                          || 4
+        'an inner join of an association'            | { new DetachedCriteria(Team, 't').join('club', JoinType.INNER).list(max: 2) }                                      || 4
+    }
 }
 
 @Entity

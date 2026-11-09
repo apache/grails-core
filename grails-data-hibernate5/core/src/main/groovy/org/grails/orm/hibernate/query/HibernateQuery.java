@@ -124,7 +124,7 @@ public class HibernateQuery extends AbstractHibernateQuery {
         final HibernateSession hibernateSession = (HibernateSession) getSession();
         final GrailsHibernateTemplate hibernateTemplate = (GrailsHibernateTemplate) hibernateSession.getNativeInterface();
         return hibernateTemplate.execute((GrailsHibernateTemplate.HibernateCallback<Object>) session -> {
-            Criteria newCriteria = session.createCriteria(impl.getEntityOrClassName());
+            Criteria newCriteria = session.createCriteria(impl.getEntityOrClassName(), impl.getAlias());
 
             Iterator iterator = impl.iterateExpressionEntries();
             while (iterator.hasNext()) {
