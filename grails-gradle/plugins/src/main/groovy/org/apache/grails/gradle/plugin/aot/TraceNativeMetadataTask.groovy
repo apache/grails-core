@@ -125,7 +125,11 @@ abstract class TraceNativeMetadataTask extends DefaultTask {
     private static final Pattern FORM = Pattern.compile(/(?is)<form\b[^>]*>.*?<\/form>/)
     private static final Pattern ACTION = Pattern.compile(/(?i)\baction\s*=\s*"([^"]*)"/)
     private static final Pattern ID = Pattern.compile(/(?i)\bid\s*=\s*"([^"]+)"/)
-    private static final Pattern FIELD = Pattern.compile(/(?is)<(?:input|select|textarea)\b[^>]*>/)
+    private static final Pattern FIELD = Pattern.compile(/(?is)<(input|select|textarea)\b[^>]*>/)
+    private static final Pattern SELECT_END = Pattern.compile(/(?i)<\/select\s*>/)
+    private static final Pattern OPTION = Pattern.compile(/(?is)<option\b([^>]*)>([^<]*)/)
+    private static final Pattern SELECTED = Pattern.compile(/(?i)(?<![\w-])selected(?![\w-])/)
+    private static final Pattern DISABLED = Pattern.compile(/(?i)(?<![\w-])disabled(?![\w-])/)
     private static final Pattern NAME = Pattern.compile(/(?i)\bname\s*=\s*"([^"]+)"/)
     private static final Pattern VALUE = Pattern.compile(/(?i)\bvalue\s*=\s*"([^"]*)"/)
     private static final Pattern TYPE = Pattern.compile(/(?i)\btype\s*=\s*"([^"]+)"/)
@@ -478,7 +482,8 @@ abstract class TraceNativeMetadataTask extends DefaultTask {
      * security filter demands is carried, and a hidden field is the page's own, so it is sent as it
      * is even when that is nothing. Any other field without a value is filled in, as the fields
      * plugin renders every field of a new instance: sent blank it fails validation, the page answers
-     * with the form again, and what a save does when it succeeds is never recorded.
+     * with the form again, and what a save does when it succeeds is never recorded. A select sends
+     * one of its options.
      */
     private static Map<String, String> fieldsOf(String markup) {
         Map<String, String> fields = [:]
@@ -487,6 +492,13 @@ abstract class TraceNativeMetadataTask extends DefaultTask {
             String tag = field.group()
             Matcher name = NAME.matcher(tag)
             if (!name.find()) {
+                continue
+            }
+            if (field.group(1).equalsIgnoreCase('select')) {
+                Matcher end = SELECT_END.matcher(markup)
+                fields[name.group(1)] = optionOf(end.find(field.end())
+                        ? markup.substring(field.end(), end.start())
+                        : markup.substring(field.end()))
                 continue
             }
             Matcher value = VALUE.matcher(tag)
@@ -500,6 +512,37 @@ abstract class TraceNativeMetadataTask extends DefaultTask {
             fields[name.group(1)] = carried || kind == 'hidden' ? (carried ?: '') : fill(kind, tag)
         }
         fields
+    }
+
+    /**
+     * What a browser sends for a select: the option selected, or the first that can be chosen where
+     * none is, and an option without a value sends its text.
+     *
+     * <p>The select's options rather than made-up text, because only one of them binds. An enum, an
+     * association and each part of a date picker are rendered as a select, and text sent for any of
+     * them fails to convert -- so the page answers with the form again, and a 200, and the save the
+     * form was listed for is never recorded.</p>
+     */
+    private static String optionOf(String options) {
+        String first = null
+        Matcher option = OPTION.matcher(options)
+        while (option.find()) {
+            String attributes = option.group(1)
+            // Without what the attributes say, so that an option whose value is "selected" is not taken for one that is.
+            String flags = attributes.replaceAll(/"[^"]*"/, '""')
+            if (DISABLED.matcher(flags).find()) {
+                continue
+            }
+            Matcher value = VALUE.matcher(attributes)
+            String sent = value.find() ? value.group(1) : option.group(2).trim()
+            if (SELECTED.matcher(flags).find()) {
+                return sent
+            }
+            if (first == null) {
+                first = sent
+            }
+        }
+        first != null ? first : ''
     }
 
     /**

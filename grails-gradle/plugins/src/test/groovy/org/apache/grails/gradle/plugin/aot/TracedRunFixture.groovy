@@ -100,6 +100,42 @@ class TracedRunFixture {
             <input type="color" name="colour" value=""/>
         </form></body></html>'''
 
+    /**
+     * What the fields plugin renders as a select: an enum, an association, and a date picker's parts. Each binds
+     * only one of its options, so text sent for any of them fails to convert.
+     */
+    private static final String SELECT_FORM = '''<html><body>
+        <form action="/select-save" method="post">
+            <select name="status" required="" id="status">
+                <option value="DRAFT">Draft</option>
+                <option value="PUBLISHED">Published</option>
+            </select>
+            <select name="author" id="author">
+                <option value="null"></option>
+                <option value="1">An author</option>
+            </select>
+            <input type="hidden" name="released" value="date.struct"/>
+            <select name="released_day" id="released_day">
+                <option value="1">1</option>
+                <option value="9" selected="selected">9</option>
+                <option value="10">10</option>
+            </select>
+            <select name="format">
+                <option value="PAPER" disabled>Paper</option>
+                <option value="HARDBACK">Hardback</option>
+                <option value="selected">Odd</option>
+            </select>
+            <select name="genre">
+                <optgroup label="Fiction"><option>Crime</option><option>Romance</option></optgroup>
+            </select>
+            <select name="tags" multiple="multiple">
+                <option value="1">first</option>
+                <option value="2" selected>second</option>
+            </select>
+            <select name="nothing"></select>
+            <input type="text" name="title"/>
+        </form></body></html>'''
+
     static void main(String[] args) {
         int port = Integer.parseInt(args[0])
         File requested = new File(args[1])
@@ -142,6 +178,9 @@ class TracedRunFixture {
             }
             else if (path == '/typed') {
                 response = TYPED_FORM
+            }
+            else if (path == '/select') {
+                response = SELECT_FORM
             }
             else if (path == '/authenticate') {
                 exchange.responseHeaders.add('Set-Cookie', 'session=in; Path=/')

@@ -217,6 +217,34 @@ exec '${new File(System.getProperty('java.home'), 'bin/java').absolutePath}' \\
             sent._available == ''
     }
 
+    void 'a select sends one of its options'() {
+        given: 'an enum, an association and a date picker are rendered as selects, and only an option binds'
+            TraceNativeMetadataTask task = task([], ['/select'])
+
+        when:
+            task.trace()
+
+        then: 'the first option where none is selected, as a browser sends'
+            Map<String, String> sent = postedTo('/select-save')
+            sent.status == 'DRAFT'
+            sent.author == 'null'
+
+        and: 'the selected one where one is'
+            sent.released_day == '9'
+            sent.tags == '2'
+            sent.released == 'date.struct'
+
+        and: 'never one that cannot be chosen, nor one whose value only reads like the attribute'
+            sent.format == 'HARDBACK'
+
+        and: 'the text of an option that has no value, inside a group as much as outside one'
+            sent.genre == 'Crime'
+
+        and: 'and nothing for a select with no options, while the fields after it are still read'
+            sent.nothing == ''
+            sent.title =~ /^traced-\d+$/
+    }
+
     void 'the form with the most fields is the one submitted'() {
         given: 'a page carrying a layout search form ahead of its own'
             TraceNativeMetadataTask task = task([], ['/create'])
