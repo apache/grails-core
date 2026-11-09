@@ -55,6 +55,7 @@ abstract class AbstractGrailsControllerUrlMappings implements UrlMappings {
     boolean validateWildcardMappings
     ConcurrentHashMap<ControllerKey, GrailsControllerClass> mappingsToGrailsControllerMap = new ConcurrentHashMap<>()
     ConcurrentHashMap<ControllerKey, GrailsControllerClass> deferredMappings = new ConcurrentHashMap<>()
+    private boolean initialized
 
     AbstractGrailsControllerUrlMappings(GrailsApplication grailsApplication, UrlMappings urlMappingsHolderDelegate, UrlConverter urlConverter = null) {
         this.urlMappingsHolderDelegate = urlMappingsHolderDelegate
@@ -71,14 +72,17 @@ abstract class AbstractGrailsControllerUrlMappings implements UrlMappings {
             GrailsControllerClass deferredController = entry.value
             GrailsControllerClass existingController = mappingsToGrailsControllerMap.get(key)
 
-            if (existingController == null) {
-                mappingsToGrailsControllerMap.put(key, deferredController)
-            } else if (key.namespace == null && deferredController.namespace == null && existingController.namespace != null) {
-                // A non-namespaced controller is a better match for a null-namespace key
-                // than a namespaced controller that registered here as a fallback
+            if (existingController == null || prefersDeferred(key, deferredController, existingController)) {
                 mappingsToGrailsControllerMap.put(key, deferredController)
             }
         }
+        initialized = true
+    }
+
+    private static boolean prefersDeferred(ControllerKey key, GrailsControllerClass deferredController, GrailsControllerClass existingController) {
+        // A non-namespaced controller is a better match for a null-namespace key
+        // than a namespaced controller that registered here as a fallback
+        key.namespace == null && deferredController.namespace == null && existingController.namespace != null
     }
 
     Collection<UrlMapping> addMappings(Closure mappings) {
@@ -204,6 +208,33 @@ abstract class AbstractGrailsControllerUrlMappings implements UrlMappings {
                 mapToUse.put(withoutPluginKey, controller)
             }
         }
+
+        if (initialized) {
+            replaceEarlierRegistration(controller)
+        }
+    }
+
+    /**
+     * Gives a controller registered while the application runs, such as one whose class was reloaded, the keys its
+     * earlier registration had, and drops the keys of the actions it no longer has. The deferred keys were merged by
+     * the constructor, so the keys of this registration are merged here by the same rule.
+     */
+    private void replaceEarlierRegistration(GrailsControllerClass controller) {
+        for (Map.Entry<ControllerKey, GrailsControllerClass> entry : deferredMappings.entrySet()) {
+            if (entry.value.is(controller)) {
+                GrailsControllerClass existingController = mappingsToGrailsControllerMap.get(entry.key)
+                if (existingController == null || isEarlierRegistration(existingController, controller) ||
+                        prefersDeferred(entry.key, controller, existingController)) {
+                    mappingsToGrailsControllerMap.put(entry.key, controller)
+                }
+            }
+        }
+        mappingsToGrailsControllerMap.values().removeIf { GrailsControllerClass registered -> isEarlierRegistration(registered, controller) }
+        deferredMappings.values().removeIf { GrailsControllerClass registered -> isEarlierRegistration(registered, controller) }
+    }
+
+    private static boolean isEarlierRegistration(GrailsControllerClass registered, GrailsControllerClass controller) {
+        !registered.is(controller) && registered.fullName == controller.fullName
     }
 
     private static final Set<String> ROUTING_PARAMS = ['controller', 'action', 'namespace', 'plugin', 'format', 'id', 'version'] as Set
