@@ -120,21 +120,39 @@ class UndertowFailedActionObservationSpec extends Specification implements HttpC
         'an error controller, on a page whose URL has a parameter' | '/page/example'                       | '/failing/includesAnswerOfController' | 'Answered by the error controller'
     }
 
-    void 'an action a page includes through UrlMappingUtils runs, and the page keeps its route'() {
+    void 'an action a page includes through UrlMappingUtils runs, and the page goes on as itself with its own route'() {
         given:
         def path = '/failing/includesThroughUrlMappingUtils'
 
         when:
-        def response = http([(REQUEST_HEADER): path], path)
+        def response = http([(REQUEST_HEADER): path], "${path}?marker=page")
 
-        then: 'the included action answered inside the page'
-        response.assertContains(200, 'before included after')
+        then: 'the included action answered inside the page, and after it the page had its own action and parameters'
+        response.assertContains(200, 'before included after, as failing/includesThroughUrlMappingUtils with page')
 
         and: 'the observation of the page stopped on its own route, with no error'
         new PollingConditions(timeout: 30).eventually {
             assert STOPPED[path] == [path, 'none']
         }
         !NOTIFIED.containsKey(path)
+    }
+
+    void 'an error controller that includes an action runs that action inside its page, and the failure is reported once'() {
+        given:
+        def path = '/failing/answeredByIncludingController'
+
+        when:
+        def response = http([(REQUEST_HEADER): path], path)
+
+        then: 'the error controller answered, with the action it included inside its page'
+        response.assertContains(500, 'Answered by the error controller, with included inside')
+
+        and: 'the observation stopped on the route that failed with what failed, and the handlers heard of it once'
+        new PollingConditions(timeout: 30).eventually {
+            assert STOPPED[path] == [path, 'NoSuchElementException']
+            assert 'NoSuchElementException' in errorTags(path)
+        }
+        NOTIFIED[path] == ['NoSuchElementException']
     }
 
     private List<String> errorTags(String route) {

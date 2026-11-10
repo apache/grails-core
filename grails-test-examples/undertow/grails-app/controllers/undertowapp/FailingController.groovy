@@ -67,6 +67,10 @@ class FailingController {
         throw new ArithmeticException('answered by an error controller that forwards')
     }
 
+    def answeredByIncludingController() {
+        throw new NoSuchElementException('answered by an error controller that includes an action')
+    }
+
     def forwardedToView() {
         forward(action: 'answeredByView')
     }
@@ -103,8 +107,8 @@ class FailingController {
 
     def includesThroughUrlMappingUtils() {
         response.writer.write('before ')
-        UrlMappingUtils.includeRequestForUrlMappingInfo(request, response, new ForwardUrlMappingInfo(controller: 'failing', action: 'included'), [:], false)
-        render ' after'
+        UrlMappingUtils.includeRequestForUrlMappingInfo(request, response, new ForwardUrlMappingInfo(controller: 'failing', action: 'included', params: [marker: 'included']), [:], false)
+        render " after, as ${controllerName}/${actionName} with ${params.marker}"
     }
 
     def included() {
@@ -117,6 +121,13 @@ class FailingController {
 
     def forwardingErrorHandler() {
         forward(action: 'errorHandler')
+    }
+
+    def includingErrorHandler() {
+        response.status = 500
+        response.writer.write('Answered by the error controller, with ')
+        UrlMappingUtils.includeRequestForUrlMappingInfo(request, response, new ForwardUrlMappingInfo(controller: 'failing', action: 'included'), [:], false)
+        render ' inside'
     }
 
     private void failAsynchronously(Exception failure) {

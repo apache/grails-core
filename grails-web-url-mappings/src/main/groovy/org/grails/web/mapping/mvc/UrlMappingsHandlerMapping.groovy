@@ -61,10 +61,10 @@ class UrlMappingsHandlerMapping extends AbstractHandlerMapping {
     public static final String MATCHED_REQUEST = 'org.grails.url.match.info'
 
     /**
-     * The mapping an include made by {@link org.grails.web.mapping.UrlMappingUtils#includeRequestForUrlMappingInfo} answers
-     * with, whatever its URI would match, with the controller it names. While an error is being handled, the include
-     * answers with the status code mapping, as a forward to it does, since the mapping it was made for can be one that
-     * carries the parameters of the request rather than its controller.
+     * The mapping an include made by {@link org.grails.web.mapping.UrlMappingUtils#includeRequestForUrlMappingInfo} was
+     * made for. The include runs the action of that mapping, whatever its URI would match and whatever error is being
+     * handled: the exception resolver includes the error handler it chose, and an error handler can include another
+     * action.
      *
      * @since 8.0.1
      */
@@ -175,7 +175,7 @@ class UrlMappingsHandlerMapping extends AbstractHandlerMapping {
         }
         def matchedInfo = request.getAttribute(MATCHED_REQUEST)
         def errorStatus = request.getAttribute(WebUtils.ERROR_STATUS_CODE_ATTRIBUTE)
-        if (includedInfo instanceof UrlMappingInfo && errorStatus == null) {
+        if (includedInfo instanceof UrlMappingInfo) {
             UrlMappingInfo info = withController((UrlMappingInfo) includedInfo)
             if (info instanceof GrailsControllerUrlMappingInfo) {
                 request.setAttribute(MATCHED_REQUEST, info)
@@ -196,9 +196,7 @@ class UrlMappingsHandlerMapping extends AbstractHandlerMapping {
 
         String version = findRequestedVersion(webRequest)
 
-        // An include made for the error handler resolves it as a forward to it does. Any other include made while an
-        // error page renders answers for its own URI.
-        if (errorStatus && (!WebUtils.isInclude(request) || includedInfo != null)) {
+        if (errorStatus && !WebUtils.isInclude(request)) {
             def exception = request.getAttribute(WebUtils.ERROR_EXCEPTION_ATTRIBUTE)
             UrlMappingInfo info
             if (exception instanceof Throwable) {

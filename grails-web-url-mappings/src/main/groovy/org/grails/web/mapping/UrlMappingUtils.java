@@ -65,6 +65,18 @@ import org.grails.web.util.WebUtils;
  * @since 2.4
  */
 public class UrlMappingUtils {
+
+    /**
+     * The request attributes a dispatch for a mapping clears for what it dispatches to, and that an include sets for
+     * its own action, so an include restores them for the page that made it.
+     */
+    private static final String[] INCLUDE_DISPATCH_ATTRIBUTES = {
+        UrlMappingsHandlerMapping.MATCHED_REQUEST,
+        GrailsApplicationAttributes.GRAILS_CONTROLLER_CLASS,
+        GrailsApplicationAttributes.GRAILS_CONTROLLER_CLASS_AVAILABLE,
+        "grailsWebRequestFilter" + OncePerRequestFilter.ALREADY_FILTERED_SUFFIX
+    };
+
     private UrlMappingUtils() {
     }
 
@@ -261,8 +273,9 @@ public class UrlMappingUtils {
      * Includes what the given UrlMappingInfo maps to in the response, where
      * {@link #forwardRequestForUrlMappingInfo(HttpServletRequest, HttpServletResponse, UrlMappingInfo, Map, boolean)}
      * would forward to it. A request that is itself an include cannot forward: a forward ends the response it is given,
-     * which inside an include belongs to the page that included it. The include answers with the given mapping,
-     * whatever its URI would match.
+     * which inside an include belongs to the page that included it. The include answers with the action of the given
+     * mapping, whatever its URI would match and whatever error is being handled. Once it returns, the page has its own
+     * controller, action, id, parameters and model again, and renders on as it was.
      *
      * @param request The request
      * @param response The response
@@ -277,12 +290,26 @@ public class UrlMappingUtils {
      */
     public static String includeRequestForUrlMappingInfo(HttpServletRequest request,
             HttpServletResponse response, UrlMappingInfo info, Map<String, Object> model, boolean includeParams) throws ServletException, IOException {
+        final IncludingPage page = new IncludingPage(GrailsWebRequest.lookup(request));
+        final Map<String, Object> dispatchAttributes = new HashMap<>();
+        for (String name : INCLUDE_DISPATCH_ATTRIBUTES) {
+            dispatchAttributes.put(name, request.getAttribute(name));
+        }
         request.setAttribute(UrlMappingsHandlerMapping.INCLUDED_MAPPING_INFO, info);
         try {
             return dispatchRequestForUrlMappingInfo(request, response, info, model, includeParams, true);
         }
         finally {
             request.removeAttribute(UrlMappingsHandlerMapping.INCLUDED_MAPPING_INFO);
+            for (Map.Entry<String, Object> attribute : dispatchAttributes.entrySet()) {
+                if (attribute.getValue() != null) {
+                    request.setAttribute(attribute.getKey(), attribute.getValue());
+                }
+                else {
+                    request.removeAttribute(attribute.getKey());
+                }
+            }
+            page.restore();
         }
     }
 
@@ -361,35 +388,7 @@ public class UrlMappingUtils {
     private static IncludedContent includeForUrlMappingInfoHelper(String includeUrl, HttpServletRequest request,
                                            HttpServletResponse response, UrlMappingInfo info, Map model) {
         final GrailsWebRequest webRequest = GrailsWebRequest.lookup(request);
-
-        String currentController = null;
-        String currentAction = null;
-        String currentId = null;
-        ModelAndView currentMv = null;
-        Map currentTemplateModel = null;
-        Binding currentPageBinding = null;
-        Map currentParams = null;
-        Object currentLayoutAttribute = null;
-        Object currentRenderingView = null;
-        if (webRequest != null) {
-            currentPageBinding = (Binding) webRequest.getAttribute(GrailsApplicationAttributes.PAGE_SCOPE, 0);
-            webRequest.removeAttribute(GrailsApplicationAttributes.PAGE_SCOPE, 0);
-            currentLayoutAttribute = webRequest.getAttribute(WebUtils.LAYOUT_ATTRIBUTE, 0);
-            if (currentLayoutAttribute != null) {
-                webRequest.removeAttribute(WebUtils.LAYOUT_ATTRIBUTE, 0);
-            }
-            currentRenderingView = webRequest.getAttribute(WebUtils.RENDERING_VIEW, 0);
-            if (currentRenderingView != null) {
-                webRequest.removeAttribute(WebUtils.RENDERING_VIEW, 0);
-            }
-            currentController = webRequest.getControllerName();
-            currentAction = webRequest.getActionName();
-            currentId = webRequest.getId();
-            currentParams = new HashMap();
-            currentParams.putAll(webRequest.getParameterMap());
-            currentMv = (ModelAndView) webRequest.getAttribute(GrailsApplicationAttributes.MODEL_AND_VIEW, 0);
-            currentTemplateModel = (Map) webRequest.getAttribute(GrailsApplicationAttributes.TEMPLATE_MODEL, 0);
-        }
+        final IncludingPage page = webRequest != null ? new IncludingPage(webRequest) : null;
         try {
             if (webRequest != null) {
                 webRequest.getParameterMap().clear();
@@ -401,32 +400,76 @@ public class UrlMappingUtils {
             return includeForUrl(includeUrl, request, response, model);
         }
         finally {
-            if (webRequest != null) {
-                if (webRequest.isActive()) {
+            if (page != null) {
+                page.restore();
+            }
+        }
+    }
 
-                    webRequest.setAttribute(GrailsApplicationAttributes.PAGE_SCOPE, currentPageBinding, 0);
-                    if (currentLayoutAttribute != null) {
-                        webRequest.setAttribute(WebUtils.LAYOUT_ATTRIBUTE, currentLayoutAttribute, 0);
-                    }
-                    if (currentRenderingView != null) {
-                        webRequest.setAttribute(WebUtils.RENDERING_VIEW, currentRenderingView, 0);
-                    }
-                    webRequest.getParameterMap().clear();
-                    webRequest.getParameterMap().putAll(currentParams);
-                    webRequest.setId(currentId);
-                    webRequest.setControllerName(currentController);
-                    webRequest.setActionName(currentAction);
-                    if (currentMv != null) {
-                        webRequest.setAttribute(GrailsApplicationAttributes.MODEL_AND_VIEW, currentMv, 0);
-                    }
-                    if (currentTemplateModel != null) {
-                        webRequest.setAttribute(GrailsApplicationAttributes.TEMPLATE_MODEL, currentTemplateModel, 0);
-                    } else {
-                        webRequest.removeAttribute(GrailsApplicationAttributes.TEMPLATE_MODEL, 0);
-                    }
-                } else {
-                    RequestContextHolder.setRequestAttributes(null);
-                }
+    /**
+     * What an include changes on the request of the page that makes it: the controller, action, id and parameters the
+     * included mapping configures, and the model and page attributes the include must not see. Created before the
+     * include, which takes the page attributes away, and restored once it returns, so the page renders on as it was.
+     */
+    @SuppressWarnings({ "unchecked", "rawtypes" })
+    private static final class IncludingPage {
+
+        private final GrailsWebRequest webRequest;
+        private final String controller;
+        private final String action;
+        private final String id;
+        private final Map params;
+        private final ModelAndView modelAndView;
+        private final Map templateModel;
+        private final Binding pageBinding;
+        private final Object layoutAttribute;
+        private final Object renderingView;
+
+        IncludingPage(GrailsWebRequest webRequest) {
+            this.webRequest = webRequest;
+            pageBinding = (Binding) webRequest.getAttribute(GrailsApplicationAttributes.PAGE_SCOPE, 0);
+            webRequest.removeAttribute(GrailsApplicationAttributes.PAGE_SCOPE, 0);
+            layoutAttribute = webRequest.getAttribute(WebUtils.LAYOUT_ATTRIBUTE, 0);
+            if (layoutAttribute != null) {
+                webRequest.removeAttribute(WebUtils.LAYOUT_ATTRIBUTE, 0);
+            }
+            renderingView = webRequest.getAttribute(WebUtils.RENDERING_VIEW, 0);
+            if (renderingView != null) {
+                webRequest.removeAttribute(WebUtils.RENDERING_VIEW, 0);
+            }
+            controller = webRequest.getControllerName();
+            action = webRequest.getActionName();
+            id = webRequest.getId();
+            params = new HashMap();
+            params.putAll(webRequest.getParameterMap());
+            modelAndView = (ModelAndView) webRequest.getAttribute(GrailsApplicationAttributes.MODEL_AND_VIEW, 0);
+            templateModel = (Map) webRequest.getAttribute(GrailsApplicationAttributes.TEMPLATE_MODEL, 0);
+        }
+
+        void restore() {
+            if (!webRequest.isActive()) {
+                RequestContextHolder.setRequestAttributes(null);
+                return;
+            }
+            webRequest.setAttribute(GrailsApplicationAttributes.PAGE_SCOPE, pageBinding, 0);
+            if (layoutAttribute != null) {
+                webRequest.setAttribute(WebUtils.LAYOUT_ATTRIBUTE, layoutAttribute, 0);
+            }
+            if (renderingView != null) {
+                webRequest.setAttribute(WebUtils.RENDERING_VIEW, renderingView, 0);
+            }
+            webRequest.getParameterMap().clear();
+            webRequest.getParameterMap().putAll(params);
+            webRequest.setId(id);
+            webRequest.setControllerName(controller);
+            webRequest.setActionName(action);
+            if (modelAndView != null) {
+                webRequest.setAttribute(GrailsApplicationAttributes.MODEL_AND_VIEW, modelAndView, 0);
+            }
+            if (templateModel != null) {
+                webRequest.setAttribute(GrailsApplicationAttributes.TEMPLATE_MODEL, templateModel, 0);
+            } else {
+                webRequest.removeAttribute(GrailsApplicationAttributes.TEMPLATE_MODEL, 0);
             }
         }
     }
