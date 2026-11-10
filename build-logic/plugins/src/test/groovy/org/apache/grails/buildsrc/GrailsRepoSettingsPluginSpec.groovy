@@ -106,10 +106,13 @@ class GrailsRepoSettingsPluginSpec extends Specification {
     }
 
     private GradleRunner runner() {
+        // The plugin adds mavenLocal() whenever GRAILS_INCLUDE_MAVEN_LOCAL is set, whatever its value,
+        // so the build under test runs without it unless a feature sets it.
         GradleRunner.create()
                 .withProjectDir(projectDir)
                 .withArguments('help', '--offline', '--stacktrace')
                 .withPluginClasspath()
+                .withEnvironment(System.getenv().findAll { it.key != 'GRAILS_INCLUDE_MAVEN_LOCAL' })
     }
 
     private static List<String> urls(BuildResult result, String label) {
