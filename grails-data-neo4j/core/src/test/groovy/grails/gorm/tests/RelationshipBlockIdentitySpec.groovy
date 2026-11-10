@@ -112,6 +112,19 @@ class RelationshipBlockIdentitySpec extends Neo4jGormDatastoreSpec {
             }
         }.empty
     }
+
+    void "every comparison of a relationship property in a block goes through the relationship variable"() {
+        given:
+        seed()
+
+        expect: 'a range, a list, a like and an isNull name the property of the relationship, not of a node'
+        RelIdRoot.createCriteria().list { owner { links { between('total', 0L, 5L) } } }*.label == ['r-with']
+        RelIdRoot.createCriteria().list { owner { links { between('total', 2L, 5L) } } }.empty
+        RelIdRoot.createCriteria().list { owner { links { 'in'('total', [1L, 9L]) } } }*.label == ['r-with']
+        RelIdRoot.createCriteria().list { owner { links { like('kind', 'a%') } } }*.label == ['r-with']
+        RelIdRoot.createCriteria().list { owner { links { isNull('total') } } }.empty
+        RelIdRoot.createCriteria().list { owner { links { isNotNull('total') } } }*.label == ['r-with']
+    }
 }
 
 @Entity
