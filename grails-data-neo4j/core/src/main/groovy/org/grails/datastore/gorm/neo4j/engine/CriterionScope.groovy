@@ -29,7 +29,6 @@ import org.grails.datastore.mapping.model.types.Association
 import org.grails.datastore.mapping.model.types.Basic
 import org.grails.datastore.mapping.model.types.Embedded
 import org.grails.datastore.mapping.query.AssociationQuery
-import org.grails.datastore.mapping.query.Query
 
 /**
  * What a criterion of a Neo4j query is about: the entity whose properties it names, the Cypher variable that
@@ -48,11 +47,26 @@ final class CriterionScope {
     final GraphPersistentEntity entity
     final CypherBuilder builder
     final String variable
+    /** The variables of the nodes at the ends of the relationship, when this is the scope of a relationship block. */
+    final String fromVariable
+    final String toVariable
 
-    CriterionScope(GraphPersistentEntity entity, CypherBuilder builder, String variable) {
+    CriterionScope(GraphPersistentEntity entity, CypherBuilder builder, String variable,
+                   String fromVariable = null, String toVariable = null) {
         this.entity = entity
         this.builder = builder
         this.variable = variable
+        this.fromVariable = fromVariable
+        this.toVariable = toVariable
+    }
+
+    /**
+     * The variable of the node a {@code from} or {@code to} block of a relationship refers to: the end of the
+     * relationship the block was entered through, or the one of the root query when the relationship is the root.
+     */
+    String endVariable(String end) {
+        String found = end == RelationshipPersistentEntity.TO ? toVariable : fromVariable
+        found ?: end
     }
 
     /**
@@ -71,20 +85,15 @@ final class CriterionScope {
     }
 
     /**
-     * The scope a criterion is evaluated in. On the variable of a relationship, which a block on an association
-     * to a relationship entity declares, the identity is the relationship entity's own, as its mapping may
-     * differ from the one of the node that owns the relationship. Every other property stays with the entity of
-     * the block, which qualifies it with the variable of the relationship.
+     * The scope of a block on an end of the relationship of this scope, a {@code from} or {@code to} association:
+     * the node at that end, which is already matched, so its criteria are about the entity the end refers to.
      */
-    CriterionScope forCriterion(Query.Criterion criterion) {
-        PersistentEntity relationship = builder.getRelationshipEntity(variable)
-        if (!(relationship instanceof GraphPersistentEntity) || relationship.is(entity)) {
-            return this
+    CriterionScope forEnd(Association end) {
+        PersistentEntity node = end.associatedEntity
+        if (fromVariable == null || !(node instanceof GraphPersistentEntity)) {
+            return atVariable(end.name)
         }
-        boolean identity = criterion instanceof Query.IdEquals ||
-                (criterion instanceof Query.PropertyNameCriterion &&
-                        ((Query.PropertyNameCriterion) criterion).property == relationship.identity?.name)
-        identity ? new CriterionScope((GraphPersistentEntity) relationship, builder, variable) : this
+        new CriterionScope((GraphPersistentEntity) node, builder, endVariable(end.name))
     }
 
     /**
@@ -152,8 +161,8 @@ final class CriterionScope {
      * The scope of the block of an association, whose pattern is matched into the query. The criteria of the
      * block are about the associated entity, so a property is looked up there: a plain property of the same name as
      * an association of the entity the query started from is still a plain property, and an association of the
-     * associated entity is tested as one. An association to a relationship entity keeps the entity it was given,
-     * and its variable is recorded as a relationship.
+     * associated entity is tested as one. An association to a relationship entity is about the relationship, so its
+     * scope is the relationship entity, and its variable is recorded as a relationship.
      */
     CriterionScope into(AssociationQuery block) {
         Association association = block.association
@@ -166,12 +175,16 @@ final class CriterionScope {
             target = "m_${builder.getNextMatchNumber() + 1}"
         }
         builder.addMatch(entity.formatAssociationPatternFromExisting(association, relationship, this.variable, target))
-        PersistentEntity associated = association.associatedEntity
-        GraphPersistentEntity nested = associated instanceof GraphPersistentEntity &&
-                !((GraphPersistentEntity) associated).isRelationshipEntity() ? (GraphPersistentEntity) associated : entity
         if (viaRelationship) {
-            builder.addRelationshipVariable(variable, (PersistentEntity) block.entity)
+            RelationshipPersistentEntity relationshipEntity = (RelationshipPersistentEntity) block.entity
+            builder.addRelationshipVariable(variable, relationshipEntity)
+            // the node that owns the block is the end its entity is the relationship's, unless it is the other way round
+            boolean incoming = entity.is(relationshipEntity.to.associatedEntity) && !entity.is(relationshipEntity.from.associatedEntity)
+            return new CriterionScope(relationshipEntity, builder, variable,
+                    incoming ? target : this.variable, incoming ? this.variable : target)
         }
+        PersistentEntity associated = association.associatedEntity
+        GraphPersistentEntity nested = associated instanceof GraphPersistentEntity ? (GraphPersistentEntity) associated : entity
         new CriterionScope(nested, builder, variable)
     }
 }

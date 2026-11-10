@@ -388,7 +388,7 @@ class Neo4jQuery extends Query {
         if (handler == null) {
             throw new UnsupportedOperationException("Criterion of type ${criterion.class.name} are not supported by GORM for Neo4j")
         }
-        return handler.handle(scope.forCriterion(criterion), criterion)
+        return handler.handle(scope, criterion)
     }
 
     private String applyOrderAndLimits(CypherBuilder cypherBuilder) {
@@ -737,7 +737,7 @@ class Neo4jQuery extends Query {
                 return dispatchCriterion(flattenEmbeddedCriterion(criterion.criteria, association.name), scope)
             }
             if (scope.entity.isRelationshipEntity()) {
-                return dispatchCriterion(criterion.criteria, scope.atVariable(association.name))
+                return dispatchCriterion(criterion.criteria, scope.forEnd(association))
             }
             return dispatchCriterion(criterion.criteria, scope.into(criterion))
         }

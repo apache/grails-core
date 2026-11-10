@@ -124,11 +124,19 @@ ON CREATE SET r = row.props"""
 
     @Override
     String formatProperty(String variable, String property) {
-        if (property.startsWith(FROM) || property.startsWith(TO)) {
+        if (isEnd(property, FROM) || isEnd(property, TO)) {
             return property
         } else {
             return super.formatProperty(variable, property)
         }
+    }
+
+    /**
+     * Whether a property name is the end of the relationship itself or something of that end ({@code to},
+     * {@code to.name}), and not a property that merely starts with the same letters, like {@code total}.
+     */
+    private static boolean isEnd(String property, String end) {
+        property == end || property.startsWith(end + '.')
     }
 
     @Override
