@@ -33,6 +33,10 @@ import spock.lang.Specification
 @Slf4j
 class GradleSpec extends Specification implements ProjectFixture, ContextFixture, CommandOutputFixture {
 
+    private static final String MAVEN_CENTRAL = 'mavenCentral()'
+    private static final String PLUGIN_PORTAL = 'gradlePluginPortal()'
+    private static final String GRAILS_RESTRICTED = 'https://repo.grails.org/grails/restricted'
+
     ApplicationContext beanContext
 
     void setup() {
@@ -107,5 +111,46 @@ class GradleSpec extends Specification implements ProjectFixture, ContextFixture
 
         expect:
         !buildSrcGradle
+    }
+
+    void 'the build script resolves its plugins from the Gradle Plugin Portal before repo.grails.org'() {
+        given:
+        final output = generate(ApplicationType.WEB, new Options(DevelopmentReloading.DEVTOOLS))
+
+        expect:
+        repositoriesIn(output['build.gradle'], 'buildscript {') == [MAVEN_CENTRAL, PLUGIN_PORTAL, GRAILS_RESTRICTED]
+    }
+
+    void 'buildSrc resolves its plugins from the Gradle Plugin Portal before repo.grails.org'() {
+        given:
+        final output = generate(ApplicationType.WEB, new Options(DevelopmentReloading.DEVTOOLS), ['gradle-build-src'])
+
+        expect:
+        repositoriesIn(output['buildSrc/build.gradle']) == [MAVEN_CENTRAL, PLUGIN_PORTAL, GRAILS_RESTRICTED]
+    }
+
+    void 'the project repositories leave out the Gradle Plugin Portal'() {
+        given:
+        final output = generate(ApplicationType.WEB, new Options(DevelopmentReloading.DEVTOOLS))
+
+        expect:
+        repositoriesIn(output['build.gradle']) == [MAVEN_CENTRAL, GRAILS_RESTRICTED]
+    }
+
+    /**
+     * The Maven Central, Gradle Plugin Portal and repo.grails.org entries of a repositories block, in order.
+     * Without an enclosing block, the top-level repositories block of the script.
+     */
+    private static List<String> repositoriesIn(String script, String enclosingBlock = null) {
+        final lines = script.readLines()
+        final from = enclosingBlock ? lines.findIndexOf { it.trim() == enclosingBlock } : 0
+        assert from >= 0, "No ${enclosingBlock} in:\n${script}"
+        final start = lines.findIndexOf(from) { enclosingBlock ? it.trim() == 'repositories {' : it == 'repositories {' }
+        assert start >= 0, "No repositories block in:\n${script}"
+        final closing = lines[start].takeWhile { it == ' ' } + '}'
+        final end = lines.findIndexOf(start) { it == closing }
+        lines[start..end].join('\n')
+                .findAll(/mavenCentral\(\)|gradlePluginPortal\(\)|url = '([^']+)'/) { String match, String url -> url ?: match }
+                .findAll { it in [MAVEN_CENTRAL, PLUGIN_PORTAL, GRAILS_RESTRICTED] }
     }
 }

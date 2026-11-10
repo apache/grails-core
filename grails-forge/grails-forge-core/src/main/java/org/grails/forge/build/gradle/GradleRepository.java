@@ -31,6 +31,14 @@ public interface GradleRepository extends Ordered {
     String toSnippet(String basePadding);
 
     static Set<GradleRepository> getDefaultRepositories(String grailsVersion) {
+        return defaultRepositories(grailsVersion, false);
+    }
+
+    static Set<GradleRepository> getDefaultBuildRepositories(String grailsVersion) {
+        return defaultRepositories(grailsVersion, true);
+    }
+
+    private static Set<GradleRepository> defaultRepositories(String grailsVersion, boolean buildRepositories) {
         Set<GradleRepository> repositories = new HashSet<>();
 
         String overrideRepo = System.getenv("GRAILS_REPO_URL");
@@ -50,6 +58,12 @@ public interface GradleRepository extends Ordered {
             }
         }
         repositories.add(new MavenCentralRepository(repositories.size()));
+        if (buildRepositories) {
+            // The plugins of the plugins block are resolved again through the build script's repositories.
+            // Without the Gradle Plugin Portal, the plugins that only it hosts come through repo.grails.org,
+            // together with a request for the jar of each plugin marker, which is a POM-only module.
+            repositories.add(new GradlePluginPortalRepository(repositories.size()));
+        }
         repositories.add(new DefaultGradleRepository(repositories.size(), "https://repo.grails.org/grails/restricted"));
         if (grailsVersion.endsWith("SNAPSHOT")) {
             repositories.add(new DefaultGradleRepository(
