@@ -273,7 +273,8 @@ public class HibernateDatastore extends AbstractDatastore
         HibernateConnectionSourceSettings.HibernateSettings hibernateSettings = settings.getHibernate();
         this.osivReadOnly = hibernateSettings.getOsiv().isReadonly();
         this.passReadOnlyToHibernate = hibernateSettings.isReadOnly();
-        this.isCacheQueries = hibernateSettings.getCache().isQueries();
+        Boolean cacheQueries = hibernateSettings.getCache().getQueries();
+        this.isCacheQueries = cacheQueries != null && cacheQueries;
         this.failOnError = settings.isFailOnError();
         Boolean markDirty = settings.getMarkDirty();
         this.markDirty = markDirty != null && markDirty;
