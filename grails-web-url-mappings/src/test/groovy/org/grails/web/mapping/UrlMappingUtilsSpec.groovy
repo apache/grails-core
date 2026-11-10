@@ -228,8 +228,8 @@ class UrlMappingUtilsSpec extends Specification {
             capturingWebRequest.getAttribute(GrailsApplicationAttributes.TEMPLATE_MODEL, 0) == null
     }
 
-    void "includeRequestForUrlMappingInfo #outcome gives the page back its controller, action, id, parameters and model"() {
-        given: 'a page with its own controller, action, id, parameter, model and matched mapping'
+    void "includeRequestForUrlMappingInfo #outcome gives the page back its namespace, controller, action, id, parameters, model and request attributes"() {
+        given: 'a page with its own namespace, controller, action, id, parameter, model, request attribute and matched mapping'
             final ModelAndView pageModel = new ModelAndView('/outer/page', [greeting: 'hello'])
             final Map<String, Object> pageTemplateModel = [templateKey: 'templateValue']
             final Object pageMatch = new ForwardUrlMappingInfo(controllerName: 'outer', actionName: 'page')
@@ -250,6 +250,10 @@ class UrlMappingUtilsSpec extends Specification {
                             duringInclude.action = included.actionName
                             duringInclude.mapping = req.getAttribute(UrlMappingsHandlerMapping.INCLUDED_MAPPING_INFO)
                             duringInclude.model = req.getAttribute(GrailsApplicationAttributes.MODEL_AND_VIEW)
+                            duringInclude.greeting = req.getAttribute('greeting')
+                            duringInclude.only = req.getAttribute('only')
+                            // as the included action does, with a controller of no namespace
+                            included.controllerNamespace = null
                             // as the handler mapping does for the included action
                             req.setAttribute(UrlMappingsHandlerMapping.MATCHED_REQUEST, fragment)
                             req.setAttribute(GrailsApplicationAttributes.GRAILS_CONTROLLER_CLASS, 'inner controller')
@@ -262,6 +266,7 @@ class UrlMappingUtilsSpec extends Specification {
             }
             GrailsWebRequest page = new GrailsWebRequest(pageRequest, response, attr)
             pageRequest.setAttribute(GrailsApplicationAttributes.WEB_REQUEST, page)
+            page.controllerNamespace = 'admin'
             page.controllerName = 'outer'
             page.actionName = 'page'
             page.id = '7'
@@ -270,11 +275,12 @@ class UrlMappingUtilsSpec extends Specification {
             page.setAttribute(GrailsApplicationAttributes.TEMPLATE_MODEL, pageTemplateModel, 0)
             pageRequest.setAttribute(UrlMappingsHandlerMapping.MATCHED_REQUEST, pageMatch)
             pageRequest.setAttribute(GrailsApplicationAttributes.GRAILS_CONTROLLER_CLASS, pageControllerClass)
+            pageRequest.setAttribute('greeting', 'outer')
 
-        when: 'the page includes another action'
+        when: 'the page includes another action, with a model of its own'
             Throwable failure = null
             try {
-                UrlMappingUtils.includeRequestForUrlMappingInfo(pageRequest, response, fragment, [:], false)
+                UrlMappingUtils.includeRequestForUrlMappingInfo(pageRequest, response, fragment, [greeting: 'inner', only: 'fragment'], false)
             }
             catch (IllegalStateException e) {
                 failure = e
@@ -286,9 +292,12 @@ class UrlMappingUtilsSpec extends Specification {
             duringInclude.action == 'fragment'
             duringInclude.mapping.is(fragment)
             duringInclude.model == null
+            duringInclude.greeting == 'inner'
+            duringInclude.only == 'fragment'
             (failure != null) == fails
 
         and: 'the page is as it was'
+            page.controllerNamespace == 'admin'
             page.controllerName == 'outer'
             page.actionName == 'page'
             page.id == '7'
@@ -298,6 +307,8 @@ class UrlMappingUtilsSpec extends Specification {
             pageRequest.getAttribute(UrlMappingsHandlerMapping.MATCHED_REQUEST).is(pageMatch)
             pageRequest.getAttribute(GrailsApplicationAttributes.GRAILS_CONTROLLER_CLASS).is(pageControllerClass)
             pageRequest.getAttribute(UrlMappingsHandlerMapping.INCLUDED_MAPPING_INFO) == null
+            pageRequest.getAttribute('greeting') == 'outer'
+            pageRequest.getAttribute('only') == null
 
         where:
             outcome                         | fails

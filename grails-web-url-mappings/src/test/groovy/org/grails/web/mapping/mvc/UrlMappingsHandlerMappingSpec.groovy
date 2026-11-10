@@ -440,6 +440,28 @@ class UrlMappingsHandlerMappingSpec extends AbstractUrlMappingsSpec {
         'its mapping with the parameters of the page\'s URL' | [slug: 'example']
     }
 
+    void "an action an include runs sees the id of its mapping rather than the id of the page"() {
+        given:
+        def grailsApplication = new DefaultGrailsApplication(FooController)
+        grailsApplication.initialise()
+        def holder = new GrailsControllerUrlMappings(grailsApplication, getUrlMappingsHolder {
+            "/foo/bar"(controller: 'foo', action: 'bar')
+        })
+        def handler = new UrlMappingsHandlerMapping(holder)
+        def webRequest = GrailsWebMockUtil.bindMockWebRequest()
+        def request = webRequest.currentRequest
+        request.addParameter('id', '7')
+
+        when: 'a page whose request has id 7 includes the action with id 9'
+        request.setAttribute(WebUtils.INCLUDE_REQUEST_URI_ATTRIBUTE, '/foo/bar')
+        request.requestURI = '/foo/bar'
+        request.setAttribute(UrlMappingsHandlerMapping.INCLUDED_MAPPING_INFO, new ForwardUrlMappingInfo(controller: 'foo', action: 'bar', id: '9'))
+        handler.getHandler(request)
+
+        then:
+        webRequest.params.id == '9'
+    }
+
     void "an include an error handler makes answers with the action it names rather than with the error handler"() {
         given:
         def grailsApplication = new DefaultGrailsApplication(FooController)
