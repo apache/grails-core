@@ -684,7 +684,7 @@ Add the corresponding `@AutoConfigureMockMvc` / `@AutoConfigureWebClient` / `@Au
 // Before
 @SpringBootTest
 class MyControllerSpec extends Specification {
-    @Autowired MockMvc mockMvc      // injected automatically
+    @Autowired MockMvc mockMvc       // injected automatically
     @Autowired TestRestTemplate rest // injected automatically
 }
 
@@ -2787,6 +2787,7 @@ once, not twice.
 
 A version option that names none of the known keys is now reported as a warning after the banner is printed,
 rather than being dropped in silence.
+
 ==== 47. Message Bundles Resolved by Spring Boot
 
 Grails no longer registers a `messageSource` bean. Spring Boot's `MessageSourceAutoConfiguration`
@@ -4068,7 +4069,7 @@ needs to expect the value it would have had on Hibernate 5:
 [source,groovy]
 ----
 def book = new Book(title: 'Grails').save(flush: true)   // id generator: 'increment'
-assert book.version == 0                                  // was 1 before Grails 8.0
+assert book.version == 0                                 // was 1 before Grails 8.0
 ----
 
 ===== 67.2 Persistence Listeners Receive Persist and Merge Events
