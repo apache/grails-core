@@ -64,7 +64,15 @@ public interface GradleRepository extends Ordered {
             // together with a request for the jar of each plugin marker, which is a POM-only module.
             repositories.add(new GradlePluginPortalRepository(repositories.size()));
         }
-        repositories.add(new DefaultGradleRepository(repositories.size(), "https://repo.grails.org/grails/restricted"));
+        // repo.grails.org hosts no snapshots, so a snapshot version is not looked for there, where every
+        // request for one would miss before the snapshot repository below is asked.
+        repositories.add(new DefaultGradleRepository(
+            repositories.size(),
+            "https://repo.grails.org/grails/restricted",
+            null,
+            List.of(),
+            List.of(VersionType.RELEASE)
+        ));
         if (grailsVersion.endsWith("SNAPSHOT")) {
             repositories.add(new DefaultGradleRepository(
                 repositories.size(),
