@@ -178,9 +178,11 @@ jobs:
       - name: "🔍 Setup TestLens"
         uses: testlens-app/setup-testlens@d96a555133c275a00949d2cc77b70fe9a4242ebf # v1.9.2
       - name: "🔨 Build project"
-        # build-logic is an included build, so the specs of its vulnerability-scan plugin are run through the root build.
+        # build-logic is an included build, so the specs of its convention plugins and of its vulnerability-scan plugin
+        # are run through the root build.
         run: >
-          ./gradlew build :grails-shell-cli:installDist groovydoc :build-logic-root:vulnerability-scan:check
+          ./gradlew build :grails-shell-cli:installDist groovydoc :build-logic-root:build-logic:check
+          :build-logic-root:vulnerability-scan:check
           --continue
           --stacktrace
           -PonlyCoreTests
@@ -219,7 +221,8 @@ jobs:
         uses: testlens-app/setup-testlens@d96a555133c275a00949d2cc77b70fe9a4242ebf # v1.9.2
       - name: "🔨 Build project"
         run: >
-          ./gradlew build :grails-shell-cli:installDist groovydoc :build-logic-root:vulnerability-scan:check
+          ./gradlew build :grails-shell-cli:installDist groovydoc :build-logic-root:build-logic:check
+          :build-logic-root:vulnerability-scan:check
           --continue
           --rerun-tasks
           --stacktrace
