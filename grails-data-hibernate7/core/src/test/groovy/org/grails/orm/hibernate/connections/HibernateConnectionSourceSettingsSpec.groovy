@@ -57,7 +57,7 @@ class HibernateConnectionSourceSettingsSpec extends Specification {
         expectedHibernateProperties.put('hibernate.naming_strategy','org.hibernate.boot.model.naming.CamelCaseToUnderscoresNamingStrategy')
         expectedHibernateProperties.put('hibernate.entity_dirtiness_strategy', 'org.grails.orm.hibernate.dirty.GrailsEntityDirtinessStrategy')
         expectedHibernateProperties.put('hibernate.configLocations','file:hibernate.cfg.xml')
-        expectedHibernateProperties.put('hibernate.use_query_cache','true')
+        expectedHibernateProperties.put('hibernate.cache.use_query_cache','true')
         expectedHibernateProperties.put("hibernate.connection.handling_mode", "DELAYED_ACQUISITION_AND_HOLD")
         expectedHibernateProperties.put('hibernate.cache.region.factory_class','org.hibernate.cache.jcache.internal.JCacheRegionFactory')
         expectedHibernateProperties.put('hibernate.jpa.compliance.cascade', 'true')
@@ -82,7 +82,7 @@ class HibernateConnectionSourceSettingsSpec extends Specification {
         hibernateProperties['hibernate.naming_strategy'] == 'org.hibernate.boot.model.naming.PhysicalNamingStrategySnakeCaseImpl'
         hibernateProperties['hibernate.entity_dirtiness_strategy'] == 'org.grails.orm.hibernate.dirty.GrailsEntityDirtinessStrategy'
         hibernateProperties['hibernate.configLocations'] == 'file:hibernate.cfg.xml'
-        hibernateProperties['hibernate.use_query_cache'] == 'true'
+        hibernateProperties['hibernate.cache.use_query_cache'] == 'true'
         hibernateProperties["hibernate.connection.handling_mode"] == "DELAYED_ACQUISITION_AND_HOLD"
         hibernateProperties['hibernate.cache.region.factory_class'] == 'org.hibernate.cache.jcache.internal.JCacheRegionFactory'
         hibernateProperties['hibernate.jpa.compliance.cascade'] == 'true'

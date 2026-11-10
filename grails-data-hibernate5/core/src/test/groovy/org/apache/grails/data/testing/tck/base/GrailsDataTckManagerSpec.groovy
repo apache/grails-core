@@ -19,6 +19,7 @@
 package org.apache.grails.data.testing.tck.base
 
 import org.grails.datastore.mapping.core.Session
+import org.junit.platform.launcher.TestExecutionListener
 import spock.lang.Specification
 
 /**
@@ -66,5 +67,10 @@ class GrailsDataTckManagerSpec extends Specification {
 
         where:
         classes << [null, []]
+    }
+
+    void "the hibernate5-core TCK suite runs with the listener that flushes the Introspector's caches after each spec"() {
+        expect:
+        ServiceLoader.load(TestExecutionListener).stream().anyMatch { it.type().name == 'org.apache.grails.testing.listener.IntrospectorFlushListener' }
     }
 }
