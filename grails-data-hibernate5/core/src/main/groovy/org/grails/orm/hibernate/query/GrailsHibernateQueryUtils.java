@@ -412,6 +412,11 @@ public class GrailsHibernateQueryUtils {
             String sortHead = sort.substring(0, firstDotPos);
             String sortTail = sort.substring(firstDotPos + 1);
             PersistentProperty property = entity.getPropertyByName(sortHead);
+            if (property == null && associationPath == null && sortHead.equals(c.getAlias())) {
+                // the alias of the queried class: the rest of the path starts from the queried class
+                addOrderPossiblyNested(c, null, entity, sortTail, order, ignoreCase);
+                return;
+            }
             if (property == null) {
                 // not a property of the entity, so a sort by it, such as by an alias that the query does not define, can only be a mistake
                 throw new IllegalArgumentException("Invalid sort property");
