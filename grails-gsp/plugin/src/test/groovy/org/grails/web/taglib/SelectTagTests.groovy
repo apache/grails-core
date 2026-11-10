@@ -150,6 +150,31 @@ class SelectTagTests extends AbstractGrailsTagTests {
     }
 
     @Test
+    void testSelectWithDataAttrsFromAListThatSuppliesItsValuesWhenRead() {
+        def template = '''<g:select name="foo" from="${[1, 2]}" dataAttrs="${[label: [].withDefault { i -> 'label' + i }, code: ['a'].withEagerDefault { i -> 'code' + i }]}" />'''
+
+        assertOutputContains('<option value="1" data-label="label0" data-code="a" >1</option>', template)
+        assertOutputContains('<option value="2" data-label="label1" data-code="code1" >2</option>', template)
+    }
+
+    @Test
+    void testSelectWithDataAttrsListWithANullValueForAnElementRendersIt() {
+        def template = '''<g:select name="foo" from="${[1, 2]}" dataAttrs="${[position: ['first', null]]}" />'''
+
+        assertOutputContains('<option value="1" data-position="first" >1</option>', template)
+        assertOutputContains('<option value="2" data-position="null" >2</option>', template)
+    }
+
+    @Test
+    void testSelectWithDataAttrsListShorterThanFromWithANullValueNamesTheKey() {
+        def e = assertThrows(GrailsTagException, {
+            applyTemplate('''<g:select name="foo" from="${[1, 2, 3]}" dataAttrs="${[position: ['first', null]]}" />''')
+        })
+
+        assertTrue e.message.contains('Tag [select] attribute [dataAttrs] has 2 values for [position], but [from] has more elements'), e.message
+    }
+
+    @Test
     void testSelectWithDataAttrsAndKeys() {
         def template = '''<g:select name="foo" from="${['One', 'Two']}" keys="${[1, 2]}" value="2" dataAttrs="${[label: { it.toLowerCase() }]}" />'''
 

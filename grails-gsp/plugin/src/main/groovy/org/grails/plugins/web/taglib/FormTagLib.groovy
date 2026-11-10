@@ -1246,12 +1246,19 @@ class FormTagLib implements ApplicationContextAware, InitializingBean, TagLibrar
                 else if (v instanceof Closure) {
                     ret[k] = v(el)
                 }
+                else if (v instanceof List) {
+                    // a value for each element, read before checking the size, since a list made by withDefault grows when read
+                    def value = v[index]
+                    if (value == null && index >= ((List) v).size()) {
+                        throwDataAttrsListTooShort(k, ((List) v).size())
+                    }
+                    ret[k] = value
+                }
                 else if (v instanceof Collection || v.getClass().isArray()) {
                     // a value for each element
                     int size = v instanceof Collection ? ((Collection) v).size() : Array.getLength(v)
                     if (index >= size) {
-                        throwTagError("Tag [select] attribute [dataAttrs] has ${size} ${size == 1 ? 'value' : 'values'} for [${k}], " +
-                                'but [from] has more elements, and it must have a value for each of them')
+                        throwDataAttrsListTooShort(k, size)
                     }
                     ret[k] = v[index]
                 }
@@ -1267,6 +1274,11 @@ class FormTagLib implements ApplicationContextAware, InitializingBean, TagLibrar
             }
         }
         ret
+    }
+
+    private void throwDataAttrsListTooShort(key, int size) {
+        throwTagError("Tag [select] attribute [dataAttrs] has ${size} ${size == 1 ? 'value' : 'values'} for [${key}], " +
+                'but [from] has more elements, and it must have a value for each of them')
     }
 
     private void throwDataAttrsError(key, String given) {
