@@ -465,6 +465,75 @@ class WhereQueryFunctionsSpec extends HibernateGormDatastoreSpec {
         deleted == 1
         WhereQueryFunctionEntity.list()*.name.sort() == ['b', 'c', 'd']
     }
+
+    void "a string function compared with a fraction matches the text on a read and in a bulk statement"() {
+        given:
+        new WhereQueryFunctionEntity(name: '3.5', amount: 1).save(flush: true)
+        new WhereQueryFunctionEntity(name: 'x', amount: 2).save(flush: true)
+        def criterion = new FunctionCallingCriterion('upper', new Query.Equals('name', 3.5d))
+
+        expect:
+        criteriaOf(criterion).list()*.name == ['3.5']
+
+        when:
+        int deleted = criteriaOf(criterion).deleteAll()
+        session.clear()
+
+        then:
+        deleted == 1
+        WhereQueryFunctionEntity.list()*.name == ['x']
+    }
+
+    void "a GString operand is compared by its text on a read and in a bulk statement"() {
+        given:
+        seedEntities()
+        String letter = 'B'
+        def text = new FunctionCallingCriterion('upper', new Query.Equals('name', "${letter}"))
+        def number = new FunctionCallingCriterion('length', new Query.Equals('name', "${1}"))
+
+        expect:
+        criteriaOf(text).list()*.name == ['b']
+        criteriaOf(number).list()*.name.sort() == ['a', 'b', 'c', 'd']
+
+        when:
+        int deleted = criteriaOf(text).deleteAll()
+        session.clear()
+
+        then:
+        deleted == 1
+        WhereQueryFunctionEntity.list()*.name.sort() == ['a', 'c', 'd']
+
+        when:
+        int deletedByLength = criteriaOf(number).deleteAll()
+
+        then:
+        deletedByLength == 3
+    }
+
+    void "a function compared with a one-row subquery works on a read and in a bulk statement"() {
+        given:
+        seedEntities()
+        new WhereQueryFunctionEntity(name: 'long name', amount: 9).save(flush: true)
+        DetachedCriteria<WhereQueryFunctionEntity> maxAmount = new DetachedCriteria<>(WhereQueryFunctionEntity).build {
+            projections { max('amount') }
+        }
+        DetachedCriteria<WhereQueryFunctionEntity> shortest = new DetachedCriteria<>(WhereQueryFunctionEntity).build {
+            projections { property('name') }
+            eq('amount', 1)
+        }
+
+        expect: 'the length of the name against the greatest amount, 9, and the amount of a row'
+        criteriaOf(new FunctionCallingCriterion('length', new Query.GreaterThanEquals('name', maxAmount))).list()*.name == ['long name']
+        criteriaOf(new FunctionCallingCriterion('lower', new Query.Equals('name', shortest))).list()*.name == ['a']
+
+        when:
+        int deleted = criteriaOf(new FunctionCallingCriterion('length', new Query.GreaterThanEquals('name', maxAmount))).deleteAll()
+        session.clear()
+
+        then:
+        deleted == 1
+        WhereQueryFunctionEntity.count() == 4
+    }
 }
 
 @Entity

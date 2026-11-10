@@ -44,6 +44,7 @@ import org.grails.datastore.mapping.query.Query;
 import org.grails.datastore.mapping.query.api.AssociationCriteria;
 import org.grails.datastore.mapping.query.api.QueryableCriteria;
 import org.grails.datastore.mapping.query.criteria.FunctionCallingCriterion;
+import org.grails.datastore.mapping.query.criteria.FunctionComparison;
 
 /**
  * Builds JPA 1.0 String-based queries from the Query model
@@ -611,87 +612,61 @@ public class JpaQueryBuilder {
         queryHandlers.put(FunctionCallingCriterion.class, new QueryHandler() {
             public int handle(PersistentEntity entity, Query.Criterion criterion, StringBuilder q, StringBuilder whereClause, String logicalName, int position, List parameters, ConversionService conversionService, boolean allowJoins, boolean hibernateCompatible) {
                 FunctionCallingCriterion functionCriterion = (FunctionCallingCriterion) criterion;
-                String name = functionCriterion.getProperty();
-                validateProperty(entity, name, FunctionCallingCriterion.class);
-                FunctionCallingCriterion.requireSupported(functionCriterion.getFunctionName());
-                if (functionCriterion.isOnValue()) {
-                    throw new InvalidDataAccessResourceUsageException("A function on the value of a comparison is not supported: " + functionCriterion.getFunctionName());
-                }
-                Query.PropertyCriterion wrapped = functionCriterion.getPropertyCriterion();
-                if (wrapped instanceof Query.ILike) {
-                    whereClause.append("lower(")
-                               .append(functionCriterion.getFunctionName())
-                               .append(OPEN_BRACKET)
-                               .append(logicalName)
-                               .append(DOT)
-                               .append(name)
-                               .append(CLOSE_BRACKET)
-                               .append(") like lower(")
-                               .append(PARAMETER_PREFIX)
-                               .append(++position)
-                               .append(CLOSE_BRACKET);
-                    parameters.add(wrapped.getValue());
-                    return position;
-                }
-                whereClause.append(functionCriterion.getFunctionName())
-                           .append(OPEN_BRACKET)
-                           .append(logicalName)
-                           .append(DOT)
-                           .append(name)
-                           .append(CLOSE_BRACKET);
-                if (wrapped instanceof Query.In in) {
-                    whereClause.append(" IN (");
-                    QueryableCriteria subquery = in.getSubquery();
-                    if (subquery != null) {
-                        buildSubQuery(q, whereClause, position, parameters, conversionService, allowJoins, hibernateCompatible, subquery);
-                        position = parameters.size();
-                    }
-                    else {
-                        for (Iterator i = in.getValues().iterator(); i.hasNext();) {
-                            Object val = FunctionCallingCriterion.convertOperand(conversionService, functionCriterion.getFunctionName(), i.next());
-                            if (FunctionCallingCriterion.isFractional(val)) {
-                                whereClause.append(numberLiteral((Number) val));
-                            }
-                            else {
-                                whereClause.append(PARAMETER_PREFIX).append(++position);
-                                parameters.add(val);
-                            }
+                validateProperty(entity, functionCriterion.getProperty(), FunctionCallingCriterion.class);
+                FunctionComparison comparison = FunctionComparison.of(functionCriterion, conversionService);
+                String function = comparison.getFunctionName() + OPEN_BRACKET + logicalName + DOT + comparison.getProperty() + CLOSE_BRACKET;
+                switch (comparison.getKind()) {
+                    case ILIKE:
+                        whereClause.append("lower(").append(function).append(") like lower(").append(PARAMETER_PREFIX).append(++position).append(CLOSE_BRACKET);
+                        parameters.add(comparison.getOperand());
+                        return position;
+                    case RLIKE:
+                        // a regular expression is not LIKE, and a bulk statement has no regular expression operator
+                        throw new InvalidDataAccessResourceUsageException("Unsupported criterion in a function call: RLike");
+                    case IS_NULL:
+                        whereClause.append(function).append(" IS NULL");
+                        return position;
+                    case IS_NOT_NULL:
+                        whereClause.append(function).append(" IS NOT NULL");
+                        return position;
+                    case IN_SUBQUERY:
+                        whereClause.append(function).append(" IN (");
+                        buildSubQuery(q, whereClause, position, parameters, conversionService, allowJoins, hibernateCompatible, (QueryableCriteria) comparison.getSubquery());
+                        whereClause.append(CLOSE_BRACKET);
+                        return parameters.size();
+                    case IN_VALUES:
+                        whereClause.append(function).append(" IN (");
+                        for (Iterator i = comparison.getValues().iterator(); i.hasNext();) {
+                            Object val = i.next();
+                            position = appendOperand(whereClause, parameters, position, val);
                             if (i.hasNext()) {
                                 whereClause.append(COMMA);
                             }
                         }
-                    }
-                    whereClause.append(CLOSE_BRACKET);
-                }
-                else if (wrapped instanceof Query.Equals && wrapped.getValue() == null) {
-                    whereClause.append(" IS NULL");
-                }
-                else if (wrapped instanceof Query.NotEquals && wrapped.getValue() == null) {
-                    whereClause.append(" IS NOT NULL");
-                }
-                else {
-                    String operator = functionOperator(wrapped);
-                    if (operator == null) {
-                        throw new InvalidDataAccessResourceUsageException("Unsupported criterion in a function call: " + wrapped.getClass().getSimpleName());
-                    }
-                    Object wrappedValue = wrapped.getValue() instanceof QueryableCriteria ? wrapped.getValue() :
-                            FunctionCallingCriterion.convertOperand(conversionService, functionCriterion.getFunctionName(), wrapped.getValue());
-                    if (wrappedValue instanceof QueryableCriteria subquery) {
-                        // a detached criteria is a subquery, as it is when the query is read
-                        whereClause.append(operator).append(OPEN_BRACKET);
-                        buildSubQuery(q, whereClause, position, parameters, conversionService, allowJoins, hibernateCompatible, subquery);
-                        position = parameters.size();
                         whereClause.append(CLOSE_BRACKET);
-                    }
-                    else if (FunctionCallingCriterion.isFractional(wrappedValue)) {
-                        // a parameter takes the type of the function, an int, which would not hold the fraction
-                        whereClause.append(operator).append(numberLiteral((Number) wrappedValue));
-                    }
-                    else {
-                        whereClause.append(operator).append(PARAMETER_PREFIX).append(++position);
-                        parameters.add(wrappedValue);
-                    }
+                        return position;
+                    case COMPARE_SUBQUERY:
+                        whereClause.append(function).append(comparison.getOperator().jpql()).append(OPEN_BRACKET);
+                        buildSubQuery(q, whereClause, position, parameters, conversionService, allowJoins, hibernateCompatible, (QueryableCriteria) comparison.getSubquery());
+                        whereClause.append(CLOSE_BRACKET);
+                        return parameters.size();
+                    default:
+                        whereClause.append(function).append(comparison.getOperator().jpql());
+                        return appendOperand(whereClause, parameters, position, comparison.getOperand());
                 }
+            }
+
+            /**
+             * A parameter takes the type of the function, an int, which would not hold a fraction, so a fraction is
+             * written as a literal of its own type.
+             */
+            private int appendOperand(StringBuilder whereClause, List parameters, int position, Object value) {
+                if (FunctionComparison.needsLiteral(value)) {
+                    whereClause.append(numberLiteral((Number) value));
+                    return position;
+                }
+                whereClause.append(PARAMETER_PREFIX).append(++position);
+                parameters.add(value);
                 return position;
             }
         });
@@ -1079,35 +1054,5 @@ public class JpaQueryBuilder {
             decimal = BigDecimal.valueOf(number.longValue());
         }
         return decimal.toPlainString() + "bd";
-    }
-
-    private static String functionOperator(Query.PropertyCriterion wrapped) {
-        if (wrapped instanceof Query.RLike) {
-            // RLike is a Like, but a regular expression is not LIKE, and a bulk statement has no regular expression
-            // operator: it is rejected here as a plain rlike is
-            return null;
-        }
-        if (wrapped instanceof Query.Equals) {
-            return " = ";
-        }
-        if (wrapped instanceof Query.NotEquals) {
-            return " != ";
-        }
-        if (wrapped instanceof Query.GreaterThan) {
-            return " > ";
-        }
-        if (wrapped instanceof Query.GreaterThanEquals) {
-            return " >= ";
-        }
-        if (wrapped instanceof Query.LessThan) {
-            return " < ";
-        }
-        if (wrapped instanceof Query.LessThanEquals) {
-            return " <= ";
-        }
-        if (wrapped instanceof Query.Like) {
-            return " LIKE ";
-        }
-        return null;
     }
 }

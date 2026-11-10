@@ -122,7 +122,15 @@ public class FunctionCallingCriterion extends Query.PropertyNameCriterion {
             case "lower", "upper", "trim" -> String.class;
             default -> Integer.class;
         };
-        if (targetType == Integer.class && value instanceof Number number && !isWholeInt(number)) {
+        if (value instanceof CharSequence && !(value instanceof String)) {
+            // a GString or any other text is bound as the text it holds, not as the object
+            value = value.toString();
+        }
+        if (targetType == String.class) {
+            return value instanceof String ? value : conversionService != null && conversionService.canConvert(value.getClass(), String.class) ?
+                    conversionService.convert(value, String.class) : value.toString();
+        }
+        if (value instanceof Number number && !isWholeInt(number)) {
             return value;
         }
         return conversionService != null && conversionService.canConvert(value.getClass(), targetType) ?
