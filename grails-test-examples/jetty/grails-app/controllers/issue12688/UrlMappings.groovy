@@ -34,6 +34,7 @@ class UrlMappings {
         "500"(controller: 'failing', action: 'errorHandler', exception: UnsupportedOperationException)
         "500"(controller: 'failing', action: 'errorHandler', exception: StackOverflowError)
         "500"(controller: 'failing', action: 'forwardingErrorHandler', exception: ArithmeticException)
+        "500"(controller: 'failing', action: 'includingErrorHandler', exception: NoSuchElementException)
         "413"(controller: 'upload', action: 'tooLarge')
         "404"(view: '/notFound')
     }

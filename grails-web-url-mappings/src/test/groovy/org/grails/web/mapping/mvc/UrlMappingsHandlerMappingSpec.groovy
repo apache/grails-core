@@ -491,6 +491,30 @@ class UrlMappingsHandlerMappingSpec extends AbstractUrlMappingsSpec {
         'its mapping with the parameters of the page\'s URL' | [slug: 'example']
     }
 
+    void "an include an error handler makes answers with the action it names rather than with the error handler"() {
+        given:
+        def grailsApplication = new DefaultGrailsApplication(FooController)
+        grailsApplication.initialise()
+        def holder = new GrailsControllerUrlMappings(grailsApplication, getUrlMappingsHolder {
+            "/foo/bar"(controller: 'foo', action: 'bar')
+            "500"(controller: 'foo', action: 'fooBar')
+        })
+        def handler = new UrlMappingsHandlerMapping(holder)
+        def request = GrailsWebMockUtil.bindMockWebRequest().request
+
+        when: 'the error handler includes another action while the request still carries the error'
+        request.setAttribute(WebUtils.ERROR_STATUS_CODE_ATTRIBUTE, 500)
+        request.setAttribute(WebUtils.INCLUDE_REQUEST_URI_ATTRIBUTE, '/foo/bar')
+        request.requestURI = '/foo/bar'
+        request.setAttribute(UrlMappingsHandlerMapping.INCLUDED_MAPPING_INFO, new ForwardUrlMappingInfo(controller: 'foo', action: 'bar'))
+        def info = handler.getHandler(request).handler
+
+        then: 'the include runs that action, not the error handler, which would include it again'
+        info instanceof GrailsControllerUrlMappingInfo
+        ((GrailsControllerUrlMappingInfo) info).controllerClass.clazz == FooController
+        ((GrailsControllerUrlMappingInfo) info).info.actionName == 'bar'
+    }
+
     void "an include made for #made answers with the action of its controller when no error is being handled"() {
         given:
         def grailsApplication = new DefaultGrailsApplication(FooController)

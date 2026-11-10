@@ -21,6 +21,7 @@ package org.grails.web.mapping
 import grails.web.mapping.LinkGenerator
 import grails.web.mapping.UrlMappingInfo
 import grails.web.servlet.mvc.GrailsParameterMap
+import org.grails.web.mapping.mvc.UrlMappingsHandlerMapping
 import org.grails.web.servlet.mvc.GrailsWebRequest
 import org.grails.web.util.GrailsApplicationAttributes
 import org.grails.web.util.IncludedContent
@@ -225,5 +226,82 @@ class UrlMappingUtilsSpec extends Specification {
 
         then: "TEMPLATE_MODEL is removed after the include (not leaked back to the outer action)"
             capturingWebRequest.getAttribute(GrailsApplicationAttributes.TEMPLATE_MODEL, 0) == null
+    }
+
+    void "includeRequestForUrlMappingInfo #outcome gives the page back its controller, action, id, parameters and model"() {
+        given: 'a page with its own controller, action, id, parameter, model and matched mapping'
+            final ModelAndView pageModel = new ModelAndView('/outer/page', [greeting: 'hello'])
+            final Map<String, Object> pageTemplateModel = [templateKey: 'templateValue']
+            final Object pageMatch = new ForwardUrlMappingInfo(controllerName: 'outer', actionName: 'page')
+            final Object pageControllerClass = new Object()
+            final UrlMappingInfo fragment = new ForwardUrlMappingInfo(controllerName: 'inner', actionName: 'fragment', id: '9', params: [marker: 'fragment'])
+            Map<String, Object> duringInclude = [fails: fails]
+            MockHttpServletRequest pageRequest = new MockHttpServletRequest() {
+                @Override
+                jakarta.servlet.RequestDispatcher getRequestDispatcher(String path) {
+                    return new jakarta.servlet.RequestDispatcher() {
+                        @Override
+                        void forward(jakarta.servlet.ServletRequest req, jakarta.servlet.ServletResponse res) {}
+                        @Override
+                        void include(jakarta.servlet.ServletRequest req, jakarta.servlet.ServletResponse res) {
+                            GrailsWebRequest included = GrailsWebRequest.lookup((jakarta.servlet.http.HttpServletRequest) req)
+                            duringInclude.path = path
+                            duringInclude.controller = included.controllerName
+                            duringInclude.action = included.actionName
+                            duringInclude.mapping = req.getAttribute(UrlMappingsHandlerMapping.INCLUDED_MAPPING_INFO)
+                            duringInclude.model = req.getAttribute(GrailsApplicationAttributes.MODEL_AND_VIEW)
+                            // as the handler mapping does for the included action
+                            req.setAttribute(UrlMappingsHandlerMapping.MATCHED_REQUEST, fragment)
+                            req.setAttribute(GrailsApplicationAttributes.GRAILS_CONTROLLER_CLASS, 'inner controller')
+                            if (duringInclude.fails) {
+                                throw new IllegalStateException('the included action failed')
+                            }
+                        }
+                    }
+                }
+            }
+            GrailsWebRequest page = new GrailsWebRequest(pageRequest, response, attr)
+            pageRequest.setAttribute(GrailsApplicationAttributes.WEB_REQUEST, page)
+            page.controllerName = 'outer'
+            page.actionName = 'page'
+            page.id = '7'
+            page.params.marker = 'page'
+            page.setAttribute(GrailsApplicationAttributes.MODEL_AND_VIEW, pageModel, 0)
+            page.setAttribute(GrailsApplicationAttributes.TEMPLATE_MODEL, pageTemplateModel, 0)
+            pageRequest.setAttribute(UrlMappingsHandlerMapping.MATCHED_REQUEST, pageMatch)
+            pageRequest.setAttribute(GrailsApplicationAttributes.GRAILS_CONTROLLER_CLASS, pageControllerClass)
+
+        when: 'the page includes another action'
+            Throwable failure = null
+            try {
+                UrlMappingUtils.includeRequestForUrlMappingInfo(pageRequest, response, fragment, [:], false)
+            }
+            catch (IllegalStateException e) {
+                failure = e
+            }
+
+        then: 'the include ran for the action it was made for, without the model of the page'
+            duringInclude.path == '/inner/fragment'
+            duringInclude.controller == 'inner'
+            duringInclude.action == 'fragment'
+            duringInclude.mapping.is(fragment)
+            duringInclude.model == null
+            (failure != null) == fails
+
+        and: 'the page is as it was'
+            page.controllerName == 'outer'
+            page.actionName == 'page'
+            page.id == '7'
+            page.params.marker == 'page'
+            page.getAttribute(GrailsApplicationAttributes.MODEL_AND_VIEW, 0).is(pageModel)
+            page.getAttribute(GrailsApplicationAttributes.TEMPLATE_MODEL, 0).is(pageTemplateModel)
+            pageRequest.getAttribute(UrlMappingsHandlerMapping.MATCHED_REQUEST).is(pageMatch)
+            pageRequest.getAttribute(GrailsApplicationAttributes.GRAILS_CONTROLLER_CLASS).is(pageControllerClass)
+            pageRequest.getAttribute(UrlMappingsHandlerMapping.INCLUDED_MAPPING_INFO) == null
+
+        where:
+            outcome                         | fails
+            'that returns'                  | false
+            'whose included action throws'  | true
     }
 }
