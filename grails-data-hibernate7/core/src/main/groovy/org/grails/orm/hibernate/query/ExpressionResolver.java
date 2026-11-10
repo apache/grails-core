@@ -20,7 +20,11 @@ import jakarta.persistence.criteria.From;
 import jakarta.persistence.criteria.JoinType;
 import jakarta.persistence.criteria.Path;
 import jakarta.persistence.metamodel.Attribute.PersistentAttributeType;
+import jakarta.persistence.metamodel.Bindable;
 import jakarta.persistence.metamodel.PluralAttribute;
+import jakarta.persistence.metamodel.SingularAttribute;
+
+import grails.orm.HibernateCriteriaBuilder;
 
 /**
  * Resolves string paths and aliases into JPA Expressions and Paths.
@@ -51,6 +55,14 @@ public class ExpressionResolver {
             cleanPath = cleanPath.substring(5);
         }
 
+        // 0. A name without a dot that the entity of this scope has as a property is that property, whatever an
+        // enclosing query calls its own alias or joins by that name: the alias is reached by qualifying it, as in
+        // alias.property
+        Path<?> inheritedName = ownPropertyHidden(cleanPath);
+        if (inheritedName != null) {
+            return inheritedName;
+        }
+
         // 1. Check for materialized aliases (Materialized Selects/Joins)
         if (aliasRegistry.hasRealized(cleanPath)) {
             return aliasRegistry.getRealized(cleanPath);
@@ -62,8 +74,8 @@ public class ExpressionResolver {
         }
 
         // 3. Handle alias:property
-        if (cleanPath.contains(grails.orm.HibernateCriteriaBuilder.ALIAS_SEPARATOR)) {
-            String[] parts = cleanPath.split(grails.orm.HibernateCriteriaBuilder.ALIAS_SEPARATOR);
+        if (cleanPath.contains(HibernateCriteriaBuilder.ALIAS_SEPARATOR)) {
+            String[] parts = cleanPath.split(HibernateCriteriaBuilder.ALIAS_SEPARATOR);
             Expression<?> resolved = resolveFromAlias(parts[0], parts[1]);
             if (resolved == null) {
                 resolved = getPath(joinTracker.getRoot(), parts[1]);
@@ -91,7 +103,20 @@ public class ExpressionResolver {
         }
 
         // 6. Fallback to Root path resolution
-        return getPath(joinTracker.getRoot(), cleanPath);
+        return sharedPath("", joinTracker.getRoot(), cleanPath);
+    }
+
+    /**
+     * The property of the entity of this scope that an alias or join of an enclosing query would hide, or
+     * {@code null} when no enclosing query has an alias or join of the name, or the entity has no such property.
+     */
+    private Path<?> ownPropertyHidden(String name) {
+        if (name.contains(".") || aliasRegistry.isOwnDefined(name) || aliasRegistry.isOwnRealized(name) ||
+                joinTracker.getOwnJoin(name) != null) {
+            return null;
+        }
+        boolean inherited = aliasRegistry.isDefined(name) || aliasRegistry.hasRealized(name) || joinTracker.getJoin(name) != null;
+        return inherited ? getPath(joinTracker.getRoot(), name) : null;
     }
 
     private Expression<?> resolveFromAlias(String alias, String subPath) {
@@ -100,6 +125,9 @@ public class ExpressionResolver {
         if (aliased != null) {
             if (subPath == null) {
                 return aliased;
+            }
+            if (aliased instanceof From<?, ?> from) {
+                return sharedPath(aliasPath(alias), from, subPath);
             }
             // A path selected under an alias, such as groupProperty('favorite', 'favorite'), continues from that
             // path. A basic value has no properties, so a path below it names nothing, and neither does a
@@ -115,7 +143,7 @@ public class ExpressionResolver {
             // A path absent from this root can refer to an enclosing query's association join.
             From<?, ?> enclosing = getPath(joinTracker.getRoot(), def.path()) == null ?
                     joinTracker.getJoin(def.path()) : null;
-            aliased = enclosing != null ? enclosing : resolveAssociation(def.path(), def.joinType());
+            aliased = enclosing != null ? enclosing : resolveAssociation(def.path(), planned(def.path(), def.joinType()));
         } else {
             Path<?> path = getPath(joinTracker.getRoot(), def.path());
             boolean elementCollection = path != null && path.getModel() instanceof PluralAttribute<?, ?, ?> attribute &&
@@ -123,19 +151,53 @@ public class ExpressionResolver {
             boolean sharesPath = !elementCollection && def.equals(aliasRegistry.getAssociationAlias(def.path()));
             From<?, ?> join = sharesPath ? joinTracker.getOwnJoin(def.path()) : null;
             if (join == null) {
-                join = joinTracker.getRoot().join(def.path(), def.joinType());
-                if (sharesPath) {
-                    joinTracker.addJoin(def.path(), join);
-                }
+                join = joinPath(def.path(), sharesPath ? planned(def.path(), def.joinType()) : def.joinType());
+            }
+            if (sharesPath) {
+                joinTracker.addJoin(def.path(), join);
             }
             aliased = join;
         }
         aliasRegistry.realize(alias, aliased);
-        return subPath != null ? getPath((From<?, ?>) aliased, subPath) : aliased;
+        return subPath != null ? sharedPath(aliasPath(alias), (From<?, ?>) aliased, subPath) : aliased;
+    }
+
+    /**
+     * Joins the last association of a path with the given join type. A nested path such as
+     * {@code owner.address} is joined one association at a time, as a JPA join takes a single attribute. The
+     * associations before the last one are relative to this query's root and share the joins this query has
+     * for them. A path that names an alias before {@link HibernateCriteriaBuilder#ALIAS_SEPARATOR}, such as
+     * {@code o:address}, starts at the join of that alias instead of the root.
+     */
+    private From<?, ?> joinPath(String path, JoinType joinType) {
+        int lastDot = path.lastIndexOf('.');
+        if (lastDot >= 0) {
+            return resolvePrefix(path.substring(0, lastDot), joinType).join(path.substring(lastDot + 1), joinType);
+        }
+        int separator = path.indexOf(HibernateCriteriaBuilder.ALIAS_SEPARATOR);
+        if (separator >= 0) {
+            From<?, ?> aliased = (From<?, ?>) resolveFromAlias(path.substring(0, separator), null);
+            return aliased.join(path.substring(separator + HibernateCriteriaBuilder.ALIAS_SEPARATOR.length()), joinType);
+        }
+        return joinTracker.getRoot().join(path, joinType);
+    }
+
+    /**
+     * Resolves the associations a nested path goes through before its last one. They keep the join type this
+     * query configured for them, and otherwise take the join type of the path that goes through them.
+     */
+    private From<?, ?> resolvePrefix(String prefix, JoinType joinType) {
+        return resolveAssociation(prefix, planned(prefix, joinType));
+    }
+
+    private JoinType planned(String path, JoinType fallback) {
+        JoinType planned = joinTracker.plannedType(path);
+        return planned != null ? planned : fallback;
     }
 
     /**
      * Resolves an association path independently of named aliases, even when an alias has the same name.
+     * The join of a path is shared by everything in this query that goes through it.
      */
     From<?, ?> resolveAssociation(String path, JoinType joinType) {
         From<?, ?> join = joinTracker.getOwnJoin(path);
@@ -144,11 +206,58 @@ public class ExpressionResolver {
             if (associationAlias != null) {
                 join = (From<?, ?>) resolveFromAlias(associationAlias.alias(), null);
             } else {
-                join = joinTracker.getRoot().join(path, joinType);
+                join = joinPath(path, joinType);
             }
             joinTracker.addJoin(path, join);
         }
         return join;
+    }
+
+    private String aliasPath(String alias) {
+        HibernateAlias def = aliasRegistry.getDefinition(alias);
+        return def != null && def.path() != null && !def.path().contains(HibernateCriteriaBuilder.ALIAS_SEPARATOR) ?
+                def.path() : null;
+    }
+
+    /**
+     * Resolves a dotted property that starts at a join. Each association the property goes through that the
+     * criteria of the query name is the join this query has for its path, shared with every alias, block and
+     * property that goes through the same path, and not a join that navigating the path would create. A path no
+     * criterion names, as one that only a projection or an order uses, and a path that cannot be named from the
+     * root, as one that starts at a join with an alias of its own, is navigated.
+     *
+     * @param base the path of the join from the root of this query, empty for the root, or {@code null}
+     * @param from the join the property starts at
+     * @param path the dotted property relative to the join
+     */
+    private Path<?> sharedPath(String base, From<?, ?> from, String path) {
+        if (base == null || !path.contains(".")) {
+            return getPath(from, path);
+        }
+        try {
+            String[] parts = path.split("\\.");
+            Path<?> current = from;
+            String currentPath = base;
+            for (int i = 0; i < parts.length - 1; i++) {
+                Path<?> next = current.get(parts[i]);
+                currentPath = currentPath.isEmpty() ? parts[i] : currentPath + "." + parts[i];
+                current = isAssociation(next) && joinTracker.plannedType(currentPath) != null ?
+                        resolveAssociation(currentPath, joinTracker.plannedType(currentPath)) : next;
+            }
+            return current.get(parts[parts.length - 1]);
+        } catch (Exception e) {
+            return getPath(from, path);
+        }
+    }
+
+    private static boolean isAssociation(Path<?> path) {
+        Bindable<?> model = path.getModel();
+        if (model instanceof PluralAttribute<?, ?, ?> plural) {
+            return plural.getPersistentAttributeType() != PersistentAttributeType.ELEMENT_COLLECTION;
+        }
+        return model instanceof SingularAttribute<?, ?> singular &&
+                (singular.getPersistentAttributeType() == PersistentAttributeType.MANY_TO_ONE ||
+                        singular.getPersistentAttributeType() == PersistentAttributeType.ONE_TO_ONE);
     }
 
     private Path<?> getPath(Path<?> from, String path) {

@@ -47,6 +47,8 @@ import org.testcontainers.containers.ContainerFetchException
 import org.testcontainers.containers.PortForwardingContainer
 import org.testcontainers.containers.SeleniumUtils
 import org.testcontainers.containers.VncRecordingContainer
+import org.testcontainers.containers.wait.strategy.LogMessageWaitStrategy
+import org.testcontainers.containers.wait.strategy.WaitStrategy
 import org.testcontainers.images.PullPolicy
 import org.testcontainers.utility.DockerImageName
 
@@ -513,13 +515,36 @@ class WebDriverContainerHolder {
 
     /**
      * Creates the VNC recording container that {@link #restartVncRecordingContainer()} starts
-     * for the next test.
+     * for the next test. Starting it completes once the recording shows the browser container's
+     * screen, see {@link #getScreenRecordedWaitStrategy()}.
      */
     protected VncRecordingContainer createVncRecordingContainer() {
         new VncRecordingContainer(container)
                 .withVncPassword('secret')
                 .withVncPort(5900)
                 .withVideoFormat(settings.recordingFormat)
+                .waitingFor(screenRecordedWaitStrategy)
+    }
+
+    /**
+     * Waits until the VNC recorder has written the screen of the browser container to the recording.
+     * <p>
+     * The wait strategy of {@link VncRecordingContainer} waits for the recorder to log
+     * {@code Connected}, which it does when its socket connects, before the VNC handshake. Until
+     * it has received the whole screen, a few hundred milliseconds later or longer on a busy
+     * machine, the recorder writes black frames, so a test that finished within that time would
+     * be recorded as a black screen.
+     * <p>
+     * In the debug mode that {@link VncRecordingContainer} runs it in, the recorder logs
+     * {@code FrameBufferUpdateRequest} after the handshake, and again each time it has received
+     * a screen update and written it to the recording. The second one means that the recording
+     * shows the screen.
+     */
+    private static WaitStrategy getScreenRecordedWaitStrategy() {
+        new LogMessageWaitStrategy()
+                .withRegEx('.*FrameBufferUpdateRequest.*')
+                .withTimes(2)
+                .withStartupTimeout(Duration.ofSeconds(15))
     }
 
     private static Field getVncRecordingContainerField() {
