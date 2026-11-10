@@ -132,4 +132,29 @@ class WhereQueryFunctionsDialectSpec extends HibernateGormDatastoreSpec {
         'MySQL'    | mysql
         'MariaDB'  | mariadb
     }
+    void "an empty list and a subquery without projection work on #db, on a read and in a bulk update and delete"() {
+        given:
+        startOn(container)
+        seed()
+        DetachedCriteria<WhereQueryFunctionEntity> named = new DetachedCriteria<>(WhereQueryFunctionEntity).build { eq('name', 'a') }
+        def outcome = { Closure c ->
+            try { c() } catch (Exception e) { "FAILS ${e.class.simpleName}: ${e.message?.take(120)}".toString() }
+        }
+
+        expect: 'an empty list matches nothing, whatever the statement'
+        criteriaOf('upper', new Query.In('name', [])).list().isEmpty()
+        outcome { criteriaOf('upper', new Query.In('name', [])).updateAll(label: 'x') } == 0
+        outcome { criteriaOf('upper', new Query.In('name', [])).deleteAll() } == 0
+
+        and: 'a subquery without projection compares the property, as on a read'
+        criteriaOf('lower', new Query.Equals('name', named)).list()*.name == ['a']
+        outcome { criteriaOf('lower', new Query.Equals('name', named)).updateAll(label: 'x') } == 1
+        outcome { criteriaOf('lower', new Query.Equals('name', named)).deleteAll() } == 1
+
+        where:
+        db         | container
+        'Postgres' | postgres
+        'MySQL'    | mysql
+        'MariaDB'  | mariadb
+    }
 }

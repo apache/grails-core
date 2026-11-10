@@ -631,7 +631,7 @@ public class JpaQueryBuilder {
                         return position;
                     case IN_SUBQUERY:
                         whereClause.append(function).append(" IN (");
-                        buildSubQuery(q, whereClause, position, parameters, conversionService, allowJoins, hibernateCompatible, (QueryableCriteria) comparison.getSubquery());
+                        buildSubQuery(q, whereClause, position, parameters, conversionService, allowJoins, hibernateCompatible, (QueryableCriteria) comparison.getSubquery(), comparison.getProperty());
                         whereClause.append(CLOSE_BRACKET);
                         return parameters.size();
                     case IN_VALUES:
@@ -647,7 +647,7 @@ public class JpaQueryBuilder {
                         return position;
                     case COMPARE_SUBQUERY:
                         whereClause.append(function).append(comparison.getOperator().jpql()).append(OPEN_BRACKET);
-                        buildSubQuery(q, whereClause, position, parameters, conversionService, allowJoins, hibernateCompatible, (QueryableCriteria) comparison.getSubquery());
+                        buildSubQuery(q, whereClause, position, parameters, conversionService, allowJoins, hibernateCompatible, (QueryableCriteria) comparison.getSubquery(), comparison.getProperty());
                         whereClause.append(CLOSE_BRACKET);
                         return parameters.size();
                     default:
@@ -861,11 +861,26 @@ public class JpaQueryBuilder {
     }
 
     protected static void buildSubQuery(StringBuilder q, StringBuilder whereClause, int position, List parameters, ConversionService conversionService, boolean allowJoins, boolean hibernateCompatible, QueryableCriteria subquery) {
+        buildSubQuery(q, whereClause, position, parameters, conversionService, allowJoins, hibernateCompatible, subquery, null);
+    }
+
+    /**
+     * Builds a subquery. A subquery without a projection selects its entity, unless the property it is compared with is
+     * given: it then selects that property, as the read of the same query does.
+     *
+     * @param comparedProperty the property the subquery is compared with, or {@code null} to select the entity
+     */
+    protected static void buildSubQuery(StringBuilder q, StringBuilder whereClause, int position, List parameters, ConversionService conversionService, boolean allowJoins, boolean hibernateCompatible, QueryableCriteria subquery, String comparedProperty) {
         PersistentEntity associatedEntity = subquery.getPersistentEntity();
         String associatedEntityName = associatedEntity.getName();
         String associatedEntityLogicalName = associatedEntity.getDecapitalizedName() + position;
         whereClause.append("SELECT ");
-        buildSelect(whereClause, subquery.getProjections(), associatedEntityLogicalName, associatedEntity);
+        if (comparedProperty != null && subquery.getProjections().isEmpty()) {
+            whereClause.append(associatedEntityLogicalName).append(DOT).append(comparedProperty);
+        }
+        else {
+            buildSelect(whereClause, subquery.getProjections(), associatedEntityLogicalName, associatedEntity);
+        }
         whereClause.append(" FROM ")
                 .append(associatedEntityName)
                 .append(' ')

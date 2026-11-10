@@ -122,6 +122,31 @@ class WhereQueryBulkStatementSpec extends Specification {
     }
 
     @Rollback
+    void "an empty list in a function comparison matches nothing in a bulk statement"() {
+        given:
+        seed()
+        def criterion = new FunctionCallingCriterion('upper', new Query.In('name', []))
+
+        expect:
+        criteriaOf(criterion).updateAll(label: 'x') == 0
+        criteriaOf(criterion).deleteAll() == 0
+        BulkStatementItem.count() == 3
+    }
+
+    @Rollback
+    void "a subquery without projection is compared by the property of the function in a bulk statement"() {
+        given:
+        seed()
+        DetachedCriteria<BulkStatementItem> named = new DetachedCriteria<>(BulkStatementItem).build { eq('name', 'a') }
+        def criterion = new FunctionCallingCriterion('lower', new Query.Equals('name', named))
+
+        expect:
+        criteriaOf(criterion).updateAll(label: 'x') == 1
+        BulkStatementItem.findAllByLabel('x')*.name == ['a']
+        criteriaOf(criterion).deleteAll() == 1
+    }
+
+    @Rollback
     void "a function name that the where DSL does not support is rejected and writes nothing"() {
         given:
         seed()
