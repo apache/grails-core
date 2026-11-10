@@ -80,6 +80,39 @@ class ReloadedControllerMappingSpec extends AbstractUrlMappingsSpec {
         controllerFor(mappings, '/reload/show').is(namespaced.clazz)
     }
 
+    void 'an action removed from a namespaced controller registered again goes to another namespaced controller that has it'() {
+        given:
+        def admin = controller('admin.ReloadController', ['index', 'show'], 'admin')
+        def staff = controller('staff.ReloadController', ['index', 'show'], 'staff')
+        def mappings = mappingsFor(admin, staff)
+
+        expect:
+        controllerFor(mappings, '/reload/show').is(staff.clazz)
+
+        when:
+        mappings.registerController(controller('staff.ReloadController', ['index'], 'staff'))
+
+        then:
+        controllerFor(mappings, '/reload/show').is(admin.clazz)
+    }
+
+    void 'a controller registered again leaves the mappings a start with its new version builds'() {
+        given:
+        def plain = controller('reload.ReloadController', ['index', 'show'])
+        def admin = controller('admin.ReloadController', ['index', 'show', 'edit'], 'admin')
+        def staff = controller('staff.ReloadController', ['index', 'show', 'list'], 'staff')
+        def mappings = mappingsFor(plain, admin, staff)
+        def reloaded = controller('staff.ReloadController', ['index', 'edit', 'create'], 'staff')
+
+        when:
+        mappings.registerController(reloaded)
+
+        then:
+        def started = mappingsFor(plain, admin, reloaded)
+        classesByKey(mappings.mappingsToGrailsControllerMap) == classesByKey(started.mappingsToGrailsControllerMap)
+        classesByKey(mappings.deferredMappings) == classesByKey(started.deferredMappings)
+    }
+
     void 'an action added to a namespaced controller registered again is matched without its namespace'() {
         given:
         def before = controller('reload.ReloadController', ['index'], 'admin')
@@ -92,6 +125,19 @@ class ReloadedControllerMappingSpec extends AbstractUrlMappingsSpec {
         then:
         controllerFor(mappings, '/reload/added').is(after.clazz)
         controllerFor(mappings, '/reload/index').is(after.clazz)
+    }
+
+    void 'a namespaced controller added while the application runs is matched without its namespace'() {
+        given:
+        def mappings = mappingsFor(controller('other.OtherController', ['index']))
+        def added = controller('admin.ReloadController', ['index', 'show'], 'admin')
+
+        when:
+        mappings.registerController(added)
+
+        then:
+        controllerFor(mappings, '/reload/show').is(added.clazz)
+        controllerFor(mappings, '/other/index') != null
     }
 
     void 'a namespaced controller registered again leaves a controller without a namespace the requests without one'() {
@@ -130,6 +176,10 @@ class ReloadedControllerMappingSpec extends AbstractUrlMappingsSpec {
             }
         """
         new DefaultGrailsControllerClass(new GroovyClassLoader(ReloadedControllerMappingSpec.classLoader).parseClass(source))
+    }
+
+    private static Map<AbstractGrailsControllerUrlMappings.ControllerKey, Class<?>> classesByKey(Map<AbstractGrailsControllerUrlMappings.ControllerKey, GrailsControllerClass> map) {
+        map.collectEntries { key, controller -> [(key): controller.clazz] } as Map<AbstractGrailsControllerUrlMappings.ControllerKey, Class<?>>
     }
 
     private static Class<?> controllerFor(GrailsControllerUrlMappings mappings, String uri) {
