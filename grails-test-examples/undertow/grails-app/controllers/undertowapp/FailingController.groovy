@@ -24,6 +24,9 @@ import org.springframework.web.context.request.async.WebAsyncUtils
 import org.springframework.web.servlet.ModelAndView
 import org.springframework.web.servlet.view.InternalResourceView
 
+import org.grails.web.mapping.ForwardUrlMappingInfo
+import org.grails.web.mapping.UrlMappingUtils
+
 class FailingController {
 
     def answeredByView() {
@@ -96,6 +99,12 @@ class FailingController {
 
     def includesAnswerOfController() {
         render "before ${g.include(action: 'answeredByController')} after"
+    }
+
+    def includesThroughUrlMappingUtils() {
+        response.writer.write('before ')
+        UrlMappingUtils.includeRequestForUrlMappingInfo(request, response, new ForwardUrlMappingInfo(controller: 'failing', action: 'included'), [:], false)
+        render ' after'
     }
 
     def included() {

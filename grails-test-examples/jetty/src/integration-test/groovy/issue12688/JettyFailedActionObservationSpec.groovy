@@ -118,6 +118,23 @@ class JettyFailedActionObservationSpec extends Specification implements HttpClie
         'an error controller, on a page whose URL has a parameter' | '/page/example'                       | '/failing/includesAnswerOfController' | 'Answered by the error controller'
     }
 
+    void 'an action a page includes through UrlMappingUtils runs, and the page keeps its route'() {
+        given:
+        def path = '/failing/includesThroughUrlMappingUtils'
+
+        when:
+        def response = http([(REQUEST_HEADER): path], path)
+
+        then: 'the included action answered inside the page'
+        response.assertContains(200, 'before included after')
+
+        and: 'the observation of the page stopped on its own route, with no error'
+        new PollingConditions(timeout: 30).eventually {
+            assert STOPPED[path] == [path, 'none']
+        }
+        !NOTIFIED.containsKey(path)
+    }
+
     private List<String> errorTags(String route) {
         meterRegistry.find('http.server.requests').tag('status', '500').tag('uri', route).timers()*.id*.getTag('error')
     }

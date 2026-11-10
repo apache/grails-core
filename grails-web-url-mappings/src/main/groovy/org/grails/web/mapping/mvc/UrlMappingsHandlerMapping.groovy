@@ -63,9 +63,9 @@ class UrlMappingsHandlerMapping extends AbstractHandlerMapping {
 
     /**
      * The mapping an include made by {@link org.grails.web.mapping.UrlMappingUtils#includeRequestForUrlMappingInfo} answers
-     * with, whatever its URI would match. While an error is being handled, the include answers with the status code
-     * mapping, as a forward to it does, since the mapping it was made for can be one that carries the parameters of the
-     * request rather than its controller.
+     * with, whatever its URI would match, with the controller it names. While an error is being handled, the include
+     * answers with the status code mapping, as a forward to it does, since the mapping it was made for can be one that
+     * carries the parameters of the request rather than its controller.
      *
      * @since 8.0.1
      */
@@ -188,8 +188,13 @@ class UrlMappingsHandlerMapping extends AbstractHandlerMapping {
         def matchedInfo = request.getAttribute(MATCHED_REQUEST)
         def errorStatus = request.getAttribute(WebUtils.ERROR_STATUS_CODE_ATTRIBUTE)
         if (includedInfo instanceof UrlMappingInfo && errorStatus == null) {
-            request.setAttribute(MATCHED_REQUEST, includedInfo)
-            return includedInfo
+            UrlMappingInfo info = withController((UrlMappingInfo) includedInfo)
+            if (info instanceof GrailsControllerUrlMappingInfo) {
+                request.setAttribute(MATCHED_REQUEST, info)
+                request.setAttribute(GrailsApplicationAttributes.GRAILS_CONTROLLER_CLASS, ((GrailsControllerUrlMappingInfo) info).controllerClass)
+                return info
+            }
+            if (info.viewName || info.URI) return info
         }
 
         // The dispatch that returns the result of asynchronous processing answers for the action that started it. Any
@@ -248,6 +253,17 @@ class UrlMappingsHandlerMapping extends AbstractHandlerMapping {
             return null
         }
 
+    }
+
+    /**
+     * The mapping with the controller it names, as a match by URI answers, so that its action runs. A mapping built
+     * from a controller and action, rather than matched, does not carry the controller.
+     */
+    private UrlMappingInfo withController(UrlMappingInfo info) {
+        if (info instanceof GrailsControllerUrlMappingInfo || !(urlMappingsHolder instanceof AbstractGrailsControllerUrlMappings)) {
+            return info
+        }
+        return ((AbstractGrailsControllerUrlMappings) urlMappingsHolder).collectControllerMapping(info)
     }
 
     protected String findRequestedVersion(GrailsWebRequest currentRequest) {

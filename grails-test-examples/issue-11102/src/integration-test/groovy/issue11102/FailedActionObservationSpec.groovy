@@ -120,6 +120,23 @@ class FailedActionObservationSpec extends Specification implements HttpClientSup
         'an error controller, on a page whose URL has a parameter' | '/page/example'                       | '/failing/includesAnswerOfController' | 'Answered by the error controller'
     }
 
+    void 'an action a page includes through UrlMappingUtils runs, and the page keeps its route'() {
+        given:
+        def path = '/failing/includesThroughUrlMappingUtils'
+
+        when:
+        def response = http([(REQUEST_HEADER): path], path)
+
+        then: 'the included action answered inside the page'
+        response.assertContains(200, 'before included after')
+
+        and: 'the observation of the page stopped on its own route, with no error'
+        new PollingConditions(timeout: 30).eventually {
+            assert STOPPED[path] == [path, 'none']
+        }
+        !NOTIFIED.containsKey(path)
+    }
+
     void 'a request #what is reported under #reported'() {
         when:
         def response = http([(REQUEST_HEADER): path], path)

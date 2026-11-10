@@ -32,6 +32,8 @@ import grails.web.mapping.AbstractUrlMappingsSpec
 import org.grails.web.errors.GrailsWrappedRuntimeException
 import org.grails.web.mapping.DefaultUrlMappingData
 import org.grails.web.mapping.DefaultUrlMappingInfo
+import org.grails.web.mapping.ForwardUrlMappingInfo
+import org.grails.web.util.GrailsApplicationAttributes
 import org.grails.web.util.WebUtils
 import org.springframework.http.server.observation.ServerRequestObservationContext
 import org.springframework.ui.ModelMap
@@ -489,7 +491,7 @@ class UrlMappingsHandlerMappingSpec extends AbstractUrlMappingsSpec {
         'its mapping with the parameters of the page\'s URL' | [slug: 'example']
     }
 
-    void "an include made for a mapping answers with that mapping when no error is being handled"() {
+    void "an include made for #made answers with the action of its controller when no error is being handled"() {
         given:
         def grailsApplication = new DefaultGrailsApplication(FooController)
         grailsApplication.initialise()
@@ -500,11 +502,42 @@ class UrlMappingsHandlerMappingSpec extends AbstractUrlMappingsSpec {
         def handler = new UrlMappingsHandlerMapping(holder)
         def webRequest = GrailsWebMockUtil.bindMockWebRequest()
         def request = webRequest.request
-        def mapping = holder.match('/foo/other')
+        def mapping = matched ? holder.match('/foo/other') : new ForwardUrlMappingInfo(controller: 'foo', action: action)
+
+        when: 'it is included under a URI that maps to another action'
+        request.setAttribute(WebUtils.INCLUDE_REQUEST_URI_ATTRIBUTE, '/foo/bar')
+        request.requestURI = '/foo/bar'
+        request.setAttribute(UrlMappingsHandlerMapping.INCLUDED_MAPPING_INFO, mapping)
+        def info = handler.getHandler(request).handler
+
+        then: 'it answers with the action it was made for, on the controller that action belongs to'
+        info instanceof GrailsControllerUrlMappingInfo
+        ((GrailsControllerUrlMappingInfo) info).controllerClass.clazz == FooController
+        ((GrailsControllerUrlMappingInfo) info).info.actionName == action
+        request.getAttribute(UrlMappingsHandlerMapping.MATCHED_REQUEST).is(info)
+        request.getAttribute(GrailsApplicationAttributes.GRAILS_CONTROLLER_CLASS).is(((GrailsControllerUrlMappingInfo) info).controllerClass)
+
+        where:
+        made                                           | matched | action
+        'a mapping matched by its URI'                 | true    | 'fooBar'
+        'a mapping built from a controller and action' | false   | 'fooBar'
+        'a mapping built from a controller alone'      | false   | null
+    }
+
+    void "an include made for a view answers with that view when no error is being handled"() {
+        given:
+        def grailsApplication = new DefaultGrailsApplication(FooController)
+        grailsApplication.initialise()
+        def holder = new GrailsControllerUrlMappings(grailsApplication, getUrlMappingsHolder {
+            "/foo/bar"(controller: 'foo', action: 'bar')
+        })
+        def handler = new UrlMappingsHandlerMapping(holder)
+        def request = GrailsWebMockUtil.bindMockWebRequest().request
+        def mapping = new ForwardUrlMappingInfo(view: '/foo/page')
 
         when:
-        request.setAttribute(WebUtils.INCLUDE_REQUEST_URI_ATTRIBUTE, '/foo/fooBar')
-        request.requestURI = '/foo/fooBar'
+        request.setAttribute(WebUtils.INCLUDE_REQUEST_URI_ATTRIBUTE, '/foo/bar')
+        request.requestURI = '/foo/bar'
         request.setAttribute(UrlMappingsHandlerMapping.INCLUDED_MAPPING_INFO, mapping)
 
         then:
