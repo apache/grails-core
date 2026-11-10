@@ -70,7 +70,9 @@ import org.springframework.core.convert.ConversionService;
 
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.PersistentProperty;
+import org.grails.datastore.mapping.model.types.Association;
 import org.grails.datastore.mapping.model.types.Basic;
+import org.grails.datastore.mapping.model.types.Embedded;
 import org.grails.datastore.mapping.multitenancy.MultiTenancySettings;
 import org.grails.datastore.mapping.query.Query;
 import org.grails.datastore.mapping.query.api.BuildableCriteria;
@@ -144,6 +146,7 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
     /** The names a property of the query started with, to tell an alias used before its declaration. */
     protected Set<String> usedPropertyHeads = new HashSet<>();
     protected static final String ALIAS = "_alias";
+    protected static final String THIS_PREFIX = "this.";
     protected ResultTransformer resultTransformer;
     protected int aliasCount;
     protected boolean paginationEnabledList = false;
@@ -637,13 +640,16 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
      * @throws org.hibernate.HibernateException Indicates a problem creating the sub criteria
      */
     public Criteria createAlias(String associationPath, String alias) {
-        if (redirectToExistingJoin(associationPath, alias)) {
-            return criteria;
-        }
-        String absolute = absoluteAssociationPath(associationPath);
-        String qualified = joinPrefix(associationPath, org.hibernate.sql.JoinType.INNER_JOIN.getJoinTypeValue());
-        aliasMap.put(absolute, alias);
-        return criteria.createAlias(qualified, alias);
+        return createAlias(associationPath, alias, org.hibernate.sql.JoinType.INNER_JOIN.getJoinTypeValue());
+    }
+
+    /**
+     * A path that starts with {@code this} names the root of the query, as it does in a property comparison, so it
+     * is the path without it.
+     */
+    protected String withoutRoot(String associationPath) {
+        return associationPath.startsWith(THIS_PREFIX) && !aliasMap.containsValue("this") ?
+                associationPath.substring(THIS_PREFIX.length()) : associationPath;
     }
 
     /**
@@ -657,20 +663,31 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
         if (segments.length < 2 || aliasMap.containsValue(segments[0])) {
             return associationPath;
         }
+        PersistentEntity entity = datastore == null ? null : datastore.getMappingContext().getPersistentEntity(targetClass.getName());
         String current = null;
         StringBuilder absolute = new StringBuilder();
+        StringBuilder embedded = new StringBuilder();
         for (int i = 0; i < segments.length - 1; i++) {
             absolute.append(i == 0 ? "" : ".").append(segments[i]);
+            PersistentProperty property = entity == null ? null : entity.getPropertyByName(segments[i]);
+            if (property instanceof Embedded) {
+                // a component is part of the path, and not a join: Hibernate cannot create a criteria on it
+                embedded.append(segments[i]).append('.');
+                entity = ((Embedded) property).getAssociatedEntity();
+                continue;
+            }
             String existing = aliasMap.get(absolute.toString());
             if (existing == null) {
                 aliasCount++;
                 existing = segments[i] + ALIAS + aliasCount;
                 aliasMap.put(absolute.toString(), existing);
-                createAlias(current == null ? segments[i] : current + '.' + segments[i], existing, joinType);
+                createAlias((current == null ? "" : current + '.') + embedded + segments[i], existing, joinType);
             }
+            embedded.setLength(0);
             current = existing;
+            entity = property instanceof Association ? ((Association) property).getAssociatedEntity() : null;
         }
-        return current + '.' + segments[segments.length - 1];
+        return (current == null ? "" : current + '.') + embedded + segments[segments.length - 1];
     }
 
     /**

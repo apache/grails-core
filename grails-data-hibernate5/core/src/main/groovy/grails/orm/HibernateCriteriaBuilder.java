@@ -147,7 +147,8 @@ public class HibernateCriteriaBuilder extends AbstractHibernateCriteriaBuilder {
      * @throws org.hibernate.HibernateException Indicates a problem creating the sub criteria
      * @see #createAlias(String, String)
      */
-    public Criteria createAlias(String associationPath, String alias, int joinType) {
+    public Criteria createAlias(String path, String alias, int joinType) {
+        String associationPath = withoutRoot(path);
         if (redirectToExistingJoin(associationPath, alias)) {
             return criteria;
         }
