@@ -91,6 +91,19 @@ class FunctionComparisonSpec extends Specification {
         new Query.NotEquals('name', null) | null  || Kind.IS_NOT_NULL
     }
 
+    void "a null value is only a null test for an equality, not for any other comparison"() {
+        when:
+        def greater = of('length', new Query.GreaterThan('name', null))
+        def like = of('upper', new Query.Like('name', null))
+
+        then:
+        greater.kind == Kind.COMPARE
+        greater.operator == Operator.GT
+        greater.operand == null
+        like.kind == Kind.COMPARE
+        like.operator == Operator.LIKE
+    }
+
     void "a list is converted value by value and keeps a fraction"() {
         when:
         def comparison = of('length', new Query.In('name', [1, '2', 3L, 3.5d]))
