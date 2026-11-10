@@ -42,7 +42,8 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManag
                                       AssociationSortAuthor, AssociationSortBook, AssociationSortPublisher, AssociationSortAward, AssociationSortCategory,
                                       AssociationSortMappedAuthor, AssociationSortMappedBook, AssociationSortEagerAuthor, AssociationSortEagerBook,
                                       AssociationSortMappedPublisher, AssociationSortMappedAward, AssociationSortMappedNode, AssociationSortMappedLeaf,
-                                      AssociationSortVenue, AssociationSortGround])
+                                      AssociationSortVenue, AssociationSortGround, AssociationSortMappedSquad, AssociationSortMappedMember,
+                                      AssociationSortMappedSetSquad, AssociationSortMappedSetMember])
     }
 
     void setup() {
@@ -534,6 +535,117 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManag
         'order in a criteria query' | { AssociationSortMixedSquad.createCriteria().list { join('reserves'); join('regulars'); order('reserves.name') } }
         'a dynamic finder'          | { AssociationSortMixedSquad.findAllByName('Squad', [sort: 'reserves.name', fetch: [reserves: 'join', regulars: 'join']]) }
         'a list'                    | { AssociationSortMixedSquad.list(sort: 'reserves.name', fetch: [reserves: 'join', regulars: 'join']) }
+    }
+
+    /**
+     * A sort by a property of a collection that the mapping fetches with {@code fetch: 'join'}, in a query
+     * that fetches another collection of the same class:
+     *
+     * <pre>
+     * | sorted by | fetched     | a query                                              | a list                         |
+     * |-----------|-------------|------------------------------------------------------|--------------------------------|
+     * | a bag     | a set       | the collections of the same query without the sort   | the same                       |
+     * | a bag     | a list      | the collections of the same query without the sort   | the same                       |
+     * | a bag     | another bag | UnsupportedOperationException                        | UnsupportedOperationException  |
+     * | a set     | a bag       | the collections of the same query without the sort   | UnsupportedOperationException  |
+     * </pre>
+     *
+     * A query fetches the collection that the mapping fetches anyway, so the sort makes no join of its own and
+     * leaves the rows of the query as they are. A list does not fetch what the mapping fetches, so its sort
+     * joins the collection, and the rows of that join would repeat the elements of a bag that it fetches.
+     */
+    void '#api sorted by a #sorted that the mapping fetches while it fetches #fetched: #outcome'() {
+        given:
+        saveMappedSquads(squadClass)
+
+        when:
+        List<String> sortedNames = null
+        Map<String, List<List<String>>> sortedContents = null
+        UnsupportedOperationException rejection = null
+        try {
+            final results = query.call(squadClass, 'regulars.name', fetched)
+            sortedNames = results*.name.unique()
+            sortedContents = mappedSquadContents(results, fetched)
+        }
+        catch (UnsupportedOperationException e) {
+            rejection = e
+        }
+        manager.session.clear()
+
+        then:
+        (rejection != null) == (outcome == 'rejected')
+
+        and: 'otherwise the squads come in the order of the sort, with the collections that the query without the sort gives them'
+        outcome == 'rejected' || sortedNames == ['Small squad', 'Full squad']
+        outcome == 'rejected' || sortedContents == mappedSquadContents(query.call(squadClass, null, fetched), fetched)
+
+        where:
+        [api, sorted, fetched, queryOutcome, listOutcome] << [
+                MAPPED_FETCH_QUERIES.keySet(),
+                [
+                        ['bag', 'reserves', 'kept', 'kept'],
+                        ['bag', 'lineup', 'kept', 'kept'],
+                        ['bag', 'substitutes', 'rejected', 'rejected'],
+                        ['set', 'substitutes', 'kept', 'rejected'],
+                ]
+        ].combinations().collect { List row -> [row[0]] + row[1] }
+        squadClass = sorted == 'bag' ? AssociationSortMappedSquad : AssociationSortMappedSetSquad
+        outcome = api == 'a list' ? listOutcome : queryOutcome
+        query = MAPPED_FETCH_QUERIES[api]
+    }
+
+    private void saveMappedSquads(Class squadClass) {
+        final full = squadClass.newInstance(name: 'Full squad')
+        ['Regular B', 'Regular C'].each { full.addToRegulars(name: it) }
+        ['Substitute A', 'Substitute B'].each { full.addToSubstitutes(name: it) }
+        final small = squadClass.newInstance(name: 'Small squad')
+        small.addToRegulars(name: 'Regular A')
+        small.addToSubstitutes(name: 'Substitute C')
+        if (squadClass == AssociationSortMappedSquad) {
+            ['Reserve A', 'Reserve B'].each { full.addToReserves(name: it) }
+            ['Lineup A', 'Lineup B'].each { full.addToLineup(name: it) }
+            small.addToReserves(name: 'Reserve C')
+            small.addToLineup(name: 'Lineup C')
+        }
+        full.save(failOnError: true)
+        small.save(failOnError: true, flush: true)
+        manager.session.clear()
+    }
+
+    private static Map<String, List<List<String>>> mappedSquadContents(List squads, String fetched) {
+        squads.collectEntries { [(it.name): [it.regulars*.name.sort(), it."$fetched"*.name.sort()]] }
+    }
+
+    private static final Map<String, Closure<List>> MAPPED_FETCH_QUERIES = [
+            'a detached criteria'      : { Class squadClass, String sort, String fetched ->
+                final query = new DetachedCriteria(squadClass).like('name', '%squad').join(fetched)
+                sort ? query.list(sort: sort) : query.list()
+            },
+            'order in a criteria query': { Class squadClass, String sort, String fetched ->
+                squadClass.createCriteria().list {
+                    like('name', '%squad')
+                    join(fetched)
+                    if (sort) {
+                        order(sort)
+                    }
+                }
+            },
+            'a paged criteria query'   : { Class squadClass, String sort, String fetched ->
+                squadClass.createCriteria().list(mappedSquadArguments(sort, fetched) + [max: 10]) { like('name', '%squad') }
+            },
+            'a dynamic finder'         : { Class squadClass, String sort, String fetched ->
+                squadClass.findAllByNameLike('%squad', mappedSquadArguments(sort, fetched))
+            },
+            'findAll by example'       : { Class squadClass, String sort, String fetched ->
+                squadClass.findAll(squadClass.newInstance(), mappedSquadArguments(sort, fetched))
+            },
+            'a list'                   : { Class squadClass, String sort, String fetched ->
+                squadClass.list(mappedSquadArguments(sort, fetched))
+            },
+    ]
+
+    private static Map mappedSquadArguments(String sort, String fetched) {
+        sort ? [sort: sort, fetch: [(fetched): 'join']] : [fetch: [(fetched): 'join']]
     }
 
     void '#api sorted by an association to a single instance is not rejected next to a fetched bag'() {
@@ -1252,5 +1364,60 @@ class AssociationSortLeague {
 
     static mapping = {
         sort league: 'asc', name: 'desc'
+    }
+}
+
+@Entity
+class AssociationSortMappedSquad {
+    String name
+    Collection<AssociationSortMappedMember> regulars
+    Collection<AssociationSortMappedMember> substitutes
+    List<AssociationSortMappedMember> lineup
+    static hasMany = [regulars: AssociationSortMappedMember, substitutes: AssociationSortMappedMember, reserves: AssociationSortMappedMember,
+                      lineup: AssociationSortMappedMember]
+    static mappedBy = [regulars: 'squad', substitutes: 'substituteSquad', reserves: 'reserveSquad', lineup: 'lineupSquad']
+
+    static mapping = {
+        regulars fetch: 'join'
+    }
+}
+
+@Entity
+class AssociationSortMappedMember {
+    String name
+    AssociationSortMappedSquad squad
+    AssociationSortMappedSquad substituteSquad
+    AssociationSortMappedSquad reserveSquad
+    AssociationSortMappedSquad lineupSquad
+
+    static constraints = {
+        squad nullable: true
+        substituteSquad nullable: true
+        reserveSquad nullable: true
+        lineupSquad nullable: true
+    }
+}
+
+@Entity
+class AssociationSortMappedSetSquad {
+    String name
+    Collection<AssociationSortMappedSetMember> substitutes
+    static hasMany = [regulars: AssociationSortMappedSetMember, substitutes: AssociationSortMappedSetMember]
+    static mappedBy = [regulars: 'squad', substitutes: 'substituteSquad']
+
+    static mapping = {
+        regulars fetch: 'join'
+    }
+}
+
+@Entity
+class AssociationSortMappedSetMember {
+    String name
+    AssociationSortMappedSetSquad squad
+    AssociationSortMappedSetSquad substituteSquad
+
+    static constraints = {
+        squad nullable: true
+        substituteSquad nullable: true
     }
 }
