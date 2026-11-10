@@ -33,7 +33,7 @@ class IsNullAssociationSpec extends Neo4jGormDatastoreSpec {
 
     void setupSpec() {
         manager.registerDomainClasses(NullTestFolder, NullTestKind, NullTestAddress, NullTestOwner, NullTestPet,
-                NullTestShelf, NullTestItem, NullTestTagged, NullTestPerson, NullTestMate, NullTestBond)
+                NullTestShelf, NullTestItem, NullTestTagged, NullTestPerson, NullTestMate, NullTestBond, NullTestFeud)
     }
 
     private void seed() {
@@ -195,6 +195,20 @@ class IsNullAssociationSpec extends Neo4jGormDatastoreSpec {
         NullTestMate.createCriteria().list { connections { isNotNull('spouse') } }*.name == ['friend']
     }
 
+    void "a null test on an association to a relationship entity looks for that relationship type only"() {
+        given: 'two mates that are connected by a feud and by no bond'
+        NullTestMate a = new NullTestMate(name: 'a').save(flush: true, failOnError: true)
+        NullTestMate b = new NullTestMate(name: 'b').save(flush: true, failOnError: true)
+        new NullTestFeud(from: a, to: b).save(flush: true)
+        NullTestMate.withSession { it.clear() }
+
+        expect: 'a relationship of another type is not a relationship of the association, and the feud is followed to its target'
+        NullTestMate.createCriteria().list { isNotNull('connections') }.isEmpty()
+        names(NullTestMate.createCriteria().list { isNull('connections') }) == ['a', 'b']
+        names(NullTestMate.createCriteria().list { isNotNull('feuds') }) == ['b']
+        names(NullTestMate.createCriteria().list { isNull('feuds') }) == ['a']
+    }
+
     private static List<String> names(List<?> entities) {
         entities*.name.sort()
     }
@@ -291,7 +305,7 @@ class NullTestPerson {
 class NullTestMate {
     String name
     NullTestMate spouse
-    static hasMany = [connections: NullTestBond]
+    static hasMany = [connections: NullTestBond, feuds: NullTestFeud]
 
     static constraints = {
         spouse nullable: true
@@ -304,5 +318,14 @@ class NullTestBond implements Relationship<NullTestMate, NullTestMate> {
 
     static constraints = {
         spouse nullable: true
+    }
+}
+
+@Entity
+class NullTestFeud implements Relationship<NullTestMate, NullTestMate> {
+    String reason
+
+    static constraints = {
+        reason nullable: true
     }
 }

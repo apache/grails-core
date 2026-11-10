@@ -704,7 +704,12 @@ class Neo4jQuery extends Query {
         }
         PersistentProperty property = entity.getPropertyByName(propertyName)
         if (property instanceof Association && !(property instanceof Basic) && !(property instanceof Embedded)) {
-            return entity.formatAssociationPatternFromExisting((Association) property, '', prefix, '')
+            // An association to a relationship entity is the relationships of that entity's type, so the pattern
+            // names the type: a relationship of another type between the same nodes is not one of the association
+            PersistentEntity associated = ((Association) property).associatedEntity
+            String relationship = associated instanceof RelationshipPersistentEntity ?
+                    ':' + ((RelationshipPersistentEntity) associated).type() : ''
+            return entity.formatAssociationPatternFromExisting((Association) property, relationship, prefix, '')
         }
         return null
     }
