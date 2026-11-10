@@ -40,6 +40,7 @@ import org.springframework.mock.web.MockServletContext
 import org.springframework.web.context.request.RequestContextHolder
 import org.springframework.web.util.ContentCachingRequestWrapper
 
+import grails.async.web.AsyncController
 import grails.util.GrailsWebMockUtil
 import grails.web.mime.MimeType
 import grails.web.mime.MimeTypeUtils
@@ -851,6 +852,95 @@ class GrailsWebRequestTaskDecoratorSpec extends Specification {
     }
 
     @Issue('https://github.com/apache/grails-core/issues/15851')
+    void 'a call a task started before a controller started asynchronous processing is making finishes before that processing completes, even before the dispatch ends'() {
+        given:
+        MockServletContext servletContext = new MockServletContext()
+        BlockingRequest live = new BlockingRequest()
+        live.asyncSupported = true
+        TaskRequestListener listener = new TaskRequestListener()
+        listener.requestInitialized(new ServletRequestEvent(servletContext, live))
+        GrailsWebMockUtil.bindMockWebRequest(servletContext, live, new MockHttpServletResponse())
+        Map seen = [:]
+        Runnable decorated = new GrailsWebRequestTaskDecorator().decorate {
+            HttpServletRequest request = GrailsWebRequest.lookup().currentRequest
+            seen.during = request.getAttribute('slow')
+            seen.after = failureOf { request.getAttribute('slow') }
+        }
+
+        when: 'the task is inside a call to the request when the action starts asynchronous processing'
+        Thread task = Thread.start { decorated.run() }
+        assert live.entered.await(10, TimeUnit.SECONDS)
+        AsyncContext asyncContext = new AsyncStartingController().startAsync()
+
+        and: 'completes it before the dispatch ends, and the container tells the listener afterwards while still reporting it as started, as Tomcat does'
+        Thread completing = Thread.start {
+            asyncContext.complete()
+            live.asyncStarted = true
+            listener.requestDestroyed(new ServletRequestEvent(servletContext, live))
+        }
+        waitUntilBlocked(completing)
+
+        then: 'completing waits for the call'
+        completing.alive
+
+        when:
+        live.release.countDown()
+        completing.join(10000)
+        task.join(10000)
+
+        then:
+        !completing.alive
+        seen.during == 'slow value'
+        seen.after.message == "$COMPLETED request"
+    }
+
+    @Issue('https://github.com/apache/grails-core/issues/15851')
+    void 'without the listener, a controller starting asynchronous processing leaves the request to complete with the web request'() {
+        given:
+        MockServletContext servletContext = new MockServletContext()
+        MockHttpServletRequest live = new MockHttpServletRequest(servletContext)
+        live.asyncSupported = true
+        GrailsWebRequest original = GrailsWebMockUtil.bindMockWebRequest(servletContext, live, new MockHttpServletResponse())
+        HttpServletRequest taskRequest
+        Runnable decorated = new GrailsWebRequestTaskDecorator().decorate {
+            taskRequest = GrailsWebRequest.lookup().currentRequest
+        }
+        decorated.run()
+        live.setAttribute('stage', 'async')
+
+        when: 'the action starts asynchronous processing and completes it'
+        new AsyncStartingController().startAsync().complete()
+
+        then:
+        taskRequest.getAttribute('stage') == 'async'
+
+        when:
+        original.requestCompleted()
+
+        then:
+        failureOf { taskRequest.getAttribute('stage') }.message == "$COMPLETED request"
+    }
+
+    @Issue('https://github.com/apache/grails-core/issues/15851')
+    void 'the asynchronous context of a controller is created over a context that gives #given'() {
+        given:
+        AsyncContext context = Stub(AsyncContext) {
+            getRequest() >> { answer.call() }
+        }
+
+        when:
+        new GrailsAsyncContext(context, null)
+
+        then:
+        noExceptionThrown()
+
+        where:
+        given                             | answer
+        'no request'                      | { -> null }
+        'no request once its cycle ended' | { -> throw new IllegalStateException('The asynchronous cycle has ended') }
+    }
+
+    @Issue('https://github.com/apache/grails-core/issues/15851')
     void 'a wrapper the container sets on the task request while live is called, and setting one once the request completed throws'() {
         given:
         GrailsWebRequest original = GrailsWebMockUtil.bindMockWebRequest()
@@ -1244,6 +1334,10 @@ class GrailsWebRequestTaskDecoratorSpec extends Specification {
             reads << 'parts'
             return super.getParts()
         }
+    }
+
+    // Starts asynchronous processing as a controller does
+    static class AsyncStartingController implements AsyncController {
     }
 
     // A request whose attribute 'slow' answers once the test releases it

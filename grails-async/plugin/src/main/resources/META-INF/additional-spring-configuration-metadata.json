@@ -1,0 +1,16 @@
+{
+  "groups": [
+    {
+      "name": "grails.async",
+      "description": "Async"
+    }
+  ],
+  "properties": [
+    {
+      "name": "grails.async.requestCompletionWait",
+      "description": "How long completing a request waits for a call that a task started during the request is making on it, such as a read of the body or a write to the response. After that the request completes without it, and the task's next call throws an IllegalStateException. A duration such as 30s, or a number of milliseconds.",
+      "type": "java.time.Duration",
+      "defaultValue": "60s"
+    }
+  ]
+}

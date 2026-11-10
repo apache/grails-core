@@ -54,10 +54,12 @@ import org.grails.web.servlet.mvc.GrailsWebRequest
  * started asynchronous processing, which then completes later, so the lifecycle listens for that processing to
  * complete, from the first task started once it has begun. A container can also tell it once the asynchronous
  * processing has already completed while the request still reports it as started, as Tomcat does when it was
- * completed before the dispatch ended. If no task was started once it had begun, the lifecycle is not told, so
- * meanwhile every call checks that the request still holds the lifecycle, which the container clears as it
- * recycles the request. Without the listener, such as in a unit test, it completes with the web request the first
- * of its tasks was started during.</p>
+ * completed before the dispatch ended. Asynchronous processing started through a controller's {@code startAsync()}
+ * tells the lifecycle as it starts, so it is told then too. If the processing was started some other way and no
+ * task was started once it had begun, the lifecycle is not told: every call checks that the request still holds
+ * the lifecycle, which the container clears as it recycles the request, but a call in progress then is not waited
+ * for. Without the listener, such as in a unit test, it completes with the web request the first of its tasks was
+ * started during.</p>
  */
 @PackageScope
 @CompileStatic
@@ -183,6 +185,31 @@ final class TaskRequestLifecycle implements AsyncListener {
             // Too late to be told when the asynchronous processing completes
         }
         lifecycle.complete()
+    }
+
+    /**
+     * Listens for the asynchronous processing just started on a request to complete, so a container that completes
+     * it before the dispatch ends, as Tomcat does, tells the lifecycle before it recycles the request, even when
+     * every task of the request was started before the processing began.
+     *
+     * @param request the request whose asynchronous processing has started, or null when the context gives none
+     */
+    static void asyncStarted(ServletRequest request) {
+        if (request == null) {
+            return
+        }
+        ServletRequest underlying = underlying(request)
+        Object found
+        try {
+            found = underlying.getAttribute(LIFECYCLE)
+        }
+        catch (IllegalStateException ignored) {
+            // The container has already recycled the request, so there is nothing left to listen for
+            return
+        }
+        if (found instanceof TaskRequestLifecycle && ((TaskRequestLifecycle) found).observed) {
+            ((TaskRequestLifecycle) found).listenToAsync(underlying)
+        }
     }
 
     // Listens for the asynchronous processing of the request to complete, once, from when it has begun, so a

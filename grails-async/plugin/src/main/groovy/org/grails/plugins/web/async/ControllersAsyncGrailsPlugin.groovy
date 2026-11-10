@@ -57,7 +57,7 @@ class ControllersAsyncGrailsPlugin extends Plugin {
     /**
      * How long completing a request waits for a call a task started during it is making, such as {@code 60s}.
      */
-    static final String REQUEST_COMPLETION_WAIT = 'grails.async.requestCompletionWait'
+    private static final String REQUEST_COMPLETION_WAIT = 'grails.async.requestCompletionWait'
 
     def grailsVersion = '8.0.0-SNAPSHOT > *'
     def loadAfter = ['controllers']

@@ -30,9 +30,8 @@ import jakarta.servlet.http.HttpServletResponseWrapper
  * The response a task started during a web request is given: a wrapper of the response of the request the task was
  * started during that calls it until the request completes, and then throws an {@link IllegalStateException} on
  * every call, as {@link TaskRequest} does for the request.
- *
- * @since 8.0.1
  */
+@PackageScope
 @CompileStatic
 class TaskResponse extends HttpServletResponseWrapper {
 

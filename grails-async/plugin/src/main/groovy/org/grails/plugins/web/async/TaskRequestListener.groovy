@@ -21,6 +21,7 @@ package org.grails.plugins.web.async
 import java.time.Duration
 
 import groovy.transform.CompileStatic
+import groovy.transform.PackageScope
 
 import jakarta.servlet.ServletRequestEvent
 import jakarta.servlet.ServletRequestListener
@@ -34,9 +35,8 @@ import jakarta.servlet.ServletRequestListener
  * <p>Completing the request waits for a call a task is making on it, for as long as {@link #getCallWait()} gives,
  * in case the call waits for a lock of the container that the thread completing the request holds. After that the
  * request completes without it, and the task's next call throws.</p>
- *
- * @since 8.0.1
  */
+@PackageScope
 @CompileStatic
 class TaskRequestListener implements ServletRequestListener {
 

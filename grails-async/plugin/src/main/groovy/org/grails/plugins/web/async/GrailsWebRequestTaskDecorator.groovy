@@ -33,8 +33,8 @@ import org.grails.web.util.GrailsApplicationAttributes
 /**
  * Propagates the current Grails web request through a Spring-managed task executor.
  *
- * <p>The task is given a {@link TaskRequest} and a {@link TaskResponse}: wrappers of the request and response it was
- * started during, which call them while the request is live and throw an {@link IllegalStateException} once it has
+ * <p>The task is given wrappers of its own of the request and response it was started during, which call them while
+ * the request is live and throw an {@link IllegalStateException} once it has
  * completed, since the container recycles them then. From then on {@link GrailsWebRequest#lookup()} no longer finds
  * the task's web request, so code the task runs, such as data binding, behaves as it does outside a request. A task
  * that starts after the request has completed runs without a web request.</p>

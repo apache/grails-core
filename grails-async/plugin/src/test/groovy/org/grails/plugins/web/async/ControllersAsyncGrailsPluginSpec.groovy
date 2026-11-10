@@ -25,7 +25,10 @@ import java.util.concurrent.RejectedExecutionException
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 
+import groovy.json.JsonSlurper
+
 import org.springframework.beans.factory.support.BeanRegistryAdapter
+import org.springframework.boot.convert.DurationStyle
 import org.springframework.boot.web.servlet.ServletListenerRegistrationBean
 import org.springframework.beans.factory.support.DefaultListableBeanFactory
 import org.springframework.core.env.MapPropertySource
@@ -106,6 +109,18 @@ class ControllersAsyncGrailsPluginSpec extends Specification {
 
         then:
         ((TaskRequestListener) registration.listener).callWait == Duration.ofSeconds(2)
+    }
+
+    @Issue('https://github.com/apache/grails-core/issues/15851')
+    void 'the configuration metadata describes grails.async.requestCompletionWait with the wait the listener takes by default'() {
+        when:
+        Map property = configurationMetadataProperty('grails.async.requestCompletionWait')
+
+        then:
+        property != null
+        property.type == Duration.name
+        property.description
+        DurationStyle.detectAndParse((String) property.defaultValue) == new TaskRequestListener().callWait
     }
 
     @Issue('https://github.com/apache/grails-core/issues/15851')
@@ -246,5 +261,16 @@ class ControllersAsyncGrailsPluginSpec extends Specification {
 
         cleanup:
         beanFactory.destroySingletons()
+    }
+
+    private static Map configurationMetadataProperty(String name) {
+        for (URL metadata : ControllersAsyncGrailsPluginSpec.classLoader.getResources('META-INF/spring-configuration-metadata.json').toList()) {
+            Map content = (Map) new JsonSlurper().parse(metadata)
+            Map property = (Map) ((List) content.get('properties') ?: []).find { Object entry -> entry instanceof Map && ((Map) entry).name == name }
+            if (property != null) {
+                return property
+            }
+        }
+        return null
     }
 }

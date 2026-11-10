@@ -20,6 +20,7 @@ package org.grails.plugins.web.async
 
 import jakarta.servlet.AsyncContext
 import jakarta.servlet.AsyncListener
+import jakarta.servlet.ServletRequest
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
 
@@ -48,6 +49,19 @@ class GrailsAsyncContext implements AsyncContext {
         this.delegate = delegate
         originalWebRequest = webRequest
         this.asyncGrailsWebRequest = asyncGrailsWebRequest
+        // Completing the asynchronous processing waits for a call in progress of a task started before it began,
+        // even when it completes before the dispatch ends
+        TaskRequestLifecycle.asyncStarted(requestOf(delegate))
+    }
+
+    private static ServletRequest requestOf(AsyncContext context) {
+        try {
+            return context?.request
+        }
+        catch (IllegalStateException ignored) {
+            // The asynchronous cycle of the context has already ended
+            return null
+        }
     }
 
     def <T extends AsyncListener> T createListener(Class<T> tClass) {

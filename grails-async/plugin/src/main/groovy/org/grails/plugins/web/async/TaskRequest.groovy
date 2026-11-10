@@ -35,9 +35,8 @@ import org.grails.web.util.GrailsApplicationAttributes
  * <p>While the request is live, {@link #getRequest()} is the request itself, so unwrapping the task's request, as
  * {@code org.springframework.web.util.WebUtils.getNativeRequest} does, finds what it wraps. Once the request has
  * completed, the wrapper no longer holds it, since the container recycles it for the requests that follow.</p>
- *
- * @since 8.0.1
  */
+@PackageScope
 @CompileStatic
 class TaskRequest extends HttpServletRequestWrapper {
 
