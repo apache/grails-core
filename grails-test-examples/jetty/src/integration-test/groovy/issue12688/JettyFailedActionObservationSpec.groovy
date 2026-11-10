@@ -123,16 +123,24 @@ class JettyFailedActionObservationSpec extends Specification implements HttpClie
         def path = '/failing/includesThroughUrlMappingUtils'
 
         when:
-        def response = http([(REQUEST_HEADER): path], "${path}?marker=page")
+        def response = http([(REQUEST_HEADER): path], "${path}?marker=page&id=7")
 
-        then: 'the included action answered inside the page, and after it the page had its own action and parameters'
-        response.assertContains(200, 'before included after, as failing/includesThroughUrlMappingUtils with page')
+        then: 'the included action saw its own id and model, and after it the page had its own action, parameters and request attributes'
+        response.assertContains(200, 'before included with id 9 and inner after, as failing/includesThroughUrlMappingUtils with page, id 7 and outer')
 
         and: 'the observation of the page stopped on its own route, with no error'
         new PollingConditions(timeout: 30).eventually {
             assert STOPPED[path] == [path, 'none']
         }
         !NOTIFIED.containsKey(path)
+    }
+
+    void 'a namespaced controller that includes an action of another controller keeps its namespace'() {
+        when:
+        def response = http('/admin/pages/includesAnAction')
+
+        then:
+        response.assertContains(200, 'before included after, in the admin namespace')
     }
 
     void 'an error controller that includes an action runs that action inside its page, and the failure is reported once'() {

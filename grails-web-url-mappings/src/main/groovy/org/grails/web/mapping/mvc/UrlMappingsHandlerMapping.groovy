@@ -189,6 +189,12 @@ class UrlMappingsHandlerMapping extends AbstractHandlerMapping {
         def errorStatus = request.getAttribute(WebUtils.ERROR_STATUS_CODE_ATTRIBUTE)
         if (includedInfo instanceof UrlMappingInfo) {
             UrlMappingInfo info = withController((UrlMappingInfo) includedInfo)
+            // as for a match by URI, the action sees the id of its mapping rather than the page's
+            GrailsWebRequest includeRequest = GrailsWebRequest.lookup(request)
+            if (includeRequest != null) {
+                includeRequest.resetParams()
+                info.configure(includeRequest)
+            }
             if (info instanceof GrailsControllerUrlMappingInfo) {
                 request.setAttribute(MATCHED_REQUEST, info)
                 request.setAttribute(GrailsApplicationAttributes.GRAILS_CONTROLLER_CLASS, ((GrailsControllerUrlMappingInfo) info).controllerClass)

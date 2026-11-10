@@ -123,9 +123,14 @@ class FailingController {
     }
 
     def includesThroughUrlMappingUtils() {
+        request.setAttribute('greeting', 'outer')
         response.writer.write('before ')
-        UrlMappingUtils.includeRequestForUrlMappingInfo(request, response, new ForwardUrlMappingInfo(controller: 'failing', action: 'included', params: [marker: 'included']), [:], false)
-        render " after, as ${controllerName}/${actionName} with ${params.marker}"
+        UrlMappingUtils.includeRequestForUrlMappingInfo(request, response, new ForwardUrlMappingInfo(controller: 'failing', action: 'includedDetails', id: '9', params: [marker: 'included']), [greeting: 'inner'], false)
+        render " after, as ${controllerName}/${actionName} with ${params.marker}, id ${params.id} and ${request.getAttribute('greeting')}"
+    }
+
+    def includedDetails() {
+        render "included with id ${params.id} and ${request.getAttribute('greeting')}"
     }
 
     def included() {

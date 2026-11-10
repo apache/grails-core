@@ -274,8 +274,9 @@ public class UrlMappingUtils {
      * {@link #forwardRequestForUrlMappingInfo(HttpServletRequest, HttpServletResponse, UrlMappingInfo, Map, boolean)}
      * would forward to it. A request that is itself an include cannot forward: a forward ends the response it is given,
      * which inside an include belongs to the page that included it. The include answers with the action of the given
-     * mapping, whatever its URI would match and whatever error is being handled. Once it returns, the page has its own
-     * controller, action, id, parameters and model again, and renders on as it was.
+     * mapping, whatever its URI would match and whatever error is being handled, and that action sees the id of
+     * the mapping. Once it returns, the page has its own controller namespace, controller, action, id,
+     * parameters, model and request attributes again, including those the given model set, and renders on as it was.
      *
      * @param request The request
      * @param response The response
@@ -291,9 +292,12 @@ public class UrlMappingUtils {
     public static String includeRequestForUrlMappingInfo(HttpServletRequest request,
             HttpServletResponse response, UrlMappingInfo info, Map<String, Object> model, boolean includeParams) throws ServletException, IOException {
         final IncludingPage page = new IncludingPage(GrailsWebRequest.lookup(request));
-        final Map<String, Object> dispatchAttributes = new HashMap<>();
+        final Map<String, Object> pageAttributes = new HashMap<>();
         for (String name : INCLUDE_DISPATCH_ATTRIBUTES) {
-            dispatchAttributes.put(name, request.getAttribute(name));
+            pageAttributes.put(name, request.getAttribute(name));
+        }
+        for (String name : model.keySet()) {
+            pageAttributes.put(name, request.getAttribute(name));
         }
         request.setAttribute(UrlMappingsHandlerMapping.INCLUDED_MAPPING_INFO, info);
         try {
@@ -301,7 +305,7 @@ public class UrlMappingUtils {
         }
         finally {
             request.removeAttribute(UrlMappingsHandlerMapping.INCLUDED_MAPPING_INFO);
-            for (Map.Entry<String, Object> attribute : dispatchAttributes.entrySet()) {
+            for (Map.Entry<String, Object> attribute : pageAttributes.entrySet()) {
                 if (attribute.getValue() != null) {
                     request.setAttribute(attribute.getKey(), attribute.getValue());
                 }
@@ -407,14 +411,15 @@ public class UrlMappingUtils {
     }
 
     /**
-     * What an include changes on the request of the page that makes it: the controller, action, id and parameters the
-     * included mapping configures, and the model and page attributes the include must not see. Created before the
+     * What an include changes on the request of the page that makes it: the controller namespace, controller, action, id
+     * and parameters the included mapping configures, and the model and page attributes the include must not see. Created before the
      * include, which takes the page attributes away, and restored once it returns, so the page renders on as it was.
      */
     @SuppressWarnings({ "unchecked", "rawtypes" })
     private static final class IncludingPage {
 
         private final GrailsWebRequest webRequest;
+        private final String namespace;
         private final String controller;
         private final String action;
         private final String id;
@@ -437,6 +442,7 @@ public class UrlMappingUtils {
             if (renderingView != null) {
                 webRequest.removeAttribute(WebUtils.RENDERING_VIEW, 0);
             }
+            namespace = webRequest.getControllerNamespace();
             controller = webRequest.getControllerName();
             action = webRequest.getActionName();
             id = webRequest.getId();
@@ -461,6 +467,7 @@ public class UrlMappingUtils {
             webRequest.getParameterMap().clear();
             webRequest.getParameterMap().putAll(params);
             webRequest.setId(id);
+            webRequest.setControllerNamespace(namespace);
             webRequest.setControllerName(controller);
             webRequest.setActionName(action);
             if (modelAndView != null) {

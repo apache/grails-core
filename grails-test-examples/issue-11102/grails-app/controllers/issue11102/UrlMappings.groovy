@@ -32,6 +32,7 @@ class UrlMappings {
         }
 
         "/failing/$action"(controller: 'failing')
+        "/admin/pages/$action"(controller: 'pages', namespace: 'admin')
         "/page/$slug"(controller: 'failing', action: 'includesAnswerOfController')
 
         "/"(view:"/index")
