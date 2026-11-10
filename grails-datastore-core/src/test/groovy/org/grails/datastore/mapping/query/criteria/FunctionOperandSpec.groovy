@@ -46,6 +46,8 @@ class FunctionOperandSpec extends Specification {
         BigInteger.valueOf(Integer.MIN_VALUE) | true
         BigInteger.valueOf(Integer.MAX_VALUE).add(BigInteger.ONE)      | false
         BigInteger.valueOf(Integer.MIN_VALUE).subtract(BigInteger.ONE) | false
+        BigInteger.TWO.pow(64)                | false
+        BigInteger.TWO.pow(64).negate()       | false
         0G                                    | true
         0.0G                                  | true
         3.0G                                  | true
