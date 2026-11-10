@@ -87,7 +87,7 @@ Metaspace has no upper limit by default (`MaxMetaspaceSize` is unlimited on ever
 Grails applications load many classes (plugins, Hibernate mappings, GSP-compiled views), so metaspace can make up a large part of the process's native memory.
 In a container environment this matters most: the JVM heap limit (`-Xmx` or `-XX:MaxRAMPercentage`) does not cover metaspace, so a container sized only for the heap can be killed by the container runtime's OOM killer when metaspace grows beyond the remaining native memory budget.
 
-**Recommended settings for Java 25:**
+**Recommended settings:**
 
 Set an explicit metaspace ceiling so the JVM raises `OutOfMemoryError: Metaspace` before the container runtime kills the process:
 
