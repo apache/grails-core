@@ -60,6 +60,24 @@ class QueryCacheSettingSpec extends Specification {
         true    | false    | false    | ['hibernate.cache.queries': 'true', 'hibernate.cache.use_query_cache': 'false']
     }
 
+    void 'a query cache that a Hibernate configuration file turns on stays on when hibernate.cache.queries is not set'() {
+        given:
+        File xml = File.createTempFile('queryCache', '.cfg.xml')
+        xml.deleteOnExit()
+        xml.text = '''<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE hibernate-configuration SYSTEM "classpath://org/hibernate/hibernate-configuration-3.0.dtd">
+<hibernate-configuration>
+    <session-factory>
+        <property name="hibernate.cache.use_query_cache">true</property>
+    </session-factory>
+</hibernate-configuration>
+'''
+
+        expect: 'nothing set leaves the file in charge, and cache.queries set explicitly still wins over it'
+        queryCacheEnabled(['hibernate.configLocations': xml.toURI().toString()]) == true
+        queryCacheEnabled(['hibernate.configLocations': xml.toURI().toString(), 'hibernate.cache.queries': 'false']) == false
+    }
+
     void 'the setting in the nested form enables the query cache'() {
         expect:
         queryCacheEnabled(['hibernate': ['cache': ['queries': true]]])
