@@ -113,10 +113,10 @@ public class MultiTenantEventListener implements PersistenceEventListener {
     // read-only in the session, such as one that read(id) or a read-only query has returned: Hibernate looks for the
     // changes of a modifiable object only, and updates no more than the version of a read-only object whose collection
     // has changed. It inserts an object of the session that is not in the database yet, whose insert waits for the
-    // flush, as its identifier comes from a sequence for example, and an object outside the session that is transient,
-    // whatever changes that object tracks. It writes another object outside the session only when the save cascades to
-    // it. An update of a class mapped with dynamicUpdate writes the properties that have changed alone, which a tenant
-    // id, being derived, never counts as. For another object that tracks its changes this is the check of
+    // flush, as its identifier comes from a sequence for example. It writes an object outside the session only when the
+    // save cascades to it, and then inserts one that is transient, whatever changes that object tracks. An update of a
+    // class mapped with dynamicUpdate writes the properties that have changed alone, which a tenant id, being derived,
+    // never counts as. For another object that tracks its changes this is the check of
     // GrailsEntityDirtinessStrategy, with which Hibernate decides whether to update an object of the session, and the
     // check for a changed collection.
     private static boolean isSaved(AbstractHibernateDatastore hibernateDatastore, PersistentEntity entity, Object object, Association association) {
@@ -133,11 +133,11 @@ public class MultiTenantEventListener implements PersistenceEventListener {
             }
         }
         else if (session != null) {
-            if (isTransient(persister, object, session)) {
-                return true;
-            }
             if (!cascadesSave(sessionFactory, association)) {
                 return false;
+            }
+            if (isTransient(persister, object, session)) {
+                return true;
             }
         }
         if (session != null && persister.getEntityMetamodel().isDynamicUpdate()) {

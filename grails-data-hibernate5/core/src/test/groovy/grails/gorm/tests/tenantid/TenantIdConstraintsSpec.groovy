@@ -808,6 +808,38 @@ class TenantIdConstraintsSpec extends Specification {
         TenantDuck  | 'ducks'    | 'default'     | true     || true
     }
 
+    void 'a new associated object is given the current tenant id only when the save cascades to it: #type.simpleName, cascade #cascade'() {
+        given: 'a new farm and a new animal that has a tenant id'
+        def animal = type.newInstance(name: 'Rex', firmId: 'beta')
+        def farm = new TenantFarm(name: 'Farm')
+        farm."$collection" = [animal] as Set
+        animal.farm = farm
+
+        when: 'the farm is validated while a tenant that breaks the maxSize of the animal is current'
+        System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, 'a-tenant-too-long')
+        boolean valid = farm.validate()
+
+        then: 'the animal is validated with the tenant id that is written for it'
+        valid == !written
+        animal.firmId == (written ? 'a-tenant-too-long' : 'beta')
+
+        when: 'the farm is saved while a tenant that fits is current'
+        System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, 'acme')
+        def saved = farm.save(flush: true)
+
+        then: 'the animal is stored only when the save cascades to it'
+        saved
+        storedTenantIds(type) == (written ? [Rex: 'acme'] : [:])
+
+        where:
+        type        | collection | cascade       || written
+        TenantCow   | 'cows'     | 'none'        || false
+        TenantGoat  | 'goats'    | 'save-update' || true
+        TenantSheep | 'sheep'    | 'merge'       || false
+        TenantHen   | 'hens'     | 'persist'     || false
+        TenantDuck  | 'ducks'    | 'default'     || true
+    }
+
     void 'a changed detached object that is reached through an embedded object is given the current tenant id'() {
         given: 'a house and its mat of one tenant, loaded inside withoutId, the mat then detached from the session'
         System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, 'beta')
