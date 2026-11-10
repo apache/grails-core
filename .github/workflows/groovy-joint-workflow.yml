@@ -50,7 +50,7 @@ jobs:
   build_groovy:
     needs: [policy]
     if: ${{ needs.policy.outputs.run-tests == 'true' }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     outputs:
       groovyVersion: ${{ steps.groovy-version.outputs.value }}
     steps:

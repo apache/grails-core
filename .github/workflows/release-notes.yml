@@ -88,7 +88,7 @@ jobs:
       # pull requests - the action's find-recent-merged-pull-requests asks for them - and a
       # permissions block is restrictive, so the scope has to be named even to read.
       pull-requests: read
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       # Seed an initial version for release branches that have no published
       # release yet (e.g. 7.2.x before its first tag). release-drafter falls

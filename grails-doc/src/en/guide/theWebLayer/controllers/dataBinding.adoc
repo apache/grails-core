@@ -1077,6 +1077,8 @@ def p = new Person()
 bindData(p, params, [exclude: 'dateOfBirth'])
 ----
 
+The properties the class itself keeps out of binding, through a `bindable: false` constraint, its `transients` or a `transient` field, stay excluded: `exclude` narrows the list of bindable properties described below, it does not replace it.
+
 Or include only certain properties:
 
 [source,groovy]
@@ -1088,3 +1090,9 @@ bindData(p, params, [include: ['firstName', 'lastName']])
 NOTE: If an empty List is provided as a value for the `include` parameter then all fields will be subject to binding if they are not explicitly excluded.
 
 The link:{constraintsRef}bindable.html[bindable] constraint can be used to globally prevent data binding for certain properties.
+
+When no `include` list is given, binding is restricted to a list of bindable properties that Grails generates for the class when it is compiled: its statically typed instance properties and those it inherits, less the properties its `constraints` mark `bindable: false`, the properties named in its `transients` list and its `transient` fields, plus any property its `constraints` mark `bindable: true`. Domain classes, command objects and any other class that implements `grails.validation.Validateable` or declares `constraints` or `transients` get this list, as do the classes that extend them, wherever they are compiled, in the application, in a plugin, or in another module of a multi-project build, provided the data binding library, `grails-web-databinding`, is on that compilation's classpath, as it is in a Grails application or plugin. A library module that compiles against GORM alone generates no list. A class with none of these is bound without restriction.
+
+A class compiled against an already compiled parent, such as a parent in a plugin or in another module, takes the parent's bindable properties from the compiled parent. If the parent was compiled by an earlier version of Grails, or without the data binding library on its compile classpath, the compiler warns that the list of the subclass is derived from the parent's bytecode, which does not carry the parent's `bindable` constraints or its `transients`, and asks for the parent to be recompiled.
+
+A property that holds a validation result, of type `org.springframework.validation.Errors`, such as the `errors` property of a domain class or of a `Validateable` object, is never bound from request data.

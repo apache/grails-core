@@ -56,7 +56,7 @@ jobs:
   validateDependencies:
     name: 'Validate Dependency Versions'
     needs: [ policy ]
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-22.04
     steps:
       - name: "📥 Checkout repository"
         uses: actions/checkout@v7.0.1
@@ -92,7 +92,7 @@ jobs:
       fail-fast: false
       matrix:
         java: [ 17, 25 ]
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-22.04
     steps:
       - name: "Output Agent IP" # in the event RAO blocks this agent, this can be used to debug it
         run: curl -s https://api.ipify.org
@@ -140,12 +140,12 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-latest
+          - os: ubuntu-22.04
             java: 17
             cache_writer: true
-          - os: ubuntu-latest
+          - os: ubuntu-22.04
             java: 21
-          - os: ubuntu-latest
+          - os: ubuntu-22.04
             java: 25
           - os: macos-latest
             java: 21
@@ -193,7 +193,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-latest
+          - os: ubuntu-22.04
             java: 17
     runs-on: ${{ matrix.os }}
     steps:
@@ -232,7 +232,7 @@ jobs:
       fail-fast: false
       matrix:
         java: [ 17, 21 ]
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-22.04
     steps:
       - name: "Output Agent IP" # in the event RAO blocks this agent, this can be used to debug it
         run: curl -s https://api.ipify.org
@@ -296,7 +296,7 @@ jobs:
       fail-fast: false
       matrix:
         java: [ 17, 21, 25 ]
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-22.04
     steps:
       - name: "Output Agent IP" # in the event RAO blocks this agent, this can be used to debug it
         run: curl -s https://api.ipify.org
@@ -345,7 +345,7 @@ jobs:
       fail-fast: false
       matrix:
         java: [ 17, 21, 25 ]
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-22.04
     steps:
       - name: "Output Agent IP" # in the event RAO blocks this agent, this can be used to debug it
         run: curl -s https://api.ipify.org
@@ -388,7 +388,7 @@ jobs:
         # must be its own run. Carried over from the standalone grails-spring-security CI — do not drop
         # configs (add, don't remove) when the app's security configurations change.
         test-config: [ 'static', 'annotation', 'requestmap', 'basic', 'basicCacheUsers', 'misc', 'putWithParams', 'bcrypt', 'issue503' ]
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-22.04
     steps:
       - name: "Output Agent IP" # in the event RAO blocks this agent, this can be used to debug it
         run: curl -s https://api.ipify.org
@@ -423,7 +423,7 @@ jobs:
     name: "Redis Tests"
     needs: [ policy ]
     if: ${{ needs.policy.outputs.run-tests == 'true' }}
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-22.04
     strategy:
       fail-fast: false
       matrix:
@@ -507,7 +507,7 @@ jobs:
     needs: [ policy ]
     if: ${{ needs.policy.outputs.run-tests == 'true' }}
     name: "Hibernate5 Functional Tests"
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-22.04
     strategy:
       fail-fast: false
       matrix:
@@ -554,7 +554,7 @@ jobs:
           needs.validateDependencies.result == 'success'
       }}
     needs: [ buildGradle, buildForge, validateDependencies ]
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-22.04
     steps:
       - name: "Output Agent IP" # in the event RAO blocks this agent, this can be used to debug it
         run: curl -s https://api.ipify.org
@@ -618,7 +618,7 @@ jobs:
           (needs.hibernate5Functional.result == 'success' || needs.hibernate5Functional.result == 'skipped') &&
           (needs.mongodbFunctional.result == 'success' || needs.mongodbFunctional.result == 'skipped')
       }}
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-22.04
     steps:
       - name: "Output Agent IP" # in the event RAO blocks this agent, this can be used to debug it
         run: curl -s https://api.ipify.org
@@ -687,7 +687,7 @@ jobs:
           needs.publish.result == 'success'
       }}
     needs: [ buildForge, publishGradle, publish ]
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-22.04
     steps:
       - name: "Output Agent IP" # in the event RAO blocks this agent, this can be used to debug it
         run: curl -s https://api.ipify.org
@@ -743,7 +743,7 @@ jobs:
           needs.publishForge.result == 'success'
       }}
     needs: [ publish, publishForge ]
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-22.04
     steps:
       - name: "Output Agent IP" # in the event RAO blocks this agent, this can be used to debug it
         run: curl -s https://api.ipify.org
@@ -780,7 +780,7 @@ jobs:
           needs.publish.result == 'success'
       }}
     needs: [ publish ]
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-22.04
     steps:
       - name: "⚙️ Maximize build space"
         run: |

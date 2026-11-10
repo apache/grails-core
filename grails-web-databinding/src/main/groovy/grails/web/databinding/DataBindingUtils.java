@@ -49,9 +49,11 @@ import grails.web.mime.MimeType;
 import grails.web.mime.MimeTypeResolver;
 import grails.web.mime.MimeTypeUtils;
 import org.grails.core.exceptions.GrailsConfigurationException;
+import org.grails.datastore.mapping.model.MappingContext;
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.PersistentProperty;
 import org.grails.datastore.mapping.model.types.OneToOne;
+import org.grails.datastore.mapping.proxy.ProxyHandler;
 import org.grails.web.databinding.DefaultASTDatabindingHelper;
 import org.grails.web.databinding.bindingsource.DataBindingSourceRegistry;
 import org.grails.web.databinding.bindingsource.DefaultDataBindingSourceRegistry;
@@ -117,29 +119,88 @@ public class DataBindingUtils {
         return bindObjectToInstance(object, source, getBindingIncludeList(object), Collections.emptyList(), null);
     }
 
+    /**
+     * The include list an object is bound with when none is given: the white list Grails generated on its class.
+     * The class of a proxy may have none, as the class a datastore generates at runtime to stand for an entity does,
+     * and then the list of the class the proxy stands for is used, which the proxy handler of the mapping context
+     * unwraps; failing that, the list of the nearest superclass that has one, since a class without a list of its
+     * own whose superclass has one is a proxy of some kind, or was compiled without the data binding library, and
+     * the superclass's list is the safe choice for either. An object whose class has no list anywhere is bound
+     * without restriction. When a proxy cannot be unwrapped, or the list cannot be read, the error reaches the
+     * caller: nothing is bound, and the caller sees why.
+     */
     protected static List getBindingIncludeList(final Object object) {
-        List includeList = Collections.emptyList();
-        try {
-            final Class<? extends Object> objectClass = object.getClass();
-            if (CLASS_TO_BINDING_INCLUDE_LIST.containsKey(objectClass)) {
-                includeList = CLASS_TO_BINDING_INCLUDE_LIST.get(objectClass);
-            } else {
-                final Field whiteListField = objectClass.getDeclaredField(DefaultASTDatabindingHelper.DEFAULT_DATABINDING_WHITELIST);
-                if (whiteListField != null) {
-                    if ((whiteListField.getModifiers() & Modifier.STATIC) != 0) {
-                        final Object whiteListValue = whiteListField.get(objectClass);
-                        if (whiteListValue instanceof List) {
-                            includeList = (List) whiteListValue;
-                        }
-                    }
-                }
-                if (!Environment.getCurrent().isReloadEnabled()) {
-                    CLASS_TO_BINDING_INCLUDE_LIST.put(objectClass, includeList);
-                }
+        final Class<?> bindingClass = getBindingClass(object);
+        List includeList = CLASS_TO_BINDING_INCLUDE_LIST.get(bindingClass);
+        if (includeList == null) {
+            includeList = readBindingIncludeList(bindingClass);
+            if (!Environment.getCurrent().isReloadEnabled()) {
+                CLASS_TO_BINDING_INCLUDE_LIST.put(bindingClass, includeList);
             }
-        } catch (Exception e) {
         }
         return includeList;
+    }
+
+    /**
+     * The class whose white list binds an object: its own class when that declares one; else the class of what the
+     * object stands for when it is a proxy, which binding into it would initialize anyway; else its own class.
+     */
+    private static Class<?> getBindingClass(final Object object) {
+        final Class<?> objectClass = object.getClass();
+        if (declaresBindingIncludeList(objectClass)) {
+            return objectClass;
+        }
+        final Object unwrapped = unwrapProxy(object);
+        return unwrapped != null ? unwrapped.getClass() : objectClass;
+    }
+
+    private static boolean declaresBindingIncludeList(final Class<?> objectClass) {
+        try {
+            objectClass.getDeclaredField(DefaultASTDatabindingHelper.DEFAULT_DATABINDING_WHITELIST);
+            return true;
+        } catch (NoSuchFieldException e) {
+            return false;
+        }
+    }
+
+    /** What a GORM proxy stands for, or {@code null} when the object is not one the mapping context's proxy handler knows. */
+    private static Object unwrapProxy(final Object object) {
+        final GrailsApplication application = Holders.findApplication();
+        if (application != null) {
+            try {
+                final MappingContext mappingContext = application.getMappingContext();
+                final ProxyHandler proxyHandler = mappingContext != null ? mappingContext.getProxyHandler() : null;
+                if (proxyHandler != null && proxyHandler.isProxy(object)) {
+                    return proxyHandler.unwrap(object);
+                }
+            } catch (GrailsConfigurationException e) {
+                // no mapping context, so nothing is a proxy
+            }
+        }
+        return null;
+    }
+
+    /** The white list the class, or the nearest superclass, declares; empty when none does. */
+    private static List readBindingIncludeList(final Class<?> bindingClass) {
+        final Field whiteListField;
+        try {
+            // public and static, so found on the class or on the nearest superclass that declares one
+            whiteListField = bindingClass.getField(DefaultASTDatabindingHelper.DEFAULT_DATABINDING_WHITELIST);
+        } catch (NoSuchFieldException e) {
+            return Collections.emptyList();
+        }
+        if (Modifier.isStatic(whiteListField.getModifiers())) {
+            final Object whiteListValue;
+            try {
+                whiteListValue = whiteListField.get(null);
+            } catch (IllegalAccessException e) {
+                throw new IllegalStateException("The data binding white list of [" + bindingClass.getName() + "] could not be read", e);
+            }
+            if (whiteListValue instanceof List) {
+                return (List) whiteListValue;
+            }
+        }
+        return Collections.emptyList();
     }
 
     /**
@@ -196,14 +257,15 @@ public class DataBindingUtils {
      *
      * @param object The object to bind to
      * @param source The source object
-     * @param include The list of properties to include
+     * @param include The list of properties to include; {@code null} for the white list generated on the class,
+     *                which an exclude list then narrows, or an empty list to bind every property not excluded
      * @param exclude The list of properties to exclude
      * @param filter The prefix to filter by
      *
      * @return A BindingResult if there were errors or null if it was successful
      */
     public static BindingResult bindObjectToInstance(Object object, Object source, List include, List exclude, String filter) {
-        if (include == null && exclude == null) {
+        if (include == null) {
             include = getBindingIncludeList(object);
         }
         GrailsApplication application = Holders.findApplication();
