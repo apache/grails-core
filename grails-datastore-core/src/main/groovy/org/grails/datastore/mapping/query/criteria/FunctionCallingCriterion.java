@@ -70,29 +70,24 @@ public class FunctionCallingCriterion extends Query.PropertyNameCriterion {
      * @param number the operand of a comparison with a function
      */
     public static boolean isWholeInt(Number number) {
-        if (number instanceof Integer || number instanceof Short || number instanceof Byte) {
-            return true;
-        }
-        if (number instanceof Long) {
-            long value = number.longValue();
-            return value >= Integer.MIN_VALUE && value <= Integer.MAX_VALUE;
-        }
-        if (number instanceof BigInteger) {
-            return ((BigInteger) number).bitLength() < Integer.SIZE;
-        }
         BigDecimal exact;
         if (number instanceof BigDecimal) {
             exact = (BigDecimal) number;
         }
-        else {
+        else if (number instanceof BigInteger) {
+            exact = new BigDecimal((BigInteger) number);
+        }
+        else if (number instanceof Double || number instanceof Float) {
             double value = number.doubleValue();
             if (Double.isNaN(value) || Double.isInfinite(value)) {
                 return false;
             }
             exact = new BigDecimal(value);
         }
-        return exact.signum() == 0 ||
-                exact.stripTrailingZeros().scale() <= 0 && exact.compareTo(INT_MIN) >= 0 && exact.compareTo(INT_MAX) <= 0;
+        else {
+            exact = BigDecimal.valueOf(number.longValue());
+        }
+        return exact.stripTrailingZeros().scale() <= 0 && exact.compareTo(INT_MIN) >= 0 && exact.compareTo(INT_MAX) <= 0;
     }
 
     /**
@@ -122,12 +117,12 @@ public class FunctionCallingCriterion extends Query.PropertyNameCriterion {
             case "lower", "upper", "trim" -> String.class;
             default -> Integer.class;
         };
-        if (value instanceof CharSequence && !(value instanceof String)) {
+        if (value instanceof CharSequence) {
             // a GString or any other text is bound as the text it holds, not as the object
             value = value.toString();
         }
         if (targetType == String.class) {
-            return value instanceof String ? value : conversionService != null && conversionService.canConvert(value.getClass(), String.class) ?
+            return conversionService != null && conversionService.canConvert(value.getClass(), String.class) ?
                     conversionService.convert(value, String.class) : value.toString();
         }
         if (value instanceof Number number && !isWholeInt(number)) {
