@@ -295,6 +295,7 @@ public class GrailsDomainBinder implements MetadataContributor {
                 typeName = StandardBasicTypes.STRING.getName();
             }
             bindSimpleValue(typeName, elt, false, getMapElementName(property, sessionFactoryBeanName), mappings);
+            bindElementColumnConstraints(property, elt, typeName);
 
             elt.setTypeName(typeName);
         }
@@ -755,6 +756,7 @@ public class GrailsDomainBinder implements MetadataContributor {
                 }
 
                 bindSimpleValue(typeName, element, true, columnName, mappings);
+                bindElementColumnConstraints(property, element, typeName);
                 if (hasJoinColumnMapping) {
                     bindColumnConfigToColumn(property, getColumnForSimpleValue(element), config.getJoinTable().getColumn());
                 }
@@ -783,6 +785,20 @@ public class GrailsDomainBinder implements MetadataContributor {
         collection.setElement(element);
 
         bindCollectionForPropertyConfig(collection, config);
+    }
+
+    /**
+     * Gives the column of a basic collection's elements the length that {@code maxSize} or {@code inList} gives a
+     * string property. Other element types are left alone, as {@code maxSize} bounds their value, not their column.
+     */
+    protected void bindElementColumnConstraints(PersistentProperty property, SimpleValue element, String typeName) {
+        if (!STRING_TYPE.equals(typeName) && !"text".equals(typeName) && !String.class.getName().equals(typeName)) {
+            return;
+        }
+        Column column = getColumnForSimpleValue(element);
+        if (column != null && property.getMapping() != null && property.getMapping().getMappedForm() != null) {
+            bindStringColumnConstraints(column, property);
+        }
     }
 
     protected String addUnderscore(String s1, String s2) {
@@ -3684,7 +3700,14 @@ public class GrailsDomainBinder implements MetadataContributor {
             return INSTANCES.get(clazz);
         }
 
+        /**
+         * The type name Hibernate treats as a user collection type class. A basic collection (a list, set or map of
+         * simple values) maps its mapped {@code type} to the element, so it names no collection type.
+         */
         public String getTypeName(ToMany property) {
+            if (property instanceof Basic) {
+                return null;
+            }
             return binder.getTypeName(property, binder.getPropertyConfig(property), getMapping(property.getOwner()));
         }
 
