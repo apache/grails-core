@@ -103,6 +103,7 @@ public class JpaCriteriaQueryCreator<T> {
         Root<?> root = cq.from(javaClass);
 
         context = aliasRegistrar.createContext(parentContext, root);
+        registerRootAlias(context, root);
 
         applyEagerFetchJoins(root, projectionList);
 
@@ -153,6 +154,7 @@ public class JpaCriteriaQueryCreator<T> {
         Root<?> root = subquery.from(javaClass);
 
         context = aliasRegistrar.createContext(parentContext, root);
+        registerRootAlias(context, root);
 
         new JpaProjectionAdapter(criteriaBuilder, context, entity).adapt(projections, (AbstractQuery<?>) subquery);
 
@@ -286,6 +288,18 @@ public class JpaCriteriaQueryCreator<T> {
         return !projectionList.isEmpty() && projectionList.stream()
                 .allMatch(projection -> projection instanceof Query.CountProjection ||
                         projection instanceof Query.CountDistinctProjection);
+    }
+
+    /**
+     * Registers the alias the criteria declares for its root, so a criterion that refers to it, in this
+     * query or in a subquery (the subquery context resolves through its parent), resolves to the root
+     * instead of an unknown property path.
+     */
+    private void registerRootAlias(JpaQueryContext context, Root<?> root) {
+        String rootAlias = detachedCriteria.getAlias();
+        if (rootAlias != null) {
+            context.registerAlias(rootAlias, root);
+        }
     }
 
     private void assignCriteria(

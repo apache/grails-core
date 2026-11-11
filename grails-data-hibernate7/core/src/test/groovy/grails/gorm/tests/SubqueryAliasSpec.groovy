@@ -43,20 +43,131 @@ class SubqueryAliasSpec extends Specification {
     @Rollback
     void "Test subquery with root alias"() {
         given:
-        Club c = new Club(name: "Manchester United").save()
-        new Team(name: "First Team", club: c).save(flush:true)
+        Club c1 = new Club(name: "Manchester United").save()
+        Club c2 = new Club(name: "Arsenal").save()
+        new Team(name: "First Team", club: c1).save(flush: true)
+        new Team(name: "Second Team", club: c2).save(flush: true)
 
         when:
-        Team t = Team.where {
+        List<Team> teams = Team.where {
             def t = Team
-            name == "First Team"
             exists(Club.where {
-                id == t.club
+                id == t.club.id && name == "Manchester United"
             }.property('name'))
 
-        }.find()
+        }.list()
 
         then:
-        t != null
+        teams.size() == 1
+        teams[0].name == "First Team"
+    }
+
+    @Rollback
+    void "Test subquery comparing an id with an association of the root alias"() {
+        given:
+        Club c1 = new Club(name: "Manchester United").save()
+        Club c2 = new Club(name: "Arsenal").save()
+        new Team(name: "First Team", club: c1).save(flush: true)
+        new Team(name: "Second Team", club: c2).save(flush: true)
+
+        when:
+        List<Team> teams = Team.where {
+            def t = Team
+            exists(Club.where {
+                id == t.club && name == "Manchester United"
+            }.property('name'))
+
+        }.list()
+
+        then:
+        teams*.name == ["First Team"]
+    }
+
+    @Rollback
+    void "Test a derived criteria keeps the root alias"() {
+        given:
+        Club c1 = new Club(name: "Manchester United").save()
+        Club c2 = new Club(name: "Arsenal").save()
+        new Team(name: "First Team", club: c1).save(flush: true)
+        new Team(name: "Second Team", club: c2).save(flush: true)
+
+        when:
+        List<Team> teams = Team.where {
+            def t = Team
+            exists(Club.where {
+                id == t.club.id && name == "Manchester United"
+            }.property('name'))
+
+        }.sort('name').list()
+
+        then:
+        teams.size() == 1
+        teams[0].name == "First Team"
+    }
+
+    @Rollback
+    void "Test a lazy subquery with a root alias"() {
+        given:
+        Club c1 = new Club(name: "Manchester United").save()
+        Club c2 = new Club(name: "Arsenal").save()
+        new Team(name: "First Team", club: c1).save(flush: true)
+        new Team(name: "Second Team", club: c2).save(flush: true)
+
+        when:
+        List<Team> teams = Team.whereLazy {
+            def t = Team
+            exists(Club.where {
+                id == t.club.id && name == "Manchester United"
+            }.property('name'))
+
+        }.list()
+
+        then:
+        teams.size() == 1
+        teams[0].name == "First Team"
+    }
+
+    @Rollback
+    void "Test a subquery root alias is registered for nested subqueries"() {
+        given:
+        Club c1 = new Club(name: "Manchester United").save()
+        Club c2 = new Club(name: "Arsenal").save()
+        new Team(name: "First Team", club: c1).save(flush: true)
+        new Team(name: "Second Team", club: c2).save(flush: true)
+
+        when:
+        List<Team> teams = Team.where {
+            def t = Team
+            exists(Club.where {
+                def subClub = Club
+                id == t.club.id && exists(Club.where {
+                    id == subClub.id && name == "Manchester United"
+                }.id())
+            }.id())
+        }.list()
+
+        then:
+        teams.size() == 1
+        teams[0].name == "First Team"
+    }
+
+    @Rollback
+    void "Test nested alias path on left-hand PropertyExpression comparison"() {
+        given:
+        Club c1 = new Club(name: "Manchester United").save()
+        Club c2 = new Club(name: "Arsenal").save()
+        new Team(name: "Manchester United", club: c1).save(flush: true)
+        new Team(name: "Second Team", club: c2).save(flush: true)
+
+        when:
+        List<Team> teams = Team.where {
+            def t = Team
+            def c = club
+            c.name == t.club.name && name == t.club.name
+        }.list()
+
+        then:
+        teams.size() == 1
+        teams[0].name == "Manchester United"
     }
 }
