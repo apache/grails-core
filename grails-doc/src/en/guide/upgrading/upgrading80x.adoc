@@ -4963,3 +4963,12 @@ As of Grails 8.0.1, an exception an action throws is recorded as an error on the
 * After a forward to an error controller, the `jakarta.servlet.error.exception` request attribute holds the exception the action threw rather than a `GrailsWrappedRuntimeException`, for a filter that reads it once the chain has returned. Inside the error controller it still holds the wrapper.
 * These requests were already counted with `outcome=SERVER_ERROR`, but an alert that counts a non-`none` `error` value will see more server errors than before, and a dashboard that reads the `uri` of an error controller will find those failures under the routes of the actions.
 * The route is now set before the Grails interceptors run, so that a failure in one is reported under the route of the action. An interceptor whose `before()` returns `false`, to render a 403 or to redirect, stopped the request before its route was set, so the request was reported with a `uri` of `UNKNOWN`, or `REDIRECTION` for a redirect. It is now reported under the route of the action, so a dashboard or alert keyed on those `uri` values sees those requests move.
+
+==== 93. `rlike` Is the Same on Hibernate 5 and Hibernate 7
+
+`rlike` is now rendered from one declaration of the supported databases in each Hibernate module, and the two modules agree on which databases fall back to `like`.
+
+* With Hibernate 5, a database that has no regular expression operator that Grails uses, such as SQL Server, Sybase, CockroachDB and Db2 for z/OS, no longer fails with `rlike is not supported with the configured dialect`: `rlike` falls back to `like`, as it does with Hibernate 7, so `%` and `_` are the wildcards there and not regular expression characters. Check queries that used `rlike` on such a database, as they now match different rows instead of failing.
+* Whether case matters follows the database: Oracle, H2 and Db2 match case-sensitively, and MySQL and MariaDB by the collation of the column. PostgreSQL matches with `~` (case-sensitive) with Hibernate 7 and `~*` (case-insensitive) with Hibernate 5; see issue 16882.
+
+See the `rlike` entry of the criteria reference for the databases that match with a regular expression.

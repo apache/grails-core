@@ -19,7 +19,6 @@
 package grails.orm
 
 import org.hibernate.Criteria
-import org.hibernate.HibernateException
 import org.hibernate.criterion.CriteriaQuery
 import org.hibernate.dialect.DB2390Dialect
 import org.hibernate.dialect.DB2390V8Dialect
@@ -37,7 +36,7 @@ import spock.lang.Specification
 import spock.lang.Unroll
 
 /**
- * The SQL that {@link RlikeExpression} renders for each database, and the databases it refuses.
+ * The SQL that {@link RlikeExpression} renders for each database, and the like it falls back to on the rest.
  */
 class RlikeExpressionSpec extends Specification {
 
@@ -58,25 +57,33 @@ class RlikeExpressionSpec extends Specification {
     }
 
     @Unroll
-    void 'on #dialect.class.simpleName rlike is refused'() {
-        when:
-        new RlikeExpression('name', 'a.*').toSqlString(Stub(Criteria), criteriaQuery(dialect))
-
-        then:
-        HibernateException e = thrown()
-        e.message == "rlike is not supported with the configured dialect ${dialect.class.canonicalName}"
+    void 'on #dialect.class.simpleName, which has no regular expression operator here, rlike falls back to like'() {
+        expect:
+        new RlikeExpression('name', 'a.*').toSqlString(Stub(Criteria), criteriaQuery(dialect)) == 'name_col LIKE ?'
 
         where:
         dialect << [new DB2390Dialect(), new DB2390V8Dialect(), new SQLServer2012Dialect()]
     }
 
-    private CriteriaQuery criteriaQuery(Dialect dialect) {
+    @Unroll
+    void 'on #dialect.class.simpleName a column that contains ?2 or ?1 is kept as it is'() {
+        expect:
+        new RlikeExpression('name', 'a.*').toSqlString(Stub(Criteria), criteriaQuery(dialect, column)) == sql
+
+        where:
+        dialect              | column                      | sql
+        new H2Dialect()      | "coalesce(a, '?2')"         | "coalesce(a, '?2') REGEXP ?"
+        new H2Dialect()      | "coalesce(a, '?1')"         | "coalesce(a, '?1') REGEXP ?"
+        new Oracle12cDialect()| "nvl(a, '?2')"             | " REGEXP_LIKE (nvl(a, '?2'), ?)"
+    }
+
+    private CriteriaQuery criteriaQuery(Dialect dialect, String column = 'name_col') {
         SessionFactoryImplementor factory = Stub {
             getDialect() >> dialect
         }
         Stub(CriteriaQuery) {
             getFactory() >> factory
-            getColumnsUsingProjection(_ as Criteria, 'name') >> (['name_col'] as String[])
+            getColumnsUsingProjection(_ as Criteria, 'name') >> ([column] as String[])
         }
     }
 }
