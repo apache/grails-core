@@ -20,23 +20,38 @@
 package org.grails.orm.hibernate.multitenancy;
 
 import java.io.Serializable;
+import java.util.List;
+
+import org.hibernate.collection.spi.PersistentCollection;
+import org.hibernate.engine.spi.CascadingActions;
+import org.hibernate.engine.spi.EntityEntry;
+import org.hibernate.engine.spi.SessionFactoryImplementor;
+import org.hibernate.engine.spi.SessionImplementor;
+import org.hibernate.persister.entity.EntityPersister;
 
 import org.springframework.context.ApplicationEvent;
 
 import grails.gorm.multitenancy.Tenants;
 import org.grails.datastore.gorm.GormEnhancer;
 import org.grails.datastore.mapping.core.Datastore;
+import org.grails.datastore.mapping.dirty.checking.DirtyCheckable;
+import org.grails.datastore.mapping.dirty.checking.DirtyCheckingSupport;
 import org.grails.datastore.mapping.engine.event.AbstractPersistenceEvent;
 import org.grails.datastore.mapping.engine.event.PersistenceEventListener;
 import org.grails.datastore.mapping.engine.event.PreInsertEvent;
 import org.grails.datastore.mapping.engine.event.PreUpdateEvent;
 import org.grails.datastore.mapping.engine.event.ValidationEvent;
 import org.grails.datastore.mapping.model.PersistentEntity;
+import org.grails.datastore.mapping.model.config.GormProperties;
+import org.grails.datastore.mapping.model.types.Association;
 import org.grails.datastore.mapping.model.types.TenantId;
+import org.grails.datastore.mapping.model.types.ToMany;
 import org.grails.datastore.mapping.multitenancy.MultiTenantCapableDatastore;
 import org.grails.datastore.mapping.multitenancy.exceptions.TenantException;
+import org.grails.datastore.mapping.multitenancy.exceptions.TenantNotFoundException;
 import org.grails.datastore.mapping.query.Query;
 import org.grails.datastore.mapping.query.event.PreQueryEvent;
+import org.grails.datastore.mapping.reflect.EntityReflector;
 import org.grails.orm.hibernate.AbstractHibernateDatastore;
 
 /**
@@ -58,6 +73,152 @@ public class MultiTenantEventListener implements PersistenceEventListener {
 
     @Override
     public void onApplicationEvent(ApplicationEvent event) {
+        handleEvent(event);
+        if (event instanceof ValidationEvent && supportsSourceType(event.getSource().getClass())) {
+            ValidationEvent validationEvent = (ValidationEvent) event;
+            if (validationEvent.isDeepValidate()) {
+                // The associated objects that are validated with this one get no event of their own, so the
+                // validator calls back with each of them
+                AbstractHibernateDatastore hibernateDatastore = (AbstractHibernateDatastore) event.getSource();
+                validationEvent.addCascadeListener((associatedObject, association) ->
+                        assignTenantIdOfAssociatedObject(hibernateDatastore, associatedObject, association));
+            }
+        }
+    }
+
+    // Called with an associated object once its beforeValidate callback has run, and before its constraints are
+    // checked. The object is given the tenant id it is inserted or updated with. One that is not saved with its owner
+    // keeps the tenant id it has, or its lack of one, and is passed again once every callback of the validation has
+    // run, as one of them may have changed it. Without a current tenant the object is left alone, and gets its tenant
+    // id as it is inserted or updated, as before. Returns whether the object was given a tenant id.
+    private boolean assignTenantIdOfAssociatedObject(AbstractHibernateDatastore hibernateDatastore, Object associatedObject, Association association) {
+        ValidationEvent cascaded = new ValidationEvent(hibernateDatastore, associatedObject);
+        PersistentEntity entity = cascaded.getEntity();
+        if (entity == null || !entity.isMultiTenant()) {
+            return false;
+        }
+        if (!isSaved(hibernateDatastore, entity, cascaded.getEntityObject(), association)) {
+            return false;
+        }
+        try {
+            handleEvent(cascaded);
+        }
+        catch (TenantNotFoundException e) {
+            return false;
+        }
+        return true;
+    }
+
+    // Whether Hibernate writes the tenant id of the object as its owner is saved. It writes none of an object that is
+    // read-only in the session, such as one that read(id) or a read-only query has returned: Hibernate looks for the
+    // changes of a modifiable object only, and updates no more than the version of a read-only object whose collection
+    // has changed. It inserts an object of the session that is not in the database yet, whose insert waits for the
+    // flush, as its identifier comes from a sequence for example. It writes an object outside the session only when the
+    // save cascades to it, and then inserts one that is transient, whatever changes that object tracks. An update of a
+    // class mapped with dynamicUpdate writes the properties that have changed alone, which a tenant id, being derived,
+    // never counts as. For another object that tracks its changes this is the check of
+    // GrailsEntityDirtinessStrategy, with which Hibernate decides whether to update an object of the session, and the
+    // check for a changed collection.
+    private static boolean isSaved(AbstractHibernateDatastore hibernateDatastore, PersistentEntity entity, Object object, Association association) {
+        SessionImplementor session = currentSession(hibernateDatastore);
+        EntityEntry entry = session != null ? session.getPersistenceContext().getEntry(object) : null;
+        SessionFactoryImplementor sessionFactory = (SessionFactoryImplementor) hibernateDatastore.getSessionFactory();
+        EntityPersister persister = sessionFactory.getMetamodel().entityPersister(entity.getName());
+        if (entry != null) {
+            if (!entry.isModifiableEntity()) {
+                return false;
+            }
+            if (!entry.isExistsInDatabase()) {
+                return true;
+            }
+        }
+        else if (session != null) {
+            if (!cascadesSave(sessionFactory, association)) {
+                return false;
+            }
+            if (isTransient(persister, object, session)) {
+                return true;
+            }
+        }
+        if (session != null && persister.getEntityMetamodel().isDynamicUpdate()) {
+            return false;
+        }
+        return !(object instanceof DirtyCheckable) || hasStoredChange(persister, (DirtyCheckable) object) ||
+                DirtyCheckingSupport.areEmbeddedDirty(entity, object) || hasDirtyCollection(entity, object);
+    }
+
+    // Whether Hibernate takes an object outside the session for a new one as a save cascades to it. The identifier and
+    // the version of the object tell, except for one with an assigned identifier and no version, which it looks up in
+    // the database.
+    private static boolean isTransient(EntityPersister persister, Object object, SessionImplementor session) {
+        Boolean isTransient = persister.isTransient(object, session);
+        if (isTransient != null) {
+            return isTransient;
+        }
+        return session.getPersistenceContext().getDatabaseSnapshot(persister.getIdentifier(object, session), persister) == null;
+    }
+
+    // Whether a save reaches an object outside the session through the association. The owner of an association inside
+    // an embedded object has no persister, so such an association is taken to cascade.
+    private static boolean cascadesSave(SessionFactoryImplementor sessionFactory, Association association) {
+        EntityPersister owner = sessionFactory.getMetamodel().entityPersisters().get(association.getOwner().getName());
+        Integer index = owner != null ? owner.getEntityMetamodel().getPropertyIndexOrNull(association.getName()) : null;
+        return index == null || owner.getPropertyCascadeStyles()[index].doCascade(CascadingActions.SAVE_UPDATE);
+    }
+
+    private static SessionImplementor currentSession(AbstractHibernateDatastore hibernateDatastore) {
+        if (!hibernateDatastore.hasCurrentSession()) {
+            return null;
+        }
+        return (SessionImplementor) hibernateDatastore.getSessionFactory().getCurrentSession();
+    }
+
+    // Whether the object has a change that makes Hibernate update its row. GrailsEntityDirtinessStrategy reports the
+    // properties that have changed, and the lastUpdated property of any changed object. A change to a property that
+    // Hibernate does not map, such as an untyped one, makes no update. An object that has changed without a changed
+    // property is new, or is changed as a whole.
+    private static boolean hasStoredChange(EntityPersister persister, DirtyCheckable object) {
+        if (!object.hasChanged()) {
+            return false;
+        }
+        List<String> changed = object.listDirtyPropertyNames();
+        if (changed.isEmpty() || updatesRow(persister, GormProperties.LAST_UPDATED)) {
+            return true;
+        }
+        for (String name : changed) {
+            if (updatesRow(persister, name)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    // A reported property makes Hibernate update the row when the object has a version, which Hibernate increments for
+    // the change, or when the property is updateable, which a formula or a collection is not. The update then writes
+    // every updateable column.
+    private static boolean updatesRow(EntityPersister persister, String propertyName) {
+        Integer index = persister.getEntityMetamodel().getPropertyIndexOrNull(propertyName);
+        return index != null && (persister.isVersioned() || persister.getPropertyUpdateability()[index]);
+    }
+
+    // Hibernate updates a versioned object when one of its collections has changed, to increment its version
+    private static boolean hasDirtyCollection(PersistentEntity entity, Object object) {
+        if (!entity.isVersioned()) {
+            return false;
+        }
+        EntityReflector reflector = entity.getReflector();
+        for (Association association : entity.getAssociations()) {
+            if (association instanceof ToMany) {
+                Object value = reflector.getProperty(object, association.getName());
+                if (value instanceof PersistentCollection && ((PersistentCollection) value).isDirty()) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    private void handleEvent(ApplicationEvent event) {
         if (supportsEventType(event.getClass())) {
             Datastore hibernateDatastore = (Datastore) event.getSource();
             if (event instanceof PreQueryEvent) {
