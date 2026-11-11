@@ -4954,3 +4954,14 @@ The `-XX:+/-UseCompressedClassPointers` flag is deprecated in Java 25 and become
 Dropping it changes the memory layout, and from JDK 27 compressed class pointers are always on, whether or not the flag is there.
 
 See <<java25-memory,Metaspace and Off-Heap Memory>> in the deployment guide for full details, including a systemd service unit example.
+
+==== 92. An Exception an Action Throws Is Recorded on the HTTP Server Observation
+
+As of Grails 8.0.1, an exception an action throws is recorded as an error on the observation of the request.
+
+* When an error view answered, as the `"500"(view: '/error')` mapping of a generated application does, `http.server.requests` tagged the 500 with `error` and `exception` values of `none`, and tracing did not see a failure.
+* A `500` mapping to a controller tagged it with `GrailsWrappedRuntimeException` and with the `uri` of that controller, so every failure it answered looked like the same route.
+* Both now report the exception the action threw and the route of the action, and the span of the request is marked as failed. That includes an `Error`, such as a failed `assert`, rather than the `ServletException` Spring MVC wraps it in. A client error is not recorded, and neither is a failure inside `g:include`, whose error page is rendered inside a page that goes on to answer the request.
+* After a forward to an error controller, the `jakarta.servlet.error.exception` request attribute holds the exception the action threw rather than a `GrailsWrappedRuntimeException`, for a filter that reads it once the chain has returned. Inside the error controller it still holds the wrapper.
+* These requests were already counted with `outcome=SERVER_ERROR`, but an alert that counts a non-`none` `error` value will see more server errors than before, and a dashboard that reads the `uri` of an error controller will find those failures under the routes of the actions.
+* The route is now set before the Grails interceptors run, so that a failure in one is reported under the route of the action. An interceptor whose `before()` returns `false`, to render a 403 or to redirect, stopped the request before its route was set, so the request was reported with a `uri` of `UNKNOWN`, or `REDIRECTION` for a redirect. It is now reported under the route of the action, so a dashboard or alert keyed on those `uri` values sees those requests move.
