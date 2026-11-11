@@ -32,6 +32,7 @@ import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
 import org.grails.orm.hibernate.cfg.PropertyConfig;
 import org.grails.orm.hibernate.cfg.domainbinding.binder.ColumnConfigToColumnBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.binder.SimpleValueColumnBinder;
+import org.grails.orm.hibernate.cfg.domainbinding.binder.StringColumnConstraintsBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyCollectionProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.util.SimpleValueColumnFetcher;
@@ -46,6 +47,7 @@ public class MapSecondPassBinder {
     private final SimpleValueColumnBinder simpleValueColumnBinder;
     private final ColumnConfigToColumnBinder columnConfigToColumnBinder;
     private final SimpleValueColumnFetcher simpleValueColumnFetcher;
+    private final StringColumnConstraintsBinder stringColumnConstraintsBinder = new StringColumnConstraintsBinder();
 
     public MapSecondPassBinder(
             MetadataBuildingContext metadataBuildingContext,
@@ -87,11 +89,28 @@ public class MapSecondPassBinder {
             String columnName = collectionProperty.getMapElementName(namingStrategy);
             BasicValue elt = simpleValueColumnBinder.bindSimpleValue(
                     metadataBuildingContext, map.getCollectionTable(), typeName, columnName, false);
+            bindElementColumn(collectionProperty, elt, typeName);
             map.setElement(elt);
         }
 
         map.setInverse(false);
         collectionSecondPassBinder.createCollectionKeys(property);
+    }
+
+    /**
+     * Applies what the mapping says about the property to the column of the values of the map, as is done for the
+     * elements of a list: the length from {@code maxSize}, or an unbounded text column for type {@code text}.
+     */
+    private void bindElementColumn(HibernateToManyCollectionProperty property, BasicValue element, String typeName) {
+        PropertyConfig mappedForm = property.getHibernateMappedForm();
+        if (mappedForm == null) {
+            return;
+        }
+        Column column = simpleValueColumnFetcher.getColumnForSimpleValue(element);
+        if (column == null) {
+            return;
+        }
+        stringColumnConstraintsBinder.bindStringColumnConstraints(column, mappedForm, typeName);
     }
 
     ColumnConfig getSingleColumnConfig(PropertyConfig propertyConfig) {
