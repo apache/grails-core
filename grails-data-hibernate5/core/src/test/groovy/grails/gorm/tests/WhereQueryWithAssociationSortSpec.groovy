@@ -20,44 +20,601 @@ package grails.gorm.tests
 
 import org.apache.grails.data.hibernate5.core.GrailsDataHibernate5TckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
-import org.hibernate.QueryException
+import org.hibernate.Hibernate
 import spock.lang.Issue
 
-/**
- * Created by graemerocher on 03/11/16.
- */
+import jakarta.persistence.criteria.JoinType
+
 class WhereQueryWithAssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManager> {
+
     void setupSpec() {
-        manager.domainClasses.addAll([Club, Team])
+        manager.domainClasses.addAll([Club, Team, Player, Contract])
+    }
+
+    void setup() {
+        final manUtd = new Club(name: 'Manchester United').save()
+        final arsenal = new Club(name: 'Arsenal').save()
+        final chelsea = new Club(name: 'Chelsea').save()
+        final manUtdTeam = new Team(club: manUtd, name: 'MU First Team').save()
+        final arsenalTeam = new Team(club: arsenal, name: 'Arsenal First Team').save()
+        final chelseaTeam = new Team(club: chelsea, name: 'Chelsea First Team').save()
+        savePlayer('MU Player', manUtdTeam)
+        savePlayer('Arsenal Player', arsenalTeam)
+        savePlayer('Chelsea Player', chelseaTeam)
+    }
+
+    private static void savePlayer(String name, Team team) {
+        final player = new Player(name: name, team: team)
+        player.contract = new Contract(salary: 1000G, player: player)
+        player.save(failOnError: true, flush: true)
+    }
+
+    private static void saveTeamWithoutClub() {
+        savePlayer('Unattached Player', new Team(name: 'Unattached First Team').save(failOnError: true))
+    }
+
+    private void saveSquad() {
+        final squad = new Team(club: Club.findByName('Arsenal'), name: 'Squad').save(failOnError: true)
+        ['Squad Player A', 'Squad Player B', 'Squad Player C'].each { savePlayer(it, squad) }
+        manager.session.clear()
+    }
+
+    /**
+     * Saves players whose order differs by each property on the sort path: by the name and the
+     * identifier of the club of their team, by the name of their team, and by their own name, which
+     * is also the order in which they are saved.
+     */
+    private void savePlayersInDistinctOrders() {
+        final clubA = new Club(name: 'Order club A').save(failOnError: true)
+        final clubC = new Club(name: 'Order club C').save(failOnError: true)
+        final clubB = new Club(name: 'Order club B').save(failOnError: true)
+        final teamZ = new Team(club: clubB, name: 'Order team Z').save(failOnError: true)
+        final teamY = new Team(club: clubA, name: 'Order team Y').save(failOnError: true)
+        final teamX = new Team(club: clubC, name: 'Order team X').save(failOnError: true)
+        savePlayer('Order player 1', teamZ)
+        savePlayer('Order player 2', teamY)
+        savePlayer('Order player 3', teamX)
+        manager.session.clear()
+    }
+
+    void '#api sorted by #sort orders by the club, not by the team or the player'() {
+        given:
+        savePlayersInDistinctOrders()
+
+        expect:
+        query.call()*.name == expected
+
+        where:
+        api                                       | sort             | query                                                                                                    || expected
+        'a where query'                           | 'team.club.name' | { Player.where { name ==~ 'Order%' }.list(sort: 'team.club.name') }                                     || ['Order player 2', 'Order player 1', 'Order player 3']
+        'a where query'                           | 'team.club.id'   | { Player.where { name ==~ 'Order%' }.list(sort: 'team.club.id') }                                       || ['Order player 2', 'Order player 3', 'Order player 1']
+        'a where query with criteria on the team' | 'team.club.name' | { Player.where { team.name ==~ 'Order%' }.list(sort: 'team.club.name') }                                || ['Order player 2', 'Order player 1', 'Order player 3']
+        'a where query with criteria on the team' | 'team.club.id'   | { Player.where { team.name ==~ 'Order%' }.list(sort: 'team.club.id') }                                  || ['Order player 2', 'Order player 3', 'Order player 1']
+        'a where query through an alias'          | 't.club.id'      | { Player.where { final t = team; t.name ==~ 'Order%' }.list(sort: 't.club.id') }                         || ['Order player 2', 'Order player 3', 'Order player 1']
+        'a dynamic finder'                        | 'team.club.name' | { Player.findAllByNameLike('Order%', [sort: 'team.club.name']) }                                        || ['Order player 2', 'Order player 1', 'Order player 3']
+        'a paged criteria query'                  | 'team.club.name' | { Player.createCriteria().list(sort: 'team.club.name', max: 10) { like('name', 'Order%') } }             || ['Order player 2', 'Order player 1', 'Order player 3']
+        'a paged criteria query'                  | 'team.club.id'   | { Player.createCriteria().list(sort: 'team.club.id', max: 10) { like('name', 'Order%') } }               || ['Order player 2', 'Order player 3', 'Order player 1']
+        'order in a criteria query'               | 'team.club.name' | { Player.createCriteria().list { like('name', 'Order%'); order('team.club.name') } }                     || ['Order player 2', 'Order player 1', 'Order player 3']
+        'order in a criteria query'               | 'team.club.id'   | { Player.createCriteria().list { like('name', 'Order%'); order('team.club.id') } }                       || ['Order player 2', 'Order player 3', 'Order player 1']
+    }
+
+    @Issue(['https://github.com/apache/grails-core/issues/9860', 'https://github.com/apache/grails-core/issues/15589'])
+    void 'sort by an association property that is also used in the where query'() {
+        when:
+        final results = Team.where {
+            club.name ==~ '%e%'
+        }.list(sort: 'club.name', order: direction)
+
+        then:
+        results*.name == expected
+
+        where:
+        direction || expected
+        'asc'     || ['Arsenal First Team', 'Chelsea First Team', 'MU First Team']
+        'desc'    || ['MU First Team', 'Chelsea First Team', 'Arsenal First Team']
+    }
+
+    @Issue('https://github.com/apache/grails-core/issues/15589')
+    void 'sort by an association property using a sort map when the where query uses the association'() {
+        when:
+        final results = Team.where {
+            club.name != 'Chelsea'
+        }.list(sort: ['club.name': 'desc'])
+
+        then:
+        results*.name == ['MU First Team', 'Arsenal First Team']
+    }
+
+    @Issue('https://github.com/apache/grails-core/issues/15589')
+    void 'sort by an association property when a chained where query uses the association'() {
+        given:
+        var query = Team.where {}
+        query = query.where { club.name != 'Chelsea' }
+
+        when:
+        final results = query.list(sort: 'club.name', fetch: [club: 'join'])
+
+        then:
+        results*.name == ['Arsenal First Team', 'MU First Team']
+    }
+
+    @Issue('https://github.com/apache/grails-core/issues/15589')
+    void 'sort by an association id when the where query uses the association'() {
+        given:
+        final expected = Team.list().sort { it.club.id }.reverse()*.name
+
+        when:
+        final results = Team.where {
+            club.name ==~ '%e%'
+        }.list(sort: 'club.id', order: 'desc')
+
+        then:
+        results*.name == expected
     }
 
     @Issue('https://github.com/apache/grails-core/issues/9860')
-    void "Test sort with where query that queries association"() {
-        given:"some test data"
-        def c = new Club(name: "Manchester United").save()
-        def t = new Team(club: c, name: "MU First Team").save()
-        def c2 = new Club(name: "Arsenal").save()
-        def t2 = new Team(club: c2, name: "Arsenal First Team").save(flush:true)
-
-        when:"a where query uses a sort on an association"
-        def results = Team.where {
-            club.name == "Manchester United"
-        }.list(sort:'club.name')
-
-
-        then:"an exception is thrown because no alias is specified"
-        thrown QueryException
-
-
-        when:"a where query uses a sort on an association"
-        results = Team.where {
-            def c1 = club
+    void 'sort by an explicit association alias defined in the where query'() {
+        when:
+        final results = Team.where {
+            final c1 = club
             c1.name ==~ '%e%'
-        }.list(sort:'c1.name')
+        }.list(sort: 'c1.name')
 
+        then:
+        results*.name == ['Arsenal First Team', 'Chelsea First Team', 'MU First Team']
+    }
 
-        then:"an exception is thrown because no alias is specified"
+    void 'sort by an association property when the where query does not use the association'() {
+        when:
+        final results = Team.where {
+            name ==~ '%First%'
+        }.list(sort: 'club.name', order: 'desc')
+
+        then:
+        results*.name == ['MU First Team', 'Chelsea First Team', 'Arsenal First Team']
+    }
+
+    void 'sort by two properties of the same association when the where query does not use it'() {
+        when:
+        final results = Team.where {
+            name ==~ '%First%'
+        }.list(sort: ['club.name': 'desc', 'club.id': 'asc'])
+
+        then:
+        results*.name == ['MU First Team', 'Chelsea First Team', 'Arsenal First Team']
+    }
+
+    void 'sort by a nested association property when the where query uses the nested association'() {
+        when:
+        final results = Player.where {
+            team.club.name ==~ '%e%'
+        }.list(sort: 'team.club.name', order: direction)
+
+        then:
+        results*.name == expected
+
+        where:
+        direction || expected
+        'asc'     || ['Arsenal Player', 'Chelsea Player', 'MU Player']
+        'desc'    || ['MU Player', 'Chelsea Player', 'Arsenal Player']
+    }
+
+    void 'sort by a nested association property when the where query uses only the first association'() {
+        when:
+        final results = Player.where {
+            team.name ==~ '%First%'
+        }.list(sort: 'team.club.name', order: 'desc')
+
+        then:
+        results*.name == ['MU Player', 'Chelsea Player', 'Arsenal Player']
+    }
+
+    void 'sort by a nested association property when the where query does not use the association'() {
+        when:
+        final results = Player.where {
+            name ==~ '%Player%'
+        }.list(sort: 'team.club.name')
+
+        then:
+        results*.name == ['Arsenal Player', 'Chelsea Player', 'MU Player']
+    }
+
+    void 'sort by a nested association property through an explicit alias'() {
+        when:
+        final results = Player.where {
+            final t = team
+            t.name ==~ '%First%'
+        }.list(sort: 't.club.name')
+
+        then:
+        results*.name == ['Arsenal Player', 'Chelsea Player', 'MU Player']
+    }
+
+    void 'sort by #sort keeps a team without a club'() {
+        given:
+        saveTeamWithoutClub()
+
+        when:
+        final results = Team.where {
+            name ==~ '%First%'
+        }.list(sort: sort)
+
+        then: 'the association is joined with a left join'
+        'Unattached First Team' in results*.name
+
+        and: 'the other teams are sorted by their club'
+        results*.name - 'Unattached First Team' == expected
+
+        where:
+        sort        || expected
+        'club.name' || ['Arsenal First Team', 'Chelsea First Team', 'MU First Team']
+        'club.id'   || ['MU First Team', 'Arsenal First Team', 'Chelsea First Team']
+    }
+
+    void 'sort by an association property joins the association with the join type that fetch requests'() {
+        given:
+        saveTeamWithoutClub()
+
+        when:
+        final results = Team.where {
+            name ==~ '%First%'
+        }.list(sort: 'club.name', fetch: [club: joinType])
+
+        then:
+        ('Unattached First Team' in results*.name) == kept
+        results*.name - 'Unattached First Team' == ['Arsenal First Team', 'Chelsea First Team', 'MU First Team']
+
+        where:
+        joinType       || kept
+        JoinType.LEFT  || true
+        JoinType.INNER || false
+    }
+
+    void 'a sort stored on the query keeps a team without a club'() {
+        given:
+        saveTeamWithoutClub()
+
+        when:
+        final results = Team.where {
+            name ==~ '%First%'
+        }.sort('club.name').list()
+
+        then:
+        'Unattached First Team' in results*.name
+        results*.name - 'Unattached First Team' == ['Arsenal First Team', 'Chelsea First Team', 'MU First Team']
+    }
+
+    void 'a sort stored on the query joins the association with the join type that fetch requests'() {
+        given:
+        saveTeamWithoutClub()
+
+        when: 'the join type is requested after the sort is stored'
+        final results = Team.where {
+            name ==~ '%First%'
+        }.sort('club.name').list(fetch: [club: joinType])
+
+        then:
+        ('Unattached First Team' in results*.name) == kept
+        results*.name - 'Unattached First Team' == ['Arsenal First Team', 'Chelsea First Team', 'MU First Team']
+
+        where:
+        joinType       || kept
+        JoinType.LEFT  || true
+        JoinType.INNER || false
+    }
+
+    void 'a sort stored on the query leaves out the only match when fetch requests an inner join'() {
+        given:
+        saveTeamWithoutClub()
+
+        when:
+        final results = Team.where {
+            name == 'Unattached First Team'
+        }.sort('club.name').list(fetch: [club: JoinType.INNER])
+
+        then:
+        results.empty
+    }
+
+    void 'a paged list with a sort stored on the query counts the rows of the join type that fetch requests'() {
+        given:
+        saveTeamWithoutClub()
+
+        when:
+        final results = Team.where {
+            name ==~ '%First%'
+        }.sort('club.name').list(max: 2, fetch: [club: joinType])
+
+        then:
         results.size() == 2
-        results.first().name == "Arsenal First Team"
+        results.totalCount == totalCount
+
+        where:
+        joinType       || totalCount
+        JoinType.LEFT  || 4
+        JoinType.INNER || 3
+    }
+
+    void 'find with a sort stored on the query joins the association with the join type that fetch requests'() {
+        given:
+        saveTeamWithoutClub()
+
+        when:
+        final result = Team.where {
+            name == 'Unattached First Team'
+        }.sort('club.name').find(arguments)
+
+        then:
+        (result != null) == found
+
+        where:
+        arguments                      || found
+        [:]                            || true
+        [fetch: [club: JoinType.LEFT]] || true
+        [fetch: [club: JoinType.INNER]] || false
+    }
+
+    void 'a nested sort stored on the query joins the association with the join type that fetch requests'() {
+        given:
+        saveTeamWithoutClub()
+
+        when:
+        final results = Player.where {
+            name ==~ '%Player%'
+        }.sort('team.club.name').list(fetch: ['team.club': joinType])
+
+        then:
+        ('Unattached Player' in results*.name) == kept
+        results*.name - 'Unattached Player' == ['Arsenal Player', 'Chelsea Player', 'MU Player']
+
+        where:
+        joinType       || kept
+        JoinType.LEFT  || true
+        JoinType.INNER || false
+    }
+
+    void 'a sort stored on the query does not change the join of a criterion that list adds'() {
+        given:
+        saveTeamWithoutClub()
+
+        when: 'a left join would let the criterion match the team without a club'
+        final query = Team.where {
+            name ==~ '%First%'
+        }
+        final additionalCriteria = {
+            club {
+                isNull('name')
+            }
+        }
+
+        then: 'the criterion joins the club with an inner join, with and without the sort'
+        query.list(additionalCriteria).empty
+        query.sort('club.name').list(additionalCriteria).empty
+    }
+
+    void 'a nested sort stored on the query does not change the joins of criteria that list adds'() {
+        given:
+        saveTeamWithoutClub()
+
+        when: 'left joins would let the criterion match the player whose team has no club'
+        final query = Player.where {
+            name ==~ '%Player%'
+        }
+        final additionalCriteria = {
+            team {
+                club {
+                    isNull('name')
+                }
+            }
+        }
+
+        then: 'the criteria join the team and the club with inner joins, with and without the sort'
+        query.list(additionalCriteria).empty
+        query.sort('team.club.name').list(additionalCriteria).empty
+    }
+
+    void 'sort by an association property leaves out a team without a club when a criterion requires a club'() {
+        given:
+        saveTeamWithoutClub()
+
+        when:
+        final results = Team.where {
+            club != null
+        }.list(sort: 'club.name')
+
+        then:
+        results*.name == ['Arsenal First Team', 'Chelsea First Team', 'MU First Team']
+    }
+
+    void 'a paged list sorted by an association property counts the rows without the association'() {
+        given:
+        saveTeamWithoutClub()
+
+        when:
+        final results = Team.where {
+            name ==~ '%First%'
+        }.list(sort: 'club.name', max: 2)
+
+        then:
+        results.size() == 2
+        results.totalCount == 4
+    }
+
+    void 'sort by #sort #direction keeps a player whose team has no club'() {
+        given:
+        saveTeamWithoutClub()
+
+        when:
+        final results = Player.where {
+            name ==~ '%Player%'
+        }.list(sort: sort, order: direction)
+
+        then:
+        'Unattached Player' in results*.name
+
+        and: 'the other players are sorted by the club of their team'
+        results*.name - 'Unattached Player' == expected
+
+        where:
+        sort             | direction || expected
+        'team.club.id'   | 'asc'     || ['MU Player', 'Arsenal Player', 'Chelsea Player']
+        'team.club.id'   | 'desc'    || ['Chelsea Player', 'Arsenal Player', 'MU Player']
+        'team.club.name' | 'asc'     || ['Arsenal Player', 'Chelsea Player', 'MU Player']
+        'team.club.name' | 'desc'    || ['MU Player', 'Chelsea Player', 'Arsenal Player']
+    }
+
+    void 'sort by a nested association id through an explicit alias keeps a player whose team has no club'() {
+        given:
+        saveTeamWithoutClub()
+
+        when:
+        final results = Player.where {
+            final t = team
+            t.name ==~ '%First%'
+        }.list(sort: 't.club.id')
+
+        then:
+        'Unattached Player' in results*.name
+        results*.name - 'Unattached Player' == ['MU Player', 'Arsenal Player', 'Chelsea Player']
+    }
+
+    void 'sort by a nested association id keeps a player whose team has no club when the where query uses the first association'() {
+        given:
+        saveTeamWithoutClub()
+
+        when:
+        final results = Player.where {
+            team.name ==~ '%First%'
+        }.list(sort: 'team.club.id')
+
+        then:
+        'Unattached Player' in results*.name
+        results*.name - 'Unattached Player' == ['MU Player', 'Arsenal Player', 'Chelsea Player']
+    }
+
+    void 'sort by the id of a nested hasOne association'() {
+        when:
+        final results = Contract.where {
+            salary > 0
+        }.list(sort: 'player.contract.id', order: 'desc')
+
+        then:
+        results*.player*.name == ['Chelsea Player', 'Arsenal Player', 'MU Player']
+    }
+
+    void 'a sort stored on the query can be combined with criteria that list adds through an alias'() {
+        given:
+        final query = Team.where {
+            name ==~ '%First%'
+        }
+
+        when: 'the sort is by the association path, and by the alias that the criteria define'
+        final byPath = query.sort('club.name').list {
+            createAlias('club', 'c')
+            like('c.name', '%e%')
+        }
+        final byAlias = query.sort('c.name', 'desc').list {
+            createAlias('club', 'c')
+            like('c.name', '%e%')
+        }
+
+        then: 'the sort uses the join of the alias'
+        byPath*.name == ['Arsenal First Team', 'Chelsea First Team', 'MU First Team']
+        byAlias*.name == ['MU First Team', 'Chelsea First Team', 'Arsenal First Team']
+    }
+
+    void 'criteria on a nested association can be used more than once'() {
+        when:
+        final results = Player.where {
+            team.club.name ==~ '%e%' && team.club.name != 'Chelsea'
+        }.list(sort: 'team.club.name')
+
+        then:
+        results*.name == ['Arsenal Player', 'MU Player']
+    }
+
+    void 'sort by a property of a collection keeps a team without players'() {
+        given:
+        new Team(club: Club.findByName('Arsenal'), name: 'Playerless First Team').save(failOnError: true, flush: true)
+
+        when:
+        final results = Team.where {
+            name ==~ '%First%'
+        }.list(sort: 'players.name')
+
+        then:
+        'Playerless First Team' in results*.name
+        results*.name - 'Playerless First Team' == ['Arsenal First Team', 'Chelsea First Team', 'MU First Team']
+    }
+
+    void 'a paged list sorted by a property of a collection does not fetch the collection'() {
+        given:
+        saveSquad()
+
+        when:
+        final results = Team.where {
+            name == 'Squad'
+        }.list(sort: 'players.name', max: 2)
+
+        then: 'the row limit does not leave players out of the collection'
+        results*.name == ['Squad']
+        !Hibernate.isInitialized(results.first().players)
+        results.first().players.size() == 3
+    }
+
+    void 'a sort by a property of a collection that is stored on the query does not fetch the collection'() {
+        given:
+        saveSquad()
+        final query = Team.where {
+            name == 'Squad'
+        }.sort('players.name')
+
+        when:
+        final listed = query.list(max: 2).first()
+
+        then:
+        !Hibernate.isInitialized(listed.players)
+        listed.players.size() == 3
+
+        when:
+        manager.session.clear()
+        final found = query.find()
+
+        then:
+        !Hibernate.isInitialized(found.players)
+        found.players.size() == 3
+    }
+
+    void 'sort by a property of a collection fetches the collection when fetch requests #fetch'() {
+        given:
+        saveSquad()
+
+        when:
+        final results = Team.where {
+            name == 'Squad'
+        }.list(sort: 'players.name', fetch: [players: fetch])
+
+        then:
+        results*.name == ['Squad']
+        Hibernate.isInitialized(results.first().players)
+        results.first().players.size() == 3
+
+        where:
+        fetch << ['join', JoinType.LEFT, JoinType.INNER, JoinType.RIGHT]
+    }
+
+    void 'sort by a property of a collection of an association does not fetch the collection'() {
+        given:
+        saveSquad()
+
+        when:
+        final results = Player.where {
+            name == 'Squad Player A'
+        }.list(sort: 'team.players.name', max: 2)
+
+        then:
+        results*.name == ['Squad Player A']
+        !Hibernate.isInitialized(results.first().team.players)
+        results.first().team.players.size() == 3
     }
 }
