@@ -40,9 +40,7 @@ class SqlRestrictionHibernate7Spec extends HibernateGormDatastoreSpec {
 
     void "sqlRestriction works with #db"() {
         given:
-        if (container != null && !container.isRunning()) {
-            container.start()
-        }
+        DatabaseContainers.start(container)
         manager.destroy()
         manager.grailsConfig = [
                 'dataSource.url'            : container?.jdbcUrl ?: 'jdbc:h2:mem:sqlRestrictionDB;LOCK_TIMEOUT=10000',

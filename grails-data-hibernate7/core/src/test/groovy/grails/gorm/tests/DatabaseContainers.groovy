@@ -21,6 +21,9 @@ package grails.gorm.tests
 import java.time.Duration
 
 import groovy.transform.CompileStatic
+import org.opentest4j.TestAbortedException
+import org.testcontainers.containers.ContainerFetchException
+import org.testcontainers.containers.GenericContainer
 import org.testcontainers.db2.Db2Container
 import org.testcontainers.mariadb.MariaDBContainer
 import org.testcontainers.mysql.MySQLContainer
@@ -60,6 +63,46 @@ final class DatabaseContainers {
             .acceptLicense()
             .withStartupTimeout(Duration.ofMinutes(10))
 
+    private static ContainerFetchException db2FetchFailure
+
     private DatabaseContainers() {
+    }
+
+    /**
+     * Starts the container of a row unless it is running already. A row without a container runs on H2.
+     * <p>
+     * The Db2 image comes from IBM's registry, icr.io, which the Docker daemon of some GitHub-hosted runners cannot
+     * reach at all, for as long as the job runs. There the Db2 rows are skipped, as they are on arm64, instead of
+     * failing the job: the other jobs of the run still run them. The image is fetched once per test JVM, before the
+     * container is started: {@code start()} retries a failing fetch for two minutes and then once more while it builds
+     * its error message, and every later Db2 row would wait as long again.
+     *
+     * @param container the container of the row, or {@code null} for H2
+     * @throws TestAbortedException if the container is Db2 and its image cannot be fetched
+     */
+    static void start(GenericContainer container) {
+        if (container == null || container.running) {
+            return
+        }
+        if (container.is(DB2)) {
+            fetchDb2Image()
+        }
+        container.start()
+    }
+
+    private static synchronized void fetchDb2Image() {
+        if (db2FetchFailure == null) {
+            try {
+                // Pulls the image unless Docker has it; the container keeps the name, so start() does not pull again
+                DB2.dockerImageName
+            } catch (ContainerFetchException e) {
+                db2FetchFailure = e
+            }
+        }
+        if (db2FetchFailure != null) {
+            throw new TestAbortedException(
+                    "The Db2 image could not be fetched, so the Db2 rows are skipped: ${db2FetchFailure.message}",
+                    db2FetchFailure)
+        }
     }
 }
