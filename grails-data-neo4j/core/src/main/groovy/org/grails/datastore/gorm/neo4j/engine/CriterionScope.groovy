@@ -28,6 +28,7 @@ import org.grails.datastore.mapping.model.PersistentProperty
 import org.grails.datastore.mapping.model.types.Association
 import org.grails.datastore.mapping.model.types.Basic
 import org.grails.datastore.mapping.model.types.Embedded
+import org.grails.datastore.mapping.model.types.ToOne
 import org.grails.datastore.mapping.query.AssociationQuery
 
 /**
@@ -123,6 +124,13 @@ final class CriterionScope {
             if (entity.isRelationshipEntity() && RelationshipPersistentEntity.isRelationshipAssociation(association)) {
                 return associated.formatId(association.name)
             }
+            if (builder.inDisjunction && found instanceof ToOne) {
+                // in a disjunction the node reached is read where it stands: a match would drop the nodes that have
+                // none before the other branches could keep them, and a missing node is a null the branch does not match
+                String local = "e_${builder.nextLocalNumber()}"
+                String pattern = entity.formatAssociationPatternFromExisting(association, '', variable, local)
+                return "head([${pattern} | ${associated.formatId(local)}])".toString()
+            }
             String target = "m_${builder.getNextMatchNumber()}"
             builder.addMatch(entity.formatAssociationPatternFromExisting(association, '', variable, target))
             // the node reached is of the associated entity, whose identity may be mapped differently
@@ -165,26 +173,52 @@ final class CriterionScope {
      * scope is the relationship entity, and its variable is recorded as a relationship.
      */
     CriterionScope into(AssociationQuery block) {
-        Association association = block.association
         String target = "m_${builder.getNextMatchNumber()}"
-        String variable = target
+        String secondTarget = "m_${builder.getNextMatchNumber() + 1}"
+        Existence block1 = blockScope(block, target, secondTarget)
+        builder.addMatch(block1.pattern)
+        block1.scope
+    }
+
+    /**
+     * The scope of the block of an association that is tested for where it stands, as a block in a disjunction is,
+     * with the pattern to look for. Nothing is added to the matches of the query: the variables are local to the test.
+     */
+    Existence intoExistence(AssociationQuery block) {
+        blockScope(block, "e_${builder.nextLocalNumber()}", "e_${builder.nextLocalNumber()}")
+    }
+
+    private Existence blockScope(AssociationQuery block, String variable, String secondVariable) {
+        Association association = block.association
+        String target = variable
         String relationship = ''
         boolean viaRelationship = block.entity instanceof RelationshipPersistentEntity
         if (viaRelationship) {
             relationship = "$variable:${(block.entity as RelationshipPersistentEntity).type()}"
-            target = "m_${builder.getNextMatchNumber() + 1}"
+            target = secondVariable
         }
-        builder.addMatch(entity.formatAssociationPatternFromExisting(association, relationship, this.variable, target))
+        String pattern = entity.formatAssociationPatternFromExisting(association, relationship, this.variable, target)
         if (viaRelationship) {
             RelationshipPersistentEntity relationshipEntity = (RelationshipPersistentEntity) block.entity
             builder.addRelationshipVariable(variable, relationshipEntity)
             // the node that owns the block is the end its entity is the relationship's, unless it is the other way round
             boolean incoming = entity.is(relationshipEntity.to.associatedEntity) && !entity.is(relationshipEntity.from.associatedEntity)
-            return new CriterionScope(relationshipEntity, builder, variable,
-                    incoming ? target : this.variable, incoming ? this.variable : target)
+            return new Existence(pattern, new CriterionScope(relationshipEntity, builder, variable,
+                    incoming ? target : this.variable, incoming ? this.variable : target))
         }
         PersistentEntity associated = association.associatedEntity
         GraphPersistentEntity nested = associated instanceof GraphPersistentEntity ? (GraphPersistentEntity) associated : entity
-        new CriterionScope(nested, builder, variable)
+        new Existence(pattern, new CriterionScope(nested, builder, variable))
+    }
+
+    /** A pattern to look for, and the scope of the criteria about what it finds. */
+    static final class Existence {
+        final String pattern
+        final CriterionScope scope
+
+        Existence(String pattern, CriterionScope scope) {
+            this.pattern = pattern
+            this.scope = scope
+        }
     }
 }

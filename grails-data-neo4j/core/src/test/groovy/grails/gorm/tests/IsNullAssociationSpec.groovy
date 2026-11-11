@@ -184,15 +184,16 @@ class IsNullAssociationSpec extends Neo4jGormDatastoreSpec {
     void "a null test on a scalar of a relationship entity block tests the relationship's property, not the node's association of that name"() {
         given: 'a mate with a spouse association, and bonds whose own spouse property is a plain string'
         NullTestMate spouse = new NullTestMate(name: 'spouse').save(flush: true, failOnError: true)
-        NullTestMate owner = new NullTestMate(name: 'owner', spouse: spouse).save(flush: true, failOnError: true)
+        NullTestMate withBond = new NullTestMate(name: 'with-set', spouse: spouse).save(flush: true, failOnError: true)
+        NullTestMate withoutValue = new NullTestMate(name: 'with-unset').save(flush: true, failOnError: true)
         NullTestMate friend = new NullTestMate(name: 'friend').save(flush: true, failOnError: true)
-        new NullTestBond(from: owner, to: friend, spouse: 'set').save(flush: true)
-        new NullTestBond(from: owner, to: spouse).save(flush: true)
+        new NullTestBond(from: withBond, to: friend, spouse: 'set').save(flush: true)
+        new NullTestBond(from: withoutValue, to: friend).save(flush: true)
         NullTestMate.withSession { it.clear() }
 
-        expect:
-        NullTestMate.createCriteria().list { connections { isNull('spouse') } }*.name == ['spouse']
-        NullTestMate.createCriteria().list { connections { isNotNull('spouse') } }*.name == ['friend']
+        expect: 'the mates that have the bonds, as the connections of an instance are the bonds it starts'
+        NullTestMate.createCriteria().list { connections { isNull('spouse') } }*.name == ['with-unset']
+        NullTestMate.createCriteria().list { connections { isNotNull('spouse') } }*.name == ['with-set']
     }
 
     void "a null test on an association to a relationship entity looks for that relationship type only"() {
@@ -202,11 +203,11 @@ class IsNullAssociationSpec extends Neo4jGormDatastoreSpec {
         new NullTestFeud(from: a, to: b).save(flush: true)
         NullTestMate.withSession { it.clear() }
 
-        expect: 'a relationship of another type is not a relationship of the association, and the feud is followed to its target'
+        expect: 'a relationship of another type is not a relationship of the association, and the feud is followed from its origin'
         NullTestMate.createCriteria().list { isNotNull('connections') }.isEmpty()
         names(NullTestMate.createCriteria().list { isNull('connections') }) == ['a', 'b']
-        names(NullTestMate.createCriteria().list { isNotNull('feuds') }) == ['b']
-        names(NullTestMate.createCriteria().list { isNull('feuds') }) == ['a']
+        names(NullTestMate.createCriteria().list { isNotNull('feuds') }) == ['a']
+        names(NullTestMate.createCriteria().list { isNull('feuds') }) == ['b']
     }
 
     private static List<String> names(List<?> entities) {

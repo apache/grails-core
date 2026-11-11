@@ -68,6 +68,8 @@ public class CypherBuilder {
     private final List<String> matches = new ArrayList<>();
     private final List<String> relationshipMatches = new ArrayList<>();
     private final List<String> optionalMatches = new ArrayList<String>();
+    private int disjunctionDepth;
+    private int localNumber;
     private String conditions;
     private String orderAndLimits;
     private final List<String> returnColumns = new ArrayList<String>();
@@ -187,6 +189,33 @@ public class CypherBuilder {
 
     public int getNextMatchNumber() {
         return matches.size();
+    }
+
+    /**
+     * Marks the start of a disjunction: a criterion in it must not narrow the rows the other branches see, so it
+     * tests for what it needs where it stands and adds no match to the query.
+     */
+    public void enterDisjunction() {
+        disjunctionDepth++;
+    }
+
+    public void leaveDisjunction() {
+        disjunctionDepth--;
+    }
+
+    /**
+     * @return whether the criterion being built is inside a disjunction
+     */
+    public boolean isInDisjunction() {
+        return disjunctionDepth > 0;
+    }
+
+    /**
+     * @return a number for a variable that is local to one expression of the conditions, such as the node of an
+     * existence test, and cannot clash with a variable of the matches
+     */
+    public int nextLocalNumber() {
+        return localNumber++;
     }
 
     public void setConditions(String conditions) {

@@ -34,7 +34,7 @@ import spock.lang.Unroll
 class RelationshipBlockMatrixSpec extends Neo4jGormDatastoreSpec {
 
     void setupSpec() {
-        manager.registerDomainClasses(ColRoot, ColOwner, ColAddress, ColTarget, ColLink)
+        manager.registerDomainClasses(ColRoot, ColOwner, ColAddress, ColTarget, ColLink, ColPerson, ColKnows)
     }
 
     private void seed() {
@@ -132,6 +132,89 @@ class RelationshipBlockMatrixSpec extends Neo4jGormDatastoreSpec {
         matches = cell[3]
     }
 
+    @Unroll
+    void "a disjunction of #property #criterion #args with a name keeps the owner without the association"() {
+        given:
+        seed()
+        ColOwner orphan = new ColOwner(name: 'orphan', total: 'text').save(flush: true, failOnError: true)
+        ColOwner.withSession { it.clear() }
+        Closure inner = block(property, criterion, args)
+
+        when:
+        List<String> found = ColOwner.createCriteria().list {
+            or {
+                links(inner)
+                eq('name', 'orphan')
+            }
+        }*.name.sort()
+
+        then:
+        found == (expected ? ['orphan', 'with'] : ['orphan'])
+
+        where:
+        cell << CELLS
+        property = cell[0]
+        criterion = cell[1]
+        args = cell[2]
+        expected = cell[3]
+    }
+
+    @Unroll
+    void "a disjunction of #criterion on an association of the owner and a name keeps the owner without the association"() {
+        given:
+        seed()
+        new ColOwner(name: 'orphan', total: 'text').save(flush: true, failOnError: true)
+        Long addressId = ColAddress.list().first().id
+        ColOwner.withSession { it.clear() }
+
+        when:
+        List<String> found = ColOwner.createCriteria().list {
+            or {
+                eq('name', 'orphan')
+                "$criterion"('address', *argsFor.call(addressId))
+            }
+        }*.name.sort()
+
+        then:
+        found == expected
+
+        where:
+        criterion | argsFor                          | expected
+        'inList'  | { Long id -> [[id]] }            | ['orphan', 'with', 'without']
+        'inList'  | { Long id -> [[id + 1000]] }     | ['orphan']
+        'eq'      | { Long id -> [ColAddress.get(id)] } | ['orphan', 'with', 'without']
+        'isNull'  | { Long id -> [] }                | ['orphan']
+        'isNotNull' | { Long id -> [] }              | ['orphan', 'with', 'without']
+    }
+
+    @Unroll
+    void "a #end block of a self-referential relationship is the #end of the relationship it was entered through"() {
+        given:
+        ColPerson alice = new ColPerson(name: 'Alice').save(flush: true, failOnError: true)
+        ColPerson bob = new ColPerson(name: 'Bob').save(flush: true, failOnError: true)
+        new ColKnows(from: alice, to: bob).save(flush: true, failOnError: true)
+        ColPerson.withSession { it.clear() }
+
+        when:
+        List<String> found = ColPerson.createCriteria().list {
+            knows {
+                "$end" {
+                    eq('name', name)
+                }
+            }
+        }*.name
+
+        then:
+        found == expected
+
+        where:
+        end    | name    | expected
+        'from' | 'Alice' | ['Alice']
+        'from' | 'Bob'   | []
+        'to'   | 'Bob'   | ['Alice']
+        'to'   | 'Alice' | []
+    }
+
     void "an association of the owner is still an association in the block of the owner"() {
         given:
         seed()
@@ -171,4 +254,14 @@ class ColLink implements Relationship<ColOwner, ColTarget> {
     String address
     String kind
     Long total
+}
+
+@Entity
+class ColPerson {
+    String name
+    static hasMany = [knows: ColKnows]
+}
+
+@Entity
+class ColKnows implements Relationship<ColPerson, ColPerson> {
 }

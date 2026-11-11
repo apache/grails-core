@@ -199,10 +199,15 @@ class Neo4jQuery extends Query {
         @Override
         @CompileStatic
         CypherExpression handle(CriterionScope scope, Query.Disjunction criterion) {
-            def inner = ((Query.Junction) criterion).criteria
-                    .collect { Query.Criterion it -> dispatchCriterion(it, scope).toString() }
-                    .join(CriterionHandler.OPERATOR_OR)
-            return new CypherExpression(inner ? "( $inner )" : inner)
+            scope.builder.enterDisjunction()
+            try {
+                def inner = ((Query.Junction) criterion).criteria
+                        .collect { Query.Criterion it -> dispatchCriterion(it, scope).toString() }
+                        .join(CriterionHandler.OPERATOR_OR)
+                return new CypherExpression(inner ? "( $inner )" : inner)
+            } finally {
+                scope.builder.leaveDisjunction()
+            }
         }
             },
             (Query.Negation): new CriterionHandler<Query.Negation>() {
@@ -738,6 +743,13 @@ class Neo4jQuery extends Query {
             }
             if (scope.entity.isRelationshipEntity()) {
                 return dispatchCriterion(criterion.criteria, scope.forEnd(association))
+            }
+            if (scope.builder.inDisjunction) {
+                // a block in a disjunction is true for a node that has a matching neighbour, and false for one that
+                // has none, so the other branches still see the nodes without; a match would drop them first
+                CriterionScope.Existence existence = scope.intoExistence(criterion)
+                String conditions = dispatchCriterion(criterion.criteria, existence.scope).toString()
+                return new CypherExpression("size([${existence.pattern}${conditions ? ' WHERE ' + conditions : ''} | 1]) > 0".toString())
             }
             return dispatchCriterion(criterion.criteria, scope.into(criterion))
         }

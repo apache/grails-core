@@ -152,7 +152,10 @@ class RelationshipUtils {
     static String matchForRelationshipEntity(Association association, RelationshipPersistentEntity entity, String var = 'r') {
         Attribute mappedForm = (Attribute) association.getMapping()?.getMappedForm()
         PersistentEntity owningEntity = association.getOwner()
-        Direction direction = mappedForm.direction ?: owningEntity == entity.getTo().associatedEntity ? Direction.INCOMING : Direction.OUTGOING
+        // the owner is at the receiving end only when it is not also the origin: a relationship between two nodes of one type
+        // is entered from its origin, as navigating the association of an instance does
+        boolean receiving = owningEntity == entity.getTo().associatedEntity && owningEntity != entity.getFrom().associatedEntity
+        Direction direction = mappedForm.direction ?: receiving ? Direction.INCOMING : Direction.OUTGOING
         final boolean reversed = direction == Direction.INCOMING || direction == Direction.BOTH
         StringBuilder sb = new StringBuilder()
         if (reversed) {
