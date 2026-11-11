@@ -19,6 +19,7 @@
 package grails.gorm.tests.detachedcriteria
 
 import grails.gorm.DetachedCriteria
+import grails.gorm.tests.DatabaseContainers
 import grails.gorm.tests.HibernateGormDatastoreSpec
 import org.grails.datastore.mapping.query.Query
 import org.grails.datastore.mapping.query.criteria.FunctionCallingCriterion
@@ -26,13 +27,15 @@ import org.testcontainers.mariadb.MariaDBContainer
 import org.testcontainers.mysql.MySQLContainer
 import org.testcontainers.postgresql.PostgreSQLContainer
 import org.testcontainers.spock.Testcontainers
+import spock.lang.IgnoreIf
 import spock.lang.Requires
 import spock.lang.Shared
 
 /**
  * Runs the functions of a where query, on a read and in a bulk statement, against the databases a string of SQL
  * would differ on: the date functions are not the same function, or not a function at all, on each of them.
- * Oracle is left out, as in the other dialect specs, because its image is too flaky to gate on.
+ * Oracle and Db2 run only the empty list, the one case they differ on: they reject an empty IN list that the
+ * others accept. Db2 is skipped on arm64, where its image does not run.
  */
 @Testcontainers
 @Requires({ isDockerAvailable() })
@@ -41,6 +44,8 @@ class WhereQueryFunctionsDialectSpec extends HibernateGormDatastoreSpec {
     @Shared PostgreSQLContainer postgres = new PostgreSQLContainer('postgres:16')
     @Shared MySQLContainer mysql = new MySQLContainer('mysql:8.0')
     @Shared MariaDBContainer mariadb = new MariaDBContainer('mariadb:10.11')
+    @Shared oracle = DatabaseContainers.ORACLE
+    @Shared db2 = DatabaseContainers.DB2
 
     void setupSpec() {
         manager.registerDomainClasses(WhereQueryFunctionEntity)
@@ -156,5 +161,26 @@ class WhereQueryFunctionsDialectSpec extends HibernateGormDatastoreSpec {
         'Postgres' | postgres
         'MySQL'    | mysql
         'MariaDB'  | mariadb
+    }
+
+    @IgnoreIf({ data.db == 'DB2' && System.getProperty('os.arch') in ['aarch64', 'arm64'] })
+    void "an empty list in a function comparison matches nothing on #db, on a read and in a bulk update and delete"() {
+        given:
+        if (!container.isRunning()) {
+            container.start()
+        }
+        startOn(container)
+        seed()
+
+        expect:
+        criteriaOf('upper', new Query.In('name', [])).list().isEmpty()
+        criteriaOf('length', new Query.In('name', [])).list().isEmpty()
+        criteriaOf('upper', new Query.In('name', [])).updateAll(label: 'x') == 0
+        criteriaOf('upper', new Query.In('name', [])).deleteAll() == 0
+
+        where:
+        db       | container
+        'Oracle' | oracle
+        'DB2'    | db2
     }
 }
