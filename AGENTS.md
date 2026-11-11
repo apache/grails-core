@@ -125,7 +125,7 @@ These human-review concerns are intentionally not mechanized; `validateRepositor
 | Spring Boot | 4.1.x |
 | Spring Framework | 7.0.x |
 | Spock | 2.5-groovy-6.0 |
-| Gradle | 9.8.x |
+| Gradle | 9.9.x |
 | Jakarta EE | 10 |
 
 ## Project Structure

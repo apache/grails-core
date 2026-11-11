@@ -45,6 +45,14 @@ class ErrorsFunctionalSpec extends ContainerGebSpec {
         pageSource.contains('Message = Something bad')
     }
 
+    void "Test 500 mappings for custom exceptions with a cause of their own"() {
+        when: "An action that throws a custom error with a cause, whose mapping names the custom error"
+        go('/demo/throwCustomErrorWithCause')
+
+        then: "The handler the mapping names is executed, which renders the message of the root cause"
+        pageSource.contains('Message = Its own cause')
+    }
+
     void "Test default 500 mapping"() {
         when: "An excetion that throws a general error handled by the default 500 mapping in UrlMapings.groovy"
         go('/errors/throwGeneralError')

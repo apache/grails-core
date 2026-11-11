@@ -56,7 +56,9 @@ public class HqlListQueryBuilder {
             fetchMap.forEach((prop, type) -> {
                 if (HibernateQueryArgument.JOIN.value().equals(type) || HibernateQueryArgument.EAGER.value().equals(type)) {
                     requireMappedProperty(prop, HibernateQueryArgument.FETCH.value());
-                    hql.append(" join fetch e.").append(prop);
+                    // the fetch mode join never leaves out an instance whose association is null or empty, as it does for a
+                    // where query and a dynamic finder; only a join type asks for that
+                    hql.append(" left join fetch e.").append(prop);
                 }
             });
         }
