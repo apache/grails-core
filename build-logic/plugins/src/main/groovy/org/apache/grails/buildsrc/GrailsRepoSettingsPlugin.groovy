@@ -118,29 +118,6 @@ class GrailsRepoSettingsPlugin implements Plugin<Settings> {
                         it.releasesOnly()
                     }
                 }
-                // These plugins' POMs say Gradle module metadata was published with them, but it never was, so
-                // Gradle requests a .module file that exists nowhere each time it resolves them without a cached
-                // result, and a proxy repository answers that miss from upstream. Reading only their POMs,
-                // straight from the Gradle Plugin Portal that hosts them, skips the request.
-                repo.exclusiveContent { exclusive ->
-                    exclusive.forRepository {
-                        repo.maven {
-                            url = 'https://plugins.gradle.org/m2'
-                            metadataSources {
-                                it.mavenPom()
-                                it.ignoreGradleMetadataRedirection()
-                            }
-                            mavenContent {
-                                it.releasesOnly()
-                            }
-                        }
-                    }
-                    exclusive.filter {
-                        it.includeModule('io.sdkman', 'gradle-sdkvendor-plugin')
-                        it.includeModule('io.spring.nohttp', 'nohttp-gradle')
-                        it.includeModule('se.patrikerdes', 'gradle-use-latest-versions-plugin')
-                    }
-                }
             }
         }
     }

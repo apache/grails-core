@@ -21,6 +21,7 @@ package org.grails.core;
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
@@ -212,7 +213,13 @@ public class DefaultGrailsControllerClass extends AbstractInjectableGrailsClass 
 
         @Override
         public Object invoke(Object controller) throws Throwable {
-            return method.invoke(controller);
+            try {
+                return method.invoke(controller);
+            }
+            catch (InvocationTargetException e) {
+                // what a method handle throws, so that what an action fails with does not depend on the environment
+                throw e.getTargetException();
+            }
         }
     }
 
