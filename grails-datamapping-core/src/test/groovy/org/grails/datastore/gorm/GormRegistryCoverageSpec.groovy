@@ -54,6 +54,34 @@ class GormRegistryCoverageSpec extends Specification {
         GormRegistry.instance.reset()
     }
 
+    void "currentConnection names the default connection outside every connection block"() {
+        expect:
+        GormRegistry.currentConnection(GormRegistryCoverageThing) == ConnectionSource.DEFAULT
+    }
+
+    void "currentConnection names the connection of the innermost block that routes the entity, and the default again once it ends"() {
+        when:
+        List<String> seen = []
+        GormRegistry.withConnectionScope(GormRegistryCoverageThing, 'second') {
+            seen << GormRegistry.currentConnection(GormRegistryCoverageThing)
+            GormRegistry.withConnectionScope(GormRegistryCoverageThing, 'third') {
+                seen << GormRegistry.currentConnection(GormRegistryCoverageThing)
+            }
+            seen << GormRegistry.currentConnection(GormRegistryCoverageThing)
+        }
+        seen << GormRegistry.currentConnection(GormRegistryCoverageThing)
+
+        then:
+        seen == ['second', 'third', 'second', ConnectionSource.DEFAULT]
+    }
+
+    void "currentConnection ignores a block that routes another entity"() {
+        expect:
+        GormRegistry.withConnectionScope(String, 'second') {
+            GormRegistry.currentConnection(GormRegistryCoverageThing)
+        } == ConnectionSource.DEFAULT
+    }
+
     void "the static findStaticApi/findInstanceApi/findValidationApi/findDatastore delegators resolve via the singleton instance"() {
         given:
         def registry = GormRegistry.instance

@@ -64,6 +64,8 @@ username(unique: ['group', 'department'])
 
 In this example `username` must be unique in `group` and `department`. There might be same logins in different groups or different departments.
 
+For a domain class mapped to several data sources, the check runs on the connection that the call is made on: inside a connection block such as `Book.second.withTransaction { }`, or a method annotated `@Transactional(connection = 'second')`, it looks at the `second` data source, and anywhere else at the default one. The same value can therefore be stored once on each connection.
+
 This constraint influences  link:{hibernate5GuideFromRef}index.html#constraints[schema generation].
 
 Error Code: `className.propertyName.unique`
