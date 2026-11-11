@@ -1892,7 +1892,8 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
                 if (attribute.isAssociation()) {
                     Class oldTargetClass = targetClass;
                     targetClass = getClassForAssociationType(attribute);
-                    if ((targetClass.equals(oldTargetClass) || isInDisjunction()) && !hasMoreThanOneArg) {
+                    final boolean branchOfOr = isInDisjunction() && !hasMoreThanOneArg;
+                    if ((targetClass.equals(oldTargetClass) || branchOfOr) && !hasMoreThanOneArg) {
                         // default to left join if joining on the same table, or when the block is a branch of an
                         // "or": the entities without the association are still found by the other branches
                         joinType = org.hibernate.sql.JoinType.LEFT_OUTER_JOIN.getJoinTypeValue();
@@ -1900,6 +1901,7 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
                     associationStack.add(name);
                     final String associationPath = getAssociationPath();
                     createAliasIfNeccessary(name, associationPath, joinType);
+                    final String blockAlias = getLastAlias();
                     // the criteria within an association node are grouped with an implicit AND
                     logicalExpressionStack.add(new LogicalExpression(AND));
                     invokeClosureNode(callable);
@@ -1909,6 +1911,11 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
                     }
                     LogicalExpression logicalExpression = logicalExpressionStack.remove(logicalExpressionStack.size() - 1);
                     if (!logicalExpression.args.isEmpty()) {
+                        if (branchOfOr) {
+                            // a branch of an "or" asks for an associated entity that matches, and a missing one is a
+                            // null that a null test in the block would match
+                            logicalExpression.args.add(0, Restrictions.isNotNull(blockAlias + ".id"));
+                        }
                         addToCriteria(logicalExpression.toCriterion());
                     }
                     associationStack.remove(associationStack.size() - 1);
