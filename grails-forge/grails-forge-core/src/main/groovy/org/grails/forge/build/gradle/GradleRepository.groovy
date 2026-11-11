@@ -36,6 +36,14 @@ interface GradleRepository extends Ordered {
     }
 
     static Set<GradleRepository> getDefaultRepositories(String grailsVersion, String overrideRepo) {
+        return defaultRepositories(grailsVersion, overrideRepo, false)
+    }
+
+    static Set<GradleRepository> getDefaultBuildRepositories(String grailsVersion) {
+        return defaultRepositories(grailsVersion, System.getenv('GRAILS_REPO_URL'), true)
+    }
+
+    private static Set<GradleRepository> defaultRepositories(String grailsVersion, String overrideRepo, boolean buildRepositories) {
         Set<GradleRepository> repositories = new LinkedHashSet<>()
 
         if (overrideRepo != null && !overrideRepo.isEmpty()) {
@@ -64,7 +72,21 @@ interface GradleRepository extends Ordered {
         if (repositories.stream().noneMatch { it instanceof MavenCentralRepository }) {
             repositories.add(new MavenCentralRepository(repositories.size()))
         }
-        repositories.add(new DefaultGradleRepository(repositories.size(), 'https://repo.grails.org/grails/restricted'))
+        if (buildRepositories) {
+            // The plugins of the plugins block are resolved again through the build script's repositories.
+            // Without the Gradle Plugin Portal, the plugins that only it hosts come through repo.grails.org,
+            // together with a request for the jar of each plugin marker, which is a POM-only module.
+            repositories.add(new GradlePluginPortalRepository(repositories.size()))
+        }
+        // repo.grails.org hosts no snapshots, so a snapshot version is not looked for there, where every
+        // request for one would miss before the snapshot repository below is asked.
+        repositories.add(new DefaultGradleRepository(
+            repositories.size(),
+            'https://repo.grails.org/grails/restricted',
+            null,
+            Collections.emptyList(),
+            List.of(VersionType.RELEASE)
+        ))
         if (grailsVersion.endsWith('SNAPSHOT')) {
             repositories.add(new DefaultGradleRepository(
                 repositories.size(),
