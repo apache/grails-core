@@ -39,7 +39,6 @@ class MultiDataSourceSessionSpec extends Specification {
             'dataSource.dialect': H2Dialect.name,
             'dataSource.formatSql': 'true',
             'hibernate.flush.mode': 'COMMIT',
-            'hibernate.cache.queries': 'true',
             'hibernate.hbm2ddl.auto': 'create-drop',
             'dataSources.secondary':[url:"jdbc:h2:mem:secondaryDb;LOCK_TIMEOUT=10000"],
     ]

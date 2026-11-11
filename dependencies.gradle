@@ -88,14 +88,16 @@ ext {
             'guava.version'                 : '33.7.2-jre',
             // Groovy YAML 6.0.0 depends on Jackson 2.22.2, which wins over the 2.21.7 Spring Boot 4.2
             // manages, so the BOM must manage at least that. Jackson 2 only releases
-            // jackson-annotations on the minor, hence the separate 2.22 below.
-            'jackson-2-bom.version'         : '2.22.3',
+            // jackson-annotations on the minor, hence the separate 2.22 below. 2.22.4 also fixes
+            // CVE-2026-110879 (type id validation in jackson-databind), which 2.21.7 does not carry.
+            'jackson-2-bom.version'         : '2.22.4',
             'jackson2-annotations.version'  : '2.22',
             // Overrides the 3.1.7 Spring Boot 4.2 manages. Pinned first as a security override of
             // 3.1.6 (CVE-2026-89425, CVE-2026-89407, CVE-2026-91777 and CVE-2026-91776), which 3.1.7
             // also fixes; kept so that moving to Spring Boot 4.2 does not take Jackson 3 from the 3.2
-            // line Grails 8 and 9.0 manage back to 3.1.
-            'jackson-bom.version'           : '3.2.3',
+            // line Grails 8 and 9.0 manage back to 3.1. 3.2.4 also fixes CVE-2026-110879, which 3.1.7
+            // does not carry, and CVE-2026-110729, which affects only jackson-core 3.2.0 to 3.2.3.
+            'jackson-bom.version'           : '3.2.4',
             'jquery.version'                : '4.0.0',
             'nimbus-jose-jwt.version'       : '10.10',
             // Includes the follow-up logout redirect and direct-client CSRF fixes on the 6.5.x line.
