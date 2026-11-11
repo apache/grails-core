@@ -1863,7 +1863,7 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
                         // Property type is a managed entity - treat as association
                         Class oldTargetClass = targetClass;
                         targetClass = propertyType;
-                        if (targetClass.equals(oldTargetClass) && !hasMoreThanOneArg) {
+                        if ((targetClass.equals(oldTargetClass) || isInDisjunction()) && !hasMoreThanOneArg) {
                             joinType = org.hibernate.sql.JoinType.LEFT_OUTER_JOIN.getJoinTypeValue();
                         }
                         associationStack.add(name);
@@ -1892,8 +1892,10 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
                 if (attribute.isAssociation()) {
                     Class oldTargetClass = targetClass;
                     targetClass = getClassForAssociationType(attribute);
-                    if (targetClass.equals(oldTargetClass) && !hasMoreThanOneArg) {
-                        joinType = org.hibernate.sql.JoinType.LEFT_OUTER_JOIN.getJoinTypeValue(); // default to left join if joining on the same table
+                    if ((targetClass.equals(oldTargetClass) || isInDisjunction()) && !hasMoreThanOneArg) {
+                        // default to left join if joining on the same table, or when the block is a branch of an
+                        // "or": the entities without the association are still found by the other branches
+                        joinType = org.hibernate.sql.JoinType.LEFT_OUTER_JOIN.getJoinTypeValue();
                     }
                     associationStack.add(name);
                     final String associationPath = getAssociationPath();
@@ -1982,6 +1984,15 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
 
     private boolean isAssociationQueryWithJoinSpecificationMethod(Object[] args) {
         return args.length == 2 && (args[0] instanceof Number) && (args[1] instanceof Closure);
+    }
+
+    private boolean isInDisjunction() {
+        for (LogicalExpression expression : logicalExpressionStack) {
+            if (OR.equals(expression.name)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private void createAliasIfNeccessary(String associationName, String associationPath, int joinType) {
