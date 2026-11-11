@@ -57,7 +57,7 @@ class MongoLookupByIdMultiTenancySpec extends AutoStartedMongoSpec {
                 'grails.gorm.multiTenancy.tenantResolverClass': SystemPropertyTenantResolver,
                 (MongoSettings.SETTING_URL)                   : "mongodb://${mongoHost}:${mongoPort}/lookupByIdDb" as String,
         ]
-        this.datastore = new MongoDatastore(config, Memo, NumberedMemo, KeyedMemo)
+        this.datastore = new MongoDatastore(config, Memo, NumberedMemo, KeyedMemo, FiledMemo, MemoFolder)
     }
 
     void setup() {
@@ -305,6 +305,23 @@ class MongoLookupByIdMultiTenancySpec extends AutoStartedMongoSpec {
         } == ['Own', 'Other']
     }
 
+    void 'a proxy from load initializes with no session bound when its class has an association'() {
+        given:
+        ObjectId filedId = FiledMemo.withTenant('own') {
+            FiledMemo.withNewSession {
+                new FiledMemo(title: 'Own', folder: new MemoFolder(name: 'Inbox').save()).save(flush: true).id
+            }
+        }
+
+        when:
+        FiledMemo memo = FiledMemo.load(filedId)
+
+        then:
+        !datastore.hasCurrentSession()
+        memo.title == 'Own'
+        memo.folder.name == 'Inbox'
+    }
+
     void 'a lookup by id without a current tenant throws TenantNotFoundException'() {
         given:
         System.clearProperty(SystemPropertyTenantResolver.PROPERTY_NAME)
@@ -336,6 +353,20 @@ class Memo implements MultiTenant<Memo>, MongoEntity<Memo> {
     ObjectId id
     String tenantId
     String title
+}
+
+@Entity
+class FiledMemo implements MultiTenant<FiledMemo>, MongoEntity<FiledMemo> {
+    ObjectId id
+    String tenantId
+    String title
+    MemoFolder folder
+}
+
+@Entity
+class MemoFolder implements MongoEntity<MemoFolder> {
+    ObjectId id
+    String name
 }
 
 @Entity
