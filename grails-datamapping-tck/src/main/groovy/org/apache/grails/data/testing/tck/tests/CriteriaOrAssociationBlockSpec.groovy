@@ -29,9 +29,11 @@ import org.apache.grails.data.testing.tck.domains.TestEntity
 /**
  * The criteria guide documents an association block as one branch of {@code or { }}: "accounts that have either
  * performed transactions in the last 10 days OR have been recently created". An entity without the association is
- * therefore found by the other branch. MongoDB has no association blocks.
+ * therefore found by the other branch, and a branch that is an association block still asks for an associated
+ * entity. MongoDB has no association blocks. Neo4j is skipped until its fix, #16836, is merged; that change removes
+ * the skip.
  */
-@IgnoreIf({ System.getProperty('mongodb.gorm.suite') == 'true' })
+@IgnoreIf({ System.getProperty('mongodb.gorm.suite') == 'true' || System.getProperty('neo4j.gorm.suite') == 'true' })
 class CriteriaOrAssociationBlockSpec extends GrailsDataTckSpec {
 
     @Override
@@ -75,6 +77,22 @@ class CriteriaOrAssociationBlockSpec extends GrailsDataTckSpec {
 
         then:
         found*.name == ['with']
+    }
+
+    void 'a null test in an association block in or does not match the entities without the association'() {
+        given:
+        createEntities()
+
+        when:
+        def found = TestEntity.withCriteria {
+            or {
+                child { isNull('name') }
+                eq('name', 'nobody')
+            }
+        }
+
+        then:
+        found.isEmpty()
     }
 
     void 'an association block outside or still excludes the entities without the association'() {

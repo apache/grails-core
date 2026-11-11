@@ -35,6 +35,7 @@ import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.Expression;
 import jakarta.persistence.criteria.From;
 import jakarta.persistence.criteria.Join;
+import jakarta.persistence.criteria.JoinType;
 import jakarta.persistence.criteria.ParameterExpression;
 import jakarta.persistence.criteria.Path;
 import jakarta.persistence.criteria.Predicate;
@@ -289,7 +290,9 @@ public class PredicateGenerator {
         GrailsHibernatePersistentEntity entity,
         Query.Junction junction) {
         List<Query.Criterion> criteriaList = junction.getCriteria();
-        Predicate[] predicates = getPredicates(criteriaQuery, root_, criteriaList, fromsByProvider, entity);
+        Predicate[] predicates = junction instanceof Query.Disjunction && criteriaList.size() > 1 ?
+            getBranchPredicates(criteriaQuery, root_, criteriaList, fromsByProvider, entity) :
+            getPredicates(criteriaQuery, root_, criteriaList, fromsByProvider, entity);
         if (junction instanceof Query.Conjunction) {
             return criteriaBuilder.and(predicates);
         } else if (junction instanceof Query.Disjunction) {
@@ -298,6 +301,41 @@ public class PredicateGenerator {
             return criteriaBuilder.not(criteriaBuilder.or(predicates));
         }
         throw new IllegalArgumentException("Unsupported junction: " + junction);
+    }
+
+    /**
+     * The predicates of the branches of an {@code or}. An association block that is a branch asks for an associated
+     * entity that matches, so on a left join the row of the join has to exist: a missing association is a null that a
+     * null test in the block would match.
+     */
+    private Predicate[] getBranchPredicates(
+        AbstractQuery<?> criteriaQuery,
+        From<?, ?> root,
+        List<Query.Criterion> branches,
+        JpaQueryContext fromsByProvider,
+        GrailsHibernatePersistentEntity entity) {
+        List<Predicate> predicates = new ArrayList<>();
+        for (Query.Criterion branch : branches) {
+            Predicate predicate = handleCriterion(criteriaQuery, root, fromsByProvider, entity, branch);
+            if (predicate == null) {
+                continue;
+            }
+            String path = branch instanceof DetachedAssociationCriteria<?> block && !block.getCriteria().isEmpty() ?
+                block.getAssociationPath() :
+                branch instanceof HibernateAssociationQuery query && !query.getAssociationCriteria().isEmpty() ?
+                    query.associationPath : null;
+            if (path != null) {
+                From<?, ?> joined = fromsByProvider.resolveAssociation(path);
+                PersistentProperty<?> identity = branch instanceof DetachedAssociationCriteria<?> block ?
+                    block.getAssociation().getAssociatedEntity().getIdentity() :
+                    ((HibernateAssociationQuery) branch).getEntity().getIdentity();
+                if (joined instanceof Join<?, ?> join && join.getJoinType() == JoinType.LEFT && identity != null) {
+                    predicate = criteriaBuilder.and(criteriaBuilder.isNotNull(joined.get(identity.getName())), predicate);
+                }
+            }
+            predicates.add(predicate);
+        }
+        return predicates.toArray(new Predicate[0]);
     }
 
     private Predicate handleAssociationCriteria(
