@@ -20,6 +20,7 @@ package org.grails.core
 
 import grails.config.Settings
 import grails.core.DefaultGrailsApplication
+import grails.web.Action
 import spock.lang.Specification
 
 /**
@@ -79,6 +80,27 @@ class DefaultGrailsControllerClassSpec extends Specification {
 
         where:
         configScopeValue << [SINGLETON, SESSION]
+    }
+
+    void "an action that fails throws its own exception when it is invoked #invocation"() {
+        when:
+        new DefaultGrailsControllerClass(controller).invoke(controller.newInstance(), 'failing')
+
+        then:
+        def exception = thrown(IllegalStateException)
+        exception.message == 'thrown by the action'
+
+        where:
+        invocation                              | controller
+        'through a method handle'               | MethodHandleInvokedController
+        'by reflection, as in development mode' | Class.forName('org.grails.core.nonpublic.ReflectivelyInvokedController')
+    }
+
+    static class MethodHandleInvokedController {
+        @Action
+        void failing() {
+            throw new IllegalStateException('thrown by the action')
+        }
     }
 
     class NotSpecifiedController {
