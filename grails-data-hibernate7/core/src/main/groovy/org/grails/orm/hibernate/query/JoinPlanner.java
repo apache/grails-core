@@ -48,6 +48,7 @@ final class JoinPlanner {
     private final Map<String, JoinType> lastAliasTypes = new HashMap<>();
     private final Set<String> createdAliases = new HashSet<>();
     private JoinPlan target;
+    private int disjunctions;
 
     private JoinPlanner(DetachedCriteria<?> criteria, HibernateQuery hibernateQuery) {
         this.criteria = criteria;
@@ -108,8 +109,23 @@ final class JoinPlanner {
             @Override
             public void associationQuery(HibernateAssociationQuery query) {
                 String path = join(scope, query.associationPath);
-                target.declare(path, joinType(path, query.associationPath, ownerJoinTypes));
+                target.declare(path, joinType(path, query.associationPath, ownerJoinTypes,
+                        !query.getAssociationCriteria().isEmpty()));
                 scan(query.getAssociationCriteria(), path, Map.of());
+            }
+
+            @Override
+            public void enter(Query.Junction junction) {
+                if (alternatives(junction)) {
+                    disjunctions++;
+                }
+            }
+
+            @Override
+            public void leave(Query.Junction junction) {
+                if (alternatives(junction)) {
+                    disjunctions--;
+                }
             }
 
             @Override
@@ -138,7 +154,7 @@ final class JoinPlanner {
         boolean declaredByCreateAlias = block.getAlias() != null && createdAliases.contains(block.getAlias()) &&
                 path.equals(aliasPaths.get(block.getAlias()));
         if (!declaredByCreateAlias) {
-            target.declare(path, joinType(path, block.getAssociationPath(), ownerJoinTypes));
+            target.declare(path, joinType(path, block.getAssociationPath(), ownerJoinTypes, !block.getCriteria().isEmpty()));
         }
         if (block.getAlias() != null) {
             aliasPaths.put(block.getAlias(), path);
@@ -148,14 +164,27 @@ final class JoinPlanner {
 
     /**
      * The join type a block asks for: the one configured for its path, then the one its container configured for
-     * it, and otherwise an inner join.
+     * it, and otherwise an inner join, or a left join when the block is a branch of a disjunction: the entities
+     * without the association are then still found by the other branches. A block without criteria asks only for
+     * the join, so it keeps the inner join.
      */
-    private JoinType joinType(String path, String associationPath, Map<String, JoinType> ownerJoinTypes) {
+    private JoinType joinType(String path, String associationPath, Map<String, JoinType> ownerJoinTypes,
+                              boolean restricts) {
         JoinType configured = target.configured(path);
         if (configured == null) {
             configured = ownerJoinTypes.get(associationPath);
         }
-        return configured != null ? configured : JoinType.INNER;
+        if (configured != null) {
+            return configured;
+        }
+        return restricts && disjunctions > 0 ? JoinType.LEFT : JoinType.INNER;
+    }
+
+    /**
+     * Whether the junction is an {@code or} with more than one branch. A disjunction of one branch is that branch.
+     */
+    private static boolean alternatives(Query.Junction junction) {
+        return junction instanceof Query.Disjunction && junction.getCriteria().size() > 1;
     }
 
     private void mention(String property, String scope) {

@@ -56,6 +56,18 @@ interface CriteriaVisitor {
     }
 
     /**
+     * A junction is entered, and its criteria are visited next.
+     */
+    default void enter(Query.Junction junction) {
+    }
+
+    /**
+     * The criteria of the junction entered last have been visited.
+     */
+    default void leave(Query.Junction junction) {
+    }
+
+    /**
      * Visits the criteria in order. The criteria that are not visited have nothing to say about the association
      * paths of this query: a subquery ({@link Query.Exists}, {@link Query.NotExists}) has paths of its own, which
      * its own query plans, and an {@link SqlRestriction} is SQL text. Any other criterion, such as one an SPI
@@ -82,7 +94,13 @@ interface CriteriaVisitor {
                 }
             }
             else if (criterion instanceof Query.Junction junction) {
-                walk(junction.getCriteria(), visitor);
+                visitor.enter(junction);
+                try {
+                    walk(junction.getCriteria(), visitor);
+                }
+                finally {
+                    visitor.leave(junction);
+                }
             }
         }
     }
