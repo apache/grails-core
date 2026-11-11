@@ -37,6 +37,7 @@ import org.springframework.web.servlet.DispatcherServlet
 
 import grails.util.Holders
 import org.grails.web.context.ServletEnvironmentGrailsApplicationDiscoveryStrategy
+import org.grails.web.errors.GrailsExceptionResolver
 import org.grails.web.util.HiddenHttpMethod
 import org.grails.web.util.WebUtils
 
@@ -71,6 +72,21 @@ class GrailsDispatcherServlet extends DispatcherServlet implements ServletContex
             else {
                 return buildGrailsWebRequest(request, response)
             }
+        }
+    }
+
+    /**
+     * Records an exception an error handler answered on the observation of the request once the dispatch has returned,
+     * unless the filter that observes the request will read it from there.
+     */
+    @Override
+    protected void doService(HttpServletRequest request, HttpServletResponse response) throws Exception {
+        Runnable recordFailureLeftOnRequest = GrailsExceptionResolver.holdFailureLeftOnRequest(request)
+        try {
+            super.doService(request, response)
+        }
+        finally {
+            recordFailureLeftOnRequest.run()
         }
     }
 
